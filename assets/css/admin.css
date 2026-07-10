@@ -683,6 +683,25 @@
     margin-bottom: 18px;
 }
 
+.vs-form-row--account .vs-form-row__field {
+    min-width: 0;
+}
+
+.vs-form-row--account .vs-form-row__field > .vs-notice {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 0;
+    box-sizing: border-box;
+}
+
+.vs-form-row--notice {
+    margin-bottom: 12px;
+}
+
+.vs-form-row--notice .vs-form-row__label--spacer {
+    display: none;
+}
+
 @media (min-width: 900px) {
     .vs-account-shell {
         display: grid;
@@ -730,8 +749,13 @@
         padding-top: 10px;
     }
 
-    .vs-form-row--account .vs-form-row__field .vs-input {
+    .vs-form-row--account .vs-form-row__field .vs-input,
+    .vs-form-row--account .vs-form-row__field > .vs-notice {
         max-width: 420px;
+    }
+
+    .vs-form-row--notice .vs-form-row__label--spacer {
+        display: block;
     }
 }
 

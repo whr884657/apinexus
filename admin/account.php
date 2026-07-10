@@ -89,7 +89,12 @@ vs_admin_layout_start('账号设置', 'account');
 
                 <div class="vs-form-section">
                     <h3 class="vs-form-section__title">修改密码</h3>
-                    <?php vs_render_notice('info', '', '如不需要修改密码，以下三项留空即可', array('compact' => true)); ?>
+                    <div class="vs-form-row vs-form-row--account vs-form-row--notice">
+                        <div class="vs-form-row__label vs-form-row__label--spacer" aria-hidden="true"></div>
+                        <div class="vs-form-row__field">
+                            <?php vs_render_notice('info', '', '如不需要修改密码，以下三项留空即可', array('compact' => true)); ?>
+                        </div>
+                    </div>
                     <div class="vs-form-row vs-form-row--account">
                         <label class="vs-label" for="accountOldPassword">当前密码</label>
                         <div class="vs-form-row__field">

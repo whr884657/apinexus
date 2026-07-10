@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.4.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-1.4.3-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -195,6 +195,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v1.4.3（2026-07-11）
+
+**类型：** 小版本（账号设置 UI 修复）
+
+**变更说明：**
+
+- 修复账号设置页提示条与输入框宽度/列对齐不一致
+- 更新《界面提示规范.md》§4.1 账号表单 Notice 约定
 
 ### v1.4.2（2026-07-11）
 

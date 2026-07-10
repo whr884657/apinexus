@@ -392,6 +392,8 @@ a:hover {
     margin: 6px 0 0;
     font-size: 12px;
     border-radius: 8px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .vs-notice--field .vs-notice__title {
