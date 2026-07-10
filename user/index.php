@@ -1,18 +1,20 @@
 <?php
 /**
  * 文件：user/index.php
- * 作用：用户中心首页
+ * 作用：用户中心首页（控制台）
  */
 
 require_once __DIR__ . '/init.php';
 
-vs_user_layout_start('用户中心');
+$avatarPreview = UserAvatar::resolve($vsUser);
+
+vs_user_layout_start('控制台', 'dashboard');
 ?>
 
 <div class="vs-panel">
     <div class="vs-panel__header">
-        <h2 class="vs-panel__title">欢迎，<?php echo vs_e($vsUser ? $vsUser['username'] : '用户'); ?></h2>
-        <p class="vs-panel__desc">这是您的用户中心，账号信息如下。</p>
+        <h2 class="vs-panel__title">欢迎回来，<?php echo vs_e($vsUser ? $vsUser['username'] : '用户'); ?></h2>
+        <p class="vs-panel__desc">这是您的用户中心，可在侧边栏进入账号设置修改资料与密码。</p>
     </div>
 
     <div class="vs-stat-grid">

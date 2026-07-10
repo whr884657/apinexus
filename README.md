@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-1.1.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -23,7 +23,8 @@
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册）
 - 分组侧边栏管理后台（控制台、账号设置、系统设置、系统升级、关于）
-- 用户模块：登录、注册、忘记密码、用户中心（注册/找回需管理员配置邮箱）
+- 用户中心：自适应侧边栏 + 顶栏，控制台与账号设置
+- 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
 - 管理员认证：登录、忘记密码（邮箱验证码）、CSRF 与登录频率限制
 - 站点信息、多域名绑定、SMTP 邮箱发信
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
@@ -53,12 +54,13 @@
 
 | 功能 | 路径 | 说明 |
 |------|------|------|
-| 前台首页 | `/` | 读取系统名称/描述，引导进入用户中心或管理后台 |
+| 前台首页 | `/` | 引导进入用户中心（不展示管理后台入口） |
 | Web 安装向导 | `/install/` | 五步安装，执行 `install/database.sql` |
 | 用户登录 | `/user/login.php` | 用户登录入口 |
 | 用户注册 | `/user/register.php` | 邮箱验证码注册（需管理员已配置发信） |
 | 用户忘记密码 | `/user/forgot.php` | 邮箱验证码重置密码 |
-| 用户中心 | `/user/index.php` | 登录后查看账号信息 |
+| 用户中心 | `/user/index.php` | 登录后控制台首页 |
+| 用户账号设置 | `/user/account.php` | 修改资料、头像、密码 |
 | 管理员登录 | `/admin/login.php` | 管理员登录（安装时创建账号，无开放注册） |
 | 管理员忘记密码 | `/admin/forgot.php` | 邮箱验证码重置（需配置 SMTP） |
 | 管理控制台 | `/admin/index.php` | 后台首页，展示站点与版本信息 |
@@ -117,6 +119,7 @@ misc-api/
 │   ├── init.php
 │   ├── includes/layout.php
 │   ├── index.php
+│   ├── account.php
 │   └── login.php / register.php / forgot.php
 ├── assets/
 │   ├── css/                    # common, admin, modal, toast, install …
@@ -187,6 +190,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v1.1.1（2026-07-11）
+
+**类型：** 小版本（用户后台 UI 与账号能力）
+
+**变更说明：**
+
+- 用户后台自适应侧边栏 + 顶栏布局
+- 新增用户账号设置页与头像支持
+- 官网隐藏管理后台入口
 
 ### v1.1.0（2026-07-10）
 

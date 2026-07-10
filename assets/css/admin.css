@@ -1203,30 +1203,3 @@ select.vs-input {
     margin-top: 4px;
     padding-top: 0;
 }
-
-/* ── 用户中心（无侧边栏） ── */
-.vs-user-shell .vs-user-main {
-    margin-left: 0;
-    width: 100%;
-}
-
-.vs-user-topbar .vs-topbar__right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.vs-user-topbar .vs-topbar__user {
-    font-size: 14px;
-    color: var(--vs-text-secondary);
-}
-
-.vs-user-topbar .vs-topbar__link {
-    font-size: 14px;
-    color: var(--vs-primary);
-    text-decoration: none;
-}
-
-.vs-user-topbar .vs-topbar__link:hover {
-    text-decoration: underline;
-}

@@ -8,7 +8,7 @@
     'use strict';
 
     global.VS = global.VS || {};
-    global.VS.version = '1.1.0';
+    global.VS.version = '1.1.1';
 
     /**
      * 从可能含 BOM / 杂讯的响应文本中解析 JSON

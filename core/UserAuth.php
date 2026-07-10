@@ -156,7 +156,7 @@ class UserAuth
             $pdo = Database::connect();
             $table = Database::table('user');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `username`, `email`, `created_at`, `last_login_at` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                'SELECT `id`, `username`, `email`, `avatar_url`, `created_at`, `last_login_at` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array(self::id()));
             return $stmt->fetch() ?: null;
@@ -305,5 +305,117 @@ class UserAuth
         }
 
         return null;
+    }
+
+    /**
+     * 更新当前用户账号（用户名、邮箱、头像、密码）
+     *
+     * @param string      $email
+     * @param string|null $newPassword
+     * @param string|null $oldPassword
+     * @param string|null $avatarUrl
+     * @param string|null $username
+     * @return true|string
+     */
+    public static function updateAccount($email, $newPassword = null, $oldPassword = null, $avatarUrl = null, $username = null)
+    {
+        if (!self::check()) {
+            return '请先登录';
+        }
+
+        if ($username !== null) {
+            $username = trim((string) $username);
+            if ($username === '') {
+                return '用户名不能为空';
+            }
+            if (strlen($username) < 3) {
+                return '用户名至少 3 个字符';
+            }
+            if (strlen($username) > 50) {
+                return '用户名不能超过 50 个字符';
+            }
+            if (!preg_match('/^[a-zA-Z0-9_\x{4e00}-\x{9fa5}]+$/u', $username)) {
+                return '用户名仅支持中文、字母、数字和下划线';
+            }
+        }
+
+        $email = trim($email);
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return '邮箱格式不正确';
+        }
+
+        $avatarUrl = $avatarUrl === null ? null : trim((string) $avatarUrl);
+        if ($avatarUrl !== null && $avatarUrl !== '' && !filter_var($avatarUrl, FILTER_VALIDATE_URL)) {
+            return '头像链接格式不正确';
+        }
+
+        if ($newPassword !== null && $newPassword !== '') {
+            if (strlen($newPassword) < 6) {
+                return '新密码至少 6 个字符';
+            }
+            if ($oldPassword === null || $oldPassword === '') {
+                return '修改密码需输入当前密码';
+            }
+
+            try {
+                $pdo = Database::connect();
+                $table = Database::table('user');
+                $stmt = $pdo->prepare('SELECT `password` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
+                $stmt->execute(array(self::id()));
+                $row = $stmt->fetch();
+                if (!$row || $row['password'] !== vs_password_hash($oldPassword)) {
+                    return '当前密码不正确';
+                }
+            } catch (Exception $e) {
+                return '验证失败，请稍后再试';
+            }
+        }
+
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('user');
+
+            if ($username !== null) {
+                $check = $pdo->prepare('SELECT `id` FROM `' . $table . '` WHERE `username` = ? AND `id` != ? LIMIT 1');
+                $check->execute(array($username, self::id()));
+                if ($check->fetch()) {
+                    return '用户名已被占用';
+                }
+            }
+
+            $checkEmail = $pdo->prepare('SELECT `id` FROM `' . $table . '` WHERE `email` = ? AND `id` != ? LIMIT 1');
+            $checkEmail->execute(array($email, self::id()));
+            if ($checkEmail->fetch()) {
+                return '该邮箱已被其他账号使用';
+            }
+
+            $savedAvatar = $avatarUrl !== null ? $avatarUrl : '';
+
+            if ($newPassword !== null && $newPassword !== '') {
+                if ($username !== null) {
+                    $stmt = $pdo->prepare(
+                        'UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar_url` = ?, `password` = ? WHERE `id` = ?'
+                    );
+                    $stmt->execute(array($username, $email, $savedAvatar, vs_password_hash($newPassword), self::id()));
+                } else {
+                    $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar_url` = ?, `password` = ? WHERE `id` = ?');
+                    $stmt->execute(array($email, $savedAvatar, vs_password_hash($newPassword), self::id()));
+                }
+            } elseif ($username !== null) {
+                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar_url` = ? WHERE `id` = ?');
+                $stmt->execute(array($username, $email, $savedAvatar, self::id()));
+            } else {
+                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar_url` = ? WHERE `id` = ?');
+                $stmt->execute(array($email, $savedAvatar, self::id()));
+            }
+
+            if ($username !== null && isset($_SESSION['vs_user_username'])) {
+                $_SESSION['vs_user_username'] = $username;
+            }
+
+            return true;
+        } catch (Exception $e) {
+            return '保存失败：' . $e->getMessage();
+        }
     }
 }
