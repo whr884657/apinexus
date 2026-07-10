@@ -27,3 +27,6 @@ Thumbs.db
 # 发行包（本地打包产物）
 release/
 release/*.zip
+
+# 本地参考文档（其它项目 README 范本，勿提交）
+README - 副本.md

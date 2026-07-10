@@ -104,7 +104,7 @@ Get-ChildItem -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }
 | 2 | `update.json` | `version`、`release_date`、`title`、`changes` |
 | 3 | `update-log.json` | 在 `versions` 中插入新版本对象 |
 | 4 | `发行说明/misc-api1.0.NN.md` | 新建，含变更说明与下载链接 |
-| 5 | **`README.md`** | **必须**：当前版本号、本版特性/变更摘要、目录或能力变动 |
+| 5 | **`README.md`** | **必须**：徽章版本、功能列表、目录结构、版本记录；规范见 `README编写要点.md` |
 | 6 | **仓库简介** | **建议**：系统能力变动时同步优化 Gitee 仓库描述 |
 
 **若有数据库结构变更：**
@@ -261,6 +261,7 @@ curl.exe -sL -o "$env:TEMP\misc-api$ver-dl.zip" `
 |------|------|
 | `Gitee推送与发行流程.md` | 本文：完整固定流程 |
 | `发布检查清单.md` | 发版打勾速查 |
+| `README编写要点.md` | README 结构与写法规范 |
 | `README.md` | 项目说明（每版须针对性更新） |
 | `LICENSE` | 开源协议 |
 | `core/Updater.php` | 在线更新 |
