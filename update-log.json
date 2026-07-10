@@ -1,5 +1,17 @@
 {
     "versions": {
+        "1.3.0": {
+            "title": "misc-api 1.3.0 OAuth 聚合登录与用户管理",
+            "date": "2026-07-11",
+            "db_changes": true,
+            "changes": [
+                "新增用户端 QQ / Gitee OAuth 聚合登录（须先注册，首次绑定需验证账号密码）",
+                "用户表新增 oauth_qq_openid、oauth_gitee_id 绑定字段",
+                "后台新增用户管理页（头像、用户名、绑定状态、最后登录，响应式列表/表格）",
+                "系统设置新增第三方登录 OAuth 配置（QQ 互联、Gitee）",
+                "登录页新增第三方登录入口（小图标样式）"
+            ]
+        },
         "1.2.0": {
             "title": "misc-api 1.2.0 注册策略与界面优化",
             "date": "2026-07-11",

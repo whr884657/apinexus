@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.2.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-1.3.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -21,10 +21,11 @@
 **主要能力：**
 
 - Web 五步安装向导，自动创建数据表与初始配置
-- **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册）
-- 分组侧边栏管理后台（控制台、账号设置、系统设置、系统升级、关于）
+- **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
+- 分组侧边栏管理后台（控制台、用户管理、系统设置、系统升级、关于）
 - 用户中心：自适应侧边栏 + 顶栏，控制台与账号设置
 - 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
+- 用户登录支持 QQ / Gitee 第三方登录（须先注册并绑定）
 - 管理员认证：登录、忘记密码（邮箱验证码）、CSRF 与登录频率限制
 - 站点信息、注册邮箱后缀白名单、SMTP 邮箱发信
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
@@ -56,7 +57,9 @@
 |------|------|------|
 | 前台首页 | `/` | 引导进入用户中心（不展示管理后台入口） |
 | Web 安装向导 | `/install/` | 五步安装，执行 `install/database.sql` |
-| 用户登录 | `/user/login.php` | 用户登录入口 |
+| 用户登录 | `/user/login.php` | 账号密码登录 + QQ/Gitee 第三方登录 |
+| OAuth 回调 | `/user/oauth/callback.php` | 第三方授权回调（由平台配置） |
+| OAuth 绑定 | `/user/oauth/bind.php` | 首次第三方登录绑定已有账号 |
 | 用户注册 | `/user/register.php` | 邮箱验证码注册（需管理员已配置发信） |
 | 用户忘记密码 | `/user/forgot.php` | 邮箱验证码重置密码 |
 | 用户中心 | `/user/index.php` | 登录后控制台首页 |
@@ -64,8 +67,9 @@
 | 管理员登录 | `/admin/login.php` | 管理员登录（安装时创建账号，无开放注册） |
 | 管理员忘记密码 | `/admin/forgot.php` | 邮箱验证码重置（需配置 SMTP） |
 | 管理控制台 | `/admin/index.php` | 后台首页，展示站点与版本信息 |
+| 用户管理 | `/admin/users.php` | 查看全部用户、OAuth 绑定状态 |
 | 账号设置 | `/admin/account.php` | 修改用户名、邮箱、头像、密码 |
-| 系统设置 | `/admin/settings.php` | 站点信息、用户注册策略、邮箱发信配置 |
+| 系统设置 | `/admin/settings.php` | 站点信息、注册策略、OAuth、邮箱发信 |
 | 系统升级 | `/admin/upgrade.php` | 手动检测更新、安装更新、查看更新记录 |
 | 关于 | `/admin/about.php` | 系统与环境信息 |
 | 更新 API | `/admin/update.php` | 在线更新接口（版本检测 / 分步更新） |
@@ -190,6 +194,17 @@ location / {
 ---
 
 ## 版本记录
+
+### v1.3.0（2026-07-11）
+
+**类型：** 大版本（OAuth 聚合登录 + 用户管理）
+
+**变更说明：**
+
+- 用户登录页支持 QQ / Gitee OAuth（须先注册，首次绑定验证账号密码）
+- 用户表新增 `oauth_qq_openid`、`oauth_gitee_id`
+- 后台新增用户管理页（响应式表格/卡片）
+- 系统设置新增 OAuth 配置
 
 ### v1.2.0（2026-07-11）
 

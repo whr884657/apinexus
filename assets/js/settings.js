@@ -82,7 +82,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
-        ['siteForm', 'registerForm', 'mailForm', 'testMailForm'].forEach(function (id) {
+        ['siteForm', 'registerForm', 'oauthForm', 'mailForm', 'testMailForm'].forEach(function (id) {
             bindAjaxForm(document.getElementById(id));
         });
     });

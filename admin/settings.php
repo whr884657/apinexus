@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/settings.php
- * 作用：misc-api 后台系统设置（站点信息、用户注册、邮箱发信）
+ * 作用：misc-api 后台系统设置（站点信息、用户注册、OAuth、邮箱发信）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */
@@ -35,6 +35,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $suffixes = RegisterPolicy::parseSuffixInput($input);
             RegisterPolicy::saveEmailSuffixes($suffixes);
             AjaxResponse::success('注册设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败：' . $e->getMessage());
+        }
+    }
+
+    if ($action === 'save_oauth') {
+        try {
+            OAuthConfig::save(
+                array(
+                    'enabled' => isset($_POST['qq_enabled']) ? '1' : '',
+                    'app_id'  => isset($_POST['qq_app_id']) ? $_POST['qq_app_id'] : '',
+                    'app_key' => isset($_POST['qq_app_key']) ? $_POST['qq_app_key'] : '',
+                ),
+                array(
+                    'enabled'       => isset($_POST['gitee_enabled']) ? '1' : '',
+                    'client_id'     => isset($_POST['gitee_client_id']) ? $_POST['gitee_client_id'] : '',
+                    'client_secret' => isset($_POST['gitee_client_secret']) ? $_POST['gitee_client_secret'] : '',
+                )
+            );
+            AjaxResponse::success('OAuth 设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败：' . $e->getMessage());
         }
@@ -82,6 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 Config::clearCache();
 $vsCfg = Config::all();
 $registerSuffixes = RegisterPolicy::formatSuffixInput(RegisterPolicy::getPolicy()['email_suffixes']);
+$oauthCfg = OAuthConfig::getAll();
+$oauthQqCallback = OAuthConfig::callbackUrl('qq');
+$oauthGiteeCallback = OAuthConfig::callbackUrl('gitee');
 
 vs_admin_layout_start('系统设置', 'settings');
 ?>
@@ -171,6 +194,69 @@ vs_admin_accordion_start(
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存注册设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-oauth',
+    '第三方登录',
+    '配置 QQ / Gitee OAuth，仅用于用户登录页聚合登录'
+);
+?>
+    <form method="post" action="" class="vs-form" id="oauthForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_oauth">
+        <?php
+        vs_render_notice(
+            'info',
+            '使用说明',
+            '<p>用户须先完成邮箱注册，首次使用第三方登录时需验证已有账号密码完成绑定。</p>'
+            . '<p>QQ 回调：<code>' . vs_e($oauthQqCallback) . '</code></p>'
+            . '<p>Gitee 回调：<code>' . vs_e($oauthGiteeCallback) . '</code></p>',
+            array('allow_html' => true, 'compact' => true)
+        );
+        ?>
+        <h4 class="vs-form-subtitle">QQ 互联</h4>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="qq_enabled" value="1" <?php echo !empty($oauthCfg['qq']['enabled']) ? 'checked' : ''; ?>>
+                <span>启用 QQ 登录</span>
+            </label>
+        </div>
+        <div class="vs-form-grid">
+            <div class="vs-form-row">
+                <label class="vs-label">App ID</label>
+                <input type="text" name="qq_app_id" class="vs-input" value="<?php echo vs_e($oauthCfg['qq']['app_id']); ?>">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label">App Key</label>
+                <input type="text" name="qq_app_key" class="vs-input" value="<?php echo vs_e($oauthCfg['qq']['app_key']); ?>">
+            </div>
+        </div>
+
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">Gitee OAuth</h4>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="gitee_enabled" value="1" <?php echo !empty($oauthCfg['gitee']['enabled']) ? 'checked' : ''; ?>>
+                <span>启用 Gitee 登录</span>
+            </label>
+        </div>
+        <div class="vs-form-grid">
+            <div class="vs-form-row">
+                <label class="vs-label">Client ID</label>
+                <input type="text" name="gitee_client_id" class="vs-input" value="<?php echo vs_e($oauthCfg['gitee']['client_id']); ?>">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label">Client Secret</label>
+                <input type="text" name="gitee_client_secret" class="vs-input" value="<?php echo vs_e($oauthCfg['gitee']['client_secret']); ?>">
+            </div>
+        </div>
+
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存 OAuth 设置</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>

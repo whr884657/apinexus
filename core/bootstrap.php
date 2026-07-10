@@ -24,6 +24,13 @@ require_once VS_ROOT . '/core/SystemInfo.php';
 require_once VS_ROOT . '/core/Updater.php';
 require_once VS_ROOT . '/core/UpdateLog.php';
 require_once VS_ROOT . '/core/UserAvatar.php';
+require_once VS_ROOT . '/core/UserManager.php';
+require_once VS_ROOT . '/core/oauth/HttpClient.php';
+require_once VS_ROOT . '/core/oauth/OAuthConfig.php';
+require_once VS_ROOT . '/core/oauth/OAuthState.php';
+require_once VS_ROOT . '/core/oauth/OAuthService.php';
+require_once VS_ROOT . '/core/oauth/qq/QQOAuth.php';
+require_once VS_ROOT . '/core/oauth/gitee/GiteeOAuth.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     AuthSecurity::configureSessionCookies();

@@ -49,6 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 $expiredMsg = (isset($_GET['expired']) && $_GET['expired'] === '1') ? '登录已超时，请重新登录' : '';
+$oauthError = isset($_GET['oauth_error']) ? trim((string) $_GET['oauth_error']) : '';
+$oauthProviders = OAuthService::enabledProviders();
 
 vs_auth_head('用户登录');
 ?>
@@ -90,6 +92,24 @@ vs_auth_head('用户登录');
 
                 <?php echo vs_auth_submit_btn('登 录', 'loginBtn', 'login-btn'); ?>
 
+                <?php if ($oauthProviders['qq'] || $oauthProviders['gitee']): ?>
+                <div class="oauth-section">
+                    <div class="oauth-section__label">第三方登录</div>
+                    <div class="oauth-section__icons">
+                        <?php if ($oauthProviders['qq']): ?>
+                            <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=qq" class="oauth-icon" title="QQ 登录" aria-label="QQ 登录">
+                                <img src="<?php echo vs_e($base); ?>/assets/img/QQ.svg" alt="" width="22" height="22">
+                            </a>
+                        <?php endif; ?>
+                        <?php if ($oauthProviders['gitee']): ?>
+                            <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=gitee" class="oauth-icon" title="Gitee 登录" aria-label="Gitee 登录">
+                                <img src="<?php echo vs_e($base); ?>/assets/img/gitee.svg" alt="" width="22" height="22">
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <div class="divider">
                     还没有账号？<a href="<?php echo vs_e($base); ?>/user/register.php">立即注册</a>
                 </div>
@@ -107,6 +127,7 @@ vs_auth_head('用户登录');
     var loginBtn = document.getElementById('loginBtn');
     var rememberEl = document.getElementById('rememberCredentials');
     var expiredMsg = <?php echo json_encode($expiredMsg, JSON_UNESCAPED_UNICODE); ?>;
+    var oauthError = <?php echo json_encode($oauthError, JSON_UNESCAPED_UNICODE); ?>;
     var storageKey = 'vs_user_login_credentials';
 
     if (!form) return;
@@ -165,6 +186,10 @@ vs_auth_head('用户登录');
 
     if (expiredMsg) {
         showMessage(expiredMsg, 'error');
+    }
+
+    if (oauthError) {
+        showMessage(oauthError, 'error');
     }
 
     form.addEventListener('submit', function (e) {

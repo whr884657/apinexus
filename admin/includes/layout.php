@@ -21,6 +21,12 @@ function vs_admin_menu_groups()
             'url'   => '/admin/index.php',
         ),
         array(
+            'id'    => 'users',
+            'title' => '用户管理',
+            'icon'  => 'users',
+            'url'   => '/admin/users.php',
+        ),
+        array(
             'id'       => 'system',
             'title'    => '系统',
             'icon'     => 'setting',

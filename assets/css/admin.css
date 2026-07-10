@@ -1203,3 +1203,127 @@ select.vs-input {
     margin-top: 4px;
     padding-top: 0;
 }
+
+/* ── 用户管理 ── */
+.vs-users-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--vs-border);
+    flex-shrink: 0;
+}
+
+.vs-users-cell-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.vs-users-name {
+    font-weight: 600;
+    color: var(--vs-text);
+}
+
+.vs-users-meta {
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+    margin-top: 2px;
+}
+
+.vs-oauth-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-right: 4px;
+    border: 1px solid transparent;
+}
+
+.vs-oauth-badge--qq {
+    background: #fff8e8;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
+.vs-oauth-badge--gitee {
+    background: #fff1f2;
+    color: #be123c;
+    border-color: #fecdd3;
+}
+
+.vs-oauth-badge--none {
+    background: var(--vs-content-bg);
+    color: var(--vs-text-secondary);
+    border-color: var(--vs-border);
+}
+
+.vs-users-mobile {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vs-user-card {
+    border: 1px solid var(--vs-border);
+    border-radius: 12px;
+    padding: 14px;
+    background: var(--vs-white);
+    box-shadow: var(--vs-shadow);
+}
+
+.vs-user-card__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.vs-user-card__title {
+    min-width: 0;
+}
+
+.vs-user-card__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.vs-user-card__cell {
+    background: var(--vs-content-bg);
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-width: 0;
+}
+
+.vs-user-card__label {
+    display: block;
+    font-size: 11px;
+    color: var(--vs-text-secondary);
+    margin-bottom: 4px;
+}
+
+.vs-user-card__value {
+    font-size: 13px;
+    color: var(--vs-text);
+    word-break: break-word;
+}
+
+@media (max-width: 768px) {
+    .vs-users-desktop {
+        display: none;
+    }
+
+    .vs-users-mobile {
+        display: flex;
+    }
+}
+
+@media (min-width: 769px) {
+    .vs-users-mobile {
+        display: none;
+    }
+}

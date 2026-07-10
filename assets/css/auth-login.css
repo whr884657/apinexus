@@ -478,6 +478,47 @@ body {
     font-size: 14px;
 }
 
+.oauth-section {
+    margin: 18px 0 6px;
+}
+
+.oauth-section__label {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.oauth-section__icons {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.oauth-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid #e8e8e8;
+    background: #fafafa;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    text-decoration: none;
+}
+
+.oauth-icon:hover {
+    border-color: #d0d0d0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+.oauth-icon img {
+    display: block;
+    width: 22px;
+    height: 22px;
+}
+
 .footer a, .footer span {
     color: #fff;
 }

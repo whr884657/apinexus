@@ -156,12 +156,81 @@ class UserAuth
             $pdo = Database::connect();
             $table = Database::table('user');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `username`, `email`, `avatar_url`, `created_at`, `last_login_at` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                'SELECT `id`, `username`, `email`, `avatar_url`, `oauth_qq_openid`, `oauth_gitee_id`, `created_at`, `last_login_at` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array(self::id()));
             return $stmt->fetch() ?: null;
         } catch (Exception $e) {
             return null;
+        }
+    }
+
+    /**
+     * 校验账号密码并返回用户行（不写入会话）
+     *
+     * @param string $account
+     * @param string $password
+     * @return array|null
+     */
+    public static function verifyCredentials($account, $password)
+    {
+        $account = trim((string) $account);
+        if ($account === '') {
+            return null;
+        }
+
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('user');
+            $hash = vs_password_hash($password);
+            $stmt = $pdo->prepare(
+                'SELECT * FROM `' . $table . '` WHERE (`username` = ? OR `email` = ?) AND `password` = ? AND `status` = 1 LIMIT 1'
+            );
+            $stmt->execute(array($account, $account, $hash));
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $user ?: null;
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * 按用户 ID 登录（OAuth 等场景）
+     *
+     * @param int $userId
+     * @return bool
+     */
+    public static function loginById($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return false;
+        }
+
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('user');
+            $stmt = $pdo->prepare('SELECT * FROM `' . $table . '` WHERE `id` = ? AND `status` = 1 LIMIT 1');
+            $stmt->execute(array($userId));
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$user) {
+                return false;
+            }
+
+            $_SESSION[self::SESSION_KEY] = $userId;
+            $_SESSION['vs_user_username'] = $user['username'];
+            self::touchActivity();
+
+            $upd = $pdo->prepare('UPDATE `' . $table . '` SET `last_login_at` = NOW() WHERE `id` = ?');
+            $upd->execute(array($userId));
+
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
+
+            return true;
+        } catch (Exception $e) {
+            return false;
         }
     }
 
