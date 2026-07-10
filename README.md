@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.5.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-1.6.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -22,9 +22,9 @@
 
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
-- 分组侧边栏管理后台（控制台、用户管理、系统设置、系统升级、关于）
+- 分组侧边栏管理后台（控制台、API 管理、内容运营、交易财务、系统管理）
+- 用户中心侧边栏：控制台、管理、积分变动、接口列表、账号设置（部分为占位页）
 - 用户管理：列表查看、OAuth 绑定状态、封禁/解封/删除（AJAX 无整页刷新）
-- 用户中心：自适应侧边栏 + 顶栏，控制台与账号设置
 - 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
 - 用户登录支持 QQ / Gitee 第三方登录（须先注册并绑定）
 - 管理员认证：登录、忘记密码（邮箱验证码）、CSRF 与登录频率限制
@@ -64,11 +64,18 @@
 | 用户注册 | `/user/register.php` | 邮箱验证码注册（需管理员已配置发信） |
 | 用户忘记密码 | `/user/forgot.php` | 邮箱验证码重置密码 |
 | 用户中心 | `/user/index.php` | 登录后控制台首页 |
+| 用户管理（占位） | `/user/manage.php` | 后续开发 |
+| 积分变动（占位） | `/user/points.php` | 后续开发 |
+| 接口列表（占位） | `/user/apis.php` | 后续开发 |
 | 用户账号设置 | `/user/account.php` | 修改资料、头像、密码 |
 | 管理员登录 | `/admin/login.php` | 管理员登录（安装时创建账号，无开放注册） |
 | 管理员忘记密码 | `/admin/forgot.php` | 邮箱验证码重置（需配置 SMTP） |
 | 管理控制台 | `/admin/index.php` | 后台首页，展示站点与版本信息 |
-| 用户管理 | `/admin/users.php` | 查看全部用户、OAuth 绑定状态 |
+| API 管理（占位） | `/admin/api/` | 接口列表、文档、反馈 |
+| 内容运营（占位） | `/admin/content/` | 文章、评论、友链、合作伙伴 |
+| 交易财务（占位） | `/admin/finance/` | 支付、订单、赞助、积分 |
+| 用户管理 | `/admin/users.php` | 查看全部用户、封禁/解封/删除 |
+| 日志查询（占位） | `/admin/system/logs.php` | 后续开发 |
 | 账号设置 | `/admin/account.php` | 修改用户名、邮箱、头像、密码 |
 | 系统设置 | `/admin/settings.php` | 站点信息、注册策略、OAuth、邮箱发信 |
 | 系统升级 | `/admin/upgrade.php` | 手动检测更新、安装更新、查看更新记录 |
@@ -113,7 +120,12 @@ misc-api/
 │   ├── includes/
 │   │   ├── layout.php          # 侧边栏布局
 │   │   └── auth_layout.php     # 登录/注册/忘记密码布局
+│   ├── api/                    # API 管理（占位）
+│   ├── content/                # 内容运营（占位）
+│   ├── finance/                # 交易财务（占位）
+│   ├── system/                 # 系统管理扩展（日志等）
 │   ├── index.php               # 控制台
+│   ├── users.php               # 用户管理
 │   ├── login.php / forgot.php
 │   ├── account.php             # 账号设置
 │   ├── settings.php            # 系统设置
@@ -124,6 +136,7 @@ misc-api/
 │   ├── init.php
 │   ├── includes/layout.php
 │   ├── index.php
+│   ├── manage.php / points.php / apis.php  # 占位
 │   ├── account.php
 │   └── login.php / register.php / forgot.php
 ├── assets/
@@ -195,6 +208,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v1.6.0（2026-07-11）
+
+**类型：** 大版本（双端侧边栏导航扩展）
+
+**变更说明：**
+
+- 用户中心新增：管理、积分变动、接口列表（一级菜单占位页）
+- 管理员后台新增：API 管理、内容运营、交易财务、系统管理四大分组
+- 系统管理整合用户管理、日志查询等；请求规范强调静态更新优先
 
 ### v1.5.0（2026-07-11）
 

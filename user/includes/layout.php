@@ -19,6 +19,24 @@ function vs_user_menu_groups()
             'url'   => '/user/index.php',
         ),
         array(
+            'id'    => 'manage',
+            'title' => '管理',
+            'icon'  => 'folder',
+            'url'   => '/user/manage.php',
+        ),
+        array(
+            'id'    => 'points',
+            'title' => '积分变动',
+            'icon'  => 'archive',
+            'url'   => '/user/points.php',
+        ),
+        array(
+            'id'    => 'api-list',
+            'title' => '接口列表',
+            'icon'  => 'cloud',
+            'url'   => '/user/apis.php',
+        ),
+        array(
             'id'    => 'account',
             'title' => '账号设置',
             'icon'  => 'user',
@@ -150,4 +168,20 @@ function vs_user_layout_end(array $extraScripts = array())
         echo '<script src="' . vs_e($vsBase) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '"></script>' . "\n";
     }
     echo '</body></html>';
+}
+
+/**
+ * 占位页面（功能开发中）
+ *
+ * @param string $pageTitle
+ * @param string $activeMenu
+ * @return void
+ */
+function vs_user_stub_page($pageTitle, $activeMenu)
+{
+    vs_user_layout_start($pageTitle, $activeMenu);
+    echo '<div class="vs-panel">';
+    echo '<p class="vs-panel__desc">功能开发中，敬请期待。</p>';
+    echo '</div>';
+    vs_user_layout_end();
 }

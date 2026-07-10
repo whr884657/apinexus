@@ -21,18 +21,46 @@ function vs_admin_menu_groups()
             'url'   => '/admin/index.php',
         ),
         array(
-            'id'    => 'users',
-            'title' => '用户管理',
-            'icon'  => 'users',
-            'url'   => '/admin/users.php',
+            'id'       => 'api',
+            'title'    => 'API 管理',
+            'icon'     => 'cloud',
+            'children' => array(
+                array('id' => 'api-list', 'title' => '接口列表', 'url' => '/admin/api/list.php'),
+                array('id' => 'api-docs', 'title' => '接口文档', 'url' => '/admin/api/docs.php'),
+                array('id' => 'api-feedback', 'title' => '接口反馈', 'url' => '/admin/api/feedback.php'),
+            ),
         ),
         array(
-            'id'       => 'system',
-            'title'    => '系统',
+            'id'       => 'content',
+            'title'    => '内容运营',
+            'icon'     => 'folder',
+            'children' => array(
+                array('id' => 'articles', 'title' => '文章管理', 'url' => '/admin/content/articles.php'),
+                array('id' => 'comments', 'title' => '评论管理', 'url' => '/admin/content/comments.php'),
+                array('id' => 'links', 'title' => '友情链接', 'url' => '/admin/content/links.php'),
+                array('id' => 'partners', 'title' => '合作伙伴', 'url' => '/admin/content/partners.php'),
+            ),
+        ),
+        array(
+            'id'       => 'finance',
+            'title'    => '交易财务',
+            'icon'     => 'archive',
+            'children' => array(
+                array('id' => 'payment', 'title' => '支付配置', 'url' => '/admin/finance/payment.php'),
+                array('id' => 'orders', 'title' => '订单管理', 'url' => '/admin/finance/orders.php'),
+                array('id' => 'sponsor', 'title' => '赞助管理', 'url' => '/admin/finance/sponsor.php'),
+                array('id' => 'points', 'title' => '积分变动', 'url' => '/admin/finance/points.php'),
+            ),
+        ),
+        array(
+            'id'       => 'sysmgmt',
+            'title'    => '系统管理',
             'icon'     => 'setting',
             'children' => array(
+                array('id' => 'users', 'title' => '用户管理', 'url' => '/admin/users.php'),
                 array('id' => 'account', 'title' => '账号设置', 'url' => '/admin/account.php'),
                 array('id' => 'settings', 'title' => '系统设置', 'url' => '/admin/settings.php'),
+                array('id' => 'logs', 'title' => '日志查询', 'url' => '/admin/system/logs.php'),
                 array('id' => 'upgrade', 'title' => '系统升级', 'url' => '/admin/upgrade.php'),
                 array('id' => 'about', 'title' => '关于', 'url' => '/admin/about.php'),
             ),
@@ -123,13 +151,13 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '')
         $isOpen = $hasChildren && $groupActive;
 
         if ($hasChildren) {
-            $badgeOnGroup = ($group['id'] === 'system' && $showUpdateSidebarBadge && !$isOpen);
+            $badgeOnGroup = ($group['id'] === 'sysmgmt' && $showUpdateSidebarBadge && !$isOpen);
             echo '<div class="vs-sidebar__group' . ($isOpen ? ' is-open' : '') . '" data-group="' . vs_e($group['id']) . '">' . "\n";
             echo '<button type="button" class="vs-sidebar__group-btn' . ($groupActive ? ' is-active' : '') . '" aria-expanded="' . ($isOpen ? 'true' : 'false') . '">';
             echo '<i class="vs-icon vs-icon--' . vs_e($group['icon']) . '"></i>';
             echo '<span class="vs-sidebar__text">';
             echo vs_e($group['title']);
-            if ($group['id'] === 'system') {
+            if ($group['id'] === 'sysmgmt') {
                 echo '<span class="vs-sidebar__badge" id="vsUpdateBadgeGroup" aria-hidden="true"';
                 echo $badgeOnGroup ? '>' : ' hidden>';
                 echo '</span>';
@@ -140,10 +168,10 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '')
             echo '<div class="vs-sidebar__sub">' . "\n";
             foreach ($group['children'] as $child) {
                 $childActive = ($child['id'] === $activeMenu) ? ' is-active' : '';
-                $badgeOnUpgrade = ($group['id'] === 'system' && $child['id'] === 'upgrade' && $showUpdateSidebarBadge && $isOpen);
+                $badgeOnUpgrade = ($group['id'] === 'sysmgmt' && $child['id'] === 'upgrade' && $showUpdateSidebarBadge && $isOpen);
                 echo '<a href="' . vs_e($base . $child['url']) . '" class="vs-sidebar__sublink' . $childActive . '">';
                 echo '<span class="vs-sidebar__text">' . vs_e($child['title']) . '</span>';
-                if ($group['id'] === 'system' && $child['id'] === 'upgrade') {
+                if ($group['id'] === 'sysmgmt' && $child['id'] === 'upgrade') {
                     echo '<span class="vs-sidebar__badge" id="vsUpdateBadgeUpgrade" aria-hidden="true"';
                     echo $badgeOnUpgrade ? '>' : ' hidden>';
                     echo '</span>';
