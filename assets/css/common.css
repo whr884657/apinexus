@@ -305,11 +305,8 @@ a:hover {
     border: 1px solid #ffe4b8;
 }
 
-/* Notice — 表单说明、操作提醒等统一提示块 */
+/* Notice — 表单说明、操作提醒等统一提示块（仅保留色块，无图标） */
 .vs-notice {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
     padding: 14px 16px;
     margin-bottom: 16px;
     border-radius: 10px;
@@ -317,20 +314,6 @@ a:hover {
     font-size: 14px;
     line-height: 1.65;
     color: var(--vs-text);
-}
-
-.vs-notice__icon {
-    flex-shrink: 0;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-    margin-top: 1px;
 }
 
 .vs-notice__title {
@@ -378,19 +361,9 @@ a:hover {
     border-color: #c8dcff;
 }
 
-.vs-notice--info .vs-notice__icon {
-    background: #2563eb;
-    color: #fff;
-}
-
 .vs-notice--warning {
     background: #fff8eb;
     border-color: #f5d9a8;
-}
-
-.vs-notice--warning .vs-notice__icon {
-    background: #d97706;
-    color: #fff;
 }
 
 .vs-notice--tip {
@@ -398,29 +371,14 @@ a:hover {
     border-color: #c8e6c9;
 }
 
-.vs-notice--tip .vs-notice__icon {
-    background: #059669;
-    color: #fff;
-}
-
 .vs-notice--success {
     background: #f0faf5;
     border-color: #b8e6cc;
 }
 
-.vs-notice--success .vs-notice__icon {
-    background: #059669;
-    color: #fff;
-}
-
 .vs-notice--danger {
     background: #fff0f0;
     border-color: #ffd6d6;
-}
-
-.vs-notice--danger .vs-notice__icon {
-    background: #dc2626;
-    color: #fff;
 }
 
 .vs-notice--compact {
@@ -434,12 +392,6 @@ a:hover {
     margin: 6px 0 0;
     font-size: 12px;
     border-radius: 8px;
-}
-
-.vs-notice--field .vs-notice__icon {
-    width: 18px;
-    height: 18px;
-    font-size: 11px;
 }
 
 .vs-notice--field .vs-notice__title {

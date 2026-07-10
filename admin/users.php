@@ -46,7 +46,7 @@ vs_admin_layout_start('用户管理', 'users');
 <div class="vs-panel">
     <div class="vs-panel__header">
         <h2 class="vs-panel__title">用户列表</h2>
-        <p class="vs-panel__desc">共 <?php echo (int) $userCount; ?> 位用户，可查看第三方账号绑定状态</p>
+        <p class="vs-panel__desc">共 <?php echo (int) $userCount; ?> 位用户</p>
     </div>
 
     <?php if ($userCount === 0): ?>

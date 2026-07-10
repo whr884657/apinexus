@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.3.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-1.3.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -194,6 +194,17 @@ location / {
 ---
 
 ## 版本记录
+
+### v1.3.1（2026-07-11）
+
+**类型：** 小版本（OAuth 体验与安全优化）
+
+**变更说明：**
+
+- 登录页第三方图标居中，位于登录按钮正下方
+- 用户账号设置支持第三方绑定/解绑
+- OAuth 安全加固（state intent、授权码防重放、会话完整性、频率限制）
+- 用户管理移动端卡片紧凑化；Notice 提示去除图标
 
 ### v1.3.0（2026-07-11）
 

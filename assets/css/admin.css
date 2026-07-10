@@ -1319,11 +1319,125 @@ select.vs-input {
 
     .vs-users-mobile {
         display: flex;
+        gap: 8px;
+    }
+
+    .vs-user-card {
+        padding: 10px 12px;
+        border-radius: 10px;
+        box-shadow: none;
+    }
+
+    .vs-user-card__head {
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .vs-users-avatar {
+        width: 32px;
+        height: 32px;
+    }
+
+    .vs-users-name {
+        font-size: 14px;
+    }
+
+    .vs-users-meta {
+        font-size: 11px;
+    }
+
+    .vs-user-card__grid {
+        gap: 6px;
+    }
+
+    .vs-user-card__cell {
+        padding: 6px 8px;
+        border-radius: 6px;
+    }
+
+    .vs-user-card__label {
+        font-size: 10px;
+        margin-bottom: 2px;
+    }
+
+    .vs-user-card__value {
+        font-size: 12px;
+    }
+
+    .vs-oauth-badge {
+        font-size: 11px;
+        padding: 1px 6px;
     }
 }
 
 @media (min-width: 769px) {
     .vs-users-mobile {
         display: none;
+    }
+}
+
+/* ── 账号设置 · 第三方绑定 ── */
+.vs-oauth-bind-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--vs-border);
+}
+
+.vs-oauth-bind-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vs-oauth-bind-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--vs-border);
+    border-radius: 10px;
+    background: var(--vs-content-bg);
+}
+
+.vs-oauth-bind-item__info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.vs-oauth-bind-item__icon {
+    flex-shrink: 0;
+    display: block;
+}
+
+.vs-oauth-bind-item__name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--vs-text);
+}
+
+.vs-oauth-bind-item__status {
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+    margin-top: 2px;
+}
+
+.vs-oauth-bind-item__action {
+    flex-shrink: 0;
+}
+
+.vs-oauth-unbind-form {
+    margin: 0;
+}
+
+@media (max-width: 480px) {
+    .vs-oauth-bind-item {
+        padding: 10px 12px;
+    }
+
+    .vs-oauth-bind-item__name {
+        font-size: 13px;
     }
 }

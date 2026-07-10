@@ -10,8 +10,34 @@ $error = '';
 $success = '';
 $avatarUrl = $vsUser && isset($vsUser['avatar_url']) ? trim((string) $vsUser['avatar_url']) : '';
 $avatarPreview = UserAvatar::resolve($vsUser);
+$oauthProviders = OAuthService::enabledProviders();
+$oauthBindings = OAuthService::bindingsForUser((int) $vsUser['id']);
+
+if (isset($_GET['oauth_error']) && trim((string) $_GET['oauth_error']) !== '') {
+    $error = trim((string) $_GET['oauth_error']);
+}
+if (isset($_GET['oauth_success']) && trim((string) $_GET['oauth_success']) !== '') {
+    $success = trim((string) $_GET['oauth_success']);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
+
+    if ($action === 'oauth_unbind') {
+        $token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
+        if (!AuthSecurity::validateCsrf($token)) {
+            $error = '请求无效，请刷新页面后重试';
+        } else {
+            $provider = isset($_POST['provider']) ? (string) $_POST['provider'] : '';
+            $result = OAuthService::unbindUser((int) $vsUser['id'], $provider);
+            if ($result === true) {
+                $success = '第三方账号已解绑';
+                $oauthBindings = OAuthService::bindingsForUser((int) $vsUser['id']);
+            } else {
+                $error = $result;
+            }
+        }
+    } else {
     $username = trim(isset($_POST['username']) ? $_POST['username'] : '');
     $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
     $avatarUrl = trim(isset($_POST['avatar_url']) ? $_POST['avatar_url'] : '');
@@ -38,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $error = $result;
         }
+    }
     }
 }
 
@@ -114,6 +141,61 @@ vs_user_layout_start('账号设置', 'account');
             </div>
         </div>
     </form>
+
+    <?php if ($oauthProviders['qq'] || $oauthProviders['gitee']): ?>
+    <div class="vs-form-section vs-oauth-bind-section">
+        <h3 class="vs-form-section__title">第三方账号</h3>
+        <?php vs_render_notice('info', '', '绑定后可在登录页使用第三方快捷登录；解绑后需重新验证账号密码才能再次绑定', array('compact' => true)); ?>
+        <div class="vs-oauth-bind-list">
+            <?php if ($oauthProviders['qq']): ?>
+            <div class="vs-oauth-bind-item">
+                <div class="vs-oauth-bind-item__info">
+                    <img src="<?php echo vs_e($vsBase); ?>/assets/img/QQ.svg" alt="" class="vs-oauth-bind-item__icon" width="24" height="24">
+                    <div>
+                        <div class="vs-oauth-bind-item__name">QQ</div>
+                        <div class="vs-oauth-bind-item__status"><?php echo $oauthBindings['qq'] ? '已绑定' : '未绑定'; ?></div>
+                    </div>
+                </div>
+                <div class="vs-oauth-bind-item__action">
+                    <?php if ($oauthBindings['qq']): ?>
+                        <form method="post" action="" class="vs-oauth-unbind-form">
+                            <input type="hidden" name="action" value="oauth_unbind">
+                            <input type="hidden" name="provider" value="qq">
+                            <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
+                            <button type="submit" class="vs-btn vs-btn--text vs-btn--sm">解绑</button>
+                        </form>
+                    <?php else: ?>
+                        <a href="<?php echo vs_e($vsBase); ?>/user/oauth/start.php?provider=qq&amp;intent=bind" class="vs-btn vs-btn--default vs-btn--sm">绑定</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            <?php if ($oauthProviders['gitee']): ?>
+            <div class="vs-oauth-bind-item">
+                <div class="vs-oauth-bind-item__info">
+                    <img src="<?php echo vs_e($vsBase); ?>/assets/img/gitee.svg" alt="" class="vs-oauth-bind-item__icon" width="24" height="24">
+                    <div>
+                        <div class="vs-oauth-bind-item__name">Gitee</div>
+                        <div class="vs-oauth-bind-item__status"><?php echo $oauthBindings['gitee'] ? '已绑定' : '未绑定'; ?></div>
+                    </div>
+                </div>
+                <div class="vs-oauth-bind-item__action">
+                    <?php if ($oauthBindings['gitee']): ?>
+                        <form method="post" action="" class="vs-oauth-unbind-form">
+                            <input type="hidden" name="action" value="oauth_unbind">
+                            <input type="hidden" name="provider" value="gitee">
+                            <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
+                            <button type="submit" class="vs-btn vs-btn--text vs-btn--sm">解绑</button>
+                        </form>
+                    <?php else: ?>
+                        <a href="<?php echo vs_e($vsBase); ?>/user/oauth/start.php?provider=gitee&amp;intent=bind" class="vs-btn vs-btn--default vs-btn--sm">绑定</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>
 
 <?php vs_user_layout_end(array('account.js')); ?>

@@ -479,7 +479,8 @@ body {
 }
 
 .oauth-section {
-    margin: 18px 0 6px;
+    margin: 16px 0 0;
+    text-align: center;
 }
 
 .oauth-section__label {
@@ -491,6 +492,7 @@ body {
 .oauth-section__icons {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 14px;
 }
 

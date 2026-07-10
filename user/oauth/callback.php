@@ -22,7 +22,7 @@ if ($error !== '') {
 
 $result = OAuthService::handleCallback($provider, $code, $state);
 
-if ($result['status'] === 'login' || $result['status'] === 'bind') {
+if ($result['status'] === 'login' || $result['status'] === 'bind' || $result['status'] === 'done') {
     vs_redirect(isset($result['redirect']) ? $result['redirect'] : $loginUrl);
 }
 

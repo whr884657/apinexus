@@ -11,16 +11,17 @@ class QQOAuth
     const PROVIDER = 'qq';
 
     /**
+     * @param array $context
      * @return string
      */
-    public static function authorizeUrl()
+    public static function authorizeUrl(array $context = array())
     {
         $cfg = OAuthConfig::getProvider(self::PROVIDER);
         $params = array(
             'response_type' => 'code',
             'client_id'     => $cfg['app_id'],
             'redirect_uri'  => OAuthConfig::callbackUrl(self::PROVIDER),
-            'state'         => OAuthState::create(self::PROVIDER),
+            'state'         => OAuthState::create(self::PROVIDER, $context),
             'scope'         => 'get_user_info',
         );
 

@@ -12,7 +12,7 @@ class OAuthService
      * @param string $provider qq|gitee
      * @return string|null
      */
-    public static function authorizeUrl($provider)
+    public static function authorizeUrl($provider, array $context = array())
     {
         $provider = self::normalizeProvider($provider);
         if ($provider === null || !OAuthConfig::isEnabled($provider)) {
@@ -20,10 +20,10 @@ class OAuthService
         }
 
         if ($provider === 'qq') {
-            return QQOAuth::authorizeUrl();
+            return QQOAuth::authorizeUrl($context);
         }
 
-        return GiteeOAuth::authorizeUrl();
+        return GiteeOAuth::authorizeUrl($context);
     }
 
     /**
@@ -50,7 +50,14 @@ class OAuthService
             return array('status' => 'error', 'msg' => '不支持的登录方式');
         }
 
-        if (!OAuthState::verify($provider, $state)) {
+        $rateMsg = AuthSecurity::checkOAuthCallbackAllowed();
+        if ($rateMsg !== null) {
+            return array('status' => 'error', 'msg' => $rateMsg);
+        }
+        AuthSecurity::recordOAuthCallback();
+
+        $stateData = OAuthState::consume($provider, $state);
+        if ($stateData === false) {
             return array('status' => 'error', 'msg' => '授权状态无效或已过期，请重试');
         }
 
@@ -59,9 +66,44 @@ class OAuthService
             return array('status' => 'error', 'msg' => '授权失败，未获取到授权码');
         }
 
+        if (self::isAuthorizationCodeUsed($code)) {
+            return array('status' => 'error', 'msg' => '授权码已失效，请重新发起登录');
+        }
+        self::markAuthorizationCodeUsed($code);
+
         $identity = self::fetchIdentity($provider, $code);
         if ($identity === null) {
             return array('status' => 'error', 'msg' => '获取第三方账号信息失败');
+        }
+
+        $intent = isset($stateData['intent']) ? $stateData['intent'] : 'login';
+        $bindUserId = isset($stateData['user_id']) ? (int) $stateData['user_id'] : 0;
+
+        if ($intent === 'bind' && $bindUserId > 0) {
+            if (!UserAuth::check() || UserAuth::id() !== $bindUserId) {
+                return array('status' => 'error', 'msg' => '绑定会话无效，请重新登录后再试');
+            }
+
+            $currentBindings = self::bindingsForUser($bindUserId);
+            if (!empty($currentBindings[$provider])) {
+                return array(
+                    'status'   => 'done',
+                    'redirect' => vs_base_url() . '/user/account.php?oauth_error=' . rawurlencode('该账号已绑定此第三方，无需重复操作'),
+                );
+            }
+
+            $bindResult = self::bindUser($bindUserId, $provider, $identity);
+            if ($bindResult !== true) {
+                return array(
+                    'status'   => 'done',
+                    'redirect' => vs_base_url() . '/user/account.php?oauth_error=' . rawurlencode($bindResult),
+                );
+            }
+
+            return array(
+                'status'   => 'done',
+                'redirect' => vs_base_url() . '/user/account.php?oauth_success=' . rawurlencode('第三方账号绑定成功'),
+            );
         }
 
         $user = self::findUserByIdentity($provider, $identity);
@@ -246,6 +288,55 @@ class OAuthService
     }
 
     /**
+     * @param int    $userId
+     * @param string $provider
+     * @return true|string
+     */
+    public static function unbindUser($userId, $provider)
+    {
+        $provider = self::normalizeProvider($provider);
+        if ($provider === null) {
+            return '不支持的解绑方式';
+        }
+
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return '用户不存在';
+        }
+
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('user');
+            $field = $provider === 'qq' ? 'oauth_qq_openid' : 'oauth_gitee_id';
+            $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `' . $field . '` = ? WHERE `id` = ?');
+            $stmt->execute(array('', $userId));
+            return true;
+        } catch (Exception $e) {
+            return '解绑失败：' . $e->getMessage();
+        }
+    }
+
+    /**
+     * @param string $provider
+     * @param int    $userId
+     * @return string|null
+     */
+    public static function validateBindStart($provider, $userId)
+    {
+        $provider = self::normalizeProvider($provider);
+        if ($provider === null || !OAuthConfig::isEnabled($provider)) {
+            return '该登录方式未启用或配置不完整';
+        }
+
+        $bindings = self::bindingsForUser($userId);
+        if (!empty($bindings[$provider])) {
+            return '您已绑定该第三方账号';
+        }
+
+        return null;
+    }
+
+    /**
      * @param string $provider
      * @param string $code
      * @return array|null
@@ -266,9 +357,10 @@ class OAuthService
     private static function storeBindPending($provider, array $identity)
     {
         $_SESSION[self::BIND_SESSION_KEY] = array(
-            'provider' => $provider,
-            'identity' => $identity,
-            'expires'  => time() + 600,
+            'provider'      => $provider,
+            'identity'      => $identity,
+            'identity_hash' => self::identityHash($provider, $identity),
+            'expires'       => time() + 600,
         );
     }
 
@@ -287,7 +379,61 @@ class OAuthService
             return null;
         }
 
+        if (
+            empty($pending['identity_hash'])
+            || empty($pending['provider'])
+            || empty($pending['identity'])
+            || !hash_equals(
+                (string) $pending['identity_hash'],
+                self::identityHash($pending['provider'], $pending['identity'])
+            )
+        ) {
+            self::clearBindPending();
+            return null;
+        }
+
         return $pending;
+    }
+
+    /**
+     * @param string $code
+     * @return bool
+     */
+    private static function isAuthorizationCodeUsed($code)
+    {
+        if (!isset($_SESSION['vs_oauth_used_codes']) || !is_array($_SESSION['vs_oauth_used_codes'])) {
+            return false;
+        }
+        $hash = hash('sha256', (string) $code);
+        return in_array($hash, $_SESSION['vs_oauth_used_codes'], true);
+    }
+
+    /**
+     * @param string $code
+     * @return void
+     */
+    private static function markAuthorizationCodeUsed($code)
+    {
+        if (!isset($_SESSION['vs_oauth_used_codes']) || !is_array($_SESSION['vs_oauth_used_codes'])) {
+            $_SESSION['vs_oauth_used_codes'] = array();
+        }
+        $_SESSION['vs_oauth_used_codes'][] = hash('sha256', (string) $code);
+        if (count($_SESSION['vs_oauth_used_codes']) > 20) {
+            $_SESSION['vs_oauth_used_codes'] = array_slice($_SESSION['vs_oauth_used_codes'], -20);
+        }
+    }
+
+    /**
+     * @param string $provider
+     * @param array  $identity
+     * @return string
+     */
+    private static function identityHash($provider, array $identity)
+    {
+        if ($provider === 'qq') {
+            return hash('sha256', 'qq:' . (isset($identity['openid']) ? $identity['openid'] : ''));
+        }
+        return hash('sha256', 'gitee:' . (isset($identity['id']) ? $identity['id'] : ''));
     }
 
     /**

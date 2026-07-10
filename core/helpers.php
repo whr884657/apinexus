@@ -31,14 +31,6 @@ function vs_render_notice($type, $title, $body, array $options = array())
     $allowed = array('info', 'warning', 'tip', 'success', 'danger');
     $type = in_array($type, $allowed, true) ? $type : 'info';
 
-    $icons = array(
-        'info'    => 'i',
-        'warning' => '!',
-        'tip'     => '*',
-        'success' => '✓',
-        'danger'  => '×',
-    );
-
     $classes = array('vs-notice', 'vs-notice--' . $type);
     if (!empty($options['compact'])) {
         $classes[] = 'vs-notice--compact';
@@ -50,15 +42,13 @@ function vs_render_notice($type, $title, $body, array $options = array())
     $bodyHtml = !empty($options['allow_html']) ? $body : vs_e($body);
 
     echo '<div class="' . vs_e(implode(' ', $classes)) . '" role="note">' . "\n";
-    echo '<span class="vs-notice__icon" aria-hidden="true">' . vs_e($icons[$type]) . '</span>' . "\n";
-    echo '<div class="vs-notice__content">' . "\n";
     if (trim($title) !== '') {
         echo '<p class="vs-notice__title">' . vs_e($title) . '</p>' . "\n";
     }
     if (trim(strip_tags($bodyHtml)) !== '') {
         echo '<div class="vs-notice__text">' . $bodyHtml . '</div>' . "\n";
     }
-    echo '</div></div>' . "\n";
+    echo '</div>' . "\n";
 }
 
 /**

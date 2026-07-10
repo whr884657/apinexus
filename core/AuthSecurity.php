@@ -33,6 +33,14 @@ class AuthSecurity
     const RESET_IP_MAX = 15;
     const RESET_IP_WINDOW = 3600;
 
+    /** OAuth 授权发起：单 IP 15 分钟内最多次数 */
+    const OAUTH_IP_MAX = 20;
+    const OAUTH_IP_WINDOW = 900;
+
+    /** OAuth 回调：单 IP 15 分钟内最多次数 */
+    const OAUTH_CALLBACK_IP_MAX = 30;
+    const OAUTH_CALLBACK_IP_WINDOW = 900;
+
     /**
      * 配置 Session Cookie 安全属性（须在 session_start 之前调用）
      *
@@ -396,6 +404,50 @@ class AuthSecurity
     public static function recordResetSubmit()
     {
         self::rateLimitAllow('reset_submit_ip:' . self::clientIp(), self::RESET_IP_WINDOW, self::RESET_IP_MAX, true);
+    }
+
+    /**
+     * OAuth 授权发起频率限制
+     *
+     * @return string|null
+     */
+    public static function checkOAuthStartAllowed()
+    {
+        $ip = self::clientIp();
+        if (!self::rateLimitAllow('oauth_start_ip:' . $ip, self::OAUTH_IP_WINDOW, self::OAUTH_IP_MAX, false)) {
+            return '第三方登录操作过于频繁，请稍后再试';
+        }
+        return null;
+    }
+
+    /**
+     * @return void
+     */
+    public static function recordOAuthStart()
+    {
+        self::rateLimitAllow('oauth_start_ip:' . self::clientIp(), self::OAUTH_IP_WINDOW, self::OAUTH_IP_MAX, true);
+    }
+
+    /**
+     * OAuth 回调频率限制
+     *
+     * @return string|null
+     */
+    public static function checkOAuthCallbackAllowed()
+    {
+        $ip = self::clientIp();
+        if (!self::rateLimitAllow('oauth_callback_ip:' . $ip, self::OAUTH_CALLBACK_IP_WINDOW, self::OAUTH_CALLBACK_IP_MAX, false)) {
+            return '第三方登录回调过于频繁，请稍后再试';
+        }
+        return null;
+    }
+
+    /**
+     * @return void
+     */
+    public static function recordOAuthCallback()
+    {
+        self::rateLimitAllow('oauth_callback_ip:' . self::clientIp(), self::OAUTH_CALLBACK_IP_WINDOW, self::OAUTH_CALLBACK_IP_MAX, true);
     }
 
     /**
