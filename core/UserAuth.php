@@ -84,8 +84,12 @@ class UserAuth
      */
     public static function isSessionExpired()
     {
-        if (empty($_SESSION[self::ACTIVITY_KEY])) {
+        if (empty($_SESSION[self::SESSION_KEY])) {
             return true;
+        }
+
+        if (empty($_SESSION[self::ACTIVITY_KEY])) {
+            return false;
         }
 
         $timeout = Config::sessionTimeout();
@@ -140,6 +144,15 @@ class UserAuth
     {
         if (self::check()) {
             vs_redirect(vs_base_url() . '/user/index.php');
+            return;
+        }
+
+        // OAuth 回调后可能仅有会话键尚未写入活动时间，尝试恢复后跳转
+        if (!empty($_SESSION[self::SESSION_KEY])) {
+            self::touchActivity();
+            if (self::check()) {
+                vs_redirect(vs_base_url() . '/user/index.php');
+            }
         }
     }
 

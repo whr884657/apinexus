@@ -1,7 +1,6 @@
 /**
  * 文件：assets/js/upgrade.js
  * 作用：系统升级页面交互
- * @version 1.0.0
  */
 
 (function () {
@@ -10,7 +9,37 @@
     var statusEl = document.getElementById('upgradeStatus');
     var checkBtn = document.getElementById('upgradeCheckBtn');
     var updateBtn = document.getElementById('upgradeApplyBtn');
+    var versionEl = document.getElementById('upgradeVersionDisplay');
     var lastCheck = null;
+
+    function escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function renderVersionDisplay(res) {
+        if (!versionEl || !res) {
+            return;
+        }
+
+        var local = 'v' + (res.local_version || '');
+        if (res.code === 1 && res.update_available && res.remote_version) {
+            var remote = 'v' + res.remote_version;
+            versionEl.innerHTML =
+                '<span class="vs-version-display">' +
+                '<span class="vs-version-display__current">' + escapeHtml(local) + '</span>' +
+                '<span class="vs-version-display__arrow" aria-hidden="true">→</span>' +
+                '<span class="vs-version-display__new vs-version-display__new--inline">' +
+                '<span class="vs-version-display__badge">新</span>' +
+                escapeHtml(remote) +
+                '</span></span>';
+        } else {
+            versionEl.textContent = local;
+        }
+    }
 
     function setStatus(text, type) {
         type = type || 'info';
@@ -26,6 +55,8 @@
 
     function renderCheckResult(res) {
         lastCheck = res;
+        renderVersionDisplay(res);
+
         if (res.code !== 1) {
             setStatus(res.msg || '检测失败', 'error');
             if (updateBtn) updateBtn.disabled = true;

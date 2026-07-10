@@ -10,6 +10,7 @@ require_once __DIR__ . '/init.php';
 
 $localVersion = VS_VERSION;
 $updateHistory = UpdateLog::payloadForApi();
+$updateCheck = Updater::checkForUpdate();
 
 vs_admin_layout_start('系统升级', 'upgrade');
 ?>
@@ -22,7 +23,9 @@ vs_admin_layout_start('系统升级', 'upgrade');
 
     <div class="vs-upgrade-current">
         <span class="vs-upgrade-current__label">当前版本</span>
-        <span class="vs-upgrade-current__value">v<?php echo vs_e($localVersion); ?></span>
+        <div class="vs-upgrade-current__value" id="upgradeVersionDisplay">
+            <?php echo vs_render_version_display($updateCheck); ?>
+        </div>
     </div>
 
     <div id="upgradeStatus" class="vs-alert" role="alert" hidden></div>

@@ -88,25 +88,30 @@ class OAuthService
                 );
             }
 
+            $accountUrl = vs_base_url() . '/user/account.php';
+
             $currentBindings = self::bindingsForUser($bindUserId);
             if (!empty($currentBindings[$provider])) {
+                self::restoreBindUserSession($bindUserId);
                 return array(
                     'status'   => 'done',
-                    'redirect' => vs_base_url() . '/user/account.php?oauth_error=' . rawurlencode('该账号已绑定此第三方，无需重复操作'),
+                    'redirect' => $accountUrl . '?oauth_error=' . rawurlencode('该账号已绑定此第三方，无需重复操作'),
                 );
             }
 
             $bindResult = self::bindUser($bindUserId, $provider, $identity);
             if ($bindResult !== true) {
+                self::restoreBindUserSession($bindUserId);
                 return array(
                     'status'   => 'done',
-                    'redirect' => vs_base_url() . '/user/account.php?oauth_error=' . rawurlencode($bindResult),
+                    'redirect' => $accountUrl . '?oauth_error=' . rawurlencode($bindResult),
                 );
             }
 
+            self::restoreBindUserSession($bindUserId);
             return array(
                 'status'   => 'done',
-                'redirect' => vs_base_url() . '/user/account.php?oauth_success=' . rawurlencode('第三方账号绑定成功'),
+                'redirect' => $accountUrl . '?oauth_success=' . rawurlencode('第三方账号绑定成功'),
             );
         }
 
@@ -124,6 +129,26 @@ class OAuthService
             'status'   => 'bind',
             'redirect' => vs_base_url() . '/user/oauth/bind.php',
         );
+    }
+
+    /**
+     * @param int $userId
+     * @return void
+     */
+    private static function restoreBindUserSession($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return;
+        }
+
+        if (!UserAuth::check() || UserAuth::id() !== $userId) {
+            UserAuth::loginById($userId);
+        }
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
     }
 
     /**

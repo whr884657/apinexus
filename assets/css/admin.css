@@ -1184,6 +1184,26 @@ select.vs-input {
     font-size: 22px;
     font-weight: 700;
     color: var(--vs-text);
+    line-height: 1.4;
+}
+
+.vs-upgrade-current__value .vs-version-display {
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.vs-upgrade-current__value .vs-version-display__current {
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.vs-upgrade-current__value .vs-version-display__new--inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--vs-primary);
+    font-weight: 700;
+    font-size: 22px;
 }
 
 .vs-upgrade-actions {

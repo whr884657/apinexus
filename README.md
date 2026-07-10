@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.4.3-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-1.4.4-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -195,6 +195,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v1.4.4（2026-07-11）
+
+**类型：** 小版本（OAuth 会话修复 + 升级页 UI）
+
+**变更说明：**
+
+- 修复第三方绑定后跳转登录页，回调后自动恢复登录态
+- 系统升级页有新版时显示 `当前版本 → 新版本` 箭头
 
 ### v1.4.3（2026-07-11）
 
