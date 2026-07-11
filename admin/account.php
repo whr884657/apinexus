@@ -78,6 +78,7 @@ vs_admin_layout_start('账号设置', 'account');
         <div class="vs-alert vs-alert--success"><?php echo vs_e($success); ?></div>
     <?php endif; ?>
 
+    <div class="vs-account-shell">
     <form method="post" action="" class="vs-form vs-account-form" id="accountForm" data-ajax="1">
         <div class="vs-account-form__layout">
             <aside class="vs-account-form__aside">
@@ -161,7 +162,7 @@ vs_admin_layout_start('账号设置', 'account');
                     </div>
                     <form method="post" action="" class="vs-admin-unbind-form" id="unbindUserForm" data-ajax="1">
                         <input type="hidden" name="action" value="unbind_user">
-                        <button type="submit" class="vs-btn vs-btn--text">解除绑定</button>
+                        <button type="submit" class="vs-btn vs-btn--text vs-btn--oauth-action">解除绑定</button>
                     </form>
                 </div>
             <?php else: ?>
@@ -183,6 +184,7 @@ vs_admin_layout_start('账号设置', 'account');
                 <button type="submit" class="vs-btn vs-btn--primary">绑定用户账号</button>
             </div>
         </form>
+    </div>
     </div>
 </div>
 

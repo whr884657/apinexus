@@ -47,7 +47,7 @@
             + '</div>'
             + '<form method="post" action="" class="vs-admin-unbind-form" id="unbindUserForm" data-ajax="1">'
             + '<input type="hidden" name="action" value="unbind_user">'
-            + '<button type="submit" class="vs-btn vs-btn--text">解除绑定</button>'
+            + '<button type="submit" class="vs-btn vs-btn--text vs-btn--oauth-action">解除绑定</button>'
             + '</form></div>';
         if (bindForm) {
             bindForm.hidden = true;

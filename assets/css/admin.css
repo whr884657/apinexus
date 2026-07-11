@@ -732,6 +732,12 @@
         align-self: start;
     }
 
+    .vs-admin-bind-section {
+        grid-column: 1;
+        grid-row: 2;
+        align-self: start;
+    }
+
     .vs-account-form__main {
         grid-column: 2;
         grid-row: 1 / span 2;
@@ -1613,9 +1619,18 @@ select.vs-input {
 
 /* ── 管理员发布身份绑定 ── */
 .vs-admin-bind-section {
-    margin-top: 28px;
-    padding-top: 24px;
-    border-top: 1px solid var(--vs-border);
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.vs-admin-bind-section .vs-form-section__title {
+    font-size: 15px;
+    margin-bottom: 8px;
+}
+
+.vs-admin-bind-section .vs-notice {
+    margin-bottom: 10px;
 }
 
 .vs-admin-bind-status {
@@ -1657,6 +1672,30 @@ select.vs-input {
     margin: 0;
     font-size: 14px;
     color: var(--vs-text-secondary);
+}
+
+.vs-admin-unbind-form {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.vs-admin-bind-card .vs-btn--text.vs-btn--oauth-action {
+    border: 1px solid var(--vs-border);
+    border-radius: 6px;
+    background: var(--vs-white);
+    color: var(--vs-text-secondary);
+    height: auto;
+    min-height: 32px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.vs-admin-bind-card .vs-btn--text.vs-btn--oauth-action:hover {
+    border-color: var(--vs-danger);
+    color: var(--vs-danger);
+    background: #fff5f5;
 }
 
 .vs-admin-bind-form {
@@ -1760,6 +1799,12 @@ select.vs-input {
 
 @media (max-width: 899px) {
     .vs-oauth-bind-section {
+        margin-top: 4px;
+        padding-top: 16px;
+        border-top: 1px solid var(--vs-border);
+    }
+
+    .vs-admin-bind-section {
         margin-top: 4px;
         padding-top: 16px;
         border-top: 1px solid var(--vs-border);

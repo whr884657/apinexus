@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.8.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-1.8.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -216,6 +216,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v1.8.1（2026-07-11）
+
+**类型：** 小版本（界面修复）
+
+**变更说明：**
+
+- 管理员账号设置页电脑端恢复左右布局（与用户中心一致）
+- 发布身份绑定解除按钮样式优化
 
 ### v1.8.0（2026-07-11）
 
