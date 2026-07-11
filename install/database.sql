@@ -62,4 +62,5 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_smtp_pass', ''),
 ('mail_smtp_secure', 'ssl'),
 ('mail_from_email', ''),
-('mail_from_name', 'misc-api');
+('mail_from_name', 'misc-api'),
+('frontend_theme', 'default');

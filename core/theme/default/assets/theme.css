@@ -1,0 +1,180 @@
+/**
+ * 默认主题 · 页面级样式扩展
+ */
+
+.vs-frontend-page-head {
+    margin-bottom: 24px;
+    padding: 28px 24px;
+    background: var(--vs-white);
+    border-radius: var(--vs-radius);
+    box-shadow: var(--vs-shadow);
+}
+
+.vs-frontend-page-head__title {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.vs-frontend-page-head__desc {
+    color: var(--vs-text-secondary);
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.vs-frontend-section {
+    margin-top: 24px;
+}
+
+.vs-frontend-section__title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.vs-frontend-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.vs-frontend-quick-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    background: var(--vs-white);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius);
+    text-decoration: none;
+    color: var(--vs-text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vs-frontend-quick-card:hover {
+    border-color: var(--vs-primary);
+    box-shadow: var(--vs-shadow);
+}
+
+.vs-frontend-quick-card__label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.vs-frontend-quick-card__arrow {
+    color: var(--vs-text-secondary);
+}
+
+.vs-frontend-placeholder-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.vs-frontend-placeholder-card,
+.vs-frontend-sponsor-card,
+.vs-frontend-about-card {
+    padding: 24px;
+    background: var(--vs-white);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius);
+}
+
+.vs-frontend-placeholder-card h3,
+.vs-frontend-sponsor-card h3,
+.vs-frontend-about-card h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.vs-frontend-placeholder-card p,
+.vs-frontend-sponsor-card p,
+.vs-frontend-about-card p {
+    color: var(--vs-text-secondary);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.vs-frontend-article-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vs-frontend-article-card {
+    padding: 20px 22px;
+    background: var(--vs-white);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius);
+}
+
+.vs-frontend-article-card__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.vs-frontend-article-card__meta {
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+    margin-bottom: 10px;
+}
+
+.vs-frontend-article-card__excerpt {
+    font-size: 14px;
+    color: var(--vs-text-secondary);
+    line-height: 1.7;
+}
+
+.vs-frontend-links-list {
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vs-frontend-links-item {
+    padding: 16px 18px;
+    background: var(--vs-white);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius);
+}
+
+.vs-frontend-links-item a {
+    font-weight: 600;
+    color: var(--vs-primary);
+}
+
+.vs-frontend-links-item__desc {
+    display: block;
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--vs-text-secondary);
+}
+
+.vs-frontend-about-list {
+    margin: 16px 0 0;
+    padding-left: 18px;
+    color: var(--vs-text-secondary);
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+@media (max-width: 768px) {
+    .vs-frontend-quick-grid,
+    .vs-frontend-placeholder-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vs-frontend-page-head {
+        padding: 22px 16px;
+    }
+
+    .vs-frontend-page-head__title {
+        font-size: 22px;
+    }
+}

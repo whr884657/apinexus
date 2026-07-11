@@ -226,9 +226,11 @@ function vs_page_title($pageTitle, $siteName = null)
  *
  * @param string $title
  * @param array  $cssFiles
+ * @param bool   $useSiteConfig
+ * @param array  $extraCssHrefs 完整 URL（如主题 assets）
  * @return void
  */
-function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true)
+function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true, array $extraCssHrefs = array())
 {
     $base = vs_base_url();
     $siteName = 'misc-api';
@@ -265,6 +267,12 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     foreach ($cssFiles as $css) {
         echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/' . vs_e($css) . '?v=' . VS_VERSION . '">' . "\n";
     }
+    foreach ($extraCssHrefs as $href) {
+        $href = trim((string) $href);
+        if ($href !== '') {
+            echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
+        }
+    }
     echo '</head>' . "\n";
     echo '<body class="vs-body">' . "\n";
 }
@@ -286,6 +294,31 @@ function vs_render_foot(array $jsFiles = array())
         echo '<script src="' . vs_e($base) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '"></script>' . "\n";
     }
     echo '</body></html>';
+}
+
+/**
+ * 渲染前台页面（主题驱动）
+ *
+ * @param string $pageKey   主题 pages 下的页面键名
+ * @param string $pageTitle 浏览器标题
+ * @param array  $pageData  传给主题模板的额外变量
+ * @return void
+ */
+function vs_frontend_page($pageKey, $pageTitle, array $pageData = array())
+{
+    $extraCss = array();
+    $themeCss = ThemeManager::themeDir(ThemeManager::activeId()) . '/assets/theme.css';
+    if (is_file($themeCss)) {
+        $extraCss[] = ThemeManager::assetUrl(ThemeManager::activeId(), 'assets/theme.css') . '?v=' . VS_VERSION;
+    }
+
+    vs_render_head($pageTitle, array('frontend.css'), true, $extraCss);
+
+    echo '<div class="vs-page vs-frontend-page">' . "\n";
+    ThemeManager::renderBody($pageKey, $pageTitle, $pageData);
+    echo '</div>' . "\n";
+
+    vs_render_foot(array('frontend.js'));
 }
 
 /**

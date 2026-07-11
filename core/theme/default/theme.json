@@ -1,0 +1,7 @@
+{
+    "id": "default",
+    "name": "默认主题",
+    "version": "1.0.0",
+    "author": "misc-api",
+    "description": "系统内置默认前台主题，含首页、接口、文章等标准页面布局"
+}

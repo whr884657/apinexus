@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.8.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-1.9.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -31,6 +31,8 @@
 - 站点信息、注册邮箱后缀白名单、SMTP 邮箱发信
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
 - 角色动画登录页、主题切换、统一弹窗与 Toast 提示
+- **前台主题系统**：`core/theme/default` 默认主题，页面 PHP 动态加载模板，后台可切换主题
+- 前台页面：首页、全部接口、文章、友情链接、赞助、关于（响应式顶栏 + 手机端侧边栏）
 - 简洁白色后台主题，纯 CSS 图标，适配电脑端与手机端
 
 ### UI 规范（弹窗 / 布局）
@@ -216,6 +218,17 @@ location / {
 ---
 
 ## 版本记录
+
+### v1.9.0（2026-07-11）
+
+**类型：** 大版本（前台主题系统 + 多页面）
+
+**变更说明：**
+
+- 前台主题系统 `core/theme/default`，页面 PHP 动态加载主题模板
+- 新增 apis/articles/links/sponsor/about 前台页面
+- 电脑端顶栏导航 + 手机端侧边栏与登录/注册
+- 后台主题设置、`frontend_theme` 配置与 1.9.0 迁移
 
 ### v1.8.2（2026-07-11）
 

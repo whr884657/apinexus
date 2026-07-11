@@ -87,6 +87,13 @@ class DatabaseMigrator
             self::markApplied('1.8.0');
         }
 
+        if (!in_array('1.9.0', $applied, true)) {
+            $all = Config::all();
+            if (array_key_exists('frontend_theme', $all)) {
+                self::markApplied('1.9.0');
+            }
+        }
+
         if (!in_array('1.0.35', $applied, true)) {
             $all = Config::all();
             if (array_key_exists('storage_local_public_slug', $all)) {

@@ -1,12 +1,13 @@
 {
-    "version": "1.8.2",
-    "title": "misc-api 1.8.2 用户管理与账号设置 UI 优化",
+    "version": "1.9.0",
+    "title": "misc-api 1.9.0 前台主题系统与多页面",
     "release_date": "2026-07-11",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "用户管理（手机端）：标题与用户计数靠左，搜索框靠右，修正头部布局",
-        "账号设置（电脑端）：左侧栏加宽、头像放大、表单字段铺满右侧空间，间距优化",
-        "账号设置（管理端/用户端）：保存修改按钮统一靠右对齐"
+        "前台主题系统：core/theme/default 默认主题，页面 PHP 动态加载主题模板",
+        "新增前台页面：全部接口、文章、友情链接、赞助、关于",
+        "顶栏响应式：电脑端横向导航，手机端左侧侧边栏 + 底部登录/注册",
+        "后台主题设置：vs_config.frontend_theme 切换前台主题"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
