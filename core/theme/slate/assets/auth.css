@@ -300,6 +300,7 @@
 
 .st-auth__group {
     display: flex;
+    align-items: stretch;
     gap: 8px;
 }
 
@@ -310,14 +311,20 @@
 
 .st-auth__code-btn {
     flex-shrink: 0;
-    height: 44px;
-    padding: 0 14px;
+    align-self: stretch;
+    height: auto;
+    min-height: 44px;
+    min-width: 104px;
+    max-width: 120px;
+    padding: 0 12px;
     border: 1.5px solid var(--st-auth-border);
     border-radius: 10px;
     background: #fff;
     color: var(--st-auth-accent);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
@@ -545,11 +552,10 @@
         padding-top: max(24px, env(safe-area-inset-top));
     }
 
-    .st-auth__group {
-        flex-direction: column;
-    }
-
     .st-auth__code-btn {
-        width: 100%;
+        min-width: 92px;
+        max-width: 108px;
+        padding: 0 8px;
+        font-size: 11px;
     }
 }

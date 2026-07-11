@@ -133,6 +133,43 @@
     color: var(--vs-white);
 }
 
+.dt-auth-btn--user {
+    gap: 8px;
+    background: var(--vs-white);
+    color: var(--vs-text);
+    border-color: var(--vs-border);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.dt-auth-btn--user:hover {
+    border-color: var(--vs-primary);
+    color: var(--vs-primary);
+    background: var(--vs-white);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+}
+
+.dt-auth-btn--block.dt-auth-btn--user {
+    background: var(--vs-white);
+    color: var(--vs-text);
+    border-color: var(--vs-border);
+}
+
+.dt-auth-btn--block.dt-auth-btn--user:hover {
+    background: #f8fafc;
+    color: var(--vs-primary);
+    border-color: var(--vs-primary);
+}
+
+.dt-auth-btn__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--vs-border);
+}
+
 .dt-menu-btn {
     display: none;
     flex-direction: column;

@@ -18,7 +18,14 @@ if (!defined('VS_THEME_RENDER')) {
                 </a>
             <?php endforeach; ?>
         </nav>
-        <a href="<?php echo vs_e($authUrl); ?>" class="dt-auth-btn dt-auth-btn--desktop"><?php echo vs_e($authLabel); ?></a>
+        <a href="<?php echo vs_e($authUrl); ?>" class="dt-auth-btn dt-auth-btn--desktop<?php echo (!empty($userLoggedIn) && !empty($authAvatarUrl)) ? ' dt-auth-btn--user' : ''; ?>">
+            <?php if (!empty($userLoggedIn) && !empty($authAvatarUrl)): ?>
+                <img src="<?php echo vs_e($authAvatarUrl); ?>" alt="" class="dt-auth-btn__avatar" width="28" height="28">
+                <span>用户中心</span>
+            <?php else: ?>
+                <?php echo vs_e($authLabel); ?>
+            <?php endif; ?>
+        </a>
         <button type="button" class="dt-menu-btn" id="dtMenuBtn" aria-label="打开菜单" aria-expanded="false" aria-controls="dtDrawer">
             <span class="dt-menu-btn__bar"></span>
             <span class="dt-menu-btn__bar"></span>
@@ -44,6 +51,13 @@ if (!defined('VS_THEME_RENDER')) {
         <?php endforeach; ?>
     </nav>
     <div class="dt-drawer__foot">
-        <a href="<?php echo vs_e($authUrl); ?>" class="dt-auth-btn dt-auth-btn--block"><?php echo vs_e($authLabel); ?></a>
+        <a href="<?php echo vs_e($authUrl); ?>" class="dt-auth-btn dt-auth-btn--block<?php echo (!empty($userLoggedIn) && !empty($authAvatarUrl)) ? ' dt-auth-btn--user' : ''; ?>">
+            <?php if (!empty($userLoggedIn) && !empty($authAvatarUrl)): ?>
+                <img src="<?php echo vs_e($authAvatarUrl); ?>" alt="" class="dt-auth-btn__avatar" width="28" height="28">
+                <span>用户中心</span>
+            <?php else: ?>
+                <?php echo vs_e($authLabel); ?>
+            <?php endif; ?>
+        </a>
     </div>
 </aside>

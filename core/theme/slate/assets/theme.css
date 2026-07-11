@@ -154,6 +154,41 @@
     height: 44px;
 }
 
+.st-bar__login--user {
+    gap: 8px;
+    background: #fff;
+    color: var(--st-fg);
+    border: 1px solid var(--st-border);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.st-bar__login--user:hover {
+    background: #fff;
+    color: var(--st-accent);
+    border-color: var(--st-accent);
+    box-shadow: 0 2px 12px rgba(36, 166, 106, 0.1);
+    transform: translateY(-1px);
+}
+
+.st-bar__login--block.st-bar__login--user {
+    background: #fff;
+    color: var(--st-fg);
+}
+
+.st-bar__login--block.st-bar__login--user:hover {
+    background: var(--st-accent-bg);
+    color: var(--st-accent);
+}
+
+.st-bar__login-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--st-border);
+}
+
 .st-bar__menu {
     display: none;
     flex-direction: column;

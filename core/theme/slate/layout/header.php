@@ -18,7 +18,14 @@ if (!defined('VS_THEME_RENDER')) {
                 </a>
             <?php endforeach; ?>
         </nav>
-        <a href="<?php echo vs_e($authUrl); ?>" class="st-bar__login"><?php echo vs_e($authLabel); ?></a>
+        <a href="<?php echo vs_e($authUrl); ?>" class="st-bar__login<?php echo (!empty($userLoggedIn) && !empty($authAvatarUrl)) ? ' st-bar__login--user' : ''; ?>">
+            <?php if (!empty($userLoggedIn) && !empty($authAvatarUrl)): ?>
+                <img src="<?php echo vs_e($authAvatarUrl); ?>" alt="" class="st-bar__login-avatar" width="28" height="28">
+                <span>用户中心</span>
+            <?php else: ?>
+                <?php echo vs_e($authLabel); ?>
+            <?php endif; ?>
+        </a>
         <button type="button" class="st-bar__menu" id="stMenuBtn" aria-label="打开菜单" aria-expanded="false" aria-controls="stDrawer">
             <span></span><span></span><span></span>
         </button>
@@ -40,6 +47,13 @@ if (!defined('VS_THEME_RENDER')) {
         <?php endforeach; ?>
     </nav>
     <div class="st-drawer__foot">
-        <a href="<?php echo vs_e($authUrl); ?>" class="st-bar__login st-bar__login--block"><?php echo vs_e($authLabel); ?></a>
+        <a href="<?php echo vs_e($authUrl); ?>" class="st-bar__login st-bar__login--block<?php echo (!empty($userLoggedIn) && !empty($authAvatarUrl)) ? ' st-bar__login--user' : ''; ?>">
+            <?php if (!empty($userLoggedIn) && !empty($authAvatarUrl)): ?>
+                <img src="<?php echo vs_e($authAvatarUrl); ?>" alt="" class="st-bar__login-avatar" width="28" height="28">
+                <span>用户中心</span>
+            <?php else: ?>
+                <?php echo vs_e($authLabel); ?>
+            <?php endif; ?>
+        </a>
     </div>
 </aside>

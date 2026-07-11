@@ -455,20 +455,28 @@ class ThemeManager
         $base = vs_base_url();
         $loggedIn = UserAuth::check();
         $authUrl = $loggedIn ? ($base . '/user/index') : ($base . '/user/login');
+        $authAvatarUrl = '';
+        if ($loggedIn) {
+            $authUser = UserAuth::user();
+            if (is_array($authUser) && class_exists('UserAvatar')) {
+                $authAvatarUrl = UserAvatar::resolve($authUser);
+            }
+        }
 
         return array_merge(
             array(
-                'vsBase'       => $base,
-                'siteName'     => SiteContext::siteName(),
-                'siteDesc'     => SiteContext::siteDescription(),
-                'pageKey'      => $pageKey,
-                'pageTitle'    => $pageTitle,
-                'navItems'     => self::navItems(),
-                'activeNav'    => $pageKey,
-                'userLoggedIn' => $loggedIn,
-                'authUrl'      => $authUrl,
-                'authLabel'    => $loggedIn ? '进入用户中心' : '登录 / 注册',
-                'themeId'      => self::activeId(),
+                'vsBase'         => $base,
+                'siteName'       => SiteContext::siteName(),
+                'siteDesc'       => SiteContext::siteDescription(),
+                'pageKey'        => $pageKey,
+                'pageTitle'      => $pageTitle,
+                'navItems'       => self::navItems(),
+                'activeNav'      => $pageKey,
+                'userLoggedIn'   => $loggedIn,
+                'authUrl'        => $authUrl,
+                'authLabel'      => $loggedIn ? '用户中心' : '登录 / 注册',
+                'authAvatarUrl'  => $authAvatarUrl,
+                'themeId'        => self::activeId(),
             ),
             $pageData
         );

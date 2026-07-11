@@ -1,9 +1,9 @@
 <?php
 /**
- * 青绿平台 · 用户中心布局（独立 shell，样式见 assets/user.css）
+ * 青绿平台 · 用户中心布局（st-uc 独立视觉，与默认主题差异化）
  */
 if (!defined('VS_THEME_RENDER') && !function_exists('vs_theme_user_layout_start')) {
-    // 由 ThemeManager 或 user/includes/layout.php 加载
+    // 由 ThemeManager 加载
 }
 
 /**
@@ -20,6 +20,8 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
     $user = $vsUser;
     $favicon = SiteContext::siteFavicon();
     $menuGroups = ThemeManager::userMenuGroups();
+    $avatarUrl = $user ? UserAvatar::resolve($user) : '';
+    $logoutUrl = $base . '/user/login?action=logout';
 
     echo '<!DOCTYPE html>' . "\n";
     echo '<html lang="zh-CN">' . "\n";
@@ -40,60 +42,53 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
         echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
     }
     echo '</head>' . "\n";
-    echo '<body class="vs-body vs-admin-body">' . "\n";
-    echo '<div class="vs-admin-shell" id="vsAdminShell">' . "\n";
+    echo '<body class="st-uc-body">' . "\n";
+    echo '<div class="st-uc-shell" id="stUcShell">' . "\n";
 
-    echo '<aside class="vs-sidebar" id="vsSidebar">' . "\n";
-    echo '<div class="vs-sidebar__head">' . "\n";
-    vs_render_site_logo('vs-sidebar__logo');
-    echo '<span class="vs-sidebar__name">' . vs_e($siteName) . '</span>' . "\n";
+    echo '<aside class="st-uc-sidebar" id="stUcSidebar">' . "\n";
+    echo '<div class="st-uc-sidebar__brand">' . "\n";
+    vs_render_site_logo('st-uc-sidebar__logo');
+    echo '<span class="st-uc-sidebar__name">' . vs_e($siteName) . '</span>' . "\n";
     echo '</div>' . "\n";
-    echo '<nav class="vs-sidebar__nav">' . "\n";
-
+    echo '<nav class="st-uc-nav">' . "\n";
     foreach ($menuGroups as $group) {
         $linkActive = isset($group['id']) && $group['id'] === $activeMenu ? ' is-active' : '';
-        echo '<a href="' . vs_e($group['url']) . '" class="vs-sidebar__link' . $linkActive . '">';
+        echo '<a href="' . vs_e($group['url']) . '" class="st-uc-nav__link' . $linkActive . '">';
         echo '<i class="vs-icon vs-icon--' . vs_e($group['icon']) . '"></i>';
-        echo '<span class="vs-sidebar__text">' . vs_e($group['title']) . '</span>';
+        echo '<span>' . vs_e($group['title']) . '</span>';
         echo '</a>' . "\n";
     }
-
     echo '</nav>' . "\n";
 
-    $logoutUrl = $base . '/user/login?action=logout';
-    echo '<div class="vs-sidebar__foot">' . "\n";
-    echo '<a href="' . vs_e($logoutUrl) . '" class="vs-sidebar__logout">' . "\n";
-    echo '<i class="vs-icon vs-icon--logout"></i>' . "\n";
-    echo '<span class="vs-sidebar__text">退出登录</span>' . "\n";
-    echo '</a>' . "\n";
-    echo '</div>' . "\n";
+    if ($user) {
+        echo '<div class="st-uc-sidebar__user">' . "\n";
+        echo '<a href="' . vs_e($base) . '/user/account" class="st-uc-user-chip">';
+        echo '<img src="' . vs_e($avatarUrl) . '" alt="" class="st-uc-user-chip__avatar" width="36" height="36">';
+        echo '<span class="st-uc-user-chip__name">' . vs_e($user['username']) . '</span>';
+        echo '</a>' . "\n";
+        echo '<a href="' . vs_e($logoutUrl) . '" class="st-uc-sidebar__logout"><i class="vs-icon vs-icon--logout"></i><span>退出登录</span></a>' . "\n";
+        echo '</div>' . "\n";
+    }
     echo '</aside>' . "\n";
 
-    echo '<div class="vs-sidebar-mask" id="vsSidebarMask"></div>' . "\n";
-    echo '<div class="vs-admin-main">' . "\n";
-    echo '<header class="vs-topbar">' . "\n";
-    echo '<div class="vs-topbar__left">' . "\n";
-    echo '<button type="button" class="vs-topbar__toggle" id="vsSidebarToggle" aria-label="展开或收缩菜单">';
-    echo '<i class="vs-icon vs-icon--menu"></i>';
-    echo '</button>' . "\n";
-    echo '<span class="vs-topbar__title">' . vs_e($siteName) . ' · 用户中心</span>' . "\n";
+    echo '<div class="st-uc-mask" id="stUcMask"></div>' . "\n";
+    echo '<div class="st-uc-main">' . "\n";
+    echo '<header class="st-uc-topbar">' . "\n";
+    echo '<div class="st-uc-topbar__left">' . "\n";
+    echo '<button type="button" class="st-uc-topbar__toggle" id="stUcToggle" aria-label="展开或收缩菜单"><i class="vs-icon vs-icon--menu"></i></button>' . "\n";
+    echo '<span class="st-uc-topbar__title">' . vs_e($pageTitle) . '</span>' . "\n";
     echo '</div>' . "\n";
-    echo '<div class="vs-topbar__right">' . "\n";
-    echo '<div class="vs-topbar__theme" id="vsThemePickerMount"></div>' . "\n";
+    echo '<div class="st-uc-topbar__right">' . "\n";
+    echo '<div class="st-uc-topbar__theme" id="vsThemePickerMount"></div>' . "\n";
     if ($user) {
-        $avatarUrl = UserAvatar::resolve($user);
-        echo '<a href="' . vs_e($base) . '/user/account" class="vs-topbar__avatar-link" title="账号设置">' . "\n";
-        echo '<img src="' . vs_e($avatarUrl) . '" alt="" class="vs-topbar__avatar" width="32" height="32">' . "\n";
-        echo '</a>' . "\n";
+        echo '<a href="' . vs_e($base) . '/user/account" class="st-uc-topbar__user" title="账号设置">';
+        echo '<img src="' . vs_e($avatarUrl) . '" alt="" width="32" height="32">';
+        echo '<span>用户中心</span></a>' . "\n";
     }
-    echo '<a href="' . vs_e($logoutUrl) . '" class="vs-topbar__logout">退出</a>' . "\n";
-    echo '</div>' . "\n";
-    echo '</header>' . "\n";
-    echo '<main class="vs-content">' . "\n";
-    echo '<div class="vs-content__head">' . "\n";
-    echo '<h1 class="vs-content__title">' . vs_e($pageTitle) . '</h1>' . "\n";
-    echo '</div>' . "\n";
-    echo '<div class="vs-content__body">' . "\n";
+    echo '<a href="' . vs_e($logoutUrl) . '" class="st-uc-topbar__exit">退出</a>' . "\n";
+    echo '</div></header>' . "\n";
+    echo '<main class="st-uc-content">' . "\n";
+    echo '<div class="st-uc-content__inner">' . "\n";
 }
 
 /**
@@ -104,10 +99,7 @@ function vs_theme_user_layout_end(array $extraScripts = array())
 {
     global $vsBase;
 
-    echo '</div>' . "\n";
-    echo '</main>' . "\n";
-    echo '</div>' . "\n";
-    echo '</div>' . "\n";
+    echo '</div></main></div></div>' . "\n";
 
     echo '<script>window.VS_BASE_URL = ' . json_encode($vsBase) . ';</script>' . "\n";
     echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
