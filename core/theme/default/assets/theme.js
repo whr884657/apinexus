@@ -1,5 +1,5 @@
 /**
- * 默认主题 · 独立脚本
+ * 默认主题 · 独立脚本（右侧抽屉，点击遮罩关闭）
  */
 (function () {
     'use strict';
@@ -7,7 +7,6 @@
     var btn = document.getElementById('dtMenuBtn');
     var drawer = document.getElementById('dtDrawer');
     var mask = document.getElementById('dtDrawerMask');
-    var closeBtn = document.getElementById('dtDrawerClose');
 
     if (!btn || !drawer || !mask) {
         return;
@@ -42,9 +41,6 @@
     });
 
     mask.addEventListener('click', closeDrawer);
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeDrawer);
-    }
 
     drawer.querySelectorAll('.dt-drawer__link').forEach(function (link) {
         link.addEventListener('click', closeDrawer);

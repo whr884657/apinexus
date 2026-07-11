@@ -139,12 +139,12 @@ class ThemeManager
         $base = vs_base_url();
         self::$navCache = array(
             array('id' => 'home', 'label' => '首页', 'url' => $base . '/'),
-            array('id' => 'apis', 'label' => '全部接口', 'url' => $base . '/apis.php'),
-            array('id' => 'articles', 'label' => '文章', 'url' => $base . '/articles.php'),
-            array('id' => 'contributors', 'label' => '贡献者', 'url' => $base . '/contributors.php'),
-            array('id' => 'links', 'label' => '友情链接', 'url' => $base . '/links.php'),
-            array('id' => 'sponsor', 'label' => '赞助', 'url' => $base . '/sponsor.php'),
-            array('id' => 'about', 'label' => '关于', 'url' => $base . '/about.php'),
+            array('id' => 'apis', 'label' => '全部接口', 'url' => $base . '/apis'),
+            array('id' => 'articles', 'label' => '文章', 'url' => $base . '/articles'),
+            array('id' => 'contributors', 'label' => '贡献者', 'url' => $base . '/contributors'),
+            array('id' => 'links', 'label' => '友情链接', 'url' => $base . '/links'),
+            array('id' => 'sponsor', 'label' => '赞助', 'url' => $base . '/sponsor'),
+            array('id' => 'about', 'label' => '关于', 'url' => $base . '/about'),
         );
 
         return self::$navCache;
@@ -217,7 +217,7 @@ class ThemeManager
     {
         $base = vs_base_url();
         $loggedIn = UserAuth::check();
-        $authUrl = $loggedIn ? ($base . '/user/index.php') : ($base . '/user/login.php');
+        $authUrl = $loggedIn ? ($base . '/user/index') : ($base . '/user/login');
 
         return array_merge(
             array(

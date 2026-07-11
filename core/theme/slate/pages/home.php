@@ -2,27 +2,30 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
-$heroDesc = isset($heroDesc) ? $heroDesc : ($siteDesc !== '' ? $siteDesc : '深色极简前台，杂志式内容布局。');
+$heroDesc = isset($heroDesc) ? $heroDesc : ($siteDesc !== '' ? $siteDesc : '为开发者提供稳定、快速的 API 接口服务');
 ?>
-<main class="st-body">
-<div class="st-shell">
-<section class="st-banner">
-    <h1 class="st-banner__title"><?php echo vs_e($siteName); ?></h1>
-    <p class="st-banner__lead"><?php echo vs_e($heroDesc); ?></p>
-    <a href="<?php echo vs_e($authUrl); ?>" class="st-login"><?php echo vs_e($authLabel); ?></a>
+<main class="st-main">
+<div class="st-wrap">
+<section class="st-hero">
+    <h1 class="st-hero__title">欢迎使用 <?php echo vs_e($siteName); ?></h1>
+    <p class="st-hero__lead"><?php echo vs_e($heroDesc); ?></p>
+    <div class="st-stats">
+        <span>接口 <strong class="st-stats__accent">建设中</strong></span>
+        <span>文章 <strong>0</strong></span>
+        <span>用户 <strong>开放注册</strong></span>
+    </div>
 </section>
-<section class="st-block">
-    <h2 class="st-block__head">探索站点</h2>
-    <p class="st-block__sub">点击下方条目快速跳转，或使用底部导航栏切换页面。</p>
-    <div class="st-stream" style="margin-top:16px;">
+<section class="st-section">
+    <h2 class="st-page-title" style="font-size:18px;margin-bottom:12px;">快速入口</h2>
+    <div class="st-card-list">
         <?php foreach ($navItems as $item): ?>
             <?php if ($item['id'] === 'home') { continue; } ?>
-            <a href="<?php echo vs_e($item['url']); ?>" class="st-row">
+            <a href="<?php echo vs_e($item['url']); ?>" class="st-card st-card-link">
                 <div>
-                    <div class="st-row__title"><?php echo vs_e($item['label']); ?></div>
-                    <div class="st-row__meta">进入 <?php echo vs_e($item['label']); ?> 页面</div>
+                    <div class="st-card__title"><?php echo vs_e($item['label']); ?></div>
+                    <div class="st-card__meta">进入 <?php echo vs_e($item['label']); ?> 页面</div>
                 </div>
-                <span class="st-row__arrow">›</span>
+                <span class="st-tag">→</span>
             </a>
         <?php endforeach; ?>
     </div>

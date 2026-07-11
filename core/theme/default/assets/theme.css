@@ -49,6 +49,27 @@
     object-fit: cover;
 }
 
+.dt-logo__icon-fallback,
+.dt-drawer__icon-fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(17, 17, 17, 0.08);
+    display: inline-block;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.dt-logo__icon-fallback::after,
+.dt-drawer__icon-fallback::after {
+    content: '';
+    position: absolute;
+    inset: 9px;
+    border-radius: 3px;
+    background: var(--vs-primary);
+    opacity: 0.85;
+}
+
 .dt-logo__text {
     font-size: 16px;
     font-weight: 700;
@@ -148,18 +169,19 @@
 .dt-drawer {
     position: fixed;
     top: 0;
-    left: 0;
+    right: 0;
+    left: auto;
     width: min(280px, 86vw);
     height: 100vh;
     height: 100dvh;
     background: var(--vs-white);
-    border-right: 1px solid var(--vs-border);
+    border-left: 1px solid var(--vs-border);
     z-index: 210;
     display: flex;
     flex-direction: column;
-    transform: translateX(-105%);
+    transform: translateX(105%);
     transition: transform 0.24s ease;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
 }
 
 .dt-drawer.is-open {
@@ -167,27 +189,31 @@
 }
 
 .dt-drawer__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     padding: 16px;
     border-bottom: 1px solid var(--vs-border);
+}
+
+.dt-drawer__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.dt-drawer__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 
 .dt-drawer__title {
     font-weight: 600;
     font-size: 15px;
-}
-
-.dt-drawer__close {
-    width: 36px;
-    height: 36px;
-    border: none;
-    background: transparent;
-    font-size: 24px;
-    color: var(--vs-text-secondary);
-    cursor: pointer;
-    border-radius: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .dt-drawer__nav {

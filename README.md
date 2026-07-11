@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.0.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.1.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -31,13 +31,13 @@
 - 站点信息、注册邮箱后缀白名单、SMTP 邮箱发信
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
 - 角色动画登录页、主题切换、统一弹窗与 Toast 提示
-- **双主题体系**：默认主题 + 深岩主题（slate），CSS/JS 完全独立，后台可预览切换
-- 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于
+- **双主题体系**：默认主题 + 云启风格主题（slate），CSS/JS 完全独立，后台可预览切换
+- 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持 nginx 伪静态，URL 无 `.php` 后缀）
 - 简洁白色后台主题，纯 CSS 图标，适配电脑端与手机端
 
 ### UI 规范（弹窗 / 布局）
 
-- **手机端（≤767px）**：侧边栏默认隐藏，点击顶栏菜单滑出；表单与弹窗全宽适配
+- **手机端（≤900px）**：侧边栏默认隐藏，点击顶栏菜单从右侧滑出；点击遮罩关闭
 - **电脑端（≥768px）**：侧边栏默认展开，可收缩；弹窗居中，内容区可滚动
 - **登录页**：可交互角色动画背景，支持主题色切换
 
@@ -59,6 +59,12 @@
 | 功能 | 路径 | 说明 |
 |------|------|------|
 | 前台首页 | `/` | 引导进入用户中心（不展示管理后台入口） |
+| 全部接口 | `/apis` | 前台接口列表（建设中） |
+| 文章 | `/articles` | 前台文章列表 |
+| 贡献者 | `/contributors` | 项目贡献者展示 |
+| 友情链接 | `/links` | 友链展示 |
+| 赞助 | `/sponsor` | 赞助说明 |
+| 关于 | `/about` | 站点与版本信息 |
 | Web 安装向导 | `/install/` | 五步安装，执行 `install/database.sql` |
 | 用户登录 | `/user/login.php` | 账号密码登录 + QQ/Gitee 第三方登录 |
 | OAuth 回调 | `/user/oauth/callback.php` | 第三方授权回调（由平台配置） |
@@ -167,7 +173,7 @@ misc-api/
 │   ├── version.php             # VS_VERSION 版本常量
 │   ├── ThemeManager.php        # 前台主题加载与切换
 │   ├── theme/default/          # 默认主题（浅色卡片 + 左抽屉）
-│   ├── theme/slate/            # 深岩主题（深色 + 右抽屉 + 底栏）
+│   ├── theme/slate/            # 云启风格主题（浅色 API 平台风）
 │   ├── Auth.php / UserAuth.php # 管理员与用户认证
 │   ├── Updater.php             # 云端在线更新
 │   ├── UpdateLog.php           # 更新记录读取
@@ -227,6 +233,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.1.0（2026-07-11）
+
+**类型：** 小版本（双主题 UI 优化）
+
+**变更说明：**
+
+- 默认主题手机端右侧抽屉、遮罩关闭、站点图标与名称
+- 云启风格主题（slate）全新重做，电脑端顶栏 / 手机端抽屉
+- 前台导航 URL 去除 `.php`，适配 nginx 伪静态
 
 ### v2.0.0（2026-07-11）
 

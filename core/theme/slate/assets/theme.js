@@ -1,52 +1,54 @@
 /**
- * 深岩主题 · 独立脚本（右侧抽屉 + 底部 Dock）
+ * 云启风格主题 · 手机端右侧抽屉
  */
 (function () {
     'use strict';
 
-    var panelBtn = document.getElementById('stPanelBtn');
-    var panel = document.getElementById('stPanel');
-    var mask = document.getElementById('stPanelMask');
-    var closeBtn = document.getElementById('stPanelClose');
+    var btn = document.getElementById('stMenuBtn');
+    var drawer = document.getElementById('stDrawer');
+    var mask = document.getElementById('stMask');
 
-    if (!panelBtn || !panel || !mask) {
+    if (!btn || !drawer || !mask) {
         return;
     }
 
-    function openPanel() {
-        panel.hidden = false;
+    function openDrawer() {
+        drawer.hidden = false;
         mask.hidden = false;
-        panel.classList.add('is-open');
-        panelBtn.setAttribute('aria-expanded', 'true');
-        document.body.classList.add('st-panel-open');
+        drawer.classList.add('is-open');
+        btn.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('st-drawer-open');
     }
 
-    function closePanel() {
-        panel.classList.remove('is-open');
-        panelBtn.setAttribute('aria-expanded', 'false');
-        document.body.classList.remove('st-panel-open');
+    function closeDrawer() {
+        drawer.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('st-drawer-open');
         window.setTimeout(function () {
-            if (!panel.classList.contains('is-open')) {
-                panel.hidden = true;
+            if (!drawer.classList.contains('is-open')) {
+                drawer.hidden = true;
                 mask.hidden = true;
             }
-        }, 250);
+        }, 240);
     }
 
-    panelBtn.addEventListener('click', function () {
-        if (panel.classList.contains('is-open')) {
-            closePanel();
+    btn.addEventListener('click', function () {
+        if (drawer.classList.contains('is-open')) {
+            closeDrawer();
         } else {
-            openPanel();
+            openDrawer();
         }
     });
 
-    mask.addEventListener('click', closePanel);
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closePanel);
-    }
+    mask.addEventListener('click', closeDrawer);
 
-    panel.querySelectorAll('.st-panel__link').forEach(function (link) {
-        link.addEventListener('click', closePanel);
+    drawer.querySelectorAll('.st-drawer__link').forEach(function (link) {
+        link.addEventListener('click', closeDrawer);
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && drawer.classList.contains('is-open')) {
+            closeDrawer();
+        }
     });
 })();
