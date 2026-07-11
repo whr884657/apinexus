@@ -104,12 +104,12 @@ class ThemeManager
         if (!empty($meta['preview'])) {
             $rel = ltrim(str_replace('\\', '/', (string) $meta['preview']), '/');
             if (is_file(self::themeDir($themeId) . '/' . $rel)) {
-                return self::assetUrl($themeId, $rel);
+                return self::assetUrl($themeId, $rel) . '?v=' . VS_VERSION;
             }
         }
-        foreach (array('assets/preview.svg', 'assets/preview.png', 'assets/preview.jpg') as $rel) {
+        foreach (array('preview.png', 'preview.jpg', 'preview.webp', 'assets/preview.png', 'assets/preview.svg') as $rel) {
             if (is_file(self::themeDir($themeId) . '/' . $rel)) {
-                return self::assetUrl($themeId, $rel);
+                return self::assetUrl($themeId, $rel) . '?v=' . VS_VERSION;
             }
         }
         return '';

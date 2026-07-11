@@ -2,6 +2,7 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
+$footDesc = $siteDesc !== '' ? $siteDesc : '为开发者提供稳定、快速的 API 接口服务';
 ?>
 <footer class="st-foot">
     <div class="st-wrap st-foot__grid">
@@ -10,27 +11,35 @@ if (!defined('VS_THEME_RENDER')) {
                 <?php vs_theme_site_logo('st-foot__img', 'st-foot__fallback'); ?>
                 <strong><?php echo vs_e($siteName); ?></strong>
             </div>
-            <p><?php echo vs_e($siteDesc !== '' ? $siteDesc : '为开发者提供稳定、快速的 API 接口服务'); ?></p>
+            <p><?php echo vs_e($footDesc); ?></p>
         </div>
         <div class="st-foot__col">
-            <h4>导航</h4>
+            <h4>资源</h4>
             <ul>
-                <?php foreach (array_slice($navItems, 0, 4) as $item): ?>
-                    <li><a href="<?php echo vs_e($item['url']); ?>"><?php echo vs_e($item['label']); ?></a></li>
-                <?php endforeach; ?>
+                <li><a href="<?php echo vs_e($vsBase); ?>/apis">接口文档</a></li>
+                <li><a href="https://gitee.com/xunjinlu/misc-api/releases" target="_blank" rel="noopener noreferrer">更新日志</a></li>
+                <li><a href="<?php echo vs_e($vsBase); ?>/about">服务状态</a></li>
             </ul>
         </div>
         <div class="st-foot__col">
-            <h4>更多</h4>
+            <h4>支持</h4>
             <ul>
-                <?php foreach (array_slice($navItems, 4) as $item): ?>
-                    <li><a href="<?php echo vs_e($item['url']); ?>"><?php echo vs_e($item['label']); ?></a></li>
-                <?php endforeach; ?>
+                <li><a href="<?php echo vs_e($vsBase); ?>/about">常见问题</a></li>
+                <li><a href="<?php echo vs_e($vsBase); ?>/sponsor">反馈建议</a></li>
+                <li><a href="<?php echo vs_e($vsBase); ?>/links">联系站长</a></li>
+            </ul>
+        </div>
+        <div class="st-foot__col">
+            <h4>关于</h4>
+            <ul>
+                <li><a href="<?php echo vs_e($vsBase); ?>/about">关于我们</a></li>
+                <li><a href="<?php echo vs_e($vsBase); ?>/contributors">贡献者</a></li>
+                <li><a href="https://gitee.com/xunjinlu/misc-api" target="_blank" rel="noopener noreferrer">开源仓库</a></li>
             </ul>
         </div>
     </div>
-    <div class="st-wrap st-foot__copy">
-        <?php vs_render_site_footer($siteName); ?>
+    <div class="st-wrap st-foot__bottom">
+        <div class="st-foot__copy"><?php vs_render_site_footer($siteName); ?></div>
     </div>
 </footer>
 </div>

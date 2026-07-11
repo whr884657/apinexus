@@ -1,5 +1,5 @@
 /**
- * 云启风格主题 · 独立样式
+ * 青绿平台主题 · 独立样式
  */
 .st-root {
     --st-accent: #24a66a;
@@ -309,6 +309,164 @@ body.st-drawer-open {
     color: var(--st-accent);
 }
 
+.st-stats__sep {
+    width: 1px;
+    height: 14px;
+    background: #e0e2e8;
+    flex-shrink: 0;
+}
+
+.st-stat-num {
+    font-variant-numeric: tabular-nums;
+}
+
+.st-home-tools {
+    padding-top: 0;
+}
+
+.st-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    background: var(--st-bg-alt);
+    border: 1.5px solid var(--st-border);
+    border-radius: 10px;
+    transition: border-color 0.15s;
+}
+
+.st-search:focus-within {
+    border-color: var(--st-accent);
+}
+
+.st-search__icon {
+    color: var(--st-fg3);
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.st-search__input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: var(--st-fg);
+    min-width: 0;
+}
+
+.st-search__input::placeholder {
+    color: var(--st-fg3);
+}
+
+.st-search__clear {
+    border: 0;
+    background: transparent;
+    color: var(--st-fg3);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.st-search__clear:hover {
+    color: var(--st-fg2);
+}
+
+.st-cats {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.st-cat-tag {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    border: 1px solid var(--st-border);
+    color: var(--st-fg2);
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.st-cat-tag:hover {
+    border-color: var(--st-accent);
+    color: var(--st-accent);
+}
+
+.st-cat-tag.is-on {
+    background: var(--st-accent-bg);
+    border-color: var(--st-accent);
+    color: var(--st-accent);
+    font-weight: 600;
+}
+
+.st-api-section {
+    padding-bottom: 48px;
+}
+
+.st-api-empty {
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--st-fg3);
+}
+
+.st-api-empty__icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.st-api-empty__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--st-fg2);
+    margin-bottom: 6px;
+}
+
+.st-api-empty__desc {
+    font-size: 13px;
+    line-height: 1.65;
+    max-width: 360px;
+    margin: 0 auto;
+}
+
+.st-back-top {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--st-border);
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    color: var(--st-fg3);
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, color 0.15s, border-color 0.15s;
+}
+
+.st-back-top.is-show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.st-back-top:hover {
+    color: var(--st-accent);
+    border-color: var(--st-accent);
+}
+
 .st-section {
     padding: 8px 0 24px;
 }
@@ -452,9 +610,9 @@ body.st-drawer-open {
 
 .st-foot__grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
     gap: 24px;
-    padding: 32px 16px 20px;
+    padding: 40px 16px 28px;
     font-size: 13px;
 }
 
@@ -505,9 +663,16 @@ body.st-drawer-open {
     color: var(--st-accent);
 }
 
-.st-foot__copy {
+.st-foot__bottom {
     padding: 16px;
     border-top: 1px solid #eceef2;
+}
+
+.st-foot__copy {
+    padding: 0;
+    font-size: 12px;
+    color: var(--st-fg3);
+    text-align: center;
 }
 
 @media (max-width: 900px) {
@@ -527,7 +692,14 @@ body.st-drawer-open {
 }
 
 @media (max-width: 640px) {
-    .st-foot__grid,
+    .st-foot__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .st-foot__brand {
+        grid-column: 1 / -1;
+    }
+
     .st-grid-2,
     .st-grid-3 {
         grid-template-columns: 1fr;
@@ -535,5 +707,16 @@ body.st-drawer-open {
 
     .st-hero {
         padding-top: 28px;
+    }
+
+    .st-stats {
+        border-radius: 12px;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 16px;
+    }
+
+    .st-stats__sep {
+        display: none;
     }
 }
