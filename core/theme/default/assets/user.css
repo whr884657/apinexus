@@ -1967,32 +1967,3 @@ select.vs-input {
     font-family: ui-monospace, monospace;
     font-size: 11px;
 }
-
-/* ── 青绿平台差异化（本主题包内，不依赖其他主题） ── */
-.vs-sidebar__link.is-active {
-    background: #eefbf4;
-    color: #168855;
-}
-
-.vs-sidebar__link:hover {
-    color: #24a66a;
-}
-
-.vs-btn--primary,
-.vs-topbar__logout:hover {
-    background: #24a66a;
-    border-color: #24a66a;
-}
-
-.vs-btn--primary:hover {
-    background: #168855;
-    border-color: #168855;
-}
-
-.vs-stat-card:hover {
-    border-color: #24a66a;
-}
-
-.vs-sidebar__logo {
-    background: #24a66a;
-}

@@ -1,13 +1,14 @@
 {
-    "version": "2.2.0",
-    "title": "misc-api 2.2.0 用户中心主题联动与主题规范",
+    "version": "2.3.0",
+    "title": "misc-api 2.3.0 主题完全隔离与青绿认证页",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "用户中心与认证页视图迁入主题包，随 frontend_theme 联动切换",
-        "新增根目录《主题规范.md》；ThemeManager 自动扫描 core/theme/ 识别主题",
-        "后台主题设置：「当前使用」仅反映已保存主题；移除冗余提示语",
-        "青绿平台首页统计三项独立横排；预览图说明修正为开发阶段预部署"
+        "ThemeManager 严格模式：主题文件无跨主题回退，路径穿越防护（realpath + .. 拦截）",
+        "青绿平台认证四页独立 st-auth 视觉：login/register/forgot/bind + auth.css/auth.js",
+        "青绿平台用户中心独立 shell 与完整 user.css/user.js，不再复用 default 布局",
+        "默认主题认证页补全 renderThemeAuthFoot；资源仅来自各主题包",
+        "《主题规范.md》扩充主题引入与渲染流程、资源隔离与安全说明"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

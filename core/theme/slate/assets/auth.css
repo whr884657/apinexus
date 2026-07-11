@@ -1,37 +1,247 @@
 /**
- * 青绿平台 · 认证页样式（配合 auth-login.css 覆盖）
+ * 青绿平台 · 认证页独立样式
  */
-body.theme-slate-auth .page {
+.st-auth-body {
+    margin: 0;
+    min-height: 100vh;
     background: #f7f8fa;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: #1a1a2e;
 }
 
-body.theme-slate-auth .left {
-    display: none;
+.st-auth {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    box-sizing: border-box;
 }
 
-body.theme-slate-auth .right {
+.st-auth__card {
     width: 100%;
     max-width: 420px;
-    margin: 0 auto;
-    padding: 40px 16px;
-}
-
-body.theme-slate-auth .form-box {
+    background: #fff;
     border: 1px solid #e8e9ee;
     border-radius: 16px;
+    padding: 28px 24px 24px;
     box-shadow: 0 4px 24px rgba(36, 166, 106, 0.06);
+    box-sizing: border-box;
 }
 
-body.theme-slate-auth .hover-btn,
-body.theme-slate-auth .login-btn {
+.st-auth__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.st-auth__brand .st-brand__fallback {
+    width: 36px;
+    height: 36px;
+}
+
+.st-auth__title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px;
+}
+
+.st-auth__sub {
+    font-size: 13px;
+    color: #8b8da3;
+    margin: 0 0 20px;
+}
+
+.st-auth__field {
+    margin-bottom: 14px;
+}
+
+.st-auth__field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #555770;
+}
+
+.st-auth__field input {
+    width: 100%;
+    box-sizing: border-box;
+    height: 42px;
+    padding: 0 12px;
+    border: 1.5px solid #e8e9ee;
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.st-auth__field input:focus {
+    border-color: #24a66a;
+}
+
+.st-auth__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 8px 0 16px;
+    font-size: 13px;
+}
+
+.st-auth__row a {
+    color: #24a66a;
+    text-decoration: none;
+}
+
+.st-auth__group {
+    display: flex;
+    gap: 8px;
+}
+
+.st-auth__group input {
+    flex: 1;
+}
+
+.st-auth__code-btn {
+    flex-shrink: 0;
+    height: 42px;
+    padding: 0 14px;
+    border: 1.5px solid #e8e9ee;
+    border-radius: 10px;
+    background: #fff;
+    color: #24a66a;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.st-auth__code-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.st-auth__pw-wrap {
+    position: relative;
+}
+
+.st-auth__pw-wrap input {
+    padding-right: 40px;
+}
+
+.st-auth__pw-toggle {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: #8b8da3;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.st-auth__submit {
+    width: 100%;
+    height: 44px;
+    border: 0;
+    border-radius: 10px;
     background: #24a66a;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
 }
 
-body.theme-slate-auth .hover-btn:hover,
-body.theme-slate-auth .login-btn:hover {
+.st-auth__submit:hover {
     background: #168855;
 }
 
-body.theme-slate-auth a {
+.st-auth__submit:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.st-auth__msg {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 14px;
+}
+
+.st-auth__msg--error {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.st-auth__msg--success {
+    background: #eefbf4;
+    color: #168855;
+    border: 1px solid #d6f5e3;
+}
+
+.st-auth__msg--info {
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.st-auth__oauth {
+    margin-top: 18px;
+    text-align: center;
+}
+
+.st-auth__oauth-label {
+    font-size: 12px;
+    color: #8b8da3;
+    margin-bottom: 10px;
+}
+
+.st-auth__oauth-icons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.st-auth__oauth-icons a {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e8e9ee;
+    border-radius: 10px;
+}
+
+.st-auth__foot {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 13px;
+    color: #8b8da3;
+}
+
+.st-auth__foot a {
     color: #24a66a;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.st-brand__fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #24a66a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.st-brand__fallback::before {
+    content: '⚡';
+    color: #fff;
+    font-size: 14px;
 }

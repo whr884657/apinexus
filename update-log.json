@@ -1,5 +1,16 @@
 {
     "versions": {
+        "2.3.0": {
+            "title": "misc-api 2.3.0 主题完全隔离与青绿认证页",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "ThemeManager 严格模式：主题文件无跨主题回退，路径穿越防护",
+                "青绿平台认证四页独立 st-auth 视觉与完整 auth 资源",
+                "青绿平台用户中心独立 shell 与 user.css/user.js",
+                "默认主题认证页资源闭环；主题规范文档扩充渲染流程"
+            ]
+        },
         "2.2.0": {
             "title": "misc-api 2.2.0 用户中心主题联动与主题规范",
             "date": "2026-07-12",
