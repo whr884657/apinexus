@@ -122,7 +122,12 @@ misc-api/
 ├── update.json                 # 远程版本清单（在线更新检测）
 ├── update-log.json             # 版本更新记录
 ├── 404.php                     # 全站 404（含安全法律提示）
-├── index.php                   # 前台首页
+├── index.php                   # 前台首页（主题驱动）
+├── apis.php                    # 前台 · 全部接口
+├── articles.php                # 前台 · 文章
+├── links.php                   # 前台 · 友情链接
+├── sponsor.php                 # 前台 · 赞助
+├── about.php                   # 前台 · 关于
 ├── .htaccess                   # Apache 伪静态（可选）
 ├── admin/                      # 后台
 │   ├── init.php                # 后台统一引导
@@ -159,6 +164,8 @@ misc-api/
 ├── core/
 │   ├── bootstrap.php
 │   ├── version.php             # VS_VERSION 版本常量
+│   ├── ThemeManager.php        # 前台主题加载与切换
+│   ├── theme/default/          # 默认前台主题（layout + pages + assets）
 │   ├── Auth.php / UserAuth.php # 管理员与用户认证
 │   ├── Updater.php             # 云端在线更新
 │   ├── UpdateLog.php           # 更新记录读取
