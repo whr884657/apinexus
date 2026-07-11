@@ -1,0 +1,37 @@
+/**
+ * 青绿平台 · 认证页样式（配合 auth-login.css 覆盖）
+ */
+body.theme-slate-auth .page {
+    background: #f7f8fa;
+}
+
+body.theme-slate-auth .left {
+    display: none;
+}
+
+body.theme-slate-auth .right {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 40px 16px;
+}
+
+body.theme-slate-auth .form-box {
+    border: 1px solid #e8e9ee;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(36, 166, 106, 0.06);
+}
+
+body.theme-slate-auth .hover-btn,
+body.theme-slate-auth .login-btn {
+    background: #24a66a;
+}
+
+body.theme-slate-auth .hover-btn:hover,
+body.theme-slate-auth .login-btn:hover {
+    background: #168855;
+}
+
+body.theme-slate-auth a {
+    color: #24a66a;
+}

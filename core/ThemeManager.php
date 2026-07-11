@@ -150,6 +150,175 @@ class ThemeManager
         return self::$navCache;
     }
 
+    /**
+     * 用户中心菜单（各主题共用路由，布局由主题包渲染）
+     *
+     * @return array<int, array<string, string>>
+     */
+    public static function userMenuGroups()
+    {
+        $base = vs_base_url();
+        return array(
+            array('id' => 'dashboard', 'title' => '控制台', 'icon' => 'dashboard', 'url' => $base . '/user/index'),
+            array('id' => 'api-manage', 'title' => 'API 管理', 'icon' => 'cloud', 'url' => $base . '/user/api-manage'),
+            array('id' => 'tokens', 'title' => '令牌管理', 'icon' => 'share', 'url' => $base . '/user/tokens'),
+            array('id' => 'points', 'title' => '积分变动', 'icon' => 'archive', 'url' => $base . '/user/points'),
+            array('id' => 'api-list', 'title' => '接口列表', 'icon' => 'folder', 'url' => $base . '/user/apis'),
+            array('id' => 'account', 'title' => '账号设置', 'icon' => 'user', 'url' => $base . '/user/account'),
+        );
+    }
+
+    /**
+     * 解析主题内文件，当前主题缺失时回退 default
+     *
+     * @param string $relative
+     * @param string|null $themeId
+     * @return string
+     */
+    public static function resolveThemeFile($relative, $themeId = null)
+    {
+        $relative = ltrim(str_replace('\\', '/', (string) $relative), '/');
+        if ($themeId === null) {
+            $themeId = self::activeId();
+        }
+
+        $candidates = array($themeId);
+        if ($themeId !== self::DEFAULT_THEME) {
+            $candidates[] = self::DEFAULT_THEME;
+        }
+
+        foreach ($candidates as $id) {
+            $file = self::themeDir($id) . '/' . $relative;
+            if (is_file($file)) {
+                return $file;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function userStylesheetHrefs()
+    {
+        $themeId = self::activeId();
+        $hrefs = array();
+        $userCss = self::themeDir($themeId) . '/assets/user.css';
+        if (is_file($userCss)) {
+            $hrefs[] = self::assetUrl($themeId, 'assets/user.css') . '?v=' . VS_VERSION;
+        } elseif ($themeId !== self::DEFAULT_THEME) {
+            $fallback = self::themeDir(self::DEFAULT_THEME) . '/assets/user.css';
+            if (is_file($fallback)) {
+                $hrefs[] = self::assetUrl(self::DEFAULT_THEME, 'assets/user.css') . '?v=' . VS_VERSION;
+            }
+        }
+        return $hrefs;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function authStylesheetHrefs()
+    {
+        $themeId = self::activeId();
+        $hrefs = array();
+        $authCss = self::themeDir($themeId) . '/assets/auth.css';
+        if (is_file($authCss)) {
+            $hrefs[] = self::assetUrl($themeId, 'assets/auth.css') . '?v=' . VS_VERSION;
+        }
+        return $hrefs;
+    }
+
+    /**
+     * @return string
+     */
+    public static function userScriptHref()
+    {
+        $themeId = self::activeId();
+        $js = self::themeDir($themeId) . '/assets/user.js';
+        if (!is_file($js) && $themeId !== self::DEFAULT_THEME) {
+            $js = self::themeDir(self::DEFAULT_THEME) . '/assets/user.js';
+            $themeId = self::DEFAULT_THEME;
+        }
+        if (!is_file($js)) {
+            return '';
+        }
+        return self::assetUrl($themeId, 'assets/user.js') . '?v=' . VS_VERSION;
+    }
+
+    /**
+     * 用户中心布局开始
+     *
+     * @param string $pageTitle
+     * @param string $activeMenu
+     * @return void
+     */
+    public static function renderUserLayoutStart($pageTitle, $activeMenu = '')
+    {
+        $file = self::resolveThemeFile('user/layout.php');
+        if ($file === '') {
+            echo '<div class="vs-alert vs-alert--error">用户中心主题布局缺失</div>';
+            return;
+        }
+        require_once $file;
+        if (function_exists('vs_theme_user_layout_start')) {
+            vs_theme_user_layout_start($pageTitle, $activeMenu);
+        }
+    }
+
+    /**
+     * 用户中心布局结束
+     *
+     * @param array $extraScripts
+     * @return void
+     */
+    public static function renderUserLayoutEnd(array $extraScripts = array())
+    {
+        $file = self::resolveThemeFile('user/layout.php');
+        if ($file === '' || !function_exists('vs_theme_user_layout_end')) {
+            echo '</body></html>';
+            return;
+        }
+        vs_theme_user_layout_end($extraScripts);
+    }
+
+    /**
+     * 认证页（登录/注册/忘记密码/绑定）视图
+     *
+     * @param string $pageKey
+     * @param string $pageTitle
+     * @param array  $pageData
+     * @return void
+     */
+    public static function renderAuthPage($pageKey, $pageTitle, array $pageData = array())
+    {
+        if (!defined('VS_THEME_RENDER')) {
+            define('VS_THEME_RENDER', true);
+        }
+
+        $pageKey = preg_replace('/[^a-z0-9_-]/i', '', (string) $pageKey);
+        $viewFile = self::resolveThemeFile('user/auth/' . $pageKey . '.php');
+        if ($viewFile === '') {
+            echo '<div class="vs-alert vs-alert--error">认证页主题模板缺失：' . vs_e($pageKey) . '</div>';
+            return;
+        }
+
+        $ctx = array_merge(
+            array(
+                'vsBase'    => vs_base_url(),
+                'siteName'  => SiteContext::siteName(),
+                'pageTitle' => $pageTitle,
+                'pageKey'   => $pageKey,
+                'themeId'   => self::activeId(),
+            ),
+            $pageData
+        );
+        extract($ctx, EXTR_SKIP);
+
+        require $viewFile;
+    }
+
     public static function assetUrl($themeId, $relative)
     {
         $relative = ltrim(str_replace('\\', '/', (string) $relative), '/');

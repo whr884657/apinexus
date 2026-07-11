@@ -1,0 +1,30 @@
+/**
+ * 青绿平台 · 用户中心样式（在 admin.css 基础上覆盖）
+ */
+.vs-sidebar__link.is-active {
+    background: #eefbf4;
+    color: #168855;
+}
+
+.vs-sidebar__link:hover {
+    color: #24a66a;
+}
+
+.vs-btn--primary,
+.vs-topbar__logout:hover {
+    background: #24a66a;
+    border-color: #24a66a;
+}
+
+.vs-btn--primary:hover {
+    background: #168855;
+    border-color: #168855;
+}
+
+.vs-stat-card {
+    border-color: #e8e9ee;
+}
+
+.vs-stat-card:hover {
+    border-color: #24a66a;
+}
