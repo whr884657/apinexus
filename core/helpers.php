@@ -381,6 +381,32 @@ function vs_render_site_logo($class = 'vs-logo-icon')
 }
 
 /**
+ * 前台主题品牌图标：优先站点 Logo，未配置时使用主题内默认占位
+ *
+ * @param string $imgClass
+ * @param string $fallbackClass
+ * @return void
+ */
+function vs_theme_site_logo($imgClass = '', $fallbackClass = '')
+{
+    if (!class_exists('SiteContext')) {
+        return;
+    }
+
+    $logo = trim(SiteContext::siteLogo());
+    if ($logo !== '') {
+        vs_render_site_logo($imgClass);
+        return;
+    }
+
+    $cls = trim($imgClass . ' ' . $fallbackClass);
+    if ($cls === '') {
+        $cls = 'vs-theme-logo-fallback';
+    }
+    echo '<span class="' . vs_e($cls) . '" aria-hidden="true"></span>';
+}
+
+/**
  * 渲染页脚（版权 + ICP + 公安备案）
  *
  * @param string|null $siteName

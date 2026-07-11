@@ -7,7 +7,7 @@ if (!defined('VS_THEME_RENDER')) {
 <header class="dt-header">
     <div class="dt-container dt-header__inner">
         <a href="<?php echo vs_e($vsBase); ?>/" class="dt-logo">
-            <?php vs_render_site_logo('dt-logo__icon'); ?>
+            <?php vs_theme_site_logo('dt-logo__icon', 'dt-logo__icon-fallback'); ?>
             <span class="dt-logo__text"><?php echo vs_e($siteName); ?></span>
         </a>
         <nav class="dt-nav" aria-label="主导航">
@@ -30,8 +30,10 @@ if (!defined('VS_THEME_RENDER')) {
 <div class="dt-drawer-mask" id="dtDrawerMask" hidden></div>
 <aside class="dt-drawer" id="dtDrawer" aria-label="站点菜单" hidden>
     <div class="dt-drawer__head">
-        <span class="dt-drawer__title"><?php echo vs_e($siteName); ?></span>
-        <button type="button" class="dt-drawer__close" id="dtDrawerClose" aria-label="关闭菜单">&times;</button>
+        <div class="dt-drawer__brand">
+            <?php vs_theme_site_logo('dt-drawer__icon', 'dt-drawer__icon-fallback'); ?>
+            <span class="dt-drawer__title"><?php echo vs_e($siteName); ?></span>
+        </div>
     </div>
     <nav class="dt-drawer__nav">
         <?php foreach ($navItems as $item): ?>

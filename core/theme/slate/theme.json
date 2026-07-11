@@ -1,8 +1,8 @@
 {
     "id": "slate",
-    "name": "深岩主题",
-    "version": "1.0.0",
+    "name": "云启风格",
+    "version": "2.0.0",
     "author": "misc-api",
-    "description": "深色极简布局，右侧抽屉与底部导航，杂志式内容流",
+    "description": "浅色 API 平台风格，绿色主色；电脑端顶栏导航，手机端右侧抽屉",
     "preview": "assets/preview.svg"
 }
