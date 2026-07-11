@@ -16,4 +16,19 @@
         btn.textContent = show ? '隐藏' : '显示';
         btn.setAttribute('aria-label', show ? '隐藏密码' : '显示密码');
     });
+
+    window.stAuthShake = function () {
+        var card = document.querySelector('.st-auth__card');
+        if (!card) return;
+        card.classList.remove('is-shake');
+        void card.offsetWidth;
+        card.classList.add('is-shake');
+        window.setTimeout(function () { card.classList.remove('is-shake'); }, 420);
+    };
+
+    window.stAuthSetLoading = function (btn, loading) {
+        if (!btn) return;
+        btn.disabled = !!loading;
+        btn.classList.toggle('is-loading', !!loading);
+    };
 })();

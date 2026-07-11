@@ -3,57 +3,48 @@ if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
 ThemeManager::renderThemeAuthHead('用户注册');
+vs_slate_auth_shell_start('注册账号', '使用邮箱验证注册，完成验证后即可使用', '加入平台，探索更多 API 能力');
 ?>
 
-<div class="st-auth">
-    <div class="st-auth__card">
-        <div class="st-auth__brand">
-            <?php vs_theme_site_logo('', 'st-brand__fallback'); ?>
-            <div>
-                <h1 class="st-auth__title">注册账号</h1>
-                <p class="st-auth__sub">使用邮箱验证注册，完成验证后即可使用</p>
-            </div>
-        </div>
+<div id="formMessage" class="st-auth__msg" role="alert" hidden></div>
 
-        <div id="formMessage" class="st-auth__msg" role="alert" hidden></div>
+<?php if (!$mailEnabled): ?>
+    <div class="st-auth__msg st-auth__msg--error"><?php echo vs_e($mailDisabledMsg); ?></div>
+<?php endif; ?>
 
-        <?php if (!$mailEnabled): ?>
-            <div class="st-auth__msg st-auth__msg--error"><?php echo vs_e($mailDisabledMsg); ?></div>
-        <?php endif; ?>
-
-        <form id="registerForm" method="post" action="" novalidate>
-            <?php vs_auth_csrf_field(); ?>
-            <div class="st-auth__field">
-                <label for="username">用户名</label>
-                <input id="username" name="username" type="text" placeholder="3～50 个字符" autocomplete="username" maxlength="50" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-            </div>
-            <div class="st-auth__field">
-                <label for="email">邮箱</label>
-                <input id="email" name="email" type="email" placeholder="请输入邮箱" autocomplete="email" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-            </div>
-            <div class="st-auth__field">
-                <label for="code">验证码</label>
-                <div class="st-auth__group">
-                    <input id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                    <button type="button" class="st-auth__code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
-                </div>
-            </div>
-            <div class="st-auth__field">
-                <label for="password">密码</label>
-                <div class="st-auth__pw-wrap">
-                    <input id="password" name="password" type="password" placeholder="请设置密码（至少6位）" autocomplete="new-password" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                    <button type="button" class="st-auth__pw-toggle" data-st-pw-toggle aria-label="显示密码">显示</button>
-                </div>
-            </div>
-            <div class="st-auth__field">
-                <label for="confirm_password">确认密码</label>
-                <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-            </div>
-            <button type="submit" class="st-auth__submit" id="submitBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>立即注册</button>
-            <div class="st-auth__foot">已有账号？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
-        </form>
+<form id="registerForm" method="post" action="" novalidate>
+    <?php vs_auth_csrf_field(); ?>
+    <div class="st-auth__field">
+        <label for="username">用户名</label>
+        <input class="st-auth__input" id="username" name="username" type="text" placeholder="3～50 个字符" autocomplete="username" maxlength="50" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
     </div>
-</div>
+    <div class="st-auth__field">
+        <label for="email">邮箱</label>
+        <input class="st-auth__input" id="email" name="email" type="email" placeholder="请输入邮箱" autocomplete="email" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+    </div>
+    <div class="st-auth__field">
+        <label for="code">验证码</label>
+        <div class="st-auth__group">
+            <input class="st-auth__input" id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+            <button type="button" class="st-auth__code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
+        </div>
+    </div>
+    <div class="st-auth__field">
+        <label for="password">密码</label>
+        <div class="st-auth__pw-wrap">
+            <input class="st-auth__input" id="password" name="password" type="password" placeholder="请设置密码（至少6位）" autocomplete="new-password" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+            <button type="button" class="st-auth__pw-toggle" data-st-pw-toggle aria-label="显示密码">显示</button>
+        </div>
+    </div>
+    <div class="st-auth__field">
+        <label for="confirm_password">确认密码</label>
+        <input class="st-auth__input" id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+    </div>
+    <button type="submit" class="st-auth__submit" id="submitBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>立即注册</button>
+    <div class="st-auth__foot">已有账号？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
+</form>
+
+<?php vs_slate_auth_shell_end(); ?>
 
 <script>
 (function () {
@@ -73,6 +64,7 @@ ThemeManager::renderThemeAuthHead('用户注册');
         messageEl.textContent = text;
         messageEl.className = 'st-auth__msg st-auth__msg--' + type;
         messageEl.hidden = false;
+        if (type === 'error' && window.stAuthShake) window.stAuthShake();
     }
     function hideMessage() { if (messageEl) messageEl.hidden = true; }
 
@@ -131,7 +123,7 @@ ThemeManager::renderThemeAuthHead('用户注册');
         if (!code) { showMessage('请输入验证码', 'error'); return; }
         if (password.length < 6) { showMessage('密码至少 6 位', 'error'); return; }
         if (password !== confirm) { showMessage('两次输入的密码不一致', 'error'); return; }
-        if (submitBtn) submitBtn.disabled = true;
+        if (window.stAuthSetLoading) window.stAuthSetLoading(submitBtn, true);
         var body = new FormData(form);
         body.append('action', 'register');
         fetch(window.location.href, { method: 'POST', body: body, credentials: 'same-origin' })
@@ -143,7 +135,7 @@ ThemeManager::renderThemeAuthHead('用户注册');
                 } else showMessage(data.msg || '注册失败', 'error');
             })
             .catch(function () { showMessage('网络异常，请稍后重试', 'error'); })
-            .finally(function () { if (submitBtn) submitBtn.disabled = false; });
+            .finally(function () { if (window.stAuthSetLoading) window.stAuthSetLoading(submitBtn, false); });
     });
 })();
 </script>

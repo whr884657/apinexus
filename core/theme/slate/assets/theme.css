@@ -288,43 +288,46 @@ body.st-drawer-open {
     line-height: 1.75;
 }
 
-.st-stat-row {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: stretch;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.st-stat-item {
-    display: flex;
-    flex-direction: column;
+.st-stat-pill {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    min-width: 120px;
-    padding: 12px 20px;
+    gap: clamp(12px, 3vw, 24px);
+    padding: 10px clamp(14px, 4vw, 22px);
     background: var(--st-bg-alt);
     border: 1px solid #f0f1f5;
-    border-radius: 12px;
-    font-size: 13px;
+    border-radius: 999px;
+    font-size: clamp(12px, 2.8vw, 14px);
     color: var(--st-fg2);
+    white-space: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
 
-.st-stat-item__label {
-    font-size: 12px;
-    color: var(--st-fg3);
+.st-stat-pill::-webkit-scrollbar {
+    display: none;
 }
 
-.st-stat-item strong {
-    font-size: 20px;
+.st-stat-pill__item {
+    flex-shrink: 0;
+}
+
+.st-stat-pill__item strong {
+    font-weight: 700;
     color: var(--st-fg);
-    line-height: 1.2;
 }
 
-.st-stat-item strong.st-stats__accent {
+.st-stat-pill__accent {
     color: var(--st-accent);
+}
+
+.st-stat-pill__sep {
+    width: 1px;
+    height: 16px;
+    background: #e0e2e8;
+    flex-shrink: 0;
 }
 
 .st-stat-num {
@@ -452,30 +455,38 @@ body.st-drawer-open {
     position: fixed;
     bottom: 24px;
     left: 50%;
-    transform: translateX(-50%);
-    z-index: 40;
+    transform: translateX(-50%) translateY(12px);
+    z-index: 90;
     width: 40px;
     height: 40px;
     border-radius: 50%;
     border: 1px solid var(--st-border);
     background: #fff;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     color: var(--st-fg3);
-    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s, color 0.15s, border-color 0.15s;
+    transition: opacity 0.25s ease, transform 0.25s ease, color 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
 .st-back-top.is-show {
     opacity: 1;
     pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
 }
 
 .st-back-top:hover {
     color: var(--st-accent);
     border-color: var(--st-accent);
+    box-shadow: 0 6px 20px rgba(36, 166, 106, 0.15);
+}
+
+.st-back-top:active {
+    transform: translateX(-50%) scale(0.94);
 }
 
 .st-section {

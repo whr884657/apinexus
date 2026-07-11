@@ -42,4 +42,7 @@ $footDesc = $siteDesc !== '' ? $siteDesc : '为开发者提供稳定、快速的
         <div class="st-foot__copy"><?php vs_render_site_footer($siteName); ?></div>
     </div>
 </footer>
+<button type="button" class="st-back-top" id="stBackTop" aria-label="返回顶部" hidden>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
 </div>

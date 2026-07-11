@@ -3,44 +3,35 @@ if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
 ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
+vs_slate_auth_shell_start('绑定' . $providerLabel . '账号', '第三方账号尚未绑定，请使用已注册账号验证身份', '绑定后即可使用第三方账号快捷登录');
 ?>
 
-<div class="st-auth">
-    <div class="st-auth__card">
-        <div class="st-auth__brand">
-            <?php vs_theme_site_logo('', 'st-brand__fallback'); ?>
-            <div>
-                <h1 class="st-auth__title">绑定<?php echo vs_e($providerLabel); ?>账号</h1>
-                <p class="st-auth__sub">第三方账号尚未绑定，请使用已注册账号验证身份</p>
-            </div>
-        </div>
+<div class="st-auth__msg st-auth__msg--info">仅支持已注册用户。请使用本站用户名/邮箱与密码完成绑定；未注册请先 <a href="<?php echo vs_e($base); ?>/user/register">注册</a>。</div>
 
-        <div class="st-auth__msg st-auth__msg--info">仅支持已注册用户。请使用本站用户名/邮箱与密码完成绑定；未注册请先 <a href="<?php echo vs_e($base); ?>/user/register">注册</a>。</div>
+<?php if ($displayName !== ''): ?>
+    <div class="st-auth__msg st-auth__msg--info"><?php echo vs_e($providerLabel); ?> 账号：<?php echo vs_e($displayName); ?></div>
+<?php endif; ?>
 
-        <?php if ($displayName !== ''): ?>
-            <div class="st-auth__msg st-auth__msg--info"><?php echo vs_e($providerLabel); ?> 账号：<?php echo vs_e($displayName); ?></div>
-        <?php endif; ?>
+<div id="formMessage" class="st-auth__msg" role="alert" hidden></div>
 
-        <div id="formMessage" class="st-auth__msg" role="alert" hidden></div>
-
-        <form id="bindForm" method="post" action="" novalidate>
-            <?php vs_auth_csrf_field(); ?>
-            <div class="st-auth__field">
-                <label for="username">用户名或邮箱</label>
-                <input id="username" name="username" type="text" placeholder="请输入已注册账号" autocomplete="username" maxlength="64" required>
-            </div>
-            <div class="st-auth__field">
-                <label for="password">密码</label>
-                <div class="st-auth__pw-wrap">
-                    <input id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required>
-                    <button type="button" class="st-auth__pw-toggle" data-st-pw-toggle aria-label="显示密码">显示</button>
-                </div>
-            </div>
-            <button type="submit" class="st-auth__submit" id="bindBtn">确认绑定并登录</button>
-            <div class="st-auth__foot"><a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
-        </form>
+<form id="bindForm" method="post" action="" novalidate>
+    <?php vs_auth_csrf_field(); ?>
+    <div class="st-auth__field">
+        <label for="username">用户名或邮箱</label>
+        <input class="st-auth__input" id="username" name="username" type="text" placeholder="请输入已注册账号" autocomplete="username" maxlength="64" required>
     </div>
-</div>
+    <div class="st-auth__field">
+        <label for="password">密码</label>
+        <div class="st-auth__pw-wrap">
+            <input class="st-auth__input" id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required>
+            <button type="button" class="st-auth__pw-toggle" data-st-pw-toggle aria-label="显示密码">显示</button>
+        </div>
+    </div>
+    <button type="submit" class="st-auth__submit" id="bindBtn">确认绑定并登录</button>
+    <div class="st-auth__foot"><a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
+</form>
+
+<?php vs_slate_auth_shell_end(); ?>
 
 <script>
 (function () {
@@ -56,11 +47,12 @@ ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
         messageEl.textContent = text;
         messageEl.className = 'st-auth__msg st-auth__msg--' + type;
         messageEl.hidden = false;
+        if (type === 'error' && window.stAuthShake) window.stAuthShake();
     }
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (bindBtn) bindBtn.disabled = true;
+        if (window.stAuthSetLoading) window.stAuthSetLoading(bindBtn, true);
         fetch(window.location.href, { method: 'POST', body: new FormData(form), credentials: 'same-origin' })
             .then(function (res) { return res.json(); })
             .then(function (data) {
@@ -70,7 +62,7 @@ ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
                 } else showMessage(data.msg || '绑定失败', 'error');
             })
             .catch(function () { showMessage('网络异常，请稍后重试', 'error'); })
-            .finally(function () { if (bindBtn) bindBtn.disabled = false; });
+            .finally(function () { if (window.stAuthSetLoading) window.stAuthSetLoading(bindBtn, false); });
     });
 })();
 </script>

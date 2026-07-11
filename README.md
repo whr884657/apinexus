@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.3.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.4.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -236,6 +236,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.4.0（2026-07-12）
+
+- 青绿平台认证页双栏重设计，修复站点 Logo 尺寸异常；原生动画与 loading 交互
+- 首页统计改为参考主题单行胶囊条；全站返回顶部按钮
 
 ### v2.3.0（2026-07-12）
 
