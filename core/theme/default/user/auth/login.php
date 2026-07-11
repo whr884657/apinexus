@@ -11,7 +11,7 @@ $expiredMsg = isset($expiredMsg) ? $expiredMsg : '';
 $oauthError = isset($oauthError) ? $oauthError : '';
 $oauthProviders = isset($oauthProviders) ? $oauthProviders : array('qq' => false, 'gitee' => false);
 
-vs_auth_head($pageTitle);
+ThemeManager::renderThemeAuthHead($pageTitle);
 ?>
 
 <div class="page">
@@ -142,4 +142,4 @@ vs_auth_head($pageTitle);
 })();
 </script>
 
-<?php vs_auth_foot(); ?>
+<?php ThemeManager::renderThemeAuthFoot(); ?>

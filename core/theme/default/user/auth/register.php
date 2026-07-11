@@ -2,7 +2,7 @@
 if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
-vs_auth_head('用户注册');
+ThemeManager::renderThemeAuthHead('用户注册');
 ?>
 
 <div class="page">
@@ -226,3 +226,4 @@ vs_auth_head('用户注册');
 })();
 </script>
 
+<?php ThemeManager::renderThemeAuthFoot(); ?>

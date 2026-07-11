@@ -2,7 +2,7 @@
 if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
-vs_auth_head('忘记密码');
+ThemeManager::renderThemeAuthHead('忘记密码');
 ?>
 
 <div class="page">
@@ -216,3 +216,4 @@ vs_auth_head('忘记密码');
 })();
 </script>
 
+<?php ThemeManager::renderThemeAuthFoot(); ?>

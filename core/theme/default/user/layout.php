@@ -36,7 +36,6 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/modal.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/icons.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/theme-picker.css?v=' . VS_VERSION . '">' . "\n";
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/admin.css?v=' . VS_VERSION . '">' . "\n";
     foreach (ThemeManager::userStylesheetHrefs() as $href) {
         echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
     }
@@ -114,7 +113,6 @@ function vs_theme_user_layout_end(array $extraScripts = array())
     echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/theme-picker.js?v=' . VS_VERSION . '"></script>' . "\n";
-    echo '<script src="' . vs_e($vsBase) . '/assets/js/admin.js?v=' . VS_VERSION . '"></script>' . "\n";
     $userJs = ThemeManager::userScriptHref();
     if ($userJs !== '') {
         echo '<script src="' . vs_e($userJs) . '"></script>' . "\n";

@@ -2,7 +2,7 @@
 if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
-vs_auth_head('绑定' . $providerLabel);
+ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
 ?>
 
 <div class="page">
@@ -106,3 +106,4 @@ vs_auth_head('绑定' . $providerLabel);
 })();
 </script>
 
+<?php ThemeManager::renderThemeAuthFoot(); ?>

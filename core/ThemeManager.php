@@ -118,6 +118,9 @@ class ThemeManager
     public static function setActive($themeId)
     {
         $themeId = trim((string) $themeId);
+        if ($themeId === '' || !preg_match('/^[a-z0-9][a-z0-9_-]{0,31}$/i', $themeId)) {
+            return '无效的主题';
+        }
         if (!self::isValidTheme($themeId)) {
             return '无效的主题';
         }
@@ -169,32 +172,37 @@ class ThemeManager
     }
 
     /**
-     * 解析主题内文件，当前主题缺失时回退 default
+     * 解析当前激活主题内文件（严格模式：不回退其他主题）
      *
      * @param string $relative
-     * @param string|null $themeId
      * @return string
+     */
+    public static function resolveActiveThemeFile($relative)
+    {
+        $themeId = self::activeId();
+        $relative = ltrim(str_replace('\\', '/', (string) $relative), '/');
+        if ($relative === '' || strpos($relative, '..') !== false) {
+            return '';
+        }
+
+        $root = realpath(self::themeDir($themeId));
+        $file = realpath(self::themeDir($themeId) . '/' . $relative);
+        if ($root === false || $file === false || strpos($file, $root) !== 0 || !is_file($file)) {
+            return '';
+        }
+
+        return $file;
+    }
+
+    /**
+     * @deprecated 仅兼容旧调用，内部转严格解析
      */
     public static function resolveThemeFile($relative, $themeId = null)
     {
-        $relative = ltrim(str_replace('\\', '/', (string) $relative), '/');
-        if ($themeId === null) {
-            $themeId = self::activeId();
+        if ($themeId !== null && $themeId !== self::activeId()) {
+            return '';
         }
-
-        $candidates = array($themeId);
-        if ($themeId !== self::DEFAULT_THEME) {
-            $candidates[] = self::DEFAULT_THEME;
-        }
-
-        foreach ($candidates as $id) {
-            $file = self::themeDir($id) . '/' . $relative;
-            if (is_file($file)) {
-                return $file;
-            }
-        }
-
-        return '';
+        return self::resolveActiveThemeFile($relative);
     }
 
     /**
@@ -203,17 +211,11 @@ class ThemeManager
     public static function userStylesheetHrefs()
     {
         $themeId = self::activeId();
-        $hrefs = array();
         $userCss = self::themeDir($themeId) . '/assets/user.css';
-        if (is_file($userCss)) {
-            $hrefs[] = self::assetUrl($themeId, 'assets/user.css') . '?v=' . VS_VERSION;
-        } elseif ($themeId !== self::DEFAULT_THEME) {
-            $fallback = self::themeDir(self::DEFAULT_THEME) . '/assets/user.css';
-            if (is_file($fallback)) {
-                $hrefs[] = self::assetUrl(self::DEFAULT_THEME, 'assets/user.css') . '?v=' . VS_VERSION;
-            }
+        if (!is_file($userCss)) {
+            return array();
         }
-        return $hrefs;
+        return array(self::assetUrl($themeId, 'assets/user.css') . '?v=' . VS_VERSION);
     }
 
     /**
@@ -222,12 +224,24 @@ class ThemeManager
     public static function authStylesheetHrefs()
     {
         $themeId = self::activeId();
-        $hrefs = array();
         $authCss = self::themeDir($themeId) . '/assets/auth.css';
-        if (is_file($authCss)) {
-            $hrefs[] = self::assetUrl($themeId, 'assets/auth.css') . '?v=' . VS_VERSION;
+        if (!is_file($authCss)) {
+            return array();
         }
-        return $hrefs;
+        return array(self::assetUrl($themeId, 'assets/auth.css') . '?v=' . VS_VERSION);
+    }
+
+    /**
+     * @return string
+     */
+    public static function authScriptHref()
+    {
+        $themeId = self::activeId();
+        $js = self::themeDir($themeId) . '/assets/auth.js';
+        if (!is_file($js)) {
+            return '';
+        }
+        return self::assetUrl($themeId, 'assets/auth.js') . '?v=' . VS_VERSION;
     }
 
     /**
@@ -237,14 +251,61 @@ class ThemeManager
     {
         $themeId = self::activeId();
         $js = self::themeDir($themeId) . '/assets/user.js';
-        if (!is_file($js) && $themeId !== self::DEFAULT_THEME) {
-            $js = self::themeDir(self::DEFAULT_THEME) . '/assets/user.js';
-            $themeId = self::DEFAULT_THEME;
-        }
         if (!is_file($js)) {
             return '';
         }
         return self::assetUrl($themeId, 'assets/user.js') . '?v=' . VS_VERSION;
+    }
+
+    /**
+     * 加载当前主题认证布局函数
+     *
+     * @return void
+     */
+    public static function ensureAuthLayoutLoaded()
+    {
+        static $loaded = false;
+        if ($loaded) {
+            return;
+        }
+        $file = self::resolveActiveThemeFile('user/auth/layout.php');
+        if ($file !== '') {
+            require_once $file;
+            $loaded = true;
+        }
+    }
+
+    /**
+     * 主题认证页头部（仅加载当前主题包资源）
+     *
+     * @param string $pageTitle
+     * @return void
+     */
+    public static function renderThemeAuthHead($pageTitle)
+    {
+        AuthSecurity::sendSecurityHeaders();
+        self::ensureAuthLayoutLoaded();
+        if (!function_exists('vs_theme_auth_head')) {
+            echo '<div class="vs-alert vs-alert--error">认证页主题布局缺失</div>';
+            return;
+        }
+        vs_theme_auth_head($pageTitle);
+    }
+
+    /**
+     * 主题认证页底部
+     *
+     * @param string $inlineJs
+     * @return void
+     */
+    public static function renderThemeAuthFoot($inlineJs = '')
+    {
+        self::ensureAuthLayoutLoaded();
+        if (!function_exists('vs_theme_auth_foot')) {
+            echo '</body></html>';
+            return;
+        }
+        vs_theme_auth_foot($inlineJs);
     }
 
     /**
@@ -256,7 +317,7 @@ class ThemeManager
      */
     public static function renderUserLayoutStart($pageTitle, $activeMenu = '')
     {
-        $file = self::resolveThemeFile('user/layout.php');
+        $file = self::resolveActiveThemeFile('user/layout.php');
         if ($file === '') {
             echo '<div class="vs-alert vs-alert--error">用户中心主题布局缺失</div>';
             return;
@@ -275,7 +336,7 @@ class ThemeManager
      */
     public static function renderUserLayoutEnd(array $extraScripts = array())
     {
-        $file = self::resolveThemeFile('user/layout.php');
+        $file = self::resolveActiveThemeFile('user/layout.php');
         if ($file === '' || !function_exists('vs_theme_user_layout_end')) {
             echo '</body></html>';
             return;
@@ -298,7 +359,7 @@ class ThemeManager
         }
 
         $pageKey = preg_replace('/[^a-z0-9_-]/i', '', (string) $pageKey);
-        $viewFile = self::resolveThemeFile('user/auth/' . $pageKey . '.php');
+        $viewFile = self::resolveActiveThemeFile('user/auth/' . $pageKey . '.php');
         if ($viewFile === '') {
             echo '<div class="vs-alert vs-alert--error">认证页主题模板缺失：' . vs_e($pageKey) . '</div>';
             return;
@@ -321,7 +382,14 @@ class ThemeManager
 
     public static function assetUrl($themeId, $relative)
     {
+        $themeId = trim((string) $themeId);
+        if (!self::isValidTheme($themeId)) {
+            return '';
+        }
         $relative = ltrim(str_replace('\\', '/', (string) $relative), '/');
+        if ($relative === '' || strpos($relative, '..') !== false) {
+            return '';
+        }
         return vs_base_url() . '/core/theme/' . rawurlencode($themeId) . '/' . $relative;
     }
 
