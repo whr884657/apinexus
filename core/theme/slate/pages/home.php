@@ -10,12 +10,19 @@ $apiCategories = array('全部', '生活服务', '图片相关', '查询工具',
 <section class="st-hero">
     <h1 class="st-hero__title">免费 API 接口服务平台</h1>
     <p class="st-hero__lead"><?php echo vs_e($heroDesc); ?></p>
-    <div class="st-stats">
-        <span>收录 <strong class="st-stat-num" id="stStatTotal">0</strong> 个接口</span>
-        <span class="st-stats__sep" aria-hidden="true"></span>
-        <span>今日调用 <strong class="st-stat-num st-stats__accent" id="stStatToday">0</strong> 次</span>
-        <span class="st-stats__sep" aria-hidden="true"></span>
-        <span>累计调用 <strong class="st-stat-num" id="stStatAll">0</strong> 次</span>
+    <div class="st-stat-row">
+        <div class="st-stat-item">
+            <span class="st-stat-item__label">收录接口</span>
+            <strong class="st-stat-num" id="stStatTotal">0</strong>
+        </div>
+        <div class="st-stat-item">
+            <span class="st-stat-item__label">今日调用</span>
+            <strong class="st-stat-num st-stats__accent" id="stStatToday">0</strong>
+        </div>
+        <div class="st-stat-item">
+            <span class="st-stat-item__label">累计调用</span>
+            <strong class="st-stat-num" id="stStatAll">0</strong>
+        </div>
     </div>
 </section>
 

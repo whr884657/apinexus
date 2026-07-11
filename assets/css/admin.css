@@ -1884,6 +1884,11 @@ select.vs-input {
     box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1), 0 10px 28px rgba(0, 0, 0, 0.1);
 }
 
+.vs-theme-card.is-selected:not(.is-active) {
+    border-color: var(--vs-primary);
+    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.06);
+}
+
 .vs-theme-card input {
     position: absolute;
     opacity: 0;

@@ -31,13 +31,13 @@ vs_admin_layout_start('主题设置', 'theme');
 <div class="vs-panel vs-theme-settings">
     <div class="vs-panel__header">
         <h2 class="vs-panel__title">前台主题</h2>
-        <p class="vs-panel__desc">选择主题后点击保存，用户访问前台时将加载对应主题包（<code>core/theme/{id}/</code>）。各主题样式与脚本完全独立。</p>
+        <p class="vs-panel__desc">系统自动扫描 <code>core/theme/</code> 下含 <code>theme.json</code> 的文件夹并识别为可用主题。各主题样式与脚本完全独立。</p>
     </div>
 
     <?php if (empty($themes)): ?>
         <?php vs_render_notice('warning', '', '未找到可用主题，请确认 core/theme/ 目录完整。', array('compact' => true)); ?>
     <?php else: ?>
-        <form method="post" action="" class="vs-form" id="themeSettingsForm" data-ajax="1">
+        <form method="post" action="" class="vs-form" id="themeSettingsForm" data-ajax="1" data-active-theme="<?php echo vs_e($activeTheme); ?>">
             <input type="hidden" name="action" value="save_theme">
             <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
 
