@@ -12,57 +12,48 @@ $oauthError = isset($oauthError) ? $oauthError : '';
 $oauthProviders = isset($oauthProviders) ? $oauthProviders : array('qq' => false, 'gitee' => false);
 
 ThemeManager::renderThemeAuthHead($pageTitle);
+vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号', '一行代码调用 API，从这里开始');
 ?>
 
-<div class="st-auth">
-    <div class="st-auth__card">
-        <div class="st-auth__brand">
-            <?php vs_theme_site_logo('', 'st-brand__fallback'); ?>
-            <div>
-                <h1 class="st-auth__title"><?php echo vs_e($siteName); ?></h1>
-                <p class="st-auth__sub">用户登录</p>
-            </div>
-        </div>
+<div id="formMessage" class="st-auth__msg" role="alert" hidden></div>
 
-        <div id="formMessage" class="st-auth__msg" role="alert" hidden></div>
-
-        <form id="loginForm" method="post" action="" novalidate>
-            <?php vs_auth_csrf_field(); ?>
-            <div class="st-auth__field">
-                <label for="username">用户名或邮箱</label>
-                <input id="username" name="username" type="text" placeholder="请输入用户名或邮箱" autocomplete="username" maxlength="64" required>
-            </div>
-            <div class="st-auth__field">
-                <label for="password">密码</label>
-                <div class="st-auth__pw-wrap">
-                    <input id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required>
-                    <button type="button" class="st-auth__pw-toggle" data-st-pw-toggle aria-label="显示密码">显示</button>
-                </div>
-            </div>
-            <div class="st-auth__row">
-                <label><input type="checkbox" id="rememberCredentials" value="1"> 记住账号密码</label>
-                <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
-            </div>
-            <button type="submit" class="st-auth__submit" id="loginBtn">登 录</button>
-
-            <?php if (!empty($oauthProviders['qq']) || !empty($oauthProviders['gitee'])): ?>
-            <div class="st-auth__oauth">
-                <div class="st-auth__oauth-label">第三方登录</div>
-                <div class="st-auth__oauth-icons">
-                    <?php if (!empty($oauthProviders['qq'])): ?>
-                        <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=qq" title="QQ 登录"><img src="<?php echo vs_e($base); ?>/assets/img/QQ.svg" alt="QQ" width="22" height="22"></a>
-                    <?php endif; ?>
-                    <?php if (!empty($oauthProviders['gitee'])): ?>
-                        <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=gitee" title="Gitee 登录"><img src="<?php echo vs_e($base); ?>/assets/img/gitee.svg" alt="Gitee" width="22" height="22"></a>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <div class="st-auth__foot">还没有账号？<a href="<?php echo vs_e($base); ?>/user/register">立即注册</a></div>
-        </form>
+<form id="loginForm" method="post" action="" novalidate>
+    <?php vs_auth_csrf_field(); ?>
+    <div class="st-auth__field">
+        <label for="username">用户名或邮箱</label>
+        <input class="st-auth__input" id="username" name="username" type="text" placeholder="请输入用户名或邮箱" autocomplete="username" maxlength="64" required>
     </div>
-</div>
+    <div class="st-auth__field">
+        <label for="password">密码</label>
+        <div class="st-auth__pw-wrap">
+            <input class="st-auth__input" id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required>
+            <button type="button" class="st-auth__pw-toggle" data-st-pw-toggle aria-label="显示密码">显示</button>
+        </div>
+    </div>
+    <div class="st-auth__row">
+        <label><input type="checkbox" id="rememberCredentials" value="1"> 记住账号</label>
+        <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
+    </div>
+    <button type="submit" class="st-auth__submit" id="loginBtn">登 录</button>
+
+    <?php if (!empty($oauthProviders['qq']) || !empty($oauthProviders['gitee'])): ?>
+    <div class="st-auth__oauth">
+        <div class="st-auth__oauth-label">第三方登录</div>
+        <div class="st-auth__oauth-icons">
+            <?php if (!empty($oauthProviders['qq'])): ?>
+                <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=qq" title="QQ 登录"><img src="<?php echo vs_e($base); ?>/assets/img/QQ.svg" alt="QQ" width="22" height="22"></a>
+            <?php endif; ?>
+            <?php if (!empty($oauthProviders['gitee'])): ?>
+                <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=gitee" title="Gitee 登录"><img src="<?php echo vs_e($base); ?>/assets/img/gitee.svg" alt="Gitee" width="22" height="22"></a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <div class="st-auth__foot">还没有账号？<a href="<?php echo vs_e($base); ?>/user/register">立即注册</a></div>
+</form>
+
+<?php vs_slate_auth_shell_end(); ?>
 
 <script>
 (function () {
@@ -102,6 +93,7 @@ ThemeManager::renderThemeAuthHead($pageTitle);
         messageEl.textContent = text;
         messageEl.className = 'st-auth__msg st-auth__msg--' + type;
         messageEl.hidden = false;
+        if (type === 'error' && window.stAuthShake) window.stAuthShake();
     }
 
     if (expiredMsg) showMessage(expiredMsg, 'error');
@@ -112,7 +104,7 @@ ThemeManager::renderThemeAuthHead($pageTitle);
         var username = form.username.value.trim();
         var password = form.password.value;
         if (!username || !password) { showMessage('请完整填写账号和密码', 'error'); return; }
-        if (loginBtn) loginBtn.disabled = true;
+        if (window.stAuthSetLoading) window.stAuthSetLoading(loginBtn, true);
         var body = new FormData(form);
         body.append('action', 'login');
         fetch(form.action || window.location.href, { method: 'POST', body: body, credentials: 'same-origin' })
@@ -125,7 +117,7 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                 } else showMessage(data.msg || '登录失败', 'error');
             })
             .catch(function () { showMessage('网络异常，请稍后重试', 'error'); })
-            .finally(function () { if (loginBtn) loginBtn.disabled = false; });
+            .finally(function () { if (window.stAuthSetLoading) window.stAuthSetLoading(loginBtn, false); });
     });
 })();
 </script>

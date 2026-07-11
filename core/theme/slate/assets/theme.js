@@ -1,5 +1,5 @@
 /**
- * 青绿平台主题 · 抽屉 / 首页搜索与统计
+ * 青绿平台主题 · 抽屉 / 首页 / 返回顶部
  */
 (function () {
     'use strict';
@@ -51,6 +51,27 @@
         });
     }
 
+    /* ── 返回顶部（全站） ── */
+    var backTop = document.getElementById('stBackTop');
+    if (backTop) {
+        backTop.hidden = false;
+        var scrollTicking = false;
+        function syncBackTop() {
+            backTop.classList.toggle('is-show', window.scrollY > 400);
+            scrollTicking = false;
+        }
+        window.addEventListener('scroll', function () {
+            if (!scrollTicking) {
+                scrollTicking = true;
+                requestAnimationFrame(syncBackTop);
+            }
+        }, { passive: true });
+        syncBackTop();
+        backTop.addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
     /* ── 首页：统计 / 搜索 / 分类 ── */
     var home = document.getElementById('stHome');
     if (!home) {
@@ -80,7 +101,6 @@
     var searchInput = document.getElementById('stSearchInput');
     var searchClear = document.getElementById('stSearchClear');
     var catBar = document.getElementById('stCatBar');
-    var currentCat = '全部';
 
     function syncSearchClear() {
         if (!searchInput || !searchClear) {
@@ -107,20 +127,9 @@
             if (!tag) {
                 return;
             }
-            currentCat = tag.getAttribute('data-cat') || '全部';
             catBar.querySelectorAll('.st-cat-tag').forEach(function (el) {
                 el.classList.toggle('is-on', el === tag);
             });
-        });
-    }
-
-    var backTop = document.getElementById('stBackTop');
-    if (backTop) {
-        window.addEventListener('scroll', function () {
-            backTop.classList.toggle('is-show', window.scrollY > 400);
-        });
-        backTop.addEventListener('click', function () {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }
 })();

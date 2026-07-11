@@ -1,14 +1,13 @@
 {
-    "version": "2.3.0",
-    "title": "misc-api 2.3.0 主题完全隔离与青绿认证页",
+    "version": "2.4.0",
+    "title": "misc-api 2.4.0 青绿平台 UI 重设计",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "ThemeManager 严格模式：主题文件无跨主题回退，路径穿越防护（realpath + .. 拦截）",
-        "青绿平台认证四页独立 st-auth 视觉：login/register/forgot/bind + auth.css/auth.js",
-        "青绿平台用户中心独立 shell 与完整 user.css/user.js，不再复用 default 布局",
-        "默认主题认证页补全 renderThemeAuthFoot；资源仅来自各主题包",
-        "《主题规范.md》扩充主题引入与渲染流程、资源隔离与安全说明"
+        "青绿平台认证页重设计：双栏自适应、Logo 尺寸约束、原生动画与加载态",
+        "首页统计改为参考主题单行胶囊条（收录/今日/累计），非卡片堆叠",
+        "全站返回顶部按钮：滚动超过 400px 显示，底部居中一键回顶",
+        "认证页错误抖动、提交 loading、输入聚焦动效等交互增强"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
