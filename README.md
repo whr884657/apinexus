@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.9.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.10.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -211,9 +211,11 @@ misc-api/
 
 ```nginx
 location / {
-    try_files $uri $uri/ /index.php?$query_string;
+    try_files $uri $uri/ $uri.php$is_args$args;
 }
 ```
+
+> 主题内链接已去除 `.php` 后缀（如 `/apis`、`/user/login`），须配置上述规则方可正常访问。
 
 ---
 
@@ -236,6 +238,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.10.0（2026-07-12）
+
+- 后台主题设置：二级导航「主题切换 / 主题设置」；移除卡片设置按钮与弹窗
+- 主题卡片简化展示，画廊区域分界强化；修正 README Nginx 伪静态
 
 ### v2.9.0（2026-07-12）
 
