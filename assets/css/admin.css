@@ -1996,6 +1996,118 @@ select.vs-input {
     color: var(--vs-text);
 }
 
+.vs-theme-card__version {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+    font-weight: 500;
+}
+
+.vs-api-review-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.vs-api-review-tabs__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--vs-border);
+    background: var(--vs-white);
+    color: var(--vs-text-secondary);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.vs-api-review-tabs__btn:hover {
+    border-color: #111;
+    color: var(--vs-text);
+}
+
+.vs-api-review-tabs__btn.is-active {
+    border-color: #111;
+    background: #111;
+    color: #fff;
+}
+
+.vs-api-review-tabs__badge {
+    display: inline-flex;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    background: #ef4444;
+    color: #fff;
+}
+
+.vs-api-review-tabs__btn.is-active .vs-api-review-tabs__badge {
+    background: #fff;
+    color: #111;
+}
+
+.vs-api-review-name {
+    font-weight: 600;
+    color: var(--vs-text);
+}
+
+.vs-api-review-endpoint,
+.vs-api-review-desc,
+.vs-api-review-meta,
+.vs-api-review-reject {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+    line-height: 1.5;
+}
+
+.vs-api-review-reject {
+    color: #b91c1c;
+}
+
+.vs-api-review-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.vs-api-status {
+    display: inline-flex;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.vs-api-status--pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.vs-api-status--approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.vs-api-status--rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.vs-api-status--offline {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
 .vs-theme-config-head {
     display: flex;
     align-items: baseline;

@@ -40,6 +40,27 @@ function vs_admin_render_theme_config_fields($themeId)
             echo '<textarea class="vs-textarea" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']" rows="3" placeholder="' . vs_e($placeholder) . '">';
             echo vs_e($val === null ? '' : (string) $val);
             echo '</textarea>';
+        } elseif ($type === 'select') {
+            $fieldDef = null;
+            foreach (ThemeManager::getSettingsSchema($themeId) as $f) {
+                if ($f['key'] === $key) {
+                    $fieldDef = $f;
+                    break;
+                }
+            }
+            echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';
+            echo '<select class="vs-input" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']">';
+            $options = ($fieldDef && !empty($fieldDef['options'])) ? $fieldDef['options'] : array();
+            foreach ($options as $opt) {
+                if (!is_array($opt) || !isset($opt['value'])) {
+                    continue;
+                }
+                $optVal = (string) $opt['value'];
+                $optLabel = isset($opt['label']) ? (string) $opt['label'] : $optVal;
+                $selected = ((string) $val === $optVal) ? ' selected' : '';
+                echo '<option value="' . vs_e($optVal) . '"' . $selected . '>' . vs_e($optLabel) . '</option>';
+            }
+            echo '</select>';
         } else {
             $inputType = $type === 'number' ? 'number' : 'text';
             echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';
@@ -144,6 +165,9 @@ vs_admin_layout_start('主题设置', 'theme');
                                 </div>
                                 <div class="vs-theme-card__body">
                                     <div class="vs-theme-card__name"><?php echo vs_e($theme['name']); ?></div>
+                                    <?php if ($theme['version'] !== ''): ?>
+                                        <div class="vs-theme-card__version">v<?php echo vs_e($theme['version']); ?></div>
+                                    <?php endif; ?>
                                 </div>
                             </label>
                         <?php endforeach; ?>

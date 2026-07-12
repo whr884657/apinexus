@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.11.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.12.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -84,14 +84,14 @@
 | 管理员忘记密码 | `/admin/forgot.php` | 邮箱验证码重置（需配置 SMTP） |
 | 管理控制台 | `/admin/index.php` | 后台首页，展示站点与版本信息 |
 | 数据大屏（占位） | `/admin/data-screen.php` | 后续开发 |
-| API 管理（占位） | `/admin/api/` | 接口列表、文档、反馈 |
+| API 管理 | `/admin/api/` | 接口列表、**接口审核**、文档、反馈（列表/文档/反馈仍为占位） |
 | 内容运营（占位） | `/admin/content/` | 文章、评论、友链、合作伙伴 |
 | 交易财务（占位） | `/admin/finance/` | 支付、订单、赞助、积分 |
 | 用户管理 | `/admin/users.php` | 查看用户、搜索、封禁/解封/删除 |
 | 公告管理（占位） | `/admin/content/announcements.php` | 后续开发 |
 | 日志查询（占位） | `/admin/system/logs.php` | 后续开发 |
 | Redis 管理（占位） | `/admin/system/redis.php` | 后续开发 |
-| 主题设置（占位） | `/admin/system/theme.php` | 后续开发 |
+| 主题设置 | `/admin/system/theme.php` | 主题切换 + 各主题独立配置 |
 | 账号设置 | `/admin/account.php` | 修改资料、发布身份绑定用户账号 |
 | 系统设置 | `/admin/settings.php` | 站点信息、注册策略、OAuth、邮箱发信 |
 | 系统升级 | `/admin/upgrade.php` | 手动检测更新、安装更新、查看更新记录 |
@@ -239,6 +239,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.12.0（2026-07-12）
+
+- 后台 **API 管理** 新增 **接口审核**（待审核 / 已通过 / 已拒绝 / 下线），新增 `{prefix}api` 数据表
+- 修复主题设置保存后「当前使用」标志不随切换实时更新；主题卡片补充 **版本号** 展示
+- **青绿平台** 主题设置新增手机端导航展开方式：顶栏抽屉（默认）或右下角 FAB 向上弹出
+- **默认主题** 首页移除「快速入口」板块
 
 ### v2.11.2（2026-07-12）
 

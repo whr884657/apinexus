@@ -231,7 +231,7 @@ class ThemeManager
             return array();
         }
 
-        $allowedTypes = array('text', 'textarea', 'number', 'checkbox');
+        $allowedTypes = array('text', 'textarea', 'number', 'checkbox', 'select');
         $schema = array();
         foreach ($meta['settings'] as $item) {
             if (!is_array($item) || empty($item['key'])) {
@@ -251,6 +251,7 @@ class ThemeManager
                 'type'        => $type,
                 'placeholder' => isset($item['placeholder']) ? (string) $item['placeholder'] : '',
                 'default'     => isset($item['default']) ? $item['default'] : '',
+                'options'     => ($type === 'select' && !empty($item['options']) && is_array($item['options'])) ? $item['options'] : array(),
             );
         }
 
@@ -272,6 +273,25 @@ class ThemeManager
             $key = $field['key'];
             if ($field['type'] === 'checkbox') {
                 $out[$key] = !empty($input[$key]) && $input[$key] !== '0' && $input[$key] !== 'false';
+                continue;
+            }
+            if ($field['type'] === 'select') {
+                $value = isset($input[$key]) ? trim((string) $input[$key]) : '';
+                $allowed = array();
+                if (!empty($field['options']) && is_array($field['options'])) {
+                    foreach ($field['options'] as $opt) {
+                        if (is_array($opt) && isset($opt['value'])) {
+                            $allowed[] = (string) $opt['value'];
+                        }
+                    }
+                }
+                if ($value === '' && isset($field['default'])) {
+                    $value = (string) $field['default'];
+                }
+                if (!empty($allowed) && !in_array($value, $allowed, true)) {
+                    $value = isset($field['default']) ? (string) $field['default'] : '';
+                }
+                $out[$key] = $value;
                 continue;
             }
             $value = isset($input[$key]) ? trim((string) $input[$key]) : '';
