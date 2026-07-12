@@ -3,7 +3,7 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 $footDesc = $siteDesc !== '' ? $siteDesc : '为开发者提供稳定、快速的 API 接口服务';
-$stNavExpandMode = ThemeManager::themeSetting('nav_expand_mode', 'top_drawer');
+$stNavExpandMode = ThemeManager::themeSettingStr('nav_expand_mode', 'top_drawer');
 $stNavUseFab = ($stNavExpandMode === 'fab_popup');
 ?>
 <footer class="st-foot">

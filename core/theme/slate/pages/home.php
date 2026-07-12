@@ -2,24 +2,33 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
-$heroTitle = ThemeManager::themeSetting('hero_title', '免费 API 接口服务平台');
-$heroLeadCustom = ThemeManager::themeSetting('hero_lead', '');
+$heroTitleRaw = trim((string) ThemeManager::themeSetting('hero_title', ''));
+$heroTitle = $heroTitleRaw !== '' ? $heroTitleRaw : ('欢迎使用 ' . $siteName);
+$heroLeadCustom = trim((string) ThemeManager::themeSetting('hero_lead', ''));
 $heroDesc = $heroLeadCustom !== '' ? $heroLeadCustom : (isset($heroDesc) ? $heroDesc : ($siteDesc !== '' ? $siteDesc : '为开发者提供丰富、稳定、快速的 API 数据接口，一行代码即可调用'));
 $showStats = ThemeManager::themeSetting('show_stats', true);
+$showStats = $showStats === true || $showStats === 1 || $showStats === '1' || $showStats === 'true';
 $apiCategories = array('全部', '生活服务', '图片相关', '查询工具', '内容生成', '便捷工具', '社交娱乐');
 ?>
 <main class="st-main" id="stHome">
 <div class="st-wrap">
 <section class="st-hero">
     <h1 class="st-hero__title"><?php echo vs_e($heroTitle); ?></h1>
-    <p class="st-hero__lead"><?php echo vs_e($heroDesc); ?></p>
+    <p class="st-hero__lead" id="stHeroLead" data-typewriter="<?php echo vs_e($heroDesc); ?>"><span class="st-hero__lead-text"></span><span class="st-hero__cursor" aria-hidden="true"></span></p>
     <?php if ($showStats): ?>
-    <div class="st-stat-pill" role="group" aria-label="接口统计">
-        <span class="st-stat-pill__item">收录 <strong class="st-stat-num" id="stStatTotal">0</strong> 个接口</span>
-        <span class="st-stat-pill__sep" aria-hidden="true"></span>
-        <span class="st-stat-pill__item">今日调用 <strong class="st-stat-num st-stat-pill__accent" id="stStatToday">0</strong> 次</span>
-        <span class="st-stat-pill__sep" aria-hidden="true"></span>
-        <span class="st-stat-pill__item">累计调用 <strong class="st-stat-num" id="stStatAll">0</strong> 次</span>
+    <div class="st-stat-grid" role="group" aria-label="接口统计">
+        <div class="st-stat-card">
+            <div class="st-stat-card__num" id="stStatTotal">0</div>
+            <div class="st-stat-card__label">收录接口</div>
+        </div>
+        <div class="st-stat-card st-stat-card--accent">
+            <div class="st-stat-card__num" id="stStatToday">0</div>
+            <div class="st-stat-card__label">今日调用</div>
+        </div>
+        <div class="st-stat-card">
+            <div class="st-stat-card__num" id="stStatAll">0</div>
+            <div class="st-stat-card__label">累计调用</div>
+        </div>
     </div>
     <?php endif; ?>
 </section>

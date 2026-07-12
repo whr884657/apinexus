@@ -211,11 +211,44 @@ class ThemeManager
     public static function themeSetting($key, $default = '')
     {
         static $cache = null;
+        static $schemaDefaults = null;
+
         if ($cache === null) {
-            $cache = self::readThemeData(self::activeId());
+            $themeId = self::activeId();
+            $cache = self::readThemeData($themeId);
+            $schemaDefaults = array();
+            foreach (self::getSettingsSchema($themeId) as $field) {
+                if (!empty($field['key']) && array_key_exists('default', $field)) {
+                    $schemaDefaults[$field['key']] = $field['default'];
+                }
+            }
         }
+
         $key = (string) $key;
-        return array_key_exists($key, $cache) ? $cache[$key] : $default;
+        if (array_key_exists($key, $cache)) {
+            return $cache[$key];
+        }
+        if (is_array($schemaDefaults) && array_key_exists($key, $schemaDefaults)) {
+            return $schemaDefaults[$key];
+        }
+        return $default;
+    }
+
+    /**
+     * 读取主题配置字符串（trim 后）
+     *
+     * @param string $key
+     * @param string $default
+     * @return string
+     */
+    public static function themeSettingStr($key, $default = '')
+    {
+        $val = self::themeSetting($key, $default);
+        if (is_bool($val)) {
+            return $val ? '1' : '0';
+        }
+        $str = trim((string) $val);
+        return $str !== '' ? $str : trim((string) $default);
     }
 
     /**

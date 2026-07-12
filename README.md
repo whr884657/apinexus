@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.12.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.12.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -32,7 +32,7 @@
 - 站点信息、注册邮箱后缀白名单、SMTP 邮箱发信
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
 - 角色动画登录页、主题切换、统一弹窗与 Toast 提示
-- **双主题体系**：默认主题 + 青绿平台（slate），各主题 CSS/JS/shell **完全独立、无跨主题回退**，后台可预览切换
+- **双主题体系**：默认主题 + 主题二（slate），各主题 CSS/JS/shell **完全独立、无跨主题回退**，后台可预览切换
 - 主题预览图：各主题目录下 `preview.png`（开发阶段随主题包预部署）
 - 用户中心与认证页随前台主题联动（各主题 CSS/JS 独立）
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持 nginx 伪静态，URL 无 `.php` 后缀）
@@ -176,7 +176,7 @@ misc-api/
 │   ├── version.php             # VS_VERSION 版本常量
 │   ├── ThemeManager.php        # 前台主题加载与切换
 │   ├── theme/default/          # 默认主题（浅色卡片 + 左抽屉）
-│   ├── theme/slate/            # 青绿平台主题（浅色 API 平台风）
+│   ├── theme/slate/            # 主题二（API 平台风）
 │   │   └── preview.png         # 主题预览图（自行截图）
 │   ├── Auth.php / UserAuth.php # 管理员与用户认证
 │   ├── Updater.php             # 云端在线更新
@@ -240,11 +240,18 @@ location / {
 
 ## 版本记录
 
+### v2.12.1（2026-07-12）
+
+- **主题二**（slate）更名为「主题二」，取消「青绿平台」对外命名
+- 修复 FAB 导航保存后不显示；顶栏仅**站点名称**可跳转首页（Logo 区域不再误触）
+- 首页主标题留空时显示「欢迎使用 {站点名}」；副文案支持**打字机效果**
+- 统计区由胶囊改为三卡片布局，视觉更清晰
+
 ### v2.12.0（2026-07-12）
 
 - 后台 **API 管理** 新增 **接口审核**（待审核 / 已通过 / 已拒绝 / 下线），新增 `{prefix}api` 数据表
 - 修复主题设置保存后「当前使用」标志不随切换实时更新；主题卡片补充 **版本号** 展示
-- **青绿平台** 主题设置新增手机端导航展开方式：顶栏抽屉（默认）或右下角 FAB 向上弹出
+- **主题二** 主题设置新增导航展开方式：顶栏抽屉（默认）或右下角 FAB 向上弹出
 - **默认主题** 首页移除「快速入口」板块
 
 ### v2.11.2（2026-07-12）

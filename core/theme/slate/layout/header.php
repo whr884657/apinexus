@@ -2,16 +2,16 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
-$stNavExpandMode = ThemeManager::themeSetting('nav_expand_mode', 'top_drawer');
+$stNavExpandMode = ThemeManager::themeSettingStr('nav_expand_mode', 'top_drawer');
 $stNavUseFab = ($stNavExpandMode === 'fab_popup');
 ?>
-<div class="st-root<?php echo $stNavUseFab ? ' st-root--nav-fab' : ''; ?>">
+<div class="st-root<?php echo $stNavUseFab ? ' st-root--nav-fab' : ''; ?>" data-nav-mode="<?php echo vs_e($stNavExpandMode); ?>">
 <header class="st-bar">
     <div class="st-wrap st-bar__inner">
-        <a href="<?php echo vs_e($vsBase); ?>/" class="st-brand">
-            <?php vs_theme_site_logo('st-brand__img', 'st-brand__fallback'); ?>
-            <span class="st-brand__name"><?php echo vs_e($siteName); ?></span>
-        </a>
+        <div class="st-brand">
+            <span class="st-brand__logo"><?php vs_theme_site_logo('st-brand__img', 'st-brand__fallback'); ?></span>
+            <a href="<?php echo vs_e($vsBase); ?>/" class="st-brand__name"><?php echo vs_e($siteName); ?></a>
+        </div>
         <nav class="st-bar__nav" aria-label="主导航">
             <?php foreach ($navItems as $item): ?>
                 <a href="<?php echo vs_e($item['url']); ?>"

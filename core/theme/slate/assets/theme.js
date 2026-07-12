@@ -1,5 +1,5 @@
 /**
- * 青绿平台主题 · 抽屉 / FAB 导航 / 首页 / 返回顶部
+ * 主题二 · 抽屉 / FAB 导航 / 首页 / 返回顶部
  */
 (function () {
     'use strict';
@@ -120,10 +120,52 @@
         });
     }
 
+    function initHeroTypewriter() {
+        var lead = document.getElementById('stHeroLead');
+        if (!lead) {
+            return;
+        }
+        var textEl = lead.querySelector('.st-hero__lead-text');
+        var cursor = lead.querySelector('.st-hero__cursor');
+        var fullText = lead.getAttribute('data-typewriter') || '';
+        if (!textEl || fullText === '') {
+            if (textEl) {
+                textEl.textContent = fullText;
+            }
+            if (cursor) {
+                cursor.classList.add('is-done');
+            }
+            return;
+        }
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            textEl.textContent = fullText;
+            if (cursor) {
+                cursor.classList.add('is-done');
+            }
+            return;
+        }
+
+        var index = 0;
+        var delay = 42;
+
+        function tick() {
+            textEl.textContent = fullText.slice(0, index);
+            index += 1;
+            if (index <= fullText.length) {
+                window.setTimeout(tick, delay);
+            } else if (cursor) {
+                cursor.classList.add('is-done');
+            }
+        }
+
+        tick();
+    }
+
     initDrawerNav();
     initFabNav();
+    initHeroTypewriter();
 
-    /* ── 返回顶部（全站） ── */
     var backTop = document.getElementById('stBackTop');
     if (backTop) {
         backTop.hidden = false;
@@ -144,7 +186,6 @@
         });
     }
 
-    /* ── 首页：统计 / 搜索 / 分类 ── */
     var home = document.getElementById('stHome');
     if (!home) {
         return;

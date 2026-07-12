@@ -1,32 +1,34 @@
 {
     "id": "slate",
-    "name": "青绿平台",
-    "version": "2.12.0",
+    "name": "主题二",
+    "version": "2.12.1",
     "author": "misc-api",
-    "description": "浅色青绿 API 平台风：搜索筛选、接口统计、分类标签；电脑端顶栏，手机端可配置抽屉或 FAB 弹出导航",
+    "description": "主题二：API 平台风首页，搜索与分类筛选；电脑端顶栏，导航可切换抽屉或右下角 FAB 弹出",
     "preview": "preview.png",
     "settings": [
         {
             "key": "hero_title",
             "label": "首页主标题",
             "type": "text",
-            "placeholder": "留空使用默认文案"
+            "placeholder": "留空则显示「欢迎使用 {站点名称}」",
+            "default": ""
         },
         {
             "key": "hero_lead",
             "label": "首页副文案",
             "type": "textarea",
-            "placeholder": "留空使用站点描述"
+            "placeholder": "留空则使用站点描述，前台以打字效果展示",
+            "default": ""
         },
         {
             "key": "show_stats",
-            "label": "显示首页统计胶囊",
+            "label": "显示首页统计区",
             "type": "checkbox",
             "default": true
         },
         {
             "key": "nav_expand_mode",
-            "label": "手机端导航展开方式",
+            "label": "导航展开方式",
             "type": "select",
             "default": "top_drawer",
             "options": [
