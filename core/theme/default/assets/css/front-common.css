@@ -157,13 +157,9 @@ body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); colo
             .menu-btn { display: flex; align-items: center; gap: 0.5rem; }
         }
 
-.main-wrapper { position: relative; z-index: 10; display: flex; padding-top: 60px; min-height: 0; flex: 1; }
-
 .theme-toggle { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-color); background: transparent; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
 
 footer { border-top: 1px solid var(--border-color); background: var(--bg-panel); padding-top: 3rem; padding-bottom: 1.5rem; margin-top: auto; position: relative; z-index: 10; flex-shrink: 0; width: 100%; }
-
-.main-wrapper { flex: 1; display: flex; }
 
 /* 友情链接样式 */
         .footer-links a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }

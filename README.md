@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.14.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.14.2-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -239,6 +239,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.14.2（2026-07-12）
+
+- **修复主题一布局根因**：`front-common.css` 误将 `.main-wrapper` 设为 `display:flex`（横向），导致 Hero/统计/接口/调试/合作伙伴全部并排重叠；已移除并强制纵向 block 排版
+- 默认主题 v1.5.2
 
 ### v2.14.1（2026-07-12）
 

@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.14.2": {
+            "title": "misc-api 2.14.2 主题一布局根因修复",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "移除 main-wrapper 误用 flex 导致并排",
+                "首页 section 纵向 block 排版",
+                "默认主题 v1.5.2"
+            ]
+        },
         "2.14.1": {
             "title": "misc-api 2.14.1 主题一布局修复",
             "date": "2026-07-12",
