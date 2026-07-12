@@ -1,12 +1,12 @@
 {
-    "version": "2.11.1",
-    "title": "misc-api 2.11.1 青绿认证页双栏布局重构",
+    "version": "2.11.2",
+    "title": "misc-api 2.11.2 青绿认证页 UI 还原",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "重构 slate 登录/注册/忘记密码/绑定页为双栏布局",
-        "移除跳动动效与右侧挤压问题，对齐 default 结构",
-        "表单区 max-width 420px，输入框圆角边框样式"
+        "还原 slate 登录/注册/忘记密码/绑定页为 2.10.2 前居中布局",
+        "保留 mail_ticket 与 120s 验证码限流等安全能力",
+        "桌面端适度放宽表单宽度，修复「忘记密码」等链接溢出"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

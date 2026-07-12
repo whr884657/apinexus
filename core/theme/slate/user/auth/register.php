@@ -3,8 +3,7 @@ if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
 ThemeManager::renderThemeAuthHead('用户注册');
-vs_slate_auth_page_start();
-vs_slate_auth_header('注册账号', '使用邮箱验证注册，完成验证后即可使用');
+vs_slate_auth_shell_start('注册账号', '使用邮箱验证注册，完成验证后即可使用');
 ?>
 
 <div id="formMessage" class="st-auth__msg" role="alert" hidden></div>
@@ -46,7 +45,7 @@ vs_slate_auth_header('注册账号', '使用邮箱验证注册，完成验证后
     <div class="st-auth__foot">已有账号？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
 </form>
 
-<?php vs_slate_auth_page_end(); ?>
+<?php vs_slate_auth_shell_end(); ?>
 
 <script>
 (function () {

@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.11.2": {
+            "title": "misc-api 2.11.2 青绿认证页 UI 还原",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "还原 slate 认证页居中 UI",
+                "保留 mail_ticket 安全能力",
+                "修复桌面端链接溢出"
+            ]
+        },
         "2.11.1": {
             "title": "misc-api 2.11.1 青绿认证页双栏布局重构",
             "date": "2026-07-12",

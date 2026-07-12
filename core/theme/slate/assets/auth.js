@@ -18,12 +18,12 @@
     });
 
     window.stAuthShake = function () {
-        var box = document.querySelector('.st-auth-box');
-        if (!box) return;
-        box.classList.remove('is-shake');
-        void box.offsetWidth;
-        box.classList.add('is-shake');
-        window.setTimeout(function () { box.classList.remove('is-shake'); }, 420);
+        var form = document.querySelector('.st-auth__form');
+        if (!form) return;
+        form.classList.remove('is-shake');
+        void form.offsetWidth;
+        form.classList.add('is-shake');
+        window.setTimeout(function () { form.classList.remove('is-shake'); }, 420);
     };
 
     window.stAuthSetLoading = function (btn, loading) {
