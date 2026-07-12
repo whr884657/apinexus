@@ -1,11 +1,12 @@
 {
-    "version": "2.14.3",
-    "title": "misc-api 2.14.3 主题一 Hero 区修复",
+    "version": "2.14.4",
+    "title": "misc-api 2.14.4 主题一统计与浅色固定",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "修复 feer-compat 误将 hero-section 设为 block 导致首屏无法垂直居中、留白异常",
-        "Hero 按钮样式补全；标题排版与间距优化；min-height 适配顶栏与公告"
+        "首页统计第三项改为累计调用次数（读取配置 api_total_calls）",
+        "移除主题一昼夜切换，固定浅色模式",
+        "修复分类标签在切换模式下样式异常"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

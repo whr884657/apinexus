@@ -1,28 +1,4 @@
-function toggleTheme() {
-            const body = document.body;
-            const isLight = body.getAttribute('data-theme') === 'light';
-            if (isLight) {
-                body.removeAttribute('data-theme');
-                localStorage.setItem('theme', 'dark');
-            } else {
-                body.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light');
-            }
-            updateIcons();
-        }
-        function updateIcons() {
-            const isLight = document.body.getAttribute('data-theme') === 'light';
-            document.querySelectorAll('.sun-icon').forEach(i => i.classList.toggle('hidden', !isLight));
-            document.querySelectorAll('.moon-icon').forEach(i => i.classList.toggle('hidden', isLight));
-        }
-        (function initTheme() {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') document.body.removeAttribute('data-theme');
-            else document.body.setAttribute('data-theme', 'light'); // 默认白色
-            updateIcons();
-        })();
-        
-        function toggleMobile() {
+function toggleMobile() {
             document.getElementById('sidebar-overlay').classList.toggle('active');
             document.getElementById('mobile-sidebar').classList.toggle('open');
         }

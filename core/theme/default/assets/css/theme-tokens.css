@@ -66,7 +66,24 @@
 
 .cat-btn.active,
 .category-tag.active {
+    background: var(--accent-primary) !important;
     color: #ffffff !important;
+    border-color: var(--accent-primary) !important;
+}
+
+body.vs-body.feer-front .theme-toggle {
+    display: none !important;
+}
+
+body.vs-body.feer-front .cat-btn:hover,
+body.vs-body.feer-front .category-tag:hover {
+    background: rgba(17, 17, 17, 0.06);
+    color: var(--text-main);
+    border-color: var(--border-color);
+}
+
+body.vs-body.feer-front .cat-btn-more:hover {
+    background: rgba(17, 17, 17, 0.06);
 }
 
 .tag-free {

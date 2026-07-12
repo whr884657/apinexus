@@ -47,6 +47,23 @@ class ApiManager
     }
 
     /**
+     * 前台展示的累计调用次数（读取系统配置 api_total_calls，默认 0）
+     *
+     * @return int
+     */
+    public static function totalCallCount()
+    {
+        if (!class_exists('Config')) {
+            return 0;
+        }
+        try {
+            return max(0, (int) Config::get('api_total_calls', 0));
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
      * 从接口列表提取去重后的分类名
      *
      * @param array $apis
