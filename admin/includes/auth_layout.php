@@ -17,6 +17,31 @@ function vs_auth_csrf_field()
 }
 
 /**
+ * 发信一次性票据隐藏字段（send_code 必传，防抓包重放）
+ *
+ * @param string $purpose AuthSecurity::MAIL_PURPOSE_*
+ * @return void
+ */
+function vs_auth_mail_ticket_field($purpose)
+{
+    $ticket = AuthSecurity::issueMailTicket($purpose);
+    echo '<input type="hidden" name="mail_ticket" id="mailTicket" value="' . vs_e($ticket) . '">' . "\n";
+}
+
+/**
+ * JSON 响应（附带新的发信票据）
+ *
+ * @param string $purpose
+ * @param array  $data
+ * @param int    $code
+ * @return void
+ */
+function vs_auth_json_mail($purpose, array $data, $code = 200)
+{
+    vs_auth_json(AuthSecurity::withMailTicket($purpose, $data), $code);
+}
+
+/**
  * 认证 POST 请求安全校验
  *
  * @return void

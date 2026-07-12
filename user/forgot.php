@@ -22,22 +22,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = (string) $_POST['action'];
 
     if ($action === 'send_code') {
+        $mailPurpose = AuthSecurity::MAIL_PURPOSE_USER_FORGOT;
+
         if (!$mailEnabled) {
-            vs_auth_json(array('code' => 0, 'msg' => '邮箱发信功能尚未配置，请联系管理员在后台「系统设置」中配置邮箱'));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '邮箱发信功能尚未配置，请联系管理员在后台「系统设置」中配置邮箱'));
+        }
+
+        $ticket = isset($_POST['mail_ticket']) ? (string) $_POST['mail_ticket'] : '';
+        if (!AuthSecurity::validateAndConsumeMailTicket($mailPurpose, $ticket)) {
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请求无效，请刷新页面后重试'));
         }
 
         $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
 
         if ($email === '') {
-            vs_auth_json(array('code' => 0, 'msg' => '请输入邮箱'));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请输入邮箱'));
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            vs_auth_json(array('code' => 0, 'msg' => '请输入有效的邮箱地址'));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请输入有效的邮箱地址'));
         }
 
         $mailLimitMsg = AuthSecurity::checkMailCodeAllowed($email);
         if ($mailLimitMsg !== null) {
-            vs_auth_json(array('code' => 0, 'msg' => $mailLimitMsg));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => $mailLimitMsg));
         }
 
         AuthSecurity::recordMailCodeAttempt($email);
@@ -62,12 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 Mailer::send($email, $siteName . ' 密码重置验证码', $body);
             }
 
-            vs_auth_json(array(
+            vs_auth_json_mail($mailPurpose, array(
                 'code' => 1,
                 'msg'  => '如果该邮箱已注册，验证码将发送到您的邮箱，请查收（含垃圾箱）',
             ));
         } catch (Exception $e) {
-            vs_auth_json(array('code' => 0, 'msg' => '发送失败：' . $e->getMessage()));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '发送失败：' . $e->getMessage()));
         }
     }
 

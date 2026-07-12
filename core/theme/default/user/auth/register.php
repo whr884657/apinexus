@@ -23,6 +23,7 @@ ThemeManager::renderThemeAuthHead('用户注册');
 
             <form id="registerForm" method="post" action="" novalidate>
                 <?php vs_auth_csrf_field(); ?>
+                <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_USER_REGISTER); ?>
                 <div class="field">
                     <label for="username">用户名</label>
                     <input id="username" name="username" type="text" placeholder="3～50 个字符" autocomplete="username" maxlength="50" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
@@ -116,6 +117,13 @@ ThemeManager::renderThemeAuthHead('用户注册');
         return match ? parseInt(match[1], 10) : 120;
     }
 
+    function applyMailTicket(data) {
+        var el = document.getElementById('mailTicket');
+        if (el && data && data.mail_ticket) {
+            el.value = data.mail_ticket;
+        }
+    }
+
     if (sendCodeBtn) {
         sendCodeBtn.addEventListener('click', function () {
             hideMessage();
@@ -144,6 +152,10 @@ ThemeManager::renderThemeAuthHead('用户注册');
             if (form.csrf_token) {
                 body.append('csrf_token', form.csrf_token.value);
             }
+            var mailTicketEl = document.getElementById('mailTicket');
+            if (mailTicketEl) {
+                body.append('mail_ticket', mailTicketEl.value);
+            }
 
             fetch(window.location.href, {
                 method: 'POST',
@@ -152,6 +164,7 @@ ThemeManager::renderThemeAuthHead('用户注册');
             })
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
+                    applyMailTicket(data);
                     if (data.code === 1) {
                         showMessage(data.msg || '验证码已发送', 'success');
                         startCountdown(120);

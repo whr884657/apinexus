@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.10.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.10.2-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -28,13 +28,13 @@
 - 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
 - 用户登录支持 QQ / Gitee 第三方登录（须先注册并绑定）
 - 管理员认证：登录、忘记密码（邮箱验证码）、CSRF 与登录频率限制
-- 邮箱验证码发信限流（防接口工具轰炸，详见 [邮箱发信规范.md](邮箱发信规范.md)）
+- 邮箱验证码发信限流（MySQL 存储 + 一次性 mail_ticket，防接口工具轰炸与重放）
 - 站点信息、注册邮箱后缀白名单、SMTP 邮箱发信
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
 - 角色动画登录页、主题切换、统一弹窗与 Toast 提示
 - **双主题体系**：默认主题 + 青绿平台（slate），各主题 CSS/JS/shell **完全独立、无跨主题回退**，后台可预览切换
 - 主题预览图：各主题目录下 `preview.png`（开发阶段随主题包预部署）
-- 用户中心与认证页随前台主题联动（详见 [主题规范.md](主题规范.md)）
+- 用户中心与认证页随前台主题联动（各主题 CSS/JS 独立）
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持 nginx 伪静态，URL 无 `.php` 后缀）
 - 简洁白色后台主题，纯 CSS 图标，适配电脑端与手机端
 
@@ -239,6 +239,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.10.2（2026-07-12）
+
+- 邮箱验证码限流改为 MySQL 表存储；新增 `mail_ticket` 一次性票据防抓包重放
+- 加强 IP 日/小时限额，限制轮换邮箱无限制发信；清理误提交的开发规范文档
 
 ### v2.10.1（2026-07-12）
 

@@ -9,6 +9,14 @@
 class AuthSecurity
 {
     const CSRF_SESSION_KEY = 'vs_csrf_token';
+    const MAIL_TICKET_SESSION_KEY = 'vs_mail_tickets';
+
+    const MAIL_PURPOSE_USER_FORGOT = 'user_forgot';
+    const MAIL_PURPOSE_USER_REGISTER = 'user_register';
+    const MAIL_PURPOSE_ADMIN_FORGOT = 'admin_forgot';
+
+    /** 发信一次性票据有效期（秒） */
+    const MAIL_TICKET_TTL = 600;
 
     /** 登录：单 IP 15 分钟内最多失败次数 */
     const LOGIN_IP_MAX = 10;
@@ -19,8 +27,12 @@ class AuthSecurity
     const LOGIN_USER_WINDOW = 900;
 
     /** 发信验证码：单 IP 1 小时内最多次数 */
-    const MAIL_IP_MAX = 5;
+    const MAIL_IP_MAX = 3;
     const MAIL_IP_WINDOW = 3600;
+
+    /** 发信验证码：单 IP 24 小时内最多次数（防轮换邮箱轰炸） */
+    const MAIL_IP_DAILY_MAX = 8;
+    const MAIL_IP_DAILY_WINDOW = 86400;
 
     /** 发信验证码：单邮箱 1 小时内最多次数 */
     const MAIL_EMAIL_MAX = 3;
@@ -34,7 +46,7 @@ class AuthSecurity
     const MAIL_MIN_INTERVAL = 120;
 
     /** 同一 IP 任意验证码发信最短间隔（秒），防接口工具连续轰炸 */
-    const MAIL_IP_MIN_INTERVAL = 45;
+    const MAIL_IP_MIN_INTERVAL = 60;
 
     /** 重置密码提交：单 IP 1 小时内最多次数 */
     const RESET_IP_MAX = 15;
@@ -184,110 +196,17 @@ class AuthSecurity
     }
 
     /**
-     * 频率限制存储路径
-     *
-     * @return string
-     */
-    private static function rateLimitFile()
-    {
-        $dir = VS_ROOT . '/config/.security';
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0755, true);
-        }
-        return $dir . '/rate_limit.json';
-    }
-
-    /**
-     * 读取频率限制数据
-     *
-     * @return array
-     */
-    private static function loadRateData()
-    {
-        $file = self::rateLimitFile();
-        if (!file_exists($file)) {
-            return array();
-        }
-        $content = @file_get_contents($file);
-        if ($content === false || $content === '') {
-            return array();
-        }
-        $data = json_decode($content, true);
-        return is_array($data) ? $data : array();
-    }
-
-    /**
-     * 保存频率限制数据
-     *
-     * @param array $data
-     * @return void
-     */
-    private static function saveRateData(array $data)
-    {
-        $file = self::rateLimitFile();
-        $now = time();
-        foreach ($data as $key => $timestamps) {
-            if (!is_array($timestamps)) {
-                unset($data[$key]);
-                continue;
-            }
-            $filtered = array();
-            foreach ($timestamps as $t) {
-                if (is_int($t) && ($now - $t) < 86400) {
-                    $filtered[] = $t;
-                }
-            }
-            if (empty($filtered)) {
-                unset($data[$key]);
-            } else {
-                $data[$key] = $filtered;
-            }
-        }
-
-        $fp = @fopen($file, 'c+');
-        if (!$fp) {
-            return;
-        }
-        if (flock($fp, LOCK_EX)) {
-            ftruncate($fp, 0);
-            fwrite($fp, json_encode($data));
-            fflush($fp);
-            flock($fp, LOCK_UN);
-        }
-        fclose($fp);
-    }
-
-    /**
-     * 记录一次操作并检查是否超限
+     * 记录一次操作并检查是否超限（MySQL 存储）
      *
      * @param string $bucket
      * @param int    $windowSeconds
      * @param int    $maxAttempts
-     * @param bool   $record 是否计入本次（检查发信间隔时可先检查再记录）
+     * @param bool   $record
      * @return bool true 允许，false 已超限
      */
     public static function rateLimitAllow($bucket, $windowSeconds, $maxAttempts, $record = true)
     {
-        $data = self::loadRateData();
-        $now = time();
-        $key = hash('sha256', $bucket);
-
-        $timestamps = isset($data[$key]) ? $data[$key] : array();
-        $timestamps = array_values(array_filter($timestamps, function ($t) use ($now, $windowSeconds) {
-            return ($now - (int) $t) < $windowSeconds;
-        }));
-
-        if (count($timestamps) >= $maxAttempts) {
-            return false;
-        }
-
-        if ($record) {
-            $timestamps[] = $now;
-            $data[$key] = $timestamps;
-            self::saveRateData($data);
-        }
-
-        return true;
+        return RateLimitStore::allow($bucket, $windowSeconds, $maxAttempts, $record);
     }
 
     /**
@@ -298,13 +217,81 @@ class AuthSecurity
      */
     public static function secondsSinceLastHit($bucket)
     {
-        $data = self::loadRateData();
-        $key = hash('sha256', $bucket);
-        if (!isset($data[$key]) || !is_array($data[$key]) || empty($data[$key])) {
-            return -1;
+        return RateLimitStore::secondsSinceLastHit($bucket);
+    }
+
+    /**
+     * 签发发信一次性票据（页面加载时写入表单）
+     *
+     * @param string $purpose
+     * @return string
+     */
+    public static function issueMailTicket($purpose)
+    {
+        $purpose = self::normalizeMailPurpose($purpose);
+        $token = bin2hex(random_bytes(16));
+        if (!isset($_SESSION[self::MAIL_TICKET_SESSION_KEY]) || !is_array($_SESSION[self::MAIL_TICKET_SESSION_KEY])) {
+            $_SESSION[self::MAIL_TICKET_SESSION_KEY] = array();
         }
-        $last = max($data[$key]);
-        return time() - (int) $last;
+        $_SESSION[self::MAIL_TICKET_SESSION_KEY][$purpose] = array(
+            'token'   => $token,
+            'expires' => time() + self::MAIL_TICKET_TTL,
+        );
+        return $token;
+    }
+
+    /**
+     * 校验并消耗发信票据（一次性，防抓包重放）
+     *
+     * @param string $purpose
+     * @param string $token
+     * @return bool
+     */
+    public static function validateAndConsumeMailTicket($purpose, $token)
+    {
+        $purpose = self::normalizeMailPurpose($purpose);
+        if (!is_string($token) || $token === '') {
+            return false;
+        }
+        if (!isset($_SESSION[self::MAIL_TICKET_SESSION_KEY][$purpose]) || !is_array($_SESSION[self::MAIL_TICKET_SESSION_KEY][$purpose])) {
+            return false;
+        }
+        $saved = $_SESSION[self::MAIL_TICKET_SESSION_KEY][$purpose];
+        unset($_SESSION[self::MAIL_TICKET_SESSION_KEY][$purpose]);
+        if (!isset($saved['token'], $saved['expires'])) {
+            return false;
+        }
+        if ((int) $saved['expires'] < time()) {
+            return false;
+        }
+        return hash_equals((string) $saved['token'], $token);
+    }
+
+    /**
+     * JSON 响应附加新的发信票据
+     *
+     * @param string $purpose
+     * @param array  $data
+     * @return array
+     */
+    public static function withMailTicket($purpose, array $data)
+    {
+        $data['mail_ticket'] = self::issueMailTicket($purpose);
+        return $data;
+    }
+
+    /**
+     * @param string $purpose
+     * @return string
+     */
+    private static function normalizeMailPurpose($purpose)
+    {
+        $allowed = array(
+            self::MAIL_PURPOSE_USER_FORGOT,
+            self::MAIL_PURPOSE_USER_REGISTER,
+            self::MAIL_PURPOSE_ADMIN_FORGOT,
+        );
+        return in_array($purpose, $allowed, true) ? $purpose : self::MAIL_PURPOSE_USER_FORGOT;
     }
 
     /**
@@ -370,6 +357,7 @@ class AuthSecurity
         $ip = self::clientIp();
         $emailKey = strtolower(trim($email));
         $ipBucket = 'mail_code_ip:' . $ip;
+        $ipDailyBucket = 'mail_code_ip_daily:' . $ip;
         $emailBucket = 'mail_code_email:' . $emailKey;
         $emailDailyBucket = 'mail_code_email_daily:' . $emailKey;
         $intervalBucket = 'mail_code_interval:' . $emailKey;
@@ -387,6 +375,9 @@ class AuthSecurity
 
         if (!self::rateLimitAllow($ipBucket, self::MAIL_IP_WINDOW, self::MAIL_IP_MAX, false)) {
             return '发送过于频繁，请稍后再试';
+        }
+        if (!self::rateLimitAllow($ipDailyBucket, self::MAIL_IP_DAILY_WINDOW, self::MAIL_IP_DAILY_MAX, false)) {
+            return '当前网络发送次数过多，请稍后再试';
         }
         if (!self::rateLimitAllow($emailBucket, self::MAIL_EMAIL_WINDOW, self::MAIL_EMAIL_MAX, false)) {
             return '该邮箱发送次数过多，请稍后再试';
@@ -409,6 +400,7 @@ class AuthSecurity
         $ip = self::clientIp();
         $emailKey = strtolower(trim($email));
         self::rateLimitAllow('mail_code_ip:' . $ip, self::MAIL_IP_WINDOW, self::MAIL_IP_MAX, true);
+        self::rateLimitAllow('mail_code_ip_daily:' . $ip, self::MAIL_IP_DAILY_WINDOW, self::MAIL_IP_DAILY_MAX, true);
         self::rateLimitAllow('mail_code_email:' . $emailKey, self::MAIL_EMAIL_WINDOW, self::MAIL_EMAIL_MAX, true);
         self::rateLimitAllow('mail_code_email_daily:' . $emailKey, self::MAIL_EMAIL_DAILY_WINDOW, self::MAIL_EMAIL_DAILY_MAX, true);
         self::rateLimitAllow('mail_code_interval:' . $emailKey, self::MAIL_MIN_INTERVAL, 1, true);

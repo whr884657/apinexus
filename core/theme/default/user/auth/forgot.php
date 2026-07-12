@@ -25,6 +25,7 @@ ThemeManager::renderThemeAuthHead('忘记密码');
 
             <form id="forgotForm" method="post" action="" novalidate>
                 <?php vs_auth_csrf_field(); ?>
+                <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_USER_FORGOT); ?>
                 <div class="field">
                     <label for="email">邮箱</label>
                     <input id="email" name="email" type="email" placeholder="请输入注册邮箱" autocomplete="email" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
@@ -113,6 +114,13 @@ ThemeManager::renderThemeAuthHead('忘记密码');
         return match ? parseInt(match[1], 10) : 120;
     }
 
+    function applyMailTicket(data) {
+        var el = document.getElementById('mailTicket');
+        if (el && data && data.mail_ticket) {
+            el.value = data.mail_ticket;
+        }
+    }
+
     if (sendCodeBtn) {
         sendCodeBtn.addEventListener('click', function () {
             hideMessage();
@@ -136,6 +144,10 @@ ThemeManager::renderThemeAuthHead('忘记密码');
             if (form.csrf_token) {
                 body.append('csrf_token', form.csrf_token.value);
             }
+            var mailTicketEl = document.getElementById('mailTicket');
+            if (mailTicketEl) {
+                body.append('mail_ticket', mailTicketEl.value);
+            }
 
             fetch(window.location.href, {
                 method: 'POST',
@@ -144,6 +156,7 @@ ThemeManager::renderThemeAuthHead('忘记密码');
             })
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
+                    applyMailTicket(data);
                     if (data.code === 1) {
                         showMessage(data.msg || '验证码已发送', 'success');
                         startCountdown(120);
