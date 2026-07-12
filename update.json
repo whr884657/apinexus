@@ -1,13 +1,13 @@
 {
-    "version": "2.9.0",
-    "title": "misc-api 2.9.0 后台主题设置与专属 data 存储",
+    "version": "2.10.0",
+    "title": "misc-api 2.10.0 后台主题设置二级导航重构",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "后台主题画廊 UI：当前使用仅徽章、悬停黑边框、卡片下设置按钮",
-        "主题设置弹窗：手机 75% 抽屉、电脑居中；仅已启用主题可配置",
-        "主题 data/settings.json 专属存储，theme.json settings schema",
-        "ThemeManager::themeSetting() 供前台读取主题配置"
+        "主题设置页新增二级横向导航：主题切换 / 主题设置",
+        "移除卡片设置按钮与弹窗，配置改为内嵌面板",
+        "简化主题卡片展示，强化卡片与板块分界",
+        "修正 README Nginx 伪静态配置"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

@@ -354,7 +354,7 @@ body.vs-modal-open {
     }
 }
 
-/* ── 主题设置弹窗（电脑端居中、手机端 75% 抽屉） ── */
+/* ── 主题设置弹窗（已废弃，保留通用 shell 样式） ── */
 .vs-modal-shell--theme-settings {
     z-index: 4850;
 }

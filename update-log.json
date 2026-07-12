@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.10.0": {
+            "title": "misc-api 2.10.0 后台主题设置二级导航重构",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "主题切换/主题设置二级 Tab",
+                "移除卡片设置按钮与弹窗",
+                "README Nginx 伪静态修正"
+            ]
+        },
         "2.9.0": {
             "title": "misc-api 2.9.0 后台主题设置与专属 data 存储",
             "date": "2026-07-12",

@@ -1,10 +1,53 @@
 <?php
 /**
  * 文件：admin/system/theme.php
- * 作用：前台主题设置（预览、选择、保存、主题专属配置）
+ * 作用：前台主题设置（主题切换 + 主题配置）
  */
 
 require_once dirname(__DIR__) . '/init.php';
+
+/**
+ * 渲染主题配置表单字段
+ *
+ * @param string $themeId
+ * @return void
+ */
+function vs_admin_render_theme_config_fields($themeId)
+{
+    $schema = ThemeManager::getSettingsSchema($themeId);
+    $values = ThemeManager::readThemeData($themeId);
+
+    if (empty($schema)) {
+        echo '<p class="vs-theme-config-empty">当前主题暂无可调整的项目</p>';
+        return;
+    }
+
+    foreach ($schema as $field) {
+        $key = $field['key'];
+        $label = $field['label'];
+        $type = $field['type'];
+        $placeholder = isset($field['placeholder']) ? (string) $field['placeholder'] : '';
+        $val = array_key_exists($key, $values) ? $values[$key] : (isset($field['default']) ? $field['default'] : '');
+
+        echo '<div class="vs-theme-config-field">';
+        if ($type === 'checkbox') {
+            $checked = $val === true || $val === 1 || $val === '1' || $val === 'true';
+            echo '<label class="vs-theme-config-check">';
+            echo '<input type="checkbox" name="settings[' . vs_e($key) . ']" value="1"' . ($checked ? ' checked' : '') . '>';
+            echo '<span>' . vs_e($label) . '</span></label>';
+        } elseif ($type === 'textarea') {
+            echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';
+            echo '<textarea class="vs-textarea" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']" rows="3" placeholder="' . vs_e($placeholder) . '">';
+            echo vs_e($val === null ? '' : (string) $val);
+            echo '</textarea>';
+        } else {
+            $inputType = $type === 'number' ? 'number' : 'text';
+            echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';
+            echo '<input type="' . vs_e($inputType) . '" class="vs-input" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']" value="' . vs_e($val === null ? '' : (string) $val) . '" placeholder="' . vs_e($placeholder) . '">';
+        }
+        echo '</div>';
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
@@ -16,32 +59,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result !== true) {
             AjaxResponse::error($result);
         }
-        AjaxResponse::success('前台主题已保存', array('theme_id' => ThemeManager::activeId()));
+        $meta = ThemeManager::readMeta(ThemeManager::activeId());
+        AjaxResponse::success('前台主题已保存', array(
+            'theme_id'   => ThemeManager::activeId(),
+            'theme_name' => isset($meta['name']) ? (string) $meta['name'] : ThemeManager::activeId(),
+        ));
     }
 
     if ($action === 'load_theme_settings') {
-        $themeId = isset($_POST['theme_id']) ? (string) $_POST['theme_id'] : '';
+        $themeId = ThemeManager::activeId();
         if (!ThemeManager::isValidTheme($themeId)) {
             AjaxResponse::error('无效的主题');
         }
-        if (!ThemeManager::isThemeEnabled($themeId)) {
-            AjaxResponse::error('该主题未启用，不可以进行设置');
-        }
+        ob_start();
+        vs_admin_render_theme_config_fields($themeId);
+        $html = ob_get_clean();
+        $meta = ThemeManager::readMeta($themeId);
         AjaxResponse::success('ok', array(
-            'theme_id' => $themeId,
-            'name'     => ThemeManager::readMeta($themeId)['name'] ?? $themeId,
-            'schema'   => ThemeManager::getSettingsSchema($themeId),
-            'values'   => ThemeManager::readThemeData($themeId),
+            'theme_id'   => $themeId,
+            'theme_name' => isset($meta['name']) ? (string) $meta['name'] : $themeId,
+            'html'       => $html,
+            'has_schema' => count(ThemeManager::getSettingsSchema($themeId)) > 0,
         ));
     }
 
     if ($action === 'save_theme_settings') {
-        $themeId = isset($_POST['theme_id']) ? (string) $_POST['theme_id'] : '';
+        $themeId = ThemeManager::activeId();
         if (!ThemeManager::isValidTheme($themeId)) {
             AjaxResponse::error('无效的主题');
-        }
-        if (!ThemeManager::isThemeEnabled($themeId)) {
-            AjaxResponse::error('该主题未启用，不可以进行设置');
         }
         $raw = isset($_POST['settings']) && is_array($_POST['settings']) ? $_POST['settings'] : array();
         $data = ThemeManager::sanitizeThemeSettingsInput($themeId, $raw);
@@ -49,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result !== true) {
             AjaxResponse::error($result);
         }
-        AjaxResponse::success('主题设置已保存', array('theme_id' => $themeId, 'values' => $data));
+        AjaxResponse::success('主题设置已保存', array('theme_id' => $themeId));
     }
 
     AjaxResponse::error('未知操作', 400);
@@ -57,95 +102,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $themes = ThemeManager::listThemes();
 $activeTheme = ThemeManager::activeId();
+$activeMeta = ThemeManager::readMeta($activeTheme);
+$activeThemeName = isset($activeMeta['name']) ? (string) $activeMeta['name'] : $activeTheme;
 
 vs_admin_layout_start('主题设置', 'theme');
 ?>
 
-<div class="vs-panel vs-theme-settings">
+<div class="vs-panel vs-theme-settings" id="themeSettingsPage" data-active-theme="<?php echo vs_e($activeTheme); ?>" data-active-name="<?php echo vs_e($activeThemeName); ?>">
     <div class="vs-panel__header">
         <h2 class="vs-panel__title">前台主题</h2>
-        <p class="vs-panel__desc">系统自动扫描 <code>core/theme/</code> 下含 <code>theme.json</code> 的文件夹并识别为可用主题。主题专属配置保存在各主题 <code>data/settings.json</code>，与站点通用 MySQL 配置分离。</p>
     </div>
+
+    <nav class="vs-product-tabs" aria-label="主题设置导航">
+        <button type="button" class="vs-product-tabs__btn is-active" data-tab="switch" aria-selected="true">主题切换</button>
+        <button type="button" class="vs-product-tabs__btn" data-tab="config" aria-selected="false">主题设置</button>
+    </nav>
 
     <?php if (empty($themes)): ?>
-        <?php vs_render_notice('warning', '', '未找到可用主题，请确认 core/theme/ 目录完整。', array('compact' => true)); ?>
+        <?php vs_render_notice('warning', '', '未找到可用主题，请稍后重试或联系管理员。', array('compact' => true)); ?>
     <?php else: ?>
-        <form method="post" action="" class="vs-form" id="themeSettingsForm" data-ajax="1" data-active-theme="<?php echo vs_e($activeTheme); ?>">
-            <input type="hidden" name="action" value="save_theme">
-            <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
+        <div class="vs-product-tab-panel is-active" data-panel="switch" id="themeSwitchPanel">
+            <form method="post" action="" class="vs-form" id="themeSettingsForm" data-ajax="1">
+                <input type="hidden" name="action" value="save_theme">
+                <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
 
-            <div class="vs-theme-gallery">
-                <?php foreach ($themes as $theme): ?>
-                    <?php
-                    $isActive = $theme['id'] === $activeTheme;
-                    $schemaCount = count(ThemeManager::getSettingsSchema($theme['id']));
-                    ?>
-                    <div class="vs-theme-card<?php echo $isActive ? ' is-active' : ''; ?>" data-theme-id="<?php echo vs_e($theme['id']); ?>">
-                        <label class="vs-theme-card__select">
-                            <input type="radio" name="frontend_theme" value="<?php echo vs_e($theme['id']); ?>"<?php echo $isActive ? ' checked' : ''; ?>>
-                            <div class="vs-theme-card__preview">
-                                <?php if ($theme['preview_url'] !== ''): ?>
-                                    <img src="<?php echo vs_e($theme['preview_url']); ?>" alt="<?php echo vs_e($theme['name']); ?> 预览" class="vs-theme-card__img" loading="lazy">
-                                <?php else: ?>
-                                    <div class="vs-theme-card__placeholder">无预览图</div>
-                                <?php endif; ?>
-                                <?php if ($isActive): ?>
-                                    <span class="vs-theme-card__status">当前使用</span>
-                                <?php endif; ?>
-                            </div>
-                            <div class="vs-theme-card__body">
-                                <div class="vs-theme-card__name"><?php echo vs_e($theme['name']); ?></div>
-                                <?php if ($theme['description'] !== ''): ?>
-                                    <p class="vs-theme-card__desc"><?php echo vs_e($theme['description']); ?></p>
-                                <?php endif; ?>
-                                <div class="vs-theme-card__meta">
-                                    <span class="vs-theme-card__id"><?php echo vs_e($theme['id']); ?></span>
-                                    <?php if ($theme['version'] !== ''): ?>
-                                        <span>v<?php echo vs_e($theme['version']); ?></span>
+                <div class="vs-theme-gallery-wrap">
+                    <div class="vs-theme-gallery">
+                        <?php foreach ($themes as $theme): ?>
+                            <?php $isActive = $theme['id'] === $activeTheme; ?>
+                            <label class="vs-theme-card<?php echo $isActive ? ' is-active' : ''; ?>" data-theme-id="<?php echo vs_e($theme['id']); ?>">
+                                <input type="radio" name="frontend_theme" value="<?php echo vs_e($theme['id']); ?>"<?php echo $isActive ? ' checked' : ''; ?>>
+                                <div class="vs-theme-card__preview">
+                                    <?php if ($theme['preview_url'] !== ''): ?>
+                                        <img src="<?php echo vs_e($theme['preview_url']); ?>" alt="<?php echo vs_e($theme['name']); ?>" class="vs-theme-card__img" loading="lazy">
+                                    <?php else: ?>
+                                        <div class="vs-theme-card__placeholder">预览</div>
+                                    <?php endif; ?>
+                                    <?php if ($isActive): ?>
+                                        <span class="vs-theme-card__status">当前使用</span>
                                     <?php endif; ?>
                                 </div>
-                            </div>
-                        </label>
-                        <div class="vs-theme-card__foot">
-                            <button type="button"
-                                    class="vs-btn vs-btn--default vs-btn--sm vs-theme-card__settings"
-                                    data-theme-id="<?php echo vs_e($theme['id']); ?>"
-                                    data-theme-name="<?php echo vs_e($theme['name']); ?>"
-                                    data-enabled="<?php echo $isActive ? '1' : '0'; ?>"
-                                    data-schema-count="<?php echo (int) $schemaCount; ?>">
-                                设置
-                            </button>
-                        </div>
+                                <div class="vs-theme-card__body">
+                                    <div class="vs-theme-card__name"><?php echo vs_e($theme['name']); ?></div>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
                     </div>
-                <?php endforeach; ?>
-            </div>
+                </div>
 
-            <div class="vs-form-actions">
-                <button type="submit" class="vs-btn vs-btn--primary">保存主题</button>
-            </div>
-        </form>
-    <?php endif; ?>
-</div>
-
-<div class="vs-modal-shell vs-modal-shell--theme-settings" id="themeSettingsModal" hidden>
-    <div class="vs-modal vs-modal--theme-settings" role="dialog" aria-modal="true" aria-labelledby="themeSettingsModalTitle">
-        <div class="vs-modal__head">
-            <h3 class="vs-modal__title" id="themeSettingsModalTitle">主题设置</h3>
-            <button type="button" class="vs-modal__close" id="themeSettingsModalClose" aria-label="关闭">&times;</button>
+                <div class="vs-form-actions">
+                    <button type="submit" class="vs-btn vs-btn--primary">保存主题</button>
+                </div>
+            </form>
         </div>
-        <form class="vs-form" id="themeConfigForm" data-ajax="1">
-            <input type="hidden" name="action" value="save_theme_settings">
-            <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
-            <input type="hidden" name="theme_id" id="themeConfigThemeId" value="">
-            <div class="vs-modal__body" id="themeConfigFormBody">
-                <p class="vs-theme-config-empty">该主题暂无可配置项，请在 theme.json 中声明 settings 字段。</p>
+
+        <div class="vs-product-tab-panel" data-panel="config" id="themeConfigPanel" hidden>
+            <div class="vs-theme-config-head">
+                <span class="vs-theme-config-head__label">正在配置</span>
+                <strong class="vs-theme-config-head__name" id="themeConfigActiveName"><?php echo vs_e($activeThemeName); ?></strong>
             </div>
-            <div class="vs-modal__foot">
-                <button type="button" class="vs-btn vs-btn--default" id="themeSettingsModalCancel">取消</button>
-                <button type="submit" class="vs-btn vs-btn--primary" id="themeConfigSaveBtn">保存设置</button>
-            </div>
-        </form>
-    </div>
+            <form method="post" action="" class="vs-form vs-theme-config-form" id="themeConfigForm" data-ajax="1">
+                <input type="hidden" name="action" value="save_theme_settings">
+                <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
+                <div class="vs-theme-config-form__body" id="themeConfigFormBody">
+                    <?php vs_admin_render_theme_config_fields($activeTheme); ?>
+                </div>
+                <div class="vs-form-actions">
+                    <button type="submit" class="vs-btn vs-btn--primary" id="themeConfigSaveBtn"<?php echo count(ThemeManager::getSettingsSchema($activeTheme)) === 0 ? ' disabled' : ''; ?>>保存设置</button>
+                </div>
+            </form>
+        </div>
+    <?php endif; ?>
 </div>
 
 <?php vs_admin_layout_end(array('theme-settings.js')); ?>
