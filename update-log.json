@@ -1,5 +1,16 @@
 {
     "versions": {
+        "2.14.0": {
+            "title": "misc-api 2.14.0 主题一参考 UI 完整复刻",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "参考 UI 完整复刻 + 白色色板",
+                "粒子/Hero/终端/调试终端",
+                "多 CSS/JS 资源加载",
+                "api-proxy 在线调试"
+            ]
+        },
         "2.13.0": {
             "title": "misc-api 2.13.0 主题一前台 UI 全面重设计",
             "date": "2026-07-12",

@@ -228,9 +228,11 @@ function vs_page_title($pageTitle, $siteName = null)
  * @param array  $cssFiles
  * @param bool   $useSiteConfig
  * @param array  $extraCssHrefs 完整 URL（如主题 assets）
+ * @param array  $headScripts   head 内联脚本或外链（完整 URL）
+ * @param string $bodyClass     body 额外 class
  * @return void
  */
-function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true, array $extraCssHrefs = array())
+function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true, array $extraCssHrefs = array(), array $headScripts = array(), $bodyClass = 'vs-body')
 {
     $base = vs_base_url();
     $siteName = 'misc-api';
@@ -273,8 +275,20 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
             echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
         }
     }
+    foreach ($headScripts as $script) {
+        $script = trim((string) $script);
+        if ($script === '') {
+            continue;
+        }
+        if (strpos($script, '<') === 0) {
+            echo $script . "\n";
+            continue;
+        }
+        echo '<script src="' . vs_e($script) . '"></script>' . "\n";
+    }
+    echo '<script>(function(){try{var t=localStorage.getItem("theme");if(t!=="dark"&&t!=="light"){t="light"}document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>' . "\n";
     echo '</head>' . "\n";
-    echo '<body class="vs-body">' . "\n";
+    echo '<body class="' . vs_e(trim($bodyClass)) . '">' . "\n";
 }
 
 /**
@@ -314,18 +328,29 @@ function vs_render_foot(array $jsFiles = array(), array $extraJsHrefs = array())
 function vs_frontend_page($pageKey, $pageTitle, array $pageData = array())
 {
     $extraCss = array();
-    $cssHref = ThemeManager::activeStylesheetHref();
-    if ($cssHref !== '') {
-        $extraCss[] = $cssHref;
-    }
-
-    vs_render_head($pageTitle, array(), true, $extraCss);
-
     $extraJs = array();
-    $jsHref = ThemeManager::activeScriptHref();
-    if ($jsHref !== '') {
-        $extraJs[] = $jsHref;
+    $headScripts = array();
+    $bodyClass = 'vs-body';
+    $themeId = ThemeManager::activeId();
+
+    if ($themeId === 'default') {
+        $bundle = ThemeManager::defaultFrontendAssets($pageKey);
+        $extraCss = $bundle['css'];
+        $extraJs = $bundle['js'];
+        $headScripts = $bundle['head_scripts'];
+        $bodyClass = $bundle['body_class'];
+    } else {
+        $cssHref = ThemeManager::activeStylesheetHref();
+        if ($cssHref !== '') {
+            $extraCss[] = $cssHref;
+        }
+        $jsHref = ThemeManager::activeScriptHref();
+        if ($jsHref !== '') {
+            $extraJs[] = $jsHref;
+        }
     }
+
+    vs_render_head($pageTitle, array(), true, $extraCss, $headScripts, $bodyClass);
 
     ThemeManager::renderBody($pageKey, $pageTitle, $pageData);
 

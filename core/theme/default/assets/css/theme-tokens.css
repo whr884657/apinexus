@@ -1,0 +1,124 @@
+/**
+ * misc-api 默认主题 · 白色色板（覆盖参考设计绿色变量）
+ * 加载顺序：置于各页面 CSS 之后
+ */
+:root,
+[data-theme="light"] {
+    --bg-deep: #f8fafc;
+    --bg-panel: rgba(255, 255, 255, 0.98);
+    --bg-card: rgba(255, 255, 255, 0.98);
+    --bg-code: #f1f5f9;
+    --bg-secondary: #f1f5f9;
+    --text-main: #111111;
+    --text-muted: #6b7280;
+    --accent-primary: #111111;
+    --accent-secondary: #2563eb;
+    --border-color: rgba(17, 17, 17, 0.12);
+    --glow-primary: rgba(17, 17, 17, 0.14);
+    --particle-color: 107, 114, 128;
+    --line-color-alpha: 0.08;
+    --endpoint-bg: rgba(17, 17, 17, 0.05);
+    --endpoint-border: rgba(17, 17, 17, 0.12);
+    --code-bg: #f1f5f9;
+}
+
+[data-theme="dark"] {
+    --bg-deep: #0b0d12;
+    --bg-panel: rgba(16, 18, 24, 0.96);
+    --bg-card: rgba(22, 24, 32, 0.92);
+    --bg-code: #141820;
+    --bg-secondary: #141820;
+    --text-main: #e5e7eb;
+    --text-muted: #9ca3af;
+    --accent-primary: #f3f4f6;
+    --accent-secondary: #93c5fd;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --glow-primary: rgba(255, 255, 255, 0.1);
+    --particle-color: 156, 163, 175;
+    --line-color-alpha: 0.12;
+    --endpoint-bg: rgba(255, 255, 255, 0.05);
+    --endpoint-border: rgba(255, 255, 255, 0.12);
+    --code-bg: #141820;
+}
+
+[data-theme="light"] .grid-overlay {
+    background-image:
+        linear-gradient(rgba(17, 17, 17, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(17, 17, 17, 0.04) 1px, transparent 1px);
+    opacity: 0.35;
+}
+
+.feer-nav-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+    font-weight: 600;
+}
+
+.feer-nav-link:hover,
+.feer-nav-link.is-active {
+    color: var(--accent-primary);
+}
+
+.feer-nav-link.is-active {
+    font-weight: 700;
+}
+
+.cat-btn.active,
+.category-tag.active {
+    color: #ffffff !important;
+}
+
+.tag-free {
+    background: rgba(17, 17, 17, 0.08) !important;
+    color: var(--accent-primary) !important;
+}
+
+.tag-new {
+    background: rgba(37, 99, 235, 0.1) !important;
+    color: var(--accent-secondary) !important;
+}
+
+.api-card:hover,
+.partner-tile:hover {
+    box-shadow: 0 10px 30px rgba(17, 17, 17, 0.08) !important;
+}
+
+.get {
+    background: rgba(17, 17, 17, 0.08) !important;
+}
+
+.post {
+    background: rgba(37, 99, 235, 0.1) !important;
+}
+
+.home-announcement-label {
+    background: rgba(17, 17, 17, 0.08) !important;
+}
+
+.home-announcement-btn-ok {
+    background: linear-gradient(135deg, #111111, #2d2d2d) !important;
+    color: #ffffff !important;
+}
+
+body.vs-body.feer-front {
+    font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-main);
+}
+
+body.vs-body.feer-front .vs-container {
+    max-width: 1280px;
+}
+
+.menu-btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .menu-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.13.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.14.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -239,6 +239,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.14.0（2026-07-12）
+
+- **主题一参考 UI 完整复刻**：迁入粒子背景、Glitch Hero、终端、接口目录、在线调试、合作伙伴等；绿色色板改为 misc-api 白色主题
+- 新增 `api-proxy.php`、`ThemeManager::defaultFrontendAssets()` 多资源加载；默认主题 v1.5.0
 
 ### v2.13.0（2026-07-12）
 
