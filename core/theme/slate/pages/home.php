@@ -2,14 +2,18 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
-$heroDesc = isset($heroDesc) ? $heroDesc : ($siteDesc !== '' ? $siteDesc : '为开发者提供丰富、稳定、快速的 API 数据接口，一行代码即可调用');
+$heroTitle = ThemeManager::themeSetting('hero_title', '免费 API 接口服务平台');
+$heroLeadCustom = ThemeManager::themeSetting('hero_lead', '');
+$heroDesc = $heroLeadCustom !== '' ? $heroLeadCustom : (isset($heroDesc) ? $heroDesc : ($siteDesc !== '' ? $siteDesc : '为开发者提供丰富、稳定、快速的 API 数据接口，一行代码即可调用'));
+$showStats = ThemeManager::themeSetting('show_stats', true);
 $apiCategories = array('全部', '生活服务', '图片相关', '查询工具', '内容生成', '便捷工具', '社交娱乐');
 ?>
 <main class="st-main" id="stHome">
 <div class="st-wrap">
 <section class="st-hero">
-    <h1 class="st-hero__title">免费 API 接口服务平台</h1>
+    <h1 class="st-hero__title"><?php echo vs_e($heroTitle); ?></h1>
     <p class="st-hero__lead"><?php echo vs_e($heroDesc); ?></p>
+    <?php if ($showStats): ?>
     <div class="st-stat-pill" role="group" aria-label="接口统计">
         <span class="st-stat-pill__item">收录 <strong class="st-stat-num" id="stStatTotal">0</strong> 个接口</span>
         <span class="st-stat-pill__sep" aria-hidden="true"></span>
@@ -17,6 +21,7 @@ $apiCategories = array('全部', '生活服务', '图片相关', '查询工具',
         <span class="st-stat-pill__sep" aria-hidden="true"></span>
         <span class="st-stat-pill__item">累计调用 <strong class="st-stat-num" id="stStatAll">0</strong> 次</span>
     </div>
+    <?php endif; ?>
 </section>
 
 <section class="st-section st-home-tools">

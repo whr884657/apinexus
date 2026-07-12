@@ -1865,31 +1865,38 @@ select.vs-input {
     position: relative;
     display: flex;
     flex-direction: column;
-    border: 2px solid var(--vs-border);
+    border: 2px solid transparent;
     border-radius: 14px;
     overflow: hidden;
     background: var(--vs-white);
-    cursor: pointer;
-    transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.18s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease;
 }
 
 .vs-theme-card:hover {
-    border-color: var(--vs-primary);
+    border-color: #111;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
 }
 
 .vs-theme-card.is-active {
-    border-color: var(--vs-primary);
-    box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.1), 0 10px 28px rgba(0, 0, 0, 0.1);
+    border-color: transparent;
+    box-shadow: none;
 }
 
-.vs-theme-card.is-selected:not(.is-active) {
-    border-color: var(--vs-primary);
-    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.06);
+.vs-theme-card.is-active:hover {
+    border-color: #111;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
-.vs-theme-card input {
+.vs-theme-card__select {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.vs-theme-card input[type="radio"] {
     position: absolute;
     opacity: 0;
     pointer-events: none;
@@ -1966,4 +1973,50 @@ select.vs-input {
     border: 1px solid var(--vs-border);
     font-family: ui-monospace, monospace;
     font-size: 11px;
+}
+
+.vs-theme-card__foot {
+    padding: 0 18px 16px;
+    border-top: 1px solid var(--vs-border);
+    background: var(--vs-content-bg);
+}
+
+.vs-theme-card__settings {
+    width: 100%;
+    justify-content: center;
+}
+
+.vs-theme-config-empty {
+    margin: 0;
+    font-size: 14px;
+    color: var(--vs-text-secondary);
+    line-height: 1.65;
+}
+
+.vs-theme-config-field {
+    margin-bottom: 16px;
+}
+
+.vs-theme-config-field:last-child {
+    margin-bottom: 0;
+}
+
+.vs-theme-config-field .vs-label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.vs-theme-config-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--vs-text);
+    cursor: pointer;
+}
+
+.vs-theme-config-check input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
 }
