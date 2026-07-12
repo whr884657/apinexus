@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.8.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.8.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -236,6 +236,10 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.8.1（2026-07-12）
+
+- 修复青绿主题账号设置页头像栏与第三方账号栏宽度不一致、电脑端右侧空白
 
 ### v2.8.0（2026-07-12）
 

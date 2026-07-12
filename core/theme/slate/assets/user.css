@@ -184,7 +184,7 @@
     border-radius: var(--st-uc-radius);
 }
 
-/* 账号设置头像 */
+/* 账号设置 */
 .st-uc-body .vs-account-shell {
     max-width: 100%;
     overflow: hidden;
@@ -196,16 +196,16 @@
 
 .st-uc-body .vs-account-form__aside {
     width: 100%;
-    max-width: 220px;
+    max-width: none;
 }
 
 .st-uc-body .vs-account-avatar {
     width: 100%;
-    max-width: 220px;
+    max-width: none;
     box-sizing: border-box;
     padding: 16px 14px;
     border-radius: var(--st-uc-radius-lg);
-    border-color: var(--st-uc-border);
+    border: 1px solid var(--st-uc-border);
     background: linear-gradient(180deg, #fff 0%, #f4faf7 100%);
 }
 
@@ -225,6 +225,35 @@
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+}
+
+.st-uc-body .vs-oauth-bind-section {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.st-uc-body .vs-oauth-bind-list {
+    width: 100%;
+}
+
+.st-uc-body .vs-oauth-bind-item {
+    border-color: var(--st-uc-border);
+    border-radius: var(--st-uc-radius-lg);
+    background: linear-gradient(180deg, #fff 0%, #f4faf7 100%);
+}
+
+@media (min-width: 900px) {
+    .st-uc-body .vs-account-shell {
+        grid-template-columns: 240px minmax(0, 1fr);
+        column-gap: 32px;
+    }
+
+    .st-uc-body .vs-account-form__aside,
+    .st-uc-body .vs-account-avatar,
+    .st-uc-body .vs-oauth-bind-section {
+        width: 100%;
+        max-width: none;
+    }
 }
 
 /* ── 遮罩 ── */
@@ -394,10 +423,5 @@ body.st-uc-menu-open {
     .st-uc-fab-wrap {
         right: 16px;
         bottom: 16px;
-    }
-
-    .st-uc-body .vs-account-form__aside,
-    .st-uc-body .vs-account-avatar {
-        max-width: 100%;
     }
 }

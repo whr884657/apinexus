@@ -1,7 +1,7 @@
 {
     "id": "slate",
     "name": "青绿平台",
-    "version": "2.8.0",
+    "version": "2.8.1",
     "author": "misc-api",
     "description": "浅色青绿 API 平台风：搜索筛选、接口统计、分类标签；电脑端顶栏，手机端右侧抽屉",
     "preview": "preview.png"
