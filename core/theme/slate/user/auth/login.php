@@ -7,12 +7,14 @@ if (!defined('VS_THEME_RENDER')) {
 }
 
 $base = isset($base) ? $base : $vsBase;
+$siteName = SiteContext::siteName();
 $expiredMsg = isset($expiredMsg) ? $expiredMsg : '';
 $oauthError = isset($oauthError) ? $oauthError : '';
 $oauthProviders = isset($oauthProviders) ? $oauthProviders : array('qq' => false, 'gitee' => false);
 
 ThemeManager::renderThemeAuthHead($pageTitle);
-vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号', array('layout' => 'login-right'));
+vs_slate_auth_page_start();
+vs_slate_auth_header($siteName, '用户登录');
 ?>
 
 <div id="formMessage" class="st-auth__msg" role="alert" hidden></div>
@@ -53,7 +55,7 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
     <div class="st-auth__foot">还没有账号？<a href="<?php echo vs_e($base); ?>/user/register">立即注册</a></div>
 </form>
 
-<?php vs_slate_auth_shell_end(); ?>
+<?php vs_slate_auth_page_end(); ?>
 
 <script>
 (function () {

@@ -1,10 +1,7 @@
 <?php
 /**
- * 青绿平台 · 认证页布局
+ * 青绿平台 · 认证页布局（双栏：左装饰 / 右表单，结构对齐 default 主题）
  */
-
-/** @var string */
-$GLOBALS['vs_slate_auth_layout_mode'] = 'center';
 
 /**
  * @param string $pageTitle
@@ -33,60 +30,54 @@ function vs_theme_auth_head($pageTitle)
 }
 
 /**
- * 认证页 shell
+ * 双栏认证页开始（左装饰区 + 右表单区）
  *
- * @param string $headTitle
- * @param string $headSub
- * @param array  $options layout: center|login-right（仅登录页桌面端右侧表单）
  * @return void
  */
-function vs_slate_auth_shell_start($headTitle, $headSub = '', array $options = array())
+function vs_slate_auth_page_start()
 {
-    $layout = isset($options['layout']) ? (string) $options['layout'] : 'center';
-    if ($layout !== 'login-right') {
-        $layout = 'center';
+    $siteName = SiteContext::siteName();
+    echo '<div class="st-auth-page">' . "\n";
+    echo '<aside class="st-auth-page__left" aria-hidden="true">' . "\n";
+    echo '<div class="st-auth-page__left-bg"></div>' . "\n";
+    echo '<div class="st-auth-page__left-content">' . "\n";
+    $initial = $siteName !== '' ? $siteName : 'A';
+    if (function_exists('mb_substr')) {
+        $initial = mb_substr($initial, 0, 1, 'UTF-8');
+    } else {
+        $initial = substr($initial, 0, 1);
     }
-    $GLOBALS['vs_slate_auth_layout_mode'] = $layout;
+    echo '<div class="st-auth-page__logo">' . vs_e($initial) . '</div>' . "\n";
+    echo '<p class="st-auth-page__site">' . vs_e($siteName) . '</p>' . "\n";
+    echo '<p class="st-auth-page__tagline">安全 · 简洁 · 高效</p>' . "\n";
+    echo '</div></aside>' . "\n";
+    echo '<main class="st-auth-page__right">' . "\n";
+    echo '<div class="st-auth-box">' . "\n";
+}
 
-    $rootClass = 'st-auth' . ($layout === 'login-right' ? ' st-auth--login-right' : '');
-
-    echo '<div class="' . $rootClass . '">' . "\n";
-    echo '<div class="st-auth__bg" aria-hidden="true"><span class="st-auth__orb st-auth__orb--1"></span><span class="st-auth__orb st-auth__orb--2"></span></div>' . "\n";
-
-    if ($layout === 'login-right') {
-        echo '<div class="st-auth__stage">' . "\n";
-        echo '<aside class="st-auth__visual" aria-hidden="true" data-st-login-visual>' . "\n";
-        echo '<div class="st-auth__visual-inner">' . "\n";
-        echo '<div class="st-auth__mesh"></div>' . "\n";
-        echo '<div class="st-auth__ring st-auth__ring--1"></div>' . "\n";
-        echo '<div class="st-auth__ring st-auth__ring--2"></div>' . "\n";
-        echo '<div class="st-auth__float st-auth__float--1"></div>' . "\n";
-        echo '<div class="st-auth__float st-auth__float--2"></div>' . "\n";
-        echo '<div class="st-auth__float st-auth__float--3"></div>' . "\n";
-        echo '<div class="st-auth__brand">' . vs_e(SiteContext::siteName()) . '</div>' . "\n";
-        echo '</div></aside>' . "\n";
+/**
+ * 表单区标题
+ *
+ * @param string $title
+ * @param string $subtitle
+ * @return void
+ */
+function vs_slate_auth_header($title, $subtitle = '')
+{
+    echo '<header class="st-auth-box__header">' . "\n";
+    echo '<h1 class="st-auth-box__title">' . vs_e($title) . '</h1>' . "\n";
+    if ($subtitle !== '') {
+        echo '<p class="st-auth-box__sub">' . vs_e($subtitle) . '</p>' . "\n";
     }
-
-    echo '<div class="st-auth__center">' . "\n";
-    echo '<div class="st-auth__form">' . "\n";
-    echo '<h1 class="st-auth__title">' . vs_e($headTitle) . '</h1>' . "\n";
-    if ($headSub !== '') {
-        echo '<p class="st-auth__sub">' . vs_e($headSub) . '</p>' . "\n";
-    }
+    echo '</header>' . "\n";
 }
 
 /**
  * @return void
  */
-function vs_slate_auth_shell_end()
+function vs_slate_auth_page_end()
 {
-    $layout = isset($GLOBALS['vs_slate_auth_layout_mode']) ? $GLOBALS['vs_slate_auth_layout_mode'] : 'center';
-    echo '</div></div>';
-    if ($layout === 'login-right') {
-        echo '</div>';
-    }
-    echo '</div>' . "\n";
-    $GLOBALS['vs_slate_auth_layout_mode'] = 'center';
+    echo '</div></main></div>' . "\n";
 }
 
 /**
