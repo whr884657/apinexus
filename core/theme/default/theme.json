@@ -1,7 +1,7 @@
 {
     "id": "default",
     "name": "默认主题",
-    "version": "1.5.3",
+    "version": "1.5.4",
     "author": "misc-api",
     "description": "参考 FeerApi 前台 UI 完整复刻，白色主题色板；含粒子背景、终端 Hero、接口目录与在线调试",
     "preview": "preview.png",

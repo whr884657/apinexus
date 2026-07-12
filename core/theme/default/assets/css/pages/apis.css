@@ -56,7 +56,7 @@
         .category-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
         .category-tag { padding: 0.35rem 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.75rem; color: var(--text-muted); text-decoration: none; transition: all 0.2s; cursor: pointer; }
         .category-tag:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
-        .category-tag.active { background: var(--accent-primary); color: #000; border-color: var(--accent-primary); }
+        .category-tag.active { background: var(--accent-primary); color: #ffffff; border-color: var(--accent-primary); }
         .category-more { padding: 0.35rem 0.75rem; border: 1px dashed var(--border-color); border-radius: 4px; font-size: 0.75rem; color: var(--accent-primary); cursor: pointer; background: transparent; display: inline-flex; align-items: center; gap: 0.25rem; transition: all 0.2s; white-space: nowrap; }
         .category-more:hover { background: rgba(0, 255, 157, 0.1); }
         .category-more .expand-icon { transition: transform 0.3s ease; }

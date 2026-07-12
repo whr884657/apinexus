@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includes/api-payload.php';
 $payload = vs_theme_api_payload();
 $apiCount = ApiManager::countApproved();
 $catCount = max(1, count($payload['categoryNames']) - 1);
+$totalCalls = ApiManager::totalCallCount();
 
 $heroTitleSetting = ThemeManager::themeSetting('hero_title', '');
 $heroLeadSetting = ThemeManager::themeSetting('hero_lead', '');
@@ -72,7 +73,7 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
     <section id="stats-section" class="py-20 grid grid-cols-2 md:grid-cols-4 gap-8 border-b" style="border-color: var(--border-color);">
         <div class="text-center"><div class="stat-value stat-green"><span class="counter" data-target="<?php echo (int) $apiCount; ?>">0</span><span class="counter-suffix"></span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">API 接口</div></div>
         <div class="text-center"><div class="stat-value stat-cyan"><span class="counter" data-target="<?php echo (int) min(99, max(1, $catCount)); ?>">0</span><span class="counter-suffix"></span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">接口分类</div></div>
-        <div class="text-center"><div class="stat-value stat-green"><span class="counter" data-target="<?php echo (int) preg_replace('/\D/', '', VS_VERSION); ?>">0</span><span class="counter-suffix"></span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">系统版本</div></div>
+        <div class="text-center"><div class="stat-value stat-green"><span class="counter" data-target="<?php echo (int) $totalCalls; ?>">0</span><span class="counter-suffix"></span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">累计调用次数</div></div>
         <div class="text-center"><div class="stat-value stat-cyan"><span class="counter" data-target="99">0</span><span class="counter-suffix">%</span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">可用性</div></div>
     </section>
     <section id="apis" class="py-24">

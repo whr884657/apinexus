@@ -411,8 +411,8 @@
         .search-input::placeholder { color: var(--text-muted); }
 
         .cat-btn { padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; border: 1px solid transparent; background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-        .cat-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
-        .cat-btn.active { background: var(--accent-primary); color: #000; font-weight: 600; }
+        .cat-btn:hover { background: rgba(17, 17, 17, 0.06); color: var(--text-main); }
+        .cat-btn.active { background: var(--accent-primary); color: #ffffff; font-weight: 600; }
         
         /* 分类展开/收起 */
         .cat-btn-more { padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; border: 1px dashed var(--border-color); background: transparent; color: var(--accent-primary); cursor: pointer; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 0.25rem; }

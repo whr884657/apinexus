@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.14.3-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.14.4-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -239,6 +239,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.14.4（2026-07-12）
+
+- **首页统计**：第三项由「系统版本」改为「累计调用次数」，读取配置项 `api_total_calls`（可在 `vs_config` 表设置数值）
+- **移除主题一昼夜切换**：顶栏去掉切换按钮，`front-theme.js` 固定浅色模式
+- **分类标签**：修复深色模式下选中态文字不可见等问题；默认主题 v1.5.4
 
 ### v2.14.3（2026-07-12）
 
