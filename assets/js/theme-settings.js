@@ -29,6 +29,17 @@
         }
     }
 
+    /** AjaxResponse::success 将字段合并到响应顶层 */
+    function pickPayload(data) {
+        if (!data) {
+            return {};
+        }
+        if (data.data && typeof data.data === 'object') {
+            return data.data;
+        }
+        return data;
+    }
+
     function refreshActiveBadges() {
         if (!form) {
             return;
@@ -40,6 +51,9 @@
             var themeId = card.getAttribute('data-theme-id') || (radio ? radio.value : '');
             var isSavedActive = themeId === activeId;
             card.classList.toggle('is-active', isSavedActive);
+            if (radio) {
+                radio.checked = isSavedActive;
+            }
 
             var preview = card.querySelector('.vs-theme-card__preview');
             if (!preview) {
@@ -97,7 +111,7 @@
                     window.VS.showMessage(data.msg || '加载失败', 'error');
                     return;
                 }
-                var payload = data.data || {};
+                var payload = pickPayload(data);
                 if (payload.theme_name) {
                     setActiveThemeMeta(payload.theme_id || getActiveThemeId(), payload.theme_name);
                 }
@@ -118,6 +132,15 @@
     });
 
     if (form) {
+        form.querySelectorAll('input[name="frontend_theme"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                form.querySelectorAll('.vs-theme-card').forEach(function (card) {
+                    var r = card.querySelector('input[name="frontend_theme"]');
+                    card.classList.toggle('is-selected', !!(r && r.checked && r.value !== getActiveThemeId()));
+                });
+            });
+        });
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             var submitBtn = form.querySelector('[type="submit"]');
@@ -132,8 +155,9 @@
                         return;
                     }
                     window.VS.showMessage(data.msg || '已保存', 'success');
-                    if (data.data && data.data.theme_id) {
-                        setActiveThemeMeta(data.data.theme_id, data.data.theme_name || data.data.theme_id);
+                    var payload = pickPayload(data);
+                    if (payload.theme_id) {
+                        setActiveThemeMeta(payload.theme_id, payload.theme_name || payload.theme_id);
                     }
                     refreshActiveBadges();
                 })

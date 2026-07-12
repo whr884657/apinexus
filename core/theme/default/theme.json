@@ -1,7 +1,7 @@
 {
     "id": "default",
     "name": "默认主题",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "author": "misc-api",
     "description": "经典浅色卡片布局，电脑端顶栏导航，手机端右侧抽屉菜单",
     "preview": "preview.png",

@@ -21,16 +21,5 @@ $heroDesc = $heroLeadSetting !== '' ? $heroLeadSetting : (isset($heroDesc) ? $he
     <div class="dt-feature"><div class="dt-feature__icon">SC</div><h3>安全加密</h3><p>密码加密存储，CSRF 防护</p></div>
     <div class="dt-feature"><div class="dt-feature__icon">RS</div><h3>响应式设计</h3><p>PC 与手机端自动适配</p></div>
 </section>
-<section class="dt-section">
-    <h2 class="dt-section__title">快速入口</h2>
-    <div class="dt-quick-grid">
-        <?php foreach ($navItems as $item): ?>
-            <?php if ($item['id'] === 'home') { continue; } ?>
-            <a href="<?php echo vs_e($item['url']); ?>" class="dt-quick-card">
-                <span><?php echo vs_e($item['label']); ?></span><span>→</span>
-            </a>
-        <?php endforeach; ?>
-    </div>
-</section>
 </div>
 </main>

@@ -1,12 +1,14 @@
 {
-    "version": "2.11.2",
-    "title": "misc-api 2.11.2 青绿认证页 UI 还原",
+    "version": "2.12.0",
+    "title": "misc-api 2.12.0 API 审核与主题体验优化",
     "release_date": "2026-07-12",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "还原 slate 登录/注册/忘记密码/绑定页为 2.10.2 前居中布局",
-        "保留 mail_ticket 与 120s 验证码限流等安全能力",
-        "桌面端适度放宽表单宽度，修复「忘记密码」等链接溢出"
+        "后台 API 管理新增接口审核模块（待审核/通过/拒绝/下线）",
+        "新增 api 数据表与 ApiManager 服务",
+        "修复主题切换后「当前使用」标志不实时更新",
+        "主题卡片展示主题版本号；青绿主题可配置手机端 FAB 弹出导航",
+        "默认主题首页移除快速入口板块"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

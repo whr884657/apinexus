@@ -2,8 +2,10 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
+$stNavExpandMode = ThemeManager::themeSetting('nav_expand_mode', 'top_drawer');
+$stNavUseFab = ($stNavExpandMode === 'fab_popup');
 ?>
-<div class="st-root">
+<div class="st-root<?php echo $stNavUseFab ? ' st-root--nav-fab' : ''; ?>">
 <header class="st-bar">
     <div class="st-wrap st-bar__inner">
         <a href="<?php echo vs_e($vsBase); ?>/" class="st-brand">
@@ -26,14 +28,14 @@ if (!defined('VS_THEME_RENDER')) {
                 <?php echo vs_e($authLabel); ?>
             <?php endif; ?>
         </a>
-        <button type="button" class="st-bar__menu" id="stMenuBtn" aria-label="打开菜单" aria-expanded="false" aria-controls="stDrawer">
+        <button type="button" class="st-bar__menu" id="stMenuBtn" aria-label="打开菜单" aria-expanded="false" aria-controls="stDrawer"<?php echo $stNavUseFab ? ' hidden' : ''; ?>>
             <span></span><span></span><span></span>
         </button>
     </div>
 </header>
 
-<div class="st-mask" id="stMask" hidden></div>
-<aside class="st-drawer" id="stDrawer" aria-label="站点菜单" hidden>
+<div class="st-mask" id="stMask" hidden<?php echo $stNavUseFab ? ' data-nav-disabled="1"' : ''; ?>></div>
+<aside class="st-drawer" id="stDrawer" aria-label="站点菜单" hidden<?php echo $stNavUseFab ? ' data-nav-disabled="1"' : ''; ?>>
     <div class="st-drawer__head">
         <?php vs_theme_site_logo('st-drawer__img', 'st-drawer__fallback'); ?>
         <span class="st-drawer__name"><?php echo vs_e($siteName); ?></span>

@@ -376,29 +376,6 @@ body.dt-drawer-open {
     margin-bottom: 16px;
 }
 
-.dt-quick-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.dt-quick-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 18px;
-    background: var(--vs-white);
-    border: 1px solid var(--vs-border);
-    border-radius: var(--vs-radius);
-    text-decoration: none;
-    color: var(--vs-text);
-}
-
-.dt-quick-card:hover {
-    border-color: var(--vs-primary);
-    box-shadow: var(--vs-shadow);
-}
-
 .dt-page-head {
     margin-bottom: 24px;
     padding: 28px 24px;
@@ -521,7 +498,6 @@ body.dt-drawer-open {
     }
 
     .dt-features,
-    .dt-quick-grid,
     .dt-grid-2,
     .dt-contributor-list {
         grid-template-columns: 1fr;

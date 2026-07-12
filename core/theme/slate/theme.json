@@ -1,9 +1,9 @@
 {
     "id": "slate",
     "name": "青绿平台",
-    "version": "2.8.1",
+    "version": "2.12.0",
     "author": "misc-api",
-    "description": "浅色青绿 API 平台风：搜索筛选、接口统计、分类标签；电脑端顶栏，手机端右侧抽屉",
+    "description": "浅色青绿 API 平台风：搜索筛选、接口统计、分类标签；电脑端顶栏，手机端可配置抽屉或 FAB 弹出导航",
     "preview": "preview.png",
     "settings": [
         {
@@ -23,6 +23,16 @@
             "label": "显示首页统计胶囊",
             "type": "checkbox",
             "default": true
+        },
+        {
+            "key": "nav_expand_mode",
+            "label": "手机端导航展开方式",
+            "type": "select",
+            "default": "top_drawer",
+            "options": [
+                {"value": "top_drawer", "label": "顶部三横线 · 右侧抽屉（默认）"},
+                {"value": "fab_popup", "label": "右下角圆形按钮 · 向上弹出"}
+            ]
         }
     ]
 }

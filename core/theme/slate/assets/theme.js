@@ -1,15 +1,18 @@
 /**
- * 青绿平台主题 · 抽屉 / 首页 / 返回顶部
+ * 青绿平台主题 · 抽屉 / FAB 导航 / 首页 / 返回顶部
  */
 (function () {
     'use strict';
 
-    /* ── 手机端抽屉 ── */
-    var btn = document.getElementById('stMenuBtn');
-    var drawer = document.getElementById('stDrawer');
-    var mask = document.getElementById('stMask');
+    function initDrawerNav() {
+        var btn = document.getElementById('stMenuBtn');
+        var drawer = document.getElementById('stDrawer');
+        var mask = document.getElementById('stMask');
 
-    if (btn && drawer && mask) {
+        if (!btn || !drawer || !mask || drawer.getAttribute('data-nav-disabled') === '1') {
+            return;
+        }
+
         function openDrawer() {
             drawer.hidden = false;
             mask.hidden = false;
@@ -50,6 +53,75 @@
             }
         });
     }
+
+    function initFabNav() {
+        var wrap = document.getElementById('stNavFabWrap');
+        var fab = document.getElementById('stNavFab');
+        var pop = document.getElementById('stNavPop');
+        var mask = document.getElementById('stNavMask');
+
+        if (!wrap || !fab || !pop) {
+            return;
+        }
+
+        function setOpen(open) {
+            wrap.classList.toggle('is-open', open);
+            fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+            document.body.classList.toggle('st-nav-fab-open', open);
+            if (mask) {
+                mask.hidden = !open;
+                mask.classList.toggle('is-show', open);
+            }
+            if (!open) {
+                window.setTimeout(function () {
+                    if (!wrap.classList.contains('is-open')) {
+                        pop.hidden = true;
+                    }
+                }, 240);
+            } else {
+                pop.hidden = false;
+            }
+        }
+
+        function isOpen() {
+            return wrap.classList.contains('is-open');
+        }
+
+        fab.addEventListener('click', function (e) {
+            e.stopPropagation();
+            setOpen(!isOpen());
+        });
+
+        if (mask) {
+            mask.addEventListener('click', function () {
+                setOpen(false);
+            });
+        }
+
+        pop.querySelectorAll('.st-nav-pop__link').forEach(function (link) {
+            link.addEventListener('click', function () {
+                setOpen(false);
+            });
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!isOpen()) {
+                return;
+            }
+            if (!wrap.contains(e.target)) {
+                setOpen(false);
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isOpen()) {
+                setOpen(false);
+            }
+        });
+    }
+
+    initDrawerNav();
+    initFabNav();
 
     /* ── 返回顶部（全站） ── */
     var backTop = document.getElementById('stBackTop');
