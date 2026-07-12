@@ -1,56 +1,68 @@
 /**
- * 青绿平台 · 用户中心（顶栏 + 移动 sheet）
+ * 青绿平台 · 用户中心（右下角 FAB 展开侧边栏）
  */
 (function () {
     'use strict';
 
-    var btn = document.getElementById('stDashMenuBtn');
-    var sheet = document.getElementById('stDashSheet');
-    var mask = document.getElementById('stDashMask');
+    var STORAGE_KEY = 'st_uc_sidebar_open';
 
-    if (!btn || !sheet || !mask) {
-        return;
-    }
+    function initSidebar() {
+        var shell = document.getElementById('stUcShell');
+        var fab = document.getElementById('stUcFab');
+        var mask = document.getElementById('stUcMask');
+        var sidebar = document.getElementById('stUcSidebar');
 
-    function openSheet() {
-        sheet.hidden = false;
-        mask.hidden = false;
-        requestAnimationFrame(function () {
-            sheet.classList.add('is-open');
+        if (!shell || !fab) {
+            return;
+        }
+
+        function setOpen(open) {
+            shell.classList.toggle('is-sidebar-open', open);
+            shell.classList.toggle('is-sidebar-closed', !open);
+            fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+            document.body.classList.toggle('st-uc-sidebar-open', open);
+            try {
+                localStorage.setItem(STORAGE_KEY, open ? '1' : '0');
+            } catch (e) {}
+        }
+
+        function isOpen() {
+            return shell.classList.contains('is-sidebar-open');
+        }
+
+        var saved = false;
+        try {
+            saved = localStorage.getItem(STORAGE_KEY) === '1';
+        } catch (e) {}
+
+        setOpen(saved);
+
+        fab.addEventListener('click', function () {
+            setOpen(!isOpen());
         });
-        btn.setAttribute('aria-expanded', 'true');
-        document.body.classList.add('st-dash-menu-open');
-    }
 
-    function closeSheet() {
-        sheet.classList.remove('is-open');
-        btn.setAttribute('aria-expanded', 'false');
-        document.body.classList.remove('st-dash-menu-open');
-        window.setTimeout(function () {
-            if (!sheet.classList.contains('is-open')) {
-                sheet.hidden = true;
-                mask.hidden = true;
+        if (mask) {
+            mask.addEventListener('click', function () {
+                setOpen(false);
+            });
+        }
+
+        if (sidebar) {
+            sidebar.querySelectorAll('.vs-sidebar__link, .vs-sidebar__logout').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (window.innerWidth <= 768) {
+                        setOpen(false);
+                    }
+                });
+            });
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isOpen()) {
+                setOpen(false);
             }
-        }, 220);
+        });
     }
 
-    btn.addEventListener('click', function () {
-        if (sheet.classList.contains('is-open')) {
-            closeSheet();
-        } else {
-            openSheet();
-        }
-    });
-
-    mask.addEventListener('click', closeSheet);
-
-    sheet.querySelectorAll('.st-dash-sheet__link').forEach(function (link) {
-        link.addEventListener('click', closeSheet);
-    });
-
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && sheet.classList.contains('is-open')) {
-            closeSheet();
-        }
-    });
+    document.addEventListener('DOMContentLoaded', initSidebar);
 })();

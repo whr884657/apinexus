@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.7.0": {
+            "title": "misc-api 2.7.0 青绿用户中心侧边栏重构",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "st-uc 侧边栏布局对齐 default，固定青绿渐变",
+                "右下角 FAB 展开侧栏，无调色盘",
+                "圆角优化与账号头像尺寸限制"
+            ]
+        },
         "2.6.0": {
             "title": "misc-api 2.6.0 青绿 st-dash 用户中心与无卡片认证页",
             "date": "2026-07-12",

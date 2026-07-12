@@ -90,8 +90,18 @@
         });
     }
 
+    function isThemePickerDisabled() {
+        if (!document.body) {
+            return false;
+        }
+        if (document.body.getAttribute('data-theme-picker') === 'off') {
+            return true;
+        }
+        return document.body.classList.contains('st-uc-body');
+    }
+
     function isAdminPage() {
-        return document.body && document.body.classList.contains('vs-admin-body');
+        return document.body && document.body.classList.contains('vs-admin-body') && !isThemePickerDisabled();
     }
 
     function paintPage(color) {
@@ -401,6 +411,10 @@
     }
 
     function init() {
+        if (isThemePickerDisabled()) {
+            return;
+        }
+
         savedColor = readSavedColor();
         currentColor = savedColor;
         paintPage(savedColor);
