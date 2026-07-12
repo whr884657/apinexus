@@ -348,4 +348,27 @@ body.vs-modal-open {
         max-height: var(--vs-mobile-drawer-height, 80vh);
         border-radius: 16px 16px 0 0;
     }
+
+    .vs-modal-shell--theme-settings {
+        --vs-mobile-drawer-height: 75vh;
+    }
+}
+
+/* ── 主题设置弹窗（电脑端居中、手机端 75% 抽屉） ── */
+.vs-modal-shell--theme-settings {
+    z-index: 4850;
+}
+
+.vs-modal-shell--theme-settings .vs-modal--theme-settings {
+    max-width: 560px;
+    width: min(560px, calc(100vw - 40px));
+    max-height: min(72vh, 640px);
+}
+
+@media (min-width: 769px) {
+    .vs-modal-shell--theme-settings {
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
 }

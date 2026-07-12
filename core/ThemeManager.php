@@ -129,6 +129,161 @@ class ThemeManager
     }
 
     /**
+     * 主题是否已启用（当前正在使用）
+     *
+     * @param string $themeId
+     * @return bool
+     */
+    public static function isThemeEnabled($themeId)
+    {
+        return self::isValidTheme($themeId) && $themeId === self::activeId();
+    }
+
+    /**
+     * 主题专属数据文件路径（core/theme/{id}/data/*.json）
+     *
+     * @param string $themeId
+     * @param string $filename
+     * @return string
+     */
+    public static function themeDataFile($themeId, $filename = 'settings.json')
+    {
+        if (!self::isValidTheme($themeId)) {
+            return '';
+        }
+        $filename = basename((string) $filename);
+        if (!preg_match('/^[a-z0-9_-]+\.json$/i', $filename)) {
+            return '';
+        }
+        return self::themeDir($themeId) . '/data/' . $filename;
+    }
+
+    /**
+     * @param string $themeId
+     * @param string $filename
+     * @return array<string, mixed>
+     */
+    public static function readThemeData($themeId, $filename = 'settings.json')
+    {
+        $file = self::themeDataFile($themeId, $filename);
+        if ($file === '' || !is_file($file)) {
+            return array();
+        }
+        $json = json_decode((string) file_get_contents($file), true);
+        return is_array($json) ? $json : array();
+    }
+
+    /**
+     * @param string $themeId
+     * @param array<string, mixed> $data
+     * @param string $filename
+     * @return true|string
+     */
+    public static function writeThemeData($themeId, array $data, $filename = 'settings.json')
+    {
+        $file = self::themeDataFile($themeId, $filename);
+        if ($file === '') {
+            return '无效的主题';
+        }
+        $dir = dirname($file);
+        if (!is_dir($dir)) {
+            if (!@mkdir($dir, 0755, true) && !is_dir($dir)) {
+                return '无法创建主题数据目录';
+            }
+        }
+        $encoded = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        if ($encoded === false) {
+            return '数据编码失败';
+        }
+        if (@file_put_contents($file, $encoded . "\n", LOCK_EX) === false) {
+            return '写入主题数据失败';
+        }
+        return true;
+    }
+
+    /**
+     * 读取当前启用主题的配置项
+     *
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public static function themeSetting($key, $default = '')
+    {
+        static $cache = null;
+        if ($cache === null) {
+            $cache = self::readThemeData(self::activeId());
+        }
+        $key = (string) $key;
+        return array_key_exists($key, $cache) ? $cache[$key] : $default;
+    }
+
+    /**
+     * theme.json 中声明的可配置项
+     *
+     * @param string $themeId
+     * @return array<int, array<string, mixed>>
+     */
+    public static function getSettingsSchema($themeId)
+    {
+        $meta = self::readMeta($themeId);
+        if (empty($meta['settings']) || !is_array($meta['settings'])) {
+            return array();
+        }
+
+        $allowedTypes = array('text', 'textarea', 'number', 'checkbox');
+        $schema = array();
+        foreach ($meta['settings'] as $item) {
+            if (!is_array($item) || empty($item['key'])) {
+                continue;
+            }
+            $key = preg_replace('/[^a-z0-9_]/i', '', (string) $item['key']);
+            if ($key === '') {
+                continue;
+            }
+            $type = isset($item['type']) ? (string) $item['type'] : 'text';
+            if (!in_array($type, $allowedTypes, true)) {
+                $type = 'text';
+            }
+            $schema[] = array(
+                'key'         => $key,
+                'label'       => isset($item['label']) ? (string) $item['label'] : $key,
+                'type'        => $type,
+                'placeholder' => isset($item['placeholder']) ? (string) $item['placeholder'] : '',
+                'default'     => isset($item['default']) ? $item['default'] : '',
+            );
+        }
+
+        return $schema;
+    }
+
+    /**
+     * 根据 schema 清洗提交的设置值
+     *
+     * @param string $themeId
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public static function sanitizeThemeSettingsInput($themeId, array $input)
+    {
+        $schema = self::getSettingsSchema($themeId);
+        $out = array();
+        foreach ($schema as $field) {
+            $key = $field['key'];
+            if ($field['type'] === 'checkbox') {
+                $out[$key] = !empty($input[$key]) && $input[$key] !== '0' && $input[$key] !== 'false';
+                continue;
+            }
+            $value = isset($input[$key]) ? trim((string) $input[$key]) : '';
+            if ($field['type'] === 'number' && $value !== '' && !is_numeric($value)) {
+                $value = '';
+            }
+            $out[$key] = $value;
+        }
+        return $out;
+    }
+
+    /**
      * 前台导航（统一排序，各主题自行渲染）
      *
      * @return array<int, array<string, string>>

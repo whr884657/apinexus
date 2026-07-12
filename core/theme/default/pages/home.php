@@ -2,12 +2,15 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
-$heroDesc = isset($heroDesc) ? $heroDesc : ($siteDesc !== '' ? $siteDesc : '基于 PHP + MySQL 的轻量级 Web 管理系统，全面适配电脑端与手机端。');
+$heroTitleSetting = ThemeManager::themeSetting('hero_title', '');
+$heroLeadSetting = ThemeManager::themeSetting('hero_lead', '');
+$heroTitle = $heroTitleSetting !== '' ? $heroTitleSetting : ('欢迎使用 ' . $siteName);
+$heroDesc = $heroLeadSetting !== '' ? $heroLeadSetting : (isset($heroDesc) ? $heroDesc : ($siteDesc !== '' ? $siteDesc : '基于 PHP + MySQL 的轻量级 Web 管理系统，全面适配电脑端与手机端。'));
 ?>
 <main class="dt-main">
 <div class="dt-container">
 <section class="dt-hero">
-    <h1 class="dt-hero__title">欢迎使用 <?php echo vs_e($siteName); ?></h1>
+    <h1 class="dt-hero__title"><?php echo vs_e($heroTitle); ?></h1>
     <p class="dt-hero__desc"><?php echo vs_e($heroDesc); ?></p>
     <div class="dt-hero__actions">
         <a href="<?php echo vs_e($authUrl); ?>" class="dt-auth-btn dt-auth-btn--block" style="width:auto;min-width:160px;"><?php echo vs_e($authLabel); ?></a>

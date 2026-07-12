@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.9.0": {
+            "title": "misc-api 2.9.0 后台主题设置与专属 data 存储",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "主题画廊悬停黑边框与设置弹窗",
+                "data/settings.json 主题专属配置",
+                "前台 themeSetting 读取"
+            ]
+        },
         "2.8.1": {
             "title": "misc-api 2.8.1 青绿账号设置布局修复",
             "date": "2026-07-12",

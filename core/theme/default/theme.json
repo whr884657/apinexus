@@ -4,5 +4,19 @@
     "version": "1.2.0",
     "author": "misc-api",
     "description": "经典浅色卡片布局，电脑端顶栏导航，手机端右侧抽屉菜单",
-    "preview": "preview.png"
+    "preview": "preview.png",
+    "settings": [
+        {
+            "key": "hero_title",
+            "label": "首页主标题",
+            "type": "text",
+            "placeholder": "留空使用默认文案"
+        },
+        {
+            "key": "hero_lead",
+            "label": "首页副文案",
+            "type": "textarea",
+            "placeholder": "留空使用站点描述"
+        }
+    ]
 }
