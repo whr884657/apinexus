@@ -1,12 +1,13 @@
 {
-    "version": "2.14.0",
-    "title": "misc-api 2.14.0 主题一参考 UI 完整复刻（白色主题）",
+    "version": "2.14.1",
+    "title": "misc-api 2.14.1 主题一布局修复与站点 Logo",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "默认主题完整迁入参考 UI：粒子背景、顶栏/抽屉、Glitch Hero、终端、统计、接口目录、在线调试、合作伙伴",
-        "各子页面（接口/文章/关于/友链/贡献者/赞助）对齐参考布局与样式，色板适配 misc-api 白色主题",
-        "新增 api-proxy.php 支持首页在线调试；ThemeManager 多资源加载"
+        "修复默认主题 Tailwind 未生效导致的 Hero/统计/调试区/合作伙伴布局错乱",
+        "顶栏 Logo 改为读取站点自定义图标，移除固定闪电 SVG",
+        "移除未请求的 api-proxy.php；在线调试改为浏览器直连并提示跨域限制",
+        "新增 feer-compat.css 布局兼容层；Tailwind CDN 优先、本地 vendor 回退"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

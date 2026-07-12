@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.14.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.14.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -239,6 +239,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.14.1（2026-07-12）
+
+- **修复主题一布局错乱**：新增 `feer-compat.css` 兼容 Tailwind 工具类；CDN 优先加载 Tailwind，本地 vendor 回退
+- **顶栏 Logo** 改为站点设置中的自定义图标（与站点绑定），无配置时使用中性占位
+- **移除 `api-proxy.php`**；首页在线调试改为浏览器直连，跨域时给出友好提示
+- 默认主题 v1.5.1
 
 ### v2.14.0（2026-07-12）
 

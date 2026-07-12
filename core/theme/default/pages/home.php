@@ -158,7 +158,6 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
 <script>
 var apiData = <?php echo json_encode($payload['apiData'], JSON_UNESCAPED_UNICODE); ?>;
 var categoryNames = <?php echo json_encode($payload['categoryNames'], JSON_UNESCAPED_UNICODE); ?>;
-var API_PROXY_URL = <?php echo json_encode($vsBase . '/api-proxy.php'); ?>;
 var statsDisplayMode = 1;
 var homeHeroConfig = <?php echo json_encode($homeHeroConfig, JSON_UNESCAPED_UNICODE); ?>;
 window.playgroundUserApiKey = null;

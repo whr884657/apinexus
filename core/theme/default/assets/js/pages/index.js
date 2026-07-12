@@ -901,119 +901,58 @@ async function sendRequest() {
         return;
     }
 
-    // 其他情况使用代理请求
+    // 浏览器直连请求（无同源代理）
+    if (hasFiles && (currentMethod === 'POST' || currentMethod === 'PUT' || currentMethod === 'PATCH')) {
+        output.innerHTML = '<span style="color: var(--text-muted)">// 含文件上传的请求暂不支持浏览器直连调试，请使用接口文档中的 curl 示例。</span>';
+        status.textContent = 'Skip';
+        status.className = "text-xs px-2 py-1 rounded bg-yellow-900 text-yellow-400 font-mono";
+        return;
+    }
+
+    const fetchOpts = { method: currentMethod };
+    if (currentMethod === 'POST' || currentMethod === 'PUT' || currentMethod === 'PATCH') {
+        if (Object.keys(params).length > 0) {
+            fetchOpts.headers = { 'Content-Type': 'application/json' };
+            fetchOpts.body = JSON.stringify(params);
+        }
+    }
+
+    const startTime = performance.now();
     try {
-        let proxyBody;
-        let proxyContentType = 'application/json';
-
-        if (hasFiles && (currentMethod === 'POST' || currentMethod === 'PUT' || currentMethod === 'PATCH')) {
-            const formData = new FormData();
-            formData.append('url', url);
-            formData.append('method', currentMethod);
-            paramInputs.forEach(input => {
-                if (input.type === 'file') {
-                    if (input.files.length > 0) formData.append(input.dataset.param, input.files[0]);
-                } else if (input.value) {
-                    formData.append(input.dataset.param, input.value);
-                }
-            });
-            proxyBody = formData;
-            proxyContentType = null; // 让浏览器自动设置 multipart boundary
-        } else {
-            const bodyStr = (currentMethod === 'POST' || currentMethod === 'PUT' || currentMethod === 'PATCH') && Object.keys(params).length > 0
-                ? JSON.stringify(params)
-                : '';
-            proxyBody = JSON.stringify({ url, method: currentMethod, body: bodyStr, contentType: 'application/json' });
-        }
-
-        const proxyOpts = { method: 'POST', body: proxyBody };
-        if (proxyContentType) proxyOpts.headers = { 'Content-Type': proxyContentType };
-
-        let json;
-        try {
-            const response = await fetch(API_PROXY_URL, proxyOpts);
-            if (!response.ok) {
-                output.innerHTML = `<span style="color: #ef4444">// 网络错误: ${response.status} ${response.statusText}</span>`;
-                status.textContent = 'Error';
-                status.className = "text-xs px-2 py-1 rounded bg-red-900 text-red-400 font-mono";
-                return;
-            }
-            const text = await response.text();
-            try {
-                json = JSON.parse(text);
-            } catch (e) {
-                output.innerHTML = `<span style="color: #ef4444">// 响应解析失败: ${text.substring(0, 200)}</span>`;
-                status.textContent = 'Error';
-                status.className = "text-xs px-2 py-1 rounded bg-red-900 text-red-400 font-mono";
-                return;
-            }
-        } catch (error) {
-            output.innerHTML = `<span style="color: #ef4444">// 请求失败: ${error.message}</span>`;
-            status.textContent = "Error";
-            status.className = "text-xs px-2 py-1 rounded bg-red-900 text-red-400 font-mono";
-            return;
-        }
-
-        if (json.error) {
-            output.innerHTML = `<span style="color: #ef4444">// ${json.message || json.error}</span>`;
-            status.textContent = 'Error';
-            status.className = "text-xs px-2 py-1 rounded bg-red-900 text-red-400 font-mono";
-            return;
-        }
-
-        const contentType = json.contentType || '';
-        const httpStatus = json.status || 200;
-        const ok = json.ok || (httpStatus >= 200 && httpStatus < 300);
+        const response = await fetch(url, fetchOpts);
+        const elapsed = Math.round(performance.now() - startTime);
+        const ok = response.ok;
+        const httpStatus = response.status;
+        const contentType = response.headers.get('content-type') || '';
         const statusText = ok ? `${httpStatus} OK` : `${httpStatus} Error`;
         const statusStyle = ok ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400';
-        const requestTime = json.time ? `${json.time}ms` : '';
 
-        // 处理二进制内容（图片、视频、音频）
-        if (json.isBinary && json.binaryType) {
-            if (json.binaryType === 'image') {
-                if (!json.data || json.data.length === 0) {
-                    output.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);"><svg class="w-12 h-12" style="color: #ef4444; margin-bottom: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><p>图片数据为空或加载失败</p><p style="font-size: 0.7rem; margin-top: 0.5rem;">content-type: ${contentType || 'unknown'}</p></div>`;
-                } else {
-                    const imageUrl = `data:${contentType || 'image/png'};base64,${json.data}`;
-                    output.innerHTML = `<div style="text-align: center; padding: 1rem;"><img src="${imageUrl}" style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid var(--border-color);" onerror="this.parentElement.innerHTML='<div style=\\'text-align:center;padding:2rem;color:#ef4444;\\'><svg class=\\'w-12 h-12\\' style=\\'color:#ef4444;margin-bottom:1rem;\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z\\'/></svg><p>图片解码失败</p></div>'"><div style="margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-muted);">图片类型: ${contentType || 'image/png'}</div><div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">数据大小: ${Math.round(json.data.length * 0.75 / 1024)}KB</div></div>`;
-                }
-            } else if (json.binaryType === 'video') {
-                if (!json.data || json.data.length === 0) {
-                    output.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);"><p>视频数据为空</p></div>`;
-                } else {
-                    const videoUrl = `data:${contentType || 'video/mp4'};base64,${json.data}`;
-                    output.innerHTML = `<div style="text-align: center; padding: 1rem;"><video controls style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid var(--border-color); background: #000;" preload="metadata"><source src="${videoUrl}" type="${contentType || 'video/mp4'}">您的浏览器不支持视频播放</video><div style="margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-muted);">视频类型: ${contentType || 'video/mp4'}</div></div>`;
-                }
-            } else if (json.binaryType === 'audio') {
-                if (!json.data || json.data.length === 0) {
-                    output.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);"><p>音频数据为空</p></div>`;
-                } else {
-                    const audioUrl = `data:${contentType || 'audio/mpeg'};base64,${json.data}`;
-                    output.innerHTML = `<div style="text-align: center; padding: 1rem;"><svg class="w-12 h-12" style="color: #ec4899;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg><audio controls autoplay style="width: 100%; max-width: 400px; margin-top: 1rem;" preload="metadata"><source src="${audioUrl}" type="${contentType || 'audio/mpeg'}">您的浏览器不支持音频播放</audio><div style="margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-muted);">音频类型: ${contentType || 'audio/mpeg'}</div></div>`;
-                }
-            }
-            status.textContent = `${statusText} ${requestTime}`;
-            status.className = `text-xs px-2 py-1 rounded font-mono ${statusStyle}`;
-            return;
-        }
-
-        // 处理非二进制内容
-        const rawText = json.body || '';
-
-        if (contentType.includes('text/html')) {
+        if (contentType.includes('image/')) {
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            output.innerHTML = `<div style="text-align: center; padding: 1rem;"><img src="${objectUrl}" style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid var(--border-color);"></div>`;
+        } else if (contentType.includes('text/html')) {
+            const rawText = await response.text();
             output.innerHTML = `<div style="padding: 0.5rem;"><div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem;">// HTML响应</div><iframe style="width: 100%; height: 200px; border: 1px solid var(--border-color); border-radius: 4px; background: #fff;" srcdoc="${rawText.replace(/"/g, '&quot;')}"></iframe></div>`;
         } else {
+            const rawText = await response.text();
             try {
                 const result = JSON.parse(rawText);
                 output.innerHTML = syntaxHighlight(JSON.stringify(result, null, 2));
             } catch (e) {
-                output.innerHTML = rawText ? `<pre style="white-space: pre-wrap; word-break: break-all;">${rawText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>` : '<span style="color: var(--text-muted)">// 无返回内容</span>';
+                output.innerHTML = rawText
+                    ? `<pre class="response-pre" style="white-space: pre-wrap; word-break: break-word;">${rawText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
+                    : '<span style="color: var(--text-muted)">// 无返回内容</span>';
             }
         }
-        status.textContent = `${statusText} ${requestTime}`;
+        status.textContent = `${statusText} ${elapsed}ms`;
         status.className = `text-xs px-2 py-1 rounded font-mono ${statusStyle}`;
     } catch (error) {
-        output.innerHTML = `<span style="color: #ef4444">// 请求失败: ${error.message}</span>`;
+        const msg = error.message || '请求失败';
+        const hint = (msg.includes('Failed to fetch') || msg.includes('NetworkError'))
+            ? '（可能为跨域限制，请在新窗口打开接口 URL 或使用 curl）'
+            : '';
+        output.innerHTML = `<span style="color: #ef4444">// 请求失败: ${msg}${hint}</span>`;
         status.textContent = "Error";
         status.className = "text-xs px-2 py-1 rounded bg-red-900 text-red-400 font-mono";
     }

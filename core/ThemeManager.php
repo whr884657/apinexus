@@ -634,6 +634,7 @@ class ThemeManager
             $css[] = $asset($pageCssMap[$pageKey]);
         }
         $css[] = $asset('assets/css/theme-tokens.css');
+        $css[] = $asset('assets/css/feer-compat.css');
 
         $js = array(
             $asset('assets/js/front-theme.js'),
@@ -658,11 +659,12 @@ class ThemeManager
             }
         }
 
+        $fallback = htmlspecialchars($asset('assets/vendor/tailwind.min.js'), ENT_QUOTES, 'UTF-8');
         return array(
             'css'           => $css,
             'js'            => $js,
             'head_scripts'  => array(
-                $asset('assets/vendor/tailwind.min.js'),
+                '<script src="https://cdn.tailwindcss.com" onerror="this.onerror=null;this.src=\'' . $fallback . '\';"></script>',
             ),
             'body_class'    => 'vs-body feer-front',
             'skip_legacy'   => true,
