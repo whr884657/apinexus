@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.10.1": {
+            "title": "misc-api 2.10.1 邮箱验证码发信安全加固",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "send_code 服务端限流加固",
+                "recordMailCodeAttempt 防绕过",
+                "新增邮箱发信规范文档"
+            ]
+        },
         "2.10.0": {
             "title": "misc-api 2.10.0 后台主题设置二级导航重构",
             "date": "2026-07-12",

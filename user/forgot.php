@@ -40,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vs_auth_json(array('code' => 0, 'msg' => $mailLimitMsg));
         }
 
+        AuthSecurity::recordMailCodeAttempt($email);
+
         try {
             $user = UserAuth::findByEmail($email);
 
@@ -58,7 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
 
                 Mailer::send($email, $siteName . ' 密码重置验证码', $body);
-                AuthSecurity::recordMailCodeSent($email);
             }
 
             vs_auth_json(array(

@@ -19,15 +19,22 @@ class AuthSecurity
     const LOGIN_USER_WINDOW = 900;
 
     /** 发信验证码：单 IP 1 小时内最多次数 */
-    const MAIL_IP_MAX = 8;
+    const MAIL_IP_MAX = 5;
     const MAIL_IP_WINDOW = 3600;
 
     /** 发信验证码：单邮箱 1 小时内最多次数 */
-    const MAIL_EMAIL_MAX = 5;
+    const MAIL_EMAIL_MAX = 3;
     const MAIL_EMAIL_WINDOW = 3600;
 
+    /** 发信验证码：单邮箱 24 小时内最多次数 */
+    const MAIL_EMAIL_DAILY_MAX = 8;
+    const MAIL_EMAIL_DAILY_WINDOW = 86400;
+
     /** 同一邮箱两次发信最短间隔（秒） */
-    const MAIL_MIN_INTERVAL = 60;
+    const MAIL_MIN_INTERVAL = 120;
+
+    /** 同一 IP 任意验证码发信最短间隔（秒），防接口工具连续轰炸 */
+    const MAIL_IP_MIN_INTERVAL = 45;
 
     /** 重置密码提交：单 IP 1 小时内最多次数 */
     const RESET_IP_MAX = 15;
@@ -338,7 +345,22 @@ class AuthSecurity
     }
 
     /**
-     * 检查发验证码是否允许
+     * 发信限流提示：距下次可发还需等待的秒数
+     *
+     * @param int $since 距上次经过秒数，-1 表示无记录
+     * @param int $minInterval
+     * @return int 0 表示无需等待
+     */
+    private static function mailWaitSeconds($since, $minInterval)
+    {
+        if ($since < 0 || $since >= $minInterval) {
+            return 0;
+        }
+        return $minInterval - $since;
+    }
+
+    /**
+     * 检查发验证码是否允许（仅检查，不计入次数）
      *
      * @param string $email
      * @return string|null
@@ -349,7 +371,19 @@ class AuthSecurity
         $emailKey = strtolower(trim($email));
         $ipBucket = 'mail_code_ip:' . $ip;
         $emailBucket = 'mail_code_email:' . $emailKey;
+        $emailDailyBucket = 'mail_code_email_daily:' . $emailKey;
         $intervalBucket = 'mail_code_interval:' . $emailKey;
+        $ipIntervalBucket = 'mail_code_ip_interval:' . $ip;
+
+        $ipWait = self::mailWaitSeconds(self::secondsSinceLastHit($ipIntervalBucket), self::MAIL_IP_MIN_INTERVAL);
+        if ($ipWait > 0) {
+            return '发送过于频繁，请 ' . $ipWait . ' 秒后再试';
+        }
+
+        $emailWait = self::mailWaitSeconds(self::secondsSinceLastHit($intervalBucket), self::MAIL_MIN_INTERVAL);
+        if ($emailWait > 0) {
+            return '发送过于频繁，请 ' . $emailWait . ' 秒后再试';
+        }
 
         if (!self::rateLimitAllow($ipBucket, self::MAIL_IP_WINDOW, self::MAIL_IP_MAX, false)) {
             return '发送过于频繁，请稍后再试';
@@ -357,29 +391,38 @@ class AuthSecurity
         if (!self::rateLimitAllow($emailBucket, self::MAIL_EMAIL_WINDOW, self::MAIL_EMAIL_MAX, false)) {
             return '该邮箱发送次数过多，请稍后再试';
         }
-
-        $since = self::secondsSinceLastHit($intervalBucket);
-        if ($since >= 0 && $since < self::MAIL_MIN_INTERVAL) {
-            $wait = self::MAIL_MIN_INTERVAL - $since;
-            return '发送过于频繁，请 ' . $wait . ' 秒后再试';
+        if (!self::rateLimitAllow($emailDailyBucket, self::MAIL_EMAIL_DAILY_WINDOW, self::MAIL_EMAIL_DAILY_MAX, false)) {
+            return '该邮箱今日发送次数已达上限，请明天再试';
         }
 
         return null;
     }
 
     /**
-     * 记录一次验证码发信
+     * 记录一次验证码发信请求（无论是否实际发信、邮箱是否已注册，均计入）
      *
      * @param string $email
      * @return void
      */
-    public static function recordMailCodeSent($email)
+    public static function recordMailCodeAttempt($email)
     {
         $ip = self::clientIp();
         $emailKey = strtolower(trim($email));
         self::rateLimitAllow('mail_code_ip:' . $ip, self::MAIL_IP_WINDOW, self::MAIL_IP_MAX, true);
         self::rateLimitAllow('mail_code_email:' . $emailKey, self::MAIL_EMAIL_WINDOW, self::MAIL_EMAIL_MAX, true);
+        self::rateLimitAllow('mail_code_email_daily:' . $emailKey, self::MAIL_EMAIL_DAILY_WINDOW, self::MAIL_EMAIL_DAILY_MAX, true);
         self::rateLimitAllow('mail_code_interval:' . $emailKey, self::MAIL_MIN_INTERVAL, 1, true);
+        self::rateLimitAllow('mail_code_ip_interval:' . $ip, self::MAIL_IP_MIN_INTERVAL, 1, true);
+    }
+
+    /**
+     * @deprecated 请改用 recordMailCodeAttempt
+     * @param string $email
+     * @return void
+     */
+    public static function recordMailCodeSent($email)
+    {
+        self::recordMailCodeAttempt($email);
     }
 
     /**

@@ -42,6 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vs_auth_json(array('code' => 0, 'msg' => $mailLimitMsg));
         }
 
+        AuthSecurity::recordMailCodeAttempt($email);
+
         try {
             $pdo = Database::connect();
             $table = Database::table('admin');
@@ -64,7 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
 
                 Mailer::send($email, $siteName . ' 密码重置验证码', $body);
-                AuthSecurity::recordMailCodeSent($email);
             }
 
             vs_auth_json(array(
@@ -245,6 +246,11 @@ vs_auth_head('忘记密码');
         }, 1000);
     }
 
+    function parseWaitSeconds(msg) {
+        var match = /请\s*(\d+)\s*秒/.exec(msg || '');
+        return match ? parseInt(match[1], 10) : 120;
+    }
+
     if (sendCodeBtn) {
         sendCodeBtn.addEventListener('click', function () {
             hideMessage();
@@ -280,10 +286,10 @@ vs_auth_head('忘记密码');
                 .then(function (data) {
                     if (data.code === 1) {
                         showMessage(data.msg || '验证码已发送', 'success');
-                        startCountdown(60);
+                        startCountdown(120);
                     } else {
                         showMessage(data.msg || '发送失败', 'error');
-                        sendCodeBtn.disabled = false;
+                        startCountdown(parseWaitSeconds(data.msg));
                     }
                 })
                 .catch(function () {

@@ -108,6 +108,11 @@ ThemeManager::renderThemeAuthHead('忘记密码');
         }, 1000);
     }
 
+    function parseWaitSeconds(msg) {
+        var match = /请\s*(\d+)\s*秒/.exec(msg || '');
+        return match ? parseInt(match[1], 10) : 120;
+    }
+
     if (sendCodeBtn) {
         sendCodeBtn.addEventListener('click', function () {
             hideMessage();
@@ -141,10 +146,10 @@ ThemeManager::renderThemeAuthHead('忘记密码');
                 .then(function (data) {
                     if (data.code === 1) {
                         showMessage(data.msg || '验证码已发送', 'success');
-                        startCountdown(60);
+                        startCountdown(120);
                     } else {
                         showMessage(data.msg || '发送失败', 'error');
-                        sendCodeBtn.disabled = false;
+                        startCountdown(parseWaitSeconds(data.msg));
                     }
                 })
                 .catch(function () {

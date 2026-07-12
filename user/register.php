@@ -58,6 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vs_auth_json(array('code' => 0, 'msg' => $mailLimitMsg));
         }
 
+        AuthSecurity::recordMailCodeAttempt($email);
+
         try {
             $code = (string) random_int(100000, 999999);
             $_SESSION['user_reg_username'] = $username;
@@ -75,8 +77,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (!Mailer::send($email, $siteName . ' 注册验证码', $body)) {
                 vs_auth_json(array('code' => 0, 'msg' => '验证码发送失败，请稍后重试'));
             }
-
-            AuthSecurity::recordMailCodeSent($email);
 
             vs_auth_json(array('code' => 1, 'msg' => '验证码已发送，请查收邮箱（含垃圾箱）'));
         } catch (Exception $e) {
