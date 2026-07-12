@@ -3,6 +3,7 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 $authBtnLabel = !empty($userLoggedIn) ? '用户中心' : $authLabel;
+$siteLogo = class_exists('SiteContext') ? trim(SiteContext::siteLogo()) : '';
 ?>
 <canvas id="shader-canvas"></canvas>
 <div class="grid-overlay"></div>
@@ -23,8 +24,12 @@ $authBtnLabel = !empty($userLoggedIn) ? '用户中心' : $authLabel;
     </div>
 </aside>
 <nav class="nav-bar">
-    <a href="<?php echo vs_e($vsBase); ?>/" class="flex items-center gap-2" style="text-decoration: none; color: inherit; min-width:0;">
-        <svg class="w-6 h-6 flex-shrink-0" style="color: var(--accent-primary)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    <a href="<?php echo vs_e($vsBase); ?>/" class="feer-brand flex items-center gap-2">
+        <?php if ($siteLogo !== ''): ?>
+            <?php vs_render_site_logo('feer-brand__img'); ?>
+        <?php else: ?>
+            <span class="feer-brand__fallback" aria-hidden="true"></span>
+        <?php endif; ?>
         <span class="font-mono text-base font-bold truncate"><?php echo vs_e($siteName); ?></span>
     </a>
     <div class="flex items-center gap-3">

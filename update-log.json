@@ -1,5 +1,16 @@
 {
     "versions": {
+        "2.14.1": {
+            "title": "misc-api 2.14.1 主题一布局修复",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "Tailwind 兼容层修复布局错乱",
+                "站点自定义 Logo 绑定顶栏",
+                "移除 api-proxy 同源代理",
+                "在线调试浏览器直连"
+            ]
+        },
         "2.14.0": {
             "title": "misc-api 2.14.0 主题一参考 UI 完整复刻",
             "date": "2026-07-12",
