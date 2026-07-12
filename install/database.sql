@@ -65,11 +65,11 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_from_name', 'misc-api'),
 ('frontend_theme', 'default');
 
--- 安全频率限制命中记录（v2.10.2+）
-CREATE TABLE IF NOT EXISTS `{prefix}security_rate_hit` (
+-- 邮箱验证码发信频率限制记录（v2.11.0+，表名见 mail_code_rate_log）
+CREATE TABLE IF NOT EXISTS `{prefix}mail_code_rate_log` (
     `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-    `bucket` varchar(64) NOT NULL COMMENT 'bucket sha256',
-    `hit_at` int unsigned NOT NULL COMMENT 'unix timestamp',
+    `limit_key` varchar(64) NOT NULL COMMENT '限流键 SHA256',
+    `created_at` int unsigned NOT NULL COMMENT '命中时间 Unix 时间戳',
     PRIMARY KEY (`id`),
-    KEY `idx_bucket_hit_at` (`bucket`, `hit_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='安全频率限制命中记录';
+    KEY `idx_limit_key_created` (`limit_key`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮箱验证码发信频率限制记录';

@@ -1,13 +1,13 @@
 {
-    "version": "2.10.2",
-    "title": "misc-api 2.10.2 邮箱发信限流数据库化与防重放",
+    "version": "2.11.0",
+    "title": "misc-api 2.11.0 限流表命名规范与青绿登录页重构",
     "release_date": "2026-07-12",
     "db_changes": true,
     "changes": [
-        "限流存储由 JSON 文件改为 MySQL 表 security_rate_hit",
-        "send_code 新增 mail_ticket 一次性票据，防抓包重放",
-        "加强 IP 日限额，限制轮换邮箱轰炸",
-        "本地开发规范文档移入 开发规范/ 目录且不再提交仓库"
+        "限流表重命名为 mail_code_rate_log，字段 limit_key/created_at",
+        "迁移 security_rate_hit 历史数据并删除旧表",
+        "青绿主题登录页：桌面端右侧表单 + 左侧原生动效",
+        "手机端登录页保持原居中样式"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

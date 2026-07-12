@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.10.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.11.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -28,7 +28,7 @@
 - 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
 - 用户登录支持 QQ / Gitee 第三方登录（须先注册并绑定）
 - 管理员认证：登录、忘记密码（邮箱验证码）、CSRF 与登录频率限制
-- 邮箱验证码发信限流（MySQL 存储 + 一次性 mail_ticket，防接口工具轰炸与重放）
+- 邮箱验证码发信限流（MySQL 表 `mail_code_rate_log` + 一次性 mail_ticket）
 - 站点信息、注册邮箱后缀白名单、SMTP 邮箱发信
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
 - 角色动画登录页、主题切换、统一弹窗与 Toast 提示
@@ -239,6 +239,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.11.0（2026-07-12）
+
+- 限流表重命名为 `mail_code_rate_log`（字段 `limit_key` / `created_at`），自动迁移旧表
+- 青绿主题登录页：电脑端右侧登录 + 左侧原生动效；手机端保持居中样式
 
 ### v2.10.2（2026-07-12）
 

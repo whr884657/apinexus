@@ -12,7 +12,7 @@ $oauthError = isset($oauthError) ? $oauthError : '';
 $oauthProviders = isset($oauthProviders) ? $oauthProviders : array('qq' => false, 'gitee' => false);
 
 ThemeManager::renderThemeAuthHead($pageTitle);
-vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号');
+vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号', array('layout' => 'login-right'));
 ?>
 
 <div id="formMessage" class="st-auth__msg" role="alert" hidden></div>

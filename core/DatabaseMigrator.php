@@ -98,6 +98,10 @@ class DatabaseMigrator
             self::markApplied('2.10.2');
         }
 
+        if (!in_array('2.11.0', $applied, true) && self::tableExists('mail_code_rate_log')) {
+            self::markApplied('2.11.0');
+        }
+
         if (!in_array('1.0.35', $applied, true)) {
             $all = Config::all();
             if (array_key_exists('storage_local_public_slug', $all)) {
@@ -276,6 +280,11 @@ class DatabaseMigrator
             return;
         }
 
+        if ($version === '2.11.0') {
+            self::applyMailCodeRateLogMigration($pdo, $prefix);
+            return;
+        }
+
         if ($version === '1.0.40') {
             self::applyLocalStorageDirectUrlMigration($pdo, $prefix);
             return;
@@ -426,6 +435,47 @@ class DatabaseMigrator
             'ALTER TABLE `' . $table . '` ADD COLUMN `avatar_url` varchar(500) NOT NULL DEFAULT \'\' '
             . 'COMMENT \'自定义头像链接\' AFTER `email`'
         );
+    }
+
+    /**
+     * v2.11.0：security_rate_hit → mail_code_rate_log 表与字段规范化
+     *
+     * @param PDO    $pdo
+     * @param string $prefix
+     * @return void
+     */
+    public static function applyMailCodeRateLogMigration(PDO $pdo, $prefix)
+    {
+        $oldTable = $prefix . 'security_rate_hit';
+        $newTable = $prefix . 'mail_code_rate_log';
+
+        $create = 'CREATE TABLE IF NOT EXISTS `' . $newTable . '` (
+            `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+            `limit_key` varchar(64) NOT NULL COMMENT \'限流键 SHA256\',
+            `created_at` int unsigned NOT NULL COMMENT \'命中时间 Unix 时间戳\',
+            PRIMARY KEY (`id`),
+            KEY `idx_limit_key_created` (`limit_key`, `created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'邮箱验证码发信频率限制记录\'';
+        self::execStatement($pdo, $create);
+
+        $oldExists = false;
+        try {
+            $check = $pdo->query('SHOW TABLES LIKE ' . $pdo->quote($oldTable));
+            $oldExists = (bool) $check->fetch(PDO::FETCH_NUM);
+        } catch (Exception $e) {
+            $oldExists = false;
+        }
+
+        if ($oldExists) {
+            $countNew = (int) $pdo->query('SELECT COUNT(*) FROM `' . $newTable . '`')->fetchColumn();
+            if ($countNew === 0) {
+                $pdo->exec(
+                    'INSERT INTO `' . $newTable . '` (`limit_key`, `created_at`)
+                     SELECT `bucket`, `hit_at` FROM `' . $oldTable . '`'
+                );
+            }
+            self::execStatement($pdo, 'DROP TABLE IF EXISTS `' . $oldTable . '`');
+        }
     }
 
     /**

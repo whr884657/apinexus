@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/RateLimitStore.php
- * 作用：基于 MySQL 的安全频率限制存储（替代本地 JSON 文件）
+ * 作用：邮箱验证码发信频率限制（MySQL 表 mail_code_rate_log）
  */
 
 class RateLimitStore
@@ -13,7 +13,7 @@ class RateLimitStore
      */
     private static function table()
     {
-        return Database::table('security_rate_hit');
+        return Database::table('mail_code_rate_log');
     }
 
     /**
@@ -42,7 +42,7 @@ class RateLimitStore
      * @param string $bucket
      * @return string
      */
-    private static function bucketKey($bucket)
+    private static function limitKey($bucket)
     {
         return hash('sha256', (string) $bucket);
     }
@@ -58,7 +58,7 @@ class RateLimitStore
         try {
             $pdo = Database::connect();
             $threshold = time() - self::RETENTION_SECONDS;
-            $stmt = $pdo->prepare('DELETE FROM `' . self::table() . '` WHERE `hit_at` < ? LIMIT 2000');
+            $stmt = $pdo->prepare('DELETE FROM `' . self::table() . '` WHERE `created_at` < ? LIMIT 2000');
             $stmt->execute(array($threshold));
         } catch (Exception $e) {
             // 清理失败不影响主流程
@@ -81,9 +81,9 @@ class RateLimitStore
             $pdo = Database::connect();
             $since = time() - (int) $windowSeconds;
             $stmt = $pdo->prepare(
-                'SELECT COUNT(*) FROM `' . self::table() . '` WHERE `bucket` = ? AND `hit_at` >= ?'
+                'SELECT COUNT(*) FROM `' . self::table() . '` WHERE `limit_key` = ? AND `created_at` >= ?'
             );
-            $stmt->execute(array(self::bucketKey($bucket), $since));
+            $stmt->execute(array(self::limitKey($bucket), $since));
             return (int) $stmt->fetchColumn();
         } catch (Exception $e) {
             return 0;
@@ -104,9 +104,9 @@ class RateLimitStore
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'SELECT MAX(`hit_at`) FROM `' . self::table() . '` WHERE `bucket` = ?'
+                'SELECT MAX(`created_at`) FROM `' . self::table() . '` WHERE `limit_key` = ?'
             );
-            $stmt->execute(array(self::bucketKey($bucket)));
+            $stmt->execute(array(self::limitKey($bucket)));
             $last = (int) $stmt->fetchColumn();
             if ($last <= 0) {
                 return -1;
@@ -158,9 +158,9 @@ class RateLimitStore
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'INSERT INTO `' . self::table() . '` (`bucket`, `hit_at`) VALUES (?, ?)'
+                'INSERT INTO `' . self::table() . '` (`limit_key`, `created_at`) VALUES (?, ?)'
             );
-            $stmt->execute(array(self::bucketKey($bucket), time()));
+            $stmt->execute(array(self::limitKey($bucket), time()));
             self::maybeCleanup();
         } catch (Exception $e) {
             // 写入失败时不阻断业务
