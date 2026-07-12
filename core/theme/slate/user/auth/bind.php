@@ -3,7 +3,7 @@ if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
 ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
-vs_slate_auth_shell_start('绑定' . $providerLabel . '账号', '第三方账号尚未绑定，请使用已注册账号验证身份', '绑定后即可使用第三方账号快捷登录');
+vs_slate_auth_shell_start('绑定' . $providerLabel . '账号', '请使用已注册账号验证身份');
 ?>
 
 <div class="st-auth__msg st-auth__msg--info">仅支持已注册用户。请使用本站用户名/邮箱与密码完成绑定；未注册请先 <a href="<?php echo vs_e($base); ?>/user/register">注册</a>。</div>

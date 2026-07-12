@@ -1,6 +1,6 @@
 <?php
 /**
- * 青绿平台 · 认证页布局
+ * 青绿平台 · 认证页布局（无卡片、无站点图标、居中）
  */
 
 /**
@@ -30,48 +30,29 @@ function vs_theme_auth_head($pageTitle)
 }
 
 /**
- * 认证页双栏 shell 开始
+ * 认证页居中 shell（无卡片）
  *
  * @param string $headTitle
  * @param string $headSub
- * @param string $visualTip
  * @return void
  */
-function vs_slate_auth_shell_start($headTitle, $headSub, $visualTip = '')
+function vs_slate_auth_shell_start($headTitle, $headSub = '')
 {
-    $siteName = SiteContext::siteName();
-    if ($visualTip === '') {
-        $visualTip = '安全、稳定、简洁的账号服务';
-    }
-
     echo '<div class="st-auth">' . "\n";
-    echo '<div class="st-auth__shell">' . "\n";
-    echo '<div class="st-auth__visual" aria-hidden="true">' . "\n";
-    echo '<div class="st-auth__visual-blob st-auth__visual-blob--1"></div>' . "\n";
-    echo '<div class="st-auth__visual-blob st-auth__visual-blob--2"></div>' . "\n";
-    echo '<div class="st-auth__visual-brand">' . "\n";
-    vs_theme_site_logo('st-auth__logo', 'st-auth__logo-fb');
-    echo '<strong>' . vs_e($siteName) . '</strong>' . "\n";
-    echo '<p>' . vs_e($visualTip) . '</p>' . "\n";
-    echo '</div></div>' . "\n";
-    echo '<div class="st-auth__panel">' . "\n";
-    echo '<div class="st-auth__card">' . "\n";
-    echo '<header class="st-auth__head">' . "\n";
-    vs_theme_site_logo('st-auth__logo st-auth__logo--sm', 'st-auth__logo-fb');
-    echo '<h1>' . vs_e($headTitle) . '</h1>' . "\n";
-    echo '<p>' . vs_e($headSub) . '</p>' . "\n";
-    echo '</header>' . "\n";
+    echo '<div class="st-auth__bg" aria-hidden="true"><span class="st-auth__orb st-auth__orb--1"></span><span class="st-auth__orb st-auth__orb--2"></span></div>' . "\n";
+    echo '<div class="st-auth__center">' . "\n";
+    echo '<div class="st-auth__form">' . "\n";
+    echo '<h1 class="st-auth__title">' . vs_e($headTitle) . '</h1>' . "\n";
+    if ($headSub !== '') {
+        echo '<p class="st-auth__sub">' . vs_e($headSub) . '</p>' . "\n";
+    }
 }
 
 /**
- * 认证页 shell 结束
- *
  * @return void
  */
 function vs_slate_auth_shell_end()
 {
-    echo '</div>' . "\n";
-    echo '<p class="st-auth__copy">&copy; ' . vs_e(date('Y')) . ' ' . vs_e(SiteContext::siteName()) . '</p>' . "\n";
     echo '</div></div></div>' . "\n";
 }
 

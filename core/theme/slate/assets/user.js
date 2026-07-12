@@ -1,65 +1,56 @@
 /**
- * 青绿平台 · 用户中心交互
+ * 青绿平台 · 用户中心（顶栏 + 移动 sheet）
  */
 (function () {
     'use strict';
 
-    var MOBILE_BREAK = 768;
-    var STORAGE_KEY = 'st_uc_sidebar_collapsed';
+    var btn = document.getElementById('stDashMenuBtn');
+    var sheet = document.getElementById('stDashSheet');
+    var mask = document.getElementById('stDashMask');
 
-    function isMobile() {
-        return window.innerWidth <= MOBILE_BREAK;
+    if (!btn || !sheet || !mask) {
+        return;
     }
 
-    function initSidebar() {
-        var shell = document.getElementById('stUcShell');
-        var toggle = document.getElementById('stUcToggle');
-        var mask = document.getElementById('stUcMask');
-
-        if (!shell || !toggle) {
-            return;
-        }
-
-        function applyDesktopState() {
-            var collapsed = localStorage.getItem(STORAGE_KEY) === '1';
-            shell.classList.toggle('is-collapsed', collapsed);
-            shell.classList.remove('is-mobile-open');
-        }
-
-        function applyMobileState() {
-            shell.classList.remove('is-collapsed');
-            shell.classList.remove('is-mobile-open');
-        }
-
-        function refreshLayout() {
-            if (isMobile()) {
-                applyMobileState();
-            } else {
-                applyDesktopState();
-            }
-        }
-
-        toggle.addEventListener('click', function () {
-            if (isMobile()) {
-                shell.classList.toggle('is-mobile-open');
-            } else {
-                shell.classList.toggle('is-collapsed');
-                localStorage.setItem(
-                    STORAGE_KEY,
-                    shell.classList.contains('is-collapsed') ? '1' : '0'
-                );
-            }
+    function openSheet() {
+        sheet.hidden = false;
+        mask.hidden = false;
+        requestAnimationFrame(function () {
+            sheet.classList.add('is-open');
         });
-
-        if (mask) {
-            mask.addEventListener('click', function () {
-                shell.classList.remove('is-mobile-open');
-            });
-        }
-
-        window.addEventListener('resize', refreshLayout);
-        refreshLayout();
+        btn.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('st-dash-menu-open');
     }
 
-    document.addEventListener('DOMContentLoaded', initSidebar);
+    function closeSheet() {
+        sheet.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('st-dash-menu-open');
+        window.setTimeout(function () {
+            if (!sheet.classList.contains('is-open')) {
+                sheet.hidden = true;
+                mask.hidden = true;
+            }
+        }, 220);
+    }
+
+    btn.addEventListener('click', function () {
+        if (sheet.classList.contains('is-open')) {
+            closeSheet();
+        } else {
+            openSheet();
+        }
+    });
+
+    mask.addEventListener('click', closeSheet);
+
+    sheet.querySelectorAll('.st-dash-sheet__link').forEach(function (link) {
+        link.addEventListener('click', closeSheet);
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && sheet.classList.contains('is-open')) {
+            closeSheet();
+        }
+    });
 })();

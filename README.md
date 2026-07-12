@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.5.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.6.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -236,6 +236,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.6.0（2026-07-12）
+
+- 青绿用户中心 `st-dash` 顶栏导航重构（非 default 侧边栏）；渐变顶栏 + 调色盘顶栏内挂载
+- 认证页无卡片无图标：标题右对齐动效，表单全屏居中
 
 ### v2.5.0（2026-07-12）
 
