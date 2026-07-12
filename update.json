@@ -1,13 +1,12 @@
 {
-    "version": "2.11.0",
-    "title": "misc-api 2.11.0 限流表命名规范与青绿登录页重构",
+    "version": "2.11.1",
+    "title": "misc-api 2.11.1 青绿认证页双栏布局重构",
     "release_date": "2026-07-12",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "限流表重命名为 mail_code_rate_log，字段 limit_key/created_at",
-        "迁移 security_rate_hit 历史数据并删除旧表",
-        "青绿主题登录页：桌面端右侧表单 + 左侧原生动效",
-        "手机端登录页保持原居中样式"
+        "重构 slate 登录/注册/忘记密码/绑定页为双栏布局",
+        "移除跳动动效与右侧挤压问题，对齐 default 结构",
+        "表单区 max-width 420px，输入框圆角边框样式"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

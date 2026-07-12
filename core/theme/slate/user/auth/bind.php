@@ -3,7 +3,8 @@ if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
 ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
-vs_slate_auth_shell_start('绑定' . $providerLabel . '账号', '请使用已注册账号验证身份');
+vs_slate_auth_page_start();
+vs_slate_auth_header('绑定' . $providerLabel . '账号', '请使用已注册账号验证身份');
 ?>
 
 <div class="st-auth__msg st-auth__msg--info">仅支持已注册用户。请使用本站用户名/邮箱与密码完成绑定；未注册请先 <a href="<?php echo vs_e($base); ?>/user/register">注册</a>。</div>
@@ -31,7 +32,7 @@ vs_slate_auth_shell_start('绑定' . $providerLabel . '账号', '请使用已注
     <div class="st-auth__foot"><a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
 </form>
 
-<?php vs_slate_auth_shell_end(); ?>
+<?php vs_slate_auth_page_end(); ?>
 
 <script>
 (function () {
