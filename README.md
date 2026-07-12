@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.6.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.7.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -236,6 +236,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.7.0（2026-07-12）
+
+- 青绿用户中心恢复侧边栏 `st-uc`，布局对齐 default；固定青绿渐变、移除调色盘
+- 右下角三角横线 FAB 展开侧栏；圆角优化；账号设置头像尺寸限制防溢出
 
 ### v2.6.0（2026-07-12）
 

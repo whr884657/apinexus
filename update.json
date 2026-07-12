@@ -1,13 +1,13 @@
 {
-    "version": "2.6.0",
-    "title": "misc-api 2.6.0 青绿 st-dash 用户中心与无卡片认证页",
+    "version": "2.7.0",
+    "title": "misc-api 2.7.0 青绿用户中心侧边栏重构",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "青绿用户中心重构为 st-dash 顶栏导航（非侧边栏 admin 风），青绿渐变顶栏",
-        "修复调色盘遮挡：body 增加 vs-admin-body，调色盘挂载顶栏内",
-        "认证页无卡片无站点图标：标题右对齐动效，表单全屏居中",
-        "验证码行底线风格横排，与整体无卡片视觉一致"
+        "青绿用户中心恢复侧边栏布局并对齐 default 结构（st-uc）",
+        "固定青绿渐变风格，移除调色盘",
+        "右下角三角横线悬浮按钮展开/收起侧边栏",
+        "降低圆角、修复账号设置头像溢出"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
