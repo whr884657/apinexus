@@ -161,6 +161,15 @@ body.vs-body.feer-front .home-page-body-stack {
 body.vs-body.feer-front .main-wrapper.container {
     position: relative;
     z-index: 10;
+    display: block !important;
+    width: 100%;
+    flex: none;
+    padding-top: 0;
+}
+
+body.vs-body.feer-front .main-wrapper > section {
+    display: block;
+    width: 100%;
 }
 
 body.vs-body.feer-front .hero-section > .flex {
