@@ -380,45 +380,53 @@ body.st-drawer-open {
     50% { opacity: 0; }
 }
 
-.st-stat-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    max-width: 640px;
-    margin: 0 auto;
-}
-
-.st-stat-card {
-    padding: 16px 12px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.82);
+.st-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 2.5vw, 22px);
+    padding: 11px clamp(16px, 4vw, 24px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(232, 245, 238, 0.96) 100%);
     border: 1px solid var(--st-border);
-    box-shadow: 0 4px 16px rgba(36, 166, 106, 0.06);
-    text-align: center;
+    border-radius: 999px;
+    font-size: clamp(12px, 2.8vw, 14px);
+    color: var(--st-fg2);
+    white-space: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    box-shadow: 0 3px 14px rgba(36, 166, 106, 0.08);
+    backdrop-filter: blur(6px);
 }
 
-.st-stat-card--accent {
-    background: linear-gradient(145deg, rgba(36, 166, 106, 0.12) 0%, rgba(255, 255, 255, 0.9) 100%);
-    border-color: rgba(36, 166, 106, 0.28);
+.st-stat-pill::-webkit-scrollbar {
+    display: none;
 }
 
-.st-stat-card__num {
-    font-size: clamp(22px, 4vw, 28px);
-    font-weight: 800;
+.st-stat-pill__item {
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+.st-stat-pill__item strong {
+    font-weight: 700;
     color: var(--st-fg);
-    font-variant-numeric: tabular-nums;
-    line-height: 1.2;
 }
 
-.st-stat-card--accent .st-stat-card__num {
+.st-stat-pill__accent {
     color: var(--st-accent-h);
 }
 
-.st-stat-card__label {
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--st-fg3);
-    font-weight: 500;
+.st-stat-pill__sep {
+    width: 1px;
+    height: 18px;
+    background: linear-gradient(180deg, transparent, #d0ddd6 20%, #d0ddd6 80%, transparent);
+    flex-shrink: 0;
+}
+
+.st-stat-num {
+    font-variant-numeric: tabular-nums;
 }
 
 .st-home-tools {
@@ -958,9 +966,9 @@ body.st-nav-fab-open {
 }
 
 @media (max-width: 640px) {
-    .st-stat-grid {
-        grid-template-columns: 1fr;
-        max-width: 280px;
+    .st-stat-pill {
+        justify-content: flex-start;
+        padding: 10px 14px;
     }
 
     .st-foot__grid {
