@@ -23,39 +23,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = (string) $_POST['action'];
 
     if ($action === 'send_code') {
+        $mailPurpose = AuthSecurity::MAIL_PURPOSE_USER_REGISTER;
+
         if (!$mailEnabled) {
-            vs_auth_json(array('code' => 0, 'msg' => $mailDisabledMsg));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => $mailDisabledMsg));
+        }
+
+        $ticket = isset($_POST['mail_ticket']) ? (string) $_POST['mail_ticket'] : '';
+        if (!AuthSecurity::validateAndConsumeMailTicket($mailPurpose, $ticket)) {
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请求无效，请刷新页面后重试'));
         }
 
         $username = trim(isset($_POST['username']) ? $_POST['username'] : '');
         $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
 
         if ($username === '') {
-            vs_auth_json(array('code' => 0, 'msg' => '请输入用户名'));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请输入用户名'));
         }
         if (strlen($username) < 3) {
-            vs_auth_json(array('code' => 0, 'msg' => '用户名至少 3 个字符'));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '用户名至少 3 个字符'));
         }
         if ($email === '') {
-            vs_auth_json(array('code' => 0, 'msg' => '请输入邮箱'));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请输入邮箱'));
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            vs_auth_json(array('code' => 0, 'msg' => '请输入有效的邮箱地址'));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请输入有效的邮箱地址'));
         }
 
         $suffixMsg = RegisterPolicy::validateEmailSuffix($email);
         if ($suffixMsg !== null) {
-            vs_auth_json(array('code' => 0, 'msg' => $suffixMsg));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => $suffixMsg));
         }
 
         $dupMsg = UserAuth::checkRegisterDuplicate($username, $email);
         if ($dupMsg !== null) {
-            vs_auth_json(array('code' => 0, 'msg' => $dupMsg));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => $dupMsg));
         }
 
         $mailLimitMsg = AuthSecurity::checkMailCodeAllowed($email);
         if ($mailLimitMsg !== null) {
-            vs_auth_json(array('code' => 0, 'msg' => $mailLimitMsg));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => $mailLimitMsg));
         }
 
         AuthSecurity::recordMailCodeAttempt($email);
@@ -75,12 +82,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
 
             if (!Mailer::send($email, $siteName . ' 注册验证码', $body)) {
-                vs_auth_json(array('code' => 0, 'msg' => '验证码发送失败，请稍后重试'));
+                vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '验证码发送失败，请稍后重试'));
             }
 
-            vs_auth_json(array('code' => 1, 'msg' => '验证码已发送，请查收邮箱（含垃圾箱）'));
+            vs_auth_json_mail($mailPurpose, array('code' => 1, 'msg' => '验证码已发送，请查收邮箱（含垃圾箱）'));
         } catch (Exception $e) {
-            vs_auth_json(array('code' => 0, 'msg' => '发送失败：' . $e->getMessage()));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '发送失败：' . $e->getMessage()));
         }
     }
 

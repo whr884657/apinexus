@@ -94,6 +94,10 @@ class DatabaseMigrator
             }
         }
 
+        if (!in_array('2.10.2', $applied, true) && self::tableExists('security_rate_hit')) {
+            self::markApplied('2.10.2');
+        }
+
         if (!in_array('1.0.35', $applied, true)) {
             $all = Config::all();
             if (array_key_exists('storage_local_public_slug', $all)) {
@@ -228,6 +232,24 @@ class DatabaseMigrator
             $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '` LIKE ?');
             $stmt->execute(array($column));
             return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 表是否已存在
+     *
+     * @param string $tableShort 不含前缀的表名
+     * @return bool
+     */
+    public static function tableExists($tableShort)
+    {
+        try {
+            $pdo = Database::connect();
+            $table = Database::table($tableShort);
+            $stmt = $pdo->query('SHOW TABLES LIKE ' . $pdo->quote($table));
+            return ($stmt && (bool) $stmt->fetch(PDO::FETCH_NUM));
         } catch (Exception $e) {
             return false;
         }

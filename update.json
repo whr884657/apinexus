@@ -1,13 +1,13 @@
 {
-    "version": "2.10.1",
-    "title": "misc-api 2.10.1 邮箱验证码发信安全加固",
+    "version": "2.10.2",
+    "title": "misc-api 2.10.2 邮箱发信限流数据库化与防重放",
     "release_date": "2026-07-12",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "加固 send_code 服务端限流：IP/邮箱间隔、小时与日配额",
-        "每次请求通过检查即计入限流，防止未注册邮箱绕过",
-        "前端倒计时与限流文案同步（120 秒）",
-        "新增《邮箱发信规范.md》"
+        "限流存储由 JSON 文件改为 MySQL 表 security_rate_hit",
+        "send_code 新增 mail_ticket 一次性票据，防抓包重放",
+        "加强 IP 日限额，限制轮换邮箱轰炸",
+        "本地开发规范文档移入 开发规范/ 目录且不再提交仓库"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

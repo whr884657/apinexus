@@ -18,6 +18,7 @@ require_once VS_ROOT . '/core/Config.php';
 require_once VS_ROOT . '/core/Mailer.php';
 require_once VS_ROOT . '/core/Auth.php';
 require_once VS_ROOT . '/core/UserAuth.php';
+require_once VS_ROOT . '/core/RateLimitStore.php';
 require_once VS_ROOT . '/core/AuthSecurity.php';
 require_once VS_ROOT . '/core/AjaxResponse.php';
 require_once VS_ROOT . '/core/SystemInfo.php';
