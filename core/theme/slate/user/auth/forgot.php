@@ -3,7 +3,7 @@ if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
 ThemeManager::renderThemeAuthHead('忘记密码');
-vs_slate_auth_shell_start('重置密码', '输入注册邮箱获取验证码，然后设置新密码', '忘记密码？几步即可找回账号');
+vs_slate_auth_shell_start('重置密码', '输入注册邮箱获取验证码，然后设置新密码');
 ?>
 
 <div id="formMessage" class="st-auth__msg" role="alert" hidden></div>

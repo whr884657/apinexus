@@ -1,6 +1,6 @@
 <?php
 /**
- * 青绿平台 · 用户中心布局（st-uc 独立视觉，与默认主题差异化）
+ * 青绿平台 · 用户中心（st-dash 顶栏导航，与 default 侧边栏完全不同）
  */
 if (!defined('VS_THEME_RENDER') && !function_exists('vs_theme_user_layout_start')) {
     // 由 ThemeManager 加载
@@ -42,53 +42,49 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
         echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
     }
     echo '</head>' . "\n";
-    echo '<body class="st-uc-body">' . "\n";
-    echo '<div class="st-uc-shell" id="stUcShell">' . "\n";
+    echo '<body class="st-dash-body vs-admin-body">' . "\n";
+    echo '<div class="st-dash" id="stDashShell">' . "\n";
 
-    echo '<aside class="st-uc-sidebar" id="stUcSidebar">' . "\n";
-    echo '<div class="st-uc-sidebar__brand">' . "\n";
-    vs_render_site_logo('st-uc-sidebar__logo');
-    echo '<span class="st-uc-sidebar__name">' . vs_e($siteName) . '</span>' . "\n";
-    echo '</div>' . "\n";
-    echo '<nav class="st-uc-nav">' . "\n";
+    echo '<header class="st-dash-header">' . "\n";
+    echo '<a href="' . vs_e($base) . '/" class="st-dash-brand">' . "\n";
+    vs_render_site_logo('st-dash-brand__logo');
+    echo '<span class="st-dash-brand__name">' . vs_e($siteName) . '</span></a>' . "\n";
+
+    echo '<nav class="st-dash-nav" aria-label="用户中心导航">' . "\n";
     foreach ($menuGroups as $group) {
         $linkActive = isset($group['id']) && $group['id'] === $activeMenu ? ' is-active' : '';
-        echo '<a href="' . vs_e($group['url']) . '" class="st-uc-nav__link' . $linkActive . '">';
+        echo '<a href="' . vs_e($group['url']) . '" class="st-dash-nav__link' . $linkActive . '">';
         echo '<i class="vs-icon vs-icon--' . vs_e($group['icon']) . '"></i>';
-        echo '<span>' . vs_e($group['title']) . '</span>';
-        echo '</a>' . "\n";
+        echo '<span>' . vs_e($group['title']) . '</span></a>' . "\n";
     }
     echo '</nav>' . "\n";
 
+    echo '<div class="st-dash-actions">' . "\n";
+    echo '<div class="st-dash-theme" id="vsThemePickerMount"></div>' . "\n";
     if ($user) {
-        echo '<div class="st-uc-sidebar__user">' . "\n";
-        echo '<a href="' . vs_e($base) . '/user/account" class="st-uc-user-chip">';
-        echo '<img src="' . vs_e($avatarUrl) . '" alt="" class="st-uc-user-chip__avatar" width="36" height="36">';
-        echo '<span class="st-uc-user-chip__name">' . vs_e($user['username']) . '</span>';
-        echo '</a>' . "\n";
-        echo '<a href="' . vs_e($logoutUrl) . '" class="st-uc-sidebar__logout"><i class="vs-icon vs-icon--logout"></i><span>退出登录</span></a>' . "\n";
-        echo '</div>' . "\n";
-    }
-    echo '</aside>' . "\n";
-
-    echo '<div class="st-uc-mask" id="stUcMask"></div>' . "\n";
-    echo '<div class="st-uc-main">' . "\n";
-    echo '<header class="st-uc-topbar">' . "\n";
-    echo '<div class="st-uc-topbar__left">' . "\n";
-    echo '<button type="button" class="st-uc-topbar__toggle" id="stUcToggle" aria-label="展开或收缩菜单"><i class="vs-icon vs-icon--menu"></i></button>' . "\n";
-    echo '<span class="st-uc-topbar__title">' . vs_e($pageTitle) . '</span>' . "\n";
-    echo '</div>' . "\n";
-    echo '<div class="st-uc-topbar__right">' . "\n";
-    echo '<div class="st-uc-topbar__theme" id="vsThemePickerMount"></div>' . "\n";
-    if ($user) {
-        echo '<a href="' . vs_e($base) . '/user/account" class="st-uc-topbar__user" title="账号设置">';
+        echo '<a href="' . vs_e($base) . '/user/account" class="st-dash-user" title="账号设置">';
         echo '<img src="' . vs_e($avatarUrl) . '" alt="" width="32" height="32">';
-        echo '<span>用户中心</span></a>' . "\n";
+        echo '<span>' . vs_e($user['username']) . '</span></a>' . "\n";
     }
-    echo '<a href="' . vs_e($logoutUrl) . '" class="st-uc-topbar__exit">退出</a>' . "\n";
+    echo '<a href="' . vs_e($logoutUrl) . '" class="st-dash-exit">退出</a>' . "\n";
+    echo '<button type="button" class="st-dash-menu-btn" id="stDashMenuBtn" aria-label="打开菜单" aria-expanded="false">';
+    echo '<span></span><span></span><span></span></button>' . "\n";
     echo '</div></header>' . "\n";
-    echo '<main class="st-uc-content">' . "\n";
-    echo '<div class="st-uc-content__inner">' . "\n";
+
+    echo '<div class="st-dash-mask" id="stDashMask" hidden></div>' . "\n";
+    echo '<aside class="st-dash-sheet" id="stDashSheet" aria-label="移动端菜单" hidden>' . "\n";
+    echo '<nav class="st-dash-sheet__nav">' . "\n";
+    foreach ($menuGroups as $group) {
+        $linkActive = isset($group['id']) && $group['id'] === $activeMenu ? ' is-active' : '';
+        echo '<a href="' . vs_e($group['url']) . '" class="st-dash-sheet__link' . $linkActive . '">';
+        echo '<i class="vs-icon vs-icon--' . vs_e($group['icon']) . '"></i>';
+        echo '<span>' . vs_e($group['title']) . '</span></a>' . "\n";
+    }
+    echo '</nav></aside>' . "\n";
+
+    echo '<main class="st-dash-main">' . "\n";
+    echo '<h1 class="st-dash-heading">' . vs_e($pageTitle) . '</h1>' . "\n";
+    echo '<div class="st-dash-content">' . "\n";
 }
 
 /**
@@ -99,7 +95,7 @@ function vs_theme_user_layout_end(array $extraScripts = array())
 {
     global $vsBase;
 
-    echo '</div></main></div></div>' . "\n";
+    echo '</div></main></div>' . "\n";
 
     echo '<script>window.VS_BASE_URL = ' . json_encode($vsBase) . ';</script>' . "\n";
     echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";

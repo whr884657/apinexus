@@ -3,7 +3,7 @@ if (!defined('VS_THEME_RENDER')) { exit; }
 $base = isset($base) ? $base : $vsBase;
 
 ThemeManager::renderThemeAuthHead('用户注册');
-vs_slate_auth_shell_start('注册账号', '使用邮箱验证注册，完成验证后即可使用', '加入平台，探索更多 API 能力');
+vs_slate_auth_shell_start('注册账号', '使用邮箱验证注册，完成验证后即可使用');
 ?>
 
 <div id="formMessage" class="st-auth__msg" role="alert" hidden></div>

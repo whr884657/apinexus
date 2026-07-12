@@ -1,5 +1,5 @@
 /**
- * 青绿平台 · 认证页（双端自适应 + 原生动画）
+ * 青绿平台 · 认证页（无卡片居中 + 标题右对齐动效）
  */
 :root {
     --st-auth-accent: #24a66a;
@@ -8,17 +8,15 @@
     --st-auth-fg: #1a1a2e;
     --st-auth-fg2: #555770;
     --st-auth-fg3: #8b8da3;
-    --st-auth-border: #e8e9ee;
-    --st-auth-bg: #f7f8fa;
-    --st-auth-card: #ffffff;
+    --st-auth-border: #d8e8df;
 }
 
 .st-auth-body {
     margin: 0;
     min-height: 100vh;
-    background: var(--st-auth-bg);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Segoe UI', system-ui, sans-serif;
     color: var(--st-auth-fg);
+    background: #f2f7f4;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -28,198 +26,102 @@
     }
 }
 
-@keyframes stAuthFadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes stAuthTitlePulse {
+    0%, 100% { opacity: 1; letter-spacing: 0.02em; }
+    50% { opacity: 0.88; letter-spacing: 0.06em; }
 }
 
-@keyframes stAuthBlobFloat {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(8px, -12px) scale(1.04); }
+@keyframes stAuthFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes stAuthShake {
     0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-6px); }
-    40%, 80% { transform: translateX(6px); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
 }
 
 @keyframes stAuthSpin {
     to { transform: rotate(360deg); }
 }
 
-/* Logo 尺寸强制约束（修复站点图标过大） */
-.st-auth__logo,
-.st-auth__logo.vs-site-logo-img,
-.st-auth__logo--sm,
-.st-auth__logo--sm.vs-site-logo-img {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    object-fit: cover;
-    flex-shrink: 0;
-    display: block;
-}
-
-.st-auth__logo--sm,
-.st-auth__logo--sm.vs-site-logo-img {
-    width: 36px;
-    height: 36px;
-    border-radius: 9px;
-}
-
-.st-auth__logo-fb {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: var(--st-auth-accent);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.st-auth__logo-fb::before {
-    content: '⚡';
-    color: #fff;
-    font-size: 16px;
-    line-height: 1;
-}
-
-.st-auth__logo--sm + .st-auth__logo-fb,
-.st-auth__head .st-auth__logo-fb {
-    width: 36px;
-    height: 36px;
-    border-radius: 9px;
+@keyframes stAuthOrb {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(12px, -18px) scale(1.05); }
 }
 
 .st-auth {
-    min-height: 100vh;
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-}
-
-.st-auth__shell {
-    display: flex;
-    width: 100%;
-    min-height: 100vh;
-}
-
-/* 左侧视觉区（桌面端） */
-.st-auth__visual {
-    display: none;
     position: relative;
-    flex: 1;
-    max-width: 480px;
-    background: linear-gradient(145deg, #168855 0%, #24a66a 45%, #48c186 100%);
-    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    box-sizing: border-box;
     overflow: hidden;
 }
 
-.st-auth__visual-blob {
+.st-auth__bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(145deg, #e8f5ee 0%, #f5f8f6 45%, #dcefe4 100%);
+    z-index: 0;
+}
+
+.st-auth__orb {
     position: absolute;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.12);
-    animation: stAuthBlobFloat 8s ease-in-out infinite;
+    filter: blur(40px);
+    animation: stAuthOrb 10s ease-in-out infinite;
 }
 
-.st-auth__visual-blob--1 {
-    width: 280px;
-    height: 280px;
+.st-auth__orb--1 {
+    width: 320px;
+    height: 320px;
     top: -80px;
     right: -60px;
+    background: rgba(36, 166, 106, 0.35);
 }
 
-.st-auth__visual-blob--2 {
-    width: 200px;
-    height: 200px;
-    bottom: -40px;
-    left: -50px;
-    animation-delay: -3s;
+.st-auth__orb--2 {
+    width: 260px;
+    height: 260px;
+    bottom: -60px;
+    left: -40px;
+    background: rgba(72, 193, 134, 0.28);
+    animation-delay: -4s;
 }
 
-.st-auth__visual-brand {
+.st-auth__center {
     position: relative;
     z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-end;
-    height: 100%;
-    padding: 48px 40px;
-    gap: 12px;
-}
-
-.st-auth__visual-brand strong {
-    font-size: 26px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-}
-
-.st-auth__visual-brand p {
-    margin: 0;
-    font-size: 15px;
-    opacity: 0.9;
-    line-height: 1.6;
-    max-width: 280px;
-}
-
-.st-auth__visual-brand .st-auth__logo,
-.st-auth__visual-brand .st-auth__logo-fb {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    margin-bottom: 8px;
-}
-
-/* 右侧表单区 */
-.st-auth__panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 32px 20px 24px;
-    box-sizing: border-box;
-    min-width: 0;
-}
-
-.st-auth__card {
     width: 100%;
     max-width: 400px;
-    background: var(--st-auth-card);
-    border: 1px solid var(--st-auth-border);
-    border-radius: 20px;
-    padding: 28px 24px 24px;
-    box-shadow: 0 8px 32px rgba(36, 166, 106, 0.08);
-    box-sizing: border-box;
-    animation: stAuthFadeUp 0.45s ease both;
+    animation: stAuthFadeIn 0.5s ease both;
 }
 
-.st-auth__card.is-shake {
-    animation: stAuthShake 0.4s ease;
+.st-auth__form {
+    width: 100%;
 }
 
-.st-auth__head {
-    text-align: center;
-    margin-bottom: 22px;
+.st-auth__form.is-shake {
+    animation: stAuthShake 0.38s ease;
 }
 
-.st-auth__head .st-auth__logo,
-.st-auth__head .st-auth__logo-fb {
-    margin: 0 auto 12px;
+.st-auth__title {
+    margin: 0 0 8px;
+    text-align: right;
+    font-size: clamp(26px, 6vw, 34px);
+    font-weight: 800;
+    color: var(--st-auth-accent-h);
+    animation: stAuthTitlePulse 4s ease-in-out infinite;
+    line-height: 1.2;
 }
 
-.st-auth__head h1 {
-    font-size: 22px;
-    font-weight: 700;
-    margin: 0 0 6px;
-    color: var(--st-auth-fg);
-}
-
-.st-auth__head p {
-    margin: 0;
+.st-auth__sub {
+    margin: 0 0 24px;
+    text-align: right;
     font-size: 13px;
     color: var(--st-auth-fg3);
     line-height: 1.5;
@@ -240,68 +142,36 @@
 .st-auth__input {
     width: 100%;
     box-sizing: border-box;
-    height: 44px;
+    height: 46px;
     padding: 0 14px;
-    border: 1.5px solid var(--st-auth-border);
-    border-radius: 10px;
-    font-size: 14px;
+    border: none;
+    border-bottom: 2px solid var(--st-auth-border);
+    border-radius: 0;
+    font-size: 15px;
     outline: none;
-    background: var(--st-auth-bg);
+    background: transparent;
     color: var(--st-auth-fg);
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    transition: border-color 0.25s, background 0.25s;
 }
 
 .st-auth__input::placeholder {
     color: var(--st-auth-fg3);
 }
 
-.st-auth__input:hover:not(:disabled) {
-    border-color: #d1d3dc;
-}
-
 .st-auth__input:focus {
-    border-color: var(--st-auth-accent);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(36, 166, 106, 0.12);
+    border-bottom-color: var(--st-auth-accent);
+    background: rgba(255, 255, 255, 0.45);
 }
 
 .st-auth__input:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
-}
-
-.st-auth__row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin: 4px 0 18px;
-    font-size: 13px;
-    color: var(--st-auth-fg2);
-}
-
-.st-auth__row label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-}
-
-.st-auth__row a {
-    color: var(--st-auth-accent);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.15s;
-}
-
-.st-auth__row a:hover {
-    color: var(--st-auth-accent-h);
 }
 
 .st-auth__group {
     display: flex;
-    align-items: stretch;
-    gap: 8px;
+    align-items: flex-end;
+    gap: 10px;
 }
 
 .st-auth__group .st-auth__input {
@@ -311,35 +181,29 @@
 
 .st-auth__code-btn {
     flex-shrink: 0;
-    align-self: stretch;
-    height: auto;
-    min-height: 44px;
-    min-width: 104px;
-    max-width: 120px;
-    padding: 0 12px;
-    border: 1.5px solid var(--st-auth-border);
-    border-radius: 10px;
-    background: #fff;
+    height: 46px;
+    min-width: 100px;
+    max-width: 112px;
+    padding: 0 10px;
+    border: 0;
+    border-bottom: 2px solid var(--st-auth-accent);
+    border-radius: 0;
+    background: transparent;
     color: var(--st-auth-accent);
     font-size: 12px;
-    font-weight: 600;
-    line-height: 1.2;
+    font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
 .st-auth__code-btn:hover:not(:disabled) {
-    background: var(--st-auth-accent-bg);
-    border-color: var(--st-auth-accent);
-}
-
-.st-auth__code-btn:active:not(:disabled) {
-    transform: scale(0.97);
+    color: var(--st-auth-accent-h);
+    background: rgba(36, 166, 106, 0.08);
 }
 
 .st-auth__code-btn:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -348,69 +212,70 @@
 }
 
 .st-auth__pw-wrap .st-auth__input {
-    padding-right: 52px;
+    padding-right: 48px;
 }
 
 .st-auth__pw-toggle {
     position: absolute;
-    right: 6px;
-    top: 50%;
-    transform: translateY(-50%);
+    right: 0;
+    bottom: 10px;
     border: 0;
     background: transparent;
     color: var(--st-auth-fg3);
-    cursor: pointer;
     font-size: 12px;
     font-weight: 500;
-    padding: 6px 8px;
-    border-radius: 6px;
-    transition: color 0.15s, background 0.15s;
+    cursor: pointer;
+    padding: 4px 6px;
 }
 
 .st-auth__pw-toggle:hover {
     color: var(--st-auth-accent);
-    background: var(--st-auth-accent-bg);
+}
+
+.st-auth__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 6px 0 20px;
+    font-size: 13px;
+    color: var(--st-auth-fg2);
+}
+
+.st-auth__row a {
+    color: var(--st-auth-accent);
+    text-decoration: none;
+    font-weight: 500;
 }
 
 .st-auth__submit {
     position: relative;
     width: 100%;
-    height: 46px;
+    height: 48px;
     border: 0;
-    border-radius: 10px;
-    background: var(--st-auth-accent);
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--st-auth-accent) 0%, var(--st-auth-accent-h) 100%);
     color: #fff;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     overflow: hidden;
-    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
-}
-
-.st-auth__submit::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transform: translateX(-100%);
-    transition: transform 0.5s;
+    transition: transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(36, 166, 106, 0.3);
 }
 
 .st-auth__submit:hover:not(:disabled) {
-    background: var(--st-auth-accent-h);
-    box-shadow: 0 4px 14px rgba(36, 166, 106, 0.35);
-}
-
-.st-auth__submit:hover:not(:disabled)::after {
-    transform: translateX(100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(36, 166, 106, 0.38);
 }
 
 .st-auth__submit:active:not(:disabled) {
-    transform: scale(0.98);
+    transform: translateY(0);
 }
 
-.st-auth__submit:disabled {
-    opacity: 0.65;
+.st-auth__submit:disabled,
+.st-auth__submit.is-loading {
+    opacity: 0.7;
     cursor: not-allowed;
 }
 
@@ -434,39 +299,35 @@
 
 .st-auth__msg {
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: 8px;
     font-size: 13px;
     margin-bottom: 14px;
     line-height: 1.5;
 }
 
 .st-auth__msg--error {
-    background: #fef2f2;
+    background: rgba(254, 242, 242, 0.9);
     color: #b91c1c;
-    border: 1px solid #fecaca;
 }
 
 .st-auth__msg--success {
-    background: var(--st-auth-accent-bg);
+    background: rgba(238, 251, 244, 0.95);
     color: var(--st-auth-accent-h);
-    border: 1px solid #d6f5e3;
 }
 
 .st-auth__msg--info {
-    background: #f0f9ff;
+    background: rgba(240, 249, 255, 0.95);
     color: #0369a1;
-    border: 1px solid #bae6fd;
 }
 
 .st-auth__msg--info a {
     color: var(--st-auth-accent);
-    font-weight: 500;
 }
 
 .st-auth__oauth {
-    margin-top: 20px;
+    margin-top: 22px;
     padding-top: 18px;
-    border-top: 1px solid #f0f1f5;
+    border-top: 1px solid var(--st-auth-border);
     text-align: center;
 }
 
@@ -479,28 +340,27 @@
 .st-auth__oauth-icons {
     display: flex;
     justify-content: center;
-    gap: 12px;
+    gap: 14px;
 }
 
 .st-auth__oauth-icons a {
     display: inline-flex;
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--st-auth-border);
-    border-radius: 12px;
-    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .st-auth__oauth-icons a:hover {
-    border-color: var(--st-auth-accent);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(36, 166, 106, 0.12);
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(36, 166, 106, 0.15);
 }
 
 .st-auth__foot {
-    margin-top: 18px;
+    margin-top: 20px;
     text-align: center;
     font-size: 13px;
     color: var(--st-auth-fg3);
@@ -508,54 +368,13 @@
 
 .st-auth__foot a {
     color: var(--st-auth-accent);
-    text-decoration: none;
     font-weight: 600;
-    transition: color 0.15s;
+    text-decoration: none;
 }
 
-.st-auth__foot a:hover {
-    color: var(--st-auth-accent-h);
-}
-
-.st-auth__copy {
-    margin-top: 20px;
-    font-size: 12px;
-    color: var(--st-auth-fg3);
-    text-align: center;
-}
-
-/* 桌面端双栏 */
-@media (min-width: 900px) {
-    .st-auth__visual {
-        display: flex;
-    }
-
-    .st-auth__panel {
-        padding: 48px 40px;
-    }
-
-    .st-auth__head .st-auth__logo,
-    .st-auth__head .st-auth__logo-fb {
-        display: none;
-    }
-}
-
-@media (max-width: 480px) {
-    .st-auth__card {
-        padding: 24px 18px 20px;
-        border-radius: 16px;
-    }
-
-    .st-auth__panel {
-        padding: 24px 16px 20px;
-        justify-content: flex-start;
-        padding-top: max(24px, env(safe-area-inset-top));
-    }
-
+@media (max-width: 380px) {
     .st-auth__code-btn {
-        min-width: 92px;
-        max-width: 108px;
-        padding: 0 8px;
+        min-width: 88px;
         font-size: 11px;
     }
 }
