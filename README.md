@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.12.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.13.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -62,7 +62,7 @@
 | 功能 | 路径 | 说明 |
 |------|------|------|
 | 前台首页 | `/` | 引导进入用户中心（不展示管理后台入口） |
-| 全部接口 | `/apis` | 前台接口列表（建设中） |
+| 全部接口 | `/apis` | 公开接口列表（搜索、分类筛选，展示已通过审核接口） |
 | 文章 | `/articles` | 前台文章列表 |
 | 贡献者 | `/contributors` | 项目贡献者展示 |
 | 友情链接 | `/links` | 友链展示 |
@@ -239,6 +239,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.13.0（2026-07-12）
+
+- **默认主题（主题一）前台全面重设计**：首页 Hero + 统计区 + 接口目录（搜索/分类/卡片），多栏页脚与返回顶部
+- **全部接口**页展示已通过审核的公开 API / TAPI，支持搜索与分类筛选
+- `ApiManager` 新增 `listPublic`、`countApproved`、`categoriesFromList`；默认主题 v1.4.0
 
 ### v2.12.2（2026-07-12）
 

@@ -1,9 +1,9 @@
 {
     "id": "default",
     "name": "默认主题",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "author": "misc-api",
-    "description": "经典浅色卡片布局，电脑端顶栏导航，手机端右侧抽屉菜单",
+    "description": "浅色卡片布局：首页接口目录、统计区、多栏页脚；与用户中心风格统一",
     "preview": "preview.png",
     "settings": [
         {

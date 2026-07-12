@@ -20,6 +20,55 @@ class ApiManager
     }
 
     /**
+     * 前台公开展示的已通过接口
+     *
+     * @return array
+     */
+    public static function listPublic()
+    {
+        return self::listAll(self::STATUS_APPROVED);
+    }
+
+    /**
+     * @return int
+     */
+    public static function countApproved()
+    {
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT COUNT(*) FROM `' . self::table() . '` WHERE `status` = ?'
+            );
+            $stmt->execute(array(self::STATUS_APPROVED));
+            return (int) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 从接口列表提取去重后的分类名
+     *
+     * @param array $apis
+     * @return array
+     */
+    public static function categoriesFromList(array $apis)
+    {
+        $cats = array();
+        foreach ($apis as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $name = trim((string) (isset($row['category']) ? $row['category'] : ''));
+            if ($name !== '' && !in_array($name, $cats, true)) {
+                $cats[] = $name;
+            }
+        }
+        sort($cats, SORT_STRING);
+        return $cats;
+    }
+
+    /**
      * @param string|null $status
      * @return array
      */
