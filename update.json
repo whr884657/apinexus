@@ -1,12 +1,11 @@
 {
-    "version": "2.12.1",
-    "title": "misc-api 2.12.1 主题二首页与导航修复",
+    "version": "2.12.2",
+    "title": "misc-api 2.12.2 主题二统计胶囊样式恢复",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "修复主题二 FAB 导航保存后不显示（设置读取 + 全端可见）",
-        "顶栏仅站点名称可跳转首页；首页主标题补全、副文案打字效果",
-        "统计区改为三卡片布局；主题二更名为「主题二」"
+        "恢复主题二首页胶囊式统计样式并微调阴影与分隔线",
+        "删除误留 admin/Untitled 临时文件"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

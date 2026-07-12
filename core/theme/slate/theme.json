@@ -1,7 +1,7 @@
 {
     "id": "slate",
     "name": "主题二",
-    "version": "2.12.1",
+    "version": "2.12.2",
     "author": "misc-api",
     "description": "主题二：API 平台风首页，搜索与分类筛选；电脑端顶栏，导航可切换抽屉或右下角 FAB 弹出",
     "preview": "preview.png",
