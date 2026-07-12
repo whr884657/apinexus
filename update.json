@@ -1,11 +1,13 @@
 {
-    "version": "2.12.2",
-    "title": "misc-api 2.12.2 主题二统计胶囊样式恢复",
+    "version": "2.13.0",
+    "title": "misc-api 2.13.0 主题一前台 UI 全面重设计",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "恢复主题二首页胶囊式统计样式并微调阴影与分隔线",
-        "删除误留 admin/Untitled 临时文件"
+        "默认主题前台全面重设计：首页 Hero、统计区、接口目录与多栏页脚",
+        "全部接口页支持搜索、分类筛选与已通过审核接口卡片展示",
+        "ApiManager 新增 listPublic / countApproved / categoriesFromList",
+        "文章、关于、友链、贡献者、赞助页统一卡片布局；用户中心样式保持不变"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
