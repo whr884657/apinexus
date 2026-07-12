@@ -27,7 +27,7 @@ $homeHeroConfig = array(
     'glitchPauseMs' => 1500,
     'line2Plain'    => '开发者的',
     'line2Accent'   => '开放 API',
-    'line2Rest'     => '接口平台',
+    'line2Rest'     => ' 接口平台',
 );
 
 $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p><p>系统版本 v' . vs_e(VS_VERSION) . ' 已上线，欢迎体验。</p>';
@@ -63,7 +63,7 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
                 <p class="text-lg sm:text-xl mb-8 max-w-2xl font-light" style="color: var(--text-muted); line-height: 1.8;"><?php echo $heroDescHtml; ?></p>
                 <div class="flex flex-wrap gap-4">
                     <button type="button" class="btn-geek" onclick="document.getElementById('apis').scrollIntoView({behavior: 'smooth'})">查看接口</button>
-                    <button type="button" class="btn-geek" style="border-color: #52525b; color: #a1a1aa;" onclick="document.getElementById('playground').scrollIntoView({behavior: 'smooth'})">在线测试</button>
+                    <button type="button" class="btn-geek btn-geek--ghost" onclick="document.getElementById('playground').scrollIntoView({behavior: 'smooth'})">在线测试</button>
                 </div>
             </div>
             <div id="hero-terminal-mount" class="w-full lg:flex-shrink-0 lg:self-end" data-logo-text="<?php echo vs_e($logoSlug); ?>"></div>

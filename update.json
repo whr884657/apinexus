@@ -1,11 +1,11 @@
 {
-    "version": "2.14.2",
-    "title": "misc-api 2.14.2 主题一布局根因修复",
+    "version": "2.14.3",
+    "title": "misc-api 2.14.3 主题一 Hero 区修复",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "修复 front-common.css 误将 .main-wrapper 设为横向 flex 导致首页各区块并排重叠",
-        "首页 main 强制纵向 block 排版；index.css / feer-compat.css 加固布局"
+        "修复 feer-compat 误将 hero-section 设为 block 导致首屏无法垂直居中、留白异常",
+        "Hero 按钮样式补全；标题排版与间距优化；min-height 适配顶栏与公告"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

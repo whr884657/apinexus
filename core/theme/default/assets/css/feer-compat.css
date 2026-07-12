@@ -37,10 +37,13 @@
 }
 
 .mx-auto { margin-left: auto; margin-right: auto; }
+.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
 .px-4 { padding-left: 1rem; padding-right: 1rem; }
 .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
 .p-1 { padding: 0.25rem; }
 .p-6 { padding: 1.5rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
 .py-20 { padding-top: 5rem; padding-bottom: 5rem; }
 .py-24 { padding-top: 6rem; padding-bottom: 6rem; }
 .pt-20 { padding-top: 5rem; }
@@ -90,6 +93,11 @@
 .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
 .border-t { border-top-width: 1px; border-top-style: solid; }
 .rounded { border-radius: 0.25rem; }
+.rounded-lg { border-radius: 0.5rem; }
+
+.bg-red-500 { background-color: #ef4444; }
+.bg-yellow-500 { background-color: #eab308; }
+.bg-green-500 { background-color: #22c55e; }
 
 .opacity-50 { opacity: 0.5; }
 .pointer-events-none { pointer-events: none; }
@@ -168,14 +176,83 @@ body.vs-body.feer-front .main-wrapper.container {
 }
 
 body.vs-body.feer-front .main-wrapper > section {
+    width: 100%;
+}
+
+/* Hero：须保留 flex 纵向居中（v2.14.2 的 display:block 会压过 .hero-section） */
+body.vs-body.feer-front .main-wrapper > section.hero-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: calc(100svh - 7rem);
+    padding: 3rem 0 2.5rem;
+}
+
+body.vs-body.feer-front .hero-left-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+}
+
+body.vs-body.feer-front .hero-section .glitch-text {
     display: block;
     width: 100%;
+    max-width: 100%;
+    text-transform: none;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+}
+
+body.vs-body.feer-front .hero-section .tag-free,
+body.vs-body.feer-front .hero-section .tag-new {
+    display: inline-block;
+    border-radius: 999px;
+    line-height: 1.25;
+}
+
+body.vs-body.feer-front .hero-section .btn-geek {
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    border: 1px solid var(--accent-primary);
+    color: var(--accent-primary);
+    background: transparent;
+    padding: 0.65rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    font-family: inherit;
+    line-height: 1.25;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    transition: color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+body.vs-body.feer-front .hero-section .btn-geek:hover {
+    color: #ffffff;
+    background: var(--accent-primary);
+    box-shadow: 0 8px 24px rgba(17, 17, 17, 0.12);
+}
+
+body.vs-body.feer-front .hero-section .btn-geek--ghost {
+    border-color: rgba(17, 17, 17, 0.25);
+    color: var(--text-muted);
+}
+
+body.vs-body.feer-front .hero-section .btn-geek--ghost:hover {
+    color: var(--text-main);
+    background: rgba(17, 17, 17, 0.06);
+    box-shadow: none;
 }
 
 body.vs-body.feer-front .hero-section > .flex {
     display: flex;
     flex-direction: column;
     gap: 2rem;
+    width: 100%;
 }
 
 @media (min-width: 1024px) {
@@ -183,6 +260,11 @@ body.vs-body.feer-front .hero-section > .flex {
         flex-direction: row;
         align-items: stretch;
         gap: 3rem;
+    }
+
+    body.vs-body.feer-front #hero-terminal-mount {
+        display: flex;
+        align-items: flex-end;
     }
 }
 

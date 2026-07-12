@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.14.3": {
+            "title": "misc-api 2.14.3 主题一 Hero 区修复",
+            "date": "2026-07-12",
+            "db_changes": false,
+            "changes": [
+                "Hero flex 居中恢复",
+                "按钮与标题样式优化",
+                "首屏高度适配顶栏公告"
+            ]
+        },
         "2.14.2": {
             "title": "misc-api 2.14.2 主题一布局根因修复",
             "date": "2026-07-12",

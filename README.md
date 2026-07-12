@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.14.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.14.3-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -239,6 +239,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.14.3（2026-07-12）
+
+- **修复 Hero 首屏异常**：v2.14.2 的 `section { display:block }` 覆盖了 `.hero-section` 的 flex 居中，导致内容贴顶、下方大面积留白；已恢复垂直居中并优化 min-height
+- Hero 按钮补全 clip-path 与 hover 样式；标题改为 block 排版，修正「开放 API 接口平台」间距
+- 默认主题 v1.5.3
 
 ### v2.14.2（2026-07-12）
 
