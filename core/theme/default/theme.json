@@ -1,16 +1,16 @@
 {
     "id": "default",
     "name": "默认主题",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "author": "misc-api",
-    "description": "浅色卡片布局：首页接口目录、统计区、多栏页脚；与用户中心风格统一",
+    "description": "参考 FeerApi 前台 UI 完整复刻，白色主题色板；含粒子背景、终端 Hero、接口目录与在线调试",
     "preview": "preview.png",
     "settings": [
         {
             "key": "hero_title",
             "label": "首页主标题",
             "type": "text",
-            "placeholder": "留空使用默认文案"
+            "placeholder": "留空使用站点名称"
         },
         {
             "key": "hero_lead",

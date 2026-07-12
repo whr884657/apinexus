@@ -601,6 +601,74 @@ class ThemeManager
         return vs_base_url() . '/core/theme/' . rawurlencode($themeId) . '/' . $relative;
     }
 
+    /**
+     * 默认主题 · 参考 UI 资源清单（多 CSS/JS）
+     *
+     * @param string $pageKey
+     * @return array{css: array, js: array, head_scripts: array, body_class: string, skip_legacy: bool}
+     */
+    public static function defaultFrontendAssets($pageKey)
+    {
+        $pageKey = preg_replace('/[^a-z0-9_-]/i', '', (string) $pageKey);
+        $v = VS_VERSION;
+        $asset = function ($rel) use ($v) {
+            return self::assetUrl('default', $rel) . '?v=' . $v;
+        };
+
+        $css = array(
+            'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap',
+            $asset('assets/css/front-common.css'),
+            $asset('assets/css/markdown-content.css'),
+        );
+
+        $pageCssMap = array(
+            'home'         => 'assets/css/pages/index.css',
+            'apis'         => 'assets/css/pages/apis.css',
+            'articles'     => 'assets/css/pages/articles.css',
+            'about'        => 'assets/css/pages/about.css',
+            'links'        => 'assets/css/pages/links.css',
+            'contributors' => 'assets/css/pages/contributors.css',
+            'sponsor'      => 'assets/css/pages/donate.css',
+        );
+        if (isset($pageCssMap[$pageKey])) {
+            $css[] = $asset($pageCssMap[$pageKey]);
+        }
+        $css[] = $asset('assets/css/theme-tokens.css');
+
+        $js = array(
+            $asset('assets/js/front-theme.js'),
+            $asset('assets/js/shell.js'),
+            $asset('assets/js/sidebar-close.js'),
+            $asset('assets/js/external-link-modal.js'),
+            $asset('assets/js/front-runtime.js'),
+        );
+
+        $pageJsMap = array(
+            'home'         => array('assets/js/pages/index-terminal.js', 'assets/js/pages/index.js'),
+            'apis'         => array('assets/js/pages/apis-page.js'),
+            'articles'     => array('assets/js/pages/articles-page.js'),
+            'about'        => array('assets/js/pages/about-page.js'),
+            'links'        => array('assets/js/pages/links-page.js'),
+            'contributors' => array('assets/js/pages/contributors-page.js'),
+            'sponsor'      => array('assets/js/pages/donate.js'),
+        );
+        if (isset($pageJsMap[$pageKey])) {
+            foreach ($pageJsMap[$pageKey] as $rel) {
+                $js[] = $asset($rel);
+            }
+        }
+
+        return array(
+            'css'           => $css,
+            'js'            => $js,
+            'head_scripts'  => array(
+                $asset('assets/vendor/tailwind.min.js'),
+            ),
+            'body_class'    => 'vs-body feer-front',
+            'skip_legacy'   => true,
+        );
+    }
+
     public static function activeStylesheetHref()
     {
         $themeId = self::activeId();

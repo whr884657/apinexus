@@ -1,0 +1,136 @@
+/*
+ * apis.css
+ * 来源: apis.php
+ */
+
+:root {
+            --bg-deep: #050508;
+            --bg-panel: rgba(12, 12, 18, 0.95);
+            --text-main: #e4e4e7;
+            --text-muted: #71717a;
+            --accent-primary: #00ff9d;
+            --accent-secondary: #00d4ff;
+            --border-color: rgba(0, 255, 157, 0.15);
+            --glow-primary: rgba(0, 255, 157, 0.7);
+        }
+        [data-theme="light"] {
+            --bg-deep: #ffffff;
+            --bg-panel: rgba(255, 255, 255, 0.98);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-primary: #059669;
+            --accent-secondary: #0284c7;
+            --border-color: rgba(5, 150, 105, 0.15);
+            --glow-primary: rgba(5, 150, 105, 0.4);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.4s, color 0.4s; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        #shader-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(0, 255, 157, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 157, 0.03) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.5; }
+        .main-wrapper { position: relative; z-index: 10; }
+        
+        .nav-bar { position: fixed; top: 0; width: 100%; z-index: 100; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); backdrop-filter: blur(12px); height: 60px; }
+        
+        .btn-geek { background: transparent; border: 1px solid var(--accent-primary); color: var(--accent-primary); padding: 0.65rem 1.5rem; font-weight: 600; font-size: 0.85rem; position: relative; overflow: hidden; cursor: pointer; transition: all 0.3s; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); text-decoration: none; display: inline-block; }
+        .btn-geek::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: var(--accent-primary); transition: left 0.3s; z-index: -1; }
+        .btn-geek:hover { color: var(--bg-deep); box-shadow: 0 0 20px var(--glow-primary); }
+        .btn-geek:hover::before { left: 0; }
+
+        .nav-bar .btn-geek { position: static; overflow: visible; }
+        .nav-bar .btn-geek::before { display: none; }
+        .nav-bar .btn-geek:hover { color: var(--bg-deep); background: var(--accent-primary); box-shadow: none; }
+
+        .theme-toggle { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-color); background: transparent; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+        .theme-toggle:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
+        
+        .page-header { padding: 5rem 1rem 1.5rem; border-bottom: 1px solid var(--border-color); }
+        .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .section-title::before { content: '//'; color: var(--accent-primary); margin-right: 0.5rem; font-family: 'JetBrains Mono', monospace; }
+        
+        .search-input { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); padding: 0.4rem 0.6rem; border-radius: 4px; outline: none; transition: all 0.3s; font-size: 0.8rem; }
+        .search-input:focus { border-color: var(--accent-primary); }
+        
+        /* 分类标签 */
+        .category-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+        .category-tag { padding: 0.35rem 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.75rem; color: var(--text-muted); text-decoration: none; transition: all 0.2s; cursor: pointer; }
+        .category-tag:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+        .category-tag.active { background: var(--accent-primary); color: #000; border-color: var(--accent-primary); }
+        .category-more { padding: 0.35rem 0.75rem; border: 1px dashed var(--border-color); border-radius: 4px; font-size: 0.75rem; color: var(--accent-primary); cursor: pointer; background: transparent; display: inline-flex; align-items: center; gap: 0.25rem; transition: all 0.2s; white-space: nowrap; }
+        .category-more:hover { background: rgba(0, 255, 157, 0.1); }
+        .category-more .expand-icon { transition: transform 0.3s ease; }
+        .category-hidden { display: none; }
+        .category-hidden.show { display: inline-block; }
+        
+        /* 卡片网格 */
+        .card-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        @media (max-width: 1024px) { .card-container { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .card-container { grid-template-columns: 1fr; } }
+        
+        .api-card { background: var(--bg-panel); border: 1px solid var(--border-color); padding: 1rem; transition: all 0.3s ease; position: relative; display: flex; flex-direction: column; }
+        .api-card:hover { border-color: var(--accent-primary); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0, 255, 157, 0.1); }
+        
+        .method-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 2px; font-weight: bold; font-family: 'JetBrains Mono', monospace; }
+        .get { background: rgba(0, 255, 157, 0.15); color: var(--accent-primary); }
+        .post { background: rgba(0, 212, 255, 0.15); color: var(--accent-secondary); }
+        
+        .endpoint-box { background: rgba(0, 255, 157, 0.08); border: 1px solid rgba(0, 255, 157, 0.2); border-radius: 4px; padding: 0.4rem 0.6rem; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent-primary); word-break: break-all; margin-top: auto; }
+        
+        .pagination { display: flex; gap: 0.25rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap; }
+        .pagination a, .pagination span { padding: 0.4rem 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.8rem; color: var(--text-muted); text-decoration: none; transition: all 0.2s; }
+        .pagination a:hover, .pagination span.active { border-color: var(--accent-primary); color: var(--accent-primary); }
+        
+        footer { border-top: 1px solid var(--border-color); background: var(--bg-panel); padding-top: 2rem; padding-bottom: 1rem; margin-top: 2rem; }
+        .footer-links a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+        .footer-links a:hover { color: var(--accent-primary); }
+        .beian-link { color: var(--text-muted); text-decoration: none; transition: color 0.2s; display: inline-flex; align-items: center; gap: 0.25rem; }
+        .beian-link:hover { color: var(--text-main); }
+        
+        /* 小尺寸二维码样式 */
+        .qrcode-box-small { width: 70px; height: 70px; padding: 4px; background: #fff; border-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); }
+        .qrcode-img-small { width: 100%; height: 100%; object-fit: contain; border-radius: 3px; }
+        
+        /* 自定义底部栏样式 */
+        .footer-custom-wrapper { width: 100%; }
+        .footer-custom-grid { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .footer-custom-left { flex: 1; text-align: left; min-width: 100px; }
+        .footer-custom-center { flex: 1; text-align: center; min-width: 100px; }
+        .footer-custom-right { flex: 1; text-align: right; min-width: 100px; }
+        @media (max-width: 768px) {
+            .footer-custom-grid { flex-direction: column; align-items: center; }
+            .footer-custom-left, .footer-custom-center, .footer-custom-right { text-align: center; }
+        }
+        .footer-custom-wrapper img, .footer-custom-wrapper svg { max-height: 24px; vertical-align: middle; }
+        .footer-custom-wrapper a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+        .footer-custom-wrapper a:hover { color: var(--accent-primary); }
+        
+        /* 移动端侧边栏 */
+        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 199; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .sidebar-overlay.active { opacity: 1; visibility: visible; }
+        .mobile-sidebar { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: var(--bg-panel); border-left: 1px solid var(--border-color); z-index: 200; padding: 1.5rem; transition: right 0.3s; display: flex; flex-direction: column; }
+        .mobile-sidebar.open { right: 0; }
+        .menu-btn { display: none; padding: 0.5rem; background: transparent; border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); cursor: pointer; }
+        .menu-btn:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+        @media (max-width: 768px) {
+            .menu-btn { display: flex; align-items: center; gap: 0.5rem; }
+        }
+
+/* ---- API 标签（使用与首页一致的 api-chip 命名） ---- */
+.api-chip {
+    display: inline-block;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    line-height: 1.25;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.api-chip--free { background: rgba(0, 255, 157, 0.15); color: var(--accent-primary); }
+.api-chip--points { background: rgba(245, 158, 11, 0.18); color: #f59e0b; }
+.api-chip--key { background: rgba(59, 130, 246, 0.18); color: #60a5fa; }
+.api-chip--maintenance { background: rgba(239, 68, 68, 0.18); color: #f87171; }
+[data-theme="light"] .api-chip--points { color: #c2410c; }
+[data-theme="light"] .api-chip--key { color: #2563eb; }
+[data-theme="light"] .api-chip--maintenance { color: #dc2626; }

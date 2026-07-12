@@ -1,0 +1,237 @@
+/**
+ * 前台 Markdown 渲染区通用样式（表格等）
+ * 用于 .article-content、.page-content、.markdown-content、.markdown-body
+ */
+.article-content,
+.page-content,
+.markdown-content,
+.markdown-body {
+    overflow-x: auto;
+}
+
+.article-content table,
+.page-content table,
+.markdown-content table,
+.markdown-body table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+.article-content th,
+.article-content td,
+.page-content th,
+.page-content td,
+.markdown-content th,
+.markdown-content td,
+.markdown-body th,
+.markdown-body td {
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    padding: 0.5rem 0.65rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.article-content th,
+.page-content th,
+.markdown-content th,
+.markdown-body th {
+    background: rgba(0, 255, 157, 0.08);
+    color: var(--text-main, #f1f5f9);
+    font-weight: 600;
+}
+
+@media (max-width: 640px) {
+    .article-content table,
+    .page-content table,
+    .markdown-content table,
+    .markdown-body table {
+        font-size: 0.8rem;
+    }
+}
+
+.article-content input[type="checkbox"],
+.page-content input[type="checkbox"],
+.markdown-content input[type="checkbox"],
+.markdown-body input[type="checkbox"] {
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+/* ```html``` 白名单片段（公告 / 文档） */
+.markdown-content .markdown-user-html,
+.markdown-body .markdown-user-html,
+.article-content .markdown-user-html,
+.page-content .markdown-user-html {
+    margin: 0.75rem 0;
+    padding: 0.5rem 0;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.markdown-user-html iframe {
+    display: block;
+    background: rgba(0, 0, 0, 0.15);
+}
+
+/* marked 解析失败时的降级展示（不拖垮整页脚本） */
+.feer-md-parse-error {
+    margin: 0.75rem 0;
+    padding: 0.65rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    background: var(--bg-code, rgba(0, 0, 0, 0.25));
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: min(50vh, 24rem);
+    overflow: auto;
+}
+
+html[data-theme="light"] .feer-md-parse-error {
+    background: #f1f5f9;
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+/* ===== 卡片样式（编辑器卡片功能渲染） ===== */
+.article-content .feer-card,
+.page-content .feer-card,
+.markdown-content .feer-card,
+.markdown-body .feer-card {
+    max-width: 80%;
+    margin: 1.25rem 0;
+    padding: 1.1rem 1.25rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-panel);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.article-content .feer-card--left,
+.page-content .feer-card--left,
+.markdown-content .feer-card--left,
+.markdown-body .feer-card--left {
+    margin-right: auto;
+    margin-left: 0;
+}
+
+.article-content .feer-card--center,
+.page-content .feer-card--center,
+.markdown-content .feer-card--center,
+.markdown-body .feer-card--center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.article-content .feer-card--right,
+.page-content .feer-card--right,
+.markdown-content .feer-card--right,
+.markdown-body .feer-card--right {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+.article-content .feer-card__title,
+.page-content .feer-card__title,
+.markdown-content .feer-card__title,
+.markdown-body .feer-card__title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(0, 255, 157, 0.15);
+}
+
+.article-content .feer-card__body,
+.page-content .feer-card__body,
+.markdown-content .feer-card__body,
+.markdown-body .feer-card__body {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+    .article-content .feer-card,
+    .page-content .feer-card,
+    .markdown-content .feer-card,
+    .markdown-body .feer-card {
+        max-width: 100%;
+    }
+}
+
+/* ===== 代码块增强 ===== */
+.article-content pre,
+.page-content pre,
+.markdown-content pre,
+.markdown-body pre,
+.article-content .hljs,
+.page-content .hljs,
+.markdown-content .hljs,
+.markdown-body .hljs {
+    border-radius: 8px;
+    overflow-x: auto;
+    position: relative;
+}
+
+/* 代码块语言标记 */
+.article-content pre::before,
+.page-content pre::before,
+.markdown-content pre::before,
+.markdown-body pre::before {
+    content: attr(data-language);
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0 8px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* 文章页面的代码块增强 */
+.article-content pre {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+}
+
+.article-content pre code {
+    background: none;
+    padding: 0;
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+}
+
+.article-content code {
+    background: rgba(0, 255, 157, 0.1);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    color: var(--accent-primary);
+}
+
+/* 引用块 */
+.article-content blockquote,
+.page-content blockquote,
+.markdown-content blockquote,
+.markdown-body blockquote {
+    border-left: 3px solid var(--accent-primary);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+    color: var(--text-muted);
+    background: rgba(0, 255, 157, 0.04);
+    border-radius: 0 6px 6px 0;
+}

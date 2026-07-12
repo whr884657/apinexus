@@ -1,13 +1,12 @@
 {
-    "version": "2.13.0",
-    "title": "misc-api 2.13.0 主题一前台 UI 全面重设计",
+    "version": "2.14.0",
+    "title": "misc-api 2.14.0 主题一参考 UI 完整复刻（白色主题）",
     "release_date": "2026-07-12",
     "db_changes": false,
     "changes": [
-        "默认主题前台全面重设计：首页 Hero、统计区、接口目录与多栏页脚",
-        "全部接口页支持搜索、分类筛选与已通过审核接口卡片展示",
-        "ApiManager 新增 listPublic / countApproved / categoriesFromList",
-        "文章、关于、友链、贡献者、赞助页统一卡片布局；用户中心样式保持不变"
+        "默认主题完整迁入参考 UI：粒子背景、顶栏/抽屉、Glitch Hero、终端、统计、接口目录、在线调试、合作伙伴",
+        "各子页面（接口/文章/关于/友链/贡献者/赞助）对齐参考布局与样式，色板适配 misc-api 白色主题",
+        "新增 api-proxy.php 支持首页在线调试；ThemeManager 多资源加载"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

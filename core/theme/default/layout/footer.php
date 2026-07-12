@@ -2,47 +2,47 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
-$footDesc = $siteDesc !== '' ? $siteDesc : '基于 PHP + MySQL 的轻量级 Web 管理系统，提供安装向导、后台管理与主题系统。';
+$year = date('Y');
+$beian = SiteContext::beianInfo();
+$runtimeStart = '2024-01-01 00:00:00';
 ?>
-<footer class="dt-foot">
-    <div class="dt-container dt-foot__grid">
-        <div class="dt-foot__brand">
-            <div class="dt-foot__logo-row">
-                <?php vs_theme_site_logo('dt-foot__img', 'dt-foot__fallback'); ?>
-                <strong><?php echo vs_e($siteName); ?></strong>
+<footer class="mt-12">
+    <div class="container mx-auto px-6">
+        <div class="py-8 border-b" style="border-color: var(--border-color);">
+            <div class="flex flex-col md:flex-row gap-6">
+                <div class="flex-1" style="min-width: 0;">
+                    <h4 class="font-bold text-sm mb-4 font-mono" style="color: var(--accent-primary);">// 友情链接</h4>
+                    <div class="flex flex-wrap gap-3 footer-links text-sm" id="friendLinks">
+                        <a href="https://gitee.com/xunjinlu/misc-api" target="_blank" rel="noopener noreferrer" class="footer-link-item">misc-api 开源仓库</a>
+                        <a href="<?php echo vs_e($vsBase); ?>/links" class="footer-link-item">友情链接</a>
+                        <a href="<?php echo vs_e($vsBase); ?>/about" class="footer-link-item">关于我们</a>
+                        <a href="https://gitee.com/xunjinlu/misc-api/releases" target="_blank" rel="noopener noreferrer" class="footer-link-item">更新日志</a>
+                    </div>
+                </div>
             </div>
-            <p><?php echo vs_e($footDesc); ?></p>
         </div>
-        <div class="dt-foot__col">
-            <h4>资源</h4>
-            <ul>
-                <li><a href="<?php echo vs_e($vsBase); ?>/apis">全部接口</a></li>
-                <li><a href="<?php echo vs_e($vsBase); ?>/articles">文章</a></li>
-                <li><a href="https://gitee.com/xunjinlu/misc-api/releases" target="_blank" rel="noopener noreferrer">更新日志</a></li>
-            </ul>
+        <div class="py-6 flex flex-col gap-4 text-xs" style="color: var(--text-muted);">
+            <div style="width: 100%; display: flex; justify-content: center;">
+                <span id="runtime-display" class="runtime-text font-mono"></span>
+            </div>
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
+                    <span><?php echo vs_e($siteName); ?> &copy; <?php echo vs_e($year); ?></span>
+                </div>
+                <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-right">
+                    <?php if ($beian['icp_number'] !== ''): ?>
+                        <a href="<?php echo vs_e($beian['icp_link']); ?>" target="_blank" rel="noopener noreferrer" class="beian-link"><?php echo vs_e($beian['icp_number']); ?></a>
+                    <?php endif; ?>
+                    <?php if ($beian['gongan_number'] !== ''): ?>
+                        <a href="<?php echo vs_e($beian['gongan_link']); ?>" target="_blank" rel="noopener noreferrer" class="beian-link" style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                            <img src="<?php echo vs_e($vsBase); ?>/assets/img/gov.png" alt="" style="width: 16px; height: 16px; display: inline-block;">
+                            <?php echo vs_e($beian['gongan_number']); ?>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
-        <div class="dt-foot__col">
-            <h4>支持</h4>
-            <ul>
-                <li><a href="<?php echo vs_e($vsBase); ?>/about">关于我们</a></li>
-                <li><a href="<?php echo vs_e($vsBase); ?>/sponsor">赞助支持</a></li>
-                <li><a href="<?php echo vs_e($vsBase); ?>/links">友情链接</a></li>
-            </ul>
-        </div>
-        <div class="dt-foot__col">
-            <h4>社区</h4>
-            <ul>
-                <li><a href="<?php echo vs_e($vsBase); ?>/contributors">贡献者</a></li>
-                <li><a href="https://gitee.com/xunjinlu/misc-api" target="_blank" rel="noopener noreferrer">开源仓库</a></li>
-                <li><a href="<?php echo vs_e($authUrl); ?>"><?php echo !empty($userLoggedIn) ? '用户中心' : vs_e($authLabel); ?></a></li>
-            </ul>
-        </div>
-    </div>
-    <div class="dt-foot__bottom">
-        <div class="dt-container"><?php vs_render_site_footer($siteName); ?></div>
     </div>
 </footer>
-<button type="button" class="dt-back-top" id="dtBackTop" aria-label="返回顶部" hidden>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-</button>
-</div>
+<script>var SYSTEM_VERSION = <?php echo json_encode(VS_VERSION); ?>;</script>
+<script>var runtimeStartDate = new Date(<?php echo json_encode($runtimeStart); ?>).getTime();</script>

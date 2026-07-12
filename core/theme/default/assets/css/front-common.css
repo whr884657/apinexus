@@ -1,0 +1,413 @@
+/*
+ * front-common.css
+ * 来源: 前端各页面公共样式
+ * 包含: 主题变量、粒子画布、导航栏、侧边栏、页脚等
+ */
+
+/* === from: about.php === */
+:root {
+            --bg-deep: #050508;
+            --bg-panel: rgba(12, 12, 18, 0.95);
+            --text-main: #e4e4e7;
+            --text-muted: #71717a;
+            --accent-primary: #00ff9d;
+            --accent-secondary: #00d4ff;
+            --border-color: rgba(0, 255, 157, 0.15);
+            --particle-color: 0, 255, 157;
+        }
+
+[data-theme="light"] {
+            --bg-deep: #ffffff;
+            --bg-panel: rgba(255, 255, 255, 0.98);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-primary: #059669;
+            --accent-secondary: #0284c7;
+            --border-color: rgba(5, 150, 105, 0.15);
+            --particle-color: 100, 116, 139;
+        }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* 按钮文本兜底：避免资源加载时序导致链接默认下划线回流 */
+a.btn-geek, a.btn-secondary, a.btn-danger, a.btn,
+button.btn-geek, button.btn-secondary, button.btn-danger, button.btn {
+    text-decoration: none !important;
+}
+a.btn-geek *, a.btn-secondary *, a.btn-danger *, a.btn * {
+    text-decoration: none !important;
+}
+
+body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.4s, color 0.4s; }
+
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+#shader-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+.grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(0, 255, 157, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 157, 0.03) 1px, transparent 1px); background-size: 50px 50px; mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%); opacity: 0.5; }
+
+[data-theme="light"] .grid-overlay { opacity: 0.1; }
+
+.main-wrapper { position: relative; z-index: 10; }
+
+.nav-bar { position: fixed; top: 0; width: 100%; z-index: 100; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); backdrop-filter: blur(12px); height: 60px; }
+
+.sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 199; opacity: 0; visibility: hidden; transition: all 0.3s; }
+.sidebar-overlay.active { opacity: 1; visibility: visible; }
+
+.mobile-sidebar { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: var(--bg-panel); border-left: 1px solid var(--border-color); z-index: 200; padding: 1.5rem; transition: right 0.3s; display: flex; flex-direction: column; }
+.mobile-sidebar.open { right: 0; }
+
+.btn-geek { background: transparent; border: 1px solid var(--accent-primary); color: var(--accent-primary); padding: 0.5rem 1rem; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.3s; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); text-decoration: none; display: inline-block; }
+
+.theme-toggle { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-color); background: transparent; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+
+footer { border-top: 1px solid var(--border-color); background: var(--bg-panel); padding-top: 2rem; padding-bottom: 1rem; margin-top: 2rem; }
+
+.footer-links a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+
+.beian-link { color: var(--text-muted); text-decoration: none; transition: color 0.2s; display: inline-flex; align-items: center; gap: 0.25rem; }
+
+/* 小尺寸二维码样式 */
+        .qrcode-box-small { width: 70px; height: 70px; padding: 4px; background: #fff; border-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); }
+
+.qrcode-img-small { width: 100%; height: 100%; object-fit: contain; border-radius: 3px; }
+
+/* 自定义底部栏样式 */
+.footer-custom-wrapper { width: 100%; }
+.footer-custom-grid { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.footer-custom-left { flex: 1; text-align: left; min-width: 100px; }
+.footer-custom-center { flex: 1; text-align: center; min-width: 100px; }
+.footer-custom-right { flex: 1; text-align: right; min-width: 100px; }
+.footer-custom-wrapper img, .footer-custom-wrapper svg { max-height: 24px; vertical-align: middle; }
+.footer-custom-wrapper a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+.footer-custom-wrapper a:hover { color: var(--accent-primary); }
+
+@media (max-width: 768px) {
+    .footer-custom-grid { flex-direction: column; align-items: center; }
+    .footer-custom-left, .footer-custom-center, .footer-custom-right { text-align: center; }
+}
+
+/* === from: api-detail.php === */
+:root {
+            --bg-deep: #050508;
+            --bg-panel: rgba(12, 12, 18, 0.95);
+            --bg-code: #0d0d14;
+            --text-main: #e4e4e7;
+            --text-muted: #71717a;
+            --accent-primary: #00ff9d;
+            --accent-secondary: #00d4ff;
+            --border-color: rgba(0, 255, 157, 0.15);
+            --glow-primary: rgba(0, 255, 157, 0.7);
+            --particle-color: 0, 255, 157;
+            --line-color-alpha: 0.15;
+            --endpoint-bg: rgba(0, 255, 157, 0.08);
+            --endpoint-border: rgba(0, 255, 157, 0.2);
+        }
+
+[data-theme="light"] {
+            --bg-deep: #ffffff;
+            --bg-panel: rgba(255, 255, 255, 0.98);
+            --bg-code: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-primary: #059669;
+            --accent-secondary: #0284c7;
+            --border-color: rgba(5, 150, 105, 0.15);
+            --particle-color: 100, 116, 139;
+            --line-color-alpha: 0.1;
+            --endpoint-bg: rgba(5, 150, 105, 0.08);
+            --endpoint-border: rgba(5, 150, 105, 0.2);
+        }
+
+.qrcode-box-small { width: 70px; height: 70px; padding: 4px; background: #fff; border-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); }
+
+.beian-link { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+
+/* === from: api-docs.php === */
+:root {
+            --bg-deep: #050508;
+            --bg-panel: rgba(12, 12, 18, 0.95);
+            --bg-card: rgba(20, 20, 30, 0.8);
+            --bg-code: #0d0d14;
+            --text-main: #e4e4e7;
+            --text-muted: #71717a;
+            --accent-primary: #00ff9d;
+            --accent-secondary: #00d4ff;
+            --border-color: rgba(0, 255, 157, 0.15);
+        }
+
+[data-theme="light"] {
+            --bg-deep: #ffffff;
+            --bg-panel: rgba(255, 255, 255, 0.98);
+            --bg-card: rgba(248, 250, 252, 0.9);
+            --bg-code: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-primary: #059669;
+            --accent-secondary: #0284c7;
+            --border-color: rgba(5, 150, 105, 0.15);
+        }
+
+body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; font-size: 14px; }
+
+.menu-btn { display: none; padding: 0.5rem; background: transparent; border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); cursor: pointer; }
+
+@media (max-width: 768px) {
+            .menu-btn { display: flex; align-items: center; gap: 0.5rem; }
+        }
+
+.main-wrapper { position: relative; z-index: 10; display: flex; padding-top: 60px; min-height: 0; flex: 1; }
+
+.theme-toggle { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-color); background: transparent; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+
+footer { border-top: 1px solid var(--border-color); background: var(--bg-panel); padding-top: 3rem; padding-bottom: 1.5rem; margin-top: auto; position: relative; z-index: 10; flex-shrink: 0; width: 100%; }
+
+.main-wrapper { flex: 1; display: flex; }
+
+/* 友情链接样式 */
+        .footer-links a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
+
+/* === from: apis.php === */
+:root {
+            --bg-deep: #050508;
+            --bg-panel: rgba(12, 12, 18, 0.95);
+            --text-main: #e4e4e7;
+            --text-muted: #71717a;
+            --accent-primary: #00ff9d;
+            --accent-secondary: #00d4ff;
+            --border-color: rgba(0, 255, 157, 0.15);
+            --glow-primary: rgba(0, 255, 157, 0.7);
+        }
+
+[data-theme="light"] {
+            --bg-deep: #ffffff;
+            --bg-panel: rgba(255, 255, 255, 0.98);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-primary: #059669;
+            --accent-secondary: #0284c7;
+            --border-color: rgba(5, 150, 105, 0.15);
+            --glow-primary: rgba(5, 150, 105, 0.4);
+        }
+
+.grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(0, 255, 157, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 157, 0.03) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.5; }
+
+.btn-geek { background: transparent; border: 1px solid var(--accent-primary); color: var(--accent-primary); padding: 0.65rem 1.5rem; font-weight: 600; font-size: 0.85rem; position: relative; overflow: hidden; cursor: pointer; transition: all 0.3s; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); text-decoration: none; display: inline-block; }
+
+/* 移动端侧边栏 */
+.sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 199; opacity: 0; visibility: hidden; transition: all 0.3s; }
+.sidebar-overlay.active { opacity: 1; visibility: visible; }
+
+/* === from: apply-link.php === */
+:root {
+            --bg-deep: #050508;
+            --bg-panel: rgba(12, 12, 18, 0.95);
+            --text-main: #e4e4e7;
+            --text-muted: #71717a;
+            --accent-primary: #00ff9d;
+            --accent-secondary: #00d4ff;
+            --border-color: rgba(0, 255, 157, 0.15);
+            --glow-primary: rgba(0, 255, 157, 0.7);
+            --particle-color: 0, 255, 157;
+        }
+
+.nav-bar { position: fixed; top: 0; width: 100%; z-index: 100; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); backdrop-filter: blur(12px); height: 60px; }
+
+.mobile-sidebar { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: var(--bg-panel); border-left: 1px solid var(--border-color); z-index: 200; padding: 2rem 1.5rem; transition: right 0.3s; display: flex; flex-direction: column; }
+.mobile-sidebar.open { right: 0; }
+
+.theme-toggle { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-color); background: transparent; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+
+footer { border-top: 1px solid var(--border-color); background: var(--bg-panel); padding-top: 3rem; padding-bottom: 1.5rem; margin-top: 3rem; }
+
+/* 小尺寸二维码样式（与友情链接页保持一致） */
+.qrcode-box-small { width: 70px; height: 70px; padding: 4px; background: #fff; border-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); }
+
+/* === from: article.php === */
+:root {
+            --bg-deep: #050508;
+            --bg-panel: rgba(12, 12, 18, 0.95);
+            --text-main: #e4e4e7;
+            --text-muted: #71717a;
+            --accent-primary: #00ff9d;
+            --accent-secondary: #00d4ff;
+            --border-color: rgba(0, 255, 157, 0.15);
+        }
+
+[data-theme="light"] {
+            --bg-deep: #ffffff;
+            --bg-panel: rgba(255, 255, 255, 0.98);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-primary: #059669;
+            --accent-secondary: #0284c7;
+            --border-color: rgba(5, 150, 105, 0.15);
+        }
+
+footer { border-top: 1px solid var(--border-color); background: var(--bg-panel); padding-top: 3rem; padding-bottom: 1.5rem; }
+
+/* === from: articles.php === */
+body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
+
+/* === from: contributors.php === */
+body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.3s, color 0.3s; }
+
+/* === from: index.php === */
+:root {
+            --bg-deep: #050508;
+            --bg-panel: rgba(12, 12, 18, 0.95);
+            --text-main: #e4e4e7;
+            --text-muted: #71717a;
+            --accent-primary: #00ff9d;
+            --accent-secondary: #00d4ff;
+            --border-color: rgba(0, 255, 157, 0.15);
+            --glow-primary: rgba(0, 255, 157, 0.7);
+            --code-bg: rgba(0, 0, 0, 0.5);
+            --particle-color: 0, 255, 157;
+            --line-color-alpha: 0.15;
+            --endpoint-bg: rgba(0, 255, 157, 0.08);
+            --endpoint-border: rgba(0, 255, 157, 0.2);
+        }
+
+[data-theme="light"] {
+            --bg-deep: #ffffff;
+            --bg-panel: rgba(255, 255, 255, 0.98);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-primary: #059669;
+            --accent-secondary: #0284c7;
+            --border-color: rgba(5, 150, 105, 0.15);
+            --glow-primary: rgba(5, 150, 105, 0.4);
+            --code-bg: #f1f5f9;
+            --particle-color: 100, 116, 139;
+            --line-color-alpha: 0.1;
+            --endpoint-bg: rgba(5, 150, 105, 0.08);
+            --endpoint-border: rgba(5, 150, 105, 0.2);
+        }
+
+* { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--accent-primary) transparent; }
+
+body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); overflow-x: hidden; transition: background 0.4s ease, color 0.4s ease; }
+
+[data-theme="light"] .grid-overlay { opacity: 0.1; background-image: linear-gradient(rgba(5, 150, 105, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(5, 150, 105, 0.08) 1px, transparent 1px); }
+
+.sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 199; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+.sidebar-overlay.active { opacity: 1; visibility: visible; }
+
+.mobile-sidebar { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: var(--bg-panel); border-left: 1px solid var(--border-color); z-index: 200; padding: 2rem 1.5rem; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; box-shadow: -5px 0 30px rgba(0,0,0,0.2); }
+.mobile-sidebar.open { right: 0; }
+
+/* === from: links.php === */
+:root {
+            --bg-deep: #050508;
+            --bg-panel: rgba(12, 12, 18, 0.95);
+            --bg-card: rgba(20, 20, 30, 0.8);
+            --text-main: #e4e4e7;
+            --text-muted: #71717a;
+            --accent-primary: #00ff9d;
+            --accent-secondary: #00d4ff;
+            --border-color: rgba(0, 255, 157, 0.15);
+        }
+
+[data-theme="light"] {
+            --bg-deep: #ffffff;
+            --bg-panel: rgba(255, 255, 255, 0.98);
+            --bg-card: rgba(248, 250, 252, 0.9);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent-primary: #059669;
+            --accent-secondary: #0284c7;
+            --border-color: rgba(5, 150, 105, 0.15);
+        }
+
+/* ==============================================
+ * 统一标签 / 徽章样式（全站通用）
+ * 定义所有类型标签的标准颜色，确保各页面显示一致
+ * ============================================== */
+
+/* --- HTTP 方法标签 --- */
+.method-badge {
+    display: inline-block;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    line-height: 1.25;
+    vertical-align: middle;
+}
+.method-badge.get { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.method-badge.post { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.method-badge.put { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.method-badge.delete { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.method-badge.patch { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+
+/* --- API 鉴权要求标签（开放访问 / KEY必填 / KEY可选） --- */
+.req-badge {
+    display: inline-block;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    line-height: 1.25;
+    vertical-align: middle;
+}
+.req-badge--none { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+.req-badge--required { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.req-badge--optional { background: rgba(99, 102, 241, 0.2); color: #6366f1; }
+
+/* --- API 运行状态标签（正常 / 禁用 / 维护中 / 待审核 / 已拒绝）--- */
+.api-status-badge {
+    display: inline-block;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    line-height: 1.25;
+    vertical-align: middle;
+}
+.api-status-badge--active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.api-status-badge--disabled { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.api-status-badge--maintenance { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.api-status-badge--pending { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.api-status-badge--rejected { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+/* --- 免费 / 积分标签 --- */
+.tag-free {
+    display: inline-block;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    line-height: 1.25;
+    vertical-align: middle;
+}
+.tag-points {
+    display: inline-block;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    line-height: 1.25;
+    vertical-align: middle;
+}
+
+/* --- 通用 KEY 标签（用户后台等老页面使用 .tag-key） --- */
+.tag-key {
+    display: inline-block;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    line-height: 1.25;
+    vertical-align: middle;
+}
+

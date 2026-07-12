@@ -1,0 +1,29 @@
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./JetBrainsMono-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('./JetBrainsMono-Medium.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('./JetBrainsMono-Bold.woff2') format('woff2');
+}
+
+/* 中文优先走系统字体，避免加载超大 CJK 字体文件拖慢首屏 */
+:root {
+    --font-sans-local: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    --font-mono-local: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, "Courier New", monospace;
+}
