@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.2.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.2.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -29,7 +29,7 @@
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
 - 用户中心侧边栏：控制台、API 管理（仅开发者）、令牌管理、积分变动、接口列表、账号设置（部分为占位页）
-- **用户角色**：普通用户（调用全站接口、管理令牌）/ 开发者（可进入 API 管理发布接口）；注册时可选，管理员可转换身份
+- **用户角色**：普通用户（调用全站接口、管理令牌）/ 开发者（可进入 API 管理发布接口）；注册页横条分段选择身份，管理员可转换身份
 - 用户管理：列表查看、搜索、封禁/解封/删除、身份转换（AJAX 无整页刷新）
 - 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
 - 用户登录支持 QQ / Gitee 第三方登录（须先注册并绑定）
@@ -75,7 +75,7 @@
 | 用户登录 | `/user/login.php` | 账号密码登录 + QQ/Gitee 第三方登录 |
 | OAuth 回调 | `/user/oauth/callback.php` | 第三方授权回调（由平台配置） |
 | OAuth 绑定 | `/user/oauth/bind.php` | 首次第三方登录绑定已有账号 |
-| 用户注册 | `/user/register.php` | 邮箱验证码注册，可选普通用户或开发者身份 |
+| 用户注册 | `/user/register.php` | 邮箱验证码注册，横条分段选择普通用户或开发者 |
 | 用户忘记密码 | `/user/forgot.php` | 邮箱验证码重置密码 |
 | 用户中心 | `/user/index.php` | 登录后控制台首页 |
 | API 管理（占位） | `/user/api-manage.php` | 仅开发者可访问，发布接口功能后续开发 |
@@ -263,6 +263,11 @@ location / {
 
 ## 版本记录
 
+### v3.2.1（2026-07-14）
+
+- **注册页 UI**：移除「注册身份」卡片区块；用户名上方增加横条分段选择器（普通用户 / 开发者），滑块随点击切换
+- **身份说明**：切换身份时 Toast 提示权限说明；默认主题与主题二布局一致
+
 ### v3.2.0（2026-07-13）
 
 - **Redis 业务缓存**：新增 `RedisCache.php`；公开接口列表、分类标签读 Redis；发信限流优先 Redis 写入，减轻 MySQL 压力
@@ -279,7 +284,7 @@ location / {
 
 - **用户角色体系**：`user` 表新增 `role` 字段（`user`=普通用户、`developer`=开发者）
 - **core 调度**：`UserRole.php` 权限判断；`FrontendUser.php` 统一用户名/头像/邮箱/角色（主题与用户中心通过 core 获取，禁止直读库）
-- **注册**：默认普通用户；注册页可选开发者，两主题均有身份说明卡片
+- **注册**：默认普通用户；注册页横条分段选择开发者，切换时 Toast 说明权限
 - **用户中心**：普通用户隐藏「API 管理」；直链访问 `/user/api-manage` 服务端拦截并提示身份
 - **后台**：用户管理新增身份列与「设为开发者 / 设为普通」AJAX 操作
 - **数据库迁移**：`install/migrations/3.0.0.sql`

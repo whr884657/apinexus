@@ -24,6 +24,17 @@ ThemeManager::renderThemeAuthHead('用户注册');
             <form id="registerForm" method="post" action="" novalidate>
                 <?php vs_auth_csrf_field(); ?>
                 <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_USER_REGISTER); ?>
+                <div class="field field--role-segment">
+                    <div class="vs-role-segment" id="roleSegment">
+                        <div class="vs-role-segment__track" id="roleSegmentTrack" data-role="user" role="radiogroup" aria-label="账号类型">
+                            <span class="vs-role-segment__thumb" aria-hidden="true"></span>
+                            <button type="button" class="vs-role-segment__btn is-active" data-role="user" aria-pressed="true" <?php echo $mailEnabled ? '' : 'disabled'; ?>>普通用户</button>
+                            <button type="button" class="vs-role-segment__btn" data-role="developer" aria-pressed="false" <?php echo $mailEnabled ? '' : 'disabled'; ?>>开发者</button>
+                        </div>
+                        <input type="hidden" name="role" id="roleInput" value="user" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                    </div>
+                </div>
+
                 <div class="field">
                     <label for="username">用户名</label>
                     <input id="username" name="username" type="text" placeholder="3～50 个字符" autocomplete="username" maxlength="50" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
@@ -32,26 +43,6 @@ ThemeManager::renderThemeAuthHead('用户注册');
                 <div class="field">
                     <label for="email">邮箱</label>
                     <input id="email" name="email" type="email" placeholder="请输入邮箱" autocomplete="email" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                </div>
-
-                <div class="field">
-                    <span class="field-label">注册身份</span>
-                    <div class="vs-reg-role" role="radiogroup" aria-label="注册身份">
-                        <label class="vs-reg-role__option">
-                            <input type="radio" name="role" value="user" checked <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                            <span class="vs-reg-role__card">
-                                <strong>普通用户</strong>
-                                <span class="vs-reg-role__desc">可在用户中心生成密钥，调用平台全部公开接口（含站长与其他用户发布的接口）。</span>
-                            </span>
-                        </label>
-                        <label class="vs-reg-role__option">
-                            <input type="radio" name="role" value="developer" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                            <span class="vs-reg-role__card">
-                                <strong>开发者</strong>
-                                <span class="vs-reg-role__desc">拥有普通用户全部能力，并可在「API 管理」中发布自己的接口，为平台提供技能与支持。</span>
-                            </span>
-                        </label>
-                    </div>
                 </div>
 
                 <div class="field">
@@ -98,6 +89,44 @@ ThemeManager::renderThemeAuthHead('用户注册');
     var countdownTimer = null;
 
     if (!form) return;
+
+    var roleTrack = document.getElementById('roleSegmentTrack');
+    var roleInput = document.getElementById('roleInput');
+    var ROLE_HINTS = {
+        user: '普通用户：可在用户中心生成密钥，调用平台全部公开接口（含站长与其他用户发布的接口）。',
+        developer: '开发者：拥有普通用户全部能力，并可在「API 管理」中发布自己的接口，为平台提供技能与支持。'
+    };
+
+    function normalizeRole(role) {
+        return role === 'developer' ? 'developer' : 'user';
+    }
+
+    function setRole(role, showHint) {
+        if (!roleTrack || !roleInput) return;
+        role = normalizeRole(role);
+        roleTrack.dataset.role = role;
+        roleInput.value = role;
+        roleTrack.querySelectorAll('.vs-role-segment__btn').forEach(function (btn) {
+            var active = btn.dataset.role === role;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        if (showHint && ROLE_HINTS[role]) {
+            showMessage(ROLE_HINTS[role], 'success');
+        }
+    }
+
+    if (roleTrack) {
+        roleTrack.querySelectorAll('.vs-role-segment__btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                if (btn.disabled) return;
+                var role = normalizeRole(btn.dataset.role);
+                if (roleInput && roleInput.value !== role) {
+                    setRole(role, true);
+                }
+            });
+        });
+    }
 
     function showMessage(text, type) {
         if (text && window.VsToast) {

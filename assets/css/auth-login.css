@@ -538,53 +538,66 @@ body {
     margin-bottom: 8px;
 }
 
-.vs-reg-role {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.field--role-segment {
+    margin-bottom: 4px;
 }
 
-.vs-reg-role__option {
-    display: block;
-    cursor: pointer;
+.vs-role-segment {
+    width: 100%;
 }
 
-.vs-reg-role__option input {
+.vs-role-segment__track {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    height: 44px;
+    padding: 3px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f3f4f6;
+}
+
+.vs-role-segment__thumb {
     position: absolute;
-    opacity: 0;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: calc(50% - 3px);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.04);
+    transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
 }
 
-.vs-reg-role__card {
-    display: block;
-    padding: 12px 14px;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    background: #fff;
-    transition: border-color 0.2s, box-shadow 0.2s;
+.vs-role-segment__track[data-role="developer"] .vs-role-segment__thumb {
+    left: calc(50%);
 }
 
-.vs-reg-role__card strong {
-    display: block;
+.vs-role-segment__btn {
+    position: relative;
+    z-index: 1;
+    border: none;
+    background: transparent;
     font-size: 14px;
-    margin-bottom: 4px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    border-radius: 8px;
+}
+
+.vs-role-segment__btn.is-active {
     color: #111827;
 }
 
-.vs-reg-role__desc {
-    display: block;
-    font-size: 12px;
-    line-height: 1.55;
-    color: #6b7280;
-}
-
-.vs-reg-role__option input:checked + .vs-reg-role__card {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 1px #2563eb;
-    background: #f8fbff;
-}
-
-.vs-reg-role__option input:focus-visible + .vs-reg-role__card {
+.vs-role-segment__btn:focus-visible {
     outline: 2px solid #93c5fd;
     outline-offset: 2px;
+}
+
+.vs-role-segment__btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
 }
