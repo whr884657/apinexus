@@ -61,6 +61,18 @@ class ApiCategoryManager
             '/assets/img/category-icons/lottery.svg',
             '/assets/img/category-icons/random.svg',
             '/assets/img/category-icons/emoji.svg',
+            '/assets/img/category-icons/netease.svg',
+            '/assets/img/category-icons/qq-music.svg',
+            '/assets/img/category-icons/honor-of-kings.svg',
+            '/assets/img/category-icons/honor-of-kings-alt.svg',
+            '/assets/img/category-icons/business-license.svg',
+            '/assets/img/category-icons/business-license-alt.svg',
+            '/assets/img/category-icons/id-card.svg',
+            '/assets/img/category-icons/icp.svg',
+            '/assets/img/category-icons/car-dealer.svg',
+            '/assets/img/category-icons/map.svg',
+            '/assets/img/category-icons/weibo.svg',
+            '/assets/img/category-icons/express.svg',
         );
     }
 

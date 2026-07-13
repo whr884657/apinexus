@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.16.3-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.16.4-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -87,7 +87,7 @@
 | 管理控制台 | `/admin/index.php` | 后台首页，展示站点与版本信息 |
 | 数据大屏（占位） | `/admin/data-screen.php` | 后续开发 |
 | 接口审核 | `/admin/api/review.php` | 待审核 / 已通过 / 已拒绝；通过、拒绝、下线（AJAX） |
-| 接口分类 | `/admin/api/categories.php` | 表格式列表、分类 CRUD、23 款内置 SVG 图标、描述、启禁 |
+| 接口分类 | `/admin/api/categories.php` | 表格式列表、分类 CRUD、35 款内置 SVG 图标、描述、启禁 |
 | API 管理（占位） | `/admin/api/list.php` 等 | 接口列表、文档、反馈仍为占位页 |
 | 内容运营（占位） | `/admin/content/` | 文章、评论、友链、合作伙伴 |
 | 交易财务（占位） | `/admin/finance/` | 支付、订单、赞助、积分 |
@@ -177,7 +177,7 @@ misc-api/
 │   ├── css/                    # common, admin, modal (vs-overlay), toast, install …
 │   ├── js/                     # common.js, api-categories.js, vs-update.js, upgrade.js …
 │   └── img/
-│       ├── category-icons/     # 内置 23 款分类 SVG 图标
+│       ├── category-icons/     # 内置 35 款分类 SVG 图标
 │       └── …                   # 头像、站点图片等
 ├── config/
 │   ├── database.php            # 安装后生成（更新时不覆盖）
@@ -252,6 +252,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.16.4（2026-07-13）
+
+- **弹窗优化**：标题区浅灰底 + 底部分隔线；底部按钮加大（电脑 46px / 手机 48px 高）
+- **分类图标**：从 `svg图标.txt` 新增 12 款 SVG（网易云、QQ音乐、王者荣耀等），内置共 35 款
+- **图标导入**：新增 `CategoryIconImporter` + `install/sync-category-icons.php`（PHP 解析 txt 写入图标目录）
+- **弹窗规范**：更新 `开发规范/弹窗开发规范.md` v1.2
 
 ### v2.16.3（2026-07-13）
 
