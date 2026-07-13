@@ -67,13 +67,13 @@
 
     function buildActionButtons(catId, enabled, apiCount) {
         var html = '';
-        html += '<button type="button" class="vs-api-cat-link vs-api-cat-action" data-cat-action="edit" data-category-id="' + catId + '">编辑</button>';
+        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-cat-action" data-cat-action="edit" data-category-id="' + catId + '">编辑</button>';
         if (enabled) {
-            html += '<button type="button" class="vs-api-cat-link vs-api-cat-action" data-cat-action="disable" data-category-id="' + catId + '">禁用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-cat-action" data-cat-action="disable" data-category-id="' + catId + '">禁用</button>';
         } else {
-            html += '<button type="button" class="vs-api-cat-link vs-api-cat-link--primary vs-api-cat-action" data-cat-action="enable" data-category-id="' + catId + '">启用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary vs-api-cat-action" data-cat-action="enable" data-category-id="' + catId + '">启用</button>';
         }
-        html += '<button type="button" class="vs-api-cat-link vs-api-cat-link--danger vs-api-cat-action" data-cat-action="delete" data-category-id="' + catId + '" data-api-count="' + apiCount + '">删除</button>';
+        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-api-cat-action" data-cat-action="delete" data-category-id="' + catId + '" data-api-count="' + apiCount + '">删除</button>';
         return html;
     }
 

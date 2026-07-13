@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.16.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.16.3-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -252,6 +252,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.16.3（2026-07-13）
+
+- **标题栏**：「添加分类」移至「接口分类」标题同一行右侧（背景框外）
+- **手机端卡片**：名称在上、描述在下；编辑/启用/删除靠右下角
+- **操作按钮**：改为带边框的 `vs-btn--pill` 胶囊样式
+- **布局扩展**：`vs_admin_layout_start` 支持第三参数 `$headerActions`
 
 ### v2.16.2（2026-07-13）
 
