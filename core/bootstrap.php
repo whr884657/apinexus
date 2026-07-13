@@ -28,6 +28,7 @@ require_once VS_ROOT . '/core/UserAvatar.php';
 require_once VS_ROOT . '/core/UserManager.php';
 require_once VS_ROOT . '/core/AdminUserBinding.php';
 require_once VS_ROOT . '/core/ApiManager.php';
+require_once VS_ROOT . '/core/ApiCategoryManager.php';
 require_once VS_ROOT . '/core/ThemeManager.php';
 require_once VS_ROOT . '/core/oauth/HttpClient.php';
 require_once VS_ROOT . '/core/oauth/OAuthConfig.php';

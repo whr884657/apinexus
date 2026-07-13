@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.15.0": {
+            "title": "misc-api 2.15.0 后台接口分类管理",
+            "date": "2026-07-13",
+            "db_changes": true,
+            "changes": [
+                "API 管理新增接口分类页",
+                "api_category 表 + CRUD",
+                "前台分类与后台同步"
+            ]
+        },
         "2.14.4": {
             "title": "misc-api 2.14.4 主题一统计与浅色固定",
             "date": "2026-07-12",

@@ -33,6 +33,7 @@ function vs_admin_menu_groups()
             'children' => array(
                 array('id' => 'api-list', 'title' => '接口列表', 'url' => '/admin/api/list.php'),
                 array('id' => 'api-review', 'title' => '接口审核', 'url' => '/admin/api/review.php'),
+                array('id' => 'api-categories', 'title' => '接口分类', 'url' => '/admin/api/categories.php'),
                 array('id' => 'api-docs', 'title' => '接口文档', 'url' => '/admin/api/docs.php'),
                 array('id' => 'api-feedback', 'title' => '接口反馈', 'url' => '/admin/api/feedback.php'),
             ),

@@ -14,7 +14,22 @@ function vs_theme_api_payload()
     $apiData = array();
     $categoryNames = array('all' => '全部');
     $catIndex = 1;
-    $catSlugMap = array();
+    $nameToKey = array();
+
+    if (class_exists('ApiCategoryManager') && ApiCategoryManager::tableReady()) {
+        foreach (ApiCategoryManager::listEnabled() as $catRow) {
+            if (!is_array($catRow)) {
+                continue;
+            }
+            $label = trim((string) $catRow['name']);
+            if ($label === '' || isset($nameToKey[$label])) {
+                continue;
+            }
+            $nameToKey[$label] = (string) $catIndex;
+            $categoryNames[(string) $catIndex] = $label;
+            $catIndex++;
+        }
+    }
 
     foreach ($rows as $row) {
         if (!is_array($row)) {
@@ -28,12 +43,12 @@ function vs_theme_api_payload()
         if ($catLabel === '') {
             $catLabel = '未分类';
         }
-        if (!isset($catSlugMap[$catLabel])) {
-            $catSlugMap[$catLabel] = (string) $catIndex;
+        if (!isset($nameToKey[$catLabel])) {
+            $nameToKey[$catLabel] = (string) $catIndex;
             $categoryNames[(string) $catIndex] = $catLabel;
             $catIndex++;
         }
-        $catKey = $catSlugMap[$catLabel];
+        $catKey = $nameToKey[$catLabel];
 
         $method = strtoupper(trim((string) (isset($row['method']) ? $row['method'] : 'GET')));
         if ($method === '') {
