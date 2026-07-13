@@ -169,7 +169,7 @@ class UserAuth
             $pdo = Database::connect();
             $table = Database::table('user');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `username`, `email`, `avatar_url`, `oauth_qq_openid`, `oauth_gitee_id`, `created_at`, `last_login_at` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                'SELECT `id`, `username`, `email`, `avatar_url`, `oauth_qq_openid`, `oauth_gitee_id`, `role`, `created_at`, `last_login_at` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array(self::id()));
             return $stmt->fetch() ?: null;
@@ -282,12 +282,14 @@ class UserAuth
      * @param string $username
      * @param string $email
      * @param string $password
+     * @param string $role user|developer，默认普通用户
      * @return true|string
      */
-    public static function register($username, $email, $password)
+    public static function register($username, $email, $password, $role = UserRole::ROLE_USER)
     {
         $username = trim((string) $username);
         $email = trim((string) $email);
+        $role = UserRole::normalize($role);
 
         if ($username === '') {
             return '用户名不能为空';
@@ -329,9 +331,9 @@ class UserAuth
             }
 
             $stmt = $pdo->prepare(
-                'INSERT INTO `' . $table . '` (`username`, `password`, `email`, `status`, `created_at`) VALUES (?, ?, ?, 1, NOW())'
+                'INSERT INTO `' . $table . '` (`username`, `password`, `email`, `status`, `role`, `created_at`) VALUES (?, ?, ?, 1, ?, NOW())'
             );
-            $stmt->execute(array($username, vs_password_hash($password), $email));
+            $stmt->execute(array($username, vs_password_hash($password), $email, $role));
 
             return true;
         } catch (Exception $e) {

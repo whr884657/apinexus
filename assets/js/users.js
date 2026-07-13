@@ -11,12 +11,15 @@
     var countDesc = document.getElementById('usersCountDesc');
     var searchEmpty = document.getElementById('usersSearchEmpty');
 
-    function createActionBtn(userId, action, label, className, confirmDelete) {
+    function createActionBtn(userId, action, label, className, confirmDelete, role) {
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'vs-btn vs-btn--pill ' + className + ' vs-user-action-btn';
         btn.setAttribute('data-user-action', action);
         btn.setAttribute('data-user-id', String(userId));
+        if (role) {
+            btn.setAttribute('data-user-role', role);
+        }
         if (confirmDelete) {
             btn.setAttribute('data-confirm-delete', '1');
         }
@@ -24,14 +27,35 @@
         return btn;
     }
 
-    function rebuildActions(container, userId, banned) {
+    function roleBadgeHtml(role, label) {
+        var cls = role === 'developer' ? 'vs-role-badge--developer' : 'vs-role-badge--user';
+        return '<span class="vs-role-badge ' + cls + '">' + label + '</span>';
+    }
+
+    function rebuildActions(container, userId, banned, role) {
         container.innerHTML = '';
         if (banned) {
             container.appendChild(createActionBtn(userId, 'unban', '解封', 'vs-btn--pill-primary'));
         } else {
             container.appendChild(createActionBtn(userId, 'ban', '封禁', 'vs-btn--pill-danger'));
         }
+        if (role === 'developer') {
+            container.appendChild(createActionBtn(userId, 'set_role', '设为普通', 'vs-btn--pill-secondary', false, 'user'));
+        } else {
+            container.appendChild(createActionBtn(userId, 'set_role', '设为开发者', 'vs-btn--pill-primary', false, 'developer'));
+        }
         container.appendChild(createActionBtn(userId, 'delete', '删除', 'vs-btn--pill-danger', true));
+    }
+
+    function updateRoleCells(userId, role, roleLabel) {
+        var rows = document.querySelectorAll('[data-user-row="' + userId + '"]');
+        rows.forEach(function (row) {
+            row.setAttribute('data-user-role', role);
+            var roleCell = row.querySelector('.vs-users-role-cell, .vs-user-card__role');
+            if (roleCell) {
+                roleCell.innerHTML = roleBadgeHtml(role, roleLabel);
+            }
+        });
     }
 
     function ensureBannedTag(nameEl) {
@@ -133,12 +157,22 @@
         }
     }
 
-    function updateUserRows(userId, action) {
+    function updateUserRows(userId, action, extra) {
         var rows = document.querySelectorAll('[data-user-row="' + userId + '"]');
         rows.forEach(function (row) {
             if (action === 'delete') {
                 if (row.parentNode) {
                     row.parentNode.removeChild(row);
+                }
+                return;
+            }
+
+            if (action === 'set_role' && extra) {
+                updateRoleCells(userId, extra.role, extra.role_label);
+                var actions = row.querySelector('.vs-users-actions, .vs-user-card__actions');
+                var banned = row.classList.contains('vs-users-row--banned') || row.classList.contains('vs-user-card--banned');
+                if (actions) {
+                    rebuildActions(actions, userId, banned, extra.role);
                 }
                 return;
             }
@@ -155,8 +189,9 @@
             }
 
             var actions = row.querySelector('.vs-users-actions, .vs-user-card__actions');
+            var role = row.getAttribute('data-user-role') || 'user';
             if (actions) {
-                rebuildActions(actions, userId, banned);
+                rebuildActions(actions, userId, banned, role);
             }
         });
     }
@@ -182,10 +217,13 @@
         return Promise.resolve(window.confirm('删除后该用户的账号与绑定信息将永久移除，且不可恢复。确定删除吗？'));
     }
 
-    function postAction(userId, action) {
+    function postAction(userId, action, role) {
         var body = new FormData();
         body.append('action', action);
         body.append('user_id', String(userId));
+        if (action === 'set_role' && role) {
+            body.append('role', role);
+        }
 
         return window.VS.postForm(body).then(function (data) {
             if (data.code !== 1) {
@@ -203,15 +241,20 @@
 
         var userId = btn.getAttribute('data-user-id');
         var action = btn.getAttribute('data-user-action');
+        var role = btn.getAttribute('data-user-role');
         if (!userId || !action) {
             return;
         }
 
         function run() {
             btn.disabled = true;
-            postAction(userId, action)
+            postAction(userId, action, role)
                 .then(function (data) {
-                    updateUserRows(userId, action);
+                    var extra = null;
+                    if (action === 'set_role') {
+                        extra = { role: data.role, role_label: data.role_label };
+                    }
+                    updateUserRows(userId, action, extra);
                     if (action === 'delete') {
                         updateCount(-1);
                     }

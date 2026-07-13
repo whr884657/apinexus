@@ -13,11 +13,12 @@ if (!defined('VS_THEME_RENDER') && !function_exists('vs_theme_user_layout_start'
  */
 function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
 {
-    global $vsBase, $vsUser, $vsSiteName;
+    global $vsBase, $vsUser, $vsUserProfile, $vsSiteName;
 
     $base = $vsBase;
     $siteName = $vsSiteName;
     $user = $vsUser;
+    $userProfile = is_array($vsUserProfile) ? $vsUserProfile : FrontendUser::current();
     $favicon = SiteContext::siteFavicon();
     $menuGroups = ThemeManager::userMenuGroups();
     $logoutUrl = $base . '/user/login?action=logout';
@@ -53,8 +54,8 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
     echo '<span class="st-uc-topbar__title">用户中心</span>' . "\n";
     echo '</div>' . "\n";
     echo '<div class="st-uc-topbar__right">' . "\n";
-    if ($user) {
-        $avatarUrl = UserAvatar::resolve($user);
+    if ($userProfile) {
+        $avatarUrl = $userProfile['avatar'];
         echo '<a href="' . vs_e($base) . '/user/account" class="st-uc-topbar__avatar" title="账号设置">';
         echo '<img src="' . vs_e($avatarUrl) . '" alt="" width="32" height="32"></a>' . "\n";
     }

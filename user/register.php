@@ -106,6 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $code = trim(isset($_POST['code']) ? $_POST['code'] : '');
         $password = isset($_POST['password']) ? $_POST['password'] : '';
         $confirm = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
+        $role = isset($_POST['role']) ? (string) $_POST['role'] : UserRole::ROLE_USER;
+        $role = UserRole::normalize($role);
 
         if ($username === '' || $email === '' || $code === '') {
             vs_auth_json(array('code' => 0, 'msg' => '请完整填写注册信息'));
@@ -134,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vs_auth_json(array('code' => 0, 'msg' => '用户名、邮箱或验证码错误'));
         }
 
-        $result = UserAuth::register($username, $email, $password);
+        $result = UserAuth::register($username, $email, $password, $role);
         if ($result !== true) {
             vs_auth_json(array('code' => 0, 'msg' => $result));
         }

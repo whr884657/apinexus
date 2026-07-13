@@ -1465,6 +1465,48 @@ select.vs-input {
     border-color: var(--vs-border);
 }
 
+.vs-role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.5;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.vs-role-badge--user {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.vs-role-badge--developer {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.vs-users-role-cell {
+    white-space: nowrap;
+}
+
+.vs-user-card__role {
+    margin-top: 6px;
+}
+
+.vs-btn--pill-secondary {
+    background: #fff;
+    color: var(--vs-text-secondary);
+    border: 1px solid var(--vs-border);
+}
+
+.vs-btn--pill-secondary:hover {
+    background: var(--vs-content-bg);
+    color: var(--vs-text);
+}
+
 .vs-users-mobile {
     display: none;
     flex-direction: column;

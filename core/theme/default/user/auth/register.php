@@ -35,6 +35,26 @@ ThemeManager::renderThemeAuthHead('用户注册');
                 </div>
 
                 <div class="field">
+                    <span class="field-label">注册身份</span>
+                    <div class="vs-reg-role" role="radiogroup" aria-label="注册身份">
+                        <label class="vs-reg-role__option">
+                            <input type="radio" name="role" value="user" checked <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                            <span class="vs-reg-role__card">
+                                <strong>普通用户</strong>
+                                <span class="vs-reg-role__desc">可在用户中心生成密钥，调用平台全部公开接口（含站长与其他用户发布的接口）。</span>
+                            </span>
+                        </label>
+                        <label class="vs-reg-role__option">
+                            <input type="radio" name="role" value="developer" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                            <span class="vs-reg-role__card">
+                                <strong>开发者</strong>
+                                <span class="vs-reg-role__desc">拥有普通用户全部能力，并可在「API 管理」中发布自己的接口，为平台提供技能与支持。</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="field">
                     <label for="code">验证码</label>
                     <div class="input-group">
                         <input id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
