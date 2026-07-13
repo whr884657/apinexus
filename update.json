@@ -1,12 +1,12 @@
 {
     "version": "2.17.1",
-    "title": "misc-api 2.17.1 主题分类数据独立与展示修复",
+    "title": "misc-api 2.17.1 前台分类与接口统一调度",
     "release_date": "2026-07-13",
     "db_changes": false,
     "changes": [
-        "移除两主题共用 payload，各主题独立 includes/api-payload.php",
-        "ApiCategoryManager 提供前台分类名列表，无接口的分类仍显示",
-        "分类标签键改为数据库 id，不再从接口行动态补充分类"
+        "新增 core/FrontendCategory.php 统一前台分类调度",
+        "新增 core/FrontendApi.php 统一公开接口列表",
+        "两主题统一分类键 all + 数据库 id，移除主题 includes/api-payload.php"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

@@ -255,10 +255,10 @@ location / {
 
 ### v2.17.1（2026-07-13）
 
-- **主题独立**：删除 `core/includes/theme-api-payload.php`；默认主题与主题二各自维护 `includes/api-payload.php`
-- **分类展示**：`ApiCategoryManager::frontendCategoryNames()` 输出全部已启用分类，**与下属接口数量无关**
-- **分类键**：前台标签使用数据库分类 **id**；不再从接口行动态追加「未分类」等额外标签
-- **接口列表**：仅在有已通过审核的公开接口时填充 `apiData`；分类筛选与接口模块解耦
+- **core 统一调度**：新增 `FrontendCategory.php`（分类）、`FrontendApi.php`（公开接口）；主题只调用 core 类，不直接访问数据库表/字段
+- **自定义主题**：主题三及后续主题可直接 `FrontendCategory::listTags()` / `FrontendApi::listForTheme()` 读取数据
+- **分类展示**：全部已启用分类始终显示（与下属接口数量无关）；分类键统一为 `all` + 数据库 **id**
+- **移除**：各主题 `includes/api-payload.php`；前台分类逻辑从 `ApiCategoryManager` 迁至 `FrontendCategory`
 
 ### v2.17.0（2026-07-13）
 

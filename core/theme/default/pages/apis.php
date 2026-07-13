@@ -1,10 +1,9 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-require_once __DIR__ . '/../includes/api-payload.php';
-$payload = default_theme_page_payload();
-$apiCount = count($payload['apiData']);
-$categories = $payload['categoryNames'];
-$visibleLimit = default_theme_category_visible_limit();
+$categoryNames = FrontendCategory::nameMap();
+$apiData = FrontendApi::listForTheme();
+$apiCount = count($apiData);
+$visibleLimit = FrontendCategory::tagVisibleLimit();
 $catIndex = 0;
 ?>
 <main class="main-wrapper container mx-auto px-4" style="padding-top:70px;">
@@ -21,16 +20,15 @@ $catIndex = 0;
             </div>
         </div>
         <div class="category-tags" id="apiCategoryTags">
-            <a href="javascript:void(0)" class="category-tag active" data-category="" onclick="selectCategory(this, '')">全部</a>
-            <?php foreach ($categories as $catId => $catName): ?>
-                <?php if ($catId === 'all') { continue; } ?>
+            <a href="javascript:void(0)" class="category-tag active" data-category="<?php echo vs_e(FrontendCategory::ALL_ID); ?>" onclick="selectCategory(this, '<?php echo vs_e(FrontendCategory::ALL_ID); ?>')"><?php echo vs_e(FrontendCategory::ALL_NAME); ?></a>
+            <?php foreach (FrontendCategory::listTags() as $tag): ?>
                 <?php
                 $hidden = $catIndex >= $visibleLimit ? ' category-hidden' : '';
                 $catIndex++;
                 ?>
-                <a href="javascript:void(0)" class="category-tag<?php echo $hidden; ?>" data-category="<?php echo vs_e($catId); ?>" onclick="selectCategory(this, '<?php echo vs_e($catId); ?>')"><?php echo vs_e($catName); ?></a>
+                <a href="javascript:void(0)" class="category-tag<?php echo $hidden; ?>" data-category="<?php echo vs_e($tag['id']); ?>" onclick="selectCategory(this, '<?php echo vs_e($tag['id']); ?>')"><?php echo vs_e($tag['name']); ?></a>
             <?php endforeach; ?>
-            <?php if (count($categories) - 1 > $visibleLimit): ?>
+            <?php if ($catIndex > $visibleLimit): ?>
             <button type="button" class="category-more" id="catMoreBtn" onclick="toggleMoreCategories()">
                 <span>更多</span>
                 <svg class="expand-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"></path></svg>

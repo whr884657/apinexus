@@ -3,11 +3,15 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 
-require_once __DIR__ . '/../includes/api-payload.php';
-$payload = slate_theme_page_payload();
-$apiCount = count($payload['apiData']);
+$categoryNames = FrontendCategory::nameMap();
+$apiData = FrontendApi::listForTheme();
+$payload = array(
+    'categoryNames' => $categoryNames,
+    'apiData'       => $apiData,
+);
+$apiCount = count($apiData);
 $totalCalls = ApiManager::totalCallCount();
-$catVisibleLimit = slate_theme_category_visible_limit();
+$catVisibleLimit = FrontendCategory::tagVisibleLimit();
 $catBtnIndex = 0;
 
 $heroTitleRaw = trim((string) ThemeManager::themeSetting('hero_title', ''));
@@ -26,7 +30,7 @@ $showStats = $showStats === true || $showStats === 1 || $showStats === '1' || $s
     <div class="st-stat-pill" role="group" aria-label="接口统计">
         <span class="st-stat-pill__item">收录 <strong class="st-stat-num" id="stStatTotal" data-target="<?php echo (int) $apiCount; ?>">0</strong> 个接口</span>
         <span class="st-stat-pill__sep" aria-hidden="true"></span>
-        <span class="st-stat-pill__item">分类 <strong class="st-stat-num" id="stStatCats" data-target="<?php echo (int) max(0, count($payload['categoryNames']) - 1); ?>">0</strong> 个</span>
+        <span class="st-stat-pill__item">分类 <strong class="st-stat-num" id="stStatCats" data-target="<?php echo (int) FrontendCategory::countEnabled(); ?>">0</strong> 个</span>
         <span class="st-stat-pill__sep" aria-hidden="true"></span>
         <span class="st-stat-pill__item">累计调用 <strong class="st-stat-num" id="stStatAll" data-target="<?php echo (int) $totalCalls; ?>">0</strong> 次</span>
     </div>
@@ -40,14 +44,13 @@ $showStats = $showStats === true || $showStats === 1 || $showStats === '1' || $s
         <button type="button" class="st-search__clear" id="stSearchClear" aria-label="清空搜索" hidden>×</button>
     </div>
     <div class="st-cats" id="stCatBar">
-        <button type="button" class="st-cat-tag is-on" data-cat="all">全部</button>
-        <?php foreach ($payload['categoryNames'] as $catId => $catName): ?>
-            <?php if ($catId === 'all') { continue; } ?>
+        <button type="button" class="st-cat-tag is-on" data-cat="<?php echo vs_e(FrontendCategory::ALL_ID); ?>"><?php echo vs_e(FrontendCategory::ALL_NAME); ?></button>
+        <?php foreach (FrontendCategory::listTags() as $tag): ?>
             <?php
             $hiddenClass = $catBtnIndex >= $catVisibleLimit ? ' st-cat-tag-hidden' : '';
             $catBtnIndex++;
             ?>
-            <button type="button" class="st-cat-tag<?php echo $hiddenClass; ?>" data-cat="<?php echo vs_e($catId); ?>"><?php echo vs_e($catName); ?></button>
+            <button type="button" class="st-cat-tag<?php echo $hiddenClass; ?>" data-cat="<?php echo vs_e($tag['id']); ?>"><?php echo vs_e($tag['name']); ?></button>
         <?php endforeach; ?>
         <?php if ($catBtnIndex > $catVisibleLimit): ?>
         <button type="button" class="st-cat-tag st-cat-tag-more" id="stCatMoreBtn" data-expanded="0">

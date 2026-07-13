@@ -8,7 +8,7 @@
     if (!container) return;
 
     var allCards = Array.from(container.querySelectorAll('.api-card'));
-    var currentCategory = '';
+    var currentCategory = 'all';
     var currentPage = 1;
     var pageSize = 20;
 
@@ -31,10 +31,10 @@
     // 重置
     window.resetApis = function() {
         searchInput.value = '';
-        currentCategory = '';
+        currentCategory = 'all';
         currentPage = 1;
         document.querySelectorAll('.category-tag').forEach(function(t) { t.classList.remove('active'); });
-        var allTag = document.querySelector('.category-tag[data-category=""]');
+        var allTag = document.querySelector('.category-tag[data-category="all"]');
         if (allTag) allTag.classList.add('active');
         applyFilter();
     };
@@ -45,7 +45,7 @@
         // 筛选
         var filtered = allCards.filter(function(card) {
             // 分类
-            if (currentCategory && card.getAttribute('data-category') !== currentCategory) return false;
+            if (currentCategory !== 'all' && card.getAttribute('data-category') !== currentCategory) return false;
             // 搜索
             if (keyword) {
                 var name = card.getAttribute('data-name') || '';
@@ -59,7 +59,7 @@
         if (totalCountEl) totalCountEl.textContent = filtered.length;
 
         // 显示/隐藏重置按钮
-        if (resetBtn) resetBtn.style.display = (keyword || currentCategory) ? '' : 'none';
+        if (resetBtn) resetBtn.style.display = (keyword || currentCategory !== 'all') ? '' : 'none';
 
         // 分页
         var totalPages = Math.ceil(filtered.length / pageSize);
