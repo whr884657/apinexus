@@ -10,11 +10,9 @@
         return;
     }
 
+    var tableEl = document.getElementById('apiCategoryTable');
     var listEl = document.getElementById('apiCategoryList');
     var emptyEl = document.getElementById('apiCategoryEmpty');
-    var emptySearch = document.getElementById('apiCategoryEmptySearch');
-    var searchInput = document.getElementById('apiCatSearchInput');
-    var searchBtn = document.getElementById('apiCatSearchBtn');
     var openAddBtn = document.getElementById('apiCatOpenAddBtn');
     var formOverlay = document.getElementById('apiCategoryFormOverlay');
     var formEl = document.getElementById('apiCategoryForm');
@@ -69,60 +67,19 @@
 
     function buildActionButtons(catId, enabled, apiCount) {
         var html = '';
-        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary vs-api-cat-action" data-cat-action="edit" data-category-id="' + catId + '">编辑</button>';
+        html += '<button type="button" class="vs-api-cat-link vs-api-cat-action" data-cat-action="edit" data-category-id="' + catId + '">编辑</button>';
         if (enabled) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-api-cat-action" data-cat-action="disable" data-category-id="' + catId + '">禁用</button>';
+            html += '<button type="button" class="vs-api-cat-link vs-api-cat-action" data-cat-action="disable" data-category-id="' + catId + '">禁用</button>';
         } else {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary vs-api-cat-action" data-cat-action="enable" data-category-id="' + catId + '">启用</button>';
+            html += '<button type="button" class="vs-api-cat-link vs-api-cat-link--primary vs-api-cat-action" data-cat-action="enable" data-category-id="' + catId + '">启用</button>';
         }
-        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-api-cat-action" data-cat-action="delete" data-category-id="' + catId + '" data-api-count="' + apiCount + '">删除</button>';
+        html += '<button type="button" class="vs-api-cat-link vs-api-cat-link--danger vs-api-cat-action" data-cat-action="delete" data-category-id="' + catId + '" data-api-count="' + apiCount + '">删除</button>';
         return html;
     }
 
-    function getFilterText() {
-        return searchInput ? searchInput.value.trim().toLowerCase() : '';
-    }
-
-    function updateSearchBtnVisibility() {
-        if (!searchBtn || !searchInput) {
-            return;
-        }
-        var hasText = searchInput.value.trim() !== '';
-        searchBtn.hidden = !hasText;
-    }
-
-    function categoryMatches(rowEl, query) {
-        if (!query) {
-            return true;
-        }
-        var name = (rowEl.getAttribute('data-cat-name') || '').toLowerCase();
-        var desc = (rowEl.getAttribute('data-cat-desc') || '').toLowerCase();
-        return name.indexOf(query) !== -1 || desc.indexOf(query) !== -1;
-    }
-
-    function applySearchFilter() {
-        var q = getFilterText();
-        var items = listEl ? listEl.querySelectorAll('.vs-api-cat-item') : [];
-        var visible = 0;
-        items.forEach(function (el) {
-            var show = categoryMatches(el, q);
-            el.hidden = !show;
-            if (show) {
-                visible++;
-            }
-        });
-        if (emptySearch) {
-            emptySearch.hidden = !(listEl && listEl.children.length > 0 && q && visible === 0);
-        }
-        if (emptyEl && listEl) {
-            emptyEl.hidden = listEl.children.length > 0 || q !== '';
-        }
-        updateSearchBtnVisibility();
-    }
-
     function ensureListVisible() {
-        if (listEl && listEl.hidden) {
-            listEl.hidden = false;
+        if (tableEl && tableEl.hidden) {
+            tableEl.hidden = false;
         }
         if (emptyEl) {
             emptyEl.hidden = true;
@@ -137,21 +94,17 @@
         var desc = row.description || '';
         var name = row.name || '';
 
-        var html = '<article class="vs-api-cat-item" data-category-row="' + catId + '"'
-            + ' data-category-status="' + (enabled ? '1' : '0') + '"'
-            + ' data-cat-name="' + escapeHtml(name) + '"'
-            + ' data-cat-desc="' + escapeHtml(desc) + '">';
-        html += '<div class="vs-api-cat-item__icon"><img src="' + escapeHtml(icon) + '" alt="" width="48" height="48" loading="lazy"></div>';
-        html += '<div class="vs-api-cat-item__main">';
-        html += '<div class="vs-api-cat-item__name" data-field="name">' + escapeHtml(name) + '</div>';
-        html += '<div class="vs-api-cat-item__desc" data-field="description">';
-        html += desc ? escapeHtml(desc) : '<span class="vs-api-cat-item__desc-empty">暂无描述</span>';
+        var html = '<div class="vs-api-cat-row" data-category-row="' + catId + '"'
+            + ' data-category-status="' + (enabled ? '1' : '0') + '">';
+        html += '<div class="vs-api-cat-row__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy"></div>';
+        html += '<div class="vs-api-cat-row__name" data-field="name">' + escapeHtml(name) + '</div>';
+        html += '<div class="vs-api-cat-row__desc" data-field="description">';
+        html += desc ? escapeHtml(desc) : '<span class="vs-api-cat-row__desc-empty">—</span>';
         html += '</div>';
-        html += '<div class="vs-api-cat-item__meta"><span>关联接口 ' + apiCount + '</span>';
-        html += '<span class="vs-api-cat-status' + (enabled ? ' is-on' : ' is-off') + '" data-field="status_label">' + (enabled ? '启用' : '禁用') + '</span></div>';
+        html += '<div class="vs-api-cat-row__count" data-field="api_count">' + apiCount + '</div>';
+        html += '<div class="vs-api-cat-row__status"><span class="vs-api-cat-status' + (enabled ? ' is-on' : ' is-off') + '" data-field="status_label">' + (enabled ? '启用' : '禁用') + '</span></div>';
+        html += '<div class="vs-api-cat-row__actions">' + buildActionButtons(catId, enabled, apiCount) + '</div>';
         html += '</div>';
-        html += '<div class="vs-api-cat-item__actions">' + buildActionButtons(catId, enabled, apiCount) + '</div>';
-        html += '</article>';
         return html;
     }
 
@@ -162,28 +115,24 @@
             return;
         }
         listEl.insertAdjacentHTML('afterbegin', buildItemHtml(Object.assign({ api_count: row.api_count || 0 }, row)));
-        applySearchFilter();
     }
 
     function updateItem(rowEl, row, apiCount) {
-        rowEl.setAttribute('data-cat-name', row.name || '');
-        rowEl.setAttribute('data-cat-desc', row.description || '');
         rowEl.querySelector('[data-field="name"]').textContent = row.name || '';
         var descEl = rowEl.querySelector('[data-field="description"]');
         var desc = row.description || '';
-        descEl.innerHTML = desc ? escapeHtml(desc) : '<span class="vs-api-cat-item__desc-empty">暂无描述</span>';
-        var iconImg = rowEl.querySelector('.vs-api-cat-item__icon img');
+        descEl.innerHTML = desc ? escapeHtml(desc) : '<span class="vs-api-cat-row__desc-empty">—</span>';
+        var iconImg = rowEl.querySelector('.vs-api-cat-row__icon img');
         if (iconImg && row.icon) {
             iconImg.src = safeIconUrl(row.icon);
         }
         if (typeof apiCount === 'number') {
-            rowEl.querySelector('.vs-api-cat-item__meta span').textContent = '关联接口 ' + apiCount;
+            rowEl.querySelector('[data-field="api_count"]').textContent = String(apiCount);
             var delBtn = rowEl.querySelector('[data-cat-action="delete"]');
             if (delBtn) {
                 delBtn.setAttribute('data-api-count', String(apiCount));
             }
         }
-        applySearchFilter();
     }
 
     function setItemStatus(rowEl, enabled, label) {
@@ -195,7 +144,7 @@
         var catId = rowEl.getAttribute('data-category-row');
         var delBtn = rowEl.querySelector('[data-cat-action="delete"]');
         var apiCount = parseInt(delBtn ? delBtn.getAttribute('data-api-count') || '0' : '0', 10);
-        rowEl.querySelector('.vs-api-cat-item__actions').innerHTML = buildActionButtons(catId, enabled, apiCount);
+        rowEl.querySelector('.vs-api-cat-row__actions').innerHTML = buildActionButtons(catId, enabled, apiCount);
     }
 
     function getSelectedIconUrl() {
@@ -236,11 +185,11 @@
         formName.value = (rowEl.querySelector('[data-field="name"]') || {}).textContent || '';
         var descEl = rowEl.querySelector('[data-field="description"]');
         var descText = descEl ? descEl.textContent : '';
-        if (descText === '暂无描述') {
+        if (descText === '—') {
             descText = '';
         }
         formDesc.value = descText.trim();
-        var img = rowEl.querySelector('.vs-api-cat-item__icon img');
+        var img = rowEl.querySelector('.vs-api-cat-row__icon img');
         setIconPickerSelection(img ? img.getAttribute('src') : '');
     }
 
@@ -399,25 +348,6 @@
         });
     }
 
-    if (searchInput) {
-        searchInput.addEventListener('input', applySearchFilter);
-        searchInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                applySearchFilter();
-            }
-        });
-    }
-
-    if (searchBtn) {
-        searchBtn.addEventListener('click', function () {
-            applySearchFilter();
-            if (searchInput) {
-                searchInput.blur();
-            }
-        });
-    }
-
     page.addEventListener('click', function (e) {
         var btn = e.target.closest('.vs-api-cat-action');
         if (!btn) {
@@ -468,18 +398,17 @@
                 if (row) {
                     row.remove();
                 }
-                if (listEl && !listEl.querySelector('.vs-api-cat-item')) {
-                    listEl.hidden = true;
+                if (listEl && !listEl.querySelector('.vs-api-cat-row')) {
+                    if (tableEl) {
+                        tableEl.hidden = true;
+                    }
                     if (emptyEl) {
                         emptyEl.hidden = false;
                     }
                 }
-                applySearchFilter();
             }).catch(function () {
                 window.VS.showMessage('网络异常，请稍后重试', 'error');
             });
         }
     });
-
-    applySearchFilter();
 })();
