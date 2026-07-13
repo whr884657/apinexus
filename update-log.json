@@ -6,8 +6,7 @@
             "db_changes": false,
             "changes": [
                 "弹窗标题/按钮 UI",
-                "+12 分类 SVG",
-                "CategoryIconImporter"
+                "+12 分类 SVG"
             ]
         },
         "2.16.3": {

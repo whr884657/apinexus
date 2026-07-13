@@ -17,39 +17,13 @@
 
 ### 分类图标（+12）
 
-从 `svg图标.txt` 解析并写入 `assets/img/category-icons/`：
-
-| 文件 | 说明 |
-|------|------|
-| `netease.svg` | 网易云 |
-| `qq-music.svg` | QQ音乐 |
-| `honor-of-kings.svg` / `honor-of-kings-alt.svg` | 王者荣耀 |
-| `business-license.svg` / `business-license-alt.svg` | 营业执照 |
-| `id-card.svg` | 身份证 |
-| `icp.svg` | 备案 |
-| `car-dealer.svg` | 车商备案 |
-| `map.svg` | 地图 |
-| `weibo.svg` | 微博 |
-| `express.svg` | 快递 |
-
-内置图标由 23 款增至 **35 款**，已注册至 `ApiCategoryManager::defaultIconPaths()`。
-
-### 维护工具
-
-- `core/CategoryIconImporter.php`：PHP 解析 `名称:<svg>` 格式 txt
-- `install/sync-category-icons.php`：执行 `php install/sync-category-icons.php` 同步图标
+内置分类 SVG 新增 12 款，合计 **35 款**（网易云、QQ音乐、王者荣耀、营业执照、身份证、备案、车商备案、地图、微博、快递等），位于 `assets/img/category-icons/`，已在 `ApiCategoryManager::defaultIconPaths()` 注册。
 
 ---
 
 ## 升级说明
 
 无需数据库迁移。更新后后台「添加分类」弹窗图标选择器可见新图标。
-
-若本地有新版 `svg图标.txt`，可运行：
-
-```bash
-php install/sync-category-icons.php
-```
 
 ---
 
@@ -59,6 +33,4 @@ php install/sync-category-icons.php
 |------|------|
 | `assets/css/modal.css` | 弹窗标题/底部样式 |
 | `core/ApiCategoryManager.php` | +12 图标路径 |
-| `core/CategoryIconImporter.php` | 新增 |
-| `install/sync-category-icons.php` | 新增 |
 | `assets/img/category-icons/*.svg` | +12 文件 |

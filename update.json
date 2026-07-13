@@ -5,8 +5,7 @@
     "db_changes": false,
     "changes": [
         "弹窗标题区与正文区分隔线，底部按钮尺寸加大",
-        "新增 12 款分类 SVG 图标（共 35 款）",
-        "CategoryIconImporter 从 svg图标.txt 导入图标"
+        "新增 12 款分类 SVG 图标（共 35 款）"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
