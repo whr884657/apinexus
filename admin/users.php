@@ -40,6 +40,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('用户已删除', array('action' => 'delete', 'user_id' => $userId));
     }
 
+    if ($action === 'set_role') {
+        $role = isset($_POST['role']) ? (string) $_POST['role'] : '';
+        $role = UserRole::normalize($role);
+        $result = UserManager::setRole($userId, $role);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        AjaxResponse::success(
+            '已设为' . UserRole::label($role),
+            array('action' => 'set_role', 'user_id' => $userId, 'role' => $role, 'role_label' => UserRole::label($role))
+        );
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
@@ -114,17 +127,48 @@ function vs_users_action_button($userId, $action, $label, $class, $confirmDelete
 }
 
 /**
- * @param int  $userId
- * @param bool $active
+ * @param array $row
  * @return string
  */
-function vs_users_action_group($userId, $active)
+function vs_users_role_badge(array $row)
 {
+    $role = UserRole::normalize(isset($row['role']) ? $row['role'] : UserRole::ROLE_USER);
+    if ($role === UserRole::ROLE_DEVELOPER) {
+        return '<span class="vs-role-badge vs-role-badge--developer">' . vs_e(UserRole::label($role)) . '</span>';
+    }
+    return '<span class="vs-role-badge vs-role-badge--user">' . vs_e(UserRole::label($role)) . '</span>';
+}
+
+/**
+ * @param int    $userId
+ * @param string $role
+ * @return string
+ */
+function vs_users_role_button($userId, $role, $label, $class)
+{
+    return '<button type="button" class="vs-btn vs-btn--pill ' . vs_e($class) . ' vs-user-action-btn"'
+        . ' data-user-action="set_role" data-user-id="' . (int) $userId . '" data-user-role="' . vs_e($role) . '">'
+        . vs_e($label) . '</button>';
+}
+
+/**
+ * @param int   $userId
+ * @param array $row
+ * @return string
+ */
+function vs_users_action_group($userId, $active, array $row)
+{
+    $role = UserRole::normalize(isset($row['role']) ? $row['role'] : UserRole::ROLE_USER);
     $html = '<div class="vs-users-actions">';
     if ($active) {
         $html .= vs_users_action_button($userId, 'ban', '封禁', 'vs-btn--pill-danger');
     } else {
         $html .= vs_users_action_button($userId, 'unban', '解封', 'vs-btn--pill-primary');
+    }
+    if ($role === UserRole::ROLE_DEVELOPER) {
+        $html .= vs_users_role_button($userId, UserRole::ROLE_USER, '设为普通', 'vs-btn--pill-secondary');
+    } else {
+        $html .= vs_users_role_button($userId, UserRole::ROLE_DEVELOPER, '设为开发者', 'vs-btn--pill-primary');
     }
     $html .= vs_users_action_button($userId, 'delete', '删除', 'vs-btn--pill-danger', true);
     $html .= '</div>';
@@ -176,6 +220,7 @@ vs_admin_layout_start('用户管理', 'users');
                     <tr>
                         <th>用户</th>
                         <th>邮箱</th>
+                        <th>身份</th>
                         <th>第三方绑定</th>
                         <th>注册时间</th>
                         <th>最后登录</th>
@@ -188,9 +233,11 @@ vs_admin_layout_start('用户管理', 'users');
                         $avatar = UserAvatar::resolve($row);
                         $active = (int) $row['status'] === 1;
                         $uid = (int) $row['id'];
+                        $userRole = UserRole::normalize(isset($row['role']) ? $row['role'] : UserRole::ROLE_USER);
                         ?>
                         <tr class="<?php echo $active ? '' : 'vs-users-row--banned'; ?>" data-user-row="<?php echo $uid; ?>"
-                            data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>">
+                            data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>"
+                            data-user-role="<?php echo vs_e($userRole); ?>">
                             <td>
                                 <div class="vs-users-cell-user">
                                     <img src="<?php echo vs_e($avatar); ?>" alt="" class="vs-users-avatar">
@@ -206,11 +253,12 @@ vs_admin_layout_start('用户管理', 'users');
                                 </div>
                             </td>
                             <td><?php echo vs_e($row['email']); ?></td>
+                            <td class="vs-users-role-cell"><?php echo vs_users_role_badge($row); ?></td>
                             <td><?php echo vs_users_oauth_badges($row); ?></td>
                             <td><?php echo vs_e($row['created_at']); ?></td>
                             <td><?php echo vs_e(vs_users_format_time(isset($row['last_login_at']) ? $row['last_login_at'] : null)); ?></td>
                             <td>
-                                <?php echo vs_users_action_group($uid, $active); ?>
+                                <?php echo vs_users_action_group($uid, $active, $row); ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -224,9 +272,11 @@ vs_admin_layout_start('用户管理', 'users');
                 $avatar = UserAvatar::resolve($row);
                 $active = (int) $row['status'] === 1;
                 $uid = (int) $row['id'];
+                $userRole = UserRole::normalize(isset($row['role']) ? $row['role'] : UserRole::ROLE_USER);
                 ?>
                 <article class="vs-user-card<?php echo $active ? '' : ' vs-user-card--banned'; ?>" data-user-row="<?php echo $uid; ?>"
-                         data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>">
+                         data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>"
+                         data-user-role="<?php echo vs_e($userRole); ?>">
                     <div class="vs-user-card__head">
                         <img src="<?php echo vs_e($avatar); ?>" alt="" class="vs-users-avatar">
                         <div class="vs-user-card__main">
@@ -243,6 +293,7 @@ vs_admin_layout_start('用户管理', 'users');
                                 </div>
                             </div>
                             <div class="vs-users-meta vs-user-card__email"><?php echo vs_e($row['email']); ?></div>
+                            <div class="vs-user-card__role"><?php echo vs_users_role_badge($row); ?></div>
                         </div>
                     </div>
                     <div class="vs-user-card__actions">
@@ -250,6 +301,11 @@ vs_admin_layout_start('用户管理', 'users');
                             <?php echo vs_users_action_button($uid, 'ban', '封禁', 'vs-btn--pill-danger'); ?>
                         <?php else: ?>
                             <?php echo vs_users_action_button($uid, 'unban', '解封', 'vs-btn--pill-primary'); ?>
+                        <?php endif; ?>
+                        <?php if ($userRole === UserRole::ROLE_DEVELOPER): ?>
+                            <?php echo vs_users_role_button($uid, UserRole::ROLE_USER, '设为普通', 'vs-btn--pill-secondary'); ?>
+                        <?php else: ?>
+                            <?php echo vs_users_role_button($uid, UserRole::ROLE_DEVELOPER, '设为开发者', 'vs-btn--pill-primary'); ?>
                         <?php endif; ?>
                         <?php echo vs_users_action_button($uid, 'delete', '删除', 'vs-btn--pill-danger', true); ?>
                     </div>

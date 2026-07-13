@@ -392,3 +392,57 @@
         font-size: 11px;
     }
 }
+
+.st-auth__label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--st-auth-fg2);
+    margin-bottom: 8px;
+}
+
+.st-reg-role {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.st-reg-role__option {
+    display: block;
+    cursor: pointer;
+}
+
+.st-reg-role__option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.st-reg-role__card {
+    display: block;
+    padding: 12px 14px;
+    border: 1px solid var(--st-auth-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.72);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.st-reg-role__card strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--st-auth-fg);
+}
+
+.st-reg-role__desc {
+    display: block;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--st-auth-fg3);
+}
+
+.st-reg-role__option input:checked + .st-reg-role__card {
+    border-color: var(--st-auth-accent);
+    box-shadow: 0 0 0 1px var(--st-auth-accent);
+    background: rgba(236, 253, 245, 0.85);
+}

@@ -13,11 +13,12 @@ if (!defined('VS_THEME_RENDER') && !function_exists('vs_theme_user_layout_start'
  */
 function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
 {
-    global $vsBase, $vsUser, $vsSiteName;
+    global $vsBase, $vsUser, $vsUserProfile, $vsSiteName;
 
     $base = $vsBase;
     $siteName = $vsSiteName;
     $user = $vsUser;
+    $userProfile = is_array($vsUserProfile) ? $vsUserProfile : FrontendUser::current();
     $favicon = SiteContext::siteFavicon();
     $menuGroups = ThemeManager::userMenuGroups();
 
@@ -80,8 +81,8 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
     echo '</div>' . "\n";
     echo '<div class="vs-topbar__right">' . "\n";
     echo '<div class="vs-topbar__theme" id="vsThemePickerMount"></div>' . "\n";
-    if ($user) {
-        $avatarUrl = UserAvatar::resolve($user);
+    if ($userProfile) {
+        $avatarUrl = $userProfile['avatar'];
         echo '<a href="' . vs_e($base) . '/user/account" class="vs-topbar__avatar-link" title="账号设置">' . "\n";
         echo '<img src="' . vs_e($avatarUrl) . '" alt="" class="vs-topbar__avatar" width="32" height="32">' . "\n";
         echo '</a>' . "\n";

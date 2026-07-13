@@ -528,3 +528,63 @@ body {
 .padding-5 {
     padding: 5px !important;
 }
+
+.field-label,
+.form-box .field > .field-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.vs-reg-role {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vs-reg-role__option {
+    display: block;
+    cursor: pointer;
+}
+
+.vs-reg-role__option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.vs-reg-role__card {
+    display: block;
+    padding: 12px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.vs-reg-role__card strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: #111827;
+}
+
+.vs-reg-role__desc {
+    display: block;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #6b7280;
+}
+
+.vs-reg-role__option input:checked + .vs-reg-role__card {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px #2563eb;
+    background: #f8fbff;
+}
+
+.vs-reg-role__option input:focus-visible + .vs-reg-role__card {
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
+}

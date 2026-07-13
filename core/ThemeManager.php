@@ -369,14 +369,27 @@ class ThemeManager
     public static function userMenuGroups()
     {
         $base = vs_base_url();
-        return array(
+        $groups = array(
             array('id' => 'dashboard', 'title' => '控制台', 'icon' => 'dashboard', 'url' => $base . '/user/index'),
-            array('id' => 'api-manage', 'title' => 'API 管理', 'icon' => 'cloud', 'url' => $base . '/user/api-manage'),
+            array('id' => 'api-manage', 'title' => 'API 管理', 'icon' => 'cloud', 'url' => $base . '/user/api-manage', 'require_developer' => true),
             array('id' => 'tokens', 'title' => '令牌管理', 'icon' => 'share', 'url' => $base . '/user/tokens'),
             array('id' => 'points', 'title' => '积分变动', 'icon' => 'archive', 'url' => $base . '/user/points'),
             array('id' => 'api-list', 'title' => '接口列表', 'icon' => 'folder', 'url' => $base . '/user/apis'),
             array('id' => 'account', 'title' => '账号设置', 'icon' => 'user', 'url' => $base . '/user/account'),
         );
+
+        if (!UserRole::currentCanPublishApi()) {
+            $filtered = array();
+            foreach ($groups as $group) {
+                if (!empty($group['require_developer'])) {
+                    continue;
+                }
+                $filtered[] = $group;
+            }
+            return $filtered;
+        }
+
+        return $groups;
     }
 
     /**

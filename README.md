@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.17.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.0.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -28,8 +28,9 @@
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
-- 用户中心侧边栏：控制台、API 管理、令牌管理、积分变动、接口列表、账号设置（部分为占位页）
-- 用户管理：列表查看、搜索、封禁/解封/删除（AJAX 无整页刷新）
+- 用户中心侧边栏：控制台、API 管理（仅开发者）、令牌管理、积分变动、接口列表、账号设置（部分为占位页）
+- **用户角色**：普通用户（调用全站接口、管理令牌）/ 开发者（可进入 API 管理发布接口）；注册时可选，管理员可转换身份
+- 用户管理：列表查看、搜索、封禁/解封/删除、身份转换（AJAX 无整页刷新）
 - 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
 - 用户登录支持 QQ / Gitee 第三方登录（须先注册并绑定）
 - 管理员认证：登录、忘记密码（邮箱验证码）、CSRF 与登录频率限制
@@ -74,10 +75,10 @@
 | 用户登录 | `/user/login.php` | 账号密码登录 + QQ/Gitee 第三方登录 |
 | OAuth 回调 | `/user/oauth/callback.php` | 第三方授权回调（由平台配置） |
 | OAuth 绑定 | `/user/oauth/bind.php` | 首次第三方登录绑定已有账号 |
-| 用户注册 | `/user/register.php` | 邮箱验证码注册（需管理员已配置发信） |
+| 用户注册 | `/user/register.php` | 邮箱验证码注册，可选普通用户或开发者身份 |
 | 用户忘记密码 | `/user/forgot.php` | 邮箱验证码重置密码 |
 | 用户中心 | `/user/index.php` | 登录后控制台首页 |
-| API 管理（占位） | `/user/api-manage.php` | 后续开发 |
+| API 管理（占位） | `/user/api-manage.php` | 仅开发者可访问，发布接口功能后续开发 |
 | 令牌管理（占位） | `/user/tokens.php` | 后续开发 |
 | 积分变动（占位） | `/user/points.php` | 后续开发 |
 | 接口列表（占位） | `/user/apis.php` | 后续开发 |
@@ -133,6 +134,7 @@
 ```
 misc-api/
 ├── README.md
+├── CORE模块说明.md             # core/ 下全部 PHP 类说明与主题对接指南
 ├── LICENSE                     # 开源协议
 ├── update.json                 # 远程版本清单（在线更新检测）
 ├── update-log.json             # 版本更新记录
@@ -187,7 +189,11 @@ misc-api/
 │   ├── version.php             # VS_VERSION 版本常量
 │   ├── ThemeManager.php        # 前台主题加载与切换
 │   ├── ApiManager.php          # 接口审核与状态
-│   ├── ApiCategoryManager.php  # 接口分类（category 表）
+│   ├── ApiCategoryManager.php  # 接口分类（后台 CRUD）
+│   ├── FrontendCategory.php    # 前台分类（主题调用）
+│   ├── FrontendApi.php         # 前台公开接口（主题调用）
+│   ├── FrontendUser.php        # 前台用户资料（主题/用户中心调用）
+│   ├── UserRole.php            # 用户角色与权限判断
 │   ├── theme/default/          # 默认主题（FeerApi 风白色 UI）
 │   ├── theme/slate/            # 主题二（API 平台风）
 │   │   └── preview.png         # 主题预览图
@@ -202,6 +208,8 @@ misc-api/
 │   └── migrations/             # 在线升级增量 SQL
 └── 发行说明/                   # 各版本发行说明 Markdown
 ```
+
+**core 各 PHP 类详细说明、用法与主题对接规范见根目录 [CORE模块说明.md](CORE模块说明.md)。**
 
 ---
 
@@ -252,6 +260,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.0.0（2026-07-13）· 大版本
+
+- **用户角色体系**：`user` 表新增 `role` 字段（`user`=普通用户、`developer`=开发者）
+- **core 调度**：`UserRole.php` 权限判断；`FrontendUser.php` 统一用户名/头像/邮箱/角色（主题与用户中心通过 core 获取，禁止直读库）
+- **注册**：默认普通用户；注册页可选开发者，两主题均有身份说明卡片
+- **用户中心**：普通用户隐藏「API 管理」；直链访问 `/user/api-manage` 服务端拦截并提示身份
+- **后台**：用户管理新增身份列与「设为开发者 / 设为普通」AJAX 操作
+- **数据库迁移**：`install/migrations/3.0.0.sql`
 
 ### v2.17.1（2026-07-13）
 

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `oauth_qq_openid` varchar(64) NOT NULL DEFAULT '' COMMENT 'QQ OpenID',
     `oauth_gitee_id` varchar(64) NOT NULL DEFAULT '' COMMENT 'Gitee 用户 ID',
     `status` tinyint(1) NOT NULL DEFAULT 1,
+    `role` varchar(16) NOT NULL DEFAULT 'user' COMMENT '用户角色：user=普通用户 developer=开发者',
     `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     `last_login_at` datetime DEFAULT NULL COMMENT '最后登录时间',
     PRIMARY KEY (`id`),

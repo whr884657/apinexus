@@ -9,7 +9,8 @@ require_once __DIR__ . '/init.php';
 $error = '';
 $success = '';
 $avatarUrl = $vsUser && isset($vsUser['avatar_url']) ? trim((string) $vsUser['avatar_url']) : '';
-$avatarPreview = UserAvatar::resolve($vsUser);
+$avatarPreview = is_array($vsUserProfile) ? $vsUserProfile['avatar'] : UserAvatar::resolve($vsUser);
+$roleLabel = is_array($vsUserProfile) ? $vsUserProfile['role_label'] : UserRole::label(UserRole::ROLE_USER);
 $oauthProviders = OAuthService::enabledProviders();
 $oauthBindings = OAuthService::bindingsForUser((int) $vsUser['id']);
 
@@ -57,7 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $vsUser = UserAuth::user();
-    $avatarPreview = UserAvatar::resolve($vsUser);
+    $vsUserProfile = FrontendUser::current();
+    $avatarPreview = is_array($vsUserProfile) ? $vsUserProfile['avatar'] : UserAvatar::resolve($vsUser);
     AjaxResponse::success('账号信息已保存', array(
         'avatar_url' => $vsUser && isset($vsUser['avatar_url']) ? trim((string) $vsUser['avatar_url']) : '',
         'avatar_preview' => $avatarPreview,
@@ -92,6 +94,12 @@ vs_user_layout_start('账号设置', 'account');
                 <div class="vs-account-form__main">
                 <div class="vs-form-section">
                     <h3 class="vs-form-section__title">基本信息</h3>
+                    <?php
+                    $roleTip = $roleLabel === '开发者'
+                        ? '您当前为开发者，可在用户中心使用「API 管理」发布接口。'
+                        : '您当前为普通用户，可生成密钥调用平台接口；如需发布接口请联系管理员调整身份。';
+                    vs_render_notice('info', '账号身份：' . $roleLabel, $roleTip, array('compact' => true));
+                    ?>
                     <div class="vs-form-row vs-form-row--account">
                         <label class="vs-label" for="accountUsername">用户名</label>
                         <div class="vs-form-row__field">
