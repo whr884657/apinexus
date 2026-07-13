@@ -22,7 +22,7 @@ class SystemInfo
             self::item('操作系统', PHP_OS),
             self::item('时区', date_default_timezone_get()),
             self::item('服务器时间', date('Y-m-d H:i:s')),
-            self::item('当前域名', SiteContext::currentHost()),
+            self::item('Redis 版本', RedisService::versionLabel()),
             self::item(
                 '服务器软件',
                 isset($_SERVER['SERVER_SOFTWARE']) ? $_SERVER['SERVER_SOFTWARE'] : '未知'

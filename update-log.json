@@ -1,5 +1,15 @@
 {
     "versions": {
+        "3.1.0": {
+            "title": "misc-api 3.1.0 Redis 管理监控页",
+            "date": "2026-07-13",
+            "db_changes": false,
+            "changes": [
+                "RedisService 监控采集",
+                "后台 Redis 管理页重构",
+                "关于页显示 Redis 版本"
+            ]
+        },
         "3.0.0": {
             "title": "misc-api 3.0.0 用户角色权限体系",
             "date": "2026-07-13",

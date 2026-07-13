@@ -120,6 +120,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 文章 | — | — | 占位 | ❌ 否 | **待开发** |
 | 友情链接 | — | — | 占位 | ❌ 否 | **待开发** |
 | 公告 | — | — | 占位 | ❌ 否 | **待开发** |
+| Redis 缓存 | — | `RedisService` | `admin/system/redis.php` | 后台专用 | **监控已完成**（业务读写待接入） |
 | 贡献者 | — | — | 占位 | ❌ 否 | **待开发** |
 
 > 上表「待开发」项：须先完成 `XxxManager` + `FrontendXxx` 并注册 bootstrap，主题才能接入；在此之前主题页仅能做静态占位。
@@ -223,6 +224,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表（**主题向**） |
+| `RedisService.php` | Redis 连接、INFO 监控采集（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
 | `SystemInfo.php` | 关于页环境信息 |
 | `Updater.php` | 在线更新检测与安装 |
@@ -673,7 +675,22 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 ---
 
-### 4.26 SystemInfo.php
+### 4.26 RedisService.php（后台 · Redis 监控）
+
+**作用：** 连接 Redis 并采集 INFO 指标，供 `admin/system/redis.php` 与关于页「Redis 版本」使用。
+
+| 方法 | 说明 |
+|------|------|
+| `extensionLoaded()` | PHP redis 扩展是否可用 |
+| `connectionConfig()` | 读取 host/port/db/prefix（不含密码明文） |
+| `collectMonitorSnapshot()` | 完整监控快照（内存、键数、命中率等） |
+| `versionLabel()` | 关于页一行摘要 |
+
+**配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`misc_api:`）。
+
+---
+
+### 4.27 SystemInfo.php
 
 **作用：** 收集 PHP、MySQL、操作系统等环境信息，供关于页展示。
 
@@ -683,7 +700,7 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 ---
 
-### 4.27 Updater.php
+### 4.28 Updater.php
 
 **作用：** 从 Gitee 检测新版本、下载 `misc-api{版本}.zip`、解压覆盖（保护 `config/`、`data/`）。
 

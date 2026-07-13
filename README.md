@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.0.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.1.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -95,7 +95,7 @@
 | 用户管理 | `/admin/users.php` | 查看用户、搜索、封禁/解封/删除 |
 | 公告管理（占位） | `/admin/content/announcements.php` | 后续开发 |
 | 日志查询（占位） | `/admin/system/logs.php` | 后续开发 |
-| Redis 管理（占位） | `/admin/system/redis.php` | 后续开发 |
+| Redis 管理 | `/admin/system/redis.php` | 连接状态、内存占用、键数量、命中率等监控 |
 | 主题设置 | `/admin/system/theme.php` | 主题切换 + 各主题独立配置 |
 | 账号设置 | `/admin/account.php` | 修改资料、发布身份绑定用户账号 |
 | 系统设置 | `/admin/settings.php` | 站点信息、注册策略、OAuth、邮箱发信 |
@@ -194,6 +194,7 @@ misc-api/
 │   ├── FrontendApi.php         # 前台公开接口（主题调用）
 │   ├── FrontendUser.php        # 前台用户资料（主题/用户中心调用）
 │   ├── UserRole.php            # 用户角色与权限判断
+│   ├── RedisService.php        # Redis 连接与监控采集
 │   ├── theme/default/          # 默认主题（FeerApi 风白色 UI）
 │   ├── theme/slate/            # 主题二（API 平台风）
 │   │   └── preview.png         # 主题预览图
@@ -260,6 +261,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.1.0（2026-07-13）
+
+- **Redis 管理页**：由占位改为完整监控面板（版本、内存、键数、命中率、QPS、服务器 INFO）
+- **core/RedisService.php**：统一 Redis 连接与指标采集；支持 config 表配置 host/port/password/db/prefix
+- **关于页**：环境信息「当前域名」改为「Redis 版本」
 
 ### v3.0.0（2026-07-13）· 大版本
 
