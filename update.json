@@ -1,12 +1,14 @@
 {
-    "version": "2.15.1",
-    "title": "misc-api 2.15.1 分类表名精简",
+    "version": "2.16.0",
+    "title": "misc-api 2.16.0 接口分类页重构",
     "release_date": "2026-07-13",
     "db_changes": true,
     "changes": [
-        "接口分类表 api_category 重命名为 category",
-        "新增开发规范：数据库命名规范（表名能短则短）",
-        "升级兼容：新装直接用 category，旧库自动 RENAME"
+        "修复接口分类添加/删除后需手动刷新的问题",
+        "重构分类页 UI：去除重复标题与背景板，卡片列表",
+        "添加分类：电脑居中弹窗、手机 80% 底部抽屉",
+        "支持分类图标（内置 8 款 + 自定义链接）与描述",
+        "移除排序字段展示，新增搜索筛选"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

@@ -114,6 +114,10 @@ class DatabaseMigrator
             self::markApplied('2.15.1');
         }
 
+        if (!in_array('2.16.0', $applied, true) && self::tableColumnExists('category', 'icon')) {
+            self::markApplied('2.16.0');
+        }
+
         if (!in_array('1.0.35', $applied, true)) {
             $all = Config::all();
             if (array_key_exists('storage_local_public_slug', $all)) {

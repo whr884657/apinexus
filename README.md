@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.15.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.16.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -241,6 +241,14 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.16.0（2026-07-13）
+
+- **接口分类页重构**：去除重复标题与背景板，改为卡片列表 + 搜索
+- **修复 AJAX 无刷新**：添加/编辑/删除/启禁后立即更新列表（修正 `code` 响应判断）
+- **添加分类弹窗**：电脑端居中弹窗，手机端 80% 高度底部抽屉
+- **分类图标**：8 款内置 SVG + 自定义正方形图片链接；新增 `description` 字段
+- **需执行数据库结构更新**（`install/migrations/2.16.0.sql`）
 
 ### v2.15.1（2026-07-13）
 

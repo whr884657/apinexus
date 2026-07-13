@@ -31,6 +31,95 @@ class ApiCategoryManager
     }
 
     /**
+     * 系统内置分类图标（相对 assets 路径）
+     *
+     * @return array<int, string>
+     */
+    public static function defaultIconPaths()
+    {
+        return array(
+            '/assets/img/category-icons/image.svg',
+            '/assets/img/category-icons/tool.svg',
+            '/assets/img/category-icons/entertainment.svg',
+            '/assets/img/category-icons/game.svg',
+            '/assets/img/category-icons/news.svg',
+            '/assets/img/category-icons/finance.svg',
+            '/assets/img/category-icons/social.svg',
+            '/assets/img/category-icons/weather.svg',
+        );
+    }
+
+    /**
+     * 内置图标完整 URL 列表
+     *
+     * @return array<int, string>
+     */
+    public static function defaultIcons()
+    {
+        $base = rtrim(vs_base_url(), '/');
+        $out = array();
+        foreach (self::defaultIconPaths() as $path) {
+            $out[] = $base . $path;
+        }
+        return $out;
+    }
+
+    /**
+     * 解析并校验图标 URL（空值回退默认图标）
+     *
+     * @param string $icon
+     * @return string
+     */
+    public static function resolveIconUrl($icon)
+    {
+        $icon = trim((string) $icon);
+        if ($icon === '') {
+            $defaults = self::defaultIcons();
+            return isset($defaults[0]) ? $defaults[0] : '';
+        }
+
+        if (preg_match('#^/assets/img/category-icons/[a-z0-9\-]+\.svg$#i', $icon)) {
+            return rtrim(vs_base_url(), '/') . $icon;
+        }
+
+        if (preg_match('#^https?://#i', $icon)) {
+            return $icon;
+        }
+
+        $base = rtrim(vs_base_url(), '/');
+        if (strpos($icon, $base) === 0) {
+            return $icon;
+        }
+
+        $defaults = self::defaultIcons();
+        return isset($defaults[0]) ? $defaults[0] : $icon;
+    }
+
+    /**
+     * 格式化分类行（API / 前台使用）
+     *
+     * @param array|null $row
+     * @return array|null
+     */
+    public static function formatRow($row)
+    {
+        if (!is_array($row)) {
+            return null;
+        }
+
+        $iconRaw = isset($row['icon']) ? (string) $row['icon'] : '';
+
+        return array(
+            'id'          => (int) $row['id'],
+            'name'        => (string) $row['name'],
+            'icon'        => self::resolveIconUrl($iconRaw),
+            'icon_raw'    => $iconRaw,
+            'description' => isset($row['description']) ? (string) $row['description'] : '',
+            'status'      => (int) $row['status'],
+        );
+    }
+
+    /**
      * @return array
      */
     public static function listAll()
@@ -45,7 +134,7 @@ class ApiCategoryManager
             $sql = 'SELECT c.*,
                     (SELECT COUNT(*) FROM `' . $apiTable . '` AS a WHERE a.`category` = c.`name`) AS api_count
                     FROM `' . self::table() . '` AS c
-                    ORDER BY c.`sort_order` ASC, c.`id` ASC';
+                    ORDER BY c.`id` DESC';
             $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
             return is_array($rows) ? $rows : array();
         } catch (Exception $e) {
@@ -71,7 +160,7 @@ class ApiCategoryManager
             }
             $out[] = $row;
         }
-        return $out;
+        return array_reverse($out);
     }
 
     /**
@@ -120,10 +209,11 @@ class ApiCategoryManager
 
     /**
      * @param string $name
-     * @param int    $sortOrder
-     * @return array{id:int,name:string,sort_order:int,status:int}|string
+     * @param string $icon
+     * @param string $description
+     * @return array|string
      */
-    public static function create($name, $sortOrder = 0)
+    public static function create($name, $icon = '', $description = '')
     {
         if (!self::tableReady()) {
             return '分类表未就绪，请先执行系统升级';
@@ -140,22 +230,31 @@ class ApiCategoryManager
             return '分类名称已存在';
         }
 
-        $sortOrder = (int) $sortOrder;
+        $iconStored = self::normalizeIconInput($icon);
+        if ($iconStored === false) {
+            return '图标链接格式不正确';
+        }
+
+        $description = self::normalizeDescription($description);
+        if ($description === false) {
+            return '分类描述不能超过 255 个字符';
+        }
 
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'INSERT INTO `' . self::table() . '` (`name`, `sort_order`, `status`, `created_at`)
-                 VALUES (?, ?, 1, NOW())'
+                'INSERT INTO `' . self::table() . '` (`name`, `icon`, `description`, `sort_order`, `status`, `created_at`)
+                 VALUES (?, ?, ?, 0, 1, NOW())'
             );
-            $stmt->execute(array($name, $sortOrder));
+            $stmt->execute(array($name, $iconStored, $description));
             $id = (int) $pdo->lastInsertId();
-            return array(
-                'id'         => $id,
-                'name'       => $name,
-                'sort_order' => $sortOrder,
-                'status'     => 1,
-            );
+            return self::formatRow(array(
+                'id'          => $id,
+                'name'        => $name,
+                'icon'        => $iconStored,
+                'description' => $description,
+                'status'      => 1,
+            ));
         } catch (Exception $e) {
             return '添加失败，请稍后重试';
         }
@@ -164,10 +263,11 @@ class ApiCategoryManager
     /**
      * @param int    $id
      * @param string $name
-     * @param int    $sortOrder
+     * @param string $icon
+     * @param string $description
      * @return true|string
      */
-    public static function update($id, $name, $sortOrder = null)
+    public static function update($id, $name, $icon = '', $description = '')
     {
         $id = (int) $id;
         $row = self::findById($id);
@@ -188,8 +288,17 @@ class ApiCategoryManager
             return '分类名称已存在';
         }
 
+        $iconStored = self::normalizeIconInput($icon);
+        if ($iconStored === false) {
+            return '图标链接格式不正确';
+        }
+
+        $description = self::normalizeDescription($description);
+        if ($description === false) {
+            return '分类描述不能超过 255 个字符';
+        }
+
         $oldName = (string) $row['name'];
-        $sortOrder = $sortOrder === null ? (int) $row['sort_order'] : (int) $sortOrder;
 
         try {
             $pdo = Database::connect();
@@ -197,10 +306,10 @@ class ApiCategoryManager
 
             $stmt = $pdo->prepare(
                 'UPDATE `' . self::table() . '`
-                 SET `name` = ?, `sort_order` = ?, `updated_at` = NOW()
+                 SET `name` = ?, `icon` = ?, `description` = ?, `updated_at` = NOW()
                  WHERE `id` = ?'
             );
-            $stmt->execute(array($name, $sortOrder, $id));
+            $stmt->execute(array($name, $iconStored, $description, $id));
 
             if ($oldName !== $name) {
                 $apiStmt = $pdo->prepare(
@@ -295,6 +404,49 @@ class ApiCategoryManager
         } catch (Exception $e) {
             return 0;
         }
+    }
+
+    /**
+     * @param string $icon
+     * @return string|false
+     */
+    private static function normalizeIconInput($icon)
+    {
+        $icon = trim((string) $icon);
+        if ($icon === '') {
+            return '';
+        }
+        if (mb_strlen($icon, 'UTF-8') > 255) {
+            return false;
+        }
+
+        $base = rtrim(vs_base_url(), '/');
+        if (strpos($icon, $base) === 0) {
+            $icon = substr($icon, strlen($base));
+        }
+
+        if (preg_match('#^/assets/img/category-icons/[a-z0-9\-]+\.svg$#i', $icon)) {
+            return $icon;
+        }
+
+        if (preg_match('#^https?://#i', $icon)) {
+            return $icon;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string $description
+     * @return string|false
+     */
+    private static function normalizeDescription($description)
+    {
+        $description = trim(preg_replace('/\s+/u', ' ', (string) $description));
+        if (mb_strlen($description, 'UTF-8') > 255) {
+            return false;
+        }
+        return $description;
     }
 
     /**
