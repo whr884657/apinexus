@@ -1,5 +1,16 @@
 {
     "versions": {
+        "3.2.0": {
+            "title": "misc-api 3.2.0 Redis 业务缓存与监控优化",
+            "date": "2026-07-13",
+            "db_changes": false,
+            "changes": [
+                "RedisCache 业务缓存层",
+                "发信限流改 Redis 写入",
+                "Redis 管理页业务向监控",
+                "接口分类表格对齐修复"
+            ]
+        },
         "3.1.0": {
             "title": "misc-api 3.1.0 Redis 管理监控页",
             "date": "2026-07-13",

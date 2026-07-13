@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.1.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.2.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -95,7 +95,7 @@
 | 用户管理 | `/admin/users.php` | 查看用户、搜索、封禁/解封/删除 |
 | 公告管理（占位） | `/admin/content/announcements.php` | 后续开发 |
 | 日志查询（占位） | `/admin/system/logs.php` | 后续开发 |
-| Redis 管理 | `/admin/system/redis.php` | 连接状态、内存占用、键数量、命中率等监控 |
+| Redis 管理 | `/admin/system/redis.php` | misc-api 业务缓存监控（命中率、缓存项、限流键） |
 | 主题设置 | `/admin/system/theme.php` | 主题切换 + 各主题独立配置 |
 | 账号设置 | `/admin/account.php` | 修改资料、发布身份绑定用户账号 |
 | 系统设置 | `/admin/settings.php` | 站点信息、注册策略、OAuth、邮箱发信 |
@@ -195,6 +195,7 @@ misc-api/
 │   ├── FrontendUser.php        # 前台用户资料（主题/用户中心调用）
 │   ├── UserRole.php            # 用户角色与权限判断
 │   ├── RedisService.php        # Redis 连接与监控采集
+│   ├── RedisCache.php          # 业务数据缓存（接口/分类/限流）
 │   ├── theme/default/          # 默认主题（FeerApi 风白色 UI）
 │   ├── theme/slate/            # 主题二（API 平台风）
 │   │   └── preview.png         # 主题预览图
@@ -261,6 +262,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.2.0（2026-07-13）
+
+- **Redis 业务缓存**：新增 `RedisCache.php`；公开接口列表、分类标签读 Redis；发信限流优先 Redis 写入，减轻 MySQL 压力
+- **Redis 管理页**：聚焦 misc-api 业务缓存（命中率、各缓存项状态、可一键清空）；服务器信息收折展示；移动端布局优化
+- **接口分类**：修复桌面端「接口/状态/操作」列错位；手机端卡片显示「接口数量」
 
 ### v3.1.0（2026-07-13）
 

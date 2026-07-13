@@ -45,6 +45,20 @@ class FrontendCategory
      */
     public static function listTags()
     {
+        return RedisCache::remember(
+            RedisCache::KEY_FRONTEND_CATEGORY,
+            RedisCache::TTL_FRONTEND_CATEGORY,
+            function () {
+                return self::buildTags();
+            }
+        );
+    }
+
+    /**
+     * @return array<int, array{id: string, name: string}>
+     */
+    private static function buildTags()
+    {
         $items = array();
         foreach (ApiCategoryManager::listEnabled() as $row) {
             $formatted = ApiCategoryManager::formatRow($row);

@@ -1,12 +1,12 @@
 {
-    "version": "3.1.0",
-    "title": "misc-api 3.1.0 Redis 管理监控页",
+    "version": "3.2.0",
+    "title": "misc-api 3.2.0 Redis 业务缓存与监控优化",
     "release_date": "2026-07-13",
     "db_changes": false,
     "changes": [
-        "新增 core/RedisService.php 采集 Redis INFO 监控指标",
-        "Redis 管理页：连接状态、内存、键数量、命中率、性能指标",
-        "关于页「当前域名」改为「Redis 版本」"
+        "新增 RedisCache 业务缓存层（公开接口、分类、发信限流优先 Redis）",
+        "Redis 管理页聚焦 misc-api 业务缓存监控，UI 移动端优化",
+        "修复接口分类桌面端列对齐与手机端接口数量显示"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

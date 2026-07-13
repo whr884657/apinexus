@@ -120,7 +120,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 文章 | — | — | 占位 | ❌ 否 | **待开发** |
 | 友情链接 | — | — | 占位 | ❌ 否 | **待开发** |
 | 公告 | — | — | 占位 | ❌ 否 | **待开发** |
-| Redis 缓存 | — | `RedisService` | `admin/system/redis.php` | 后台专用 | **监控已完成**（业务读写待接入） |
+| Redis 缓存 | — | `RedisService` / `RedisCache` | `admin/system/redis.php` | 后台专用 | **业务缓存已接入**（接口/分类/限流） |
 | 贡献者 | — | — | 占位 | ❌ 否 | **待开发** |
 
 > 上表「待开发」项：须先完成 `XxxManager` + `FrontendXxx` 并注册 bootstrap，主题才能接入；在此之前主题页仅能做静态占位。
@@ -225,6 +225,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表（**主题向**） |
 | `RedisService.php` | Redis 连接、INFO 监控采集（**后台向**） |
+| `RedisCache.php` | misc-api 业务数据缓存（接口列表、分类、限流回退） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
 | `SystemInfo.php` | 关于页环境信息 |
 | `Updater.php` | 在线更新检测与安装 |
