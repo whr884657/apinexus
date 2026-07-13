@@ -26,6 +26,7 @@ require_once VS_ROOT . '/core/AjaxResponse.php';
 require_once VS_ROOT . '/core/SystemInfo.php';
 require_once VS_ROOT . '/core/Updater.php';
 require_once VS_ROOT . '/core/UpdateLog.php';
+require_once VS_ROOT . '/core/RedisService.php';
 require_once VS_ROOT . '/core/UserAvatar.php';
 require_once VS_ROOT . '/core/UserManager.php';
 require_once VS_ROOT . '/core/AdminUserBinding.php';

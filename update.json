@@ -1,14 +1,12 @@
 {
-    "version": "3.0.0",
-    "title": "misc-api 3.0.0 用户角色权限体系",
+    "version": "3.1.0",
+    "title": "misc-api 3.1.0 Redis 管理监控页",
     "release_date": "2026-07-13",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "用户表新增 role 字段（user=普通用户 developer=开发者）",
-        "新增 core/UserRole.php、core/FrontendUser.php 统一用户资料与权限调度",
-        "注册页支持选择普通用户/开发者，两主题 UI 与说明提示",
-        "普通用户隐藏 API 管理入口，直链访问拦截并提示身份",
-        "管理员用户管理支持身份转换（设为开发者/设为普通）"
+        "新增 core/RedisService.php 采集 Redis INFO 监控指标",
+        "Redis 管理页：连接状态、内存、键数量、命中率、性能指标",
+        "关于页「当前域名」改为「Redis 版本」"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
