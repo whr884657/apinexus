@@ -1,4 +1,6 @@
-# misc-api
+<div align="center">
+  <h1>misc-api</h1>
+</div>
 
 <p align="center">
   <strong>轻量 Web 管理 · 安装向导 · 安全认证 · 云端在线更新</strong>
