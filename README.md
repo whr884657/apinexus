@@ -1,13 +1,13 @@
 <div align="center">
-  <h1>misc-api</h1>
+  <h1>MISC-API</h1>
 </div>
 
 <p align="center">
-  <strong>轻量 Web 管理 · 安装向导 · 安全认证 · 云端在线更新</strong>
+  <strong>开放接口平台 · 自部署管理 · 云端在线更新</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.16.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.16.2-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -18,13 +18,16 @@
 
 ## 项目简介
 
-**misc-api** 是一套可自部署的轻量级 Web 管理系统：安装后在浏览器中管理站点信息、管理员与用户账号、注册策略与邮件发信，并支持从**云端**检测与安装系统更新。
+**MISC-API** 是一套可自部署的**开放 API 接口平台**管理系统。基于 PHP + MySQL，无重型框架依赖，提供前台接口目录与在线调试、后台接口审核与分类管理，以及用户体系与云端在线更新。
 
 **主要能力：**
 
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
-- 分组侧边栏管理后台（控制台、数据大屏、API 管理含接口分类、内容运营、交易财务、系统管理）
+- **API 管理（已实现）**：接口审核（通过 / 拒绝 / 下线）、接口分类（CRUD、图标、描述、启禁；表格式紧凑列表）
+- **前台双主题**：默认主题（FeerApi 风白色 UI：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风首页与分类筛选）；各主题 CSS/JS/shell **完全独立、无跨主题回退**，后台可预览切换
+- 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
+- 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
 - 用户中心侧边栏：控制台、API 管理、令牌管理、积分变动、接口列表、账号设置（部分为占位页）
 - 用户管理：列表查看、搜索、封禁/解封/删除（AJAX 无整页刷新）
 - 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
@@ -33,18 +36,15 @@
 - 邮箱验证码发信限流（MySQL 表 `mail_code_rate_log` + 一次性 mail_ticket）
 - 站点信息、注册邮箱后缀白名单、SMTP 邮箱发信
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
-- 角色动画登录页、主题切换、统一弹窗与 Toast 提示
-- **双主题体系**：默认主题 + 主题二（slate），各主题 CSS/JS/shell **完全独立、无跨主题回退**，后台可预览切换
-- 主题预览图：各主题目录下 `preview.png`（开发阶段随主题包预部署）
-- 用户中心与认证页随前台主题联动（各主题 CSS/JS 独立）
-- 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持 nginx 伪静态，URL 无 `.php` 后缀）
+- 认证页角色动画背景；后台 `vs-overlay` 大弹窗（电脑 75% 视口 / 手机全宽 85vh 抽屉）与 Toast 提示
 - 简洁白色后台主题，纯 CSS 图标，适配电脑端与手机端
 
 ### UI 规范（弹窗 / 布局）
 
 - **手机端（≤900px）**：侧边栏默认隐藏，点击顶栏菜单从右侧滑出；点击遮罩关闭
-- **电脑端（≥768px）**：侧边栏默认展开，可收缩；弹窗居中，内容区可滚动
-- **登录页**：可交互角色动画背景，支持主题色切换
+- **电脑端（≥768px）**：侧边栏默认展开，可收缩
+- **后台弹窗**：`vs-overlay--lg`——电脑端 75% 视口居中，手机端 100% 宽底部抽屉（85vh），内容区可滚动
+- **认证页**：可交互角色动画背景，随前台主题联动
 
 ---
 
@@ -63,7 +63,7 @@
 
 | 功能 | 路径 | 说明 |
 |------|------|------|
-| 前台首页 | `/` | 引导进入用户中心（不展示管理后台入口） |
+| 前台首页 | `/` | 主题驱动首页：Hero、统计区、接口目录、在线调试 Playground |
 | 全部接口 | `/apis` | 公开接口列表（搜索、分类筛选，展示已通过审核接口） |
 | 文章 | `/articles` | 前台文章列表 |
 | 贡献者 | `/contributors` | 项目贡献者展示 |
@@ -86,7 +86,9 @@
 | 管理员忘记密码 | `/admin/forgot.php` | 邮箱验证码重置（需配置 SMTP） |
 | 管理控制台 | `/admin/index.php` | 后台首页，展示站点与版本信息 |
 | 数据大屏（占位） | `/admin/data-screen.php` | 后续开发 |
-| API 管理 | `/admin/api/` | 接口列表、**接口审核**、文档、反馈（列表/文档/反馈仍为占位） |
+| 接口审核 | `/admin/api/review.php` | 待审核 / 已通过 / 已拒绝；通过、拒绝、下线（AJAX） |
+| 接口分类 | `/admin/api/categories.php` | 表格式列表、分类 CRUD、23 款内置 SVG 图标、描述、启禁 |
+| API 管理（占位） | `/admin/api/list.php` 等 | 接口列表、文档、反馈仍为占位页 |
 | 内容运营（占位） | `/admin/content/` | 文章、评论、友链、合作伙伴 |
 | 交易财务（占位） | `/admin/finance/` | 支付、订单、赞助、积分 |
 | 用户管理 | `/admin/users.php` | 查看用户、搜索、封禁/解封/删除 |
@@ -106,9 +108,11 @@
 ## 后台框架特性
 
 - **自定义 PHP 架构**：无 Laravel / ThinkPHP 等重型框架依赖
+- **API 业务层**：`ApiManager`（审核与状态）、`ApiCategoryManager`（分类与 `category` 表）
 - **白色主题**：顶部栏 + 可收缩分组侧边栏
 - **电脑端**：侧边栏默认展开，点击左上角可收缩/展开
 - **手机端**：侧边栏默认隐藏，点击顶栏菜单滑出
+- **弹窗体系**：`assets/css/modal.css` 中的 `vs-overlay` / `vs-overlay--lg`，电脑 75% 视口、手机全宽抽屉
 - **会话超时**：长时间无操作自动退出（可配置）
 - **系统可配置**：名称、描述、关键词、Favicon、Logo 可在后台修改
 - **源码开放**：全部逻辑可阅读、可二次开发
@@ -146,7 +150,10 @@ misc-api/
 │   ├── includes/
 │   │   ├── layout.php          # 侧边栏布局
 │   │   └── auth_layout.php     # 登录/注册/忘记密码布局
-│   ├── api/                    # API 管理（占位）
+│   ├── api/                    # API 管理
+│   │   ├── review.php          # 接口审核
+│   │   ├── categories.php      # 接口分类
+│   │   └── list.php / docs.php / feedback.php  # 占位
 │   ├── content/                # 内容运营（占位）
 │   ├── finance/                # 交易财务（占位）
 │   ├── system/                 # 系统管理扩展（日志等）
@@ -167,9 +174,11 @@ misc-api/
 │   ├── account.php
 │   └── login.php / register.php / forgot.php
 ├── assets/
-│   ├── css/                    # common, admin, modal, toast, install …
-│   ├── js/                     # common.js, vs-update.js, upgrade.js …
-│   └── img/                    # 头像、站点图片等
+│   ├── css/                    # common, admin, modal (vs-overlay), toast, install …
+│   ├── js/                     # common.js, api-categories.js, vs-update.js, upgrade.js …
+│   └── img/
+│       ├── category-icons/     # 内置 23 款分类 SVG 图标
+│       └── …                   # 头像、站点图片等
 ├── config/
 │   ├── database.php            # 安装后生成（更新时不覆盖）
 │   └── install.lock            # 安装锁定文件
@@ -177,9 +186,11 @@ misc-api/
 │   ├── bootstrap.php
 │   ├── version.php             # VS_VERSION 版本常量
 │   ├── ThemeManager.php        # 前台主题加载与切换
-│   ├── theme/default/          # 默认主题（浅色卡片 + 左抽屉）
+│   ├── ApiManager.php          # 接口审核与状态
+│   ├── ApiCategoryManager.php  # 接口分类（category 表）
+│   ├── theme/default/          # 默认主题（FeerApi 风白色 UI）
 │   ├── theme/slate/            # 主题二（API 平台风）
-│   │   └── preview.png         # 主题预览图（自行截图）
+│   │   └── preview.png         # 主题预览图
 │   ├── Auth.php / UserAuth.php # 管理员与用户认证
 │   ├── Updater.php             # 云端在线更新
 │   ├── UpdateLog.php           # 更新记录读取
@@ -241,6 +252,14 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.16.2（2026-07-13）
+
+- **接口分类页**：卡片改为紧凑表格式列表，移除搜索框；「添加分类」按钮右对齐
+- **操作样式**：编辑/启禁/删除改为文字链接，减少占位
+- **弹窗修复**：修复手机端抽屉未铺满屏幕宽度（`--form` 宽度误作用于移动端）
+- **大弹窗**：新增 `vs-overlay--lg`，电脑端 75% 视口（15/20），手机端 100% 宽 85vh 抽屉
+- **弹窗规范**：更新 `开发规范/弹窗开发规范.md` v1.1
 
 ### v2.16.1（2026-07-13）
 

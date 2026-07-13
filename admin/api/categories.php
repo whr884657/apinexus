@@ -88,45 +88,41 @@ function vs_render_api_category_item(array $row)
     $desc = trim((string) (isset($row['description']) ? $row['description'] : ''));
     $name = (string) $row['name'];
     ?>
-    <article class="vs-api-cat-item"
-             data-category-row="<?php echo $catId; ?>"
-             data-category-status="<?php echo $enabled ? '1' : '0'; ?>"
-             data-cat-name="<?php echo vs_e($name); ?>"
-             data-cat-desc="<?php echo vs_e($desc); ?>">
-        <div class="vs-api-cat-item__icon">
-            <img src="<?php echo vs_e($icon); ?>" alt="" width="48" height="48" loading="lazy">
+    <div class="vs-api-cat-row"
+         data-category-row="<?php echo $catId; ?>"
+         data-category-status="<?php echo $enabled ? '1' : '0'; ?>">
+        <div class="vs-api-cat-row__icon">
+            <img src="<?php echo vs_e($icon); ?>" alt="" width="32" height="32" loading="lazy">
         </div>
-        <div class="vs-api-cat-item__main">
-            <div class="vs-api-cat-item__name" data-field="name"><?php echo vs_e($name); ?></div>
-            <div class="vs-api-cat-item__desc" data-field="description">
-                <?php if ($desc !== ''): ?>
-                    <?php echo vs_e($desc); ?>
-                <?php else: ?>
-                    <span class="vs-api-cat-item__desc-empty">暂无描述</span>
-                <?php endif; ?>
-            </div>
-            <div class="vs-api-cat-item__meta">
-                <span>关联接口 <?php echo $apiCount; ?></span>
-                <span class="vs-api-cat-status<?php echo $enabled ? ' is-on' : ' is-off'; ?>" data-field="status_label">
-                    <?php echo $enabled ? '启用' : '禁用'; ?>
-                </span>
-            </div>
+        <div class="vs-api-cat-row__name" data-field="name"><?php echo vs_e($name); ?></div>
+        <div class="vs-api-cat-row__desc" data-field="description">
+            <?php if ($desc !== ''): ?>
+                <?php echo vs_e($desc); ?>
+            <?php else: ?>
+                <span class="vs-api-cat-row__desc-empty">—</span>
+            <?php endif; ?>
         </div>
-        <div class="vs-api-cat-item__actions">
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary vs-api-cat-action"
+        <div class="vs-api-cat-row__count" data-field="api_count"><?php echo $apiCount; ?></div>
+        <div class="vs-api-cat-row__status">
+            <span class="vs-api-cat-status<?php echo $enabled ? ' is-on' : ' is-off'; ?>" data-field="status_label">
+                <?php echo $enabled ? '启用' : '禁用'; ?>
+            </span>
+        </div>
+        <div class="vs-api-cat-row__actions">
+            <button type="button" class="vs-api-cat-link vs-api-cat-action"
                     data-cat-action="edit" data-category-id="<?php echo $catId; ?>">编辑</button>
             <?php if ($enabled): ?>
-                <button type="button" class="vs-btn vs-btn--pill vs-api-cat-action"
+                <button type="button" class="vs-api-cat-link vs-api-cat-action"
                         data-cat-action="disable" data-category-id="<?php echo $catId; ?>">禁用</button>
             <?php else: ?>
-                <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary vs-api-cat-action"
+                <button type="button" class="vs-api-cat-link vs-api-cat-link--primary vs-api-cat-action"
                         data-cat-action="enable" data-category-id="<?php echo $catId; ?>">启用</button>
             <?php endif; ?>
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-api-cat-action"
+            <button type="button" class="vs-api-cat-link vs-api-cat-link--danger vs-api-cat-action"
                     data-cat-action="delete" data-category-id="<?php echo $catId; ?>"
                     data-api-count="<?php echo $apiCount; ?>">删除</button>
         </div>
-    </article>
+    </div>
     <?php
 }
 
@@ -144,28 +140,31 @@ vs_admin_layout_start('接口分类', 'api-categories');
                 <span class="vs-api-cat-add-btn__icon" aria-hidden="true">+</span>
                 <span class="vs-api-cat-add-btn__text">添加分类</span>
             </button>
-            <div class="vs-api-cat-search">
-                <input type="search" class="vs-input vs-api-cat-search__input" id="apiCatSearchInput"
-                       placeholder="搜索分类" autocomplete="off" aria-label="搜索分类">
-                <button type="button" class="vs-btn vs-btn--primary vs-api-cat-search__btn" id="apiCatSearchBtn" hidden>搜索</button>
-            </div>
         </div>
 
         <div class="vs-api-cat-empty" id="apiCategoryEmpty"<?php echo count($categories) > 0 ? ' hidden' : ''; ?>>
             <?php vs_render_notice('info', '', '暂无分类，点击「添加分类」创建。', array('compact' => true)); ?>
         </div>
 
-        <div class="vs-api-cat-list" id="apiCategoryList"<?php echo count($categories) === 0 ? ' hidden' : ''; ?>>
-            <?php foreach ($categories as $row): ?>
-                <?php vs_render_api_category_item($row); ?>
-            <?php endforeach; ?>
+        <div class="vs-api-cat-table" id="apiCategoryTable"<?php echo count($categories) === 0 ? ' hidden' : ''; ?>>
+            <div class="vs-api-cat-table__head" aria-hidden="true">
+                <span class="vs-api-cat-table__col vs-api-cat-table__col--icon"></span>
+                <span class="vs-api-cat-table__col">名称</span>
+                <span class="vs-api-cat-table__col">描述</span>
+                <span class="vs-api-cat-table__col vs-api-cat-table__col--count">接口</span>
+                <span class="vs-api-cat-table__col vs-api-cat-table__col--status">状态</span>
+                <span class="vs-api-cat-table__col vs-api-cat-table__col--actions">操作</span>
+            </div>
+            <div class="vs-api-cat-table__body" id="apiCategoryList">
+                <?php foreach ($categories as $row): ?>
+                    <?php vs_render_api_category_item($row); ?>
+                <?php endforeach; ?>
+            </div>
         </div>
-
-        <p class="vs-api-cat-empty-search" id="apiCategoryEmptySearch" hidden>没有匹配的分类</p>
     <?php endif; ?>
 </div>
 
-<div class="vs-overlay vs-overlay--form" id="apiCategoryFormOverlay" hidden aria-hidden="true">
+<div class="vs-overlay vs-overlay--lg" id="apiCategoryFormOverlay" hidden aria-hidden="true">
     <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
     <div class="vs-overlay__panel" role="dialog" aria-labelledby="apiCategoryFormTitle" aria-modal="true">
         <div class="vs-overlay__handle" aria-hidden="true"></div>
@@ -194,8 +193,8 @@ vs_admin_layout_start('接口分类', 'api-categories');
             </div>
         </form>
         <footer class="vs-overlay__foot">
-            <button type="button" class="vs-btn" data-overlay-close="1">取消</button>
-            <button type="submit" form="apiCategoryForm" class="vs-btn vs-btn--primary" id="apiCatFormSubmitBtn">保存</button>
+            <button type="button" class="vs-btn vs-btn--pill" data-overlay-close="1">取消</button>
+            <button type="submit" form="apiCategoryForm" class="vs-btn vs-btn--pill vs-btn--pill-primary" id="apiCatFormSubmitBtn">保存</button>
         </footer>
     </div>
 </div>
