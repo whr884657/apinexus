@@ -133,27 +133,26 @@ function vs_render_api_category_item(array $row)
 vs_admin_layout_start('接口分类', 'api-categories');
 ?>
 
-<div class="vs-api-cat-page" id="apiCategoriesPage"
+<div class="vs-panel vs-api-cat-panel" id="apiCategoriesPage"
      data-default-icons="<?php echo vs_e(json_encode($defaultIcons, JSON_UNESCAPED_UNICODE)); ?>">
 
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '分类数据表未就绪，请前往「系统管理 → 系统升级」执行数据库结构更新。', array('compact' => true)); ?>
     <?php else: ?>
         <div class="vs-api-cat-toolbar">
-            <div class="vs-api-cat-search">
-                <input type="search" class="vs-input" id="apiCatSearchInput"
-                       placeholder="搜索分类名称或描述" autocomplete="off" aria-label="搜索分类">
-            </div>
             <button type="button" class="vs-btn vs-btn--primary vs-api-cat-add-btn" id="apiCatOpenAddBtn">
                 <span class="vs-api-cat-add-btn__icon" aria-hidden="true">+</span>
-                <span>添加分类</span>
+                <span class="vs-api-cat-add-btn__text">添加分类</span>
             </button>
+            <div class="vs-api-cat-search">
+                <input type="search" class="vs-input vs-api-cat-search__input" id="apiCatSearchInput"
+                       placeholder="搜索分类" autocomplete="off" aria-label="搜索分类">
+                <button type="button" class="vs-btn vs-btn--primary vs-api-cat-search__btn" id="apiCatSearchBtn" hidden>搜索</button>
+            </div>
         </div>
 
-        <p class="vs-api-cat-hint">维护前台接口目录与筛选使用的分类；重命名分类会同步更新已关联接口</p>
-
         <div class="vs-api-cat-empty" id="apiCategoryEmpty"<?php echo count($categories) > 0 ? ' hidden' : ''; ?>>
-            <?php vs_render_notice('info', '', '暂无分类，点击右上角「添加分类」创建；也可在接口审核通过后从接口记录中自动出现未归类名称。', array('compact' => true)); ?>
+            <?php vs_render_notice('info', '', '暂无分类，点击「添加分类」创建。', array('compact' => true)); ?>
         </div>
 
         <div class="vs-api-cat-list" id="apiCategoryList"<?php echo count($categories) === 0 ? ' hidden' : ''; ?>>
@@ -166,13 +165,15 @@ vs_admin_layout_start('接口分类', 'api-categories');
     <?php endif; ?>
 </div>
 
-<div class="vs-modal-shell vs-modal-shell--api-cat" id="apiCategoryFormModal" hidden aria-hidden="true">
-    <div class="vs-modal vs-modal--api-cat" role="dialog" aria-labelledby="apiCategoryFormTitle" aria-modal="true">
-        <div class="vs-modal__head">
-            <h3 class="vs-modal__title" id="apiCategoryFormTitle">添加分类</h3>
-            <button type="button" class="vs-modal__close" data-modal-close="1" aria-label="关闭">&times;</button>
-        </div>
-        <form id="apiCategoryForm" class="vs-modal__body vs-form" autocomplete="off">
+<div class="vs-overlay vs-overlay--form" id="apiCategoryFormOverlay" hidden aria-hidden="true">
+    <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
+    <div class="vs-overlay__panel" role="dialog" aria-labelledby="apiCategoryFormTitle" aria-modal="true">
+        <div class="vs-overlay__handle" aria-hidden="true"></div>
+        <header class="vs-overlay__head">
+            <h3 class="vs-overlay__title" id="apiCategoryFormTitle">添加分类</h3>
+            <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
+        </header>
+        <form id="apiCategoryForm" class="vs-overlay__body vs-form" autocomplete="off">
             <input type="hidden" id="apiCatFormId" name="category_id" value="">
             <div class="vs-form-row">
                 <label class="vs-label">分类图标</label>
@@ -192,10 +193,10 @@ vs_admin_layout_start('接口分类', 'api-categories');
                           rows="3" placeholder="简要说明该分类包含的接口类型（选填）"></textarea>
             </div>
         </form>
-        <div class="vs-modal__foot">
-            <button type="button" class="vs-btn" data-modal-close="1">取消</button>
+        <footer class="vs-overlay__foot">
+            <button type="button" class="vs-btn" data-overlay-close="1">取消</button>
             <button type="submit" form="apiCategoryForm" class="vs-btn vs-btn--primary" id="apiCatFormSubmitBtn">保存</button>
-        </div>
+        </footer>
     </div>
 </div>
 

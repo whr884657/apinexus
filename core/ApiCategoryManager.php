@@ -39,13 +39,28 @@ class ApiCategoryManager
     {
         return array(
             '/assets/img/category-icons/image.svg',
+            '/assets/img/category-icons/video.svg',
+            '/assets/img/category-icons/music.svg',
             '/assets/img/category-icons/tool.svg',
-            '/assets/img/category-icons/entertainment.svg',
-            '/assets/img/category-icons/game.svg',
-            '/assets/img/category-icons/news.svg',
-            '/assets/img/category-icons/finance.svg',
-            '/assets/img/category-icons/social.svg',
+            '/assets/img/category-icons/ai.svg',
+            '/assets/img/category-icons/search.svg',
             '/assets/img/category-icons/weather.svg',
+            '/assets/img/category-icons/live.svg',
+            '/assets/img/category-icons/hot.svg',
+            '/assets/img/category-icons/baidu-hot.svg',
+            '/assets/img/category-icons/toutiao-hot.svg',
+            '/assets/img/category-icons/douyin-hot.svg',
+            '/assets/img/category-icons/zhihu-hot.svg',
+            '/assets/img/category-icons/sogou-hot.svg',
+            '/assets/img/category-icons/douyin.svg',
+            '/assets/img/category-icons/kuaishou.svg',
+            '/assets/img/category-icons/bilibili.svg',
+            '/assets/img/category-icons/wechat.svg',
+            '/assets/img/category-icons/qq.svg',
+            '/assets/img/category-icons/ip.svg',
+            '/assets/img/category-icons/lottery.svg',
+            '/assets/img/category-icons/random.svg',
+            '/assets/img/category-icons/emoji.svg',
         );
     }
 

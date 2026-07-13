@@ -2168,7 +2168,7 @@ select.vs-input {
 }
 
 /* 接口分类管理 */
-.vs-api-cat-page {
+.vs-api-cat-panel {
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -2176,44 +2176,56 @@ select.vs-input {
 
 .vs-api-cat-toolbar {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.vs-api-cat-search {
-    flex: 1 1 220px;
-    max-width: 420px;
-}
-
-.vs-api-cat-search .vs-input {
-    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
 }
 
 .vs-api-cat-add-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
+    justify-content: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding-left: 12px;
+    padding-right: 12px;
 }
 
 .vs-api-cat-add-btn__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
-    font-size: 18px;
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
     line-height: 1;
     font-weight: 600;
 }
 
-.vs-api-cat-hint {
-    margin: 0;
-    font-size: 13px;
-    color: var(--vs-text-secondary);
-    line-height: 1.6;
+.vs-api-cat-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.vs-api-cat-search__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+}
+
+.vs-api-cat-search__btn {
+    flex: 0 0 auto;
+    min-width: 56px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.vs-api-cat-search__btn[hidden] {
+    display: none !important;
 }
 
 .vs-api-cat-list {
@@ -2354,16 +2366,22 @@ select.vs-input {
     margin-top: 4px;
 }
 
-.vs-modal-shell--api-cat {
-    z-index: 4850;
+.vs-overlay--form .vs-api-cat-icon-picker {
+    max-height: 160px;
+    overflow-y: auto;
 }
 
-.vs-modal-shell--api-cat .vs-modal--api-cat {
-    max-width: 520px;
-    width: min(520px, calc(100vw - 40px));
-}
+@media (max-width: 767px) {
+    .vs-api-cat-add-btn__text {
+        display: none;
+    }
 
-@media (max-width: 768px) {
+    .vs-api-cat-add-btn {
+        min-width: 40px;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
     .vs-api-cat-item {
         grid-template-columns: 48px 1fr;
     }
@@ -2374,30 +2392,15 @@ select.vs-input {
         padding-top: 4px;
         border-top: 1px solid var(--vs-border);
     }
+}
 
+@media (min-width: 768px) {
     .vs-api-cat-toolbar {
-        flex-direction: column;
-        align-items: stretch;
+        gap: 12px;
     }
 
     .vs-api-cat-search {
-        max-width: none;
-    }
-
-    .vs-api-cat-add-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .vs-modal-shell--api-cat {
-        --vs-mobile-drawer-height: 80vh;
-    }
-}
-
-@media (min-width: 769px) {
-    .vs-modal-shell--api-cat {
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
+        max-width: 480px;
+        margin-left: auto;
     }
 }

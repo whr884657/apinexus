@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.16.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.16.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -241,6 +241,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.16.1（2026-07-13）
+
+- **接口分类页**：恢复 `vs-panel` 背景板，去除内容区重复标题与说明文案
+- **工具栏**：添加分类（左）+ 搜索框（右）同一行；输入内容后显示「搜索」按钮
+- **弹窗**：按 `开发规范/弹窗开发规范.md` 改用 `vs-overlay`（电脑居中 / 手机 80vh 抽屉）
+- **内置图标**：替换为用户提供的 23 款 SVG（图片、视频、AI、热榜、抖音等）
 
 ### v2.16.0（2026-07-13）
 
