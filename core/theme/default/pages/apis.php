@@ -1,10 +1,10 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
 require_once __DIR__ . '/../includes/api-payload.php';
-$payload = vs_theme_api_payload();
+$payload = default_theme_page_payload();
 $apiCount = count($payload['apiData']);
 $categories = $payload['categoryNames'];
-$visibleLimit = vs_theme_category_visible_limit();
+$visibleLimit = default_theme_category_visible_limit();
 $catIndex = 0;
 ?>
 <main class="main-wrapper container mx-auto px-4" style="padding-top:70px;">

@@ -4,10 +4,10 @@ if (!defined('VS_THEME_RENDER')) {
 }
 
 require_once __DIR__ . '/../includes/api-payload.php';
-$payload = vs_theme_api_payload();
-$apiCount = ApiManager::countApproved();
+$payload = slate_theme_page_payload();
+$apiCount = count($payload['apiData']);
 $totalCalls = ApiManager::totalCallCount();
-$catVisibleLimit = vs_theme_category_visible_limit();
+$catVisibleLimit = slate_theme_category_visible_limit();
 $catBtnIndex = 0;
 
 $heroTitleRaw = trim((string) ThemeManager::themeSetting('hero_title', ''));

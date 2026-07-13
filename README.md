@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.17.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.17.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -253,12 +253,19 @@ location / {
 
 ## 版本记录
 
+### v2.17.1（2026-07-13）
+
+- **主题独立**：删除 `core/includes/theme-api-payload.php`；默认主题与主题二各自维护 `includes/api-payload.php`
+- **分类展示**：`ApiCategoryManager::frontendCategoryNames()` 输出全部已启用分类，**与下属接口数量无关**
+- **分类键**：前台标签使用数据库分类 **id**；不再从接口行动态追加「未分类」等额外标签
+- **接口列表**：仅在有已通过审核的公开接口时填充 `apiData`；分类筛选与接口模块解耦
+
 ### v2.17.0（2026-07-13）
 
 - **双主题分类对接**：默认主题与主题二首页/全部接口页分类标签从数据库读取（纯文字，无图标）
 - **分类展示**：自动换行；默认显示 15 个，超出显示「更多」可展开
 - **主题二重构**：首页真实接口列表；全部接口页改为搜索 + 分类 + 卡片网格（移除建设中占位）
-- **后端**：`listEnabled()` 按 `sort_order` 排序；共享 `core/includes/theme-api-payload.php`
+- **后端**：`listEnabled()` 按 `sort_order` 排序
 
 ### v2.16.4（2026-07-13）
 

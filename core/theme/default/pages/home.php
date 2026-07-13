@@ -4,9 +4,9 @@ if (!defined('VS_THEME_RENDER')) {
 }
 
 require_once __DIR__ . '/../includes/api-payload.php';
-$payload = vs_theme_api_payload();
+$payload = default_theme_page_payload();
 $apiCount = ApiManager::countApproved();
-$catCount = max(1, count($payload['categoryNames']) - 1);
+$catCount = max(0, count($payload['categoryNames']) - 1);
 $totalCalls = ApiManager::totalCallCount();
 
 $heroTitleSetting = ThemeManager::themeSetting('hero_title', '');
@@ -86,7 +86,7 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
             <div class="flex flex-wrap gap-2 font-mono text-xs items-center" id="category-btns">
                 <button type="button" class="cat-btn active" onclick="filterAPI('all', this)">全部</button>
                 <?php
-                $catVisibleLimit = vs_theme_category_visible_limit();
+                $catVisibleLimit = default_theme_category_visible_limit();
                 $catBtnIndex = 0;
                 foreach ($payload['categoryNames'] as $catId => $catName):
                     if ($catId === 'all') {

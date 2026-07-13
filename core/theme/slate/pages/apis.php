@@ -1,9 +1,9 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
 require_once __DIR__ . '/../includes/api-payload.php';
-$payload = vs_theme_api_payload();
+$payload = slate_theme_page_payload();
 $apiCount = count($payload['apiData']);
-$catVisibleLimit = vs_theme_category_visible_limit();
+$catVisibleLimit = slate_theme_category_visible_limit();
 $catIndex = 0;
 ?>
 <main class="st-main" id="stApisPage">

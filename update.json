@@ -1,13 +1,12 @@
 {
-    "version": "2.17.0",
-    "title": "misc-api 2.17.0 双主题接口分类对接",
+    "version": "2.17.1",
+    "title": "misc-api 2.17.1 主题分类数据独立与展示修复",
     "release_date": "2026-07-13",
     "db_changes": false,
     "changes": [
-        "默认主题与主题二首页/全部接口页分类标签对接数据库",
-        "分类标签自动换行，默认显示 15 个，超出显示「更多」可展开",
-        "主题二全部接口页重构：搜索框 + 分类筛选 + 接口卡片列表",
-        "ApiCategoryManager::listEnabled 按 sort_order 排序"
+        "移除两主题共用 payload，各主题独立 includes/api-payload.php",
+        "ApiCategoryManager 提供前台分类名列表，无接口的分类仍显示",
+        "分类标签键改为数据库 id，不再从接口行动态补充分类"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

@@ -5,7 +5,7 @@ if (!defined('VS_THEME_RENDER')) {
 
 if (!isset($payload) || !is_array($payload)) {
     require_once __DIR__ . '/../includes/api-payload.php';
-    $payload = vs_theme_api_payload();
+    $payload = slate_theme_page_payload();
 }
 
 $apis = isset($payload['apiData']) ? $payload['apiData'] : array();
