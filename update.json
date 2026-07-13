@@ -1,12 +1,12 @@
 {
-    "version": "2.14.4",
-    "title": "misc-api 2.14.4 主题一统计与浅色固定",
-    "release_date": "2026-07-12",
-    "db_changes": false,
+    "version": "2.15.0",
+    "title": "misc-api 2.15.0 后台接口分类管理",
+    "release_date": "2026-07-13",
+    "db_changes": true,
     "changes": [
-        "首页统计第三项改为累计调用次数（读取配置 api_total_calls）",
-        "移除主题一昼夜切换，固定浅色模式",
-        "修复分类标签在切换模式下样式异常"
+        "后台 API 管理新增「接口分类」页面：增删改、启用/禁用、排序",
+        "新增 api_category 数据表与 ApiCategoryManager",
+        "前台接口目录优先展示后台启用的官方分类"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

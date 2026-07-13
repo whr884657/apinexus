@@ -106,6 +106,10 @@ class DatabaseMigrator
             self::markApplied('2.12.0');
         }
 
+        if (!in_array('2.15.0', $applied, true) && self::tableExists('api_category')) {
+            self::markApplied('2.15.0');
+        }
+
         if (!in_array('1.0.35', $applied, true)) {
             $all = Config::all();
             if (array_key_exists('storage_local_public_slug', $all)) {

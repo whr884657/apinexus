@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.14.4-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.15.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -24,7 +24,7 @@
 
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
-- 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
+- 分组侧边栏管理后台（控制台、数据大屏、API 管理含接口分类、内容运营、交易财务、系统管理）
 - 用户中心侧边栏：控制台、API 管理、令牌管理、积分变动、接口列表、账号设置（部分为占位页）
 - 用户管理：列表查看、搜索、封禁/解封/删除（AJAX 无整页刷新）
 - 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
@@ -241,6 +241,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v2.15.0（2026-07-13）
+
+- **后台 API 管理 · 接口分类**：新增分类 CRUD、启用/禁用、排序；重命名同步更新已关联接口
+- 新增 `api_category` 表与 `ApiCategoryManager`；前台接口目录优先展示后台启用的官方分类
+- **需执行数据库结构更新**（`install/migrations/2.15.0.sql`）
 
 ### v2.14.4（2026-07-12）
 
