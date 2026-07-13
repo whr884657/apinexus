@@ -11,7 +11,7 @@ class ApiCategoryManager
      */
     public static function table()
     {
-        return Database::table('api_category');
+        return Database::table('category');
     }
 
     /**

@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.15.1": {
+            "title": "misc-api 2.15.1 分类表名精简",
+            "date": "2026-07-13",
+            "db_changes": true,
+            "changes": [
+                "api_category → category",
+                "数据库命名规范",
+                "迁移 2.15.1"
+            ]
+        },
         "2.15.0": {
             "title": "misc-api 2.15.0 后台接口分类管理",
             "date": "2026-07-13",

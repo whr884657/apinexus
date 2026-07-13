@@ -95,7 +95,9 @@ CREATE TABLE IF NOT EXISTS `{prefix}api` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API 接口表';
 
 -- API 接口分类表（v2.15.0+）
-CREATE TABLE IF NOT EXISTS `{prefix}api_category` (
+-- API 接口分类表（v2.15.0+，v2.15.1 起表名为 category）
+
+CREATE TABLE IF NOT EXISTS `{prefix}category` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `name` varchar(50) NOT NULL COMMENT '分类名称',
     `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '排序（数值越小越靠前）',

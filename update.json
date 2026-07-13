@@ -1,12 +1,12 @@
 {
-    "version": "2.15.0",
-    "title": "misc-api 2.15.0 后台接口分类管理",
+    "version": "2.15.1",
+    "title": "misc-api 2.15.1 分类表名精简",
     "release_date": "2026-07-13",
     "db_changes": true,
     "changes": [
-        "后台 API 管理新增「接口分类」页面：增删改、启用/禁用、排序",
-        "新增 api_category 数据表与 ApiCategoryManager",
-        "前台接口目录优先展示后台启用的官方分类"
+        "接口分类表 api_category 重命名为 category",
+        "新增开发规范：数据库命名规范（表名能短则短）",
+        "升级兼容：新装直接用 category，旧库自动 RENAME"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.15.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-2.15.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -242,10 +242,16 @@ location / {
 
 ## 版本记录
 
+### v2.15.1（2026-07-13）
+
+- **表名精简**：接口分类表 `api_category` 重命名为 `category`（新装直接使用短表名）
+- 新增本地规范 `开发规范/数据库命名规范.md`：表名能短则短，避免冗余 `api_` 等前缀
+- 迁移 `2.15.1.sql`：已存在 `api_category` 的站点自动 `RENAME`
+
 ### v2.15.0（2026-07-13）
 
 - **后台 API 管理 · 接口分类**：新增分类 CRUD、启用/禁用、排序；重命名同步更新已关联接口
-- 新增 `api_category` 表与 `ApiCategoryManager`；前台接口目录优先展示后台启用的官方分类
+- 新增 `category` 表与 `ApiCategoryManager`；前台接口目录优先展示后台启用的官方分类
 - **需执行数据库结构更新**（`install/migrations/2.15.0.sql`）
 
 ### v2.14.4（2026-07-12）
