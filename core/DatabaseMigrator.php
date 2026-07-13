@@ -106,8 +106,12 @@ class DatabaseMigrator
             self::markApplied('2.12.0');
         }
 
-        if (!in_array('2.15.0', $applied, true) && self::tableExists('api_category')) {
+        if (!in_array('2.15.0', $applied, true) && (self::tableExists('api_category') || self::tableExists('category'))) {
             self::markApplied('2.15.0');
+        }
+
+        if (!in_array('2.15.1', $applied, true) && self::tableExists('category') && !self::tableExists('api_category')) {
+            self::markApplied('2.15.1');
         }
 
         if (!in_array('1.0.35', $applied, true)) {
