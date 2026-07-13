@@ -109,16 +109,16 @@ function vs_render_api_category_item(array $row)
             </span>
         </div>
         <div class="vs-api-cat-row__actions">
-            <button type="button" class="vs-api-cat-link vs-api-cat-action"
+            <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-cat-action"
                     data-cat-action="edit" data-category-id="<?php echo $catId; ?>">编辑</button>
             <?php if ($enabled): ?>
-                <button type="button" class="vs-api-cat-link vs-api-cat-action"
+                <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-cat-action"
                         data-cat-action="disable" data-category-id="<?php echo $catId; ?>">禁用</button>
             <?php else: ?>
-                <button type="button" class="vs-api-cat-link vs-api-cat-link--primary vs-api-cat-action"
+                <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary vs-api-cat-action"
                         data-cat-action="enable" data-category-id="<?php echo $catId; ?>">启用</button>
             <?php endif; ?>
-            <button type="button" class="vs-api-cat-link vs-api-cat-link--danger vs-api-cat-action"
+            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-api-cat-action"
                     data-cat-action="delete" data-category-id="<?php echo $catId; ?>"
                     data-api-count="<?php echo $apiCount; ?>">删除</button>
         </div>
@@ -126,7 +126,19 @@ function vs_render_api_category_item(array $row)
     <?php
 }
 
-vs_admin_layout_start('接口分类', 'api-categories');
+$headerActions = '';
+if ($tableReady) {
+    ob_start();
+    ?>
+    <button type="button" class="vs-btn vs-btn--primary vs-api-cat-add-btn" id="apiCatOpenAddBtn">
+        <span class="vs-api-cat-add-btn__icon" aria-hidden="true">+</span>
+        <span class="vs-api-cat-add-btn__text">添加分类</span>
+    </button>
+    <?php
+    $headerActions = ob_get_clean();
+}
+
+vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
 ?>
 
 <div class="vs-panel vs-api-cat-panel" id="apiCategoriesPage"
@@ -135,13 +147,6 @@ vs_admin_layout_start('接口分类', 'api-categories');
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '分类数据表未就绪，请前往「系统管理 → 系统升级」执行数据库结构更新。', array('compact' => true)); ?>
     <?php else: ?>
-        <div class="vs-api-cat-toolbar">
-            <button type="button" class="vs-btn vs-btn--primary vs-api-cat-add-btn" id="apiCatOpenAddBtn">
-                <span class="vs-api-cat-add-btn__icon" aria-hidden="true">+</span>
-                <span class="vs-api-cat-add-btn__text">添加分类</span>
-            </button>
-        </div>
-
         <div class="vs-api-cat-empty" id="apiCategoryEmpty"<?php echo count($categories) > 0 ? ' hidden' : ''; ?>>
             <?php vs_render_notice('info', '', '暂无分类，点击「添加分类」创建。', array('compact' => true)); ?>
         </div>
