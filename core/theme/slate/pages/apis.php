@@ -1,9 +1,8 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-require_once __DIR__ . '/../includes/api-payload.php';
-$payload = slate_theme_page_payload();
-$apiCount = count($payload['apiData']);
-$catVisibleLimit = slate_theme_category_visible_limit();
+$apiData = FrontendApi::listForTheme();
+$apiCount = count($apiData);
+$catVisibleLimit = FrontendCategory::tagVisibleLimit();
 $catIndex = 0;
 ?>
 <main class="st-main" id="stApisPage">
@@ -19,16 +18,15 @@ $catIndex = 0;
     </div>
 
     <div class="st-cats st-cats--page" id="stApisCatBar">
-        <button type="button" class="st-cat-tag is-on" data-cat="all">全部</button>
-        <?php foreach ($payload['categoryNames'] as $catId => $catName): ?>
-            <?php if ($catId === 'all') { continue; } ?>
+        <button type="button" class="st-cat-tag is-on" data-cat="<?php echo vs_e(FrontendCategory::ALL_ID); ?>"><?php echo vs_e(FrontendCategory::ALL_NAME); ?></button>
+        <?php foreach (FrontendCategory::listTags() as $tag): ?>
             <?php
             $hiddenClass = $catIndex >= $catVisibleLimit ? ' st-cat-tag-hidden' : '';
             $catIndex++;
             ?>
-            <button type="button" class="st-cat-tag<?php echo $hiddenClass; ?>" data-cat="<?php echo vs_e($catId); ?>"><?php echo vs_e($catName); ?></button>
+            <button type="button" class="st-cat-tag<?php echo $hiddenClass; ?>" data-cat="<?php echo vs_e($tag['id']); ?>"><?php echo vs_e($tag['name']); ?></button>
         <?php endforeach; ?>
-        <?php if (count($payload['categoryNames']) - 1 > $catVisibleLimit): ?>
+        <?php if ($catIndex > $catVisibleLimit): ?>
         <button type="button" class="st-cat-tag st-cat-tag-more" id="stApisCatMoreBtn" data-expanded="0">
             <span>更多</span>
             <svg class="st-cat-more-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
@@ -44,5 +42,8 @@ $catIndex = 0;
 </div>
 </main>
 <script>
-window.stApiPayload = <?php echo json_encode($payload, JSON_UNESCAPED_UNICODE); ?>;
+window.stApiPayload = <?php echo json_encode(array(
+    'categoryNames' => FrontendCategory::nameMap(),
+    'apiData'       => $apiData,
+), JSON_UNESCAPED_UNICODE); ?>;
 </script>

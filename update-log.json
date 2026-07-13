@@ -1,13 +1,13 @@
 {
     "versions": {
         "2.17.1": {
-            "title": "misc-api 2.17.1 主题分类数据独立与展示修复",
+            "title": "misc-api 2.17.1 前台分类与接口统一调度",
             "date": "2026-07-13",
             "db_changes": false,
             "changes": [
-                "各主题独立 api-payload",
-                "无接口分类仍显示",
-                "分类 id 映射"
+                "FrontendCategory 统一分类调度",
+                "FrontendApi 公开接口列表",
+                "两主题统一 all + id"
             ]
         },
         "2.17.0": {

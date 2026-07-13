@@ -1,30 +1,43 @@
 # misc-api 2.17.1 发行说明
 
 **发布日期：** 2026-07-13  
-**类型：** 小版本（结构优化 + 分类展示修复）  
+**类型：** 小版本（前台分类统一调度 + 展示修复）  
 **数据库变更：** 无
 
 ---
 
 ## 变更摘要
 
-### 取消两主题共用 payload
+### core 统一调度（主题开发入口）
 
-- 删除 `core/includes/theme-api-payload.php`
-- **默认主题**：`core/theme/default/includes/api-payload.php` → `default_theme_page_payload()`
-- **主题二**：`core/theme/slate/includes/api-payload.php` → `slate_theme_page_payload()`
-- 各主题后续可独立调整，互不影响
+新增与 `Auth.php`、`ApiCategoryManager.php` 同级的 **前台专用 core 类**，主题只调用这些类，无需关心表名、字段名：
 
-### 分类始终展示（与接口数量无关）
+| 类 | 作用 |
+|----|------|
+| `core/FrontendCategory.php` | 前台分类标签：`listTags()`、`nameMap()`、`tagVisibleLimit()` 等 |
+| `core/FrontendApi.php` | 前台公开接口：`listForTheme()` |
 
-- 新增 `ApiCategoryManager::frontendCategoryNames()`：输出全部 **已启用** 分类
-- 某分类下暂无公开接口时，分类标签 **仍显示**
-- 前台分类键改为数据库 **id**（不再用自增序号或从接口行动态补充分类名）
+**主题用法示例：**
 
-### 接口列表边界
+```php
+foreach (FrontendCategory::listTags() as $tag) {
+    // $tag['id']  $tag['name']
+}
+$apiData = FrontendApi::listForTheme();
+```
 
-- `apiData` 仍来自 `ApiManager::listPublic()`（仅已通过审核的公开接口）
-- 用户侧接口提交等功能未上线时，列表可为空；**分类标签不受影响**
+后续主题三、用户自研主题均可直接调用，无需在主题目录写数据库逻辑。
+
+### 两主题分类识别统一
+
+- 「全部」键统一为 **`all`**（默认主题全部接口页原先为空字符串，已对齐）
+- 各分类键统一为数据库 **id** 字符串
+- 已启用分类 **始终显示**，与下属接口数量无关
+
+### 清理
+
+- 删除各主题 `includes/api-payload.php`
+- 前台分类相关方法从 `ApiCategoryManager` 迁至 `FrontendCategory`（后台 CRUD 仍在 `ApiCategoryManager`）
 
 ---
 
@@ -38,9 +51,11 @@
 
 | 文件 | 说明 |
 |------|------|
-| `core/ApiCategoryManager.php` | `frontendCategoryNames()` / `categoryNameToIdMap()` |
-| `core/theme/default/includes/api-payload.php` | 默认主题独立 payload |
-| `core/theme/slate/includes/api-payload.php` | 主题二独立 payload |
+| `core/FrontendCategory.php` | 前台分类统一调度 |
+| `core/FrontendApi.php` | 前台公开接口统一调度 |
+| `core/bootstrap.php` | 加载上述类 |
+| `core/theme/default/pages/*.php` | 调用 FrontendCategory / FrontendApi |
+| `core/theme/slate/pages/*.php` | 同上 |
 
 ---
 

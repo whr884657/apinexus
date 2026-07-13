@@ -3,12 +3,11 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 
-if (!isset($payload) || !is_array($payload)) {
-    require_once __DIR__ . '/../includes/api-payload.php';
-    $payload = slate_theme_page_payload();
+if (!isset($apiData) || !is_array($apiData)) {
+    $apiData = FrontendApi::listForTheme();
 }
 
-$apis = isset($payload['apiData']) ? $payload['apiData'] : array();
+$apis = $apiData;
 
 foreach ($apis as $api):
     if (!is_array($api)) {

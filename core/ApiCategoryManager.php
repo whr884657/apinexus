@@ -194,60 +194,6 @@ class ApiCategoryManager
     }
 
     /**
-     * 前台分类标签默认可见数量（不含「全部」）
-     *
-     * @return int
-     */
-    public static function frontendVisibleLimit()
-    {
-        return 15;
-    }
-
-    /**
-     * 前台分类标签：全部已启用分类（与下属接口数量无关）
-     *
-     * @return array<string, string> 键为分类 id 字符串，「all」=>「全部」
-     */
-    public static function frontendCategoryNames()
-    {
-        $names = array('all' => '全部');
-        foreach (self::listEnabled() as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            $id = (int) (isset($row['id']) ? $row['id'] : 0);
-            $label = trim((string) (isset($row['name']) ? $row['name'] : ''));
-            if ($id <= 0 || $label === '') {
-                continue;
-            }
-            $names[(string) $id] = $label;
-        }
-        return $names;
-    }
-
-    /**
-     * 分类名称 => id（用于接口行 category 字段映射）
-     *
-     * @return array<string, string>
-     */
-    public static function categoryNameToIdMap()
-    {
-        $map = array();
-        foreach (self::listEnabled() as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            $id = (int) (isset($row['id']) ? $row['id'] : 0);
-            $label = trim((string) (isset($row['name']) ? $row['name'] : ''));
-            if ($id <= 0 || $label === '' || isset($map[$label])) {
-                continue;
-            }
-            $map[$label] = (string) $id;
-        }
-        return $map;
-    }
-
-    /**
      * @param int $id
      * @return array|null
      */

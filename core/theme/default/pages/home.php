@@ -3,10 +3,14 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 
-require_once __DIR__ . '/../includes/api-payload.php';
-$payload = default_theme_page_payload();
+$categoryNames = FrontendCategory::nameMap();
+$apiData = FrontendApi::listForTheme();
+$payload = array(
+    'categoryNames' => $categoryNames,
+    'apiData'       => $apiData,
+);
 $apiCount = ApiManager::countApproved();
-$catCount = max(0, count($payload['categoryNames']) - 1);
+$catCount = FrontendCategory::countEnabled();
 $totalCalls = ApiManager::totalCallCount();
 
 $heroTitleSetting = ThemeManager::themeSetting('hero_title', '');
@@ -84,14 +88,13 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
                 <div class="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" style="color: var(--text-muted)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>
             </div>
             <div class="flex flex-wrap gap-2 font-mono text-xs items-center" id="category-btns">
-                <button type="button" class="cat-btn active" onclick="filterAPI('all', this)">全部</button>
+                <button type="button" class="cat-btn active" onclick="filterAPI('<?php echo vs_e(FrontendCategory::ALL_ID); ?>', this)"><?php echo vs_e(FrontendCategory::ALL_NAME); ?></button>
                 <?php
-                $catVisibleLimit = default_theme_category_visible_limit();
+                $catVisibleLimit = FrontendCategory::tagVisibleLimit();
                 $catBtnIndex = 0;
-                foreach ($payload['categoryNames'] as $catId => $catName):
-                    if ($catId === 'all') {
-                        continue;
-                    }
+                foreach (FrontendCategory::listTags() as $tag):
+                    $catId = $tag['id'];
+                    $catName = $tag['name'];
                     $hiddenClass = $catBtnIndex >= $catVisibleLimit ? ' cat-btn-hidden' : '';
                     $catBtnIndex++;
                 ?>
