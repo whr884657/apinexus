@@ -26,7 +26,13 @@ class ApiManager
      */
     public static function listPublic()
     {
-        return self::listAll(self::STATUS_APPROVED);
+        return RedisCache::remember(
+            RedisCache::KEY_API_PUBLIC,
+            RedisCache::TTL_API_PUBLIC,
+            function () {
+                return self::listAll(self::STATUS_APPROVED);
+            }
+        );
     }
 
     /**
@@ -188,6 +194,7 @@ class ApiManager
             );
             $reason = $status === self::STATUS_REJECTED ? trim((string) $rejectReason) : '';
             $stmt->execute(array($status, $reason, $apiId));
+            RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
             return '操作失败，请稍后重试';

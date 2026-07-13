@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/RedisService.php
- * 作用：Redis 连接、状态检测与监控指标采集（后台 Redis 管理页）
+ * 作用：Redis 连接、业务缓存监控与 misc-api 专用键空间
  */
 
 class RedisService
@@ -21,8 +21,69 @@ class RedisService
     }
 
     /**
-     * 连接配置（不含密码明文输出给前端）
-     *
+     * @return bool
+     */
+    public static function ping()
+    {
+        if (!self::extensionLoaded()) {
+            return false;
+        }
+
+        try {
+            return self::withClient(function (Redis $redis) {
+                $pong = $redis->ping();
+                return ($pong === true || $pong === '+PONG' || $pong === 'PONG');
+            });
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * @param callable $callback function(Redis $redis)
+     * @return mixed
+     */
+    public static function withClient($callback)
+    {
+        $redis = self::connectClient();
+        try {
+            return call_user_func($callback, $redis);
+        } finally {
+            try {
+                $redis->close();
+            } catch (Exception $e) {
+                // ignore
+            }
+        }
+    }
+
+    /**
+     * @param string $suffix
+     * @return string
+     */
+    public static function buildKey($suffix)
+    {
+        $prefix = self::connectionConfig()['prefix'];
+        return $prefix . ltrim((string) $suffix, ':');
+    }
+
+    /**
+     * @param int $bytes
+     * @return string
+     */
+    public static function formatBytes($bytes)
+    {
+        $bytes = max(0, (int) $bytes);
+        if ($bytes < 1024) {
+            return $bytes . ' B';
+        }
+        if ($bytes < 1048576) {
+            return round($bytes / 1024, 1) . ' KB';
+        }
+        return round($bytes / 1048576, 2) . ' MB';
+    }
+
+    /**
      * @return array
      */
     public static function connectionConfig()
@@ -52,8 +113,6 @@ class RedisService
     }
 
     /**
-     * 关于页等使用的 Redis 版本摘要
-     *
      * @return string
      */
     public static function versionLabel()
@@ -61,23 +120,22 @@ class RedisService
         if (!self::extensionLoaded()) {
             return 'PHP Redis 扩展未安装';
         }
-
-        $snapshot = self::collectMonitorSnapshot();
-        if (!$snapshot['connected']) {
-            return $snapshot['error'] !== '' ? $snapshot['error'] : '未连接';
+        if (!self::ping()) {
+            return '未连接';
         }
 
-        $version = isset($snapshot['server']['redis_version']) ? $snapshot['server']['redis_version'] : '';
-        if ($version === '') {
-            return '已连接';
+        try {
+            $version = self::withClient(function (Redis $redis) {
+                $info = $redis->info();
+                return is_array($info) && isset($info['redis_version']) ? (string) $info['redis_version'] : '';
+            });
+            return $version !== '' ? 'Redis ' . $version : '已连接';
+        } catch (Exception $e) {
+            return '未连接';
         }
-
-        return 'Redis ' . $version;
     }
 
     /**
-     * 采集监控快照（供后台页与 AJAX 刷新）
-     *
      * @return array
      */
     public static function collectMonitorSnapshot()
@@ -89,12 +147,21 @@ class RedisService
             'extension_loaded' => self::extensionLoaded(),
             'connected' => false,
             'config' => $config,
-            'server' => array(),
-            'memory' => array(),
-            'stats' => array(),
-            'keys' => array(
-                'total' => 0,
-                'prefixed' => 0,
+            'business' => array(
+                'cache_enabled' => false,
+                'app_hits' => 0,
+                'app_misses' => 0,
+                'app_hit_rate_percent' => null,
+                'entries' => array(),
+                'cache_keys' => 0,
+                'rate_limit_keys' => 0,
+                'cache_memory_bytes' => 0,
+                'cache_memory_human' => '—',
+            ),
+            'server' => array(
+                'redis_version' => '',
+                'uptime_human' => '',
+                'used_memory_human' => '',
             ),
             'collected_at' => date('Y-m-d H:i:s'),
         );
@@ -104,75 +171,77 @@ class RedisService
             return $snapshot;
         }
 
-        $redis = null;
         try {
-            $redis = self::connectClient();
-            $snapshot['connected'] = true;
-            $snapshot['ok'] = true;
+            self::withClient(function (Redis $redis) use (&$snapshot, $config) {
+                $snapshot['connected'] = true;
+                $snapshot['ok'] = true;
 
-            $info = $redis->info();
-            if (!is_array($info)) {
-                $info = array();
-            }
+                $info = $redis->info();
+                if (!is_array($info)) {
+                    $info = array();
+                }
 
-            $snapshot['server'] = array(
-                'redis_version' => self::infoValue($info, 'redis_version'),
-                'redis_mode' => self::infoValue($info, 'redis_mode'),
-                'os' => self::infoValue($info, 'os'),
-                'arch_bits' => self::infoValue($info, 'arch_bits'),
-                'uptime_seconds' => (int) self::infoValue($info, 'uptime_in_seconds', '0'),
-                'uptime_human' => self::formatUptime((int) self::infoValue($info, 'uptime_in_seconds', '0')),
-                'role' => self::infoValue($info, 'role'),
-                'tcp_port' => self::infoValue($info, 'tcp_port'),
-            );
+                $snapshot['server'] = array(
+                    'redis_version' => self::infoValue($info, 'redis_version'),
+                    'uptime_human' => self::formatUptime((int) self::infoValue($info, 'uptime_in_seconds', '0')),
+                    'used_memory_human' => self::infoValue($info, 'used_memory_human'),
+                );
 
-            $maxMemory = (int) self::infoValue($info, 'maxmemory', '0');
-            $usedMemory = (int) self::infoValue($info, 'used_memory', '0');
+                $snapshot['business']['cache_enabled'] = true;
+                $appStats = RedisCache::appStats();
+                $snapshot['business']['app_hits'] = $appStats['hits'];
+                $snapshot['business']['app_misses'] = $appStats['misses'];
+                $snapshot['business']['app_hit_rate_percent'] = $appStats['hit_rate_percent'];
+                $snapshot['business']['entries'] = RedisCache::inspectEntries();
 
-            $snapshot['memory'] = array(
-                'used_memory_human' => self::infoValue($info, 'used_memory_human'),
-                'used_memory_peak_human' => self::infoValue($info, 'used_memory_peak_human'),
-                'used_memory_rss_human' => self::infoValue($info, 'used_memory_rss_human'),
-                'maxmemory_human' => $maxMemory > 0
-                    ? self::infoValue($info, 'maxmemory_human')
-                    : '未限制',
-                'mem_fragmentation_ratio' => self::infoValue($info, 'mem_fragmentation_ratio'),
-                'usage_percent' => $maxMemory > 0
-                    ? round(($usedMemory / $maxMemory) * 100, 2)
-                    : null,
-            );
+                $prefix = $config['prefix'];
+                $cacheScan = self::scanKeyStats($redis, $prefix . 'cache:*');
+                $rateScan = self::scanKeyStats($redis, $prefix . 'rl:*');
 
-            $hits = (int) self::infoValue($info, 'keyspace_hits', '0');
-            $misses = (int) self::infoValue($info, 'keyspace_misses', '0');
-            $lookupTotal = $hits + $misses;
-
-            $snapshot['stats'] = array(
-                'connected_clients' => (int) self::infoValue($info, 'connected_clients', '0'),
-                'blocked_clients' => (int) self::infoValue($info, 'blocked_clients', '0'),
-                'instantaneous_ops_per_sec' => (int) self::infoValue($info, 'instantaneous_ops_per_sec', '0'),
-                'total_commands_processed' => (int) self::infoValue($info, 'total_commands_processed', '0'),
-                'keyspace_hits' => $hits,
-                'keyspace_misses' => $misses,
-                'hit_rate_percent' => $lookupTotal > 0 ? round(($hits / $lookupTotal) * 100, 2) : null,
-                'expired_keys' => (int) self::infoValue($info, 'expired_keys', '0'),
-                'evicted_keys' => (int) self::infoValue($info, 'evicted_keys', '0'),
-            );
-
-            $snapshot['keys']['total'] = (int) $redis->dbSize();
-            $snapshot['keys']['prefixed'] = self::countPrefixedKeys($redis, $config['prefix']);
+                $snapshot['business']['cache_keys'] = $cacheScan['count'];
+                $snapshot['business']['rate_limit_keys'] = $rateScan['count'];
+                $snapshot['business']['cache_memory_bytes'] = $cacheScan['bytes'] + $rateScan['bytes'];
+                $snapshot['business']['cache_memory_human'] = self::formatBytes(
+                    $snapshot['business']['cache_memory_bytes']
+                );
+            });
         } catch (Exception $e) {
             $snapshot['error'] = $e->getMessage();
-        } finally {
-            if ($redis instanceof Redis) {
-                try {
-                    $redis->close();
-                } catch (Exception $e) {
-                    // ignore
-                }
-            }
         }
 
         return $snapshot;
+    }
+
+    /**
+     * @param Redis  $redis
+     * @param string $pattern
+     * @return array{count:int,bytes:int}
+     */
+    private static function scanKeyStats(Redis $redis, $pattern)
+    {
+        $count = 0;
+        $bytes = 0;
+        $iterator = null;
+        $maxKeys = 10000;
+
+        do {
+            $keys = $redis->scan($iterator, $pattern, 100);
+            if ($keys === false || !is_array($keys)) {
+                break;
+            }
+            foreach ($keys as $key) {
+                $count++;
+                $len = $redis->strlen($key);
+                if ($len !== false) {
+                    $bytes += (int) $len;
+                }
+                if ($count >= $maxKeys) {
+                    return array('count' => $maxKeys, 'bytes' => $bytes);
+                }
+            }
+        } while ($iterator !== 0 && $iterator !== null);
+
+        return array('count' => $count, 'bytes' => $bytes);
     }
 
     /**
@@ -205,46 +274,7 @@ class RedisService
             throw new Exception('无法选择 Redis 数据库 db' . $config['database']);
         }
 
-        $pong = $redis->ping();
-        if ($pong !== '+PONG' && $pong !== 'PONG' && $pong !== true) {
-            throw new Exception('Redis PING 未响应');
-        }
-
         return $redis;
-    }
-
-    /**
-     * @param Redis  $redis
-     * @param string $prefix
-     * @return int
-     */
-    private static function countPrefixedKeys(Redis $redis, $prefix)
-    {
-        $prefix = (string) $prefix;
-        if ($prefix === '') {
-            return 0;
-        }
-
-        $count = 0;
-        $iterator = null;
-        $pattern = $prefix . '*';
-        $maxKeys = 50000;
-
-        do {
-            $keys = $redis->scan($iterator, $pattern, 200);
-            if ($keys === false) {
-                break;
-            }
-            if (!is_array($keys)) {
-                continue;
-            }
-            $count += count($keys);
-            if ($count >= $maxKeys) {
-                return $maxKeys;
-            }
-        } while ($iterator !== 0 && $iterator !== null);
-
-        return $count;
     }
 
     /**

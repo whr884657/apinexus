@@ -278,6 +278,7 @@ class ApiCategoryManager
             );
             $stmt->execute(array($name, $iconStored, $description));
             $id = (int) $pdo->lastInsertId();
+            RedisCache::invalidateFrontend();
             return self::formatRow(array(
                 'id'          => $id,
                 'name'        => $name,
@@ -349,6 +350,7 @@ class ApiCategoryManager
             }
 
             $pdo->commit();
+            RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
@@ -380,6 +382,7 @@ class ApiCategoryManager
                 'UPDATE `' . self::table() . '` SET `status` = ?, `updated_at` = NOW() WHERE `id` = ?'
             );
             $stmt->execute(array($status, $id));
+            RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
             return '操作失败，请稍后重试';
@@ -407,6 +410,7 @@ class ApiCategoryManager
             $pdo = Database::connect();
             $stmt = $pdo->prepare('DELETE FROM `' . self::table() . '` WHERE `id` = ?');
             $stmt->execute(array($id));
+            RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
             return '删除失败，请稍后重试';

@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/RateLimitStore.php
- * 作用：邮箱验证码发信频率限制（MySQL 表 mail_code_rate_log）
+ * 作用：发信/操作频率限制（优先 Redis，降低 MySQL 高频写入；不可用时回退 MySQL）
  */
 
 class RateLimitStore
@@ -48,6 +48,27 @@ class RateLimitStore
     }
 
     /**
+     * @param string $bucket
+     * @param int    $windowSeconds
+     * @return string
+     */
+    private static function redisWindowKey($bucket, $windowSeconds)
+    {
+        $windowSeconds = max(1, (int) $windowSeconds);
+        $slot = (int) floor(time() / $windowSeconds);
+        return 'rl:' . self::limitKey($bucket) . ':' . $slot;
+    }
+
+    /**
+     * @param string $bucket
+     * @return string
+     */
+    private static function redisLastKey($bucket)
+    {
+        return 'rl:last:' . self::limitKey($bucket);
+    }
+
+    /**
      * @return void
      */
     private static function maybeCleanup()
@@ -66,14 +87,23 @@ class RateLimitStore
     }
 
     /**
-     * 窗口内命中次数
-     *
      * @param string $bucket
      * @param int    $windowSeconds
      * @return int
      */
     public static function countHits($bucket, $windowSeconds)
     {
+        if (RedisCache::enabled()) {
+            try {
+                return RedisService::withClient(function (Redis $redis) use ($bucket, $windowSeconds) {
+                    $key = RedisService::buildKey(self::redisWindowKey($bucket, $windowSeconds));
+                    return (int) $redis->get($key);
+                });
+            } catch (Exception $e) {
+                // 回退 MySQL
+            }
+        }
+
         if (!self::isReady()) {
             return 0;
         }
@@ -91,13 +121,26 @@ class RateLimitStore
     }
 
     /**
-     * 距上次命中经过的秒数（无记录返回 -1）
-     *
      * @param string $bucket
      * @return int
      */
     public static function secondsSinceLastHit($bucket)
     {
+        if (RedisCache::enabled()) {
+            try {
+                return RedisService::withClient(function (Redis $redis) use ($bucket) {
+                    $key = RedisService::buildKey(self::redisLastKey($bucket));
+                    $last = (int) $redis->get($key);
+                    if ($last <= 0) {
+                        return -1;
+                    }
+                    return time() - $last;
+                });
+            } catch (Exception $e) {
+                // 回退 MySQL
+            }
+        }
+
         if (!self::isReady()) {
             return -1;
         }
@@ -118,8 +161,6 @@ class RateLimitStore
     }
 
     /**
-     * 检查是否允许并在需要时记录
-     *
      * @param string $bucket
      * @param int    $windowSeconds
      * @param int    $maxAttempts
@@ -128,30 +169,43 @@ class RateLimitStore
      */
     public static function allow($bucket, $windowSeconds, $maxAttempts, $record = true)
     {
-        if (!self::isReady()) {
-            return true;
-        }
-
         $count = self::countHits($bucket, $windowSeconds);
         if ($count >= $maxAttempts) {
             return false;
         }
 
         if ($record) {
-            self::recordHit($bucket);
+            self::recordHit($bucket, $windowSeconds);
         }
 
         return true;
     }
 
     /**
-     * 记录一次命中
-     *
      * @param string $bucket
+     * @param int    $windowSeconds
      * @return void
      */
-    public static function recordHit($bucket)
+    public static function recordHit($bucket, $windowSeconds = 3600)
     {
+        if (RedisCache::enabled()) {
+            try {
+                RedisService::withClient(function (Redis $redis) use ($bucket, $windowSeconds) {
+                    $windowSeconds = max(1, (int) $windowSeconds);
+                    $winKey = RedisService::buildKey(self::redisWindowKey($bucket, $windowSeconds));
+                    $lastKey = RedisService::buildKey(self::redisLastKey($bucket));
+                    $count = (int) $redis->incr($winKey);
+                    if ($count === 1) {
+                        $redis->expire($winKey, $windowSeconds + 60);
+                    }
+                    $redis->setex($lastKey, self::RETENTION_SECONDS, (string) time());
+                });
+                return;
+            } catch (Exception $e) {
+                // 回退 MySQL
+            }
+        }
+
         if (!self::isReady()) {
             return;
         }

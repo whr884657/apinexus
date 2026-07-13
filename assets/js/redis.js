@@ -1,21 +1,23 @@
 /**
  * 文件：assets/js/redis.js
- * 作用：Redis 管理页监控刷新（AJAX + 静态更新 DOM）
+ * 作用：Redis 管理页刷新与清空业务缓存
  */
 (function () {
     'use strict';
 
     var panel = document.getElementById('redisMonitorPanel');
     var refreshBtn = document.getElementById('redisRefreshBtn');
-    if (!panel || !refreshBtn) {
+    var clearBtn = document.getElementById('redisClearBtn');
+    if (!panel) {
         return;
     }
 
-    function displayValue(value) {
-        if (value === null || value === undefined || value === '') {
-            return '—';
-        }
-        return String(value);
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
 
     function setField(name, value) {
@@ -25,87 +27,119 @@
         }
     }
 
-    function renderSnapshot(snapshot) {
-        if (!snapshot || typeof snapshot !== 'object') {
-            return;
-        }
-
-        var config = snapshot.config || {};
-        setField('config_host', displayValue(config.host) + ':' + displayValue(config.port));
-        setField('config_database', 'db' + (config.database != null ? config.database : '0'));
-        setField('config_prefix', displayValue(config.prefix));
-        setField('config_auth', config.has_password ? '已配置' : '未配置');
-        setField('collected_at', displayValue(snapshot.collected_at));
-
-        var server = snapshot.server || {};
-        var memory = snapshot.memory || {};
-        var stats = snapshot.stats || {};
-        var keys = snapshot.keys || {};
-
-        setField('redis_version', displayValue(server.redis_version));
-        setField('uptime_human', displayValue(server.uptime_human));
-        setField('used_memory_human', displayValue(memory.used_memory_human));
-        setField('used_memory_peak_human', displayValue(memory.used_memory_peak_human));
-        setField('keys_total', displayValue(keys.total));
-        setField('keys_prefixed', displayValue(keys.prefixed) + (parseInt(keys.prefixed, 10) >= 50000 ? '+' : ''));
-        setField('hit_rate_percent', stats.hit_rate_percent == null ? '—' : stats.hit_rate_percent + '%');
-        setField('connected_clients', displayValue(stats.connected_clients));
-
-        setField('used_memory_rss_human', displayValue(memory.used_memory_rss_human));
-        setField('maxmemory_human', displayValue(memory.maxmemory_human));
-        setField('usage_percent', memory.usage_percent == null ? '—' : memory.usage_percent + '%');
-        setField('mem_fragmentation_ratio', displayValue(memory.mem_fragmentation_ratio));
-        setField('instantaneous_ops_per_sec', displayValue(stats.instantaneous_ops_per_sec));
-        setField('total_commands_processed', displayValue(stats.total_commands_processed));
-        setField('hits_misses', (stats.keyspace_hits || 0) + ' / ' + (stats.keyspace_misses || 0));
-        setField('expired_evicted', (stats.expired_keys || 0) + ' / ' + (stats.evicted_keys || 0));
-
-        setField('redis_mode', displayValue(server.redis_mode));
-        setField('role', displayValue(server.role));
-        setField('os', displayValue(server.os));
-        setField('arch_bits', server.arch_bits ? displayValue(server.arch_bits) + ' bit' : '—');
-        setField('blocked_clients', displayValue(stats.blocked_clients));
-        setField('tcp_port', displayValue(server.tcp_port));
-
-        panel.setAttribute('data-snapshot', JSON.stringify(snapshot));
-    }
-
-    function updateStatusNotice(snapshot) {
-        var wrap = document.getElementById('redisStatusNotice');
-        if (!wrap) {
+    function renderEntries(entries) {
+        var list = document.getElementById('redisEntryList');
+        if (!list || !Array.isArray(entries)) {
             return;
         }
 
         var html = '';
-        if (!snapshot.extension_loaded) {
-            html = '<div class="vs-notice vs-notice--danger"><div class="vs-notice__body"><strong>Redis 扩展未就绪</strong><p>安装向导要求 PHP redis 扩展，请确认服务器已安装并启用该扩展后重试。</p></div></div>';
-        } else if (!snapshot.connected) {
-            html = '<div class="vs-notice vs-notice--warning"><div class="vs-notice__body"><strong>Redis 未连接</strong><p>' + (snapshot.error || '请检查 Redis 服务是否启动，以及连接地址与认证配置。') + '</p></div></div>';
-        } else {
-            html = '<div class="vs-notice vs-notice--success"><div class="vs-notice__body"><strong>Redis 运行正常</strong><p>已成功连接并读取服务器 INFO。下方数据可通过「刷新监控」获取最新状态。</p></div></div>';
-        }
-        wrap.innerHTML = html;
+        entries.forEach(function (entry) {
+            html += '<div class="vs-redis-entry">';
+            html += '<div class="vs-redis-entry__main">';
+            html += '<div class="vs-redis-entry__title">' + escapeHtml(entry.label || '') + '</div>';
+            html += '<div class="vs-redis-entry__meta">刷新周期 ' + escapeHtml(entry.ttl_hint || '')
+                + ' · 键 ' + escapeHtml(entry.key || '') + '</div>';
+            html += '</div><div class="vs-redis-entry__status">';
+            if (entry.cached) {
+                html += '<span class="vs-redis-badge vs-redis-badge--on">已缓存</span>';
+                html += '<span class="vs-redis-entry__detail">剩余 ' + (entry.ttl_seconds != null ? entry.ttl_seconds : '—')
+                    + ' 秒 · ' + escapeHtml(entry.size_human || '—') + '</span>';
+            } else {
+                html += '<span class="vs-redis-badge vs-redis-badge--off">未缓存</span>';
+                html += '<span class="vs-redis-entry__detail">下次访问时自动建立</span>';
+            }
+            html += '</div></div>';
+        });
+        list.innerHTML = html;
     }
 
-    refreshBtn.addEventListener('click', function () {
-        refreshBtn.disabled = true;
-        var body = new FormData();
-        body.append('action', 'refresh');
+    function renderSnapshot(snapshot) {
+        if (!snapshot) {
+            return;
+        }
 
-        window.VS.postForm(body)
-            .then(function (data) {
-                if (data.code !== 1 || !data.snapshot) {
-                    throw new Error(data.msg || '刷新失败');
-                }
-                renderSnapshot(data.snapshot);
-                updateStatusNotice(data.snapshot);
-                window.VS.showMessage(data.msg || '监控数据已刷新', 'success');
-            })
-            .catch(function (err) {
-                window.VS.showMessage(err.message || '网络异常，请稍后重试', 'error');
-            })
-            .finally(function () {
-                refreshBtn.disabled = false;
-            });
-    });
+        var biz = snapshot.business || {};
+        var server = snapshot.server || {};
+
+        setField('app_hits', String(biz.app_hits || 0));
+        setField('app_misses', String(biz.app_misses || 0));
+        setField('app_hit_rate', biz.app_hit_rate_percent == null ? '—' : biz.app_hit_rate_percent + '%');
+        setField('cache_memory', biz.cache_memory_human || '—');
+        setField('cache_keys', String(biz.cache_keys || 0));
+        setField('rate_limit_keys', String(biz.rate_limit_keys || 0));
+        setField('collected_at', snapshot.collected_at || '—');
+        setField('redis_version', server.redis_version || '—');
+        setField('uptime_human', server.uptime_human || '—');
+        setField('used_memory_human', server.used_memory_human || '—');
+
+        renderEntries(biz.entries || []);
+
+        var notice = document.getElementById('redisStatusNotice');
+        if (!notice) {
+            return;
+        }
+        if (!snapshot.extension_loaded) {
+            notice.innerHTML = '<div class="vs-notice vs-notice--danger"><div class="vs-notice__body"><strong>未安装 Redis 扩展</strong><p>系统将以 MySQL 直连运行，无法使用 Redis 缓存。</p></div></div>';
+        } else if (!snapshot.connected) {
+            notice.innerHTML = '<div class="vs-notice vs-notice--warning"><div class="vs-notice__body"><strong>Redis 未连接</strong><p>'
+                + escapeHtml(snapshot.error || '请启动 Redis 并检查连接配置。') + '</p></div></div>';
+        } else {
+            notice.innerHTML = '<div class="vs-notice vs-notice--success"><div class="vs-notice__body"><strong>Redis 已连接</strong><p>业务缓存正常工作；修改接口或分类后会自动刷新相关缓存。</p></div></div>';
+        }
+    }
+
+    function postAction(action) {
+        var body = new FormData();
+        body.append('action', action);
+        return window.VS.postForm(body).then(function (data) {
+            if (data.code !== 1) {
+                throw new Error(data.msg || '操作失败');
+            }
+            return data;
+        });
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function () {
+            refreshBtn.disabled = true;
+            postAction('refresh')
+                .then(function (data) {
+                    renderSnapshot(data.snapshot);
+                    window.VS.showMessage(data.msg || '已刷新', 'success');
+                })
+                .catch(function (err) {
+                    window.VS.showMessage(err.message || '网络异常', 'error');
+                })
+                .finally(function () {
+                    refreshBtn.disabled = false;
+                });
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            var run = function () {
+                clearBtn.disabled = true;
+                postAction('clear_cache')
+                    .then(function (data) {
+                        renderSnapshot(data.snapshot);
+                        window.VS.showMessage(data.msg || '已清空', 'success');
+                    })
+                    .catch(function (err) {
+                        window.VS.showMessage(err.message || '操作失败', 'error');
+                    })
+                    .finally(function () {
+                        clearBtn.disabled = false;
+                    });
+            };
+
+            if (window.VsModal && window.VsModal.confirm) {
+                window.VsModal.confirm('将清空公开接口、分类等业务缓存，下次访问会重新从 MySQL 加载。确定吗？', '清空业务缓存')
+                    .then(function (ok) { if (ok) run(); });
+            } else {
+                if (window.confirm('确定清空业务缓存？')) run();
+            }
+        });
+    }
 })();
