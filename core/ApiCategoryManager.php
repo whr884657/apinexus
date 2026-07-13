@@ -176,18 +176,21 @@ class ApiCategoryManager
      */
     public static function listEnabled()
     {
-        $rows = self::listAll();
-        $out = array();
-        foreach ($rows as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            if ((int) $row['status'] !== 1) {
-                continue;
-            }
-            $out[] = $row;
+        if (!self::tableReady()) {
+            return array();
         }
-        return array_reverse($out);
+
+        try {
+            $pdo = Database::connect();
+            $sql = 'SELECT c.*
+                    FROM `' . self::table() . '` AS c
+                    WHERE c.`status` = 1
+                    ORDER BY c.`sort_order` ASC, c.`id` ASC';
+            $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+            return is_array($rows) ? $rows : array();
+        } catch (Exception $e) {
+            return array();
+        }
     }
 
     /**

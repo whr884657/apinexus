@@ -488,14 +488,16 @@ body.st-drawer-open {
 
 .st-cats {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
+    align-items: center;
+}
+
+.st-cats--page {
+    margin-bottom: 20px;
 }
 
 .st-cat-tag {
-    flex-shrink: 0;
     padding: 4px 12px;
     border-radius: 6px;
     font-size: 12px;
@@ -504,6 +506,31 @@ body.st-drawer-open {
     background: rgba(255, 255, 255, 0.75);
     cursor: pointer;
     transition: border-color 0.15s, color 0.15s, background 0.15s;
+    white-space: nowrap;
+}
+
+.st-cat-tag-hidden {
+    display: none;
+}
+
+.st-cat-tag-hidden.is-show {
+    display: inline-flex;
+}
+
+.st-cat-tag-more {
+    border-style: dashed;
+    color: var(--st-accent-h);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.st-cat-more-icon {
+    transition: transform 0.25s ease;
+}
+
+.st-cat-tag-more[data-expanded="1"] .st-cat-more-icon {
+    transform: rotate(90deg);
 }
 
 .st-cat-tag:hover {
@@ -521,6 +548,160 @@ body.st-drawer-open {
 
 .st-api-section {
     padding-bottom: 48px;
+}
+
+.st-api-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+@media (max-width: 960px) {
+    .st-api-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .st-api-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.st-api-card {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(236, 248, 242, 0.88) 100%);
+    border: 1px solid var(--st-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.st-api-card:hover {
+    border-color: rgba(36, 166, 106, 0.45);
+    box-shadow: 0 8px 24px rgba(36, 166, 106, 0.1);
+    transform: translateY(-2px);
+}
+
+.st-api-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.st-api-card__method {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+}
+
+.st-api-card__method--get {
+    background: rgba(36, 166, 106, 0.12);
+    color: var(--st-accent-h);
+}
+
+.st-api-card__method--post {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+}
+
+.st-api-card__badge {
+    font-size: 11px;
+    color: var(--st-fg3);
+}
+
+.st-api-card__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--st-fg1);
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.st-api-card__desc {
+    font-size: 13px;
+    color: var(--st-fg3);
+    line-height: 1.55;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.st-api-card__endpoint {
+    display: block;
+    font-size: 11px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: rgba(36, 166, 106, 0.08);
+    border: 1px solid rgba(36, 166, 106, 0.18);
+    color: var(--st-accent-h);
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+.st-api-more-wrap {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.st-api-more-link {
+    display: inline-flex;
+}
+
+.st-search--page {
+    margin-bottom: 14px;
+}
+
+.st-apis-page {
+    padding-top: 12px;
+    padding-bottom: 48px;
+}
+
+.st-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 24px;
+}
+
+.st-pagination a,
+.st-pagination span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--st-border);
+    font-size: 13px;
+    color: var(--st-fg2);
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+}
+
+.st-pagination span.is-active {
+    background: var(--st-accent);
+    border-color: var(--st-accent);
+    color: #fff;
+    font-weight: 600;
+}
+
+.st-pagination a:hover {
+    border-color: var(--st-accent);
+    color: var(--st-accent-h);
+}
+
+.st-api-empty--inline {
+    grid-column: 1 / -1;
+    padding: 32px 16px;
 }
 
 .st-api-empty {

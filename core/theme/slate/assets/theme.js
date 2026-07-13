@@ -186,14 +186,13 @@
         });
     }
 
-    var home = document.getElementById('stHome');
-    if (!home) {
-        return;
-    }
-
     function animateNum(el, target, duration) {
         if (!el) {
             return;
+        }
+        var parsed = parseInt(el.getAttribute('data-target'), 10);
+        if (!isNaN(parsed)) {
+            target = parsed;
         }
         var start = performance.now();
         function step(now) {
@@ -207,42 +206,245 @@
         requestAnimationFrame(step);
     }
 
-    animateNum(document.getElementById('stStatTotal'), 0, 600);
-    animateNum(document.getElementById('stStatToday'), 0, 800);
-    animateNum(document.getElementById('stStatAll'), 0, 1000);
-
-    var searchInput = document.getElementById('stSearchInput');
-    var searchClear = document.getElementById('stSearchClear');
-    var catBar = document.getElementById('stCatBar');
-
-    function syncSearchClear() {
-        if (!searchInput || !searchClear) {
+    function bindSearchClear(input, clearBtn) {
+        if (!input || !clearBtn) {
             return;
         }
-        searchClear.hidden = searchInput.value === '';
-    }
-
-    if (searchInput) {
-        searchInput.addEventListener('input', syncSearchClear);
-    }
-
-    if (searchClear && searchInput) {
-        searchClear.addEventListener('click', function () {
-            searchInput.value = '';
-            syncSearchClear();
-            searchInput.focus();
+        function sync() {
+            clearBtn.hidden = input.value === '';
+        }
+        input.addEventListener('input', sync);
+        clearBtn.addEventListener('click', function () {
+            input.value = '';
+            sync();
+            input.focus();
+            input.dispatchEvent(new Event('input', { bubbles: true }));
         });
+        sync();
     }
 
-    if (catBar) {
+    function bindCatBar(catBar, onSelect) {
+        if (!catBar) {
+            return;
+        }
         catBar.addEventListener('click', function (e) {
+            var moreBtn = e.target.closest('.st-cat-tag-more');
+            if (moreBtn) {
+                var expanded = moreBtn.getAttribute('data-expanded') === '1';
+                catBar.querySelectorAll('.st-cat-tag-hidden').forEach(function (el) {
+                    el.classList.toggle('is-show', !expanded);
+                });
+                var label = moreBtn.querySelector('span');
+                if (label) {
+                    label.textContent = expanded ? '更多' : '收起';
+                }
+                moreBtn.setAttribute('data-expanded', expanded ? '0' : '1');
+                return;
+            }
             var tag = e.target.closest('.st-cat-tag');
-            if (!tag) {
+            if (!tag || tag.classList.contains('st-cat-tag-more')) {
                 return;
             }
             catBar.querySelectorAll('.st-cat-tag').forEach(function (el) {
-                el.classList.toggle('is-on', el === tag);
+                if (!el.classList.contains('st-cat-tag-more')) {
+                    el.classList.toggle('is-on', el === tag);
+                }
             });
+            if (typeof onSelect === 'function') {
+                onSelect(tag.getAttribute('data-cat') || 'all');
+            }
         });
+    }
+
+    function buildApiCardHtml(api) {
+        var methods = api.methods && api.methods.length ? api.methods : ['GET'];
+        var method = String(methods[0] || 'GET').toUpperCase();
+        var methodClass = method.toLowerCase();
+        var desc = api.desc ? '<p class="st-api-card__desc">' + escapeHtml(api.desc) + '</p>' : '';
+        var endpoint = (api.full_url || api.endpoint || '');
+        var endpointHtml = endpoint
+            ? '<code class="st-api-card__endpoint">' + escapeHtml(endpoint) + '</code>'
+            : '';
+        return '<article class="st-api-card" data-category="' + escapeHtml(String(api.category || '')) + '" data-name="' + escapeHtml((api.name || '').toLowerCase()) + '" data-desc="' + escapeHtml((api.desc || '').toLowerCase()) + '">' +
+            '<div class="st-api-card__head">' +
+            '<span class="st-api-card__method st-api-card__method--' + escapeHtml(methodClass) + '">' + escapeHtml(method) + '</span>' +
+            '<span class="st-api-card__badge">免费</span></div>' +
+            '<h3 class="st-api-card__title">' + escapeHtml(api.name || '') + '</h3>' +
+            desc + endpointHtml + '</article>';
+    }
+
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function initHomeApiList() {
+        var grid = document.getElementById('stApiGrid');
+        var payload = window.stApiPayload;
+        if (!grid || !payload || !Array.isArray(payload.apiData)) {
+            return;
+        }
+        var limit = window.stHomePreviewLimit || 8;
+        var currentCat = 'all';
+        var currentSearch = '';
+
+        function render() {
+            var keyword = currentSearch.toLowerCase().trim();
+            var filtered = payload.apiData.filter(function (api) {
+                if (currentCat !== 'all' && String(api.category) !== String(currentCat)) {
+                    return false;
+                }
+                if (keyword) {
+                    var name = String(api.name || '').toLowerCase();
+                    var desc = String(api.desc || '').toLowerCase();
+                    if (name.indexOf(keyword) === -1 && desc.indexOf(keyword) === -1) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+            var slice = filtered.slice(0, limit);
+            if (slice.length === 0) {
+                grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">没有找到相关接口</p></div>';
+                return;
+            }
+            grid.innerHTML = slice.map(buildApiCardHtml).join('');
+        }
+
+        bindCatBar(document.getElementById('stCatBar'), function (cat) {
+            currentCat = cat || 'all';
+            render();
+        });
+        bindSearchClear(document.getElementById('stSearchInput'), document.getElementById('stSearchClear'));
+        var searchInput = document.getElementById('stSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                currentSearch = searchInput.value || '';
+                render();
+            });
+        }
+        render();
+    }
+
+    function initApisPage() {
+        var page = document.getElementById('stApisPage');
+        var grid = document.getElementById('stApisGrid');
+        var pagination = document.getElementById('stApisPagination');
+        var totalEl = document.getElementById('stApiTotalCount');
+        if (!page || !grid) {
+            return;
+        }
+        var allCards = Array.from(grid.querySelectorAll('.st-api-card'));
+        var currentCat = 'all';
+        var currentPage = 1;
+        var pageSize = 20;
+
+        function applyFilter() {
+            var searchInput = document.getElementById('stApisSearchInput');
+            var keyword = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            var filtered = allCards.filter(function (card) {
+                if (currentCat !== 'all' && card.getAttribute('data-category') !== String(currentCat)) {
+                    return false;
+                }
+                if (keyword) {
+                    var name = card.getAttribute('data-name') || '';
+                    var desc = card.getAttribute('data-desc') || '';
+                    if (name.indexOf(keyword) === -1 && desc.indexOf(keyword) === -1) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+            if (totalEl) {
+                totalEl.textContent = String(filtered.length);
+            }
+            var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+            var start = (currentPage - 1) * pageSize;
+            var pageCards = filtered.slice(start, start + pageSize);
+            allCards.forEach(function (card) { card.style.display = 'none'; });
+            pageCards.forEach(function (card) { card.style.display = ''; });
+            var emptyEl = grid.querySelector('.st-api-empty--inline');
+            if (pageCards.length === 0) {
+                if (!emptyEl) {
+                    emptyEl = document.createElement('div');
+                    emptyEl.className = 'st-api-empty st-api-empty--inline';
+                    emptyEl.innerHTML = '<p class="st-api-empty__title">没有找到相关接口</p>';
+                    grid.appendChild(emptyEl);
+                }
+                emptyEl.style.display = '';
+            } else if (emptyEl) {
+                emptyEl.style.display = 'none';
+            }
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            if (!pagination) {
+                return;
+            }
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+            pagination.style.display = '';
+            var html = '';
+            if (currentPage > 1) {
+                html += '<a href="javascript:void(0)" data-page="' + (currentPage - 1) + '">上一页</a>';
+            }
+            var start = Math.max(1, currentPage - 2);
+            var end = Math.min(totalPages, currentPage + 2);
+            for (var i = start; i <= end; i++) {
+                if (i === currentPage) {
+                    html += '<span class="is-active">' + i + '</span>';
+                } else {
+                    html += '<a href="javascript:void(0)" data-page="' + i + '">' + i + '</a>';
+                }
+            }
+            if (currentPage < totalPages) {
+                html += '<a href="javascript:void(0)" data-page="' + (currentPage + 1) + '">下一页</a>';
+            }
+            pagination.innerHTML = html;
+            pagination.querySelectorAll('[data-page]').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    currentPage = parseInt(link.getAttribute('data-page'), 10) || 1;
+                    applyFilter();
+                    window.scrollTo({ top: page.offsetTop - 80, behavior: 'smooth' });
+                });
+            });
+        }
+
+        bindCatBar(document.getElementById('stApisCatBar'), function (cat) {
+            currentCat = cat || 'all';
+            currentPage = 1;
+            applyFilter();
+        });
+        bindSearchClear(document.getElementById('stApisSearchInput'), document.getElementById('stApisSearchClear'));
+        var apisSearch = document.getElementById('stApisSearchInput');
+        if (apisSearch) {
+            apisSearch.addEventListener('input', function () {
+                currentPage = 1;
+                applyFilter();
+            });
+        }
+        applyFilter();
+    }
+
+    var home = document.getElementById('stHome');
+    if (home) {
+        animateNum(document.getElementById('stStatTotal'), 0, 600);
+        animateNum(document.getElementById('stStatCats'), 0, 700);
+        animateNum(document.getElementById('stStatAll'), 0, 1000);
+        initHomeApiList();
+        return;
+    }
+
+    if (document.getElementById('stApisPage')) {
+        initApisPage();
     }
 })();

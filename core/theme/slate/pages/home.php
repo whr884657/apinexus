@@ -2,13 +2,20 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
+
+require_once __DIR__ . '/../includes/api-payload.php';
+$payload = vs_theme_api_payload();
+$apiCount = ApiManager::countApproved();
+$totalCalls = ApiManager::totalCallCount();
+$catVisibleLimit = vs_theme_category_visible_limit();
+$catBtnIndex = 0;
+
 $heroTitleRaw = trim((string) ThemeManager::themeSetting('hero_title', ''));
 $heroTitle = $heroTitleRaw !== '' ? $heroTitleRaw : ('欢迎使用 ' . $siteName);
 $heroLeadCustom = trim((string) ThemeManager::themeSetting('hero_lead', ''));
 $heroDesc = $heroLeadCustom !== '' ? $heroLeadCustom : (isset($heroDesc) ? $heroDesc : ($siteDesc !== '' ? $siteDesc : '为开发者提供丰富、稳定、快速的 API 数据接口，一行代码即可调用'));
 $showStats = ThemeManager::themeSetting('show_stats', true);
 $showStats = $showStats === true || $showStats === 1 || $showStats === '1' || $showStats === 'true';
-$apiCategories = array('全部', '生活服务', '图片相关', '查询工具', '内容生成', '便捷工具', '社交娱乐');
 ?>
 <main class="st-main" id="stHome">
 <div class="st-wrap">
@@ -17,11 +24,11 @@ $apiCategories = array('全部', '生活服务', '图片相关', '查询工具',
     <p class="st-hero__lead" id="stHeroLead" data-typewriter="<?php echo vs_e($heroDesc); ?>"><span class="st-hero__lead-text"></span><span class="st-hero__cursor" aria-hidden="true"></span></p>
     <?php if ($showStats): ?>
     <div class="st-stat-pill" role="group" aria-label="接口统计">
-        <span class="st-stat-pill__item">收录 <strong class="st-stat-num" id="stStatTotal">0</strong> 个接口</span>
+        <span class="st-stat-pill__item">收录 <strong class="st-stat-num" id="stStatTotal" data-target="<?php echo (int) $apiCount; ?>">0</strong> 个接口</span>
         <span class="st-stat-pill__sep" aria-hidden="true"></span>
-        <span class="st-stat-pill__item">今日调用 <strong class="st-stat-num st-stat-pill__accent" id="stStatToday">0</strong> 次</span>
+        <span class="st-stat-pill__item">分类 <strong class="st-stat-num" id="stStatCats" data-target="<?php echo (int) max(0, count($payload['categoryNames']) - 1); ?>">0</strong> 个</span>
         <span class="st-stat-pill__sep" aria-hidden="true"></span>
-        <span class="st-stat-pill__item">累计调用 <strong class="st-stat-num" id="stStatAll">0</strong> 次</span>
+        <span class="st-stat-pill__item">累计调用 <strong class="st-stat-num" id="stStatAll" data-target="<?php echo (int) $totalCalls; ?>">0</strong> 次</span>
     </div>
     <?php endif; ?>
 </section>
@@ -33,19 +40,35 @@ $apiCategories = array('全部', '生活服务', '图片相关', '查询工具',
         <button type="button" class="st-search__clear" id="stSearchClear" aria-label="清空搜索" hidden>×</button>
     </div>
     <div class="st-cats" id="stCatBar">
-        <?php foreach ($apiCategories as $i => $cat): ?>
-            <button type="button" class="st-cat-tag<?php echo $i === 0 ? ' is-on' : ''; ?>" data-cat="<?php echo vs_e($cat); ?>"><?php echo vs_e($cat); ?></button>
+        <button type="button" class="st-cat-tag is-on" data-cat="all">全部</button>
+        <?php foreach ($payload['categoryNames'] as $catId => $catName): ?>
+            <?php if ($catId === 'all') { continue; } ?>
+            <?php
+            $hiddenClass = $catBtnIndex >= $catVisibleLimit ? ' st-cat-tag-hidden' : '';
+            $catBtnIndex++;
+            ?>
+            <button type="button" class="st-cat-tag<?php echo $hiddenClass; ?>" data-cat="<?php echo vs_e($catId); ?>"><?php echo vs_e($catName); ?></button>
         <?php endforeach; ?>
+        <?php if ($catBtnIndex > $catVisibleLimit): ?>
+        <button type="button" class="st-cat-tag st-cat-tag-more" id="stCatMoreBtn" data-expanded="0">
+            <span>更多</span>
+            <svg class="st-cat-more-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+        </button>
+        <?php endif; ?>
     </div>
 </section>
 
 <section class="st-section st-api-section" id="stApiListWrap">
-    <div class="st-api-empty">
-        <div class="st-api-empty__icon" aria-hidden="true">⌕</div>
-        <p class="st-api-empty__title">接口列表建设中</p>
-        <p class="st-api-empty__desc">公开接口模块完善后将在此展示，支持搜索与分类筛选。</p>
-        <a href="<?php echo vs_e($navItems[1]['url'] ?? ($vsBase . '/apis')); ?>" class="st-bar__login" style="display:inline-flex;margin-top:12px;">查看全部接口</a>
+    <div class="st-api-grid" id="stApiGrid"></div>
+    <?php if ($apiCount > 8): ?>
+    <div class="st-api-more-wrap">
+        <a href="<?php echo vs_e($vsBase); ?>/apis" class="st-bar__login st-api-more-link">查看全部接口</a>
     </div>
+    <?php endif; ?>
 </section>
 </div>
 </main>
+<script>
+window.stApiPayload = <?php echo json_encode($payload, JSON_UNESCAPED_UNICODE); ?>;
+window.stHomePreviewLimit = 8;
+</script>

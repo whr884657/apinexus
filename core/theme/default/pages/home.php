@@ -86,19 +86,20 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
             <div class="flex flex-wrap gap-2 font-mono text-xs items-center" id="category-btns">
                 <button type="button" class="cat-btn active" onclick="filterAPI('all', this)">全部</button>
                 <?php
+                $catVisibleLimit = vs_theme_category_visible_limit();
                 $catBtnIndex = 0;
                 foreach ($payload['categoryNames'] as $catId => $catName):
                     if ($catId === 'all') {
                         continue;
                     }
-                    $hiddenClass = $catBtnIndex >= 10 ? ' cat-btn-hidden' : '';
+                    $hiddenClass = $catBtnIndex >= $catVisibleLimit ? ' cat-btn-hidden' : '';
                     $catBtnIndex++;
                 ?>
                 <button type="button" class="cat-btn<?php echo $hiddenClass; ?>" onclick="filterAPI('<?php echo vs_e($catId); ?>', this)"><?php echo vs_e($catName); ?></button>
                 <?php endforeach; ?>
-                <?php if ($catBtnIndex > 10): ?>
+                <?php if ($catBtnIndex > $catVisibleLimit): ?>
                 <button type="button" class="cat-btn-more" id="catMoreBtn" onclick="toggleCategoryExpand()">
-                    <span>更多分类</span>
+                    <span>更多</span>
                     <svg class="expand-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"></path></svg>
                 </button>
                 <?php endif; ?>
