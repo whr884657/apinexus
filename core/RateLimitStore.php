@@ -200,6 +200,7 @@ class RateLimitStore
                     }
                     $redis->setex($lastKey, self::RETENTION_SECONDS, (string) time());
                 });
+                RedisCache::maintainKeyspace();
                 return;
             } catch (Exception $e) {
                 // 回退 MySQL

@@ -654,6 +654,110 @@
     margin-bottom: 12px;
 }
 
+.vs-redis-charts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.vs-redis-chart-card {
+    padding: 16px;
+    border: 1px solid var(--vs-border);
+    border-radius: 10px;
+    background: var(--vs-content-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.vs-redis-chart-card__title {
+    width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vs-text);
+    text-align: left;
+}
+
+.vs-redis-donut {
+    --p1: 50;
+    --c1: #10b981;
+    --c2: #e5e7eb;
+    position: relative;
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    background: conic-gradient(var(--c1) 0 calc(var(--p1) * 1%), var(--c2) 0);
+    flex-shrink: 0;
+}
+
+.vs-redis-donut::after {
+    content: '';
+    position: absolute;
+    inset: 24%;
+    background: var(--vs-white);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+.vs-redis-donut__label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--vs-text);
+    z-index: 1;
+}
+
+.vs-redis-chart-legend {
+    width: 100%;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vs-redis-chart-legend li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+}
+
+.vs-redis-chart-legend__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.vs-redis-chart-legend__name {
+    display: inline-flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.vs-redis-chart-legend__val {
+    font-weight: 600;
+    color: var(--vs-text);
+}
+
+@media (max-width: 991px) {
+    .vs-redis-charts {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 767px) {
     .vs-redis-hero-grid {
         grid-template-columns: 1fr;
@@ -1114,7 +1218,7 @@ select.vs-input {
     font-size: 12px;
     font-weight: 500;
     line-height: 1.25;
-    border-radius: 999px;
+    border-radius: var(--vs-btn-radius, 10px);
 }
 
 .vs-btn--pill-primary {
@@ -2138,6 +2242,16 @@ select.vs-input {
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
 }
 
+.vs-theme-card.is-selected {
+    border-color: #111;
+    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.14), 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.vs-theme-card.is-selected:hover {
+    border-color: #111;
+    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.14), 0 6px 20px rgba(15, 23, 42, 0.1);
+}
+
 .vs-theme-card.is-active:hover {
     border-color: #111;
     box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
@@ -2216,7 +2330,7 @@ select.vs-input {
     align-items: center;
     gap: 6px;
     padding: 8px 14px;
-    border-radius: 999px;
+    border-radius: var(--vs-btn-radius, 10px);
     border: 1px solid var(--vs-border);
     background: var(--vs-white);
     color: var(--vs-text-secondary);

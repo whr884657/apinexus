@@ -27,7 +27,8 @@
     --vs-border: #e5e7eb;
     --vs-bg: #f8fafc;
     --vs-white: #ffffff;
-    --vs-radius: 8px;
+    --vs-radius: 10px;
+    --vs-btn-radius: 10px;
     --vs-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
@@ -199,7 +200,7 @@ a:hover {
     height: 44px;
     padding: 0 24px;
     border: none;
-    border-radius: 9999px;
+    border-radius: var(--vs-btn-radius, 10px);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -224,7 +225,7 @@ a:hover {
     background: var(--vs-white);
     color: var(--vs-text);
     border: 1px solid var(--vs-border);
-    border-radius: 9999px;
+    border-radius: var(--vs-btn-radius, 10px);
 }
 
 .vs-btn--default:hover {
@@ -254,7 +255,7 @@ a:hover {
 }
 
 .vs-btn--rect {
-    border-radius: 8px;
+    border-radius: var(--vs-btn-radius, 10px);
     height: auto;
     min-height: 34px;
     padding: 6px 14px;

@@ -20,13 +20,11 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
 <form id="loginForm" method="post" action="" novalidate>
     <?php vs_auth_csrf_field(); ?>
     <div class="st-auth__field">
-        <label for="username">用户名或邮箱</label>
-        <input class="st-auth__input" id="username" name="username" type="text" placeholder="请输入用户名或邮箱" autocomplete="username" maxlength="64" required>
+        <input class="st-auth__input" id="username" name="username" type="text" placeholder="请输入用户名或邮箱" autocomplete="username" maxlength="64" required aria-label="用户名或邮箱">
     </div>
     <div class="st-auth__field">
-        <label for="password">密码</label>
         <div class="st-auth__pw-wrap">
-            <input class="st-auth__input" id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required>
+            <input class="st-auth__input" id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required aria-label="密码">
             <button type="button" class="st-auth__pw-toggle" data-st-pw-toggle aria-label="显示密码">显示</button>
         </div>
     </div>

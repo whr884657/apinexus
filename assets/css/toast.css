@@ -1,21 +1,22 @@
 /**
  * 文件：assets/css/toast.css
- * 作用：全局胶囊弹出提示（Toast），统一固定在页面顶部
- * @version 1.0.0
+ * 作用：全站长条形 Toast 提示，统一固定在页面顶部
+ * @version 3.3.0
  */
 
 .vs-toast-host {
     position: fixed;
     top: calc(12px + env(safe-area-inset-top, 0px));
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
     z-index: 10050;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: 8px;
     pointer-events: none;
-    max-width: min(92vw, 480px);
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .vs-admin-body .vs-toast-host {
@@ -23,41 +24,52 @@
 }
 
 .vs-toast {
-    padding: 10px 18px;
-    border-radius: 999px;
+    display: block;
+    width: 100%;
+    max-width: none;
+    min-height: 46px;
+    padding: 12px 16px;
+    border-radius: 10px;
     font-size: 14px;
-    line-height: 1.4;
+    line-height: 1.5;
     color: #fff;
-    background: rgba(30, 30, 30, 0.88);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    background: rgba(30, 30, 30, 0.94);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
     opacity: 0;
-    transform: translateY(-8px) scale(0.96);
+    transform: translateY(-10px);
     transition: opacity 0.28s ease, transform 0.28s ease;
-    text-align: center;
+    text-align: left;
     word-break: break-word;
+    box-sizing: border-box;
 }
 
 .vs-toast.is-visible {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
 }
 
 .vs-toast--success {
-    background: rgba(22, 119, 78, 0.94);
+    background: rgba(22, 119, 78, 0.97);
 }
 
 .vs-toast--error {
-    background: rgba(180, 45, 45, 0.94);
+    background: rgba(180, 45, 45, 0.97);
 }
 
 .vs-toast--info {
-    background: rgba(30, 30, 30, 0.88);
+    background: rgba(30, 41, 59, 0.96);
+}
+
+@media (min-width: 768px) {
+    .vs-toast-host {
+        padding: 0 24px;
+    }
 }
 
 @media (max-width: 767px) {
     .vs-toast-host {
         top: calc(10px + env(safe-area-inset-top, 0px));
-        max-width: min(94vw, 480px);
+        padding: 0 16px;
     }
 
     .vs-admin-body .vs-toast-host {
@@ -66,6 +78,8 @@
 
     .vs-toast {
         font-size: 13px;
-        padding: 9px 16px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        min-height: 44px;
     }
 }

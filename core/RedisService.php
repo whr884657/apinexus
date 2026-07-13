@@ -171,6 +171,8 @@ class RedisService
             return $snapshot;
         }
 
+        RedisCache::maintainKeyspace();
+
         try {
             self::withClient(function (Redis $redis) use (&$snapshot, $config) {
                 $snapshot['connected'] = true;
@@ -242,6 +244,79 @@ class RedisService
         } while ($iterator !== 0 && $iterator !== null);
 
         return array('count' => $count, 'bytes' => $bytes);
+    }
+
+    /**
+     * 清理过期限流键并在超出上限时淘汰最旧键
+     *
+     * @param Redis $redis
+     * @param int   $maxKeys
+     * @return int 删除数量
+     */
+    public static function pruneRateLimitKeys(Redis $redis, $maxKeys)
+    {
+        $maxKeys = max(100, (int) $maxKeys);
+        $prefix = self::connectionConfig()['prefix'];
+        $pattern = $prefix . 'rl:*';
+        $keys = array();
+        $iterator = null;
+
+        do {
+            $batch = $redis->scan($iterator, $pattern, 200);
+            if ($batch === false || !is_array($batch)) {
+                break;
+            }
+            foreach ($batch as $key) {
+                $keys[] = $key;
+            }
+        } while ($iterator !== 0 && $iterator !== null);
+
+        $pruned = 0;
+        $alive = array();
+
+        foreach ($keys as $key) {
+            $ttl = (int) $redis->ttl($key);
+            if ($ttl === -2) {
+                continue;
+            }
+            if ($ttl === 0) {
+                $redis->del($key);
+                $pruned++;
+                continue;
+            }
+            if ($ttl === -1 && strpos($key, $prefix . 'rl:last:') !== 0) {
+                $redis->expire($key, 3600);
+            }
+            $alive[] = $key;
+        }
+
+        if (count($alive) <= $maxKeys) {
+            return $pruned;
+        }
+
+        $candidates = array();
+        foreach ($alive as $key) {
+            if (strpos($key, $prefix . 'rl:last:') === 0) {
+                continue;
+            }
+            $candidates[] = array(
+                'key' => $key,
+                'score' => (int) $redis->ttl($key),
+            );
+        }
+
+        usort($candidates, function ($a, $b) {
+            return $a['score'] - $b['score'];
+        });
+
+        $overflow = count($alive) - $maxKeys;
+        for ($i = 0; $i < $overflow && $i < count($candidates); $i++) {
+            if ($redis->del($candidates[$i]['key'])) {
+                $pruned++;
+            }
+        }
+
+        return $pruned;
     }
 
     /**

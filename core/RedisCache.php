@@ -16,6 +16,10 @@ class RedisCache
     const TTL_FRONTEND_CATEGORY = 300;
     const TTL_API_PUBLIC = 120;
 
+    const MAX_RATE_LIMIT_KEYS = 2000;
+    const STAT_MAX_VALUE = 100000000;
+    const STAT_TTL_SECONDS = 2592000;
+
     /**
      * @return bool
      */
@@ -53,6 +57,7 @@ class RedisCache
                 self::incrStat($redis, self::KEY_STAT_MISSES);
                 $value = call_user_func($factory);
                 $redis->setex($fullKey, max(1, (int) $ttl), serialize($value));
+                self::maybeMaintain($redis);
                 return $value;
             });
         } catch (Exception $e) {
@@ -89,6 +94,78 @@ class RedisCache
         self::forget(self::KEY_FRONTEND_API);
         self::forget(self::KEY_FRONTEND_CATEGORY);
         self::forget(self::KEY_API_PUBLIC);
+    }
+
+    /**
+     * 键空间维护：清理过期限流键、限制键数量、防止统计无限增长
+     *
+     * @return array{pruned:int,capped:bool}
+     */
+    public static function maintainKeyspace()
+    {
+        if (!self::enabled()) {
+            return array('pruned' => 0, 'capped' => false);
+        }
+
+        if (random_int(1, 8) > 2) {
+            return array('pruned' => 0, 'capped' => false);
+        }
+
+        try {
+            return RedisService::withClient(function (Redis $redis) {
+                return self::runMaintain($redis);
+            });
+        } catch (Exception $e) {
+            return array('pruned' => 0, 'capped' => false);
+        }
+    }
+
+    /**
+     * @param Redis $redis
+     * @return void
+     */
+    private static function maybeMaintain(Redis $redis)
+    {
+        if (random_int(1, 12) > 1) {
+            return;
+        }
+        self::runMaintain($redis);
+    }
+
+    /**
+     * @param Redis $redis
+     * @return array{pruned:int,capped:bool}
+     */
+    private static function runMaintain(Redis $redis)
+    {
+        $pruned = RedisService::pruneRateLimitKeys($redis, self::MAX_RATE_LIMIT_KEYS);
+        $capped = self::capStatKeys($redis);
+        return array('pruned' => $pruned, 'capped' => $capped);
+    }
+
+    /**
+     * @param Redis $redis
+     * @return bool
+     */
+    private static function capStatKeys(Redis $redis)
+    {
+        $capped = false;
+        foreach (array(self::KEY_STAT_HITS, self::KEY_STAT_MISSES) as $statKey) {
+            $fullKey = RedisService::buildKey($statKey);
+            if (!$redis->exists($fullKey)) {
+                continue;
+            }
+            $ttl = (int) $redis->ttl($fullKey);
+            if ($ttl < 0) {
+                $redis->expire($fullKey, self::STAT_TTL_SECONDS);
+            }
+            $value = (int) $redis->get($fullKey);
+            if ($value > self::STAT_MAX_VALUE) {
+                $redis->setex($fullKey, self::STAT_TTL_SECONDS, '0');
+                $capped = true;
+            }
+        }
+        return $capped;
     }
 
     /**

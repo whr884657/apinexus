@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.2.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.3.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -262,6 +262,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.3.0（2026-07-14）
+
+- **Toast**：全站改为长条形圆角提示，手机端左右留边；禁止胶囊/灵动岛形
+- **按钮规范**：后台按钮统一圆角矩形（`--vs-btn-radius: 10px`）；新增《按钮样式规范》
+- **主题 1**：注册身份滑块样式写入 `core/theme/default/assets/auth.css`，修复无渲染问题
+- **主题 2**：登录/注册/忘记密码/绑定页移除输入框上方标签，保留 placeholder + `aria-label`
+- **主题切换**：后台桌面端待保存主题 `.is-selected` 边框持久显示
+- **Redis**：管理页增加命中/键分布/缓存项饼图；文案去站点化；超限时自动清理限流键
 
 ### v3.2.1（2026-07-14）
 

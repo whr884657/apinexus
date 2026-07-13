@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/redis.js
- * 作用：Redis 管理页刷新与清空业务缓存
+ * 作用：Redis 管理页刷新、清空缓存与图表更新
  */
 (function () {
     'use strict';
@@ -21,9 +21,20 @@
     }
 
     function setField(name, value) {
-        var el = panel.querySelector('[data-redis-field="' + name + '"]');
-        if (el) {
+        panel.querySelectorAll('[data-redis-field="' + name + '"]').forEach(function (el) {
             el.textContent = value;
+        });
+    }
+
+    function setDonut(id, percent, label) {
+        var el = document.getElementById(id);
+        if (!el) {
+            return;
+        }
+        el.style.setProperty('--p1', String(percent));
+        var labelEl = el.querySelector('.vs-redis-donut__label');
+        if (labelEl) {
+            labelEl.textContent = label;
         }
     }
 
@@ -54,6 +65,41 @@
         list.innerHTML = html;
     }
 
+    function renderCharts(biz) {
+        var hits = biz.app_hits || 0;
+        var misses = biz.app_misses || 0;
+        var hitTotal = hits + misses;
+        var hitPercent = hitTotal > 0 ? Math.round((hits / hitTotal) * 1000) / 10 : 0;
+
+        var cacheKeys = biz.cache_keys || 0;
+        var rateKeys = biz.rate_limit_keys || 0;
+        var keyTotal = cacheKeys + rateKeys;
+        var cacheKeyPercent = keyTotal > 0 ? Math.round((cacheKeys / keyTotal) * 1000) / 10 : 0;
+
+        var entries = biz.entries || [];
+        var cachedCount = 0;
+        entries.forEach(function (entry) {
+            if (entry.cached) {
+                cachedCount += 1;
+            }
+        });
+        var entryTotal = entries.length;
+        var entryCachedPercent = entryTotal > 0 ? Math.round((cachedCount / entryTotal) * 1000) / 10 : 0;
+
+        setDonut('redisChartHit', hitPercent, hitTotal > 0 ? hitPercent + '%' : '—');
+        setDonut('redisChartKeys', cacheKeyPercent, keyTotal > 0 ? cacheKeyPercent + '%' : '—');
+        setDonut('redisChartEntries', entryCachedPercent, entryTotal > 0 ? entryCachedPercent + '%' : '—');
+
+        setField('chart_hits', String(hits));
+        setField('chart_misses', String(misses));
+        setField('cache_keys', String(cacheKeys));
+        setField('rate_limit_keys', String(rateKeys));
+        setField('chart_cached_count', String(cachedCount));
+        setField('chart_uncached_count', String(Math.max(0, entryTotal - cachedCount)));
+        setField('cache_keys_dup', String(cacheKeys));
+        setField('rate_limit_keys_dup', String(rateKeys));
+    }
+
     function renderSnapshot(snapshot) {
         if (!snapshot) {
             return;
@@ -66,13 +112,12 @@
         setField('app_misses', String(biz.app_misses || 0));
         setField('app_hit_rate', biz.app_hit_rate_percent == null ? '—' : biz.app_hit_rate_percent + '%');
         setField('cache_memory', biz.cache_memory_human || '—');
-        setField('cache_keys', String(biz.cache_keys || 0));
-        setField('rate_limit_keys', String(biz.rate_limit_keys || 0));
         setField('collected_at', snapshot.collected_at || '—');
         setField('redis_version', server.redis_version || '—');
         setField('uptime_human', server.uptime_human || '—');
         setField('used_memory_human', server.used_memory_human || '—');
 
+        renderCharts(biz);
         renderEntries(biz.entries || []);
 
         var notice = document.getElementById('redisStatusNotice');
@@ -137,8 +182,8 @@
             if (window.VsModal && window.VsModal.confirm) {
                 window.VsModal.confirm('将清空公开接口、分类等业务缓存，下次访问会重新从 MySQL 加载。确定吗？', '清空业务缓存')
                     .then(function (ok) { if (ok) run(); });
-            } else {
-                if (window.confirm('确定清空业务缓存？')) run();
+            } else if (window.confirm('确定清空业务缓存？')) {
+                run();
             }
         });
     }

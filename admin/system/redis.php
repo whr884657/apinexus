@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/system/redis.php
- * 作用：Redis 管理（misc-api 业务缓存监控 + 服务器简要状态）
+ * 作用：Redis 管理（业务缓存监控 + 可视化统计）
  */
 
 require_once dirname(__DIR__) . '/init.php';
@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'clear_cache') {
         RedisCache::invalidateFrontend();
-        AjaxResponse::success('本系统业务缓存已清空', array('snapshot' => RedisService::collectMonitorSnapshot()));
+        AjaxResponse::success('业务缓存已清空', array('snapshot' => RedisService::collectMonitorSnapshot()));
     }
 
     AjaxResponse::error('无效操作', 400);
@@ -26,6 +26,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $snapshot = RedisService::collectMonitorSnapshot();
 $biz = isset($snapshot['business']) ? $snapshot['business'] : array();
 $server = isset($snapshot['server']) ? $snapshot['server'] : array();
+
+$hits = (int) (isset($biz['app_hits']) ? $biz['app_hits'] : 0);
+$misses = (int) (isset($biz['app_misses']) ? $biz['app_misses'] : 0);
+$hitTotal = $hits + $misses;
+$hitPercent = $hitTotal > 0 ? round(($hits / $hitTotal) * 100, 1) : 0;
+$missPercent = $hitTotal > 0 ? round(100 - $hitPercent, 1) : 0;
+
+$cacheKeys = (int) (isset($biz['cache_keys']) ? $biz['cache_keys'] : 0);
+$rateKeys = (int) (isset($biz['rate_limit_keys']) ? $biz['rate_limit_keys'] : 0);
+$keyTotal = $cacheKeys + $rateKeys;
+$cacheKeyPercent = $keyTotal > 0 ? round(($cacheKeys / $keyTotal) * 100, 1) : 0;
+$rateKeyPercent = $keyTotal > 0 ? round(100 - $cacheKeyPercent, 1) : 0;
+
+$entries = isset($biz['entries']) ? $biz['entries'] : array();
+$cachedCount = 0;
+foreach ($entries as $entry) {
+    if (!empty($entry['cached'])) {
+        $cachedCount++;
+    }
+}
+$entryTotal = count($entries);
+$entryCachedPercent = $entryTotal > 0 ? round(($cachedCount / $entryTotal) * 100, 1) : 0;
+$entryMissPercent = $entryTotal > 0 ? round(100 - $entryCachedPercent, 1) : 0;
 
 vs_admin_layout_start(
     'Redis 管理',
@@ -37,8 +60,8 @@ vs_admin_layout_start(
 
 <div class="vs-panel vs-redis-panel" id="redisMonitorPanel">
     <div class="vs-panel__header">
-        <h2 class="vs-panel__title">本系统 Redis 缓存</h2>
-        <p class="vs-panel__desc">仅监控 misc-api 前缀下的<strong>业务缓存</strong>（公开接口、分类标签、发信限流等），用于减轻 MySQL 读取与写入压力。</p>
+        <h2 class="vs-panel__title">Redis 缓存监控</h2>
+        <p class="vs-panel__desc">查看业务缓存命中率、键分布与缓存项状态；仅高频读取的数据会写入 Redis，其余仍走 MySQL。</p>
     </div>
 
     <div id="redisStatusNotice">
@@ -51,15 +74,48 @@ vs_admin_layout_start(
         <?php endif; ?>
     </div>
 
+    <div class="vs-redis-charts" id="redisCharts">
+        <div class="vs-redis-chart-card">
+            <div class="vs-redis-chart-card__title">命中分布</div>
+            <div class="vs-redis-donut" id="redisChartHit" style="--p1: <?php echo vs_e($hitPercent); ?>; --c1: #10b981; --c2: #e5e7eb;">
+                <span class="vs-redis-donut__label" data-redis-field="chart_hit_label"><?php echo $hitTotal > 0 ? vs_e($hitPercent . '%') : '—'; ?></span>
+            </div>
+            <ul class="vs-redis-chart-legend">
+                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#10b981"></span>命中</span><span class="vs-redis-chart-legend__val" data-redis-field="chart_hits"><?php echo $hits; ?></span></li>
+                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#e5e7eb"></span>未命中</span><span class="vs-redis-chart-legend__val" data-redis-field="chart_misses"><?php echo $misses; ?></span></li>
+            </ul>
+        </div>
+        <div class="vs-redis-chart-card">
+            <div class="vs-redis-chart-card__title">键类型分布</div>
+            <div class="vs-redis-donut" id="redisChartKeys" style="--p1: <?php echo vs_e($cacheKeyPercent); ?>; --c1: #3b82f6; --c2: #fde68a;">
+                <span class="vs-redis-donut__label" data-redis-field="chart_key_label"><?php echo $keyTotal > 0 ? vs_e($cacheKeyPercent . '%') : '—'; ?></span>
+            </div>
+            <ul class="vs-redis-chart-legend">
+                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#3b82f6"></span>数据缓存</span><span class="vs-redis-chart-legend__val" data-redis-field="cache_keys"><?php echo $cacheKeys; ?></span></li>
+                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#fde68a"></span>发信限流</span><span class="vs-redis-chart-legend__val" data-redis-field="rate_limit_keys"><?php echo $rateKeys; ?></span></li>
+            </ul>
+        </div>
+        <div class="vs-redis-chart-card">
+            <div class="vs-redis-chart-card__title">缓存项状态</div>
+            <div class="vs-redis-donut" id="redisChartEntries" style="--p1: <?php echo vs_e($entryCachedPercent); ?>; --c1: #8b5cf6; --c2: #f3f4f6;">
+                <span class="vs-redis-donut__label" data-redis-field="chart_entry_label"><?php echo $entryTotal > 0 ? vs_e($entryCachedPercent . '%') : '—'; ?></span>
+            </div>
+            <ul class="vs-redis-chart-legend">
+                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#8b5cf6"></span>已缓存</span><span class="vs-redis-chart-legend__val" data-redis-field="chart_cached_count"><?php echo $cachedCount; ?></span></li>
+                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#f3f4f6;border:1px solid #e5e7eb"></span>未缓存</span><span class="vs-redis-chart-legend__val" data-redis-field="chart_uncached_count"><?php echo max(0, $entryTotal - $cachedCount); ?></span></li>
+            </ul>
+        </div>
+    </div>
+
     <div class="vs-stat-grid vs-redis-hero-grid">
         <div class="vs-stat-card vs-redis-stat-card">
             <span class="vs-stat-card__label">缓存命中次数</span>
-            <span class="vs-stat-card__value" data-redis-field="app_hits"><?php echo (int) (isset($biz['app_hits']) ? $biz['app_hits'] : 0); ?></span>
+            <span class="vs-stat-card__value" data-redis-field="app_hits"><?php echo $hits; ?></span>
             <span class="vs-redis-stat-card__hint">读取缓存成功（累计）</span>
         </div>
         <div class="vs-stat-card vs-redis-stat-card">
             <span class="vs-stat-card__label">缓存未命中</span>
-            <span class="vs-stat-card__value" data-redis-field="app_misses"><?php echo (int) (isset($biz['app_misses']) ? $biz['app_misses'] : 0); ?></span>
+            <span class="vs-stat-card__value" data-redis-field="app_misses"><?php echo $misses; ?></span>
             <span class="vs-redis-stat-card__hint">回源 MySQL 后写入缓存</span>
         </div>
         <div class="vs-stat-card vs-redis-stat-card">
@@ -68,7 +124,7 @@ vs_admin_layout_start(
                 $rate = isset($biz['app_hit_rate_percent']) ? $biz['app_hit_rate_percent'] : null;
                 echo $rate === null ? '—' : vs_e($rate . '%');
             ?></span>
-            <span class="vs-redis-stat-card__hint">仅统计 misc-api 业务缓存</span>
+            <span class="vs-redis-stat-card__hint">命中 /（命中 + 未命中）</span>
         </div>
         <div class="vs-stat-card vs-redis-stat-card">
             <span class="vs-stat-card__label">缓存占用（估算）</span>
@@ -79,9 +135,8 @@ vs_admin_layout_start(
 
     <div class="vs-redis-section">
         <h3 class="vs-form-section__title">业务缓存项</h3>
-        <p class="vs-panel__desc vs-redis-section__desc">以下数据来自 misc-api 自动写入的缓存，前台访问接口页时会优先读 Redis。</p>
         <div class="vs-redis-entry-list" id="redisEntryList">
-            <?php foreach ((isset($biz['entries']) ? $biz['entries'] : array()) as $entry): ?>
+            <?php foreach ($entries as $entry): ?>
                 <div class="vs-redis-entry">
                     <div class="vs-redis-entry__main">
                         <div class="vs-redis-entry__title"><?php echo vs_e($entry['label']); ?></div>
@@ -105,15 +160,15 @@ vs_admin_layout_start(
     </div>
 
     <div class="vs-redis-section">
-        <h3 class="vs-form-section__title">键数量统计</h3>
+        <h3 class="vs-form-section__title">连接信息</h3>
         <div class="vs-info-grid vs-redis-info-grid">
             <div class="vs-info-item">
                 <span class="vs-info-item__label">数据缓存键（cache:*）</span>
-                <span class="vs-info-item__value" data-redis-field="cache_keys"><?php echo (int) (isset($biz['cache_keys']) ? $biz['cache_keys'] : 0); ?></span>
+                <span class="vs-info-item__value" data-redis-field="cache_keys_dup"><?php echo $cacheKeys; ?></span>
             </div>
             <div class="vs-info-item">
                 <span class="vs-info-item__label">发信限流键（rl:*）</span>
-                <span class="vs-info-item__value" data-redis-field="rate_limit_keys"><?php echo (int) (isset($biz['rate_limit_keys']) ? $biz['rate_limit_keys'] : 0); ?></span>
+                <span class="vs-info-item__value" data-redis-field="rate_limit_keys_dup"><?php echo $rateKeys; ?></span>
             </div>
             <div class="vs-info-item">
                 <span class="vs-info-item__label">连接地址</span>

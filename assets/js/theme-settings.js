@@ -132,13 +132,18 @@
     });
 
     if (form) {
-        form.querySelectorAll('input[name="frontend_theme"]').forEach(function (radio) {
-            radio.addEventListener('change', function () {
-                form.querySelectorAll('.vs-theme-card').forEach(function (card) {
-                    var r = card.querySelector('input[name="frontend_theme"]');
-                    card.classList.toggle('is-selected', !!(r && r.checked && r.value !== getActiveThemeId()));
-                });
+        function refreshSelectionState() {
+            var activeId = getActiveThemeId();
+            form.querySelectorAll('.vs-theme-card').forEach(function (card) {
+                var r = card.querySelector('input[name="frontend_theme"]');
+                var themeId = card.getAttribute('data-theme-id') || (r ? r.value : '');
+                var isPending = !!(r && r.checked && themeId !== activeId);
+                card.classList.toggle('is-selected', isPending);
             });
+        }
+
+        form.querySelectorAll('input[name="frontend_theme"]').forEach(function (radio) {
+            radio.addEventListener('change', refreshSelectionState);
         });
 
         form.addEventListener('submit', function (e) {
@@ -160,6 +165,7 @@
                         setActiveThemeMeta(payload.theme_id, payload.theme_name || payload.theme_id);
                     }
                     refreshActiveBadges();
+                    refreshSelectionState();
                 })
                 .catch(function () {
                     window.VS.showMessage('网络异常，请稍后重试', 'error');
@@ -172,6 +178,7 @@
         });
 
         refreshActiveBadges();
+        refreshSelectionState();
     }
 
     if (configForm) {
