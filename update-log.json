@@ -1,5 +1,15 @@
 {
     "versions": {
+        "2.16.4": {
+            "title": "misc-api 2.16.4 弹窗按钮与分类图标扩充",
+            "date": "2026-07-13",
+            "db_changes": false,
+            "changes": [
+                "弹窗标题/按钮 UI",
+                "+12 分类 SVG",
+                "CategoryIconImporter"
+            ]
+        },
         "2.16.3": {
             "title": "misc-api 2.16.3 分类页标题栏与手机卡片布局",
             "date": "2026-07-13",

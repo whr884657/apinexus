@@ -1,12 +1,12 @@
 {
-    "version": "2.16.3",
-    "title": "misc-api 2.16.3 分类页标题栏与手机卡片布局",
+    "version": "2.16.4",
+    "title": "misc-api 2.16.4 弹窗按钮与分类图标扩充",
     "release_date": "2026-07-13",
     "db_changes": false,
     "changes": [
-        "添加分类按钮移至页面标题行右侧（背景框外）",
-        "手机端分类卡片：标题在上、描述在下、操作按钮右下角",
-        "编辑/启用/禁用/删除改为带边框的胶囊按钮"
+        "弹窗标题区与正文区分隔线，底部按钮尺寸加大",
+        "新增 12 款分类 SVG 图标（共 35 款）",
+        "CategoryIconImporter 从 svg图标.txt 导入图标"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

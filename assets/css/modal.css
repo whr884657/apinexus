@@ -436,13 +436,15 @@ body.vs-modal-open {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 18px 20px 0;
+    padding: 20px 24px 16px;
     flex-shrink: 0;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .vs-overlay__title {
     margin: 0;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     color: #0f172a;
     line-height: 1.4;
@@ -483,13 +485,22 @@ body.vs-modal-open {
 .vs-overlay__foot {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
-    padding: 12px 20px 20px;
+    gap: 12px;
+    padding: 16px 24px 24px;
     flex-shrink: 0;
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
 }
 
 .vs-overlay__foot .vs-btn {
-    min-width: 88px;
+    min-width: 120px;
+}
+
+.vs-overlay__foot .vs-btn--pill {
+    min-height: 44px;
+    padding: 10px 28px;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 body.is-overlay-open {
@@ -523,18 +534,25 @@ body.is-overlay-open {
         transform: translateY(0);
     }
 
+    .vs-overlay__head {
+        padding: 18px 20px 14px;
+    }
+
     .vs-overlay__body {
-        padding: 14px 16px;
+        padding: 16px 20px;
     }
 
     .vs-overlay__foot {
-        padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-        gap: 12px;
+        padding: 14px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+        gap: 14px;
     }
 
     .vs-overlay__foot .vs-btn--pill {
         flex: 1 1 0;
         min-width: 0;
+        min-height: 48px;
+        padding: 12px 20px;
+        font-size: 16px;
     }
 }
 
@@ -569,9 +587,9 @@ body.is-overlay-open {
     }
 
     .vs-overlay__foot .vs-btn--pill {
-        min-width: 96px;
-        border-radius: 999px;
-        padding-left: 20px;
-        padding-right: 20px;
+        min-width: 128px;
+        min-height: 46px;
+        padding: 11px 32px;
+        font-size: 15px;
     }
 }
