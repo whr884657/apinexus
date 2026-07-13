@@ -135,10 +135,10 @@ function toggleMoreCategories() {
     var isExpanded = btn.getAttribute('data-expanded') === '1';
     hiddenCats.forEach(function(cat) { cat.classList.toggle('show', !isExpanded); });
     if (isExpanded) {
-        if (btnText) btnText.textContent = '更多分类';
+        if (btnText) btnText.textContent = '更多';
         if (expandIcon) expandIcon.style.transform = 'rotate(0deg)';
     } else {
-        if (btnText) btnText.textContent = '收起分类';
+        if (btnText) btnText.textContent = '收起';
         if (expandIcon) expandIcon.style.transform = 'rotate(90deg)';
     }
     btn.setAttribute('data-expanded', isExpanded ? '0' : '1');

@@ -438,10 +438,10 @@ function toggleCategoryExpand() {
     });
 
     if (categoryExpanded) {
-        btnText.textContent = '收起分类';
+        btnText.textContent = '收起';
         expandIcon.style.transform = 'rotate(90deg)';
     } else {
-        btnText.textContent = '更多分类';
+        btnText.textContent = '更多';
         expandIcon.style.transform = 'rotate(0deg)';
     }
 }

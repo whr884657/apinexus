@@ -4,7 +4,7 @@ require_once __DIR__ . '/../includes/api-payload.php';
 $payload = vs_theme_api_payload();
 $apiCount = count($payload['apiData']);
 $categories = $payload['categoryNames'];
-$visibleLimit = 10;
+$visibleLimit = vs_theme_category_visible_limit();
 $catIndex = 0;
 ?>
 <main class="main-wrapper container mx-auto px-4" style="padding-top:70px;">
@@ -32,7 +32,7 @@ $catIndex = 0;
             <?php endforeach; ?>
             <?php if (count($categories) - 1 > $visibleLimit): ?>
             <button type="button" class="category-more" id="catMoreBtn" onclick="toggleMoreCategories()">
-                <span>更多分类</span>
+                <span>更多</span>
                 <svg class="expand-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"></path></svg>
             </button>
             <?php endif; ?>
