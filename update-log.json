@@ -1,5 +1,16 @@
 {
     "versions": {
+        "3.9.0": {
+            "title": "misc-api 3.9.0 数据库字段去下划线与短英文命名",
+            "date": "2026-07-14",
+            "db_changes": true,
+            "changes": [
+                "全库字段去掉下划线：needkey / audit / createtime / userid / binduid 等短英文名",
+                "mail_code_rate_log 表重命名为 mailrate",
+                "业务代码与主题数据键同步新命名；不再长期兼容旧字段名",
+                "新增《版本升级不兼容旧版》规范；更新《数据库开发规范》禁止下划线命名"
+            ]
+        },
         "3.8.1": {
             "title": "misc-api 3.8.1 清理旧文件管理系统残留代码",
             "date": "2026-07-14",

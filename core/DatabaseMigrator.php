@@ -4,7 +4,7 @@
  * 作用：版本更新时执行 install/migrations 下的增量 SQL（数据库结构更新）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
- * 仅处理 misc-api 正式库表（admin / user / config / api / category / mail_code_rate_log）。
+ * 仅处理 misc-api 正式库表（admin / user / config / api / category / mailrate）。
  */
 
 class DatabaseMigrator
@@ -82,11 +82,11 @@ class DatabaseMigrator
 
         $applied = self::getAppliedVersions();
 
-        if (!in_array('1.0.20', $applied, true) && self::tableColumnExists('admin', 'avatar_url')) {
+        if (!in_array('1.0.20', $applied, true) && self::tableColumnExists('admin', 'avatar')) {
             self::markApplied('1.0.20');
         }
 
-        if (!in_array('1.8.0', $applied, true) && self::tableColumnExists('admin', 'bound_user_id')) {
+        if (!in_array('1.8.0', $applied, true) && self::tableColumnExists('admin', 'binduid')) {
             self::markApplied('1.8.0');
         }
 
@@ -101,7 +101,7 @@ class DatabaseMigrator
             self::markApplied('2.10.2');
         }
 
-        if (!in_array('2.11.0', $applied, true) && self::tableExists('mail_code_rate_log')) {
+        if (!in_array('2.11.0', $applied, true) && self::tableExists('mailrate')) {
             self::markApplied('2.11.0');
         }
 
@@ -125,14 +125,18 @@ class DatabaseMigrator
             self::markApplied('3.0.0');
         }
 
-        // 新装已含 3.6.0 表结构时跳过 DROP 重建，避免清空数据
-        if (!in_array('3.6.0', $applied, true) && self::tableColumnExists('api', 'doc_ai')) {
+        // 新装已含 3.6.0+ 接口扩展字段时跳过旧 DROP 重建
+        if (!in_array('3.6.0', $applied, true) && self::tableColumnExists('api', 'aidoc')) {
             self::markApplied('3.6.0');
         }
 
-        // 新装已含 3.8.0（audit_status + 数字 status）时跳过迁移
-        if (!in_array('3.8.0', $applied, true) && self::tableColumnExists('api', 'audit_status')) {
+        if (!in_array('3.8.0', $applied, true) && self::tableColumnExists('api', 'audit')) {
             self::markApplied('3.8.0');
+        }
+
+        // 新装已含 3.9.0（字段去下划线）时跳过迁移
+        if (!in_array('3.9.0', $applied, true) && self::tableColumnExists('api', 'needkey')) {
+            self::markApplied('3.9.0');
         }
     }
 
@@ -171,6 +175,15 @@ class DatabaseMigrator
             Config::clearCache();
         } catch (Exception $e) {
             // ignore
+        }
+
+        if (self::tableExists('mailrate') && self::tableExists('mail_code_rate_log')) {
+            try {
+                $pdo = Database::connect();
+                self::execStatement($pdo, 'DROP TABLE IF EXISTS `' . Database::table('mail_code_rate_log') . '`');
+            } catch (Exception $e) {
+                // 留待下次结构更新重试
+            }
         }
     }
 
@@ -361,7 +374,7 @@ class DatabaseMigrator
             'config',
             'api',
             'category',
-            'mail_code_rate_log',
+            'mailrate',
         );
         foreach ($shortTables as $table) {
             if (preg_match('/`' . preg_quote($table, '/') . '`/i', $sql)
@@ -374,7 +387,7 @@ class DatabaseMigrator
     }
 
     /**
-     * v1.0.20：安全添加 avatar_url 字段（已存在则跳过）
+     * v1.0.20：安全添加 avatar 字段（已存在则跳过）
      *
      * @param PDO    $pdo
      * @param string $prefix
@@ -382,19 +395,19 @@ class DatabaseMigrator
      */
     public static function applyAdminAvatarUrlColumn(PDO $pdo, $prefix)
     {
-        if (self::tableColumnExists('admin', 'avatar_url')) {
+        if (self::tableColumnExists('admin', 'avatar')) {
             return;
         }
 
         $table = $prefix . 'admin';
         $pdo->exec(
-            'ALTER TABLE `' . $table . '` ADD COLUMN `avatar_url` varchar(500) NOT NULL DEFAULT \'\' '
+            'ALTER TABLE `' . $table . '` ADD COLUMN `avatar` varchar(500) NOT NULL DEFAULT \'\' '
             . 'COMMENT \'自定义头像链接\' AFTER `email`'
         );
     }
 
     /**
-     * v2.11.0：security_rate_hit → mail_code_rate_log 表与字段规范化
+     * v2.11.0：security_rate_hit → mailrate 表与字段规范化
      *
      * @param PDO    $pdo
      * @param string $prefix
@@ -403,14 +416,14 @@ class DatabaseMigrator
     public static function applyMailCodeRateLogMigration(PDO $pdo, $prefix)
     {
         $oldTable = $prefix . 'security_rate_hit';
-        $newTable = $prefix . 'mail_code_rate_log';
+        $newTable = $prefix . 'mailrate';
 
         $create = 'CREATE TABLE IF NOT EXISTS `' . $newTable . '` (
             `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT \'主键 ID\',
-            `limit_key` varchar(64) NOT NULL COMMENT \'限流键（SHA256）\',
-            `created_at` int unsigned NOT NULL COMMENT \'命中时间（Unix 时间戳）\',
+            `limitkey` varchar(64) NOT NULL COMMENT \'限流键（SHA256）\',
+            `createtime` int unsigned NOT NULL COMMENT \'命中时间（Unix 时间戳）\',
             PRIMARY KEY (`id`),
-            KEY `idx_limit_key_created` (`limit_key`, `created_at`)
+            KEY `idx_limitkey_createtime` (`limitkey`, `createtime`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'邮箱验证码发信频率限制记录\'';
         self::execStatement($pdo, $create);
 
@@ -426,7 +439,7 @@ class DatabaseMigrator
             $countNew = (int) $pdo->query('SELECT COUNT(*) FROM `' . $newTable . '`')->fetchColumn();
             if ($countNew === 0) {
                 $pdo->exec(
-                    'INSERT INTO `' . $newTable . '` (`limit_key`, `created_at`)
+                    'INSERT INTO `' . $newTable . '` (`limitkey`, `createtime`)
                      SELECT `bucket`, `hit_at` FROM `' . $oldTable . '`'
                 );
             }

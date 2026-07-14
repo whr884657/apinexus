@@ -261,7 +261,7 @@
         var method = String(methods[0] || 'GET').toUpperCase();
         var methodClass = method.toLowerCase();
         var desc = api.desc ? '<p class="st-api-card__desc">' + escapeHtml(api.desc) + '</p>' : '';
-        var endpoint = (api.full_url || api.endpoint || '');
+        var endpoint = (api.endpoint || '');
         var endpointHtml = endpoint
             ? '<code class="st-api-card__endpoint">' + escapeHtml(endpoint) + '</code>'
             : '';

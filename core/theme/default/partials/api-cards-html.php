@@ -22,7 +22,7 @@ foreach ($apis as $api):
     $desc = trim((string) (isset($api['desc']) ? $api['desc'] : ''));
     $cat = (string) (isset($api['category']) ? $api['category'] : '');
     $methods = isset($api['methods']) && is_array($api['methods']) ? $api['methods'] : array('GET');
-    $endpoint = trim((string) (isset($api['full_url']) ? $api['full_url'] : (isset($api['endpoint']) ? $api['endpoint'] : '')));
+    $endpoint = trim((string) (isset($api['endpoint']) ? $api['endpoint'] : ''));
     $nameKey = function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name);
     $descKey = function_exists('mb_strtolower') ? mb_strtolower($desc, 'UTF-8') : strtolower($desc);
     $maintenance = !empty($api['maintenance']);

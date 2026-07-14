@@ -8,7 +8,7 @@ require_once __DIR__ . '/init.php';
 
 $error = '';
 $success = '';
-$avatarUrl = $vsUser && isset($vsUser['avatar_url']) ? trim((string) $vsUser['avatar_url']) : '';
+$avatarUrl = $vsUser && isset($vsUser['avatar']) ? trim((string) $vsUser['avatar']) : '';
 $avatarPreview = is_array($vsUserProfile) ? $vsUserProfile['avatar'] : UserAvatar::resolve($vsUser);
 $roleLabel = is_array($vsUserProfile) ? $vsUserProfile['role_label'] : UserRole::label(UserRole::ROLE_USER);
 $oauthProviders = OAuthService::enabledProviders();
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $username = trim(isset($_POST['username']) ? $_POST['username'] : '');
     $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
-    $avatarUrl = trim(isset($_POST['avatar_url']) ? $_POST['avatar_url'] : '');
+    $avatarUrl = trim(isset($_POST['avatar']) ? $_POST['avatar'] : '');
     $newPassword = isset($_POST['new_password']) ? $_POST['new_password'] : '';
     $newPassword2 = isset($_POST['new_password2']) ? $_POST['new_password2'] : '';
     $oldPassword = isset($_POST['old_password']) ? $_POST['old_password'] : '';
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $vsUserProfile = FrontendUser::current();
     $avatarPreview = is_array($vsUserProfile) ? $vsUserProfile['avatar'] : UserAvatar::resolve($vsUser);
     AjaxResponse::success('账号信息已保存', array(
-        'avatar_url' => $vsUser && isset($vsUser['avatar_url']) ? trim((string) $vsUser['avatar_url']) : '',
+        'avatar' => $vsUser && isset($vsUser['avatar']) ? trim((string) $vsUser['avatar']) : '',
         'avatar_preview' => $avatarPreview,
     ));
 }
@@ -85,7 +85,7 @@ vs_user_layout_start('账号设置', 'account');
                         <img src="<?php echo vs_e($avatarPreview); ?>" alt="" class="vs-account-avatar__img" id="avatarPreview"
                              data-fallback="<?php echo vs_e(UserAvatar::localRandomAvatar($vsUser ? (int) $vsUser['id'] : 0)); ?>">
                         <label class="vs-label vs-account-avatar__label">头像链接</label>
-                        <input type="url" name="avatar_url" id="avatarUrlInput" class="vs-input"
+                        <input type="url" name="avatar" id="avatarUrlInput" class="vs-input"
                                value="<?php echo vs_e($avatarUrl); ?>" placeholder="https://example.com/avatar.jpg">
                         <?php vs_render_notice('tip', '', '输入图片 URL，留空则使用 QQ 邮箱头像或默认头像', array('field' => true, 'compact' => true)); ?>
                     </div>

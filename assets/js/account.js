@@ -98,8 +98,8 @@
                         if (data.avatar_preview) {
                             updatePreview(data.avatar_preview);
                         }
-                        if (input && data.avatar_url != null) {
-                            input.value = data.avatar_url;
+                        if (input && data.avatar != null) {
+                            input.value = data.avatar;
                         }
                         form.querySelectorAll('input[type="password"]').forEach(function (el) {
                             el.value = '';

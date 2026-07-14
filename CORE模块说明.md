@@ -530,23 +530,17 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 
 **作用：** API 接口表的读写、运营状态与审核（后台「接口列表 / 接口审核」）。面向后台和部分统计；**前台主题请优先用 `FrontendApi`**。
 
-**接口状态 `status`（数字）：** `0` 正常 / `1` 禁用（前台不展示）/ `2` 维护（前台可见但不可请求）  
-**审核状态 `audit_status`（数字）：** `0` 审核不通过 / `1` 审核通过（管理员发布默认通过）
+**接口状态 `status`（数字）：** `0` 正常 / `1` 禁用 / `2` 维护  
+**审核 `audit`（数字）：** `0` 不通过 / `1` 通过（管理员发布默认通过）  
+**密钥 `needkey`（数字）：** `0` 不需要 / `1` 必须 / `2` 可选  
 
 | 方法 | 说明 |
 |------|------|
 | `listPublic()` | 前台可见：审核通过且非禁用（含维护中） |
-| `listAll($status)` / `listByAudit($audit)` / `listFiltered($opts)` | 后台列表筛选 |
-| `findById($apiId)` | 单条 |
-| `create($data)` / `update($id, $data)` / `delete($id)` | 后台 CRUD |
-| `setStatus($apiId, $status)` | 设置 0/1/2（兼容旧英文串） |
-| `setAuditStatus($apiId, $audit)` | 设置审核 0/1 |
-| `countPublic()` / `countApproved()` | 前台可见数量（后者为兼容别名） |
-| `totalCallCount()` | 各接口 `call_count` 之和 |
-| `incrementCallCount($apiId)` | 增加调用计数 |
-| `formatRow($row)` | 后台列表 / AJAX 格式化 |
-| `normalizeRequireKey` / `requireKeyLabel` | 密钥：0 不需要 / 1 必须 / 2 可选 |
-| `normalizeStatus` / `statusLabel` / `normalizeAuditStatus` / `auditStatusLabel` | 状态归一与中文标签 |
+| `listAll` / `listByAudit` / `listFiltered` | 后台列表筛选 |
+| `create` / `update` / `delete` / `setStatus` / `setAuditStatus` | 写操作 |
+| `formatRow` | 后台格式化（键名与库字段一致：`needkey`/`audit`/`calls`/`userid`…） |
+| `normalizeRequireKey` / `requireKeyLabel` 等 | 数字归一与中文标签 |
 
 ---
 
@@ -831,7 +825,8 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 |------|------|
 | 项目说明 | `README.md` |
 | **主题开发（数据来源）** | `开发规范/主题规范.md` §十（本地维护） |
-| 数据库开发 | `开发规范/数据库开发规范.md`（本地维护；命名 + 中文 COMMENT + 数字状态编码） |
+| 数据库开发 | `开发规范/数据库开发规范.md`（禁止字段下划线；中文 COMMENT；数字状态） |
+| 升级策略 | `开发规范/版本升级不兼容旧版.md`（新版不长期兼容旧字段/旧代码） |
 | 请求与表单 | `开发规范/请求与表单规范.md`（本地维护） |
 | 发版流程 | `开发规范/Gitee推送与发行流程.md`（本地维护） |
 | 弹窗规范 | `开发规范/弹窗开发规范.md`（本地维护） |

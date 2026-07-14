@@ -25,9 +25,9 @@ class AdminUserBinding
             $userTable = Database::table('user');
 
             $stmt = $pdo->prepare(
-                'SELECT u.`id`, u.`username`, u.`email`, u.`status`, u.`avatar_url`, u.`created_at`
+                'SELECT u.`id`, u.`username`, u.`email`, u.`status`, u.`avatar`, u.`createtime`
                  FROM `' . $adminTable . '` a
-                 INNER JOIN `' . $userTable . '` u ON u.`id` = a.`bound_user_id`
+                 INNER JOIN `' . $userTable . '` u ON u.`id` = a.`binduid`
                  WHERE a.`id` = ? AND u.`status` = 1
                  LIMIT 1'
             );
@@ -88,7 +88,7 @@ class AdminUserBinding
             $adminTable = Database::table('admin');
 
             $check = $pdo->prepare(
-                'SELECT `id`, `username` FROM `' . $adminTable . '` WHERE `bound_user_id` = ? AND `id` != ? LIMIT 1'
+                'SELECT `id`, `username` FROM `' . $adminTable . '` WHERE `binduid` = ? AND `id` != ? LIMIT 1'
             );
             $check->execute(array($userId, $adminId));
             $other = $check->fetch(PDO::FETCH_ASSOC);
@@ -96,7 +96,7 @@ class AdminUserBinding
                 return '该用户已绑定其他管理员账号';
             }
 
-            $stmt = $pdo->prepare('UPDATE `' . $adminTable . '` SET `bound_user_id` = ? WHERE `id` = ? LIMIT 1');
+            $stmt = $pdo->prepare('UPDATE `' . $adminTable . '` SET `binduid` = ? WHERE `id` = ? LIMIT 1');
             $stmt->execute(array($userId, $adminId));
 
             return array(
@@ -125,7 +125,7 @@ class AdminUserBinding
         try {
             $pdo = Database::connect();
             $adminTable = Database::table('admin');
-            $stmt = $pdo->prepare('UPDATE `' . $adminTable . '` SET `bound_user_id` = NULL WHERE `id` = ? LIMIT 1');
+            $stmt = $pdo->prepare('UPDATE `' . $adminTable . '` SET `binduid` = NULL WHERE `id` = ? LIMIT 1');
             $stmt->execute(array($adminId));
             return true;
         } catch (Exception $e) {

@@ -66,10 +66,10 @@ $userCount = count($users);
 function vs_users_oauth_badges(array $row)
 {
     $badges = array();
-    if (trim((string) $row['oauth_qq_openid']) !== '') {
+    if (trim((string) $row['qqopenid']) !== '') {
         $badges[] = '<span class="vs-oauth-badge vs-oauth-badge--qq">QQ</span>';
     }
-    if (trim((string) $row['oauth_gitee_id']) !== '') {
+    if (trim((string) $row['giteeid']) !== '') {
         $badges[] = '<span class="vs-oauth-badge vs-oauth-badge--gitee">Gitee</span>';
     }
     if (empty($badges)) {
@@ -86,10 +86,10 @@ function vs_users_oauth_badges(array $row)
 function vs_users_oauth_icons(array $row, $base)
 {
     $icons = array();
-    if (trim((string) $row['oauth_qq_openid']) !== '') {
+    if (trim((string) $row['qqopenid']) !== '') {
         $icons[] = '<img src="' . vs_e($base) . '/assets/img/QQ.svg" alt="QQ" class="vs-user-oauth-icon" width="18" height="18">';
     }
-    if (trim((string) $row['oauth_gitee_id']) !== '') {
+    if (trim((string) $row['giteeid']) !== '') {
         $icons[] = '<img src="' . vs_e($base) . '/assets/img/gitee.svg" alt="Gitee" class="vs-user-oauth-icon" width="18" height="18">';
     }
     if (empty($icons)) {
@@ -255,8 +255,8 @@ vs_admin_layout_start('用户管理', 'users');
                             <td><?php echo vs_e($row['email']); ?></td>
                             <td class="vs-users-role-cell"><?php echo vs_users_role_badge($row); ?></td>
                             <td><?php echo vs_users_oauth_badges($row); ?></td>
-                            <td><?php echo vs_e($row['created_at']); ?></td>
-                            <td><?php echo vs_e(vs_users_format_time(isset($row['last_login_at']) ? $row['last_login_at'] : null)); ?></td>
+                            <td><?php echo vs_e($row['createtime']); ?></td>
+                            <td><?php echo vs_e(vs_users_format_time(isset($row['lastlogin']) ? $row['lastlogin'] : null)); ?></td>
                             <td>
                                 <?php echo vs_users_action_group($uid, $active, $row); ?>
                             </td>
@@ -297,7 +297,7 @@ vs_admin_layout_start('用户管理', 'users');
                             </div>
                             <div class="vs-users-meta vs-user-card__email"><?php echo vs_e($row['email']); ?></div>
                             <div class="vs-user-card__last-login">
-                                最后登录：<?php echo vs_e(vs_users_format_time(isset($row['last_login_at']) ? $row['last_login_at'] : null)); ?>
+                                最后登录：<?php echo vs_e(vs_users_format_time(isset($row['lastlogin']) ? $row['lastlogin'] : null)); ?>
                             </div>
                         </div>
                     </div>
