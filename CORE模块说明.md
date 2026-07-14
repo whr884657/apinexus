@@ -112,7 +112,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` | `FrontendApi` | `admin/api/list.php` | ✅ 是 | **已完成**（后台列表 CRUD；用户提交/审核待上线） |
+| 公开 API 接口 | `ApiManager` | `FrontendApi` | `admin/api/list.php`、`review.php` | ✅ 是 | **已完成**（列表 CRUD + 审核字段；用户投稿后续接入） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
@@ -538,22 +538,25 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 
 ### 4.21 ApiManager.php（后台 · 接口）
 
-**作用：** API 接口表的读写与状态管理（后台「接口列表」CRUD）。面向后台和部分统计；**前台主题请优先用 `FrontendApi`**。
+**作用：** API 接口表的读写、运营状态与审核（后台「接口列表 / 接口审核」）。面向后台和部分统计；**前台主题请优先用 `FrontendApi`**。
 
-**状态常量：** `normal`（正常）/ `disabled`（禁用，前台不展示）/ `maintenance`（维护中，前台可见但不可请求）
+**接口状态 `status`（数字）：** `0` 正常 / `1` 禁用（前台不展示）/ `2` 维护（前台可见但不可请求）  
+**审核状态 `audit_status`（数字）：** `0` 审核不通过 / `1` 审核通过（管理员发布默认通过）
 
 | 方法 | 说明 |
 |------|------|
-| `listPublic()` | 前台可见接口（排除禁用；含维护中） |
-| `listAll($status)` | 后台列表，可按状态筛选 |
+| `listPublic()` | 前台可见：审核通过且非禁用（含维护中） |
+| `listAll($status)` / `listByAudit($audit)` / `listFiltered($opts)` | 后台列表筛选 |
 | `findById($apiId)` | 单条 |
 | `create($data)` / `update($id, $data)` / `delete($id)` | 后台 CRUD |
-| `setStatus($apiId, $status)` | 设置 normal / disabled / maintenance |
+| `setStatus($apiId, $status)` | 设置 0/1/2（兼容旧英文串） |
+| `setAuditStatus($apiId, $audit)` | 设置审核 0/1 |
 | `countPublic()` / `countApproved()` | 前台可见数量（后者为兼容别名） |
 | `totalCallCount()` | 各接口 `call_count` 之和 |
 | `incrementCallCount($apiId)` | 增加调用计数 |
 | `formatRow($row)` | 后台列表 / AJAX 格式化 |
-| `normalizeRequireKey` / `requireKeyLabel` | 密钥三态：0 不需要 / 1 必须 / 2 可选 |
+| `normalizeRequireKey` / `requireKeyLabel` | 密钥：0 不需要 / 1 必须 / 2 可选 |
+| `normalizeStatus` / `statusLabel` / `normalizeAuditStatus` / `auditStatusLabel` | 状态归一与中文标签 |
 
 ---
 
@@ -838,7 +841,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 |------|------|
 | 项目说明 | `README.md` |
 | **主题开发（数据来源）** | `开发规范/主题规范.md` §十（本地维护） |
-| 数据库命名 | `开发规范/数据库命名规范.md`（本地维护） |
+| 数据库开发 | `开发规范/数据库开发规范.md`（本地维护；命名 + 中文 COMMENT + 数字状态编码） |
 | 请求与表单 | `开发规范/请求与表单规范.md`（本地维护） |
 | 发版流程 | `开发规范/Gitee推送与发行流程.md`（本地维护） |
 | 弹窗规范 | `开发规范/弹窗开发规范.md`（本地维护） |

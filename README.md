@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.7.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.8.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -24,7 +24,7 @@
 
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
-- **API 管理（已实现）**：接口列表（添加/编辑/禁用/维护、请求参数与文档、图标）、接口分类（CRUD、图标、描述、启禁；表格式紧凑列表）；接口审核为占位（用户提交流程后续）
+- **API 管理（已实现）**：接口列表（添加/编辑、状态 0正常/1禁用/2维护、审核、请求参数与文档、图标）、接口分类（CRUD、图标、描述、启禁）；接口审核页（0不通过/1通过；管理员发布默认通过）
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
@@ -264,6 +264,14 @@ location / {
 
 ## 版本记录
 
+### v3.8.0（2026-07-14）
+
+- **库表中文注释**：所有表/字段补齐详细中文 COMMENT；去掉纯英文注释
+- **接口状态数字化**：`status` 改为 `0` 正常 / `1` 禁用 / `2` 维护（升级自动转换旧英文值）
+- **审核字段**：新增 `audit_status`（`0` 不通过 / `1` 通过）；管理员发布默认通过；前台仅展示已通过且非禁用接口
+- **接口审核页**：可筛选并切换通过/不通过（用户投稿上线后可复用）
+- **需执行数据库结构更新**（`install/migrations/3.8.0.sql`）
+
 ### v3.7.1（2026-07-14）
 
 - **下拉**：修复请求方式 / 状态 / 分类箭头重影
@@ -405,7 +413,7 @@ location / {
 ### v2.15.1（2026-07-13）
 
 - **表名精简**：接口分类表 `api_category` 重命名为 `category`（新装直接使用短表名）
-- 新增本地规范 `开发规范/数据库命名规范.md`：表名能短则短，避免冗余 `api_` 等前缀
+- 新增本地规范 `开发规范/数据库开发规范.md`（原「数据库命名规范」）：表名能短则短，避免冗余 `api_` 等前缀；表/字段须带详细 COMMENT
 - 迁移 `2.15.1.sql`：已存在 `api_category` 的站点自动 `RENAME`
 
 ### v2.15.0（2026-07-13）

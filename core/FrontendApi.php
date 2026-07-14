@@ -3,7 +3,7 @@
  * 文件：core/FrontendApi.php
  * 作用：前台主题 · 公开接口列表（统一调度，主题只调用本类）
  *
- * 说明：禁用接口不输出；维护中接口输出 maintenance=1，主题应拦截请求并提示「维护中」。
+ * 说明：仅输出审核通过且非禁用的接口；维护中输出 maintenance=1，主题应拦截请求并提示「维护中」。
  * 图标字段非主题通用，未接入图标展示的主题可忽略 icon。
  */
 
@@ -27,9 +27,18 @@ class FrontendApi
                 continue;
             }
 
-            $status = isset($row['status']) ? (string) $row['status'] : ApiManager::STATUS_NORMAL;
+            $status = ApiManager::normalizeStatus(isset($row['status']) ? $row['status'] : ApiManager::STATUS_NORMAL);
             if ($status === ApiManager::STATUS_DISABLED) {
                 continue;
+            }
+
+            if (ApiManager::hasAuditColumn()) {
+                $audit = ApiManager::normalizeAuditStatus(
+                    isset($row['audit_status']) ? $row['audit_status'] : ApiManager::AUDIT_APPROVED
+                );
+                if ($audit !== ApiManager::AUDIT_APPROVED) {
+                    continue;
+                }
             }
 
             $catLabel = trim((string) (isset($row['category']) ? $row['category'] : ''));

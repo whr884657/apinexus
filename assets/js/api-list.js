@@ -30,6 +30,7 @@
         description: document.getElementById('apiListFormDesc'),
         method: document.getElementById('apiListFormMethod'),
         status: document.getElementById('apiListFormStatus'),
+        audit: document.getElementById('apiListFormAudit'),
         endpoint: document.getElementById('apiListFormEndpoint'),
         category: document.getElementById('apiListFormCategory'),
         requireKey: document.getElementById('apiListFormRequireKey'),
@@ -38,6 +39,28 @@
         docNormal: document.getElementById('apiListFormDocNormal'),
         docAi: document.getElementById('apiListFormDocAi')
     };
+
+    /** 接口状态：0正常 1禁用 2维护（兼容旧英文串） */
+    function normalizeStatus(status) {
+        if (status === 'normal') {
+            return 0;
+        }
+        if (status === 'disabled') {
+            return 1;
+        }
+        if (status === 'maintenance') {
+            return 2;
+        }
+        var n = parseInt(status, 10);
+        if (n === 1 || n === 2) {
+            return n;
+        }
+        return 0;
+    }
+
+    function normalizeAudit(audit) {
+        return parseInt(audit, 10) === 0 ? 0 : 1;
+    }
 
     var iconBase = (page.getAttribute('data-icon-base') || '').replace(/\/$/, '');
     var defaultIcons = [];
@@ -113,13 +136,18 @@
     }
 
     function statusClass(status) {
-        if (status === 'disabled') {
+        var n = normalizeStatus(status);
+        if (n === 1) {
             return 'is-disabled';
         }
-        if (status === 'maintenance') {
+        if (n === 2) {
             return 'is-maintenance';
         }
         return 'is-normal';
+    }
+
+    function auditClass(audit) {
+        return normalizeAudit(audit) === 1 ? 'is-approved' : 'is-rejected';
     }
 
     function getSelectedIconUrl() {
@@ -197,16 +225,16 @@
 
     function buildActionButtons(api) {
         var id = api.id;
-        var status = api.status || 'normal';
+        var status = normalizeStatus(api.status);
         var html = '';
         html += '<button type="button" class="vs-btn vs-btn--default vs-api-list-action" data-api-action="edit" data-api-id="' + id + '">编辑</button>';
-        if (status !== 'normal') {
+        if (status !== 0) {
             html += '<button type="button" class="vs-btn vs-btn--default vs-api-list-action" data-api-action="normal" data-api-id="' + id + '">正常</button>';
         }
-        if (status !== 'maintenance') {
+        if (status !== 2) {
             html += '<button type="button" class="vs-btn vs-btn--default vs-api-list-action" data-api-action="maintenance" data-api-id="' + id + '">维护</button>';
         }
-        if (status !== 'disabled') {
+        if (status !== 1) {
             html += '<button type="button" class="vs-btn vs-btn--default vs-api-list-action" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
         }
         html += '<button type="button" class="vs-btn vs-btn--danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
@@ -217,12 +245,14 @@
         var icon = safeIconUrl(api.icon);
         var desc = api.description || '';
         var method = (api.method || 'GET').toUpperCase();
-        var status = api.status || 'normal';
+        var status = normalizeStatus(api.status);
+        var audit = normalizeAudit(api.audit_status);
         var search = (String(api.name || '') + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '')).toLowerCase();
         var payload = escapeHtml(JSON.stringify(api));
 
         var html = '<div class="vs-api-list-row" data-api-row="' + api.id + '"'
-            + ' data-api-status="' + escapeHtml(status) + '"'
+            + ' data-api-status="' + status + '"'
+            + ' data-api-audit="' + audit + '"'
             + ' data-search="' + escapeHtml(search) + '"'
             + ' data-payload="' + payload + '">';
         html += '<div class="vs-api-list-row__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" data-field="icon"></div>';
@@ -235,7 +265,10 @@
         html += '<div class="vs-api-list-row__endpoint" data-field="endpoint" title="' + escapeHtml(api.endpoint || '') + '">' + escapeHtml(api.endpoint || '') + '</div>';
         html += '<div class="vs-api-list-row__calls" data-field="call_count">' + (parseInt(api.call_count, 10) || 0) + '</div>';
         html += '<div class="vs-api-list-row__key" data-field="require_key_label">' + escapeHtml(api.require_key_label || requireKeyLabel(api.require_key)) + '</div>';
-        html += '<div class="vs-api-list-row__status"><span class="vs-api-list-status ' + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || status) + '</span></div>';
+        html += '<div class="vs-api-list-row__status">';
+        html += '<span class="vs-api-list-status ' + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span>';
+        html += '<span class="vs-api-list-audit ' + auditClass(audit) + '" data-field="audit_status_label">' + escapeHtml(api.audit_status_label || (audit === 1 ? '审核通过' : '审核不通过')) + '</span>';
+        html += '</div>';
         html += '<div class="vs-api-list-row__actions">' + buildActionButtons(api) + '</div>';
         html += '</div>';
         return html;
@@ -297,7 +330,8 @@
         if (!rowEl || !api) {
             return;
         }
-        rowEl.setAttribute('data-api-status', api.status || 'normal');
+        rowEl.setAttribute('data-api-status', String(normalizeStatus(api.status)));
+        rowEl.setAttribute('data-api-audit', String(normalizeAudit(api.audit_status)));
         rowEl.setAttribute(
             'data-search',
             (String(api.name || '') + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '')).toLowerCase()
@@ -335,8 +369,14 @@
         }
         var statusEl = rowEl.querySelector('[data-field="status_label"]');
         if (statusEl) {
-            statusEl.textContent = api.status_label || api.status || '';
-            statusEl.className = 'vs-api-list-status ' + statusClass(api.status || 'normal');
+            statusEl.textContent = api.status_label || String(normalizeStatus(api.status));
+            statusEl.className = 'vs-api-list-status ' + statusClass(api.status);
+        }
+        var auditEl = rowEl.querySelector('[data-field="audit_status_label"]');
+        if (auditEl) {
+            var audit = normalizeAudit(api.audit_status);
+            auditEl.textContent = api.audit_status_label || (audit === 1 ? '审核通过' : '审核不通过');
+            auditEl.className = 'vs-api-list-audit ' + auditClass(audit);
         }
         var iconImg = rowEl.querySelector('[data-field="icon"]');
         if (iconImg) {
@@ -371,7 +411,10 @@
             fields.method.value = 'GET';
         }
         if (fields.status) {
-            fields.status.value = 'normal';
+            fields.status.value = '0';
+        }
+        if (fields.audit) {
+            fields.audit.value = '1';
         }
         if (fields.endpoint) {
             fields.endpoint.value = '';
@@ -418,7 +461,10 @@
             fields.method.value = (api.method || 'GET').toUpperCase();
         }
         if (fields.status) {
-            fields.status.value = api.status || 'normal';
+            fields.status.value = String(normalizeStatus(api.status));
+        }
+        if (fields.audit) {
+            fields.audit.value = String(normalizeAudit(api.audit_status));
         }
         if (fields.endpoint) {
             fields.endpoint.value = api.endpoint || '';
@@ -493,7 +539,8 @@
             doc_normal: fields.docNormal ? fields.docNormal.value : '',
             doc_ai: fields.docAi ? fields.docAi.value : '',
             require_key: fields.requireKey ? String(fields.requireKey.value || '0') : '0',
-            status: fields.status ? fields.status.value : 'normal',
+            status: fields.status ? String(normalizeStatus(fields.status.value)) : '0',
+            audit_status: fields.audit ? String(normalizeAudit(fields.audit.value)) : '1',
             icon: getSelectedIconUrl(),
             category: fields.category ? fields.category.value : ''
         };
@@ -666,14 +713,14 @@
 
         if (action === 'normal' || action === 'maintenance' || action === 'disable') {
             var statusMap = {
-                normal: 'normal',
-                maintenance: 'maintenance',
-                disable: 'disabled'
+                normal: 0,
+                maintenance: 2,
+                disable: 1
             };
             var nextStatus = statusMap[action];
             postAction('set_status', {
                 api_id: apiId,
-                status: nextStatus
+                status: String(nextStatus)
             }).then(function (data) {
                 if (data.code !== 1 || !row) {
                     window.VS.showMessage(data.msg || '操作失败', 'error');
@@ -681,7 +728,7 @@
                 }
                 window.VS.showMessage(data.msg || '状态已更新', 'success');
                 var api = parseRowPayload(row) || { id: parseInt(apiId, 10) || 0 };
-                api.status = data.status || nextStatus;
+                api.status = normalizeStatus(data.status !== undefined ? data.status : nextStatus);
                 api.status_label = data.status_label || api.status;
                 updateItem(row, api);
             }).catch(function () {
