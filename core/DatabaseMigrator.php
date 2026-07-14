@@ -4,6 +4,7 @@
  * 作用：版本更新时执行 install/migrations 下的增量 SQL（数据库结构更新）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
+ * 仅处理 misc-api 正式库表（admin / user / config / api / category / mail_code_rate_log）。
  */
 
 class DatabaseMigrator
@@ -77,6 +78,8 @@ class DatabaseMigrator
             return;
         }
 
+        self::purgeLegacyArtifacts();
+
         $applied = self::getAppliedVersions();
 
         if (!in_array('1.0.20', $applied, true) && self::tableColumnExists('admin', 'avatar_url')) {
@@ -131,27 +134,43 @@ class DatabaseMigrator
         if (!in_array('3.8.0', $applied, true) && self::tableColumnExists('api', 'audit_status')) {
             self::markApplied('3.8.0');
         }
+    }
 
-        if (!in_array('1.0.35', $applied, true)) {
-            $all = Config::all();
-            if (array_key_exists('storage_local_public_slug', $all)) {
-                self::markApplied('1.0.35');
+    /**
+     * 清理从旧「文件管理系统」误迁入的表/配置残留（幂等）
+     *
+     * @return void
+     */
+    public static function purgeLegacyArtifacts()
+    {
+        $legacyTables = array('domain', 'file_folder', 'file_item');
+        foreach ($legacyTables as $short) {
+            if (!self::tableExists($short)) {
+                continue;
             }
-        }
-
-        if (!in_array('1.0.40', $applied, true) && !array_key_exists('storage_local_public_slug', Config::all())) {
-            self::markApplied('1.0.40');
-        }
-
-        if (self::domainTableExists()) {
             try {
                 $pdo = Database::connect();
-                $prefix = Database::prefix();
-                self::applyBoundDomainsMigration($pdo, $prefix);
-                self::execStatement($pdo, 'DROP TABLE IF EXISTS `' . $prefix . 'domain`');
+                self::execStatement($pdo, 'DROP TABLE IF EXISTS `' . Database::table($short) . '`');
             } catch (Exception $e) {
-                // 留待正式迁移流程重试
+                // 留待下次结构更新重试
             }
+        }
+
+        $legacyKeys = array(
+            'storage_local_public_slug',
+            'bound_domains',
+            'primary_domain',
+        );
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('config');
+            foreach ($legacyKeys as $key) {
+                $stmt = $pdo->prepare('DELETE FROM `' . $table . '` WHERE `key` = ?');
+                $stmt->execute(array($key));
+            }
+            Config::clearCache();
+        } catch (Exception $e) {
+            // ignore
         }
     }
 
@@ -315,118 +334,18 @@ class DatabaseMigrator
             return;
         }
 
-        if ($version === '1.0.40') {
-            self::applyLocalStorageDirectUrlMigration($pdo, $prefix);
-            return;
-        }
-
-        if ($version === '1.0.47') {
-            self::applyBoundDomainsMigration($pdo, $prefix);
-        }
-
         $sql = file_get_contents($file);
         $sql = str_replace('{prefix}', $prefix, $sql);
         self::assertPrefixedTables($sql, $prefix, basename($file));
         $statements = DatabaseInstaller::parseSqlStatements($sql);
 
         foreach ($statements as $statement) {
-            if ($version === '1.0.47' && trim($statement) === '') {
-                continue;
-            }
             self::execStatement($pdo, $statement);
         }
     }
 
     /**
-     * v1.0.47：domain 表数据迁入 config.bound_domains（删表由 1.0.47.sql 执行）
-     *
-     * @param PDO    $pdo
-     * @param string $prefix
-     * @return void
-     */
-    public static function applyBoundDomainsMigration(PDO $pdo, $prefix)
-    {
-        $configTable = $prefix . 'config';
-        $domainTable = $prefix . 'domain';
-
-        $stmt = $pdo->prepare('SELECT `value` FROM `' . $configTable . '` WHERE `key` = ? LIMIT 1');
-        $stmt->execute(array('bound_domains'));
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        $existing = Domain::decodeList($row ? (string) $row['value'] : '[]');
-
-        $tableExists = false;
-        try {
-            $check = $pdo->query('SHOW TABLES LIKE ' . $pdo->quote($domainTable));
-            $tableExists = (bool) $check->fetch(PDO::FETCH_NUM);
-        } catch (Exception $e) {
-            $tableExists = false;
-        }
-
-        if ($tableExists && count($existing) === 0) {
-            $rows = $pdo->query('SELECT * FROM `' . $domainTable . '` ORDER BY `id` ASC')->fetchAll(PDO::FETCH_ASSOC);
-            $migrated = array();
-            foreach ($rows as $item) {
-                $migrated[] = array(
-                    'id'            => (int) $item['id'],
-                    'domain'        => Domain::normalizeHost($item['domain']),
-                    'site_name'     => trim((string) $item['site_name']),
-                    'icp_number'    => trim((string) $item['icp_number']),
-                    'gongan_number' => trim((string) $item['gongan_number']),
-                );
-            }
-            $existing = Domain::decodeList(json_encode($migrated, JSON_UNESCAPED_UNICODE));
-        }
-
-        $json = json_encode(array_values($existing), JSON_UNESCAPED_UNICODE);
-        $upsert = $pdo->prepare(
-            'INSERT INTO `' . $configTable . '` (`key`, `value`) VALUES (?, ?) '
-            . 'ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)'
-        );
-        $upsert->execute(array('bound_domains', $json));
-
-        Config::clearCache();
-    }
-
-    /**
-     * domain 表是否仍存在（用于 1.0.47 迁移补偿）
-     *
-     * @return bool
-     */
-    public static function domainTableExists()
-    {
-        try {
-            $pdo = Database::connect();
-            $table = Database::table('domain');
-            $check = $pdo->query('SHOW TABLES LIKE ' . $pdo->quote($table));
-            return (bool) $check->fetch(PDO::FETCH_NUM);
-        } catch (Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * v1.0.40：本地储存改回 upload 直链，清理 slug 网关
-     *
-     * @param PDO    $pdo
-     * @param string $prefix
-     * @return void
-     */
-    public static function applyLocalStorageDirectUrlMigration(PDO $pdo, $prefix)
-    {
-        require_once VS_ROOT . '/core/Storage/LocalStorage/LocalStorageOptions.php';
-        require_once VS_ROOT . '/core/Storage/LocalStorage/LocalStorageDriver.php';
-
-        LocalStorageDriver::cleanupLegacyGateway();
-
-        $table = $prefix . 'config';
-        $pdo->exec("DELETE FROM `" . $table . "` WHERE `key` = 'storage_local_public_slug'");
-
-        Config::clearCache();
-        LocalStorageDriver::refreshStoredPublicUrls();
-    }
-
-    /**
-     * 校验迁移脚本是否使用了表前缀占位符
+     * 校验迁移脚本是否使用了表前缀占位符（仅检查 misc-api 正式表）
      *
      * @param string $sql
      * @param string $prefix
@@ -436,7 +355,14 @@ class DatabaseMigrator
      */
     public static function assertPrefixedTables($sql, $prefix, $filename)
     {
-        $shortTables = array('admin', 'config', 'file_folder', 'file_item');
+        $shortTables = array(
+            'admin',
+            'user',
+            'config',
+            'api',
+            'category',
+            'mail_code_rate_log',
+        );
         foreach ($shortTables as $table) {
             if (preg_match('/`' . preg_quote($table, '/') . '`/i', $sql)
                 && !preg_match('/`' . preg_quote($prefix . $table, '/') . '`/i', $sql)) {
@@ -480,9 +406,9 @@ class DatabaseMigrator
         $newTable = $prefix . 'mail_code_rate_log';
 
         $create = 'CREATE TABLE IF NOT EXISTS `' . $newTable . '` (
-            `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-            `limit_key` varchar(64) NOT NULL COMMENT \'限流键 SHA256\',
-            `created_at` int unsigned NOT NULL COMMENT \'命中时间 Unix 时间戳\',
+            `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT \'主键 ID\',
+            `limit_key` varchar(64) NOT NULL COMMENT \'限流键（SHA256）\',
+            `created_at` int unsigned NOT NULL COMMENT \'命中时间（Unix 时间戳）\',
             PRIMARY KEY (`id`),
             KEY `idx_limit_key_created` (`limit_key`, `created_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'邮箱验证码发信频率限制记录\'';

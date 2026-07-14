@@ -145,7 +145,6 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/icons.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/theme-picker.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/admin.css?v=' . VS_VERSION . '">' . "\n";
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/upload-queue.css?v=' . VS_VERSION . '">' . "\n";
     echo '</head>' . "\n";
     echo '<body class="vs-body vs-admin-body">' . "\n";
     echo '<div class="vs-admin-shell" id="vsAdminShell">' . "\n";
@@ -269,7 +268,6 @@ function vs_admin_layout_end(array $extraScripts = array())
     echo '<script src="' . vs_e($vsBase) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/theme-picker.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/admin.js?v=' . VS_VERSION . '"></script>' . "\n";
-    echo '<script src="' . vs_e($vsBase) . '/assets/js/upload-queue.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/update-check.js?v=' . VS_VERSION . '"></script>' . "\n";
     foreach ($extraScripts as $js) {
         echo '<script src="' . vs_e($vsBase) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '"></script>' . "\n";
@@ -300,7 +298,7 @@ function vs_admin_stub_page($pageTitle, $activeMenu)
  * @param string $title
  * @param string $desc
  * @param bool   $open
- * @param bool   $nested 嵌套折叠（储存配置子板块）
+ * @param bool   $nested 嵌套折叠（设置页子板块）
  * @return void
  */
 function vs_admin_accordion_start($id, $title, $desc = '', $open = false, $nested = false)

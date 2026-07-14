@@ -11,7 +11,6 @@ require_once VS_ROOT . '/core/InstallChecker.php';
 require_once VS_ROOT . '/core/Database.php';
 require_once VS_ROOT . '/core/DatabaseInstaller.php';
 require_once VS_ROOT . '/core/DatabaseMigrator.php';
-require_once VS_ROOT . '/core/Domain.php';
 require_once VS_ROOT . '/core/SiteContext.php';
 require_once VS_ROOT . '/core/RegisterPolicy.php';
 require_once VS_ROOT . '/core/Config.php';

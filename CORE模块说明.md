@@ -43,7 +43,7 @@ require_once VS_ROOT . '/core/bootstrap.php';
 
 ```
 version.php → helpers.php → InstallChecker → Database → DatabaseInstaller
-→ DatabaseMigrator → Domain → SiteContext → RegisterPolicy → Config
+→ DatabaseMigrator → SiteContext → RegisterPolicy → Config
 → Mailer → Auth → UserAuth → RateLimitStore → AuthSecurity → AjaxResponse
 → SystemInfo → Updater → UpdateLog → UserAvatar → UserManager
 → AdminUserBinding → ApiManager → ApiCategoryManager
@@ -204,9 +204,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `InstallChecker.php` | 安装状态检测 |
 | `Database.php` | PDO 连接、表名前缀 |
 | `DatabaseInstaller.php` | 安装向导执行 `database.sql` |
-| `DatabaseMigrator.php` | 版本迁移 SQL |
+| `DatabaseMigrator.php` | 版本迁移 SQL（含清理旧系统残留） |
 | `Config.php` | 系统配置读写（`vs_config` 表） |
-| `Domain.php` | 绑定域名管理 |
 | `SiteContext.php` | 站点名称、描述、Logo 等展示信息 |
 | `RegisterPolicy.php` | 注册邮箱后缀策略 |
 | `Mailer.php` | SMTP 发信 |
@@ -362,19 +361,10 @@ Config::set('site_name', '我的 API 站');
 
 ---
 
-### 4.9 Domain.php
+### 4.9 SiteContext.php
 
-**作用：** 多域名绑定（存于 `config.bound_domains` JSON），用于按 Host 解析站点。
+> **说明：** 旧版多域名类 `Domain.php` 已于 v1.2.0 移除；站点信息一律由本类从单站 `config` 读取。结构更新时 `DatabaseMigrator::purgeLegacyArtifacts()` 会清理残留的 `domain` 表与 `bound_domains` 等配置键。
 
-| 方法 | 说明 |
-|------|------|
-| `all()` | 全部绑定域名 |
-| `findByHost($host)` | 按域名查找 |
-| `saveAll($list)` | 保存列表 |
-
----
-
-### 4.10 SiteContext.php
 
 **作用：** 前台展示用的站点信息（名称、描述、关键词、Logo、备案号等），从 Config 读取并缓存。
 

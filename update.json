@@ -1,14 +1,13 @@
 {
-    "version": "3.8.0",
-    "title": "misc-api 3.8.0 库表中文注释与数字状态 / 接口审核",
+    "version": "3.8.1",
+    "title": "misc-api 3.8.1 清理旧文件管理系统残留代码",
     "release_date": "2026-07-14",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "全库表字段补全详细中文 COMMENT（禁止纯英文注释）",
-        "api.status 改为数字：0正常 1禁用 2维护（兼容升级旧英文值）",
-        "新增 api.audit_status：0审核不通过 1审核通过；管理员发布默认通过",
-        "前台仅展示审核通过且非禁用接口；后台启用接口审核页",
-        "《数据库开发规范》强制中文注释 + 多态字段 0/1/2… 编码"
+        "移除 DatabaseMigrator 中 LocalStorage/多域名等缺失依赖的残留迁移",
+        "删除已废弃的 Domain.php；结构更新时自动清理 domain / file_* 表与旧配置键",
+        "后台布局去掉不存在的 upload-queue.css / .js 引用（避免每页 404）",
+        "同步 CORE 模块说明与 bootstrap 加载顺序"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
