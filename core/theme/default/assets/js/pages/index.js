@@ -856,6 +856,13 @@ async function sendRequest() {
     const output = document.getElementById('response-body');
     const status = document.getElementById('status-badge');
 
+    if (api.maintenance == 1 || api.maintenance === '1') {
+        output.textContent = '维护中';
+        status.textContent = '维护中';
+        status.className = 'text-xs px-2 py-1 rounded bg-yellow-900 text-yellow-400 font-mono';
+        return;
+    }
+
     // 获取当前选中的请求方式
     const currentMethod = getSelectedMethod();
 

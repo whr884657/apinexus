@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.5.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.6.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -24,7 +24,7 @@
 
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
-- **API 管理（已实现）**：接口审核（通过 / 拒绝 / 下线）、接口分类（CRUD、图标、描述、启禁；表格式紧凑列表）
+- **API 管理（已实现）**：接口列表（添加/编辑/禁用/维护、请求参数与文档、图标）、接口分类（CRUD、图标、描述、启禁；表格式紧凑列表）；接口审核为占位（用户提交流程后续）
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
@@ -87,9 +87,10 @@
 | 管理员忘记密码 | `/admin/forgot.php` | 邮箱验证码重置（需配置 SMTP） |
 | 管理控制台 | `/admin/index.php` | 后台首页，展示站点与版本信息 |
 | 数据大屏（占位） | `/admin/data-screen.php` | 后续开发 |
-| 接口审核 | `/admin/api/review.php` | 待审核 / 已通过 / 已拒绝；通过、拒绝、下线（AJAX） |
+| 接口列表 | `/admin/api/list.php` | 添加/编辑接口、状态（正常/维护/禁用）、图标、参数与文档（AJAX 大弹窗） |
+| 接口审核（占位） | `/admin/api/review.php` | 用户提交流程后续开发 |
 | 接口分类 | `/admin/api/categories.php` | 表格式列表、分类 CRUD、35 款内置 SVG 图标、描述、启禁 |
-| API 管理（占位） | `/admin/api/list.php` 等 | 接口列表、文档、反馈仍为占位页 |
+| API 管理（占位） | `/admin/api/docs.php` 等 | 文档、反馈仍为占位页 |
 | 内容运营（占位） | `/admin/content/` | 文章、评论、友链、合作伙伴 |
 | 交易财务（占位） | `/admin/finance/` | 支付、订单、赞助、积分 |
 | 用户管理 | `/admin/users.php` | 查看用户、搜索、封禁/解封/删除 |
@@ -109,7 +110,7 @@
 ## 后台框架特性
 
 - **自定义 PHP 架构**：无 Laravel / ThinkPHP 等重型框架依赖
-- **API 业务层**：`ApiManager`（审核与状态）、`ApiCategoryManager`（分类与 `category` 表）
+- **API 业务层**：`ApiManager`（接口列表 CRUD 与状态）、`ApiCategoryManager`（分类与 `category` 表）
 - **白色主题**：顶部栏 + 可收缩分组侧边栏
 - **电脑端**：侧边栏默认展开，点击左上角可收缩/展开
 - **手机端**：侧边栏默认隐藏，点击顶栏菜单滑出
@@ -153,9 +154,9 @@ misc-api/
 │   │   ├── layout.php          # 侧边栏布局
 │   │   └── auth_layout.php     # 登录/注册/忘记密码布局
 │   ├── api/                    # API 管理
-│   │   ├── review.php          # 接口审核
+│   │   ├── list.php            # 接口列表（添加/编辑/状态）
 │   │   ├── categories.php      # 接口分类
-│   │   └── list.php / docs.php / feedback.php  # 占位
+│   │   └── review.php / docs.php / feedback.php  # 占位
 │   ├── content/                # 内容运营（占位）
 │   ├── finance/                # 交易财务（占位）
 │   ├── system/                 # 系统管理扩展（日志等）
@@ -188,7 +189,7 @@ misc-api/
 │   ├── bootstrap.php
 │   ├── version.php             # VS_VERSION 版本常量
 │   ├── ThemeManager.php        # 前台主题加载与切换
-│   ├── ApiManager.php          # 接口审核与状态
+│   ├── ApiManager.php          # 接口列表 CRUD 与状态
 │   ├── ApiCategoryManager.php  # 接口分类（后台 CRUD）
 │   ├── FrontendCategory.php    # 前台分类（主题调用）
 │   ├── FrontendApi.php         # 前台公开接口（主题调用）
@@ -262,6 +263,14 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.6.0（2026-07-14）· 大版本
+
+- **API 表重构**：废弃旧审核字段，重建为接口运营模型（参数、返回示例、普通/AI 文档、调用次数、密钥、图标、状态）
+- **接口列表**：后台 `/admin/api/list.php` 大弹窗添加/编辑；禁用 / 维护 / 正常状态；本地 SVG + 外链图标
+- **前台**：`FrontendApi` 对接新字段；禁用不展示；维护中请求提示「维护中」
+- **数据库迁移**：`install/migrations/3.6.0.sql`（**会清空旧 api 表数据**）
+- **清理**：移除废弃的 `api-review.js`、空 `api/` 目录
 
 ### v3.5.1（2026-07-14）
 

@@ -441,10 +441,12 @@ class ApiCategoryManager
     }
 
     /**
+     * 规范化图标入库值（本地 SVG 路径或外链）
+     *
      * @param string $icon
      * @return string|false
      */
-    private static function normalizeIconInput($icon)
+    public static function normalizeIconInput($icon)
     {
         $icon = trim((string) $icon);
         if ($icon === '') {

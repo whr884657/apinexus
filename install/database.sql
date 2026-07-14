@@ -75,23 +75,28 @@ CREATE TABLE IF NOT EXISTS `{prefix}mail_code_rate_log` (
     KEY `idx_limit_key_created` (`limit_key`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮箱验证码发信频率限制记录';
 
--- API 接口表（v2.12.0+）
+-- API 接口表（v3.6.0 起：后台接口列表维护；旧审核字段已废弃）
 CREATE TABLE IF NOT EXISTS `{prefix}api` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-    `user_id` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提交用户 ID',
     `name` varchar(100) NOT NULL COMMENT '接口名称',
-    `slug` varchar(100) NOT NULL DEFAULT '' COMMENT '接口标识',
     `description` text COMMENT '接口描述',
-    `category` varchar(50) NOT NULL DEFAULT '' COMMENT '分类',
     `endpoint` varchar(500) NOT NULL DEFAULT '' COMMENT '接口地址',
-    `method` varchar(10) NOT NULL DEFAULT 'GET' COMMENT '请求方法',
-    `type` varchar(10) NOT NULL DEFAULT 'api' COMMENT 'api|tapi',
-    `status` varchar(20) NOT NULL DEFAULT 'pending' COMMENT 'pending|approved|rejected|offline',
-    `reject_reason` varchar(500) NOT NULL DEFAULT '' COMMENT '拒绝原因',
+    `method` varchar(10) NOT NULL DEFAULT 'GET' COMMENT 'GET|POST',
+    `request_params` mediumtext COMMENT '请求参数（JSON 数组）',
+    `response_example` mediumtext COMMENT '返回参数示例',
+    `doc_normal` mediumtext COMMENT '普通文档',
+    `doc_ai` mediumtext COMMENT 'AI 文档',
+    `call_count` bigint unsigned NOT NULL DEFAULT 0 COMMENT '请求次数',
+    `require_key` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否需要密钥：0否 1是',
+    `status` varchar(20) NOT NULL DEFAULT 'normal' COMMENT 'normal|disabled|maintenance',
+    `icon` varchar(255) NOT NULL DEFAULT '' COMMENT '图标（链接或本地 SVG 路径）',
+    `category` varchar(50) NOT NULL DEFAULT '' COMMENT '分类名称（对接 category.name，可选）',
+    `user_id` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '创建者用户 ID',
     `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` datetime DEFAULT NULL,
     PRIMARY KEY (`id`),
     KEY `idx_status` (`status`),
+    KEY `idx_category` (`category`),
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API 接口表';
 

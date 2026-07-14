@@ -112,7 +112,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` | `FrontendApi` | `admin/api/review.php` | ✅ 是 | **已完成**（列表；用户提交等待上线） |
+| 公开 API 接口 | `ApiManager` | `FrontendApi` | `admin/api/list.php` | ✅ 是 | **已完成**（后台列表 CRUD；用户提交/审核待上线） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
@@ -538,19 +538,21 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 
 ### 4.21 ApiManager.php（后台 · 接口）
 
-**作用：** API 接口表的读写与**审核状态**管理。面向后台和部分统计；**前台主题请优先用 `FrontendApi`**。
+**作用：** API 接口表的读写与状态管理（后台「接口列表」CRUD）。面向后台和部分统计；**前台主题请优先用 `FrontendApi`**。
 
-**状态常量：** `pending` / `approved` / `rejected` / `offline`
+**状态常量：** `normal`（正常）/ `disabled`（禁用，前台不展示）/ `maintenance`（维护中，前台可见但不可请求）
 
 | 方法 | 说明 |
 |------|------|
-| `listPublic()` | 已通过审核的接口（前台数据源） |
+| `listPublic()` | 前台可见接口（排除禁用；含维护中） |
 | `listAll($status)` | 后台列表，可按状态筛选 |
 | `findById($apiId)` | 单条 |
-| `setStatus($apiId, $status, $rejectReason)` | 审核通过/拒绝/下线 |
-| `countApproved()` | 已通过数量 |
-| `countPending()` | 待审核数量 |
-| `totalCallCount()` | 累计调用次数（读配置） |
+| `create($data)` / `update($id, $data)` / `delete($id)` | 后台 CRUD |
+| `setStatus($apiId, $status)` | 设置 normal / disabled / maintenance |
+| `countPublic()` / `countApproved()` | 前台可见数量（后者为兼容别名） |
+| `totalCallCount()` | 各接口 `call_count` 之和 |
+| `incrementCallCount($apiId)` | 增加调用计数 |
+| `formatRow($row)` | 后台列表 / AJAX 格式化 |
 
 ---
 

@@ -122,6 +122,11 @@ class DatabaseMigrator
             self::markApplied('3.0.0');
         }
 
+        // 新装已含 3.6.0 表结构时跳过 DROP 重建，避免清空数据
+        if (!in_array('3.6.0', $applied, true) && self::tableColumnExists('api', 'doc_ai')) {
+            self::markApplied('3.6.0');
+        }
+
         if (!in_array('1.0.35', $applied, true)) {
             $all = Config::all();
             if (array_key_exists('storage_local_public_slug', $all)) {

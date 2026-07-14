@@ -3,7 +3,8 @@
  * 文件：core/FrontendApi.php
  * 作用：前台主题 · 公开接口列表（统一调度，主题只调用本类）
  *
- * 说明：仅输出已通过审核的公开接口；分类 id 与 FrontendCategory 一致。
+ * 说明：禁用接口不输出；维护中接口输出 maintenance=1，主题应拦截请求并提示「维护中」。
+ * 图标字段非主题通用，未接入图标展示的主题可忽略 icon。
  */
 
 class FrontendApi
@@ -26,33 +27,40 @@ class FrontendApi
                 continue;
             }
 
+            $status = isset($row['status']) ? (string) $row['status'] : ApiManager::STATUS_NORMAL;
+            if ($status === ApiManager::STATUS_DISABLED) {
+                continue;
+            }
+
             $catLabel = trim((string) (isset($row['category']) ? $row['category'] : ''));
             $catKey = FrontendCategory::resolveIdByName($catLabel);
 
             $method = strtoupper(trim((string) (isset($row['method']) ? $row['method'] : 'GET')));
-            if ($method === '') {
+            if ($method !== 'POST') {
                 $method = 'GET';
             }
-            $methods = array_values(array_filter(array_map('trim', explode(',', $method))));
-            if ($methods === array()) {
-                $methods = array('GET');
-            }
             $endpoint = trim((string) (isset($row['endpoint']) ? $row['endpoint'] : ''));
+            $iconRaw = isset($row['icon']) ? (string) $row['icon'] : '';
 
             $apiData[] = array(
-                'id'              => (int) $row['id'],
-                'name'            => $name,
-                'desc'            => trim((string) (isset($row['description']) ? $row['description'] : '')),
-                'category'        => $catKey,
-                'method'          => $methods[0],
-                'methods'         => $methods,
-                'endpoint'        => $endpoint,
-                'full_url'        => $endpoint,
-                'backup_url'      => '',
-                'params'          => '',
-                'maintenance'     => 0,
-                'require_api_key' => 0,
-                'points_cost'     => 0,
+                'id'               => (int) $row['id'],
+                'name'             => $name,
+                'desc'             => trim((string) (isset($row['description']) ? $row['description'] : '')),
+                'category'         => $catKey,
+                'method'           => $method,
+                'methods'          => array($method),
+                'endpoint'         => $endpoint,
+                'full_url'         => $endpoint,
+                'backup_url'       => '',
+                'params'           => isset($row['request_params']) ? (string) $row['request_params'] : '',
+                'response_example' => isset($row['response_example']) ? (string) $row['response_example'] : '',
+                'doc_normal'       => isset($row['doc_normal']) ? (string) $row['doc_normal'] : '',
+                'doc_ai'           => isset($row['doc_ai']) ? (string) $row['doc_ai'] : '',
+                'maintenance'      => $status === ApiManager::STATUS_MAINTENANCE ? 1 : 0,
+                'require_api_key'  => !empty($row['require_key']) ? 1 : 0,
+                'call_count'       => isset($row['call_count']) ? (int) $row['call_count'] : 0,
+                'icon'             => $iconRaw !== '' ? ApiCategoryManager::resolveIconUrl($iconRaw) : '',
+                'points_cost'      => 0,
             );
         }
 

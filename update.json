@@ -1,12 +1,14 @@
 {
-    "version": "3.5.1",
-    "title": "misc-api 3.5.1 恢复默认主题认证页原 UI",
+    "version": "3.6.0",
+    "title": "misc-api 3.6.0 接口列表与 API 表结构重构",
     "release_date": "2026-07-14",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "回退 3.5.0 对登录/注册/忘记密码/绑定页的视觉改版，恢复原双栏角色小人界面",
-        "移除默认主题 anime.js 动效依赖，继续使用 auth-characters.js 角色交互",
-        "文档与版本信息同步"
+        "重建 api 表：废弃审核字段，改为后台接口列表维护结构",
+        "后台接口列表：大弹窗添加/编辑，支持参数、两个文档、图标、状态与密钥",
+        "状态语义：禁用前台不展示；维护中可展示但请求提示「维护中」",
+        "前台 FrontendApi 对接新字段；默认主题拦截维护中请求",
+        "数据库迁移 3.6.0（DROP 旧表，请留意旧接口数据清空）"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

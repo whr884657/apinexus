@@ -2882,3 +2882,380 @@ select.vs-input {
         display: inline;
     }
 }
+
+/* 接口列表管理 */
+.vs-api-list-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vs-api-list-toolbar {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.vs-api-list-search {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.vs-api-list-search__input {
+    width: min(220px, 46vw);
+    height: 36px;
+    padding: 0 12px 0 34px;
+    font-size: 13px;
+}
+
+.vs-api-list-search__icon {
+    position: absolute;
+    left: 12px;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--vs-text-secondary);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.vs-api-list-search__icon::after {
+    content: "";
+    position: absolute;
+    right: -4px;
+    bottom: -3px;
+    width: 6px;
+    height: 1.5px;
+    background: var(--vs-text-secondary);
+    transform: rotate(45deg);
+}
+
+.vs-api-list-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+}
+
+.vs-api-list-add-btn__icon {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.vs-api-list-table {
+    border: 1px solid var(--vs-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--vs-content-bg);
+}
+
+.vs-api-list-table__head,
+.vs-api-list-row {
+    display: grid;
+    grid-template-columns: 44px minmax(120px, 1.4fr) 64px minmax(140px, 1.6fr) 64px 56px 72px minmax(220px, 1.2fr);
+    align-items: center;
+    gap: 8px 10px;
+    padding: 0 14px;
+}
+
+.vs-api-list-table__head {
+    min-height: 36px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--vs-border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vs-text-secondary);
+}
+
+.vs-api-list-table__col--method,
+.vs-api-list-table__col--calls,
+.vs-api-list-table__col--key,
+.vs-api-list-table__col--status {
+    text-align: center;
+}
+
+.vs-api-list-table__col--actions {
+    text-align: right;
+}
+
+.vs-api-list-row {
+    min-height: 56px;
+    border-bottom: 1px solid var(--vs-border);
+    font-size: 13px;
+}
+
+.vs-api-list-row:last-child {
+    border-bottom: none;
+}
+
+.vs-api-list-row:hover {
+    background: #f8fafc;
+}
+
+.vs-api-list-row > * {
+    min-width: 0;
+}
+
+.vs-api-list-row__icon img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #f1f5f9;
+}
+
+.vs-api-list-row__name {
+    font-weight: 600;
+    color: var(--vs-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vs-api-list-row__desc,
+.vs-api-list-row__endpoint {
+    color: var(--vs-text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vs-api-list-row__empty {
+    color: #94a3b8;
+}
+
+.vs-api-list-row__method,
+.vs-api-list-row__calls,
+.vs-api-list-row__key,
+.vs-api-list-row__status {
+    justify-self: center;
+    text-align: center;
+}
+
+.vs-api-list-row__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.vs-api-list-row__actions .vs-btn {
+    height: 30px;
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+.vs-api-list-method {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.vs-api-list-method--get {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.vs-api-list-method--post {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.vs-api-list-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.vs-api-list-status.is-normal {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.vs-api-list-status.is-maintenance {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.vs-api-list-status.is-disabled {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.vs-api-list-form-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--vs-border);
+    padding-bottom: 10px;
+}
+
+.vs-api-list-form-tab {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--vs-text-secondary);
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vs-api-list-form-tab.is-active {
+    background: #f1f5f9;
+    color: var(--vs-text);
+    border-color: var(--vs-border);
+}
+
+.vs-api-list-form-pane[hidden] {
+    display: none !important;
+}
+
+.vs-form-row--2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.vs-form-hint {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+    line-height: 1.5;
+}
+
+.vs-req {
+    color: var(--vs-danger, #dc2626);
+}
+
+.vs-api-list-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.vs-api-list-key-field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.vs-select {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, #64748b 50%),
+        linear-gradient(135deg, #64748b 50%, transparent 50%);
+    background-position: calc(100% - 16px) calc(50% - 3px), calc(100% - 11px) calc(50% - 3px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 28px;
+}
+
+@media (max-width: 900px) {
+    .vs-api-list-table__head {
+        display: none;
+    }
+
+    .vs-api-list-row {
+        display: grid;
+        grid-template-columns: 40px 1fr auto;
+        gap: 8px 10px;
+        padding: 12px 14px;
+        align-items: start;
+    }
+
+    .vs-api-list-row__icon {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .vs-api-list-row__main {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .vs-api-list-row__method {
+        grid-column: 3;
+        grid-row: 1;
+        justify-self: end;
+    }
+
+    .vs-api-list-row__endpoint {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        white-space: normal;
+        word-break: break-all;
+    }
+
+    .vs-api-list-row__calls,
+    .vs-api-list-row__key,
+    .vs-api-list-row__status {
+        grid-row: 3;
+        justify-self: start;
+        text-align: left;
+    }
+
+    .vs-api-list-row__calls {
+        grid-column: 1;
+    }
+
+    .vs-api-list-row__key {
+        grid-column: 2;
+    }
+
+    .vs-api-list-row__status {
+        grid-column: 3;
+        justify-self: end;
+    }
+
+    .vs-api-list-row__calls::before {
+        content: "调用 ";
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    .vs-api-list-row__key::before {
+        content: "密钥 ";
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    .vs-api-list-row__actions {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        justify-content: flex-start;
+        padding-top: 8px;
+        border-top: 1px solid var(--vs-border);
+    }
+
+    .vs-form-row--2 {
+        grid-template-columns: 1fr;
+    }
+
+    .vs-api-list-search__input {
+        width: 140px;
+    }
+}
