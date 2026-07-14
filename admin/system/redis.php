@@ -31,13 +31,11 @@ $hits = (int) (isset($biz['app_hits']) ? $biz['app_hits'] : 0);
 $misses = (int) (isset($biz['app_misses']) ? $biz['app_misses'] : 0);
 $hitTotal = $hits + $misses;
 $hitPercent = $hitTotal > 0 ? round(($hits / $hitTotal) * 100, 1) : 0;
-$missPercent = $hitTotal > 0 ? round(100 - $hitPercent, 1) : 0;
 
 $cacheKeys = (int) (isset($biz['cache_keys']) ? $biz['cache_keys'] : 0);
 $rateKeys = (int) (isset($biz['rate_limit_keys']) ? $biz['rate_limit_keys'] : 0);
 $keyTotal = $cacheKeys + $rateKeys;
 $cacheKeyPercent = $keyTotal > 0 ? round(($cacheKeys / $keyTotal) * 100, 1) : 0;
-$rateKeyPercent = $keyTotal > 0 ? round(100 - $cacheKeyPercent, 1) : 0;
 
 $entries = isset($biz['entries']) ? $biz['entries'] : array();
 $cachedCount = 0;
@@ -48,7 +46,50 @@ foreach ($entries as $entry) {
 }
 $entryTotal = count($entries);
 $entryCachedPercent = $entryTotal > 0 ? round(($cachedCount / $entryTotal) * 100, 1) : 0;
-$entryMissPercent = $entryTotal > 0 ? round(100 - $entryCachedPercent, 1) : 0;
+$cacheMemory = isset($biz['cache_memory_human']) ? (string) $biz['cache_memory_human'] : '—';
+
+$chartBoot = array(
+    'hit' => array(
+        'title' => '命中分布',
+        'centerValue' => $hitTotal > 0 ? ($hitPercent . '%') : '—',
+        'centerHint' => '命中率',
+        'segments' => array(
+            array('id' => 'hits', 'label' => '命中', 'value' => $hits, 'color' => '#10b981', 'unit' => '次'),
+            array('id' => 'misses', 'label' => '未命中', 'value' => $misses, 'color' => '#d1d5db', 'unit' => '次'),
+        ),
+    ),
+    'keys' => array(
+        'title' => '键类型分布',
+        'centerValue' => $keyTotal > 0 ? ($cacheKeyPercent . '%') : '—',
+        'centerHint' => '数据缓存占比',
+        'segments' => array(
+            array('id' => 'cache', 'label' => '数据缓存', 'value' => $cacheKeys, 'color' => '#3b82f6', 'unit' => '个键'),
+            array('id' => 'rate', 'label' => '发信限流', 'value' => $rateKeys, 'color' => '#fbbf24', 'unit' => '个键'),
+        ),
+    ),
+    'entries' => array(
+        'title' => '缓存项状态',
+        'centerValue' => $cacheMemory !== '' ? $cacheMemory : '—',
+        'centerHint' => '缓存占用',
+        'segments' => array(
+            array(
+                'id' => 'cached',
+                'label' => '已缓存',
+                'value' => $cachedCount,
+                'color' => '#8b5cf6',
+                'unit' => '项',
+                'extra' => '占用 ' . $cacheMemory,
+            ),
+            array(
+                'id' => 'uncached',
+                'label' => '未缓存',
+                'value' => max(0, $entryTotal - $cachedCount),
+                'color' => '#e5e7eb',
+                'unit' => '项',
+            ),
+        ),
+    ),
+);
 
 vs_admin_layout_start(
     'Redis 管理',
@@ -58,10 +99,11 @@ vs_admin_layout_start(
 );
 ?>
 
-<div class="vs-panel vs-redis-panel" id="redisMonitorPanel">
+<div class="vs-panel vs-redis-panel" id="redisMonitorPanel"
+     data-chart-boot="<?php echo vs_e(json_encode($chartBoot, JSON_UNESCAPED_UNICODE)); ?>">
     <div class="vs-panel__header">
         <h2 class="vs-panel__title">Redis 缓存监控</h2>
-        <p class="vs-panel__desc">查看业务缓存命中率、键分布与缓存项状态；仅高频读取的数据会写入 Redis，其余仍走 MySQL。</p>
+        <p class="vs-panel__desc">悬停或点击环形图扇区查看明细；仅高频读取的数据写入 Redis，其余仍走 MySQL。</p>
     </div>
 
     <div id="redisStatusNotice">
@@ -74,63 +116,20 @@ vs_admin_layout_start(
         <?php endif; ?>
     </div>
 
-    <div class="vs-redis-charts" id="redisCharts">
-        <div class="vs-redis-chart-card">
-            <div class="vs-redis-chart-card__title">命中分布</div>
-            <div class="vs-redis-donut" id="redisChartHit" style="--p1: <?php echo vs_e($hitPercent); ?>; --c1: #10b981; --c2: #e5e7eb;">
-                <span class="vs-redis-donut__label" data-redis-field="chart_hit_label"><?php echo $hitTotal > 0 ? vs_e($hitPercent . '%') : '—'; ?></span>
+    <div class="vs-redis-charts" id="redisCharts" role="group" aria-label="Redis 监控图表">
+        <?php foreach ($chartBoot as $chartId => $chart): ?>
+            <div class="vs-redis-chart-card" data-redis-chart="<?php echo vs_e($chartId); ?>">
+                <div class="vs-redis-chart-card__title"><?php echo vs_e($chart['title']); ?></div>
+                <div class="vs-redis-donut-wrap">
+                    <svg class="vs-redis-donut-svg" viewBox="0 0 120 120" role="img" aria-label="<?php echo vs_e($chart['title']); ?>"></svg>
+                    <div class="vs-redis-donut__center" aria-hidden="true">
+                        <span class="vs-redis-donut__value"><?php echo vs_e($chart['centerValue']); ?></span>
+                        <span class="vs-redis-donut__hint"><?php echo vs_e($chart['centerHint']); ?></span>
+                    </div>
+                </div>
+                <div class="vs-redis-chart-tip" data-redis-tip>悬停或点击扇区查看明细</div>
             </div>
-            <ul class="vs-redis-chart-legend">
-                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#10b981"></span>命中</span><span class="vs-redis-chart-legend__val" data-redis-field="chart_hits"><?php echo $hits; ?></span></li>
-                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#e5e7eb"></span>未命中</span><span class="vs-redis-chart-legend__val" data-redis-field="chart_misses"><?php echo $misses; ?></span></li>
-            </ul>
-        </div>
-        <div class="vs-redis-chart-card">
-            <div class="vs-redis-chart-card__title">键类型分布</div>
-            <div class="vs-redis-donut" id="redisChartKeys" style="--p1: <?php echo vs_e($cacheKeyPercent); ?>; --c1: #3b82f6; --c2: #fde68a;">
-                <span class="vs-redis-donut__label" data-redis-field="chart_key_label"><?php echo $keyTotal > 0 ? vs_e($cacheKeyPercent . '%') : '—'; ?></span>
-            </div>
-            <ul class="vs-redis-chart-legend">
-                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#3b82f6"></span>数据缓存</span><span class="vs-redis-chart-legend__val" data-redis-field="cache_keys"><?php echo $cacheKeys; ?></span></li>
-                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#fde68a"></span>发信限流</span><span class="vs-redis-chart-legend__val" data-redis-field="rate_limit_keys"><?php echo $rateKeys; ?></span></li>
-            </ul>
-        </div>
-        <div class="vs-redis-chart-card">
-            <div class="vs-redis-chart-card__title">缓存项状态</div>
-            <div class="vs-redis-donut" id="redisChartEntries" style="--p1: <?php echo vs_e($entryCachedPercent); ?>; --c1: #8b5cf6; --c2: #f3f4f6;">
-                <span class="vs-redis-donut__label" data-redis-field="chart_entry_label"><?php echo $entryTotal > 0 ? vs_e($entryCachedPercent . '%') : '—'; ?></span>
-            </div>
-            <ul class="vs-redis-chart-legend">
-                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#8b5cf6"></span>已缓存</span><span class="vs-redis-chart-legend__val" data-redis-field="chart_cached_count"><?php echo $cachedCount; ?></span></li>
-                <li><span class="vs-redis-chart-legend__name"><span class="vs-redis-chart-legend__dot" style="background:#f3f4f6;border:1px solid #e5e7eb"></span>未缓存</span><span class="vs-redis-chart-legend__val" data-redis-field="chart_uncached_count"><?php echo max(0, $entryTotal - $cachedCount); ?></span></li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="vs-stat-grid vs-redis-hero-grid">
-        <div class="vs-stat-card vs-redis-stat-card">
-            <span class="vs-stat-card__label">缓存命中次数</span>
-            <span class="vs-stat-card__value" data-redis-field="app_hits"><?php echo $hits; ?></span>
-            <span class="vs-redis-stat-card__hint">读取缓存成功（累计）</span>
-        </div>
-        <div class="vs-stat-card vs-redis-stat-card">
-            <span class="vs-stat-card__label">缓存未命中</span>
-            <span class="vs-stat-card__value" data-redis-field="app_misses"><?php echo $misses; ?></span>
-            <span class="vs-redis-stat-card__hint">回源 MySQL 后写入缓存</span>
-        </div>
-        <div class="vs-stat-card vs-redis-stat-card">
-            <span class="vs-stat-card__label">业务命中率</span>
-            <span class="vs-stat-card__value" data-redis-field="app_hit_rate"><?php
-                $rate = isset($biz['app_hit_rate_percent']) ? $biz['app_hit_rate_percent'] : null;
-                echo $rate === null ? '—' : vs_e($rate . '%');
-            ?></span>
-            <span class="vs-redis-stat-card__hint">命中 /（命中 + 未命中）</span>
-        </div>
-        <div class="vs-stat-card vs-redis-stat-card">
-            <span class="vs-stat-card__label">缓存占用（估算）</span>
-            <span class="vs-stat-card__value" data-redis-field="cache_memory"><?php echo vs_e(isset($biz['cache_memory_human']) ? $biz['cache_memory_human'] : '—'); ?></span>
-            <span class="vs-redis-stat-card__hint">cache:* 与 rl:* 键值大小合计</span>
-        </div>
+        <?php endforeach; ?>
     </div>
 
     <div class="vs-redis-section">
@@ -162,14 +161,6 @@ vs_admin_layout_start(
     <div class="vs-redis-section">
         <h3 class="vs-form-section__title">连接信息</h3>
         <div class="vs-info-grid vs-redis-info-grid">
-            <div class="vs-info-item">
-                <span class="vs-info-item__label">数据缓存键（cache:*）</span>
-                <span class="vs-info-item__value" data-redis-field="cache_keys_dup"><?php echo $cacheKeys; ?></span>
-            </div>
-            <div class="vs-info-item">
-                <span class="vs-info-item__label">发信限流键（rl:*）</span>
-                <span class="vs-info-item__value" data-redis-field="rate_limit_keys_dup"><?php echo $rateKeys; ?></span>
-            </div>
             <div class="vs-info-item">
                 <span class="vs-info-item__label">连接地址</span>
                 <span class="vs-info-item__value"><?php

@@ -678,7 +678,7 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 ### 4.26 RedisService.php（后台 · Redis 监控）
 
-**作用：** 连接 Redis 并采集 INFO / 业务缓存快照，供 `admin/system/redis.php` 与关于页「Redis 版本」使用。前端 `assets/js/redis.js` 对运行时长与剩余 TTL 做每秒本地计时；「刷新周期」文案不参与滚动。
+**作用：** 连接 Redis 并采集 INFO / 业务缓存快照，供 `admin/system/redis.php` 与关于页「Redis 版本」使用。前端 `assets/js/redis.js` 渲染交互式 SVG 环形图（悬停/点击扇区查看明细），并对运行时长与剩余 TTL 做每秒本地计时；「刷新周期」文案不参与滚动。缓存项状态图默认展示业务缓存占用。
 
 | 方法 | 说明 |
 |------|------|
