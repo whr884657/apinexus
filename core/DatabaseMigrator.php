@@ -127,6 +127,11 @@ class DatabaseMigrator
             self::markApplied('3.6.0');
         }
 
+        // 新装已含 3.8.0（audit_status + 数字 status）时跳过迁移
+        if (!in_array('3.8.0', $applied, true) && self::tableColumnExists('api', 'audit_status')) {
+            self::markApplied('3.8.0');
+        }
+
         if (!in_array('1.0.35', $applied, true)) {
             $all = Config::all();
             if (array_key_exists('storage_local_public_slug', $all)) {

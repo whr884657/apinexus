@@ -22,7 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'doc_normal'       => isset($_POST['doc_normal']) ? (string) $_POST['doc_normal'] : '',
             'doc_ai'           => isset($_POST['doc_ai']) ? (string) $_POST['doc_ai'] : '',
             'require_key'      => isset($_POST['require_key']) ? (int) $_POST['require_key'] : 0,
-            'status'           => isset($_POST['status']) ? (string) $_POST['status'] : ApiManager::STATUS_NORMAL,
+            'status'           => isset($_POST['status']) ? $_POST['status'] : ApiManager::STATUS_NORMAL,
+            'audit_status'     => isset($_POST['audit_status'])
+                ? (int) $_POST['audit_status']
+                : ApiManager::AUDIT_APPROVED,
             'icon'             => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'         => isset($_POST['category']) ? (string) $_POST['category'] : '',
         );
@@ -41,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = $payloadFromPost();
         $admin = Auth::user();
         $data['user_id'] = ($admin && !empty($admin['bound_user_id'])) ? (int) $admin['bound_user_id'] : 0;
+        // 管理员后台发布：默认审核通过
+        $data['audit_status'] = ApiManager::AUDIT_APPROVED;
         $result = ApiManager::create($data);
         if (!is_array($result)) {
             AjaxResponse::error($result);
@@ -67,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'set_status') {
         $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
-        $status = isset($_POST['status']) ? (string) $_POST['status'] : '';
+        $status = ApiManager::normalizeStatus(isset($_POST['status']) ? $_POST['status'] : '');
         $result = ApiManager::setStatus($id, $status);
         if ($result !== true) {
             AjaxResponse::error($result);
@@ -76,6 +81,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'api_id'       => $id,
             'status'       => $status,
             'status_label' => ApiManager::statusLabel($status),
+        ));
+    }
+
+    if ($action === 'set_audit') {
+        $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
+        $audit = ApiManager::normalizeAuditStatus(isset($_POST['audit_status']) ? $_POST['audit_status'] : '');
+        $result = ApiManager::setAuditStatus($id, $audit);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        AjaxResponse::success('审核状态已更新', array(
+            'api_id'             => $id,
+            'audit_status'       => $audit,
+            'audit_status_label' => ApiManager::auditStatusLabel($audit),
         ));
     }
 
@@ -108,19 +127,22 @@ function vs_render_api_list_item(array $row)
         return;
     }
     $apiId = (int) $api['id'];
-    $status = (string) $api['status'];
+    $status = (int) $api['status'];
     $statusClass = 'is-normal';
     if ($status === ApiManager::STATUS_DISABLED) {
         $statusClass = 'is-disabled';
     } elseif ($status === ApiManager::STATUS_MAINTENANCE) {
         $statusClass = 'is-maintenance';
     }
+    $auditStatus = isset($api['audit_status']) ? (int) $api['audit_status'] : ApiManager::AUDIT_APPROVED;
+    $auditClass = $auditStatus === ApiManager::AUDIT_APPROVED ? 'is-approved' : 'is-rejected';
     $desc = trim((string) $api['description']);
     $payloadJson = json_encode($api, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     ?>
     <div class="vs-api-list-row"
          data-api-row="<?php echo $apiId; ?>"
-         data-api-status="<?php echo vs_e($status); ?>"
+         data-api-status="<?php echo $status; ?>"
+         data-api-audit="<?php echo $auditStatus; ?>"
          data-search="<?php echo vs_e(mb_strtolower($api['name'] . ' ' . $api['endpoint'] . ' ' . $api['category'], 'UTF-8')); ?>"
          data-payload='<?php echo $payloadJson !== false ? $payloadJson : '{}'; ?>'>
         <div class="vs-api-list-row__icon">
@@ -151,6 +173,9 @@ function vs_render_api_list_item(array $row)
         <div class="vs-api-list-row__status">
             <span class="vs-api-list-status <?php echo $statusClass; ?>" data-field="status_label">
                 <?php echo vs_e($api['status_label']); ?>
+            </span>
+            <span class="vs-api-list-audit <?php echo $auditClass; ?>" data-field="audit_status_label">
+                <?php echo vs_e(isset($api['audit_status_label']) ? $api['audit_status_label'] : ApiManager::auditStatusLabel($auditStatus)); ?>
             </span>
         </div>
         <div class="vs-api-list-row__actions">
@@ -208,7 +233,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
         </div>
     <?php else: ?>
         <div class="vs-api-list-tip vs-api-list-tip--enter">
-            <?php vs_render_notice('info', '', '禁用：前台完全不显示。维护：前台可见，但请求将提示「维护中」。图标为本地 SVG 或外链，主题可不展示。', array('compact' => true)); ?>
+            <?php vs_render_notice('info', '', '接口状态：0正常 / 1禁用（前台不显示） / 2维护（可见但不可请求）。审核：0不通过 / 1通过（未通过前台不展示）。管理员发布默认审核通过。', array('compact' => true)); ?>
         </div>
 
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiListEmpty"<?php echo count($apis) > 0 ? ' hidden' : ''; ?>>
@@ -287,13 +312,21 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                         </select>
                     </div>
                     <div>
-                        <label class="vs-label" for="apiListFormStatus">状态</label>
+                        <label class="vs-label" for="apiListFormStatus">接口状态</label>
                         <select class="vs-input vs-select" id="apiListFormStatus" name="status">
-                            <option value="normal">正常</option>
-                            <option value="maintenance">维护</option>
-                            <option value="disabled">禁用</option>
+                            <option value="0">正常（0）</option>
+                            <option value="2">维护（2）</option>
+                            <option value="1">禁用（1）</option>
                         </select>
                     </div>
+                </div>
+                <div class="vs-form-row">
+                    <label class="vs-label" for="apiListFormAudit">审核状态</label>
+                    <select class="vs-input vs-select" id="apiListFormAudit" name="audit_status">
+                        <option value="1" selected>审核通过（1）</option>
+                        <option value="0">审核不通过（0）</option>
+                    </select>
+                    <p class="vs-form-hint">管理员发布默认「审核通过」；未通过的接口前台不展示。</p>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormEndpoint">接口地址 <span class="vs-req">*</span></label>
