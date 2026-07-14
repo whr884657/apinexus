@@ -10,13 +10,7 @@ ThemeManager::renderThemeAuthHead('忘记密码');
 
     <div class="right">
         <div class="form-box">
-            <div class="header header-mobile">
-                <div class="auth-kicker">Password Reset</div>
-                <h1>重置密码</h1>
-                <p class="header-sub">邮箱验证码找回</p>
-            </div>
             <div class="header header-desktop">
-                <div class="auth-kicker">Password Reset</div>
                 <h1>重置密码</h1>
                 <p class="header-sub">输入注册邮箱获取验证码，然后设置新密码</p>
             </div>
@@ -24,7 +18,9 @@ ThemeManager::renderThemeAuthHead('忘记密码');
             <div id="formMessage" class="form-message" role="alert" hidden></div>
 
             <?php if (!$mailEnabled): ?>
-                <?php vs_render_notice('warning', '暂无法找回密码', '邮箱发信功能尚未配置。请联系管理员在后台「系统设置」中配置邮箱。'); ?>
+                <div class="form-message form-message--error" style="display:block;">
+                    邮箱发信功能尚未配置，无法使用忘记密码。请联系管理员在后台「系统设置」中配置邮箱。
+                </div>
             <?php endif; ?>
 
             <form id="forgotForm" method="post" action="" novalidate>
@@ -57,7 +53,6 @@ ThemeManager::renderThemeAuthHead('忘记密码');
                 <div class="divider">
                     想起密码了？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a>
                 </div>
-                <a class="auth-home-link" href="<?php echo vs_e($base); ?>/">← 返回站点首页</a>
             </form>
         </div>
     </div>

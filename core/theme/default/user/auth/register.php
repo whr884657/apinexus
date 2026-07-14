@@ -10,13 +10,7 @@ ThemeManager::renderThemeAuthHead('用户注册');
 
     <div class="right">
         <div class="form-box">
-            <div class="header header-mobile">
-                <div class="auth-kicker">Create Account</div>
-                <h1>注册账号</h1>
-                <p class="header-sub">邮箱验证注册</p>
-            </div>
             <div class="header header-desktop">
-                <div class="auth-kicker">Create Account</div>
                 <h1>注册账号</h1>
                 <p class="header-sub">使用邮箱验证注册，完成验证后即可使用</p>
             </div>
@@ -72,7 +66,6 @@ ThemeManager::renderThemeAuthHead('用户注册');
                 <div class="divider">
                     已有账号？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a>
                 </div>
-                <a class="auth-home-link" href="<?php echo vs_e($base); ?>/">← 返回站点首页</a>
             </form>
         </div>
     </div>

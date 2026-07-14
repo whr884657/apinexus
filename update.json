@@ -1,12 +1,12 @@
 {
-    "version": "3.5.0",
-    "title": "misc-api 3.5.0 默认主题认证页视觉统一",
+    "version": "3.5.1",
+    "title": "misc-api 3.5.1 恢复默认主题认证页原 UI",
     "release_date": "2026-07-14",
     "db_changes": false,
     "changes": [
-        "默认主题登录/注册/忘记密码/绑定页对齐前台 Feer 风格（深色展区 + 玻璃表单 + 极客按钮）",
-        "保留彩色角色小人；本主题打包 anime.js 入场/呼吸与粒子背景（motion 分层防冲突）",
-        "登录仅记住用户名，不再本地存储明文密码；手机端与减少动效偏好完善"
+        "回退 3.5.0 对登录/注册/忘记密码/绑定页的视觉改版，恢复原双栏角色小人界面",
+        "移除默认主题 anime.js 动效依赖，继续使用 auth-characters.js 角色交互",
+        "文档与版本信息同步"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
