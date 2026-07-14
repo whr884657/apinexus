@@ -23,7 +23,6 @@
     var formSubmitBtn = document.getElementById('apiCatFormSubmitBtn');
     var iconPicker = document.getElementById('apiCatIconPicker');
     var iconUrlInput = document.getElementById('apiCatIconUrl');
-    var iconSearch = document.getElementById('apiCatIconSearch');
     var iconCountHint = document.getElementById('apiCatIconCountHint');
 
     var iconBase = (page.getAttribute('data-icon-base') || '').replace(/\/$/, '');
@@ -49,12 +48,11 @@
     var iconCtl = null;
 
     if (iconCountHint && defaultIcons.length) {
-        iconCountHint.textContent = '共 ' + defaultIcons.length + ' 个内置 SVG，可搜索筛选';
+        iconCountHint.textContent = '共 ' + defaultIcons.length + ' 个内置 SVG，点选即可';
     }
 
     if (window.VsIconPicker && iconPicker) {
         iconCtl = window.VsIconPicker.mount(iconPicker, defaultIcons, {
-            searchInput: iconSearch,
             onSelect: function () {
                 if (iconUrlInput) {
                     iconUrlInput.value = '';
@@ -206,10 +204,6 @@
             }
             if (iconUrlInput) {
                 iconUrlInput.value = matched ? '' : (url || '');
-            }
-            if (iconSearch) {
-                iconSearch.value = '';
-                iconCtl.filter('');
             }
             return;
         }

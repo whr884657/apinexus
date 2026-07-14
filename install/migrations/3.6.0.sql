@@ -13,7 +13,7 @@ CREATE TABLE `{prefix}api` (
     `doc_normal` mediumtext COMMENT '普通文档',
     `doc_ai` mediumtext COMMENT 'AI 文档',
     `call_count` bigint unsigned NOT NULL DEFAULT 0 COMMENT '请求次数',
-    `require_key` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否需要密钥：0否 1是',
+    `require_key` tinyint(1) NOT NULL DEFAULT 0 COMMENT '密钥要求：0不需要 1必须 2可选',
     `status` varchar(20) NOT NULL DEFAULT 'normal' COMMENT 'normal|disabled|maintenance',
     `icon` varchar(255) NOT NULL DEFAULT '' COMMENT '图标（链接或本地 SVG 路径）',
     `category` varchar(50) NOT NULL DEFAULT '' COMMENT '分类名称（对接 category.name，可选）',

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.7.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.7.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -37,14 +37,14 @@
 - 邮箱验证码发信限流（MySQL 表 `mail_code_rate_log` + 一次性 mail_ticket）
 - 站点信息、注册邮箱后缀白名单、SMTP 邮箱发信
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
-- 认证页角色动画背景；后台 `vs-overlay` 大弹窗（电脑 75% 视口 / 手机全宽 85vh 抽屉）与 Toast 提示
+- 认证页角色动画背景；后台 `vs-overlay` 大弹窗（电脑约 92% 视口 / 手机全宽 85vh 抽屉）与 Toast 提示
 - 简洁白色后台主题，纯 CSS 图标，适配电脑端与手机端
 
 ### UI 规范（弹窗 / 布局）
 
 - **手机端（≤900px）**：侧边栏默认隐藏，点击顶栏菜单从右侧滑出；点击遮罩关闭
 - **电脑端（≥768px）**：侧边栏默认展开，可收缩
-- **后台弹窗**：`vs-overlay--lg`——电脑端 75% 视口居中，手机端 100% 宽底部抽屉（85vh），内容区可滚动
+- **后台弹窗**：`vs-overlay--lg`——电脑端约 92% 视口居中（上限 1440×960），手机端 100% 宽底部抽屉（85vh），内容区可滚动
 - **认证页**：可交互角色动画背景，随前台主题联动
 
 ---
@@ -114,7 +114,7 @@
 - **白色主题**：顶部栏 + 可收缩分组侧边栏
 - **电脑端**：侧边栏默认展开，点击左上角可收缩/展开
 - **手机端**：侧边栏默认隐藏，点击顶栏菜单滑出
-- **弹窗体系**：`assets/css/modal.css` 中的 `vs-overlay` / `vs-overlay--lg`，电脑 75% 视口、手机全宽抽屉
+- **弹窗体系**：`assets/css/modal.css` 中的 `vs-overlay` / `vs-overlay--lg`，电脑约 92% 视口、手机全宽抽屉
 - **会话超时**：长时间无操作自动退出（可配置）
 - **系统可配置**：名称、描述、关键词、Favicon、Logo 可在后台修改
 - **源码开放**：全部逻辑可阅读、可二次开发
@@ -263,6 +263,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.7.1（2026-07-14）
+
+- **下拉**：修复请求方式 / 状态 / 分类箭头重影
+- **密钥三态**：不需要 / 必须 / 可选；前台对接 `require_api_key` 0/1/2
+- **弹窗**：LG 桌面约 92vw×88vh；空状态仅保留右上角添加入口
+- **图标选择**：去掉搜索，改为点选
 
 ### v3.7.0（2026-07-14）· 大版本
 

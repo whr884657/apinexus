@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'response_example' => isset($_POST['response_example']) ? (string) $_POST['response_example'] : '',
             'doc_normal'       => isset($_POST['doc_normal']) ? (string) $_POST['doc_normal'] : '',
             'doc_ai'           => isset($_POST['doc_ai']) ? (string) $_POST['doc_ai'] : '',
-            'require_key'      => !empty($_POST['require_key']) ? 1 : 0,
+            'require_key'      => isset($_POST['require_key']) ? (int) $_POST['require_key'] : 0,
             'status'           => isset($_POST['status']) ? (string) $_POST['status'] : ApiManager::STATUS_NORMAL,
             'icon'             => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'         => isset($_POST['category']) ? (string) $_POST['category'] : '',
@@ -146,7 +146,7 @@ function vs_render_api_list_item(array $row)
         </div>
         <div class="vs-api-list-row__calls" data-field="call_count"><?php echo (int) $api['call_count']; ?></div>
         <div class="vs-api-list-row__key" data-field="require_key_label">
-            <?php echo !empty($api['require_key']) ? '需要' : '否'; ?>
+            <?php echo vs_e(isset($api['require_key_label']) ? $api['require_key_label'] : ApiManager::requireKeyLabel($api['require_key'])); ?>
         </div>
         <div class="vs-api-list-row__status">
             <span class="vs-api-list-status <?php echo $statusClass; ?>" data-field="status_label">
@@ -213,10 +213,8 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiListEmpty"<?php echo count($apis) > 0 ? ' hidden' : ''; ?>>
             <div class="vs-api-list-empty__card">
-                <div class="vs-api-list-empty__icon" aria-hidden="true">+</div>
                 <h3 class="vs-api-list-empty__title">暂无接口</h3>
-                <p class="vs-api-list-empty__desc">点击右上角「添加接口」，配置名称、地址、参数与文档。</p>
-                <button type="button" class="vs-btn vs-btn--primary" id="apiListEmptyAddBtn">添加接口</button>
+                <p class="vs-api-list-empty__desc">请点击右上角「添加接口」进行配置（名称、地址、参数与文档等）。</p>
             </div>
         </div>
 
@@ -263,14 +261,12 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 
             <div class="vs-api-list-form-pane is-active" data-api-form-pane="basic">
                 <div class="vs-form-row">
-                    <label class="vs-label" for="apiListIconSearch">接口图标</label>
-                    <input type="search" class="vs-input vs-icon-picker-search" id="apiListIconSearch"
-                           placeholder="搜索图标名，如 weather、alipay、api" autocomplete="off">
+                    <label class="vs-label">接口图标</label>
                     <div class="vs-api-cat-icon-picker" id="apiListIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
                     <label class="vs-label vs-api-cat-icon-url-label" for="apiListIconUrl">或填写图标链接</label>
                     <input type="url" class="vs-input" id="apiListIconUrl" name="icon"
                            placeholder="https://example.com/icon.png" maxlength="255">
-                    <p class="vs-form-hint">图标来自系统 SVG 库；非主题通用字段，未支持的主题可忽略。</p>
+                    <p class="vs-form-hint">点选下方图标，或填写外链；非主题通用字段。</p>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormName">接口名称 <span class="vs-req">*</span></label>
@@ -315,11 +311,12 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                         </select>
                     </div>
                     <div class="vs-api-list-key-field">
-                        <span class="vs-label">是否需要密钥</span>
-                        <label class="vs-checkbox">
-                            <input type="checkbox" id="apiListFormRequireKey" name="require_key" value="1">
-                            <span>请求时需要密钥</span>
-                        </label>
+                        <label class="vs-label" for="apiListFormRequireKey">是否需要密钥</label>
+                        <select class="vs-input vs-select" id="apiListFormRequireKey" name="require_key">
+                            <option value="0">完全不需要</option>
+                            <option value="1">必须需要</option>
+                            <option value="2">可选（可填可不填）</option>
+                        </select>
                     </div>
                 </div>
             </div>

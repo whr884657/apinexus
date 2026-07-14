@@ -57,7 +57,7 @@ class FrontendApi
                 'doc_normal'       => isset($row['doc_normal']) ? (string) $row['doc_normal'] : '',
                 'doc_ai'           => isset($row['doc_ai']) ? (string) $row['doc_ai'] : '',
                 'maintenance'      => $status === ApiManager::STATUS_MAINTENANCE ? 1 : 0,
-                'require_api_key'  => !empty($row['require_key']) ? 1 : 0,
+                'require_api_key'  => ApiManager::normalizeRequireKey(isset($row['require_key']) ? $row['require_key'] : 0),
                 'call_count'       => isset($row['call_count']) ? (int) $row['call_count'] : 0,
                 'icon'             => $iconRaw !== '' ? ApiCategoryManager::resolveIconUrl($iconRaw) : '',
                 'points_cost'      => 0,

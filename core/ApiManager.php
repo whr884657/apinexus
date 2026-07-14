@@ -15,6 +15,13 @@ class ApiManager
     const METHOD_GET = 'GET';
     const METHOD_POST = 'POST';
 
+    /** 密钥要求：不需要 */
+    const KEY_NONE = 0;
+    /** 密钥要求：必须 */
+    const KEY_REQUIRED = 1;
+    /** 密钥要求：可选 */
+    const KEY_OPTIONAL = 2;
+
     /**
      * @return string
      */
@@ -447,7 +454,8 @@ class ApiManager
             'doc_normal'       => isset($row['doc_normal']) ? (string) $row['doc_normal'] : '',
             'doc_ai'           => isset($row['doc_ai']) ? (string) $row['doc_ai'] : '',
             'call_count'       => isset($row['call_count']) ? (int) $row['call_count'] : 0,
-            'require_key'      => !empty($row['require_key']) ? 1 : 0,
+            'require_key'      => self::normalizeRequireKey(isset($row['require_key']) ? $row['require_key'] : 0),
+            'require_key_label'=> self::requireKeyLabel(isset($row['require_key']) ? $row['require_key'] : 0),
             'status'           => $status,
             'status_label'     => self::statusLabel($status),
             'icon'             => ApiCategoryManager::resolveIconUrl($iconRaw),
@@ -480,9 +488,10 @@ class ApiManager
             'endpoint'     => $full['endpoint'],
             'method'       => $full['method'],
             'call_count'   => $full['call_count'],
-            'require_key'  => $full['require_key'],
-            'status'       => $full['status'],
-            'status_label' => $full['status_label'],
+            'require_key'       => $full['require_key'],
+            'require_key_label' => $full['require_key_label'],
+            'status'            => $full['status'],
+            'status_label'      => $full['status_label'],
             'icon'         => $full['icon'],
             'icon_raw'     => $full['icon_raw'],
             'category'     => $full['category'],
@@ -543,7 +552,7 @@ class ApiManager
             return '文档或返回示例过长';
         }
 
-        $requireKey = !empty($data['require_key']) ? 1 : 0;
+        $requireKey = self::normalizeRequireKey(isset($data['require_key']) ? $data['require_key'] : self::KEY_NONE);
 
         $status = isset($data['status']) ? (string) $data['status'] : self::STATUS_NORMAL;
         if (!self::isValidStatus($status)) {
@@ -579,5 +588,33 @@ class ApiManager
             'icon'             => $icon,
             'category'         => $category,
         );
+    }
+
+    /**
+     * @param mixed $value
+     * @return int 0|1|2
+     */
+    public static function normalizeRequireKey($value)
+    {
+        $v = (int) $value;
+        if ($v === self::KEY_REQUIRED || $v === self::KEY_OPTIONAL) {
+            return $v;
+        }
+        return self::KEY_NONE;
+    }
+
+    /**
+     * @param mixed $value
+     * @return string
+     */
+    public static function requireKeyLabel($value)
+    {
+        $map = array(
+            self::KEY_NONE     => '不需要',
+            self::KEY_REQUIRED => '必须',
+            self::KEY_OPTIONAL => '可选',
+        );
+        $key = self::normalizeRequireKey($value);
+        return isset($map[$key]) ? $map[$key] : '不需要';
     }
 }
