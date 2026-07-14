@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.4.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.4.3-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -95,7 +95,7 @@
 | 用户管理 | `/admin/users.php` | 查看用户、搜索、封禁/解封/删除 |
 | 公告管理（占位） | `/admin/content/announcements.php` | 后续开发 |
 | 日志查询（占位） | `/admin/system/logs.php` | 后续开发 |
-| Redis 管理 | `/admin/system/redis.php` | 业务缓存引出线饼图监控（扇区标注、点击高亮、缓存占用） |
+| Redis 管理 | `/admin/system/redis.php` | 业务缓存环形图监控（扇区悬停/点击明细、缓存占用） |
 | 主题设置 | `/admin/system/theme.php` | 主题切换 + 各主题独立配置 |
 | 账号设置 | `/admin/account.php` | 修改资料、发布身份绑定用户账号 |
 | 系统设置 | `/admin/settings.php` | 站点信息、注册策略、OAuth、邮箱发信 |
@@ -262,6 +262,10 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.4.3（2026-07-14）
+
+- **修复**：回退 3.4.2 引出线饼图（手机端线条溢出、UI 错乱）；恢复 3.4.1 环形图交互，并加强卡片防溢出
 
 ### v3.4.2（2026-07-14）
 

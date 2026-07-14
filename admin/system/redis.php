@@ -55,7 +55,7 @@ $chartBoot = array(
         'centerHint' => '命中率',
         'segments' => array(
             array('id' => 'hits', 'label' => '命中', 'value' => $hits, 'color' => '#10b981', 'unit' => '次'),
-            array('id' => 'misses', 'label' => '未命中', 'value' => $misses, 'color' => '#94a3b8', 'unit' => '次'),
+            array('id' => 'misses', 'label' => '未命中', 'value' => $misses, 'color' => '#d1d5db', 'unit' => '次'),
         ),
     ),
     'keys' => array(
@@ -63,8 +63,8 @@ $chartBoot = array(
         'centerValue' => $keyTotal > 0 ? ($cacheKeyPercent . '%') : '—',
         'centerHint' => '数据缓存占比',
         'segments' => array(
-            array('id' => 'cache', 'label' => '数据缓存', 'value' => $cacheKeys, 'color' => '#3b82f6', 'unit' => '键'),
-            array('id' => 'rate', 'label' => '发信限流', 'value' => $rateKeys, 'color' => '#f59e0b', 'unit' => '键'),
+            array('id' => 'cache', 'label' => '数据缓存', 'value' => $cacheKeys, 'color' => '#3b82f6', 'unit' => '个键'),
+            array('id' => 'rate', 'label' => '发信限流', 'value' => $rateKeys, 'color' => '#fbbf24', 'unit' => '个键'),
         ),
     ),
     'entries' => array(
@@ -84,7 +84,7 @@ $chartBoot = array(
                 'id' => 'uncached',
                 'label' => '未缓存',
                 'value' => max(0, $entryTotal - $cachedCount),
-                'color' => '#cbd5e1',
+                'color' => '#e5e7eb',
                 'unit' => '项',
             ),
         ),
@@ -103,7 +103,7 @@ vs_admin_layout_start(
      data-chart-boot="<?php echo vs_e(json_encode($chartBoot, JSON_UNESCAPED_UNICODE)); ?>">
     <div class="vs-panel__header">
         <h2 class="vs-panel__title">Redis 缓存监控</h2>
-        <p class="vs-panel__desc">饼图引出线显示各板块数据；点击扇区可高亮对应标注。仅高频读取的数据写入 Redis，其余仍走 MySQL。</p>
+        <p class="vs-panel__desc">悬停或点击环形图扇区查看明细；仅高频读取的数据写入 Redis，其余仍走 MySQL。</p>
     </div>
 
     <div id="redisStatusNotice">
@@ -120,13 +120,14 @@ vs_admin_layout_start(
         <?php foreach ($chartBoot as $chartId => $chart): ?>
             <div class="vs-redis-chart-card" data-redis-chart="<?php echo vs_e($chartId); ?>">
                 <div class="vs-redis-chart-card__title"><?php echo vs_e($chart['title']); ?></div>
-                <div class="vs-redis-pie-wrap">
-                    <svg class="vs-redis-pie-svg" viewBox="0 0 320 220" role="img" aria-label="<?php echo vs_e($chart['title']); ?>"></svg>
-                    <div class="vs-redis-pie__center" aria-hidden="true">
-                        <span class="vs-redis-pie__value"><?php echo vs_e($chart['centerValue']); ?></span>
-                        <span class="vs-redis-pie__hint"><?php echo vs_e($chart['centerHint']); ?></span>
+                <div class="vs-redis-donut-wrap">
+                    <svg class="vs-redis-donut-svg" viewBox="0 0 120 120" role="img" aria-label="<?php echo vs_e($chart['title']); ?>"></svg>
+                    <div class="vs-redis-donut__center" aria-hidden="true">
+                        <span class="vs-redis-donut__value"><?php echo vs_e($chart['centerValue']); ?></span>
+                        <span class="vs-redis-donut__hint"><?php echo vs_e($chart['centerHint']); ?></span>
                     </div>
                 </div>
+                <div class="vs-redis-chart-tip" data-redis-tip>悬停或点击扇区查看明细</div>
             </div>
         <?php endforeach; ?>
     </div>
