@@ -31,49 +31,73 @@ class ApiCategoryManager
     }
 
     /**
-     * 系统内置分类图标（相对 assets 路径）
+     * 图标库目录（物理路径）
+     *
+     * @return string
+     */
+    public static function iconLibraryDir()
+    {
+        return VS_ROOT . '/assets/img/category-icons';
+    }
+
+    /**
+     * 系统内置分类图标（相对 assets 路径；自动扫描图标库）
      *
      * @return array<int, string>
      */
     public static function defaultIconPaths()
     {
-        return array(
-            '/assets/img/category-icons/image.svg',
-            '/assets/img/category-icons/video.svg',
-            '/assets/img/category-icons/music.svg',
-            '/assets/img/category-icons/tool.svg',
-            '/assets/img/category-icons/ai.svg',
-            '/assets/img/category-icons/search.svg',
-            '/assets/img/category-icons/weather.svg',
-            '/assets/img/category-icons/live.svg',
-            '/assets/img/category-icons/hot.svg',
-            '/assets/img/category-icons/baidu-hot.svg',
-            '/assets/img/category-icons/toutiao-hot.svg',
-            '/assets/img/category-icons/douyin-hot.svg',
-            '/assets/img/category-icons/zhihu-hot.svg',
-            '/assets/img/category-icons/sogou-hot.svg',
-            '/assets/img/category-icons/douyin.svg',
-            '/assets/img/category-icons/kuaishou.svg',
-            '/assets/img/category-icons/bilibili.svg',
-            '/assets/img/category-icons/wechat.svg',
-            '/assets/img/category-icons/qq.svg',
-            '/assets/img/category-icons/ip.svg',
-            '/assets/img/category-icons/lottery.svg',
-            '/assets/img/category-icons/random.svg',
-            '/assets/img/category-icons/emoji.svg',
-            '/assets/img/category-icons/netease.svg',
-            '/assets/img/category-icons/qq-music.svg',
-            '/assets/img/category-icons/honor-of-kings.svg',
-            '/assets/img/category-icons/honor-of-kings-alt.svg',
-            '/assets/img/category-icons/business-license.svg',
-            '/assets/img/category-icons/business-license-alt.svg',
-            '/assets/img/category-icons/id-card.svg',
-            '/assets/img/category-icons/icp.svg',
-            '/assets/img/category-icons/car-dealer.svg',
-            '/assets/img/category-icons/map.svg',
-            '/assets/img/category-icons/weibo.svg',
-            '/assets/img/category-icons/express.svg',
+        static $cached = null;
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $dir = self::iconLibraryDir();
+        $files = array();
+        if (is_dir($dir)) {
+            $list = scandir($dir);
+            if (is_array($list)) {
+                foreach ($list as $name) {
+                    if (!is_string($name) || $name === '.' || $name === '..') {
+                        continue;
+                    }
+                    if (!preg_match('/^[a-z0-9\-]+\.svg$/i', $name)) {
+                        continue;
+                    }
+                    $files[] = strtolower($name);
+                }
+            }
+        }
+
+        // 常用图标靠前，其余按文件名排序
+        $preferred = array(
+            'image.svg', 'video.svg', 'music.svg', 'tool.svg', 'ai.svg',
+            'search.svg', 'weather.svg', 'live.svg', 'hot.svg',
+            'douyin.svg', 'kuaishou.svg', 'bilibili.svg', 'wechat.svg', 'qq.svg',
+            'api.svg', 'map.svg', 'express.svg', 'lottery.svg', 'random.svg',
         );
+        $preferredSet = array_fill_keys($preferred, true);
+        $head = array();
+        foreach ($preferred as $name) {
+            if (in_array($name, $files, true)) {
+                $head[] = $name;
+            }
+        }
+        $tail = array();
+        foreach ($files as $name) {
+            if (!isset($preferredSet[$name])) {
+                $tail[] = $name;
+            }
+        }
+        sort($tail, SORT_STRING);
+
+        $paths = array();
+        foreach (array_merge($head, $tail) as $name) {
+            $paths[] = '/assets/img/category-icons/' . $name;
+        }
+
+        $cached = $paths;
+        return $cached;
     }
 
     /**

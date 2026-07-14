@@ -2762,8 +2762,10 @@ select.vs-input {
 }
 
 .vs-overlay--lg .vs-api-cat-icon-picker {
-    max-height: 200px;
+    max-height: min(320px, 40vh);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
 }
 
 @media (max-width: 767px) {
@@ -3257,5 +3259,155 @@ select.vs-input {
 
     .vs-api-list-search__input {
         width: 140px;
+    }
+}
+
+/* 图标选择器：搜索 + 入场 */
+.vs-icon-picker-search {
+    margin-bottom: 10px;
+    height: 38px;
+    font-size: 13px;
+}
+
+.vs-icon-picker.is-empty-filter::after {
+    content: "无匹配图标";
+    display: block;
+    width: 100%;
+    padding: 16px 8px;
+    text-align: center;
+    color: var(--vs-text-secondary);
+    font-size: 13px;
+}
+
+.vs-icon-picker__item {
+    animation: vs-icon-pop 0.35s ease both;
+    animation-delay: calc(var(--icon-i, 0) * 12ms);
+}
+
+.vs-icon-picker__item:active {
+    transform: scale(0.94);
+}
+
+@keyframes vs-icon-pop {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vs-icon-picker__item,
+    .vs-api-list-row.is-enter,
+    .vs-api-cat-row.is-enter,
+    .vs-api-list-tip--enter,
+    .vs-api-list-empty__card {
+        animation: none !important;
+    }
+}
+
+/* 列表 / 分类行入场 */
+.vs-api-list-row.is-enter,
+.vs-api-cat-row.is-enter {
+    animation: vs-row-fade 0.38s ease both;
+    animation-delay: calc(var(--row-i, 0) * 28ms);
+}
+
+@keyframes vs-row-fade {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.vs-api-list-tip--enter {
+    animation: vs-row-fade 0.35s ease both;
+}
+
+.vs-api-list-upgrade {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.vs-api-list-empty--hero {
+    padding: 28px 8px 12px;
+}
+
+.vs-api-list-empty__card {
+    max-width: 420px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 28px 22px;
+    border: 1px dashed var(--vs-border);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+    animation: vs-row-fade 0.4s ease both;
+}
+
+.vs-api-list-empty__icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 12px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--vs-primary);
+    background: #f1f5f9;
+}
+
+.vs-api-list-empty__title {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+
+.vs-api-list-empty__desc {
+    margin: 0 0 18px;
+    color: var(--vs-text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.vs-api-list-form-tab {
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.vs-api-list-form-tab:active {
+    transform: scale(0.97);
+}
+
+.vs-api-list-form-pane.is-active {
+    animation: vs-pane-in 0.22s ease both;
+}
+
+@keyframes vs-pane-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 900px) {
+    .vs-api-list-empty__card {
+        padding: 22px 16px;
+    }
+
+    .vs-icon-picker-search {
+        font-size: 16px; /* iOS 防自动放大 */
     }
 }
