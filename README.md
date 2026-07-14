@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.4.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.4.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -95,7 +95,7 @@
 | 用户管理 | `/admin/users.php` | 查看用户、搜索、封禁/解封/删除 |
 | 公告管理（占位） | `/admin/content/announcements.php` | 后续开发 |
 | 日志查询（占位） | `/admin/system/logs.php` | 后续开发 |
-| Redis 管理 | `/admin/system/redis.php` | misc-api 业务缓存监控（命中率、缓存项、限流键） |
+| Redis 管理 | `/admin/system/redis.php` | 业务缓存交互监控（环形图悬停/点击明细、缓存占用、缓存项） |
 | 主题设置 | `/admin/system/theme.php` | 主题切换 + 各主题独立配置 |
 | 账号设置 | `/admin/account.php` | 修改资料、发布身份绑定用户账号 |
 | 系统设置 | `/admin/settings.php` | 站点信息、注册策略、OAuth、邮箱发信 |
@@ -262,6 +262,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.4.1（2026-07-14）
+
+- **Redis 监控**：去掉图表下方重复图例与冗余统计卡片；SVG 环形图支持悬停/点击高亮并展示明细
+- **缓存占用**：缓存项状态图中心默认显示业务缓存占用；多端图表网格自适应
 
 ### v3.4.0（2026-07-14）
 
