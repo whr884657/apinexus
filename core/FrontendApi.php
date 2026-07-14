@@ -34,7 +34,7 @@ class FrontendApi
 
             if (ApiManager::hasAuditColumn()) {
                 $audit = ApiManager::normalizeAuditStatus(
-                    isset($row['audit_status']) ? $row['audit_status'] : ApiManager::AUDIT_APPROVED
+                    isset($row['audit']) ? $row['audit'] : ApiManager::AUDIT_APPROVED
                 );
                 if ($audit !== ApiManager::AUDIT_APPROVED) {
                     continue;
@@ -52,24 +52,22 @@ class FrontendApi
             $iconRaw = isset($row['icon']) ? (string) $row['icon'] : '';
 
             $apiData[] = array(
-                'id'               => (int) $row['id'],
-                'name'             => $name,
-                'desc'             => trim((string) (isset($row['description']) ? $row['description'] : '')),
-                'category'         => $catKey,
-                'method'           => $method,
-                'methods'          => array($method),
-                'endpoint'         => $endpoint,
-                'full_url'         => $endpoint,
-                'backup_url'       => '',
-                'params'           => isset($row['request_params']) ? (string) $row['request_params'] : '',
-                'response_example' => isset($row['response_example']) ? (string) $row['response_example'] : '',
-                'doc_normal'       => isset($row['doc_normal']) ? (string) $row['doc_normal'] : '',
-                'doc_ai'           => isset($row['doc_ai']) ? (string) $row['doc_ai'] : '',
-                'maintenance'      => $status === ApiManager::STATUS_MAINTENANCE ? 1 : 0,
-                'require_api_key'  => ApiManager::normalizeRequireKey(isset($row['require_key']) ? $row['require_key'] : 0),
-                'call_count'       => isset($row['call_count']) ? (int) $row['call_count'] : 0,
-                'icon'             => $iconRaw !== '' ? ApiCategoryManager::resolveIconUrl($iconRaw) : '',
-                'points_cost'      => 0,
+                'id'          => (int) $row['id'],
+                'name'        => $name,
+                'desc'        => trim((string) (isset($row['description']) ? $row['description'] : '')),
+                'category'    => $catKey,
+                'method'      => $method,
+                'methods'     => array($method),
+                'endpoint'    => $endpoint,
+                'params'      => isset($row['params']) ? (string) $row['params'] : '',
+                'response'    => isset($row['response']) ? (string) $row['response'] : '',
+                'doc'         => isset($row['doc']) ? (string) $row['doc'] : '',
+                'aidoc'       => isset($row['aidoc']) ? (string) $row['aidoc'] : '',
+                'maintenance' => $status === ApiManager::STATUS_MAINTENANCE ? 1 : 0,
+                'needkey'     => ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
+                'calls'       => isset($row['calls']) ? (int) $row['calls'] : 0,
+                'icon'        => $iconRaw !== '' ? ApiCategoryManager::resolveIconUrl($iconRaw) : '',
+                'points'      => 0,
             );
         }
 

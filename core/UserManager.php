@@ -15,8 +15,8 @@ class UserManager
             $pdo = Database::connect();
             $table = Database::table('user');
             $stmt = $pdo->query(
-                'SELECT `id`, `username`, `email`, `avatar_url`, `oauth_qq_openid`, `oauth_gitee_id`,
-                        `status`, `role`, `created_at`, `last_login_at`
+                'SELECT `id`, `username`, `email`, `avatar`, `qqopenid`, `giteeid`,
+                        `status`, `role`, `createtime`, `lastlogin`
                  FROM `' . $table . '`
                  ORDER BY `id` DESC'
             );
@@ -42,7 +42,7 @@ class UserManager
             $pdo = Database::connect();
             $table = Database::table('user');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `username`, `email`, `avatar_url`, `status`, `role`, `created_at`
+                'SELECT `id`, `username`, `email`, `avatar`, `status`, `role`, `createtime`
                  FROM `' . $table . '`
                  WHERE `username` = ? OR `email` = ?
                  LIMIT 1'
@@ -70,7 +70,7 @@ class UserManager
             $pdo = Database::connect();
             $table = Database::table('user');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `username`, `email`, `avatar_url`, `status`, `role`, `created_at`
+                'SELECT `id`, `username`, `email`, `avatar`, `status`, `role`, `createtime`
                  FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array($userId));

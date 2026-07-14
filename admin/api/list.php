@@ -17,14 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'description'      => isset($_POST['description']) ? (string) $_POST['description'] : '',
             'endpoint'         => isset($_POST['endpoint']) ? (string) $_POST['endpoint'] : '',
             'method'           => isset($_POST['method']) ? (string) $_POST['method'] : 'GET',
-            'request_params'   => isset($_POST['request_params']) ? (string) $_POST['request_params'] : '',
-            'response_example' => isset($_POST['response_example']) ? (string) $_POST['response_example'] : '',
-            'doc_normal'       => isset($_POST['doc_normal']) ? (string) $_POST['doc_normal'] : '',
-            'doc_ai'           => isset($_POST['doc_ai']) ? (string) $_POST['doc_ai'] : '',
-            'require_key'      => isset($_POST['require_key']) ? (int) $_POST['require_key'] : 0,
-            'status'           => isset($_POST['status']) ? $_POST['status'] : ApiManager::STATUS_NORMAL,
-            'audit_status'     => isset($_POST['audit_status'])
-                ? (int) $_POST['audit_status']
+            'params'   => isset($_POST['params']) ? (string) $_POST['params'] : '',
+            'response' => isset($_POST['response']) ? (string) $_POST['response'] : '',
+            'doc'      => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
+            'aidoc'    => isset($_POST['aidoc']) ? (string) $_POST['aidoc'] : '',
+            'needkey'  => isset($_POST['needkey']) ? (int) $_POST['needkey'] : 0,
+            'status'   => isset($_POST['status']) ? $_POST['status'] : ApiManager::STATUS_NORMAL,
+            'audit'    => isset($_POST['audit'])
+                ? (int) $_POST['audit']
                 : ApiManager::AUDIT_APPROVED,
             'icon'             => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'         => isset($_POST['category']) ? (string) $_POST['category'] : '',
@@ -43,9 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'create') {
         $data = $payloadFromPost();
         $admin = Auth::user();
-        $data['user_id'] = ($admin && !empty($admin['bound_user_id'])) ? (int) $admin['bound_user_id'] : 0;
+        $data['userid'] = ($admin && !empty($admin['binduid'])) ? (int) $admin['binduid'] : 0;
         // 管理员后台发布：默认审核通过
-        $data['audit_status'] = ApiManager::AUDIT_APPROVED;
+        $data['audit'] = ApiManager::AUDIT_APPROVED;
         $result = ApiManager::create($data);
         if (!is_array($result)) {
             AjaxResponse::error($result);
@@ -86,15 +86,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'set_audit') {
         $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
-        $audit = ApiManager::normalizeAuditStatus(isset($_POST['audit_status']) ? $_POST['audit_status'] : '');
+        $audit = ApiManager::normalizeAuditStatus(isset($_POST['audit']) ? $_POST['audit'] : '');
         $result = ApiManager::setAuditStatus($id, $audit);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
         AjaxResponse::success('审核状态已更新', array(
-            'api_id'             => $id,
-            'audit_status'       => $audit,
-            'audit_status_label' => ApiManager::auditStatusLabel($audit),
+            'api_id'      => $id,
+            'audit'       => $audit,
+            'audit_label' => ApiManager::auditStatusLabel($audit),
         ));
     }
 
@@ -134,7 +134,7 @@ function vs_render_api_list_item(array $row)
     } elseif ($status === ApiManager::STATUS_MAINTENANCE) {
         $statusClass = 'is-maintenance';
     }
-    $auditStatus = isset($api['audit_status']) ? (int) $api['audit_status'] : ApiManager::AUDIT_APPROVED;
+    $auditStatus = isset($api['audit']) ? (int) $api['audit'] : ApiManager::AUDIT_APPROVED;
     $auditClass = $auditStatus === ApiManager::AUDIT_APPROVED ? 'is-approved' : 'is-rejected';
     $desc = trim((string) $api['description']);
     $payloadJson = json_encode($api, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
@@ -166,16 +166,16 @@ function vs_render_api_list_item(array $row)
         <div class="vs-api-list-row__endpoint" data-field="endpoint" title="<?php echo vs_e($api['endpoint']); ?>">
             <?php echo vs_e($api['endpoint']); ?>
         </div>
-        <div class="vs-api-list-row__calls" data-field="call_count"><?php echo (int) $api['call_count']; ?></div>
-        <div class="vs-api-list-row__key" data-field="require_key_label">
-            <?php echo vs_e(isset($api['require_key_label']) ? $api['require_key_label'] : ApiManager::requireKeyLabel($api['require_key'])); ?>
+        <div class="vs-api-list-row__calls" data-field="calls"><?php echo (int) $api['calls']; ?></div>
+        <div class="vs-api-list-row__key" data-field="needkey_label">
+            <?php echo vs_e(isset($api['needkey_label']) ? $api['needkey_label'] : ApiManager::requireKeyLabel($api['needkey'])); ?>
         </div>
         <div class="vs-api-list-row__status">
             <span class="vs-api-list-status <?php echo $statusClass; ?>" data-field="status_label">
                 <?php echo vs_e($api['status_label']); ?>
             </span>
-            <span class="vs-api-list-audit <?php echo $auditClass; ?>" data-field="audit_status_label">
-                <?php echo vs_e(isset($api['audit_status_label']) ? $api['audit_status_label'] : ApiManager::auditStatusLabel($auditStatus)); ?>
+            <span class="vs-api-list-audit <?php echo $auditClass; ?>" data-field="audit_label">
+                <?php echo vs_e(isset($api['audit_label']) ? $api['audit_label'] : ApiManager::auditStatusLabel($auditStatus)); ?>
             </span>
         </div>
         <div class="vs-api-list-row__actions">
@@ -322,7 +322,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormAudit">审核状态</label>
-                    <select class="vs-input vs-select" id="apiListFormAudit" name="audit_status">
+                    <select class="vs-input vs-select" id="apiListFormAudit" name="audit">
                         <option value="1" selected>审核通过（1）</option>
                         <option value="0">审核不通过（0）</option>
                     </select>
@@ -345,7 +345,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     </div>
                     <div class="vs-api-list-key-field">
                         <label class="vs-label" for="apiListFormRequireKey">是否需要密钥</label>
-                        <select class="vs-input vs-select" id="apiListFormRequireKey" name="require_key">
+                        <select class="vs-input vs-select" id="apiListFormRequireKey" name="needkey">
                             <option value="0">完全不需要</option>
                             <option value="1">必须需要</option>
                             <option value="2">可选（可填可不填）</option>
@@ -357,13 +357,13 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
             <div class="vs-api-list-form-pane" data-api-form-pane="params" hidden>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormParams">请求参数（JSON 数组）</label>
-                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormParams" name="request_params" rows="8"
+                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormParams" name="params" rows="8"
                               placeholder='[{"name":"q","type":"string","required":true,"description":"关键词"}]'></textarea>
                     <p class="vs-form-hint">留空表示无参数。须为 JSON 数组，字段建议含 name / type / required / description。</p>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormResponse">返回参数示例</label>
-                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormResponse" name="response_example" rows="8"
+                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormResponse" name="response" rows="8"
                               placeholder='{"code":1,"msg":"ok","data":{}}'></textarea>
                 </div>
             </div>
@@ -371,12 +371,12 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
             <div class="vs-api-list-form-pane" data-api-form-pane="docs" hidden>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormDocNormal">普通文档</label>
-                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocNormal" name="doc_normal" rows="10"
+                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocNormal" name="doc" rows="10"
                               placeholder="面向普通用户的接口说明…"></textarea>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormDocAi">AI 文档</label>
-                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="doc_ai" rows="10"
+                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="aidoc" rows="10"
                               placeholder="面向 AI / Agent 的结构化说明…"></textarea>
                 </div>
             </div>

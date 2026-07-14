@@ -177,7 +177,7 @@ class Auth
         try {
             $pdo = Database::connect();
             $table = Database::table('admin');
-            $stmt = $pdo->prepare('SELECT `id`, `username`, `email`, `avatar_url`, `bound_user_id`, `created_at` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
+            $stmt = $pdo->prepare('SELECT `id`, `username`, `email`, `avatar`, `binduid`, `createtime` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
             $stmt->execute(array(self::id()));
             return $stmt->fetch() ?: null;
         } catch (Exception $e) {
@@ -263,18 +263,18 @@ class Auth
             if ($newPassword !== null && $newPassword !== '') {
                 if ($username !== null) {
                     $stmt = $pdo->prepare(
-                        'UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar_url` = ?, `password` = ? WHERE `id` = ?'
+                        'UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar` = ?, `password` = ? WHERE `id` = ?'
                     );
                     $stmt->execute(array($username, $email, $savedAvatar, vs_password_hash($newPassword), self::id()));
                 } else {
-                    $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar_url` = ?, `password` = ? WHERE `id` = ?');
+                    $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar` = ?, `password` = ? WHERE `id` = ?');
                     $stmt->execute(array($email, $savedAvatar, vs_password_hash($newPassword), self::id()));
                 }
             } elseif ($username !== null) {
-                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar_url` = ? WHERE `id` = ?');
+                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar` = ? WHERE `id` = ?');
                 $stmt->execute(array($username, $email, $savedAvatar, self::id()));
             } else {
-                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar_url` = ? WHERE `id` = ?');
+                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar` = ? WHERE `id` = ?');
                 $stmt->execute(array($email, $savedAvatar, self::id()));
             }
 

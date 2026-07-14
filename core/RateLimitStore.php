@@ -13,7 +13,7 @@ class RateLimitStore
      */
     private static function table()
     {
-        return Database::table('mail_code_rate_log');
+        return Database::table('mailrate');
     }
 
     /**
@@ -79,7 +79,7 @@ class RateLimitStore
         try {
             $pdo = Database::connect();
             $threshold = time() - self::RETENTION_SECONDS;
-            $stmt = $pdo->prepare('DELETE FROM `' . self::table() . '` WHERE `created_at` < ? LIMIT 2000');
+            $stmt = $pdo->prepare('DELETE FROM `' . self::table() . '` WHERE `createtime` < ? LIMIT 2000');
             $stmt->execute(array($threshold));
         } catch (Exception $e) {
             // 清理失败不影响主流程
@@ -111,7 +111,7 @@ class RateLimitStore
             $pdo = Database::connect();
             $since = time() - (int) $windowSeconds;
             $stmt = $pdo->prepare(
-                'SELECT COUNT(*) FROM `' . self::table() . '` WHERE `limit_key` = ? AND `created_at` >= ?'
+                'SELECT COUNT(*) FROM `' . self::table() . '` WHERE `limitkey` = ? AND `createtime` >= ?'
             );
             $stmt->execute(array(self::limitKey($bucket), $since));
             return (int) $stmt->fetchColumn();
@@ -147,7 +147,7 @@ class RateLimitStore
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'SELECT MAX(`created_at`) FROM `' . self::table() . '` WHERE `limit_key` = ?'
+                'SELECT MAX(`createtime`) FROM `' . self::table() . '` WHERE `limitkey` = ?'
             );
             $stmt->execute(array(self::limitKey($bucket)));
             $last = (int) $stmt->fetchColumn();
@@ -213,7 +213,7 @@ class RateLimitStore
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'INSERT INTO `' . self::table() . '` (`limit_key`, `created_at`) VALUES (?, ?)'
+                'INSERT INTO `' . self::table() . '` (`limitkey`, `createtime`) VALUES (?, ?)'
             );
             $stmt->execute(array(self::limitKey($bucket), time()));
             self::maybeCleanup();

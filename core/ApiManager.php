@@ -4,7 +4,7 @@
  * 作用：API 接口数据管理（后台接口列表 CRUD）
  *
  * 接口状态 status：0 正常 / 1 禁用（前台不展示）/ 2 维护（前台可见但不可请求）
- * 审核状态 audit_status：0 审核不通过 / 1 审核通过（管理员发布默认通过）
+ * 审核状态 audit：0 审核不通过 / 1 审核通过（管理员发布默认通过）
  */
 
 class ApiManager
@@ -52,7 +52,7 @@ class ApiManager
             if (!$stmt || !$stmt->fetchColumn()) {
                 return false;
             }
-            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('doc_ai'));
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('aidoc'));
             return $col && $col->fetchColumn();
         } catch (Exception $e) {
             return false;
@@ -68,7 +68,7 @@ class ApiManager
     {
         try {
             $pdo = Database::connect();
-            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('audit_status'));
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('audit'));
             return $col && $col->fetchColumn();
         } catch (Exception $e) {
             return false;
@@ -87,8 +87,8 @@ class ApiManager
             RedisCache::TTL_API_PUBLIC,
             function () {
                 return self::listFiltered(array(
-                    'status_in'     => array(self::STATUS_NORMAL, self::STATUS_MAINTENANCE),
-                    'audit_status'  => self::AUDIT_APPROVED,
+                    'status_in' => array(self::STATUS_NORMAL, self::STATUS_MAINTENANCE),
+                    'audit'     => self::AUDIT_APPROVED,
                 ));
             }
         );
@@ -106,7 +106,7 @@ class ApiManager
             $sql = 'SELECT COUNT(*) FROM `' . self::table() . '`
                     WHERE `status` IN (' . (int) self::STATUS_NORMAL . ', ' . (int) self::STATUS_MAINTENANCE . ')';
             if (self::hasAuditColumn()) {
-                $sql .= ' AND `audit_status` = ' . (int) self::AUDIT_APPROVED;
+                $sql .= ' AND `audit` = ' . (int) self::AUDIT_APPROVED;
             }
             $stmt = $pdo->query($sql);
             return (int) $stmt->fetchColumn();
@@ -125,7 +125,7 @@ class ApiManager
     }
 
     /**
-     * 全站累计调用次数（各接口 call_count 之和）
+     * 全站累计调用次数（各接口 calls 之和）
      *
      * @return int
      */
@@ -133,7 +133,7 @@ class ApiManager
     {
         try {
             $pdo = Database::connect();
-            $stmt = $pdo->query('SELECT COALESCE(SUM(`call_count`), 0) FROM `' . self::table() . '`');
+            $stmt = $pdo->query('SELECT COALESCE(SUM(`calls`), 0) FROM `' . self::table() . '`');
             return max(0, (int) $stmt->fetchColumn());
         } catch (Exception $e) {
             if (!class_exists('Config')) {
@@ -194,13 +194,13 @@ class ApiManager
     {
         $opts = array();
         if ($auditStatus !== null && $auditStatus !== '') {
-            $opts['audit_status'] = $auditStatus;
+            $opts['audit'] = $auditStatus;
         }
         return self::listFiltered($opts);
     }
 
     /**
-     * @param array $opts status|status_in|audit_status
+     * @param array $opts status|status_in|audit
      * @return array
      */
     public static function listFiltered(array $opts = array())
@@ -213,7 +213,7 @@ class ApiManager
             $pdo = Database::connect();
             $sql = 'SELECT a.*, u.`username`, u.`email`
                     FROM `' . self::table() . '` AS a
-                    LEFT JOIN `' . Database::table('user') . '` AS u ON u.`id` = a.`user_id`';
+                    LEFT JOIN `' . Database::table('user') . '` AS u ON u.`id` = a.`userid`';
             $where = array();
             $params = array();
 
@@ -240,10 +240,10 @@ class ApiManager
                 }
             }
 
-            if (isset($opts['audit_status']) && $opts['audit_status'] !== null && $opts['audit_status'] !== '' && self::hasAuditColumn()) {
-                $a = self::normalizeAuditStatus($opts['audit_status']);
+            if (isset($opts['audit']) && $opts['audit'] !== null && $opts['audit'] !== '' && self::hasAuditColumn()) {
+                $a = self::normalizeAuditStatus($opts['audit']);
                 if (self::isValidAuditStatus($a)) {
-                    $where[] = 'a.`audit_status` = ?';
+                    $where[] = 'a.`audit` = ?';
                     $params[] = $a;
                 }
             }
@@ -278,7 +278,7 @@ class ApiManager
             $stmt = $pdo->prepare(
                 'SELECT a.*, u.`username`, u.`email`
                  FROM `' . self::table() . '` AS a
-                 LEFT JOIN `' . Database::table('user') . '` AS u ON u.`id` = a.`user_id`
+                 LEFT JOIN `' . Database::table('user') . '` AS u ON u.`id` = a.`userid`
                  WHERE a.`id` = ? LIMIT 1'
             );
             $stmt->execute(array($apiId));
@@ -306,15 +306,15 @@ class ApiManager
             return $parsed;
         }
 
-        $userId = isset($data['user_id']) ? (int) $data['user_id'] : 0;
+        $userId = isset($data['userid']) ? (int) $data['userid'] : 0;
         if ($userId < 0) {
             $userId = 0;
         }
 
         // 管理员后台发布默认审核通过；显式传入 0 时保留（供后续用户投稿）
         $auditStatus = self::AUDIT_APPROVED;
-        if (array_key_exists('audit_status', $data)) {
-            $auditStatus = self::normalizeAuditStatus($data['audit_status']);
+        if (array_key_exists('audit', $data)) {
+            $auditStatus = self::normalizeAuditStatus($data['audit']);
             if (!self::isValidAuditStatus($auditStatus)) {
                 return '无效的审核状态';
             }
@@ -325,8 +325,8 @@ class ApiManager
             if (self::hasAuditColumn()) {
                 $stmt = $pdo->prepare(
                     'INSERT INTO `' . self::table() . '`
-                     (`name`, `description`, `endpoint`, `method`, `request_params`, `response_example`,
-                      `doc_normal`, `doc_ai`, `call_count`, `require_key`, `status`, `audit_status`, `icon`, `category`, `user_id`, `created_at`)
+                     (`name`, `description`, `endpoint`, `method`, `params`, `response`,
+                      `doc`, `aidoc`, `calls`, `needkey`, `status`, `audit`, `icon`, `category`, `userid`, `createtime`)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, NOW())'
                 );
                 $stmt->execute(array(
@@ -334,11 +334,11 @@ class ApiManager
                     $parsed['description'],
                     $parsed['endpoint'],
                     $parsed['method'],
-                    $parsed['request_params'],
-                    $parsed['response_example'],
-                    $parsed['doc_normal'],
-                    $parsed['doc_ai'],
-                    $parsed['require_key'],
+                    $parsed['params'],
+                    $parsed['response'],
+                    $parsed['doc'],
+                    $parsed['aidoc'],
+                    $parsed['needkey'],
                     $parsed['status'],
                     $auditStatus,
                     $parsed['icon'],
@@ -348,8 +348,8 @@ class ApiManager
             } else {
                 $stmt = $pdo->prepare(
                     'INSERT INTO `' . self::table() . '`
-                     (`name`, `description`, `endpoint`, `method`, `request_params`, `response_example`,
-                      `doc_normal`, `doc_ai`, `call_count`, `require_key`, `status`, `icon`, `category`, `user_id`, `created_at`)
+                     (`name`, `description`, `endpoint`, `method`, `params`, `response`,
+                      `doc`, `aidoc`, `calls`, `needkey`, `status`, `icon`, `category`, `userid`, `createtime`)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, NOW())'
                 );
                 $stmt->execute(array(
@@ -357,11 +357,11 @@ class ApiManager
                     $parsed['description'],
                     $parsed['endpoint'],
                     $parsed['method'],
-                    $parsed['request_params'],
-                    $parsed['response_example'],
-                    $parsed['doc_normal'],
-                    $parsed['doc_ai'],
-                    $parsed['require_key'],
+                    $parsed['params'],
+                    $parsed['response'],
+                    $parsed['doc'],
+                    $parsed['aidoc'],
+                    $parsed['needkey'],
                     $parsed['status'],
                     $parsed['icon'],
                     $parsed['category'],
@@ -397,10 +397,10 @@ class ApiManager
             return $parsed;
         }
 
-        $hasAuditInPayload = array_key_exists('audit_status', $data);
+        $hasAuditInPayload = array_key_exists('audit', $data);
         $auditStatus = self::AUDIT_APPROVED;
         if ($hasAuditInPayload) {
-            $auditStatus = self::normalizeAuditStatus($data['audit_status']);
+            $auditStatus = self::normalizeAuditStatus($data['audit']);
             if (!self::isValidAuditStatus($auditStatus)) {
                 return '无效的审核状态';
             }
@@ -412,8 +412,8 @@ class ApiManager
                 $stmt = $pdo->prepare(
                     'UPDATE `' . self::table() . '`
                      SET `name` = ?, `description` = ?, `endpoint` = ?, `method` = ?,
-                         `request_params` = ?, `response_example` = ?, `doc_normal` = ?, `doc_ai` = ?,
-                         `require_key` = ?, `status` = ?, `audit_status` = ?, `icon` = ?, `category` = ?, `updated_at` = NOW()
+                         `params` = ?, `response` = ?, `doc` = ?, `aidoc` = ?,
+                         `needkey` = ?, `status` = ?, `audit` = ?, `icon` = ?, `category` = ?, `updatetime` = NOW()
                      WHERE `id` = ?'
                 );
                 $stmt->execute(array(
@@ -421,11 +421,11 @@ class ApiManager
                     $parsed['description'],
                     $parsed['endpoint'],
                     $parsed['method'],
-                    $parsed['request_params'],
-                    $parsed['response_example'],
-                    $parsed['doc_normal'],
-                    $parsed['doc_ai'],
-                    $parsed['require_key'],
+                    $parsed['params'],
+                    $parsed['response'],
+                    $parsed['doc'],
+                    $parsed['aidoc'],
+                    $parsed['needkey'],
                     $parsed['status'],
                     $auditStatus,
                     $parsed['icon'],
@@ -436,8 +436,8 @@ class ApiManager
                 $stmt = $pdo->prepare(
                     'UPDATE `' . self::table() . '`
                      SET `name` = ?, `description` = ?, `endpoint` = ?, `method` = ?,
-                         `request_params` = ?, `response_example` = ?, `doc_normal` = ?, `doc_ai` = ?,
-                         `require_key` = ?, `status` = ?, `icon` = ?, `category` = ?, `updated_at` = NOW()
+                         `params` = ?, `response` = ?, `doc` = ?, `aidoc` = ?,
+                         `needkey` = ?, `status` = ?, `icon` = ?, `category` = ?, `updatetime` = NOW()
                      WHERE `id` = ?'
                 );
                 $stmt->execute(array(
@@ -445,11 +445,11 @@ class ApiManager
                     $parsed['description'],
                     $parsed['endpoint'],
                     $parsed['method'],
-                    $parsed['request_params'],
-                    $parsed['response_example'],
-                    $parsed['doc_normal'],
-                    $parsed['doc_ai'],
-                    $parsed['require_key'],
+                    $parsed['params'],
+                    $parsed['response'],
+                    $parsed['doc'],
+                    $parsed['aidoc'],
+                    $parsed['needkey'],
                     $parsed['status'],
                     $parsed['icon'],
                     $parsed['category'],
@@ -482,7 +482,7 @@ class ApiManager
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'UPDATE `' . self::table() . '` SET `status` = ?, `updated_at` = NOW() WHERE `id` = ?'
+                'UPDATE `' . self::table() . '` SET `status` = ?, `updatetime` = NOW() WHERE `id` = ?'
             );
             $stmt->execute(array($status, $apiId));
             RedisCache::invalidateFrontend();
@@ -516,7 +516,7 @@ class ApiManager
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'UPDATE `' . self::table() . '` SET `audit_status` = ?, `updated_at` = NOW() WHERE `id` = ?'
+                'UPDATE `' . self::table() . '` SET `audit` = ?, `updatetime` = NOW() WHERE `id` = ?'
             );
             $stmt->execute(array($auditStatus, $apiId));
             RedisCache::invalidateFrontend();
@@ -567,7 +567,7 @@ class ApiManager
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
                 'UPDATE `' . self::table() . '`
-                 SET `call_count` = `call_count` + ?, `updated_at` = NOW()
+                 SET `calls` = `calls` + ?, `updatetime` = NOW()
                  WHERE `id` = ?'
             );
             $stmt->execute(array($delta, $apiId));
@@ -579,25 +579,13 @@ class ApiManager
     }
 
     /**
-     * 兼容旧英文状态串与数字编码
+     * 归一接口状态（仅接受数字 0/1/2）
      *
      * @param mixed $value
      * @return int
      */
     public static function normalizeStatus($value)
     {
-        if (is_string($value)) {
-            $v = strtolower(trim($value));
-            if ($v === 'normal') {
-                return self::STATUS_NORMAL;
-            }
-            if ($v === 'disabled') {
-                return self::STATUS_DISABLED;
-            }
-            if ($v === 'maintenance') {
-                return self::STATUS_MAINTENANCE;
-            }
-        }
         $n = (int) $value;
         if ($n === self::STATUS_DISABLED || $n === self::STATUS_MAINTENANCE) {
             return $n;
@@ -677,7 +665,7 @@ class ApiManager
 
         $status = self::normalizeStatus(isset($row['status']) ? $row['status'] : self::STATUS_NORMAL);
         $auditStatus = self::normalizeAuditStatus(
-            isset($row['audit_status']) ? $row['audit_status'] : self::AUDIT_APPROVED
+            isset($row['audit']) ? $row['audit'] : self::AUDIT_APPROVED
         );
         if (isset($row['icon_raw']) && (string) $row['icon_raw'] !== '') {
             $iconRaw = (string) $row['icon_raw'];
@@ -686,29 +674,29 @@ class ApiManager
         }
 
         return array(
-            'id'                 => (int) $row['id'],
-            'name'               => (string) $row['name'],
-            'description'        => isset($row['description']) ? (string) $row['description'] : '',
-            'endpoint'           => isset($row['endpoint']) ? (string) $row['endpoint'] : '',
-            'method'             => isset($row['method']) ? strtoupper((string) $row['method']) : self::METHOD_GET,
-            'request_params'     => isset($row['request_params']) ? (string) $row['request_params'] : '',
-            'response_example'   => isset($row['response_example']) ? (string) $row['response_example'] : '',
-            'doc_normal'         => isset($row['doc_normal']) ? (string) $row['doc_normal'] : '',
-            'doc_ai'             => isset($row['doc_ai']) ? (string) $row['doc_ai'] : '',
-            'call_count'         => isset($row['call_count']) ? (int) $row['call_count'] : 0,
-            'require_key'        => self::normalizeRequireKey(isset($row['require_key']) ? $row['require_key'] : 0),
-            'require_key_label'  => self::requireKeyLabel(isset($row['require_key']) ? $row['require_key'] : 0),
-            'status'             => $status,
-            'status_label'       => self::statusLabel($status),
-            'audit_status'       => $auditStatus,
-            'audit_status_label' => self::auditStatusLabel($auditStatus),
-            'icon'               => ApiCategoryManager::resolveIconUrl($iconRaw),
-            'icon_raw'           => $iconRaw,
-            'category'           => isset($row['category']) ? (string) $row['category'] : '',
-            'user_id'            => isset($row['user_id']) ? (int) $row['user_id'] : 0,
-            'username'           => isset($row['username']) ? (string) $row['username'] : '',
-            'created_at'         => isset($row['created_at']) ? (string) $row['created_at'] : '',
-            'updated_at'         => isset($row['updated_at']) ? (string) $row['updated_at'] : '',
+            'id'            => (int) $row['id'],
+            'name'          => (string) $row['name'],
+            'description'   => isset($row['description']) ? (string) $row['description'] : '',
+            'endpoint'      => isset($row['endpoint']) ? (string) $row['endpoint'] : '',
+            'method'        => isset($row['method']) ? strtoupper((string) $row['method']) : self::METHOD_GET,
+            'params'        => isset($row['params']) ? (string) $row['params'] : '',
+            'response'      => isset($row['response']) ? (string) $row['response'] : '',
+            'doc'           => isset($row['doc']) ? (string) $row['doc'] : '',
+            'aidoc'         => isset($row['aidoc']) ? (string) $row['aidoc'] : '',
+            'calls'         => isset($row['calls']) ? (int) $row['calls'] : 0,
+            'needkey'       => self::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
+            'needkey_label' => self::requireKeyLabel(isset($row['needkey']) ? $row['needkey'] : 0),
+            'status'        => $status,
+            'status_label'  => self::statusLabel($status),
+            'audit'         => $auditStatus,
+            'audit_label'   => self::auditStatusLabel($auditStatus),
+            'icon'          => ApiCategoryManager::resolveIconUrl($iconRaw),
+            'icon_raw'      => $iconRaw,
+            'category'      => isset($row['category']) ? (string) $row['category'] : '',
+            'userid'        => isset($row['userid']) ? (int) $row['userid'] : 0,
+            'username'      => isset($row['username']) ? (string) $row['username'] : '',
+            'createtime'    => isset($row['createtime']) ? (string) $row['createtime'] : '',
+            'updatetime'    => isset($row['updatetime']) ? (string) $row['updatetime'] : '',
         );
     }
 
@@ -726,23 +714,23 @@ class ApiManager
         }
 
         return array(
-            'id'                 => $full['id'],
-            'name'               => $full['name'],
-            'description'        => $full['description'],
-            'endpoint'           => $full['endpoint'],
-            'method'             => $full['method'],
-            'call_count'         => $full['call_count'],
-            'require_key'        => $full['require_key'],
-            'require_key_label'  => $full['require_key_label'],
-            'status'             => $full['status'],
-            'status_label'       => $full['status_label'],
-            'audit_status'       => $full['audit_status'],
-            'audit_status_label' => $full['audit_status_label'],
-            'icon'               => $full['icon'],
-            'icon_raw'           => $full['icon_raw'],
-            'category'           => $full['category'],
-            'user_id'            => $full['user_id'],
-            'username'           => $full['username'],
+            'id'            => $full['id'],
+            'name'          => $full['name'],
+            'description'   => $full['description'],
+            'endpoint'      => $full['endpoint'],
+            'method'        => $full['method'],
+            'calls'         => $full['calls'],
+            'needkey'       => $full['needkey'],
+            'needkey_label' => $full['needkey_label'],
+            'status'        => $full['status'],
+            'status_label'  => $full['status_label'],
+            'audit'         => $full['audit'],
+            'audit_label'   => $full['audit_label'],
+            'icon'          => $full['icon'],
+            'icon_raw'      => $full['icon_raw'],
+            'category'      => $full['category'],
+            'userid'        => $full['userid'],
+            'username'      => $full['username'],
         );
     }
 
@@ -781,7 +769,7 @@ class ApiManager
             return '请求方式仅支持 GET 或 POST';
         }
 
-        $requestParams = trim((string) (isset($data['request_params']) ? $data['request_params'] : ''));
+        $requestParams = trim((string) (isset($data['params']) ? $data['params'] : ''));
         if ($requestParams !== '') {
             $decoded = json_decode($requestParams, true);
             if (!is_array($decoded)) {
@@ -793,14 +781,14 @@ class ApiManager
             }
         }
 
-        $responseExample = (string) (isset($data['response_example']) ? $data['response_example'] : '');
-        $docNormal = (string) (isset($data['doc_normal']) ? $data['doc_normal'] : '');
-        $docAi = (string) (isset($data['doc_ai']) ? $data['doc_ai'] : '');
+        $responseExample = (string) (isset($data['response']) ? $data['response'] : '');
+        $docNormal = (string) (isset($data['doc']) ? $data['doc'] : '');
+        $docAi = (string) (isset($data['aidoc']) ? $data['aidoc'] : '');
         if (strlen($responseExample) > 200000 || strlen($docNormal) > 200000 || strlen($docAi) > 200000) {
             return '文档或返回示例过长';
         }
 
-        $requireKey = self::normalizeRequireKey(isset($data['require_key']) ? $data['require_key'] : self::KEY_NONE);
+        $requireKey = self::normalizeRequireKey(isset($data['needkey']) ? $data['needkey'] : self::KEY_NONE);
 
         $status = self::normalizeStatus(isset($data['status']) ? $data['status'] : self::STATUS_NORMAL);
         if (!self::isValidStatus($status)) {
@@ -823,18 +811,18 @@ class ApiManager
         }
 
         return array(
-            'name'             => $name,
-            'description'      => $description,
-            'endpoint'         => $endpoint,
-            'method'           => $method,
-            'request_params'   => $requestParams,
-            'response_example' => $responseExample,
-            'doc_normal'       => $docNormal,
-            'doc_ai'           => $docAi,
-            'require_key'      => $requireKey,
-            'status'           => $status,
-            'icon'             => $icon,
-            'category'         => $category,
+            'name'        => $name,
+            'description' => $description,
+            'endpoint'    => $endpoint,
+            'method'      => $method,
+            'params'      => $requestParams,
+            'response'    => $responseExample,
+            'doc'         => $docNormal,
+            'aidoc'       => $docAi,
+            'needkey'     => $requireKey,
+            'status'      => $status,
+            'icon'        => $icon,
+            'category'    => $category,
         );
     }
 

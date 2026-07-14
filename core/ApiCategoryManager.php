@@ -209,7 +209,7 @@ class ApiCategoryManager
             $sql = 'SELECT c.*
                     FROM `' . self::table() . '` AS c
                     WHERE c.`status` = 1
-                    ORDER BY c.`sort_order` ASC, c.`id` ASC';
+                    ORDER BY c.`sort` ASC, c.`id` ASC';
             $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
             return is_array($rows) ? $rows : array();
         } catch (Exception $e) {
@@ -297,7 +297,7 @@ class ApiCategoryManager
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'INSERT INTO `' . self::table() . '` (`name`, `icon`, `description`, `sort_order`, `status`, `created_at`)
+                'INSERT INTO `' . self::table() . '` (`name`, `icon`, `description`, `sort`, `status`, `createtime`)
                  VALUES (?, ?, ?, 0, 1, NOW())'
             );
             $stmt->execute(array($name, $iconStored, $description));
@@ -361,7 +361,7 @@ class ApiCategoryManager
 
             $stmt = $pdo->prepare(
                 'UPDATE `' . self::table() . '`
-                 SET `name` = ?, `icon` = ?, `description` = ?, `updated_at` = NOW()
+                 SET `name` = ?, `icon` = ?, `description` = ?, `updatetime` = NOW()
                  WHERE `id` = ?'
             );
             $stmt->execute(array($name, $iconStored, $description, $id));
@@ -403,7 +403,7 @@ class ApiCategoryManager
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'UPDATE `' . self::table() . '` SET `status` = ?, `updated_at` = NOW() WHERE `id` = ?'
+                'UPDATE `' . self::table() . '` SET `status` = ?, `updatetime` = NOW() WHERE `id` = ?'
             );
             $stmt->execute(array($status, $id));
             RedisCache::invalidateFrontend();

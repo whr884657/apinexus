@@ -28,11 +28,11 @@ vs_user_layout_start('控制台', 'dashboard');
         </div>
         <div class="vs-stat-card">
             <span class="vs-stat-card__label">注册时间</span>
-            <span class="vs-stat-card__value"><?php echo vs_e($vsUser && !empty($vsUser['created_at']) ? $vsUser['created_at'] : '-'); ?></span>
+            <span class="vs-stat-card__value"><?php echo vs_e($vsUser && !empty($vsUser['createtime']) ? $vsUser['createtime'] : '-'); ?></span>
         </div>
         <div class="vs-stat-card">
             <span class="vs-stat-card__label">最后登录</span>
-            <span class="vs-stat-card__value"><?php echo vs_e($vsUser && !empty($vsUser['last_login_at']) ? $vsUser['last_login_at'] : '-'); ?></span>
+            <span class="vs-stat-card__value"><?php echo vs_e($vsUser && !empty($vsUser['lastlogin']) ? $vsUser['lastlogin'] : '-'); ?></span>
         </div>
     </div>
 </div>

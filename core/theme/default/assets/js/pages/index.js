@@ -347,12 +347,12 @@ function buildApiTagSpans(api) {
     const spans = [];
     const isMaintenance = (api.maintenance == 1 || api.maintenance === '1');
     if (isMaintenance) return spans;
-    if ((api.points_cost || 0) <= 0) {
+    if ((api.points || 0) <= 0) {
         spans.push('<span class="api-chip api-chip--free">免费</span>');
     } else {
-        spans.push(`<span class="api-chip api-chip--points">${api.points_cost}积分/次</span>`);
+        spans.push(`<span class="api-chip api-chip--points">${api.points}积分/次</span>`);
     }
-    var keyMode = parseInt(api.require_api_key, 10) || 0;
+    var keyMode = parseInt(api.needkey, 10) || 0;
     if (keyMode === 1) {
         spans.push('<span class="api-chip api-chip--key">KEY必填</span>');
     } else if (keyMode === 2) {
@@ -405,7 +405,7 @@ function renderAPI(data) {
             <h3 class="font-bold">${api.name}</h3>
             <p style="color: var(--text-muted);">${api.desc}</p>
             <div class="endpoint-box font-mono" style="background: var(--endpoint-bg); border: 1px solid var(--endpoint-border); color: var(--accent-primary);">
-                ${api.full_url || api.endpoint}
+                ${api.endpoint}
             </div>
             <a href="${(window.VS_BASE_URL || '') + '/apis'}" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>
         </div>
@@ -498,7 +498,7 @@ function selectApi(id) {
     // 使用宽松相等，因为ID可能是数字或字符串
     const api = apiData.find(a => a.id == id);
     if (api) {
-        selectedApiText.textContent = `${api.method} ${api.full_url || api.endpoint}`;
+        selectedApiText.textContent = `${api.method} ${api.endpoint}`;
         hiddenApiSelect.value = id;
         const cfgTitle = document.getElementById('playground-config-title-text');
         if (cfgTitle) {
@@ -584,7 +584,7 @@ function renderParams(api) {
         } catch(e) {}
     }
 
-    const keyMode = parseInt(api.require_api_key, 10) || 0;
+    const keyMode = parseInt(api.needkey, 10) || 0;
     if (keyMode === 1 || keyMode === 2) {
         const hasKey = params.some(function (p) {
             const n = String(p && p.name ? p.name : '').toLowerCase();
@@ -671,7 +671,7 @@ function renderParams(api) {
 function renderModalList() {
     const searchTerm = modalSearchInput.value.toLowerCase();
     let filteredData = apiData;
-    if (searchTerm) filteredData = filteredData.filter(a => a.name.toLowerCase().includes(searchTerm) || (a.full_url || a.endpoint).toLowerCase().includes(searchTerm));
+    if (searchTerm) filteredData = filteredData.filter(a => a.name.toLowerCase().includes(searchTerm) || (a.endpoint).toLowerCase().includes(searchTerm));
 
     // 使用 DocumentFragment 减少重排
     const fragment = document.createDocumentFragment();
@@ -706,7 +706,7 @@ function renderModalList() {
                     ? '<span class="api-chip api-chip--maintenance">维护中</span>'
                     : '';
                 const tagsRowHtml = `${methodsHtml}${maintHtml}${metaParts.join('')}`;
-                const pathRaw = api.full_url || api.endpoint || '';
+                const pathRaw = api.endpoint || '';
                 const nameRaw = api.name || '';
 
                 itemDiv.innerHTML = `
@@ -775,7 +775,7 @@ function mountPlaygroundKeyHint(container, html, tone) {
 function applyPlaygroundSessionApiKey(api, container) {
     removePlaygroundKeyHint(container);
     if (!api || !container) return;
-    var keyMode = parseInt(api.require_api_key, 10) || 0;
+    var keyMode = parseInt(api.needkey, 10) || 0;
     if (keyMode !== 1 && keyMode !== 2) return;
 
     const ctx = getPlaygroundKeyContext();
@@ -875,7 +875,7 @@ async function sendRequest() {
     const hasFiles = Array.from(fileInputs).some(input => input.files.length > 0);
 
     // 构建完整的请求URL
-    let url = api.full_url || api.endpoint;
+    let url = api.endpoint;
 
     // 收集参数
     const params = {};

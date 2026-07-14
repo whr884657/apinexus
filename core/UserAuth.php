@@ -41,7 +41,7 @@ class UserAuth
                 $_SESSION['vs_user_username'] = $user['username'];
                 self::touchActivity();
 
-                $upd = $pdo->prepare('UPDATE `' . $table . '` SET `last_login_at` = NOW() WHERE `id` = ?');
+                $upd = $pdo->prepare('UPDATE `' . $table . '` SET `lastlogin` = NOW() WHERE `id` = ?');
                 $upd->execute(array((int) $user['id']));
 
                 if (session_status() === PHP_SESSION_ACTIVE) {
@@ -169,7 +169,7 @@ class UserAuth
             $pdo = Database::connect();
             $table = Database::table('user');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `username`, `email`, `avatar_url`, `oauth_qq_openid`, `oauth_gitee_id`, `role`, `created_at`, `last_login_at` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                'SELECT `id`, `username`, `email`, `avatar`, `qqopenid`, `giteeid`, `role`, `createtime`, `lastlogin` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array(self::id()));
             return $stmt->fetch() ?: null;
@@ -263,7 +263,7 @@ class UserAuth
             $_SESSION['vs_user_username'] = $user['username'];
             self::touchActivity();
 
-            $upd = $pdo->prepare('UPDATE `' . $table . '` SET `last_login_at` = NOW() WHERE `id` = ?');
+            $upd = $pdo->prepare('UPDATE `' . $table . '` SET `lastlogin` = NOW() WHERE `id` = ?');
             $upd->execute(array($userId));
 
             if (session_status() === PHP_SESSION_ACTIVE) {
@@ -331,7 +331,7 @@ class UserAuth
             }
 
             $stmt = $pdo->prepare(
-                'INSERT INTO `' . $table . '` (`username`, `password`, `email`, `status`, `role`, `created_at`) VALUES (?, ?, ?, 1, ?, NOW())'
+                'INSERT INTO `' . $table . '` (`username`, `password`, `email`, `status`, `role`, `createtime`) VALUES (?, ?, ?, 1, ?, NOW())'
             );
             $stmt->execute(array($username, vs_password_hash($password), $email, $role));
 
@@ -511,18 +511,18 @@ class UserAuth
             if ($newPassword !== null && $newPassword !== '') {
                 if ($username !== null) {
                     $stmt = $pdo->prepare(
-                        'UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar_url` = ?, `password` = ? WHERE `id` = ?'
+                        'UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar` = ?, `password` = ? WHERE `id` = ?'
                     );
                     $stmt->execute(array($username, $email, $savedAvatar, vs_password_hash($newPassword), self::id()));
                 } else {
-                    $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar_url` = ?, `password` = ? WHERE `id` = ?');
+                    $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar` = ?, `password` = ? WHERE `id` = ?');
                     $stmt->execute(array($email, $savedAvatar, vs_password_hash($newPassword), self::id()));
                 }
             } elseif ($username !== null) {
-                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar_url` = ? WHERE `id` = ?');
+                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar` = ? WHERE `id` = ?');
                 $stmt->execute(array($username, $email, $savedAvatar, self::id()));
             } else {
-                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar_url` = ? WHERE `id` = ?');
+                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar` = ? WHERE `id` = ?');
                 $stmt->execute(array($email, $savedAvatar, self::id()));
             }
 

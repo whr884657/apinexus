@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $prefix = Database::TABLE_PREFIX;
                 $table = $prefix . 'admin';
 
-                $stmt = $pdo->prepare('INSERT INTO `' . $table . '` (`username`, `password`, `email`, `status`, `created_at`) VALUES (?, ?, ?, 1, NOW())');
+                $stmt = $pdo->prepare('INSERT INTO `' . $table . '` (`username`, `password`, `email`, `status`, `createtime`) VALUES (?, ?, ?, 1, NOW())');
                 $stmt->execute(array($username, vs_password_hash($password), $email));
 
                 writeDatabaseConfig($dbConfig);

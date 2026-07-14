@@ -223,14 +223,14 @@ class OAuthService
                 if ($openid === '') {
                     return 'QQ 账号信息无效';
                 }
-                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `oauth_qq_openid` = ? WHERE `id` = ?');
+                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `qqopenid` = ? WHERE `id` = ?');
                 $stmt->execute(array($openid, $userId));
             } else {
                 $gid = trim((string) $identity['id']);
                 if ($gid === '') {
                     return 'Gitee 账号信息无效';
                 }
-                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `oauth_gitee_id` = ? WHERE `id` = ?');
+                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `giteeid` = ? WHERE `id` = ?');
                 $stmt->execute(array($gid, $userId));
             }
 
@@ -262,8 +262,8 @@ class OAuthService
                     return null;
                 }
                 $stmt = $pdo->prepare(
-                    'SELECT `id`, `username`, `email`, `avatar_url`, `oauth_qq_openid`, `oauth_gitee_id`, `last_login_at`
-                     FROM `' . $table . '` WHERE `oauth_qq_openid` = ? AND `status` = 1 LIMIT 1'
+                    'SELECT `id`, `username`, `email`, `avatar`, `qqopenid`, `giteeid`, `lastlogin`
+                     FROM `' . $table . '` WHERE `qqopenid` = ? AND `status` = 1 LIMIT 1'
                 );
                 $stmt->execute(array($openid));
             } else {
@@ -272,8 +272,8 @@ class OAuthService
                     return null;
                 }
                 $stmt = $pdo->prepare(
-                    'SELECT `id`, `username`, `email`, `avatar_url`, `oauth_qq_openid`, `oauth_gitee_id`, `last_login_at`
-                     FROM `' . $table . '` WHERE `oauth_gitee_id` = ? AND `status` = 1 LIMIT 1'
+                    'SELECT `id`, `username`, `email`, `avatar`, `qqopenid`, `giteeid`, `lastlogin`
+                     FROM `' . $table . '` WHERE `giteeid` = ? AND `status` = 1 LIMIT 1'
                 );
                 $stmt->execute(array($gid));
             }
@@ -301,13 +301,13 @@ class OAuthService
             $pdo = Database::connect();
             $table = Database::table('user');
             $stmt = $pdo->prepare(
-                'SELECT `oauth_qq_openid`, `oauth_gitee_id` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                'SELECT `qqopenid`, `giteeid` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array($userId));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
-                $result['qq'] = trim((string) $row['oauth_qq_openid']) !== '';
-                $result['gitee'] = trim((string) $row['oauth_gitee_id']) !== '';
+                $result['qq'] = trim((string) $row['qqopenid']) !== '';
+                $result['gitee'] = trim((string) $row['giteeid']) !== '';
             }
         } catch (Exception $e) {
             // ignore
@@ -336,7 +336,7 @@ class OAuthService
         try {
             $pdo = Database::connect();
             $table = Database::table('user');
-            $field = $provider === 'qq' ? 'oauth_qq_openid' : 'oauth_gitee_id';
+            $field = $provider === 'qq' ? 'qqopenid' : 'giteeid';
             $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `' . $field . '` = ? WHERE `id` = ?');
             $stmt->execute(array('', $userId));
             return true;

@@ -1,13 +1,13 @@
 {
-    "version": "3.8.1",
-    "title": "misc-api 3.8.1 清理旧文件管理系统残留代码",
+    "version": "3.9.0",
+    "title": "misc-api 3.9.0 数据库字段去下划线与短英文命名",
     "release_date": "2026-07-14",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "移除 DatabaseMigrator 中 LocalStorage/多域名等缺失依赖的残留迁移",
-        "删除已废弃的 Domain.php；结构更新时自动清理 domain / file_* 表与旧配置键",
-        "后台布局去掉不存在的 upload-queue.css / .js 引用（避免每页 404）",
-        "同步 CORE 模块说明与 bootstrap 加载顺序"
+        "全库字段去掉下划线：needkey / audit / createtime / userid / binduid 等短英文名",
+        "mail_code_rate_log 表重命名为 mailrate",
+        "业务代码与主题数据键同步新命名；不再长期兼容旧字段名",
+        "新增《版本升级不兼容旧版》规范；更新《数据库开发规范》禁止下划线命名"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

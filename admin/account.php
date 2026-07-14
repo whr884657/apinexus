@@ -10,7 +10,7 @@ require_once __DIR__ . '/init.php';
 
 $error = '';
 $success = '';
-$avatarUrl = $vsAdmin && isset($vsAdmin['avatar_url']) ? trim((string) $vsAdmin['avatar_url']) : '';
+$avatarUrl = $vsAdmin && isset($vsAdmin['avatar']) ? trim((string) $vsAdmin['avatar']) : '';
 $avatarPreview = UserAvatar::resolve($vsAdmin);
 $boundUser = AdminUserBinding::getBoundUser((int) Auth::id());
 
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $username = trim(isset($_POST['username']) ? $_POST['username'] : '');
     $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
-    $avatarUrl = trim(isset($_POST['avatar_url']) ? $_POST['avatar_url'] : '');
+    $avatarUrl = trim(isset($_POST['avatar']) ? $_POST['avatar'] : '');
     $newPassword = isset($_POST['new_password']) ? $_POST['new_password'] : '';
     $newPassword2 = isset($_POST['new_password2']) ? $_POST['new_password2'] : '';
     $oldPassword = isset($_POST['old_password']) ? $_POST['old_password'] : '';
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $vsAdmin = Auth::user();
     $avatarPreview = UserAvatar::resolve($vsAdmin);
     AjaxResponse::success('账号信息已保存', array(
-        'avatar_url' => $vsAdmin && isset($vsAdmin['avatar_url']) ? trim((string) $vsAdmin['avatar_url']) : '',
+        'avatar' => $vsAdmin && isset($vsAdmin['avatar']) ? trim((string) $vsAdmin['avatar']) : '',
         'avatar_preview' => $avatarPreview,
     ));
 }
@@ -86,7 +86,7 @@ vs_admin_layout_start('账号设置', 'account');
                     <img src="<?php echo vs_e($avatarPreview); ?>" alt="" class="vs-account-avatar__img" id="avatarPreview"
                          data-fallback="<?php echo vs_e(UserAvatar::localRandomAvatar($vsAdmin ? (int) $vsAdmin['id'] : 0)); ?>">
                     <label class="vs-label vs-account-avatar__label">头像链接</label>
-                    <input type="url" name="avatar_url" id="avatarUrlInput" class="vs-input"
+                    <input type="url" name="avatar" id="avatarUrlInput" class="vs-input"
                            value="<?php echo vs_e($avatarUrl); ?>" placeholder="https://example.com/avatar.jpg">
                     <?php vs_render_notice('tip', '', '输入图片 URL，留空则使用默认头像', array('field' => true, 'compact' => true)); ?>
                 </div>

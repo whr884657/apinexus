@@ -17,15 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'set_audit') {
         $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
-        $audit = ApiManager::normalizeAuditStatus(isset($_POST['audit_status']) ? $_POST['audit_status'] : '');
+        $audit = ApiManager::normalizeAuditStatus(isset($_POST['audit']) ? $_POST['audit'] : '');
         $result = ApiManager::setAuditStatus($id, $audit);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
         AjaxResponse::success('审核状态已更新', array(
-            'api_id'             => $id,
-            'audit_status'       => $audit,
-            'audit_status_label' => ApiManager::auditStatusLabel($audit),
+            'api_id'      => $id,
+            'audit'       => $audit,
+            'audit_label' => ApiManager::auditStatusLabel($audit),
         ));
     }
 
@@ -83,16 +83,16 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
                     if (!$api) {
                         continue;
                     }
-                    $audit = (int) $api['audit_status'];
+                    $audit = (int) $api['audit'];
                     ?>
                     <div class="vs-api-review-row" data-api-id="<?php echo (int) $api['id']; ?>" data-audit="<?php echo $audit; ?>">
                         <div class="vs-api-review-row__main">
                             <strong><?php echo vs_e($api['name']); ?></strong>
                             <span class="vs-api-review-row__meta"><?php echo vs_e($api['endpoint']); ?></span>
                             <?php if (!empty($api['username'])): ?>
-                                <span class="vs-api-review-row__meta">创建者：<?php echo vs_e($api['username']); ?>（UID <?php echo (int) $api['user_id']; ?>）</span>
-                            <?php elseif ((int) $api['user_id'] > 0): ?>
-                                <span class="vs-api-review-row__meta">创建者 UID：<?php echo (int) $api['user_id']; ?></span>
+                                <span class="vs-api-review-row__meta">创建者：<?php echo vs_e($api['username']); ?>（UID <?php echo (int) $api['userid']; ?>）</span>
+                            <?php elseif ((int) $api['userid'] > 0): ?>
+                                <span class="vs-api-review-row__meta">创建者 UID：<?php echo (int) $api['userid']; ?></span>
                             <?php else: ?>
                                 <span class="vs-api-review-row__meta">创建者：未绑定前台用户</span>
                             <?php endif; ?>
@@ -104,7 +104,7 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
                         </div>
                         <div>
                             <span class="vs-api-list-audit <?php echo $audit === ApiManager::AUDIT_APPROVED ? 'is-approved' : 'is-rejected'; ?>" data-field="audit_label">
-                                <?php echo vs_e($api['audit_status_label']); ?>
+                                <?php echo vs_e($api['audit_label']); ?>
                             </span>
                         </div>
                         <div class="vs-api-review-row__actions">
@@ -203,7 +203,7 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
         var fd = new FormData();
         fd.append('action', 'set_audit');
         fd.append('api_id', apiId);
-        fd.append('audit_status', audit);
+        fd.append('audit', audit);
         window.VS.postForm(fd, window.location.pathname).then(function (data) {
             if (!data || data.code !== 1) {
                 window.VS.showMessage((data && data.msg) || '操作失败', 'error');
@@ -213,7 +213,7 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
             row.setAttribute('data-audit', String(audit));
             var label = row.querySelector('[data-field="audit_label"]');
             if (label) {
-                label.textContent = data.audit_status_label || (audit === '1' ? '审核通过' : '审核不通过');
+                label.textContent = data.audit_label || (audit === '1' ? '审核通过' : '审核不通过');
                 label.className = 'vs-api-list-audit ' + (audit === '1' ? 'is-approved' : 'is-rejected');
             }
             var actions = row.querySelector('.vs-api-review-row__actions');

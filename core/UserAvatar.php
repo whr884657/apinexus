@@ -14,7 +14,7 @@ class UserAvatar
     /**
      * 解析用户头像 URL
      *
-     * @param array|null $user 需含 id、email，可选 avatar_url
+     * @param array|null $user 需含 id、email，可选 avatar
      * @return string
      */
     public static function resolve($user)
@@ -29,7 +29,7 @@ class UserAvatar
             return 'https://q1.qlogo.cn/g?b=qq&nk=' . rawurlencode($qq) . '&s=640';
         }
 
-        $custom = isset($user['avatar_url']) ? trim((string) $user['avatar_url']) : '';
+        $custom = isset($user['avatar']) ? trim((string) $user['avatar']) : '';
         if ($custom !== '' && filter_var($custom, FILTER_VALIDATE_URL)) {
             return $custom;
         }

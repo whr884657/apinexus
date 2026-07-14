@@ -39,13 +39,12 @@ class FrontendUser
             'id' => (int) $user['id'],
             'username' => (string) $user['username'],
             'email' => (string) $user['email'],
-            'avatar_url' => (string) (isset($user['avatar_url']) ? $user['avatar_url'] : ''),
             'avatar' => UserAvatar::resolve($user),
             'role' => $role,
             'role_label' => UserRole::label($role),
             'can_publish_api' => UserRole::canPublishApi($role),
-            'created_at' => isset($user['created_at']) ? (string) $user['created_at'] : '',
-            'last_login_at' => isset($user['last_login_at']) ? (string) $user['last_login_at'] : '',
+            'createtime' => isset($user['createtime']) ? (string) $user['createtime'] : '',
+            'lastlogin' => isset($user['lastlogin']) ? (string) $user['lastlogin'] : '',
         );
     }
 }
