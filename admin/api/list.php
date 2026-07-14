@@ -93,7 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $tableReady = ApiManager::tableReady();
 $apis = $tableReady ? ApiManager::listAll() : array();
-$defaultIcons = ApiCategoryManager::defaultIcons();
+$defaultIconPaths = ApiCategoryManager::defaultIconPaths();
+$iconBase = rtrim(vs_base_url(), '/');
 $categories = ApiCategoryManager::tableReady() ? ApiCategoryManager::listEnabled() : array();
 
 /**
@@ -197,15 +198,26 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 ?>
 
 <div class="vs-panel vs-api-list-panel" id="apiListPage"
-     data-default-icons="<?php echo vs_e(json_encode($defaultIcons, JSON_UNESCAPED_UNICODE)); ?>">
+     data-icon-base="<?php echo vs_e($iconBase); ?>"
+     data-default-icons="<?php echo vs_e(json_encode($defaultIconPaths, JSON_UNESCAPED_UNICODE)); ?>">
 
     <?php if (!$tableReady): ?>
-        <?php vs_render_notice('warning', '', '接口数据表未就绪或仍为旧结构。请前往「系统管理 → 系统升级」执行数据库结构更新（将清空旧接口数据并重建表）。', array('compact' => true)); ?>
+        <div class="vs-api-list-upgrade">
+            <?php vs_render_notice('warning', '', '接口数据表未就绪或仍为旧结构。请先执行数据库结构更新后再使用接口列表。', array('compact' => true)); ?>
+            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade.php'); ?>">前往系统升级</a>
+        </div>
     <?php else: ?>
-        <?php vs_render_notice('info', '', '禁用：前台完全不显示。维护：前台可见，但请求将提示「维护中」。图标为本地 SVG 或外链，主题可不展示。', array('compact' => true)); ?>
+        <div class="vs-api-list-tip vs-api-list-tip--enter">
+            <?php vs_render_notice('info', '', '禁用：前台完全不显示。维护：前台可见，但请求将提示「维护中」。图标为本地 SVG 或外链，主题可不展示。', array('compact' => true)); ?>
+        </div>
 
-        <div class="vs-api-list-empty" id="apiListEmpty"<?php echo count($apis) > 0 ? ' hidden' : ''; ?>>
-            <?php vs_render_notice('info', '', '暂无接口，点击「添加接口」创建。', array('compact' => true)); ?>
+        <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiListEmpty"<?php echo count($apis) > 0 ? ' hidden' : ''; ?>>
+            <div class="vs-api-list-empty__card">
+                <div class="vs-api-list-empty__icon" aria-hidden="true">+</div>
+                <h3 class="vs-api-list-empty__title">暂无接口</h3>
+                <p class="vs-api-list-empty__desc">点击右上角「添加接口」，配置名称、地址、参数与文档。</p>
+                <button type="button" class="vs-btn vs-btn--primary" id="apiListEmptyAddBtn">添加接口</button>
+            </div>
         </div>
 
         <div class="vs-api-list-empty" id="apiListSearchEmpty" hidden>
@@ -251,12 +263,14 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 
             <div class="vs-api-list-form-pane is-active" data-api-form-pane="basic">
                 <div class="vs-form-row">
-                    <label class="vs-label">接口图标</label>
+                    <label class="vs-label" for="apiListIconSearch">接口图标</label>
+                    <input type="search" class="vs-input vs-icon-picker-search" id="apiListIconSearch"
+                           placeholder="搜索图标名，如 weather、alipay、api" autocomplete="off">
                     <div class="vs-api-cat-icon-picker" id="apiListIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
                     <label class="vs-label vs-api-cat-icon-url-label" for="apiListIconUrl">或填写图标链接</label>
                     <input type="url" class="vs-input" id="apiListIconUrl" name="icon"
                            placeholder="https://example.com/icon.png" maxlength="255">
-                    <p class="vs-form-hint">图标非主题通用；未支持图标的主题可忽略该字段。</p>
+                    <p class="vs-form-hint">图标来自系统 SVG 库；非主题通用字段，未支持的主题可忽略。</p>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormName">接口名称 <span class="vs-req">*</span></label>
@@ -344,4 +358,4 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
     </div>
 </div>
 
-<?php vs_admin_layout_end(array('api-list.js')); ?>
+<?php vs_admin_layout_end(array('icon-picker.js', 'api-list.js')); ?>

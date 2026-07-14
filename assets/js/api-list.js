@@ -23,6 +23,9 @@
     var formSubmitBtn = document.getElementById('apiListFormSubmitBtn');
     var iconPicker = document.getElementById('apiListIconPicker');
     var iconUrlInput = document.getElementById('apiListIconUrl');
+    var iconSearch = document.getElementById('apiListIconSearch');
+    var emptyAddBtn = document.getElementById('apiListEmptyAddBtn');
+    var iconCtl = null;
 
     var fields = {
         name: document.getElementById('apiListFormName'),
@@ -38,18 +41,40 @@
         docAi: document.getElementById('apiListFormDocAi')
     };
 
+    var iconBase = (page.getAttribute('data-icon-base') || '').replace(/\/$/, '');
     var defaultIcons = [];
     try {
         defaultIcons = JSON.parse(page.getAttribute('data-default-icons') || '[]');
     } catch (e) {
         defaultIcons = [];
     }
+    defaultIcons = defaultIcons.map(function (item) {
+        var u = String(item || '');
+        if (!u) {
+            return '';
+        }
+        if (/^https?:\/\//i.test(u)) {
+            return u;
+        }
+        return iconBase + (u.charAt(0) === '/' ? u : '/' + u);
+    }).filter(Boolean);
 
     var formMode = 'create';
     var returnFocusEl = null;
 
     if (formOverlay && formOverlay.parentNode !== document.body) {
         document.body.appendChild(formOverlay);
+    }
+
+    if (window.VsIconPicker && iconPicker) {
+        iconCtl = window.VsIconPicker.mount(iconPicker, defaultIcons, {
+            searchInput: iconSearch,
+            onSelect: function () {
+                if (iconUrlInput) {
+                    iconUrlInput.value = '';
+                }
+            }
+        });
     }
 
     function postAction(action, payload) {
@@ -93,6 +118,9 @@
         if (iconUrlInput && iconUrlInput.value.trim()) {
             return iconUrlInput.value.trim();
         }
+        if (iconCtl) {
+            return iconCtl.getSelected() || (defaultIcons.length ? defaultIcons[0] : '');
+        }
         if (!iconPicker) {
             return defaultIcons.length ? defaultIcons[0] : '';
         }
@@ -104,22 +132,50 @@
     }
 
     function setIconPickerSelection(url) {
+        var normalized = safeIconUrl(url);
+        if (iconCtl) {
+            iconCtl.setSelected(normalized || url || '');
+            var matched = false;
+            if (iconPicker) {
+                iconPicker.querySelectorAll('.vs-icon-picker__item').forEach(function (btn) {
+                    var btnUrl = btn.getAttribute('data-icon-url') || '';
+                    if (btnUrl === normalized || btnUrl === url) {
+                        iconCtl.setSelected(btnUrl);
+                        matched = true;
+                    }
+                });
+            }
+            if (iconUrlInput) {
+                iconUrlInput.value = matched ? '' : (url || '');
+            }
+            if (iconSearch) {
+                iconSearch.value = '';
+                iconCtl.filter('');
+            }
+            return;
+        }
         if (!iconPicker) {
             return;
         }
-        var normalized = safeIconUrl(url);
-        var matched = false;
+        var hit = false;
         iconPicker.querySelectorAll('.vs-api-cat-icon-pick').forEach(function (btn) {
             var btnUrl = btn.getAttribute('data-icon-url') || '';
             var on = btnUrl === normalized || btnUrl === url;
             btn.classList.toggle('is-selected', on);
             if (on) {
-                matched = true;
+                hit = true;
             }
         });
         if (iconUrlInput) {
-            iconUrlInput.value = matched ? '' : (url || '');
+            iconUrlInput.value = hit ? '' : (url || '');
         }
+    }
+
+    function markRowsEnter() {
+        page.querySelectorAll('.vs-api-list-row').forEach(function (row, i) {
+            row.style.setProperty('--row-i', String(Math.min(i, 20)));
+            row.classList.add('is-enter');
+        });
     }
 
     function switchFormTab(tab) {
@@ -520,30 +576,19 @@
         return Promise.resolve(window.confirm('确定删除该接口？'));
     }
 
-    if (iconPicker) {
-        defaultIcons.forEach(function (url) {
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'vs-api-cat-icon-pick';
-            btn.setAttribute('data-icon-url', url);
-            btn.innerHTML = '<img src="' + escapeHtml(url) + '" alt="" width="40" height="40">';
-            btn.addEventListener('click', function () {
-                setIconPickerSelection(url);
-            });
-            iconPicker.appendChild(btn);
+    if (iconUrlInput) {
+        iconUrlInput.addEventListener('input', function () {
+            if (iconCtl) {
+                iconCtl.setSelected('');
+            } else if (iconPicker) {
+                iconPicker.querySelectorAll('.vs-api-cat-icon-pick').forEach(function (b) {
+                    b.classList.remove('is-selected');
+                });
+            }
         });
     }
 
-    if (iconUrlInput) {
-        iconUrlInput.addEventListener('input', function () {
-            if (!iconPicker) {
-                return;
-            }
-            iconPicker.querySelectorAll('.vs-api-cat-icon-pick').forEach(function (b) {
-                b.classList.remove('is-selected');
-            });
-        });
-    }
+    markRowsEnter();
 
     document.querySelectorAll('.vs-api-list-form-tab').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -572,6 +617,12 @@
 
     if (openAddBtn) {
         openAddBtn.addEventListener('click', function () {
+            openFormOverlay('create');
+        });
+    }
+
+    if (emptyAddBtn) {
+        emptyAddBtn.addEventListener('click', function () {
             openFormOverlay('create');
         });
     }

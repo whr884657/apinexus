@@ -73,7 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $categories = ApiCategoryManager::listAll();
 $tableReady = ApiCategoryManager::tableReady();
-$defaultIcons = ApiCategoryManager::defaultIcons();
+$defaultIconPaths = ApiCategoryManager::defaultIconPaths();
+$iconBase = rtrim(vs_base_url(), '/');
 
 /**
  * @param array $row
@@ -142,7 +143,8 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
 ?>
 
 <div class="vs-panel vs-api-cat-panel" id="apiCategoriesPage"
-     data-default-icons="<?php echo vs_e(json_encode($defaultIcons, JSON_UNESCAPED_UNICODE)); ?>">
+     data-icon-base="<?php echo vs_e($iconBase); ?>"
+     data-default-icons="<?php echo vs_e(json_encode($defaultIconPaths, JSON_UNESCAPED_UNICODE)); ?>">
 
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '分类数据表未就绪，请前往「系统管理 → 系统升级」执行数据库结构更新。', array('compact' => true)); ?>
@@ -180,8 +182,11 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
         <form id="apiCategoryForm" class="vs-overlay__body vs-form" autocomplete="off">
             <input type="hidden" id="apiCatFormId" name="category_id" value="">
             <div class="vs-form-row">
-                <label class="vs-label">分类图标</label>
-                <div class="vs-api-cat-icon-picker" id="apiCatIconPicker" role="listbox" aria-label="选择默认图标"></div>
+                <label class="vs-label" for="apiCatIconSearch">分类图标</label>
+                <input type="search" class="vs-input vs-icon-picker-search" id="apiCatIconSearch"
+                       placeholder="搜索图标名，如 weather、alipay、api" autocomplete="off">
+                <div class="vs-api-cat-icon-picker" id="apiCatIconPicker" role="listbox" aria-label="选择内置图标"></div>
+                <p class="vs-form-hint" id="apiCatIconCountHint">系统内置 SVG 图标库，支持搜索筛选</p>
                 <label class="vs-label vs-api-cat-icon-url-label" for="apiCatIconUrl">或填写图标链接（正方形）</label>
                 <input type="url" class="vs-input" id="apiCatIconUrl" name="icon"
                        placeholder="https://example.com/icon.png" maxlength="255">
@@ -204,4 +209,4 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
     </div>
 </div>
 
-<?php vs_admin_layout_end(array('api-categories.js')); ?>
+<?php vs_admin_layout_end(array('icon-picker.js', 'api-categories.js')); ?>

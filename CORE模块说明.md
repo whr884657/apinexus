@@ -568,7 +568,7 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 | `findById($id)` / `findByName($name)` | 查找 |
 | `create()` / `update()` / `delete()` | CRUD |
 | `setStatus($id, $status)` | 启用/禁用 |
-| `defaultIconPaths()` / `resolveIconUrl()` | 内置 SVG 图标 |
+| `defaultIconPaths()` / `defaultIcons()` / `resolveIconUrl()` | 图标库自动扫描（`assets/img/category-icons/*.svg`） |
 | `formatRow($row)` | 格式化单行 |
 
 ---

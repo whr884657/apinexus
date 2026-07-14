@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.6.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.7.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -89,7 +89,7 @@
 | 数据大屏（占位） | `/admin/data-screen.php` | 后续开发 |
 | 接口列表 | `/admin/api/list.php` | 添加/编辑接口、状态（正常/维护/禁用）、图标、参数与文档（AJAX 大弹窗） |
 | 接口审核（占位） | `/admin/api/review.php` | 用户提交流程后续开发 |
-| 接口分类 | `/admin/api/categories.php` | 表格式列表、分类 CRUD、35 款内置 SVG 图标、描述、启禁 |
+| 接口分类 | `/admin/api/categories.php` | 表格式列表、分类 CRUD、内置 SVG 图标库（自动扫描）、描述、启禁 |
 | API 管理（占位） | `/admin/api/docs.php` 等 | 文档、反馈仍为占位页 |
 | 内容运营（占位） | `/admin/content/` | 文章、评论、友链、合作伙伴 |
 | 交易财务（占位） | `/admin/finance/` | 支付、订单、赞助、积分 |
@@ -180,7 +180,7 @@ misc-api/
 │   ├── css/                    # common, admin, modal (vs-overlay), toast, install …
 │   ├── js/                     # common.js, api-categories.js, vs-update.js, upgrade.js …
 │   └── img/
-│       ├── category-icons/     # 内置 35 款分类 SVG 图标
+│       ├── category-icons/     # 内置分类 / 接口 SVG 图标库（自动扫描）
 │       └── …                   # 头像、站点图片等
 ├── config/
 │   ├── database.php            # 安装后生成（更新时不覆盖）
@@ -263,6 +263,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.7.0（2026-07-14）· 大版本
+
+- **图标库**：内置 SVG 扩充至约 188 个；分类 / 接口弹窗自动扫描并可搜索选用
+- **交互**：图标入场、列表行与表单 Tab 过渡动画；尊重 `prefers-reduced-motion`
+- **接口列表**：空状态引导与表未就绪时「前往系统升级」入口；双端布局优化
+- **说明**：若仍见「功能开发中」，请升级至本版（接口列表自 3.6.0 起已非占位页）
 
 ### v3.6.0（2026-07-14）· 大版本
 
