@@ -19,15 +19,9 @@ ThemeManager::renderThemeAuthHead($pageTitle);
 
     <div class="right">
         <div class="form-box">
-            <div class="header header-mobile">
-                <div class="auth-kicker">User Access</div>
+            <div class="header header-desktop">
                 <h1><?php echo vs_e($siteName); ?></h1>
                 <p class="header-sub">用户登录</p>
-            </div>
-            <div class="header header-desktop">
-                <div class="auth-kicker">User Access</div>
-                <h1><?php echo vs_e($siteName); ?></h1>
-                <p class="header-sub">用户登录 · 与前台同一视觉体系</p>
             </div>
 
             <div id="formMessage" class="form-message" role="alert" hidden></div>
@@ -48,7 +42,7 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                 <div class="row">
                     <label class="remember">
                         <input type="checkbox" id="rememberCredentials" value="1">
-                        记住用户名
+                        记住账号密码
                     </label>
                     <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
                 </div>
@@ -76,7 +70,6 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                 <div class="divider">
                     还没有账号？<a href="<?php echo vs_e($base); ?>/user/register">立即注册</a>
                 </div>
-                <a class="auth-home-link" href="<?php echo vs_e($base); ?>/">← 返回站点首页</a>
             </form>
         </div>
     </div>
@@ -100,16 +93,13 @@ ThemeManager::renderThemeAuthHead($pageTitle);
             var saved = JSON.parse(raw);
             if (!saved || typeof saved.username !== 'string') return;
             form.username.value = saved.username;
-            // 仅记住用户名，不落盘明文密码（兼容清除旧版存过的 password）
+            if (typeof saved.password === 'string') form.password.value = saved.password;
             if (rememberEl) rememberEl.checked = true;
-            if (typeof saved.password === 'string') {
-                localStorage.setItem(storageKey, JSON.stringify({ username: saved.username }));
-            }
         } catch (err) { localStorage.removeItem(storageKey); }
     }
-    function saveCredentials(username, remember) {
+    function saveCredentials(username, password, remember) {
         try {
-            if (remember) localStorage.setItem(storageKey, JSON.stringify({ username: username }));
+            if (remember) localStorage.setItem(storageKey, JSON.stringify({ username: username, password: password }));
             else localStorage.removeItem(storageKey);
         } catch (err) {}
     }
@@ -139,7 +129,7 @@ ThemeManager::renderThemeAuthHead($pageTitle);
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 if (data.code === 1) {
-                    saveCredentials(username, rememberEl && rememberEl.checked);
+                    saveCredentials(username, password, rememberEl && rememberEl.checked);
                     showMessage(data.msg || '登录成功', 'success');
                     if (data.url) setTimeout(function () { window.location.href = data.url; }, 800);
                 } else showMessage(data.msg || '登录失败', 'error');

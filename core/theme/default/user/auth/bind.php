@@ -10,13 +10,7 @@ ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
 
     <div class="right">
         <div class="form-box">
-            <div class="header header-mobile">
-                <div class="auth-kicker">OAuth Bind</div>
-                <h1>绑定<?php echo vs_e($providerLabel); ?>账号</h1>
-                <p class="header-sub">验证已注册账号</p>
-            </div>
             <div class="header header-desktop">
-                <div class="auth-kicker">OAuth Bind</div>
                 <h1>绑定<?php echo vs_e($providerLabel); ?>账号</h1>
                 <p class="header-sub">第三方账号尚未绑定，请使用已注册账号验证身份</p>
             </div>
@@ -54,7 +48,6 @@ ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
                 <div class="divider">
                     <a href="<?php echo vs_e($base); ?>/user/login">返回登录</a>
                 </div>
-                <a class="auth-home-link" href="<?php echo vs_e($base); ?>/">← 返回站点首页</a>
             </form>
         </div>
     </div>
