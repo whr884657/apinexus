@@ -112,7 +112,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` | `FrontendApi` | `admin/api/list.php`、`review.php` | ✅ 是 | **已完成**（列表 CRUD + 审核字段；用户投稿后续接入） |
+| 公开 API 接口 | `ApiManager` / `ApiNotify` | `FrontendApi` | `admin/api/list.php`、`review.php`、`user/api-manage.php` | ✅ 是 | **已完成**（列表 CRUD + 审核三态 + 开发者投稿与邮件通知） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
@@ -219,7 +219,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `AdminUserBinding.php` | 管理员绑定用户身份（发布内容用） |
 | `UserManager.php` | 后台用户列表/封禁/删除/身份转换 |
 | `UserAvatar.php` | 用户头像 URL 解析 |
-| `ApiManager.php` | API 接口数据与审核状态（**后台向**） |
+| `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
+| `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表（**主题向**） |
@@ -526,21 +527,31 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 
 ---
 
-### 4.21 ApiManager.php（后台 · 接口）
+### 4.21 ApiManager.php（后台 / 用户投稿 · 接口）
 
-**作用：** API 接口表的读写、运营状态与审核（后台「接口列表 / 接口审核」）。面向后台和部分统计；**前台主题请优先用 `FrontendApi`**。
+**作用：** API 接口表的读写、运营状态与审核（后台「接口列表 / 接口审核」、用户中心「API 管理」）。**前台主题请优先用 `FrontendApi`**。
 
 **接口状态 `status`（数字）：** `0` 正常 / `1` 禁用 / `2` 维护  
-**审核 `audit`（数字）：** `0` 不通过 / `1` 通过（管理员发布默认通过）  
+**审核 `audit`（数字）：** `0` 待审核 / `1` 通过 / `2` 不通过（管理员发布默认通过；用户投稿为待审核）  
+**拒绝原因 `rejectreason`：** 不通过时可填，邮件与用户 API 管理页可见  
 **密钥 `needkey`（数字）：** `0` 不需要 / `1` 必须 / `2` 可选  
 
 | 方法 | 说明 |
 |------|------|
 | `listPublic()` | 前台可见：审核通过且非禁用（含维护中） |
-| `listAll` / `listByAudit` / `listFiltered` | 后台列表筛选 |
-| `create` / `update` / `delete` / `setStatus` / `setAuditStatus` | 写操作 |
-| `formatRow` | 后台格式化（键名与库字段一致：`needkey`/`audit`/`calls`/`userid`…） |
+| `listAll` / `listByAudit` / `listByUser` / `listFiltered` | 列表筛选（支持 userid） |
+| `create` / `update` / `delete` / `setStatus` / `setAuditStatus` | 写操作（`setAuditStatus` 可带拒绝原因） |
+| `formatRow` | 格式化（含 `rejectreason` / `audit_class`） |
 | `normalizeRequireKey` / `requireKeyLabel` 等 | 数字归一与中文标签 |
+
+### 4.21.1 ApiNotify.php（邮件通知）
+
+**作用：** 投稿待审通知管理员；审核结果通知投稿用户。依赖 `Mailer` 与系统 SMTP；发信失败不阻断审核主流程。
+
+| 方法 | 说明 |
+|------|------|
+| `notifyAdminsPending($api)` | 通知全部启用中的管理员邮箱 |
+| `notifyUserAuditResult($api, $audit, $reason)` | 通知投稿用户通过/不通过 |
 
 ---
 
@@ -832,6 +843,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 | 弹窗规范 | `开发规范/弹窗开发规范.md`（本地维护） |
 | 按钮样式 | `开发规范/按钮样式规范.md`（本地维护） |
 | 界面提示 / Toast | `开发规范/界面提示规范.md` §8（本地维护） |
+| 界面勿泄露实现细节 | `开发规范/界面勿泄露实现细节.md`（禁止把库枚举写到页面） |
 | 版本记录 | `update-log.json`、`发行说明/` |
 
 ---

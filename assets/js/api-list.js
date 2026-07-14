@@ -58,8 +58,13 @@
         return 0;
     }
 
+    /** 审核：0待审 1通过 2不通过 */
     function normalizeAudit(value) {
-        return parseInt(value, 10) === 0 ? 0 : 1;
+        var n = parseInt(value, 10);
+        if (n === 1 || n === 2) {
+            return n;
+        }
+        return 0;
     }
 
     var iconBase = (page.getAttribute('data-icon-base') || '').replace(/\/$/, '');
@@ -147,7 +152,14 @@
     }
 
     function auditClass(audit) {
-        return normalizeAudit(audit) === 1 ? 'is-approved' : 'is-rejected';
+        var n = normalizeAudit(audit);
+        if (n === 1) {
+            return 'is-approved';
+        }
+        if (n === 2) {
+            return 'is-rejected';
+        }
+        return 'is-pending';
     }
 
     function getSelectedIconUrl() {
@@ -267,7 +279,7 @@
         html += '<div class="vs-api-list-row__key" data-field="needkey_label">' + escapeHtml(api.needkey_label || requireKeyLabel(api.needkey)) + '</div>';
         html += '<div class="vs-api-list-row__status">';
         html += '<span class="vs-api-list-status ' + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span>';
-        html += '<span class="vs-api-list-audit ' + auditClass(audit) + '" data-field="audit_label">' + escapeHtml(api.audit_label || (audit === 1 ? '审核通过' : '审核不通过')) + '</span>';
+        html += '<span class="vs-api-list-audit ' + auditClass(audit) + '" data-field="audit_label">' + escapeHtml(api.audit_label || '') + '</span>';
         html += '</div>';
         html += '<div class="vs-api-list-row__actions">' + buildActionButtons(api) + '</div>';
         html += '</div>';
@@ -375,7 +387,7 @@
         var auditEl = rowEl.querySelector('[data-field="audit_label"]');
         if (auditEl) {
             var audit = normalizeAudit(api.audit);
-            auditEl.textContent = api.audit_label || (audit === 1 ? '审核通过' : '审核不通过');
+            auditEl.textContent = api.audit_label || '';
             auditEl.className = 'vs-api-list-audit ' + auditClass(audit);
         }
         var iconImg = rowEl.querySelector('[data-field="icon"]');

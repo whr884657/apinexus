@@ -1,13 +1,13 @@
 {
-    "version": "3.9.0",
-    "title": "misc-api 3.9.0 数据库字段去下划线与短英文命名",
+    "version": "3.10.0",
+    "title": "misc-api 3.10.0 开发者投稿、审核三态与邮件通知",
     "release_date": "2026-07-14",
     "db_changes": true,
     "changes": [
-        "全库字段去掉下划线：needkey / audit / createtime / userid / binduid 等短英文名",
-        "mail_code_rate_log 表重命名为 mailrate",
-        "业务代码与主题数据键同步新命名；不再长期兼容旧字段名",
-        "新增《版本升级不兼容旧版》规范；更新《数据库开发规范》禁止下划线命名"
+        "用户中心 API 管理：开发者可提交/编辑/删除自有接口",
+        "审核三态：待审核 / 通过 / 不通过；新增 rejectreason 拒绝原因（选填）",
+        "投稿邮件通知管理员；审核结果邮件通知投稿用户",
+        "接口审核页空状态对齐列表页；界面勿泄露库内数字编码"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

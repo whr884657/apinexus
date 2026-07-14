@@ -135,7 +135,7 @@ function vs_render_api_list_item(array $row)
         $statusClass = 'is-maintenance';
     }
     $auditStatus = isset($api['audit']) ? (int) $api['audit'] : ApiManager::AUDIT_APPROVED;
-    $auditClass = $auditStatus === ApiManager::AUDIT_APPROVED ? 'is-approved' : 'is-rejected';
+    $auditClass = isset($api['audit_class']) ? (string) $api['audit_class'] : ApiManager::auditStatusClass($auditStatus);
     $desc = trim((string) $api['description']);
     $payloadJson = json_encode($api, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     ?>
@@ -228,12 +228,12 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 
     <?php if (!$tableReady): ?>
         <div class="vs-api-list-upgrade">
-            <?php vs_render_notice('warning', '', '接口数据表未就绪或仍为旧结构。请先执行数据库结构更新后再使用接口列表。', array('compact' => true)); ?>
+            <?php vs_render_notice('warning', '', '接口管理功能尚未就绪，请先前往「系统升级」完成更新后再使用。', array('compact' => true)); ?>
             <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade.php'); ?>">前往系统升级</a>
         </div>
     <?php else: ?>
         <div class="vs-api-list-tip vs-api-list-tip--enter">
-            <?php vs_render_notice('info', '', '接口状态：0正常 / 1禁用（前台不显示） / 2维护（可见但不可请求）。审核：0不通过 / 1通过（未通过前台不展示）。管理员发布默认审核通过。', array('compact' => true)); ?>
+            <?php vs_render_notice('info', '', '正常：可对外提供服务。维护：站点前台仍可看到，但暂不可请求。禁用：站点前台不显示。未通过审核的接口也不会在站点前台展示。在本页发布时，默认设为审核通过。', array('compact' => true)); ?>
         </div>
 
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiListEmpty"<?php echo count($apis) > 0 ? ' hidden' : ''; ?>>
@@ -291,7 +291,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <label class="vs-label vs-api-cat-icon-url-label" for="apiListIconUrl">或填写图标链接</label>
                     <input type="url" class="vs-input" id="apiListIconUrl" name="icon"
                            placeholder="https://example.com/icon.png" maxlength="255">
-                    <p class="vs-form-hint">点选下方图标，或填写外链；非主题通用字段。</p>
+                    <p class="vs-form-hint">点选下方图标，或填写图片链接地址。</p>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormName">接口名称 <span class="vs-req">*</span></label>
@@ -314,19 +314,20 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <div>
                         <label class="vs-label" for="apiListFormStatus">接口状态</label>
                         <select class="vs-input vs-select" id="apiListFormStatus" name="status">
-                            <option value="0">正常（0）</option>
-                            <option value="2">维护（2）</option>
-                            <option value="1">禁用（1）</option>
+                            <option value="0">正常</option>
+                            <option value="2">维护</option>
+                            <option value="1">禁用</option>
                         </select>
                     </div>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormAudit">审核状态</label>
                     <select class="vs-input vs-select" id="apiListFormAudit" name="audit">
-                        <option value="1" selected>审核通过（1）</option>
-                        <option value="0">审核不通过（0）</option>
+                        <option value="1" selected>审核通过</option>
+                        <option value="0">待审核</option>
+                        <option value="2">审核不通过</option>
                     </select>
-                    <p class="vs-form-hint">管理员发布默认「审核通过」；未通过的接口前台不展示。</p>
+                    <p class="vs-form-hint">在本页发布时默认「审核通过」；待审核与未通过的接口不会出现在站点前台。</p>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormEndpoint">接口地址 <span class="vs-req">*</span></label>
@@ -359,7 +360,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <label class="vs-label" for="apiListFormParams">请求参数（JSON 数组）</label>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormParams" name="params" rows="8"
                               placeholder='[{"name":"q","type":"string","required":true,"description":"关键词"}]'></textarea>
-                    <p class="vs-form-hint">留空表示无参数。须为 JSON 数组，字段建议含 name / type / required / description。</p>
+                    <p class="vs-form-hint">留空表示无参数。请按示例填写 JSON 数组（含参数名、类型、是否必填、说明等）。</p>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormResponse">返回参数示例</label>
