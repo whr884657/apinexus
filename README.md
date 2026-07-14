@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.3.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.4.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -262,6 +262,14 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.4.0（2026-07-14）
+
+- **认证页**：主题 1 登录/注册/忘记密码/绑定去掉输入框上方标签，提示改入 placeholder；主题 2 注册用户名占位改为「请输入用户名（3～50 个字符）」
+- **Toast**：长条内 flex 垂直居中（内层 `.vs-toast__text`），单行不再偏上
+- **Redis**：运行时长显示天/时/分/秒并每秒累加；业务缓存「刷新周期」保持静态，仅剩余秒数倒计时
+- **用户管理**：手机卡片角色标签移至右上角（OAuth 图标左侧），右下增加「最后登录」
+- **接口分类**：手机端「接口数量」移至「启用」标签左侧
 
 ### v3.3.0（2026-07-14）
 

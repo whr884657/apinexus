@@ -288,12 +288,17 @@ vs_admin_layout_start('用户管理', 'users');
                                         <span class="vs-users-banned-tag">已封禁</span>
                                     <?php endif; ?>
                                 </div>
-                                <div class="vs-user-card__oauth">
-                                    <?php echo vs_users_oauth_icons($row, $vsBase); ?>
+                                <div class="vs-user-card__badges">
+                                    <span class="vs-user-card__role"><?php echo vs_users_role_badge($row); ?></span>
+                                    <div class="vs-user-card__oauth">
+                                        <?php echo vs_users_oauth_icons($row, $vsBase); ?>
+                                    </div>
                                 </div>
                             </div>
                             <div class="vs-users-meta vs-user-card__email"><?php echo vs_e($row['email']); ?></div>
-                            <div class="vs-user-card__role"><?php echo vs_users_role_badge($row); ?></div>
+                            <div class="vs-user-card__last-login">
+                                最后登录：<?php echo vs_e(vs_users_format_time(isset($row['last_login_at']) ? $row['last_login_at'] : null)); ?>
+                            </div>
                         </div>
                     </div>
                     <div class="vs-user-card__actions">

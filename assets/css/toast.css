@@ -24,14 +24,16 @@
 }
 
 .vs-toast {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
     width: 100%;
     max-width: none;
     min-height: 46px;
-    padding: 12px 16px;
+    padding: 0 16px;
     border-radius: 10px;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.4;
     color: #fff;
     background: rgba(30, 30, 30, 0.94);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
@@ -41,6 +43,14 @@
     text-align: left;
     word-break: break-word;
     box-sizing: border-box;
+}
+
+.vs-toast__text {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 12px 0;
+    line-height: inherit;
 }
 
 .vs-toast.is-visible {
@@ -78,8 +88,12 @@
 
     .vs-toast {
         font-size: 13px;
-        padding: 11px 14px;
+        padding: 0 14px;
         border-radius: 10px;
         min-height: 44px;
+    }
+
+    .vs-toast__text {
+        padding: 11px 0;
     }
 }

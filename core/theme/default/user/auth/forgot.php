@@ -27,29 +27,25 @@ ThemeManager::renderThemeAuthHead('忘记密码');
                 <?php vs_auth_csrf_field(); ?>
                 <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_USER_FORGOT); ?>
                 <div class="field">
-                    <label for="email">邮箱</label>
-                    <input id="email" name="email" type="email" placeholder="请输入注册邮箱" autocomplete="email" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                    <input id="email" name="email" type="email" placeholder="请输入注册邮箱" autocomplete="email" maxlength="64" required aria-label="邮箱" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
                 <div class="field">
-                    <label for="code">验证码</label>
                     <div class="input-group">
-                        <input id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                        <input id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="验证码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                         <button type="button" class="code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
                     </div>
                 </div>
 
                 <div class="field">
-                    <label for="password">新密码</label>
                     <div class="input-wrap">
-                        <input id="password" name="password" type="password" placeholder="请输入新密码（至少6位）" autocomplete="new-password" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                        <input id="password" name="password" type="password" placeholder="请输入新密码（至少6位）" autocomplete="new-password" maxlength="64" required aria-label="新密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                         <?php echo vs_auth_toggle_password_html(); ?>
                     </div>
                 </div>
 
                 <div class="field">
-                    <label for="confirm_password">确认密码</label>
-                    <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入新密码" autocomplete="new-password" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                    <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入新密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
                 <?php echo vs_auth_submit_btn('确认重置', 'submitBtn'); ?>

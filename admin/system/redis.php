@@ -137,7 +137,7 @@ vs_admin_layout_start(
         <h3 class="vs-form-section__title">业务缓存项</h3>
         <div class="vs-redis-entry-list" id="redisEntryList">
             <?php foreach ($entries as $entry): ?>
-                <div class="vs-redis-entry">
+                <div class="vs-redis-entry" data-cached="<?php echo !empty($entry['cached']) ? '1' : '0'; ?>" data-ttl="<?php echo !empty($entry['cached']) ? (int) $entry['ttl_seconds'] : ''; ?>" data-size="<?php echo vs_e(isset($entry['size_human']) ? $entry['size_human'] : '—'); ?>">
                     <div class="vs-redis-entry__main">
                         <div class="vs-redis-entry__title"><?php echo vs_e($entry['label']); ?></div>
                         <div class="vs-redis-entry__meta">
@@ -148,7 +148,7 @@ vs_admin_layout_start(
                     <div class="vs-redis-entry__status">
                         <?php if (!empty($entry['cached'])): ?>
                             <span class="vs-redis-badge vs-redis-badge--on">已缓存</span>
-                            <span class="vs-redis-entry__detail">剩余 <?php echo (int) $entry['ttl_seconds']; ?> 秒 · <?php echo vs_e($entry['size_human']); ?></span>
+                            <span class="vs-redis-entry__detail" data-redis-ttl-text>剩余 <?php echo (int) $entry['ttl_seconds']; ?> 秒 · <?php echo vs_e($entry['size_human']); ?></span>
                         <?php else: ?>
                             <span class="vs-redis-badge vs-redis-badge--off">未缓存</span>
                             <span class="vs-redis-entry__detail">下次访问时自动建立</span>
@@ -193,7 +193,7 @@ vs_admin_layout_start(
             </div>
             <div class="vs-info-item">
                 <span class="vs-info-item__label">运行时长</span>
-                <span class="vs-info-item__value" data-redis-field="uptime_human"><?php echo vs_e(isset($server['uptime_human']) ? $server['uptime_human'] : '—'); ?></span>
+                <span class="vs-info-item__value" data-redis-field="uptime_human" data-uptime-seconds="<?php echo (int) (isset($server['uptime_seconds']) ? $server['uptime_seconds'] : 0); ?>"><?php echo vs_e(isset($server['uptime_human']) ? $server['uptime_human'] : '—'); ?></span>
             </div>
             <div class="vs-info-item">
                 <span class="vs-info-item__label">进程内存占用</span>

@@ -160,6 +160,7 @@ class RedisService
             ),
             'server' => array(
                 'redis_version' => '',
+                'uptime_seconds' => 0,
                 'uptime_human' => '',
                 'used_memory_human' => '',
             ),
@@ -183,9 +184,11 @@ class RedisService
                     $info = array();
                 }
 
+                $uptimeSec = (int) self::infoValue($info, 'uptime_in_seconds', '0');
                 $snapshot['server'] = array(
                     'redis_version' => self::infoValue($info, 'redis_version'),
-                    'uptime_human' => self::formatUptime((int) self::infoValue($info, 'uptime_in_seconds', '0')),
+                    'uptime_seconds' => $uptimeSec,
+                    'uptime_human' => self::formatUptime($uptimeSec),
                     'used_memory_human' => self::infoValue($info, 'used_memory_human'),
                 );
 
@@ -367,19 +370,25 @@ class RedisService
      * @param int $seconds
      * @return string
      */
-    private static function formatUptime($seconds)
+    public static function formatUptime($seconds)
     {
         $seconds = max(0, (int) $seconds);
         $days = (int) floor($seconds / 86400);
         $hours = (int) floor(($seconds % 86400) / 3600);
         $minutes = (int) floor(($seconds % 3600) / 60);
+        $secs = (int) ($seconds % 60);
 
+        $parts = array();
         if ($days > 0) {
-            return $days . ' 天 ' . $hours . ' 小时';
+            $parts[] = $days . ' 天';
         }
-        if ($hours > 0) {
-            return $hours . ' 小时 ' . $minutes . ' 分钟';
+        if ($days > 0 || $hours > 0) {
+            $parts[] = $hours . ' 小时';
         }
-        return $minutes . ' 分钟';
+        if ($days > 0 || $hours > 0 || $minutes > 0) {
+            $parts[] = $minutes . ' 分';
+        }
+        $parts[] = $secs . ' 秒';
+        return implode(' ', $parts);
     }
 }
