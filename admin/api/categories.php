@@ -182,11 +182,9 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
         <form id="apiCategoryForm" class="vs-overlay__body vs-form" autocomplete="off">
             <input type="hidden" id="apiCatFormId" name="category_id" value="">
             <div class="vs-form-row">
-                <label class="vs-label" for="apiCatIconSearch">分类图标</label>
-                <input type="search" class="vs-input vs-icon-picker-search" id="apiCatIconSearch"
-                       placeholder="搜索图标名，如 weather、alipay、api" autocomplete="off">
+                <label class="vs-label">分类图标</label>
                 <div class="vs-api-cat-icon-picker" id="apiCatIconPicker" role="listbox" aria-label="选择内置图标"></div>
-                <p class="vs-form-hint" id="apiCatIconCountHint">系统内置 SVG 图标库，支持搜索筛选</p>
+                <p class="vs-form-hint" id="apiCatIconCountHint">系统内置 SVG 图标库，点选即可</p>
                 <label class="vs-label vs-api-cat-icon-url-label" for="apiCatIconUrl">或填写图标链接（正方形）</label>
                 <input type="url" class="vs-input" id="apiCatIconUrl" name="icon"
                        placeholder="https://example.com/icon.png" maxlength="255">

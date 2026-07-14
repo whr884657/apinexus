@@ -553,6 +553,7 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 | `totalCallCount()` | 各接口 `call_count` 之和 |
 | `incrementCallCount($apiId)` | 增加调用计数 |
 | `formatRow($row)` | 后台列表 / AJAX 格式化 |
+| `normalizeRequireKey` / `requireKeyLabel` | 密钥三态：0 不需要 / 1 必须 / 2 可选 |
 
 ---
 

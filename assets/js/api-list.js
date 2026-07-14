@@ -23,8 +23,6 @@
     var formSubmitBtn = document.getElementById('apiListFormSubmitBtn');
     var iconPicker = document.getElementById('apiListIconPicker');
     var iconUrlInput = document.getElementById('apiListIconUrl');
-    var iconSearch = document.getElementById('apiListIconSearch');
-    var emptyAddBtn = document.getElementById('apiListEmptyAddBtn');
     var iconCtl = null;
 
     var fields = {
@@ -68,13 +66,23 @@
 
     if (window.VsIconPicker && iconPicker) {
         iconCtl = window.VsIconPicker.mount(iconPicker, defaultIcons, {
-            searchInput: iconSearch,
             onSelect: function () {
                 if (iconUrlInput) {
                     iconUrlInput.value = '';
                 }
             }
         });
+    }
+
+    function requireKeyLabel(v) {
+        var n = parseInt(v, 10) || 0;
+        if (n === 1) {
+            return '必须';
+        }
+        if (n === 2) {
+            return '可选';
+        }
+        return '不需要';
     }
 
     function postAction(action, payload) {
@@ -147,10 +155,6 @@
             }
             if (iconUrlInput) {
                 iconUrlInput.value = matched ? '' : (url || '');
-            }
-            if (iconSearch) {
-                iconSearch.value = '';
-                iconCtl.filter('');
             }
             return;
         }
@@ -230,7 +234,7 @@
         html += '<div class="vs-api-list-row__method"><span class="vs-api-list-method vs-api-list-method--' + escapeHtml(method.toLowerCase()) + '" data-field="method">' + escapeHtml(method) + '</span></div>';
         html += '<div class="vs-api-list-row__endpoint" data-field="endpoint" title="' + escapeHtml(api.endpoint || '') + '">' + escapeHtml(api.endpoint || '') + '</div>';
         html += '<div class="vs-api-list-row__calls" data-field="call_count">' + (parseInt(api.call_count, 10) || 0) + '</div>';
-        html += '<div class="vs-api-list-row__key" data-field="require_key_label">' + (parseInt(api.require_key, 10) ? '需要' : '否') + '</div>';
+        html += '<div class="vs-api-list-row__key" data-field="require_key_label">' + escapeHtml(api.require_key_label || requireKeyLabel(api.require_key)) + '</div>';
         html += '<div class="vs-api-list-row__status"><span class="vs-api-list-status ' + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || status) + '</span></div>';
         html += '<div class="vs-api-list-row__actions">' + buildActionButtons(api) + '</div>';
         html += '</div>';
@@ -327,7 +331,7 @@
         }
         var keyEl = rowEl.querySelector('[data-field="require_key_label"]');
         if (keyEl) {
-            keyEl.textContent = parseInt(api.require_key, 10) ? '需要' : '否';
+            keyEl.textContent = api.require_key_label || requireKeyLabel(api.require_key);
         }
         var statusEl = rowEl.querySelector('[data-field="status_label"]');
         if (statusEl) {
@@ -376,7 +380,7 @@
             fields.category.value = '';
         }
         if (fields.requireKey) {
-            fields.requireKey.checked = false;
+            fields.requireKey.value = '0';
         }
         if (fields.params) {
             fields.params.value = '';
@@ -423,7 +427,7 @@
             fields.category.value = api.category || '';
         }
         if (fields.requireKey) {
-            fields.requireKey.checked = !!parseInt(api.require_key, 10);
+            fields.requireKey.value = String(parseInt(api.require_key, 10) || 0);
         }
         if (fields.params) {
             fields.params.value = api.request_params || '';
@@ -488,7 +492,7 @@
             response_example: fields.response ? fields.response.value : '',
             doc_normal: fields.docNormal ? fields.docNormal.value : '',
             doc_ai: fields.docAi ? fields.docAi.value : '',
-            require_key: fields.requireKey && fields.requireKey.checked ? '1' : '0',
+            require_key: fields.requireKey ? String(fields.requireKey.value || '0') : '0',
             status: fields.status ? fields.status.value : 'normal',
             icon: getSelectedIconUrl(),
             category: fields.category ? fields.category.value : ''
@@ -621,11 +625,6 @@
         });
     }
 
-    if (emptyAddBtn) {
-        emptyAddBtn.addEventListener('click', function () {
-            openFormOverlay('create');
-        });
-    }
 
     if (searchInput) {
         searchInput.addEventListener('input', applySearchFilter);

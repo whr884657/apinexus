@@ -1161,8 +1161,18 @@
     margin: 28px 0;
 }
 
-select.vs-input {
-    appearance: auto;
+/* 下拉框仅保留一支箭头，避免 native + 自定义双箭头重影 */
+select.vs-input,
+select.vs-input.vs-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px 12px;
+    padding-right: 36px;
 }
 
 .vs-table-wrap {
@@ -3166,15 +3176,7 @@ select.vs-input {
     justify-content: flex-end;
 }
 
-.vs-select {
-    appearance: none;
-    background-image: linear-gradient(45deg, transparent 50%, #64748b 50%),
-        linear-gradient(135deg, #64748b 50%, transparent 50%);
-    background-position: calc(100% - 16px) calc(50% - 3px), calc(100% - 11px) calc(50% - 3px);
-    background-size: 5px 5px, 5px 5px;
-    background-repeat: no-repeat;
-    padding-right: 28px;
-}
+/* .vs-select 与 select.vs-input 共用上方箭头样式，勿再叠加第二套箭头 */
 
 @media (max-width: 900px) {
     .vs-api-list-table__head {
@@ -3339,44 +3341,48 @@ select.vs-input {
 }
 
 .vs-api-list-empty--hero {
-    padding: 28px 8px 12px;
+    padding: 8px 0 4px;
 }
 
 .vs-api-list-empty__card {
-    max-width: 420px;
-    margin: 0 auto;
-    text-align: center;
-    padding: 28px 22px;
-    border: 1px dashed var(--vs-border);
-    border-radius: 14px;
-    background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    text-align: left;
+    padding: 20px 22px;
+    border: 1px solid var(--vs-border);
+    border-radius: 12px;
+    background: #f8fafc;
     animation: vs-row-fade 0.4s ease both;
 }
 
-.vs-api-list-empty__icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 12px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--vs-primary);
-    background: #f1f5f9;
-}
-
 .vs-api-list-empty__title {
-    margin: 0 0 8px;
-    font-size: 18px;
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vs-text);
 }
 
 .vs-api-list-empty__desc {
-    margin: 0 0 18px;
+    margin: 0;
     color: var(--vs-text-secondary);
     font-size: 13px;
-    line-height: 1.6;
+    line-height: 1.65;
+}
+
+@media (min-width: 901px) {
+    .vs-api-list-empty__card {
+        padding: 22px 28px;
+    }
+
+    .vs-api-list-empty__title {
+        font-size: 17px;
+    }
+
+    .vs-api-list-empty__desc {
+        font-size: 14px;
+        max-width: 640px;
+    }
 }
 
 .vs-api-list-form-tab {

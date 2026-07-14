@@ -377,10 +377,11 @@ body.vs-modal-open {
 :root {
     --vs-overlay-mobile-height: 85vh;
     --vs-overlay-form-max-width: 480px;
-    --vs-overlay-lg-width: 75vw;
-    --vs-overlay-lg-height: 75vh;
-    --vs-overlay-lg-max-width: 1200px;
-    --vs-overlay-lg-max-height: 900px;
+    /* LG 大编辑器：桌面更宽更高，便于接口/分类长表单 */
+    --vs-overlay-lg-width: 92vw;
+    --vs-overlay-lg-height: 88vh;
+    --vs-overlay-lg-max-width: 1440px;
+    --vs-overlay-lg-max-height: 960px;
 }
 
 .vs-overlay {
