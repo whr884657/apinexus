@@ -1,5 +1,15 @@
 {
     "versions": {
+        "3.5.0": {
+            "title": "misc-api 3.5.0 默认主题认证页视觉统一",
+            "date": "2026-07-14",
+            "db_changes": false,
+            "changes": [
+                "登录/注册/忘记密码/绑定对齐 Feer 主题",
+                "anime.js 入场、呼吸与粒子动效（motion 分层）",
+                "记住用户名不再落盘明文密码；多端与无障碍完善"
+            ]
+        },
         "3.4.3": {
             "title": "misc-api 3.4.3 修复 Redis 饼图 UI 错乱",
             "date": "2026-07-14",
