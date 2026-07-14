@@ -65,6 +65,9 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_smtp_secure', 'ssl'),
 ('mail_from_email', ''),
 ('mail_from_name', 'misc-api'),
+('mail_notify_submit', '1'),
+('mail_notify_pass', '1'),
+('mail_notify_fail', '1'),
 ('frontend_theme', 'default');
 
 -- 邮箱验证码发信频率限制记录
@@ -81,7 +84,10 @@ CREATE TABLE IF NOT EXISTS `{prefix}api` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `name` varchar(100) NOT NULL COMMENT '接口名称',
     `description` text COMMENT '接口描述',
-    `endpoint` varchar(500) NOT NULL DEFAULT '' COMMENT '接口地址（http或https）',
+    `endpoint` varchar(500) NOT NULL DEFAULT '' COMMENT '调用地址（本地为路径；代理为/proxy.php?s=短码）',
+    `apitype` tinyint(1) NOT NULL DEFAULT 0 COMMENT '接口类型：0本地路径 1代理外链',
+    `targeturl` varchar(500) NOT NULL DEFAULT '' COMMENT '代理上游完整地址（仅代理类型）',
+    `proxyslug` varchar(64) NOT NULL DEFAULT '' COMMENT '代理短码（仅代理类型）',
     `method` varchar(10) NOT NULL DEFAULT 'GET' COMMENT '请求方式：GET或POST',
     `params` mediumtext COMMENT '请求参数（JSON数组）',
     `response` mediumtext COMMENT '返回参数示例',
@@ -101,7 +107,9 @@ CREATE TABLE IF NOT EXISTS `{prefix}api` (
     KEY `idx_status` (`status`),
     KEY `idx_audit` (`audit`),
     KEY `idx_category` (`category`),
-    KEY `idx_userid` (`userid`)
+    KEY `idx_userid` (`userid`),
+    KEY `idx_apitype` (`apitype`),
+    KEY `idx_proxyslug` (`proxyslug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API接口表';
 
 -- API 接口分类表

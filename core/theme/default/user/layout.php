@@ -9,9 +9,10 @@ if (!defined('VS_THEME_RENDER') && !function_exists('vs_theme_user_layout_start'
 /**
  * @param string $pageTitle
  * @param string $activeMenu
+ * @param string $headerActions
  * @return void
  */
-function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
+function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions = '')
 {
     global $vsBase, $vsUser, $vsUserProfile, $vsSiteName;
 
@@ -93,6 +94,9 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
     echo '<main class="vs-content">' . "\n";
     echo '<div class="vs-content__head">' . "\n";
     echo '<h1 class="vs-content__title">' . vs_e($pageTitle) . '</h1>' . "\n";
+    if ($headerActions !== '') {
+        echo '<div class="vs-content__actions">' . $headerActions . '</div>' . "\n";
+    }
     echo '</div>' . "\n";
     echo '<div class="vs-content__body">' . "\n";
 }
@@ -110,8 +114,13 @@ function vs_theme_user_layout_end(array $extraScripts = array())
     echo '</div>' . "\n";
     echo '</div>' . "\n";
 
+    if (function_exists('vs_render_modal_shell')) {
+        vs_render_modal_shell();
+    }
+
     echo '<script>window.VS_BASE_URL = ' . json_encode($vsBase) . ';</script>' . "\n";
     echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
+    echo '<script src="' . vs_e($vsBase) . '/assets/js/modal.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/theme-picker.js?v=' . VS_VERSION . '"></script>' . "\n";
     $userJs = ThemeManager::userScriptHref();
@@ -119,6 +128,9 @@ function vs_theme_user_layout_end(array $extraScripts = array())
         echo '<script src="' . vs_e($userJs) . '"></script>' . "\n";
     }
     foreach ($extraScripts as $js) {
+        if ($js === 'modal.js') {
+            continue;
+        }
         echo '<script src="' . vs_e($vsBase) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '"></script>' . "\n";
     }
     echo '</body></html>';

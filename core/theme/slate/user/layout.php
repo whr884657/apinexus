@@ -9,9 +9,10 @@ if (!defined('VS_THEME_RENDER') && !function_exists('vs_theme_user_layout_start'
 /**
  * @param string $pageTitle
  * @param string $activeMenu
+ * @param string $headerActions
  * @return void
  */
-function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
+function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions = '')
 {
     global $vsBase, $vsUser, $vsUserProfile, $vsSiteName;
 
@@ -63,6 +64,9 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '')
     echo '<main class="st-uc-content">' . "\n";
     echo '<div class="st-uc-content__head">' . "\n";
     echo '<h1 class="st-uc-content__title">' . vs_e($pageTitle) . '</h1>' . "\n";
+    if ($headerActions !== '') {
+        echo '<div class="vs-content__actions st-uc-content__actions">' . $headerActions . '</div>' . "\n";
+    }
     echo '</div>' . "\n";
     echo '<div class="st-uc-content__body">' . "\n";
 }
@@ -100,14 +104,22 @@ function vs_theme_user_layout_end(array $extraScripts = array())
     echo '<span class="st-uc-fab__lines" aria-hidden="true"><i></i><i></i><i></i></span>';
     echo '</button></div>' . "\n";
 
+    if (function_exists('vs_render_modal_shell')) {
+        vs_render_modal_shell();
+    }
+
     echo '<script>window.VS_BASE_URL = ' . json_encode($vsBase) . ';</script>' . "\n";
     echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
+    echo '<script src="' . vs_e($vsBase) . '/assets/js/modal.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
     $userJs = ThemeManager::userScriptHref();
     if ($userJs !== '') {
         echo '<script src="' . vs_e($userJs) . '"></script>' . "\n";
     }
     foreach ($extraScripts as $js) {
+        if ($js === 'modal.js') {
+            continue;
+        }
         echo '<script src="' . vs_e($vsBase) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '"></script>' . "\n";
     }
     echo '</body></html>';

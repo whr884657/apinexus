@@ -31,7 +31,10 @@
         method: document.getElementById('apiListFormMethod'),
         status: document.getElementById('apiListFormStatus'),
         audit: document.getElementById('apiListFormAudit'),
+        apitype: document.getElementById('apiListFormApiType'),
         endpoint: document.getElementById('apiListFormEndpoint'),
+        targeturl: document.getElementById('apiListFormTargetUrl'),
+        proxyslug: document.getElementById('apiListFormProxySlug'),
         category: document.getElementById('apiListFormCategory'),
         requireKey: document.getElementById('apiListFormRequireKey'),
         params: document.getElementById('apiListFormParams'),
@@ -39,6 +42,55 @@
         docNormal: document.getElementById('apiListFormDocNormal'),
         docAi: document.getElementById('apiListFormDocAi')
     };
+
+    var typeHint = document.getElementById('apiListTypeHint');
+    var endpointLabel = document.getElementById('apiListEndpointLabel');
+    var endpointRow = document.getElementById('apiListEndpointRow');
+    var targetRow = document.getElementById('apiListTargetRow');
+    var slugRow = document.getElementById('apiListSlugRow');
+
+    function setApiType(type) {
+        var t = parseInt(type, 10) === 1 ? 1 : 0;
+        if (fields.apitype) {
+            fields.apitype.value = String(t);
+        }
+        document.querySelectorAll('.vs-api-type-tab').forEach(function (btn) {
+            var on = parseInt(btn.getAttribute('data-apitype'), 10) === t;
+            btn.classList.toggle('vs-btn--primary', on);
+            btn.classList.toggle('vs-btn--default', !on);
+        });
+        if (endpointRow) {
+            endpointRow.hidden = t === 1;
+        }
+        if (fields.endpoint) {
+            fields.endpoint.required = t === 0;
+        }
+        if (targetRow) {
+            targetRow.hidden = t !== 1;
+        }
+        if (fields.targeturl) {
+            fields.targeturl.required = t === 1;
+        }
+        if (slugRow) {
+            slugRow.hidden = t !== 1;
+        }
+        if (typeHint) {
+            typeHint.textContent = t === 1
+                ? '代理外链：填写对方完整地址，系统生成本站 /proxy.php?s=短码，请求时 302 跳转并附带参数。'
+                : '本地接口：只填本站路径，如 /api/img/index.php';
+        }
+        if (endpointLabel) {
+            endpointLabel.innerHTML = t === 1
+                ? '本地路径'
+                : '本地路径 <span class="vs-req">*</span>';
+        }
+    }
+
+    document.querySelectorAll('.vs-api-type-tab').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            setApiType(btn.getAttribute('data-apitype') || '0');
+        });
+    });
 
     /** 接口状态：0正常 1禁用 2维护（兼容旧英文串） */
     function normalizeStatus(status) {
@@ -431,6 +483,12 @@
         if (fields.endpoint) {
             fields.endpoint.value = '';
         }
+        if (fields.targeturl) {
+            fields.targeturl.value = '';
+        }
+        if (fields.proxyslug) {
+            fields.proxyslug.value = '';
+        }
         if (fields.category) {
             fields.category.value = '';
         }
@@ -452,6 +510,7 @@
         if (formTitle) {
             formTitle.textContent = '添加接口';
         }
+        setApiType(0);
         setIconPickerSelection(defaultIcons.length ? defaultIcons[0] : '');
         switchFormTab('basic');
     }
@@ -478,8 +537,16 @@
         if (fields.audit) {
             fields.audit.value = String(normalizeAudit(api.audit));
         }
+        var apiType = parseInt(api.apitype, 10) === 1 ? 1 : 0;
+        setApiType(apiType);
         if (fields.endpoint) {
-            fields.endpoint.value = api.endpoint || '';
+            fields.endpoint.value = apiType === 1 ? '' : (api.endpoint || '');
+        }
+        if (fields.targeturl) {
+            fields.targeturl.value = api.targeturl || (apiType === 1 ? (api.endpoint || '') : '');
+        }
+        if (fields.proxyslug) {
+            fields.proxyslug.value = api.proxyslug || '';
         }
         if (fields.category) {
             fields.category.value = api.category || '';
@@ -541,10 +608,14 @@
     }
 
     function collectPayload() {
+        var apiType = fields.apitype ? String(parseInt(fields.apitype.value, 10) === 1 ? 1 : 0) : '0';
         return {
             name: fields.name ? fields.name.value.trim() : '',
             description: fields.description ? fields.description.value.trim() : '',
+            apitype: apiType,
             endpoint: fields.endpoint ? fields.endpoint.value.trim() : '',
+            targeturl: fields.targeturl ? fields.targeturl.value.trim() : '',
+            proxyslug: fields.proxyslug ? fields.proxyslug.value.trim() : '',
             method: fields.method ? fields.method.value : 'GET',
             params: fields.params ? fields.params.value.trim() : '',
             response: fields.response ? fields.response.value : '',

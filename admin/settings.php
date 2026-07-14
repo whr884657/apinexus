@@ -64,14 +64,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save_mail') {
         try {
             Config::setMany(array(
-                'mail_enabled'     => isset($_POST['mail_enabled']) ? '1' : '0',
-                'mail_smtp_host'   => trim(isset($_POST['mail_smtp_host']) ? $_POST['mail_smtp_host'] : ''),
-                'mail_smtp_port'   => trim(isset($_POST['mail_smtp_port']) ? $_POST['mail_smtp_port'] : '465'),
-                'mail_smtp_user'   => trim(isset($_POST['mail_smtp_user']) ? $_POST['mail_smtp_user'] : ''),
-                'mail_smtp_pass'   => trim(isset($_POST['mail_smtp_pass']) ? $_POST['mail_smtp_pass'] : ''),
-                'mail_smtp_secure' => trim(isset($_POST['mail_smtp_secure']) ? $_POST['mail_smtp_secure'] : 'ssl'),
-                'mail_from_email'  => trim(isset($_POST['mail_from_email']) ? $_POST['mail_from_email'] : ''),
-                'mail_from_name'   => trim(isset($_POST['mail_from_name']) ? $_POST['mail_from_name'] : SiteContext::siteName()),
+                'mail_enabled'       => isset($_POST['mail_enabled']) ? '1' : '0',
+                'mail_smtp_host'     => trim(isset($_POST['mail_smtp_host']) ? $_POST['mail_smtp_host'] : ''),
+                'mail_smtp_port'     => trim(isset($_POST['mail_smtp_port']) ? $_POST['mail_smtp_port'] : '465'),
+                'mail_smtp_user'     => trim(isset($_POST['mail_smtp_user']) ? $_POST['mail_smtp_user'] : ''),
+                'mail_smtp_pass'     => trim(isset($_POST['mail_smtp_pass']) ? $_POST['mail_smtp_pass'] : ''),
+                'mail_smtp_secure'   => trim(isset($_POST['mail_smtp_secure']) ? $_POST['mail_smtp_secure'] : 'ssl'),
+                'mail_from_email'    => trim(isset($_POST['mail_from_email']) ? $_POST['mail_from_email'] : ''),
+                'mail_from_name'     => trim(isset($_POST['mail_from_name']) ? $_POST['mail_from_name'] : SiteContext::siteName()),
+                'mail_notify_submit' => isset($_POST['mail_notify_submit']) ? '1' : '0',
+                'mail_notify_pass'   => isset($_POST['mail_notify_pass']) ? '1' : '0',
+                'mail_notify_fail'   => isset($_POST['mail_notify_fail']) ? '1' : '0',
             ));
 
             AjaxResponse::success('邮箱设置已保存');
@@ -313,6 +316,22 @@ vs_admin_accordion_start(
                 <label class="vs-label">发件人名称</label>
                 <input type="text" name="mail_from_name" class="vs-input" value="<?php echo vs_e(isset($vsCfg['mail_from_name']) ? $vsCfg['mail_from_name'] : ''); ?>">
             </div>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">业务邮件通知</label>
+            <p class="vs-form-hint" style="margin-top:0;">总开关开启后，可分别控制下列通知是否发送（关闭则跳过对应邮件）。</p>
+            <label class="vs-checkbox">
+                <input type="checkbox" name="mail_notify_submit" value="1" <?php echo (!isset($vsCfg['mail_notify_submit']) || $vsCfg['mail_notify_submit'] === '1') ? 'checked' : ''; ?>>
+                <span>开发者投稿 / 重新提交时，通知管理员</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="mail_notify_pass" value="1" <?php echo (!isset($vsCfg['mail_notify_pass']) || $vsCfg['mail_notify_pass'] === '1') ? 'checked' : ''; ?>>
+                <span>审核通过时，通知投稿用户</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="mail_notify_fail" value="1" <?php echo (!isset($vsCfg['mail_notify_fail']) || $vsCfg['mail_notify_fail'] === '1') ? 'checked' : ''; ?>>
+                <span>审核不通过时，通知投稿用户</span>
+            </label>
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存邮箱设置</button>

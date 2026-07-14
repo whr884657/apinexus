@@ -5,6 +5,7 @@
  *
  * 接口状态 status：0 正常 / 1 禁用（前台不展示）/ 2 维护（前台可见但不可请求）
  * 审核状态 audit：0 待审核 / 1 通过 / 2 不通过（管理员发布默认通过；用户投稿为待审核）
+ * 接口类型 apitype：0 本地路径 / 1 代理外链（302 至 targeturl）
  */
 
 class ApiManager
@@ -22,6 +23,11 @@ class ApiManager
     const AUDIT_APPROVED = 1;
     /** 审核：不通过 */
     const AUDIT_REJECTED = 2;
+
+    /** 接口类型：本地路径 */
+    const APITYPE_LOCAL = 0;
+    /** 接口类型：代理外链 */
+    const APITYPE_PROXY = 1;
 
     const METHOD_GET = 'GET';
     const METHOD_POST = 'POST';
@@ -87,6 +93,22 @@ class ApiManager
         try {
             $pdo = Database::connect();
             $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('rejectreason'));
+            return $col && $col->fetchColumn();
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 是否已具备代理相关字段（迁移 3.11.0 后为 true）
+     *
+     * @return bool
+     */
+    public static function hasProxyColumns()
+    {
+        try {
+            $pdo = Database::connect();
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('proxyslug'));
             return $col && $col->fetchColumn();
         } catch (Exception $e) {
             return false;
@@ -339,7 +361,7 @@ class ApiManager
             return '接口数据表未就绪，请先执行数据库结构更新';
         }
 
-        $parsed = self::normalizePayload($data);
+        $parsed = self::normalizePayload($data, 0);
         if (!is_array($parsed)) {
             return $parsed;
         }
@@ -364,7 +386,34 @@ class ApiManager
 
         try {
             $pdo = Database::connect();
-            if (self::hasAuditColumn() && self::hasRejectReasonColumn()) {
+            if (self::hasProxyColumns() && self::hasAuditColumn() && self::hasRejectReasonColumn()) {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO `' . self::table() . '`
+                     (`name`, `description`, `endpoint`, `apitype`, `targeturl`, `proxyslug`, `method`, `params`, `response`,
+                      `doc`, `aidoc`, `calls`, `needkey`, `status`, `audit`, `rejectreason`, `icon`, `category`, `userid`, `createtime`)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, NOW())'
+                );
+                $stmt->execute(array(
+                    $parsed['name'],
+                    $parsed['description'],
+                    $parsed['endpoint'],
+                    $parsed['apitype'],
+                    $parsed['targeturl'],
+                    $parsed['proxyslug'],
+                    $parsed['method'],
+                    $parsed['params'],
+                    $parsed['response'],
+                    $parsed['doc'],
+                    $parsed['aidoc'],
+                    $parsed['needkey'],
+                    $parsed['status'],
+                    $auditStatus,
+                    $rejectReason,
+                    $parsed['icon'],
+                    $parsed['category'],
+                    $userId,
+                ));
+            } elseif (self::hasAuditColumn() && self::hasRejectReasonColumn()) {
                 $stmt = $pdo->prepare(
                     'INSERT INTO `' . self::table() . '`
                      (`name`, `description`, `endpoint`, `method`, `params`, `response`,
@@ -458,7 +507,7 @@ class ApiManager
             return '接口不存在';
         }
 
-        $parsed = self::normalizePayload($data);
+        $parsed = self::normalizePayload($data, $apiId);
         if (!is_array($parsed)) {
             return $parsed;
         }
@@ -482,7 +531,62 @@ class ApiManager
 
         try {
             $pdo = Database::connect();
-            if ($hasAuditInPayload && self::hasAuditColumn() && self::hasRejectReasonColumn() && $rejectReason !== null) {
+            if (self::hasProxyColumns() && $hasAuditInPayload && self::hasAuditColumn() && self::hasRejectReasonColumn() && $rejectReason !== null) {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . self::table() . '`
+                     SET `name` = ?, `description` = ?, `endpoint` = ?, `apitype` = ?, `targeturl` = ?, `proxyslug` = ?,
+                         `method` = ?, `params` = ?, `response` = ?, `doc` = ?, `aidoc` = ?,
+                         `needkey` = ?, `status` = ?, `audit` = ?, `rejectreason` = ?,
+                         `icon` = ?, `category` = ?, `updatetime` = NOW()
+                     WHERE `id` = ?'
+                );
+                $stmt->execute(array(
+                    $parsed['name'],
+                    $parsed['description'],
+                    $parsed['endpoint'],
+                    $parsed['apitype'],
+                    $parsed['targeturl'],
+                    $parsed['proxyslug'],
+                    $parsed['method'],
+                    $parsed['params'],
+                    $parsed['response'],
+                    $parsed['doc'],
+                    $parsed['aidoc'],
+                    $parsed['needkey'],
+                    $parsed['status'],
+                    $auditStatus,
+                    $rejectReason,
+                    $parsed['icon'],
+                    $parsed['category'],
+                    $apiId,
+                ));
+            } elseif (self::hasProxyColumns() && !$hasAuditInPayload) {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . self::table() . '`
+                     SET `name` = ?, `description` = ?, `endpoint` = ?, `apitype` = ?, `targeturl` = ?, `proxyslug` = ?,
+                         `method` = ?, `params` = ?, `response` = ?, `doc` = ?, `aidoc` = ?,
+                         `needkey` = ?, `status` = ?, `icon` = ?, `category` = ?, `updatetime` = NOW()
+                     WHERE `id` = ?'
+                );
+                $stmt->execute(array(
+                    $parsed['name'],
+                    $parsed['description'],
+                    $parsed['endpoint'],
+                    $parsed['apitype'],
+                    $parsed['targeturl'],
+                    $parsed['proxyslug'],
+                    $parsed['method'],
+                    $parsed['params'],
+                    $parsed['response'],
+                    $parsed['doc'],
+                    $parsed['aidoc'],
+                    $parsed['needkey'],
+                    $parsed['status'],
+                    $parsed['icon'],
+                    $parsed['category'],
+                    $apiId,
+                ));
+            } elseif ($hasAuditInPayload && self::hasAuditColumn() && self::hasRejectReasonColumn() && $rejectReason !== null) {
                 $stmt = $pdo->prepare(
                     'UPDATE `' . self::table() . '`
                      SET `name` = ?, `description` = ?, `endpoint` = ?, `method` = ?,
@@ -841,6 +945,11 @@ class ApiManager
             'name'          => (string) $row['name'],
             'description'   => isset($row['description']) ? (string) $row['description'] : '',
             'endpoint'      => isset($row['endpoint']) ? (string) $row['endpoint'] : '',
+            'apitype'       => self::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : self::APITYPE_LOCAL),
+            'apitype_label' => self::apiTypeLabel(isset($row['apitype']) ? $row['apitype'] : self::APITYPE_LOCAL),
+            'targeturl'     => isset($row['targeturl']) ? (string) $row['targeturl'] : '',
+            'proxyslug'     => isset($row['proxyslug']) ? (string) $row['proxyslug'] : '',
+            'call_url'      => self::resolveCallUrl($row),
             'method'        => isset($row['method']) ? strtoupper((string) $row['method']) : self::METHOD_GET,
             'params'        => isset($row['params']) ? (string) $row['params'] : '',
             'response'      => isset($row['response']) ? (string) $row['response'] : '',
@@ -884,6 +993,11 @@ class ApiManager
             'name'           => $full['name'],
             'description'    => $full['description'],
             'endpoint'       => $full['endpoint'],
+            'apitype'        => $full['apitype'],
+            'apitype_label'  => $full['apitype_label'],
+            'targeturl'      => $full['targeturl'],
+            'proxyslug'      => $full['proxyslug'],
+            'call_url'       => $full['call_url'],
             'method'         => $full['method'],
             'calls'          => $full['calls'],
             'needkey'        => $full['needkey'],
@@ -903,10 +1017,57 @@ class ApiManager
     }
 
     /**
+     * 归一接口类型
+     *
+     * @param mixed $value
+     * @return int
+     */
+    public static function normalizeApiType($value)
+    {
+        return ((int) $value === self::APITYPE_PROXY) ? self::APITYPE_PROXY : self::APITYPE_LOCAL;
+    }
+
+    /**
+     * @param mixed $value
+     * @return string
+     */
+    public static function apiTypeLabel($value)
+    {
+        return self::normalizeApiType($value) === self::APITYPE_PROXY ? '代理外链' : '本地接口';
+    }
+
+    /**
+     * 前台/调试用的绝对调用地址
+     *
+     * @param array $row
+     * @return string
+     */
+    public static function resolveCallUrl(array $row)
+    {
+        $apitype = self::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : self::APITYPE_LOCAL);
+        if ($apitype === self::APITYPE_PROXY) {
+            $slug = isset($row['proxyslug']) ? (string) $row['proxyslug'] : '';
+            return ApiProxy::publicUrl($slug);
+        }
+        $endpoint = trim((string) (isset($row['endpoint']) ? $row['endpoint'] : ''));
+        if ($endpoint === '') {
+            return '';
+        }
+        if (preg_match('#^https?://#i', $endpoint)) {
+            return $endpoint;
+        }
+        if ($endpoint[0] !== '/') {
+            $endpoint = '/' . $endpoint;
+        }
+        return rtrim(vs_base_url(), '/') . $endpoint;
+    }
+
+    /**
      * @param array $data
+     * @param int   $excludeId 更新时排除自身短码占用
      * @return array|string
      */
-    private static function normalizePayload(array $data)
+    private static function normalizePayload(array $data, $excludeId = 0)
     {
         $name = trim(preg_replace('/\s+/u', ' ', (string) (isset($data['name']) ? $data['name'] : '')));
         if ($name === '') {
@@ -921,15 +1082,53 @@ class ApiManager
             return '接口描述过长';
         }
 
+        $apitype = self::normalizeApiType(isset($data['apitype']) ? $data['apitype'] : self::APITYPE_LOCAL);
+        $targeturl = '';
+        $proxyslug = '';
         $endpoint = trim((string) (isset($data['endpoint']) ? $data['endpoint'] : ''));
-        if ($endpoint === '') {
-            return '请填写接口地址';
-        }
-        if (mb_strlen($endpoint, 'UTF-8') > 500) {
-            return '接口地址不能超过 500 个字符';
-        }
-        if (!preg_match('#^https?://#i', $endpoint)) {
-            return '接口地址须以 http:// 或 https:// 开头';
+
+        if ($apitype === self::APITYPE_PROXY) {
+            $targeturl = trim((string) (isset($data['targeturl']) ? $data['targeturl'] : ''));
+            if ($targeturl === '') {
+                // 兼容旧表单：把 endpoint 当作上游
+                $targeturl = $endpoint;
+            }
+            if ($targeturl === '' || !preg_match('#^https?://#i', $targeturl)) {
+                return '代理上游地址须为完整的 http:// 或 https:// 链接';
+            }
+            if (mb_strlen($targeturl, 'UTF-8') > 500) {
+                return '代理上游地址不能超过 500 个字符';
+            }
+            $proxyslug = ApiProxy::normalizeSlug(isset($data['proxyslug']) ? $data['proxyslug'] : '');
+            if ($proxyslug === '') {
+                $proxyslug = ApiProxy::generateUniqueSlug(6);
+            }
+            if (ApiProxy::slugExists($proxyslug, $excludeId > 0 ? $excludeId : null)) {
+                return '代理短码已被占用，请更换';
+            }
+            $endpoint = ApiProxy::publicPath($proxyslug);
+        } else {
+            if ($endpoint === '') {
+                return '请填写本地接口路径';
+            }
+            if (mb_strlen($endpoint, 'UTF-8') > 500) {
+                return '接口地址不能超过 500 个字符';
+            }
+            if (preg_match('#^https?://#i', $endpoint)) {
+                // 兼容历史：完整 URL 视为本地直连
+            } else {
+                if ($endpoint[0] !== '/') {
+                    $endpoint = '/' . ltrim($endpoint, '/');
+                }
+                if (strpos($endpoint, '//') === 0 || strpos($endpoint, '..') !== false) {
+                    return '本地接口路径不合法';
+                }
+                if (!preg_match('#^/[A-Za-z0-9_./%~+-]+$#', $endpoint)) {
+                    return '本地接口路径仅支持字母、数字与常见路径字符';
+                }
+            }
+            $targeturl = '';
+            $proxyslug = '';
         }
 
         $method = strtoupper(trim((string) (isset($data['method']) ? $data['method'] : self::METHOD_GET)));
@@ -982,6 +1181,9 @@ class ApiManager
             'name'        => $name,
             'description' => $description,
             'endpoint'    => $endpoint,
+            'apitype'     => $apitype,
+            'targeturl'   => $targeturl,
+            'proxyslug'   => $proxyslug,
             'method'      => $method,
             'params'      => $requestParams,
             'response'    => $responseExample,

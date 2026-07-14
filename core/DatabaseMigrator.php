@@ -143,6 +143,11 @@ class DatabaseMigrator
         if (!in_array('3.10.0', $applied, true) && self::tableColumnExists('api', 'rejectreason')) {
             self::markApplied('3.10.0');
         }
+
+        // 新装已含 3.11.0（代理字段）时跳过迁移
+        if (!in_array('3.11.0', $applied, true) && self::tableColumnExists('api', 'proxyslug')) {
+            self::markApplied('3.11.0');
+        }
     }
 
     /**

@@ -112,7 +112,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` / `ApiNotify` | `FrontendApi` | `admin/api/list.php`、`review.php`、`user/api-manage.php` | ✅ 是 | **已完成**（列表 CRUD + 审核三态 + 开发者投稿与邮件通知） |
+| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` | `FrontendApi` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`proxy.php` | ✅ 是 | **已完成**（本地/代理、审核三态、投稿与可开关邮件通知） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
@@ -220,7 +220,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `UserManager.php` | 后台用户列表/封禁/删除/身份转换 |
 | `UserAvatar.php` | 用户头像 URL 解析 |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
-| `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
+| `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
+| `ApiProxy.php` | 代理外链 302 跳转（`proxy.php?s=`） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表（**主题向**） |

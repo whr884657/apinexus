@@ -32,6 +32,7 @@ require_once VS_ROOT . '/core/UserManager.php';
 require_once VS_ROOT . '/core/AdminUserBinding.php';
 require_once VS_ROOT . '/core/ApiManager.php';
 require_once VS_ROOT . '/core/ApiNotify.php';
+require_once VS_ROOT . '/core/ApiProxy.php';
 require_once VS_ROOT . '/core/ApiCategoryManager.php';
 require_once VS_ROOT . '/core/FrontendCategory.php';
 require_once VS_ROOT . '/core/FrontendApi.php';

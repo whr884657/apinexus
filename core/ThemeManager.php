@@ -534,9 +534,10 @@ class ThemeManager
      *
      * @param string $pageTitle
      * @param string $activeMenu
+     * @param string $headerActions 标题行右侧操作区 HTML（可选）
      * @return void
      */
-    public static function renderUserLayoutStart($pageTitle, $activeMenu = '')
+    public static function renderUserLayoutStart($pageTitle, $activeMenu = '', $headerActions = '')
     {
         $file = self::resolveActiveThemeFile('user/layout.php');
         if ($file === '') {
@@ -545,7 +546,7 @@ class ThemeManager
         }
         require_once $file;
         if (function_exists('vs_theme_user_layout_start')) {
-            vs_theme_user_layout_start($pageTitle, $activeMenu);
+            vs_theme_user_layout_start($pageTitle, $activeMenu, $headerActions);
         }
     }
 

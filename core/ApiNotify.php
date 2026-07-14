@@ -17,6 +17,9 @@ class ApiNotify
         if (!Config::isMailEnabled()) {
             return array('ok' => false, 'sent' => 0, 'error' => '邮箱发信未配置');
         }
+        if (Config::get('mail_notify_submit', '1') !== '1') {
+            return array('ok' => false, 'sent' => 0, 'error' => '已关闭投稿通知邮件');
+        }
 
         $emails = self::adminEmails();
         if (count($emails) === 0) {
@@ -58,6 +61,17 @@ class ApiNotify
             return array('ok' => false, 'sent' => 0, 'error' => '邮箱发信未配置');
         }
 
+        $audit = (int) $audit;
+        if ($audit === ApiManager::AUDIT_APPROVED) {
+            if (Config::get('mail_notify_pass', '1') !== '1') {
+                return array('ok' => false, 'sent' => 0, 'error' => '已关闭审核通过通知邮件');
+            }
+        } else {
+            if (Config::get('mail_notify_fail', '1') !== '1') {
+                return array('ok' => false, 'sent' => 0, 'error' => '已关闭审核拒绝通知邮件');
+            }
+        }
+
         $to = isset($api['email']) ? trim((string) $api['email']) : '';
         if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
             return array('ok' => false, 'sent' => 0, 'error' => '投稿用户邮箱无效');
@@ -65,7 +79,6 @@ class ApiNotify
 
         $siteName = self::siteName();
         $name = isset($api['name']) ? (string) $api['name'] : '';
-        $audit = (int) $audit;
         $reason = trim((string) $rejectReason);
 
         if ($audit === ApiManager::AUDIT_APPROVED) {

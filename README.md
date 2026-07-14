@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.10.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.11.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -263,6 +263,14 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.11.0（2026-07-15）
+
+- **本地 / 代理接口**：本地填路径；代理填上游 URL，公开地址 `/proxy.php?s=短码`（纯 PHP 302）
+- **投稿权限**：未绑定管理员的开发者仅可投代理；已绑定与管理员可选两种类型
+- **用户中心**：修复提交弹窗；右上角提交按钮
+- **邮件开关**：投稿 / 通过 / 拒绝通知可分别开关
+- **需执行数据库结构更新**（`install/migrations/3.11.0.sql`）
 
 ### v3.10.0（2026-07-14）
 

@@ -7,6 +7,31 @@
 class AdminUserBinding
 {
     /**
+     * 前台用户是否已绑定某管理员（可代管本地接口投稿）
+     *
+     * @param int $userId
+     * @return bool
+     */
+    public static function isUserBoundToAdmin($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return false;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT `id` FROM `' . Database::table('admin') . '`
+                 WHERE `binduid` = ? AND `status` = 1 LIMIT 1'
+            );
+            $stmt->execute(array($userId));
+            return (bool) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
      * 获取当前管理员绑定的用户
      *
      * @param int $adminId

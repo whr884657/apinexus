@@ -3134,6 +3134,13 @@ select.vs-input.vs-select {
     font-weight: 600;
 }
 
+.vs-api-type-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
 .vs-api-list-audit.is-pending {
     color: #b45309;
     background: #fffbeb;

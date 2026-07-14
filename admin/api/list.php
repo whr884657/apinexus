@@ -13,21 +13,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $payloadFromPost = function () {
         return array(
-            'name'             => isset($_POST['name']) ? (string) $_POST['name'] : '',
-            'description'      => isset($_POST['description']) ? (string) $_POST['description'] : '',
-            'endpoint'         => isset($_POST['endpoint']) ? (string) $_POST['endpoint'] : '',
-            'method'           => isset($_POST['method']) ? (string) $_POST['method'] : 'GET',
-            'params'   => isset($_POST['params']) ? (string) $_POST['params'] : '',
-            'response' => isset($_POST['response']) ? (string) $_POST['response'] : '',
-            'doc'      => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
-            'aidoc'    => isset($_POST['aidoc']) ? (string) $_POST['aidoc'] : '',
-            'needkey'  => isset($_POST['needkey']) ? (int) $_POST['needkey'] : 0,
-            'status'   => isset($_POST['status']) ? $_POST['status'] : ApiManager::STATUS_NORMAL,
-            'audit'    => isset($_POST['audit'])
+            'name'        => isset($_POST['name']) ? (string) $_POST['name'] : '',
+            'description' => isset($_POST['description']) ? (string) $_POST['description'] : '',
+            'endpoint'    => isset($_POST['endpoint']) ? (string) $_POST['endpoint'] : '',
+            'apitype'     => isset($_POST['apitype']) ? (int) $_POST['apitype'] : ApiManager::APITYPE_LOCAL,
+            'targeturl'   => isset($_POST['targeturl']) ? (string) $_POST['targeturl'] : '',
+            'proxyslug'   => isset($_POST['proxyslug']) ? (string) $_POST['proxyslug'] : '',
+            'method'      => isset($_POST['method']) ? (string) $_POST['method'] : 'GET',
+            'params'      => isset($_POST['params']) ? (string) $_POST['params'] : '',
+            'response'    => isset($_POST['response']) ? (string) $_POST['response'] : '',
+            'doc'         => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
+            'aidoc'       => isset($_POST['aidoc']) ? (string) $_POST['aidoc'] : '',
+            'needkey'     => isset($_POST['needkey']) ? (int) $_POST['needkey'] : 0,
+            'status'      => isset($_POST['status']) ? $_POST['status'] : ApiManager::STATUS_NORMAL,
+            'audit'       => isset($_POST['audit'])
                 ? (int) $_POST['audit']
                 : ApiManager::AUDIT_APPROVED,
-            'icon'             => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
-            'category'         => isset($_POST['category']) ? (string) $_POST['category'] : '',
+            'icon'        => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
+            'category'    => isset($_POST['category']) ? (string) $_POST['category'] : '',
         );
     };
 
@@ -330,9 +333,30 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <p class="vs-form-hint">在本页发布时默认「审核通过」；待审核与未通过的接口不会出现在站点前台。</p>
                 </div>
                 <div class="vs-form-row">
-                    <label class="vs-label" for="apiListFormEndpoint">接口地址 <span class="vs-req">*</span></label>
+                    <label class="vs-label">接口类型</label>
+                    <div class="vs-api-type-tabs" id="apiListTypeTabs" role="tablist">
+                        <button type="button" class="vs-btn vs-btn--primary vs-api-type-tab" data-apitype="0">本地接口</button>
+                        <button type="button" class="vs-btn vs-btn--default vs-api-type-tab" data-apitype="1">代理外链</button>
+                    </div>
+                    <input type="hidden" id="apiListFormApiType" name="apitype" value="0">
+                    <p class="vs-form-hint" id="apiListTypeHint">本地接口：只填本站路径，如 /api/img/index.php</p>
+                </div>
+                <div class="vs-form-row" id="apiListEndpointRow">
+                    <label class="vs-label" for="apiListFormEndpoint" id="apiListEndpointLabel">本地路径 <span class="vs-req">*</span></label>
                     <input type="text" class="vs-input" id="apiListFormEndpoint" name="endpoint" maxlength="500" required
+                           placeholder="/api/img/index.php">
+                </div>
+                <div class="vs-form-row" id="apiListTargetRow" hidden>
+                    <label class="vs-label" for="apiListFormTargetUrl">上游完整地址 <span class="vs-req">*</span></label>
+                    <input type="url" class="vs-input" id="apiListFormTargetUrl" name="targeturl" maxlength="500"
                            placeholder="https://api.example.com/v1/demo">
+                    <p class="vs-form-hint">用户请求本站代理地址时，将 302 跳转到该地址，并携带查询参数。</p>
+                </div>
+                <div class="vs-form-row" id="apiListSlugRow" hidden>
+                    <label class="vs-label" for="apiListFormProxySlug">代理短码（选填）</label>
+                    <input type="text" class="vs-input" id="apiListFormProxySlug" name="proxyslug" maxlength="64"
+                           placeholder="留空则自动生成，如 sjspks" pattern="[A-Za-z0-9]*">
+                    <p class="vs-form-hint">公开地址形如 <?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/proxy.php?s=短码（纯 PHP，无需改伪静态）。</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>

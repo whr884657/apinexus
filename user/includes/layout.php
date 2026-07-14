@@ -24,11 +24,12 @@ function vs_user_group_is_active(array $group, $activeMenu)
 /**
  * @param string $pageTitle
  * @param string $activeMenu
+ * @param string $headerActions
  * @return void
  */
-function vs_user_layout_start($pageTitle, $activeMenu = '')
+function vs_user_layout_start($pageTitle, $activeMenu = '', $headerActions = '')
 {
-    ThemeManager::renderUserLayoutStart($pageTitle, $activeMenu);
+    ThemeManager::renderUserLayoutStart($pageTitle, $activeMenu, $headerActions);
 }
 
 /**

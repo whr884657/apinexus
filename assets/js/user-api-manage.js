@@ -17,8 +17,17 @@
     var submitBtn = document.getElementById('userApiFormSubmitBtn');
     var iconPicker = document.getElementById('userApiIconPicker');
     var iconUrlInput = document.getElementById('userApiIconUrl');
+    var apiTypeInput = document.getElementById('userApiFormApiType');
+    var endpointRow = document.getElementById('userApiEndpointRow');
+    var targetRow = document.getElementById('userApiTargetRow');
+    var slugRow = document.getElementById('userApiSlugRow');
+    var typeHint = document.getElementById('userApiTypeHint');
+    var endpointInput = document.getElementById('userApiFormEndpoint');
+    var targetInput = document.getElementById('userApiFormTargetUrl');
+    var slugInput = document.getElementById('userApiFormProxySlug');
     var iconCtl = null;
     var formMode = 'create';
+    var canLocal = page.getAttribute('data-can-local') === '1';
 
     var iconBase = (page.getAttribute('data-icon-base') || '').replace(/\/$/, '');
     var defaultIcons = [];
@@ -51,6 +60,44 @@
             }
         });
     }
+
+    function setApiType(type) {
+        var t = canLocal ? (parseInt(type, 10) === 1 ? 1 : 0) : 1;
+        if (apiTypeInput) {
+            apiTypeInput.value = String(t);
+        }
+        document.querySelectorAll('.vs-user-api-type-tab').forEach(function (btn) {
+            var on = parseInt(btn.getAttribute('data-apitype'), 10) === t;
+            btn.classList.toggle('vs-btn--primary', on);
+            btn.classList.toggle('vs-btn--default', !on);
+        });
+        if (endpointRow) {
+            endpointRow.hidden = t === 1;
+        }
+        if (endpointInput) {
+            endpointInput.required = t === 0;
+        }
+        if (targetRow) {
+            targetRow.hidden = t !== 1;
+        }
+        if (targetInput) {
+            targetInput.required = t === 1;
+        }
+        if (slugRow) {
+            slugRow.hidden = t !== 1;
+        }
+        if (typeHint) {
+            typeHint.textContent = t === 1
+                ? '代理外链：填写对方完整地址；系统生成本站代理地址，请求时 302 跳转并附带参数。'
+                : '本地接口：只填本站路径，如 /api/img/index.php';
+        }
+    }
+
+    document.querySelectorAll('.vs-user-api-type-tab').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            setApiType(btn.getAttribute('data-apitype') || '0');
+        });
+    });
 
     function escapeHtml(text) {
         return String(text)
@@ -87,6 +134,8 @@
         }
         formOverlay.hidden = false;
         formOverlay.setAttribute('aria-hidden', 'false');
+        formOverlay.classList.add('is-open');
+        document.body.classList.add('is-overlay-open');
     }
 
     function closeOverlay() {
@@ -95,6 +144,8 @@
         }
         formOverlay.hidden = true;
         formOverlay.setAttribute('aria-hidden', 'true');
+        formOverlay.classList.remove('is-open');
+        document.body.classList.remove('is-overlay-open');
     }
 
     function syncEmpty() {
@@ -121,17 +172,20 @@
     function buildRowHtml(api) {
         var id = parseInt(api.id, 10) || 0;
         var reason = api.rejectreason ? String(api.rejectreason) : '';
-        var payload = escapeHtml(JSON.stringify(api));
+        var callUrl = api.call_url || api.endpoint || '';
         var html = '';
-        html += '<div class="vs-user-api-row" data-api-row="' + id + '" data-payload=\'' + payload.replace(/'/g, '&#39;') + '\'>';
+        html += '<div class="vs-user-api-row" data-api-row="' + id + '">';
         html += '<div class="vs-user-api-row__main">';
         html += '<div class="vs-user-api-row__title">';
         html += '<strong data-field="name">' + escapeHtml(api.name || '') + '</strong>';
         html += '<span class="vs-api-list-audit ' + auditClass(api.audit) + '" data-field="audit_label">'
             + escapeHtml(api.audit_label || '') + '</span>';
+        if (api.apitype_label) {
+            html += '<span class="vs-user-api-type">' + escapeHtml(api.apitype_label) + '</span>';
+        }
         html += '</div>';
-        html += '<div class="vs-user-api-row__meta"><span data-field="method">' + escapeHtml(api.method || 'GET')
-            + '</span> · <span data-field="endpoint">' + escapeHtml(api.endpoint || '') + '</span></div>';
+        html += '<div class="vs-user-api-row__meta"><span>' + escapeHtml(api.method || 'GET')
+            + '</span> · <span>' + escapeHtml(callUrl) + '</span></div>';
         html += '<p class="vs-user-api-row__reason" data-field="rejectreason"' + (reason ? '' : ' hidden') + '>';
         html += reason ? ('未通过原因：' + escapeHtml(reason)) : '';
         html += '</p></div>';
@@ -173,6 +227,7 @@
         if (form) {
             form.reset();
         }
+        setApiType(canLocal ? 0 : 1);
         if (iconCtl) {
             iconCtl.select(defaultIcons.length ? defaultIcons[0] : '');
         }
@@ -192,12 +247,16 @@
         if (submitBtn) {
             submitBtn.textContent = '重新提交审核';
         }
+        var apiType = canLocal ? (parseInt(api.apitype, 10) === 1 ? 1 : 0) : 1;
+        setApiType(apiType);
         var map = {
             userApiFormName: api.name,
             userApiFormDesc: api.description,
             userApiFormMethod: api.method || 'GET',
             userApiFormNeedkey: String(api.needkey != null ? api.needkey : 0),
-            userApiFormEndpoint: api.endpoint,
+            userApiFormEndpoint: apiType === 0 ? (api.endpoint || '') : '',
+            userApiFormTargetUrl: api.targeturl || '',
+            userApiFormProxySlug: api.proxyslug || '',
             userApiFormCategory: api.category || '',
             userApiFormParams: api.params || '',
             userApiFormResponse: api.response || '',
@@ -227,12 +286,19 @@
     }
 
     function collectPayload() {
+        var apiType = apiTypeInput ? String(parseInt(apiTypeInput.value, 10) === 1 ? 1 : 0) : (canLocal ? '0' : '1');
+        if (!canLocal) {
+            apiType = '1';
+        }
         return {
             name: (document.getElementById('userApiFormName') || {}).value || '',
             description: (document.getElementById('userApiFormDesc') || {}).value || '',
+            apitype: apiType,
+            endpoint: endpointInput ? endpointInput.value : '',
+            targeturl: targetInput ? targetInput.value : '',
+            proxyslug: slugInput ? slugInput.value : '',
             method: (document.getElementById('userApiFormMethod') || {}).value || 'GET',
             needkey: (document.getElementById('userApiFormNeedkey') || {}).value || '0',
-            endpoint: (document.getElementById('userApiFormEndpoint') || {}).value || '',
             category: (document.getElementById('userApiFormCategory') || {}).value || '',
             params: (document.getElementById('userApiFormParams') || {}).value || '',
             response: (document.getElementById('userApiFormResponse') || {}).value || '',
@@ -300,6 +366,12 @@
         }
     });
 
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && formOverlay && formOverlay.classList.contains('is-open')) {
+            closeOverlay();
+        }
+    });
+
     if (form) {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -334,5 +406,6 @@
         });
     }
 
+    setApiType(canLocal ? 0 : 1);
     syncEmpty();
 })();

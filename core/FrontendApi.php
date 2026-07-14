@@ -48,8 +48,12 @@ class FrontendApi
             if ($method !== 'POST') {
                 $method = 'GET';
             }
-            $endpoint = trim((string) (isset($row['endpoint']) ? $row['endpoint'] : ''));
+            $callUrl = ApiManager::resolveCallUrl($row);
+            $endpoint = $callUrl !== ''
+                ? $callUrl
+                : trim((string) (isset($row['endpoint']) ? $row['endpoint'] : ''));
             $iconRaw = isset($row['icon']) ? (string) $row['icon'] : '';
+            $apitype = ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0);
 
             $apiData[] = array(
                 'id'          => (int) $row['id'],
@@ -59,6 +63,7 @@ class FrontendApi
                 'method'      => $method,
                 'methods'     => array($method),
                 'endpoint'    => $endpoint,
+                'apitype'     => $apitype,
                 'params'      => isset($row['params']) ? (string) $row['params'] : '',
                 'response'    => isset($row['response']) ? (string) $row['response'] : '',
                 'doc'         => isset($row['doc']) ? (string) $row['doc'] : '',
