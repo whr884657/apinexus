@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/redis.js
- * 作用：Redis 管理页刷新、清空缓存、交互环形图与实时倒计时
+ * 作用：Redis 管理页刷新、清空缓存、引出线饼图与实时倒计时
  */
 (function () {
     'use strict';
@@ -106,23 +106,25 @@
         return Math.round((seg.value / total) * 1000) / 10;
     }
 
-    function tipText(seg, total) {
+    function labelLines(seg, total) {
         var pct = segmentPercent(seg, total);
-        var line = seg.label + '：' + seg.value + (seg.unit ? ' ' + seg.unit : '');
-        if (total > 0) {
-            line += '（' + pct + '%）';
-        }
+        var main = seg.label + ' ' + seg.value + (seg.unit ? ' ' + seg.unit : '');
+        var sub = total > 0 ? pct + '%' : '';
         if (seg.extra) {
-            line += ' · ' + seg.extra;
+            sub = sub ? (sub + ' · ' + seg.extra) : seg.extra;
         }
-        return line;
+        return { main: main, sub: sub };
+    }
+
+    function ariaLabel(seg, total) {
+        var lines = labelLines(seg, total);
+        return lines.sub ? (lines.main + '（' + lines.sub + '）') : lines.main;
     }
 
     function createChartController(card, chartId, config) {
-        var svg = card.querySelector('.vs-redis-donut-svg');
-        var valueEl = card.querySelector('.vs-redis-donut__value');
-        var hintEl = card.querySelector('.vs-redis-donut__hint');
-        var tipEl = card.querySelector('[data-redis-tip]');
+        var svg = card.querySelector('.vs-redis-pie-svg');
+        var valueEl = card.querySelector('.vs-redis-pie__value');
+        var hintEl = card.querySelector('.vs-redis-pie__hint');
         if (!svg) {
             return null;
         }
@@ -130,14 +132,16 @@
         var state = {
             id: chartId,
             config: config,
-            pinned: null,
-            hover: null
+            pinned: null
         };
 
-        var CX = 60;
-        var CY = 60;
-        var R_OUT = 48;
-        var R_IN = 30;
+        var CX = 160;
+        var CY = 110;
+        var R_OUT = 54;
+        var R_IN = 32;
+        var R_CALL = 68;
+        var R_ELBOW = 82;
+        var LABEL_X = 118;
 
         function totalOf(segments) {
             var sum = 0;
@@ -154,60 +158,47 @@
             if (hintEl) {
                 hintEl.textContent = state.config.centerHint || '';
             }
+            card.classList.remove('is-focused');
         }
 
-        function hideTip() {
-            if (!tipEl) {
-                return;
-            }
-            tipEl.textContent = '悬停或点击扇区查看明细';
-            tipEl.classList.remove('is-active');
-        }
-
-        function showTip(seg) {
-            if (!tipEl || !seg) {
-                return;
-            }
-            var total = totalOf(state.config.segments);
-            tipEl.textContent = tipText(seg, total);
-            tipEl.classList.add('is-active');
-        }
-
-        function setActive(index) {
-            svg.querySelectorAll('.vs-redis-donut-seg').forEach(function (path, i) {
-                path.classList.toggle('is-active', index !== null && i === index);
-                path.classList.toggle('is-dim', index !== null && i !== index);
-            });
-        }
-
-        function applyFocus(index) {
-            var segs = state.config.segments || [];
-            if (index == null || !segs[index]) {
-                setActive(null);
+        function focusCenter(seg) {
+            if (!seg) {
                 resetCenter();
-                if (state.pinned == null) {
-                    hideTip();
-                } else if (segs[state.pinned]) {
-                    setActive(state.pinned);
-                    showTip(segs[state.pinned]);
-                    if (valueEl) {
-                        valueEl.textContent = String(segs[state.pinned].value);
-                    }
-                    if (hintEl) {
-                        hintEl.textContent = segs[state.pinned].label;
-                    }
-                }
                 return;
             }
-            var seg = segs[index];
-            setActive(index);
-            showTip(seg);
+            card.classList.add('is-focused');
             if (valueEl) {
-                valueEl.textContent = String(seg.value);
+                valueEl.textContent = String(seg.value) + (seg.unit ? ' ' + seg.unit : '');
             }
             if (hintEl) {
                 hintEl.textContent = seg.label;
             }
+        }
+
+        function setActive(index) {
+            svg.querySelectorAll('[data-seg-index]').forEach(function (node) {
+                var i = parseInt(node.getAttribute('data-seg-index'), 10);
+                var on = index !== null && i === index;
+                var dim = index !== null && i !== index;
+                node.classList.toggle('is-active', on);
+                node.classList.toggle('is-dim', dim);
+            });
+            if (index == null) {
+                resetCenter();
+            } else {
+                var segs = state.config.segments || [];
+                focusCenter(segs[index] || null);
+            }
+        }
+
+        function svgEl(name, attrs) {
+            var el = document.createElementNS(NS, name);
+            if (attrs) {
+                Object.keys(attrs).forEach(function (k) {
+                    el.setAttribute(k, attrs[k]);
+                });
+            }
+            return el;
         }
 
         function draw() {
@@ -220,82 +211,190 @@
             var angle = 0;
 
             if (total <= 0) {
-                var empty = document.createElementNS(NS, 'circle');
-                empty.setAttribute('cx', String(CX));
-                empty.setAttribute('cy', String(CY));
-                empty.setAttribute('r', String((R_OUT + R_IN) / 2));
-                empty.setAttribute('fill', 'none');
-                empty.setAttribute('stroke', '#e5e7eb');
-                empty.setAttribute('stroke-width', String(R_OUT - R_IN));
-                empty.setAttribute('class', 'vs-redis-donut-empty');
-                svg.appendChild(empty);
+                svg.appendChild(svgEl('circle', {
+                    cx: String(CX),
+                    cy: String(CY),
+                    r: String((R_OUT + R_IN) / 2),
+                    fill: 'none',
+                    stroke: '#e5e7eb',
+                    'stroke-width': String(R_OUT - R_IN),
+                    class: 'vs-redis-pie-empty'
+                }));
                 resetCenter();
-                hideTip();
                 return;
             }
 
+            var layout = [];
             segments.forEach(function (seg, index) {
                 var value = Math.max(0, Number(seg.value) || 0);
                 var sweep = (value / total) * 360;
                 var a0 = angle;
                 var a1 = angle + sweep;
                 angle = a1;
-
                 if (sweep <= 0) {
                     return;
                 }
-
-                var path = document.createElementNS(NS, 'path');
-                path.setAttribute('d', annularPath(CX, CY, R_OUT, R_IN, a0, a1));
-                path.setAttribute('fill', seg.color || '#94a3b8');
-                path.setAttribute('class', 'vs-redis-donut-seg');
-                path.setAttribute('data-seg-index', String(index));
-                path.setAttribute('tabindex', '0');
-                path.setAttribute('role', 'button');
-                path.setAttribute('aria-label', tipText(seg, total));
-
-                path.addEventListener('mouseenter', function () {
-                    state.hover = index;
-                    applyFocus(index);
+                layout.push({
+                    seg: seg,
+                    index: index,
+                    a0: a0,
+                    a1: a1,
+                    mid: a0 + sweep / 2,
+                    sweep: sweep
                 });
-                path.addEventListener('mouseleave', function () {
-                    state.hover = null;
-                    applyFocus(state.pinned);
+            });
+
+            layout.forEach(function (item) {
+                var midNorm = ((item.mid % 360) + 360) % 360;
+                item.side = midNorm < 180 ? 'right' : 'left';
+            });
+            if (layout.length === 2 && layout[0].side === layout[1].side) {
+                layout[1].side = layout[0].side === 'right' ? 'left' : 'right';
+            }
+
+            // Stack labels vertically if same side to avoid overlap
+            var sideBuckets = { left: [], right: [] };
+            layout.forEach(function (item) {
+                sideBuckets[item.side].push(item);
+            });
+            Object.keys(sideBuckets).forEach(function (side) {
+                var list = sideBuckets[side];
+                list.sort(function (a, b) { return a.mid - b.mid; });
+                if (list.length <= 1) {
+                    return;
+                }
+                var baseY = CY - ((list.length - 1) * 18);
+                list.forEach(function (item, i) {
+                    item.labelY = baseY + i * 36;
                 });
+            });
+
+            layout.forEach(function (item) {
+                var seg = item.seg;
+                var group = svgEl('g', {
+                    class: 'vs-redis-pie-group',
+                    'data-seg-index': String(item.index)
+                });
+
+                var midRad = ((item.mid - 90) * Math.PI) / 180;
+                var pullX = Math.cos(midRad) * 6;
+                var pullY = Math.sin(midRad) * 6;
+                group.style.setProperty('--pull-x', pullX + 'px');
+                group.style.setProperty('--pull-y', pullY + 'px');
+
+                var path = svgEl('path', {
+                    d: annularPath(CX, CY, R_OUT, R_IN, item.a0, item.a1),
+                    fill: seg.color || '#94a3b8',
+                    class: 'vs-redis-pie-seg',
+                    'data-seg-index': String(item.index),
+                    tabindex: '0',
+                    role: 'button',
+                    'aria-label': ariaLabel(seg, total)
+                });
+
+                var start = polar(CX, CY, R_OUT + 1, item.mid);
+                var elbow = polar(CX, CY, R_ELBOW, item.mid);
+                var labelY = item.labelY != null ? item.labelY : elbow.y;
+                var isRight = item.side === 'right';
+                var endX = isRight ? CX + LABEL_X : CX - LABEL_X;
+                var endY = Math.max(28, Math.min(192, labelY));
+
+                // Soften elbow toward label side to avoid crossing the pie
+                elbow = {
+                    x: isRight ? Math.max(elbow.x, CX + R_CALL) : Math.min(elbow.x, CX - R_CALL),
+                    y: endY
+                };
+
+                var line = svgEl('path', {
+                    d: [
+                        'M', start.x, start.y,
+                        'L', elbow.x, elbow.y,
+                        'L', endX, endY
+                    ].join(' '),
+                    class: 'vs-redis-pie-leader',
+                    fill: 'none',
+                    stroke: seg.color || '#94a3b8',
+                    'data-seg-index': String(item.index)
+                });
+
+                var dot = svgEl('circle', {
+                    cx: String(start.x),
+                    cy: String(start.y),
+                    r: '2.5',
+                    fill: seg.color || '#94a3b8',
+                    class: 'vs-redis-pie-anchor',
+                    'data-seg-index': String(item.index)
+                });
+
+                var lines = labelLines(seg, total);
+                var labelGroup = svgEl('g', {
+                    class: 'vs-redis-pie-label',
+                    'data-seg-index': String(item.index)
+                });
+
+                var textAnchor = isRight ? 'start' : 'end';
+                var tx = isRight ? endX + 4 : endX - 4;
+
+                var main = svgEl('text', {
+                    x: String(tx),
+                    y: String(endY - (lines.sub ? 4 : 0)),
+                    'text-anchor': textAnchor,
+                    class: 'vs-redis-pie-label__main'
+                });
+                main.textContent = lines.main;
+
+                labelGroup.appendChild(main);
+                if (lines.sub) {
+                    var sub = svgEl('text', {
+                        x: String(tx),
+                        y: String(endY + 12),
+                        'text-anchor': textAnchor,
+                        class: 'vs-redis-pie-label__sub'
+                    });
+                    sub.textContent = lines.sub;
+                    labelGroup.appendChild(sub);
+                }
+
+                function activate() {
+                    if (state.pinned === item.index) {
+                        state.pinned = null;
+                        setActive(null);
+                    } else {
+                        state.pinned = item.index;
+                        setActive(item.index);
+                    }
+                }
+
                 path.addEventListener('click', function (e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (state.pinned === index) {
-                        state.pinned = null;
-                        applyFocus(state.hover);
-                    } else {
-                        state.pinned = index;
-                        applyFocus(index);
-                    }
+                    activate();
                 });
                 path.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        path.click();
+                        activate();
                     }
                 });
+                labelGroup.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    activate();
+                });
 
-                svg.appendChild(path);
+                group.appendChild(path);
+                group.appendChild(line);
+                group.appendChild(dot);
+                group.appendChild(labelGroup);
+                svg.appendChild(group);
             });
 
-            resetCenter();
             if (state.pinned != null) {
-                applyFocus(state.pinned);
+                setActive(state.pinned);
             } else {
-                hideTip();
                 setActive(null);
             }
         }
-
-        card.addEventListener('mouseleave', function () {
-            state.hover = null;
-            applyFocus(state.pinned);
-        });
 
         return {
             update: function (nextConfig) {
@@ -337,7 +436,7 @@
                 centerHint: '命中率',
                 segments: [
                     { id: 'hits', label: '命中', value: hits, color: '#10b981', unit: '次' },
-                    { id: 'misses', label: '未命中', value: misses, color: '#d1d5db', unit: '次' }
+                    { id: 'misses', label: '未命中', value: misses, color: '#94a3b8', unit: '次' }
                 ]
             },
             keys: {
@@ -345,8 +444,8 @@
                 centerValue: keyTotal > 0 ? cacheKeyPercent + '%' : '—',
                 centerHint: '数据缓存占比',
                 segments: [
-                    { id: 'cache', label: '数据缓存', value: cacheKeys, color: '#3b82f6', unit: '个键' },
-                    { id: 'rate', label: '发信限流', value: rateKeys, color: '#fbbf24', unit: '个键' }
+                    { id: 'cache', label: '数据缓存', value: cacheKeys, color: '#3b82f6', unit: '键' },
+                    { id: 'rate', label: '发信限流', value: rateKeys, color: '#f59e0b', unit: '键' }
                 ]
             },
             entries: {
@@ -366,7 +465,7 @@
                         id: 'uncached',
                         label: '未缓存',
                         value: Math.max(0, entryTotal - cachedCount),
-                        color: '#e5e7eb',
+                        color: '#cbd5e1',
                         unit: '项'
                     }
                 ]
