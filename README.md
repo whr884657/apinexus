@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.4.3-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.5.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -262,6 +262,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.5.0（2026-07-14）
+
+- **默认主题认证页**：登录 / 注册 / 忘记密码（及绑定）与前台 Feer 视觉统一；深色展区保留小人角色，右侧玻璃表单 + 切角按钮
+- **动效**：本主题引入 anime.js（无 CDN），入场错落、角色呼吸与粒子背景；motion 层与角色交互分层，支持 `prefers-reduced-motion`
+- **安全**：登录「记住用户名」不再将明文密码写入 localStorage
 
 ### v3.4.3（2026-07-14）
 

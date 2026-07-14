@@ -672,7 +672,7 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 3. 在 `pages/` 下写 PHP，**分类与接口只调 `FrontendCategory` / `FrontendApi`**
 4. 后台「系统设置 → 前台主题」切换，或 `Config::set('frontend_theme', 'mytheme')`
 
-**主题隔离：** 各主题 CSS/JS **完全独立**，无跨主题文件回退。
+**主题隔离：** 各主题 CSS/JS **完全独立**，无跨主题文件回退。默认主题认证页（v3.5.0+）含本包 `assets/vendor/anime.min.js` 与 `auth.js`（入场/呼吸/粒子，motion 层与角色 skew 分离），风格对齐前台 Feer。
 
 ---
 
