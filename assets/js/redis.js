@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/redis.js
- * 作用：Redis 管理页刷新、清空缓存与图表更新
+ * 作用：Redis 管理页刷新、清空缓存、图表更新与实时倒计时
  */
 (function () {
     'use strict';
@@ -11,6 +11,10 @@
     if (!panel) {
         return;
     }
+
+    var tickTimer = null;
+    var uptimeBase = 0;
+    var uptimeSyncedAt = 0;
 
     function escapeHtml(str) {
         return String(str)
@@ -24,6 +28,26 @@
         panel.querySelectorAll('[data-redis-field="' + name + '"]').forEach(function (el) {
             el.textContent = value;
         });
+    }
+
+    function formatUptime(seconds) {
+        seconds = Math.max(0, Math.floor(seconds || 0));
+        var days = Math.floor(seconds / 86400);
+        var hours = Math.floor((seconds % 86400) / 3600);
+        var minutes = Math.floor((seconds % 3600) / 60);
+        var secs = seconds % 60;
+        var parts = [];
+        if (days > 0) {
+            parts.push(days + ' 天');
+        }
+        if (days > 0 || hours > 0) {
+            parts.push(hours + ' 小时');
+        }
+        if (days > 0 || hours > 0 || minutes > 0) {
+            parts.push(minutes + ' 分');
+        }
+        parts.push(secs + ' 秒');
+        return parts.join(' ');
     }
 
     function setDonut(id, percent, label) {
@@ -46,16 +70,19 @@
 
         var html = '';
         entries.forEach(function (entry) {
-            html += '<div class="vs-redis-entry">';
+            var cached = !!entry.cached;
+            var ttl = entry.ttl_seconds != null ? parseInt(entry.ttl_seconds, 10) : '';
+            var size = entry.size_human || '—';
+            html += '<div class="vs-redis-entry" data-cached="' + (cached ? '1' : '0') + '" data-ttl="'
+                + (cached ? ttl : '') + '" data-size="' + escapeHtml(size) + '">';
             html += '<div class="vs-redis-entry__main">';
             html += '<div class="vs-redis-entry__title">' + escapeHtml(entry.label || '') + '</div>';
             html += '<div class="vs-redis-entry__meta">刷新周期 ' + escapeHtml(entry.ttl_hint || '')
                 + ' · 键 ' + escapeHtml(entry.key || '') + '</div>';
             html += '</div><div class="vs-redis-entry__status">';
-            if (entry.cached) {
+            if (cached) {
                 html += '<span class="vs-redis-badge vs-redis-badge--on">已缓存</span>';
-                html += '<span class="vs-redis-entry__detail">剩余 ' + (entry.ttl_seconds != null ? entry.ttl_seconds : '—')
-                    + ' 秒 · ' + escapeHtml(entry.size_human || '—') + '</span>';
+                html += '<span class="vs-redis-entry__detail" data-redis-ttl-text>剩余 ' + ttl + ' 秒 · ' + escapeHtml(size) + '</span>';
             } else {
                 html += '<span class="vs-redis-badge vs-redis-badge--off">未缓存</span>';
                 html += '<span class="vs-redis-entry__detail">下次访问时自动建立</span>';
@@ -63,6 +90,62 @@
             html += '</div></div>';
         });
         list.innerHTML = html;
+    }
+
+    function tickLive() {
+        var uptimeEl = panel.querySelector('[data-redis-field="uptime_human"]');
+        if (uptimeEl && uptimeBase > 0 && uptimeSyncedAt > 0) {
+            var elapsed = Math.floor((Date.now() - uptimeSyncedAt) / 1000);
+            var current = uptimeBase + elapsed;
+            uptimeEl.setAttribute('data-uptime-seconds', String(current));
+            uptimeEl.textContent = formatUptime(current);
+        }
+
+        panel.querySelectorAll('.vs-redis-entry[data-cached="1"]').forEach(function (entry) {
+            var ttlAttr = entry.getAttribute('data-ttl');
+            if (ttlAttr === '' || ttlAttr == null) {
+                return;
+            }
+            var ttl = parseInt(ttlAttr, 10);
+            if (isNaN(ttl)) {
+                return;
+            }
+            ttl = Math.max(0, ttl - 1);
+            entry.setAttribute('data-ttl', String(ttl));
+            var detail = entry.querySelector('[data-redis-ttl-text]');
+            var size = entry.getAttribute('data-size') || '—';
+            if (detail) {
+                if (ttl <= 0) {
+                    entry.setAttribute('data-cached', '0');
+                    entry.setAttribute('data-ttl', '');
+                    var status = entry.querySelector('.vs-redis-entry__status');
+                    if (status) {
+                        status.innerHTML = '<span class="vs-redis-badge vs-redis-badge--off">未缓存</span>'
+                            + '<span class="vs-redis-entry__detail">下次访问时自动建立</span>';
+                    }
+                } else {
+                    detail.textContent = '剩余 ' + ttl + ' 秒 · ' + size;
+                }
+            }
+        });
+    }
+
+    function startTicker() {
+        if (tickTimer) {
+            clearInterval(tickTimer);
+        }
+        tickTimer = setInterval(tickLive, 1000);
+    }
+
+    function syncUptime(server) {
+        var sec = server && server.uptime_seconds != null ? parseInt(server.uptime_seconds, 10) : 0;
+        uptimeBase = isNaN(sec) ? 0 : sec;
+        uptimeSyncedAt = Date.now();
+        var uptimeEl = panel.querySelector('[data-redis-field="uptime_human"]');
+        if (uptimeEl) {
+            uptimeEl.setAttribute('data-uptime-seconds', String(uptimeBase));
+            uptimeEl.textContent = server.uptime_human || (uptimeBase > 0 ? formatUptime(uptimeBase) : '—');
+        }
     }
 
     function renderCharts(biz) {
@@ -114,8 +197,8 @@
         setField('cache_memory', biz.cache_memory_human || '—');
         setField('collected_at', snapshot.collected_at || '—');
         setField('redis_version', server.redis_version || '—');
-        setField('uptime_human', server.uptime_human || '—');
         setField('used_memory_human', server.used_memory_human || '—');
+        syncUptime(server);
 
         renderCharts(biz);
         renderEntries(biz.entries || []);
@@ -187,4 +270,15 @@
             }
         });
     }
+
+    var initialUptime = panel.querySelector('[data-redis-field="uptime_human"]');
+    if (initialUptime) {
+        var initSec = parseInt(initialUptime.getAttribute('data-uptime-seconds') || '0', 10);
+        uptimeBase = isNaN(initSec) ? 0 : initSec;
+        uptimeSyncedAt = Date.now();
+        if (uptimeBase > 0) {
+            initialUptime.textContent = formatUptime(uptimeBase);
+        }
+    }
+    startTicker();
 })();

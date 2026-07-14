@@ -1745,7 +1745,24 @@ select.vs-input {
 }
 
 .vs-user-card__role {
+    display: inline-flex;
+    margin: 0;
+}
+
+.vs-user-card__badges {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 1px;
+}
+
+.vs-user-card__last-login {
     margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--vs-text-secondary);
+    text-align: right;
 }
 
 .vs-btn--pill-secondary {
@@ -2721,9 +2738,9 @@ select.vs-input {
 
     .vs-api-cat-row {
         display: grid;
-        grid-template-columns: 36px 1fr auto;
-        grid-template-rows: auto auto auto auto;
-        gap: 4px 10px;
+        grid-template-columns: 36px 1fr auto auto;
+        grid-template-rows: auto auto auto;
+        gap: 4px 8px;
         padding: 12px;
         min-height: 0;
         border: 1px solid var(--vs-border);
@@ -2755,8 +2772,8 @@ select.vs-input {
         white-space: normal;
         font-size: 15px;
         line-height: 1.35;
-        align-self: end;
-        padding-bottom: 2px;
+        align-self: center;
+        padding-bottom: 0;
     }
 
     .vs-api-cat-row__desc {
@@ -2773,13 +2790,18 @@ select.vs-input {
     }
 
     .vs-api-cat-row__count {
-        display: block;
-        grid-column: 2;
-        grid-row: 3;
-        font-size: 12px;
-        line-height: 1.4;
+        display: inline-flex;
+        align-items: center;
+        grid-column: 3;
+        grid-row: 1;
+        justify-self: end;
+        align-self: center;
+        font-size: 11px;
+        line-height: 1.35;
         color: var(--vs-text-secondary);
-        text-align: left;
+        text-align: right;
+        white-space: nowrap;
+        padding: 2px 0;
     }
 
     .vs-api-cat-row__count::before {
@@ -2788,14 +2810,15 @@ select.vs-input {
     }
 
     .vs-api-cat-row__status {
-        grid-column: 3;
+        grid-column: 4;
         grid-row: 1;
-        align-self: start;
+        justify-self: end;
+        align-self: center;
     }
 
     .vs-api-cat-row__actions {
         grid-column: 1 / -1;
-        grid-row: 4;
+        grid-row: 3;
         justify-content: flex-end;
         max-width: none;
         padding-top: 10px;

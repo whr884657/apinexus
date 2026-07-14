@@ -120,7 +120,10 @@
             var host = ensureToastHost();
             var el = document.createElement('div');
             el.className = 'vs-toast vs-toast--' + type;
-            el.textContent = message;
+            var text = document.createElement('span');
+            text.className = 'vs-toast__text';
+            text.textContent = message;
+            el.appendChild(text);
             host.appendChild(el);
 
             global.requestAnimationFrame(function () {

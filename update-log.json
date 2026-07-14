@@ -1,5 +1,17 @@
 {
     "versions": {
+        "3.4.0": {
+            "title": "misc-api 3.4.0 认证占位、Redis 实时与卡片布局优化",
+            "date": "2026-07-14",
+            "db_changes": false,
+            "changes": [
+                "主题认证页 placeholder 布局统一",
+                "Toast 垂直居中（.vs-toast__text）",
+                "Redis 时长实时累加；刷新周期静态、TTL 倒计时",
+                "用户卡片角色与最后登录布局",
+                "分类卡片接口数量位置"
+            ]
+        },
         "3.3.0": {
             "title": "misc-api 3.3.0 UI 规范与 Redis 监控优化",
             "date": "2026-07-14",

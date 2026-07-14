@@ -36,34 +36,29 @@ ThemeManager::renderThemeAuthHead('用户注册');
                 </div>
 
                 <div class="field">
-                    <label for="username">用户名</label>
-                    <input id="username" name="username" type="text" placeholder="3～50 个字符" autocomplete="username" maxlength="50" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                    <input id="username" name="username" type="text" placeholder="请输入用户名（3～50 个字符）" autocomplete="username" maxlength="50" required aria-label="用户名" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
                 <div class="field">
-                    <label for="email">邮箱</label>
-                    <input id="email" name="email" type="email" placeholder="请输入邮箱" autocomplete="email" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                    <input id="email" name="email" type="email" placeholder="请输入邮箱" autocomplete="email" maxlength="64" required aria-label="邮箱" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
                 <div class="field">
-                    <label for="code">验证码</label>
                     <div class="input-group">
-                        <input id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                        <input id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="验证码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                         <button type="button" class="code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
                     </div>
                 </div>
 
                 <div class="field">
-                    <label for="password">密码</label>
                     <div class="input-wrap">
-                        <input id="password" name="password" type="password" placeholder="请设置密码（至少6位）" autocomplete="new-password" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                        <input id="password" name="password" type="password" placeholder="请设置密码（至少6位）" autocomplete="new-password" maxlength="64" required aria-label="密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                         <?php echo vs_auth_toggle_password_html(); ?>
                     </div>
                 </div>
 
                 <div class="field">
-                    <label for="confirm_password">确认密码</label>
-                    <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                    <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
                 <?php echo vs_auth_submit_btn('立即注册', 'submitBtn'); ?>

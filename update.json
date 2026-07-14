@@ -1,15 +1,14 @@
 {
-    "version": "3.3.0",
-    "title": "misc-api 3.3.0 UI 规范与 Redis 监控优化",
+    "version": "3.4.0",
+    "title": "misc-api 3.4.0 认证占位、Redis 实时与卡片布局优化",
     "release_date": "2026-07-14",
     "db_changes": false,
     "changes": [
-        "全站 Toast 改为长条形圆角样式，手机端左右留边",
-        "后台按钮统一为圆角矩形（非胶囊），新增《按钮样式规范》",
-        "默认主题注册身份滑块 CSS 修复（写入主题 auth.css）",
-        "主题二认证页移除冗余输入标签，仅保留 placeholder",
-        "后台主题切换：待保存选中态边框持久显示",
-        "Redis 管理页增加饼图可视化，文案去站点化；键空间自动清理"
+        "主题1认证页标签改为输入框内 placeholder；主题2注册用户名占位文案补全",
+        "全站 Toast 单行文本垂直居中（.vs-toast__text）",
+        "Redis 运行时长精确到秒并实时累加；刷新周期文案静态，仅剩余 TTL 倒计时",
+        "用户卡片：角色标签移至右上角 OAuth 图标左侧，底部增加最后登录时间",
+        "接口分类手机端：接口数量移至「启用」标签左侧"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

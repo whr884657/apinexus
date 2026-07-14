@@ -33,14 +33,12 @@ ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
             <form id="bindForm" method="post" action="" novalidate>
                 <?php vs_auth_csrf_field(); ?>
                 <div class="field">
-                    <label for="username">用户名或邮箱</label>
-                    <input id="username" name="username" type="text" placeholder="请输入已注册账号" autocomplete="username" maxlength="64" required>
+                    <input id="username" name="username" type="text" placeholder="请输入已注册账号" autocomplete="username" maxlength="64" required aria-label="用户名或邮箱">
                 </div>
 
                 <div class="field">
-                    <label for="password">密码</label>
                     <div class="input-wrap">
-                        <input id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required>
+                        <input id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required aria-label="密码">
                         <?php echo vs_auth_toggle_password_html(); ?>
                     </div>
                 </div>

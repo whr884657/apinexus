@@ -224,8 +224,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表（**主题向**） |
-| `RedisService.php` | Redis 连接、INFO 监控采集（**后台向**） |
-| `RedisCache.php` | misc-api 业务数据缓存（接口列表、分类、限流回退） |
+| `RedisCache.php` | 业务数据缓存（接口列表、分类）；键空间自动维护 |
+| `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
 | `SystemInfo.php` | 关于页环境信息 |
 | `Updater.php` | 在线更新检测与安装 |
@@ -678,13 +678,14 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 ### 4.26 RedisService.php（后台 · Redis 监控）
 
-**作用：** 连接 Redis 并采集 INFO 指标，供 `admin/system/redis.php` 与关于页「Redis 版本」使用。
+**作用：** 连接 Redis 并采集 INFO / 业务缓存快照，供 `admin/system/redis.php` 与关于页「Redis 版本」使用。前端 `assets/js/redis.js` 对运行时长与剩余 TTL 做每秒本地计时；「刷新周期」文案不参与滚动。
 
 | 方法 | 说明 |
 |------|------|
 | `extensionLoaded()` | PHP redis 扩展是否可用 |
 | `connectionConfig()` | 读取 host/port/db/prefix（不含密码明文） |
-| `collectMonitorSnapshot()` | 完整监控快照（内存、键数、命中率等） |
+| `collectMonitorSnapshot()` | 完整监控快照（含 `uptime_seconds` / `uptime_human`、业务缓存项 TTL） |
+| `formatUptime($seconds)` | 格式化为「N 天 N 小时 N 分 N 秒」 |
 | `versionLabel()` | 关于页一行摘要 |
 
 **配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`misc_api:`）。
