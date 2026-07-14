@@ -147,7 +147,7 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
      data-default-icons="<?php echo vs_e(json_encode($defaultIconPaths, JSON_UNESCAPED_UNICODE)); ?>">
 
     <?php if (!$tableReady): ?>
-        <?php vs_render_notice('warning', '', '分类数据表未就绪，请前往「系统管理 → 系统升级」执行数据库结构更新。', array('compact' => true)); ?>
+        <?php vs_render_notice('warning', '', '分类管理功能尚未就绪，请前往「系统管理 → 系统升级」完成更新。', array('compact' => true)); ?>
     <?php else: ?>
         <div class="vs-api-cat-empty" id="apiCategoryEmpty"<?php echo count($categories) > 0 ? ' hidden' : ''; ?>>
             <?php vs_render_notice('info', '', '暂无分类，点击「添加分类」创建。', array('compact' => true)); ?>

@@ -138,6 +138,11 @@ class DatabaseMigrator
         if (!in_array('3.9.0', $applied, true) && self::tableColumnExists('api', 'needkey')) {
             self::markApplied('3.9.0');
         }
+
+        // 新装已含 3.10.0（rejectreason + 审核三态）时跳过迁移
+        if (!in_array('3.10.0', $applied, true) && self::tableColumnExists('api', 'rejectreason')) {
+            self::markApplied('3.10.0');
+        }
     }
 
     /**

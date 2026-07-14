@@ -1,10 +1,10 @@
 <?php
 /**
  * 文件：core/ApiManager.php
- * 作用：API 接口数据管理（后台接口列表 CRUD）
+ * 作用：API 接口数据管理（后台接口列表 CRUD、用户投稿）
  *
  * 接口状态 status：0 正常 / 1 禁用（前台不展示）/ 2 维护（前台可见但不可请求）
- * 审核状态 audit：0 审核不通过 / 1 审核通过（管理员发布默认通过）
+ * 审核状态 audit：0 待审核 / 1 通过 / 2 不通过（管理员发布默认通过；用户投稿为待审核）
  */
 
 class ApiManager
@@ -16,10 +16,12 @@ class ApiManager
     /** 接口状态：维护 */
     const STATUS_MAINTENANCE = 2;
 
-    /** 审核：不通过 */
-    const AUDIT_REJECTED = 0;
+    /** 审核：待审核 */
+    const AUDIT_PENDING = 0;
     /** 审核：通过 */
     const AUDIT_APPROVED = 1;
+    /** 审核：不通过 */
+    const AUDIT_REJECTED = 2;
 
     const METHOD_GET = 'GET';
     const METHOD_POST = 'POST';
@@ -69,6 +71,22 @@ class ApiManager
         try {
             $pdo = Database::connect();
             $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('audit'));
+            return $col && $col->fetchColumn();
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 是否已具备审核原因字段（迁移 3.10.0 后为 true）
+     *
+     * @return bool
+     */
+    public static function hasRejectReasonColumn()
+    {
+        try {
+            $pdo = Database::connect();
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('rejectreason'));
             return $col && $col->fetchColumn();
         } catch (Exception $e) {
             return false;
@@ -200,7 +218,22 @@ class ApiManager
     }
 
     /**
-     * @param array $opts status|status_in|audit
+     * 某用户投稿的接口列表
+     *
+     * @param int $userId
+     * @return array
+     */
+    public static function listByUser($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return array();
+        }
+        return self::listFiltered(array('userid' => $userId));
+    }
+
+    /**
+     * @param array $opts status|status_in|audit|userid
      * @return array
      */
     public static function listFiltered(array $opts = array())
@@ -246,6 +279,11 @@ class ApiManager
                     $where[] = 'a.`audit` = ?';
                     $params[] = $a;
                 }
+            }
+
+            if (isset($opts['userid']) && (int) $opts['userid'] > 0) {
+                $where[] = 'a.`userid` = ?';
+                $params[] = (int) $opts['userid'];
             }
 
             if (count($where) > 0) {
@@ -311,7 +349,7 @@ class ApiManager
             $userId = 0;
         }
 
-        // 管理员后台发布默认审核通过；显式传入 0 时保留（供后续用户投稿）
+        // 默认审核通过（管理员发布）；用户投稿须显式传入待审核
         $auditStatus = self::AUDIT_APPROVED;
         if (array_key_exists('audit', $data)) {
             $auditStatus = self::normalizeAuditStatus($data['audit']);
@@ -319,10 +357,38 @@ class ApiManager
                 return '无效的审核状态';
             }
         }
+        $rejectReason = '';
+        if ($auditStatus === self::AUDIT_REJECTED && array_key_exists('rejectreason', $data)) {
+            $rejectReason = self::normalizeRejectReason($data['rejectreason']);
+        }
 
         try {
             $pdo = Database::connect();
-            if (self::hasAuditColumn()) {
+            if (self::hasAuditColumn() && self::hasRejectReasonColumn()) {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO `' . self::table() . '`
+                     (`name`, `description`, `endpoint`, `method`, `params`, `response`,
+                      `doc`, `aidoc`, `calls`, `needkey`, `status`, `audit`, `rejectreason`, `icon`, `category`, `userid`, `createtime`)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, NOW())'
+                );
+                $stmt->execute(array(
+                    $parsed['name'],
+                    $parsed['description'],
+                    $parsed['endpoint'],
+                    $parsed['method'],
+                    $parsed['params'],
+                    $parsed['response'],
+                    $parsed['doc'],
+                    $parsed['aidoc'],
+                    $parsed['needkey'],
+                    $parsed['status'],
+                    $auditStatus,
+                    $rejectReason,
+                    $parsed['icon'],
+                    $parsed['category'],
+                    $userId,
+                ));
+            } elseif (self::hasAuditColumn()) {
                 $stmt = $pdo->prepare(
                     'INSERT INTO `' . self::table() . '`
                      (`name`, `description`, `endpoint`, `method`, `params`, `response`,
@@ -406,9 +472,43 @@ class ApiManager
             }
         }
 
+        $clearReject = $hasAuditInPayload && $auditStatus !== self::AUDIT_REJECTED;
+        $rejectReason = null;
+        if ($hasAuditInPayload && $auditStatus === self::AUDIT_REJECTED && array_key_exists('rejectreason', $data)) {
+            $rejectReason = self::normalizeRejectReason($data['rejectreason']);
+        } elseif ($clearReject) {
+            $rejectReason = '';
+        }
+
         try {
             $pdo = Database::connect();
-            if ($hasAuditInPayload && self::hasAuditColumn()) {
+            if ($hasAuditInPayload && self::hasAuditColumn() && self::hasRejectReasonColumn() && $rejectReason !== null) {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . self::table() . '`
+                     SET `name` = ?, `description` = ?, `endpoint` = ?, `method` = ?,
+                         `params` = ?, `response` = ?, `doc` = ?, `aidoc` = ?,
+                         `needkey` = ?, `status` = ?, `audit` = ?, `rejectreason` = ?,
+                         `icon` = ?, `category` = ?, `updatetime` = NOW()
+                     WHERE `id` = ?'
+                );
+                $stmt->execute(array(
+                    $parsed['name'],
+                    $parsed['description'],
+                    $parsed['endpoint'],
+                    $parsed['method'],
+                    $parsed['params'],
+                    $parsed['response'],
+                    $parsed['doc'],
+                    $parsed['aidoc'],
+                    $parsed['needkey'],
+                    $parsed['status'],
+                    $auditStatus,
+                    $rejectReason,
+                    $parsed['icon'],
+                    $parsed['category'],
+                    $apiId,
+                ));
+            } elseif ($hasAuditInPayload && self::hasAuditColumn()) {
                 $stmt = $pdo->prepare(
                     'UPDATE `' . self::table() . '`
                      SET `name` = ?, `description` = ?, `endpoint` = ?, `method` = ?,
@@ -495,11 +595,12 @@ class ApiManager
     /**
      * 设置审核状态
      *
-     * @param int        $apiId
-     * @param int|string $auditStatus
+     * @param int         $apiId
+     * @param int|string  $auditStatus
+     * @param string|null $rejectReason 不通过时可填原因；通过/待审时自动清空
      * @return true|string
      */
-    public static function setAuditStatus($apiId, $auditStatus)
+    public static function setAuditStatus($apiId, $auditStatus, $rejectReason = null)
     {
         $apiId = (int) $apiId;
         $auditStatus = self::normalizeAuditStatus($auditStatus);
@@ -507,23 +608,55 @@ class ApiManager
             return '无效操作';
         }
         if (!self::hasAuditColumn()) {
-            return '请先执行数据库结构更新（3.8.0）';
+            return '请先执行数据库结构更新';
         }
         if (!self::findById($apiId)) {
             return '接口不存在';
         }
 
+        $reason = '';
+        if ($auditStatus === self::AUDIT_REJECTED) {
+            $reason = self::normalizeRejectReason($rejectReason);
+        }
+
         try {
             $pdo = Database::connect();
-            $stmt = $pdo->prepare(
-                'UPDATE `' . self::table() . '` SET `audit` = ?, `updatetime` = NOW() WHERE `id` = ?'
-            );
-            $stmt->execute(array($auditStatus, $apiId));
+            if (self::hasRejectReasonColumn()) {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . self::table() . '`
+                     SET `audit` = ?, `rejectreason` = ?, `updatetime` = NOW()
+                     WHERE `id` = ?'
+                );
+                $stmt->execute(array($auditStatus, $reason, $apiId));
+            } else {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . self::table() . '` SET `audit` = ?, `updatetime` = NOW() WHERE `id` = ?'
+                );
+                $stmt->execute(array($auditStatus, $apiId));
+            }
             RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
             return '操作失败，请稍后重试';
         }
+    }
+
+    /**
+     * @param mixed $value
+     * @return string
+     */
+    public static function normalizeRejectReason($value)
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return '';
+        }
+        if (function_exists('mb_substr')) {
+            $text = mb_substr($text, 0, 500, 'UTF-8');
+        } else {
+            $text = substr($text, 0, 500);
+        }
+        return $text;
     }
 
     /**
@@ -629,7 +762,10 @@ class ApiManager
     public static function normalizeAuditStatus($value)
     {
         $n = (int) $value;
-        return $n === self::AUDIT_REJECTED ? self::AUDIT_REJECTED : self::AUDIT_APPROVED;
+        if ($n === self::AUDIT_APPROVED || $n === self::AUDIT_REJECTED) {
+            return $n;
+        }
+        return self::AUDIT_PENDING;
     }
 
     /**
@@ -639,7 +775,9 @@ class ApiManager
     public static function isValidAuditStatus($value)
     {
         $n = (int) $value;
-        return $n === self::AUDIT_REJECTED || $n === self::AUDIT_APPROVED;
+        return $n === self::AUDIT_PENDING
+            || $n === self::AUDIT_APPROVED
+            || $n === self::AUDIT_REJECTED;
     }
 
     /**
@@ -648,7 +786,32 @@ class ApiManager
      */
     public static function auditStatusLabel($value)
     {
-        return self::normalizeAuditStatus($value) === self::AUDIT_APPROVED ? '审核通过' : '审核不通过';
+        $n = self::normalizeAuditStatus($value);
+        if ($n === self::AUDIT_APPROVED) {
+            return '审核通过';
+        }
+        if ($n === self::AUDIT_REJECTED) {
+            return '审核不通过';
+        }
+        return '待审核';
+    }
+
+    /**
+     * CSS 辅助类名（仅 class，不含数字含义文案）
+     *
+     * @param mixed $value
+     * @return string
+     */
+    public static function auditStatusClass($value)
+    {
+        $n = self::normalizeAuditStatus($value);
+        if ($n === self::AUDIT_APPROVED) {
+            return 'is-approved';
+        }
+        if ($n === self::AUDIT_REJECTED) {
+            return 'is-rejected';
+        }
+        return 'is-pending';
     }
 
     /**
@@ -686,17 +849,20 @@ class ApiManager
             'calls'         => isset($row['calls']) ? (int) $row['calls'] : 0,
             'needkey'       => self::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_label' => self::requireKeyLabel(isset($row['needkey']) ? $row['needkey'] : 0),
-            'status'        => $status,
-            'status_label'  => self::statusLabel($status),
-            'audit'         => $auditStatus,
-            'audit_label'   => self::auditStatusLabel($auditStatus),
-            'icon'          => ApiCategoryManager::resolveIconUrl($iconRaw),
-            'icon_raw'      => $iconRaw,
-            'category'      => isset($row['category']) ? (string) $row['category'] : '',
-            'userid'        => isset($row['userid']) ? (int) $row['userid'] : 0,
-            'username'      => isset($row['username']) ? (string) $row['username'] : '',
-            'createtime'    => isset($row['createtime']) ? (string) $row['createtime'] : '',
-            'updatetime'    => isset($row['updatetime']) ? (string) $row['updatetime'] : '',
+            'status'         => $status,
+            'status_label'   => self::statusLabel($status),
+            'audit'          => $auditStatus,
+            'audit_label'    => self::auditStatusLabel($auditStatus),
+            'audit_class'    => self::auditStatusClass($auditStatus),
+            'rejectreason'   => isset($row['rejectreason']) ? (string) $row['rejectreason'] : '',
+            'email'          => isset($row['email']) ? (string) $row['email'] : '',
+            'icon'           => ApiCategoryManager::resolveIconUrl($iconRaw),
+            'icon_raw'       => $iconRaw,
+            'category'       => isset($row['category']) ? (string) $row['category'] : '',
+            'userid'         => isset($row['userid']) ? (int) $row['userid'] : 0,
+            'username'       => isset($row['username']) ? (string) $row['username'] : '',
+            'createtime'     => isset($row['createtime']) ? (string) $row['createtime'] : '',
+            'updatetime'     => isset($row['updatetime']) ? (string) $row['updatetime'] : '',
         );
     }
 
@@ -714,23 +880,25 @@ class ApiManager
         }
 
         return array(
-            'id'            => $full['id'],
-            'name'          => $full['name'],
-            'description'   => $full['description'],
-            'endpoint'      => $full['endpoint'],
-            'method'        => $full['method'],
-            'calls'         => $full['calls'],
-            'needkey'       => $full['needkey'],
-            'needkey_label' => $full['needkey_label'],
-            'status'        => $full['status'],
-            'status_label'  => $full['status_label'],
-            'audit'         => $full['audit'],
-            'audit_label'   => $full['audit_label'],
-            'icon'          => $full['icon'],
-            'icon_raw'      => $full['icon_raw'],
-            'category'      => $full['category'],
-            'userid'        => $full['userid'],
-            'username'      => $full['username'],
+            'id'             => $full['id'],
+            'name'           => $full['name'],
+            'description'    => $full['description'],
+            'endpoint'       => $full['endpoint'],
+            'method'         => $full['method'],
+            'calls'          => $full['calls'],
+            'needkey'        => $full['needkey'],
+            'needkey_label'  => $full['needkey_label'],
+            'status'         => $full['status'],
+            'status_label'   => $full['status_label'],
+            'audit'          => $full['audit'],
+            'audit_label'    => $full['audit_label'],
+            'audit_class'    => $full['audit_class'],
+            'rejectreason'   => $full['rejectreason'],
+            'icon'           => $full['icon'],
+            'icon_raw'       => $full['icon_raw'],
+            'category'       => $full['category'],
+            'userid'         => $full['userid'],
+            'username'       => $full['username'],
         );
     }
 

@@ -3134,6 +3134,11 @@ select.vs-input.vs-select {
     font-weight: 600;
 }
 
+.vs-api-list-audit.is-pending {
+    color: #b45309;
+    background: #fffbeb;
+}
+
 .vs-api-list-audit.is-approved {
     background: #eff6ff;
     color: #1d4ed8;
