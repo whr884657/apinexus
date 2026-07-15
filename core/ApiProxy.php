@@ -1,14 +1,20 @@
 <?php
 /**
  * 文件：core/ApiProxy.php
- * 作用：代理外链接口的纯 PHP 302 跳转（不依赖 Nginx/.htaccess 伪静态）
+ * 作用：代理外链网关 —— 路径样式公开地址跳转上游（302）
  *
- * 访问：/proxy.php?s={proxyslug}&其它参数…
- * 行为：将查询参数拼到上游 targeturl 后，302 跳转至上游。
+ * 公开地址：/apis/{proxyslug}               （推荐，配合伪静态）
+ *           /apis.php/{proxyslug}            （PATH_INFO，可不依赖去 .php）
+ * 辅参仍用查询串：/apis/{短码}?foo=1
+ *
+ * 短码解析优先级：查询参数 s → PATH_INFO 首段 → REQUEST_URI 路径段
  */
 
 class ApiProxy
 {
+    /** 公开路径前缀（不含尾斜杠；对外隐藏入口文件名语义） */
+    const PUBLIC_PREFIX = '/apis';
+
     /**
      * 根据短码查已通过且可访问的代理接口
      *
@@ -51,13 +57,67 @@ class ApiProxy
     }
 
     /**
-     * 处理 HTTP 请求：302 至上游（保留除 s 以外的查询参数）
+     * 从当前请求解析代理短码（入站兼容多种形态）
      *
+     * @return string 规范化短码，无法识别时为空串
+     */
+    public static function resolveSlugFromRequest()
+    {
+        $slug = '';
+        if (isset($_GET['s'])) {
+            $slug = self::normalizeSlug((string) $_GET['s']);
+            if ($slug !== '') {
+                return $slug;
+            }
+        }
+
+        if (!empty($_SERVER['PATH_INFO'])) {
+            $parts = explode('/', trim((string) $_SERVER['PATH_INFO'], '/'));
+            if (isset($parts[0]) && $parts[0] !== '') {
+                $slug = self::normalizeSlug($parts[0]);
+                if ($slug !== '') {
+                    return $slug;
+                }
+            }
+        }
+
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = parse_url($uri, PHP_URL_PATH);
+        if (!is_string($path) || $path === '') {
+            return '';
+        }
+        // /apis/{slug} 或 /apis.php/{slug}（可带子目录前缀）
+        if (preg_match('#/(?:apis\.php|apis)/([A-Za-z0-9]{3,64})/?$#', $path, $m)) {
+            return self::normalizeSlug($m[1]);
+        }
+
+        return '';
+    }
+
+    /**
+     * 当前请求是否应走代理网关（有合法短码）
+     *
+     * @return bool
+     */
+    public static function isGatewayRequest()
+    {
+        return self::resolveSlugFromRequest() !== '';
+    }
+
+    /**
+     * 处理 HTTP 请求：302 至上游（保留查询参数，排除路由用的 s）
+     *
+     * @param string|null $slug 已解析短码；null 则自行从请求解析
      * @return void
      */
-    public static function handleRequest()
+    public static function handleRequest($slug = null)
     {
-        $slug = isset($_GET['s']) ? (string) $_GET['s'] : '';
+        if ($slug === null) {
+            $slug = self::resolveSlugFromRequest();
+        } else {
+            $slug = self::normalizeSlug($slug);
+        }
+
         $row = self::findCallableBySlug($slug);
         if (!$row) {
             http_response_code(404);
@@ -103,7 +163,7 @@ class ApiProxy
         if ($slug === '') {
             return '';
         }
-        return '/proxy.php?s=' . rawurlencode($slug);
+        return self::PUBLIC_PREFIX . '/' . $slug;
     }
 
     /**

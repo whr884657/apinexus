@@ -1,10 +1,13 @@
-# misc-api URL Rewrite (Optional)
+# misc-api URL Rewrite
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
 
     # 禁止直接访问 config 目录
     RewriteRule ^config/ - [F,L]
+
+    # 路径样式网关：/apis/{短码} → apis.php/{短码}（PATH_INFO）
+    RewriteRule ^apis/([a-z0-9]{3,64})$ apis.php/$1 [QSA,L]
 </IfModule>
 
 # 404 错误页

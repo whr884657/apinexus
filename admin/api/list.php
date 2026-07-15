@@ -350,13 +350,13 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <label class="vs-label" for="apiListFormTargetUrl">上游完整地址 <span class="vs-req">*</span></label>
                     <input type="url" class="vs-input" id="apiListFormTargetUrl" name="targeturl" maxlength="500"
                            placeholder="https://api.example.com/v1/demo">
-                    <p class="vs-form-hint">用户请求本站代理地址时，将 302 跳转到该地址，并携带查询参数。</p>
+                    <p class="vs-form-hint">访问本站公开地址时，将跳转到该上游，并附带查询参数。</p>
                 </div>
                 <div class="vs-form-row" id="apiListSlugRow" hidden>
-                    <label class="vs-label" for="apiListFormProxySlug">代理短码（选填）</label>
+                    <label class="vs-label" for="apiListFormProxySlug">接口短码（选填）</label>
                     <input type="text" class="vs-input" id="apiListFormProxySlug" name="proxyslug" maxlength="64"
                            placeholder="留空则自动生成，如 sjspks" pattern="[A-Za-z0-9]*">
-                    <p class="vs-form-hint">公开地址形如 <?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/proxy.php?s=短码（纯 PHP，无需改伪静态）。</p>
+                    <p class="vs-form-hint">公开地址形如 <?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/apis/短码</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>

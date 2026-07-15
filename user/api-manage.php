@@ -277,10 +277,10 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                        placeholder="https://api.example.com/v1/demo" <?php echo $canLocal ? '' : 'required'; ?>>
             </div>
             <div class="vs-form-row" id="userApiSlugRow"<?php echo $canLocal ? ' hidden' : ''; ?>>
-                <label class="vs-label" for="userApiFormProxySlug">代理短码（选填）</label>
+                <label class="vs-label" for="userApiFormProxySlug">接口短码（选填）</label>
                 <input type="text" class="vs-input" id="userApiFormProxySlug" name="proxyslug" maxlength="64"
                        placeholder="留空自动生成" pattern="[A-Za-z0-9]*">
-                <p class="vs-form-hint">公开地址：<?php echo vs_e($iconBase); ?>/proxy.php?s=短码</p>
+                <p class="vs-form-hint">公开地址：<?php echo vs_e($iconBase); ?>/apis/短码</p>
             </div>
 
             <div class="vs-form-row vs-form-row--2">

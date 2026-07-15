@@ -76,7 +76,7 @@
         }
         if (typeHint) {
             typeHint.textContent = t === 1
-                ? '代理外链：填写对方完整地址，系统生成本站 /proxy.php?s=短码，请求时 302 跳转并附带参数。'
+                ? '外链接口：填写对方完整地址，系统生成本站 /apis/短码；访问时跳转上游并附带查询参数。'
                 : '本地接口：只填本站路径，如 /api/img/index.php';
         }
         if (endpointLabel) {

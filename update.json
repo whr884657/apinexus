@@ -1,13 +1,13 @@
 {
-    "version": "3.11.0",
-    "title": "misc-api 3.11.0 本地/代理接口与邮件通知开关",
+    "version": "3.12.0",
+    "title": "misc-api 3.12.0 代理接口路径样式公开地址",
     "release_date": "2026-07-15",
     "db_changes": true,
     "changes": [
-        "接口支持本地路径与代理外链（纯 PHP 302，/proxy.php?s=短码）",
-        "未绑定管理员的开发者仅可投代理；已绑定与管理员可选本地/代理",
-        "修复用户中心提交弹窗（is-open）；按钮移至右上角",
-        "邮箱设置可分别开关：投稿通知、审核通过、审核拒绝邮件"
+        "代理公开地址改为路径样式 /apis/{短码}（去掉 proxy.php 与 ?s=）",
+        "apis.php 兼任列表页与外链网关；入站兼容 PATH_INFO / 伪静态 / 查询参数 s",
+        "同步 Nginx、Apache 伪静态规则与后台/用户中心提示文案",
+        "结构更新将历史 endpoint 统一为 /apis/{proxyslug}"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
