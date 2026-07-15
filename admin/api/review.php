@@ -3,9 +3,8 @@
  * 文件：admin/api/review.php
  * 作用：接口审核（待审 / 通过 / 不通过；可选填写不通过原因；邮件通知投稿用户）
  *
- * 说明：管理员在「接口列表」发布的接口默认审核通过；
- * 开发者在用户中心提交的接口为待审核。筛选用页面内按钮，不改 URL。
- * 数值编码仅存在于服务端常量与库表，勿写入页面可见文案。
+ * 说明：仅展示开发者投稿（userid>0）。管理员在「接口列表」发布的接口默认已通过，不进入本页。
+ * 筛选用页面内按钮，不改 URL。数值编码仅存在于服务端常量与库表。
  */
 
 require_once dirname(__DIR__) . '/init.php';
@@ -27,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $before = ApiManager::findById($id);
         if (!$before) {
             AjaxResponse::error('接口不存在');
+        }
+        if ((int) (isset($before['userid']) ? $before['userid'] : 0) <= 0) {
+            AjaxResponse::error('管理员发布的接口无需在本页审核，请前往「接口列表」管理');
         }
 
         $result = ApiManager::setAuditStatus($id, $audit, $reason);
@@ -62,26 +64,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $tableReady = ApiManager::tableReady();
 $hasAudit = $tableReady && ApiManager::hasAuditColumn();
-$apis = $hasAudit ? ApiManager::listAll() : array();
+$apis = $hasAudit ? ApiManager::listForReview() : array();
 
-$headerActions = '';
-if ($hasAudit) {
-    ob_start();
-    ?>
-    <div class="vs-api-review-filters" id="apiReviewFilters">
-        <button type="button" class="vs-btn vs-btn--primary vs-api-review-filter" data-filter="all">全部</button>
-        <button type="button" class="vs-btn vs-btn--default vs-api-review-filter" data-filter="0">待审核</button>
-        <button type="button" class="vs-btn vs-btn--default vs-api-review-filter" data-filter="1">已通过</button>
-        <button type="button" class="vs-btn vs-btn--default vs-api-review-filter" data-filter="2">未通过</button>
-    </div>
-    <?php
-    $headerActions = ob_get_clean();
+$counts = array(
+    'all' => 0,
+    '0'   => 0,
+    '1'   => 0,
+    '2'   => 0,
+);
+foreach ($apis as $row) {
+    $a = isset($row['audit']) ? (string) (int) $row['audit'] : '0';
+    $counts['all'] += 1;
+    if (isset($counts[$a])) {
+        $counts[$a] += 1;
+    }
 }
 
-vs_admin_layout_start('接口审核', 'api-review', $headerActions);
+vs_admin_layout_start('接口审核', 'api-review');
 ?>
 
-<div class="vs-panel vs-api-review-panel" id="apiReviewPage">
+<div class="vs-panel vs-api-review-panel" id="apiReviewPage"
+     data-has-table="<?php echo $hasAudit && count($apis) > 0 ? '1' : '0'; ?>">
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '接口管理功能尚未就绪，请先前往「系统升级」完成更新。', array('compact' => true)); ?>
         <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade.php'); ?>">前往系统升级</a>
@@ -89,18 +92,33 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
         <?php vs_render_notice('warning', '', '当前系统尚未具备审核功能，请先前往「系统升级」完成结构更新。', array('compact' => true)); ?>
         <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade.php'); ?>">前往系统升级</a>
     <?php else: ?>
-        <?php vs_render_notice('info', '', '可在此处理开发者提交的接口。未通过与待审核的接口不会出现在站点前台；在「接口列表」由管理员直接发布时默认审核通过。不通过时可填写原因（选填），系统将邮件通知投稿用户。', array('compact' => true)); ?>
+        <?php vs_render_notice('info', '', '本页仅显示开发者投稿的接口。管理员在「接口列表」直接发布的接口默认已通过审核，不会出现在这里。不通过时可填写原因（选填），系统将邮件通知投稿用户。', array('compact' => true)); ?>
+
+        <div class="vs-api-review-tabs" id="apiReviewFilters" role="tablist" aria-label="审核筛选">
+            <button type="button" class="vs-btn vs-btn--default vs-api-review-filter vs-api-review-tabs__btn" data-filter="all">
+                全部<span class="vs-api-review-tabs__badge"><?php echo (int) $counts['all']; ?></span>
+            </button>
+            <button type="button" class="vs-btn vs-btn--primary vs-api-review-filter vs-api-review-tabs__btn is-active" data-filter="0">
+                待审核<span class="vs-api-review-tabs__badge"><?php echo (int) $counts['0']; ?></span>
+            </button>
+            <button type="button" class="vs-btn vs-btn--default vs-api-review-filter vs-api-review-tabs__btn" data-filter="1">
+                已通过<span class="vs-api-review-tabs__badge"><?php echo (int) $counts['1']; ?></span>
+            </button>
+            <button type="button" class="vs-btn vs-btn--default vs-api-review-filter vs-api-review-tabs__btn" data-filter="2">
+                未通过<span class="vs-api-review-tabs__badge"><?php echo (int) $counts['2']; ?></span>
+            </button>
+        </div>
 
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiReviewEmpty"<?php echo count($apis) > 0 ? ' hidden' : ''; ?>>
             <div class="vs-api-list-empty__card">
-                <h3 class="vs-api-list-empty__title">暂无接口</h3>
-                <p class="vs-api-list-empty__desc">还没有可审核的接口。开发者在用户中心提交后，会出现在本页。</p>
+                <h3 class="vs-api-list-empty__title">暂无投稿待审</h3>
+                <p class="vs-api-list-empty__desc">开发者在用户中心提交接口后，会出现在本页。管理员自行发布的接口请在「接口列表」管理。</p>
             </div>
         </div>
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiReviewFilterEmpty" hidden>
             <div class="vs-api-list-empty__card">
                 <h3 class="vs-api-list-empty__title">暂无匹配项</h3>
-                <p class="vs-api-list-empty__desc">当前筛选项下没有接口，可切换上方筛选查看其它状态。</p>
+                <p class="vs-api-list-empty__desc">当前筛选项下没有接口，可切换上方「全部 / 待审核 / 已通过 / 未通过」查看。</p>
             </div>
         </div>
 
@@ -120,19 +138,18 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
                     }
                     $audit = (int) $api['audit'];
                     $reason = isset($api['rejectreason']) ? (string) $api['rejectreason'] : '';
+                    $rowHidden = $audit !== ApiManager::AUDIT_PENDING ? ' hidden' : '';
                     ?>
-                    <div class="vs-api-review-row" data-api-id="<?php echo (int) $api['id']; ?>" data-audit="<?php echo $audit; ?>">
+                    <div class="vs-api-review-row" data-api-id="<?php echo (int) $api['id']; ?>" data-audit="<?php echo $audit; ?>"<?php echo $rowHidden; ?>>
                         <div class="vs-api-review-row__main">
-                            <strong><?php echo vs_e($api['name']); ?></strong>
-                            <span class="vs-api-review-row__meta"><?php echo vs_e($api['endpoint']); ?></span>
+                            <strong class="vs-api-review-name"><?php echo vs_e($api['name']); ?></strong>
+                            <span class="vs-api-review-endpoint"><?php echo vs_e($api['endpoint']); ?></span>
                             <?php if (!empty($api['username'])): ?>
-                                <span class="vs-api-review-row__meta">创建者：<?php echo vs_e($api['username']); ?></span>
-                            <?php elseif ((int) $api['userid'] > 0): ?>
-                                <span class="vs-api-review-row__meta">创建者：已关联前台用户</span>
+                                <span class="vs-api-review-meta">投稿者：<?php echo vs_e($api['username']); ?></span>
                             <?php else: ?>
-                                <span class="vs-api-review-row__meta">创建者：未绑定前台用户</span>
+                                <span class="vs-api-review-meta">投稿者：用户 #<?php echo (int) $api['userid']; ?></span>
                             <?php endif; ?>
-                            <span class="vs-api-review-row__reason" data-field="rejectreason"<?php echo $reason === '' ? ' hidden' : ''; ?>>
+                            <span class="vs-api-review-reason" data-field="rejectreason"<?php echo $reason === '' ? ' hidden' : ''; ?>>
                                 原因：<?php echo vs_e($reason); ?>
                             </span>
                         </div>
@@ -146,13 +163,13 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
                                 <?php echo vs_e($api['audit_label']); ?>
                             </span>
                         </div>
-                        <div class="vs-api-review-row__actions">
+                        <div class="vs-api-review-row__actions vs-api-review-actions">
                             <?php if ($audit !== ApiManager::AUDIT_APPROVED): ?>
                                 <button type="button" class="vs-btn vs-btn--primary vs-api-review-action"
                                         data-audit="1">通过</button>
                             <?php endif; ?>
                             <?php if ($audit !== ApiManager::AUDIT_REJECTED): ?>
-                                <button type="button" class="vs-btn vs-btn--danger vs-api-review-reject"
+                                <button type="button" class="vs-btn vs-btn--danger vs-api-review-deny"
                                         data-audit="2">不通过</button>
                             <?php endif; ?>
                         </div>
@@ -187,7 +204,6 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
 </div>
 
 <style>
-.vs-api-review-filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .vs-api-review-table { margin-top: 12px; border: 1px solid var(--vs-border, #e2e8f0); border-radius: 12px; overflow: hidden; }
 .vs-api-review-table__head,
 .vs-api-review-row {
@@ -205,173 +221,19 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
 }
 .vs-api-review-row { border-top: 1px solid var(--vs-border, #e2e8f0); }
 .vs-api-review-row__main { display: flex; flex-direction: column; gap: 4px; }
-.vs-api-review-row__meta { font-size: 12px; color: #64748b; word-break: break-all; }
-.vs-api-review-row__reason { font-size: 12px; color: #b45309; word-break: break-word; }
+.vs-api-review-reason { font-size: 12px; color: #b45309; word-break: break-word; }
 .vs-api-review-row__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 768px) {
     .vs-api-review-table__head { display: none; }
     .vs-api-review-row { grid-template-columns: 1fr; }
+    .vs-api-review-row__actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+    .vs-api-review-row__actions .vs-btn { width: 100%; }
 }
 </style>
 
-<script>
-(function () {
-    var page = document.getElementById('apiReviewPage');
-    if (!page || !window.VS) { return; }
-
-    var table = document.getElementById('apiReviewTable');
-    var emptyAll = document.getElementById('apiReviewEmpty');
-    var emptyFilter = document.getElementById('apiReviewFilterEmpty');
-    var overlay = document.getElementById('apiReviewRejectOverlay');
-    var reasonInput = document.getElementById('apiReviewRejectReason');
-    var confirmBtn = document.getElementById('apiReviewRejectConfirm');
-    var currentFilter = 'all';
-    var rejectApiId = '';
-
-    function openOverlay() {
-        if (!overlay) { return; }
-        overlay.hidden = false;
-        overlay.setAttribute('aria-hidden', 'false');
-        if (reasonInput) {
-            reasonInput.value = '';
-            reasonInput.focus();
-        }
-    }
-
-    function closeOverlay() {
-        if (!overlay) { return; }
-        overlay.hidden = true;
-        overlay.setAttribute('aria-hidden', 'true');
-        rejectApiId = '';
-    }
-
-    function applyFilter(filter) {
-        currentFilter = filter;
-        document.querySelectorAll('.vs-api-review-filter').forEach(function (btn) {
-            var on = btn.getAttribute('data-filter') === filter;
-            btn.classList.toggle('vs-btn--primary', on);
-            btn.classList.toggle('vs-btn--default', !on);
-        });
-        if (!table) {
-            if (emptyAll) { emptyAll.hidden = false; }
-            if (emptyFilter) { emptyFilter.hidden = true; }
-            return;
-        }
-        var visible = 0;
-        var total = 0;
-        table.querySelectorAll('.vs-api-review-row').forEach(function (row) {
-            total += 1;
-            var audit = row.getAttribute('data-audit');
-            var show = filter === 'all' || audit === filter;
-            row.hidden = !show;
-            if (show) { visible += 1; }
-        });
-        if (emptyFilter) {
-            emptyFilter.hidden = !(total > 0 && visible === 0);
-        }
-        table.hidden = total === 0 || visible === 0;
-        if (emptyAll) {
-            emptyAll.hidden = total > 0;
-        }
-    }
-
-    function renderActions(actions, audit) {
-        if (!actions) { return; }
-        var html = '';
-        if (audit !== '1') {
-            html += '<button type="button" class="vs-btn vs-btn--primary vs-api-review-action" data-audit="1">通过</button>';
-        }
-        if (audit !== '2') {
-            html += '<button type="button" class="vs-btn vs-btn--danger vs-api-review-reject" data-audit="2">不通过</button>';
-        }
-        actions.innerHTML = html;
-    }
-
-    function postAudit(apiId, audit, reason) {
-        var fd = new FormData();
-        fd.append('action', 'set_audit');
-        fd.append('api_id', apiId);
-        fd.append('audit', audit);
-        if (typeof reason === 'string') {
-            fd.append('rejectreason', reason);
-        }
-        return window.VS.postForm(fd, window.location.pathname).then(function (data) {
-            if (!data || data.code !== 1) {
-                window.VS.showMessage((data && data.msg) || '操作失败', 'error');
-                return null;
-            }
-            window.VS.showMessage(data.msg || '已更新', 'success');
-            var row = table ? table.querySelector('.vs-api-review-row[data-api-id="' + apiId + '"]') : null;
-            if (!row) { return data; }
-            row.setAttribute('data-audit', String(audit));
-            var label = row.querySelector('[data-field="audit_label"]');
-            if (label) {
-                label.textContent = data.audit_label || '';
-                label.className = 'vs-api-list-audit ' + (data.audit_class || '');
-            }
-            var reasonEl = row.querySelector('[data-field="rejectreason"]');
-            if (reasonEl) {
-                var r = data.rejectreason || '';
-                if (r) {
-                    reasonEl.hidden = false;
-                    reasonEl.textContent = '原因：' + r;
-                } else {
-                    reasonEl.hidden = true;
-                    reasonEl.textContent = '';
-                }
-            }
-            renderActions(row.querySelector('.vs-api-review-row__actions'), String(audit));
-            applyFilter(currentFilter);
-            return data;
-        }).catch(function () {
-            window.VS.showMessage('网络异常，请稍后重试', 'error');
-            return null;
-        });
-    }
-
-    document.addEventListener('click', function (e) {
-        var closeEl = e.target.closest('[data-overlay-close]');
-        if (closeEl && overlay && overlay.contains(closeEl)) {
-            closeOverlay();
-            return;
-        }
-
-        var filterBtn = e.target.closest('.vs-api-review-filter');
-        if (filterBtn) {
-            applyFilter(filterBtn.getAttribute('data-filter') || 'all');
-            return;
-        }
-
-        var rejectBtn = e.target.closest('.vs-api-review-reject');
-        if (rejectBtn && page.contains(rejectBtn)) {
-            var row = rejectBtn.closest('.vs-api-review-row');
-            if (!row) { return; }
-            rejectApiId = row.getAttribute('data-api-id') || '';
-            openOverlay();
-            return;
-        }
-
-        var btn = e.target.closest('.vs-api-review-action');
-        if (btn && page.contains(btn)) {
-            var rowPass = btn.closest('.vs-api-review-row');
-            if (!rowPass) { return; }
-            postAudit(rowPass.getAttribute('data-api-id'), btn.getAttribute('data-audit'), '');
-        }
-    });
-
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', function () {
-            if (!rejectApiId) { return; }
-            var reason = reasonInput ? reasonInput.value : '';
-            postAudit(rejectApiId, '2', reason).then(function (data) {
-                if (data) { closeOverlay(); }
-            });
-        });
-    }
-
-    applyFilter('all');
-})();
-</script>
-
 <?php
-vs_admin_layout_end();
+vs_admin_layout_end(array('api-review.js'));
