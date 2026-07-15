@@ -1,20 +1,19 @@
 <?php
 /**
  * 文件：core/ApiProxy.php
- * 作用：代理外链网关 —— 路径样式公开地址跳转上游（302）
+ * 作用：代理外链网关 —— PATH_INFO 路径样式公开地址跳转上游（302）
  *
- * 公开地址：/apis/{proxyslug}               （推荐，配合伪静态）
- *           /apis.php/{proxyslug}            （PATH_INFO，可不依赖去 .php）
- * 辅参仍用查询串：/apis/{短码}?foo=1
+ * 出站公开地址（不依赖伪静态）：
+ *   /apis.php/{proxyslug}
+ * 辅参仍用查询串：
+ *   /apis.php/{短码}?foo=1
  *
- * 短码解析优先级：查询参数 s → PATH_INFO 首段 → REQUEST_URI 路径段
+ * 入站只认脚本后的路径段（PATH_INFO）；无路径段时不走网关。
+ * 列表页：/apis 或 /apis.php（无 PATH_INFO）
  */
 
 class ApiProxy
 {
-    /** 公开路径前缀（不含尾斜杠；对外隐藏入口文件名语义） */
-    const PUBLIC_PREFIX = '/apis';
-
     /**
      * 根据短码查已通过且可访问的代理接口
      *
@@ -57,28 +56,20 @@ class ApiProxy
     }
 
     /**
-     * 从当前请求解析代理短码（入站兼容多种形态）
+     * 当前请求的 PATH_INFO（如 /sjspks）
+     * 部分环境未传 PATH_INFO 时，从 REQUEST_URI 相对 SCRIPT_NAME 还原（仍是路径式，不是查询串）
      *
-     * @return string 规范化短码，无法识别时为空串
+     * @return string
      */
-    public static function resolveSlugFromRequest()
+    public static function requestPathInfo()
     {
-        $slug = '';
-        if (isset($_GET['s'])) {
-            $slug = self::normalizeSlug((string) $_GET['s']);
-            if ($slug !== '') {
-                return $slug;
-            }
+        if (!empty($_SERVER['PATH_INFO'])) {
+            return (string) $_SERVER['PATH_INFO'];
         }
 
-        if (!empty($_SERVER['PATH_INFO'])) {
-            $parts = explode('/', trim((string) $_SERVER['PATH_INFO'], '/'));
-            if (isset($parts[0]) && $parts[0] !== '') {
-                $slug = self::normalizeSlug($parts[0]);
-                if ($slug !== '') {
-                    return $slug;
-                }
-            }
+        $script = isset($_SERVER['SCRIPT_NAME']) ? str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']) : '';
+        if ($script === '') {
+            return '';
         }
 
         $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
@@ -86,16 +77,40 @@ class ApiProxy
         if (!is_string($path) || $path === '') {
             return '';
         }
-        // /apis/{slug} 或 /apis.php/{slug}（可带子目录前缀）
-        if (preg_match('#/(?:apis\.php|apis)/([A-Za-z0-9]{3,64})/?$#', $path, $m)) {
-            return self::normalizeSlug($m[1]);
-        }
 
-        return '';
+        // 兼容子目录：SCRIPT_NAME=/sub/apis.php，URI=/sub/apis.php/abc
+        $scriptBase = basename($script);
+        $pos = strrpos($path, '/' . $scriptBase);
+        if ($pos === false) {
+            return '';
+        }
+        $after = substr($path, $pos + strlen('/' . $scriptBase));
+        if ($after === '' || $after[0] !== '/') {
+            return '';
+        }
+        return $after;
     }
 
     /**
-     * 当前请求是否应走代理网关（有合法短码）
+     * 从 PATH_INFO 首段解析短码；无路径则返回空（走列表页）
+     *
+     * @return string
+     */
+    public static function resolveSlugFromRequest()
+    {
+        $info = self::requestPathInfo();
+        if ($info === '' || $info === '/') {
+            return '';
+        }
+        $parts = explode('/', trim($info, '/'));
+        if (!isset($parts[0]) || $parts[0] === '') {
+            return '';
+        }
+        return self::normalizeSlug($parts[0]);
+    }
+
+    /**
+     * 当前请求是否应走代理网关（脚本后带有合法短码路径）
      *
      * @return bool
      */
@@ -105,9 +120,9 @@ class ApiProxy
     }
 
     /**
-     * 处理 HTTP 请求：302 至上游（保留查询参数，排除路由用的 s）
+     * 处理 HTTP 请求：302 至上游（查询串全部原样附带）
      *
-     * @param string|null $slug 已解析短码；null 则自行从请求解析
+     * @param string|null $slug
      * @return void
      */
     public static function handleRequest($slug = null)
@@ -142,9 +157,7 @@ class ApiProxy
             exit;
         }
 
-        $params = $_GET;
-        unset($params['s']);
-        $url = self::mergeQuery($target, $params);
+        $url = self::mergeQuery($target, $_GET);
 
         header('Cache-Control: no-store');
         header('Location: ' . $url, true, 302);
@@ -163,7 +176,7 @@ class ApiProxy
         if ($slug === '') {
             return '';
         }
-        return self::PUBLIC_PREFIX . '/' . $slug;
+        return '/apis.php/' . $slug;
     }
 
     /**

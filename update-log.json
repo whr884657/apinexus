@@ -1,5 +1,15 @@
 {
     "versions": {
+        "3.14.0": {
+            "title": "misc-api 3.14.0 代理网关改为 PATH_INFO 路径式",
+            "date": "2026-07-15",
+            "db_changes": true,
+            "changes": [
+                "代理公开地址改为 /apis.php/{短码}（PATH_INFO，不依赖 /apis/短码 伪静态）",
+                "apis.php：无路径段开列表，有路径段走网关；去掉查询串 s 等兜底",
+                "结构更新将代理 endpoint 统一为 /apis.php/{proxyslug}"
+            ]
+        },
         "3.13.0": {
             "title": "misc-api 3.13.0 代理表单修复与在线更新清理废弃文件",
             "date": "2026-07-15",

@@ -348,7 +348,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <label class="vs-label" for="apiListFormProxySlug">接口短码 <span class="vs-req">*</span></label>
                     <input type="text" class="vs-input" id="apiListFormProxySlug" name="proxyslug" maxlength="64"
                            placeholder="例如 sjspks（3～64 位字母或数字）" pattern="[A-Za-z0-9]{3,64}" autocomplete="off">
-                    <p class="vs-form-hint">公开地址形如 <?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/apis/短码</p>
+                    <p class="vs-form-hint">公开地址形如 <?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/apis.php/短码</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>
