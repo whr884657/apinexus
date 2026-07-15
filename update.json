@@ -1,12 +1,12 @@
 {
-    "version": "3.16.2",
-    "title": "misc-api 3.16.2 澄清路径样式规范与文档索引",
+    "version": "3.17.0",
+    "title": "misc-api 3.17.0 用户 API 管理修复与列表标签优化",
     "release_date": "2026-07-15",
     "db_changes": false,
     "changes": [
-        "澄清：查询串→路径样式规范以 PATH_INFO（/脚本.php/标识）为主体，不依赖伪静态",
-        "代理去 .php 运维说明独立在 nginx伪静态配置.md，避免与规范混淆",
-        "同步 CORE 模块说明中的规范索引表述"
+        "修复用户中心「提交接口」无反应、「编辑」误报网络异常（iconPicker.setSelected）",
+        "已通过审核的接口列表只显示运行状态（如正常），不再叠「审核通过」",
+        "优化手机端用户 API 卡片与后台接口列表布局；默认主题标题区对齐操作按钮"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

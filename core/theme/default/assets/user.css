@@ -372,13 +372,25 @@
 }
 
 .vs-content__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 16px;
+    flex-wrap: wrap;
 }
 
 .vs-content__title {
     font-size: 20px;
     font-weight: 600;
     color: var(--vs-text);
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.vs-content__actions {
+    flex: 0 0 auto;
 }
 
 .vs-admin-footer {
