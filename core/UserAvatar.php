@@ -30,7 +30,10 @@ class UserAvatar
         }
 
         $custom = isset($user['avatar']) ? trim((string) $user['avatar']) : '';
-        if ($custom !== '' && filter_var($custom, FILTER_VALIDATE_URL)) {
+        if ($custom !== '' && vs_is_allowed_avatar_url($custom)) {
+            if (isset($custom[0]) && $custom[0] === '/') {
+                return rtrim(vs_base_url(), '/') . $custom;
+            }
             return $custom;
         }
 

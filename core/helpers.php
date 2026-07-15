@@ -104,6 +104,59 @@ function vs_password_hash($password)
 }
 
 /**
+ * 邮箱规范化（去空格、小写），用于查找与会话比对
+ *
+ * @param string $email
+ * @return string
+ */
+function vs_normalize_email($email)
+{
+    return strtolower(trim((string) $email));
+}
+
+/**
+ * Unicode 字符长度（用户名等前台 maxlength 按「字」计）
+ *
+ * @param string $value
+ * @return int
+ */
+function vs_unicode_len($value)
+{
+    $value = (string) $value;
+    if (function_exists('mb_strlen')) {
+        return (int) mb_strlen($value, 'UTF-8');
+    }
+
+    return strlen($value);
+}
+
+/**
+ * 头像链接是否可保存（http/https，或站点内以 / 开头的相对路径）
+ *
+ * @param string $url
+ * @return bool
+ */
+function vs_is_allowed_avatar_url($url)
+{
+    $url = trim((string) $url);
+    if ($url === '') {
+        return true;
+    }
+
+    if (filter_var($url, FILTER_VALIDATE_URL)) {
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        return $scheme === 'http' || $scheme === 'https';
+    }
+
+    // 站点相对路径，如 /assets/img/avatar/xx.png
+    if (isset($url[0]) && $url[0] === '/' && strpos($url, '//') !== 0 && strpos($url, '\\') === false) {
+        return strlen($url) <= 500;
+    }
+
+    return false;
+}
+
+/**
  * 获取站点根 URL
  *
  * @return string

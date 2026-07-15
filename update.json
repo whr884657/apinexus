@@ -1,12 +1,12 @@
 {
-    "version": "3.17.0",
-    "title": "misc-api 3.17.0 用户 API 管理修复与列表标签优化",
+    "version": "3.17.1",
+    "title": "misc-api 3.17.1 忘记密码与账号改密稳定性修复",
     "release_date": "2026-07-15",
     "db_changes": false,
     "changes": [
-        "修复用户中心「提交接口」无反应、「编辑」误报网络异常（iconPicker.setSelected）",
-        "已通过审核的接口列表只显示运行状态（如正常），不再叠「审核通过」",
-        "优化手机端用户 API 卡片与后台接口列表布局；默认主题标题区对齐操作按钮"
+        "修复忘记密码：邮箱大小写不一致导致「邮箱或验证码错误」；重置成功却误报失败（MySQL rowCount）",
+        "修复账号改密：中文用户名按字节计长误拦截；头像 type=url / 非法链接拖垮整表保存；表单增加 novalidate",
+        "密码校验改用 hash_equals；两套主题忘记密码页 JSON 解析加固（与管理员忘记密码一致）"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
