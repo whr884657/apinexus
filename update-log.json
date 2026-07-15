@@ -1,5 +1,15 @@
 {
     "versions": {
+        "3.16.0": {
+            "title": "misc-api 3.16.0 代理伪静态改用面板兼容写法",
+            "date": "2026-07-15",
+            "db_changes": false,
+            "changes": [
+                "代理伪静态改为 /apis/{短码} → /apis.php?_vs_slug=短码（兼容宝塔等仅匹配 *.php 的规则）",
+                "保留原有 try_files 去 .php；列表 /apis 与代理 /apis/短码 互不冲突",
+                "跳转上游时剔除内部参数 _vs_slug；nginx伪静态配置.md 随包发布"
+            ]
+        },
         "3.15.0": {
             "title": "misc-api 3.15.0 代理公开地址去 .php 美观路径",
             "date": "2026-07-15",

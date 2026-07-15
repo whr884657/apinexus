@@ -3,20 +3,22 @@
  * 文件：core/ApiProxy.php
  * 作用：代理外链网关 —— 路径样式公开地址跳转上游（302）
  *
- * 出站（美观、能省 .php 就省）：
- *   /apis/{proxyslug}
- * 辅参：
- *   /apis/{短码}?foo=1
+ * 出站（美观）：
+ *   /apis/{proxyslug}?foo=1
  *
- * 入站：
- *   1) /apis.php/{短码} 的 PATH_INFO（不依赖伪静态也能通）
- *   2) 伪静态把 /apis/{短码} 落到本脚本后，从 PATH_INFO 或 REQUEST_URI 取短码
+ * 入站短码来源（按序）：
+ *   1) $_GET['_vs_slug'] —— Nginx/Apache 伪静态内部参数（面板兼容，勿当对外契约）
+ *   2) PATH_INFO —— /apis.php/{短码}
+ *   3) REQUEST_URI 形如 /apis/{短码} 且当前脚本为 apis.php
  *
- * 列表页：/apis 或 /apis.php（无短码路径段）
+ * 列表：/apis（无短码）
  */
 
 class ApiProxy
 {
+    /** 伪静态内部短码参数名（仅 rewrite 注入，不出现在公开出站 URL） */
+    const REWRITE_SLUG_PARAM = '_vs_slug';
+
     /** 对外公开路径前缀（去 .php，美观） */
     const PUBLIC_PREFIX = '/apis';
 
@@ -97,12 +99,21 @@ class ApiProxy
     }
 
     /**
-     * 解析代理短码：有路径段才算网关，否则为空（列表页）
+     * 解析代理短码：有合法短码才算网关，否则为空（列表页）
      *
      * @return string
      */
     public static function resolveSlugFromRequest()
     {
+        // 1) 伪静态内部参数（rewrite → /apis.php?_vs_slug=xxx）—— 宝塔等仅匹配 *.php 结尾时必用
+        if (isset($_GET[self::REWRITE_SLUG_PARAM])) {
+            $slug = self::normalizeSlug((string) $_GET[self::REWRITE_SLUG_PARAM]);
+            if ($slug !== '') {
+                return $slug;
+            }
+        }
+
+        // 2) PATH_INFO：/apis.php/短码
         $info = self::requestPathInfo();
         if ($info !== '' && $info !== '/') {
             $parts = explode('/', trim($info, '/'));
@@ -114,7 +125,7 @@ class ApiProxy
             }
         }
 
-        // 伪静态：浏览器地址是 /apis/短码，内部已落到 apis.php，但 PATH_INFO 可能为空
+        // 3) 当前已是 apis.php，URI 仍为美观路径 /apis/短码
         $script = isset($_SERVER['SCRIPT_NAME'])
             ? basename(str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']))
             : '';
@@ -127,7 +138,6 @@ class ApiProxy
         if (!is_string($path) || $path === '') {
             return '';
         }
-        // 仅匹配 /apis/{短码}；纯 /apis 不匹配 → 列表
         if (preg_match('#/apis/([A-Za-z0-9]{3,64})/?$#', $path, $m)) {
             return self::normalizeSlug($m[1]);
         }
@@ -181,7 +191,9 @@ class ApiProxy
             exit;
         }
 
-        $url = self::mergeQuery($target, $_GET);
+        $params = $_GET;
+        unset($params[self::REWRITE_SLUG_PARAM]);
+        $url = self::mergeQuery($target, $params);
 
         header('Cache-Control: no-store');
         header('Location: ' . $url, true, 302);
