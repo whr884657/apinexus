@@ -2,14 +2,13 @@
 /**
  * 文件：apis.php
  * 作用：
- *   1) 无 PATH_INFO：前台 · 全部接口列表（/apis 或 /apis.php）
- *   2) 有 PATH_INFO：代理网关 /apis.php/{短码} → 跳转上游
+ *   1) /apis 或 /apis.php（无短码）→ 全部接口列表
+ *   2) /apis/{短码}（伪静态进本脚本）或 /apis.php/{短码} → 代理网关
  */
 
 define('VS_ROOT', __DIR__);
 require_once VS_ROOT . '/core/bootstrap.php';
 
-// 脚本后带路径段 = 代理调用；否则为接口列表
 $proxySlug = ApiProxy::resolveSlugFromRequest();
 if ($proxySlug !== '') {
     if (!InstallChecker::isInstalled()) {

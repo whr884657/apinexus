@@ -1,19 +1,25 @@
 <?php
 /**
  * 文件：core/ApiProxy.php
- * 作用：代理外链网关 —— PATH_INFO 路径样式公开地址跳转上游（302）
+ * 作用：代理外链网关 —— 路径样式公开地址跳转上游（302）
  *
- * 出站公开地址（不依赖伪静态）：
- *   /apis.php/{proxyslug}
- * 辅参仍用查询串：
- *   /apis.php/{短码}?foo=1
+ * 出站（美观、能省 .php 就省）：
+ *   /apis/{proxyslug}
+ * 辅参：
+ *   /apis/{短码}?foo=1
  *
- * 入站只认脚本后的路径段（PATH_INFO）；无路径段时不走网关。
- * 列表页：/apis 或 /apis.php（无 PATH_INFO）
+ * 入站：
+ *   1) /apis.php/{短码} 的 PATH_INFO（不依赖伪静态也能通）
+ *   2) 伪静态把 /apis/{短码} 落到本脚本后，从 PATH_INFO 或 REQUEST_URI 取短码
+ *
+ * 列表页：/apis 或 /apis.php（无短码路径段）
  */
 
 class ApiProxy
 {
+    /** 对外公开路径前缀（去 .php，美观） */
+    const PUBLIC_PREFIX = '/apis';
+
     /**
      * 根据短码查已通过且可访问的代理接口
      *
@@ -57,7 +63,7 @@ class ApiProxy
 
     /**
      * 当前请求的 PATH_INFO（如 /sjspks）
-     * 部分环境未传 PATH_INFO 时，从 REQUEST_URI 相对 SCRIPT_NAME 还原（仍是路径式，不是查询串）
+     * 部分环境未传 PATH_INFO 时，从 REQUEST_URI 相对 apis.php 还原
      *
      * @return string
      */
@@ -78,7 +84,6 @@ class ApiProxy
             return '';
         }
 
-        // 兼容子目录：SCRIPT_NAME=/sub/apis.php，URI=/sub/apis.php/abc
         $scriptBase = basename($script);
         $pos = strrpos($path, '/' . $scriptBase);
         if ($pos === false) {
@@ -92,26 +97,45 @@ class ApiProxy
     }
 
     /**
-     * 从 PATH_INFO 首段解析短码；无路径则返回空（走列表页）
+     * 解析代理短码：有路径段才算网关，否则为空（列表页）
      *
      * @return string
      */
     public static function resolveSlugFromRequest()
     {
         $info = self::requestPathInfo();
-        if ($info === '' || $info === '/') {
+        if ($info !== '' && $info !== '/') {
+            $parts = explode('/', trim($info, '/'));
+            if (isset($parts[0]) && $parts[0] !== '') {
+                $slug = self::normalizeSlug($parts[0]);
+                if ($slug !== '') {
+                    return $slug;
+                }
+            }
+        }
+
+        // 伪静态：浏览器地址是 /apis/短码，内部已落到 apis.php，但 PATH_INFO 可能为空
+        $script = isset($_SERVER['SCRIPT_NAME'])
+            ? basename(str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']))
+            : '';
+        if (strcasecmp($script, 'apis.php') !== 0) {
             return '';
         }
-        $parts = explode('/', trim($info, '/'));
-        if (!isset($parts[0]) || $parts[0] === '') {
+
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        $path = parse_url($uri, PHP_URL_PATH);
+        if (!is_string($path) || $path === '') {
             return '';
         }
-        return self::normalizeSlug($parts[0]);
+        // 仅匹配 /apis/{短码}；纯 /apis 不匹配 → 列表
+        if (preg_match('#/apis/([A-Za-z0-9]{3,64})/?$#', $path, $m)) {
+            return self::normalizeSlug($m[1]);
+        }
+
+        return '';
     }
 
     /**
-     * 当前请求是否应走代理网关（脚本后带有合法短码路径）
-     *
      * @return bool
      */
     public static function isGatewayRequest()
@@ -120,7 +144,7 @@ class ApiProxy
     }
 
     /**
-     * 处理 HTTP 请求：302 至上游（查询串全部原样附带）
+     * 处理 HTTP 请求：302 至上游（查询串原样附带）
      *
      * @param string|null $slug
      * @return void
@@ -165,7 +189,7 @@ class ApiProxy
     }
 
     /**
-     * 公开访问路径（站点内相对路径，不含域名）
+     * 公开访问路径（去 .php）
      *
      * @param string $slug
      * @return string
@@ -176,7 +200,7 @@ class ApiProxy
         if ($slug === '') {
             return '';
         }
-        return '/apis.php/' . $slug;
+        return self::PUBLIC_PREFIX . '/' . $slug;
     }
 
     /**
@@ -211,8 +235,6 @@ class ApiProxy
     }
 
     /**
-     * 生成未占用短码
-     *
      * @param int $len
      * @return string
      */

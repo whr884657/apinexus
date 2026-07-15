@@ -141,7 +141,7 @@ misc-api/
 ├── update-log.json             # 版本更新记录
 ├── 404.php                     # 全站 404（含安全法律提示）
 ├── index.php                   # 前台首页（主题驱动）
-├── apis.php                    # 全部接口列表 + PATH_INFO 网关 /apis.php/{短码}
+├── apis.php                    # 全部接口列表 + 网关（对外 /apis/{短码}）
 ├── articles.php                # 前台 · 文章
 ├── links.php                   # 前台 · 友情链接
 ├── sponsor.php                 # 前台 · 赞助
@@ -263,6 +263,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.15.0（2026-07-15）
+
+- **代理地址美观化**：出站改为 `/apis/{短码}`（能省 `.php` 就省）；`/apis.php/{短码}` 仍可用
+- **伪静态**：Nginx / Apache 将 `/apis/{短码}` 转到 `apis.php/{短码}`（PATH_INFO）
+- **需执行数据库结构更新**（`install/migrations/3.15.0.sql`）；并同步站点伪静态
 
 ### v3.14.0（2026-07-15）
 

@@ -274,7 +274,7 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 <input type="text" class="vs-input" id="userApiFormProxySlug" name="proxyslug" maxlength="64"
                        placeholder="例如 sjspks（3～64 位字母或数字）" pattern="[A-Za-z0-9]{3,64}"
                        autocomplete="off" <?php echo $canLocal ? '' : 'required'; ?>>
-                <p class="vs-form-hint">公开地址：<?php echo vs_e($iconBase); ?>/apis.php/短码</p>
+                <p class="vs-form-hint">公开地址：<?php echo vs_e($iconBase); ?>/apis/短码</p>
             </div>
 
             <div class="vs-form-row vs-form-row--2">

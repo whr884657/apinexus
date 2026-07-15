@@ -5,6 +5,9 @@
 
     # 禁止直接访问 config 目录
     RewriteRule ^config/ - [F,L]
+
+    # 美观网关：/apis/{短码} → apis.php/{短码}（PATH_INFO；列表 /apis 不匹配本规则）
+    RewriteRule ^apis/([a-z0-9]{3,64})/?$ apis.php/$1 [QSA,L]
 </IfModule>
 
 # 允许 /apis.php/短码 把多余路径交给 PHP（PATH_INFO）
