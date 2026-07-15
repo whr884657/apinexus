@@ -177,9 +177,11 @@ function vs_render_api_list_item(array $row)
             <span class="vs-api-list-status <?php echo $statusClass; ?>" data-field="status_label">
                 <?php echo vs_e($api['status_label']); ?>
             </span>
+            <?php if ($auditStatus !== ApiManager::AUDIT_APPROVED): ?>
             <span class="vs-api-list-audit <?php echo $auditClass; ?>" data-field="audit_label">
                 <?php echo vs_e(isset($api['audit_label']) ? $api['audit_label'] : ApiManager::auditStatusLabel($auditStatus)); ?>
             </span>
+            <?php endif; ?>
         </div>
         <div class="vs-api-list-row__actions">
             <button type="button" class="vs-btn vs-btn--default vs-api-list-action"

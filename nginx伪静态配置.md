@@ -1,6 +1,31 @@
-# misc-api Nginx rewrite
+# misc-api · Nginx 伪静态说明
 
-## Baota / panel — paste THIS only (no comments)
+本文说明：**该复制哪一段、贴到宝塔哪里、和原来的「去 .php」怎么共存。**  
+下面灰色代码框里是给 Nginx / 宝塔用的规则，**框内不要改、不要加中文**。
+
+---
+
+## 一、宝塔里贴哪里？
+
+1. 打开：**网站 → 你的站点 → 设置 → 伪静态**（或「配置文件」里对应站点的 rewrite 片段）。  
+2. 先看现有内容里有没有已经写好的：
+
+```nginx
+location / {
+    try_files $uri $uri/ $uri.php$is_args$args;
+}
+```
+
+3. 按下面「情况 A / B」复制对应代码块 → 保存 → **重载 Nginx**。  
+4. 浏览器测试：`https://你的域名/apis/已有短码`（应能跳转）；`/apis` 仍是接口列表。
+
+---
+
+## 二、该复制哪一段？
+
+### 情况 A：伪静态里**还没有** `location / { try_files ... }`
+
+整段复制下面（推荐）：
 
 ```nginx
 location ~ ^/apis/([a-z0-9]+)/?$ {
@@ -11,7 +36,9 @@ location / {
 }
 ```
 
-If your site already has `location / { try_files ... }`, paste ONLY this:
+### 情况 B：伪静态 / 站点配置里**已经有**上面的 `location / { try_files ... }`
+
+**只复制**下面这一段，并保证它出现在原来的 `location /` **上面**（写在文件更靠前的位置）：
 
 ```nginx
 location ~ ^/apis/([a-z0-9]+)/?$ {
@@ -19,28 +46,23 @@ location ~ ^/apis/([a-z0-9]+)/?$ {
 }
 ```
 
-Put it **above** the existing `location /` block (site config), or at the **top** of the rewrite file.
+---
 
-## Do NOT use
+## 三、复制时注意（常见翻车）
 
-```nginx
-# BAD: {3,64} is broken by Baota panel (strips braces) -> pcre missing )
-location ~ ^/apis/([a-z0-9]{3,64})/?$ { ... }
+1. **不要**在代码框内容里加中文注释，宝塔界面容易乱。  
+2. **不要**写成 `[a-z0-9]{3,64}` —— 宝塔保存时可能吃掉花括号，报 `pcre_compile() failed: missing )`。长度由 PHP 校验即可。  
+3. **不要**写成 `/apis.php/$1`（PATH_INFO）—— 很多面板的 PHP 规则只认「以 `.php` 结尾」的路径，会 404。必须用 `apis.php?_vs_slug=$1`。  
+4. 短码规则与原来的「全站去 .php」可同时存在：`/apis` 走列表，`/apis/短码` 走代理，`/articles` 等仍走 `try_files`。
 
-# BAD: PATH_INFO style — many panels match only URI ending with .php
-rewrite ... /apis.php/$1 last;
-```
+---
 
-## Behavior
+## 四、地址对照（方便自测）
 
-| URL | Result |
-|-----|--------|
-| `/apis` | list page via try_files |
-| `/apis/slug` | proxy via `_vs_slug` |
-| `/articles` | try_files as before |
+| 浏览器地址 | 作用 |
+|------------|------|
+| `/apis` | 全部接口列表 |
+| `/apis/短码` | 代理外链（内部用 `_vs_slug`，地址栏仍好看） |
+| `/articles` 等 | 和以前一样，走去 `.php` 的 `try_files` |
 
-Slug length is validated in PHP (3-64). Nginx only needs `[a-z0-9]+`.
-
-## After paste
-
-Reload nginx. Test: `/apis/your-slug`
+保存、重载后仍异常时：先确认伪静态已生效，再确认短码那段是否在 `location /` 之前。

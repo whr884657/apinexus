@@ -176,7 +176,7 @@
                 fd.append(key, payload[key]);
             });
         }
-        return window.VS.postForm(fd, window.location.pathname);
+        return window.VS.postForm(fd);
     }
 
     function escapeHtml(text) {
@@ -334,7 +334,9 @@
         html += '<div class="vs-api-list-row__key" data-field="needkey_label">' + escapeHtml(api.needkey_label || requireKeyLabel(api.needkey)) + '</div>';
         html += '<div class="vs-api-list-row__status">';
         html += '<span class="vs-api-list-status ' + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span>';
-        html += '<span class="vs-api-list-audit ' + auditClass(audit) + '" data-field="audit_label">' + escapeHtml(api.audit_label || '') + '</span>';
+        if (audit !== 1) {
+            html += '<span class="vs-api-list-audit ' + auditClass(audit) + '" data-field="audit_label">' + escapeHtml(api.audit_label || '') + '</span>';
+        }
         html += '</div>';
         html += '<div class="vs-api-list-row__actions">' + buildActionButtons(api) + '</div>';
         html += '</div>';
@@ -439,9 +441,19 @@
             statusEl.textContent = api.status_label || String(normalizeStatus(api.status));
             statusEl.className = 'vs-api-list-status ' + statusClass(api.status);
         }
+        var statusWrap = rowEl.querySelector('.vs-api-list-row__status');
         var auditEl = rowEl.querySelector('[data-field="audit_label"]');
-        if (auditEl) {
-            var audit = normalizeAudit(api.audit);
+        var audit = normalizeAudit(api.audit);
+        if (audit === 1) {
+            if (auditEl && auditEl.parentNode) {
+                auditEl.parentNode.removeChild(auditEl);
+            }
+        } else if (statusWrap) {
+            if (!auditEl) {
+                auditEl = document.createElement('span');
+                auditEl.setAttribute('data-field', 'audit_label');
+                statusWrap.appendChild(auditEl);
+            }
             auditEl.textContent = api.audit_label || '';
             auditEl.className = 'vs-api-list-audit ' + auditClass(audit);
         }

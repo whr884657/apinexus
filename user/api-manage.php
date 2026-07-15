@@ -159,9 +159,22 @@ function vs_render_user_api_item(array $row)
         <div class="vs-user-api-row__main">
             <div class="vs-user-api-row__title">
                 <strong data-field="name"><?php echo vs_e($api['name']); ?></strong>
-                <span class="vs-api-list-audit <?php echo vs_e($api['audit_class']); ?>" data-field="audit_label">
-                    <?php echo vs_e($api['audit_label']); ?>
-                </span>
+                <?php if ((int) $api['audit'] === ApiManager::AUDIT_APPROVED): ?>
+                    <?php
+                    $rowStatus = isset($api['status']) ? (int) $api['status'] : ApiManager::STATUS_NORMAL;
+                    $rowStatusClass = 'is-normal';
+                    if ($rowStatus === ApiManager::STATUS_DISABLED) {
+                        $rowStatusClass = 'is-disabled';
+                    } elseif ($rowStatus === ApiManager::STATUS_MAINTENANCE) {
+                        $rowStatusClass = 'is-maintenance';
+                    }
+                    ?>
+                    <span class="vs-api-list-status <?php echo $rowStatusClass; ?>" data-field="status_label"><?php echo vs_e($api['status_label']); ?></span>
+                <?php else: ?>
+                    <span class="vs-api-list-audit <?php echo vs_e($api['audit_class']); ?>" data-field="audit_label">
+                        <?php echo vs_e($api['audit_label']); ?>
+                    </span>
+                <?php endif; ?>
                 <?php if (!empty($api['apitype_label'])): ?>
                     <span class="vs-user-api-type"><?php echo vs_e($api['apitype_label']); ?></span>
                 <?php endif; ?>
@@ -345,14 +358,30 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
 }
 .vs-user-api-row__main { flex: 1; min-width: 0; }
 .vs-user-api-row__title { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
-.vs-user-api-row__meta { font-size: 13px; color: #64748b; word-break: break-all; }
+.vs-user-api-row__meta { font-size: 13px; color: #64748b; word-break: break-all; line-height: 1.5; }
 .vs-user-api-row__reason { margin: 8px 0 0; font-size: 13px; color: #b45309; }
-.vs-user-api-row__actions { display: flex; gap: 8px; flex-shrink: 0; }
+.vs-user-api-row__actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 .vs-user-api-type {
     font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: #475569;
 }
 @media (max-width: 640px) {
-    .vs-user-api-row { flex-direction: column; }
+    .vs-user-api-row {
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px;
+    }
+    .vs-user-api-row__actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .vs-user-api-row__actions .vs-btn {
+        width: 100%;
+    }
+    .vs-user-api-row__meta {
+        font-size: 12px;
+    }
 }
 </style>
 <?php endif; ?>

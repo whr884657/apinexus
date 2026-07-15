@@ -118,7 +118,7 @@
                 fd.append(key, payload[key]);
             });
         }
-        return window.VS.postForm(fd, window.location.pathname);
+        return window.VS.postForm(fd);
     }
 
     function getSelectedIconUrl() {
@@ -181,8 +181,20 @@
         html += '<div class="vs-user-api-row__main">';
         html += '<div class="vs-user-api-row__title">';
         html += '<strong data-field="name">' + escapeHtml(api.name || '') + '</strong>';
-        html += '<span class="vs-api-list-audit ' + auditClass(api.audit) + '" data-field="audit_label">'
-            + escapeHtml(api.audit_label || '') + '</span>';
+        if (parseInt(api.audit, 10) === 1) {
+            var st = parseInt(api.status, 10);
+            var stClass = 'is-normal';
+            if (st === 1) {
+                stClass = 'is-disabled';
+            } else if (st === 2) {
+                stClass = 'is-maintenance';
+            }
+            html += '<span class="vs-api-list-status ' + stClass + '" data-field="status_label">'
+                + escapeHtml(api.status_label || '正常') + '</span>';
+        } else {
+            html += '<span class="vs-api-list-audit ' + auditClass(api.audit) + '" data-field="audit_label">'
+                + escapeHtml(api.audit_label || '') + '</span>';
+        }
         if (api.apitype_label) {
             html += '<span class="vs-user-api-type">' + escapeHtml(api.apitype_label) + '</span>';
         }
@@ -232,7 +244,7 @@
         }
         setApiType(canLocal ? 0 : 1);
         if (iconCtl) {
-            iconCtl.select(defaultIcons.length ? defaultIcons[0] : '');
+            iconCtl.setSelected(defaultIcons.length ? defaultIcons[0] : '');
         }
         if (iconUrlInput) {
             iconUrlInput.value = '';
@@ -277,12 +289,12 @@
             if (raw && /^https?:\/\//i.test(raw)) {
                 iconUrlInput.value = raw;
                 if (iconCtl) {
-                    iconCtl.select('');
+                    iconCtl.setSelected('');
                 }
             } else {
                 iconUrlInput.value = '';
                 if (iconCtl) {
-                    iconCtl.select(api.icon || (defaultIcons[0] || ''));
+                    iconCtl.setSelected(api.icon || (defaultIcons[0] || ''));
                 }
             }
         }
