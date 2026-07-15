@@ -148,6 +148,8 @@ class DatabaseMigrator
         if (!in_array('3.11.0', $applied, true) && self::tableColumnExists('api', 'proxyslug')) {
             self::markApplied('3.11.0');
         }
+
+        // 新装无历史 /proxy.php?s= 地址时，3.12.0 的 UPDATE 幂等，不强制跳过
     }
 
     /**
