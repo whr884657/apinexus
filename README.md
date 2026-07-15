@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.17.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.17.2-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -273,6 +273,10 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.17.2（2026-07-15）
+
+- **接口审核**：修复通过/不通过无响应；仅列开发者投稿；筛选含「全部」，默认待审核
 
 ### v3.17.1（2026-07-15）
 

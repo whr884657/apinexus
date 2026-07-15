@@ -45,8 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create') {
         $data = $payloadFromPost();
-        $admin = Auth::user();
-        $data['userid'] = ($admin && !empty($admin['binduid'])) ? (int) $admin['binduid'] : 0;
+        // 管理员后台发布不挂投稿用户，避免出现在「接口审核」
+        $data['userid'] = 0;
         // 管理员后台发布：默认审核通过
         $data['audit'] = ApiManager::AUDIT_APPROVED;
         $result = ApiManager::create($data);

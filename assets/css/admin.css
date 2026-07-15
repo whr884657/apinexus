@@ -2457,15 +2457,17 @@ select.vs-input.vs-select {
 .vs-api-review-endpoint,
 .vs-api-review-desc,
 .vs-api-review-meta,
-.vs-api-review-reject {
+.vs-api-review-reason {
     margin-top: 4px;
     font-size: 12px;
     color: var(--vs-text-secondary);
     line-height: 1.5;
+    word-break: break-all;
 }
 
-.vs-api-review-reject {
+.vs-api-review-reason {
     color: #b91c1c;
+    word-break: break-word;
 }
 
 .vs-api-review-actions {

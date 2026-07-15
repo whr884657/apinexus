@@ -232,11 +232,21 @@ class ApiManager
      */
     public static function listByAudit($auditStatus = null)
     {
-        $opts = array();
+        $opts = array('user_submitted' => true);
         if ($auditStatus !== null && $auditStatus !== '') {
             $opts['audit'] = $auditStatus;
         }
         return self::listFiltered($opts);
+    }
+
+    /**
+     * 审核页列表：仅开发者投稿，不含管理员后台直接发布
+     *
+     * @return array
+     */
+    public static function listForReview()
+    {
+        return self::listFiltered(array('user_submitted' => true));
     }
 
     /**
@@ -306,6 +316,9 @@ class ApiManager
             if (isset($opts['userid']) && (int) $opts['userid'] > 0) {
                 $where[] = 'a.`userid` = ?';
                 $params[] = (int) $opts['userid'];
+            } elseif (!empty($opts['user_submitted'])) {
+                // 仅开发者投稿（userid>0）；管理员在「接口列表」发布的不进审核页
+                $where[] = 'a.`userid` > 0';
             }
 
             if (count($where) > 0) {
