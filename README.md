@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.17.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.17.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -273,6 +273,10 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.17.1（2026-07-15）
+
+- **忘记密码 / 改密**：修复邮箱大小写、rowCount 误失败、中文用户名与头像校验拖垮保存等问题（主题 UI 共用核心 `UserAuth`）
 
 ### v3.17.0（2026-07-15）
 

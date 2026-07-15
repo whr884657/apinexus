@@ -85,6 +85,32 @@
                 submitBtn.disabled = true;
             }
 
+            if (form.id === 'accountForm') {
+                var newPwd = form.querySelector('[name="new_password"]');
+                var newPwd2 = form.querySelector('[name="new_password2"]');
+                var oldPwd = form.querySelector('[name="old_password"]');
+                var np = newPwd ? newPwd.value : '';
+                var np2 = newPwd2 ? newPwd2.value : '';
+                var op = oldPwd ? oldPwd.value : '';
+                if (np !== '' || np2 !== '' || op !== '') {
+                    if (np.length < 6) {
+                        window.VS.showMessage('新密码至少 6 个字符', 'error');
+                        if (submitBtn) submitBtn.disabled = false;
+                        return;
+                    }
+                    if (np !== np2) {
+                        window.VS.showMessage('两次输入的新密码不一致', 'error');
+                        if (submitBtn) submitBtn.disabled = false;
+                        return;
+                    }
+                    if (!op) {
+                        window.VS.showMessage('修改密码需输入当前密码', 'error');
+                        if (submitBtn) submitBtn.disabled = false;
+                        return;
+                    }
+                }
+            }
+
             window.VS.postForm(form)
                 .then(function (data) {
                     if (data.code !== 1) {

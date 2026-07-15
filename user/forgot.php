@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请输入有效的邮箱地址'));
         }
+        $email = vs_normalize_email($email);
 
         $mailLimitMsg = AuthSecurity::checkMailCodeAllowed($email);
         if ($mailLimitMsg !== null) {
@@ -54,8 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if ($user) {
                 $code = (string) random_int(100000, 999999);
+                $emailCanonical = vs_normalize_email(isset($user['email']) ? $user['email'] : $email);
                 $_SESSION['user_reset_id'] = (int) $user['id'];
-                $_SESSION['user_reset_email'] = $email;
+                $_SESSION['user_reset_email'] = $emailCanonical;
                 $_SESSION['user_reset_code'] = $code;
                 $_SESSION['user_reset_code_expires'] = time() + $codeTtl;
 
@@ -66,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $body .= '<p>验证码 ' . (int) ($codeTtl / 60) . ' 分钟内有效，请勿泄露给他人。</p>';
                 $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
 
-                Mailer::send($email, $siteName . ' 密码重置验证码', $body);
+                Mailer::send($emailCanonical, $siteName . ' 密码重置验证码', $body);
             }
 
             vs_auth_json_mail($mailPurpose, array(
@@ -99,6 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             vs_auth_json(array('code' => 0, 'msg' => '请输入有效的邮箱地址'));
         }
+        $email = vs_normalize_email($email);
         if ($code === '') {
             vs_auth_json(array('code' => 0, 'msg' => '请输入验证码'));
         }
@@ -109,15 +112,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vs_auth_json(array('code' => 0, 'msg' => '两次输入的密码不一致'));
         }
 
-        $savedEmail = isset($_SESSION['user_reset_email']) ? $_SESSION['user_reset_email'] : '';
-        $savedCode = isset($_SESSION['user_reset_code']) ? $_SESSION['user_reset_code'] : '';
+        $savedEmail = isset($_SESSION['user_reset_email']) ? vs_normalize_email($_SESSION['user_reset_email']) : '';
+        $savedCode = isset($_SESSION['user_reset_code']) ? (string) $_SESSION['user_reset_code'] : '';
         $expires = isset($_SESSION['user_reset_code_expires']) ? (int) $_SESSION['user_reset_code_expires'] : 0;
         $userId = isset($_SESSION['user_reset_id']) ? (int) $_SESSION['user_reset_id'] : 0;
 
         if ($savedEmail === '' || $savedCode === '' || $expires < time() || $userId <= 0) {
             vs_auth_json(array('code' => 0, 'msg' => '验证码已过期，请重新获取'));
         }
-        if ($email !== $savedEmail || $code !== $savedCode) {
+        if ($email !== $savedEmail || !hash_equals($savedCode, $code)) {
             vs_auth_json(array('code' => 0, 'msg' => '邮箱或验证码错误'));
         }
 
@@ -137,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         vs_auth_json(array(
             'code' => 1,
             'msg'  => '密码重置成功，请使用新密码登录',
-            'url'  => $base . '/user/login.php',
+            'url'  => $base . '/user/login',
         ));
     }
 

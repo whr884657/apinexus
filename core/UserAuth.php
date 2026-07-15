@@ -294,10 +294,10 @@ class UserAuth
         if ($username === '') {
             return '用户名不能为空';
         }
-        if (strlen($username) < 3) {
+        if (vs_unicode_len($username) < 3) {
             return '用户名至少 3 个字符';
         }
-        if (strlen($username) > 50) {
+        if (vs_unicode_len($username) > 50) {
             return '用户名不能超过 50 个字符';
         }
         if (!preg_match('/^[a-zA-Z0-9_\x{4e00}-\x{9fa5}]+$/u', $username)) {
@@ -306,6 +306,7 @@ class UserAuth
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return '邮箱格式不正确';
         }
+        $email = vs_normalize_email($email);
         $suffixMsg = RegisterPolicy::validateEmailSuffix($email);
         if ($suffixMsg !== null) {
             return $suffixMsg;
@@ -324,7 +325,7 @@ class UserAuth
                 return '用户名已被占用';
             }
 
-            $stmt = $pdo->prepare('SELECT `id` FROM `' . $table . '` WHERE `email` = ? LIMIT 1');
+            $stmt = $pdo->prepare('SELECT `id` FROM `' . $table . '` WHERE LOWER(`email`) = ? LIMIT 1');
             $stmt->execute(array($email));
             if ($stmt->fetch()) {
                 return '该邮箱已注册';
@@ -358,10 +359,16 @@ class UserAuth
         try {
             $pdo = Database::connect();
             $table = Database::table('user');
+            $hash = vs_password_hash($newPassword);
             $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `password` = ? WHERE `id` = ? AND `status` = 1');
-            $stmt->execute(array(vs_password_hash($newPassword), $userId));
+            $stmt->execute(array($hash, $userId));
 
-            return $stmt->rowCount() > 0;
+            // MySQL 在新旧值相同时 rowCount 可能为 0，不能据此判定失败
+            $check = $pdo->prepare('SELECT `password` FROM `' . $table . '` WHERE `id` = ? AND `status` = 1 LIMIT 1');
+            $check->execute(array($userId));
+            $row = $check->fetch(PDO::FETCH_ASSOC);
+
+            return is_array($row) && hash_equals((string) $row['password'], $hash);
         } catch (Exception $e) {
             return false;
         }
@@ -375,7 +382,7 @@ class UserAuth
      */
     public static function findByEmail($email)
     {
-        $email = trim((string) $email);
+        $email = vs_normalize_email($email);
         if ($email === '') {
             return null;
         }
@@ -383,7 +390,9 @@ class UserAuth
         try {
             $pdo = Database::connect();
             $table = Database::table('user');
-            $stmt = $pdo->prepare('SELECT `id`, `username`, `email` FROM `' . $table . '` WHERE `email` = ? AND `status` = 1 LIMIT 1');
+            $stmt = $pdo->prepare(
+                'SELECT `id`, `username`, `email` FROM `' . $table . '` WHERE LOWER(`email`) = ? AND `status` = 1 LIMIT 1'
+            );
             $stmt->execute(array($email));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -412,8 +421,8 @@ class UserAuth
                 return '用户名已被占用';
             }
 
-            $stmt = $pdo->prepare('SELECT `id` FROM `' . $table . '` WHERE `email` = ? LIMIT 1');
-            $stmt->execute(array(trim($email)));
+            $stmt = $pdo->prepare('SELECT `id` FROM `' . $table . '` WHERE LOWER(`email`) = ? LIMIT 1');
+            $stmt->execute(array(vs_normalize_email($email)));
             if ($stmt->fetch()) {
                 return '该邮箱已注册';
             }
@@ -445,10 +454,10 @@ class UserAuth
             if ($username === '') {
                 return '用户名不能为空';
             }
-            if (strlen($username) < 3) {
+            if (vs_unicode_len($username) < 3) {
                 return '用户名至少 3 个字符';
             }
-            if (strlen($username) > 50) {
+            if (vs_unicode_len($username) > 50) {
                 return '用户名不能超过 50 个字符';
             }
             if (!preg_match('/^[a-zA-Z0-9_\x{4e00}-\x{9fa5}]+$/u', $username)) {
@@ -456,13 +465,13 @@ class UserAuth
             }
         }
 
-        $email = trim($email);
+        $email = vs_normalize_email($email);
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return '邮箱格式不正确';
         }
 
         $avatarUrl = $avatarUrl === null ? null : trim((string) $avatarUrl);
-        if ($avatarUrl !== null && $avatarUrl !== '' && !filter_var($avatarUrl, FILTER_VALIDATE_URL)) {
+        if ($avatarUrl !== null && $avatarUrl !== '' && !vs_is_allowed_avatar_url($avatarUrl)) {
             return '头像链接格式不正确';
         }
 
@@ -479,8 +488,8 @@ class UserAuth
                 $table = Database::table('user');
                 $stmt = $pdo->prepare('SELECT `password` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
                 $stmt->execute(array(self::id()));
-                $row = $stmt->fetch();
-                if (!$row || $row['password'] !== vs_password_hash($oldPassword)) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$row || !hash_equals((string) $row['password'], vs_password_hash($oldPassword))) {
                     return '当前密码不正确';
                 }
             } catch (Exception $e) {
@@ -500,7 +509,7 @@ class UserAuth
                 }
             }
 
-            $checkEmail = $pdo->prepare('SELECT `id` FROM `' . $table . '` WHERE `email` = ? AND `id` != ? LIMIT 1');
+            $checkEmail = $pdo->prepare('SELECT `id` FROM `' . $table . '` WHERE LOWER(`email`) = ? AND `id` != ? LIMIT 1');
             $checkEmail->execute(array($email, self::id()));
             if ($checkEmail->fetch()) {
                 return '该邮箱已被其他账号使用';

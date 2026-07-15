@@ -206,21 +206,21 @@ class Auth
             if ($username === '') {
                 return '用户名不能为空';
             }
-            if (strlen($username) < 3) {
+            if (vs_unicode_len($username) < 3) {
                 return '用户名至少 3 个字符';
             }
-            if (strlen($username) > 50) {
+            if (vs_unicode_len($username) > 50) {
                 return '用户名不能超过 50 个字符';
             }
         }
 
-        $email = trim($email);
+        $email = vs_normalize_email($email);
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return '邮箱格式不正确';
         }
 
         $avatarUrl = $avatarUrl === null ? null : trim((string) $avatarUrl);
-        if ($avatarUrl !== null && $avatarUrl !== '' && !filter_var($avatarUrl, FILTER_VALIDATE_URL)) {
+        if ($avatarUrl !== null && $avatarUrl !== '' && !vs_is_allowed_avatar_url($avatarUrl)) {
             return '头像链接格式不正确';
         }
 
@@ -237,8 +237,8 @@ class Auth
                 $table = Database::table('admin');
                 $stmt = $pdo->prepare('SELECT `password` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
                 $stmt->execute(array(self::id()));
-                $row = $stmt->fetch();
-                if (!$row || $row['password'] !== vs_password_hash($oldPassword)) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$row || !hash_equals((string) $row['password'], vs_password_hash($oldPassword))) {
                     return '当前密码不正确';
                 }
             } catch (Exception $e) {
@@ -305,11 +305,16 @@ class Auth
         try {
             $pdo = Database::connect();
             $adminTable = Database::table('admin');
+            $hash = vs_password_hash($newPassword);
 
             $stmt = $pdo->prepare('UPDATE `' . $adminTable . '` SET `password` = ? WHERE `id` = ? AND `status` = 1');
-            $stmt->execute(array(vs_password_hash($newPassword), $adminId));
+            $stmt->execute(array($hash, $adminId));
 
-            return $stmt->rowCount() > 0;
+            $check = $pdo->prepare('SELECT `password` FROM `' . $adminTable . '` WHERE `id` = ? AND `status` = 1 LIMIT 1');
+            $check->execute(array($adminId));
+            $row = $check->fetch(PDO::FETCH_ASSOC);
+
+            return is_array($row) && hash_equals((string) $row['password'], $hash);
         } catch (Exception $e) {
             return false;
         }

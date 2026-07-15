@@ -117,6 +117,19 @@ ThemeManager::renderThemeAuthHead('忘记密码');
         }
     }
 
+    function parseResponse(res) {
+        return res.text().then(function (text) {
+            if (window.VS && typeof window.VS.parseJsonResponse === 'function') {
+                var data = window.VS.parseJsonResponse(text);
+                if (!data) {
+                    throw new Error('invalid_json');
+                }
+                return data;
+            }
+            return JSON.parse(text);
+        });
+    }
+
     if (sendCodeBtn) {
         sendCodeBtn.addEventListener('click', function () {
             hideMessage();
@@ -150,7 +163,7 @@ ThemeManager::renderThemeAuthHead('忘记密码');
                 body: body,
                 credentials: 'same-origin'
             })
-                .then(function (res) { return res.json(); })
+                .then(parseResponse)
                 .then(function (data) {
                     applyMailTicket(data);
                     if (data.code === 1) {
@@ -209,7 +222,7 @@ ThemeManager::renderThemeAuthHead('忘记密码');
             body: body,
             credentials: 'same-origin'
         })
-            .then(function (res) { return res.json(); })
+            .then(parseResponse)
             .then(function (data) {
                 if (data.code === 1) {
                     showMessage(data.msg || '重置成功', 'success');

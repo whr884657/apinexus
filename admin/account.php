@@ -79,15 +79,15 @@ vs_admin_layout_start('账号设置', 'account');
     <?php endif; ?>
 
     <div class="vs-account-shell">
-    <form method="post" action="" class="vs-form vs-account-form" id="accountForm" data-ajax="1">
+    <form method="post" action="" class="vs-form vs-account-form" id="accountForm" data-ajax="1" novalidate>
         <div class="vs-account-form__layout">
             <aside class="vs-account-form__aside">
                 <div class="vs-account-avatar">
                     <img src="<?php echo vs_e($avatarPreview); ?>" alt="" class="vs-account-avatar__img" id="avatarPreview"
                          data-fallback="<?php echo vs_e(UserAvatar::localRandomAvatar($vsAdmin ? (int) $vsAdmin['id'] : 0)); ?>">
                     <label class="vs-label vs-account-avatar__label">头像链接</label>
-                    <input type="url" name="avatar" id="avatarUrlInput" class="vs-input"
-                           value="<?php echo vs_e($avatarUrl); ?>" placeholder="https://example.com/avatar.jpg">
+                    <input type="text" name="avatar" id="avatarUrlInput" class="vs-input"
+                           value="<?php echo vs_e($avatarUrl); ?>" placeholder="https://example.com/avatar.jpg" maxlength="500" inputmode="url" autocomplete="off">
                     <?php vs_render_notice('tip', '', '输入图片 URL，留空则使用默认头像', array('field' => true, 'compact' => true)); ?>
                 </div>
             </aside>

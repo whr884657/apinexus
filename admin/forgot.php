@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请输入有效的邮箱地址'));
         }
+        $email = vs_normalize_email($email);
 
         $mailLimitMsg = AuthSecurity::checkMailCodeAllowed($email);
         if ($mailLimitMsg !== null) {
@@ -54,14 +55,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         try {
             $pdo = Database::connect();
             $table = Database::table('admin');
-            $stmt = $pdo->prepare('SELECT `id`, `username`, `email` FROM `' . $table . '` WHERE `email` = ? AND `status` = 1 LIMIT 1');
+            $stmt = $pdo->prepare(
+                'SELECT `id`, `username`, `email` FROM `' . $table . '` WHERE LOWER(`email`) = ? AND `status` = 1 LIMIT 1'
+            );
             $stmt->execute(array($email));
             $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($admin) {
                 $code = (string) random_int(100000, 999999);
+                $emailCanonical = vs_normalize_email(isset($admin['email']) ? $admin['email'] : $email);
                 $_SESSION['reset_admin_id'] = (int) $admin['id'];
-                $_SESSION['reset_email'] = $email;
+                $_SESSION['reset_email'] = $emailCanonical;
                 $_SESSION['reset_code'] = $code;
                 $_SESSION['reset_code_expires'] = time() + $codeTtl;
 
@@ -72,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $body .= '<p>验证码 ' . (int) ($codeTtl / 60) . ' 分钟内有效，请勿泄露给他人。</p>';
                 $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
 
-                Mailer::send($email, $siteName . ' 密码重置验证码', $body);
+                Mailer::send($emailCanonical, $siteName . ' 密码重置验证码', $body);
             }
 
             vs_auth_json_mail($mailPurpose, array(
@@ -101,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             vs_auth_json(array('code' => 0, 'msg' => '请输入有效的邮箱地址'));
         }
+        $email = vs_normalize_email($email);
         if ($code === '') {
             vs_auth_json(array('code' => 0, 'msg' => '请输入验证码'));
         }
@@ -111,15 +116,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vs_auth_json(array('code' => 0, 'msg' => '两次输入的密码不一致'));
         }
 
-        $savedEmail = isset($_SESSION['reset_email']) ? $_SESSION['reset_email'] : '';
-        $savedCode = isset($_SESSION['reset_code']) ? $_SESSION['reset_code'] : '';
+        $savedEmail = isset($_SESSION['reset_email']) ? vs_normalize_email($_SESSION['reset_email']) : '';
+        $savedCode = isset($_SESSION['reset_code']) ? (string) $_SESSION['reset_code'] : '';
         $expires = isset($_SESSION['reset_code_expires']) ? (int) $_SESSION['reset_code_expires'] : 0;
         $adminId = isset($_SESSION['reset_admin_id']) ? (int) $_SESSION['reset_admin_id'] : 0;
 
         if ($savedEmail === '' || $savedCode === '' || $expires < time() || $adminId <= 0) {
             vs_auth_json(array('code' => 0, 'msg' => '验证码已过期，请重新获取'));
         }
-        if ($email !== $savedEmail || $code !== $savedCode) {
+        if ($email !== $savedEmail || !hash_equals($savedCode, $code)) {
             vs_auth_json(array('code' => 0, 'msg' => '邮箱或验证码错误'));
         }
 
@@ -139,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         vs_auth_json(array(
             'code' => 1,
             'msg'  => '密码重置成功，请使用新密码登录',
-            'url'  => $base . '/admin/login.php',
+            'url'  => $base . '/admin/login',
         ));
     }
 
@@ -266,6 +271,19 @@ vs_auth_head('忘记密码');
         }
     }
 
+    function parseResponse(res) {
+        return res.text().then(function (text) {
+            if (window.VS && typeof window.VS.parseJsonResponse === 'function') {
+                var data = window.VS.parseJsonResponse(text);
+                if (!data) {
+                    throw new Error('invalid_json');
+                }
+                return data;
+            }
+            return JSON.parse(text);
+        });
+    }
+
     if (sendCodeBtn) {
         sendCodeBtn.addEventListener('click', function () {
             hideMessage();
@@ -301,7 +319,7 @@ vs_auth_head('忘记密码');
                 body: body,
                 credentials: 'same-origin'
             })
-                .then(function (res) { return res.json(); })
+                .then(parseResponse)
                 .then(function (data) {
                     applyMailTicket(data);
                     if (data.code === 1) {
@@ -364,7 +382,7 @@ vs_auth_head('忘记密码');
             body: body,
             credentials: 'same-origin'
         })
-            .then(function (res) { return res.json(); })
+            .then(parseResponse)
             .then(function (data) {
                 if (data.code === 1) {
                     showMessage(data.msg || '重置成功', 'success');
