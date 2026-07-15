@@ -3,30 +3,11 @@
     RewriteEngine On
     RewriteBase /
 
-    # 禁止直接访问 config 目录
     RewriteRule ^config/ - [F,L]
 
-    # 代理美观地址：/apis/{短码} → apis.php?_vs_slug=短码
-    # （不要写成 apis.php/短码：多数环境 PHP 规则只认以 .php 结尾，PATH_INFO 会 404）
-    RewriteRule ^apis/([a-z0-9]{3,64})/?$ apis.php?_vs_slug=$1 [QSA,L]
+    # /apis/{slug} -> apis.php?_vs_slug= (no {n,m} quantifiers)
+    RewriteRule ^apis/([a-z0-9]+)/?$ apis.php?_vs_slug=$1 [QSA,L]
 </IfModule>
 
-# 可选：若坚持用 /apis.php/短码（PATH_INFO）可开启
-<IfModule mod_cgi.c>
-    AcceptPathInfo On
-</IfModule>
-<IfModule mod_php.c>
-    AcceptPathInfo On
-</IfModule>
-<IfModule mod_php7.c>
-    AcceptPathInfo On
-</IfModule>
-<IfModule mod_php8.c>
-    AcceptPathInfo On
-</IfModule>
-
-# 404 错误页
 ErrorDocument 404 /404.php
-
-# 禁止目录浏览
 Options -Indexes

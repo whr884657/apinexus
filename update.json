@@ -1,12 +1,11 @@
 {
-    "version": "3.16.0",
-    "title": "misc-api 3.16.0 代理伪静态改用面板兼容写法",
+    "version": "3.16.1",
+    "title": "misc-api 3.16.1 修复宝塔伪静态花括号导致保存失败",
     "release_date": "2026-07-15",
     "db_changes": false,
     "changes": [
-        "代理伪静态改为 /apis/{短码} → /apis.php?_vs_slug=短码（兼容宝塔等仅匹配 *.php 的规则）",
-        "保留原有 try_files 去 .php；列表 /apis 与代理 /apis/短码 互不冲突",
-        "跳转上游时剔除内部参数 _vs_slug；nginx伪静态配置.md 随包发布"
+        "伪静态正则去掉 {3,64}（宝塔会吞花括号导致 pcre missing )）",
+        "nginx伪静态配置.md / README 提供可直接粘贴的纯英文规则，无中文注释"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

@@ -232,28 +232,25 @@ misc-api/
 
 项目根目录 `.htaccess` 已含：全站可用规则 + `/apis/{短码}` → `apis.php?_vs_slug=短码`。启用 `mod_rewrite` 即可。
 
-### Nginx（须同时保留「去 .php」与「代理短码」）
+### Nginx（宝塔「伪静态」请只粘贴英文规则，不要带中文注释）
+
+**可直接粘贴（推荐完整）：**
 
 ```nginx
-# 1) 代理美观地址 —— 写在 location / 之前
-# 不要写成 /apis.php/$1（多数面板 PHP 只认以 .php 结尾，PATH_INFO 会 404）
-location ~ ^/apis/([a-z0-9]{3,64})/?$ {
-    rewrite ^/apis/([a-z0-9]{3,64})/?$ /apis.php?_vs_slug=$1 last;
+location ~ ^/apis/([a-z0-9]+)/?$ {
+    rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
-
-# 2) 全站去 .php（原有规则务必保留）
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
 }
 ```
 
-| 地址 | 结果 |
-|------|------|
-| `/apis` | 全部接口列表 |
-| `/apis/{短码}` | 代理网关 |
-| `/articles` 等 | 仍走第 2 条 `try_files` |
+若站点配置里已有 `location / { try_files ... }`，只追加第一段 `location ~ ^/apis/...`，并放在 `location /` **上面**。
 
-更完整说明见根目录 [`nginx伪静态配置.md`](nginx伪静态配置.md)。
+> **注意：** 不要写 `[a-z0-9]{3,64}`。宝塔伪静态保存时会吞掉 `{…}`，正则变成 `^/apis/([a-z0-9]` 导致 `pcre_compile() failed: missing )`。长度校验由 PHP 完成即可。  
+> **注意：** 不要 rewrite 到 `/apis.php/$1`（PATH_INFO），面板 PHP 常只匹配以 `.php` 结尾的 URI。
+
+详情见 [`nginx伪静态配置.md`](nginx伪静态配置.md)。
 
 ---
 
@@ -276,6 +273,10 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.16.1（2026-07-15）
+
+- **宝塔伪静态**：去掉正则 `{3,64}`（面板会吞花括号导致无法保存）；文档改为可直接粘贴的纯英文规则
 
 ### v3.16.0（2026-07-15）
 
