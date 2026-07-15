@@ -221,7 +221,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `UserAvatar.php` | 用户头像 URL 解析 |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
-| `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站 PATH_INFO + 伪静态 |
+| `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表（**主题向**） |
@@ -849,7 +849,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 | 按钮样式 | `开发规范/按钮样式规范.md`（本地维护） |
 | 界面提示 / Toast | `开发规范/界面提示规范.md` §8（本地维护） |
 | 界面勿泄露实现细节 | `开发规范/界面勿泄露实现细节.md`（禁止把库枚举写到页面） |
-| 查询串转路径样式 | `开发规范/查询串转路径样式规范.md`（PATH_INFO / 伪静态出站入站约定） |
+| 查询串转路径样式 | `开发规范/查询串转路径样式规范.md`（层 B 伪静态须用 `?_vs_slug=` 内部参数，忌 PATH_INFO rewrite） |
 | 版本记录 | `update-log.json`、`发行说明/` |
 
 ---

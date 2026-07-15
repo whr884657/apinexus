@@ -230,17 +230,30 @@ misc-api/
 
 ### Apache
 
-项目根目录已包含 `.htaccess` 推荐配置，启用 `mod_rewrite` 即可。
+项目根目录 `.htaccess` 已含：全站可用规则 + `/apis/{短码}` → `apis.php?_vs_slug=短码`。启用 `mod_rewrite` 即可。
 
-### Nginx
+### Nginx（须同时保留「去 .php」与「代理短码」）
 
 ```nginx
+# 1) 代理美观地址 —— 写在 location / 之前
+# 不要写成 /apis.php/$1（多数面板 PHP 只认以 .php 结尾，PATH_INFO 会 404）
+location ~ ^/apis/([a-z0-9]{3,64})/?$ {
+    rewrite ^/apis/([a-z0-9]{3,64})/?$ /apis.php?_vs_slug=$1 last;
+}
+
+# 2) 全站去 .php（原有规则务必保留）
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
 }
 ```
 
-> 主题内链接已去除 `.php` 后缀（如 `/apis`、`/user/login`），须配置上述规则方可正常访问。
+| 地址 | 结果 |
+|------|------|
+| `/apis` | 全部接口列表 |
+| `/apis/{短码}` | 代理网关 |
+| `/articles` 等 | 仍走第 2 条 `try_files` |
+
+更完整说明见根目录 [`nginx伪静态配置.md`](nginx伪静态配置.md)。
 
 ---
 
@@ -263,6 +276,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.16.0（2026-07-15）
+
+- **代理伪静态纠偏**：`/apis/{短码}` → `/apis.php?_vs_slug=短码`（兼容宝塔等仅匹配 `*.php` 的规则）；**勿再** rewrite 到 `/apis.php/$1`
+- **兼容原有去 .php**：保留 `try_files`；列表 `/apis` 与代理 `/apis/短码` 互不冲突
+- 发行包新增可随版阅读的 `nginx伪静态配置.md`
 
 ### v3.15.0（2026-07-15）
 
