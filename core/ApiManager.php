@@ -1094,17 +1094,17 @@ class ApiManager
                 $targeturl = $endpoint;
             }
             if ($targeturl === '' || !preg_match('#^https?://#i', $targeturl)) {
-                return '代理上游地址须为完整的 http:// 或 https:// 链接';
+                return '请填写完整的上游地址（以 http:// 或 https:// 开头）';
             }
             if (mb_strlen($targeturl, 'UTF-8') > 500) {
                 return '代理上游地址不能超过 500 个字符';
             }
             $proxyslug = ApiProxy::normalizeSlug(isset($data['proxyslug']) ? $data['proxyslug'] : '');
             if ($proxyslug === '') {
-                $proxyslug = ApiProxy::generateUniqueSlug(6);
+                return '请填写 3～64 位字母或数字短码';
             }
             if (ApiProxy::slugExists($proxyslug, $excludeId > 0 ? $excludeId : null)) {
-                return '代理短码已被占用，请更换';
+                return '该短码已被占用，请更换';
             }
             $endpoint = ApiProxy::publicPath($proxyslug);
         } else {

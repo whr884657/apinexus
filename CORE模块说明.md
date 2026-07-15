@@ -229,7 +229,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
 | `SystemInfo.php` | 关于页环境信息 |
-| `Updater.php` | 在线更新检测与安装 |
+| `Updater.php` | 在线更新检测与安装；覆盖后按 `install/obsolete-files.json` 清理废弃文件 |
 | `UpdateLog.php` | 版本更新记录读取 |
 | `oauth/*` | QQ / Gitee 第三方登录 |
 
@@ -706,13 +706,17 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 ### 4.28 Updater.php
 
-**作用：** 从 Gitee 检测新版本、下载 `misc-api{版本}.zip`、解压覆盖（保护 `config/`、`data/`）。
+**作用：** 从 Gitee 检测新版本、下载 `misc-api{版本}.zip`、解压覆盖（保护 `config/`、`data/`），并按清单清理废弃文件。
 
 | 方法 | 说明 |
 |------|------|
 | `localVersion()` | 本地版本 |
 | `checkForUpdate()` | 检测是否有新版本 |
 | `downloadAndApply($version)` | 下载并应用更新包 |
+| `removeObsoleteFiles()` | 覆盖后删除 `install/obsolete-files.json` 声明的残留文件 |
+| `protectedRelativePaths()` | 更新时绝不可覆盖的路径 |
+
+**废弃文件：** 发行包内维护 `install/obsolete-files.json`（`files` 数组为相对项目根的路径）。部署步骤在 `copyTree` 之后执行删除；不会触及受保护路径。
 
 ---
 

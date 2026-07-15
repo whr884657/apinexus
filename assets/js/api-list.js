@@ -74,9 +74,12 @@
         if (slugRow) {
             slugRow.hidden = t !== 1;
         }
+        if (fields.proxyslug) {
+            fields.proxyslug.required = t === 1;
+        }
         if (typeHint) {
             typeHint.textContent = t === 1
-                ? '外链接口：填写对方完整地址，系统生成本站 /apis/短码；访问时跳转上游并附带查询参数。'
+                ? '外链接口：填写对方完整地址与短码，系统生成本站 /apis/短码；访问时跳转上游并附带查询参数。'
                 : '本地接口：只填本站路径，如 /api/img/index.php';
         }
         if (endpointLabel) {
@@ -639,8 +642,26 @@
             }
             return;
         }
-        if (!payload.endpoint) {
-            window.VS.showMessage('请填写接口地址', 'error');
+        var isProxy = parseInt(payload.apitype, 10) === 1;
+        if (isProxy) {
+            if (!payload.targeturl || !/^https?:\/\//i.test(payload.targeturl)) {
+                window.VS.showMessage('请填写完整的上游地址（以 http:// 或 https:// 开头）', 'error');
+                switchFormTab('basic');
+                if (fields.targeturl) {
+                    fields.targeturl.focus();
+                }
+                return;
+            }
+            if (!/^[a-zA-Z0-9]{3,64}$/.test(payload.proxyslug || '')) {
+                window.VS.showMessage('请填写 3～64 位字母或数字短码', 'error');
+                switchFormTab('basic');
+                if (fields.proxyslug) {
+                    fields.proxyslug.focus();
+                }
+                return;
+            }
+        } else if (!payload.endpoint) {
+            window.VS.showMessage('请填写本地接口路径', 'error');
             switchFormTab('basic');
             if (fields.endpoint) {
                 fields.endpoint.focus();

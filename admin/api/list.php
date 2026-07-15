@@ -278,7 +278,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
             <h3 class="vs-overlay__title" id="apiListFormTitle">添加接口</h3>
             <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
         </header>
-        <form id="apiListForm" class="vs-overlay__body vs-form" autocomplete="off">
+        <form id="apiListForm" class="vs-overlay__body vs-form" autocomplete="off" novalidate>
             <input type="hidden" id="apiListFormId" name="api_id" value="">
 
             <div class="vs-api-list-form-tabs" role="tablist">
@@ -288,14 +288,6 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
             </div>
 
             <div class="vs-api-list-form-pane is-active" data-api-form-pane="basic">
-                <div class="vs-form-row">
-                    <label class="vs-label">接口图标</label>
-                    <div class="vs-api-cat-icon-picker" id="apiListIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
-                    <label class="vs-label vs-api-cat-icon-url-label" for="apiListIconUrl">或填写图标链接</label>
-                    <input type="url" class="vs-input" id="apiListIconUrl" name="icon"
-                           placeholder="https://example.com/icon.png" maxlength="255">
-                    <p class="vs-form-hint">点选下方图标，或填写图片链接地址。</p>
-                </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormName">接口名称 <span class="vs-req">*</span></label>
                     <input type="text" class="vs-input" id="apiListFormName" name="name" maxlength="100" required
@@ -353,9 +345,9 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <p class="vs-form-hint">访问本站公开地址时，将跳转到该上游，并附带查询参数。</p>
                 </div>
                 <div class="vs-form-row" id="apiListSlugRow" hidden>
-                    <label class="vs-label" for="apiListFormProxySlug">接口短码（选填）</label>
+                    <label class="vs-label" for="apiListFormProxySlug">接口短码 <span class="vs-req">*</span></label>
                     <input type="text" class="vs-input" id="apiListFormProxySlug" name="proxyslug" maxlength="64"
-                           placeholder="留空则自动生成，如 sjspks" pattern="[A-Za-z0-9]*">
+                           placeholder="例如 sjspks（3～64 位字母或数字）" pattern="[A-Za-z0-9]{3,64}" autocomplete="off">
                     <p class="vs-form-hint">公开地址形如 <?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/apis/短码</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
@@ -376,6 +368,14 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             <option value="2">可选（可填可不填）</option>
                         </select>
                     </div>
+                </div>
+                <div class="vs-form-row">
+                    <label class="vs-label">接口图标</label>
+                    <div class="vs-api-cat-icon-picker" id="apiListIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
+                    <label class="vs-label vs-api-cat-icon-url-label" for="apiListIconUrl">或填写图标链接</label>
+                    <input type="url" class="vs-input" id="apiListIconUrl" name="icon"
+                           placeholder="https://example.com/icon.png" maxlength="255">
+                    <p class="vs-form-hint">点选下方图标，或填写图片链接地址。</p>
                 </div>
             </div>
 

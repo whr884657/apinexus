@@ -231,17 +231,10 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
             <h3 class="vs-overlay__title" id="userApiFormTitle">提交接口</h3>
             <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
         </header>
-        <form id="userApiForm" class="vs-overlay__body vs-form" autocomplete="off">
+        <form id="userApiForm" class="vs-overlay__body vs-form" autocomplete="off" novalidate>
             <input type="hidden" id="userApiFormId" name="api_id" value="">
             <input type="hidden" id="userApiFormApiType" name="apitype" value="<?php echo $canLocal ? '0' : '1'; ?>">
 
-            <div class="vs-form-row">
-                <label class="vs-label">接口图标</label>
-                <div class="vs-api-cat-icon-picker" id="userApiIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
-                <label class="vs-label vs-api-cat-icon-url-label" for="userApiIconUrl">或填写图标链接</label>
-                <input type="url" class="vs-input" id="userApiIconUrl" name="icon"
-                       placeholder="https://example.com/icon.png" maxlength="255">
-            </div>
             <div class="vs-form-row">
                 <label class="vs-label" for="userApiFormName">接口名称 <span class="vs-req">*</span></label>
                 <input type="text" class="vs-input" id="userApiFormName" name="name" maxlength="100" required
@@ -263,13 +256,13 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 <p class="vs-form-hint" id="userApiTypeHint">本地接口：只填本站路径，如 /api/img/index.php</p>
             </div>
             <?php else: ?>
-            <p class="vs-form-hint">本账号仅支持提交代理外链：填写对方完整地址，系统生成可 302 跳转的本站代理地址。</p>
+            <p class="vs-form-hint">本账号仅支持提交外链接口：填写对方完整地址与短码，系统生成本站公开地址。</p>
             <?php endif; ?>
 
             <div class="vs-form-row" id="userApiEndpointRow"<?php echo $canLocal ? '' : ' hidden'; ?>>
                 <label class="vs-label" for="userApiFormEndpoint">本地路径 <span class="vs-req">*</span></label>
                 <input type="text" class="vs-input" id="userApiFormEndpoint" name="endpoint" maxlength="500"
-                       placeholder="/api/img/index.php" <?php echo $canLocal ? '' : ''; ?>>
+                       placeholder="/api/img/index.php">
             </div>
             <div class="vs-form-row" id="userApiTargetRow"<?php echo $canLocal ? ' hidden' : ''; ?>>
                 <label class="vs-label" for="userApiFormTargetUrl">上游完整地址 <span class="vs-req">*</span></label>
@@ -277,9 +270,10 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                        placeholder="https://api.example.com/v1/demo" <?php echo $canLocal ? '' : 'required'; ?>>
             </div>
             <div class="vs-form-row" id="userApiSlugRow"<?php echo $canLocal ? ' hidden' : ''; ?>>
-                <label class="vs-label" for="userApiFormProxySlug">接口短码（选填）</label>
+                <label class="vs-label" for="userApiFormProxySlug">接口短码 <span class="vs-req">*</span></label>
                 <input type="text" class="vs-input" id="userApiFormProxySlug" name="proxyslug" maxlength="64"
-                       placeholder="留空自动生成" pattern="[A-Za-z0-9]*">
+                       placeholder="例如 sjspks（3～64 位字母或数字）" pattern="[A-Za-z0-9]{3,64}"
+                       autocomplete="off" <?php echo $canLocal ? '' : 'required'; ?>>
                 <p class="vs-form-hint">公开地址：<?php echo vs_e($iconBase); ?>/apis/短码</p>
             </div>
 
@@ -326,6 +320,14 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 <label class="vs-label" for="userApiFormAidoc">AI 文档</label>
                 <textarea class="vs-input vs-textarea" id="userApiFormAidoc" name="aidoc" rows="5"></textarea>
             </div>
+            <div class="vs-form-row">
+                <label class="vs-label">接口图标</label>
+                <div class="vs-api-cat-icon-picker" id="userApiIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
+                <label class="vs-label vs-api-cat-icon-url-label" for="userApiIconUrl">或填写图标链接</label>
+                <input type="url" class="vs-input" id="userApiIconUrl" name="icon"
+                       placeholder="https://example.com/icon.png" maxlength="255">
+                <p class="vs-form-hint">点选下方图标，或填写图片链接地址。</p>
+            </div>
         </form>
         <footer class="vs-overlay__foot">
             <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">取消</button>
@@ -349,7 +351,6 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
 .vs-user-api-type {
     font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: #475569;
 }
-.st-uc-content__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 @media (max-width: 640px) {
     .vs-user-api-row { flex-direction: column; }
 }

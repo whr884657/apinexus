@@ -128,11 +128,30 @@
     background: transparent;
 }
 
+.st-uc-content__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 2;
+}
+
 .st-uc-content__title {
     font-size: 22px;
     font-weight: 700;
-    margin: 0 0 16px;
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
     color: var(--st-uc-text);
+}
+
+.st-uc-content__actions {
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 3;
 }
 
 .st-uc-body .vs-panel {
@@ -140,6 +159,8 @@
     border: 1px solid var(--st-uc-border);
     border-radius: var(--st-uc-radius-lg);
     box-shadow: 0 2px 12px rgba(36, 166, 106, 0.06);
+    position: relative;
+    z-index: 1;
 }
 
 .st-uc-body .vs-stat-card {

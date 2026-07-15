@@ -1,13 +1,13 @@
 {
-    "version": "3.12.0",
-    "title": "misc-api 3.12.0 代理接口路径样式公开地址",
+    "version": "3.13.0",
+    "title": "misc-api 3.13.0 代理表单修复与在线更新清理废弃文件",
     "release_date": "2026-07-15",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "代理公开地址改为路径样式 /apis/{短码}（去掉 proxy.php 与 ?s=）",
-        "apis.php 兼任列表页与外链网关；入站兼容 PATH_INFO / 伪静态 / 查询参数 s",
-        "同步 Nginx、Apache 伪静态规则与后台/用户中心提示文案",
-        "结构更新将历史 endpoint 统一为 /apis/{proxyslug}"
+        "修复代理外链保存时误报未填上游地址（按类型分别校验本地路径/上游地址）",
+        "接口短码改为必填；投稿弹窗字段顺序：名称优先、图标置底",
+        "修复主题 slate 用户中心「提交接口」按钮与面板重叠导致点击无效",
+        "在线更新覆盖后按 install/obsolete-files.json 删除废弃文件（如 proxy.php）"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

@@ -86,9 +86,12 @@
         if (slugRow) {
             slugRow.hidden = t !== 1;
         }
+        if (slugInput) {
+            slugInput.required = t === 1;
+        }
         if (typeHint) {
             typeHint.textContent = t === 1
-                ? '外链接口：填写对方完整地址；系统生成本站 /apis/短码，访问时跳转上游并附带参数。'
+                ? '外链接口：填写对方完整地址与短码；系统生成本站 /apis/短码，访问时跳转上游并附带参数。'
                 : '本地接口：只填本站路径，如 /api/img/index.php';
         }
     }
@@ -373,9 +376,45 @@
     });
 
     if (form) {
+        form.setAttribute('novalidate', 'novalidate');
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             var payload = collectPayload();
+            payload.name = String(payload.name || '').trim();
+            payload.endpoint = String(payload.endpoint || '').trim();
+            payload.targeturl = String(payload.targeturl || '').trim();
+            payload.proxyslug = String(payload.proxyslug || '').trim();
+            if (!payload.name) {
+                window.VS.showMessage('请填写接口名称', 'error');
+                var nameEl = document.getElementById('userApiFormName');
+                if (nameEl) {
+                    nameEl.focus();
+                }
+                return;
+            }
+            var isProxy = parseInt(payload.apitype, 10) === 1;
+            if (isProxy) {
+                if (!payload.targeturl || !/^https?:\/\//i.test(payload.targeturl)) {
+                    window.VS.showMessage('请填写完整的上游地址（以 http:// 或 https:// 开头）', 'error');
+                    if (targetInput) {
+                        targetInput.focus();
+                    }
+                    return;
+                }
+                if (!/^[a-zA-Z0-9]{3,64}$/.test(payload.proxyslug)) {
+                    window.VS.showMessage('请填写 3～64 位字母或数字短码', 'error');
+                    if (slugInput) {
+                        slugInput.focus();
+                    }
+                    return;
+                }
+            } else if (!payload.endpoint) {
+                window.VS.showMessage('请填写本地接口路径', 'error');
+                if (endpointInput) {
+                    endpointInput.focus();
+                }
+                return;
+            }
             var action = formMode === 'edit' ? 'update' : 'create';
             if (action === 'update') {
                 payload.api_id = formId ? formId.value : '';

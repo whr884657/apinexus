@@ -324,6 +324,7 @@ class Updater
 
         try {
             self::copyTree($work['source_root'], VS_ROOT, self::protectedRelativePaths());
+            $removed = self::removeObsoleteFiles($work['source_root'], VS_ROOT, self::protectedRelativePaths());
             self::assertDatabaseConfigUnchanged($dbConfigHash);
         } catch (Exception $e) {
             return array('ok' => false, 'msg' => '文件覆盖失败：' . $e->getMessage());
@@ -335,9 +336,14 @@ class Updater
         unset($work['source_root'], $work['downloaded'], $work['extracted']);
         self::setUpdateWork($work);
 
+        $msg = '文件覆盖完成';
+        if ($removed > 0) {
+            $msg .= '，已清理 ' . $removed . ' 个废弃文件';
+        }
+
         return array(
             'ok'  => true,
-            'msg' => '文件覆盖完成',
+            'msg' => $msg,
             'step'=> 'deploy',
         );
     }
@@ -807,6 +813,108 @@ class Updater
             'config/install.lock',
             'data',
         );
+    }
+
+    /**
+     * 读取废弃文件清单（优先更新包内 install/obsolete-files.json，缺省则用内置兜底）
+     *
+     * @param string $sourceRoot 解压后的源码根目录
+     * @return array<int, string> 相对路径列表
+     */
+    public static function loadObsoleteRelativePaths($sourceRoot)
+    {
+        $list = array();
+        $path = rtrim(str_replace('\\', '/', (string) $sourceRoot), '/') . '/install/obsolete-files.json';
+        if (is_file($path)) {
+            $raw = @file_get_contents($path);
+            $json = is_string($raw) ? json_decode($raw, true) : null;
+            if (is_array($json) && isset($json['files']) && is_array($json['files'])) {
+                foreach ($json['files'] as $item) {
+                    if (is_string($item) && $item !== '') {
+                        $list[] = $item;
+                    }
+                }
+            }
+        }
+        if (count($list) === 0) {
+            $list = array(
+                'proxy.php',
+                'api-proxy.php',
+            );
+        }
+        return self::sanitizeObsoletePaths($list);
+    }
+
+    /**
+     * 规范化并过滤危险路径
+     *
+     * @param array $paths
+     * @return array<int, string>
+     */
+    public static function sanitizeObsoletePaths(array $paths)
+    {
+        $out = array();
+        foreach ($paths as $relative) {
+            $relative = str_replace('\\', '/', trim((string) $relative));
+            $relative = ltrim($relative, '/');
+            if ($relative === '' || strpos($relative, '..') !== false) {
+                continue;
+            }
+            if (strpos($relative, ':') !== false) {
+                continue;
+            }
+            // 仅允许删项目根下明确列出的普通文件（禁止根目录通配 / 目录爆破）
+            if (!preg_match('#^[A-Za-z0-9_./%-]+$#', $relative)) {
+                continue;
+            }
+            if (substr($relative, -1) === '/') {
+                continue;
+            }
+            $out[$relative] = $relative;
+        }
+        return array_values($out);
+    }
+
+    /**
+     * 覆盖后删除发行包声明的废弃文件（跳过受保护路径）
+     *
+     * @param string $sourceRoot
+     * @param string $targetRoot
+     * @param array  $protected
+     * @return int 实际删除的文件数
+     */
+    public static function removeObsoleteFiles($sourceRoot, $targetRoot, array $protected)
+    {
+        $targetRoot = rtrim(str_replace('\\', '/', (string) $targetRoot), '/');
+        if ($targetRoot === '' || !is_dir($targetRoot)) {
+            return 0;
+        }
+
+        $removed = 0;
+        foreach (self::loadObsoleteRelativePaths($sourceRoot) as $relative) {
+            if (self::isImmutablePath($relative) || self::isProtectedPath($relative, $protected)) {
+                continue;
+            }
+            $full = $targetRoot . '/' . $relative;
+            if (!is_file($full)) {
+                continue;
+            }
+            // 防止路径逃逸：解析后必须仍在目标根下
+            $realFile = realpath($full);
+            $realRoot = realpath($targetRoot);
+            if ($realFile === false || $realRoot === false) {
+                continue;
+            }
+            $realFile = str_replace('\\', '/', $realFile);
+            $realRoot = rtrim(str_replace('\\', '/', $realRoot), '/');
+            if (strpos($realFile, $realRoot . '/') !== 0) {
+                continue;
+            }
+            if (@unlink($realFile)) {
+                $removed++;
+            }
+        }
+        return $removed;
     }
 
     /**
