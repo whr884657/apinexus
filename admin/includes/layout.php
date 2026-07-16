@@ -107,9 +107,10 @@ function vs_admin_group_is_active(array $group, $activeMenu)
  * @param string $pageTitle
  * @param string $activeMenu
  * @param string $headerActions 标题行右侧操作区 HTML（可选）
+ * @param string $titleSuffix   标题旁附加 HTML（已转义/可信，可选）
  * @return void
  */
-function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = '')
+function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = '', $titleSuffix = '')
 {
     global $vsBase, $vsAdmin, $vsSiteName;
 
@@ -236,7 +237,11 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
 
     echo '<main class="vs-content">' . "\n";
     echo '<div class="vs-content__head">' . "\n";
-    echo '<h1 class="vs-content__title">' . vs_e($pageTitle) . '</h1>' . "\n";
+    echo '<h1 class="vs-content__title">' . vs_e($pageTitle);
+    if ($titleSuffix !== '') {
+        echo ' <span class="vs-content__title-meta">' . $titleSuffix . '</span>';
+    }
+    echo '</h1>' . "\n";
     if ($headerActions !== '') {
         echo '<div class="vs-content__actions">' . $headerActions . '</div>' . "\n";
     }

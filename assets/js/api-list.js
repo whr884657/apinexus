@@ -15,6 +15,12 @@
     var emptyEl = document.getElementById('apiListEmpty');
     var searchEmptyEl = document.getElementById('apiListSearchEmpty');
     var searchInput = document.getElementById('apiListSearchInput');
+    var pageSizeEl = document.getElementById('apiListPageSize');
+    var pagerEl = document.getElementById('apiListPager');
+    var pagerInfoEl = document.getElementById('apiListPagerInfo');
+    var prevBtn = document.getElementById('apiListPrevBtn');
+    var nextBtn = document.getElementById('apiListNextBtn');
+    var currentPage = 1;
     var openAddBtn = document.getElementById('apiListOpenAddBtn');
     var formOverlay = document.getElementById('apiListFormOverlay');
     var formEl = document.getElementById('apiListForm');
@@ -299,10 +305,22 @@
         return String((api && (api.call_url || api.endpoint)) || '');
     }
 
+    function displayUsername(api) {
+        var name = api && api.username ? String(api.username).trim() : '';
+        if (name) {
+            return name;
+        }
+        var uid = api ? (parseInt(api.userid, 10) || 0) : 0;
+        return uid > 0 ? ('用户#' + uid) : '管理员';
+    }
+
+    function typeTagClass(badge) {
+        return badge === '代理' ? 'vs-api-tag--proxy' : 'vs-api-tag--local';
+    }
+
     function buildTagsHtml(api) {
-        var status = normalizeStatus(api.status);
         var audit = normalizeAudit(api.audit);
-        var typeBadge = api.apitype_badge || '';
+        var typeBadge = api.apitype_badge || '本地';
         var keyBadge = api.needkey_badge || '';
         var category = api.category ? String(api.category) : '';
         var html = '';
@@ -313,11 +331,8 @@
         if (keyBadge) {
             html += '<span class="vs-api-tag vs-api-tag--key" data-field="needkey_badge">' + escapeHtml(keyBadge) + '</span>';
         }
-        if (typeBadge) {
-            html += '<span class="vs-api-tag vs-api-tag--proxy" data-field="apitype_badge">' + escapeHtml(typeBadge) + '</span>';
-        }
-        html += '<span class="vs-api-tag vs-api-tag--status ' + statusClass(status) + '" data-field="status_label">'
-            + escapeHtml(api.status_label || String(status)) + '</span>';
+        html += '<span class="vs-api-tag ' + typeTagClass(typeBadge) + '" data-field="apitype_badge">'
+            + escapeHtml(typeBadge) + '</span>';
         if (audit !== 1) {
             html += '<span class="vs-api-tag vs-api-tag--audit ' + auditClass(audit) + '" data-field="audit_label">'
                 + escapeHtml(api.audit_label || '') + '</span>';
@@ -349,8 +364,10 @@
         var status = normalizeStatus(api.status);
         var audit = normalizeAudit(api.audit);
         var callUrl = callUrlOf(api);
-        var typeBadge = api.apitype_badge || '';
-        var search = (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '') + ' ' + typeBadge).toLowerCase();
+        var typeBadge = api.apitype_badge || '本地';
+        var username = displayUsername(api);
+        var search = (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' '
+            + String(api.category || '') + ' ' + typeBadge + ' ' + username).toLowerCase();
         var payload = escapeHtml(JSON.stringify(api));
 
         var html = '<div class="vs-api-item" data-api-row="' + api.id + '"'
@@ -358,17 +375,24 @@
             + ' data-api-audit="' + audit + '"'
             + ' data-search="' + escapeHtml(search) + '"'
             + ' data-payload="' + payload + '">';
-        html += '<div class="vs-api-item__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" data-field="icon"></div>';
-        html += '<div class="vs-api-item__title">';
-        html += '<span class="vs-api-item__id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
+        html += '<div class="vs-api-item__top"><div class="vs-api-item__icon">';
+        html += '<img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" data-field="icon">';
+        html += '</div><div class="vs-api-item__main">';
+        html += '<div class="vs-api-item__row1"><div class="vs-api-item__title">';
         html += '<span class="vs-api-item__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
-        html += '</div>';
-        html += '<div class="vs-api-item__tags" data-field="tags">' + buildTagsHtml(api) + '</div>';
+        html += '<span class="vs-api-item__id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
+        html += '</div><div class="vs-api-item__tags" data-field="tags">' + buildTagsHtml(api) + '</div></div>';
         html += '<div class="vs-api-item__endpoint">';
         html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
         html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span>';
+        html += '</div></div></div>';
+        html += '<div class="vs-api-item__meta">';
+        html += '<span class="vs-api-item__meta-status">状态：<span class="vs-api-tag vs-api-tag--status '
+            + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span></span>';
+        html += '<span class="vs-api-item__meta-author" title="提交者">提交：<em data-field="username">' + escapeHtml(username) + '</em></span>';
+        html += '<span class="vs-api-item__meta-calls" title="请求次数">请求：<strong data-field="calls">'
+            + (parseInt(api.calls, 10) || 0) + '</strong></span>';
         html += '</div>';
-        html += '<div class="vs-api-item__calls" title="调用次数"><span data-field="calls">' + (parseInt(api.calls, 10) || 0) + '</span></div>';
         html += '<div class="vs-api-item__actions">' + buildActionButtons(api) + '</div>';
         html += '</div>';
         return html;
@@ -406,16 +430,80 @@
         }
     }
 
-    function applySearchFilter() {
+    function defaultPageSize() {
+        return window.matchMedia('(max-width: 900px)').matches ? 10 : 20;
+    }
+
+    function getPageSize() {
+        var n = pageSizeEl ? parseInt(pageSizeEl.value, 10) : 0;
+        if (!n || n < 1) {
+            n = defaultPageSize();
+        }
+        return n;
+    }
+
+    function matchedRows() {
+        if (!listEl) {
+            return [];
+        }
+        var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
+        var all = Array.prototype.slice.call(listEl.querySelectorAll('.vs-api-item'));
+        if (!q) {
+            return all;
+        }
+        return all.filter(function (row) {
+            var hay = row.getAttribute('data-search') || '';
+            return hay.indexOf(q) !== -1;
+        });
+    }
+
+    function applyListView() {
         if (!listEl) {
             return;
         }
-        var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-        listEl.querySelectorAll('.vs-api-item').forEach(function (row) {
-            var hay = row.getAttribute('data-search') || '';
-            row.hidden = q !== '' && hay.indexOf(q) === -1;
+        var matched = matchedRows();
+        var all = listEl.querySelectorAll('.vs-api-item');
+        var size = getPageSize();
+        var totalPages = Math.max(1, Math.ceil(matched.length / size) || 1);
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+        if (currentPage < 1) {
+            currentPage = 1;
+        }
+        var start = (currentPage - 1) * size;
+        var end = start + size;
+        var indexMap = {};
+        matched.forEach(function (row, i) {
+            indexMap[String(row.getAttribute('data-api-row'))] = i;
         });
+        all.forEach(function (row) {
+            var key = String(row.getAttribute('data-api-row'));
+            if (!Object.prototype.hasOwnProperty.call(indexMap, key)) {
+                row.hidden = true;
+                return;
+            }
+            var idx = indexMap[key];
+            row.hidden = !(idx >= start && idx < end);
+        });
+        if (pagerEl) {
+            pagerEl.hidden = matched.length === 0;
+        }
+        if (pagerInfoEl) {
+            pagerInfoEl.textContent = '第 ' + currentPage + ' / ' + totalPages + ' 页（共 ' + matched.length + ' 条）';
+        }
+        if (prevBtn) {
+            prevBtn.disabled = currentPage <= 1;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = currentPage >= totalPages || matched.length === 0;
+        }
         refreshEmptyState();
+    }
+
+    function applySearchFilter() {
+        currentPage = 1;
+        applyListView();
     }
 
     function parseRowPayload(rowEl) {
@@ -431,12 +519,15 @@
             return;
         }
         var callUrl = callUrlOf(api);
-        var typeBadge = api.apitype_badge || '';
-        rowEl.setAttribute('data-api-status', String(normalizeStatus(api.status)));
+        var typeBadge = api.apitype_badge || '本地';
+        var username = displayUsername(api);
+        var status = normalizeStatus(api.status);
+        rowEl.setAttribute('data-api-status', String(status));
         rowEl.setAttribute('data-api-audit', String(normalizeAudit(api.audit)));
         rowEl.setAttribute(
             'data-search',
-            (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '') + ' ' + typeBadge).toLowerCase()
+            (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' '
+                + String(api.category || '') + ' ' + typeBadge + ' ' + username).toLowerCase()
         );
         rowEl.setAttribute('data-payload', JSON.stringify(api));
 
@@ -463,6 +554,15 @@
         if (callsEl) {
             callsEl.textContent = String(parseInt(api.calls, 10) || 0);
         }
+        var userEl = rowEl.querySelector('[data-field="username"]');
+        if (userEl) {
+            userEl.textContent = username;
+        }
+        var statusEl = rowEl.querySelector('[data-field="status_label"]');
+        if (statusEl) {
+            statusEl.textContent = api.status_label || String(status);
+            statusEl.className = 'vs-api-tag vs-api-tag--status ' + statusClass(status);
+        }
         var tagsEl = rowEl.querySelector('[data-field="tags"]');
         if (tagsEl) {
             tagsEl.innerHTML = buildTagsHtml(api);
@@ -483,7 +583,8 @@
             return;
         }
         listEl.insertAdjacentHTML('afterbegin', buildItemHtml(api));
-        applySearchFilter();
+        currentPage = 1;
+        applyListView();
     }
 
     function resetForm() {
@@ -803,6 +904,36 @@
         searchInput.addEventListener('input', applySearchFilter);
     }
 
+    if (pageSizeEl) {
+        if (!pageSizeEl.value) {
+            pageSizeEl.value = String(defaultPageSize());
+        } else if (window.matchMedia('(max-width: 900px)').matches && pageSizeEl.value === '20') {
+            pageSizeEl.value = '10';
+        }
+        pageSizeEl.addEventListener('change', function () {
+            currentPage = 1;
+            applyListView();
+        });
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            if (currentPage > 1) {
+                currentPage -= 1;
+                applyListView();
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            currentPage += 1;
+            applyListView();
+        });
+    }
+
+    applyListView();
+
     page.addEventListener('click', function (e) {
         var btn = e.target.closest('.vs-api-list-action');
         if (!btn) {
@@ -877,7 +1008,7 @@
                     if (row) {
                         row.remove();
                     }
-                    refreshEmptyState();
+                    applyListView();
                 }).catch(function () {
                     window.VS.showMessage('网络异常，请稍后重试', 'error');
                 });

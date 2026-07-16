@@ -1054,14 +1054,14 @@ class ApiManager
     }
 
     /**
-     * 列表卡片用短标签（仅代理显示「代理」，本地不占位）
+     * 列表卡片用短标签：代理 / 本地
      *
      * @param mixed $value
      * @return string
      */
     public static function apiTypeBadge($value)
     {
-        return self::normalizeApiType($value) === self::APITYPE_PROXY ? '代理' : '';
+        return self::normalizeApiType($value) === self::APITYPE_PROXY ? '代理' : '本地';
     }
 
     /**

@@ -233,12 +233,12 @@
         var icon = api.icon || '';
         var html = '';
         html += '<div class="vs-api-item vs-user-api-row" data-api-row="' + id + '" data-api-status="' + status + '" data-api-audit="' + audit + '">';
-        html += '<div class="vs-api-item__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy"></div>';
-        html += '<div class="vs-api-item__title">';
-        html += '<span class="vs-api-item__id">#' + id + '</span>';
+        html += '<div class="vs-api-item__top"><div class="vs-api-item__icon">';
+        html += '<img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy"></div>';
+        html += '<div class="vs-api-item__main"><div class="vs-api-item__row1"><div class="vs-api-item__title">';
         html += '<span class="vs-api-item__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
-        html += '</div>';
-        html += '<div class="vs-api-item__tags">';
+        html += '<span class="vs-api-item__id">#' + id + '</span>';
+        html += '</div><div class="vs-api-item__tags">';
         if (category) {
             html += '<span class="vs-api-tag vs-api-tag--cat">' + escapeHtml(category) + '</span>';
         }
@@ -246,29 +246,32 @@
         if (keyBadge) {
             html += '<span class="vs-api-tag vs-api-tag--key">' + escapeHtml(keyBadge) + '</span>';
         }
-        if (approved) {
-            html += '<span class="vs-api-tag vs-api-tag--status ' + statusClass(status) + '" data-field="status_label">'
-                + escapeHtml(api.status_label || '正常') + '</span>';
-        } else {
+        if (!approved) {
             html += '<span class="vs-api-tag vs-api-tag--audit ' + auditClass(audit) + '" data-field="audit_label">'
                 + escapeHtml(api.audit_label || '') + '</span>';
         }
-        html += '</div>';
+        html += '</div></div>';
         html += '<div class="vs-api-item__endpoint">';
         html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
         html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span>';
-        html += '</div>';
-        html += '<div class="vs-api-item__calls" title="调用次数"><span data-field="calls">' + (parseInt(api.calls, 10) || 0) + '</span></div>';
+        html += '</div></div></div>';
+        html += '<div class="vs-api-item__meta">';
+        if (approved) {
+            html += '<span class="vs-api-item__meta-status">状态：<span class="vs-api-tag vs-api-tag--status '
+                + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || '正常') + '</span></span>';
+        }
+        html += '<span class="vs-api-item__meta-calls" title="请求次数">请求：<strong data-field="calls">'
+            + (parseInt(api.calls, 10) || 0) + '</strong></span></div>';
+        html += '<p class="vs-api-review-reason vs-user-api-row__reason" data-field="rejectreason"' + (reason ? '' : ' hidden') + '>';
+        html += reason ? ('未通过原因：' + escapeHtml(reason)) : '';
+        html += '</p>';
         html += '<div class="vs-api-item__actions vs-user-api-row__actions">';
         html += '<button type="button" class="vs-btn vs-btn--outline vs-user-api-edit" data-api-id="' + id + '">编辑</button>';
         if (approved) {
             html += buildStatusButtons(api);
         }
         html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-user-api-delete" data-api-id="' + id + '">删除</button>';
-        html += '</div>';
-        html += '<p class="vs-api-review-reason vs-user-api-row__reason" data-field="rejectreason"' + (reason ? '' : ' hidden') + '>';
-        html += reason ? ('未通过原因：' + escapeHtml(reason)) : '';
-        html += '</p></div>';
+        html += '</div></div>';
         return html;
     }
 

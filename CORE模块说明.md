@@ -545,6 +545,7 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 | `create` / `update` / `delete` / `setStatus` / `setAuditStatus` | 写操作（`setAuditStatus` 可带拒绝原因） |
 | `formatRow` | 格式化（含 `rejectreason` / `audit_class`） |
 | `normalizeRequireKey` / `requireKeyLabel` 等 | 数字归一与中文标签 |
+| `apiTypeBadge` / `requireKeyBadge` | 列表短标签：代理/本地；KEY可选/必填 |
 
 ### 4.21.1 ApiNotify.php（邮件通知）
 

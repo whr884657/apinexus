@@ -3560,3 +3560,439 @@ select.vs-input.vs-select {
         font-size: 16px; /* iOS 防自动放大 */
     }
 }
+
+
+/* ===== v3.21.0 API card / list / pager ===== */
+.vs-content__title-meta,
+.vs-content__title-stat {
+    margin-left: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vs-text-secondary);
+}
+
+.vs-api-list-pagesize {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vs-api-list-pagesize__label {
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+}
+
+.vs-api-list-pagesize__select {
+    width: 72px;
+    height: 36px;
+    padding: 0 8px;
+    font-size: 13px;
+}
+
+.vs-api-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+
+.vs-api-pager__info {
+    font-size: 13px;
+    color: var(--vs-text-secondary);
+}
+
+.vs-btn--sm {
+    height: 30px;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+.vs-api-list-table {
+    border: none;
+    background: transparent;
+    overflow: visible;
+}
+
+.vs-api-list-table__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 统一卡片：标签/按钮一律横排 */
+.vs-api-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 14px 12px;
+    border: 1px solid var(--vs-border);
+    border-radius: 12px;
+    background: var(--vs-content-bg);
+    font-size: 13px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.vs-api-item[hidden] {
+    display: none !important;
+}
+
+.vs-api-item:hover {
+    border-color: #cbd5e1;
+}
+
+.vs-api-item__top {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: -2px;
+}
+
+.vs-api-item__icon {
+    flex-shrink: 0;
+}
+
+.vs-api-item__icon img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #f1f5f9;
+    display: block;
+}
+
+.vs-api-item__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vs-api-item__row1 {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px 12px;
+}
+
+.vs-api-item__title {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+}
+
+.vs-api-item__name {
+    font-weight: 700;
+    color: var(--vs-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vs-api-item__id {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.vs-api-item__tags {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    max-width: 55%;
+    overflow-x: auto;
+}
+
+.vs-api-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.vs-api-tag--cat { background: #e0f2fe; color: #0369a1; }
+.vs-api-tag--free { background: #dcfce7; color: #15803d; }
+.vs-api-tag--key { background: #e0f2fe; color: #0284c7; }
+.vs-api-tag--proxy { background: #ede9fe; color: #6d28d9; }
+.vs-api-tag--local { background: #f1f5f9; color: #475569; }
+.vs-api-tag--status.is-normal { background: #dcfce7; color: #15803d; }
+.vs-api-tag--status.is-maintenance { background: #fef3c7; color: #b45309; }
+.vs-api-tag--status.is-disabled { background: #f1f5f9; color: #64748b; }
+.vs-api-tag--audit.is-pending { background: #fef3c7; color: #b45309; }
+.vs-api-tag--audit.is-approved { background: #dbeafe; color: #1d4ed8; }
+.vs-api-tag--audit.is-rejected { background: #fee2e2; color: #b91c1c; }
+
+.vs-api-item__endpoint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.vs-api-item__url {
+    color: #16a34a;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vs-api-item__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px 14px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.vs-api-item__meta-author em {
+    font-style: normal;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.vs-api-item__meta-calls strong {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.vs-api-item__actions {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed #cbd5e1;
+    overflow-x: auto;
+}
+
+.vs-api-item__actions .vs-btn {
+    height: 26px;
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.vs-btn--outline {
+    height: 26px;
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 8px;
+    background: #fff;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+}
+
+.vs-btn--outline:hover {
+    border-color: #94a3b8;
+    color: #334155;
+    background: #f8fafc;
+}
+
+.vs-btn--outline-danger {
+    color: #e11d48;
+    border-color: rgba(225, 29, 72, 0.35);
+}
+
+.vs-btn--outline-danger:hover {
+    background: #fff1f2;
+    border-color: #e11d48;
+    color: #be123c;
+}
+
+.vs-api-list-method {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    flex-shrink: 0;
+}
+
+.vs-api-list-method--get { background: #ecfdf5; color: #047857; }
+.vs-api-list-method--post { background: #eff6ff; color: #1d4ed8; }
+
+.vs-api-list-status {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.vs-api-list-status.is-normal { background: #dcfce7; color: #15803d; }
+.vs-api-list-status.is-maintenance { background: #fef3c7; color: #b45309; }
+.vs-api-list-status.is-disabled { background: #f1f5f9; color: #64748b; }
+
+.vs-api-list-audit {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.vs-api-list-audit.is-pending { background: #fef3c7; color: #b45309; }
+.vs-api-list-audit.is-approved { background: #dbeafe; color: #1d4ed8; }
+.vs-api-list-audit.is-rejected { background: #fee2e2; color: #b91c1c; }
+
+.vs-api-type-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.vs-api-list-form-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--vs-border);
+    padding-bottom: 10px;
+}
+
+.vs-api-list-form-tab {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--vs-text-secondary);
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vs-api-list-form-tab.is-active {
+    background: #f1f5f9;
+    color: var(--vs-text);
+    border-color: var(--vs-border);
+}
+
+.vs-api-list-form-pane[hidden] {
+    display: none !important;
+}
+
+.vs-form-row--2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.vs-form-hint {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+    line-height: 1.5;
+}
+
+.vs-req {
+    color: var(--vs-danger, #dc2626);
+}
+
+.vs-api-list-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.vs-api-list-key-field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+    .vs-api-item {
+        padding: 10px 12px;
+        gap: 6px;
+        border-radius: 14px;
+    }
+
+    .vs-api-item__tags {
+        max-width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .vs-api-item__name {
+        white-space: normal;
+    }
+
+    .vs-api-item__url {
+        white-space: normal;
+        word-break: break-all;
+    }
+
+    .vs-api-item__meta {
+        justify-content: flex-end;
+    }
+
+    .vs-api-item__actions {
+        display: flex !important;
+        grid-template-columns: none !important;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+    }
+
+    .vs-api-item__actions .vs-btn {
+        width: auto !important;
+        height: 26px;
+    }
+
+    .vs-form-row--2 {
+        grid-template-columns: 1fr;
+    }
+
+    .vs-api-list-search__input {
+        width: 120px;
+    }
+}
+
+.vs-api-review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vs-api-review-list[hidden] {
+    display: none !important;
+}
+
+.vs-api-review-reason {
+    font-size: 12px;
+    color: #b91c1c;
+}
+
+.vs-api-review-reason[hidden] {
+    display: none !important;
+}

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.20.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.21.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -279,6 +279,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.21.0（2026-07-17）
+
+- **卡片 UI**：标签/按钮横排；名称上移；调用链接；提交者+请求次数；代理/本地标签
+- **列表能力**：搜索、分页（可选条数）、ID 倒序、标题旁接口统计
 
 ### v3.20.0（2026-07-16）
 
