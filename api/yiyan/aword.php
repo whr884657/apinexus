@@ -5,9 +5,19 @@
  * 官方文档: https://developer.hitokoto.cn/sentence/
  */
 
-// —— 统计（本地脚本头部注入；若后台以代理类型发布则应走 /apis/{短码}）——
-require_once dirname(__DIR__, 2) . '/core/bootstrap.php';
-ApiStats::hit();
+// —— 调用统计（任意深度；PHP 7.4～8.2；详见 api/统计代码使用说明.md）——
+$__d = __DIR__;
+while ($__d !== '' && $__d !== dirname($__d)) {
+    if (is_file($__d . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'bootstrap.php')) {
+        require_once $__d . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'bootstrap.php';
+        break;
+    }
+    $__d = dirname($__d);
+}
+unset($__d);
+if (class_exists('ApiStats', false)) {
+    ApiStats::hit();
+}
 
 // 禁用错误显示
 error_reporting(0);

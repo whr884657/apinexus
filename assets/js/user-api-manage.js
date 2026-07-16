@@ -172,41 +172,85 @@
         return 'is-pending';
     }
 
+    function statusClass(status) {
+        var n = parseInt(status, 10);
+        if (n === 1) {
+            return 'is-disabled';
+        }
+        if (n === 2) {
+            return 'is-maintenance';
+        }
+        return 'is-normal';
+    }
+
+    function methodSlug(method) {
+        var m = String(method || 'GET').toLowerCase().replace(/[^a-z0-9]+/g, '');
+        return m || 'get';
+    }
+
+    function buildStatusButtons(api) {
+        var id = parseInt(api.id, 10) || 0;
+        var status = parseInt(api.status, 10);
+        if (isNaN(status)) {
+            status = 0;
+        }
+        var html = '';
+        if (status !== 0) {
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-status" data-api-id="' + id + '" data-status="0">正常</button>';
+        }
+        if (status !== 2) {
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-status" data-api-id="' + id + '" data-status="2">维护</button>';
+        }
+        if (status !== 1) {
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-status" data-api-id="' + id + '" data-status="1">禁用</button>';
+        }
+        return html;
+    }
+
     function buildRowHtml(api) {
         var id = parseInt(api.id, 10) || 0;
         var reason = api.rejectreason ? String(api.rejectreason) : '';
         var callUrl = api.call_url || api.endpoint || '';
+        var method = (api.method || 'GET').toUpperCase();
+        var audit = parseInt(api.audit, 10);
+        if (isNaN(audit)) {
+            audit = 0;
+        }
+        var approved = audit === 1;
+        var status = parseInt(api.status, 10);
+        if (isNaN(status)) {
+            status = 0;
+        }
         var html = '';
-        html += '<div class="vs-user-api-row" data-api-row="' + id + '">';
-        html += '<div class="vs-user-api-row__main">';
-        html += '<div class="vs-user-api-row__title">';
-        html += '<strong data-field="name">' + escapeHtml(api.name || '') + '</strong>';
-        if (parseInt(api.audit, 10) === 1) {
-            var st = parseInt(api.status, 10);
-            var stClass = 'is-normal';
-            if (st === 1) {
-                stClass = 'is-disabled';
-            } else if (st === 2) {
-                stClass = 'is-maintenance';
-            }
-            html += '<span class="vs-api-list-status ' + stClass + '" data-field="status_label">'
+        html += '<div class="vs-user-api-row" data-api-row="' + id + '" data-api-status="' + status + '" data-api-audit="' + audit + '">';
+        html += '<div class="vs-user-api-row__top">';
+        html += '<div class="vs-user-api-row__titleline">';
+        html += '<span class="vs-user-api-row__id">#' + id + '</span>';
+        html += '<strong class="vs-user-api-row__name" data-field="name">' + escapeHtml(api.name || '') + '</strong>';
+        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += '</div>';
+        html += '<div class="vs-user-api-row__side">';
+        if (approved) {
+            html += '<span class="vs-api-list-status ' + statusClass(status) + '" data-field="status_label">'
                 + escapeHtml(api.status_label || '正常') + '</span>';
         } else {
-            html += '<span class="vs-api-list-audit ' + auditClass(api.audit) + '" data-field="audit_label">'
+            html += '<span class="vs-api-list-audit ' + auditClass(audit) + '" data-field="audit_label">'
                 + escapeHtml(api.audit_label || '') + '</span>';
         }
-        if (api.apitype_label) {
-            html += '<span class="vs-user-api-type">' + escapeHtml(api.apitype_label) + '</span>';
-        }
-        html += '</div>';
-        html += '<div class="vs-user-api-row__meta"><span>' + escapeHtml(api.method || 'GET')
-            + '</span> · <span>' + escapeHtml(callUrl) + '</span></div>';
+        html += '<span class="vs-user-api-row__calls" title="调用次数"><span data-field="calls">'
+            + (parseInt(api.calls, 10) || 0) + '</span></span>';
+        html += '</div></div>';
+        html += '<div class="vs-user-api-row__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">'
+            + escapeHtml(callUrl) + '</div>';
         html += '<p class="vs-user-api-row__reason" data-field="rejectreason"' + (reason ? '' : ' hidden') + '>';
         html += reason ? ('未通过原因：' + escapeHtml(reason)) : '';
-        html += '</p></div>';
+        html += '</p>';
         html += '<div class="vs-user-api-row__actions">';
-        html += '<button type="button" class="vs-btn vs-btn--default vs-user-api-edit" data-api-id="' + id + '">编辑</button>';
-        html += '<button type="button" class="vs-btn vs-btn--danger vs-user-api-delete" data-api-id="' + id + '">删除</button>';
+        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-edit" data-api-id="' + id + '">编辑</button>';
+        if (approved) {
+            html += buildStatusButtons(api);
+        }
+        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-user-api-delete" data-api-id="' + id + '">删除</button>';
         html += '</div></div>';
         return html;
     }
@@ -347,6 +391,25 @@
                 }
                 fillForm(data.api);
                 openOverlay();
+            }).catch(function () {
+                window.VS.showMessage('网络异常，请稍后重试', 'error');
+            });
+            return;
+        }
+
+        var statusBtn = e.target.closest('.vs-user-api-status');
+        if (statusBtn && page.contains(statusBtn)) {
+            var statusId = statusBtn.getAttribute('data-api-id');
+            var nextStatus = statusBtn.getAttribute('data-status');
+            postAction('set_status', { api_id: statusId, status: String(nextStatus) }).then(function (data) {
+                if (!data || data.code !== 1) {
+                    window.VS.showMessage((data && data.msg) || '操作失败', 'error');
+                    return;
+                }
+                window.VS.showMessage(data.msg || '状态已更新', 'success');
+                if (data.api_summary) {
+                    upsertRow(data.api_summary);
+                }
             }).catch(function () {
                 window.VS.showMessage('网络异常，请稍后重试', 'error');
             });

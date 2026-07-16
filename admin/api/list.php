@@ -139,66 +139,68 @@ function vs_render_api_list_item(array $row)
     }
     $auditStatus = isset($api['audit']) ? (int) $api['audit'] : ApiManager::AUDIT_APPROVED;
     $auditClass = isset($api['audit_class']) ? (string) $api['audit_class'] : ApiManager::auditStatusClass($auditStatus);
-    $desc = trim((string) $api['description']);
+    $callUrl = isset($api['call_url']) ? (string) $api['call_url'] : (string) $api['endpoint'];
+    $typeLabel = isset($api['apitype_label']) ? (string) $api['apitype_label'] : '';
+    $keyLabel = isset($api['needkey_label']) ? (string) $api['needkey_label'] : ApiManager::requireKeyLabel($api['needkey']);
+    $searchHay = mb_strtolower($api['name'] . ' ' . $callUrl . ' ' . $api['endpoint'] . ' ' . $api['category'] . ' ' . $typeLabel, 'UTF-8');
     $payloadJson = json_encode($api, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    $methodSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) $api['method']));
+    if ($methodSlug === '') {
+        $methodSlug = 'get';
+    }
     ?>
     <div class="vs-api-list-row"
          data-api-row="<?php echo $apiId; ?>"
          data-api-status="<?php echo $status; ?>"
          data-api-audit="<?php echo $auditStatus; ?>"
-         data-search="<?php echo vs_e(mb_strtolower($api['name'] . ' ' . $api['endpoint'] . ' ' . $api['category'], 'UTF-8')); ?>"
+         data-search="<?php echo vs_e($searchHay); ?>"
          data-payload='<?php echo $payloadJson !== false ? $payloadJson : '{}'; ?>'>
-        <div class="vs-api-list-row__icon">
-            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" data-field="icon">
-        </div>
-        <div class="vs-api-list-row__main">
-            <div class="vs-api-list-row__name" data-field="name"><?php echo vs_e($api['name']); ?></div>
-            <div class="vs-api-list-row__desc" data-field="description">
-                <?php if ($desc !== ''): ?>
-                    <?php echo vs_e($desc); ?>
-                <?php else: ?>
-                    <span class="vs-api-list-row__empty">—</span>
-                <?php endif; ?>
+        <div class="vs-api-list-row__top">
+            <div class="vs-api-list-row__icon">
+                <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" data-field="icon">
             </div>
+            <div class="vs-api-list-row__head">
+                <div class="vs-api-list-row__titleline">
+                    <span class="vs-api-list-row__id" data-field="id">#<?php echo $apiId; ?></span>
+                    <span class="vs-api-list-row__name" data-field="name"><?php echo vs_e($api['name']); ?></span>
+                    <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($api['method']); ?></span>
+                </div>
+                <div class="vs-api-list-row__badges">
+                    <?php if ($typeLabel !== ''): ?>
+                        <span class="vs-api-list-type" data-field="apitype_label"><?php echo vs_e($typeLabel); ?></span>
+                    <?php endif; ?>
+                    <span class="vs-api-list-status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($api['status_label']); ?></span>
+                    <?php if ($auditStatus !== ApiManager::AUDIT_APPROVED): ?>
+                        <span class="vs-api-list-audit <?php echo $auditClass; ?>" data-field="audit_label"><?php echo vs_e(isset($api['audit_label']) ? $api['audit_label'] : ApiManager::auditStatusLabel($auditStatus)); ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="vs-api-list-row__calls" title="调用次数"><span data-field="calls"><?php echo (int) $api['calls']; ?></span></div>
         </div>
-        <div class="vs-api-list-row__method">
-            <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e(strtolower($api['method'])); ?>" data-field="method">
-                <?php echo vs_e($api['method']); ?>
-            </span>
-        </div>
-        <div class="vs-api-list-row__endpoint" data-field="endpoint" title="<?php echo vs_e($api['endpoint']); ?>">
-            <?php echo vs_e($api['endpoint']); ?>
-        </div>
-        <div class="vs-api-list-row__calls" data-field="calls"><?php echo (int) $api['calls']; ?></div>
-        <div class="vs-api-list-row__key" data-field="needkey_label">
-            <?php echo vs_e(isset($api['needkey_label']) ? $api['needkey_label'] : ApiManager::requireKeyLabel($api['needkey'])); ?>
-        </div>
-        <div class="vs-api-list-row__status">
-            <span class="vs-api-list-status <?php echo $statusClass; ?>" data-field="status_label">
-                <?php echo vs_e($api['status_label']); ?>
-            </span>
-            <?php if ($auditStatus !== ApiManager::AUDIT_APPROVED): ?>
-            <span class="vs-api-list-audit <?php echo $auditClass; ?>" data-field="audit_label">
-                <?php echo vs_e(isset($api['audit_label']) ? $api['audit_label'] : ApiManager::auditStatusLabel($auditStatus)); ?>
-            </span>
+        <div class="vs-api-list-row__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></div>
+        <div class="vs-api-list-row__meta">
+            <span data-field="needkey_label"><?php echo vs_e($keyLabel); ?></span>
+            <?php if (!empty($api['category'])): ?>
+                <span class="vs-api-list-row__sep">·</span>
+                <span data-field="category"><?php echo vs_e($api['category']); ?></span>
             <?php endif; ?>
         </div>
         <div class="vs-api-list-row__actions">
-            <button type="button" class="vs-btn vs-btn--default vs-api-list-action"
+            <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action"
                     data-api-action="edit" data-api-id="<?php echo $apiId; ?>">编辑</button>
             <?php if ($status !== ApiManager::STATUS_NORMAL): ?>
-                <button type="button" class="vs-btn vs-btn--default vs-api-list-action"
+                <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action"
                         data-api-action="normal" data-api-id="<?php echo $apiId; ?>">正常</button>
             <?php endif; ?>
             <?php if ($status !== ApiManager::STATUS_MAINTENANCE): ?>
-                <button type="button" class="vs-btn vs-btn--default vs-api-list-action"
+                <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action"
                         data-api-action="maintenance" data-api-id="<?php echo $apiId; ?>">维护</button>
             <?php endif; ?>
             <?php if ($status !== ApiManager::STATUS_DISABLED): ?>
-                <button type="button" class="vs-btn vs-btn--default vs-api-list-action"
+                <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action"
                         data-api-action="disable" data-api-id="<?php echo $apiId; ?>">禁用</button>
             <?php endif; ?>
-            <button type="button" class="vs-btn vs-btn--danger vs-api-list-action"
+            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-api-list-action"
                     data-api-action="delete" data-api-id="<?php echo $apiId; ?>">删除</button>
         </div>
     </div>
@@ -253,16 +255,6 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
         </div>
 
         <div class="vs-api-list-table" id="apiListTable"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
-            <div class="vs-api-list-table__head" aria-hidden="true">
-                <span class="vs-api-list-table__col vs-api-list-table__col--icon"></span>
-                <span class="vs-api-list-table__col">名称</span>
-                <span class="vs-api-list-table__col vs-api-list-table__col--method">方法</span>
-                <span class="vs-api-list-table__col">地址</span>
-                <span class="vs-api-list-table__col vs-api-list-table__col--calls">调用</span>
-                <span class="vs-api-list-table__col vs-api-list-table__col--key">密钥</span>
-                <span class="vs-api-list-table__col vs-api-list-table__col--status">状态</span>
-                <span class="vs-api-list-table__col vs-api-list-table__col--actions">操作</span>
-            </div>
             <div class="vs-api-list-table__body" id="apiListBody">
                 <?php foreach ($apis as $row): ?>
                     <?php vs_render_api_list_item($row); ?>

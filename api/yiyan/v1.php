@@ -11,9 +11,19 @@
  * @return JSON 一言数据
  */
 
-// —— 统计（须在业务前；endpoint 配成 /api/yiyan/v1.php 即可自动匹配）——
-require_once dirname(__DIR__, 2) . '/core/bootstrap.php';
-ApiStats::hit();
+// —— 调用统计（任意深度；PHP 7.4～8.2；详见 api/统计代码使用说明.md）——
+$__d = __DIR__;
+while ($__d !== '' && $__d !== dirname($__d)) {
+    if (is_file($__d . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'bootstrap.php')) {
+        require_once $__d . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'bootstrap.php';
+        break;
+    }
+    $__d = dirname($__d);
+}
+unset($__d);
+if (class_exists('ApiStats', false)) {
+    ApiStats::hit();
+}
 
 // ==================== 跨域请求配置 ====================
 header('Access-Control-Allow-Origin: *');

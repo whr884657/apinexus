@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/api-review.js
- * 作用：后台接口审核（筛选、通过、不通过弹窗）
+ * 作用：后台接口审核（待审 / 通过 / 不通过；筛选不含「全部」）
  */
 (function () {
     'use strict';
@@ -16,7 +16,8 @@
     var overlay = document.getElementById('apiReviewRejectOverlay');
     var reasonInput = document.getElementById('apiReviewRejectReason');
     var confirmBtn = document.getElementById('apiReviewRejectConfirm');
-    // 审核队列默认看待审；「全部」仍可切换
+    var listEditBase = page.getAttribute('data-list-edit-base') || '';
+    // 进入本页默认「待审核」；仅三态筛选
     var currentFilter = '0';
     var rejectApiId = '';
 
@@ -42,7 +43,11 @@
     }
 
     function applyFilter(filter) {
-        currentFilter = String(filter == null ? '0' : filter);
+        var next = String(filter == null ? '0' : filter);
+        if (next !== '0' && next !== '1' && next !== '2') {
+            next = '0';
+        }
+        currentFilter = next;
         document.querySelectorAll('.vs-api-review-filter').forEach(function (btn) {
             var on = String(btn.getAttribute('data-filter')) === currentFilter;
             btn.classList.toggle('vs-btn--primary', on);
@@ -63,7 +68,7 @@
         table.querySelectorAll('.vs-api-review-row').forEach(function (row) {
             total += 1;
             var audit = String(row.getAttribute('data-audit') || '');
-            var show = currentFilter === 'all' || audit === currentFilter;
+            var show = audit === currentFilter;
             row.hidden = !show;
             if (show) {
                 visible += 1;
@@ -78,16 +83,19 @@
         }
     }
 
-    function renderActions(actions, audit) {
+    function renderActions(actions, audit, apiId) {
         if (!actions) {
             return;
         }
         var html = '';
+        if (listEditBase) {
+            html += '<a class="vs-btn vs-btn--pill vs-btn--default" href="' + listEditBase + encodeURIComponent(apiId) + '">编辑</a>';
+        }
         if (audit !== '1') {
-            html += '<button type="button" class="vs-btn vs-btn--primary vs-api-review-action" data-audit="1">通过</button>';
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary vs-api-review-action" data-audit="1">通过</button>';
         }
         if (audit !== '2') {
-            html += '<button type="button" class="vs-btn vs-btn--danger vs-api-review-deny" data-audit="2">不通过</button>';
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-api-review-deny" data-audit="2">不通过</button>';
         }
         actions.innerHTML = html;
     }
@@ -127,7 +135,7 @@
                     reasonEl.textContent = '';
                 }
             }
-            renderActions(row.querySelector('.vs-api-review-row__actions'), String(audit));
+            renderActions(row.querySelector('.vs-api-review-row__actions'), String(audit), apiId);
             applyFilter(currentFilter);
             return data;
         }).catch(function () {

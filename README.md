@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.18.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.19.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -25,7 +25,7 @@
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
 - **API 管理（已实现）**：后台接口列表与分类；接口审核（待审核/通过/不通过，可选拒绝原因）；用户中心开发者投稿与邮件通知
-- **调用统计（v3.18+）**：本地脚本头 `ApiStats::hit()` + 代理 `/apis/{短码}` 自动记账；日志表 `apilog`；同步 `api.calls`（密钥/扣费字段预留）
+- **调用统计（v3.18+）**：本地脚本头 `ApiStats::hit()` + 代理 `/apis/{短码}` 自动记账；日志表 `apilog`（含 IP 归属地预留字段 `iploc`）；同步 `api.calls`；站长说明见 `api/统计代码使用说明.md`
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
@@ -88,8 +88,8 @@
 | 管理员忘记密码 | `/admin/forgot.php` | 邮箱验证码重置（需配置 SMTP） |
 | 管理控制台 | `/admin/index.php` | 后台首页，展示站点与版本信息 |
 | 数据大屏（占位） | `/admin/data-screen.php` | 后续开发 |
-| 接口列表 | `/admin/api/list.php` | 添加/编辑接口、状态（正常/维护/禁用）、图标、参数与文档（AJAX 大弹窗） |
-| 接口审核 | `/admin/api/review.php` | 待审/通过/不通过；拒绝原因（选填）；审核结果邮件通知 |
+| 接口列表 | `/admin/api/list.php` | 紧凑卡片：类型、完整调用链接、状态、调用量、编辑/维护/禁用/删除 |
+| 接口审核 | `/admin/api/review.php` | 待审/通过/未通过；编辑/通过/不通过；拒绝原因（选填）；邮件通知 |
 | 接口分类 | `/admin/api/categories.php` | 表格式列表、分类 CRUD、内置 SVG 图标库（自动扫描）、描述、启禁 |
 | API 管理（占位） | `/admin/api/docs.php` 等 | 文档、反馈仍为占位页 |
 | 内容运营（占位） | `/admin/content/` | 文章、评论、友链、合作伙伴 |
@@ -143,7 +143,7 @@ misc-api/
 ├── 404.php                     # 全站 404（含安全法律提示）
 ├── index.php                   # 前台首页（主题驱动）
 ├── apis.php                    # 全部接口列表 + 代理网关（对外 /apis/{短码}，内记统计）
-├── api/                        # 本地业务接口脚本（头部注入 ApiStats::hit）
+├── api/                        # 本地业务接口脚本（头部注入 ApiStats::hit）+ 统计代码使用说明.md
 │   └── yiyan/                  # 示例：随机一言
 ├── articles.php                # 前台 · 文章
 ├── links.php                   # 前台 · 友情链接
@@ -193,6 +193,8 @@ misc-api/
 │   ├── version.php             # VS_VERSION 版本常量
 │   ├── ThemeManager.php        # 前台主题加载与切换
 │   ├── ApiManager.php          # 接口列表 CRUD 与状态
+│   ├── ApiStats.php            # 本地/代理调用统计（apilog）
+│   ├── ApiProxy.php            # 代理网关 /apis/{短码}
 │   ├── ApiCategoryManager.php  # 接口分类（后台 CRUD）
 │   ├── FrontendCategory.php    # 前台分类（主题调用）
 │   ├── FrontendApi.php         # 前台公开接口（主题调用）
@@ -276,6 +278,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.19.0（2026-07-16）
+
+- **接口管理 UI**：管理端列表/审核、用户端 API 管理改为紧凑卡片；完整调用链接；审核去掉「全部」并修复筛选
+- **统计增强**：`apilog.iploc` 预留；本地注入兼容任意目录深度；`api/统计代码使用说明.md`
 
 ### v3.18.0（2026-07-16）
 

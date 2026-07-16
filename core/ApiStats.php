@@ -226,12 +226,12 @@ class ApiStats
         $stmt = $pdo->prepare(
             'INSERT INTO `' . Database::table('apilog') . '` (
                 `apiid`, `apiname`, `apitype`, `userid`, `apikey`,
-                `method`, `ip`, `host`, `path`, `url`,
+                `method`, `ip`, `iploc`, `host`, `path`, `url`,
                 `referer`, `origin`, `domain`, `ua`, `source`,
                 `ok`, `httpcode`, `charged`, `cost`, `createtime`
             ) VALUES (
                 ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, 0, 0, NOW()
             )'
@@ -244,6 +244,7 @@ class ApiStats
             $ctx['apikey'],
             $ctx['method'],
             $ctx['ip'],
+            $ctx['iploc'],
             $ctx['host'],
             $ctx['path'],
             $ctx['url'],
@@ -301,6 +302,7 @@ class ApiStats
             'apikey'  => mb_substr(self::readKey(), 0, 128, 'UTF-8'),
             'method'  => mb_substr($method, 0, 16, 'UTF-8'),
             'ip'      => mb_substr($ip, 0, 45, 'UTF-8'),
+            'iploc'   => '', // 预留：后续系统设置开启 IP 解析后再写入
             'host'    => mb_substr($host, 0, 255, 'UTF-8'),
             'path'    => mb_substr($path, 0, 500, 'UTF-8'),
             'url'     => mb_substr($url, 0, 1000, 'UTF-8'),

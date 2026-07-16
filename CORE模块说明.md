@@ -112,7 +112,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `ApiStats` | `FrontendApi` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php` | ✅ 是 | **已完成**（本地/外链、对外 `/apis/{短码}`、审核三态、投稿与邮件、**调用统计 apilog**） |
+| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `ApiStats` | `FrontendApi` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php` | ✅ 是 | **已完成**（本地/外链、对外 `/apis/{短码}`、审核三态、投稿与邮件、**调用统计 apilog**、**iploc 预留**、管理/用户卡片 UI） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
@@ -222,7 +222,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前 `ApiStats::hitProxy` |
-| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；本地文件头 `ApiStats::hit()` |
+| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`（含 `iploc` 预留）；本地文件头向上查找 `bootstrap` 后 `ApiStats::hit()` |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表（**主题向**） |

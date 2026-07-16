@@ -154,6 +154,11 @@ class DatabaseMigrator
             self::markApplied('3.18.0');
         }
 
+        // 新装已含 3.19.0（iploc）时跳过迁移
+        if (!in_array('3.19.0', $applied, true) && self::tableColumnExists('apilog', 'iploc')) {
+            self::markApplied('3.19.0');
+        }
+
         // 新装无历史 /proxy.php?s= 地址时，3.12.0 的 UPDATE 幂等，不强制跳过
     }
 

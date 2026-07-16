@@ -290,31 +290,41 @@
         });
     }
 
+    function methodSlug(method) {
+        var m = String(method || 'GET').toLowerCase().replace(/[^a-z0-9]+/g, '');
+        return m || 'get';
+    }
+
+    function callUrlOf(api) {
+        return String((api && (api.call_url || api.endpoint)) || '');
+    }
+
     function buildActionButtons(api) {
         var id = api.id;
         var status = normalizeStatus(api.status);
         var html = '';
-        html += '<button type="button" class="vs-btn vs-btn--default vs-api-list-action" data-api-action="edit" data-api-id="' + id + '">编辑</button>';
+        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action" data-api-action="edit" data-api-id="' + id + '">编辑</button>';
         if (status !== 0) {
-            html += '<button type="button" class="vs-btn vs-btn--default vs-api-list-action" data-api-action="normal" data-api-id="' + id + '">正常</button>';
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action" data-api-action="normal" data-api-id="' + id + '">正常</button>';
         }
         if (status !== 2) {
-            html += '<button type="button" class="vs-btn vs-btn--default vs-api-list-action" data-api-action="maintenance" data-api-id="' + id + '">维护</button>';
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action" data-api-action="maintenance" data-api-id="' + id + '">维护</button>';
         }
         if (status !== 1) {
-            html += '<button type="button" class="vs-btn vs-btn--default vs-api-list-action" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
         }
-        html += '<button type="button" class="vs-btn vs-btn--danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
+        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
         return html;
     }
 
     function buildItemHtml(api) {
         var icon = safeIconUrl(api.icon);
-        var desc = api.description || '';
         var method = (api.method || 'GET').toUpperCase();
         var status = normalizeStatus(api.status);
         var audit = normalizeAudit(api.audit);
-        var search = (String(api.name || '') + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '')).toLowerCase();
+        var callUrl = callUrlOf(api);
+        var typeLabel = api.apitype_label || '';
+        var search = (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '') + ' ' + typeLabel).toLowerCase();
         var payload = escapeHtml(JSON.stringify(api));
 
         var html = '<div class="vs-api-list-row" data-api-row="' + api.id + '"'
@@ -322,20 +332,30 @@
             + ' data-api-audit="' + audit + '"'
             + ' data-search="' + escapeHtml(search) + '"'
             + ' data-payload="' + payload + '">';
+        html += '<div class="vs-api-list-row__top">';
         html += '<div class="vs-api-list-row__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" data-field="icon"></div>';
-        html += '<div class="vs-api-list-row__main">';
-        html += '<div class="vs-api-list-row__name" data-field="name">' + escapeHtml(api.name || '') + '</div>';
-        html += '<div class="vs-api-list-row__desc" data-field="description">';
-        html += desc ? escapeHtml(desc) : '<span class="vs-api-list-row__empty">—</span>';
-        html += '</div></div>';
-        html += '<div class="vs-api-list-row__method"><span class="vs-api-list-method vs-api-list-method--' + escapeHtml(method.toLowerCase()) + '" data-field="method">' + escapeHtml(method) + '</span></div>';
-        html += '<div class="vs-api-list-row__endpoint" data-field="endpoint" title="' + escapeHtml(api.endpoint || '') + '">' + escapeHtml(api.endpoint || '') + '</div>';
-        html += '<div class="vs-api-list-row__calls" data-field="calls">' + (parseInt(api.calls, 10) || 0) + '</div>';
-        html += '<div class="vs-api-list-row__key" data-field="needkey_label">' + escapeHtml(api.needkey_label || requireKeyLabel(api.needkey)) + '</div>';
-        html += '<div class="vs-api-list-row__status">';
+        html += '<div class="vs-api-list-row__head">';
+        html += '<div class="vs-api-list-row__titleline">';
+        html += '<span class="vs-api-list-row__id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
+        html += '<span class="vs-api-list-row__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
+        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += '</div>';
+        html += '<div class="vs-api-list-row__badges">';
+        if (typeLabel) {
+            html += '<span class="vs-api-list-type" data-field="apitype_label">' + escapeHtml(typeLabel) + '</span>';
+        }
         html += '<span class="vs-api-list-status ' + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span>';
         if (audit !== 1) {
             html += '<span class="vs-api-list-audit ' + auditClass(audit) + '" data-field="audit_label">' + escapeHtml(api.audit_label || '') + '</span>';
+        }
+        html += '</div></div>';
+        html += '<div class="vs-api-list-row__calls" title="调用次数"><span data-field="calls">' + (parseInt(api.calls, 10) || 0) + '</span></div>';
+        html += '</div>';
+        html += '<div class="vs-api-list-row__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</div>';
+        html += '<div class="vs-api-list-row__meta">';
+        html += '<span data-field="needkey_label">' + escapeHtml(api.needkey_label || requireKeyLabel(api.needkey)) + '</span>';
+        if (api.category) {
+            html += '<span class="vs-api-list-row__sep">·</span><span data-field="category">' + escapeHtml(api.category) + '</span>';
         }
         html += '</div>';
         html += '<div class="vs-api-list-row__actions">' + buildActionButtons(api) + '</div>';
@@ -399,34 +419,34 @@
         if (!rowEl || !api) {
             return;
         }
+        var callUrl = callUrlOf(api);
+        var typeLabel = api.apitype_label || '';
         rowEl.setAttribute('data-api-status', String(normalizeStatus(api.status)));
         rowEl.setAttribute('data-api-audit', String(normalizeAudit(api.audit)));
         rowEl.setAttribute(
             'data-search',
-            (String(api.name || '') + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '')).toLowerCase()
+            (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '') + ' ' + typeLabel).toLowerCase()
         );
         rowEl.setAttribute('data-payload', JSON.stringify(api));
 
+        var idEl = rowEl.querySelector('[data-field="id"]');
+        if (idEl) {
+            idEl.textContent = '#' + (parseInt(api.id, 10) || 0);
+        }
         var nameEl = rowEl.querySelector('[data-field="name"]');
         if (nameEl) {
             nameEl.textContent = api.name || '';
-        }
-        var descEl = rowEl.querySelector('[data-field="description"]');
-        if (descEl) {
-            descEl.innerHTML = api.description
-                ? escapeHtml(api.description)
-                : '<span class="vs-api-list-row__empty">—</span>';
         }
         var methodEl = rowEl.querySelector('[data-field="method"]');
         if (methodEl) {
             var m = (api.method || 'GET').toUpperCase();
             methodEl.textContent = m;
-            methodEl.className = 'vs-api-list-method vs-api-list-method--' + m.toLowerCase();
+            methodEl.className = 'vs-api-list-method vs-api-list-method--' + methodSlug(m);
         }
-        var endpointEl = rowEl.querySelector('[data-field="endpoint"]');
-        if (endpointEl) {
-            endpointEl.textContent = api.endpoint || '';
-            endpointEl.setAttribute('title', api.endpoint || '');
+        var urlEl = rowEl.querySelector('[data-field="call_url"]');
+        if (urlEl) {
+            urlEl.textContent = callUrl;
+            urlEl.setAttribute('title', callUrl);
         }
         var callsEl = rowEl.querySelector('[data-field="calls"]');
         if (callsEl) {
@@ -436,26 +456,62 @@
         if (keyEl) {
             keyEl.textContent = api.needkey_label || requireKeyLabel(api.needkey);
         }
+        var typeEl = rowEl.querySelector('[data-field="apitype_label"]');
+        var badges = rowEl.querySelector('.vs-api-list-row__badges');
+        if (typeLabel) {
+            if (!typeEl && badges) {
+                typeEl = document.createElement('span');
+                typeEl.className = 'vs-api-list-type';
+                typeEl.setAttribute('data-field', 'apitype_label');
+                badges.insertBefore(typeEl, badges.firstChild);
+            }
+            if (typeEl) {
+                typeEl.textContent = typeLabel;
+            }
+        } else if (typeEl && typeEl.parentNode) {
+            typeEl.parentNode.removeChild(typeEl);
+        }
         var statusEl = rowEl.querySelector('[data-field="status_label"]');
         if (statusEl) {
             statusEl.textContent = api.status_label || String(normalizeStatus(api.status));
             statusEl.className = 'vs-api-list-status ' + statusClass(api.status);
         }
-        var statusWrap = rowEl.querySelector('.vs-api-list-row__status');
         var auditEl = rowEl.querySelector('[data-field="audit_label"]');
         var audit = normalizeAudit(api.audit);
         if (audit === 1) {
             if (auditEl && auditEl.parentNode) {
                 auditEl.parentNode.removeChild(auditEl);
             }
-        } else if (statusWrap) {
+        } else if (badges) {
             if (!auditEl) {
                 auditEl = document.createElement('span');
                 auditEl.setAttribute('data-field', 'audit_label');
-                statusWrap.appendChild(auditEl);
+                badges.appendChild(auditEl);
             }
             auditEl.textContent = api.audit_label || '';
             auditEl.className = 'vs-api-list-audit ' + auditClass(audit);
+        }
+        var catEl = rowEl.querySelector('[data-field="category"]');
+        var meta = rowEl.querySelector('.vs-api-list-row__meta');
+        if (api.category) {
+            if (!catEl && meta) {
+                var sep = document.createElement('span');
+                sep.className = 'vs-api-list-row__sep';
+                sep.textContent = '·';
+                catEl = document.createElement('span');
+                catEl.setAttribute('data-field', 'category');
+                meta.appendChild(sep);
+                meta.appendChild(catEl);
+            }
+            if (catEl) {
+                catEl.textContent = api.category;
+            }
+        } else if (catEl) {
+            var prev = catEl.previousSibling;
+            if (prev && prev.classList && prev.classList.contains('vs-api-list-row__sep')) {
+                prev.parentNode.removeChild(prev);
+            }
+            catEl.parentNode.removeChild(catEl);
         }
         var iconImg = rowEl.querySelector('[data-field="icon"]');
         if (iconImg) {
@@ -874,4 +930,32 @@
             });
         }
     });
+
+    // 审核页「编辑」跳转：list.php?edit={id}
+    (function openEditFromQuery() {
+        var match = /[?&]edit=(\d+)/.exec(window.location.search || '');
+        if (!match) {
+            return;
+        }
+        var editId = match[1];
+        var btn = page.querySelector('.vs-api-list-action[data-api-action="edit"][data-api-id="' + editId + '"]');
+        if (btn) {
+            btn.click();
+            return;
+        }
+        postAction('get', { api_id: editId }).then(function (data) {
+            if (data.code !== 1 || !data.api) {
+                return;
+            }
+            formMode = 'edit';
+            fillForm(data.api);
+            if (!formOverlay) {
+                return;
+            }
+            formOverlay.hidden = false;
+            formOverlay.setAttribute('aria-hidden', 'false');
+            formOverlay.classList.add('is-open');
+            document.body.classList.add('is-overlay-open');
+        }).catch(function () {});
+    })();
 })();
