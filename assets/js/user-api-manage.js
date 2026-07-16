@@ -161,6 +161,13 @@
         }
     }
 
+    function listBody() {
+        if (!listEl) {
+            return null;
+        }
+        return listEl.querySelector('.vs-api-list-table__body') || listEl;
+    }
+
     function auditClass(audit) {
         var n = parseInt(audit, 10);
         if (n === 1) {
@@ -196,13 +203,13 @@
         }
         var html = '';
         if (status !== 0) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-status" data-api-id="' + id + '" data-status="0">正常</button>';
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="' + id + '" data-status="0">正常</button>';
         }
         if (status !== 2) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-status" data-api-id="' + id + '" data-status="2">维护</button>';
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="' + id + '" data-status="2">维护</button>';
         }
         if (status !== 1) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-status" data-api-id="' + id + '" data-status="1">禁用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="' + id + '" data-status="1">禁用</button>';
         }
         return html;
     }
@@ -221,37 +228,47 @@
         if (isNaN(status)) {
             status = 0;
         }
+        var keyBadge = api.needkey_badge || '';
+        var category = api.category ? String(api.category) : '';
+        var icon = api.icon || '';
         var html = '';
-        html += '<div class="vs-user-api-row" data-api-row="' + id + '" data-api-status="' + status + '" data-api-audit="' + audit + '">';
-        html += '<div class="vs-user-api-row__top">';
-        html += '<div class="vs-user-api-row__titleline">';
-        html += '<span class="vs-user-api-row__id">#' + id + '</span>';
-        html += '<strong class="vs-user-api-row__name" data-field="name">' + escapeHtml(api.name || '') + '</strong>';
-        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += '<div class="vs-api-item vs-user-api-row" data-api-row="' + id + '" data-api-status="' + status + '" data-api-audit="' + audit + '">';
+        html += '<div class="vs-api-item__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy"></div>';
+        html += '<div class="vs-api-item__title">';
+        html += '<span class="vs-api-item__id">#' + id + '</span>';
+        html += '<span class="vs-api-item__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
         html += '</div>';
-        html += '<div class="vs-user-api-row__side">';
+        html += '<div class="vs-api-item__tags">';
+        if (category) {
+            html += '<span class="vs-api-tag vs-api-tag--cat">' + escapeHtml(category) + '</span>';
+        }
+        html += '<span class="vs-api-tag vs-api-tag--free">免费</span>';
+        if (keyBadge) {
+            html += '<span class="vs-api-tag vs-api-tag--key">' + escapeHtml(keyBadge) + '</span>';
+        }
         if (approved) {
-            html += '<span class="vs-api-list-status ' + statusClass(status) + '" data-field="status_label">'
+            html += '<span class="vs-api-tag vs-api-tag--status ' + statusClass(status) + '" data-field="status_label">'
                 + escapeHtml(api.status_label || '正常') + '</span>';
         } else {
-            html += '<span class="vs-api-list-audit ' + auditClass(audit) + '" data-field="audit_label">'
+            html += '<span class="vs-api-tag vs-api-tag--audit ' + auditClass(audit) + '" data-field="audit_label">'
                 + escapeHtml(api.audit_label || '') + '</span>';
         }
-        html += '<span class="vs-user-api-row__calls" title="调用次数"><span data-field="calls">'
-            + (parseInt(api.calls, 10) || 0) + '</span></span>';
-        html += '</div></div>';
-        html += '<div class="vs-user-api-row__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">'
-            + escapeHtml(callUrl) + '</div>';
-        html += '<p class="vs-user-api-row__reason" data-field="rejectreason"' + (reason ? '' : ' hidden') + '>';
-        html += reason ? ('未通过原因：' + escapeHtml(reason)) : '';
-        html += '</p>';
-        html += '<div class="vs-user-api-row__actions">';
-        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-edit" data-api-id="' + id + '">编辑</button>';
+        html += '</div>';
+        html += '<div class="vs-api-item__endpoint">';
+        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span>';
+        html += '</div>';
+        html += '<div class="vs-api-item__calls" title="调用次数"><span data-field="calls">' + (parseInt(api.calls, 10) || 0) + '</span></div>';
+        html += '<div class="vs-api-item__actions vs-user-api-row__actions">';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-user-api-edit" data-api-id="' + id + '">编辑</button>';
         if (approved) {
             html += buildStatusButtons(api);
         }
-        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-user-api-delete" data-api-id="' + id + '">删除</button>';
-        html += '</div></div>';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-user-api-delete" data-api-id="' + id + '">删除</button>';
+        html += '</div>';
+        html += '<p class="vs-api-review-reason vs-user-api-row__reason" data-field="rejectreason"' + (reason ? '' : ' hidden') + '>';
+        html += reason ? ('未通过原因：' + escapeHtml(reason)) : '';
+        html += '</p></div>';
         return html;
     }
 
@@ -259,15 +276,19 @@
         if (!listEl || !api) {
             return;
         }
+        var body = listBody();
+        if (!body) {
+            return;
+        }
         var id = String(api.id);
-        var existing = listEl.querySelector('.vs-user-api-row[data-api-row="' + id + '"]');
+        var existing = body.querySelector('.vs-user-api-row[data-api-row="' + id + '"]');
         var temp = document.createElement('div');
         temp.innerHTML = buildRowHtml(api);
         var node = temp.firstChild;
         if (existing && node) {
             existing.parentNode.replaceChild(node, existing);
         } else if (node) {
-            listEl.insertBefore(node, listEl.firstChild);
+            body.insertBefore(node, body.firstChild);
         }
         syncEmpty();
     }

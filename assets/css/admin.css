@@ -2450,76 +2450,34 @@ select.vs-input.vs-select {
 }
 
 .vs-api-review-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    border: 1px solid var(--vs-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--vs-content-bg);
 }
 
 .vs-api-review-list[hidden] {
     display: none !important;
 }
 
-.vs-api-review-row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 12px 14px;
-    border: 1px solid var(--vs-border);
-    border-radius: 12px;
-    background: var(--vs-content-bg);
+.vs-api-review-list .vs-api-item {
+    grid-template-columns: 40px minmax(120px, 1.2fr) minmax(140px, 1.4fr) minmax(180px, 2fr) 72px minmax(200px, 1.2fr);
+    grid-template-areas:
+        "icon title tags endpoint calls actions"
+        ". meta meta meta meta meta"
+        ". reason reason reason reason reason";
 }
 
-.vs-api-review-row[hidden] {
-    display: none !important;
-}
-
-.vs-api-review-row__top {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px 12px;
-}
-
-.vs-api-review-row__titleline {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 8px;
-    min-width: 0;
-}
-
-.vs-api-review-row__badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-}
-
-.vs-api-review-name {
-    font-weight: 600;
-    color: var(--vs-text);
-}
-
-.vs-api-review-row__url {
+.vs-api-item__meta,
+.vs-api-review-meta {
+    grid-area: meta;
     font-size: 12px;
     color: var(--vs-text-secondary);
-    word-break: break-all;
-    line-height: 1.45;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-}
-
-.vs-api-review-endpoint,
-.vs-api-review-desc,
-.vs-api-review-meta,
-.vs-api-review-reason {
-    font-size: 12px;
-    color: var(--vs-text-secondary);
-    line-height: 1.5;
-    word-break: break-word;
 }
 
 .vs-api-review-reason {
+    grid-area: reason;
+    font-size: 12px;
     color: #b91c1c;
 }
 
@@ -2527,31 +2485,24 @@ select.vs-input.vs-select {
     display: none !important;
 }
 
-.vs-api-review-actions,
-.vs-api-review-row__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding-top: 4px;
-    border-top: 1px solid var(--vs-border);
-}
-
-.vs-api-review-row__actions .vs-btn {
-    height: 28px;
-    min-width: 0;
-    padding: 0 10px;
-    font-size: 12px;
-}
-
-@media (max-width: 768px) {
-    .vs-api-review-row__actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
+@media (max-width: 900px) {
+    .vs-api-review-list {
+        border: none;
+        background: transparent;
+        overflow: visible;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }
 
-    .vs-api-review-row__actions .vs-btn {
-        width: 100%;
+    .vs-api-review-list .vs-api-item {
+        grid-template-areas:
+            "icon title tags"
+            "endpoint endpoint endpoint"
+            "meta meta meta"
+            "reason reason reason"
+            "calls calls calls"
+            "actions actions actions";
     }
 }
 
@@ -3041,46 +2992,51 @@ select.vs-input.vs-select {
 }
 
 .vs-api-list-table {
-    border: none;
-    background: transparent;
-    overflow: visible;
+    border: 1px solid var(--vs-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--vs-content-bg);
 }
 
 .vs-api-list-table__body {
     display: flex;
     flex-direction: column;
-    gap: 10px;
 }
 
-.vs-api-list-row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 12px 14px;
-    border: 1px solid var(--vs-border);
-    border-radius: 12px;
-    background: var(--vs-content-bg);
+/* 桌面端：表格行；手机端：卡片（见 media） */
+.vs-api-item {
+    display: grid;
+    grid-template-columns: 40px minmax(120px, 1.2fr) minmax(140px, 1.4fr) minmax(180px, 2fr) 72px minmax(200px, 1.2fr);
+    grid-template-areas:
+        "icon title tags endpoint calls actions";
+    align-items: center;
+    gap: 8px 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--vs-border);
     font-size: 13px;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    background: var(--vs-content-bg);
 }
 
-.vs-api-list-row[hidden] {
+.vs-api-item:last-child {
+    border-bottom: none;
+}
+
+.vs-api-item[hidden] {
     display: none !important;
 }
 
-.vs-api-list-row:hover {
+.vs-api-item:hover {
     background: #f8fafc;
-    border-color: #cbd5e1;
 }
 
-.vs-api-list-row__top {
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: start;
-}
+.vs-api-item__icon { grid-area: icon; }
+.vs-api-item__title { grid-area: title; min-width: 0; }
+.vs-api-item__tags { grid-area: tags; }
+.vs-api-item__endpoint { grid-area: endpoint; min-width: 0; }
+.vs-api-item__calls { grid-area: calls; }
+.vs-api-item__actions { grid-area: actions; }
 
-.vs-api-list-row__icon img {
+.vs-api-item__icon img {
     width: 32px;
     height: 32px;
     border-radius: 8px;
@@ -3089,96 +3045,36 @@ select.vs-input.vs-select {
     display: block;
 }
 
-.vs-api-list-row__head {
-    min-width: 0;
+.vs-api-item__title {
     display: flex;
-    flex-direction: column;
+    align-items: baseline;
     gap: 6px;
-}
-
-.vs-api-list-row__titleline {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 8px;
     min-width: 0;
 }
 
-.vs-api-list-row__id {
+.vs-api-item__id {
     font-size: 12px;
     font-weight: 700;
     color: #94a3b8;
-    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
 }
 
-.vs-api-list-row__name {
+.vs-api-item__name {
     font-weight: 600;
     color: var(--vs-text);
-    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 100%;
 }
 
-.vs-api-list-row__badges {
+.vs-api-item__tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
 }
 
-.vs-api-list-row__calls {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--vs-text-secondary);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    padding-top: 2px;
-}
-
-.vs-api-list-row__calls::before {
-    content: "调用 ";
-    font-weight: 500;
-    color: #94a3b8;
-}
-
-.vs-api-list-row__url {
-    font-size: 12px;
-    color: var(--vs-text-secondary);
-    word-break: break-all;
-    line-height: 1.45;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-}
-
-.vs-api-list-row__meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 6px;
-    font-size: 12px;
-    color: #94a3b8;
-}
-
-.vs-api-list-row__sep {
-    opacity: 0.7;
-}
-
-.vs-api-list-row__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding-top: 4px;
-    border-top: 1px solid var(--vs-border);
-}
-
-.vs-api-list-row__actions .vs-btn {
-    height: 28px;
-    min-width: 0;
-    padding: 0 10px;
-    font-size: 12px;
-}
-
-.vs-api-list-type {
+.vs-api-tag {
     display: inline-flex;
     align-items: center;
     height: 20px;
@@ -3186,8 +3082,124 @@ select.vs-input.vs-select {
     border-radius: 999px;
     font-size: 11px;
     font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.vs-api-tag--cat {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.vs-api-tag--free {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.vs-api-tag--key {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.vs-api-tag--proxy {
     background: #f1f5f9;
     color: #475569;
+}
+
+.vs-api-tag--status.is-normal {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.vs-api-tag--status.is-maintenance {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.vs-api-tag--status.is-disabled {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.vs-api-tag--audit.is-pending {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.vs-api-tag--audit.is-approved {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.vs-api-tag--audit.is-rejected {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.vs-api-item__endpoint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.vs-api-item__url {
+    color: #16a34a;
+    font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vs-api-item__calls {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #2563eb;
+    font-variant-numeric: tabular-nums;
+}
+
+.vs-api-item__calls::before {
+    content: "请求 ";
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.vs-api-item__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.vs-btn--outline {
+    height: 28px;
+    min-width: 0;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 8px;
+    background: #fff;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+}
+
+.vs-btn--outline:hover {
+    border-color: #94a3b8;
+    color: #334155;
+    background: #f8fafc;
+}
+
+.vs-btn--outline-danger {
+    color: #e11d48;
+    border-color: rgba(225, 29, 72, 0.35);
+}
+
+.vs-btn--outline-danger:hover {
+    background: #fff1f2;
+    border-color: #e11d48;
+    color: #be123c;
 }
 
 .vs-api-list-method {
@@ -3201,6 +3213,7 @@ select.vs-input.vs-select {
     font-size: 11px;
     font-weight: 700;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    flex-shrink: 0;
 }
 
 .vs-api-list-method--get {
@@ -3213,11 +3226,10 @@ select.vs-input.vs-select {
     color: #1d4ed8;
 }
 
+/* 兼容旧类名（状态 pill） */
 .vs-api-list-status {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 44px;
     height: 20px;
     padding: 0 8px;
     border-radius: 999px;
@@ -3225,53 +3237,29 @@ select.vs-input.vs-select {
     font-weight: 600;
 }
 
-.vs-api-list-status.is-normal {
-    background: #ecfdf5;
-    color: #047857;
-}
-
-.vs-api-list-status.is-maintenance {
-    background: #fffbeb;
-    color: #b45309;
-}
-
-.vs-api-list-status.is-disabled {
-    background: #f1f5f9;
-    color: #64748b;
-}
+.vs-api-list-status.is-normal { background: #dcfce7; color: #15803d; }
+.vs-api-list-status.is-maintenance { background: #fef3c7; color: #b45309; }
+.vs-api-list-status.is-disabled { background: #f1f5f9; color: #64748b; }
 
 .vs-api-list-audit {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 52px;
     height: 20px;
     padding: 0 8px;
     border-radius: 999px;
     font-size: 11px;
     font-weight: 600;
 }
+
+.vs-api-list-audit.is-pending { background: #fef3c7; color: #b45309; }
+.vs-api-list-audit.is-approved { background: #dbeafe; color: #1d4ed8; }
+.vs-api-list-audit.is-rejected { background: #fee2e2; color: #b91c1c; }
 
 .vs-api-type-tabs {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
     margin-bottom: 6px;
-}
-
-.vs-api-list-audit.is-pending {
-    color: #b45309;
-    background: #fffbeb;
-}
-
-.vs-api-list-audit.is-approved {
-    background: #eff6ff;
-    color: #1d4ed8;
-}
-
-.vs-api-list-audit.is-rejected {
-    background: #fef2f2;
-    color: #b91c1c;
 }
 
 .vs-api-list-form-tabs {
@@ -3335,36 +3323,79 @@ select.vs-input.vs-select {
     justify-content: flex-end;
 }
 
-/* .vs-select 与 select.vs-input 共用上方箭头样式，勿再叠加第二套箭头 */
-
+/* 手机端：参考卡片布局 */
 @media (max-width: 900px) {
-    .vs-api-list-row {
-        padding: 12px;
+    .vs-api-list-table {
+        border: none;
+        background: transparent;
+        overflow: visible;
     }
 
-    .vs-api-list-row__top {
-        grid-template-columns: 32px minmax(0, 1fr);
+    .vs-api-list-table__body {
+        gap: 12px;
     }
 
-    .vs-api-list-row__calls {
-        grid-column: 2;
-        justify-self: start;
-        margin-top: -2px;
+    .vs-api-item {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "icon title tags"
+            "endpoint endpoint endpoint"
+            "calls calls calls"
+            "actions actions actions";
+        gap: 8px 10px;
+        padding: 14px;
+        border: 1px solid var(--vs-border);
+        border-radius: 14px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        margin: 0;
     }
 
-    .vs-api-list-row__name {
+    .vs-api-item:last-child {
+        border-bottom: 1px solid var(--vs-border);
+    }
+
+    .vs-api-item__title {
+        flex-wrap: wrap;
+    }
+
+    .vs-api-item__name {
         white-space: normal;
     }
 
-    .vs-api-list-row__actions {
+    .vs-api-item__tags {
+        justify-content: flex-end;
+        max-width: 58%;
+    }
+
+    .vs-api-item__endpoint {
+        flex-wrap: wrap;
+    }
+
+    .vs-api-item__url {
+        white-space: normal;
+        word-break: break-all;
+        overflow: visible;
+        text-overflow: unset;
+    }
+
+    .vs-api-item__calls {
+        text-align: right;
+        justify-self: end;
+    }
+
+    .vs-api-item__actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
+        padding-top: 10px;
+        border-top: 1px dashed #cbd5e1;
+        justify-content: stretch;
     }
 
-    .vs-api-list-row__actions .vs-btn {
+    .vs-api-item__actions .vs-btn {
         width: 100%;
-        margin: 0;
+        height: 34px;
     }
 
     .vs-form-row--2 {
@@ -3415,7 +3446,7 @@ select.vs-input.vs-select {
 
 @media (prefers-reduced-motion: reduce) {
     .vs-icon-picker__item,
-    .vs-api-list-row.is-enter,
+    .vs-api-item.is-enter,
     .vs-api-cat-row.is-enter,
     .vs-api-list-tip--enter,
     .vs-api-list-empty__card {
@@ -3424,7 +3455,7 @@ select.vs-input.vs-select {
 }
 
 /* 列表 / 分类行入场 */
-.vs-api-list-row.is-enter,
+.vs-api-item.is-enter,
 .vs-api-cat-row.is-enter {
     animation: vs-row-fade 0.38s ease both;
     animation-delay: calc(var(--row-i, 0) * 28ms);

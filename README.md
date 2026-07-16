@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.19.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.20.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -25,7 +25,8 @@
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
 - **API 管理（已实现）**：后台接口列表与分类；接口审核（待审核/通过/不通过，可选拒绝原因）；用户中心开发者投稿与邮件通知
-- **调用统计（v3.18+）**：本地脚本头 `ApiStats::hit()` + 代理 `/apis/{短码}` 自动记账；日志表 `apilog`（含 IP 归属地预留字段 `iploc`）；同步 `api.calls`；站长说明见 `api/统计代码使用说明.md`
+- **调用统计（v3.18+）**：本地脚本头 ≤3 行 `ApiStats::hit()`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`（含 `iploc` 预留）
+
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
@@ -278,6 +279,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.20.0（2026-07-16）
+
+- **接口管理 UI**：电脑端表格行 + 手机端参考卡片；分类/免费/KEY/代理/状态标签；完整调用链接
+- **统计注入**：简化为 3 行向上查找；`api/hit.php` 一行引入；规范「宜简不宜繁」
 
 ### v3.19.0（2026-07-16）
 

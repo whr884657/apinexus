@@ -960,6 +960,7 @@ class ApiManager
             'endpoint'      => isset($row['endpoint']) ? (string) $row['endpoint'] : '',
             'apitype'       => self::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : self::APITYPE_LOCAL),
             'apitype_label' => self::apiTypeLabel(isset($row['apitype']) ? $row['apitype'] : self::APITYPE_LOCAL),
+            'apitype_badge' => self::apiTypeBadge(isset($row['apitype']) ? $row['apitype'] : self::APITYPE_LOCAL),
             'targeturl'     => isset($row['targeturl']) ? (string) $row['targeturl'] : '',
             'proxyslug'     => isset($row['proxyslug']) ? (string) $row['proxyslug'] : '',
             'call_url'      => self::resolveCallUrl($row),
@@ -971,6 +972,7 @@ class ApiManager
             'calls'         => isset($row['calls']) ? (int) $row['calls'] : 0,
             'needkey'       => self::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_label' => self::requireKeyLabel(isset($row['needkey']) ? $row['needkey'] : 0),
+            'needkey_badge' => self::requireKeyBadge(isset($row['needkey']) ? $row['needkey'] : 0),
             'status'         => $status,
             'status_label'   => self::statusLabel($status),
             'audit'          => $auditStatus,
@@ -1008,6 +1010,7 @@ class ApiManager
             'endpoint'       => $full['endpoint'],
             'apitype'        => $full['apitype'],
             'apitype_label'  => $full['apitype_label'],
+            'apitype_badge'  => $full['apitype_badge'],
             'targeturl'      => $full['targeturl'],
             'proxyslug'      => $full['proxyslug'],
             'call_url'       => $full['call_url'],
@@ -1015,6 +1018,7 @@ class ApiManager
             'calls'          => $full['calls'],
             'needkey'        => $full['needkey'],
             'needkey_label'  => $full['needkey_label'],
+            'needkey_badge'  => $full['needkey_badge'],
             'status'         => $full['status'],
             'status_label'   => $full['status_label'],
             'audit'          => $full['audit'],
@@ -1047,6 +1051,35 @@ class ApiManager
     public static function apiTypeLabel($value)
     {
         return self::normalizeApiType($value) === self::APITYPE_PROXY ? '代理外链' : '本地接口';
+    }
+
+    /**
+     * 列表卡片用短标签（仅代理显示「代理」，本地不占位）
+     *
+     * @param mixed $value
+     * @return string
+     */
+    public static function apiTypeBadge($value)
+    {
+        return self::normalizeApiType($value) === self::APITYPE_PROXY ? '代理' : '';
+    }
+
+    /**
+     * 列表卡片密钥角标：无要求则空；可选 / 必填
+     *
+     * @param mixed $value
+     * @return string
+     */
+    public static function requireKeyBadge($value)
+    {
+        $key = self::normalizeRequireKey($value);
+        if ($key === self::KEY_REQUIRED) {
+            return 'KEY必填';
+        }
+        if ($key === self::KEY_OPTIONAL) {
+            return 'KEY可选';
+        }
+        return '';
     }
 
     /**

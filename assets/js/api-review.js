@@ -89,13 +89,13 @@
         }
         var html = '';
         if (listEditBase) {
-            html += '<a class="vs-btn vs-btn--pill vs-btn--default" href="' + listEditBase + encodeURIComponent(apiId) + '">编辑</a>';
+            html += '<a class="vs-btn vs-btn--outline" href="' + listEditBase + encodeURIComponent(apiId) + '">编辑</a>';
         }
         if (audit !== '1') {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary vs-api-review-action" data-audit="1">通过</button>';
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-review-action" data-audit="1">通过</button>';
         }
         if (audit !== '2') {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-api-review-deny" data-audit="2">不通过</button>';
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-api-review-deny" data-audit="2">不通过</button>';
         }
         actions.innerHTML = html;
     }

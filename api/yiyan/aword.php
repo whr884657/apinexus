@@ -5,19 +5,10 @@
  * 官方文档: https://developer.hitokoto.cn/sentence/
  */
 
-// —— 调用统计（任意深度；PHP 7.4～8.2；详见 api/统计代码使用说明.md）——
-$__d = __DIR__;
-while ($__d !== '' && $__d !== dirname($__d)) {
-    if (is_file($__d . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'bootstrap.php')) {
-        require_once $__d . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'bootstrap.php';
-        break;
-    }
-    $__d = dirname($__d);
-}
-unset($__d);
-if (class_exists('ApiStats', false)) {
-    ApiStats::hit();
-}
+// —— 调用统计（3 行；任意深度；详见 api/统计代码使用说明.md）——
+for ($d = __DIR__; !is_file($d . '/core/bootstrap.php') && $d !== dirname($d); $d = dirname($d)) {}
+require_once $d . '/core/bootstrap.php';
+ApiStats::hit();
 
 // 禁用错误显示
 error_reporting(0);
