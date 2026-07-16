@@ -22,14 +22,25 @@ function vs_admin_render_theme_config_fields($themeId)
         return;
     }
 
+    $statKeys = array();
+    $otherFields = array();
     foreach ($schema as $field) {
+        $key = $field['key'];
+        if ($field['type'] === 'checkbox' && strpos($key, 'show_stat_') === 0) {
+            $statKeys[] = $field;
+        } else {
+            $otherFields[] = $field;
+        }
+    }
+
+    $renderField = function ($field) use ($values) {
         $key = $field['key'];
         $label = $field['label'];
         $type = $field['type'];
         $placeholder = isset($field['placeholder']) ? (string) $field['placeholder'] : '';
         $val = array_key_exists($key, $values) ? $values[$key] : (isset($field['default']) ? $field['default'] : '');
 
-        echo '<div class="vs-theme-config-field">';
+        echo '<div class="vs-theme-config-field' . ($type === 'checkbox' ? ' vs-theme-config-field--check' : '') . '">';
         if ($type === 'checkbox') {
             $checked = $val === true || $val === 1 || $val === '1' || $val === 'true';
             echo '<label class="vs-theme-config-check">';
@@ -41,16 +52,9 @@ function vs_admin_render_theme_config_fields($themeId)
             echo vs_e($val === null ? '' : (string) $val);
             echo '</textarea>';
         } elseif ($type === 'select') {
-            $fieldDef = null;
-            foreach (ThemeManager::getSettingsSchema($themeId) as $f) {
-                if ($f['key'] === $key) {
-                    $fieldDef = $f;
-                    break;
-                }
-            }
             echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';
             echo '<select class="vs-input" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']">';
-            $options = ($fieldDef && !empty($fieldDef['options'])) ? $fieldDef['options'] : array();
+            $options = !empty($field['options']) ? $field['options'] : array();
             foreach ($options as $opt) {
                 if (!is_array($opt) || !isset($opt['value'])) {
                     continue;
@@ -67,6 +71,31 @@ function vs_admin_render_theme_config_fields($themeId)
             echo '<input type="' . vs_e($inputType) . '" class="vs-input" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']" value="' . vs_e($val === null ? '' : (string) $val) . '" placeholder="' . vs_e($placeholder) . '">';
         }
         echo '</div>';
+    };
+
+    foreach ($otherFields as $field) {
+        if ($field['key'] === 'show_stats' && count($statKeys) > 0) {
+            $renderField($field);
+            echo '<div class="vs-theme-config-group">';
+            echo '<p class="vs-theme-config-group__title">首页统计项</p>';
+            echo '<div class="vs-theme-config-checks">';
+            foreach ($statKeys as $sf) {
+                $renderField($sf);
+            }
+            echo '</div></div>';
+            $statKeys = array();
+            continue;
+        }
+        $renderField($field);
+    }
+    if (count($statKeys) > 0) {
+        echo '<div class="vs-theme-config-group">';
+        echo '<p class="vs-theme-config-group__title">首页统计项</p>';
+        echo '<div class="vs-theme-config-checks">';
+        foreach ($statKeys as $sf) {
+            $renderField($sf);
+        }
+        echo '</div></div>';
     }
 }
 

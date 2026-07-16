@@ -39,7 +39,13 @@ $stTintSwatches = array(
         <div class="st-bar__actions">
             <div class="st-tint" id="stTint">
                 <button type="button" class="st-tint__btn" id="stTintBtn" aria-label="选择主题色" aria-expanded="false" aria-controls="stTintPanel" title="主题色">
-                    <span class="st-tint__disc" aria-hidden="true"></span>
+                    <svg class="theme-trigger-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M12 3C7.03 3 3 7.03 3 12c0 2.2 1.02 4.16 2.62 5.45.42.33.68.84.68 1.38v1.17c0 .55.45 1 1 1h1.17c.54 0 1.05.26 1.38.68C10.84 22.98 12.8 24 15 24c4.97 0 9-4.03 9-9S19.97 3 15 3h-3z" stroke="#374151" stroke-width="1.5"/>
+                        <circle cx="8.5" cy="10.5" r="1.5" fill="#ef4444"/>
+                        <circle cx="12" cy="8" r="1.5" fill="#3b82f6"/>
+                        <circle cx="15.5" cy="11" r="1.5" fill="#22c55e"/>
+                        <circle cx="13" cy="15" r="1.5" fill="#eab308"/>
+                    </svg>
                 </button>
                 <div class="st-tint__panel" id="stTintPanel" hidden role="listbox" aria-label="浅色主题">
                     <?php foreach ($stTintSwatches as $sw): ?>

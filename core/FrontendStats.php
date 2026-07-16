@@ -13,7 +13,11 @@ class FrontendStats
      */
     public static function userCount()
     {
-        return UserManager::count();
+        try {
+            return max(0, (int) UserManager::count());
+        } catch (Exception $e) {
+            return 0;
+        }
     }
 
     /**
@@ -23,17 +27,17 @@ class FrontendStats
      */
     public static function todayCallCount()
     {
-        if (!ApiStats::tableReady()) {
+        if (!class_exists('ApiStats') || !ApiStats::tableReady()) {
             return 0;
         }
         try {
             $pdo = Database::connect();
             $table = Database::table('apilog');
-            // createtime 由 ApiStats 写入 NOW()（日期时间）
+            // createtime 为 datetime（ApiStats::write 使用 NOW()）
             $stmt = $pdo->query(
-                'SELECT COUNT(*) FROM `' . $table . '` WHERE DATE(`createtime`) = CURDATE()'
+                'SELECT COUNT(*) FROM `' . $table . '` WHERE `createtime` >= CURDATE() AND `createtime` < DATE_ADD(CURDATE(), INTERVAL 1 DAY)'
             );
-            return (int) $stmt->fetchColumn();
+            return max(0, (int) $stmt->fetchColumn());
         } catch (Exception $e) {
             return 0;
         }

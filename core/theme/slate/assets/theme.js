@@ -448,9 +448,10 @@
 
     var home = document.getElementById('stHome');
     if (home) {
-        animateNum(document.getElementById('stStatTotal'), 0, 600);
-        animateNum(document.getElementById('stStatCats'), 0, 700);
-        animateNum(document.getElementById('stStatAll'), 0, 1000);
+        var nums = home.querySelectorAll('.st-stat-num');
+        nums.forEach(function (el, i) {
+            animateNum(el, 0, 600 + i * 120);
+        });
         initHomeApiList();
         return;
     }

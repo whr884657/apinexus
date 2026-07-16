@@ -172,7 +172,7 @@ function vs_api_detail_url($apiId)
 }
 
 /**
- * 从当前请求解析资源数字 ID（仅 PATH_INFO / SCRIPT_NAME 相对还原）
+ * 从当前请求解析资源数字 ID（PATH_INFO / SCRIPT_NAME 相对还原）
  *
  * @return int
  */
@@ -181,6 +181,8 @@ function vs_resolve_path_id()
     $info = '';
     if (!empty($_SERVER['PATH_INFO'])) {
         $info = (string) $_SERVER['PATH_INFO'];
+    } elseif (!empty($_SERVER['ORIG_PATH_INFO'])) {
+        $info = (string) $_SERVER['ORIG_PATH_INFO'];
     } else {
         $script = isset($_SERVER['SCRIPT_NAME']) ? str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']) : '';
         $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.26.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.27.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -281,6 +281,14 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.27.0（2026-07-17）
+
+**类型：** 中版本（主题二全页配色 + 双主题详情页）
+
+- 主题二选色后顶栏/底栏/背景一并变色；调色盘图标与后台一致
+- 修复用户数/今日调用不跳动；主题设置统计项双列网格
+- 默认主题与主题二接口详情页完整 UI（响应式）
 
 ### v3.26.0（2026-07-17）
 

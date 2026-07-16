@@ -42,7 +42,7 @@
             "key": "show_stat_users",
             "label": "统计：注册用户数",
             "type": "checkbox",
-            "default": false
+            "default": true
         },
         {
             "key": "show_stat_today",
