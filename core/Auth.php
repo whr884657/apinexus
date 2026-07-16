@@ -143,11 +143,11 @@ class Auth
     {
         if (!empty($_SESSION[self::SESSION_KEY]) && self::isSessionExpired()) {
             self::logout();
-            vs_redirect(vs_base_url() . '/admin/login.php?expired=1');
+            vs_redirect(vs_base_url() . '/admin/login?expired=1');
         }
 
         if (!self::check()) {
-            vs_redirect(vs_base_url() . '/admin/login.php');
+            vs_redirect(vs_base_url() . '/admin/login');
         }
     }
 
@@ -159,7 +159,7 @@ class Auth
     public static function redirectIfLoggedIn()
     {
         if (self::check()) {
-            vs_redirect(vs_base_url() . '/admin/index.php');
+            vs_redirect(vs_base_url() . '/admin/index');
         }
     }
 

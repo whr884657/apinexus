@@ -36,7 +36,7 @@
     var fields = {
         name: document.getElementById('apiListFormName'),
         description: document.getElementById('apiListFormDesc'),
-        method: document.getElementById('apiListFormMethod'),
+        methodChecks: document.querySelectorAll('#apiListFormMethodChecks [data-api-method]'),
         status: document.getElementById('apiListFormStatus'),
         audit: document.getElementById('apiListFormAudit'),
         apitype: document.getElementById('apiListFormApiType'),
@@ -303,6 +303,46 @@
         return m || 'get';
     }
 
+    function methodDisplay(api) {
+        if (api && api.method_label) {
+            return String(api.method_label);
+        }
+        if (api && api.methods && api.methods.length) {
+            return api.methods.join(' / ');
+        }
+        return String((api && api.method) || 'GET').replace(/,/g, ' / ');
+    }
+
+    function getSelectedMethods() {
+        var list = [];
+        var nodes = fields.methodChecks || [];
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i].checked) {
+                list.push(String(nodes[i].getAttribute('data-api-method') || '').toUpperCase());
+            }
+        }
+        return list;
+    }
+
+    function setSelectedMethods(value) {
+        var set = {};
+        var raw = Array.isArray(value) ? value : String(value || 'GET').split(/[\s,|\/]+/);
+        for (var i = 0; i < raw.length; i++) {
+            var m = String(raw[i] || '').toUpperCase();
+            if (m === 'GET' || m === 'POST') {
+                set[m] = true;
+            }
+        }
+        if (!set.GET && !set.POST) {
+            set.GET = true;
+        }
+        var nodes = fields.methodChecks || [];
+        for (var j = 0; j < nodes.length; j++) {
+            var key = String(nodes[j].getAttribute('data-api-method') || '').toUpperCase();
+            nodes[j].checked = !!set[key];
+        }
+    }
+
     function callUrlOf(api) {
         return String((api && (api.call_url || api.endpoint)) || '');
     }
@@ -359,7 +399,8 @@
 
     function buildItemHtml(api) {
         var icon = safeIconUrl(api.icon);
-        var method = (api.method || 'GET').toUpperCase();
+        var method = methodDisplay(api);
+        var methodKey = String((api.method || 'GET')).split(/[\s,|\/]+/)[0] || 'GET';
         var status = normalizeStatus(api.status);
         var audit = normalizeAudit(api.audit);
         var callUrl = callUrlOf(api);
@@ -380,7 +421,7 @@
         html += '<span class="vs-api-item__id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
         html += '</div>';
         html += '<div class="vs-api-item__endpoint">';
-        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(methodKey)) + '" data-field="method">' + escapeHtml(method) + '</span>';
         html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span>';
         html += '</div>';
         html += '<div class="vs-api-item__tags" data-field="tags">' + buildTagsHtml(api) + '</div>';
@@ -602,9 +643,10 @@
         }
         var methodEl = rowEl.querySelector('[data-field="method"]');
         if (methodEl) {
-            var m = (api.method || 'GET').toUpperCase();
+            var m = methodDisplay(api);
+            var key = String((api.method || 'GET')).split(/[\s,|\/]+/)[0] || 'GET';
             methodEl.textContent = m;
-            methodEl.className = 'vs-api-list-method vs-api-list-method--' + methodSlug(m);
+            methodEl.className = 'vs-api-list-method vs-api-list-method--' + methodSlug(key);
         }
         var urlEl = rowEl.querySelector('[data-field="call_url"]');
         if (urlEl) {
@@ -659,8 +701,8 @@
         if (fields.description) {
             fields.description.value = '';
         }
-        if (fields.method) {
-            fields.method.value = 'GET';
+        if (fields.methodChecks && fields.methodChecks.length) {
+            setSelectedMethods('GET');
         }
         if (fields.status) {
             fields.status.value = '0';
@@ -701,6 +743,12 @@
         setApiType(0);
         setIconPickerSelection(defaultIcons.length ? defaultIcons[0] : '');
         switchFormTab('basic');
+        if (window.VSPick) {
+            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
+                var s = document.getElementById(id);
+                if (s) { window.VSPick.refresh(s); }
+            });
+        }
     }
 
     function fillForm(api) {
@@ -716,8 +764,8 @@
         if (fields.description) {
             fields.description.value = api.description || '';
         }
-        if (fields.method) {
-            fields.method.value = (api.method || 'GET').toUpperCase();
+        if (fields.methodChecks && fields.methodChecks.length) {
+            setSelectedMethods(api.methods || api.method || 'GET');
         }
         if (fields.status) {
             fields.status.value = String(normalizeStatus(api.status));
@@ -759,6 +807,12 @@
         }
         setIconPickerSelection(api.icon || api.icon_raw || '');
         switchFormTab('basic');
+        if (window.VSPick) {
+            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
+                var s = document.getElementById(id);
+                if (s) { window.VSPick.refresh(s); }
+            });
+        }
     }
 
     function openFormOverlay(mode, rowEl) {
@@ -804,7 +858,7 @@
             endpoint: fields.endpoint ? fields.endpoint.value.trim() : '',
             targeturl: fields.targeturl ? fields.targeturl.value.trim() : '',
             proxyslug: fields.proxyslug ? fields.proxyslug.value.trim() : '',
-            method: fields.method ? fields.method.value : 'GET',
+            method: getSelectedMethods().join(','),
             params: fields.params ? fields.params.value.trim() : '',
             response: fields.response ? fields.response.value : '',
             doc: fields.docNormal ? fields.docNormal.value : '',
@@ -822,6 +876,12 @@
         if (!payload.name) {
             window.VS.showMessage('请填写接口名称', 'error');
             switchFormTab('basic');
+        if (window.VSPick) {
+            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
+                var s = document.getElementById(id);
+                if (s) { window.VSPick.refresh(s); }
+            });
+        }
             if (fields.name) {
                 fields.name.focus();
             }
@@ -832,6 +892,12 @@
             if (!payload.targeturl || !/^https?:\/\//i.test(payload.targeturl)) {
                 window.VS.showMessage('请填写完整的上游地址（以 http:// 或 https:// 开头）', 'error');
                 switchFormTab('basic');
+        if (window.VSPick) {
+            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
+                var s = document.getElementById(id);
+                if (s) { window.VSPick.refresh(s); }
+            });
+        }
                 if (fields.targeturl) {
                     fields.targeturl.focus();
                 }
@@ -840,6 +906,12 @@
             if (!/^[a-zA-Z0-9]{3,64}$/.test(payload.proxyslug || '')) {
                 window.VS.showMessage('请填写 3～64 位字母或数字短码', 'error');
                 switchFormTab('basic');
+        if (window.VSPick) {
+            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
+                var s = document.getElementById(id);
+                if (s) { window.VSPick.refresh(s); }
+            });
+        }
                 if (fields.proxyslug) {
                     fields.proxyslug.focus();
                 }
@@ -848,6 +920,12 @@
         } else if (!payload.endpoint) {
             window.VS.showMessage('请填写本地接口路径', 'error');
             switchFormTab('basic');
+        if (window.VSPick) {
+            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
+                var s = document.getElementById(id);
+                if (s) { window.VSPick.refresh(s); }
+            });
+        }
             if (fields.endpoint) {
                 fields.endpoint.focus();
             }

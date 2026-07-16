@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'apitype'      => $apitype,
             'targeturl'    => isset($_POST['targeturl']) ? (string) $_POST['targeturl'] : '',
             'proxyslug'    => isset($_POST['proxyslug']) ? (string) $_POST['proxyslug'] : '',
-            'method'       => isset($_POST['method']) ? (string) $_POST['method'] : 'GET',
+            'method'       => isset($_POST['method']) ? $_POST['method'] : 'GET',
             'params'       => isset($_POST['params']) ? (string) $_POST['params'] : '',
             'response'     => isset($_POST['response']) ? (string) $_POST['response'] : '',
             'doc'          => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
@@ -343,24 +343,26 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
 
             <div class="vs-form-row vs-form-row--2">
                 <div>
-                    <label class="vs-label" for="userApiFormMethod">请求方式</label>
-                    <select class="vs-input vs-select" id="userApiFormMethod" name="method">
-                        <option value="GET">GET</option>
-                        <option value="POST">POST</option>
-                    </select>
+                    <label class="vs-label">请求方式</label>
+                    <div class="vs-method-checks" id="userApiFormMethodChecks" role="group" aria-label="请求方式">
+                        <label class="vs-check"><input type="checkbox" name="method[]" value="GET" data-api-method="GET" checked> GET</label>
+                        <label class="vs-check"><input type="checkbox" name="method[]" value="POST" data-api-method="POST"> POST</label>
+                    </div>
+                    <p class="vs-form-hint">可同时勾选 GET 与 POST。</p>
                 </div>
                 <div>
                     <label class="vs-label" for="userApiFormNeedkey">密钥要求</label>
-                    <select class="vs-input vs-select" id="userApiFormNeedkey" name="needkey">
-                        <option value="0">不需要</option>
+                    <select class="vs-input vs-select" id="userApiFormNeedkey" name="needkey" data-vs-pick>
+                        <option value="0">完全不需要</option>
                         <option value="1">必须需要</option>
-                        <option value="2">可选</option>
+                        <option value="2">可选（可填可不填）</option>
                     </select>
+                    <p class="vs-form-hint">「完全不需要」与「可选」调用规则相同；选「完全不需要」时前台通常不展示密钥填写框。</p>
                 </div>
             </div>
             <div class="vs-form-row">
                 <label class="vs-label" for="userApiFormCategory">所属分类</label>
-                <select class="vs-input vs-select" id="userApiFormCategory" name="category">
+                <select class="vs-input vs-select" id="userApiFormCategory" name="category" data-vs-pick>
                     <option value="">未分类</option>
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?php echo vs_e($cat['name']); ?>"><?php echo vs_e($cat['name']); ?></option>
@@ -413,4 +415,4 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
 <?php endif; ?>
 
 <?php
-vs_user_layout_end($tableReady ? array('icon-picker.js', 'user-api-manage.js') : array());
+vs_user_layout_end($tableReady ? array('vs-pick.js', 'icon-picker.js', 'user-api-manage.js') : array());

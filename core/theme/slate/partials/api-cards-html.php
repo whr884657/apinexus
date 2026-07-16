@@ -8,6 +8,7 @@ if (!isset($apiData) || !is_array($apiData)) {
 }
 
 $apis = $apiData;
+$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
 
 foreach ($apis as $api):
     if (!is_array($api)) {
@@ -23,20 +24,28 @@ foreach ($apis as $api):
     $endpoint = trim((string) (isset($api['endpoint']) ? $api['endpoint'] : ''));
     $nameKey = function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name);
     $descKey = function_exists('mb_strtolower') ? mb_strtolower($desc, 'UTF-8') : strtolower($desc);
+    $apiId = (int) (isset($api['id']) ? $api['id'] : 0);
+    $detailUrl = !empty($api['detail_url'])
+        ? (string) $api['detail_url']
+        : ($apiId > 0 ? vs_api_detail_url($apiId) : ($vsBase . '/apis'));
     $methodClass = strtolower(trim((string) $methods[0]));
     ?>
 <article class="st-api-card" data-category="<?php echo vs_e($cat); ?>" data-name="<?php echo vs_e($nameKey); ?>" data-desc="<?php echo vs_e($descKey); ?>">
-    <div class="st-api-card__head">
-        <span class="st-api-card__method st-api-card__method--<?php echo vs_e($methodClass); ?>"><?php echo vs_e(strtoupper(trim((string) $methods[0]))); ?></span>
-        <span class="st-api-card__badge">免费</span>
-    </div>
-    <h3 class="st-api-card__title"><?php echo vs_e($name); ?></h3>
-    <?php if ($desc !== ''): ?>
-    <p class="st-api-card__desc"><?php echo vs_e($desc); ?></p>
-    <?php endif; ?>
-    <?php if ($endpoint !== ''): ?>
-    <code class="st-api-card__endpoint"><?php echo vs_e($endpoint); ?></code>
-    <?php endif; ?>
+    <a class="st-api-card__link" href="<?php echo vs_e($detailUrl); ?>">
+        <div class="st-api-card__head">
+            <?php foreach (array_slice($methods, 0, 2) as $m): ?>
+            <span class="st-api-card__method st-api-card__method--<?php echo vs_e(strtolower(trim((string) $m))); ?>"><?php echo vs_e(strtoupper(trim((string) $m))); ?></span>
+            <?php endforeach; ?>
+            <span class="st-api-card__badge">免费</span>
+        </div>
+        <h3 class="st-api-card__title"><?php echo vs_e($name); ?></h3>
+        <?php if ($desc !== ''): ?>
+        <p class="st-api-card__desc"><?php echo vs_e($desc); ?></p>
+        <?php endif; ?>
+        <?php if ($endpoint !== ''): ?>
+        <code class="st-api-card__endpoint"><?php echo vs_e($endpoint); ?></code>
+        <?php endif; ?>
+    </a>
 </article>
 <?php endforeach; ?>
 <?php if ($apis === array()): ?>

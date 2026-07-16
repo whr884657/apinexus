@@ -4599,3 +4599,94 @@ select.vs-input.vs-select {
         word-break: break-all !important;
     }
 }
+
+/* —— 自定义下拉选择（vs-pick） —— */
+.vs-pick {
+    position: relative;
+    width: 100%;
+}
+.vs-pick__native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+.vs-pick__btn {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    position: relative;
+    padding-right: 32px !important;
+}
+.vs-pick__btn::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #94a3b8;
+    border-bottom: 2px solid #94a3b8;
+    transform: translateY(-60%) rotate(45deg);
+    transition: transform .15s ease;
+}
+.vs-pick.is-open .vs-pick__btn::after {
+    transform: translateY(-20%) rotate(225deg);
+}
+.vs-pick__panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 80;
+    max-height: 240px;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid var(--vs-border, #e2e8f0);
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    padding: 6px;
+}
+.vs-pick__option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--vs-text, #0f172a);
+    cursor: pointer;
+}
+.vs-pick__option:hover {
+    background: #f1f5f9;
+}
+.vs-pick__option.is-selected {
+    background: #eef2ff;
+    color: #3730a3;
+    font-weight: 600;
+}
+.vs-method-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    min-height: 40px;
+}
+.vs-method-checks .vs-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--vs-text, #0f172a);
+    cursor: pointer;
+    user-select: none;
+}
+

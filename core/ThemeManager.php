@@ -638,6 +638,7 @@ class ThemeManager
         $pageCssMap = array(
             'home'         => 'assets/css/pages/index.css',
             'apis'         => 'assets/css/pages/apis.css',
+            'api-detail'   => 'assets/css/pages/apis.css',
             'articles'     => 'assets/css/pages/articles.css',
             'about'        => 'assets/css/pages/about.css',
             'links'        => 'assets/css/pages/links.css',

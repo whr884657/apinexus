@@ -16,7 +16,7 @@ $base = vs_base_url();
 
 if (isset($_GET['action']) && $_GET['action'] === 'logout') {
     Auth::logout();
-    vs_redirect($base . '/admin/login.php');
+    vs_redirect($base . '/admin/login');
 }
 
 Auth::redirectIfLoggedIn();
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         vs_auth_json(array(
             'code' => 1,
             'msg'  => '登录成功',
-            'url'  => $base . '/admin/index.php',
+            'url'  => $base . '/admin/index',
         ));
     }
 
@@ -72,14 +72,10 @@ vs_auth_head('登录');
 
             <form id="loginForm" method="post" action="" novalidate>
                 <?php vs_auth_csrf_field(); ?>
-                <div class="field">
-                    <label for="username">用户名或邮箱</label>
-                    <input id="username" name="username" type="text" placeholder="请输入用户名或邮箱" autocomplete="username" maxlength="64" required>
+                <div class="field"><input id="username" name="username" type="text" placeholder="请输入用户名或邮箱" autocomplete="username" maxlength="64" required>
                 </div>
 
-                <div class="field">
-                    <label for="password">密码</label>
-                    <div class="input-wrap">
+                <div class="field"><div class="input-wrap">
                         <input id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required>
                         <?php echo vs_auth_toggle_password_html(); ?>
                     </div>
@@ -90,7 +86,7 @@ vs_auth_head('登录');
                         <input type="checkbox" id="rememberCredentials" value="1">
                         记住账号密码
                     </label>
-                    <a href="<?php echo vs_e($base); ?>/admin/forgot.php">忘记密码？</a>
+                    <a href="<?php echo vs_e($base); ?>/admin/forgot">忘记密码？</a>
                 </div>
 
                 <?php echo vs_auth_submit_btn('登 录', 'loginBtn', 'login-btn'); ?>

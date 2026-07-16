@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tableReady = ApiManager::tableReady();
 $hasAudit = $tableReady && ApiManager::hasAuditColumn();
 $apis = $hasAudit ? ApiManager::listForReview() : array();
-$listEditBase = rtrim(vs_base_url(), '/') . '/admin/api/list.php?edit=';
+$listEditBase = rtrim(vs_base_url(), '/') . '/admin/api/list?edit=';
 
 $counts = array(
     '0' => 0,
@@ -87,10 +87,10 @@ vs_admin_layout_start('接口审核', 'api-review');
      data-has-table="<?php echo $hasAudit && count($apis) > 0 ? '1' : '0'; ?>">
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '接口管理功能尚未就绪，请先前往「系统升级」完成更新。', array('compact' => true)); ?>
-        <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade.php'); ?>">前往系统升级</a>
+        <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
     <?php elseif (!$hasAudit): ?>
         <?php vs_render_notice('warning', '', '当前系统尚未具备审核功能，请先前往「系统升级」完成结构更新。', array('compact' => true)); ?>
-        <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade.php'); ?>">前往系统升级</a>
+        <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
     <?php else: ?>
         <?php vs_render_notice('info', '', '本页仅显示开发者投稿的接口。管理员在「接口列表」直接发布的接口默认已通过审核，不会出现在这里。不通过时可填写原因（选填），系统将邮件通知投稿用户。', array('compact' => true)); ?>
 
@@ -185,8 +185,12 @@ vs_admin_layout_start('接口审核', 'api-review');
                         </div>
                         <div class="vs-api-item__actions vs-api-review-row__actions">
                             <a class="vs-btn vs-btn--outline" href="<?php echo vs_e($listEditBase . (int) $api['id']); ?>">编辑</a>
+                            <?php if ($audit !== ApiManager::AUDIT_APPROVED): ?>
                             <button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-pass vs-api-review-action<?php echo $audit === ApiManager::AUDIT_APPROVED ? ' is-active' : ''; ?>" data-audit="1">通过</button>
+                            <?php endif; ?>
+                            <?php if ($audit !== ApiManager::AUDIT_REJECTED): ?>
                             <button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-btn--status vs-btn--status-deny vs-api-review-deny<?php echo $audit === ApiManager::AUDIT_REJECTED ? ' is-active' : ''; ?>" data-audit="2">不通过</button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>

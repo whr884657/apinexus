@@ -981,7 +981,9 @@ class ApiManager
             'targeturl'     => isset($row['targeturl']) ? (string) $row['targeturl'] : '',
             'proxyslug'     => isset($row['proxyslug']) ? (string) $row['proxyslug'] : '',
             'call_url'      => self::resolveCallUrl($row),
-            'method'        => isset($row['method']) ? strtoupper((string) $row['method']) : self::METHOD_GET,
+            'method'        => self::methodsToStorage(self::normalizeMethods(isset($row['method']) ? $row['method'] : self::METHOD_GET)),
+            'methods'       => self::normalizeMethods(isset($row['method']) ? $row['method'] : self::METHOD_GET),
+            'method_label'  => self::methodsLabel(isset($row['method']) ? $row['method'] : self::METHOD_GET),
             'params'        => isset($row['params']) ? (string) $row['params'] : '',
             'response'      => isset($row['response']) ? (string) $row['response'] : '',
             'doc'           => isset($row['doc']) ? (string) $row['doc'] : '',
@@ -1032,6 +1034,8 @@ class ApiManager
             'proxyslug'      => $full['proxyslug'],
             'call_url'       => $full['call_url'],
             'method'         => $full['method'],
+            'methods'        => $full['methods'],
+            'method_label'   => $full['method_label'],
             'calls'          => $full['calls'],
             'needkey'        => $full['needkey'],
             'needkey_label'  => $full['needkey_label'],
@@ -1194,10 +1198,33 @@ class ApiManager
             $proxyslug = '';
         }
 
-        $method = strtoupper(trim((string) (isset($data['method']) ? $data['method'] : self::METHOD_GET)));
-        if (!in_array($method, array(self::METHOD_GET, self::METHOD_POST), true)) {
-            return '请求方式仅支持 GET 或 POST';
+        $methodRaw = isset($data['method']) ? $data['method'] : self::METHOD_GET;
+        if (is_array($methodRaw)) {
+            $methodParts = $methodRaw;
+        } else {
+            $methodParts = preg_split('/[\s,|\/]+/', (string) $methodRaw);
         }
+        $methods = array();
+        if (is_array($methodParts)) {
+            foreach ($methodParts as $part) {
+                $m = strtoupper(trim((string) $part));
+                if ($m === self::METHOD_GET || $m === self::METHOD_POST) {
+                    $methods[$m] = $m;
+                }
+            }
+        }
+        if (empty($methods)) {
+            return '请至少选择一种请求方式（GET / POST）';
+        }
+        // 固定顺序：GET 在前
+        $ordered = array();
+        if (isset($methods[self::METHOD_GET])) {
+            $ordered[] = self::METHOD_GET;
+        }
+        if (isset($methods[self::METHOD_POST])) {
+            $ordered[] = self::METHOD_POST;
+        }
+        $method = implode(',', $ordered);
 
         $requestParams = trim((string) (isset($data['params']) ? $data['params'] : ''));
         if ($requestParams !== '') {
@@ -1260,6 +1287,63 @@ class ApiManager
     }
 
     /**
+     * 规范化请求方式列表（可同时含 GET、POST）
+     *
+     * @param mixed $value 字符串（如 GET / GET,POST）、数组均可
+     * @return array
+     */
+    public static function normalizeMethods($value)
+    {
+        if (is_array($value)) {
+            $parts = $value;
+        } else {
+            $parts = preg_split('/[\s,|\/]+/', (string) $value);
+        }
+        $set = array();
+        if (is_array($parts)) {
+            foreach ($parts as $part) {
+                $m = strtoupper(trim((string) $part));
+                if ($m === self::METHOD_GET || $m === self::METHOD_POST) {
+                    $set[$m] = $m;
+                }
+            }
+        }
+        $ordered = array();
+        if (isset($set[self::METHOD_GET])) {
+            $ordered[] = self::METHOD_GET;
+        }
+        if (isset($set[self::METHOD_POST])) {
+            $ordered[] = self::METHOD_POST;
+        }
+        if (empty($ordered)) {
+            $ordered[] = self::METHOD_GET;
+        }
+        return $ordered;
+    }
+
+    /**
+     * 存库用逗号串，如 GET 或 GET,POST
+     *
+     * @param mixed $value
+     * @return string
+     */
+    public static function methodsToStorage($value)
+    {
+        return implode(',', self::normalizeMethods($value));
+    }
+
+    /**
+     * 展示用文案
+     *
+     * @param mixed $value
+     * @return string
+     */
+    public static function methodsLabel($value)
+    {
+        return implode(' / ', self::normalizeMethods($value));
+    }
+
+    /**
      * @param mixed $value
      * @return int 0|1|2
      */
@@ -1279,11 +1363,11 @@ class ApiManager
     public static function requireKeyLabel($value)
     {
         $map = array(
-            self::KEY_NONE     => '不需要',
-            self::KEY_REQUIRED => '必须',
+            self::KEY_NONE     => '完全不需要',
+            self::KEY_REQUIRED => '必须需要',
             self::KEY_OPTIONAL => '可选',
         );
         $key = self::normalizeRequireKey($value);
-        return isset($map[$key]) ? $map[$key] : '不需要';
+        return isset($map[$key]) ? $map[$key] : '完全不需要';
     }
 }

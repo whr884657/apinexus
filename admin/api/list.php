@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'apitype'     => isset($_POST['apitype']) ? (int) $_POST['apitype'] : ApiManager::APITYPE_LOCAL,
             'targeturl'   => isset($_POST['targeturl']) ? (string) $_POST['targeturl'] : '',
             'proxyslug'   => isset($_POST['proxyslug']) ? (string) $_POST['proxyslug'] : '',
-            'method'      => isset($_POST['method']) ? (string) $_POST['method'] : 'GET',
+            'method'      => isset($_POST['method']) ? $_POST['method'] : 'GET',
             'params'      => isset($_POST['params']) ? (string) $_POST['params'] : '',
             'response'    => isset($_POST['response']) ? (string) $_POST['response'] : '',
             'doc'         => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
@@ -170,7 +170,8 @@ function vs_render_api_list_item(array $row)
     }
     $searchHay = mb_strtolower($api['name'] . ' ' . $callUrl . ' ' . $api['endpoint'] . ' ' . $category . ' ' . $typeBadge . ' ' . $username, 'UTF-8');
     $payloadJson = json_encode($api, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-    $methodSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) $api['method']));
+    $methodRaw = isset($api['method_label']) ? (string) $api['method_label'] : (isset($api['method']) ? (string) $api['method'] : 'GET');
+    $methodSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', str_replace(array(',', '/', ' '), '', (string) (isset($api['method']) ? $api['method'] : 'GET'))));
     if ($methodSlug === '') {
         $methodSlug = 'get';
     }
@@ -190,7 +191,7 @@ function vs_render_api_list_item(array $row)
             <span class="vs-api-item__id" data-field="id">#<?php echo $apiId; ?></span>
         </div>
         <div class="vs-api-item__endpoint">
-            <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($api['method']); ?></span>
+            <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($methodRaw); ?></span>
             <span class="vs-api-item__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
         </div>
         <div class="vs-api-item__tags" data-field="tags">
@@ -257,7 +258,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
     <?php if (!$tableReady): ?>
         <div class="vs-api-list-upgrade">
             <?php vs_render_notice('warning', '', '接口管理功能尚未就绪，请先前往「系统升级」完成更新后再使用。', array('compact' => true)); ?>
-            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade.php'); ?>">前往系统升级</a>
+            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
         </div>
     <?php else: ?>
         <div class="vs-api-list-tip vs-api-list-tip--enter">
@@ -290,7 +291,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
         <div class="vs-api-pager" id="apiListPager">
             <label class="vs-api-list-pagesize" for="apiListPageSize">
                 <span class="vs-api-list-pagesize__label">每页</span>
-                <select class="vs-input vs-select vs-api-list-pagesize__select" id="apiListPageSize">
+                <select class="vs-input vs-select vs-api-list-pagesize__select" id="apiListPageSize" data-vs-pick>
                     <option value="10">10</option>
                     <option value="20" selected>20</option>
                     <option value="50">50</option>
@@ -336,15 +337,16 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>
-                        <label class="vs-label" for="apiListFormMethod">请求方式 <span class="vs-req">*</span></label>
-                        <select class="vs-input vs-select" id="apiListFormMethod" name="method">
-                            <option value="GET">GET</option>
-                            <option value="POST">POST</option>
-                        </select>
+                        <label class="vs-label">请求方式 <span class="vs-req">*</span></label>
+                        <div class="vs-method-checks" id="apiListFormMethodChecks" role="group" aria-label="请求方式">
+                            <label class="vs-check"><input type="checkbox" name="method[]" value="GET" data-api-method="GET" checked> GET</label>
+                            <label class="vs-check"><input type="checkbox" name="method[]" value="POST" data-api-method="POST"> POST</label>
+                        </div>
+                        <p class="vs-form-hint">可同时勾选 GET 与 POST。</p>
                     </div>
                     <div>
                         <label class="vs-label" for="apiListFormStatus">接口状态</label>
-                        <select class="vs-input vs-select" id="apiListFormStatus" name="status">
+                        <select class="vs-input vs-select" id="apiListFormStatus" name="status" data-vs-pick>
                             <option value="0">正常</option>
                             <option value="2">维护</option>
                             <option value="1">禁用</option>
@@ -353,7 +355,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormAudit">审核状态</label>
-                    <select class="vs-input vs-select" id="apiListFormAudit" name="audit">
+                    <select class="vs-input vs-select" id="apiListFormAudit" name="audit" data-vs-pick>
                         <option value="1" selected>审核通过</option>
                         <option value="0">待审核</option>
                         <option value="2">审核不通过</option>
@@ -389,7 +391,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                 <div class="vs-form-row vs-form-row--2">
                     <div>
                         <label class="vs-label" for="apiListFormCategory">所属分类</label>
-                        <select class="vs-input vs-select" id="apiListFormCategory" name="category">
+                        <select class="vs-input vs-select" id="apiListFormCategory" name="category" data-vs-pick>
                             <option value="">未分类</option>
                             <?php foreach ($categories as $cat): ?>
                                 <option value="<?php echo vs_e($cat['name']); ?>"><?php echo vs_e($cat['name']); ?></option>
@@ -398,11 +400,12 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     </div>
                     <div class="vs-api-list-key-field">
                         <label class="vs-label" for="apiListFormRequireKey">是否需要密钥</label>
-                        <select class="vs-input vs-select" id="apiListFormRequireKey" name="needkey">
+                        <select class="vs-input vs-select" id="apiListFormRequireKey" name="needkey" data-vs-pick>
                             <option value="0">完全不需要</option>
                             <option value="1">必须需要</option>
                             <option value="2">可选（可填可不填）</option>
                         </select>
+                        <p class="vs-form-hint">「完全不需要」与「可选」调用规则相同；选「完全不需要」时前台通常不展示密钥填写框，「可选」会展示可空输入。</p>
                     </div>
                 </div>
                 <div class="vs-form-row">
@@ -449,4 +452,4 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
     </div>
 </div>
 
-<?php vs_admin_layout_end(array('icon-picker.js', 'api-list.js')); ?>
+<?php vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-list.js')); ?>

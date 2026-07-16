@@ -18,24 +18,24 @@ function vs_admin_menu_groups()
             'id'    => 'dashboard',
             'title' => '控制台',
             'icon'  => 'dashboard',
-            'url'   => '/admin/index.php',
+            'url'   => '/admin/index',
         ),
         array(
             'id'    => 'data-screen',
             'title' => '数据大屏',
             'icon'  => 'ai',
-            'url'   => '/admin/data-screen.php',
+            'url'   => '/admin/data-screen',
         ),
         array(
             'id'       => 'api',
             'title'    => 'API 管理',
             'icon'     => 'cloud',
             'children' => array(
-                array('id' => 'api-list', 'title' => '接口列表', 'url' => '/admin/api/list.php'),
-                array('id' => 'api-review', 'title' => '接口审核', 'url' => '/admin/api/review.php'),
-                array('id' => 'api-categories', 'title' => '接口分类', 'url' => '/admin/api/categories.php'),
-                array('id' => 'api-docs', 'title' => '接口文档', 'url' => '/admin/api/docs.php'),
-                array('id' => 'api-feedback', 'title' => '接口反馈', 'url' => '/admin/api/feedback.php'),
+                array('id' => 'api-list', 'title' => '接口列表', 'url' => '/admin/api/list'),
+                array('id' => 'api-review', 'title' => '接口审核', 'url' => '/admin/api/review'),
+                array('id' => 'api-categories', 'title' => '接口分类', 'url' => '/admin/api/categories'),
+                array('id' => 'api-docs', 'title' => '接口文档', 'url' => '/admin/api/docs'),
+                array('id' => 'api-feedback', 'title' => '接口反馈', 'url' => '/admin/api/feedback'),
             ),
         ),
         array(
@@ -43,11 +43,11 @@ function vs_admin_menu_groups()
             'title'    => '内容运营',
             'icon'     => 'folder',
             'children' => array(
-                array('id' => 'announcements', 'title' => '公告管理', 'url' => '/admin/content/announcements.php'),
-                array('id' => 'articles', 'title' => '文章管理', 'url' => '/admin/content/articles.php'),
-                array('id' => 'comments', 'title' => '评论管理', 'url' => '/admin/content/comments.php'),
-                array('id' => 'links', 'title' => '友情链接', 'url' => '/admin/content/links.php'),
-                array('id' => 'partners', 'title' => '合作伙伴', 'url' => '/admin/content/partners.php'),
+                array('id' => 'announcements', 'title' => '公告管理', 'url' => '/admin/content/announcements'),
+                array('id' => 'articles', 'title' => '文章管理', 'url' => '/admin/content/articles'),
+                array('id' => 'comments', 'title' => '评论管理', 'url' => '/admin/content/comments'),
+                array('id' => 'links', 'title' => '友情链接', 'url' => '/admin/content/links'),
+                array('id' => 'partners', 'title' => '合作伙伴', 'url' => '/admin/content/partners'),
             ),
         ),
         array(
@@ -55,10 +55,10 @@ function vs_admin_menu_groups()
             'title'    => '交易财务',
             'icon'     => 'archive',
             'children' => array(
-                array('id' => 'payment', 'title' => '支付配置', 'url' => '/admin/finance/payment.php'),
-                array('id' => 'orders', 'title' => '订单管理', 'url' => '/admin/finance/orders.php'),
-                array('id' => 'sponsor', 'title' => '赞助管理', 'url' => '/admin/finance/sponsor.php'),
-                array('id' => 'points', 'title' => '积分变动', 'url' => '/admin/finance/points.php'),
+                array('id' => 'payment', 'title' => '支付配置', 'url' => '/admin/finance/payment'),
+                array('id' => 'orders', 'title' => '订单管理', 'url' => '/admin/finance/orders'),
+                array('id' => 'sponsor', 'title' => '赞助管理', 'url' => '/admin/finance/sponsor'),
+                array('id' => 'points', 'title' => '积分变动', 'url' => '/admin/finance/points'),
             ),
         ),
         array(
@@ -66,14 +66,14 @@ function vs_admin_menu_groups()
             'title'    => '系统管理',
             'icon'     => 'setting',
             'children' => array(
-                array('id' => 'users', 'title' => '用户管理', 'url' => '/admin/users.php'),
-                array('id' => 'account', 'title' => '账号设置', 'url' => '/admin/account.php'),
-                array('id' => 'settings', 'title' => '系统设置', 'url' => '/admin/settings.php'),
-                array('id' => 'theme', 'title' => '主题设置', 'url' => '/admin/system/theme.php'),
-                array('id' => 'logs', 'title' => '日志查询', 'url' => '/admin/system/logs.php'),
-                array('id' => 'redis', 'title' => 'Redis 管理', 'url' => '/admin/system/redis.php'),
-                array('id' => 'upgrade', 'title' => '系统升级', 'url' => '/admin/upgrade.php'),
-                array('id' => 'about', 'title' => '关于', 'url' => '/admin/about.php'),
+                array('id' => 'users', 'title' => '用户管理', 'url' => '/admin/users'),
+                array('id' => 'account', 'title' => '账号设置', 'url' => '/admin/account'),
+                array('id' => 'settings', 'title' => '系统设置', 'url' => '/admin/settings'),
+                array('id' => 'theme', 'title' => '主题设置', 'url' => '/admin/system/theme'),
+                array('id' => 'logs', 'title' => '日志查询', 'url' => '/admin/system/logs'),
+                array('id' => 'redis', 'title' => 'Redis 管理', 'url' => '/admin/system/redis'),
+                array('id' => 'upgrade', 'title' => '系统升级', 'url' => '/admin/upgrade'),
+                array('id' => 'about', 'title' => '关于', 'url' => '/admin/about'),
             ),
         ),
     );
@@ -221,7 +221,7 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
 
     echo '</nav>' . "\n";
 
-    $logoutUrl = $base . '/admin/login.php?action=logout';
+    $logoutUrl = $base . '/admin/login?action=logout';
     echo '<div class="vs-sidebar__foot">' . "\n";
     echo '<a href="' . vs_e($logoutUrl) . '" class="vs-sidebar__logout">' . "\n";
     echo '<i class="vs-icon vs-icon--logout"></i>' . "\n";
@@ -246,11 +246,11 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     echo '<div class="vs-topbar__theme" id="vsThemePickerMount"></div>' . "\n";
     if ($admin) {
         $avatarUrl = UserAvatar::resolve($admin);
-        echo '<a href="' . vs_e($base) . '/admin/account.php" class="vs-topbar__avatar-link" title="账号设置">' . "\n";
+        echo '<a href="' . vs_e($base) . '/admin/account" class="vs-topbar__avatar-link" title="账号设置">' . "\n";
         echo '<img src="' . vs_e($avatarUrl) . '" alt="" class="vs-topbar__avatar" width="32" height="32">' . "\n";
         echo '</a>' . "\n";
     }
-    echo '<a href="' . vs_e($base) . '/admin/login.php?action=logout" class="vs-topbar__logout">退出</a>' . "\n";
+    echo '<a href="' . vs_e($base) . '/admin/login?action=logout" class="vs-topbar__logout">退出</a>' . "\n";
     echo '</div>' . "\n";
     echo '</header>' . "\n";
 

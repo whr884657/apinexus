@@ -22,7 +22,7 @@ vs_admin_layout_start('控制台', 'dashboard');
 
     <?php if (!$mailEnabled): ?>
         <?php
-        $settingsUrl = vs_e($vsBase) . '/admin/settings.php';
+        $settingsUrl = vs_e($vsBase) . '/admin/settings';
         vs_render_notice(
             'warning',
             '邮箱发信尚未配置',

@@ -91,10 +91,15 @@
         if (listEditBase) {
             html += '<a class="vs-btn vs-btn--outline" href="' + listEditBase + encodeURIComponent(apiId) + '">编辑</a>';
         }
-        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-pass vs-api-review-action'
-            + (audit === '1' ? ' is-active' : '') + '" data-audit="1">通过</button>';
-        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-btn--status vs-btn--status-deny vs-api-review-deny'
-            + (audit === '2' ? ' is-active' : '') + '" data-audit="2">不通过</button>';
+        // 已通过：仅「不通过」；未通过：仅「通过」；待审核：两者都显示
+        if (String(audit) !== '1') {
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-pass vs-api-review-action'
+                + (audit === '1' ? ' is-active' : '') + '" data-audit="1">通过</button>';
+        }
+        if (String(audit) !== '2') {
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-btn--status vs-btn--status-deny vs-api-review-deny'
+                + (audit === '2' ? ' is-active' : '') + '" data-audit="2">不通过</button>';
+        }
         actions.innerHTML = html;
     }
 

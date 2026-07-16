@@ -190,6 +190,32 @@
         return 'is-normal';
     }
 
+
+    function methodDisplay(api) {
+        if (api && api.method_label) { return String(api.method_label); }
+        if (api && api.methods && api.methods.length) { return api.methods.join(' / '); }
+        return String((api && api.method) || 'GET').replace(/,/g, ' / ');
+    }
+    function getSelectedMethods() {
+        var list = [], nodes = document.querySelectorAll('#userApiFormMethodChecks [data-api-method]');
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i].checked) list.push(String(nodes[i].getAttribute('data-api-method') || '').toUpperCase());
+        }
+        return list;
+    }
+    function setSelectedMethods(value) {
+        var set = {}, raw = Array.isArray(value) ? value : String(value || 'GET').split(/[\s,|\/]+/);
+        for (var i = 0; i < raw.length; i++) {
+            var m = String(raw[i] || '').toUpperCase();
+            if (m === 'GET' || m === 'POST') set[m] = true;
+        }
+        if (!set.GET && !set.POST) set.GET = true;
+        var nodes = document.querySelectorAll('#userApiFormMethodChecks [data-api-method]');
+        for (var j = 0; j < nodes.length; j++) {
+            var key = String(nodes[j].getAttribute('data-api-method') || '').toUpperCase();
+            nodes[j].checked = !!set[key];
+        }
+    }
     function methodSlug(method) {
         var m = String(method || 'GET').toLowerCase().replace(/[^a-z0-9]+/g, '');
         return m || 'get';
@@ -215,7 +241,7 @@
         var id = parseInt(api.id, 10) || 0;
         var reason = api.rejectreason ? String(api.rejectreason) : '';
         var callUrl = api.call_url || api.endpoint || '';
-        var method = (api.method || 'GET').toUpperCase();
+        var method = methodDisplay(api); var methodKey = String((api.method || 'GET')).split(/[\s,|\/]+/)[0] || 'GET';
         var audit = parseInt(api.audit, 10);
         if (isNaN(audit)) {
             audit = 0;
@@ -235,7 +261,7 @@
         html += '<span class="vs-api-item__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
         html += '<span class="vs-api-item__id">#' + id + '</span></div>';
         html += '<div class="vs-api-item__endpoint">';
-        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(methodKey || method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
         html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span></div>';
         html += '<div class="vs-api-item__tags">';
         if (category) {
@@ -298,6 +324,7 @@
     }
 
     function resetForm() {
+        setSelectedMethods('GET');
         formMode = 'create';
         if (formId) {
             formId.value = '';
@@ -336,7 +363,6 @@
         var map = {
             userApiFormName: api.name,
             userApiFormDesc: api.description,
-            userApiFormMethod: api.method || 'GET',
             userApiFormNeedkey: String(api.needkey != null ? api.needkey : 0),
             userApiFormEndpoint: apiType === 0 ? (api.endpoint || '') : '',
             userApiFormTargetUrl: api.targeturl || '',
@@ -353,6 +379,13 @@
                 el.value = map[id] != null ? map[id] : '';
             }
         });
+        setSelectedMethods(api.methods || api.method || 'GET');
+        if (window.VSPick) {
+            ['userApiFormNeedkey', 'userApiFormCategory'].forEach(function (id) {
+                var s = document.getElementById(id);
+                if (s) { window.VSPick.refresh(s); }
+            });
+        }
         var raw = api.icon_raw || '';
         if (iconUrlInput) {
             if (raw && /^https?:\/\//i.test(raw)) {
@@ -381,7 +414,7 @@
             endpoint: endpointInput ? endpointInput.value : '',
             targeturl: targetInput ? targetInput.value : '',
             proxyslug: slugInput ? slugInput.value : '',
-            method: (document.getElementById('userApiFormMethod') || {}).value || 'GET',
+            method: getSelectedMethods().join(','),
             needkey: (document.getElementById('userApiFormNeedkey') || {}).value || '0',
             category: (document.getElementById('userApiFormCategory') || {}).value || '',
             params: (document.getElementById('userApiFormParams') || {}).value || '',

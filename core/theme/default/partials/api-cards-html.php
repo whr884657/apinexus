@@ -9,7 +9,7 @@ if (!isset($apiData) || !is_array($apiData)) {
 
 $apis = $apiData;
 $showDetailBtn = !isset($showDetailBtn) || $showDetailBtn;
-$detailUrl = isset($detailUrl) ? $detailUrl : ($vsBase . '/apis');
+$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
 
 foreach ($apis as $api):
     if (!is_array($api)) {
@@ -26,6 +26,10 @@ foreach ($apis as $api):
     $nameKey = function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name);
     $descKey = function_exists('mb_strtolower') ? mb_strtolower($desc, 'UTF-8') : strtolower($desc);
     $maintenance = !empty($api['maintenance']);
+    $apiId = (int) (isset($api['id']) ? $api['id'] : 0);
+    $detailUrl = !empty($api['detail_url'])
+        ? (string) $api['detail_url']
+        : ($apiId > 0 ? vs_api_detail_url($apiId) : ($vsBase . '/apis'));
     ?>
 <div class="api-card" data-category="<?php echo vs_e($cat); ?>" data-name="<?php echo vs_e($nameKey); ?>" data-desc="<?php echo vs_e($descKey); ?>" style="position: relative;">
     <div style="position: absolute; top: 0.75rem; right: 0.75rem; display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: flex-end;">

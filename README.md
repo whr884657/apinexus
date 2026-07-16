@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.23.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.24.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -68,6 +68,7 @@
 |------|------|------|
 | 前台首页 | `/` | 主题驱动首页：Hero、统计区、接口目录、在线调试 Playground |
 | 全部接口 | `/apis` | 公开接口列表（搜索、**数据库分类**筛选，展示已通过审核接口） |
+| 接口详情 | `/api-detail/{id}` | 单个接口详情（需伪静态，见 `nginx伪静态配置.md`） |
 | 文章 | `/articles` | 前台文章列表 |
 | 贡献者 | `/contributors` | 项目贡献者展示 |
 | 友情链接 | `/links` | 友链展示 |
@@ -87,7 +88,7 @@
 | 用户账号设置 | `/user/account.php` | 修改资料、头像、密码 |
 | 管理员登录 | `/admin/login.php` | 管理员登录（安装时创建账号，无开放注册） |
 | 管理员忘记密码 | `/admin/forgot.php` | 邮箱验证码重置（需配置 SMTP） |
-| 管理控制台 | `/admin/index.php` | 后台首页，展示站点与版本信息 |
+| 管理控制台 | `/admin/index` | 后台首页，展示站点与版本信息 |
 | 数据大屏（占位） | `/admin/data-screen.php` | 后续开发 |
 | 接口列表 | `/admin/api/list.php` | 紧凑卡片：类型、完整调用链接、状态、调用量、编辑/维护/禁用/删除 |
 | 接口审核 | `/admin/api/review.php` | 待审/通过/未通过；编辑/通过/不通过；拒绝原因（选填）；邮件通知 |
@@ -104,7 +105,7 @@
 | 系统设置 | `/admin/settings.php` | 站点信息、注册策略、OAuth、邮箱发信 |
 | 系统升级 | `/admin/upgrade.php` | 手动检测更新、安装更新、查看更新记录 |
 | 关于 | `/admin/about.php` | 系统与环境信息 |
-| 更新 API | `/admin/update.php` | 在线更新接口（版本检测 / 分步更新） |
+| 更新 API | `/admin/update` | 在线更新接口（版本检测 / 分步更新） |
 | 404 错误页 | `/404.php` | 不存在页面与非法访问提示（含法律条款） |
 
 ---
@@ -246,15 +247,18 @@ misc-api/
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
+location ~ ^/api-detail/([0-9]+)/?$ {
+    rewrite ^/api-detail/([0-9]+)/?$ /api-detail.php?_vs_id=$1 last;
+}
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
 }
 ```
 
-若站点配置里已有 `location / { try_files ... }`，只追加第一段 `location ~ ^/apis/...`，并放在 `location /` **上面**。
+若站点配置里已有 `location / { try_files ... }`，只追加 `apis` 与 `api-detail` 两段，并放在 `location /` **上面**。
 
 > **注意：** 不要写 `[a-z0-9]{3,64}`。宝塔伪静态保存时会吞掉 `{…}`，正则变成 `^/apis/([a-z0-9]` 导致 `pcre_compile() failed: missing )`。长度校验由 PHP 完成即可。  
-> **注意：** 不要 rewrite 到 `/apis.php/$1`（PATH_INFO），面板 PHP 常只匹配以 `.php` 结尾的 URI。
+> **注意：** 不要 rewrite 到 `/apis.php/$1` 或 `/api-detail.php/$1`（PATH_INFO），面板 PHP 常只匹配以 `.php` 结尾的 URI。
 
 详情见 [`nginx伪静态配置.md`](nginx伪静态配置.md)。
 
@@ -279,6 +283,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.24.0（2026-07-17）
+
+**类型：** 中版本（接口详情 + 多选请求方式 + 自定义选择面板 + 外链代理 + 后台去 .php）
+
+- 请求方式支持 GET/POST 同时勾选；密钥「完全不需要 / 可选」增加说明
+- 后台/用户表单单选改用 vs-pick；审核页按钮按状态互斥
+- 新增双主题接口详情页 `/api-detail/{id}`；外链图标/头像经 media-proxy
+- 管理端菜单与登录跳转去掉 `.php`；默认主题全部接口/贡献者/赞助页 UI 对齐
 
 ### v3.23.0（2026-07-17）
 

@@ -134,7 +134,7 @@ class ApiCategoryManager
         }
 
         if (preg_match('#^https?://#i', $icon)) {
-            return $icon;
+            return vs_external_media_url($icon);
         }
 
         $base = rtrim(vs_base_url(), '/');
@@ -490,7 +490,7 @@ class ApiCategoryManager
         }
 
         if (preg_match('#^https?://#i', $icon)) {
-            return $icon;
+            return vs_external_media_url($icon);
         }
 
         return false;
