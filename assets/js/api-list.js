@@ -16,8 +16,10 @@
     var searchEmptyEl = document.getElementById('apiListSearchEmpty');
     var searchInput = document.getElementById('apiListSearchInput');
     var pageSizeEl = document.getElementById('apiListPageSize');
+    var footerEl = document.getElementById('apiListFooter');
     var pagerEl = document.getElementById('apiListPager');
-    var pagerInfoEl = document.getElementById('apiListPagerInfo');
+    var pagerNumsEl = document.getElementById('apiListPagerNums');
+    var statsEl = document.getElementById('apiListStats');
     var prevBtn = document.getElementById('apiListPrevBtn');
     var nextBtn = document.getElementById('apiListNextBtn');
     var currentPage = 1;
@@ -389,9 +391,9 @@
         html += '<div class="vs-api-item__meta">';
         html += '<span class="vs-api-item__meta-status">状态：<span class="vs-api-tag vs-api-tag--status '
             + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span></span>';
-        html += '<span class="vs-api-item__meta-author" title="提交者">提交：<em data-field="username">' + escapeHtml(username) + '</em></span>';
         html += '<span class="vs-api-item__meta-calls" title="请求次数">请求：<strong data-field="calls">'
             + (parseInt(api.calls, 10) || 0) + '</strong></span>';
+        html += '<span class="vs-api-item__meta-author" title="提交者">提交：<em data-field="username">' + escapeHtml(username) + '</em></span>';
         html += '</div>';
         html += '<div class="vs-api-item__actions">' + buildActionButtons(api) + '</div>';
         html += '</div>';
@@ -428,6 +430,9 @@
         if (searchEmptyEl) {
             searchEmptyEl.hidden = !(hasAny && visible === 0);
         }
+        if (footerEl) {
+            footerEl.hidden = !hasAny;
+        }
     }
 
     function defaultPageSize() {
@@ -455,6 +460,65 @@
             var hay = row.getAttribute('data-search') || '';
             return hay.indexOf(q) !== -1;
         });
+    }
+
+    function buildStatsText(total, maint, pending) {
+        var text = '当前接口总数 ' + total;
+        if (maint > 0 || pending > 0) {
+            if (maint > 0) {
+                text += '，维护中 ' + maint;
+            }
+            if (pending > 0) {
+                text += '，待审核 ' + pending;
+            }
+        }
+        return text;
+    }
+
+    function refreshStatsFromDom() {
+        if (!listEl || !statsEl) {
+            return;
+        }
+        var rows = listEl.querySelectorAll('.vs-api-item');
+        var total = rows.length;
+        var maint = 0;
+        var pending = 0;
+        rows.forEach(function (row) {
+            if (parseInt(row.getAttribute('data-api-status'), 10) === 2) {
+                maint += 1;
+            }
+            if (parseInt(row.getAttribute('data-api-audit'), 10) === 0) {
+                pending += 1;
+            }
+        });
+        statsEl.textContent = buildStatsText(total, maint, pending);
+        page.setAttribute('data-stats-total', String(total));
+        page.setAttribute('data-stats-maint', String(maint));
+        page.setAttribute('data-stats-pending', String(pending));
+    }
+
+    function renderPagerNums(totalPages) {
+        if (!pagerNumsEl) {
+            return;
+        }
+        pagerNumsEl.innerHTML = '';
+        var maxShow = 7;
+        var start = 1;
+        var end = totalPages;
+        if (totalPages > maxShow) {
+            start = Math.max(1, currentPage - 3);
+            end = Math.min(totalPages, start + maxShow - 1);
+            start = Math.max(1, end - maxShow + 1);
+        }
+        var i;
+        for (i = start; i <= end; i += 1) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'vs-api-pager__num' + (i === currentPage ? ' is-active' : '');
+            btn.textContent = String(i);
+            btn.setAttribute('data-page', String(i));
+            pagerNumsEl.appendChild(btn);
+        }
     }
 
     function applyListView() {
@@ -486,12 +550,13 @@
             var idx = indexMap[key];
             row.hidden = !(idx >= start && idx < end);
         });
+        if (footerEl) {
+            footerEl.hidden = matched.length === 0 && all.length === 0;
+        }
         if (pagerEl) {
             pagerEl.hidden = matched.length === 0;
         }
-        if (pagerInfoEl) {
-            pagerInfoEl.textContent = '第 ' + currentPage + ' / ' + totalPages + ' 页（共 ' + matched.length + ' 条）';
-        }
+        renderPagerNums(totalPages);
         if (prevBtn) {
             prevBtn.disabled = currentPage <= 1;
         }
@@ -584,6 +649,7 @@
         }
         listEl.insertAdjacentHTML('afterbegin', buildItemHtml(api));
         currentPage = 1;
+        refreshStatsFromDom();
         applyListView();
     }
 
@@ -932,6 +998,21 @@
         });
     }
 
+    if (pagerNumsEl) {
+        pagerNumsEl.addEventListener('click', function (e) {
+            var btn = e.target.closest('.vs-api-pager__num');
+            if (!btn) {
+                return;
+            }
+            var p = parseInt(btn.getAttribute('data-page'), 10);
+            if (!p || p === currentPage) {
+                return;
+            }
+            currentPage = p;
+            applyListView();
+        });
+    }
+
     applyListView();
 
     page.addEventListener('click', function (e) {
@@ -988,6 +1069,7 @@
                 api.status = normalizeStatus(data.status !== undefined ? data.status : nextStatus);
                 api.status_label = data.status_label || api.status;
                 updateItem(row, api);
+                refreshStatsFromDom();
             }).catch(function () {
                 window.VS.showMessage('网络异常，请稍后重试', 'error');
             });
@@ -1008,6 +1090,7 @@
                     if (row) {
                         row.remove();
                     }
+                    refreshStatsFromDom();
                     applyListView();
                 }).catch(function () {
                     window.VS.showMessage('网络异常，请稍后重试', 'error');

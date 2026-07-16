@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.21.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.22.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -279,6 +279,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.22.0（2026-07-17）
+
+- **列表布局**：电脑端紧凑行式（非大卡片）；手机端少留白、扁按钮
+- **分页外置**：背景板外居中页码 + 每页条数；接口统计移至页底居中
+- **规范**：禁止临时脚本改业务文件，临时功能性文件发版前必须删除
 
 ### v3.21.0（2026-07-17）
 
