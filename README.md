@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.24.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.25.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -68,7 +68,7 @@
 |------|------|------|
 | 前台首页 | `/` | 主题驱动首页：Hero、统计区、接口目录、在线调试 Playground |
 | 全部接口 | `/apis` | 公开接口列表（搜索、**数据库分类**筛选，展示已通过审核接口） |
-| 接口详情 | `/api-detail/{id}` | 单个接口详情（需伪静态，见 `nginx伪静态配置.md`） |
+| 接口详情 | `/detail.php/{id}` | 单个接口详情（PATH_INFO，不依赖伪静态） |
 | 文章 | `/articles` | 前台文章列表 |
 | 贡献者 | `/contributors` | 项目贡献者展示 |
 | 友情链接 | `/links` | 友链展示 |
@@ -247,18 +247,16 @@ misc-api/
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
-location ~ ^/api-detail/([0-9]+)/?$ {
-    rewrite ^/api-detail/([0-9]+)/?$ /api-detail.php?_vs_id=$1 last;
-}
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
 }
 ```
 
-若站点配置里已有 `location / { try_files ... }`，只追加 `apis` 与 `api-detail` 两段，并放在 `location /` **上面**。
+若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` 段，并放在 `location /` **上面**。
 
 > **注意：** 不要写 `[a-z0-9]{3,64}`。宝塔伪静态保存时会吞掉 `{…}`，正则变成 `^/apis/([a-z0-9]` 导致 `pcre_compile() failed: missing )`。长度校验由 PHP 完成即可。  
-> **注意：** 不要 rewrite 到 `/apis.php/$1` 或 `/api-detail.php/$1`（PATH_INFO），面板 PHP 常只匹配以 `.php` 结尾的 URI。
+> **注意：** 不要 rewrite 到 `/apis.php/$1`（PATH_INFO），面板 PHP 常只匹配以 `.php` 结尾的 URI。  
+> **接口详情不需要伪静态：** 出站地址为 `/detail.php/{id}`（PATH_INFO），由 PHP 解析。
 
 详情见 [`nginx伪静态配置.md`](nginx伪静态配置.md)。
 
@@ -284,14 +282,23 @@ location / {
 
 ## 版本记录
 
+### v3.25.0（2026-07-17）
+
+**类型：** 中版本（详情 PATH_INFO 纠偏、去除外链代理、命名精简）
+
+- 接口详情改为 `/detail.php/{id}`（纯 PATH_INFO，**不再**写伪静态）
+- 移除 `media-proxy` / `ExternalMedia`；外链头像/图标按原 URL 直链加载
+- Nginx / `.htaccess` 仅保留 `/apis/{短码}` 代理规则（还原至可用形态）
+- 页面命名与流程记录规范补强（本地 `开发规范/`）
+
 ### v3.24.0（2026-07-17）
 
 **类型：** 中版本（接口详情 + 多选请求方式 + 自定义选择面板 + 外链代理 + 后台去 .php）
 
 - 请求方式支持 GET/POST 同时勾选；密钥「完全不需要 / 可选」增加说明
 - 后台/用户表单单选改用 vs-pick；审核页按钮按状态互斥
-- 新增双主题接口详情页 `/api-detail/{id}`；外链图标/头像经 media-proxy
-- 管理端菜单与登录跳转去掉 `.php`；默认主题全部接口/贡献者/赞助页 UI 对齐
+- 新增双主题接口详情页；后台去 `.php`；默认主题列表/贡献者/赞助页 UI 对齐
+- （已由 3.25.0 纠正：详情伪静态与 media-proxy 方案）
 
 ### v3.23.0（2026-07-17）
 

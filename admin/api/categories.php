@@ -93,7 +93,7 @@ function vs_render_api_category_item(array $row)
          data-category-row="<?php echo $catId; ?>"
          data-category-status="<?php echo $enabled ? '1' : '0'; ?>">
         <div class="vs-api-cat-row__icon">
-            <img src="<?php echo vs_e($icon); ?>" alt="" width="32" height="32" loading="lazy">
+            <img src="<?php echo vs_e($icon); ?>" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer">
         </div>
         <div class="vs-api-cat-row__name" data-field="name"><?php echo vs_e($name); ?></div>
         <div class="vs-api-cat-row__desc" data-field="description">

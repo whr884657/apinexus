@@ -26,7 +26,7 @@ class UserAvatar
         $email = isset($user['email']) ? trim((string) $user['email']) : '';
         $qq = self::extractQqFromEmail($email);
         if ($qq !== '') {
-            return vs_external_media_url('https://q1.qlogo.cn/g?b=qq&nk=' . rawurlencode($qq) . '&s=640');
+            return 'https://q1.qlogo.cn/g?b=qq&nk=' . rawurlencode($qq) . '&s=640';
         }
 
         $custom = isset($user['avatar']) ? trim((string) $user['avatar']) : '';
@@ -34,7 +34,7 @@ class UserAvatar
             if (isset($custom[0]) && $custom[0] === '/') {
                 return rtrim(vs_base_url(), '/') . $custom;
             }
-            return vs_external_media_url($custom);
+            return $custom;
         }
 
         return self::localRandomAvatar((int) $user['id']);

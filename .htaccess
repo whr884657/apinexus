@@ -5,11 +5,8 @@
 
     RewriteRule ^config/ - [F,L]
 
-    # /apis/{slug} -> apis.php?_vs_slug=
+    # /apis/{slug} -> apis.php?_vs_slug= (no {n,m} quantifiers)
     RewriteRule ^apis/([a-z0-9]+)/?$ apis.php?_vs_slug=$1 [QSA,L]
-
-    # /api-detail/{id} -> api-detail.php?_vs_id=
-    RewriteRule ^api-detail/([0-9]+)/?$ api-detail.php?_vs_id=$1 [QSA,L]
 </IfModule>
 
 ErrorDocument 404 /404.php

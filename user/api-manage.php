@@ -196,7 +196,7 @@ function vs_render_user_api_item(array $row)
     ?>
     <div class="vs-api-item vs-user-api-row" data-api-row="<?php echo $apiId; ?>" data-api-status="<?php echo $rowStatus; ?>" data-api-audit="<?php echo $audit; ?>">
         <div class="vs-api-item__icon">
-            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy">
+            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer">
         </div>
         <div class="vs-api-item__title">
             <span class="vs-api-item__name" data-field="name"><?php echo vs_e($api['name']); ?></span>

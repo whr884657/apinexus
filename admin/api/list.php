@@ -184,7 +184,7 @@ function vs_render_api_list_item(array $row)
          data-search="<?php echo vs_e($searchHay); ?>"
          data-payload='<?php echo $payloadJson !== false ? $payloadJson : '{}'; ?>'>
         <div class="vs-api-item__icon">
-            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" data-field="icon">
+            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" data-field="icon">
         </div>
         <div class="vs-api-item__title">
             <span class="vs-api-item__name" data-field="name"><?php echo vs_e($api['name']); ?></span>

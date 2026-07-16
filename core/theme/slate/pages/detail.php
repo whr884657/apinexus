@@ -6,7 +6,7 @@ $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
 ?>
 <main class="st-main" id="stApiDetailPage">
 <div class="st-wrap">
-<section class="st-section st-api-detail">
+<section class="st-section st-detail">
     <h1 class="st-page-title"><?php echo $notFound ? '接口不存在' : vs_e($api['name']); ?></h1>
     <p class="st-page-desc">
         <?php if ($notFound): ?>
@@ -23,7 +23,7 @@ $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
         <a class="st-bar__login" href="<?php echo vs_e($vsBase); ?>/apis">返回全部接口</a>
     </div>
     <?php else: ?>
-    <div class="st-api-detail__meta">
+    <div class="st-detail__meta">
         <?php foreach ((isset($api['methods']) && is_array($api['methods']) ? $api['methods'] : array('GET')) as $m): ?>
             <span class="st-api-card__method st-api-card__method--<?php echo vs_e(strtolower(trim((string) $m))); ?>"><?php echo vs_e(strtoupper(trim((string) $m))); ?></span>
         <?php endforeach; ?>
@@ -33,30 +33,30 @@ $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
     </div>
 
     <?php if (!empty($api['desc'])): ?>
-    <p class="st-api-detail__desc"><?php echo vs_e($api['desc']); ?></p>
+    <p class="st-detail__desc"><?php echo vs_e($api['desc']); ?></p>
     <?php endif; ?>
 
     <?php if (!empty($api['endpoint'])): ?>
-    <h2 class="st-api-detail__h">调用地址</h2>
+    <h2 class="st-detail__h">调用地址</h2>
     <code class="st-api-card__endpoint"><?php echo vs_e($api['endpoint']); ?></code>
     <?php endif; ?>
 
     <?php if (!empty($api['params'])): ?>
-    <h2 class="st-api-detail__h">请求参数</h2>
-    <pre class="st-api-detail__pre"><?php echo vs_e($api['params']); ?></pre>
+    <h2 class="st-detail__h">请求参数</h2>
+    <pre class="st-detail__pre"><?php echo vs_e($api['params']); ?></pre>
     <?php endif; ?>
 
     <?php if (!empty($api['response'])): ?>
-    <h2 class="st-api-detail__h">返回示例</h2>
-    <pre class="st-api-detail__pre"><?php echo vs_e($api['response']); ?></pre>
+    <h2 class="st-detail__h">返回示例</h2>
+    <pre class="st-detail__pre"><?php echo vs_e($api['response']); ?></pre>
     <?php endif; ?>
 
     <?php if (!empty($api['doc'])): ?>
-    <h2 class="st-api-detail__h">接口文档</h2>
-    <div class="st-api-detail__doc"><?php echo vs_e($api['doc']); ?></div>
+    <h2 class="st-detail__h">接口文档</h2>
+    <div class="st-detail__doc"><?php echo vs_e($api['doc']); ?></div>
     <?php endif; ?>
 
-    <div class="st-api-detail__actions">
+    <div class="st-detail__actions">
         <a class="st-bar__login" href="<?php echo vs_e($vsBase); ?>/apis">返回全部接口</a>
         <?php if (!empty($api['endpoint']) && empty($api['maintenance'])): ?>
         <a class="st-bar__login" href="<?php echo vs_e($api['endpoint']); ?>" target="_blank" rel="noopener noreferrer">打开接口</a>

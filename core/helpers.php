@@ -157,55 +157,7 @@ function vs_is_allowed_avatar_url($url)
 }
 
 /**
- * 外链图片/媒体是否走本站代理（解决跨域与部分平台直链限制）
- *
- * @param string $url
- * @return bool
- */
-function vs_is_external_http_url($url)
-{
-    $url = trim((string) $url);
-    if ($url === '' || !filter_var($url, FILTER_VALIDATE_URL)) {
-        return false;
-    }
-    $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
-    if ($scheme !== 'http' && $scheme !== 'https') {
-        return false;
-    }
-    $host = strtolower((string) parse_url($url, PHP_URL_HOST));
-    if ($host === '') {
-        return false;
-    }
-    $baseHost = strtolower((string) parse_url(vs_base_url(), PHP_URL_HOST));
-    if ($baseHost !== '' && $host === $baseHost) {
-        return false;
-    }
-    return true;
-}
-
-/**
- * 将外链转为经本站代理的展示地址；站内路径原样返回
- *
- * @param string $url
- * @return string
- */
-function vs_external_media_url($url)
-{
-    $url = trim((string) $url);
-    if ($url === '') {
-        return '';
-    }
-    if (isset($url[0]) && $url[0] === '/' && strpos($url, '//') !== 0) {
-        return rtrim(vs_base_url(), '/') . $url;
-    }
-    if (!vs_is_external_http_url($url)) {
-        return $url;
-    }
-    return rtrim(vs_base_url(), '/') . '/media-proxy?u=' . rawurlencode(base64_encode($url));
-}
-
-/**
- * 接口详情公开地址（美观路径，依赖伪静态或 PATH_INFO）
+ * 接口详情公开地址（PATH_INFO：/detail.php/{id}，不依赖伪静态）
  *
  * @param int $apiId
  * @return string
@@ -216,24 +168,16 @@ function vs_api_detail_url($apiId)
     if ($apiId <= 0) {
         return rtrim(vs_base_url(), '/') . '/apis';
     }
-    return rtrim(vs_base_url(), '/') . '/api-detail/' . $apiId;
+    return rtrim(vs_base_url(), '/') . '/detail.php/' . $apiId;
 }
 
 /**
- * 从当前请求解析资源数字 ID（伪静态内部参数 / PATH_INFO / 兼容旧 ?id=）
+ * 从当前请求解析资源数字 ID（仅 PATH_INFO / SCRIPT_NAME 相对还原）
  *
- * @param string $rewriteParam 伪静态注入的查询参数名（勿当出站契约）
  * @return int
  */
-function vs_resolve_path_id($rewriteParam = '_vs_id')
+function vs_resolve_path_id()
 {
-    if (isset($_GET[$rewriteParam])) {
-        $id = (int) $_GET[$rewriteParam];
-        if ($id > 0) {
-            return $id;
-        }
-    }
-
     $info = '';
     if (!empty($_SERVER['PATH_INFO'])) {
         $info = (string) $_SERVER['PATH_INFO'];
@@ -250,12 +194,6 @@ function vs_resolve_path_id($rewriteParam = '_vs_id')
                     $info = $after;
                 }
             }
-            // 美观路径 /api-detail/12 且当前脚本为 api-detail.php
-            if ($info === '' && strcasecmp($scriptBase, 'api-detail.php') === 0
-                && preg_match('#/api-detail/(\d+)/?$#', $path, $m)
-            ) {
-                return (int) $m[1];
-            }
         }
     }
 
@@ -263,13 +201,6 @@ function vs_resolve_path_id($rewriteParam = '_vs_id')
         $parts = explode('/', trim($info, '/'));
         if (isset($parts[0]) && ctype_digit($parts[0])) {
             return (int) $parts[0];
-        }
-    }
-
-    if (isset($_GET['id'])) {
-        $id = (int) $_GET['id'];
-        if ($id > 0) {
-            return $id;
         }
     }
 

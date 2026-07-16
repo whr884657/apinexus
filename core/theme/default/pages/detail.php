@@ -23,8 +23,8 @@ $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
         <a href="<?php echo vs_e($vsBase); ?>/apis" class="btn-geek">返回全部接口</a>
     </section>
     <?php else: ?>
-    <section class="py-4 api-detail">
-        <div class="api-detail__meta flex flex-wrap gap-2 mb-4">
+    <section class="py-4 detail">
+        <div class="detail__meta flex flex-wrap gap-2 mb-4">
             <?php foreach ((isset($api['methods']) && is_array($api['methods']) ? $api['methods'] : array('GET')) as $m): ?>
                 <span class="method-badge <?php echo vs_e(strtolower(trim((string) $m))); ?>"><?php echo vs_e(strtoupper(trim((string) $m))); ?></span>
             <?php endforeach; ?>
@@ -39,7 +39,7 @@ $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
         </div>
 
         <?php if (!empty($api['desc'])): ?>
-        <p class="api-detail__desc mb-4" style="color: var(--text-muted); line-height: 1.7;"><?php echo vs_e($api['desc']); ?></p>
+        <p class="detail__desc mb-4" style="color: var(--text-muted); line-height: 1.7;"><?php echo vs_e($api['desc']); ?></p>
         <?php endif; ?>
 
         <?php if (!empty($api['endpoint'])): ?>
@@ -52,21 +52,21 @@ $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
         <?php if (!empty($api['params'])): ?>
         <div class="mb-4">
             <h2 class="text-sm font-bold mb-2">请求参数</h2>
-            <pre class="api-detail__pre font-mono"><?php echo vs_e($api['params']); ?></pre>
+            <pre class="detail__pre font-mono"><?php echo vs_e($api['params']); ?></pre>
         </div>
         <?php endif; ?>
 
         <?php if (!empty($api['response'])): ?>
         <div class="mb-4">
             <h2 class="text-sm font-bold mb-2">返回示例</h2>
-            <pre class="api-detail__pre font-mono"><?php echo vs_e($api['response']); ?></pre>
+            <pre class="detail__pre font-mono"><?php echo vs_e($api['response']); ?></pre>
         </div>
         <?php endif; ?>
 
         <?php if (!empty($api['doc'])): ?>
         <div class="mb-4">
             <h2 class="text-sm font-bold mb-2">接口文档</h2>
-            <div class="api-detail__doc" style="line-height: 1.8; color: var(--text-muted); white-space: pre-wrap;"><?php echo vs_e($api['doc']); ?></div>
+            <div class="detail__doc" style="line-height: 1.8; color: var(--text-muted); white-space: pre-wrap;"><?php echo vs_e($api['doc']); ?></div>
         </div>
         <?php endif; ?>
 

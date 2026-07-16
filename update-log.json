@@ -1,5 +1,16 @@
 {
     "versions": {
+        "3.25.0": {
+            "title": "misc-api 3.25.0 详情 PATH_INFO 与去除外链代理",
+            "date": "2026-07-17",
+            "db_changes": false,
+            "changes": [
+                "接口详情改为 /detail.php/{id}（PATH_INFO，无伪静态）",
+                "移除 media-proxy / ExternalMedia，外链图片按原 URL 直链加载",
+                "Nginx / Apache 伪静态仅保留 /apis/{短码} 代理规则",
+                "补强页面命名与修改流程记录规范（本地文档）"
+            ]
+        },
         "3.24.0": {
             "title": "misc-api 3.24.0 接口详情与后台体验大升级",
             "date": "2026-07-17",

@@ -123,7 +123,7 @@
 
         var html = '<div class="vs-api-cat-row" data-category-row="' + catId + '"'
             + ' data-category-status="' + (enabled ? '1' : '0') + '">';
-        html += '<div class="vs-api-cat-row__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy"></div>';
+        html += '<div class="vs-api-cat-row__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer"></div>';
         html += '<div class="vs-api-cat-row__name" data-field="name">' + escapeHtml(name) + '</div>';
         html += '<div class="vs-api-cat-row__desc" data-field="description">';
         html += desc ? escapeHtml(desc) : '<span class="vs-api-cat-row__desc-empty">—</span>';

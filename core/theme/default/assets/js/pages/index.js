@@ -407,7 +407,7 @@ function renderAPI(data) {
             <div class="endpoint-box font-mono" style="background: var(--endpoint-bg); border: 1px solid var(--endpoint-border); color: var(--accent-primary);">
                 ${api.endpoint}
             </div>
-            <a href="${api.detail_url || ((window.VS_BASE_URL || '') + '/api-detail/' + (api.id || ''))}" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>
+            <a href="${api.detail_url || ((window.VS_BASE_URL || '') + '/detail.php/' + (api.id || ''))}" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>
         </div>
     `}).join('');
 }

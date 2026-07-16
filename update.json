@@ -1,13 +1,13 @@
 {
-    "version": "3.24.0",
-    "title": "misc-api 3.24.0 接口详情与后台体验大升级",
+    "version": "3.25.0",
+    "title": "misc-api 3.25.0 详情 PATH_INFO 与去除外链代理",
     "release_date": "2026-07-17",
     "db_changes": false,
     "changes": [
-        "请求方式支持 GET/POST 多选；密钥「完全不需要」与「可选」说明备注",
-        "自定义选择面板 vs-pick 替代原生 select；审核按钮按状态互斥显示",
-        "新增接口详情页 /api-detail/{id}（双主题）与外链图片代理 media-proxy",
-        "后台菜单与登录跳转去 .php；登录/忘记密码去掉重复 label；默认主题列表/贡献者/赞助页 UI 对齐"
+        "接口详情改为 /detail.php/{id}（PATH_INFO，无伪静态）",
+        "移除 media-proxy / ExternalMedia，外链图片按原 URL 直链加载",
+        "Nginx / Apache 伪静态仅保留 /apis/{短码} 代理规则",
+        "补强页面命名与修改流程记录规范（本地文档）"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"

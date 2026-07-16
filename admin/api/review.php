@@ -152,7 +152,7 @@ vs_admin_layout_start('接口审核', 'api-review');
                     ?>
                     <div class="vs-api-item vs-api-review-row" data-api-id="<?php echo (int) $api['id']; ?>" data-audit="<?php echo $audit; ?>"<?php echo $rowHidden; ?>>
                         <div class="vs-api-item__icon">
-                            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy">
+                            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer">
                         </div>
                         <div class="vs-api-item__title">
                             <span class="vs-api-item__name"><?php echo vs_e($api['name']); ?></span>
