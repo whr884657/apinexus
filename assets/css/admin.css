@@ -2555,7 +2555,7 @@ select.vs-input.vs-select {
 }
 
 .vs-theme-config-form__body {
-    max-width: 560px;
+    max-width: 640px;
 }
 
 .vs-theme-config-empty {
@@ -2578,6 +2578,31 @@ select.vs-input.vs-select {
     margin-bottom: 6px;
 }
 
+.vs-theme-config-group {
+    margin: 8px 0 18px;
+    padding: 12px 14px;
+    border: 1px solid var(--vs-border);
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.vs-theme-config-group__title {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vs-text-secondary);
+}
+
+.vs-theme-config-checks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+}
+
+.vs-theme-config-checks .vs-theme-config-field {
+    margin-bottom: 0;
+}
+
 .vs-theme-config-check {
     display: flex;
     align-items: center;
@@ -2585,6 +2610,12 @@ select.vs-input.vs-select {
     font-size: 14px;
     color: var(--vs-text);
     cursor: pointer;
+}
+
+@media (max-width: 640px) {
+    .vs-theme-config-checks {
+        grid-template-columns: 1fr;
+    }
 }
 
 .vs-theme-config-check input {

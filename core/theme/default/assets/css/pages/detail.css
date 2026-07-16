@@ -1,0 +1,134 @@
+/**
+ * 接口详情页（默认主题）
+ */
+
+.detail-page {
+    padding-top: 76px;
+    padding-bottom: 2.5rem;
+    max-width: 860px;
+}
+
+.detail-crumb {
+    color: var(--text-muted, #71717a);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.detail-crumb a {
+    color: var(--accent-primary, #00ff9d);
+    text-decoration: none;
+}
+
+.detail-crumb a:hover {
+    text-decoration: underline;
+}
+
+.detail-crumb__sep {
+    opacity: 0.5;
+}
+
+.detail-hero {
+    margin-bottom: 1.25rem;
+}
+
+.detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.75rem;
+}
+
+.detail-title {
+    margin-bottom: 0.35rem;
+}
+
+.detail-id {
+    font-size: 0.8rem;
+    color: var(--text-muted, #71717a);
+    margin-bottom: 0.75rem;
+}
+
+.detail-desc,
+.detail-lead {
+    color: var(--text-muted, #71717a);
+    line-height: 1.7;
+    margin: 0 0 1rem;
+}
+
+.detail-panel {
+    border: 1px solid var(--border-color, rgba(0, 255, 157, 0.15));
+    background: var(--bg-panel, rgba(12, 12, 18, 0.95));
+    border-radius: 10px;
+    padding: 1rem 1.1rem 1.15rem;
+    margin-bottom: 1rem;
+}
+
+.detail-panel--empty {
+    text-align: center;
+    padding: 2rem 1.25rem;
+}
+
+.detail-h {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0 0 0.65rem;
+}
+
+.detail-pre {
+    margin: 0;
+    padding: 0.75rem 0.85rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, rgba(0, 255, 157, 0.15));
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-main, #e4e4e7);
+    font-size: 0.78rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+[data-theme="light"] .detail-pre {
+    background: rgba(15, 23, 42, 0.03);
+}
+
+.detail-doc {
+    color: var(--text-muted, #71717a);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 0.85rem;
+}
+
+.detail-actions--inline {
+    margin-top: 0.75rem;
+}
+
+.detail-page .endpoint-box {
+    margin-top: 0;
+}
+
+@media (max-width: 640px) {
+    .detail-page {
+        padding-top: 70px;
+        padding-bottom: 2rem;
+    }
+
+    .detail-panel {
+        padding: 0.9rem;
+        border-radius: 8px;
+    }
+
+    .detail-actions .btn-geek {
+        flex: 1 1 auto;
+        text-align: center;
+    }
+}
