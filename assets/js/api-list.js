@@ -347,15 +347,12 @@
         var status = normalizeStatus(api.status);
         var html = '';
         html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="edit" data-api-id="' + id + '">编辑</button>';
-        if (status !== 0) {
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="normal" data-api-id="' + id + '">正常</button>';
-        }
-        if (status !== 2) {
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="maintenance" data-api-id="' + id + '">维护</button>';
-        }
-        if (status !== 1) {
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
-        }
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-normal vs-api-list-action'
+            + (status === 0 ? ' is-active' : '') + '" data-api-action="normal" data-api-id="' + id + '">正常</button>';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-maint vs-api-list-action'
+            + (status === 2 ? ' is-active' : '') + '" data-api-action="maintenance" data-api-id="' + id + '">维护</button>';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-disabled vs-api-list-action'
+            + (status === 1 ? ' is-active' : '') + '" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
         html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
         return html;
     }
@@ -377,23 +374,22 @@
             + ' data-api-audit="' + audit + '"'
             + ' data-search="' + escapeHtml(search) + '"'
             + ' data-payload="' + payload + '">';
-        html += '<div class="vs-api-item__top"><div class="vs-api-item__icon">';
-        html += '<img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" data-field="icon">';
-        html += '</div><div class="vs-api-item__main">';
-        html += '<div class="vs-api-item__row1"><div class="vs-api-item__title">';
+        html += '<div class="vs-api-item__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" data-field="icon"></div>';
+        html += '<div class="vs-api-item__title">';
         html += '<span class="vs-api-item__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
         html += '<span class="vs-api-item__id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
-        html += '</div><div class="vs-api-item__tags" data-field="tags">' + buildTagsHtml(api) + '</div></div>';
+        html += '</div>';
         html += '<div class="vs-api-item__endpoint">';
         html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
         html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span>';
-        html += '</div></div></div>';
+        html += '</div>';
+        html += '<div class="vs-api-item__tags" data-field="tags">' + buildTagsHtml(api) + '</div>';
         html += '<div class="vs-api-item__meta">';
-        html += '<span class="vs-api-item__meta-status">状态：<span class="vs-api-tag vs-api-tag--status '
-            + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span></span>';
-        html += '<span class="vs-api-item__meta-calls" title="请求次数">请求：<strong data-field="calls">'
-            + (parseInt(api.calls, 10) || 0) + '</strong></span>';
-        html += '<span class="vs-api-item__meta-author" title="提交者">提交：<em data-field="username">' + escapeHtml(username) + '</em></span>';
+        html += '<div class="vs-api-item__status">状态：<span class="vs-api-tag vs-api-tag--status '
+            + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span></div>';
+        html += '<div class="vs-api-item__calls" title="请求次数">请求：<strong data-field="calls">'
+            + (parseInt(api.calls, 10) || 0) + '</strong></div>';
+        html += '<div class="vs-api-item__author" title="提交者">提交：<em data-field="username">' + escapeHtml(username) + '</em></div>';
         html += '</div>';
         html += '<div class="vs-api-item__actions">' + buildActionButtons(api) + '</div>';
         html += '</div>';
@@ -1056,6 +1052,9 @@
                 disable: 1
             };
             var nextStatus = statusMap[action];
+            if (row && parseInt(row.getAttribute('data-api-status'), 10) === nextStatus) {
+                return;
+            }
             postAction('set_status', {
                 api_id: apiId,
                 status: String(nextStatus)

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.22.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.23.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -279,6 +279,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.23.0（2026-07-17）
+
+- **真分列布局**：电脑端横向铺开图标/名称/链接/标签/状态/请求/提交/操作；手机满宽右靠、分隔线拉满
+- **分页**：每页条数与页码同一行；统计仍在页底居中
+- **按钮高亮**：正常/维护/禁用（及审核通过/不通过）常显并变色标识当前态
+- **审核红点**：待审时侧栏折叠亮「API 管理」、展开亮「接口审核」
 
 ### v3.22.0（2026-07-17）
 

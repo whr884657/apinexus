@@ -195,40 +195,39 @@ function vs_render_user_api_item(array $row)
     $category = isset($api['category']) ? trim((string) $api['category']) : '';
     ?>
     <div class="vs-api-item vs-user-api-row" data-api-row="<?php echo $apiId; ?>" data-api-status="<?php echo $rowStatus; ?>" data-api-audit="<?php echo $audit; ?>">
-        <div class="vs-api-item__top">
-            <div class="vs-api-item__icon">
-                <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy">
-            </div>
-            <div class="vs-api-item__main">
-                <div class="vs-api-item__row1">
-                    <div class="vs-api-item__title">
-                        <span class="vs-api-item__name" data-field="name"><?php echo vs_e($api['name']); ?></span>
-                        <span class="vs-api-item__id">#<?php echo $apiId; ?></span>
-                    </div>
-                    <div class="vs-api-item__tags">
-                        <?php if ($category !== ''): ?>
-                            <span class="vs-api-tag vs-api-tag--cat"><?php echo vs_e($category); ?></span>
-                        <?php endif; ?>
-                        <span class="vs-api-tag vs-api-tag--free">免费</span>
-                        <?php if ($keyBadge !== ''): ?>
-                            <span class="vs-api-tag vs-api-tag--key"><?php echo vs_e($keyBadge); ?></span>
-                        <?php endif; ?>
-                        <?php if (!$approved): ?>
-                            <span class="vs-api-tag vs-api-tag--audit <?php echo vs_e($api['audit_class']); ?>" data-field="audit_label"><?php echo vs_e($api['audit_label']); ?></span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <div class="vs-api-item__endpoint">
-                    <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($api['method']); ?></span>
-                    <span class="vs-api-item__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
-                </div>
-            </div>
+        <div class="vs-api-item__icon">
+            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy">
+        </div>
+        <div class="vs-api-item__title">
+            <span class="vs-api-item__name" data-field="name"><?php echo vs_e($api['name']); ?></span>
+            <span class="vs-api-item__id">#<?php echo $apiId; ?></span>
+        </div>
+        <div class="vs-api-item__endpoint">
+            <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($api['method']); ?></span>
+            <span class="vs-api-item__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
+        </div>
+        <div class="vs-api-item__tags">
+            <?php if ($category !== ''): ?>
+                <span class="vs-api-tag vs-api-tag--cat"><?php echo vs_e($category); ?></span>
+            <?php endif; ?>
+            <span class="vs-api-tag vs-api-tag--free">免费</span>
+            <?php if ($keyBadge !== ''): ?>
+                <span class="vs-api-tag vs-api-tag--key"><?php echo vs_e($keyBadge); ?></span>
+            <?php endif; ?>
+            <?php if (!$approved): ?>
+                <span class="vs-api-tag vs-api-tag--audit <?php echo vs_e($api['audit_class']); ?>" data-field="audit_label"><?php echo vs_e($api['audit_label']); ?></span>
+            <?php endif; ?>
         </div>
         <div class="vs-api-item__meta">
-            <?php if ($approved): ?>
-                <span class="vs-api-item__meta-status">状态：<span class="vs-api-tag vs-api-tag--status <?php echo $rowStatusClass; ?>" data-field="status_label"><?php echo vs_e($api['status_label']); ?></span></span>
-            <?php endif; ?>
-            <span class="vs-api-item__meta-calls" title="请求次数">请求：<strong data-field="calls"><?php echo (int) $api['calls']; ?></strong></span>
+            <div class="vs-api-item__status">
+                <?php if ($approved): ?>
+                    状态：<span class="vs-api-tag vs-api-tag--status <?php echo $rowStatusClass; ?>" data-field="status_label"><?php echo vs_e($api['status_label']); ?></span>
+                <?php else: ?>
+                    <span data-field="status_label"></span>
+                <?php endif; ?>
+            </div>
+            <div class="vs-api-item__calls" title="请求次数">请求：<strong data-field="calls"><?php echo (int) $api['calls']; ?></strong></div>
+            <div class="vs-api-item__author"></div>
         </div>
         <p class="vs-api-review-reason vs-user-api-row__reason" data-field="rejectreason"<?php echo $reason === '' ? ' hidden' : ''; ?>>
             未通过原因：<?php echo vs_e($reason); ?>
@@ -236,15 +235,9 @@ function vs_render_user_api_item(array $row)
         <div class="vs-api-item__actions vs-user-api-row__actions">
             <button type="button" class="vs-btn vs-btn--outline vs-user-api-edit" data-api-id="<?php echo $apiId; ?>">编辑</button>
             <?php if ($approved): ?>
-                <?php if ($rowStatus !== ApiManager::STATUS_NORMAL): ?>
-                    <button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="<?php echo $apiId; ?>" data-status="0">正常</button>
-                <?php endif; ?>
-                <?php if ($rowStatus !== ApiManager::STATUS_MAINTENANCE): ?>
-                    <button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="<?php echo $apiId; ?>" data-status="2">维护</button>
-                <?php endif; ?>
-                <?php if ($rowStatus !== ApiManager::STATUS_DISABLED): ?>
-                    <button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="<?php echo $apiId; ?>" data-status="1">禁用</button>
-                <?php endif; ?>
+                <button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-normal vs-user-api-status<?php echo $rowStatus === ApiManager::STATUS_NORMAL ? ' is-active' : ''; ?>" data-api-id="<?php echo $apiId; ?>" data-status="0">正常</button>
+                <button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-maint vs-user-api-status<?php echo $rowStatus === ApiManager::STATUS_MAINTENANCE ? ' is-active' : ''; ?>" data-api-id="<?php echo $apiId; ?>" data-status="2">维护</button>
+                <button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-disabled vs-user-api-status<?php echo $rowStatus === ApiManager::STATUS_DISABLED ? ' is-active' : ''; ?>" data-api-id="<?php echo $apiId; ?>" data-status="1">禁用</button>
             <?php endif; ?>
             <button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-user-api-delete" data-api-id="<?php echo $apiId; ?>">删除</button>
         </div>

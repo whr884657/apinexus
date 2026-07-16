@@ -68,6 +68,7 @@
         refreshLayout();
 
         initSidebarGroups();
+        bootReviewBadges();
     }
 
     function initSidebarGroups() {
@@ -90,11 +91,44 @@
                     btn.setAttribute('aria-expanded', 'true');
                 }
 
-                if (group.getAttribute('data-group') === 'system' && window.VsUpdate) {
-                    VsUpdate.refreshSidebarBadgePlacement();
+                var gid = group.getAttribute('data-group');
+                if (gid === 'sysmgmt' && window.VsUpdate && typeof window.VsUpdate.refreshSidebarBadgePlacement === 'function') {
+                    window.VsUpdate.refreshSidebarBadgePlacement();
+                }
+                if (gid === 'api') {
+                    refreshReviewBadgePlacement();
                 }
             });
         });
+    }
+
+    function refreshReviewBadgePlacement() {
+        var groupBadge = document.getElementById('vsReviewBadgeGroup');
+        var itemBadge = document.getElementById('vsReviewBadgeItem');
+        var apiGroup = document.querySelector('.vs-sidebar__group[data-group="api"]');
+        if (!groupBadge || !itemBadge) {
+            return;
+        }
+        if (groupBadge.getAttribute('data-active') !== '1') {
+            groupBadge.hidden = true;
+            itemBadge.hidden = true;
+            return;
+        }
+        var isOpen = apiGroup && apiGroup.classList.contains('is-open');
+        groupBadge.hidden = !!isOpen;
+        itemBadge.hidden = !isOpen;
+    }
+
+    function bootReviewBadges() {
+        var groupBadge = document.getElementById('vsReviewBadgeGroup');
+        var itemBadge = document.getElementById('vsReviewBadgeItem');
+        if (!groupBadge || !itemBadge) {
+            return;
+        }
+        var active = !groupBadge.hidden || !itemBadge.hidden;
+        groupBadge.setAttribute('data-active', active ? '1' : '0');
+        itemBadge.setAttribute('data-active', active ? '1' : '0');
+        refreshReviewBadgePlacement();
     }
 
     document.addEventListener('DOMContentLoaded', initSidebar);

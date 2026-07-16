@@ -129,6 +129,10 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
             }
         }
     }
+    $showReviewSidebarBadge = false;
+    if (InstallChecker::isInstalled() && class_exists('ApiManager')) {
+        $showReviewSidebarBadge = ApiManager::countPendingReview() > 0;
+    }
 
     echo '<!DOCTYPE html>' . "\n";
     echo '<html lang="zh-CN">' . "\n";
@@ -163,7 +167,13 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
         $isOpen = $hasChildren && $groupActive;
 
         if ($hasChildren) {
-            $badgeOnGroup = ($group['id'] === 'sysmgmt' && $showUpdateSidebarBadge && !$isOpen);
+            $badgeOnGroup = false;
+            if ($group['id'] === 'sysmgmt' && $showUpdateSidebarBadge && !$isOpen) {
+                $badgeOnGroup = true;
+            }
+            if ($group['id'] === 'api' && $showReviewSidebarBadge && !$isOpen) {
+                $badgeOnGroup = true;
+            }
             echo '<div class="vs-sidebar__group' . ($isOpen ? ' is-open' : '') . '" data-group="' . vs_e($group['id']) . '">' . "\n";
             echo '<button type="button" class="vs-sidebar__group-btn' . ($groupActive ? ' is-active' : '') . '" aria-expanded="' . ($isOpen ? 'true' : 'false') . '">';
             echo '<i class="vs-icon vs-icon--' . vs_e($group['icon']) . '"></i>';
@@ -171,7 +181,12 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
             echo vs_e($group['title']);
             if ($group['id'] === 'sysmgmt') {
                 echo '<span class="vs-sidebar__badge" id="vsUpdateBadgeGroup" aria-hidden="true"';
-                echo $badgeOnGroup ? '>' : ' hidden>';
+                echo ($showUpdateSidebarBadge && !$isOpen) ? '>' : ' hidden>';
+                echo '</span>';
+            }
+            if ($group['id'] === 'api') {
+                echo '<span class="vs-sidebar__badge" id="vsReviewBadgeGroup" aria-hidden="true"';
+                echo ($showReviewSidebarBadge && !$isOpen) ? '>' : ' hidden>';
                 echo '</span>';
             }
             echo '</span>';
@@ -180,12 +195,16 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
             echo '<div class="vs-sidebar__sub">' . "\n";
             foreach ($group['children'] as $child) {
                 $childActive = ($child['id'] === $activeMenu) ? ' is-active' : '';
-                $badgeOnUpgrade = ($group['id'] === 'sysmgmt' && $child['id'] === 'upgrade' && $showUpdateSidebarBadge && $isOpen);
                 echo '<a href="' . vs_e($base . $child['url']) . '" class="vs-sidebar__sublink' . $childActive . '">';
                 echo '<span class="vs-sidebar__text">' . vs_e($child['title']) . '</span>';
                 if ($group['id'] === 'sysmgmt' && $child['id'] === 'upgrade') {
                     echo '<span class="vs-sidebar__badge" id="vsUpdateBadgeUpgrade" aria-hidden="true"';
-                    echo $badgeOnUpgrade ? '>' : ' hidden>';
+                    echo ($showUpdateSidebarBadge && $isOpen) ? '>' : ' hidden>';
+                    echo '</span>';
+                }
+                if ($group['id'] === 'api' && $child['id'] === 'api-review') {
+                    echo '<span class="vs-sidebar__badge" id="vsReviewBadgeItem" aria-hidden="true"';
+                    echo ($showReviewSidebarBadge && $isOpen) ? '>' : ' hidden>';
                     echo '</span>';
                 }
                 echo '</a>' . "\n";

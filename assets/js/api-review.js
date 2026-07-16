@@ -91,12 +91,10 @@
         if (listEditBase) {
             html += '<a class="vs-btn vs-btn--outline" href="' + listEditBase + encodeURIComponent(apiId) + '">编辑</a>';
         }
-        if (audit !== '1') {
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-review-action" data-audit="1">通过</button>';
-        }
-        if (audit !== '2') {
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-api-review-deny" data-audit="2">不通过</button>';
-        }
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-pass vs-api-review-action'
+            + (audit === '1' ? ' is-active' : '') + '" data-audit="1">通过</button>';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-btn--status vs-btn--status-deny vs-api-review-deny'
+            + (audit === '2' ? ' is-active' : '') + '" data-audit="2">不通过</button>';
         actions.innerHTML = html;
     }
 

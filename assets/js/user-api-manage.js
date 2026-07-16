@@ -202,15 +202,12 @@
             status = 0;
         }
         var html = '';
-        if (status !== 0) {
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="' + id + '" data-status="0">正常</button>';
-        }
-        if (status !== 2) {
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="' + id + '" data-status="2">维护</button>';
-        }
-        if (status !== 1) {
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="' + id + '" data-status="1">禁用</button>';
-        }
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-normal vs-user-api-status'
+            + (status === 0 ? ' is-active' : '') + '" data-api-id="' + id + '" data-status="0">正常</button>';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-maint vs-user-api-status'
+            + (status === 2 ? ' is-active' : '') + '" data-api-id="' + id + '" data-status="2">维护</button>';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-disabled vs-user-api-status'
+            + (status === 1 ? ' is-active' : '') + '" data-api-id="' + id + '" data-status="1">禁用</button>';
         return html;
     }
 
@@ -233,12 +230,14 @@
         var icon = api.icon || '';
         var html = '';
         html += '<div class="vs-api-item vs-user-api-row" data-api-row="' + id + '" data-api-status="' + status + '" data-api-audit="' + audit + '">';
-        html += '<div class="vs-api-item__top"><div class="vs-api-item__icon">';
-        html += '<img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy"></div>';
-        html += '<div class="vs-api-item__main"><div class="vs-api-item__row1"><div class="vs-api-item__title">';
+        html += '<div class="vs-api-item__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy"></div>';
+        html += '<div class="vs-api-item__title">';
         html += '<span class="vs-api-item__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
-        html += '<span class="vs-api-item__id">#' + id + '</span>';
-        html += '</div><div class="vs-api-item__tags">';
+        html += '<span class="vs-api-item__id">#' + id + '</span></div>';
+        html += '<div class="vs-api-item__endpoint">';
+        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span></div>';
+        html += '<div class="vs-api-item__tags">';
         if (category) {
             html += '<span class="vs-api-tag vs-api-tag--cat">' + escapeHtml(category) + '</span>';
         }
@@ -250,18 +249,20 @@
             html += '<span class="vs-api-tag vs-api-tag--audit ' + auditClass(audit) + '" data-field="audit_label">'
                 + escapeHtml(api.audit_label || '') + '</span>';
         }
-        html += '</div></div>';
-        html += '<div class="vs-api-item__endpoint">';
-        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
-        html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span>';
-        html += '</div></div></div>';
+        html += '</div>';
         html += '<div class="vs-api-item__meta">';
+        html += '<div class="vs-api-item__status">';
         if (approved) {
-            html += '<span class="vs-api-item__meta-status">状态：<span class="vs-api-tag vs-api-tag--status '
-                + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || '正常') + '</span></span>';
+            html += '状态：<span class="vs-api-tag vs-api-tag--status ' + statusClass(status)
+                + '" data-field="status_label">' + escapeHtml(api.status_label || '正常') + '</span>';
+        } else {
+            html += '<span data-field="status_label"></span>';
         }
-        html += '<span class="vs-api-item__meta-calls" title="请求次数">请求：<strong data-field="calls">'
-            + (parseInt(api.calls, 10) || 0) + '</strong></span></div>';
+        html += '</div>';
+        html += '<div class="vs-api-item__calls" title="请求次数">请求：<strong data-field="calls">'
+            + (parseInt(api.calls, 10) || 0) + '</strong></div>';
+        html += '<div class="vs-api-item__author"></div>';
+        html += '</div>';
         html += '<p class="vs-api-review-reason vs-user-api-row__reason" data-field="rejectreason"' + (reason ? '' : ' hidden') + '>';
         html += reason ? ('未通过原因：' + escapeHtml(reason)) : '';
         html += '</p>';

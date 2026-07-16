@@ -284,7 +284,7 @@
     function refreshSidebarBadgePlacement() {
         var groupBadge = document.getElementById('vsUpdateBadgeGroup');
         var itemBadge = document.getElementById('vsUpdateBadgeUpgrade');
-        var systemGroup = document.querySelector('.vs-sidebar__group[data-group="system"]');
+        var systemGroup = document.querySelector('.vs-sidebar__group[data-group="sysmgmt"]');
 
         if (!badgeActive) {
             if (groupBadge) groupBadge.hidden = true;

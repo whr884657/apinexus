@@ -250,6 +250,23 @@ class ApiManager
     }
 
     /**
+     * 待审核投稿数量（侧边栏红点）
+     *
+     * @return int
+     */
+    public static function countPendingReview()
+    {
+        if (!self::tableReady() || !self::hasAuditColumn()) {
+            return 0;
+        }
+        $rows = self::listFiltered(array(
+            'user_submitted' => true,
+            'audit'          => self::AUDIT_PENDING,
+        ));
+        return is_array($rows) ? count($rows) : 0;
+    }
+
+    /**
      * 某用户投稿的接口列表
      *
      * @param int $userId

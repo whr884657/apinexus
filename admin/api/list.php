@@ -182,52 +182,42 @@ function vs_render_api_list_item(array $row)
          data-api-audit="<?php echo $auditStatus; ?>"
          data-search="<?php echo vs_e($searchHay); ?>"
          data-payload='<?php echo $payloadJson !== false ? $payloadJson : '{}'; ?>'>
-        <div class="vs-api-item__top">
-            <div class="vs-api-item__icon">
-                <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" data-field="icon">
-            </div>
-            <div class="vs-api-item__main">
-                <div class="vs-api-item__row1">
-                    <div class="vs-api-item__title">
-                        <span class="vs-api-item__name" data-field="name"><?php echo vs_e($api['name']); ?></span>
-                        <span class="vs-api-item__id" data-field="id">#<?php echo $apiId; ?></span>
-                    </div>
-                    <div class="vs-api-item__tags" data-field="tags">
-                        <?php if ($category !== ''): ?>
-                            <span class="vs-api-tag vs-api-tag--cat" data-field="category"><?php echo vs_e($category); ?></span>
-                        <?php endif; ?>
-                        <span class="vs-api-tag vs-api-tag--free">免费</span>
-                        <?php if ($keyBadge !== ''): ?>
-                            <span class="vs-api-tag vs-api-tag--key" data-field="needkey_badge"><?php echo vs_e($keyBadge); ?></span>
-                        <?php endif; ?>
-                        <span class="vs-api-tag <?php echo $typeClass; ?>" data-field="apitype_badge"><?php echo vs_e($typeBadge); ?></span>
-                        <?php if ($auditStatus !== ApiManager::AUDIT_APPROVED): ?>
-                            <span class="vs-api-tag vs-api-tag--audit <?php echo $auditClass; ?>" data-field="audit_label"><?php echo vs_e(isset($api['audit_label']) ? $api['audit_label'] : ApiManager::auditStatusLabel($auditStatus)); ?></span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <div class="vs-api-item__endpoint">
-                    <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($api['method']); ?></span>
-                    <span class="vs-api-item__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
-                </div>
-            </div>
+        <div class="vs-api-item__icon">
+            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" data-field="icon">
+        </div>
+        <div class="vs-api-item__title">
+            <span class="vs-api-item__name" data-field="name"><?php echo vs_e($api['name']); ?></span>
+            <span class="vs-api-item__id" data-field="id">#<?php echo $apiId; ?></span>
+        </div>
+        <div class="vs-api-item__endpoint">
+            <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($api['method']); ?></span>
+            <span class="vs-api-item__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
+        </div>
+        <div class="vs-api-item__tags" data-field="tags">
+            <?php if ($category !== ''): ?>
+                <span class="vs-api-tag vs-api-tag--cat" data-field="category"><?php echo vs_e($category); ?></span>
+            <?php endif; ?>
+            <span class="vs-api-tag vs-api-tag--free">免费</span>
+            <?php if ($keyBadge !== ''): ?>
+                <span class="vs-api-tag vs-api-tag--key" data-field="needkey_badge"><?php echo vs_e($keyBadge); ?></span>
+            <?php endif; ?>
+            <span class="vs-api-tag <?php echo $typeClass; ?>" data-field="apitype_badge"><?php echo vs_e($typeBadge); ?></span>
+            <?php if ($auditStatus !== ApiManager::AUDIT_APPROVED): ?>
+                <span class="vs-api-tag vs-api-tag--audit <?php echo $auditClass; ?>" data-field="audit_label"><?php echo vs_e(isset($api['audit_label']) ? $api['audit_label'] : ApiManager::auditStatusLabel($auditStatus)); ?></span>
+            <?php endif; ?>
         </div>
         <div class="vs-api-item__meta">
-            <span class="vs-api-item__meta-status">状态：<span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($api['status_label']); ?></span></span>
-            <span class="vs-api-item__meta-calls" title="请求次数">请求：<strong data-field="calls"><?php echo (int) $api['calls']; ?></strong></span>
-            <span class="vs-api-item__meta-author" title="提交者">提交：<em data-field="username"><?php echo vs_e($username); ?></em></span>
+            <div class="vs-api-item__status">
+                状态：<span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($api['status_label']); ?></span>
+            </div>
+            <div class="vs-api-item__calls" title="请求次数">请求：<strong data-field="calls"><?php echo (int) $api['calls']; ?></strong></div>
+            <div class="vs-api-item__author" title="提交者">提交：<em data-field="username"><?php echo vs_e($username); ?></em></div>
         </div>
         <div class="vs-api-item__actions">
             <button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="edit" data-api-id="<?php echo $apiId; ?>">编辑</button>
-            <?php if ($status !== ApiManager::STATUS_NORMAL): ?>
-                <button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="normal" data-api-id="<?php echo $apiId; ?>">正常</button>
-            <?php endif; ?>
-            <?php if ($status !== ApiManager::STATUS_MAINTENANCE): ?>
-                <button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="maintenance" data-api-id="<?php echo $apiId; ?>">维护</button>
-            <?php endif; ?>
-            <?php if ($status !== ApiManager::STATUS_DISABLED): ?>
-                <button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="disable" data-api-id="<?php echo $apiId; ?>">禁用</button>
-            <?php endif; ?>
+            <button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-normal vs-api-list-action<?php echo $status === ApiManager::STATUS_NORMAL ? ' is-active' : ''; ?>" data-api-action="normal" data-api-id="<?php echo $apiId; ?>">正常</button>
+            <button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-maint vs-api-list-action<?php echo $status === ApiManager::STATUS_MAINTENANCE ? ' is-active' : ''; ?>" data-api-action="maintenance" data-api-id="<?php echo $apiId; ?>">维护</button>
+            <button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-disabled vs-api-list-action<?php echo $status === ApiManager::STATUS_DISABLED ? ' is-active' : ''; ?>" data-api-action="disable" data-api-id="<?php echo $apiId; ?>">禁用</button>
             <button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-api-list-action" data-api-action="delete" data-api-id="<?php echo $apiId; ?>">删除</button>
         </div>
     </div>
@@ -298,19 +288,19 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
     <?php if ($tableReady): ?>
     <div class="vs-api-list-footer" id="apiListFooter"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
         <div class="vs-api-pager" id="apiListPager">
+            <label class="vs-api-list-pagesize" for="apiListPageSize">
+                <span class="vs-api-list-pagesize__label">每页</span>
+                <select class="vs-input vs-select vs-api-list-pagesize__select" id="apiListPageSize">
+                    <option value="10">10</option>
+                    <option value="20" selected>20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </label>
             <button type="button" class="vs-api-pager__nav" id="apiListPrevBtn" aria-label="上一页">上一页</button>
             <div class="vs-api-pager__nums" id="apiListPagerNums" role="navigation" aria-label="页码"></div>
             <button type="button" class="vs-api-pager__nav" id="apiListNextBtn" aria-label="下一页">下一页</button>
         </div>
-        <label class="vs-api-list-pagesize" for="apiListPageSize">
-            <span class="vs-api-list-pagesize__label">每页</span>
-            <select class="vs-input vs-select vs-api-list-pagesize__select" id="apiListPageSize">
-                <option value="10">10</option>
-                <option value="20" selected>20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-            </select>
-        </label>
         <p class="vs-api-list-stats" id="apiListStats"><?php echo vs_e($titleMeta); ?></p>
     </div>
     <?php endif; ?>
