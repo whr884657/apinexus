@@ -1,9 +1,9 @@
 {
     "id": "slate",
     "name": "主题二",
-    "version": "2.17.0",
+    "version": "2.18.0",
     "author": "misc-api",
-    "description": "主题二：API 平台风首页与全部接口页，搜索与数据库分类筛选（自动换行、15 个可见 + 更多展开）；电脑端顶栏，导航可切换抽屉或右下角 FAB 弹出",
+    "description": "主题二：可配首页统计与浅色主题色；API 平台风首页与全部接口页",
     "preview": "preview.png",
     "settings": [
         {
@@ -25,6 +25,53 @@
             "label": "显示首页统计区",
             "type": "checkbox",
             "default": true
+        },
+        {
+            "key": "show_stat_cats",
+            "label": "统计：接口分类数",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_stat_apis",
+            "label": "统计：接口总数",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_stat_users",
+            "label": "统计：注册用户数",
+            "type": "checkbox",
+            "default": false
+        },
+        {
+            "key": "show_stat_today",
+            "label": "统计：今日调用次数",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_stat_calls",
+            "label": "统计：累计调用次数",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "color_preset",
+            "label": "默认主题色（浅色）",
+            "type": "select",
+            "default": "green",
+            "options": [
+                {"value": "green", "label": "浅绿（默认）"},
+                {"value": "rose", "label": "浅玫瑰"},
+                {"value": "orange", "label": "浅橙"},
+                {"value": "yellow", "label": "浅黄"},
+                {"value": "mint", "label": "薄荷"},
+                {"value": "sky", "label": "天空蓝"},
+                {"value": "violet", "label": "浅紫"},
+                {"value": "pink", "label": "浅粉"},
+                {"value": "cyan", "label": "浅青"}
+            ]
         },
         {
             "key": "nav_expand_mode",

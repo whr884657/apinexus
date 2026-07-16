@@ -37,6 +37,7 @@ require_once VS_ROOT . '/core/ApiStats.php';
 require_once VS_ROOT . '/core/ApiCategoryManager.php';
 require_once VS_ROOT . '/core/FrontendCategory.php';
 require_once VS_ROOT . '/core/FrontendApi.php';
+require_once VS_ROOT . '/core/FrontendStats.php';
 require_once VS_ROOT . '/core/ThemeManager.php';
 require_once VS_ROOT . '/core/oauth/HttpClient.php';
 require_once VS_ROOT . '/core/oauth/OAuthConfig.php';

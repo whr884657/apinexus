@@ -4468,9 +4468,53 @@ select.vs-input.vs-select {
 
 .vs-api-pager .vs-api-list-pagesize {
     display: inline-flex !important;
+    flex-direction: row !important;
     align-items: center !important;
-    gap: 4px !important;
+    flex: 0 0 auto !important;
+    gap: 6px !important;
     margin: 0 !important;
+    white-space: nowrap !important;
+}
+
+.vs-api-pager .vs-api-list-pagesize__label {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    writing-mode: horizontal-tb !important;
+    font-size: 12px !important;
+    line-height: 28px !important;
+    color: var(--vs-text-secondary);
+}
+
+/* vs-pick 默认 width:100% 会把「每页」挤成竖排，分页内强制自适应 */
+.vs-api-pager .vs-api-list-pagesize .vs-pick {
+    width: auto !important;
+    min-width: 56px !important;
+    flex: 0 0 auto !important;
+}
+
+.vs-api-pager .vs-api-list-pagesize .vs-pick__btn,
+.vs-api-pager .vs-api-list-pagesize__select {
+    width: 56px !important;
+    min-width: 56px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 22px 0 8px !important;
+    font-size: 12px !important;
+    line-height: 26px !important;
+    box-sizing: border-box !important;
+}
+
+.vs-api-pager .vs-api-list-pagesize .vs-pick__btn::after {
+    right: 8px !important;
+    width: 6px !important;
+    height: 6px !important;
+}
+
+.vs-api-pager__nav,
+.vs-api-pager__num {
+    height: 28px !important;
+    min-height: 28px !important;
+    box-sizing: border-box !important;
 }
 
 .vs-api-list-stats {
