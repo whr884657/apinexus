@@ -214,8 +214,8 @@ function vs_render_api_list_item(array $row)
         </div>
         <div class="vs-api-item__meta">
             <span class="vs-api-item__meta-status">状态：<span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($api['status_label']); ?></span></span>
-            <span class="vs-api-item__meta-author" title="提交者">提交：<em data-field="username"><?php echo vs_e($username); ?></em></span>
             <span class="vs-api-item__meta-calls" title="请求次数">请求：<strong data-field="calls"><?php echo (int) $api['calls']; ?></strong></span>
+            <span class="vs-api-item__meta-author" title="提交者">提交：<em data-field="username"><?php echo vs_e($username); ?></em></span>
         </div>
         <div class="vs-api-item__actions">
             <button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="edit" data-api-id="<?php echo $apiId; ?>">编辑</button>
@@ -244,15 +244,6 @@ if ($tableReady) {
             <input type="search" class="vs-input vs-api-list-search__input" id="apiListSearchInput"
                    placeholder="搜索名称 / 地址 / 提交者" autocomplete="off">
         </label>
-        <label class="vs-api-list-pagesize" for="apiListPageSize">
-            <span class="vs-api-list-pagesize__label">每页</span>
-            <select class="vs-input vs-select vs-api-list-pagesize__select" id="apiListPageSize">
-                <option value="10">10</option>
-                <option value="20" selected>20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-            </select>
-        </label>
         <button type="button" class="vs-btn vs-btn--primary vs-api-list-add-btn" id="apiListOpenAddBtn">
             <span class="vs-api-list-add-btn__icon" aria-hidden="true">+</span>
             <span class="vs-api-list-add-btn__text">添加接口</span>
@@ -262,13 +253,17 @@ if ($tableReady) {
     $headerActions = ob_get_clean();
 }
 
-vs_admin_layout_start('接口列表', 'api-list', $headerActions, '<span class="vs-content__title-stat">' . vs_e($titleMeta) . '</span>');
+vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 ?>
 
-<div class="vs-panel vs-api-list-panel" id="apiListPage"
+<div id="apiListPage"
      data-icon-base="<?php echo vs_e($iconBase); ?>"
-     data-default-icons="<?php echo vs_e(json_encode($defaultIconPaths, JSON_UNESCAPED_UNICODE)); ?>">
+     data-default-icons="<?php echo vs_e(json_encode($defaultIconPaths, JSON_UNESCAPED_UNICODE)); ?>"
+     data-stats-total="<?php echo (int) $countTotal; ?>"
+     data-stats-maint="<?php echo (int) $countMaint; ?>"
+     data-stats-pending="<?php echo (int) $countPending; ?>">
 
+    <div class="vs-panel vs-api-list-panel">
     <?php if (!$tableReady): ?>
         <div class="vs-api-list-upgrade">
             <?php vs_render_notice('warning', '', '接口管理功能尚未就绪，请先前往「系统升级」完成更新后再使用。', array('compact' => true)); ?>
@@ -276,7 +271,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions, '<span class="
         </div>
     <?php else: ?>
         <div class="vs-api-list-tip vs-api-list-tip--enter">
-            <?php vs_render_notice('info', '', '正常：可对外提供服务。维护：站点前台仍可看到，但暂不可请求。禁用：站点前台不显示。未通过审核的接口也不会在站点前台展示。列表按接口编号从大到小排列。', array('compact' => true)); ?>
+            <?php vs_render_notice('info', '', '正常：可对外提供服务。维护：站点前台仍可看到，但暂不可请求。禁用：站点前台不显示。未通过审核的接口也不会在站点前台展示。', array('compact' => true)); ?>
         </div>
 
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiListEmpty"<?php echo count($apis) > 0 ? ' hidden' : ''; ?>>
@@ -297,12 +292,27 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions, '<span class="
                 <?php endforeach; ?>
             </div>
         </div>
+    <?php endif; ?>
+    </div>
 
-        <div class="vs-api-pager" id="apiListPager"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
-            <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListPrevBtn">上一页</button>
-            <span class="vs-api-pager__info" id="apiListPagerInfo">第 1 / 1 页</span>
-            <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListNextBtn">下一页</button>
+    <?php if ($tableReady): ?>
+    <div class="vs-api-list-footer" id="apiListFooter"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
+        <div class="vs-api-pager" id="apiListPager">
+            <button type="button" class="vs-api-pager__nav" id="apiListPrevBtn" aria-label="上一页">上一页</button>
+            <div class="vs-api-pager__nums" id="apiListPagerNums" role="navigation" aria-label="页码"></div>
+            <button type="button" class="vs-api-pager__nav" id="apiListNextBtn" aria-label="下一页">下一页</button>
         </div>
+        <label class="vs-api-list-pagesize" for="apiListPageSize">
+            <span class="vs-api-list-pagesize__label">每页</span>
+            <select class="vs-input vs-select vs-api-list-pagesize__select" id="apiListPageSize">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </label>
+        <p class="vs-api-list-stats" id="apiListStats"><?php echo vs_e($titleMeta); ?></p>
+    </div>
     <?php endif; ?>
 </div>
 

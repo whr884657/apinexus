@@ -181,8 +181,8 @@ vs_admin_layout_start('接口审核', 'api-review');
                         </div>
                         <div class="vs-api-item__meta">
                             <span class="vs-api-item__meta-status">状态：<span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>"><?php echo vs_e($api['status_label']); ?></span></span>
-                            <span class="vs-api-item__meta-author" title="提交者">提交：<em><?php echo vs_e($username); ?></em></span>
                             <span class="vs-api-item__meta-calls" title="请求次数">请求：<strong><?php echo (int) $api['calls']; ?></strong></span>
+                            <span class="vs-api-item__meta-author" title="提交者">提交：<em><?php echo vs_e($username); ?></em></span>
                         </div>
                         <div class="vs-api-review-reason" data-field="rejectreason"<?php echo $reason === '' ? ' hidden' : ''; ?>>
                             原因：<?php echo vs_e($reason); ?>

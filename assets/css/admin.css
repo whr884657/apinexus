@@ -3996,3 +3996,263 @@ select.vs-input.vs-select {
 .vs-api-review-reason[hidden] {
     display: none !important;
 }
+
+/* ===== v3.22.0：电脑端行式列表 + 手机扁按钮 + 底部分页外置 ===== */
+.vs-api-list-panel {
+    padding: 14px 16px !important;
+}
+
+.vs-api-review-panel,
+#userApiManagePage.vs-panel {
+    padding: 14px 16px !important;
+}
+
+.vs-api-list-table {
+    border: 1px solid var(--vs-border);
+    border-radius: 10px;
+    background: var(--vs-content-bg);
+    overflow: hidden;
+}
+
+.vs-api-list-table__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0 !important;
+}
+
+.vs-api-list-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 0 4px 8px;
+}
+
+.vs-api-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 0;
+}
+
+.vs-api-pager__nums {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.vs-api-pager__nav,
+.vs-api-pager__num {
+    appearance: none;
+    min-width: 32px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.vs-api-pager__num.is-active {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #fff;
+}
+
+.vs-api-pager__nav:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.vs-api-list-footer .vs-api-list-pagesize {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vs-api-list-pagesize__select {
+    width: 64px;
+    height: 28px !important;
+    padding: 0 6px !important;
+    font-size: 12px !important;
+}
+
+.vs-api-list-stats {
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--vs-text-secondary);
+    line-height: 1.4;
+}
+
+@media (min-width: 901px) {
+    .vs-api-item {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px !important;
+        border: none !important;
+        border-bottom: 1px solid var(--vs-border) !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+
+    .vs-api-item:last-child {
+        border-bottom: none !important;
+    }
+
+    .vs-api-item__top {
+        display: flex !important;
+        flex: 1;
+        min-width: 0;
+        margin-top: 0 !important;
+        gap: 10px;
+    }
+
+    .vs-api-item__icon img {
+        width: 28px !important;
+        height: 28px !important;
+    }
+
+    .vs-api-item__main {
+        gap: 2px !important;
+        min-width: 0;
+    }
+
+    .vs-api-item__tags {
+        max-width: 48%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .vs-api-item__meta {
+        flex-shrink: 0;
+        justify-content: flex-end;
+        gap: 8px 12px;
+        white-space: nowrap;
+    }
+
+    .vs-api-item__actions {
+        flex-shrink: 0;
+        border-top: none !important;
+        padding-top: 0 !important;
+        justify-content: flex-end;
+        gap: 4px !important;
+    }
+
+    .vs-api-item__actions .vs-btn,
+    .vs-api-item__actions .vs-btn--outline,
+    .vs-api-item__actions a.vs-btn {
+        height: 24px !important;
+        padding: 0 8px !important;
+        font-size: 12px !important;
+        border-radius: 6px !important;
+        line-height: 1 !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .vs-api-list-panel {
+        padding: 10px 8px !important;
+    }
+
+    .vs-api-review-panel,
+    #userApiManagePage.vs-panel {
+        padding: 10px 8px !important;
+    }
+
+    .vs-api-list-table {
+        border: none !important;
+        background: transparent !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+    }
+
+    .vs-api-list-table__body,
+    .vs-api-review-list {
+        gap: 8px !important;
+    }
+
+    .vs-api-item {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+        padding: 8px 10px !important;
+        border: 1px solid var(--vs-border) !important;
+        border-radius: 10px !important;
+        box-shadow: none !important;
+        background: #fff !important;
+    }
+
+    .vs-api-item__top {
+        display: flex !important;
+        gap: 8px;
+        margin-top: 0 !important;
+    }
+
+    .vs-api-item__icon img {
+        width: 28px !important;
+        height: 28px !important;
+    }
+
+    .vs-api-item__main {
+        gap: 2px !important;
+    }
+
+    .vs-api-item__tags {
+        max-width: 58%;
+        justify-content: flex-end !important;
+        flex-wrap: wrap;
+        gap: 3px !important;
+    }
+
+    .vs-api-tag {
+        height: 18px !important;
+        padding: 0 6px !important;
+        font-size: 10px !important;
+    }
+
+    .vs-api-item__meta {
+        justify-content: flex-end !important;
+        gap: 6px 10px !important;
+        font-size: 11px !important;
+    }
+
+    .vs-api-item__actions {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        justify-content: flex-end !important;
+        gap: 4px !important;
+        padding-top: 6px !important;
+        border-top: 1px dashed #cbd5e1 !important;
+        overflow-x: auto;
+    }
+
+    .vs-api-item__actions .vs-btn,
+    .vs-api-item__actions .vs-btn--outline,
+    .vs-api-item__actions a.vs-btn {
+        height: 22px !important;
+        min-height: 22px !important;
+        padding: 0 8px !important;
+        font-size: 11px !important;
+        border-radius: 6px !important;
+        line-height: 1 !important;
+        width: auto !important;
+    }
+
+    .vs-api-list-search__input {
+        width: min(140px, 42vw);
+        height: 32px;
+    }
+}
