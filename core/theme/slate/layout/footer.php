@@ -66,4 +66,5 @@ $stNavUseFab = ($stNavExpandMode === 'fab_popup');
     </button>
 </div>
 <?php endif; ?>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/st-tint.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 </div>

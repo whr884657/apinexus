@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.25.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.26.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -281,6 +281,14 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.26.0（2026-07-17）
+
+**类型：** 中版本（主题二卡片/配色 + 后台分页）
+
+- 后台分页「每页」横向、选择框与页码按钮同高
+- 主题二首页卡片可进详情、双方法徽章、固定卡片高度
+- 主题二可配首页统计项与默认浅色；顶栏圆形淡色调色盘
 
 ### v3.25.0（2026-07-17）
 

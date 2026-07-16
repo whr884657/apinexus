@@ -258,19 +258,30 @@
 
     function buildApiCardHtml(api) {
         var methods = api.methods && api.methods.length ? api.methods : ['GET'];
-        var method = String(methods[0] || 'GET').toUpperCase();
-        var methodClass = method.toLowerCase();
-        var desc = api.desc ? '<p class="st-api-card__desc">' + escapeHtml(api.desc) + '</p>' : '';
-        var endpoint = (api.endpoint || '');
-        var endpointHtml = endpoint
-            ? '<code class="st-api-card__endpoint">' + escapeHtml(endpoint) + '</code>'
-            : '';
+        var methodHtml = methods.slice(0, 2).map(function (m) {
+            var method = String(m || 'GET').toUpperCase();
+            var methodClass = method.toLowerCase();
+            return '<span class="st-api-card__method st-api-card__method--' + escapeHtml(methodClass) + '">' + escapeHtml(method) + '</span>';
+        }).join('');
+        var descText = String(api.desc || '').trim();
+        var endpoint = String(api.endpoint || '').trim();
+        var detailUrl = String(api.detail_url || '').trim();
+        var base = (window.VS_BASE_URL || '').replace(/\/$/, '');
+        if (!detailUrl && api.id) {
+            detailUrl = base + '/detail.php/' + api.id;
+        }
+        if (!detailUrl) {
+            detailUrl = base + '/apis';
+        }
         return '<article class="st-api-card" data-category="' + escapeHtml(String(api.category || '')) + '" data-name="' + escapeHtml((api.name || '').toLowerCase()) + '" data-desc="' + escapeHtml((api.desc || '').toLowerCase()) + '">' +
+            '<a class="st-api-card__link" href="' + escapeHtml(detailUrl) + '">' +
             '<div class="st-api-card__head">' +
-            '<span class="st-api-card__method st-api-card__method--' + escapeHtml(methodClass) + '">' + escapeHtml(method) + '</span>' +
+            '<div class="st-api-card__methods">' + methodHtml + '</div>' +
             '<span class="st-api-card__badge">免费</span></div>' +
             '<h3 class="st-api-card__title">' + escapeHtml(api.name || '') + '</h3>' +
-            desc + endpointHtml + '</article>';
+            '<p class="st-api-card__desc">' + (descText ? escapeHtml(descText) : '&nbsp;') + '</p>' +
+            '<code class="st-api-card__endpoint">' + (endpoint ? escapeHtml(endpoint) : '&nbsp;') + '</code>' +
+            '</a></article>';
     }
 
     function escapeHtml(str) {

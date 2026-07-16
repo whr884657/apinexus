@@ -1,13 +1,13 @@
 {
-    "version": "3.25.0",
-    "title": "misc-api 3.25.0 详情 PATH_INFO 与去除外链代理",
+    "version": "3.26.0",
+    "title": "misc-api 3.26.0 主题二卡片/配色与后台分页修复",
     "release_date": "2026-07-17",
     "db_changes": false,
     "changes": [
-        "接口详情改为 /detail.php/{id}（PATH_INFO，无伪静态）",
-        "移除 media-proxy / ExternalMedia，外链图片按原 URL 直链加载",
-        "Nginx / Apache 伪静态仅保留 /apis/{短码} 代理规则",
-        "补强页面命名与修改流程记录规范（本地文档）"
+        "后台分页：「每页」横向显示，页码选择与上下页按钮同高",
+        "主题二首页卡片可进详情、展示 GET/POST，卡片高度与链接位固定",
+        "主题二后台可配首页统计项（分类/接口/用户/今日/累计）与默认浅色",
+        "主题二顶栏圆形浅色调色盘（调色板第 5～12 色）"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
