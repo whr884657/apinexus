@@ -191,42 +191,54 @@ function vs_render_user_api_item(array $row)
         $methodSlug = 'get';
     }
     $approved = $audit === ApiManager::AUDIT_APPROVED;
+    $keyBadge = isset($api['needkey_badge']) ? (string) $api['needkey_badge'] : ApiManager::requireKeyBadge(isset($api['needkey']) ? $api['needkey'] : 0);
+    $category = isset($api['category']) ? trim((string) $api['category']) : '';
     ?>
-    <div class="vs-user-api-row" data-api-row="<?php echo $apiId; ?>" data-api-status="<?php echo $rowStatus; ?>" data-api-audit="<?php echo $audit; ?>">
-        <div class="vs-user-api-row__top">
-            <div class="vs-user-api-row__titleline">
-                <span class="vs-user-api-row__id">#<?php echo $apiId; ?></span>
-                <strong class="vs-user-api-row__name" data-field="name"><?php echo vs_e($api['name']); ?></strong>
-                <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($api['method']); ?></span>
-            </div>
-            <div class="vs-user-api-row__side">
-                <?php if ($approved): ?>
-                    <span class="vs-api-list-status <?php echo $rowStatusClass; ?>" data-field="status_label"><?php echo vs_e($api['status_label']); ?></span>
-                <?php else: ?>
-                    <span class="vs-api-list-audit <?php echo vs_e($api['audit_class']); ?>" data-field="audit_label"><?php echo vs_e($api['audit_label']); ?></span>
-                <?php endif; ?>
-                <span class="vs-user-api-row__calls" title="调用次数"><span data-field="calls"><?php echo (int) $api['calls']; ?></span></span>
-            </div>
+    <div class="vs-api-item vs-user-api-row" data-api-row="<?php echo $apiId; ?>" data-api-status="<?php echo $rowStatus; ?>" data-api-audit="<?php echo $audit; ?>">
+        <div class="vs-api-item__icon">
+            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy">
         </div>
-        <div class="vs-user-api-row__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></div>
-        <p class="vs-user-api-row__reason" data-field="rejectreason"<?php echo $reason === '' ? ' hidden' : ''; ?>>
-            未通过原因：<?php echo vs_e($reason); ?>
-        </p>
-        <div class="vs-user-api-row__actions">
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-edit" data-api-id="<?php echo $apiId; ?>">编辑</button>
+        <div class="vs-api-item__title">
+            <span class="vs-api-item__id">#<?php echo $apiId; ?></span>
+            <span class="vs-api-item__name" data-field="name"><?php echo vs_e($api['name']); ?></span>
+        </div>
+        <div class="vs-api-item__tags">
+            <?php if ($category !== ''): ?>
+                <span class="vs-api-tag vs-api-tag--cat"><?php echo vs_e($category); ?></span>
+            <?php endif; ?>
+            <span class="vs-api-tag vs-api-tag--free">免费</span>
+            <?php if ($keyBadge !== ''): ?>
+                <span class="vs-api-tag vs-api-tag--key"><?php echo vs_e($keyBadge); ?></span>
+            <?php endif; ?>
+            <?php if ($approved): ?>
+                <span class="vs-api-tag vs-api-tag--status <?php echo $rowStatusClass; ?>" data-field="status_label"><?php echo vs_e($api['status_label']); ?></span>
+            <?php else: ?>
+                <span class="vs-api-tag vs-api-tag--audit <?php echo vs_e($api['audit_class']); ?>" data-field="audit_label"><?php echo vs_e($api['audit_label']); ?></span>
+            <?php endif; ?>
+        </div>
+        <div class="vs-api-item__endpoint">
+            <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($api['method']); ?></span>
+            <span class="vs-api-item__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
+        </div>
+        <div class="vs-api-item__calls" title="调用次数"><span data-field="calls"><?php echo (int) $api['calls']; ?></span></div>
+        <div class="vs-api-item__actions vs-user-api-row__actions">
+            <button type="button" class="vs-btn vs-btn--outline vs-user-api-edit" data-api-id="<?php echo $apiId; ?>">编辑</button>
             <?php if ($approved): ?>
                 <?php if ($rowStatus !== ApiManager::STATUS_NORMAL): ?>
-                    <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-status" data-api-id="<?php echo $apiId; ?>" data-status="0">正常</button>
+                    <button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="<?php echo $apiId; ?>" data-status="0">正常</button>
                 <?php endif; ?>
                 <?php if ($rowStatus !== ApiManager::STATUS_MAINTENANCE): ?>
-                    <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-status" data-api-id="<?php echo $apiId; ?>" data-status="2">维护</button>
+                    <button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="<?php echo $apiId; ?>" data-status="2">维护</button>
                 <?php endif; ?>
                 <?php if ($rowStatus !== ApiManager::STATUS_DISABLED): ?>
-                    <button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-user-api-status" data-api-id="<?php echo $apiId; ?>" data-status="1">禁用</button>
+                    <button type="button" class="vs-btn vs-btn--outline vs-user-api-status" data-api-id="<?php echo $apiId; ?>" data-status="1">禁用</button>
                 <?php endif; ?>
             <?php endif; ?>
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-user-api-delete" data-api-id="<?php echo $apiId; ?>">删除</button>
+            <button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-user-api-delete" data-api-id="<?php echo $apiId; ?>">删除</button>
         </div>
+        <p class="vs-api-review-reason vs-user-api-row__reason" data-field="rejectreason"<?php echo $reason === '' ? ' hidden' : ''; ?>>
+            未通过原因：<?php echo vs_e($reason); ?>
+        </p>
     </div>
     <?php
 }
@@ -262,10 +274,12 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
             </div>
         </div>
 
-        <div class="vs-user-api-list" id="userApiList"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
-            <?php foreach ($apis as $row): ?>
-                <?php vs_render_user_api_item($row); ?>
-            <?php endforeach; ?>
+        <div class="vs-api-list-table vs-user-api-list" id="userApiList"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
+            <div class="vs-api-list-table__body">
+                <?php foreach ($apis as $row): ?>
+                    <?php vs_render_user_api_item($row); ?>
+                <?php endforeach; ?>
+            </div>
         </div>
     <?php endif; ?>
 </div>
@@ -386,87 +400,28 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
 
 <style>
 .vs-api-type-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
-.vs-user-api-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-.vs-user-api-row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 12px 14px;
-    border: 1px solid var(--vs-border, #e2e8f0);
-    border-radius: 12px;
-    background: var(--vs-content-bg, #fff);
-}
-.vs-user-api-row__top {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px 12px;
-}
-.vs-user-api-row__titleline {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 8px;
-    min-width: 0;
-}
-.vs-user-api-row__id {
-    font-size: 12px;
-    font-weight: 700;
-    color: #94a3b8;
-    font-variant-numeric: tabular-nums;
-}
-.vs-user-api-row__name { font-weight: 600; color: var(--vs-text, #0f172a); }
-.vs-user-api-row__side {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-}
-.vs-user-api-row__calls {
-    font-size: 12px;
-    font-weight: 700;
-    color: #64748b;
-    font-variant-numeric: tabular-nums;
-}
-.vs-user-api-row__calls::before {
-    content: "调用 ";
-    font-weight: 500;
-    color: #94a3b8;
-}
-.vs-user-api-row__url {
-    font-size: 12px;
-    color: #64748b;
-    word-break: break-all;
-    line-height: 1.45;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+.vs-user-api-list { margin-top: 12px; }
+.vs-user-api-list .vs-api-item {
+    grid-template-areas:
+        "icon title tags endpoint calls actions"
+        ". reason reason reason reason reason";
 }
 .vs-user-api-row__reason {
+    grid-area: reason;
     margin: 0;
     font-size: 12px;
     color: #b45309;
 }
 .vs-user-api-row__reason[hidden] { display: none !important; }
-.vs-user-api-row__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding-top: 4px;
-    border-top: 1px solid var(--vs-border, #e2e8f0);
-}
-.vs-user-api-row__actions .vs-btn {
-    height: 28px;
-    min-width: 0;
-    padding: 0 10px;
-    font-size: 12px;
-}
-@media (max-width: 640px) {
-    .vs-user-api-row__actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
+@media (max-width: 900px) {
+    .vs-user-api-list .vs-api-item {
+        grid-template-areas:
+            "icon title tags"
+            "endpoint endpoint endpoint"
+            "reason reason reason"
+            "calls calls calls"
+            "actions actions actions";
     }
-    .vs-user-api-row__actions .vs-btn { width: 100%; }
 }
 </style>
 <?php endif; ?>

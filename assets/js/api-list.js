@@ -271,7 +271,7 @@
     }
 
     function markRowsEnter() {
-        page.querySelectorAll('.vs-api-list-row').forEach(function (row, i) {
+        page.querySelectorAll('.vs-api-item').forEach(function (row, i) {
             row.style.setProperty('--row-i', String(Math.min(i, 20)));
             row.classList.add('is-enter');
         });
@@ -299,21 +299,47 @@
         return String((api && (api.call_url || api.endpoint)) || '');
     }
 
+    function buildTagsHtml(api) {
+        var status = normalizeStatus(api.status);
+        var audit = normalizeAudit(api.audit);
+        var typeBadge = api.apitype_badge || '';
+        var keyBadge = api.needkey_badge || '';
+        var category = api.category ? String(api.category) : '';
+        var html = '';
+        if (category) {
+            html += '<span class="vs-api-tag vs-api-tag--cat" data-field="category">' + escapeHtml(category) + '</span>';
+        }
+        html += '<span class="vs-api-tag vs-api-tag--free">免费</span>';
+        if (keyBadge) {
+            html += '<span class="vs-api-tag vs-api-tag--key" data-field="needkey_badge">' + escapeHtml(keyBadge) + '</span>';
+        }
+        if (typeBadge) {
+            html += '<span class="vs-api-tag vs-api-tag--proxy" data-field="apitype_badge">' + escapeHtml(typeBadge) + '</span>';
+        }
+        html += '<span class="vs-api-tag vs-api-tag--status ' + statusClass(status) + '" data-field="status_label">'
+            + escapeHtml(api.status_label || String(status)) + '</span>';
+        if (audit !== 1) {
+            html += '<span class="vs-api-tag vs-api-tag--audit ' + auditClass(audit) + '" data-field="audit_label">'
+                + escapeHtml(api.audit_label || '') + '</span>';
+        }
+        return html;
+    }
+
     function buildActionButtons(api) {
         var id = api.id;
         var status = normalizeStatus(api.status);
         var html = '';
-        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action" data-api-action="edit" data-api-id="' + id + '">编辑</button>';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="edit" data-api-id="' + id + '">编辑</button>';
         if (status !== 0) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action" data-api-action="normal" data-api-id="' + id + '">正常</button>';
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="normal" data-api-id="' + id + '">正常</button>';
         }
         if (status !== 2) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action" data-api-action="maintenance" data-api-id="' + id + '">维护</button>';
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="maintenance" data-api-id="' + id + '">维护</button>';
         }
         if (status !== 1) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default vs-api-list-action" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
         }
-        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
         return html;
     }
 
@@ -323,42 +349,27 @@
         var status = normalizeStatus(api.status);
         var audit = normalizeAudit(api.audit);
         var callUrl = callUrlOf(api);
-        var typeLabel = api.apitype_label || '';
-        var search = (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '') + ' ' + typeLabel).toLowerCase();
+        var typeBadge = api.apitype_badge || '';
+        var search = (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '') + ' ' + typeBadge).toLowerCase();
         var payload = escapeHtml(JSON.stringify(api));
 
-        var html = '<div class="vs-api-list-row" data-api-row="' + api.id + '"'
+        var html = '<div class="vs-api-item" data-api-row="' + api.id + '"'
             + ' data-api-status="' + status + '"'
             + ' data-api-audit="' + audit + '"'
             + ' data-search="' + escapeHtml(search) + '"'
             + ' data-payload="' + payload + '">';
-        html += '<div class="vs-api-list-row__top">';
-        html += '<div class="vs-api-list-row__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" data-field="icon"></div>';
-        html += '<div class="vs-api-list-row__head">';
-        html += '<div class="vs-api-list-row__titleline">';
-        html += '<span class="vs-api-list-row__id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
-        html += '<span class="vs-api-list-row__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
+        html += '<div class="vs-api-item__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" data-field="icon"></div>';
+        html += '<div class="vs-api-item__title">';
+        html += '<span class="vs-api-item__id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
+        html += '<span class="vs-api-item__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
+        html += '</div>';
+        html += '<div class="vs-api-item__tags" data-field="tags">' + buildTagsHtml(api) + '</div>';
+        html += '<div class="vs-api-item__endpoint">';
         html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span>';
         html += '</div>';
-        html += '<div class="vs-api-list-row__badges">';
-        if (typeLabel) {
-            html += '<span class="vs-api-list-type" data-field="apitype_label">' + escapeHtml(typeLabel) + '</span>';
-        }
-        html += '<span class="vs-api-list-status ' + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span>';
-        if (audit !== 1) {
-            html += '<span class="vs-api-list-audit ' + auditClass(audit) + '" data-field="audit_label">' + escapeHtml(api.audit_label || '') + '</span>';
-        }
-        html += '</div></div>';
-        html += '<div class="vs-api-list-row__calls" title="调用次数"><span data-field="calls">' + (parseInt(api.calls, 10) || 0) + '</span></div>';
-        html += '</div>';
-        html += '<div class="vs-api-list-row__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</div>';
-        html += '<div class="vs-api-list-row__meta">';
-        html += '<span data-field="needkey_label">' + escapeHtml(api.needkey_label || requireKeyLabel(api.needkey)) + '</span>';
-        if (api.category) {
-            html += '<span class="vs-api-list-row__sep">·</span><span data-field="category">' + escapeHtml(api.category) + '</span>';
-        }
-        html += '</div>';
-        html += '<div class="vs-api-list-row__actions">' + buildActionButtons(api) + '</div>';
+        html += '<div class="vs-api-item__calls" title="调用次数"><span data-field="calls">' + (parseInt(api.calls, 10) || 0) + '</span></div>';
+        html += '<div class="vs-api-item__actions">' + buildActionButtons(api) + '</div>';
         html += '</div>';
         return html;
     }
@@ -376,7 +387,7 @@
         if (!listEl) {
             return;
         }
-        var rows = listEl.querySelectorAll('.vs-api-list-row');
+        var rows = listEl.querySelectorAll('.vs-api-item');
         var visible = 0;
         rows.forEach(function (row) {
             if (!row.hidden) {
@@ -400,7 +411,7 @@
             return;
         }
         var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-        listEl.querySelectorAll('.vs-api-list-row').forEach(function (row) {
+        listEl.querySelectorAll('.vs-api-item').forEach(function (row) {
             var hay = row.getAttribute('data-search') || '';
             row.hidden = q !== '' && hay.indexOf(q) === -1;
         });
@@ -420,12 +431,12 @@
             return;
         }
         var callUrl = callUrlOf(api);
-        var typeLabel = api.apitype_label || '';
+        var typeBadge = api.apitype_badge || '';
         rowEl.setAttribute('data-api-status', String(normalizeStatus(api.status)));
         rowEl.setAttribute('data-api-audit', String(normalizeAudit(api.audit)));
         rowEl.setAttribute(
             'data-search',
-            (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '') + ' ' + typeLabel).toLowerCase()
+            (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' ' + String(api.category || '') + ' ' + typeBadge).toLowerCase()
         );
         rowEl.setAttribute('data-payload', JSON.stringify(api));
 
@@ -452,72 +463,15 @@
         if (callsEl) {
             callsEl.textContent = String(parseInt(api.calls, 10) || 0);
         }
-        var keyEl = rowEl.querySelector('[data-field="needkey_label"]');
-        if (keyEl) {
-            keyEl.textContent = api.needkey_label || requireKeyLabel(api.needkey);
-        }
-        var typeEl = rowEl.querySelector('[data-field="apitype_label"]');
-        var badges = rowEl.querySelector('.vs-api-list-row__badges');
-        if (typeLabel) {
-            if (!typeEl && badges) {
-                typeEl = document.createElement('span');
-                typeEl.className = 'vs-api-list-type';
-                typeEl.setAttribute('data-field', 'apitype_label');
-                badges.insertBefore(typeEl, badges.firstChild);
-            }
-            if (typeEl) {
-                typeEl.textContent = typeLabel;
-            }
-        } else if (typeEl && typeEl.parentNode) {
-            typeEl.parentNode.removeChild(typeEl);
-        }
-        var statusEl = rowEl.querySelector('[data-field="status_label"]');
-        if (statusEl) {
-            statusEl.textContent = api.status_label || String(normalizeStatus(api.status));
-            statusEl.className = 'vs-api-list-status ' + statusClass(api.status);
-        }
-        var auditEl = rowEl.querySelector('[data-field="audit_label"]');
-        var audit = normalizeAudit(api.audit);
-        if (audit === 1) {
-            if (auditEl && auditEl.parentNode) {
-                auditEl.parentNode.removeChild(auditEl);
-            }
-        } else if (badges) {
-            if (!auditEl) {
-                auditEl = document.createElement('span');
-                auditEl.setAttribute('data-field', 'audit_label');
-                badges.appendChild(auditEl);
-            }
-            auditEl.textContent = api.audit_label || '';
-            auditEl.className = 'vs-api-list-audit ' + auditClass(audit);
-        }
-        var catEl = rowEl.querySelector('[data-field="category"]');
-        var meta = rowEl.querySelector('.vs-api-list-row__meta');
-        if (api.category) {
-            if (!catEl && meta) {
-                var sep = document.createElement('span');
-                sep.className = 'vs-api-list-row__sep';
-                sep.textContent = '·';
-                catEl = document.createElement('span');
-                catEl.setAttribute('data-field', 'category');
-                meta.appendChild(sep);
-                meta.appendChild(catEl);
-            }
-            if (catEl) {
-                catEl.textContent = api.category;
-            }
-        } else if (catEl) {
-            var prev = catEl.previousSibling;
-            if (prev && prev.classList && prev.classList.contains('vs-api-list-row__sep')) {
-                prev.parentNode.removeChild(prev);
-            }
-            catEl.parentNode.removeChild(catEl);
+        var tagsEl = rowEl.querySelector('[data-field="tags"]');
+        if (tagsEl) {
+            tagsEl.innerHTML = buildTagsHtml(api);
         }
         var iconImg = rowEl.querySelector('[data-field="icon"]');
         if (iconImg) {
             iconImg.src = safeIconUrl(api.icon);
         }
-        var actions = rowEl.querySelector('.vs-api-list-row__actions');
+        var actions = rowEl.querySelector('.vs-api-item__actions');
         if (actions) {
             actions.innerHTML = buildActionButtons(api);
         }

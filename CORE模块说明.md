@@ -222,7 +222,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前 `ApiStats::hitProxy` |
-| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`（含 `iploc` 预留）；本地文件头向上查找 `bootstrap` 后 `ApiStats::hit()` |
+| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；本地注入 ≤3 行向上查找或 `api/hit.php` |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表（**主题向**） |
