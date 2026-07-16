@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.17.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.18.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -25,6 +25,7 @@
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
 - **API 管理（已实现）**：后台接口列表与分类；接口审核（待审核/通过/不通过，可选拒绝原因）；用户中心开发者投稿与邮件通知
+- **调用统计（v3.18+）**：本地脚本头 `ApiStats::hit()` + 代理 `/apis/{短码}` 自动记账；日志表 `apilog`；同步 `api.calls`（密钥/扣费字段预留）
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
@@ -141,7 +142,9 @@ misc-api/
 ├── update-log.json             # 版本更新记录
 ├── 404.php                     # 全站 404（含安全法律提示）
 ├── index.php                   # 前台首页（主题驱动）
-├── apis.php                    # 全部接口列表 + 网关（对外 /apis/{短码}）
+├── apis.php                    # 全部接口列表 + 代理网关（对外 /apis/{短码}，内记统计）
+├── api/                        # 本地业务接口脚本（头部注入 ApiStats::hit）
+│   └── yiyan/                  # 示例：随机一言
 ├── articles.php                # 前台 · 文章
 ├── links.php                   # 前台 · 友情链接
 ├── sponsor.php                 # 前台 · 赞助
@@ -273,6 +276,10 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.18.0（2026-07-16）
+
+- **调用统计**：本地文件头 `ApiStats::hit()` + 代理网关自动记账；新表 `apilog`；同步 `api.calls`（须结构更新）
 
 ### v3.17.2（2026-07-15）
 

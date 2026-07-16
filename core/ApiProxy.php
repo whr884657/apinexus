@@ -177,6 +177,7 @@ class ApiProxy
 
         $status = ApiManager::normalizeStatus(isset($row['status']) ? $row['status'] : 0);
         if ($status === ApiManager::STATUS_MAINTENANCE) {
+            ApiStats::hitProxy($row, false, 503);
             http_response_code(503);
             header('Content-Type: text/plain; charset=utf-8');
             echo '维护中';
@@ -185,6 +186,7 @@ class ApiProxy
 
         $target = trim((string) (isset($row['targeturl']) ? $row['targeturl'] : ''));
         if ($target === '' || !preg_match('#^https?://#i', $target)) {
+            ApiStats::hitProxy($row, false, 500);
             http_response_code(500);
             header('Content-Type: text/plain; charset=utf-8');
             echo '上游地址无效';
@@ -193,7 +195,11 @@ class ApiProxy
 
         $params = $_GET;
         unset($params[self::REWRITE_SLUG_PARAM]);
+        // 本站密钥参数不转给上游
+        unset($params['key'], $params['api_key'], $params['apikey']);
         $url = self::mergeQuery($target, $params);
+
+        ApiStats::hitProxy($row, true, 302);
 
         header('Cache-Control: no-store');
         header('Location: ' . $url, true, 302);

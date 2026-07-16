@@ -149,6 +149,11 @@ class DatabaseMigrator
             self::markApplied('3.11.0');
         }
 
+        // 新装已含 3.18.0（apilog）时跳过迁移
+        if (!in_array('3.18.0', $applied, true) && self::tableExists('apilog')) {
+            self::markApplied('3.18.0');
+        }
+
         // 新装无历史 /proxy.php?s= 地址时，3.12.0 的 UPDATE 幂等，不强制跳过
     }
 
