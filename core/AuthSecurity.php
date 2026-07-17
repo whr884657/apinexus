@@ -83,6 +83,8 @@ class AuthSecurity
 
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
+        // 避免短时会话回收导致 CSRF 偶发失效（登录/发信页长时间停留）
+        ini_set('session.gc_maxlifetime', '86400');
     }
 
     /**
@@ -152,26 +154,92 @@ class AuthSecurity
     }
 
     /**
+     * 规范化 Host（去端口、小写；IPv6 方括号保留内层）
+     *
+     * @param string $host
+     * @return string
+     */
+    public static function normalizeRequestHost($host)
+    {
+        $host = strtolower(trim((string) $host));
+        if ($host === '') {
+            return '';
+        }
+        if ($host[0] === '[') {
+            $end = strpos($host, ']');
+            if ($end !== false) {
+                return substr($host, 0, $end + 1);
+            }
+        }
+        if (strpos($host, ':') !== false) {
+            $host = preg_replace('/:\d+$/', '', $host);
+        }
+        return $host;
+    }
+
+    /**
+     * 从 Origin / Referer URL 取出 host
+     *
+     * @param string $url
+     * @return string
+     */
+    private static function hostFromUrl($url)
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['host'])) {
+            return '';
+        }
+        $host = strtolower((string) $parts['host']);
+        if (isset($parts['port']) && (int) $parts['port'] > 0) {
+            // HTTP_HOST 可能带非默认端口，一并纳入比较集合由调用方处理
+        }
+        return $host;
+    }
+
+    /**
      * 校验请求来源（同源）
+     *
+     * 说明：部分浏览器 / 隐私模式 / 应用内 WebView 的同源 fetch 可能不带 Origin/Referer。
+     * 此时仍依赖 CSRF Token，避免误杀登录；有头时再严格比对 Host。
      *
      * @return bool
      */
     public static function validateSameOrigin()
     {
-        $host = isset($_SERVER['HTTP_HOST']) ? strtolower($_SERVER['HTTP_HOST']) : '';
+        $rawHost = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
+        $host = self::normalizeRequestHost($rawHost);
         if ($host === '') {
             return false;
         }
 
-        $expected = self::isHttps() ? 'https://' . $host : 'http://' . $host;
-
-        if (isset($_SERVER['HTTP_ORIGIN'])) {
-            $origin = $_SERVER['HTTP_ORIGIN'];
-            return strcasecmp($origin, $expected) === 0;
+        $candidates = array();
+        if (!empty($_SERVER['HTTP_ORIGIN'])) {
+            $candidates[] = (string) $_SERVER['HTTP_ORIGIN'];
+        }
+        if (!empty($_SERVER['HTTP_REFERER'])) {
+            $candidates[] = (string) $_SERVER['HTTP_REFERER'];
         }
 
-        if (isset($_SERVER['HTTP_REFERER'])) {
-            return stripos($_SERVER['HTTP_REFERER'], $expected) === 0;
+        if ($candidates === array()) {
+            return true;
+        }
+
+        foreach ($candidates as $url) {
+            $candHost = self::hostFromUrl($url);
+            if ($candHost === '') {
+                continue;
+            }
+            if ($candHost === $host) {
+                return true;
+            }
+            // www / 裸域宽松互认（仅一层）
+            if ($candHost === 'www.' . $host || $host === 'www.' . $candHost) {
+                return true;
+            }
         }
 
         return false;
@@ -513,7 +581,11 @@ class AuthSecurity
         $token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
         if (!self::validateCsrf($token)) {
             if (function_exists('vs_auth_json')) {
-                vs_auth_json(array('code' => 0, 'msg' => '请求无效，请刷新页面后重试'), 403);
+                vs_auth_json(array(
+                    'code' => 0,
+                    'msg'  => '登录凭证已失效，请刷新页面后重试',
+                    'csrf' => self::csrfToken(),
+                ), 403);
             }
             http_response_code(403);
             exit;

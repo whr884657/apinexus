@@ -4,12 +4,14 @@ if (!defined('VS_THEME_RENDER')) {
 }
 $year = date('Y');
 $beian = SiteContext::beianInfo();
-$runtimeStart = '2024-01-01 00:00:00';
+$showRuntime = ThemeManager::themeSettingBool('show_runtime', true);
+$hasRuntime = vs_site_has_runtime();
+$runtimeStart = vs_site_runtime_start();
 ?>
 <footer class="mt-12">
     <div class="container mx-auto px-6">
         <div class="py-8 border-b" style="border-color: var(--border-color);">
-            <div class="flex flex-col md:flex-row gap-6">
+            <div class="flex flex-col md:flex-row gap-6 md:items-start md:justify-between">
                 <div class="flex-1" style="min-width: 0;">
                     <h4 class="font-bold text-sm mb-4 font-mono" style="color: var(--accent-primary);">// 友情链接</h4>
                     <div class="flex flex-wrap gap-3 footer-links text-sm" id="friendLinks">
@@ -19,12 +21,18 @@ $runtimeStart = '2024-01-01 00:00:00';
                         <a href="https://gitee.com/xunjinlu/misc-api/releases" target="_blank" rel="noopener noreferrer" class="footer-link-item">更新日志</a>
                     </div>
                 </div>
+                <div class="shrink-0">
+                    <?php vs_render_footer_qrs(); ?>
+                </div>
             </div>
         </div>
         <div class="py-6 flex flex-col gap-4 text-xs" style="color: var(--text-muted);">
+            <?php vs_render_footer_custom_bar(); ?>
+            <?php if ($showRuntime && $hasRuntime): ?>
             <div style="width: 100%; display: flex; justify-content: center;">
                 <span id="runtime-display" class="runtime-text font-mono"></span>
             </div>
+            <?php endif; ?>
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
                     <span><?php echo vs_e($siteName); ?> &copy; <?php echo vs_e($year); ?></span>
@@ -45,4 +53,6 @@ $runtimeStart = '2024-01-01 00:00:00';
     </div>
 </footer>
 <script>var SYSTEM_VERSION = <?php echo json_encode(VS_VERSION); ?>;</script>
+<?php if ($showRuntime && $hasRuntime): ?>
 <script>var runtimeStartDate = new Date(<?php echo json_encode($runtimeStart); ?>).getTime();</script>
+<?php endif; ?>

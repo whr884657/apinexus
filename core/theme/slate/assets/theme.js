@@ -263,7 +263,6 @@
             var methodClass = method.toLowerCase();
             return '<span class="st-api-card__method st-api-card__method--' + escapeHtml(methodClass) + '">' + escapeHtml(method) + '</span>';
         }).join('');
-        var descText = String(api.desc || '').trim();
         var endpoint = String(api.endpoint || '').trim();
         var detailUrl = String(api.detail_url || '').trim();
         var base = (window.VS_BASE_URL || '').replace(/\/$/, '');
@@ -279,7 +278,6 @@
             '<div class="st-api-card__methods">' + methodHtml + '</div>' +
             '<span class="st-api-card__badge">免费</span></div>' +
             '<h3 class="st-api-card__title">' + escapeHtml(api.name || '') + '</h3>' +
-            '<p class="st-api-card__desc">' + (descText ? escapeHtml(descText) : '&nbsp;') + '</p>' +
             '<code class="st-api-card__endpoint">' + (endpoint ? escapeHtml(endpoint) : '&nbsp;') + '</code>' +
             '</a></article>';
     }

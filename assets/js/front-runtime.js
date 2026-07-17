@@ -1,5 +1,5 @@
 /**
- * 文件：core/theme/default/assets/js/front-runtime.js
+ * 文件：assets/js/front-runtime.js
  * 作用：前台「网站已运行」时间计数（依赖 window.runtimeStartDate）
  */
 

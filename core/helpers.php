@@ -287,7 +287,7 @@ function vs_require_secure_post()
 
     $token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
     if (!AuthSecurity::validateCsrf($token)) {
-        AjaxResponse::error('请求无效，请刷新页面后重试', 403);
+        AjaxResponse::error('登录凭证已失效，请刷新页面后重试', 403);
     }
 }
 
@@ -328,6 +328,204 @@ function vs_page_title($pageTitle, $siteName = null)
 }
 
 /**
+ * 站点运行时间起点（YYYY-MM-DD HH:MM:SS）
+ *
+ * @return string
+ */
+function vs_site_runtime_start()
+{
+    if (!class_exists('SiteContext') || !InstallChecker::isInstalled()) {
+        return '';
+    }
+    return SiteContext::siteRuntimeStart();
+}
+
+/**
+ * 是否已配置网站运行时间
+ *
+ * @return bool
+ */
+function vs_site_has_runtime()
+{
+    $start = vs_site_runtime_start();
+    if ($start === '') {
+        return false;
+    }
+    $ts = strtotime($start);
+    return $ts !== false;
+}
+
+/**
+ * 已启用且 URL 非空的页脚二维码列表
+ *
+ * @return array<int, array{name: string, url: string}>
+ */
+function vs_footer_enabled_qrs()
+{
+    if (!class_exists('SiteContext') || !InstallChecker::isInstalled()) {
+        return array();
+    }
+
+    $items = array(
+        array(
+            'enabled' => SiteContext::footerQr1Enabled(),
+            'name'    => SiteContext::footerQr1Name(),
+            'url'     => SiteContext::footerQr1Url(),
+        ),
+        array(
+            'enabled' => SiteContext::footerQr2Enabled(),
+            'name'    => SiteContext::footerQr2Name(),
+            'url'     => SiteContext::footerQr2Url(),
+        ),
+    );
+
+    $out = array();
+    foreach ($items as $item) {
+        if ($item['enabled'] !== '1') {
+            continue;
+        }
+        $url = trim((string) $item['url']);
+        if ($url === '') {
+            continue;
+        }
+        $name = trim((string) $item['name']);
+        $out[] = array(
+            'name' => $name !== '' ? $name : '二维码',
+            'url'  => $url,
+        );
+    }
+
+    return $out;
+}
+
+/**
+ * 渲染页脚自定义三栏（管理员可信 HTML，原样输出）
+ *
+ * @return void
+ */
+function vs_render_footer_custom_bar()
+{
+    if (!class_exists('SiteContext') || !InstallChecker::isInstalled()) {
+        return;
+    }
+
+    $left = SiteContext::footerHtmlLeft();
+    $center = SiteContext::footerHtmlCenter();
+    $right = SiteContext::footerHtmlRight();
+    if (trim($left . $center . $right) === '') {
+        return;
+    }
+
+    echo '<div class="vs-foot-custom">' . "\n";
+    echo '<div class="vs-foot-custom__slot vs-foot-custom__slot--left">' . $left . '</div>' . "\n";
+    echo '<div class="vs-foot-custom__slot vs-foot-custom__slot--center">' . $center . '</div>' . "\n";
+    echo '<div class="vs-foot-custom__slot vs-foot-custom__slot--right">' . $right . '</div>' . "\n";
+    echo '</div>' . "\n";
+}
+
+/**
+ * 渲染页脚二维码区
+ *
+ * @param string $modifier 额外 CSS 类名
+ * @return void
+ */
+function vs_render_footer_qrs($modifier = '')
+{
+    if (!class_exists('ThemeManager') || !ThemeManager::themeSettingBool('show_footer_qr', true)) {
+        return;
+    }
+
+    $qrs = vs_footer_enabled_qrs();
+    if ($qrs === array()) {
+        return;
+    }
+
+    $classes = array('vs-foot-qr');
+    $modifier = trim((string) $modifier);
+    if ($modifier !== '') {
+        $classes[] = $modifier;
+    }
+
+    echo '<div class="' . vs_e(implode(' ', $classes)) . '">' . "\n";
+    foreach ($qrs as $qr) {
+        $href = vs_favicon_href($qr['url']);
+        if ($href === '') {
+            continue;
+        }
+        echo '<figure class="vs-foot-qr__item">' . "\n";
+        echo '<img class="vs-foot-qr__img" src="' . vs_e($href) . '" alt="' . vs_e($qr['name']) . '" loading="lazy" referrerpolicy="no-referrer">' . "\n";
+        if ($qr['name'] !== '') {
+            echo '<figcaption class="vs-foot-qr__label">' . vs_e($qr['name']) . '</figcaption>' . "\n";
+        }
+        echo '</figure>' . "\n";
+    }
+    echo '</div>' . "\n";
+}
+
+/**
+ * 渲染 SEO / Open Graph / Twitter 元标签
+ *
+ * @param array $opts title, description, keywords, image, url, robots, canonical, theme_color, type
+ * @return void
+ */
+function vs_render_seo_meta(array $opts = array())
+{
+    $title = isset($opts['title']) ? trim((string) $opts['title']) : '';
+    $description = isset($opts['description']) ? trim((string) $opts['description']) : '';
+    $keywords = isset($opts['keywords']) ? trim((string) $opts['keywords']) : '';
+    $image = isset($opts['image']) ? trim((string) $opts['image']) : '';
+    $url = isset($opts['url']) ? trim((string) $opts['url']) : '';
+    $robots = isset($opts['robots']) ? trim((string) $opts['robots']) : '';
+    $canonical = isset($opts['canonical']) ? trim((string) $opts['canonical']) : '';
+    $themeColor = isset($opts['theme_color']) ? trim((string) $opts['theme_color']) : '';
+    $type = isset($opts['type']) ? trim((string) $opts['type']) : 'website';
+    $siteName = isset($opts['site_name']) ? trim((string) $opts['site_name']) : '';
+
+    if ($siteName === '' && class_exists('SiteContext') && InstallChecker::isInstalled()) {
+        $siteName = SiteContext::siteName();
+    }
+
+    if ($description !== '') {
+        echo '<meta name="description" content="' . vs_e($description) . '">' . "\n";
+    }
+    if ($keywords !== '') {
+        echo '<meta name="keywords" content="' . vs_e($keywords) . '">' . "\n";
+    }
+    if ($robots !== '') {
+        echo '<meta name="robots" content="' . vs_e($robots) . '">' . "\n";
+    }
+    if ($canonical !== '') {
+        echo '<link rel="canonical" href="' . vs_e($canonical) . '">' . "\n";
+    }
+    if ($themeColor !== '') {
+        echo '<meta name="theme-color" content="' . vs_e($themeColor) . '">' . "\n";
+    }
+
+    if ($title !== '') {
+        echo '<meta property="og:title" content="' . vs_e($title) . '">' . "\n";
+        echo '<meta name="twitter:title" content="' . vs_e($title) . '">' . "\n";
+    }
+    if ($description !== '') {
+        echo '<meta property="og:description" content="' . vs_e($description) . '">' . "\n";
+        echo '<meta name="twitter:description" content="' . vs_e($description) . '">' . "\n";
+    }
+    if ($image !== '') {
+        echo '<meta property="og:image" content="' . vs_e($image) . '">' . "\n";
+        echo '<meta name="twitter:image" content="' . vs_e($image) . '">' . "\n";
+    }
+    if ($url !== '') {
+        echo '<meta property="og:url" content="' . vs_e($url) . '">' . "\n";
+    }
+    if ($type !== '') {
+        echo '<meta property="og:type" content="' . vs_e($type) . '">' . "\n";
+    }
+    if ($siteName !== '') {
+        echo '<meta property="og:site_name" content="' . vs_e($siteName) . '">' . "\n";
+    }
+    echo '<meta name="twitter:card" content="' . vs_e($image !== '' ? 'summary_large_image' : 'summary') . '">' . "\n";
+}
+
+/**
  * 渲染页面头部
  *
  * @param string $title
@@ -345,6 +543,7 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     $favicon = '';
     $keywords = '';
     $description = '';
+    $canonical = $base . '/';
 
     if ($useSiteConfig && class_exists('InstallChecker') && InstallChecker::isInstalled()) {
         $siteName = SiteContext::siteName();
@@ -353,18 +552,32 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
         $description = SiteContext::siteDescription();
     }
 
+    if (!empty($_SERVER['REQUEST_URI'])) {
+        $path = strtok((string) $_SERVER['REQUEST_URI'], '?');
+        if ($path !== false && $path !== '') {
+            $canonical = rtrim($base, '/') . $path;
+        }
+    }
+
+    $pageTitle = vs_page_title($title, $siteName);
+    $ogImage = $favicon !== '' ? vs_favicon_href($favicon) : '';
+
     echo '<!DOCTYPE html>' . "\n";
     echo '<html lang="zh-CN">' . "\n";
     echo '<head>' . "\n";
     echo '<meta charset="UTF-8">' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
-    if ($description !== '') {
-        echo '<meta name="description" content="' . vs_e($description) . '">' . "\n";
-    }
-    if ($keywords !== '') {
-        echo '<meta name="keywords" content="' . vs_e($keywords) . '">' . "\n";
-    }
-    echo '<title>' . vs_e(vs_page_title($title, $siteName)) . '</title>' . "\n";
+    vs_render_seo_meta(array(
+        'title'       => $pageTitle,
+        'description' => $description,
+        'keywords'    => $keywords,
+        'image'       => $ogImage,
+        'url'         => $canonical,
+        'robots'      => 'index,follow',
+        'canonical'   => $canonical,
+        'site_name'   => $siteName,
+    ));
+    echo '<title>' . vs_e($pageTitle) . '</title>' . "\n";
     if ($favicon !== '') {
         echo '<link rel="icon" href="' . vs_e(vs_favicon_href($favicon)) . '">' . "\n";
     }
@@ -372,6 +585,7 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/modal.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/icons.css?v=' . VS_VERSION . '">' . "\n";
+    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/site-footer.css?v=' . VS_VERSION . '">' . "\n";
     foreach ($cssFiles as $css) {
         echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/' . vs_e($css) . '?v=' . VS_VERSION . '">' . "\n";
     }

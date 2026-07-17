@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /user/
+Disallow: /install/
+Disallow: /config/
+Disallow: /data/
+Disallow: /core/
+Disallow: /upload/

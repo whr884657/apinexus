@@ -195,10 +195,27 @@ vs_auth_head('登录');
         fetch(form.action || window.location.href, {
             method: 'POST',
             body: body,
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
         })
-            .then(function (res) { return res.json(); })
+            .then(function (res) {
+                return res.text().then(function (text) {
+                    var data = null;
+                    try {
+                        data = text ? JSON.parse(text) : null;
+                    } catch (err) {
+                        data = null;
+                    }
+                    if (!data || typeof data !== 'object') {
+                        throw new Error('bad_json');
+                    }
+                    return data;
+                });
+            })
             .then(function (data) {
+                if (data.csrf && form.csrf_token) {
+                    form.csrf_token.value = data.csrf;
+                }
                 if (data.code === 1) {
                     saveCredentials(
                         username,
@@ -214,7 +231,7 @@ vs_auth_head('登录');
                 }
             })
             .catch(function () {
-                showMessage('网络异常，请稍后重试', 'error');
+                showMessage('网络异常或会话已过期，请刷新页面后重试', 'error');
             })
             .finally(function () {
                 if (loginBtn) loginBtn.disabled = false;

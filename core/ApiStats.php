@@ -15,15 +15,6 @@
 
 class ApiStats
 {
-    /** 来源：直访 */
-    const SOURCE_DIRECT = 0;
-    /** 来源：网页引用（Referer） */
-    const SOURCE_REFERER = 1;
-    /** 来源：跨域（Origin） */
-    const SOURCE_CORS = 2;
-    /** 来源：其他 */
-    const SOURCE_OTHER = 3;
-
     /** @var array 本请求已记账的接口 ID，防重复 */
     private static $done = array();
 
@@ -227,12 +218,12 @@ class ApiStats
             'INSERT INTO `' . Database::table('apilog') . '` (
                 `apiid`, `apiname`, `apitype`, `userid`, `apikey`,
                 `method`, `ip`, `iploc`, `host`, `path`, `url`,
-                `referer`, `origin`, `domain`, `ua`, `source`,
+                `referer`, `origin`, `domain`, `ua`,
                 `ok`, `httpcode`, `charged`, `cost`, `createtime`
             ) VALUES (
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
                 ?, ?, 0, 0, NOW()
             )'
         );
@@ -252,7 +243,6 @@ class ApiStats
             $ctx['origin'],
             $ctx['domain'],
             $ctx['ua'],
-            $ctx['source'],
             $ok ? 1 : 0,
             (int) $http,
         ));
@@ -283,15 +273,6 @@ class ApiStats
             $domain = self::extractDomain($origin);
         }
 
-        $source = self::SOURCE_DIRECT;
-        if ($origin !== '' && self::originDiffersFromHost($origin, $host)) {
-            $source = self::SOURCE_CORS;
-        } elseif ($referer !== '') {
-            $source = self::SOURCE_REFERER;
-        } elseif ($origin !== '') {
-            $source = self::SOURCE_OTHER;
-        }
-
         $userid = 0;
         if (class_exists('UserAuth') && UserAuth::check()) {
             $userid = (int) UserAuth::id();
@@ -310,7 +291,6 @@ class ApiStats
             'origin'  => mb_substr($origin, 0, 500, 'UTF-8'),
             'domain'  => mb_substr($domain, 0, 255, 'UTF-8'),
             'ua'      => mb_substr($ua, 0, 500, 'UTF-8'),
-            'source'  => $source,
         );
     }
 
@@ -347,21 +327,6 @@ class ApiStats
         }
         $host = parse_url($url, PHP_URL_HOST);
         return is_string($host) ? strtolower($host) : '';
-    }
-
-    /**
-     * @param string $origin
-     * @param string $host
-     * @return bool
-     */
-    private static function originDiffersFromHost($origin, $host)
-    {
-        $oh = self::extractDomain($origin);
-        $hh = strtolower(preg_replace('/:\d+$/', '', (string) $host));
-        if ($oh === '' || $hh === '') {
-            return false;
-        }
-        return $oh !== $hh;
     }
 
     /**

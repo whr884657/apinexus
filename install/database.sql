@@ -68,7 +68,17 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_submit', '1'),
 ('mail_notify_pass', '1'),
 ('mail_notify_fail', '1'),
-('frontend_theme', 'default');
+('frontend_theme', 'default'),
+('site_runtime_start', ''),
+('footer_html_left', ''),
+('footer_html_center', ''),
+('footer_html_right', ''),
+('footer_qr1_enabled', '0'),
+('footer_qr1_name', ''),
+('footer_qr1_url', ''),
+('footer_qr2_enabled', '0'),
+('footer_qr2_name', ''),
+('footer_qr2_url', '');
 
 -- 邮箱验证码发信频率限制记录
 CREATE TABLE IF NOT EXISTS `{prefix}mailrate` (
@@ -130,7 +140,6 @@ CREATE TABLE IF NOT EXISTS `{prefix}apilog` (
     `origin` varchar(500) NOT NULL DEFAULT '' COMMENT 'Origin',
     `domain` varchar(255) NOT NULL DEFAULT '' COMMENT '来源域名',
     `ua` varchar(500) NOT NULL DEFAULT '' COMMENT 'User-Agent',
-    `source` tinyint(1) NOT NULL DEFAULT 0 COMMENT '来源类型：0直访 1网页引用 2跨域 3其他',
     `ok` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否成功：0失败 1成功',
     `httpcode` smallint NOT NULL DEFAULT 200 COMMENT 'HTTP状态码',
     `charged` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否扣费：0否 1是（预留）',
@@ -140,8 +149,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}apilog` (
     KEY `idx_apiid` (`apiid`),
     KEY `idx_userid` (`userid`),
     KEY `idx_ip` (`ip`),
-    KEY `idx_createtime` (`createtime`),
-    KEY `idx_source` (`source`)
+    KEY `idx_createtime` (`createtime`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API调用日志';
 
 -- API 接口分类表

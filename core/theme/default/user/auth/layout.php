@@ -18,6 +18,11 @@ function vs_theme_auth_head($pageTitle)
     echo '<html lang="zh-CN">' . "\n";
     echo '<head>' . "\n";
     echo '<meta charset="UTF-8">' . "\n";
+    vs_render_seo_meta(array(
+        'title'       => vs_page_title($pageTitle, $siteName),
+        'robots'      => 'noindex,nofollow',
+        'site_name'   => $siteName,
+    ));
     echo '<title>' . vs_e(vs_page_title($pageTitle, $siteName)) . '</title>' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">' . "\n";
     if ($favicon !== '') {

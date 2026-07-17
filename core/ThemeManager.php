@@ -252,6 +252,31 @@ class ThemeManager
     }
 
     /**
+     * 读取主题配置布尔值
+     *
+     * @param string $key
+     * @param bool   $default
+     * @return bool
+     */
+    public static function themeSettingBool($key, $default = false)
+    {
+        $val = self::themeSetting($key, $default);
+        if (is_bool($val)) {
+            return $val;
+        }
+        if ($val === '1' || $val === 1 || $val === 'true' || $val === 'on') {
+            return true;
+        }
+        if ($val === '0' || $val === 0 || $val === 'false' || $val === 'off') {
+            return false;
+        }
+        if ($val === '' || $val === null) {
+            return (bool) $default;
+        }
+        return (bool) $val;
+    }
+
+    /**
      * theme.json 中声明的可配置项
      *
      * @param string $themeId

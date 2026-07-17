@@ -139,6 +139,12 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     echo '<head>' . "\n";
     echo '<meta charset="UTF-8">' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
+    vs_render_seo_meta(array(
+        'title'       => vs_page_title($pageTitle, $siteName),
+        'description' => SiteContext::siteDescription(),
+        'robots'      => 'noindex,nofollow',
+        'site_name'   => $siteName,
+    ));
     echo '<title>' . vs_e(vs_page_title($pageTitle, $siteName)) . '</title>' . "\n";
     if ($favicon !== '') {
         echo '<link rel="icon" href="' . vs_e(vs_favicon_href($favicon)) . '">' . "\n";

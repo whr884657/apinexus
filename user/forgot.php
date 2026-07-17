@@ -52,31 +52,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         try {
             $user = UserAuth::findByEmail($email);
-
-            if ($user) {
-                $code = (string) random_int(100000, 999999);
-                $emailCanonical = vs_normalize_email(isset($user['email']) ? $user['email'] : $email);
-                $_SESSION['user_reset_id'] = (int) $user['id'];
-                $_SESSION['user_reset_email'] = $emailCanonical;
-                $_SESSION['user_reset_code'] = $code;
-                $_SESSION['user_reset_code_expires'] = time() + $codeTtl;
-
-                $body = '<div style="font-family:sans-serif;line-height:1.8;">';
-                $body .= '<p>您好，' . htmlspecialchars($user['username']) . '：</p>';
-                $body .= '<p>您正在申请重置 ' . htmlspecialchars($siteName) . ' 用户密码，验证码为：</p>';
-                $body .= '<p style="font-size:24px;font-weight:bold;margin:16px 0;">' . htmlspecialchars($code) . '</p>';
-                $body .= '<p>验证码 ' . (int) ($codeTtl / 60) . ' 分钟内有效，请勿泄露给他人。</p>';
-                $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
-
-                Mailer::send($emailCanonical, $siteName . ' 密码重置验证码', $body);
+            if (!$user) {
+                // 未注册一律不发信，并明确提示（防虚拟机轮换未注册邮箱轰炸 SMTP）
+                vs_auth_json_mail($mailPurpose, array(
+                    'code' => 0,
+                    'msg'  => '该邮箱未在本站注册，无法发送验证码',
+                ));
             }
+
+            $code = (string) random_int(100000, 999999);
+            $emailCanonical = vs_normalize_email(isset($user['email']) ? $user['email'] : $email);
+            $_SESSION['user_reset_id'] = (int) $user['id'];
+            $_SESSION['user_reset_email'] = $emailCanonical;
+            $_SESSION['user_reset_code'] = $code;
+            $_SESSION['user_reset_code_expires'] = time() + $codeTtl;
+
+            $body = '<div style="font-family:sans-serif;line-height:1.8;">';
+            $body .= '<p>您好，' . htmlspecialchars($user['username']) . '：</p>';
+            $body .= '<p>您正在申请重置 ' . htmlspecialchars($siteName) . ' 用户密码，验证码为：</p>';
+            $body .= '<p style="font-size:24px;font-weight:bold;margin:16px 0;">' . htmlspecialchars($code) . '</p>';
+            $body .= '<p>验证码 ' . (int) ($codeTtl / 60) . ' 分钟内有效，请勿泄露给他人。</p>';
+            $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
+
+            Mailer::send($emailCanonical, $siteName . ' 密码重置验证码', $body);
 
             vs_auth_json_mail($mailPurpose, array(
                 'code' => 1,
-                'msg'  => '如果该邮箱已注册，验证码将发送到您的邮箱，请查收（含垃圾箱）',
+                'msg'  => '验证码已发送，请查收邮箱（含垃圾箱）',
             ));
         } catch (Exception $e) {
-            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '发送失败：' . $e->getMessage()));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '发送失败，请稍后重试'));
         }
     }
 

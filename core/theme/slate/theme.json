@@ -82,6 +82,18 @@
                 {"value": "top_drawer", "label": "顶部三横线 · 右侧抽屉（默认）"},
                 {"value": "fab_popup", "label": "右下角圆形按钮 · 向上弹出"}
             ]
+        },
+        {
+            "key": "show_runtime",
+            "label": "显示网站运行时间",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_footer_qr",
+            "label": "显示页脚二维码",
+            "type": "checkbox",
+            "default": true
         }
     ]
 }

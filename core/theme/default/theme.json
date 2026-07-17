@@ -17,6 +17,24 @@
             "label": "首页副文案",
             "type": "textarea",
             "placeholder": "留空使用站点描述"
+        },
+        {
+            "key": "show_partners",
+            "label": "显示合作伙伴区",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_runtime",
+            "label": "显示网站运行时间",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_footer_qr",
+            "label": "显示页脚二维码",
+            "type": "checkbox",
+            "default": true
         }
     ]
 }

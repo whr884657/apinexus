@@ -132,6 +132,7 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
             </div>
         </div>
     </section>
+    <?php if (ThemeManager::themeSettingBool('show_partners', true)): ?>
     <section id="home-partners" class="py-24 border-t" style="border-color: var(--border-color);">
         <div class="partners-section-header"><h2 class="section-title">合作伙伴</h2></div>
         <div class="partners-grid">
@@ -149,6 +150,7 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
             </div>
         </div>
     </section>
+    <?php endif; ?>
 </main>
 </div>
 <div id="api-modal" class="modal-overlay" onclick="closeSelectModal(event)">

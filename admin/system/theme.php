@@ -140,6 +140,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $raw = isset($_POST['settings']) && is_array($_POST['settings']) ? $_POST['settings'] : array();
         $data = ThemeManager::sanitizeThemeSettingsInput($themeId, $raw);
+        if (!empty($data['show_runtime']) && !vs_site_has_runtime()) {
+            AjaxResponse::error('当前系统并没有配置网站运行时间，请到系统设置当中进行配置。');
+        }
         $result = ThemeManager::writeThemeData($themeId, $data);
         if ($result !== true) {
             AjaxResponse::error($result);
