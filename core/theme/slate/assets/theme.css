@@ -1230,7 +1230,8 @@ body.st-drawer-open {
 .st-foot__qrs {
     display: flex;
     justify-content: flex-end;
-    align-items: flex-start;
+    align-items: flex-end;
+    margin-left: auto;
 }
 
 .st-foot__logo-row {
@@ -1472,7 +1473,8 @@ body.st-nav-fab-open {
     }
 
     .st-foot__qrs {
-        justify-content: flex-start;
+        justify-content: flex-end;
+        width: 100%;
     }
 
     .st-foot__brand {

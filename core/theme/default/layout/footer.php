@@ -21,7 +21,7 @@ $runtimeStart = vs_site_runtime_start();
                         <a href="https://gitee.com/xunjinlu/misc-api/releases" target="_blank" rel="noopener noreferrer" class="footer-link-item">更新日志</a>
                     </div>
                 </div>
-                <div class="shrink-0">
+                <div class="vs-foot-qr-wrap">
                     <?php vs_render_footer_qrs(); ?>
                 </div>
             </div>

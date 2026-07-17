@@ -3,22 +3,12 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 
-// ThemeManager::renderBody() 会注入上下文；此处再做兜底，避免静态分析误报与缺变量
-$siteName = isset($siteName) && (string) $siteName !== ''
-    ? (string) $siteName
-    : SiteContext::siteName();
-$siteDesc = isset($siteDesc)
-    ? (string) $siteDesc
-    : SiteContext::siteDescription();
-$vsBase = isset($vsBase) && (string) $vsBase !== ''
-    ? rtrim((string) $vsBase, '/')
-    : rtrim(vs_base_url(), '/');
-if (!isset($userLoggedIn)) {
-    $userLoggedIn = UserAuth::check();
-}
-if (!isset($authUrl) || (string) $authUrl === '') {
-    $authUrl = !empty($userLoggedIn) ? ($vsBase . '/user/index') : ($vsBase . '/user/login');
-}
+// ThemeManager::renderBody() 会注入上下文；首页关键展示字段统一从站点/认证读取，避免静态分析误报
+$siteName = SiteContext::siteName();
+$siteDesc = SiteContext::siteDescription();
+$vsBase = rtrim(vs_base_url(), '/');
+$userLoggedIn = UserAuth::check();
+$authUrl = $userLoggedIn ? ($vsBase . '/user/index') : ($vsBase . '/user/login');
 
 $categoryNames = FrontendCategory::nameMap();
 $apiData = FrontendApi::listForTheme();

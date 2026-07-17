@@ -320,7 +320,7 @@ vs_admin_accordion_start(
         vs_render_notice(
             'tip',
             '',
-            '支持 HTML / JavaScript，由管理员配置，前台原样输出。留空则不显示对应栏位。',
+            '支持 HTML / JavaScript，由管理员配置，前台原样输出。友链徽章图会自动限制高度（约 24px），避免忽大忽小。电脑端按左/中/右显示，手机端统一居中。留空则不显示对应栏位。',
             array('compact' => true)
         );
         ?>
