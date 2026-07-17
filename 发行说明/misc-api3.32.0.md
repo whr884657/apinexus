@@ -10,3 +10,7 @@
 
 - 无数据库变更，覆盖更新即可
 - 建议清理浏览器缓存后验证管理员/用户中心「提交/编辑接口」参数类型选择
+
+## 下载
+
+https://gitee.com/xunjinlu/misc-api/releases/download/v3.32.0/misc-api3.32.0.zip
