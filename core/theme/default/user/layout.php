@@ -43,6 +43,7 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/modal.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/icons.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/theme-picker.css?v=' . VS_VERSION . '">' . "\n";
+    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/admin.css?v=' . VS_VERSION . '">' . "\n";
     foreach (ThemeManager::userStylesheetHrefs() as $href) {
         echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
     }

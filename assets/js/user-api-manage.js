@@ -296,6 +296,27 @@
         return m || 'get';
     }
 
+    function methodBadgesHtml(api) {
+        var methods = (api && api.methods && api.methods.length)
+            ? api.methods
+            : String((api && (api.method_label || api.method)) || 'GET').split(/[\s,|\/]+/).filter(Boolean);
+        if (!methods.length) {
+            methods = ['GET'];
+        }
+        var html = '<span class="vs-api-list-methods" data-field="method">';
+        methods.forEach(function (m) {
+            html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(m)) + '">'
+                + escapeHtml(String(m).toUpperCase()) + '</span>';
+        });
+        html += '</span>';
+        return html;
+    }
+
+    var paramsEditor = document.getElementById('userApiParamsEditor');
+    if (window.VsParamsEditor && paramsEditor) {
+        window.VsParamsEditor.mount(paramsEditor, { hiddenId: 'userApiFormParams' });
+    }
+
     function buildStatusButtons(api) {
         var id = parseInt(api.id, 10) || 0;
         var status = parseInt(api.status, 10);
@@ -316,7 +337,6 @@
         var id = parseInt(api.id, 10) || 0;
         var reason = api.rejectreason ? String(api.rejectreason) : '';
         var callUrl = api.call_url || api.endpoint || '';
-        var method = methodDisplay(api); var methodKey = String((api.method || 'GET')).split(/[\s,|\/]+/)[0] || 'GET';
         var audit = parseInt(api.audit, 10);
         if (isNaN(audit)) {
             audit = 0;
@@ -336,7 +356,7 @@
         html += '<span class="vs-api-item__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
         html += '<span class="vs-api-item__id">#' + id + '</span></div>';
         html += '<div class="vs-api-item__endpoint">';
-        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(methodKey || method)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += methodBadgesHtml(api);
         html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span></div>';
         html += '<div class="vs-api-item__tags">';
         if (category) {
@@ -420,6 +440,9 @@
         if (iconUrlInput) {
             iconUrlInput.value = '';
         }
+        if (window.VsParamsEditor && paramsEditor) {
+            window.VsParamsEditor.setValue(paramsEditor, '');
+        }
     }
 
     function fillForm(api) {
@@ -454,6 +477,9 @@
                 el.value = map[id] != null ? map[id] : '';
             }
         });
+        if (window.VsParamsEditor && paramsEditor) {
+            window.VsParamsEditor.setValue(paramsEditor, api.params || '');
+        }
         setSelectedMethods(api.methods || api.method || 'GET');
         if (window.VSPick) {
             ['userApiFormNeedkey', 'userApiFormCategory'].forEach(function (id) {
@@ -482,6 +508,20 @@
         if (!canLocal) {
             apiType = '1';
         }
+        var paramsVal = '';
+        var paramsHidden = document.getElementById('userApiFormParams');
+        if (window.VsParamsEditor && paramsEditor) {
+            var got = window.VsParamsEditor.getValue(paramsEditor);
+            if (got && typeof got === 'object' && got.error) {
+                return { __error: got.error };
+            }
+            paramsVal = typeof got === 'string' ? got : '';
+            if (paramsHidden) {
+                paramsHidden.value = paramsVal;
+            }
+        } else if (paramsHidden) {
+            paramsVal = paramsHidden.value || '';
+        }
         return {
             name: (document.getElementById('userApiFormName') || {}).value || '',
             description: (document.getElementById('userApiFormDesc') || {}).value || '',
@@ -492,7 +532,7 @@
             method: getSelectedMethods().join(','),
             needkey: (document.getElementById('userApiFormNeedkey') || {}).value || '0',
             category: (document.getElementById('userApiFormCategory') || {}).value || '',
-            params: (document.getElementById('userApiFormParams') || {}).value || '',
+            params: paramsVal,
             response: (document.getElementById('userApiFormResponse') || {}).value || '',
             doc: (document.getElementById('userApiFormDoc') || {}).value || '',
             aidoc: (document.getElementById('userApiFormAidoc') || {}).value || '',
@@ -588,6 +628,10 @@
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             var payload = collectPayload();
+            if (payload.__error) {
+                window.VS.showMessage(payload.__error, 'error');
+                return;
+            }
             payload.name = String(payload.name || '').trim();
             payload.endpoint = String(payload.endpoint || '').trim();
             payload.targeturl = String(payload.targeturl || '').trim();

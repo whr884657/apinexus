@@ -186,10 +186,9 @@ function vs_render_user_api_item(array $row)
     } elseif ($rowStatus === ApiManager::STATUS_MAINTENANCE) {
         $rowStatusClass = 'is-maintenance';
     }
-    $methodSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) $api['method']));
-    if ($methodSlug === '') {
-        $methodSlug = 'get';
-    }
+    $methods = isset($api['methods']) && is_array($api['methods'])
+        ? $api['methods']
+        : ApiManager::normalizeMethods(isset($api['method']) ? $api['method'] : 'GET');
     $approved = $audit === ApiManager::AUDIT_APPROVED;
     $keyBadge = isset($api['needkey_badge']) ? (string) $api['needkey_badge'] : ApiManager::requireKeyBadge(isset($api['needkey']) ? $api['needkey'] : 0);
     $category = isset($api['category']) ? trim((string) $api['category']) : '';
@@ -203,7 +202,17 @@ function vs_render_user_api_item(array $row)
             <span class="vs-api-item__id">#<?php echo $apiId; ?></span>
         </div>
         <div class="vs-api-item__endpoint">
-            <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($api['method']); ?></span>
+            <span class="vs-api-list-methods" data-field="method">
+                <?php foreach ($methods as $m): ?>
+                    <?php
+                    $mSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) $m));
+                    if ($mSlug === '') {
+                        $mSlug = 'get';
+                    }
+                    ?>
+                    <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($mSlug); ?>"><?php echo vs_e(strtoupper((string) $m)); ?></span>
+                <?php endforeach; ?>
+            </span>
             <span class="vs-api-item__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
         </div>
         <div class="vs-api-item__tags">
@@ -386,13 +395,15 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 </select>
             </div>
             <div class="vs-form-row">
-                <label class="vs-label" for="userApiFormParams">请求参数（JSON 数组）</label>
-                <textarea class="vs-input vs-textarea" id="userApiFormParams" name="params" rows="5"
-                          placeholder='[{"name":"q","type":"string","required":true}]'></textarea>
+                <label class="vs-label">请求参数</label>
+                <textarea class="vs-input vs-textarea" id="userApiFormParams" name="params" hidden aria-hidden="true"></textarea>
+                <div class="vs-params-editor" id="userApiParamsEditor" data-hidden-id="userApiFormParams"></div>
             </div>
             <div class="vs-form-row">
                 <label class="vs-label" for="userApiFormResponse">返回参数示例</label>
-                <textarea class="vs-input vs-textarea" id="userApiFormResponse" name="response" rows="4"></textarea>
+                <textarea class="vs-input vs-textarea" id="userApiFormResponse" name="response" rows="4"
+                          placeholder='{"code":1,"msg":"ok","data":{}}'></textarea>
+                <p class="vs-form-hint">返回示例保持 JSON 文本填写即可。</p>
             </div>
             <div class="vs-form-row">
                 <label class="vs-label" for="userApiFormDoc">普通文档</label>
@@ -431,4 +442,4 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
 <?php endif; ?>
 
 <?php
-vs_user_layout_end($tableReady ? array('vs-pick.js', 'icon-picker.js', 'user-api-manage.js') : array());
+vs_user_layout_end($tableReady ? array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'user-api-manage.js') : array());

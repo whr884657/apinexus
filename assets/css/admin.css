@@ -3350,8 +3350,114 @@ select.vs-input.vs-select {
 .vs-api-list-key-field {
     display: flex;
     flex-direction: column;
+    gap: 0;
+    justify-content: flex-start;
+    min-width: 0;
+}
+
+.vs-form-row--2 > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.vs-form-row--2 .vs-pick {
+    width: 100%;
+}
+
+/* 请求参数表格编辑器 */
+.vs-params-editor {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
-    justify-content: flex-end;
+}
+
+.vs-params-editor__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.vs-params-editor__tabs {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.vs-params-editor__tab {
+    border: 1px solid var(--vs-border, #e2e8f0);
+    background: #fff;
+    color: var(--vs-text-secondary, #64748b);
+    border-radius: 8px;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vs-params-editor__tab.is-active {
+    background: #f1f5f9;
+    color: var(--vs-text, #0f172a);
+    border-color: #cbd5e1;
+}
+
+.vs-params-editor__scroll {
+    overflow-x: auto;
+    border: 1px solid var(--vs-border, #e2e8f0);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.vs-params-editor__table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+}
+
+.vs-params-editor__table th,
+.vs-params-editor__table td {
+    padding: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.vs-params-editor__table th {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vs-text-secondary, #64748b);
+    text-align: left;
+    background: #f8fafc;
+}
+
+.vs-params-editor__table .vs-input,
+.vs-params-editor__table .vs-select {
+    width: 100%;
+    min-width: 0;
+}
+
+.vs-params-editor__req-cell {
+    white-space: nowrap;
+}
+
+.vs-params-editor__actions {
+    width: 48px;
+    text-align: center;
+}
+
+.vs-api-list-methods {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.vs-api-list-method--getpost,
+.vs-api-list-method--postget {
+    background: #f8fafc;
+    color: #475569;
 }
 
 /* 手机端：参考卡片布局 */
@@ -3958,8 +4064,114 @@ select.vs-input.vs-select {
 .vs-api-list-key-field {
     display: flex;
     flex-direction: column;
+    gap: 0;
+    justify-content: flex-start;
+    min-width: 0;
+}
+
+.vs-form-row--2 > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.vs-form-row--2 .vs-pick {
+    width: 100%;
+}
+
+/* 请求参数表格编辑器 */
+.vs-params-editor {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
-    justify-content: flex-end;
+}
+
+.vs-params-editor__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.vs-params-editor__tabs {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.vs-params-editor__tab {
+    border: 1px solid var(--vs-border, #e2e8f0);
+    background: #fff;
+    color: var(--vs-text-secondary, #64748b);
+    border-radius: 8px;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vs-params-editor__tab.is-active {
+    background: #f1f5f9;
+    color: var(--vs-text, #0f172a);
+    border-color: #cbd5e1;
+}
+
+.vs-params-editor__scroll {
+    overflow-x: auto;
+    border: 1px solid var(--vs-border, #e2e8f0);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.vs-params-editor__table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+}
+
+.vs-params-editor__table th,
+.vs-params-editor__table td {
+    padding: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.vs-params-editor__table th {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vs-text-secondary, #64748b);
+    text-align: left;
+    background: #f8fafc;
+}
+
+.vs-params-editor__table .vs-input,
+.vs-params-editor__table .vs-select {
+    width: 100%;
+    min-width: 0;
+}
+
+.vs-params-editor__req-cell {
+    white-space: nowrap;
+}
+
+.vs-params-editor__actions {
+    width: 48px;
+    text-align: center;
+}
+
+.vs-api-list-methods {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.vs-api-list-method--getpost,
+.vs-api-list-method--postget {
+    background: #f8fafc;
+    color: #475569;
 }
 
 @media (max-width: 900px) {

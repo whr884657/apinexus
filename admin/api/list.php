@@ -26,9 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'aidoc'       => isset($_POST['aidoc']) ? (string) $_POST['aidoc'] : '',
             'needkey'     => isset($_POST['needkey']) ? (int) $_POST['needkey'] : 0,
             'status'      => isset($_POST['status']) ? $_POST['status'] : ApiManager::STATUS_NORMAL,
-            'audit'       => isset($_POST['audit'])
-                ? (int) $_POST['audit']
-                : ApiManager::AUDIT_APPROVED,
             'icon'        => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'    => isset($_POST['category']) ? (string) $_POST['category'] : '',
         );
@@ -45,9 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create') {
         $data = $payloadFromPost();
-        // 管理员后台发布不挂投稿用户，避免出现在「接口审核」
-        $data['userid'] = 0;
-        // 管理员后台发布：默认审核通过
+        $publishUid = AdminUserBinding::publishUserId((int) Auth::id());
+        if (!is_int($publishUid)) {
+            AjaxResponse::error((string) $publishUid);
+        }
+        // 使用绑定用户身份展示投稿者；审核默认通过，不进「待审核」
+        $data['userid'] = $publishUid;
         $data['audit'] = ApiManager::AUDIT_APPROVED;
         $result = ApiManager::create($data);
         if (!is_array($result)) {
@@ -61,7 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'update') {
         $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
-        $result = ApiManager::update($id, $payloadFromPost());
+        $data = $payloadFromPost();
+        // 管理员后台编辑不改审核态（本页无审核控件；发布侧一律视为已通过）
+        $data['audit'] = ApiManager::AUDIT_APPROVED;
+        $result = ApiManager::update($id, $data);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
@@ -166,15 +169,18 @@ function vs_render_api_list_item(array $row)
     $category = isset($api['category']) ? trim((string) $api['category']) : '';
     $username = isset($api['username']) ? trim((string) $api['username']) : '';
     if ($username === '') {
-        $username = ((int) $api['userid'] > 0) ? ('用户#' . (int) $api['userid']) : '管理员';
+        if ((int) $api['userid'] > 0) {
+            $username = '用户#' . (int) $api['userid'];
+        } else {
+            $bound = AdminUserBinding::getBoundUser((int) Auth::id());
+            $username = ($bound && !empty($bound['username'])) ? (string) $bound['username'] : '管理员';
+        }
     }
     $searchHay = mb_strtolower($api['name'] . ' ' . $callUrl . ' ' . $api['endpoint'] . ' ' . $category . ' ' . $typeBadge . ' ' . $username, 'UTF-8');
     $payloadJson = json_encode($api, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-    $methodRaw = isset($api['method_label']) ? (string) $api['method_label'] : (isset($api['method']) ? (string) $api['method'] : 'GET');
-    $methodSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', str_replace(array(',', '/', ' '), '', (string) (isset($api['method']) ? $api['method'] : 'GET'))));
-    if ($methodSlug === '') {
-        $methodSlug = 'get';
-    }
+    $methods = isset($api['methods']) && is_array($api['methods'])
+        ? $api['methods']
+        : ApiManager::normalizeMethods(isset($api['method']) ? $api['method'] : 'GET');
     $typeClass = ($typeBadge === '代理') ? 'vs-api-tag--proxy' : 'vs-api-tag--local';
     ?>
     <div class="vs-api-item"
@@ -191,7 +197,17 @@ function vs_render_api_list_item(array $row)
             <span class="vs-api-item__id" data-field="id">#<?php echo $apiId; ?></span>
         </div>
         <div class="vs-api-item__endpoint">
-            <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>" data-field="method"><?php echo vs_e($methodRaw); ?></span>
+            <span class="vs-api-list-methods" data-field="method">
+                <?php foreach ($methods as $m): ?>
+                    <?php
+                    $mSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) $m));
+                    if ($mSlug === '') {
+                        $mSlug = 'get';
+                    }
+                    ?>
+                    <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($mSlug); ?>"><?php echo vs_e(strtoupper((string) $m)); ?></span>
+                <?php endforeach; ?>
+            </span>
             <span class="vs-api-item__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
         </div>
         <div class="vs-api-item__tags" data-field="tags">
@@ -337,14 +353,6 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>
-                        <label class="vs-label">请求方式 <span class="vs-req">*</span></label>
-                        <div class="vs-method-checks" id="apiListFormMethodChecks" role="group" aria-label="请求方式">
-                            <label class="vs-check"><input type="checkbox" name="method[]" value="GET" data-api-method="GET" checked> GET</label>
-                            <label class="vs-check"><input type="checkbox" name="method[]" value="POST" data-api-method="POST"> POST</label>
-                        </div>
-                        <p class="vs-form-hint">可同时勾选 GET 与 POST。</p>
-                    </div>
-                    <div>
                         <label class="vs-label" for="apiListFormStatus">接口状态</label>
                         <select class="vs-input vs-select" id="apiListFormStatus" name="status" data-vs-pick>
                             <option value="0">正常</option>
@@ -352,15 +360,14 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             <option value="1">禁用</option>
                         </select>
                     </div>
-                </div>
-                <div class="vs-form-row">
-                    <label class="vs-label" for="apiListFormAudit">审核状态</label>
-                    <select class="vs-input vs-select" id="apiListFormAudit" name="audit" data-vs-pick>
-                        <option value="1" selected>审核通过</option>
-                        <option value="0">待审核</option>
-                        <option value="2">审核不通过</option>
-                    </select>
-                    <p class="vs-form-hint">在本页发布时默认「审核通过」；待审核与未通过的接口不会出现在站点前台。</p>
+                    <div>
+                        <label class="vs-label">请求方式 <span class="vs-req">*</span></label>
+                        <div class="vs-method-checks" id="apiListFormMethodChecks" role="group" aria-label="请求方式">
+                            <label class="vs-check"><input type="checkbox" name="method[]" value="GET" data-api-method="GET" checked> GET</label>
+                            <label class="vs-check"><input type="checkbox" name="method[]" value="POST" data-api-method="POST"> POST</label>
+                        </div>
+                        <p class="vs-form-hint">可同时勾选 GET 与 POST。</p>
+                    </div>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label">接口类型</label>
@@ -398,16 +405,16 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="vs-api-list-key-field">
+                    <div>
                         <label class="vs-label" for="apiListFormRequireKey">是否需要密钥</label>
                         <select class="vs-input vs-select" id="apiListFormRequireKey" name="needkey" data-vs-pick>
                             <option value="0">完全不需要</option>
                             <option value="1">必须需要</option>
                             <option value="2">可选（可填可不填）</option>
                         </select>
-                        <p class="vs-form-hint">「完全不需要」与「可选」调用规则相同；选「完全不需要」时前台通常不展示密钥填写框，「可选」会展示可空输入。</p>
                     </div>
                 </div>
+                <p class="vs-form-hint">「完全不需要」与「可选」调用规则相同；选「完全不需要」时前台通常不展示密钥填写框，「可选」会展示可空输入。本页发布的接口默认审核通过。</p>
                 <div class="vs-form-row">
                     <label class="vs-label">接口图标</label>
                     <div class="vs-api-cat-icon-picker" id="apiListIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
@@ -420,15 +427,15 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 
             <div class="vs-api-list-form-pane" data-api-form-pane="params" hidden>
                 <div class="vs-form-row">
-                    <label class="vs-label" for="apiListFormParams">请求参数（JSON 数组）</label>
-                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormParams" name="params" rows="8"
-                              placeholder='[{"name":"q","type":"string","required":true,"description":"关键词"}]'></textarea>
-                    <p class="vs-form-hint">留空表示无参数。请按示例填写 JSON 数组（含参数名、类型、是否必填、说明等）。</p>
+                    <label class="vs-label">请求参数</label>
+                    <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormParams" name="params" hidden aria-hidden="true"></textarea>
+                    <div class="vs-params-editor" id="apiListParamsEditor" data-hidden-id="apiListFormParams"></div>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="apiListFormResponse">返回参数示例</label>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormResponse" name="response" rows="8"
                               placeholder='{"code":1,"msg":"ok","data":{}}'></textarea>
+                    <p class="vs-form-hint">返回示例保持 JSON 文本填写即可。</p>
                 </div>
             </div>
 
@@ -452,4 +459,4 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
     </div>
 </div>
 
-<?php vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-list.js')); ?>
+<?php vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'api-list.js')); ?>

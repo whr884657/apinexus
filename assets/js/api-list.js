@@ -38,7 +38,6 @@
         description: document.getElementById('apiListFormDesc'),
         methodChecks: document.querySelectorAll('#apiListFormMethodChecks [data-api-method]'),
         status: document.getElementById('apiListFormStatus'),
-        audit: document.getElementById('apiListFormAudit'),
         apitype: document.getElementById('apiListFormApiType'),
         endpoint: document.getElementById('apiListFormEndpoint'),
         targeturl: document.getElementById('apiListFormTargetUrl'),
@@ -46,10 +45,15 @@
         category: document.getElementById('apiListFormCategory'),
         requireKey: document.getElementById('apiListFormRequireKey'),
         params: document.getElementById('apiListFormParams'),
+        paramsEditor: document.getElementById('apiListParamsEditor'),
         response: document.getElementById('apiListFormResponse'),
         docNormal: document.getElementById('apiListFormDocNormal'),
         docAi: document.getElementById('apiListFormDocAi')
     };
+
+    if (window.VsParamsEditor && fields.paramsEditor) {
+        window.VsParamsEditor.mount(fields.paramsEditor, { hiddenId: 'apiListFormParams' });
+    }
 
     var typeHint = document.getElementById('apiListTypeHint');
     var endpointLabel = document.getElementById('apiListEndpointLabel');
@@ -303,6 +307,23 @@
         return m || 'get';
     }
 
+    function methodBadgesHtml(api) {
+        var methods = (api && api.methods && api.methods.length)
+            ? api.methods
+            : String((api && (api.method_label || api.method)) || 'GET').split(/[\s,|\/]+/).filter(Boolean);
+        if (!methods.length) {
+            methods = ['GET'];
+        }
+        var html = '<span class="vs-api-list-methods" data-field="method">';
+        methods.forEach(function (m) {
+            var slug = methodSlug(m);
+            html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(slug) + '">'
+                + escapeHtml(String(m).toUpperCase()) + '</span>';
+        });
+        html += '</span>';
+        return html;
+    }
+
     function methodDisplay(api) {
         if (api && api.method_label) {
             return String(api.method_label);
@@ -399,8 +420,6 @@
 
     function buildItemHtml(api) {
         var icon = safeIconUrl(api.icon);
-        var method = methodDisplay(api);
-        var methodKey = String((api.method || 'GET')).split(/[\s,|\/]+/)[0] || 'GET';
         var status = normalizeStatus(api.status);
         var audit = normalizeAudit(api.audit);
         var callUrl = callUrlOf(api);
@@ -421,7 +440,7 @@
         html += '<span class="vs-api-item__id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
         html += '</div>';
         html += '<div class="vs-api-item__endpoint">';
-        html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(methodSlug(methodKey)) + '" data-field="method">' + escapeHtml(method) + '</span>';
+        html += methodBadgesHtml(api);
         html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span>';
         html += '</div>';
         html += '<div class="vs-api-item__tags" data-field="tags">' + buildTagsHtml(api) + '</div>';
@@ -643,10 +662,12 @@
         }
         var methodEl = rowEl.querySelector('[data-field="method"]');
         if (methodEl) {
-            var m = methodDisplay(api);
-            var key = String((api.method || 'GET')).split(/[\s,|\/]+/)[0] || 'GET';
-            methodEl.textContent = m;
-            methodEl.className = 'vs-api-list-method vs-api-list-method--' + methodSlug(key);
+            var wrap = document.createElement('div');
+            wrap.innerHTML = methodBadgesHtml(api);
+            var next = wrap.firstChild;
+            if (next) {
+                methodEl.parentNode.replaceChild(next, methodEl);
+            }
         }
         var urlEl = rowEl.querySelector('[data-field="call_url"]');
         if (urlEl) {
@@ -707,9 +728,6 @@
         if (fields.status) {
             fields.status.value = '0';
         }
-        if (fields.audit) {
-            fields.audit.value = '1';
-        }
         if (fields.endpoint) {
             fields.endpoint.value = '';
         }
@@ -728,6 +746,9 @@
         if (fields.params) {
             fields.params.value = '';
         }
+        if (window.VsParamsEditor && fields.paramsEditor) {
+            window.VsParamsEditor.setValue(fields.paramsEditor, '');
+        }
         if (fields.response) {
             fields.response.value = '';
         }
@@ -744,7 +765,7 @@
         setIconPickerSelection(defaultIcons.length ? defaultIcons[0] : '');
         switchFormTab('basic');
         if (window.VSPick) {
-            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
+            ['apiListFormStatus', 'apiListFormCategory', 'apiListFormRequireKey'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -770,9 +791,6 @@
         if (fields.status) {
             fields.status.value = String(normalizeStatus(api.status));
         }
-        if (fields.audit) {
-            fields.audit.value = String(normalizeAudit(api.audit));
-        }
         var apiType = parseInt(api.apitype, 10) === 1 ? 1 : 0;
         setApiType(apiType);
         if (fields.endpoint) {
@@ -793,6 +811,9 @@
         if (fields.params) {
             fields.params.value = api.params || '';
         }
+        if (window.VsParamsEditor && fields.paramsEditor) {
+            window.VsParamsEditor.setValue(fields.paramsEditor, api.params || '');
+        }
         if (fields.response) {
             fields.response.value = api.response || '';
         }
@@ -808,7 +829,7 @@
         setIconPickerSelection(api.icon || api.icon_raw || '');
         switchFormTab('basic');
         if (window.VSPick) {
-            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
+            ['apiListFormStatus','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -851,6 +872,19 @@
 
     function collectPayload() {
         var apiType = fields.apitype ? String(parseInt(fields.apitype.value, 10) === 1 ? 1 : 0) : '0';
+        var paramsVal = '';
+        if (window.VsParamsEditor && fields.paramsEditor) {
+            var got = window.VsParamsEditor.getValue(fields.paramsEditor);
+            if (got && typeof got === 'object' && got.error) {
+                return { __error: got.error };
+            }
+            paramsVal = typeof got === 'string' ? got : '';
+            if (fields.params) {
+                fields.params.value = paramsVal;
+            }
+        } else if (fields.params) {
+            paramsVal = fields.params.value.trim();
+        }
         return {
             name: fields.name ? fields.name.value.trim() : '',
             description: fields.description ? fields.description.value.trim() : '',
@@ -859,13 +893,12 @@
             targeturl: fields.targeturl ? fields.targeturl.value.trim() : '',
             proxyslug: fields.proxyslug ? fields.proxyslug.value.trim() : '',
             method: getSelectedMethods().join(','),
-            params: fields.params ? fields.params.value.trim() : '',
+            params: paramsVal,
             response: fields.response ? fields.response.value : '',
             doc: fields.docNormal ? fields.docNormal.value : '',
             aidoc: fields.docAi ? fields.docAi.value : '',
             needkey: fields.requireKey ? String(fields.requireKey.value || '0') : '0',
             status: fields.status ? String(normalizeStatus(fields.status.value)) : '0',
-            audit: fields.audit ? String(normalizeAudit(fields.audit.value)) : '1',
             icon: getSelectedIconUrl(),
             category: fields.category ? fields.category.value : ''
         };
@@ -873,15 +906,14 @@
 
     function handleFormSubmit() {
         var payload = collectPayload();
+        if (payload.__error) {
+            window.VS.showMessage(payload.__error, 'error');
+            switchFormTab('params');
+            return;
+        }
         if (!payload.name) {
             window.VS.showMessage('请填写接口名称', 'error');
             switchFormTab('basic');
-        if (window.VSPick) {
-            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
-                var s = document.getElementById(id);
-                if (s) { window.VSPick.refresh(s); }
-            });
-        }
             if (fields.name) {
                 fields.name.focus();
             }
@@ -892,12 +924,6 @@
             if (!payload.targeturl || !/^https?:\/\//i.test(payload.targeturl)) {
                 window.VS.showMessage('请填写完整的上游地址（以 http:// 或 https:// 开头）', 'error');
                 switchFormTab('basic');
-        if (window.VSPick) {
-            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
-                var s = document.getElementById(id);
-                if (s) { window.VSPick.refresh(s); }
-            });
-        }
                 if (fields.targeturl) {
                     fields.targeturl.focus();
                 }
@@ -906,12 +932,6 @@
             if (!/^[a-zA-Z0-9]{3,64}$/.test(payload.proxyslug || '')) {
                 window.VS.showMessage('请填写 3～64 位字母或数字短码', 'error');
                 switchFormTab('basic');
-        if (window.VSPick) {
-            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
-                var s = document.getElementById(id);
-                if (s) { window.VSPick.refresh(s); }
-            });
-        }
                 if (fields.proxyslug) {
                     fields.proxyslug.focus();
                 }
@@ -920,15 +940,14 @@
         } else if (!payload.endpoint) {
             window.VS.showMessage('请填写本地接口路径', 'error');
             switchFormTab('basic');
-        if (window.VSPick) {
-            ['apiListFormStatus','apiListFormAudit','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
-                var s = document.getElementById(id);
-                if (s) { window.VSPick.refresh(s); }
-            });
-        }
             if (fields.endpoint) {
                 fields.endpoint.focus();
             }
+            return;
+        }
+        if (getSelectedMethods().length === 0) {
+            window.VS.showMessage('请至少选择一种请求方式', 'error');
+            switchFormTab('basic');
             return;
         }
         if (payload.params) {
@@ -937,12 +956,9 @@
                 if (!Array.isArray(parsed)) {
                     throw new Error('not array');
                 }
-            } catch (e) {
+            } catch (err) {
                 window.VS.showMessage('请求参数须为合法 JSON 数组', 'error');
                 switchFormTab('params');
-                if (fields.params) {
-                    fields.params.focus();
-                }
                 return;
             }
         }

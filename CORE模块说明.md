@@ -683,7 +683,8 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 3. 在 `pages/` 下写 PHP，**分类与接口只调 `FrontendCategory` / `FrontendApi`**
 4. 后台「系统设置 → 前台主题」切换，或 `Config::set('frontend_theme', 'mytheme')`
 
-**主题隔离：** 各主题 CSS/JS **完全独立**，无跨主题文件回退。默认主题认证页使用本包 `auth.css` / `auth.js`，角色交互由全局 `assets/js/auth-characters.js` 提供（v3.5.1 起不再依赖 anime.js）。
+**主题隔离：** 各主题 CSS/JS **完全独立**，无跨主题文件回退。默认主题认证页使用本包 `auth.css` / `auth.js`，角色交互由全局 `assets/js/auth-characters.js` 提供（v3.5.1 起不再依赖 anime.js）。  
+**用户中心壳层：** 公共样式用 `/assets/css/admin.css`；各主题 `assets/user.css` **只写增量覆盖**，禁止整份复制 `admin.css`（见 E25、《主题资源隔离规范》）。
 
 ---
 
@@ -821,6 +822,9 @@ MySQL
 
 ## 七、常见问题
 
+**Q：默认主题用户中心 UI 突然全乱了？**  
+A：多半是主题包里错误地整份复制了过期的 `admin.css`（E25）。用户中心须加载 `/assets/css/admin.css`，主题 `user.css` 只写增量。见《主题资源隔离规范》。
+
 **Q：主题里可以直接 `Database::connect()` 吗？**  
 A：不推荐。请使用 `FrontendCategory`、`FrontendApi` 等已封装类；新能力应在 core 新增类后在 bootstrap 注册。
 
@@ -860,6 +864,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 | 界面勿泄露实现细节 | `开发规范/界面勿泄露实现细节.md`（禁止把库枚举写到页面） |
 | 查询串转路径样式 | `开发规范/查询串转路径样式规范.md`（**主体：PATH_INFO `/脚本.php/标识`，无需伪静态**；代理去 .php 见 `nginx伪静态配置.md`） |
 | 本地/代理调用统计 | `开发规范/本地与代理接口统计机制.md`（`ApiStats` + `apilog`） |
+| 主题资源隔离 | `开发规范/主题资源隔离规范.md` |
 | 开发易错点 | `开发规范/开发易错点备忘.md` |
 | 版本记录 | `update-log.json`、`发行说明/` |
 
