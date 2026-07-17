@@ -47,7 +47,7 @@ $beian = SiteContext::beianInfo();
 </footer>
 <?php if ($showRuntime && $hasRuntime): ?>
 <script>var runtimeStartDate = new Date(<?php echo json_encode($runtimeStart); ?>).getTime();</script>
-<script src="<?php echo vs_e($vsBase); ?>/assets/js/front-runtime.js?v=<?php echo vs_e(VS_VERSION); ?>"></script>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/js/front-runtime.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>"></script>
 <?php endif; ?>
 <button type="button" class="st-back-top" id="stBackTop" aria-label="返回顶部" hidden>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>

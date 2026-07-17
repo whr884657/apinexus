@@ -55,4 +55,5 @@ $runtimeStart = vs_site_runtime_start();
 <script>var SYSTEM_VERSION = <?php echo json_encode(VS_VERSION); ?>;</script>
 <?php if ($showRuntime && $hasRuntime): ?>
 <script>var runtimeStartDate = new Date(<?php echo json_encode($runtimeStart); ?>).getTime();</script>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('default', 'assets/js/front-runtime.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>"></script>
 <?php endif; ?>
