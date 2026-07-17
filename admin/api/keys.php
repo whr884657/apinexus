@@ -120,25 +120,27 @@ vs_admin_layout_start('令牌管理', 'api-keys');
                 <?php endforeach; ?>
             </div>
         </div>
-
-        <div class="vs-api-list-footer" id="adminTokenFooter"<?php echo $total === 0 ? ' hidden' : ''; ?>>
-            <div class="vs-api-pager" id="adminTokenPager">
-                <label class="vs-api-list-pagesize" for="adminTokenPageSize">
-                    <span class="vs-api-list-pagesize__label">每页</span>
-                    <select class="vs-input vs-select vs-api-list-pagesize__select" id="adminTokenPageSize" data-vs-pick>
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
-                        <option value="50">50</option>
-                    </select>
-                </label>
-                <button type="button" class="vs-api-pager__nav" id="adminTokenPrevBtn" aria-label="上一页">上一页</button>
-                <div class="vs-api-pager__nums" id="adminTokenPagerNums" role="navigation" aria-label="页码"></div>
-                <button type="button" class="vs-api-pager__nav" id="adminTokenNextBtn" aria-label="下一页">下一页</button>
-            </div>
-            <p class="vs-api-list-stats" id="adminTokenStats">共 <?php echo (int) $total; ?> 个令牌</p>
-        </div>
     <?php endif; ?>
 </div>
+
+<?php if ($tableReady): ?>
+<div class="vs-api-list-footer" id="adminTokenFooter"<?php echo $total === 0 ? ' hidden' : ''; ?>>
+    <div class="vs-api-pager" id="adminTokenPager">
+        <label class="vs-api-list-pagesize" for="adminTokenPageSize">
+            <span class="vs-api-list-pagesize__label">每页</span>
+            <select class="vs-input vs-select vs-api-list-pagesize__select" id="adminTokenPageSize" data-vs-pick>
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+            </select>
+        </label>
+        <button type="button" class="vs-api-pager__nav" id="adminTokenPrevBtn" aria-label="上一页">上一页</button>
+        <div class="vs-api-pager__nums" id="adminTokenPagerNums" role="navigation" aria-label="页码"></div>
+        <button type="button" class="vs-api-pager__nav" id="adminTokenNextBtn" aria-label="下一页">下一页</button>
+    </div>
+    <p class="vs-api-list-stats" id="adminTokenStats">共 <?php echo (int) $total; ?> 个令牌</p>
+</div>
+<?php endif; ?>
 
 <?php
 vs_admin_layout_end($tableReady ? array('vs-pick.js', 'admin-keys.js') : array());

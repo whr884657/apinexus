@@ -196,12 +196,14 @@ vs_user_layout_start('令牌管理', 'keys', $headerActions);
                 <?php endforeach; ?>
             </div>
         </div>
-
-        <div class="vs-api-list-footer" id="userTokenFooter"<?php echo $tokenCount === 0 ? ' hidden' : ''; ?>>
-            <p class="vs-api-list-stats" id="userTokenStats">共 <?php echo (int) $tokenCount; ?> 个令牌（上限 <?php echo (int) ApiKeyManager::MAX_PER_USER; ?>）</p>
-        </div>
     <?php endif; ?>
 </div>
+
+<?php if ($tableReady): ?>
+<div class="vs-api-list-footer" id="userTokenFooter"<?php echo $tokenCount === 0 ? ' hidden' : ''; ?>>
+    <p class="vs-api-list-stats" id="userTokenStats">共 <?php echo (int) $tokenCount; ?> 个令牌（上限 <?php echo (int) ApiKeyManager::MAX_PER_USER; ?>）</p>
+</div>
+<?php endif; ?>
 
 <?php if ($tableReady): ?>
 <div class="vs-overlay vs-overlay--form" id="userTokenFormOverlay" hidden aria-hidden="true">
