@@ -23,12 +23,12 @@ class ApiProxy
     const PUBLIC_PREFIX = '/apis';
 
     /**
-     * 根据短码查已通过且可访问的代理接口
+     * 按短码查代理接口行（不过滤状态/审核，供网关返回明确错误文案）
      *
      * @param string $slug
      * @return array|null
      */
-    public static function findCallableBySlug($slug)
+    public static function findBySlug($slug)
     {
         $slug = self::normalizeSlug($slug);
         if ($slug === '' || !ApiManager::tableReady() || !ApiManager::hasProxyColumns()) {
@@ -43,24 +43,39 @@ class ApiProxy
             $stmt = $pdo->prepare($sql);
             $stmt->execute(array($slug, ApiManager::APITYPE_PROXY));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$row) {
-                return null;
-            }
-
-            $status = ApiManager::normalizeStatus(isset($row['status']) ? $row['status'] : 0);
-            if ($status === ApiManager::STATUS_DISABLED) {
-                return null;
-            }
-            if (ApiManager::hasAuditColumn()) {
-                $audit = ApiManager::normalizeAuditStatus(isset($row['audit']) ? $row['audit'] : 1);
-                if ($audit !== ApiManager::AUDIT_APPROVED) {
-                    return null;
-                }
-            }
-            return $row;
+            return $row ?: null;
         } catch (Exception $e) {
             return null;
         }
+    }
+
+    /**
+     * 根据短码查已通过且状态正常的代理接口（不含禁用/未审）
+     *
+     * @param string $slug
+     * @return array|null
+     */
+    public static function findCallableBySlug($slug)
+    {
+        $row = self::findBySlug($slug);
+        if (!$row) {
+            return null;
+        }
+
+        $status = ApiManager::normalizeStatus(isset($row['status']) ? $row['status'] : 0);
+        if ($status === ApiManager::STATUS_DISABLED) {
+            return null;
+        }
+        if ($status === ApiManager::STATUS_MAINTENANCE) {
+            return null;
+        }
+        if (ApiManager::hasAuditColumn()) {
+            $audit = ApiManager::normalizeAuditStatus(isset($row['audit']) ? $row['audit'] : 1);
+            if ($audit !== ApiManager::AUDIT_APPROVED) {
+                return null;
+            }
+        }
+        return $row;
     }
 
     /**
@@ -167,20 +182,22 @@ class ApiProxy
             $slug = self::normalizeSlug($slug);
         }
 
-        $row = self::findCallableBySlug($slug);
+        $row = self::findBySlug($slug);
         if (!$row) {
             http_response_code(404);
-            header('Content-Type: text/plain; charset=utf-8');
-            echo '接口不存在或不可用';
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array('code' => 0, 'msg' => '接口不存在'), JSON_UNESCAPED_UNICODE);
             exit;
         }
 
-        $status = ApiManager::normalizeStatus(isset($row['status']) ? $row['status'] : 0);
-        if ($status === ApiManager::STATUS_MAINTENANCE) {
-            ApiStats::hitProxy($row, false, 503);
-            http_response_code(503);
-            header('Content-Type: text/plain; charset=utf-8');
-            echo '维护中';
+        $gate = ApiStats::guardAccess($row);
+        if ($gate !== true) {
+            $http = isset($gate['http']) ? (int) $gate['http'] : 403;
+            $msg = isset($gate['msg']) ? (string) $gate['msg'] : '接口不可用';
+            ApiStats::hitProxy($row, false, $http);
+            http_response_code($http);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array('code' => 0, 'msg' => $msg), JSON_UNESCAPED_UNICODE);
             exit;
         }
 
@@ -188,19 +205,8 @@ class ApiProxy
         if ($target === '' || !preg_match('#^https?://#i', $target)) {
             ApiStats::hitProxy($row, false, 500);
             http_response_code(500);
-            header('Content-Type: text/plain; charset=utf-8');
-            echo '上游地址无效';
-            exit;
-        }
-
-        $keyGate = ApiStats::guardProxyKey($row);
-        if ($keyGate !== true) {
-            $http = isset($keyGate['http']) ? (int) $keyGate['http'] : 401;
-            $msg = isset($keyGate['msg']) ? (string) $keyGate['msg'] : '密钥校验失败';
-            ApiStats::hitProxy($row, false, $http);
-            http_response_code($http);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(array('code' => 0, 'msg' => $msg), JSON_UNESCAPED_UNICODE);
+            echo json_encode(array('code' => 0, 'msg' => '上游地址无效'), JSON_UNESCAPED_UNICODE);
             exit;
         }
 

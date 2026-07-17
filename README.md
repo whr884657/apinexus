@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.29.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.29.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -286,6 +286,14 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.29.1（2026-07-18）
+
+**类型：** 小版本（调用守卫文案 + 统计规范）
+
+- 统一本地/代理失败提示：该接口已经被禁用、该接口维护中、密钥错误等
+- 代理禁用接口返回明确文案并记账
+- 完善统计机制开发规范与站长说明
 
 ### v3.29.0（2026-07-18）
 
