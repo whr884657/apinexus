@@ -1,6 +1,6 @@
 <?php
 /**
- * 文件：admin/api/tokens.php
+ * 文件：admin/api/keys.php
  * 作用：管理员查看 / 禁用 / 删除用户令牌
  */
 
@@ -77,7 +77,7 @@ function vs_render_admin_token_item(array $row)
             <span class="vs-api-item__id">#<?php echo $id; ?></span>
         </div>
         <div class="vs-api-item__endpoint vs-token-row__secret">
-            <code class="vs-token-row__code" data-field="secret" title="<?php echo vs_e($token['secret']); ?>"><?php echo vs_e($token['secret']); ?></code>
+            <code class="vs-token-row__code vs-key-copy" data-field="secret" data-copy="<?php echo vs_e($token['secret']); ?>" title="点击复制" role="button" tabindex="0"><?php echo vs_e($token['secret']); ?></code>
         </div>
         <div class="vs-api-item__tags">
             <span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($token['status_label']); ?></span>
@@ -97,7 +97,7 @@ function vs_render_admin_token_item(array $row)
     <?php
 }
 
-vs_admin_layout_start('令牌管理', 'api-tokens');
+vs_admin_layout_start('令牌管理', 'api-keys');
 ?>
 
 <div class="vs-panel" id="adminTokenPage" data-token-total="<?php echo (int) $total; ?>">
@@ -141,5 +141,5 @@ vs_admin_layout_start('令牌管理', 'api-tokens');
 </div>
 
 <?php
-vs_admin_layout_end($tableReady ? array('vs-pick.js', 'admin-tokens.js') : array());
+vs_admin_layout_end($tableReady ? array('vs-pick.js', 'admin-keys.js') : array());
 

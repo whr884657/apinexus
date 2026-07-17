@@ -1,6 +1,6 @@
 <?php
 /**
- * 文件：user/tokens.php
+ * 文件：user/keys.php
  * 作用：用户中心 · 令牌管理（每账号最多 3 个）
  */
 
@@ -135,7 +135,7 @@ function vs_render_user_token_item(array $row)
             <span class="vs-api-item__id">#<?php echo $id; ?></span>
         </div>
         <div class="vs-api-item__endpoint vs-token-row__secret">
-            <code class="vs-token-row__code" data-field="secret" title="<?php echo vs_e($token['secret']); ?>"><?php echo vs_e($token['secret']); ?></code>
+            <code class="vs-token-row__code vs-key-copy" data-field="secret" data-copy="<?php echo vs_e($token['secret']); ?>" title="点击复制" role="button" tabindex="0"><?php echo vs_e($token['secret']); ?></code>
         </div>
         <div class="vs-api-item__tags">
             <span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($token['status_label']); ?></span>
@@ -163,10 +163,8 @@ if ($tableReady) {
         . '>添加令牌</button>';
 }
 
-vs_user_layout_start('令牌管理', 'tokens', $headerActions);
-$assetBase = rtrim(vs_base_url(), '/');
+vs_user_layout_start('令牌管理', 'keys', $headerActions);
 ?>
-<link rel="stylesheet" href="<?php echo vs_e($assetBase); ?>/assets/css/admin.css?v=<?php echo VS_VERSION; ?>">
 
 <div class="vs-panel" id="userTokenPage"
      data-token-count="<?php echo (int) $tokenCount; ?>"
@@ -232,5 +230,5 @@ $assetBase = rtrim(vs_base_url(), '/');
 <?php endif; ?>
 
 <?php
-vs_user_layout_end($tableReady ? array('user-tokens.js') : array());
+vs_user_layout_end($tableReady ? array('user-keys.js') : array());
 

@@ -1,14 +1,15 @@
 /**
- * 主题二 · 圆形浅色调色盘（全页变量驱动；淡色对应调色板第 5～12 项）
+ * 主题二 · 圆形浅色调色盘（前台 .st-root / 用户中心 .st-uc-body 共用 localStorage）
  */
 (function () {
     'use strict';
 
     var STORAGE_KEY = 'st_theme_tint';
-    var root = document.querySelector('.st-root');
+    var root = document.querySelector('.st-root') || document.querySelector('.st-uc-body');
     if (!root) {
         return;
     }
+    var isUserCenter = root.classList.contains('st-uc-body');
 
     var PRESETS = {
         green: {
@@ -118,6 +119,18 @@
         root.style.setProperty('--st-card-grad', preset.cardGrad);
         root.style.setProperty('--st-search-bg', preset.searchBg);
         root.style.setProperty('--st-pill-bg', preset.pillBg);
+
+        if (isUserCenter) {
+            root.style.setProperty('--st-uc-accent', preset.accent);
+            root.style.setProperty('--st-uc-accent-h', preset.accentH);
+            root.style.setProperty('--st-uc-accent-l', preset.accent);
+            root.style.setProperty('--st-uc-bg', preset.bg);
+            root.style.setProperty('--st-uc-bg-mid', preset.bgHi);
+            root.style.setProperty('--st-uc-surface', preset.bgHi);
+            root.style.setProperty('--st-uc-border', preset.border);
+            root.style.background = 'linear-gradient(165deg, ' + preset.bgHi + ' 0%, ' + preset.bg + ' 45%, ' + preset.bgLo + ' 100%)';
+        }
+
         root.setAttribute('data-st-tint', preset.id);
         document.querySelectorAll('.st-tint__swatch').forEach(function (el) {
             el.classList.toggle('is-on', el.getAttribute('data-tint') === preset.id);

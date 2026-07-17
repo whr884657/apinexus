@@ -121,6 +121,196 @@
     display: block;
 }
 
+.st-uc-topbar__right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* 顶栏调色盘（与前台共用 st-tint 结构） */
+.st-uc-tint.st-tint {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.st-uc-tint .st-tint__btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--st-uc-border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.st-uc-tint .st-tint__btn:hover {
+    border-color: color-mix(in srgb, var(--st-uc-accent) 40%, transparent);
+}
+
+.st-uc-tint .st-tint__btn .theme-trigger-icon {
+    width: 17px;
+    height: 17px;
+    display: block;
+}
+
+.st-uc-tint .st-tint__panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 80;
+    display: grid;
+    grid-template-columns: repeat(4, 22px);
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--st-uc-border);
+    border-radius: var(--st-uc-radius-lg);
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+}
+
+.st-uc-tint .st-tint__panel[hidden] {
+    display: none;
+}
+
+.st-uc-tint .st-tint__swatch {
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 999px;
+    background: var(--swatch, #eef6f1);
+    cursor: pointer;
+    padding: 0;
+}
+
+.st-uc-tint .st-tint__swatch.is-on,
+.st-uc-tint .st-tint__swatch:hover {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--st-uc-accent);
+}
+
+/* 顶部三横线按钮 */
+.st-uc-menu-btn {
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--st-uc-border);
+    border-radius: var(--st-uc-radius);
+    background: rgba(255, 255, 255, 0.96);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.st-uc-menu-btn span {
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: var(--st-uc-accent-h);
+    border-radius: 1px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+body.st-uc-drawer-open .st-uc-menu-btn span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+body.st-uc-drawer-open .st-uc-menu-btn span:nth-child(2) {
+    opacity: 0;
+}
+
+body.st-uc-drawer-open .st-uc-menu-btn span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+/* 右侧抽屉 */
+.st-uc-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 320;
+    width: min(300px, 86vw);
+    height: 100%;
+    background: linear-gradient(180deg, #ffffff 0%, var(--st-uc-bg-mid) 100%);
+    border-left: 1px solid var(--st-uc-border);
+    box-shadow: -8px 0 28px rgba(15, 23, 42, 0.12);
+    transform: translateX(100%);
+    transition: transform 0.24s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.st-uc-drawer.is-open {
+    transform: translateX(0);
+}
+
+.st-uc-drawer__head {
+    padding: 18px 16px 12px;
+    border-bottom: 1px solid var(--st-uc-border);
+}
+
+.st-uc-drawer__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--st-uc-text);
+}
+
+.st-uc-drawer__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    overflow: auto;
+}
+
+.st-uc-drawer__link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--st-uc-radius);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--st-uc-text2);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+
+.st-uc-drawer__link:hover {
+    background: color-mix(in srgb, var(--st-uc-accent) 12%, transparent);
+    color: var(--st-uc-accent-h);
+}
+
+.st-uc-drawer__link.is-active {
+    background: color-mix(in srgb, var(--st-uc-accent) 16%, transparent);
+    color: var(--st-uc-accent-h);
+    font-weight: 600;
+}
+
+.st-uc-drawer__link--exit {
+    margin-top: 8px;
+    border-top: 1px solid var(--st-uc-border);
+    border-radius: 0 0 var(--st-uc-radius) var(--st-uc-radius);
+    padding-top: 14px;
+    color: #c0392b;
+}
+
+.st-uc-drawer__link--exit:hover {
+    background: rgba(192, 57, 43, 0.08);
+    color: #a93226;
+}
+
+.st-uc-body--nav-drawer .st-uc-content {
+    padding-bottom: 28px;
+}
+
 /* ── 主内容 ── */
 .st-uc-content {
     flex: 1;

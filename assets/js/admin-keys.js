@@ -126,7 +126,7 @@
         html += '<div class="vs-api-item__icon vs-token-row__icon" aria-hidden="true"><span class="vs-token-row__icon-mark">SK</span></div>';
         html += '<div class="vs-api-item__title"><span class="vs-api-item__name" data-field="remark">' + escapeHtml(token.remark || '') + '</span>';
         html += '<span class="vs-api-item__id">#' + id + '</span></div>';
-        html += '<div class="vs-api-item__endpoint vs-token-row__secret"><code class="vs-token-row__code" data-field="secret" title="' + escapeHtml(token.secret || '') + '">' + escapeHtml(token.secret || '') + '</code></div>';
+        html += '<div class="vs-api-item__endpoint vs-token-row__secret"><code class="vs-token-row__code vs-key-copy" data-field="secret" data-copy="' + escapeHtml(token.secret || '') + '" title="点击复制" role="button" tabindex="0">' + escapeHtml(token.secret || '') + '</code></div>';
         html += '<div class="vs-api-item__tags"><span class="vs-api-tag vs-api-tag--status ' + statusClass + '" data-field="status_label">' + escapeHtml(token.status_label || '') + '</span></div>';
         html += '<div class="vs-api-item__meta"><div class="vs-api-item__calls">调用：<strong data-field="calls">' + (parseInt(token.calls, 10) || 0) + '</strong></div>';
         html += '<div class="vs-api-item__author" data-field="username">' + escapeHtml(username) + '</div></div>';
@@ -189,7 +189,48 @@
         });
     }
 
+    function copySecret(text) {
+        var value = String(text || '');
+        if (!value) {
+            return;
+        }
+        function ok() {
+            window.VS.showMessage('已复制令牌', 'success');
+        }
+        function fail() {
+            window.VS.showMessage('复制失败，请手动选择', 'error');
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(value).then(ok).catch(fail);
+            return;
+        }
+        var ta = document.createElement('textarea');
+        ta.value = value;
+        ta.setAttribute('readonly', 'readonly');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            if (document.execCommand('copy')) {
+                ok();
+            } else {
+                fail();
+            }
+        } catch (err) {
+            fail();
+        }
+        document.body.removeChild(ta);
+    }
+
     page.addEventListener('click', function (e) {
+        var copyEl = e.target.closest('.vs-key-copy');
+        if (copyEl && page.contains(copyEl)) {
+            e.preventDefault();
+            copySecret(copyEl.getAttribute('data-copy') || copyEl.textContent);
+            return;
+        }
+
         var resetBtn = e.target.closest('.vs-admin-token-reset');
         if (resetBtn && page.contains(resetBtn)) {
             var resetId = resetBtn.getAttribute('data-token-id');

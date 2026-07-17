@@ -117,7 +117,7 @@
         html += '<span class="vs-api-item__id">#' + id + '</span>';
         html += '</div>';
         html += '<div class="vs-api-item__endpoint vs-token-row__secret">';
-        html += '<code class="vs-token-row__code" data-field="secret" title="' + escapeHtml(token.secret || '') + '">' + escapeHtml(token.secret || '') + '</code>';
+        html += '<code class="vs-token-row__code vs-key-copy" data-field="secret" data-copy="' + escapeHtml(token.secret || '') + '" title="点击复制" role="button" tabindex="0">' + escapeHtml(token.secret || '') + '</code>';
         html += '</div>';
         html += '<div class="vs-api-item__tags">';
         html += '<span class="vs-api-tag vs-api-tag--status ' + statusClass + '" data-field="status_label">' + escapeHtml(token.status_label || '') + '</span>';
@@ -214,7 +214,48 @@
         }
     });
 
+    function copySecret(text) {
+        var value = String(text || '');
+        if (!value) {
+            return;
+        }
+        function ok() {
+            window.VS.showMessage('已复制令牌', 'success');
+        }
+        function fail() {
+            window.VS.showMessage('复制失败，请手动选择', 'error');
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(value).then(ok).catch(fail);
+            return;
+        }
+        var ta = document.createElement('textarea');
+        ta.value = value;
+        ta.setAttribute('readonly', 'readonly');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            if (document.execCommand('copy')) {
+                ok();
+            } else {
+                fail();
+            }
+        } catch (err) {
+            fail();
+        }
+        document.body.removeChild(ta);
+    }
+
     page.addEventListener('click', function (e) {
+        var copyEl = e.target.closest('.vs-key-copy');
+        if (copyEl && page.contains(copyEl)) {
+            e.preventDefault();
+            copySecret(copyEl.getAttribute('data-copy') || copyEl.textContent);
+            return;
+        }
+
         var editBtn = e.target.closest('.vs-token-edit');
         if (editBtn && page.contains(editBtn)) {
             openEdit(editBtn.getAttribute('data-token-id'));
@@ -292,6 +333,18 @@
                 window.VS.showMessage('网络异常，请稍后重试', 'error');
             });
         }
+    });
+
+    page.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') {
+            return;
+        }
+        var copyEl = e.target.closest('.vs-key-copy');
+        if (!copyEl || !page.contains(copyEl)) {
+            return;
+        }
+        e.preventDefault();
+        copySecret(copyEl.getAttribute('data-copy') || copyEl.textContent);
     });
 
     if (form) {

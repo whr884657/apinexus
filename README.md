@@ -85,7 +85,7 @@
 | 用户忘记密码 | `/user/forgot.php` | 邮箱验证码重置密码 |
 | 用户中心 | `/user/index.php` | 登录后控制台首页 |
 | API 管理 | `/user/api-manage.php` | 仅开发者：提交/编辑/删除自有接口，查看审核状态与拒绝原因；手机卡片分页 |
-| 令牌管理 | `/user/tokens.php` | 创建/编辑/重置/禁用/删除调用令牌（每账号最多 3 个，格式 SK-…） |
+| 令牌管理 | `/user/keys.php` | 创建/编辑/重置/禁用/删除调用令牌（每账号最多 3 个，格式 SK-…；点击密钥可复制） |
 | 积分变动（占位） | `/user/points.php` | 后续开发 |
 | 接口列表（占位） | `/user/apis.php` | 后续开发 |
 | 用户账号设置 | `/user/account.php` | 修改资料、头像、密码 |
@@ -96,7 +96,7 @@
 | 接口列表 | `/admin/api/list.php` | 紧凑卡片：类型、完整调用链接、状态、调用量、编辑/维护/禁用/删除 |
 | 接口审核 | `/admin/api/review.php` | 待审/通过/未通过；编辑/通过/不通过；拒绝原因（选填）；邮件通知 |
 | 接口分类 | `/admin/api/categories.php` | 表格式列表、分类 CRUD、内置 SVG 图标库（自动扫描）、描述、启禁 |
-| 令牌管理 | `/admin/api/tokens.php` | 查看全站用户令牌，可重置/禁用/删除 |
+| 令牌管理 | `/admin/api/keys.php` | 查看全站用户令牌，可重置/禁用/删除（点击密钥可复制） |
 | API 管理（占位） | `/admin/api/docs.php` 等 | 文档、反馈仍为占位页 |
 | 内容运营（占位） | `/admin/content/` | 文章、评论、友链、合作伙伴 |
 | 交易财务（占位） | `/admin/finance/` | 支付、订单、赞助、积分 |
@@ -182,13 +182,13 @@ misc-api/
 │   ├── init.php
 │   ├── includes/layout.php
 │   ├── index.php
-│   ├── api-manage.php / tokens.php   # API 投稿 / 令牌管理（已实现）
+│   ├── api-manage.php / keys.php     # API 投稿 / 令牌管理（已实现）
 │   ├── points.php / apis.php         # 占位
 │   ├── account.php
 │   └── login.php / register.php / forgot.php
 ├── assets/
 │   ├── css/                    # common, admin, modal (vs-overlay), toast, install …
-│   ├── js/                     # common.js, user-tokens.js, user-api-manage.js, admin-tokens.js …
+│   ├── js/                     # common.js, user-keys.js, user-api-manage.js, admin-keys.js …
 │   └── img/
 │       ├── category-icons/     # 内置分类 / 接口 SVG 图标库（自动扫描）
 │       └── …                   # 头像、站点图片等

@@ -252,7 +252,6 @@ if ($tableReady) {
 
 vs_user_layout_start('API 管理', 'api-manage', $headerActions);
 ?>
-<link rel="stylesheet" href="<?php echo vs_e($iconBase); ?>/assets/css/admin.css?v=<?php echo VS_VERSION; ?>">
 
 <div class="vs-panel" id="userApiManagePage"
      data-icon-base="<?php echo vs_e($iconBase); ?>"

@@ -75,7 +75,7 @@
         },
         {
             "key": "nav_expand_mode",
-            "label": "导航展开方式",
+            "label": "导航展开方式（前台 + 用户中心）",
             "type": "select",
             "default": "top_drawer",
             "options": [

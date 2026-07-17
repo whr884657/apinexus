@@ -4807,6 +4807,18 @@ select.vs-input.vs-select {
     background: transparent;
     word-break: break-all;
 }
+.vs-token-row__code.vs-key-copy {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px 4px;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.vs-token-row__code.vs-key-copy:hover,
+.vs-token-row__code.vs-key-copy:focus {
+    background: rgba(22, 163, 74, 0.1);
+    outline: none;
+    box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.25);
+}
 .vs-token-row.is-token-disabled {
     opacity: 0.72;
 }

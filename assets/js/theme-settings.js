@@ -87,7 +87,8 @@
             configPanel.hidden = tabId !== 'config';
         }
 
-        if (tabId === 'config') {
+        // 首屏已由 PHP 渲染配置表单；仅在切换主题后标记需刷新时再 AJAX
+        if (tabId === 'config' && configBody && configBody.getAttribute('data-needs-reload') === '1') {
             reloadConfigPanel();
         }
     }
@@ -116,6 +117,7 @@
                     setActiveThemeMeta(payload.theme_id || getActiveThemeId(), payload.theme_name);
                 }
                 configBody.innerHTML = payload.html || '<p class="vs-theme-config-empty">当前主题暂无可调整的项目</p>';
+                configBody.removeAttribute('data-needs-reload');
                 if (configSaveBtn) {
                     configSaveBtn.disabled = !payload.has_schema;
                 }
@@ -163,6 +165,9 @@
                     var payload = pickPayload(data);
                     if (payload.theme_id) {
                         setActiveThemeMeta(payload.theme_id, payload.theme_name || payload.theme_id);
+                        if (configBody) {
+                            configBody.setAttribute('data-needs-reload', '1');
+                        }
                     }
                     refreshActiveBadges();
                     refreshSelectionState();
