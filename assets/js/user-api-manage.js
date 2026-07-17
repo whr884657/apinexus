@@ -153,6 +153,9 @@
         if (!formOverlay) {
             return;
         }
+        if (window.VsParamsEditor && typeof window.VsParamsEditor.closeTypePicker === 'function') {
+            window.VsParamsEditor.closeTypePicker();
+        }
         formOverlay.hidden = true;
         formOverlay.setAttribute('aria-hidden', 'true');
         formOverlay.classList.remove('is-open');

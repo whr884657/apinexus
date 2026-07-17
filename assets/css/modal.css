@@ -594,3 +594,241 @@ body.is-overlay-open {
         font-size: 15px;
     }
 }
+
+/* ── 嵌套选择器（弹窗中的弹窗 / 抽屉中的抽屉）── */
+.vs-nested-picker {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    padding: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.vs-nested-picker.vs-nested-picker--viewport {
+    position: fixed;
+    z-index: 4900;
+}
+
+.vs-nested-picker[hidden] {
+    display: none !important;
+}
+
+.vs-nested-picker.is-open {
+    pointer-events: auto;
+}
+
+.vs-nested-picker.is-visible {
+    opacity: 1;
+}
+
+.vs-nested-picker__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(1px);
+}
+
+.vs-nested-picker__panel {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+}
+
+.vs-nested-picker__handle {
+    display: none;
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: #cbd5e1;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+}
+
+.vs-nested-picker__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px 12px;
+    flex-shrink: 0;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.vs-nested-picker__title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.vs-nested-picker__close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.vs-nested-picker__close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.vs-nested-picker__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 14px 16px;
+}
+
+.vs-nested-picker__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 8px;
+}
+
+.vs-nested-picker__chip {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-height: 52px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vs-nested-picker__chip:hover {
+    border-color: #93c5fd;
+    background: #f8fbff;
+}
+
+.vs-nested-picker__chip.is-selected {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.vs-nested-picker__chip-en {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    word-break: break-all;
+}
+
+.vs-nested-picker__chip-zh {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.vs-nested-picker__custom {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.vs-nested-picker__custom .vs-label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.vs-nested-picker__custom-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.vs-nested-picker__custom-row .vs-input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.vs-nested-picker__foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 16px 16px;
+    flex-shrink: 0;
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+@media (max-width: 767px) {
+    .vs-nested-picker {
+        align-items: flex-end;
+        justify-content: stretch;
+    }
+
+    .vs-nested-picker__handle {
+        display: block;
+    }
+
+    .vs-nested-picker__panel {
+        width: 100%;
+        height: 78%;
+        max-height: 78%;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.14);
+        transform: translateY(18px);
+        transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    .vs-nested-picker.is-visible .vs-nested-picker__panel {
+        transform: translateY(0);
+    }
+
+    .vs-nested-picker__grid {
+        grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+        gap: 8px;
+    }
+
+    .vs-nested-picker__foot .vs-btn {
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 44px;
+    }
+}
+
+@media (min-width: 768px) {
+    .vs-nested-picker {
+        align-items: center;
+        justify-content: center;
+        padding: 28px;
+    }
+
+    .vs-nested-picker__panel {
+        width: min(560px, 92%);
+        max-height: min(72%, 560px);
+        border-radius: 14px;
+        transform: scale(0.97);
+        opacity: 0.96;
+        transition: transform 0.22s ease, opacity 0.22s ease;
+    }
+
+    .vs-nested-picker.is-visible .vs-nested-picker__panel {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    .vs-nested-picker__foot .vs-btn {
+        min-width: 100px;
+    }
+}
