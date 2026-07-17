@@ -1,5 +1,6 @@
 /**
  * 接口请求参数编辑器：默认表格；可切换 JSON 并自动互转
+ * 参数类型：嵌套选择器（弹窗中的弹窗 / 抽屉中的抽屉）+ 预设网格 + 自定义输入
  */
 (function (global) {
     'use strict';
@@ -71,6 +72,13 @@
         enum: 'enum'
     };
 
+    var typePickerState = {
+        el: null,
+        targetInput: null,
+        targetBtn: null,
+        selected: 'string'
+    };
+
     function escapeHtml(text) {
         return String(text == null ? '' : text)
             .replace(/&/g, '&amp;')
@@ -79,17 +87,38 @@
             .replace(/"/g, '&quot;');
     }
 
+    function isCustomTypeToken(token) {
+        return /^[A-Za-z][A-Za-z0-9_\[\]\.\-]{0,63}$/.test(token);
+    }
+
     function normalizeType(raw) {
-        var key = String(raw || 'string').trim().toLowerCase();
-        if (TYPE_ALIASES[key]) {
-            return TYPE_ALIASES[key];
+        var key = String(raw == null ? '' : raw).trim();
+        if (!key) {
+            return 'string';
+        }
+        var lower = key.toLowerCase();
+        if (TYPE_ALIASES[lower]) {
+            return TYPE_ALIASES[lower];
         }
         for (var i = 0; i < PARAM_TYPES.length; i++) {
-            if (PARAM_TYPES[i].value === key) {
+            if (PARAM_TYPES[i].value.toLowerCase() === lower) {
                 return PARAM_TYPES[i].value;
             }
         }
+        if (isCustomTypeToken(key)) {
+            return key;
+        }
         return 'string';
+    }
+
+    function typeLabel(value) {
+        var v = normalizeType(value);
+        for (var i = 0; i < PARAM_TYPES.length; i++) {
+            if (PARAM_TYPES[i].value === v) {
+                return v + ' · ' + PARAM_TYPES[i].label;
+            }
+        }
+        return v + ' · 自定义';
     }
 
     function normalizeRow(item) {
@@ -153,23 +182,18 @@
         return out.length ? JSON.stringify(out, null, 4) : '';
     }
 
-    function typeOptionsHtml(selected) {
-        var html = '';
-        for (var i = 0; i < PARAM_TYPES.length; i++) {
-            var t = PARAM_TYPES[i];
-            html += '<option value="' + escapeHtml(t.value) + '"'
-                + (t.value === selected ? ' selected' : '') + '>'
-                + escapeHtml(t.value + ' · ' + t.label) + '</option>';
-        }
-        return html;
-    }
-
     function buildRowHtml(row) {
         row = row || { name: '', type: 'string', required: false, description: '', example: '' };
+        var typeVal = normalizeType(row.type || 'string');
         return ''
             + '<tr class="vs-params-editor__row">'
             + '<td><input type="text" class="vs-input vs-params-editor__name" value="' + escapeHtml(row.name) + '" placeholder="参数名" maxlength="64"></td>'
-            + '<td><select class="vs-input vs-select vs-params-editor__type" data-vs-pick>' + typeOptionsHtml(row.type || 'string') + '</select></td>'
+            + '<td class="vs-params-editor__type-cell">'
+            + '<input type="hidden" class="vs-params-editor__type" value="' + escapeHtml(typeVal) + '">'
+            + '<button type="button" class="vs-input vs-params-editor__type-btn" data-params-type-open aria-haspopup="dialog">'
+            + escapeHtml(typeLabel(typeVal))
+            + '</button>'
+            + '</td>'
             + '<td class="vs-params-editor__req-cell"><label class="vs-check"><input type="checkbox" class="vs-params-editor__required"' + (row.required ? ' checked' : '') + '> 必填</label></td>'
             + '<td><input type="text" class="vs-input vs-params-editor__desc" value="' + escapeHtml(row.description) + '" placeholder="描述" maxlength="500"></td>'
             + '<td><input type="text" class="vs-input vs-params-editor__example" value="' + escapeHtml(row.example) + '" placeholder="示例" maxlength="200"></td>'
@@ -177,14 +201,18 @@
             + '</tr>';
     }
 
-    function enhanceTypePicks(scope) {
-        if (!window.VSPick) {
+    function setRowType(tr, value) {
+        if (!tr) {
             return;
         }
-        var root = scope || document;
-        var nodes = root.querySelectorAll ? root.querySelectorAll('select.vs-params-editor__type[data-vs-pick]') : [];
-        for (var i = 0; i < nodes.length; i++) {
-            window.VSPick.refresh(nodes[i]);
+        var typeVal = normalizeType(value);
+        var input = tr.querySelector('.vs-params-editor__type');
+        var btn = tr.querySelector('.vs-params-editor__type-btn');
+        if (input) {
+            input.value = typeVal;
+        }
+        if (btn) {
+            btn.textContent = typeLabel(typeVal);
         }
     }
 
@@ -219,6 +247,209 @@
         hidden.value = rowsToJson(collectRows(root));
     }
 
+    function findHostPanel(fromEl) {
+        if (!fromEl || !fromEl.closest) {
+            return null;
+        }
+        return fromEl.closest('.vs-overlay__panel') || null;
+    }
+
+    function ensureTypePicker() {
+        if (typePickerState.el) {
+            return typePickerState.el;
+        }
+        var el = document.createElement('div');
+        el.className = 'vs-nested-picker vs-nested-picker--type';
+        el.id = 'vsParamTypePicker';
+        el.hidden = true;
+        el.setAttribute('aria-hidden', 'true');
+        el.innerHTML = ''
+            + '<div class="vs-nested-picker__backdrop" data-type-picker-close></div>'
+            + '<div class="vs-nested-picker__panel" role="dialog" aria-modal="true" aria-labelledby="vsParamTypePickerTitle">'
+            + '<div class="vs-nested-picker__handle" aria-hidden="true"></div>'
+            + '<header class="vs-nested-picker__head">'
+            + '<h3 class="vs-nested-picker__title" id="vsParamTypePickerTitle">选择参数类型</h3>'
+            + '<button type="button" class="vs-nested-picker__close" data-type-picker-close aria-label="关闭">&times;</button>'
+            + '</header>'
+            + '<div class="vs-nested-picker__body">'
+            + '<div class="vs-nested-picker__grid" data-type-picker-grid></div>'
+            + '<div class="vs-nested-picker__custom">'
+            + '<label class="vs-label" for="vsParamTypeCustom">自定义类型</label>'
+            + '<div class="vs-nested-picker__custom-row">'
+            + '<input type="text" class="vs-input" id="vsParamTypeCustom" data-type-picker-custom maxlength="64" placeholder="如 decimal、int64、string[]">'
+            + '<button type="button" class="vs-btn vs-btn--outline" data-type-picker-apply-custom>使用</button>'
+            + '</div>'
+            + '<p class="vs-form-hint">可点选上方预设，也可输入自定义类型名（字母开头，可含数字、_、[]、.、-）。</p>'
+            + '</div>'
+            + '</div>'
+            + '<footer class="vs-nested-picker__foot">'
+            + '<button type="button" class="vs-btn vs-btn--outline" data-type-picker-close>取消</button>'
+            + '<button type="button" class="vs-btn vs-btn--primary" data-type-picker-confirm>确定</button>'
+            + '</footer>'
+            + '</div>';
+
+        var grid = el.querySelector('[data-type-picker-grid]');
+        PARAM_TYPES.forEach(function (t) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'vs-nested-picker__chip';
+            btn.setAttribute('data-type-value', t.value);
+            btn.innerHTML = '<span class="vs-nested-picker__chip-en">' + escapeHtml(t.value) + '</span>'
+                + '<span class="vs-nested-picker__chip-zh">' + escapeHtml(t.label) + '</span>';
+            grid.appendChild(btn);
+        });
+
+        el.addEventListener('click', function (e) {
+            if (e.target.closest('[data-type-picker-close]')) {
+                closeTypePicker();
+                return;
+            }
+            var chip = e.target.closest('[data-type-value]');
+            if (chip && el.contains(chip)) {
+                selectTypeInPicker(chip.getAttribute('data-type-value'));
+                return;
+            }
+            if (e.target.closest('[data-type-picker-apply-custom]')) {
+                var custom = el.querySelector('[data-type-picker-custom]');
+                var raw = custom ? String(custom.value || '').trim() : '';
+                if (!raw) {
+                    if (global.VS && global.VS.showMessage) {
+                        global.VS.showMessage('请输入自定义类型', 'error');
+                    }
+                    return;
+                }
+                if (!isCustomTypeToken(raw) && !TYPE_ALIASES[raw.toLowerCase()]) {
+                    if (global.VS && global.VS.showMessage) {
+                        global.VS.showMessage('自定义类型格式无效', 'error');
+                    }
+                    return;
+                }
+                selectTypeInPicker(normalizeType(raw));
+                return;
+            }
+            if (e.target.closest('[data-type-picker-confirm]')) {
+                confirmTypePicker();
+            }
+        });
+
+        typePickerState.el = el;
+        return el;
+    }
+
+    function selectTypeInPicker(value) {
+        var el = ensureTypePicker();
+        var typeVal = normalizeType(value);
+        typePickerState.selected = typeVal;
+        var chips = el.querySelectorAll('[data-type-value]');
+        for (var i = 0; i < chips.length; i++) {
+            chips[i].classList.toggle('is-selected', chips[i].getAttribute('data-type-value') === typeVal);
+        }
+        var custom = el.querySelector('[data-type-picker-custom]');
+        if (custom) {
+            var preset = false;
+            for (var j = 0; j < PARAM_TYPES.length; j++) {
+                if (PARAM_TYPES[j].value === typeVal) {
+                    preset = true;
+                    break;
+                }
+            }
+            custom.value = preset ? '' : typeVal;
+        }
+    }
+
+    function confirmTypePicker() {
+        var el = ensureTypePicker();
+        var custom = el.querySelector('[data-type-picker-custom]');
+        var customRaw = custom ? String(custom.value || '').trim() : '';
+        var finalType = typePickerState.selected || 'string';
+        if (customRaw) {
+            if (!isCustomTypeToken(customRaw) && !TYPE_ALIASES[customRaw.toLowerCase()]) {
+                if (global.VS && global.VS.showMessage) {
+                    global.VS.showMessage('自定义类型格式无效', 'error');
+                }
+                return;
+            }
+            finalType = normalizeType(customRaw);
+        }
+        if (typePickerState.targetInput) {
+            var tr = typePickerState.targetInput.closest('tr');
+            setRowType(tr, finalType);
+            var editor = typePickerState.targetInput.closest('.vs-params-editor');
+            if (editor) {
+                syncHidden(editor);
+            }
+        }
+        closeTypePicker();
+    }
+
+    function openTypePicker(triggerBtn) {
+        var el = ensureTypePicker();
+        var tr = triggerBtn.closest('tr');
+        var input = tr ? tr.querySelector('.vs-params-editor__type') : null;
+        var current = input ? normalizeType(input.value) : 'string';
+        typePickerState.targetInput = input;
+        typePickerState.targetBtn = triggerBtn;
+        typePickerState.selected = current;
+
+        var host = findHostPanel(triggerBtn);
+        if (host) {
+            if (el.parentNode !== host) {
+                host.appendChild(el);
+            }
+            el.classList.add('vs-nested-picker--hosted');
+            el.classList.remove('vs-nested-picker--viewport');
+        } else {
+            if (el.parentNode !== document.body) {
+                document.body.appendChild(el);
+            }
+            el.classList.add('vs-nested-picker--viewport');
+            el.classList.remove('vs-nested-picker--hosted');
+        }
+
+        selectTypeInPicker(current);
+        el.hidden = false;
+        el.setAttribute('aria-hidden', 'false');
+        el.classList.add('is-open');
+        requestAnimationFrame(function () {
+            el.classList.add('is-visible');
+        });
+
+        var focusEl = el.querySelector('[data-type-value].is-selected')
+            || el.querySelector('[data-type-picker-custom]')
+            || el.querySelector('[data-type-picker-confirm]');
+        if (focusEl && focusEl.focus) {
+            focusEl.focus();
+        }
+    }
+
+    function closeTypePicker() {
+        var el = typePickerState.el;
+        if (!el) {
+            return;
+        }
+        el.classList.remove('is-visible');
+        el.classList.remove('is-open');
+        el.hidden = true;
+        el.setAttribute('aria-hidden', 'true');
+        var returnBtn = typePickerState.targetBtn;
+        typePickerState.targetInput = null;
+        typePickerState.targetBtn = null;
+        if (returnBtn && returnBtn.focus) {
+            returnBtn.focus();
+        }
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') {
+            return;
+        }
+        var el = typePickerState.el;
+        if (el && el.classList.contains('is-open')) {
+            e.stopPropagation();
+            closeTypePicker();
+        }
+    }, true);
+
     function renderTable(root, rows) {
         var body = root.querySelector('[data-params-tbody]');
         if (!body) {
@@ -229,7 +460,6 @@
         } else {
             body.innerHTML = rows.map(buildRowHtml).join('');
         }
-        enhanceTypePicks(body);
         syncHidden(root);
     }
 
@@ -325,6 +555,12 @@
         root.setAttribute('data-params-ready', '1');
 
         root.addEventListener('click', function (e) {
+            var typeOpen = e.target.closest('[data-params-type-open]');
+            if (typeOpen && root.contains(typeOpen)) {
+                e.preventDefault();
+                openTypePicker(typeOpen);
+                return;
+            }
             var modeBtn = e.target.closest('[data-params-mode]');
             if (modeBtn && root.contains(modeBtn)) {
                 if (modeBtn.getAttribute('data-params-mode') === 'table') {
@@ -340,10 +576,6 @@
                 var body = root.querySelector('[data-params-tbody]');
                 if (body) {
                     body.insertAdjacentHTML('beforeend', buildRowHtml(null));
-                    var last = body.querySelector('.vs-params-editor__row:last-child');
-                    if (last) {
-                        enhanceTypePicks(last);
-                    }
                 }
                 syncHidden(root);
                 return;
@@ -357,14 +589,13 @@
                         tr.querySelectorAll('input').forEach(function (inp) {
                             if (inp.type === 'checkbox') {
                                 inp.checked = false;
-                            } else {
+                            } else if (inp.type === 'hidden' && inp.classList.contains('vs-params-editor__type')) {
+                                inp.value = 'string';
+                            } else if (inp.type !== 'hidden') {
                                 inp.value = '';
                             }
                         });
-                        var sel = tr.querySelector('select');
-                        if (sel) {
-                            sel.value = 'string';
-                        }
+                        setRowType(tr, 'string');
                     } else {
                         tr.parentNode.removeChild(tr);
                     }
@@ -424,6 +655,7 @@
         getValue: getValue,
         setValue: setValue,
         parse: parseParamsJson,
-        stringify: rowsToJson
+        stringify: rowsToJson,
+        closeTypePicker: closeTypePicker
     };
 })(window);

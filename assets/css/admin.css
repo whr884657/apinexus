@@ -3446,17 +3446,18 @@ select.vs-input.vs-select {
     min-width: 0;
 }
 
-.vs-params-editor__table .vs-pick {
-    width: 100%;
-    min-width: 140px;
+.vs-params-editor__type-cell {
+    min-width: 148px;
 }
 
-.vs-params-editor__table .vs-pick__btn {
+.vs-params-editor__type-btn {
     width: 100%;
+    min-width: 140px;
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
 }
 
 .vs-params-editor__req-cell {
@@ -4173,17 +4174,18 @@ select.vs-input.vs-select {
     min-width: 0;
 }
 
-.vs-params-editor__table .vs-pick {
-    width: 100%;
-    min-width: 140px;
+.vs-params-editor__type-cell {
+    min-width: 148px;
 }
 
-.vs-params-editor__table .vs-pick__btn {
+.vs-params-editor__type-btn {
     width: 100%;
+    min-width: 140px;
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
 }
 
 .vs-params-editor__req-cell {
