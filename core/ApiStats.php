@@ -51,8 +51,9 @@ class ApiStats
                 return;
             }
 
-            $gate = self::lightGate($row);
+            $gate = self::guardAccess($row);
             if ($gate !== true) {
+                self::write($row, false, (int) $gate['http']);
                 self::$done[$id] = true;
                 self::jsonExit($gate['http'], $gate['msg']);
             }
@@ -90,14 +91,14 @@ class ApiStats
     }
 
     /**
-     * 代理跳转前密钥守卫（失败返回 array，成功返回 true）
+     * 代理/本地共用：状态 + 审核 + 密钥守卫
      *
      * @param array $row
      * @return true|array{http:int,msg:string}
      */
-    public static function guardProxyKey(array $row)
+    public static function guardAccess(array $row)
     {
-        return self::evaluateKey($row);
+        return self::lightGate($row);
     }
 
     /**
@@ -184,7 +185,7 @@ class ApiStats
     }
 
     /**
-     * 轻量可调用检查（状态 + 密钥）
+     * 轻量可调用检查（状态 + 审核 + 密钥）
      *
      * @param array $row
      * @return true|array{http:int,msg:string}
@@ -193,15 +194,15 @@ class ApiStats
     {
         $status = ApiManager::normalizeStatus(isset($row['status']) ? $row['status'] : 0);
         if ($status === ApiManager::STATUS_DISABLED) {
-            return array('http' => 403, 'msg' => '接口已禁用');
+            return array('http' => 403, 'msg' => '该接口已经被禁用');
         }
         if ($status === ApiManager::STATUS_MAINTENANCE) {
-            return array('http' => 503, 'msg' => '接口维护中');
+            return array('http' => 503, 'msg' => '该接口维护中');
         }
         if (ApiManager::hasAuditColumn()) {
             $audit = ApiManager::normalizeAuditStatus(isset($row['audit']) ? $row['audit'] : 1);
             if ($audit !== ApiManager::AUDIT_APPROVED) {
-                return array('http' => 403, 'msg' => '接口不可用');
+                return array('http' => 403, 'msg' => '该接口不可用');
             }
         }
         return self::evaluateKey($row);
@@ -228,18 +229,18 @@ class ApiStats
 
         if (!$provided) {
             if ($need === ApiManager::KEY_REQUIRED) {
-                return array('http' => 401, 'msg' => '请提供有效的调用密钥');
+                return array('http' => 401, 'msg' => '请提供调用密钥');
             }
             return true;
         }
 
         if (!ApiKeyManager::tableReady()) {
-            return array('http' => 503, 'msg' => '密钥校验暂不可用，请联系管理员完成升级');
+            return array('http' => 503, 'msg' => '密钥校验暂不可用');
         }
 
         $keyRow = ApiKeyManager::findBySecret($raw);
         if (!$keyRow) {
-            return array('http' => 401, 'msg' => '密钥无效');
+            return array('http' => 401, 'msg' => '密钥错误');
         }
         if ((int) $keyRow['status'] !== ApiKeyManager::STATUS_ENABLED) {
             return array('http' => 403, 'msg' => '密钥已禁用');
