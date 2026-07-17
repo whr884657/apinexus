@@ -34,6 +34,7 @@ function vs_admin_menu_groups()
                 array('id' => 'api-list', 'title' => '接口列表', 'url' => '/admin/api/list'),
                 array('id' => 'api-review', 'title' => '接口审核', 'url' => '/admin/api/review'),
                 array('id' => 'api-categories', 'title' => '接口分类', 'url' => '/admin/api/categories'),
+                array('id' => 'api-tokens', 'title' => '令牌管理', 'url' => '/admin/api/tokens'),
                 array('id' => 'api-docs', 'title' => '接口文档', 'url' => '/admin/api/docs'),
                 array('id' => 'api-feedback', 'title' => '接口反馈', 'url' => '/admin/api/feedback'),
             ),

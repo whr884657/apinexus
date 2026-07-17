@@ -47,7 +47,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 → Mailer → Auth → UserAuth → RateLimitStore → AuthSecurity → AjaxResponse
 → SystemInfo → Updater → UpdateLog → UserAvatar → UserManager
 → AdminUserBinding → ApiManager → ApiCategoryManager
-→ FrontendCategory → FrontendApi → ThemeManager
+→ ApiStats → TokenManager → FrontendCategory → FrontendApi → ThemeManager
 → oauth/* → Session 启动
 ```
 
@@ -113,6 +113,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
 | 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 PATH_INFO、多选方法、审核三态、统计、双端 UI、主题二可配统计/配色） |
+| 用户调用令牌 | `TokenManager` | —（调用校验后续接入） | `user/tokens.php`、`admin/api/tokens.php` | 用户中心/后台 | **已完成管理界面**（表 `token`；每账号最多 3 个；`SK-`+32；调用强制校验待后续） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
@@ -223,6 +224,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前 `ApiStats::hitProxy` |
 | `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；本地注入 ≤3 行向上查找或 `api/hit.php` |
+| `TokenManager.php` | 用户 API 调用令牌 CRUD（每用户最多 3 条；格式 `SK-`+32；含调用次数） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表与详情（**主题向**） |

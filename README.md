@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.28.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.29.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -26,11 +26,12 @@
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
 - **API 管理（已实现）**：后台接口列表与分类；接口审核（待审核/通过/不通过，可选拒绝原因）；用户中心开发者投稿与邮件通知
 - **调用统计（v3.18+）**：本地脚本头 ≤3 行 `ApiStats::hit()`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`（含 `iploc` 预留）
+- **用户令牌（v3.29+）**：表 `token`；用户中心与管理员后台均可管理；格式 `SK-`+32 位；每账号最多 3 个（调用侧强制校验后续接入）
 
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
-- 用户中心侧边栏：控制台、API 管理（仅开发者，可投稿）、令牌管理、积分变动、接口列表、账号设置（部分为占位页）
+- 用户中心侧边栏：控制台、API 管理（仅开发者，可投稿）、**令牌管理**（创建/重置/禁用，每账号最多 3 个）、积分变动、接口列表、账号设置（部分为占位页）
 - **用户角色**：普通用户（调用全站接口、管理令牌）/ 开发者（可进入 API 管理提交接口待审）；注册页横条分段选择身份，管理员可转换身份
 - 用户管理：列表查看、搜索、封禁/解封/删除、身份转换（AJAX 无整页刷新）
 - 用户头像：QQ 邮箱自动匹配 / 自定义链接 / 默认头像
@@ -83,8 +84,8 @@
 | 用户注册 | `/user/register.php` | 邮箱验证码注册，横条分段选择普通用户或开发者 |
 | 用户忘记密码 | `/user/forgot.php` | 邮箱验证码重置密码 |
 | 用户中心 | `/user/index.php` | 登录后控制台首页 |
-| API 管理 | `/user/api-manage.php` | 仅开发者：提交/编辑/删除自有接口，查看审核状态与拒绝原因 |
-| 令牌管理（占位） | `/user/tokens.php` | 后续开发 |
+| API 管理 | `/user/api-manage.php` | 仅开发者：提交/编辑/删除自有接口，查看审核状态与拒绝原因；手机卡片分页 |
+| 令牌管理 | `/user/tokens.php` | 创建/编辑/重置/禁用/删除调用令牌（每账号最多 3 个，格式 SK-…） |
 | 积分变动（占位） | `/user/points.php` | 后续开发 |
 | 接口列表（占位） | `/user/apis.php` | 后续开发 |
 | 用户账号设置 | `/user/account.php` | 修改资料、头像、密码 |
@@ -95,6 +96,7 @@
 | 接口列表 | `/admin/api/list.php` | 紧凑卡片：类型、完整调用链接、状态、调用量、编辑/维护/禁用/删除 |
 | 接口审核 | `/admin/api/review.php` | 待审/通过/未通过；编辑/通过/不通过；拒绝原因（选填）；邮件通知 |
 | 接口分类 | `/admin/api/categories.php` | 表格式列表、分类 CRUD、内置 SVG 图标库（自动扫描）、描述、启禁 |
+| 令牌管理 | `/admin/api/tokens.php` | 查看全站用户令牌，可重置/禁用/删除 |
 | API 管理（占位） | `/admin/api/docs.php` 等 | 文档、反馈仍为占位页 |
 | 内容运营（占位） | `/admin/content/` | 文章、评论、友链、合作伙伴 |
 | 交易财务（占位） | `/admin/finance/` | 支付、订单、赞助、积分 |
@@ -180,12 +182,13 @@ misc-api/
 │   ├── init.php
 │   ├── includes/layout.php
 │   ├── index.php
-│   ├── api-manage.php / tokens.php / points.php / apis.php  # 占位
+│   ├── api-manage.php / tokens.php   # API 投稿 / 令牌管理（已实现）
+│   ├── points.php / apis.php         # 占位
 │   ├── account.php
 │   └── login.php / register.php / forgot.php
 ├── assets/
 │   ├── css/                    # common, admin, modal (vs-overlay), toast, install …
-│   ├── js/                     # common.js, api-categories.js, vs-update.js, upgrade.js …
+│   ├── js/                     # common.js, user-tokens.js, user-api-manage.js, admin-tokens.js …
 │   └── img/
 │       ├── category-icons/     # 内置分类 / 接口 SVG 图标库（自动扫描）
 │       └── …                   # 头像、站点图片等
@@ -283,6 +286,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.29.0（2026-07-18）
+
+**类型：** 大版本（用户令牌体系 + API 管理体验）
+
+- 新建 `token` 表；用户中心令牌管理（创建/编辑/重置/禁用/删除，每账号最多 3 个，`SK-` + 32 位）
+- 管理员后台「令牌管理」可查看并处理全站令牌
+- 用户 API 管理：手机卡片间距与布局优化，补充分页与接口总数
+- 须执行数据库结构更新
 
 ### v3.28.1（2026-07-17）
 
