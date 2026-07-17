@@ -1,12 +1,12 @@
 <?php
 /**
- * 文件：core/TokenManager.php
- * 作用：用户 API 调用令牌 CRUD（每用户最多 3 条）
+ * 文件：core/ApiKeyManager.php
+ * 作用：用户 API 调用密钥 CRUD（每用户最多 3 条）
  */
 
-class TokenManager
+class ApiKeyManager
 {
-    /** 每用户令牌上限 */
+    /** 每用户密钥上限 */
     const MAX_PER_USER = 3;
 
     /** 状态：禁用 */
@@ -20,7 +20,7 @@ class TokenManager
     public static function tableReady()
     {
         try {
-            return DatabaseMigrator::tableExists('token');
+            return DatabaseMigrator::tableExists('apikey');
         } catch (Exception $e) {
             return false;
         }
@@ -57,7 +57,7 @@ class TokenManager
         }
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . $table . '` WHERE `userid` = ?');
             $stmt->execute(array($userId));
             return (int) $stmt->fetchColumn();
@@ -78,7 +78,7 @@ class TokenManager
         }
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare(
                 'SELECT `id`, `userid`, `remark`, `secret`, `status`, `calls`, `createtime`
                  FROM `' . $table . '`
@@ -105,7 +105,7 @@ class TokenManager
         }
         try {
             $pdo = Database::connect();
-            $tokenTable = Database::table('token');
+            $tokenTable = Database::table('apikey');
             $userTable = Database::table('user');
             $sql = 'SELECT t.`id`, t.`userid`, t.`remark`, t.`secret`, t.`status`, t.`calls`, t.`createtime`,
                            u.`username` AS `username`
@@ -131,7 +131,7 @@ class TokenManager
         }
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare(
                 'SELECT `id`, `userid`, `remark`, `secret`, `status`, `calls`, `createtime`
                  FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
@@ -156,7 +156,7 @@ class TokenManager
         }
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare(
                 'SELECT `id`, `userid`, `remark`, `secret`, `status`, `calls`, `createtime`
                  FROM `' . $table . '` WHERE `secret` = ? LIMIT 1'
@@ -223,7 +223,7 @@ class TokenManager
 
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare(
                 'INSERT INTO `' . $table . '`
                  (`userid`, `remark`, `secret`, `status`, `calls`, `createtime`)
@@ -266,7 +266,7 @@ class TokenManager
 
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `remark` = ? WHERE `id` = ? LIMIT 1');
             $stmt->execute(array($remark, $id));
             return true;
@@ -301,7 +301,7 @@ class TokenManager
 
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `secret` = ? WHERE `id` = ? LIMIT 1');
             $stmt->execute(array($secret, $id));
             $fresh = self::findById($id);
@@ -335,7 +335,7 @@ class TokenManager
 
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `status` = ? WHERE `id` = ? LIMIT 1');
             $stmt->execute(array($status, $id));
             return true;
@@ -363,7 +363,7 @@ class TokenManager
 
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare('DELETE FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
             $stmt->execute(array($id));
             return true;
@@ -373,7 +373,7 @@ class TokenManager
     }
 
     /**
-     * 调用成功后累加次数（后续密钥校验接入时使用）
+     * 调用成功后累加次数
      *
      * @param int $id
      * @return void
@@ -386,7 +386,7 @@ class TokenManager
         }
         try {
             $pdo = Database::connect();
-            $table = Database::table('token');
+            $table = Database::table('apikey');
             $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `calls` = `calls` + 1 WHERE `id` = ? LIMIT 1');
             $stmt->execute(array($id));
         } catch (Exception $e) {

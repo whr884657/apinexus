@@ -6,7 +6,7 @@
 
 require_once dirname(__DIR__) . '/init.php';
 
-$tableReady = TokenManager::tableReady();
+$tableReady = ApiKeyManager::tableReady();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
@@ -19,18 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = isset($_POST['token_id']) ? (int) $_POST['token_id'] : 0;
 
     if ($action === 'set_status') {
-        $status = isset($_POST['status']) ? (int) $_POST['status'] : TokenManager::STATUS_DISABLED;
-        $result = TokenManager::setStatus($id, 0, $status);
+        $status = isset($_POST['status']) ? (int) $_POST['status'] : ApiKeyManager::STATUS_DISABLED;
+        $result = ApiKeyManager::setStatus($id, 0, $status);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
-        $row = TokenManager::formatRow(TokenManager::findById($id));
-        $msg = ((int) $row['status'] === TokenManager::STATUS_ENABLED) ? '令牌已启用' : '令牌已禁用';
+        $row = ApiKeyManager::formatRow(ApiKeyManager::findById($id));
+        $msg = ((int) $row['status'] === ApiKeyManager::STATUS_ENABLED) ? '令牌已启用' : '令牌已禁用';
         AjaxResponse::success($msg, array('token' => $row));
     }
 
     if ($action === 'delete') {
-        $result = TokenManager::delete($id, 0);
+        $result = ApiKeyManager::delete($id, 0);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'reset') {
-        $result = TokenManager::resetSecret($id, 0);
+        $result = ApiKeyManager::resetSecret($id, 0);
         if (!is_array($result)) {
             AjaxResponse::error($result);
         }
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     AjaxResponse::error('无效操作', 400);
 }
 
-$tokens = $tableReady ? TokenManager::listAll() : array();
+$tokens = $tableReady ? ApiKeyManager::listAll() : array();
 $total = count($tokens);
 
 /**
@@ -57,12 +57,12 @@ $total = count($tokens);
  */
 function vs_render_admin_token_item(array $row)
 {
-    $token = TokenManager::formatRow($row);
+    $token = ApiKeyManager::formatRow($row);
     if (!$token) {
         return;
     }
     $id = (int) $token['id'];
-    $enabled = (int) $token['status'] === TokenManager::STATUS_ENABLED;
+    $enabled = (int) $token['status'] === ApiKeyManager::STATUS_ENABLED;
     $statusClass = $enabled ? 'is-enabled' : 'is-disabled';
     $username = $token['username'] !== '' ? $token['username'] : ('用户#' . $token['userid']);
     ?>
@@ -142,3 +142,4 @@ vs_admin_layout_start('令牌管理', 'api-tokens');
 
 <?php
 vs_admin_layout_end($tableReady ? array('vs-pick.js', 'admin-tokens.js') : array());
+

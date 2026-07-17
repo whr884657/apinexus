@@ -193,6 +193,17 @@ class ApiProxy
             exit;
         }
 
+        $keyGate = ApiStats::guardProxyKey($row);
+        if ($keyGate !== true) {
+            $http = isset($keyGate['http']) ? (int) $keyGate['http'] : 401;
+            $msg = isset($keyGate['msg']) ? (string) $keyGate['msg'] : '密钥校验失败';
+            ApiStats::hitProxy($row, false, $http);
+            http_response_code($http);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array('code' => 0, 'msg' => $msg), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         $params = $_GET;
         unset($params[self::REWRITE_SLUG_PARAM]);
         // 本站密钥参数不转给上游

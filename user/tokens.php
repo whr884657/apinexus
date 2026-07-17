@@ -7,7 +7,7 @@
 require_once __DIR__ . '/init.php';
 
 $userId = (int) UserAuth::id();
-$tableReady = TokenManager::tableReady();
+$tableReady = ApiKeyManager::tableReady();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
 
     $assertOwner = function ($tokenId) use ($userId) {
-        $row = TokenManager::findById($tokenId);
+        $row = ApiKeyManager::findById($tokenId);
         if (!$row) {
             return '令牌不存在';
         }
@@ -31,14 +31,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create') {
         $remark = isset($_POST['remark']) ? (string) $_POST['remark'] : '';
-        $result = TokenManager::create($userId, $remark);
+        $result = ApiKeyManager::create($userId, $remark);
         if (!is_array($result)) {
             AjaxResponse::error($result);
         }
         AjaxResponse::success('令牌已创建', array(
             'token' => $result,
-            'count' => TokenManager::countByUser($userId),
-            'max'   => TokenManager::MAX_PER_USER,
+            'count' => ApiKeyManager::countByUser($userId),
+            'max'   => ApiKeyManager::MAX_PER_USER,
         ));
     }
 
@@ -49,11 +49,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error($owned);
         }
         $remark = isset($_POST['remark']) ? (string) $_POST['remark'] : '';
-        $result = TokenManager::updateRemark($id, $userId, $remark);
+        $result = ApiKeyManager::updateRemark($id, $userId, $remark);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
-        $row = TokenManager::formatRow(TokenManager::findById($id));
+        $row = ApiKeyManager::formatRow(ApiKeyManager::findById($id));
         AjaxResponse::success('备注已更新', array('token' => $row));
     }
 
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_array($owned)) {
             AjaxResponse::error($owned);
         }
-        $result = TokenManager::resetSecret($id, $userId);
+        $result = ApiKeyManager::resetSecret($id, $userId);
         if (!is_array($result)) {
             AjaxResponse::error($result);
         }
@@ -76,13 +76,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_array($owned)) {
             AjaxResponse::error($owned);
         }
-        $status = isset($_POST['status']) ? (int) $_POST['status'] : TokenManager::STATUS_DISABLED;
-        $result = TokenManager::setStatus($id, $userId, $status);
+        $status = isset($_POST['status']) ? (int) $_POST['status'] : ApiKeyManager::STATUS_DISABLED;
+        $result = ApiKeyManager::setStatus($id, $userId, $status);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
-        $row = TokenManager::formatRow(TokenManager::findById($id));
-        $msg = ((int) $row['status'] === TokenManager::STATUS_ENABLED) ? '令牌已启用' : '令牌已禁用';
+        $row = ApiKeyManager::formatRow(ApiKeyManager::findById($id));
+        $msg = ((int) $row['status'] === ApiKeyManager::STATUS_ENABLED) ? '令牌已启用' : '令牌已禁用';
         AjaxResponse::success($msg, array('token' => $row));
     }
 
@@ -92,23 +92,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_array($owned)) {
             AjaxResponse::error($owned);
         }
-        $result = TokenManager::delete($id, $userId);
+        $result = ApiKeyManager::delete($id, $userId);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
         AjaxResponse::success('令牌已删除', array(
             'token_id' => $id,
-            'count'    => TokenManager::countByUser($userId),
-            'max'      => TokenManager::MAX_PER_USER,
+            'count'    => ApiKeyManager::countByUser($userId),
+            'max'      => ApiKeyManager::MAX_PER_USER,
         ));
     }
 
     AjaxResponse::error('无效操作', 400);
 }
 
-$tokens = $tableReady ? TokenManager::listByUser($userId) : array();
+$tokens = $tableReady ? ApiKeyManager::listByUser($userId) : array();
 $tokenCount = count($tokens);
-$canAdd = $tableReady && $tokenCount < TokenManager::MAX_PER_USER;
+$canAdd = $tableReady && $tokenCount < ApiKeyManager::MAX_PER_USER;
 
 /**
  * @param array $row
@@ -116,12 +116,12 @@ $canAdd = $tableReady && $tokenCount < TokenManager::MAX_PER_USER;
  */
 function vs_render_user_token_item(array $row)
 {
-    $token = TokenManager::formatRow($row);
+    $token = ApiKeyManager::formatRow($row);
     if (!$token) {
         return;
     }
     $id = (int) $token['id'];
-    $enabled = (int) $token['status'] === TokenManager::STATUS_ENABLED;
+    $enabled = (int) $token['status'] === ApiKeyManager::STATUS_ENABLED;
     $statusClass = $enabled ? 'is-enabled' : 'is-disabled';
     ?>
     <div class="vs-api-item vs-token-row<?php echo $enabled ? '' : ' is-token-disabled'; ?>"
@@ -170,7 +170,7 @@ $assetBase = rtrim(vs_base_url(), '/');
 
 <div class="vs-panel" id="userTokenPage"
      data-token-count="<?php echo (int) $tokenCount; ?>"
-     data-token-max="<?php echo (int) TokenManager::MAX_PER_USER; ?>">
+     data-token-max="<?php echo (int) ApiKeyManager::MAX_PER_USER; ?>">
 
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '令牌功能尚未就绪，请联系管理员完成系统升级。', array('compact' => true)); ?>
@@ -179,7 +179,7 @@ $assetBase = rtrim(vs_base_url(), '/');
         vs_render_notice(
             'info',
             '',
-            '每个账号最多 ' . TokenManager::MAX_PER_USER . ' 个令牌。令牌以 SK- 开头；禁用后即使泄露也无法继续调用。',
+            '每个账号最多 ' . ApiKeyManager::MAX_PER_USER . ' 个令牌。令牌以 SK- 开头；禁用后即使泄露也无法继续调用。',
             array('compact' => true)
         );
         ?>
@@ -200,7 +200,7 @@ $assetBase = rtrim(vs_base_url(), '/');
         </div>
 
         <div class="vs-api-list-footer" id="userTokenFooter"<?php echo $tokenCount === 0 ? ' hidden' : ''; ?>>
-            <p class="vs-api-list-stats" id="userTokenStats">共 <?php echo (int) $tokenCount; ?> 个令牌（上限 <?php echo (int) TokenManager::MAX_PER_USER; ?>）</p>
+            <p class="vs-api-list-stats" id="userTokenStats">共 <?php echo (int) $tokenCount; ?> 个令牌（上限 <?php echo (int) ApiKeyManager::MAX_PER_USER; ?>）</p>
         </div>
     <?php endif; ?>
 </div>
@@ -233,3 +233,4 @@ $assetBase = rtrim(vs_base_url(), '/');
 
 <?php
 vs_user_layout_end($tableReady ? array('user-tokens.js') : array());
+

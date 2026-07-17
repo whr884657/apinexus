@@ -10,7 +10,7 @@
  *
  * 代理：ApiProxy 网关内自动调用，勿在上游文件注入。
  *
- * 说明：密钥校验、扣费尚未接入；表字段预留，有值则如实记下。
+ * 密钥：识别 key / api_key / apikey / X-API-Key；校验 apikey 表；归属 userid；成功调用累加密钥 calls。
  */
 
 class ApiStats
@@ -19,7 +19,13 @@ class ApiStats
     private static $done = array();
 
     /**
-     * 本地接口入口：守卫（轻量）+ 记账
+     * 本请求解析出的密钥上下文
+     * @var array|null {raw,keyid,userid,valid}
+     */
+    private static $keyCtx = null;
+
+    /**
+     * 本地接口入口：守卫（含密钥）+ 记账
      *
      * @param int|null $apiId 接口主键；null/0 则按当前脚本路径匹配 endpoint
      * @return void
@@ -81,6 +87,17 @@ class ApiStats
         } catch (Exception $e) {
             // ignore
         }
+    }
+
+    /**
+     * 代理跳转前密钥守卫（失败返回 array，成功返回 true）
+     *
+     * @param array $row
+     * @return true|array{http:int,msg:string}
+     */
+    public static function guardProxyKey(array $row)
+    {
+        return self::evaluateKey($row);
     }
 
     /**
@@ -167,7 +184,7 @@ class ApiStats
     }
 
     /**
-     * 轻量可调用检查（密钥/扣费未接入）
+     * 轻量可调用检查（状态 + 密钥）
      *
      * @param array $row
      * @return true|array{http:int,msg:string}
@@ -187,6 +204,53 @@ class ApiStats
                 return array('http' => 403, 'msg' => '接口不可用');
             }
         }
+        return self::evaluateKey($row);
+    }
+
+    /**
+     * 按接口 needkey 识别并校验请求中的密钥
+     *
+     * @param array $row
+     * @return true|array{http:int,msg:string}
+     */
+    private static function evaluateKey(array $row)
+    {
+        $need = ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : ApiManager::KEY_NONE);
+        $raw = self::readKey();
+        $provided = ($raw !== '');
+
+        self::$keyCtx = array(
+            'raw'    => $raw,
+            'keyid'  => 0,
+            'userid' => 0,
+            'valid'  => false,
+        );
+
+        if (!$provided) {
+            if ($need === ApiManager::KEY_REQUIRED) {
+                return array('http' => 401, 'msg' => '请提供有效的调用密钥');
+            }
+            return true;
+        }
+
+        if (!ApiKeyManager::tableReady()) {
+            return array('http' => 503, 'msg' => '密钥校验暂不可用，请联系管理员完成升级');
+        }
+
+        $keyRow = ApiKeyManager::findBySecret($raw);
+        if (!$keyRow) {
+            return array('http' => 401, 'msg' => '密钥无效');
+        }
+        if ((int) $keyRow['status'] !== ApiKeyManager::STATUS_ENABLED) {
+            return array('http' => 403, 'msg' => '密钥已禁用');
+        }
+
+        self::$keyCtx = array(
+            'raw'    => $raw,
+            'keyid'  => (int) $keyRow['id'],
+            'userid' => (int) $keyRow['userid'],
+            'valid'  => true,
+        );
         return true;
     }
 
@@ -205,11 +269,15 @@ class ApiStats
 
         ApiManager::incrementCallCount($id, 1);
 
+        $ctx = self::requestContext();
+        if ($ok && !empty(self::$keyCtx['valid']) && !empty(self::$keyCtx['keyid'])) {
+            ApiKeyManager::incrementCalls((int) self::$keyCtx['keyid']);
+        }
+
         if (!self::tableReady()) {
             return;
         }
 
-        $ctx = self::requestContext();
         $apitype = ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0);
         $name = isset($row['name']) ? (string) $row['name'] : '';
 
@@ -274,16 +342,26 @@ class ApiStats
         }
 
         $userid = 0;
-        if (class_exists('UserAuth') && UserAuth::check()) {
+        $apikey = '';
+        if (is_array(self::$keyCtx)) {
+            $apikey = isset(self::$keyCtx['raw']) ? (string) self::$keyCtx['raw'] : '';
+            if (!empty(self::$keyCtx['valid']) && !empty(self::$keyCtx['userid'])) {
+                $userid = (int) self::$keyCtx['userid'];
+            }
+        }
+        if ($apikey === '') {
+            $apikey = self::readKey();
+        }
+        if ($userid <= 0 && class_exists('UserAuth') && UserAuth::check()) {
             $userid = (int) UserAuth::id();
         }
 
         return array(
             'userid'  => $userid,
-            'apikey'  => mb_substr(self::readKey(), 0, 128, 'UTF-8'),
+            'apikey'  => mb_substr($apikey, 0, 128, 'UTF-8'),
             'method'  => mb_substr($method, 0, 16, 'UTF-8'),
             'ip'      => mb_substr($ip, 0, 45, 'UTF-8'),
-            'iploc'   => '', // 预留：后续系统设置开启 IP 解析后再写入
+            'iploc'   => '',
             'host'    => mb_substr($host, 0, 255, 'UTF-8'),
             'path'    => mb_substr($path, 0, 500, 'UTF-8'),
             'url'     => mb_substr($url, 0, 1000, 'UTF-8'),
@@ -295,7 +373,7 @@ class ApiStats
     }
 
     /**
-     * 读取密钥（仅记录，本版不校验）
+     * 读取请求中的密钥（Query / POST / Header）
      *
      * @return string
      */
