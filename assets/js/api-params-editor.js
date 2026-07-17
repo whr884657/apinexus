@@ -159,7 +159,7 @@
             var t = PARAM_TYPES[i];
             html += '<option value="' + escapeHtml(t.value) + '"'
                 + (t.value === selected ? ' selected' : '') + '>'
-                + escapeHtml(t.label) + '</option>';
+                + escapeHtml(t.value + ' · ' + t.label) + '</option>';
         }
         return html;
     }
@@ -169,12 +169,23 @@
         return ''
             + '<tr class="vs-params-editor__row">'
             + '<td><input type="text" class="vs-input vs-params-editor__name" value="' + escapeHtml(row.name) + '" placeholder="参数名" maxlength="64"></td>'
-            + '<td><select class="vs-input vs-select vs-params-editor__type">' + typeOptionsHtml(row.type || 'string') + '</select></td>'
+            + '<td><select class="vs-input vs-select vs-params-editor__type" data-vs-pick>' + typeOptionsHtml(row.type || 'string') + '</select></td>'
             + '<td class="vs-params-editor__req-cell"><label class="vs-check"><input type="checkbox" class="vs-params-editor__required"' + (row.required ? ' checked' : '') + '> 必填</label></td>'
             + '<td><input type="text" class="vs-input vs-params-editor__desc" value="' + escapeHtml(row.description) + '" placeholder="描述" maxlength="500"></td>'
             + '<td><input type="text" class="vs-input vs-params-editor__example" value="' + escapeHtml(row.example) + '" placeholder="示例" maxlength="200"></td>'
             + '<td class="vs-params-editor__actions"><button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-params-editor__remove" title="删除">删</button></td>'
             + '</tr>';
+    }
+
+    function enhanceTypePicks(scope) {
+        if (!window.VSPick) {
+            return;
+        }
+        var root = scope || document;
+        var nodes = root.querySelectorAll ? root.querySelectorAll('select.vs-params-editor__type[data-vs-pick]') : [];
+        for (var i = 0; i < nodes.length; i++) {
+            window.VSPick.refresh(nodes[i]);
+        }
     }
 
     function collectRows(root) {
@@ -218,6 +229,7 @@
         } else {
             body.innerHTML = rows.map(buildRowHtml).join('');
         }
+        enhanceTypePicks(body);
         syncHidden(root);
     }
 
@@ -328,6 +340,10 @@
                 var body = root.querySelector('[data-params-tbody]');
                 if (body) {
                     body.insertAdjacentHTML('beforeend', buildRowHtml(null));
+                    var last = body.querySelector('.vs-params-editor__row:last-child');
+                    if (last) {
+                        enhanceTypePicks(last);
+                    }
                 }
                 syncHidden(root);
                 return;

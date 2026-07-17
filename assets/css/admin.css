@@ -3049,7 +3049,16 @@ select.vs-input.vs-select {
 }
 
 .vs-api-item:last-child {
-    border-bottom: none;
+    border-bottom: 1px solid var(--vs-border);
+}
+
+@media (min-width: 901px) {
+    .vs-api-list-table .vs-api-item:last-child,
+    .vs-user-api-list .vs-api-item:last-child,
+    .vs-user-token-list .vs-api-item:last-child,
+    .vs-admin-token-list .vs-api-item:last-child {
+        border-bottom: none;
+    }
 }
 
 .vs-api-item[hidden] {
@@ -3435,6 +3444,19 @@ select.vs-input.vs-select {
 .vs-params-editor__table .vs-select {
     width: 100%;
     min-width: 0;
+}
+
+.vs-params-editor__table .vs-pick {
+    width: 100%;
+    min-width: 140px;
+}
+
+.vs-params-editor__table .vs-pick__btn {
+    width: 100%;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .vs-params-editor__req-cell {
@@ -4151,6 +4173,19 @@ select.vs-input.vs-select {
     min-width: 0;
 }
 
+.vs-params-editor__table .vs-pick {
+    width: 100%;
+    min-width: 140px;
+}
+
+.vs-params-editor__table .vs-pick__btn {
+    width: 100%;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .vs-params-editor__req-cell {
     white-space: nowrap;
 }
@@ -4544,7 +4579,16 @@ select.vs-input.vs-select {
 }
 
 .vs-api-item:last-child {
-    border-bottom: none !important;
+    border-bottom: 1px solid var(--vs-border) !important;
+}
+
+@media (min-width: 901px) {
+    .vs-api-list-table .vs-api-item:last-child,
+    .vs-user-api-list .vs-api-item:last-child,
+    .vs-user-token-list .vs-api-item:last-child,
+    .vs-admin-token-list .vs-api-item:last-child {
+        border-bottom: none !important;
+    }
 }
 
 .vs-api-item__icon img {
@@ -4905,7 +4949,24 @@ select.vs-input.vs-select {
     }
 }
 
-/* —— 自定义下拉选择（vs-pick） —— */
+/* 手机端卡片：末行也保留完整底边，避免「最后一张卡片底边丢失」 */
+@media (max-width: 900px) {
+    .vs-api-list-table .vs-api-item,
+    .vs-user-api-list .vs-api-item,
+    .vs-user-token-list .vs-api-item,
+    .vs-admin-token-list .vs-api-item {
+        border: 1px solid var(--vs-border) !important;
+        border-radius: 14px !important;
+    }
+
+    .vs-api-list-table .vs-api-item:last-child,
+    .vs-user-api-list .vs-api-item:last-child,
+    .vs-user-token-list .vs-api-item:last-child,
+    .vs-admin-token-list .vs-api-item:last-child {
+        border-bottom: 1px solid var(--vs-border) !important;
+    }
+}
+
 .vs-pick {
     position: relative;
     width: 100%;
