@@ -63,14 +63,24 @@ class SiteContext
         }
 
         self::$cache = array(
-            'host'             => self::currentHost(),
-            'site_name'        => trim((string) Config::get('site_name', 'misc-api')),
-            'site_description' => trim((string) Config::get('site_description', '')),
-            'site_keywords'    => trim((string) Config::get('site_keywords', '')),
-            'site_favicon'     => trim((string) Config::get('site_favicon', '')),
-            'site_logo'        => trim((string) Config::get('site_logo', '')),
-            'icp_number'       => trim((string) Config::get('site_icp', '')),
-            'gongan_number'    => trim((string) Config::get('site_gongan', '')),
+            'host'               => self::currentHost(),
+            'site_name'          => trim((string) Config::get('site_name', 'misc-api')),
+            'site_description'   => trim((string) Config::get('site_description', '')),
+            'site_keywords'      => trim((string) Config::get('site_keywords', '')),
+            'site_favicon'       => trim((string) Config::get('site_favicon', '')),
+            'site_logo'          => trim((string) Config::get('site_logo', '')),
+            'icp_number'         => trim((string) Config::get('site_icp', '')),
+            'gongan_number'      => trim((string) Config::get('site_gongan', '')),
+            'site_runtime_start' => trim((string) Config::get('site_runtime_start', '')),
+            'footer_html_left'   => (string) Config::get('footer_html_left', ''),
+            'footer_html_center' => (string) Config::get('footer_html_center', ''),
+            'footer_html_right'  => (string) Config::get('footer_html_right', ''),
+            'footer_qr1_enabled' => trim((string) Config::get('footer_qr1_enabled', '')),
+            'footer_qr1_name'    => trim((string) Config::get('footer_qr1_name', '')),
+            'footer_qr1_url'     => trim((string) Config::get('footer_qr1_url', '')),
+            'footer_qr2_enabled' => trim((string) Config::get('footer_qr2_enabled', '')),
+            'footer_qr2_name'    => trim((string) Config::get('footer_qr2_name', '')),
+            'footer_qr2_url'     => trim((string) Config::get('footer_qr2_url', '')),
         );
 
         return self::$cache;
@@ -116,6 +126,86 @@ class SiteContext
     public static function siteLogo()
     {
         return self::resolve()['site_logo'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function siteRuntimeStart()
+    {
+        return self::resolve()['site_runtime_start'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function footerHtmlLeft()
+    {
+        return self::resolve()['footer_html_left'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function footerHtmlCenter()
+    {
+        return self::resolve()['footer_html_center'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function footerHtmlRight()
+    {
+        return self::resolve()['footer_html_right'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function footerQr1Enabled()
+    {
+        return self::resolve()['footer_qr1_enabled'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function footerQr1Name()
+    {
+        return self::resolve()['footer_qr1_name'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function footerQr1Url()
+    {
+        return self::resolve()['footer_qr1_url'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function footerQr2Enabled()
+    {
+        return self::resolve()['footer_qr2_enabled'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function footerQr2Name()
+    {
+        return self::resolve()['footer_qr2_name'];
+    }
+
+    /**
+     * @return string
+     */
+    public static function footerQr2Url()
+    {
+        return self::resolve()['footer_qr2_url'];
     }
 
     /**

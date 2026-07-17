@@ -61,6 +61,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'save_site_extra') {
+        try {
+            Config::setMany(array(
+                'site_runtime_start' => trim(isset($_POST['site_runtime_start']) ? $_POST['site_runtime_start'] : ''),
+                'footer_html_left'   => isset($_POST['footer_html_left']) ? (string) $_POST['footer_html_left'] : '',
+                'footer_html_center' => isset($_POST['footer_html_center']) ? (string) $_POST['footer_html_center'] : '',
+                'footer_html_right'  => isset($_POST['footer_html_right']) ? (string) $_POST['footer_html_right'] : '',
+                'footer_qr1_enabled' => isset($_POST['footer_qr1_enabled']) ? '1' : '0',
+                'footer_qr1_name'    => trim(isset($_POST['footer_qr1_name']) ? $_POST['footer_qr1_name'] : ''),
+                'footer_qr1_url'     => trim(isset($_POST['footer_qr1_url']) ? $_POST['footer_qr1_url'] : ''),
+                'footer_qr2_enabled' => isset($_POST['footer_qr2_enabled']) ? '1' : '0',
+                'footer_qr2_name'    => trim(isset($_POST['footer_qr2_name']) ? $_POST['footer_qr2_name'] : ''),
+                'footer_qr2_url'     => trim(isset($_POST['footer_qr2_url']) ? $_POST['footer_qr2_url'] : ''),
+            ));
+            SiteContext::clearCache();
+            AjaxResponse::success('站点扩展设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error($e->getMessage());
+        }
+    }
+
     if ($action === 'save_mail') {
         try {
             Config::setMany(array(
@@ -261,6 +282,96 @@ vs_admin_accordion_start(
 
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存 OAuth 设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-site-extra',
+    '站点扩展',
+    '网站运行时间、页脚自定义栏与二维码'
+);
+?>
+    <form method="post" action="" class="vs-form" id="siteExtraForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_site_extra">
+
+        <h4 class="vs-form-subtitle">网站运行时间</h4>
+        <?php
+        vs_render_notice(
+            'tip',
+            '',
+            '填写站点上线时间后，启用「显示运行时间」的前台主题会在页脚展示已运行时长。',
+            array('compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label">运行时间起点</label>
+            <input type="text" name="site_runtime_start" class="vs-input"
+                   value="<?php echo vs_e(Config::get('site_runtime_start', '')); ?>"
+                   placeholder="YYYY-MM-DD HH:MM:SS">
+            <?php vs_render_notice('tip', '', '格式示例：2024-01-01 00:00:00', array('field' => true, 'compact' => true)); ?>
+        </div>
+
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">底部自定义栏</h4>
+        <?php
+        vs_render_notice(
+            'tip',
+            '',
+            '支持 HTML / JavaScript，由管理员配置，前台原样输出。留空则不显示对应栏位。',
+            array('compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label">左侧内容</label>
+            <textarea name="footer_html_left" class="vs-textarea" rows="4"><?php echo vs_e(Config::get('footer_html_left', '')); ?></textarea>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">中间内容</label>
+            <textarea name="footer_html_center" class="vs-textarea" rows="4"><?php echo vs_e(Config::get('footer_html_center', '')); ?></textarea>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">右侧内容</label>
+            <textarea name="footer_html_right" class="vs-textarea" rows="4"><?php echo vs_e(Config::get('footer_html_right', '')); ?></textarea>
+        </div>
+
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">页脚二维码</h4>
+        <div class="vs-form-grid">
+            <div class="vs-form-row">
+                <label class="vs-checkbox">
+                    <input type="checkbox" name="footer_qr1_enabled" value="1" <?php echo Config::get('footer_qr1_enabled', '') === '1' ? 'checked' : ''; ?>>
+                    <span>启用二维码 1</span>
+                </label>
+                <label class="vs-label">名称</label>
+                <input type="text" name="footer_qr1_name" class="vs-input"
+                       value="<?php echo vs_e(Config::get('footer_qr1_name', '')); ?>" placeholder="例如：公众号">
+                <label class="vs-label">图片 URL</label>
+                <input type="text" name="footer_qr1_url" class="vs-input"
+                       value="<?php echo vs_e(Config::get('footer_qr1_url', '')); ?>"
+                       placeholder="/upload/qr.png 或 https://...">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-checkbox">
+                    <input type="checkbox" name="footer_qr2_enabled" value="1" <?php echo Config::get('footer_qr2_enabled', '') === '1' ? 'checked' : ''; ?>>
+                    <span>启用二维码 2</span>
+                </label>
+                <label class="vs-label">名称</label>
+                <input type="text" name="footer_qr2_name" class="vs-input"
+                       value="<?php echo vs_e(Config::get('footer_qr2_name', '')); ?>" placeholder="例如：交流群">
+                <label class="vs-label">图片 URL</label>
+                <input type="text" name="footer_qr2_url" class="vs-input"
+                       value="<?php echo vs_e(Config::get('footer_qr2_url', '')); ?>"
+                       placeholder="/upload/qr2.png 或 https://...">
+            </div>
+        </div>
+        <?php vs_render_notice('tip', '', '需同时启用主题设置中的「显示页脚二维码」才会在前台展示。', array('compact' => true)); ?>
+
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存站点扩展</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>

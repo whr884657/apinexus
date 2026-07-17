@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.27.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.28.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -38,6 +38,8 @@
 - 管理员认证：登录、忘记密码（邮箱验证码）、CSRF 与登录频率限制
 - 邮箱验证码发信限流（MySQL 表 `mail_code_rate_log` + 一次性 mail_ticket）
 - 站点信息、注册邮箱后缀白名单、SMTP 邮箱发信
+- **站点扩展（v3.28+）**：自定义底栏左/中/右 HTML、站点运行时间、页脚 1～2 个二维码；主题可开关运行时间 / 二维码 / 合作伙伴
+- **SEO（v3.28+）**：公开页 description / OG / Twitter 卡片；后台与登录 `noindex`；根目录 `robots.txt`
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
 - 认证页角色动画背景；后台 `vs-overlay` 大弹窗（电脑约 92% 视口 / 手机全宽 85vh 抽屉）与 Toast 提示
 - 简洁白色后台主题，纯 CSS 图标，适配电脑端与手机端
@@ -281,6 +283,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.28.0（2026-07-17）
+
+**类型：** 中版本（安全纠偏 + 底栏扩展 + SEO + 库表删列）
+
+- 忘记密码未注册邮箱禁止发码；登录偶发「来源无效 / 刷新重试」修复
+- 删除 `apilog.source`；主题二列表卡片去掉描述占位空白
+- 系统设置：底栏三栏自定义、运行时间、二维码；双主题可开关显示
+- 全站 SEO 与 `robots.txt`；默认主题赞助页 `//` 标题样式对齐
 
 ### v3.27.0（2026-07-17）
 

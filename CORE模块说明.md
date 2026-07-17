@@ -370,7 +370,7 @@ Config::set('site_name', '我的 API 站');
 > **说明：** 旧版多域名类 `Domain.php` 已于 v1.2.0 移除；站点信息一律由本类从单站 `config` 读取。结构更新时 `DatabaseMigrator::purgeLegacyArtifacts()` 会清理残留的 `domain` 表与 `bound_domains` 等配置键。
 
 
-**作用：** 前台展示用的站点信息（名称、描述、关键词、Logo、备案号等），从 Config 读取并缓存。
+**作用：** 前台展示用的站点信息（名称、描述、关键词、Logo、备案号、运行时间、页脚扩展等），从 Config 读取并缓存。
 
 | 方法 | 说明 |
 |------|------|
@@ -378,9 +378,12 @@ Config::set('site_name', '我的 API 站');
 | `siteDescription()` | 站点描述 |
 | `siteKeywords()` | SEO 关键词 |
 | `siteLogo()` | Logo 路径 |
+| `siteRuntimeStart()` | 网站运行起点时间 |
+| `footerHtmlLeft/Center/Right()` | 自定义底栏三栏 HTML |
+| `footerQr1*` / `footerQr2*` | 页脚二维码启用、名称、图片地址 |
 | `currentHost()` | 当前访问 Host |
 
-**主题模板变量：** `ThemeManager::renderBody()` 会向模板注入 `$siteName`、`$siteDesc` 等。
+**主题模板变量：** `ThemeManager::renderBody()` 会向模板注入 `$siteName`、`$siteDesc` 等；页脚扩展用 `vs_render_footer_custom_bar()` / `vs_render_footer_qrs()`。
 
 ---
 

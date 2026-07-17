@@ -6,6 +6,24 @@
     max-width: 960px;
 }
 
+.page-header {
+    padding: 1.25rem 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.section-title::before {
+    content: '//';
+    color: var(--accent-primary);
+    margin-right: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
 .donate-block {
     margin-bottom: 2rem;
 }

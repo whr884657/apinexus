@@ -125,6 +125,12 @@ function vs_auth_head($title)
     echo '<html lang="zh">' . "\n";
     echo '<head>' . "\n";
     echo '<meta charset="utf-8">' . "\n";
+    vs_render_seo_meta(array(
+        'title'       => vs_page_title($title, $siteName),
+        'description' => SiteContext::siteDescription(),
+        'robots'      => 'noindex,nofollow',
+        'site_name'   => $siteName,
+    ));
     echo '<title>' . vs_e(vs_page_title($title, $siteName)) . '</title>' . "\n";
     echo '<meta name="renderer" content="webkit">' . "\n";
     echo '<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' . "\n";

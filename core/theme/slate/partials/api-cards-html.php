@@ -40,7 +40,6 @@ foreach ($apis as $api):
             <span class="st-api-card__badge">免费</span>
         </div>
         <h3 class="st-api-card__title"><?php echo vs_e($name); ?></h3>
-        <p class="st-api-card__desc"><?php echo $desc !== '' ? vs_e($desc) : '&nbsp;'; ?></p>
         <code class="st-api-card__endpoint"><?php echo $endpoint !== '' ? vs_e($endpoint) : '&nbsp;'; ?></code>
     </a>
 </article>

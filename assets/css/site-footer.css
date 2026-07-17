@@ -1,0 +1,73 @@
+/**
+ * site-footer.css · 全站页脚扩展（自定义栏 + 二维码）
+ */
+
+.vs-foot-custom {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    align-items: start;
+}
+
+.vs-foot-custom__slot {
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.vs-foot-custom__slot--left {
+    text-align: left;
+}
+
+.vs-foot-custom__slot--center {
+    text-align: center;
+}
+
+.vs-foot-custom__slot--right {
+    text-align: right;
+}
+
+.vs-foot-qr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.vs-foot-qr__item {
+    margin: 0;
+    text-align: center;
+}
+
+.vs-foot-qr__img {
+    display: block;
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.vs-foot-qr__label {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+    .vs-foot-custom {
+        grid-template-columns: 1fr;
+    }
+
+    .vs-foot-custom__slot,
+    .vs-foot-custom__slot--left,
+    .vs-foot-custom__slot--center,
+    .vs-foot-custom__slot--right {
+        text-align: center;
+    }
+
+    .vs-foot-qr {
+        justify-content: center;
+    }
+}
