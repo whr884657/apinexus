@@ -681,7 +681,6 @@ class ThemeManager
             $asset('assets/js/shell.js'),
             $asset('assets/js/sidebar-close.js'),
             $asset('assets/js/external-link-modal.js'),
-            $asset('assets/js/front-runtime.js'),
         );
 
         $pageJsMap = array(

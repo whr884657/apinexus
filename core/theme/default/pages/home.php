@@ -3,6 +3,23 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 
+// ThemeManager::renderBody() 会注入上下文；此处再做兜底，避免静态分析误报与缺变量
+$siteName = isset($siteName) && (string) $siteName !== ''
+    ? (string) $siteName
+    : SiteContext::siteName();
+$siteDesc = isset($siteDesc)
+    ? (string) $siteDesc
+    : SiteContext::siteDescription();
+$vsBase = isset($vsBase) && (string) $vsBase !== ''
+    ? rtrim((string) $vsBase, '/')
+    : rtrim(vs_base_url(), '/');
+if (!isset($userLoggedIn)) {
+    $userLoggedIn = UserAuth::check();
+}
+if (!isset($authUrl) || (string) $authUrl === '') {
+    $authUrl = !empty($userLoggedIn) ? ($vsBase . '/user/index') : ($vsBase . '/user/login');
+}
+
 $categoryNames = FrontendCategory::nameMap();
 $apiData = FrontendApi::listForTheme();
 $payload = array(
@@ -13,10 +30,13 @@ $apiCount = ApiManager::countApproved();
 $catCount = FrontendCategory::countEnabled();
 $totalCalls = ApiManager::totalCallCount();
 
-$heroTitleSetting = ThemeManager::themeSetting('hero_title', '');
-$heroLeadSetting = ThemeManager::themeSetting('hero_lead', '');
-$heroGlitch = $heroTitleSetting !== '' ? strtoupper($heroTitleSetting) : strtoupper(preg_replace('/\s+/', ' ', $siteName));
-$heroDesc = $heroLeadSetting !== '' ? $heroLeadSetting : ($siteDesc !== '' ? $siteDesc : '面向开发者的免费接口公共服务。无需密钥，低延迟。直接调用，即刻响应。');
+$heroTitleSetting = ThemeManager::themeSettingStr('hero_title', '');
+$heroLeadSetting = ThemeManager::themeSettingStr('hero_lead', '');
+$heroGlitchSource = $heroTitleSetting !== '' ? $heroTitleSetting : $siteName;
+$heroGlitch = strtoupper(preg_replace('/\s+/', ' ', $heroGlitchSource));
+$heroDesc = $heroLeadSetting !== ''
+    ? $heroLeadSetting
+    : ($siteDesc !== '' ? $siteDesc : '面向开发者的免费接口公共服务。无需密钥，低延迟。直接调用，即刻响应。');
 $heroDescHtml = nl2br(vs_e($heroDesc));
 
 $logoSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', $siteName));

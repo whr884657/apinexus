@@ -30,6 +30,12 @@ https://gitee.com/xunjinlu/misc-api/releases/download/v3.28.0/misc-api3.28.0.zip
 7. **SEO**  
    公开页 meta / OG / Twitter；后台与登录 noindex；根目录 `robots.txt`。
 
+8. **运行时间脚本归属（补丁）**  
+   计时 JS 放在各主题 `assets/js/front-runtime.js`，由 footer 按需加载；已删除公共 `assets/js/front-runtime.js`。
+
+9. **默认主题首页**  
+   对 `$siteName` / `$siteDesc` / `$vsBase` / `$authUrl` 做注入兜底，消除缺变量告警。
+
 ## 升级注意
 
 - **有数据库变更**：请在后台执行「数据库结构更新」（删除 `apilog.source`）。

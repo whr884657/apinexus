@@ -1,6 +1,6 @@
 /**
- * 文件：assets/js/front-runtime.js
- * 作用：前台「网站已运行」时间计数（依赖 window.runtimeStartDate）
+ * 文件：core/theme/slate/assets/js/front-runtime.js
+ * 作用：主题二 · 网站运行时间计数（仅本主题使用；依赖 window.runtimeStartDate）
  */
 
 (function () {
@@ -9,6 +9,10 @@
     var startTime = window.runtimeStartDate;
     if (!startTime) {
         return;
+    }
+
+    function pad2(n) {
+        return String(n).padStart(2, '0');
     }
 
     function updateRuntime() {
@@ -33,12 +37,18 @@
         var seconds = Math.floor((diff % (60 * 1000)) / 1000);
 
         var parts = [];
-        if (years > 0) parts.push(years + '年');
-        if (months > 0) parts.push(months + '月');
-        if (days > 0) parts.push(days + '天');
-        parts.push(String(hours).padStart(2, '0') + '时');
-        parts.push(String(minutes).padStart(2, '0') + '分');
-        parts.push(String(seconds).padStart(2, '0') + '秒');
+        if (years > 0) {
+            parts.push(years + '年');
+        }
+        if (months > 0) {
+            parts.push(months + '月');
+        }
+        if (days > 0) {
+            parts.push(days + '天');
+        }
+        parts.push(pad2(hours) + '时');
+        parts.push(pad2(minutes) + '分');
+        parts.push(pad2(seconds) + '秒');
 
         el.textContent = '网站已运行: ' + parts.join('');
     }

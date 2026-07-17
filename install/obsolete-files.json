@@ -7,6 +7,7 @@
         "core/ExternalMedia.php",
         "core/theme/default/pages/api-detail.php",
         "core/theme/slate/pages/api-detail.php",
+        "assets/js/front-runtime.js",
         "本地与代理接口统计识别机制-可移植说明.md",
         "本地API头部注入统计机制-可移植说明.md"
     ]

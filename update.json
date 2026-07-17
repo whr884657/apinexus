@@ -7,7 +7,8 @@
         "忘记密码：未注册邮箱禁止发码；登录同源校验与 CSRF 偶发失败修复",
         "删除 apilog 来源类型字段；主题二卡片去描述空白",
         "系统设置：自定义底栏三栏、运行时间、页脚二维码；双主题联动",
-        "全站 SEO meta / OG / Twitter + robots.txt；赞助页标题样式对齐"
+        "全站 SEO meta / OG / Twitter + robots.txt；赞助页标题样式对齐",
+        "运行时间 JS 改回各主题自有 assets，删除公共 front-runtime；默认主题 home 变量兜底"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
