@@ -4291,13 +4291,17 @@ select.vs-input.vs-select {
 /* ===== v3.23.0：真·分列列表 + 手机全宽右靠 + 分页单行 + 状态按钮高亮 ===== */
 .vs-api-list-panel,
 .vs-api-review-panel,
-#userApiManagePage.vs-panel {
+#userApiManagePage.vs-panel,
+#userTokenPage.vs-panel,
+#adminTokenPage.vs-panel {
     padding: 12px !important;
 }
 
 .vs-api-list-table,
 .vs-api-review-list,
-.vs-user-api-list {
+.vs-user-api-list,
+.vs-user-token-list,
+.vs-admin-token-list {
     border: 1px solid var(--vs-border) !important;
     border-radius: 10px !important;
     background: #fff !important;
@@ -4306,7 +4310,9 @@ select.vs-input.vs-select {
 
 .vs-api-list-table__body,
 .vs-api-review-list,
-.vs-user-api-list .vs-api-list-table__body {
+.vs-user-api-list .vs-api-list-table__body,
+.vs-user-token-list .vs-api-list-table__body,
+.vs-admin-token-list .vs-api-list-table__body {
     display: flex !important;
     flex-direction: column !important;
     gap: 0 !important;
@@ -4595,22 +4601,30 @@ select.vs-input.vs-select {
 @media (max-width: 900px) {
     .vs-api-list-panel,
     .vs-api-review-panel,
-    #userApiManagePage.vs-panel {
+    #userApiManagePage.vs-panel,
+    #userTokenPage.vs-panel,
+    #adminTokenPage.vs-panel {
         padding: 8px 6px !important;
     }
 
     .vs-api-list-table,
     .vs-api-review-list,
-    .vs-user-api-list {
+    .vs-user-api-list,
+    .vs-user-token-list,
+    .vs-admin-token-list {
         border: none !important;
         background: transparent !important;
         border-radius: 0 !important;
         overflow: visible !important;
     }
 
+    /* 须覆盖 .vs-user-api-list .vs-api-list-table__body { gap:0 }，否则手机卡片无间隙 */
     .vs-api-list-table__body,
-    .vs-api-review-list {
-        gap: 8px !important;
+    .vs-api-review-list,
+    .vs-user-api-list .vs-api-list-table__body,
+    .vs-user-token-list .vs-api-list-table__body,
+    .vs-admin-token-list .vs-api-list-table__body {
+        gap: 10px !important;
     }
 
     .vs-api-item {
@@ -4618,7 +4632,7 @@ select.vs-input.vs-select {
         grid-template-columns: 28px minmax(0, 1fr) auto !important;
         grid-template-areas:
             "icon title tags"
-            "endpoint endpoint endpoint"
+            "icon endpoint endpoint"
             "meta meta meta"
             "reason reason reason"
             "actions actions actions" !important;
@@ -4630,7 +4644,11 @@ select.vs-input.vs-select {
         align-items: start !important;
     }
 
-    .vs-api-item__icon { grid-area: icon; }
+    .vs-api-item__icon {
+        grid-area: icon;
+        align-self: start !important;
+        padding-top: 2px !important;
+    }
     .vs-api-item__title { grid-area: title; }
     .vs-api-item__tags {
         grid-area: tags;
@@ -4763,5 +4781,62 @@ select.vs-input.vs-select {
     color: var(--vs-text, #0f172a);
     cursor: pointer;
     user-select: none;
+}
+
+/* ===== v3.29.0：用户/管理员令牌 ===== */
+.vs-token-row__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #0f172a;
+    color: #fff;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+.vs-token-row__icon-mark {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+}
+.vs-token-row__code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: #16a34a;
+    background: transparent;
+    word-break: break-all;
+}
+.vs-token-row.is-token-disabled {
+    opacity: 0.72;
+}
+.vs-token-row.is-token-disabled .vs-token-row__code {
+    color: #94a3b8;
+    text-decoration: line-through;
+}
+.vs-api-tag--status.is-enabled {
+    background: #dcfce7;
+    color: #15803d;
+}
+.vs-user-token-list,
+.vs-admin-token-list {
+    margin-top: 12px;
+}
+
+@media (min-width: 901px) {
+    .vs-token-row {
+        grid-template-columns:
+            32px
+            minmax(100px, 1fr)
+            minmax(200px, 2fr)
+            auto
+            auto
+            auto
+            auto !important;
+        grid-template-areas: "icon title endpoint tags calls author actions" !important;
+    }
+    .vs-token-row .vs-api-item__meta {
+        display: contents;
+    }
 }
 

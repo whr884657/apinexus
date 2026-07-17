@@ -9,7 +9,15 @@
 
     var listEl = document.getElementById('userApiList');
     var emptyEl = document.getElementById('userApiEmpty');
+    var footerEl = document.getElementById('userApiFooter');
+    var statsEl = document.getElementById('userApiStats');
+    var pagerEl = document.getElementById('userApiPager');
+    var pagerNumsEl = document.getElementById('userApiPagerNums');
+    var prevBtn = document.getElementById('userApiPrevBtn');
+    var nextBtn = document.getElementById('userApiNextBtn');
+    var pageSizeEl = document.getElementById('userApiPageSize');
     var addBtn = document.getElementById('userApiAddBtn');
+    var currentPage = 1;
     var formOverlay = document.getElementById('userApiFormOverlay');
     var form = document.getElementById('userApiForm');
     var formTitle = document.getElementById('userApiFormTitle');
@@ -152,12 +160,79 @@
     }
 
     function syncEmpty() {
-        var has = listEl && listEl.querySelectorAll('.vs-user-api-row').length > 0;
+        var rows = listEl ? listEl.querySelectorAll('.vs-user-api-row') : [];
+        var has = rows.length > 0;
         if (emptyEl) {
             emptyEl.hidden = has;
         }
         if (listEl) {
             listEl.hidden = !has;
+        }
+        if (footerEl) {
+            footerEl.hidden = !has;
+        }
+        if (statsEl) {
+            statsEl.textContent = '共 ' + rows.length + ' 个接口';
+        }
+        applyListView();
+    }
+
+    function getPageSize() {
+        var n = pageSizeEl ? parseInt(pageSizeEl.value, 10) : 20;
+        return n > 0 ? n : 20;
+    }
+
+    function renderPagerNums(totalPages) {
+        if (!pagerNumsEl) {
+            return;
+        }
+        pagerNumsEl.innerHTML = '';
+        var maxShow = 7;
+        var start = 1;
+        var end = totalPages;
+        if (totalPages > maxShow) {
+            start = Math.max(1, currentPage - 3);
+            end = Math.min(totalPages, start + maxShow - 1);
+            start = Math.max(1, end - maxShow + 1);
+        }
+        var i;
+        for (i = start; i <= end; i += 1) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'vs-api-pager__num' + (i === currentPage ? ' is-active' : '');
+            btn.textContent = String(i);
+            btn.setAttribute('data-page', String(i));
+            pagerNumsEl.appendChild(btn);
+        }
+    }
+
+    function applyListView() {
+        if (!listEl) {
+            return;
+        }
+        var rows = Array.prototype.slice.call(listEl.querySelectorAll('.vs-user-api-row'));
+        var size = getPageSize();
+        var totalPages = Math.max(1, Math.ceil(rows.length / size) || 1);
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+        if (currentPage < 1) {
+            currentPage = 1;
+        }
+        var start = (currentPage - 1) * size;
+        var end = start + size;
+        rows.forEach(function (row, idx) {
+            row.hidden = !(idx >= start && idx < end);
+        });
+        if (pagerEl) {
+            pagerEl.hidden = rows.length === 0;
+        }
+        renderPagerNums(totalPages);
+        if (prevBtn) {
+            prevBtn.disabled = currentPage <= 1;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = currentPage >= totalPages || rows.length === 0;
         }
     }
 
@@ -579,5 +654,35 @@
     }
 
     setApiType(canLocal ? 0 : 1);
+
+    if (pageSizeEl) {
+        pageSizeEl.addEventListener('change', function () {
+            currentPage = 1;
+            applyListView();
+        });
+    }
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            currentPage -= 1;
+            applyListView();
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            currentPage += 1;
+            applyListView();
+        });
+    }
+    if (pagerNumsEl) {
+        pagerNumsEl.addEventListener('click', function (e) {
+            var btn = e.target.closest('.vs-api-pager__num');
+            if (!btn) {
+                return;
+            }
+            currentPage = parseInt(btn.getAttribute('data-page'), 10) || 1;
+            applyListView();
+        });
+    }
+
     syncEmpty();
 })();
