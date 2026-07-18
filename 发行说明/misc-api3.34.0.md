@@ -8,13 +8,12 @@
 - 收费接口保存时强制密钥为「必须」；开启必须/可选密钥时自动写入 `key` 请求参数
 - 接口请求方式 GET/POST 改为切换按钮（管理员与用户后台）
 - 用户充值中心、积分变动 UI 重做：自定义金额卡片弹窗、二维码中心支付图标、弹窗按钮等高
-- 码支付回调迁入 `core/play/codeplay/`，公网入口为 `codepay.php/notify`（并支持 `/codepay/notify` 伪静态）
+- 码支付回调逻辑在 `core/play/codeplay/`；公网入口为带 `.php` 的 `paynotify.php` / `payreturn.php`（下单时作为 `notify_url`/`return_url` 传入，**不改伪静态**）
 
 ## 升级说明
 
 - 本版无数据库结构变更；在线升级覆盖代码即可
-- 若 Nginx 未走 Apache `.htaccess`，请按 `nginx伪静态配置.md` 增加 `/codepay/notify|return` 规则（也可直接使用 `/codepay.php/notify`）
-- 码支付商户后台请将异步通知地址改为新路径
+- 无需为支付回调调整 Nginx / `.htaccess`；异步通知由本系统下单参数自动携带，不必在码支付商户后台单独配置回调为主路径
 
 ## 下载
 

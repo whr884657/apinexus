@@ -174,8 +174,9 @@ class PointsManager
         $channel = isset($cfg['channel'][$payType]) ? $cfg['channel'][$payType] : '';
 
         $base = rtrim(vs_base_url(), '/');
-        $notify = $base . '/codepay.php/notify';
-        $return = $base . '/user/recharge';
+        // 带 .php 的真实文件，不依赖伪静态；notify_url 在下单时传给码支付，无需在码支付后台配置
+        $notify = $base . '/paynotify.php';
+        $return = $base . '/payreturn.php';
 
         $id = OrderManager::insert(array(
             'orderno' => $orderno,
