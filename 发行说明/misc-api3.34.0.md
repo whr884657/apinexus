@@ -9,6 +9,7 @@
 - 接口请求方式 GET/POST 改为切换按钮（管理员与用户后台）
 - 用户充值中心、积分变动 UI 重做：自定义金额卡片弹窗、二维码中心支付图标、弹窗按钮等高
 - 码支付回调逻辑在 `core/play/codeplay/`；公网入口为带 `.php` 的 `paynotify.php` / `payreturn.php`（下单时作为 `notify_url`/`return_url` 传入，**不改伪静态**）
+- **说明（3.34.1）**：根目录入口已移除，请直访 `core/play/codeplay/notify.php` / `return.php`
 
 ## 升级说明
 

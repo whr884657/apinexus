@@ -28,21 +28,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $tableReady = OrderManager::tableReady();
-vs_admin_layout_start('订单管理', 'orders');
+$headerActions = '';
+if ($tableReady) {
+    ob_start();
+    ?>
+    <div class="vs-finance-head-actions" id="ordersToolbar">
+        <div class="vs-finance-filters" role="group" aria-label="订单状态">
+            <button type="button" class="vs-btn vs-btn--primary vs-finance-filter is-active" data-status="">全部</button>
+            <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="0">待支付</button>
+            <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="1">已完成</button>
+            <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="2">已取消</button>
+        </div>
+        <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="orderRefreshBtn">刷新</button>
+    </div>
+    <?php
+    $headerActions = ob_get_clean();
+}
+
+vs_admin_layout_start('订单管理', 'orders', $headerActions);
 ?>
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先完成系统升级以同步 orders 表。', array('compact' => true)); ?>
 <?php else: ?>
-<div class="vs-finance-toolbar" id="ordersToolbar">
-    <div class="vs-finance-filters" role="group" aria-label="订单状态">
-        <button type="button" class="vs-btn vs-btn--primary vs-finance-filter is-active" data-status="">全部</button>
-        <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="0">待支付</button>
-        <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="1">已完成</button>
-        <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="2">已取消</button>
-    </div>
-    <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="orderRefreshBtn">刷新</button>
-</div>
-
 <div class="vs-panel vs-finance-panel">
     <div class="vs-finance-table" id="ordersListBody">
         <p class="vs-empty vs-finance-empty">加载中…</p>
