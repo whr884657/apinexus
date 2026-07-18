@@ -114,7 +114,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
 | 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 PATH_INFO、多选方法、审核三态、统计、双端 UI、主题二可配统计/配色） |
 | 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号最多 3 个；`SK-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
-| 积分与支付 | `PointsManager` / `OrderManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额） | `admin/finance/*`、`user/recharge`、`user/points`、`pay/notify.php` | 用户中心/后台 | **已完成**（`user.points`、`api.charge/price`、表 `orders`；码支付扫码充值；API 调用扣费） |
+| 积分与支付 | `PointsManager` / `OrderManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额） | `admin/finance/*`、`user/recharge`、`user/points`、`codepay.php` → `core/play/codeplay/*` | 用户中心/后台 | **已完成**（`user.points`、`api.charge/price`、表 `orders`；码支付扫码充值；API 调用扣费） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |

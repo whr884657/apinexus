@@ -128,12 +128,29 @@ class OrderManager
             'paytype'    => (string) (isset($row['paytype']) ? $row['paytype'] : ''),
             'pay_label'  => PayConfig::methodLabel(isset($row['paytype']) ? $row['paytype'] : ''),
             'tradeno'    => (string) (isset($row['tradeno']) ? $row['tradeno'] : ''),
-            'status'     => (int) $row['status'],
+            'status'       => (int) $row['status'],
             'status_label' => self::statusLabel(isset($row['status']) ? $row['status'] : 0),
-            'remark'     => (string) (isset($row['remark']) ? $row['remark'] : ''),
-            'createtime' => (string) (isset($row['createtime']) ? $row['createtime'] : ''),
-            'paytime'    => (string) (isset($row['paytime']) ? $row['paytime'] : ''),
+            'status_class' => self::statusClass(isset($row['status']) ? $row['status'] : 0),
+            'remark'       => (string) (isset($row['remark']) ? $row['remark'] : ''),
+            'createtime'   => (string) (isset($row['createtime']) ? $row['createtime'] : ''),
+            'paytime'      => (string) (isset($row['paytime']) ? $row['paytime'] : ''),
         );
+    }
+
+    /**
+     * @param int $status
+     * @return string
+     */
+    public static function statusClass($status)
+    {
+        $status = (int) $status;
+        if ($status === self::STATUS_DONE) {
+            return 'is-done';
+        }
+        if ($status === self::STATUS_CANCEL) {
+            return 'is-cancel';
+        }
+        return 'is-pending';
     }
 
     /**
@@ -200,7 +217,7 @@ class OrderManager
     }
 
     /**
-     * @param array $opts userid?, status?, page, pagesize
+     * @param array $opts userid?, status?, scope(recharge|ledger)?, page, pagesize
      * @return array{list:array,total:int,page:int,pagesize:int}
      */
     public static function listPaged(array $opts = array())
@@ -209,6 +226,7 @@ class OrderManager
         $pagesize = max(1, min(50, (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20)));
         $userid = isset($opts['userid']) ? (int) $opts['userid'] : 0;
         $status = array_key_exists('status', $opts) ? $opts['status'] : null;
+        $scope = isset($opts['scope']) ? trim((string) $opts['scope']) : '';
 
         $empty = array('list' => array(), 'total' => 0, 'page' => $page, 'pagesize' => $pagesize);
         if (!self::tableReady()) {
@@ -222,6 +240,14 @@ class OrderManager
             if ($userid > 0) {
                 $where[] = 'o.`userid` = ?';
                 $bind[] = $userid;
+            }
+            if ($scope === 'recharge') {
+                $where[] = 'o.`direct` = ? AND o.`kind` = ?';
+                $bind[] = self::DIRECT_INC;
+                $bind[] = self::KIND_RECHARGE;
+            } elseif ($scope === 'ledger') {
+                $where[] = 'o.`status` = ?';
+                $bind[] = self::STATUS_DONE;
             }
             if ($status !== null && $status !== '') {
                 $where[] = 'o.`status` = ?';

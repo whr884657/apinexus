@@ -341,7 +341,7 @@
         var list = [];
         var nodes = fields.methodChecks || [];
         for (var i = 0; i < nodes.length; i++) {
-            if (nodes[i].checked) {
+            if (nodes[i].classList.contains('is-on') || nodes[i].checked) {
                 list.push(String(nodes[i].getAttribute('data-api-method') || '').toUpperCase());
             }
         }
@@ -363,8 +363,120 @@
         var nodes = fields.methodChecks || [];
         for (var j = 0; j < nodes.length; j++) {
             var key = String(nodes[j].getAttribute('data-api-method') || '').toUpperCase();
-            nodes[j].checked = !!set[key];
+            var on = !!set[key];
+            nodes[j].classList.toggle('is-on', on);
+            nodes[j].setAttribute('aria-pressed', on ? 'true' : 'false');
+            if (typeof nodes[j].checked !== 'undefined' && nodes[j].tagName === 'INPUT') {
+                nodes[j].checked = on;
+            }
         }
+    }
+
+    (function bindMethodToggles() {
+        var wrap = document.getElementById('apiListFormMethodChecks');
+        if (!wrap) {
+            return;
+        }
+        wrap.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-api-method]');
+            if (!btn || !wrap.contains(btn)) {
+                return;
+            }
+            e.preventDefault();
+            var on = !btn.classList.contains('is-on');
+            btn.classList.toggle('is-on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            if (getSelectedMethods().length === 0) {
+                btn.classList.add('is-on');
+                btn.setAttribute('aria-pressed', 'true');
+            }
+        });
+    })();
+
+    function syncKeyParam() {
+        if (!window.VsParamsEditor || !fields.paramsEditor || !fields.requireKey) {
+            return;
+        }
+        var need = parseInt(fields.requireKey.value, 10) || 0;
+        var got = window.VsParamsEditor.getValue(fields.paramsEditor);
+        if (got && typeof got === 'object' && got.error) {
+            return;
+        }
+        var rows = [];
+        try {
+            rows = got ? JSON.parse(got) : [];
+        } catch (err) {
+            rows = [];
+        }
+        if (!Array.isArray(rows)) {
+            rows = [];
+        }
+        var keyIdx = -1;
+        for (var i = 0; i < rows.length; i++) {
+            if (String(rows[i].name || '').toLowerCase() === 'key') {
+                keyIdx = i;
+                break;
+            }
+        }
+        var autoDesc = '接口调用密钥';
+        if (need === 0) {
+            if (keyIdx >= 0 && String(rows[keyIdx].description || '') === autoDesc) {
+                rows.splice(keyIdx, 1);
+                window.VsParamsEditor.setValue(fields.paramsEditor, rows.length ? JSON.stringify(rows, null, 4) : '');
+            }
+            return;
+        }
+        var required = need === 1;
+        if (keyIdx >= 0) {
+            rows[keyIdx].required = required;
+            if (!rows[keyIdx].description) {
+                rows[keyIdx].description = autoDesc;
+            }
+            if (!rows[keyIdx].type) {
+                rows[keyIdx].type = 'string';
+            }
+        } else {
+            rows.unshift({
+                name: 'key',
+                type: 'string',
+                required: required,
+                description: autoDesc,
+                example: ''
+            });
+        }
+        window.VsParamsEditor.setValue(fields.paramsEditor, JSON.stringify(rows, null, 4));
+    }
+
+    function syncChargeUi() {
+        if (!fields.charge || !fields.priceRow) {
+            return;
+        }
+        var paid = String(fields.charge.value) === '1';
+        fields.priceRow.hidden = !paid;
+        if (!paid && fields.price) {
+            fields.price.value = '';
+        }
+        if (fields.requireKey) {
+            var optNone = fields.requireKey.querySelector('option[value="0"]');
+            if (optNone) {
+                optNone.disabled = paid;
+            }
+            if (paid && String(fields.requireKey.value) === '0') {
+                fields.requireKey.value = '1';
+                if (window.VSPick && typeof window.VSPick.refresh === 'function') {
+                    window.VSPick.refresh(fields.requireKey);
+                }
+            }
+        }
+        syncKeyParam();
+    }
+
+    if (fields.charge) {
+        fields.charge.addEventListener('change', syncChargeUi);
+        syncChargeUi();
+    }
+    if (fields.requireKey) {
+        fields.requireKey.addEventListener('change', syncKeyParam);
     }
 
     function callUrlOf(api) {
@@ -382,22 +494,6 @@
 
     function typeTagClass(badge) {
         return badge === '代理' ? 'vs-api-tag--proxy' : 'vs-api-tag--local';
-    }
-
-    function syncChargeUi() {
-        if (!fields.charge || !fields.priceRow) {
-            return;
-        }
-        var paid = String(fields.charge.value) === '1';
-        fields.priceRow.hidden = !paid;
-        if (!paid && fields.price) {
-            fields.price.value = '';
-        }
-    }
-
-    if (fields.charge) {
-        fields.charge.addEventListener('change', syncChargeUi);
-        syncChargeUi();
     }
 
     function buildTagsHtml(api) {
@@ -850,6 +946,7 @@
         if (window.VsParamsEditor && fields.paramsEditor) {
             window.VsParamsEditor.setValue(fields.paramsEditor, api.params || '');
         }
+        syncKeyParam();
         if (fields.response) {
             fields.response.value = api.response || '';
         }

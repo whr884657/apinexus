@@ -372,11 +372,11 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     </div>
                     <div>
                         <label class="vs-label">请求方式 <span class="vs-req">*</span></label>
-                        <div class="vs-method-checks" id="apiListFormMethodChecks" role="group" aria-label="请求方式">
-                            <label class="vs-check"><input type="checkbox" name="method[]" value="GET" data-api-method="GET" checked> GET</label>
-                            <label class="vs-check"><input type="checkbox" name="method[]" value="POST" data-api-method="POST"> POST</label>
+                        <div class="vs-method-toggles" id="apiListFormMethodChecks" role="group" aria-label="请求方式">
+                            <button type="button" class="vs-method-toggle is-on" data-api-method="GET" aria-pressed="true">GET</button>
+                            <button type="button" class="vs-method-toggle" data-api-method="POST" aria-pressed="false">POST</button>
                         </div>
-                        <p class="vs-form-hint">可同时勾选 GET 与 POST。</p>
+                        <p class="vs-form-hint">可同时选择 GET 与 POST。</p>
                     </div>
                 </div>
                 <div class="vs-form-row">

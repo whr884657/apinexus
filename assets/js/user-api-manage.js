@@ -277,7 +277,9 @@
     function getSelectedMethods() {
         var list = [], nodes = document.querySelectorAll('#userApiFormMethodChecks [data-api-method]');
         for (var i = 0; i < nodes.length; i++) {
-            if (nodes[i].checked) list.push(String(nodes[i].getAttribute('data-api-method') || '').toUpperCase());
+            if (nodes[i].classList.contains('is-on') || nodes[i].checked) {
+                list.push(String(nodes[i].getAttribute('data-api-method') || '').toUpperCase());
+            }
         }
         return list;
     }
@@ -291,9 +293,30 @@
         var nodes = document.querySelectorAll('#userApiFormMethodChecks [data-api-method]');
         for (var j = 0; j < nodes.length; j++) {
             var key = String(nodes[j].getAttribute('data-api-method') || '').toUpperCase();
-            nodes[j].checked = !!set[key];
+            var on = !!set[key];
+            nodes[j].classList.toggle('is-on', on);
+            nodes[j].setAttribute('aria-pressed', on ? 'true' : 'false');
+            if (nodes[j].tagName === 'INPUT') {
+                nodes[j].checked = on;
+            }
         }
     }
+    (function bindUserMethodToggles() {
+        var wrap = document.getElementById('userApiFormMethodChecks');
+        if (!wrap) return;
+        wrap.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-api-method]');
+            if (!btn || !wrap.contains(btn)) return;
+            e.preventDefault();
+            var on = !btn.classList.contains('is-on');
+            btn.classList.toggle('is-on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            if (getSelectedMethods().length === 0) {
+                btn.classList.add('is-on');
+                btn.setAttribute('aria-pressed', 'true');
+            }
+        });
+    })();
     function methodSlug(method) {
         var m = String(method || 'GET').toLowerCase().replace(/[^a-z0-9]+/g, '');
         return m || 'get';
@@ -320,10 +343,63 @@
         window.VsParamsEditor.mount(paramsEditor, { hiddenId: 'userApiFormParams' });
     }
 
+    function syncUserKeyParam() {
+        var needEl = document.getElementById('userApiFormNeedkey');
+        if (!window.VsParamsEditor || !paramsEditor || !needEl) {
+            return;
+        }
+        var need = parseInt(needEl.value, 10) || 0;
+        var got = window.VsParamsEditor.getValue(paramsEditor);
+        if (got && typeof got === 'object' && got.error) {
+            return;
+        }
+        var rows = [];
+        try {
+            rows = got ? JSON.parse(got) : [];
+        } catch (err) {
+            rows = [];
+        }
+        if (!Array.isArray(rows)) {
+            rows = [];
+        }
+        var keyIdx = -1;
+        for (var i = 0; i < rows.length; i++) {
+            if (String(rows[i].name || '').toLowerCase() === 'key') {
+                keyIdx = i;
+                break;
+            }
+        }
+        var autoDesc = '接口调用密钥';
+        if (need === 0) {
+            if (keyIdx >= 0 && String(rows[keyIdx].description || '') === autoDesc) {
+                rows.splice(keyIdx, 1);
+                window.VsParamsEditor.setValue(paramsEditor, rows.length ? JSON.stringify(rows, null, 4) : '');
+            }
+            return;
+        }
+        var required = need === 1;
+        if (keyIdx >= 0) {
+            rows[keyIdx].required = required;
+            if (!rows[keyIdx].description) {
+                rows[keyIdx].description = autoDesc;
+            }
+        } else {
+            rows.unshift({
+                name: 'key',
+                type: 'string',
+                required: required,
+                description: autoDesc,
+                example: ''
+            });
+        }
+        window.VsParamsEditor.setValue(paramsEditor, JSON.stringify(rows, null, 4));
+    }
+
     function syncUserChargeUi() {
         var charge = document.getElementById('userApiFormCharge');
         var row = document.getElementById('userApiPriceRow');
         var price = document.getElementById('userApiFormPrice');
+        var needEl = document.getElementById('userApiFormNeedkey');
         if (!charge || !row) {
             return;
         }
@@ -332,11 +408,28 @@
         if (!paid && price) {
             price.value = '';
         }
+        if (needEl) {
+            var optNone = needEl.querySelector('option[value="0"]');
+            if (optNone) {
+                optNone.disabled = paid;
+            }
+            if (paid && String(needEl.value) === '0') {
+                needEl.value = '1';
+                if (window.VSPick && typeof window.VSPick.refresh === 'function') {
+                    window.VSPick.refresh(needEl);
+                }
+            }
+        }
+        syncUserKeyParam();
     }
     var chargeEl = document.getElementById('userApiFormCharge');
     if (chargeEl) {
         chargeEl.addEventListener('change', syncUserChargeUi);
         syncUserChargeUi();
+    }
+    var needkeyEl = document.getElementById('userApiFormNeedkey');
+    if (needkeyEl) {
+        needkeyEl.addEventListener('change', syncUserKeyParam);
     }
 
     function buildStatusButtons(api) {
@@ -508,6 +601,7 @@
         if (window.VsParamsEditor && paramsEditor) {
             window.VsParamsEditor.setValue(paramsEditor, api.params || '');
         }
+        syncUserKeyParam();
         setSelectedMethods(api.methods || api.method || 'GET');
         if (window.VSPick) {
             ['userApiFormNeedkey', 'userApiFormCategory', 'userApiFormCharge'].forEach(function (id) {

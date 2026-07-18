@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.33.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.34.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -27,6 +27,7 @@
 - **API 管理（已实现）**：后台接口列表与分类；接口审核（待审核/通过/不通过，可选拒绝原因）；用户中心开发者投稿与邮件通知
 - **调用统计（v3.18+）**：本地脚本头 ≤3 行 `ApiStats::hit()`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`（含 `iploc` 预留）
 - **用户令牌（v3.29+）**：表 `apikey`；用户中心与管理员后台均可管理；格式 `SK-`+32 位；每账号最多 3 个；本地/代理调用已校验密钥并累计次数
+- **积分计费与充值（v3.33+ / v3.34）**：接口收费扣积分；用户充值中心扫码支付；订单管理与积分变动分栏；码支付回调 `codepay.php`
 
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
@@ -150,6 +151,7 @@ misc-api/
 ├── 404.php                     # 全站 404（含安全法律提示）
 ├── index.php                   # 前台首页（主题驱动）
 ├── apis.php                    # 全部接口列表 + 代理网关（对外 /apis/{短码}，内记统计）
+├── codepay.php                 # 码支付公网入口（PATH_INFO：/notify|/return → core/play/codeplay）
 ├── api/                        # 本地业务接口脚本（头部注入 ApiStats::hit）+ 统计代码使用说明.md
 │   └── yiyan/                  # 示例：随机一言
 ├── articles.php                # 前台 · 文章
@@ -168,7 +170,7 @@ misc-api/
 │   │   ├── categories.php      # 接口分类
 │   │   └── review.php / docs.php / feedback.php  # 占位
 │   ├── content/                # 内容运营（占位）
-│   ├── finance/                # 交易财务（占位）
+│   ├── finance/                # 交易财务（支付配置/订单/积分）
 │   ├── system/                 # 系统管理扩展（日志等）
 │   ├── index.php               # 控制台
 │   ├── data-screen.php         # 数据大屏（占位）
@@ -287,6 +289,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.34.0（2026-07-18）
+
+- 订单管理与积分变动拆分为独立页面；状态彩色标识；列表支持每页条数
+- 支付配置：图标支付方式按钮 + 套餐可视化编辑；去掉重复页标题
+- 收费接口强制需要密钥；GET/POST 切换按钮；密钥参数自动写入
+- 用户充值中心 / 积分变动 UI 重做；码支付回调迁入 `core/play/codeplay`，入口 `codepay.php`
 
 ### v3.33.0（2026-07-18）
 

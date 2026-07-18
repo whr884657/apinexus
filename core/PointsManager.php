@@ -173,8 +173,8 @@ class PointsManager
         $cfg = PayConfig::all();
         $channel = isset($cfg['channel'][$payType]) ? $cfg['channel'][$payType] : '';
 
-        $base = vs_base_url();
-        $notify = $base . '/pay/notify.php';
+        $base = rtrim(vs_base_url(), '/');
+        $notify = $base . '/codepay.php/notify';
         $return = $base . '/user/recharge';
 
         $id = OrderManager::insert(array(

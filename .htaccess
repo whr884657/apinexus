@@ -7,6 +7,9 @@
 
     # /apis/{slug} -> apis.php?_vs_slug= (no {n,m} quantifiers)
     RewriteRule ^apis/([a-z0-9]+)/?$ apis.php?_vs_slug=$1 [QSA,L]
+
+    # /codepay/notify|return -> codepay.php PATH_INFO（码支付回调，逻辑在 core/play/codeplay）
+    RewriteRule ^codepay/(notify|return)/?$ codepay.php/$1 [QSA,L]
 </IfModule>
 
 ErrorDocument 404 /404.php
