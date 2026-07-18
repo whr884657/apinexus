@@ -209,6 +209,35 @@ class ApiStats
     }
 
     /**
+     * 收费接口：须有效密钥且余额足够
+     *
+     * @param array $row
+     * @return true|array{http:int,msg:string}
+     */
+    private static function evaluateBilling(array $row)
+    {
+        if (!ApiManager::hasChargeColumns()) {
+            return true;
+        }
+        $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
+        $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
+        if ($charge !== ApiManager::CHARGE_PAID || $price <= 0) {
+            return true;
+        }
+        if (empty(self::$keyCtx['valid']) || empty(self::$keyCtx['userid'])) {
+            return array('http' => 401, 'msg' => '收费接口须提供有效密钥');
+        }
+        if (!PointsManager::hasPointsColumn()) {
+            return array('http' => 503, 'msg' => '积分系统暂不可用');
+        }
+        $bal = PointsManager::balance((int) self::$keyCtx['userid']);
+        if ($bal + 0.0000001 < $price) {
+            return array('http' => 402, 'msg' => '积分余额不足');
+        }
+        return true;
+    }
+
+    /**
      * 按接口 needkey 识别并校验请求中的密钥
      *
      * @param array $row
@@ -227,11 +256,20 @@ class ApiStats
             'valid'  => false,
         );
 
+        // 收费接口强制视为需要密钥
+        if (ApiManager::hasChargeColumns()) {
+            $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
+            $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
+            if ($charge === ApiManager::CHARGE_PAID && $price > 0 && $need === ApiManager::KEY_NONE) {
+                $need = ApiManager::KEY_REQUIRED;
+            }
+        }
+
         if (!$provided) {
             if ($need === ApiManager::KEY_REQUIRED) {
                 return array('http' => 401, 'msg' => '请提供调用密钥');
             }
-            return true;
+            return self::evaluateBilling($row);
         }
 
         if (!ApiKeyManager::tableReady()) {
@@ -252,7 +290,7 @@ class ApiStats
             'userid' => (int) $keyRow['userid'],
             'valid'  => true,
         );
-        return true;
+        return self::evaluateBilling($row);
     }
 
     /**
@@ -266,6 +304,28 @@ class ApiStats
         $id = (int) $row['id'];
         if ($id <= 0) {
             return;
+        }
+
+        $charged = 0;
+        $cost = 0.0;
+        if ($ok && ApiManager::hasChargeColumns()) {
+            $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
+            $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
+            if ($charge === ApiManager::CHARGE_PAID && $price > 0
+                && !empty(self::$keyCtx['valid']) && !empty(self::$keyCtx['userid'])) {
+                $deduct = PointsManager::deductApiCall(
+                    (int) self::$keyCtx['userid'],
+                    $price,
+                    $id,
+                    (int) self::$keyCtx['keyid'],
+                    '调用接口：' . (isset($row['name']) ? (string) $row['name'] : ('#' . $id))
+                );
+                if (!$deduct['ok']) {
+                    self::jsonExit(402, isset($deduct['msg']) ? $deduct['msg'] : '积分余额不足');
+                }
+                $charged = 1;
+                $cost = $price;
+            }
         }
 
         ApiManager::incrementCallCount($id, 1);
@@ -293,7 +353,7 @@ class ApiStats
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?,
-                ?, ?, 0, 0, NOW()
+                ?, ?, ?, ?, NOW()
             )'
         );
         $stmt->execute(array(
@@ -314,6 +374,8 @@ class ApiStats
             $ctx['ua'],
             $ok ? 1 : 0,
             (int) $http,
+            $charged,
+            $cost,
         ));
     }
 

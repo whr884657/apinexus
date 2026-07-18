@@ -53,6 +53,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
     }
 
+    if ($action === 'adjust_points') {
+        if (!PointsManager::hasPointsColumn() || !OrderManager::tableReady()) {
+            AjaxResponse::error('积分系统未就绪');
+        }
+        $delta = isset($_POST['delta']) ? (float) $_POST['delta'] : 0;
+        $remark = isset($_POST['remark']) ? trim((string) $_POST['remark']) : '';
+        $result = PointsManager::adminAdjust($userId, $delta, $remark);
+        if (!$result['ok']) {
+            AjaxResponse::error($result['msg']);
+        }
+        AjaxResponse::success('积分已调整', array(
+            'action'  => 'adjust_points',
+            'user_id' => $userId,
+            'points'  => PayConfig::fmtPoints($result['balance']),
+        ));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
@@ -170,6 +187,11 @@ function vs_users_action_group($userId, $active, array $row)
     } else {
         $html .= vs_users_role_button($userId, UserRole::ROLE_DEVELOPER, '设为开发者', 'vs-btn--pill-primary');
     }
+    if (class_exists('PointsManager') && PointsManager::hasPointsColumn()) {
+        $html .= '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-secondary vs-user-action-btn"'
+            . ' data-user-action="adjust_points" data-user-id="' . (int) $userId . '"'
+            . ' data-user-points="' . vs_e(PayConfig::fmtPoints(isset($row['points']) ? $row['points'] : 0)) . '">积分</button>';
+    }
     $html .= vs_users_action_button($userId, 'delete', '删除', 'vs-btn--pill-danger', true);
     $html .= '</div>';
     return $html;
@@ -221,6 +243,9 @@ vs_admin_layout_start('用户管理', 'users');
                         <th>用户</th>
                         <th>邮箱</th>
                         <th>身份</th>
+                        <?php if (PointsManager::hasPointsColumn()): ?>
+                        <th>积分</th>
+                        <?php endif; ?>
                         <th>第三方绑定</th>
                         <th>注册时间</th>
                         <th>最后登录</th>
@@ -254,6 +279,9 @@ vs_admin_layout_start('用户管理', 'users');
                             </td>
                             <td><?php echo vs_e($row['email']); ?></td>
                             <td class="vs-users-role-cell"><?php echo vs_users_role_badge($row); ?></td>
+                            <?php if (PointsManager::hasPointsColumn()): ?>
+                            <td class="vs-users-points-cell" data-field="points"><?php echo vs_e(PayConfig::fmtPoints(isset($row['points']) ? $row['points'] : 0)); ?></td>
+                            <?php endif; ?>
                             <td><?php echo vs_users_oauth_badges($row); ?></td>
                             <td><?php echo vs_e($row['createtime']); ?></td>
                             <td><?php echo vs_e(vs_users_format_time(isset($row['lastlogin']) ? $row['lastlogin'] : null)); ?></td>
@@ -296,6 +324,9 @@ vs_admin_layout_start('用户管理', 'users');
                                 </div>
                             </div>
                             <div class="vs-users-meta vs-user-card__email"><?php echo vs_e($row['email']); ?></div>
+                            <?php if (PointsManager::hasPointsColumn()): ?>
+                            <div class="vs-users-meta">积分：<span data-field="points"><?php echo vs_e(PayConfig::fmtPoints(isset($row['points']) ? $row['points'] : 0)); ?></span></div>
+                            <?php endif; ?>
                             <div class="vs-user-card__last-login">
                                 最后登录：<?php echo vs_e(vs_users_format_time(isset($row['lastlogin']) ? $row['lastlogin'] : null)); ?>
                             </div>
@@ -312,6 +343,11 @@ vs_admin_layout_start('用户管理', 'users');
                         <?php else: ?>
                             <?php echo vs_users_role_button($uid, UserRole::ROLE_DEVELOPER, '设为开发者', 'vs-btn--pill-primary'); ?>
                         <?php endif; ?>
+                        <?php if (PointsManager::hasPointsColumn()): ?>
+                            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-secondary vs-user-action-btn"
+                                    data-user-action="adjust_points" data-user-id="<?php echo $uid; ?>"
+                                    data-user-points="<?php echo vs_e(PayConfig::fmtPoints(isset($row['points']) ? $row['points'] : 0)); ?>">积分</button>
+                        <?php endif; ?>
                         <?php echo vs_users_action_button($uid, 'delete', '删除', 'vs-btn--pill-danger', true); ?>
                     </div>
                 </article>
@@ -319,5 +355,35 @@ vs_admin_layout_start('用户管理', 'users');
         </div>
     <?php endif; ?>
 </div>
+
+<?php if (PointsManager::hasPointsColumn()): ?>
+<div class="vs-overlay vs-overlay--form" id="usersPointsOverlay" hidden aria-hidden="true">
+    <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
+    <div class="vs-overlay__panel" role="dialog" aria-modal="true" aria-labelledby="usersPointsTitle">
+        <div class="vs-overlay__handle" aria-hidden="true"></div>
+        <header class="vs-overlay__head">
+            <h3 class="vs-overlay__title" id="usersPointsTitle">调整积分</h3>
+            <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
+        </header>
+        <form class="vs-overlay__body" id="usersPointsForm" method="post" data-ajax="1">
+            <input type="hidden" name="action" value="adjust_points">
+            <input type="hidden" name="user_id" id="usersPointsUserId" value="">
+            <p class="vs-form-hint" id="usersPointsHint">当前余额：0</p>
+            <div class="vs-form-row">
+                <label class="vs-label" for="usersPointsDelta">变动数量</label>
+                <input type="number" class="vs-input" id="usersPointsDelta" name="delta" step="0.0001" required placeholder="正数加款，负数扣款">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label" for="usersPointsRemark">备注</label>
+                <input type="text" class="vs-input" id="usersPointsRemark" name="remark" maxlength="100" placeholder="可选">
+            </div>
+        </form>
+        <footer class="vs-overlay__foot">
+            <button type="button" class="vs-btn vs-btn--outline" data-overlay-close="1">取消</button>
+            <button type="submit" form="usersPointsForm" class="vs-btn vs-btn--primary">确定</button>
+        </footer>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php vs_admin_layout_end(array('users.js')); ?>

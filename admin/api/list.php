@@ -25,6 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'doc'         => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
             'aidoc'       => isset($_POST['aidoc']) ? (string) $_POST['aidoc'] : '',
             'needkey'     => isset($_POST['needkey']) ? (int) $_POST['needkey'] : 0,
+            'charge'      => isset($_POST['charge']) ? (int) $_POST['charge'] : 0,
+            'price'       => isset($_POST['price']) ? $_POST['price'] : 0,
             'status'      => isset($_POST['status']) ? $_POST['status'] : ApiManager::STATUS_NORMAL,
             'icon'        => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'    => isset($_POST['category']) ? (string) $_POST['category'] : '',
@@ -214,7 +216,15 @@ function vs_render_api_list_item(array $row)
             <?php if ($category !== ''): ?>
                 <span class="vs-api-tag vs-api-tag--cat" data-field="category"><?php echo vs_e($category); ?></span>
             <?php endif; ?>
-            <span class="vs-api-tag vs-api-tag--free">免费</span>
+            <span class="vs-api-tag vs-api-tag--free" data-field="charge_tag"><?php
+                $charge = isset($api['charge']) ? (int) $api['charge'] : 0;
+                $price = isset($api['price']) ? (string) $api['price'] : '0';
+                if ($charge === 1 && (float) $price > 0) {
+                    echo vs_e('每次 ' . $price . ' 积分');
+                } else {
+                    echo '免费';
+                }
+            ?></span>
             <?php if ($keyBadge !== ''): ?>
                 <span class="vs-api-tag vs-api-tag--key" data-field="needkey_badge"><?php echo vs_e($keyBadge); ?></span>
             <?php endif; ?>
@@ -414,7 +424,20 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                         </select>
                     </div>
                 </div>
-                <p class="vs-form-hint">「完全不需要」与「可选」调用规则相同；选「完全不需要」时前台通常不展示密钥填写框，「可选」会展示可空输入。本页发布的接口默认审核通过。</p>
+                <div class="vs-form-row vs-form-row--2">
+                    <div>
+                        <label class="vs-label" for="apiListFormCharge">是否收费</label>
+                        <select class="vs-input vs-select" id="apiListFormCharge" name="charge" data-vs-pick>
+                            <option value="0">免费</option>
+                            <option value="1">收费</option>
+                        </select>
+                    </div>
+                    <div id="apiListPriceRow" hidden>
+                        <label class="vs-label" for="apiListFormPrice">每次扣除积分</label>
+                        <input type="number" class="vs-input" id="apiListFormPrice" name="price" min="0.0001" step="0.0001" placeholder="如 0.1 或 1">
+                    </div>
+                </div>
+                <p class="vs-form-hint">「完全不需要」与「可选」调用规则相同；选「完全不需要」时前台通常不展示密钥填写框，「可选」会展示可空输入。本页发布的接口默认审核通过。收费接口调用时须提供有效密钥且余额足够。</p>
                 <div class="vs-form-row">
                     <label class="vs-label">接口图标</label>
                     <div class="vs-api-cat-icon-picker" id="apiListIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>

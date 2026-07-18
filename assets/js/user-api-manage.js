@@ -320,6 +320,25 @@
         window.VsParamsEditor.mount(paramsEditor, { hiddenId: 'userApiFormParams' });
     }
 
+    function syncUserChargeUi() {
+        var charge = document.getElementById('userApiFormCharge');
+        var row = document.getElementById('userApiPriceRow');
+        var price = document.getElementById('userApiFormPrice');
+        if (!charge || !row) {
+            return;
+        }
+        var paid = String(charge.value) === '1';
+        row.hidden = !paid;
+        if (!paid && price) {
+            price.value = '';
+        }
+    }
+    var chargeEl = document.getElementById('userApiFormCharge');
+    if (chargeEl) {
+        chargeEl.addEventListener('change', syncUserChargeUi);
+        syncUserChargeUi();
+    }
+
     function buildStatusButtons(api) {
         var id = parseInt(api.id, 10) || 0;
         var status = parseInt(api.status, 10);
@@ -365,7 +384,9 @@
         if (category) {
             html += '<span class="vs-api-tag vs-api-tag--cat">' + escapeHtml(category) + '</span>';
         }
-        html += '<span class="vs-api-tag vs-api-tag--free">免费</span>';
+        html += '<span class="vs-api-tag vs-api-tag--free" data-field="charge_tag">'
+            + escapeHtml((parseInt(api.charge, 10) === 1 && parseFloat(api.price) > 0) ? ('每次 ' + api.price + ' 积分') : '免费')
+            + '</span>';
         if (keyBadge) {
             html += '<span class="vs-api-tag vs-api-tag--key">' + escapeHtml(keyBadge) + '</span>';
         }
@@ -446,6 +467,7 @@
         if (window.VsParamsEditor && paramsEditor) {
             window.VsParamsEditor.setValue(paramsEditor, '');
         }
+        syncUserChargeUi();
     }
 
     function fillForm(api) {
@@ -465,6 +487,8 @@
             userApiFormName: api.name,
             userApiFormDesc: api.description,
             userApiFormNeedkey: String(api.needkey != null ? api.needkey : 0),
+            userApiFormCharge: String(parseInt(api.charge, 10) === 1 ? 1 : 0),
+            userApiFormPrice: (parseInt(api.charge, 10) === 1 && api.price) ? String(api.price) : '',
             userApiFormEndpoint: apiType === 0 ? (api.endpoint || '') : '',
             userApiFormTargetUrl: api.targeturl || '',
             userApiFormProxySlug: api.proxyslug || '',
@@ -480,12 +504,13 @@
                 el.value = map[id] != null ? map[id] : '';
             }
         });
+        syncUserChargeUi();
         if (window.VsParamsEditor && paramsEditor) {
             window.VsParamsEditor.setValue(paramsEditor, api.params || '');
         }
         setSelectedMethods(api.methods || api.method || 'GET');
         if (window.VSPick) {
-            ['userApiFormNeedkey', 'userApiFormCategory'].forEach(function (id) {
+            ['userApiFormNeedkey', 'userApiFormCategory', 'userApiFormCharge'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -534,6 +559,8 @@
             proxyslug: slugInput ? slugInput.value : '',
             method: getSelectedMethods().join(','),
             needkey: (document.getElementById('userApiFormNeedkey') || {}).value || '0',
+            charge: (document.getElementById('userApiFormCharge') || {}).value || '0',
+            price: (document.getElementById('userApiFormPrice') || {}).value || '',
             category: (document.getElementById('userApiFormCategory') || {}).value || '',
             params: paramsVal,
             response: (document.getElementById('userApiFormResponse') || {}).value || '',

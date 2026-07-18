@@ -44,6 +44,10 @@
         } else {
             container.appendChild(createActionBtn(userId, 'set_role', '设为开发者', 'vs-btn--pill-primary', false, 'developer'));
         }
+        if (document.getElementById('usersPointsOverlay')) {
+            var ptsBtn = createActionBtn(userId, 'adjust_points', '积分', 'vs-btn--pill-secondary');
+            container.appendChild(ptsBtn);
+        }
         container.appendChild(createActionBtn(userId, 'delete', '删除', 'vs-btn--pill-danger', true));
     }
 
@@ -246,6 +250,36 @@
             return;
         }
 
+        if (action === 'adjust_points') {
+            var overlay = document.getElementById('usersPointsOverlay');
+            var form = document.getElementById('usersPointsForm');
+            var uidEl = document.getElementById('usersPointsUserId');
+            var hint = document.getElementById('usersPointsHint');
+            var delta = document.getElementById('usersPointsDelta');
+            var remark = document.getElementById('usersPointsRemark');
+            if (!overlay || !form || !uidEl) {
+                return;
+            }
+            uidEl.value = userId;
+            if (hint) {
+                hint.textContent = '当前余额：' + (btn.getAttribute('data-user-points') || '0');
+            }
+            if (delta) {
+                delta.value = '';
+            }
+            if (remark) {
+                remark.value = '';
+            }
+            overlay.hidden = false;
+            overlay.setAttribute('aria-hidden', 'false');
+            overlay.classList.add('is-open');
+            document.body.classList.add('is-overlay-open');
+            if (delta) {
+                delta.focus();
+            }
+            return;
+        }
+
         function run() {
             btn.disabled = true;
             postAction(userId, action, role)
@@ -279,6 +313,43 @@
 
         run();
     });
+
+    (function bindPointsOverlay() {
+        var overlay = document.getElementById('usersPointsOverlay');
+        var form = document.getElementById('usersPointsForm');
+        if (!overlay || !form) {
+            return;
+        }
+        function close() {
+            overlay.hidden = true;
+            overlay.setAttribute('aria-hidden', 'true');
+            overlay.classList.remove('is-open');
+            document.body.classList.remove('is-overlay-open');
+        }
+        overlay.querySelectorAll('[data-overlay-close]').forEach(function (el) {
+            el.addEventListener('click', close);
+        });
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            window.VS.postForm(form).then(function (data) {
+                if (!data || data.code !== 1) {
+                    window.VS.showMessage((data && data.msg) || '调整失败', 'error');
+                    return;
+                }
+                var uid = document.getElementById('usersPointsUserId').value;
+                document.querySelectorAll('[data-user-row="' + uid + '"] [data-field="points"]').forEach(function (el) {
+                    el.textContent = data.points || '0';
+                });
+                document.querySelectorAll('[data-user-action="adjust_points"][data-user-id="' + uid + '"]').forEach(function (el) {
+                    el.setAttribute('data-user-points', data.points || '0');
+                });
+                window.VS.showMessage(data.msg || '已调整', 'success');
+                close();
+            }).catch(function () {
+                window.VS.showMessage('网络异常', 'error');
+            });
+        });
+    })();
 
     bindSearch();
 })();

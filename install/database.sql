@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `giteeid` varchar(64) NOT NULL DEFAULT '' COMMENT 'Gitee登录用户ID',
     `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '账号状态：0禁用 1启用',
     `role` varchar(16) NOT NULL DEFAULT 'user' COMMENT '用户角色：user普通用户 developer开发者',
+    `points` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '积分余额',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     `lastlogin` datetime DEFAULT NULL COMMENT '最后登录时间',
     PRIMARY KEY (`id`),
@@ -78,7 +79,14 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('footer_qr1_url', ''),
 ('footer_qr2_enabled', '0'),
 ('footer_qr2_name', ''),
-('footer_qr2_url', '');
+('footer_qr2_url', ''),
+('pay_url', ''),
+('pay_pid', ''),
+('pay_key', ''),
+('pay_channel', '{"alipay":"","wxpay":"","qqpay":""}'),
+('pay_methods', '["alipay","wxpay"]'),
+('pay_rate', '1000'),
+('pay_packages', '[{"id":"base1","name":"体验包","money":"1.00","points":"1000","hot":0},{"id":"base10","name":"常用包","money":"10.00","points":"11000","hot":1},{"id":"base50","name":"超值包","money":"50.00","points":"60000","hot":0}]');
 
 -- 邮箱验证码发信频率限制记录
 CREATE TABLE IF NOT EXISTS `{prefix}mailrate` (
@@ -105,6 +113,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}api` (
     `aidoc` mediumtext COMMENT 'AI文档',
     `calls` bigint unsigned NOT NULL DEFAULT 0 COMMENT '累计请求次数',
     `needkey` tinyint(1) NOT NULL DEFAULT 0 COMMENT '密钥要求：0不需要 1必须 2可选',
+    `charge` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否收费：0免费 1收费',
+    `price` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '每次调用扣除积分（收费时有效）',
     `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '接口状态：0正常 1禁用 2维护',
     `audit` tinyint(1) NOT NULL DEFAULT 1 COMMENT '审核状态：0待审核 1通过 2不通过（管理员发布默认1）',
     `rejectreason` varchar(500) NOT NULL DEFAULT '' COMMENT '审核不通过原因（管理员可选填写）',
@@ -142,8 +152,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}apilog` (
     `ua` varchar(500) NOT NULL DEFAULT '' COMMENT 'User-Agent',
     `ok` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否成功：0失败 1成功',
     `httpcode` smallint NOT NULL DEFAULT 200 COMMENT 'HTTP状态码',
-    `charged` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否扣费：0否 1是（预留）',
-    `cost` int NOT NULL DEFAULT 0 COMMENT '扣费积分数（预留）',
+    `charged` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否扣费：0否 1是',
+    `cost` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '本次扣费积分数',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '调用时间',
     PRIMARY KEY (`id`),
     KEY `idx_apiid` (`apiid`),
@@ -181,3 +191,30 @@ CREATE TABLE IF NOT EXISTS `{prefix}category` (
     UNIQUE KEY `uk_name` (`name`),
     KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API接口分类表';
+
+-- 积分与支付订单
+CREATE TABLE IF NOT EXISTS `{prefix}orders` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `orderno` varchar(64) NOT NULL COMMENT '订单号（全局唯一）',
+    `userid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联用户ID（对应user.id）',
+    `direct` tinyint(1) NOT NULL COMMENT '方向：0减少 1增加',
+    `kind` tinyint(1) NOT NULL COMMENT '类型：增加时0用户充值1管理员加款；减少时0API调用1管理员扣款2AI调用(预留)',
+    `amount` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '变动积分（正数）',
+    `balance` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '变动后积分余额',
+    `money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '实付金额（元，充值订单）',
+    `apiid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联接口ID（API扣费时）',
+    `keyid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联密钥ID（API扣费时）',
+    `paytype` varchar(16) NOT NULL DEFAULT '' COMMENT '支付方式：alipay/wxpay/qqpay',
+    `tradeno` varchar(64) NOT NULL DEFAULT '' COMMENT '上游平台订单号',
+    `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '订单状态：0待支付 1已完成 2已取消',
+    `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '备注说明',
+    `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `paytime` datetime DEFAULT NULL COMMENT '支付完成时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_orderno` (`orderno`),
+    KEY `idx_userid` (`userid`),
+    KEY `idx_direct` (`direct`),
+    KEY `idx_kind` (`kind`),
+    KEY `idx_status` (`status`),
+    KEY `idx_createtime` (`createtime`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='积分与支付订单';

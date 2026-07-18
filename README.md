@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.32.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.33.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -287,6 +287,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.33.0（2026-07-18）
+
+**类型：** 大版本（积分计费 + 订单 + 码支付）
+
+- 接口收费开关与单次扣费；调用扣积分并写订单
+- 用户积分余额、充值中心扫码支付、管理员加减款
+- 支付配置（码支付网关 / 渠道 / 套餐 / 兑换比例）
+- 须执行数据库结构更新
 
 ### v3.32.0（2026-07-18）
 

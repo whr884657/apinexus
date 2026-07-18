@@ -39,6 +39,11 @@ class ApiManager
     /** 密钥要求：可选 */
     const KEY_OPTIONAL = 2;
 
+    /** 是否收费：免费 */
+    const CHARGE_FREE = 0;
+    /** 是否收费：收费 */
+    const CHARGE_PAID = 1;
+
     /**
      * @return string
      */
@@ -113,6 +118,56 @@ class ApiManager
         } catch (Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * 是否已具备计费字段（迁移 3.33.0 后为 true）
+     *
+     * @return bool
+     */
+    public static function hasChargeColumns()
+    {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
+        try {
+            $pdo = Database::connect();
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('charge'));
+            $ok = $col && $col->fetchColumn();
+        } catch (Exception $e) {
+            $ok = false;
+        }
+        return $ok;
+    }
+
+    /**
+     * @param mixed $v
+     * @return int
+     */
+    public static function normalizeCharge($v)
+    {
+        $n = (int) $v;
+        return $n === self::CHARGE_PAID ? self::CHARGE_PAID : self::CHARGE_FREE;
+    }
+
+    /**
+     * @param mixed $v
+     * @return float
+     */
+    public static function normalizePrice($v)
+    {
+        $n = round((float) $v, 4);
+        return $n > 0 ? $n : 0.0;
+    }
+
+    /**
+     * @param int $charge
+     * @return string
+     */
+    public static function chargeLabel($charge)
+    {
+        return self::normalizeCharge($charge) === self::CHARGE_PAID ? '收费' : '免费';
     }
 
     /**
@@ -514,6 +569,7 @@ class ApiManager
                 ));
             }
             $id = (int) $pdo->lastInsertId();
+            self::applyChargeFields($id, $parsed);
             RedisCache::invalidateFrontend();
             $row = self::findById($id);
             return self::formatRow($row);
@@ -690,6 +746,7 @@ class ApiManager
                     $apiId,
                 ));
             }
+            self::applyChargeFields($apiId, $parsed);
             RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
@@ -992,6 +1049,11 @@ class ApiManager
             'needkey'       => self::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_label' => self::requireKeyLabel(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_badge' => self::requireKeyBadge(isset($row['needkey']) ? $row['needkey'] : 0),
+            'charge'        => self::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0),
+            'charge_label'  => self::chargeLabel(isset($row['charge']) ? $row['charge'] : 0),
+            'price'         => class_exists('PayConfig')
+                ? PayConfig::fmtPoints(self::normalizePrice(isset($row['price']) ? $row['price'] : 0))
+                : (string) self::normalizePrice(isset($row['price']) ? $row['price'] : 0),
             'status'         => $status,
             'status_label'   => self::statusLabel($status),
             'audit'          => $auditStatus,
@@ -1040,6 +1102,9 @@ class ApiManager
             'needkey'        => $full['needkey'],
             'needkey_label'  => $full['needkey_label'],
             'needkey_badge'  => $full['needkey_badge'],
+            'charge'         => $full['charge'],
+            'charge_label'   => $full['charge_label'],
+            'price'          => $full['price'],
             'status'         => $full['status'],
             'status_label'   => $full['status_label'],
             'audit'          => $full['audit'],
@@ -1247,6 +1312,18 @@ class ApiManager
 
         $requireKey = self::normalizeRequireKey(isset($data['needkey']) ? $data['needkey'] : self::KEY_NONE);
 
+        $charge = self::normalizeCharge(isset($data['charge']) ? $data['charge'] : self::CHARGE_FREE);
+        $price = 0.0;
+        if ($charge === self::CHARGE_PAID) {
+            $price = self::normalizePrice(isset($data['price']) ? $data['price'] : 0);
+            if ($price <= 0) {
+                return '收费接口请填写每次调用扣除的积分';
+            }
+            if ($price > 100000000) {
+                return '单次扣费积分过大';
+            }
+        }
+
         $status = self::normalizeStatus(isset($data['status']) ? $data['status'] : self::STATUS_NORMAL);
         if (!self::isValidStatus($status)) {
             return '无效的接口状态';
@@ -1280,10 +1357,40 @@ class ApiManager
             'doc'         => $docNormal,
             'aidoc'       => $docAi,
             'needkey'     => $requireKey,
+            'charge'      => $charge,
+            'price'       => $price,
             'status'      => $status,
             'icon'        => $icon,
             'category'    => $category,
         );
+    }
+
+    /**
+     * 写入计费字段（独立 UPDATE，兼容历史建表分支）
+     *
+     * @param int   $apiId
+     * @param array $parsed
+     * @return void
+     */
+    private static function applyChargeFields($apiId, array $parsed)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId <= 0 || !self::hasChargeColumns()) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '` SET `charge` = ?, `price` = ? WHERE `id` = ?'
+            );
+            $stmt->execute(array(
+                self::normalizeCharge(isset($parsed['charge']) ? $parsed['charge'] : 0),
+                self::normalizePrice(isset($parsed['price']) ? $parsed['price'] : 0),
+                $apiId,
+            ));
+        } catch (Exception $e) {
+            // ignore
+        }
     }
 
     /**

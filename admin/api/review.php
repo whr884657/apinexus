@@ -166,7 +166,11 @@ vs_admin_layout_start('接口审核', 'api-review');
                             <?php if ($category !== ''): ?>
                                 <span class="vs-api-tag vs-api-tag--cat"><?php echo vs_e($category); ?></span>
                             <?php endif; ?>
-                            <span class="vs-api-tag vs-api-tag--free">免费</span>
+                            <span class="vs-api-tag vs-api-tag--free" data-field="charge_tag"><?php
+                                $charge = isset($api['charge']) ? (int) $api['charge'] : 0;
+                                $price = isset($api['price']) ? (string) $api['price'] : '0';
+                                echo ($charge === 1 && (float) $price > 0) ? vs_e('每次 ' . $price . ' 积分') : '免费';
+                            ?></span>
                             <?php if ($keyBadge !== ''): ?>
                                 <span class="vs-api-tag vs-api-tag--key"><?php echo vs_e($keyBadge); ?></span>
                             <?php endif; ?>

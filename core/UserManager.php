@@ -14,9 +14,12 @@ class UserManager
         try {
             $pdo = Database::connect();
             $table = Database::table('user');
+            $pointsCol = class_exists('PointsManager') && PointsManager::hasPointsColumn()
+                ? ', `points`'
+                : '';
             $stmt = $pdo->query(
                 'SELECT `id`, `username`, `email`, `avatar`, `qqopenid`, `giteeid`,
-                        `status`, `role`, `createtime`, `lastlogin`
+                        `status`, `role`' . $pointsCol . ', `createtime`, `lastlogin`
                  FROM `' . $table . '`
                  ORDER BY `id` DESC'
             );

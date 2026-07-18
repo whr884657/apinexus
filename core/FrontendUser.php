@@ -43,6 +43,9 @@ class FrontendUser
             'role' => $role,
             'role_label' => UserRole::label($role),
             'can_publish_api' => UserRole::canPublishApi($role),
+            'points' => class_exists('PointsManager') && PointsManager::hasPointsColumn()
+                ? PayConfig::fmtPoints(isset($user['points']) ? $user['points'] : PointsManager::balance((int) $user['id']))
+                : '0',
             'createtime' => isset($user['createtime']) ? (string) $user['createtime'] : '',
             'lastlogin' => isset($user['lastlogin']) ? (string) $user['lastlogin'] : '',
         );

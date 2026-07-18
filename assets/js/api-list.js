@@ -44,6 +44,9 @@
         proxyslug: document.getElementById('apiListFormProxySlug'),
         category: document.getElementById('apiListFormCategory'),
         requireKey: document.getElementById('apiListFormRequireKey'),
+        charge: document.getElementById('apiListFormCharge'),
+        price: document.getElementById('apiListFormPrice'),
+        priceRow: document.getElementById('apiListPriceRow'),
         params: document.getElementById('apiListFormParams'),
         paramsEditor: document.getElementById('apiListParamsEditor'),
         response: document.getElementById('apiListFormResponse'),
@@ -381,6 +384,22 @@
         return badge === '代理' ? 'vs-api-tag--proxy' : 'vs-api-tag--local';
     }
 
+    function syncChargeUi() {
+        if (!fields.charge || !fields.priceRow) {
+            return;
+        }
+        var paid = String(fields.charge.value) === '1';
+        fields.priceRow.hidden = !paid;
+        if (!paid && fields.price) {
+            fields.price.value = '';
+        }
+    }
+
+    if (fields.charge) {
+        fields.charge.addEventListener('change', syncChargeUi);
+        syncChargeUi();
+    }
+
     function buildTagsHtml(api) {
         var audit = normalizeAudit(api.audit);
         var typeBadge = api.apitype_badge || '本地';
@@ -390,7 +409,10 @@
         if (category) {
             html += '<span class="vs-api-tag vs-api-tag--cat" data-field="category">' + escapeHtml(category) + '</span>';
         }
-        html += '<span class="vs-api-tag vs-api-tag--free">免费</span>';
+        var charge = parseInt(api.charge, 10) === 1;
+        var price = api.price != null ? String(api.price) : '0';
+        var chargeText = (charge && parseFloat(price) > 0) ? ('每次 ' + price + ' 积分') : '免费';
+        html += '<span class="vs-api-tag vs-api-tag--free" data-field="charge_tag">' + escapeHtml(chargeText) + '</span>';
         if (keyBadge) {
             html += '<span class="vs-api-tag vs-api-tag--key" data-field="needkey_badge">' + escapeHtml(keyBadge) + '</span>';
         }
@@ -743,6 +765,13 @@
         if (fields.requireKey) {
             fields.requireKey.value = '0';
         }
+        if (fields.charge) {
+            fields.charge.value = '0';
+        }
+        if (fields.price) {
+            fields.price.value = '';
+        }
+        syncChargeUi();
         if (fields.params) {
             fields.params.value = '';
         }
@@ -808,6 +837,13 @@
         if (fields.requireKey) {
             fields.requireKey.value = String(parseInt(api.needkey, 10) || 0);
         }
+        if (fields.charge) {
+            fields.charge.value = String(parseInt(api.charge, 10) === 1 ? 1 : 0);
+        }
+        if (fields.price) {
+            fields.price.value = (parseInt(api.charge, 10) === 1 && api.price) ? String(api.price) : '';
+        }
+        syncChargeUi();
         if (fields.params) {
             fields.params.value = api.params || '';
         }
@@ -829,7 +865,7 @@
         setIconPickerSelection(api.icon || api.icon_raw || '');
         switchFormTab('basic');
         if (window.VSPick) {
-            ['apiListFormStatus','apiListFormCategory','apiListFormRequireKey'].forEach(function (id) {
+            ['apiListFormStatus','apiListFormCategory','apiListFormRequireKey','apiListFormCharge'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -901,6 +937,8 @@
             doc: fields.docNormal ? fields.docNormal.value : '',
             aidoc: fields.docAi ? fields.docAi.value : '',
             needkey: fields.requireKey ? String(fields.requireKey.value || '0') : '0',
+            charge: fields.charge ? String(parseInt(fields.charge.value, 10) === 1 ? 1 : 0) : '0',
+            price: fields.price ? String(fields.price.value || '') : '',
             status: fields.status ? String(normalizeStatus(fields.status.value)) : '0',
             icon: getSelectedIconUrl(),
             category: fields.category ? fields.category.value : ''

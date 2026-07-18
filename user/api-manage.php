@@ -40,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'doc'          => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
             'aidoc'        => isset($_POST['aidoc']) ? (string) $_POST['aidoc'] : '',
             'needkey'      => isset($_POST['needkey']) ? (int) $_POST['needkey'] : 0,
+            'charge'       => isset($_POST['charge']) ? (int) $_POST['charge'] : 0,
+            'price'        => isset($_POST['price']) ? $_POST['price'] : 0,
             'status'       => ApiManager::STATUS_NORMAL,
             'audit'        => ApiManager::AUDIT_PENDING,
             'rejectreason' => '',
@@ -219,7 +221,11 @@ function vs_render_user_api_item(array $row)
             <?php if ($category !== ''): ?>
                 <span class="vs-api-tag vs-api-tag--cat"><?php echo vs_e($category); ?></span>
             <?php endif; ?>
-            <span class="vs-api-tag vs-api-tag--free">免费</span>
+            <span class="vs-api-tag vs-api-tag--free" data-field="charge_tag"><?php
+                $charge = isset($api['charge']) ? (int) $api['charge'] : 0;
+                $price = isset($api['price']) ? (string) $api['price'] : '0';
+                echo ($charge === 1 && (float) $price > 0) ? vs_e('每次 ' . $price . ' 积分') : '免费';
+            ?></span>
             <?php if ($keyBadge !== ''): ?>
                 <span class="vs-api-tag vs-api-tag--key"><?php echo vs_e($keyBadge); ?></span>
             <?php endif; ?>
@@ -385,6 +391,19 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                         <option value="2">可选（可填可不填）</option>
                     </select>
                     <p class="vs-form-hint">「完全不需要」与「可选」调用规则相同；选「完全不需要」时前台通常不展示密钥填写框。</p>
+                </div>
+            </div>
+            <div class="vs-form-row vs-form-row--2">
+                <div>
+                    <label class="vs-label" for="userApiFormCharge">是否收费</label>
+                    <select class="vs-input vs-select" id="userApiFormCharge" name="charge" data-vs-pick>
+                        <option value="0">免费</option>
+                        <option value="1">收费</option>
+                    </select>
+                </div>
+                <div id="userApiPriceRow" hidden>
+                    <label class="vs-label" for="userApiFormPrice">每次扣除积分</label>
+                    <input type="number" class="vs-input" id="userApiFormPrice" name="price" min="0.0001" step="0.0001" placeholder="如 0.1 或 1">
                 </div>
             </div>
             <div class="vs-form-row">

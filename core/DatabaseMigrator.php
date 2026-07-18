@@ -4,7 +4,7 @@
  * 作用：版本更新时执行 install/migrations 下的增量 SQL（数据库结构更新）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
- * 仅处理 misc-api 正式库表（admin / user / config / api / category / mailrate / apilog / apikey）。
+ * 仅处理 misc-api 正式库表（admin / user / config / api / category / mailrate / apilog / apikey / orders）。
  */
 
 class DatabaseMigrator
@@ -173,6 +173,14 @@ class DatabaseMigrator
         }
         if (!in_array('3.29.0', $applied, true) && self::tableExists('apikey')) {
             self::markApplied('3.29.0');
+        }
+
+        // 新装已含 3.33.0（积分/订单/接口计费）时跳过迁移
+        if (!in_array('3.33.0', $applied, true)
+            && self::tableExists('orders')
+            && self::tableColumnExists('user', 'points')
+            && self::tableColumnExists('api', 'charge')) {
+            self::markApplied('3.33.0');
         }
 
         // 新装无历史 /proxy.php?s= 地址时，3.12.0 的 UPDATE 幂等，不强制跳过

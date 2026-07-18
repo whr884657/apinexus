@@ -70,7 +70,10 @@ class FrontendApi
             'calls'       => isset($row['calls']) ? (int) $row['calls'] : 0,
             'icon'        => $iconRaw !== '' ? ApiCategoryManager::resolveIconUrl($iconRaw) : '',
             'detail_url'  => $id > 0 ? vs_api_detail_url($id) : '',
-            'points'      => 0,
+            'charge'      => ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0),
+            'points'      => ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0) === ApiManager::CHARGE_PAID
+                ? (float) ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0)
+                : 0,
         );
     }
 
