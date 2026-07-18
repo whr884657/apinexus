@@ -48,25 +48,27 @@
             if (!list.length) {
                 body.innerHTML = '<p class="vs-empty vs-finance-empty">暂无充值订单</p>';
             } else {
-                var head = '<div class="vs-finance-row vs-finance-row--head">'
-                    + '<span>订单号</span><span>用户</span><span>支付</span><span>金额</span><span>积分</span><span>状态</span><span>时间</span>'
-                    + '</div>';
-                body.innerHTML = head + list.map(function (row) {
-                    return '<div class="vs-finance-row">'
-                        + '<span data-label="订单号"><strong class="vs-finance-mono">' + escapeHtml(row.orderno) + '</strong>'
-                        + (row.tradeno ? '<div class="vs-finance-sub">平台 ' + escapeHtml(row.tradeno) + '</div>' : '')
-                        + '</span>'
-                        + '<span data-label="用户">' + escapeHtml(row.username || ('#' + row.userid)) + '</span>'
-                        + '<span data-label="支付">' + escapeHtml(row.pay_label || '—') + '</span>'
-                        + '<span data-label="金额">¥' + escapeHtml(row.money) + '</span>'
-                        + '<span data-label="积分">+' + escapeHtml(row.amount) + '</span>'
-                        + '<span data-label="状态"><span class="vs-order-status ' + escapeHtml(row.status_class || '') + '">'
-                        + escapeHtml(row.status_label) + '</span></span>'
-                        + '<span data-label="时间">' + escapeHtml(row.createtime)
-                        + (row.paytime ? '<div class="vs-finance-sub">支付 ' + escapeHtml(row.paytime) + '</div>' : '')
-                        + '</span>'
-                        + '</div>';
-                }).join('');
+                body.innerHTML = '<div class="vs-finance-list">' + list.map(function (row) {
+                    return '<article class="vs-finance-card">'
+                        + '<div class="vs-finance-card__top">'
+                        + '<div class="vs-finance-card__id">'
+                        + '<strong class="vs-finance-mono">' + escapeHtml(row.orderno) + '</strong>'
+                        + (row.tradeno ? '<span class="vs-finance-sub">平台 ' + escapeHtml(row.tradeno) + '</span>' : '')
+                        + '</div>'
+                        + '<span class="vs-order-status ' + escapeHtml(row.status_class || '') + '">'
+                        + escapeHtml(row.status_label) + '</span>'
+                        + '</div>'
+                        + '<div class="vs-finance-card__meta">'
+                        + '<span>' + escapeHtml(row.username || ('#' + row.userid)) + '</span>'
+                        + '<span>' + escapeHtml(row.pay_label || '—') + '</span>'
+                        + '<span>¥' + escapeHtml(row.money) + '</span>'
+                        + '<span class="vs-ledger-amount is-inc">+' + escapeHtml(row.amount) + '</span>'
+                        + '</div>'
+                        + '<div class="vs-finance-card__time">' + escapeHtml(row.createtime)
+                        + (row.paytime ? ' · 支付 ' + escapeHtml(row.paytime) : '')
+                        + '</div>'
+                        + '</article>';
+                }).join('') + '</div>';
             }
             if (footer) {
                 footer.hidden = false;

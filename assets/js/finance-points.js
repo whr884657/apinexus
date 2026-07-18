@@ -44,10 +44,7 @@
             if (!list.length) {
                 body.innerHTML = '<p class="vs-empty vs-finance-empty">暂无积分变动</p>';
             } else {
-                var head = '<div class="vs-finance-row vs-finance-row--head vs-finance-row--ledger">'
-                    + '<span>时间</span><span>用户</span><span>类型</span><span>变动</span><span>余额</span><span>说明</span>'
-                    + '</div>';
-                body.innerHTML = head + list.map(function (row) {
+                body.innerHTML = '<div class="vs-finance-list">' + list.map(function (row) {
                     var sign = row.direct === 1 ? '+' : '-';
                     var cls = row.direct === 1 ? 'is-inc' : 'is-dec';
                     var detail = '';
@@ -58,15 +55,21 @@
                     } else if (parseFloat(row.money) > 0) {
                         detail = '¥' + row.money;
                     }
-                    return '<div class="vs-finance-row vs-finance-row--ledger">'
-                        + '<span data-label="时间">' + escapeHtml(row.createtime) + '</span>'
-                        + '<span data-label="用户">' + escapeHtml(row.username || ('#' + row.userid)) + '</span>'
-                        + '<span data-label="类型"><span class="vs-ledger-kind">' + escapeHtml(row.kind_label) + '</span></span>'
-                        + '<span data-label="变动"><span class="vs-ledger-amount ' + cls + '">' + sign + escapeHtml(row.amount) + '</span></span>'
-                        + '<span data-label="余额">' + escapeHtml(row.balance) + '</span>'
-                        + '<span data-label="说明"><span class="vs-finance-sub">' + escapeHtml(detail || row.orderno) + '</span></span>'
-                        + '</div>';
-                }).join('');
+                    return '<article class="vs-finance-card vs-finance-card--ledger">'
+                        + '<div class="vs-finance-card__top">'
+                        + '<div class="vs-finance-card__main">'
+                        + '<span class="vs-ledger-kind">' + escapeHtml(row.kind_label) + '</span>'
+                        + '<strong class="vs-finance-card__user">' + escapeHtml(row.username || ('#' + row.userid)) + '</strong>'
+                        + '</div>'
+                        + '<span class="vs-ledger-amount ' + cls + '">' + sign + escapeHtml(row.amount) + '</span>'
+                        + '</div>'
+                        + '<div class="vs-finance-card__meta">'
+                        + '<span>余额 ' + escapeHtml(row.balance) + '</span>'
+                        + (detail ? '<span>' + escapeHtml(detail) + '</span>' : '')
+                        + '</div>'
+                        + '<div class="vs-finance-card__time">' + escapeHtml(row.createtime) + '</div>'
+                        + '</article>';
+                }).join('') + '</div>';
             }
             if (footer) {
                 footer.hidden = false;

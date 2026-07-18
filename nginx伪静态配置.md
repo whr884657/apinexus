@@ -55,7 +55,7 @@ location ~ ^/apis/([a-z0-9]+)/?$ {
 3. **不要**写成 `/apis.php/$1`（PATH_INFO）—— 很多面板的 PHP 规则只认「以 `.php` 结尾」的路径，会 404。必须用 `apis.php?_vs_slug=$1`。  
 4. 短码规则与原来的「全站去 .php」可同时存在：`/apis` 走列表，`/apis/短码` 走代理，`/articles` 等仍走 `try_files`。  
 5. **接口详情页不需要伪静态**：出站/入站用 PATH_INFO（`/detail.php/{id}`），由 PHP 解析，见《查询串转路径样式规范》。  
-6. **码支付回调不要加伪静态**：公网地址固定为带 `.php` 的真实文件 `paynotify.php` / `payreturn.php`，下单时作为 `notify_url` / `return_url` 传给平台，**不依赖** rewrite。
+6. **码支付回调不要加伪静态**：公网地址为 `core/play/codeplay/notify.php` / `return.php`（直接访问 core，带 `.php`），下单时作为 `notify_url` / `return_url` 传给平台。
 
 ---
 
@@ -65,8 +65,8 @@ location ~ ^/apis/([a-z0-9]+)/?$ {
 |------------|------|
 | `/apis` | 全部接口列表 |
 | `/apis/短码` | 代理外链（内部用 `_vs_slug`，地址栏仍好看） |
-| `/paynotify.php` | 码支付异步回调（真实文件，无伪静态） |
-| `/payreturn.php` | 码支付浏览器回跳（真实文件，无伪静态） |
+| `/core/play/codeplay/notify.php` | 码支付异步回调（直访 core，无伪静态） |
+| `/core/play/codeplay/return.php` | 码支付浏览器回跳 |
 | `/detail.php/数字ID` | 接口详情（PATH_INFO，**无**伪静态规则） |
 | `/articles` 等 | 和以前一样，走去 `.php` 的 `try_files` |
 

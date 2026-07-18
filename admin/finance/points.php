@@ -26,16 +26,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $tableReady = OrderManager::tableReady();
-vs_admin_layout_start('积分变动', 'points');
+$headerActions = '';
+if ($tableReady) {
+    ob_start();
+    ?>
+    <div class="vs-finance-head-actions">
+        <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="pointsRefreshBtn">刷新</button>
+    </div>
+    <?php
+    $headerActions = ob_get_clean();
+}
+
+vs_admin_layout_start('积分变动', 'points', $headerActions);
 ?>
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先完成系统升级以同步 orders 表。', array('compact' => true)); ?>
 <?php else: ?>
-<div class="vs-finance-toolbar">
-    <div></div>
-    <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="pointsRefreshBtn">刷新</button>
-</div>
-
 <div class="vs-panel vs-finance-panel">
     <div class="vs-finance-table" id="pointsListBody">
         <p class="vs-empty vs-finance-empty">加载中…</p>

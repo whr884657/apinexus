@@ -5184,15 +5184,17 @@ select.vs-input.vs-select {
     display: block;
 }
 .vs-finance-toolbar {
-    display: flex;
+    display: none;
+}
+.vs-finance-head-actions {
+    display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 12px;
+    justify-content: flex-end;
+    gap: 8px;
 }
 .vs-finance-filters {
-    display: flex;
+    display: inline-flex;
     flex-wrap: wrap;
     gap: 8px;
 }
@@ -5202,31 +5204,63 @@ select.vs-input.vs-select {
     padding: 0 14px;
     font-size: 13px;
 }
+.vs-content__actions .vs-finance-head-actions {
+    max-width: min(100%, 720px);
+}
 .vs-finance-panel {
     overflow: hidden;
+    padding: 0 !important;
 }
 .vs-finance-empty {
     padding: 28px 16px !important;
     text-align: center;
 }
-.vs-finance-row {
-    display: grid;
-    grid-template-columns: 1.5fr .8fr .8fr .7fr .7fr .7fr 1fr;
-    gap: 10px;
-    padding: 12px 16px;
+.vs-finance-list {
+    display: flex;
+    flex-direction: column;
+}
+.vs-finance-card {
+    padding: 14px 16px;
     border-bottom: 1px solid #f1f5f9;
-    font-size: 13px;
+}
+.vs-finance-card:last-child {
+    border-bottom: 0;
+}
+.vs-finance-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+.vs-finance-card__id {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.vs-finance-card__main {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 8px;
+    min-width: 0;
 }
-.vs-finance-row--ledger {
-    grid-template-columns: 1.1fr .8fr .9fr .7fr .7fr 1.2fr;
+.vs-finance-card__user {
+    font-size: 14px;
+    color: #0f172a;
 }
-.vs-finance-row--head {
-    background: #f8fafc;
-    color: #64748b;
+.vs-finance-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #475569;
+}
+.vs-finance-card__time {
+    margin-top: 6px;
     font-size: 12px;
-    font-weight: 600;
-    border-bottom: 1px solid #e2e8f0;
+    color: #94a3b8;
 }
 .vs-finance-mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -5234,13 +5268,13 @@ select.vs-input.vs-select {
     word-break: break-all;
 }
 .vs-finance-sub {
-    margin-top: 2px;
     color: #94a3b8;
     font-size: 12px;
 }
 .vs-order-status {
     display: inline-flex;
     align-items: center;
+    flex-shrink: 0;
     min-height: 24px;
     padding: 0 8px;
     border-radius: 6px;
@@ -5266,9 +5300,12 @@ select.vs-input.vs-select {
     background: #f1f5f9;
     color: #475569;
     font-size: 12px;
+    font-weight: 600;
 }
 .vs-ledger-amount {
     font-weight: 700;
+    font-size: 15px;
+    flex-shrink: 0;
 }
 .vs-ledger-amount.is-inc {
     color: #16a34a;
@@ -5281,6 +5318,30 @@ select.vs-input.vs-select {
     border-top: 1px solid var(--vs-border, #e2e8f0);
     display: flex;
     justify-content: flex-end;
+}
+@media (max-width: 767px) {
+    .vs-content__head:has(.vs-finance-head-actions) {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .vs-content__head:has(.vs-finance-head-actions) .vs-content__actions {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+    .vs-finance-head-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .vs-finance-filters .vs-btn,
+    .vs-finance-refresh {
+        min-height: 32px;
+        padding: 0 10px;
+        font-size: 12px;
+    }
+    .vs-finance-card {
+        padding: 12px 14px;
+    }
 }
 .vs-pkg-editor-head {
     display: flex;
@@ -5538,28 +5599,6 @@ select.vs-input.vs-select {
     flex-shrink: 0;
 }
 @media (max-width: 900px) {
-    .vs-finance-row--head {
-        display: none;
-    }
-    .vs-finance-row,
-    .vs-finance-row--ledger {
-        display: block;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        margin: 0 12px 10px;
-        background: #fff;
-    }
-    .vs-finance-row > span {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 4px 0;
-    }
-    .vs-finance-row > span::before {
-        content: attr(data-label);
-        color: #64748b;
-        flex-shrink: 0;
-    }
     .vs-recharge-hero__value,
     .vs-points-hero__value {
         font-size: 28px;
