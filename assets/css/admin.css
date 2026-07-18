@@ -5127,3 +5127,446 @@ select.vs-input.vs-select {
     }
 }
 
+/* ===== v3.34.0：财务 / 充值 / 请求方式 / 支付方式 ===== */
+.vs-method-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    min-height: 40px;
+}
+.vs-method-toggle {
+    min-width: 72px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--vs-btn-radius, 10px);
+    background: #fff;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.vs-method-toggle.is-on {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #1d4ed8;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+.vs-pay-method-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.vs-pay-method-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--vs-btn-radius, 10px);
+    background: #fff;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.vs-pay-method-btn.is-on {
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+.vs-pay-ico {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    display: block;
+}
+.vs-finance-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.vs-finance-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.vs-finance-filters .vs-btn,
+.vs-finance-refresh {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+}
+.vs-finance-panel {
+    overflow: hidden;
+}
+.vs-finance-empty {
+    padding: 28px 16px !important;
+    text-align: center;
+}
+.vs-finance-row {
+    display: grid;
+    grid-template-columns: 1.5fr .8fr .8fr .7fr .7fr .7fr 1fr;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+    align-items: center;
+}
+.vs-finance-row--ledger {
+    grid-template-columns: 1.1fr .8fr .9fr .7fr .7fr 1.2fr;
+}
+.vs-finance-row--head {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+}
+.vs-finance-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    word-break: break-all;
+}
+.vs-finance-sub {
+    margin-top: 2px;
+    color: #94a3b8;
+    font-size: 12px;
+}
+.vs-order-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.vs-order-status.is-pending {
+    background: #fef3c7;
+    color: #b45309;
+}
+.vs-order-status.is-done {
+    background: #dcfce7;
+    color: #15803d;
+}
+.vs-order-status.is-cancel {
+    background: #f1f5f9;
+    color: #64748b;
+}
+.vs-ledger-kind {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 12px;
+}
+.vs-ledger-amount {
+    font-weight: 700;
+}
+.vs-ledger-amount.is-inc {
+    color: #16a34a;
+}
+.vs-ledger-amount.is-dec {
+    color: #dc2626;
+}
+.vs-finance-form-foot {
+    padding: 16px 20px;
+    border-top: 1px solid var(--vs-border, #e2e8f0);
+    display: flex;
+    justify-content: flex-end;
+}
+.vs-pkg-editor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.vs-pkg-editor-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+.vs-pkg-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    background: #fff;
+}
+.vs-pkg-card.is-hot {
+    border-color: #93c5fd;
+    background: #f8fbff;
+}
+.vs-pkg-card__name {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.vs-pkg-card__badge {
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+}
+.vs-pkg-card__money {
+    margin-top: 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #2563eb;
+}
+.vs-pkg-card__points {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #64748b;
+}
+.vs-pkg-card__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+.vs-btn--danger-text {
+    color: #b91c1c !important;
+}
+.vs-pkg-empty {
+    grid-column: 1 / -1;
+    padding: 20px !important;
+    text-align: center;
+    color: #94a3b8;
+}
+.vs-api-pager__navs {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.vs-recharge,
+.vs-points {
+    max-width: 920px;
+}
+.vs-recharge-hero,
+.vs-points-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 20px 22px;
+    margin-bottom: 16px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #1d4ed8 100%);
+    color: #fff;
+}
+.vs-recharge-hero__label,
+.vs-points-hero__label {
+    font-size: 13px;
+    opacity: 0.8;
+}
+.vs-recharge-hero__value,
+.vs-points-hero__value {
+    margin-top: 4px;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+.vs-recharge-hero__meta {
+    margin-top: 6px;
+    font-size: 12px;
+    opacity: 0.75;
+}
+.vs-points-hero__main {
+    min-width: 0;
+}
+.vs-recharge-section {
+    margin-bottom: 18px;
+}
+.vs-recharge-section__title {
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+}
+.vs-recharge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 10px;
+}
+.vs-recharge-card {
+    position: relative;
+    text-align: left;
+    padding: 16px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.vs-recharge-card:hover {
+    border-color: #93c5fd;
+}
+.vs-recharge-card.is-selected,
+.vs-recharge-card.is-hot.is-selected {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    background: #eff6ff;
+}
+.vs-recharge-card.is-hot {
+    border-color: #93c5fd;
+}
+.vs-recharge-card--custom {
+    border-style: dashed;
+    background: #f8fafc;
+}
+.vs-recharge-card__badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+}
+.vs-recharge-card__name {
+    font-weight: 600;
+    color: #0f172a;
+}
+.vs-recharge-card__money {
+    margin-top: 10px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #2563eb;
+}
+.vs-recharge-card__points {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #64748b;
+}
+.vs-recharge-actions {
+    margin-top: 8px;
+}
+.vs-recharge-pay-btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+}
+.vs-recharge-pay-body {
+    text-align: center;
+}
+.vs-recharge-pay-meta {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #475569;
+}
+.vs-recharge-qr {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto 12px;
+}
+.vs-recharge-qr img {
+    width: 220px;
+    height: 220px;
+    border-radius: 12px;
+    display: block;
+    background: #fff;
+}
+.vs-recharge-qr__logo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 42px;
+    height: 42px;
+    transform: translate(-50%, -50%);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.vs-recharge-qr__logo .vs-pay-ico {
+    width: 36px;
+    height: 36px;
+}
+.vs-recharge-pay-foot {
+    display: flex !important;
+    gap: 12px;
+}
+.vs-recharge-pay-foot .vs-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+}
+.vs-points-list {
+    padding: 4px 0;
+}
+.vs-points-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.vs-points-item:last-child {
+    border-bottom: 0;
+}
+.vs-points-item__title {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 14px;
+}
+.vs-points-item__meta,
+.vs-points-item__bal {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+.vs-points-item__side {
+    text-align: right;
+    flex-shrink: 0;
+}
+@media (max-width: 900px) {
+    .vs-finance-row--head {
+        display: none;
+    }
+    .vs-finance-row,
+    .vs-finance-row--ledger {
+        display: block;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin: 0 12px 10px;
+        background: #fff;
+    }
+    .vs-finance-row > span {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 4px 0;
+    }
+    .vs-finance-row > span::before {
+        content: attr(data-label);
+        color: #64748b;
+        flex-shrink: 0;
+    }
+    .vs-recharge-hero__value,
+    .vs-points-hero__value {
+        font-size: 28px;
+    }
+    .vs-recharge-pay-btn {
+        min-height: 48px;
+    }
+}
+
+

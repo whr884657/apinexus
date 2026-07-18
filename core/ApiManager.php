@@ -1322,6 +1322,10 @@ class ApiManager
             if ($price > 100000000) {
                 return '单次扣费积分过大';
             }
+            // 收费接口必须校验密钥，不允许「完全不需要」
+            if ($requireKey === self::KEY_NONE) {
+                $requireKey = self::KEY_REQUIRED;
+            }
         }
 
         $status = self::normalizeStatus(isset($data['status']) ? $data['status'] : self::STATUS_NORMAL);

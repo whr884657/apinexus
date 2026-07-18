@@ -31,6 +31,9 @@ location / {
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
+location ~ ^/codepay/(notify|return)/?$ {
+    rewrite ^/codepay/(notify|return)/?$ /codepay.php/$1 last;
+}
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
 }
@@ -43,6 +46,9 @@ location / {
 ```nginx
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
+}
+location ~ ^/codepay/(notify|return)/?$ {
+    rewrite ^/codepay/(notify|return)/?$ /codepay.php/$1 last;
 }
 ```
 
@@ -64,6 +70,8 @@ location ~ ^/apis/([a-z0-9]+)/?$ {
 |------------|------|
 | `/apis` | 全部接口列表 |
 | `/apis/短码` | 代理外链（内部用 `_vs_slug`，地址栏仍好看） |
+| `/codepay/notify` | 码支付异步回调（亦可直接用 `/codepay.php/notify`） |
+| `/codepay/return` | 码支付浏览器回跳 |
 | `/detail.php/数字ID` | 接口详情（PATH_INFO，**无**伪静态规则） |
 | `/articles` 等 | 和以前一样，走去 `.php` 的 `try_files` |
 

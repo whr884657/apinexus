@@ -1,10 +1,12 @@
 <?php
 /**
- * 文件：pay/notify.php
+ * 文件：core/play/codeplay/notify.php
  * 作用：码支付异步回调（无需登录；先验签再履约）
  */
 
-define('VS_ROOT', dirname(__DIR__));
+if (!defined('VS_ROOT')) {
+    define('VS_ROOT', dirname(dirname(dirname(__DIR__))));
+}
 require_once VS_ROOT . '/core/bootstrap.php';
 
 header('Content-Type: text/plain; charset=utf-8');
