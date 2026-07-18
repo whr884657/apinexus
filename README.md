@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.34.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.34.2-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -288,6 +288,10 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.34.2（2026-07-18）
+
+- 订单/积分：桌面多列表格、标题行紧凑、手机端紧凑卡
 
 ### v3.34.1（2026-07-18）
 

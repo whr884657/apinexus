@@ -5183,30 +5183,38 @@ select.vs-input.vs-select {
     flex-shrink: 0;
     display: block;
 }
-.vs-finance-toolbar {
-    display: none;
+/* 财务页：标题与工具栏紧挨，不左右撑满留白 */
+.vs-content__head:has(.vs-finance-head-actions) {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+}
+.vs-content__head:has(.vs-finance-head-actions) .vs-content__title {
+    flex: 0 0 auto;
+}
+.vs-content__head:has(.vs-finance-head-actions) .vs-content__actions {
+    flex: 0 1 auto;
+    min-width: 0;
 }
 .vs-finance-head-actions {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-end;
     gap: 8px;
 }
 .vs-finance-filters {
     display: inline-flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 .vs-finance-filters .vs-btn,
 .vs-finance-refresh {
-    min-height: 36px;
-    padding: 0 14px;
+    min-height: 34px;
+    padding: 0 12px;
     font-size: 13px;
 }
-.vs-content__actions .vs-finance-head-actions {
-    max-width: min(100%, 720px);
-}
+
 .vs-finance-panel {
     overflow: hidden;
     padding: 0 !important;
@@ -5215,52 +5223,74 @@ select.vs-input.vs-select {
     padding: 28px 16px !important;
     text-align: center;
 }
-.vs-finance-list {
+
+/* 桌面：真正的多列表格；手机：紧凑卡片 */
+.vs-finance-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+.vs-finance-grid {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
-.vs-finance-card {
-    padding: 14px 16px;
+.vs-finance-row {
+    display: grid;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 11px 16px;
     border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+    color: #334155;
+    background: #fff;
 }
-.vs-finance-card:last-child {
+.vs-finance-row:last-child {
     border-bottom: 0;
 }
-.vs-finance-card__top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
+.vs-finance-row:hover {
+    background: #f8fafc;
 }
-.vs-finance-card__id {
+.vs-finance-row--head {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.vs-finance-row--head:hover {
+    background: #f8fafc;
+}
+.vs-finance-row--order {
+    grid-template-columns:
+        minmax(160px, 1.6fr)
+        minmax(72px, 0.7fr)
+        minmax(72px, 0.7fr)
+        minmax(64px, 0.55fr)
+        minmax(64px, 0.55fr)
+        minmax(72px, 0.6fr)
+        minmax(140px, 1.1fr);
+}
+.vs-finance-row--ledger {
+    grid-template-columns:
+        minmax(140px, 1.1fr)
+        minmax(72px, 0.7fr)
+        minmax(88px, 0.8fr)
+        minmax(72px, 0.55fr)
+        minmax(72px, 0.55fr)
+        minmax(120px, 1.4fr);
+}
+.vs-finance-meta,
+.vs-finance-head {
+    display: contents;
+}
+.vs-finance-cell {
     min-width: 0;
+}
+.vs-finance-cell--stack {
     display: flex;
     flex-direction: column;
     gap: 2px;
-}
-.vs-finance-card__main {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
-.vs-finance-card__user {
-    font-size: 14px;
-    color: #0f172a;
-}
-.vs-finance-card__meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 14px;
-    margin-top: 8px;
-    font-size: 13px;
-    color: #475569;
-}
-.vs-finance-card__time {
-    margin-top: 6px;
-    font-size: 12px;
-    color: #94a3b8;
 }
 .vs-finance-mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -5271,15 +5301,25 @@ select.vs-input.vs-select {
     color: #94a3b8;
     font-size: 12px;
 }
+.vs-finance-user {
+    font-weight: 600;
+    color: #0f172a;
+}
+.vs-finance-time {
+    color: #64748b;
+    font-size: 12px;
+    white-space: nowrap;
+}
 .vs-order-status {
     display: inline-flex;
     align-items: center;
-    flex-shrink: 0;
+    justify-content: center;
     min-height: 24px;
     padding: 0 8px;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
+    width: fit-content;
 }
 .vs-order-status.is-pending {
     background: #fef3c7;
@@ -5297,15 +5337,16 @@ select.vs-input.vs-select {
     display: inline-flex;
     padding: 2px 8px;
     border-radius: 6px;
-    background: #f1f5f9;
-    color: #475569;
+    background: #eff6ff;
+    color: #1d4ed8;
     font-size: 12px;
     font-weight: 600;
+    width: fit-content;
 }
 .vs-ledger-amount {
     font-weight: 700;
-    font-size: 15px;
-    flex-shrink: 0;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
 }
 .vs-ledger-amount.is-inc {
     color: #16a34a;
@@ -5313,34 +5354,86 @@ select.vs-input.vs-select {
 .vs-ledger-amount.is-dec {
     color: #dc2626;
 }
+.vs-finance-m-label {
+    display: none;
+}
 .vs-finance-form-foot {
     padding: 16px 20px;
     border-top: 1px solid var(--vs-border, #e2e8f0);
     display: flex;
     justify-content: flex-end;
 }
-@media (max-width: 767px) {
-    .vs-content__head:has(.vs-finance-head-actions) {
-        flex-wrap: wrap;
-        align-items: flex-start;
-        gap: 10px;
-    }
+
+@media (max-width: 900px) {
     .vs-content__head:has(.vs-finance-head-actions) .vs-content__actions {
         flex: 1 1 100%;
-        width: 100%;
     }
-    .vs-finance-head-actions {
-        width: 100%;
-        justify-content: flex-start;
+    .vs-finance-row--head {
+        display: none;
+    }
+    .vs-finance-row--order {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "id status"
+            "meta meta"
+            "time time";
+        gap: 6px 10px;
+        padding: 12px 14px;
+        align-items: start;
+    }
+    .vs-finance-row--order .vs-finance-c-id { grid-area: id; }
+    .vs-finance-row--order .vs-finance-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        grid-area: meta;
+    }
+    .vs-finance-row--order .vs-finance-c-status { grid-area: status; justify-self: end; }
+    .vs-finance-row--order .vs-finance-c-time { grid-area: time; }
+
+    .vs-finance-row--ledger {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "head amount"
+            "meta meta"
+            "time time";
+        gap: 6px 10px;
+        padding: 12px 14px;
+        align-items: start;
+    }
+    .vs-finance-row--ledger .vs-finance-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        grid-area: head;
+        min-width: 0;
+    }
+    .vs-finance-row--ledger .vs-finance-c-amount { grid-area: amount; justify-self: end; }
+    .vs-finance-row--ledger .vs-finance-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        grid-area: meta;
+    }
+    .vs-finance-row--ledger .vs-finance-c-time { grid-area: time; }
+
+    .vs-finance-m-label {
+        display: inline;
+        color: #94a3b8;
+        font-size: 12px;
+        margin-right: 2px;
+    }
+    .vs-finance-time {
+        white-space: normal;
     }
     .vs-finance-filters .vs-btn,
     .vs-finance-refresh {
         min-height: 32px;
         padding: 0 10px;
         font-size: 12px;
-    }
-    .vs-finance-card {
-        padding: 12px 14px;
     }
 }
 .vs-pkg-editor-head {

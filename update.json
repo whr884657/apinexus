@@ -1,11 +1,12 @@
 {
-    "version": "3.34.1",
-    "title": "misc-api 3.34.1 财务列表标题行与码支付直访 core",
+    "version": "3.34.2",
+    "title": "misc-api 3.34.2 财务列表桌面表格与手机紧凑卡",
     "release_date": "2026-07-18",
     "db_changes": false,
     "changes": [
-        "订单管理 / 积分变动：筛选与刷新并入标题行；列表改为紧凑卡片",
-        "码支付回调改为直访 core/play/codeplay/notify.php 与 return.php，移除根目录入口"
+        "订单管理 / 积分变动：桌面改为多列表格，消除中间大块留白",
+        "标题与筛选/刷新紧挨排列，不再两端拉开",
+        "手机端改为紧凑信息卡，去掉空表头与稀疏布局"
     ],
     "repo": "xunjinlu/misc-api",
     "branch": "main"
