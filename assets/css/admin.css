@@ -2289,13 +2289,22 @@ select.vs-input.vs-select {
     border: 0;
     border-radius: 0;
     box-shadow: none;
+    width: 100%;
 }
 
 .vs-theme-gallery {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 260px);
-    justify-content: center;
+    /* mobile: full width; desktop: auto-fill from 260px min */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
     gap: 16px;
+    width: 100%;
+}
+
+@media (max-width: 640px) {
+    .vs-theme-gallery {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
 }
 
 .vs-theme-card {
