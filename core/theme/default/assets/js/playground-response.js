@@ -232,7 +232,7 @@
     function relayRequest(opts) {
         var playUrl = (typeof window.VS_PLAY_URL === 'string' && window.VS_PLAY_URL)
             ? window.VS_PLAY_URL
-            : ((window.VS_BASE_URL || '') + '/play');
+            : ((window.VS_BASE_URL || '') + '/core/playground/relay.php');
         var csrf = (typeof window.VS_CSRF_TOKEN === 'string') ? window.VS_CSRF_TOKEN : '';
         var payload = {
             csrf_token: csrf,

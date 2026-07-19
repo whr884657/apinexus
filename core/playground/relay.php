@@ -1,10 +1,16 @@
 <?php
 /**
- * 文件：play.php
+ * 文件：core/playground/relay.php
  * 作用：前台在线测试同源中继入口（POST + CSRF）
+ *
+ * 说明：
+ * - 供各主题共用，勿放根目录、勿放单一主题包
+ * - 公网地址：{站点根}/core/playground/relay.php（带 .php 直访，不依赖伪静态）
  */
 
-define('VS_ROOT', __DIR__);
+if (!defined('VS_ROOT')) {
+    define('VS_ROOT', dirname(dirname(__DIR__)));
+}
 require_once VS_ROOT . '/core/bootstrap.php';
 
 if (!InstallChecker::isInstalled()) {

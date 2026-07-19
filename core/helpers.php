@@ -866,7 +866,7 @@ function vs_playground_session_context()
         'userCenterUrl' => $base . '/user/index',
         'loginUrl'      => $base . '/user/login',
         'csrf'          => class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '',
-        'playUrl'       => $base . '/play',
+        'playUrl'       => $base . '/core/playground/relay.php',
     );
     if (!class_exists('UserAuth') || !UserAuth::check()) {
         return $out;
