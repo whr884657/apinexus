@@ -22,6 +22,9 @@ $totalCalls = ApiManager::totalCallCount();
 
 $heroTitleSetting = ThemeManager::themeSettingStr('hero_title', '');
 $heroLeadSetting = ThemeManager::themeSettingStr('hero_lead', '');
+$heroLine2Plain = ThemeManager::themeSettingStr('hero_line2_plain', '');
+$heroLine2Accent = ThemeManager::themeSettingStr('hero_line2_accent', '');
+$heroLine2Rest = ThemeManager::themeSettingStr('hero_line2_rest', '');
 $heroGlitchSource = $heroTitleSetting !== '' ? $heroTitleSetting : $siteName;
 $heroGlitch = strtoupper(preg_replace('/\s+/', ' ', $heroGlitchSource));
 $heroDesc = $heroLeadSetting !== ''
@@ -40,9 +43,9 @@ $homeHeroConfig = array(
     'glitchLine'    => $heroGlitch,
     'startDelayMs'  => 500,
     'glitchPauseMs' => 1500,
-    'line2Plain'    => '开发者的',
-    'line2Accent'   => '开放 API',
-    'line2Rest'     => ' 接口平台',
+    'line2Plain'    => $heroLine2Plain !== '' ? $heroLine2Plain : '开发者的',
+    'line2Accent'   => $heroLine2Accent !== '' ? $heroLine2Accent : '开放 API',
+    'line2Rest'     => $heroLine2Rest !== '' ? $heroLine2Rest : ' 接口平台',
 );
 
 $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p><p>系统版本 v' . vs_e(VS_VERSION) . ' 已上线，欢迎体验。</p>';

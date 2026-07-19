@@ -1,22 +1,40 @@
 {
     "id": "default",
     "name": "默认主题",
-    "version": "1.5.4",
+    "version": "1.6.0",
     "author": "ApiNexus",
     "description": "参考 FeerApi 前台 UI 完整复刻，白色主题色板；含粒子背景、终端 Hero、接口目录与在线调试",
     "preview": "preview.png",
     "settings": [
         {
             "key": "hero_title",
-            "label": "首页主标题",
+            "label": "首页第1行 · 主标题（打字机第一行）",
             "type": "text",
-            "placeholder": "留空使用站点名称"
+            "placeholder": "留空则用站点名称（系统设置 → 站点信息）"
+        },
+        {
+            "key": "hero_line2_plain",
+            "label": "首页第2行 · 前缀（换行后普通文字）",
+            "type": "text",
+            "placeholder": "默认：开发者的"
+        },
+        {
+            "key": "hero_line2_accent",
+            "label": "首页第2行 · 高亮（彩色强调）",
+            "type": "text",
+            "placeholder": "默认：开放 API"
+        },
+        {
+            "key": "hero_line2_rest",
+            "label": "首页第2行 · 后缀（高亮后的普通文字）",
+            "type": "text",
+            "placeholder": "默认： 接口平台（注意前导空格）"
         },
         {
             "key": "hero_lead",
-            "label": "首页副文案",
+            "label": "首页说明段落（主标题下方长文案）",
             "type": "textarea",
-            "placeholder": "留空使用站点描述"
+            "placeholder": "留空则用站点描述；再空则用内置默认介绍"
         },
         {
             "key": "show_partners",

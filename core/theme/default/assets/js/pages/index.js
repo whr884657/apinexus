@@ -241,8 +241,8 @@ const DEFAULT_HOME_HERO = {
     startDelayMs: 500,
     glitchPauseMs: 1500,
     line2Plain: '开发者的',
-    line2Accent: '免费API',
-    line2Rest: '接口宝库',
+    line2Accent: '开放 API',
+    line2Rest: ' 接口平台',
 };
 const heroCfg = Object.assign({}, DEFAULT_HOME_HERO, typeof window.homeHeroConfig === 'object' && window.homeHeroConfig !== null ? window.homeHeroConfig : {});
 const textSequence = [
