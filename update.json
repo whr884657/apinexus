@@ -1,13 +1,12 @@
 {
-    "version": "4.8.0",
-    "title": "ApiNexus 4.8.0 在线测试浏览器直连与统计纠偏",
+    "version": "4.9.0",
+    "title": "ApiNexus 4.9.0 友链一键获取与申请通知",
     "release_date": "2026-07-20",
     "db_changes": false,
     "changes": [
-        "在线测试改为浏览器直连公开 endpoint，日志记录真实接口路径",
-        "中继不再写入 apilog，避免 path 被记成 relay.php",
-        "直连响应按 Content-Type + 魔数正确预览图/音/视频",
-        "修复友情链接/申请友链页标题被顶栏遮挡（对齐 88px 顶距）"
+        "申请友链支持一键获取站点名称/图标/描述（TDK）",
+        "友链申请通知管理员；审核通过且联系方式含邮箱时通知申请人",
+        "修复后台「添加友链」弹窗不显示（缺少 is-open）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

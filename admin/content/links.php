@@ -29,6 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'update') {
         $id = isset($_POST['link_id']) ? (int) $_POST['link_id'] : 0;
+        $before = LinkManager::findById($id);
+        $newStatus = isset($_POST['status']) ? (int) $_POST['status'] : LinkManager::STATUS_APPROVED;
         $result = LinkManager::update($id, array(
             'name'        => isset($_POST['name']) ? (string) $_POST['name'] : '',
             'siteurl'     => isset($_POST['siteurl']) ? (string) $_POST['siteurl'] : '',
@@ -36,12 +38,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'description' => isset($_POST['description']) ? (string) $_POST['description'] : '',
             'contact'     => isset($_POST['contact']) ? (string) $_POST['contact'] : '',
             'sort'        => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
-            'status'      => isset($_POST['status']) ? (int) $_POST['status'] : LinkManager::STATUS_APPROVED,
+            'status'      => $newStatus,
         ));
         if ($result !== true) {
             AjaxResponse::error($result);
         }
         $row = LinkManager::findById($id);
+        if ($newStatus === LinkManager::STATUS_APPROVED && is_array($row) && class_exists('LinkNotify')) {
+            $prev = is_array($before)
+                ? LinkManager::normalizeStatus(isset($before['status']) ? $before['status'] : 0)
+                : LinkManager::STATUS_PENDING;
+            if ($prev !== LinkManager::STATUS_APPROVED) {
+                LinkNotify::notifyApplicantApproved(LinkManager::formatRow($row));
+            }
+        }
         AjaxResponse::success('友链已保存', array(
             'link' => is_array($row) ? LinkManager::formatRow($row) : null,
         ));
@@ -57,9 +67,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ), true)) {
             AjaxResponse::error('无效状态');
         }
+        $before = LinkManager::findById($id);
         $result = LinkManager::setStatus($id, $status);
         if ($result !== true) {
             AjaxResponse::error($result);
+        }
+        if ($status === LinkManager::STATUS_APPROVED && class_exists('LinkNotify')) {
+            $row = LinkManager::findById($id);
+            if (is_array($row)) {
+                $prev = is_array($before)
+                    ? LinkManager::normalizeStatus(isset($before['status']) ? $before['status'] : 0)
+                    : LinkManager::STATUS_PENDING;
+                if ($prev !== LinkManager::STATUS_APPROVED) {
+                    LinkNotify::notifyApplicantApproved(LinkManager::formatRow($row));
+                }
+            }
         }
         AjaxResponse::success(LinkManager::statusLabel($status), array(
             'link_id'      => $id,
@@ -221,6 +243,5 @@ vs_admin_layout_start('友情链接', 'links', $headerActions);
     </div>
 </div>
 
-<script src="<?php echo vs_e(vs_base_url()); ?>/assets/js/admin-links.js?v=<?php echo vs_e(VS_VERSION); ?>"></script>
 <?php
-vs_admin_layout_end();
+vs_admin_layout_end(array('admin-links.js'));

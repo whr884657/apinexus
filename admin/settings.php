@@ -93,9 +93,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'mail_smtp_secure'   => trim(isset($_POST['mail_smtp_secure']) ? $_POST['mail_smtp_secure'] : 'ssl'),
                 'mail_from_email'    => trim(isset($_POST['mail_from_email']) ? $_POST['mail_from_email'] : ''),
                 'mail_from_name'     => trim(isset($_POST['mail_from_name']) ? $_POST['mail_from_name'] : SiteContext::siteName()),
-                'mail_notify_submit' => isset($_POST['mail_notify_submit']) ? '1' : '0',
-                'mail_notify_pass'   => isset($_POST['mail_notify_pass']) ? '1' : '0',
-                'mail_notify_fail'   => isset($_POST['mail_notify_fail']) ? '1' : '0',
+                'mail_notify_submit'     => isset($_POST['mail_notify_submit']) ? '1' : '0',
+                'mail_notify_pass'       => isset($_POST['mail_notify_pass']) ? '1' : '0',
+                'mail_notify_fail'       => isset($_POST['mail_notify_fail']) ? '1' : '0',
+                'mail_notify_link_apply' => isset($_POST['mail_notify_link_apply']) ? '1' : '0',
+                'mail_notify_link_pass'  => isset($_POST['mail_notify_link_pass']) ? '1' : '0',
             ));
 
             AjaxResponse::success('邮箱设置已保存');
@@ -442,6 +444,14 @@ vs_admin_accordion_start(
             <label class="vs-checkbox" style="margin-top:8px;display:flex;">
                 <input type="checkbox" name="mail_notify_fail" value="1" <?php echo (!isset($vsCfg['mail_notify_fail']) || $vsCfg['mail_notify_fail'] === '1') ? 'checked' : ''; ?>>
                 <span>审核不通过时，通知投稿用户</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="mail_notify_link_apply" value="1" <?php echo (!isset($vsCfg['mail_notify_link_apply']) || $vsCfg['mail_notify_link_apply'] === '1') ? 'checked' : ''; ?>>
+                <span>有新的友情链接申请时，通知管理员</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="mail_notify_link_pass" value="1" <?php echo (!isset($vsCfg['mail_notify_link_pass']) || $vsCfg['mail_notify_link_pass'] === '1') ? 'checked' : ''; ?>>
+                <span>友情链接审核通过时，通知申请人（联系方式需含邮箱）</span>
             </label>
         </div>
         <div class="vs-form-actions">
