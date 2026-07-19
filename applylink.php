@@ -31,6 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::error($result);
     }
 
+    if (class_exists('LinkNotify')) {
+        LinkNotify::notifyAdminsPending($result);
+    }
+
     AjaxResponse::success('申请已提交，请等待站长审核', array(
         'link' => $result,
     ));

@@ -17,13 +17,17 @@
     function openOverlay() {
         if (!overlay) return;
         overlay.hidden = false;
+        overlay.classList.add('is-open');
         overlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
     }
 
     function closeOverlay() {
         if (!overlay) return;
         overlay.hidden = true;
+        overlay.classList.remove('is-open');
         overlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
     }
 
     function fillForm(data) {
@@ -63,6 +67,11 @@
     if (overlay) {
         overlay.querySelectorAll('[data-overlay-close="1"]').forEach(function (el) {
             el.addEventListener('click', closeOverlay);
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+                closeOverlay();
+            }
         });
     }
 

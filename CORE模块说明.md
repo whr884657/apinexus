@@ -120,7 +120,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
 | 第三方登录 | `oauth/*` | `OAuthService` | 系统设置 | ✅ 是 | **已完成** |
 | 文章 | — | — | 占位 | ❌ 否 | **待开发** |
-| 友情链接 | `LinkManager` | `FrontendLink` | `admin/content/links.php`、`links.php`、`applylink.php` | ✅ 是 | **已完成**（表 `link`；前台申请 + 后台审核；页脚/友链页展示已通过项） |
+| 友情链接 | `LinkManager` / `LinkSiteMeta` / `LinkNotify` | `FrontendLink` | `admin/content/links.php`、`links.php`、`applylink.php`、`core/theme/default/api/sitemeta.php` | ✅ 是 | **已完成**（表 `link`；一键 TDK；申请/通过邮件通知；前台申请 + 后台审核） |
 | 公告 | — | — | 占位 | ❌ 否 | **待开发** |
 | Redis 缓存 | — | `RedisService` / `RedisCache` | `admin/system/redis.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 限流） |
 | 贡献者 | — | — | 占位 | ❌ 否 | **待开发** |
@@ -229,6 +229,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD（表 `apikey`；每用户最多 3 条；格式 `sk-`+32；含调用次数） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `LinkManager.php` | 友情链接 CRUD / 审核 / 前台申请（**后台向**） |
+| `LinkSiteMeta.php` | 抓取外站 HTML 解析 title/description/favicon（友链一键填充；防 SSRF） |
+| `LinkNotify.php` | 友链申请通知管理员；通过后通知申请人邮箱 |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表与详情（**主题向**） |
 | `FrontendLink.php` | 前台已通过友链列表与本站友链卡片（**主题向**） |
@@ -680,9 +682,15 @@ VsPlaygroundResponse.directRequest({
 
 ---
 
-### 4.24b LinkManager.php / FrontendLink.php（友情链接）★ 主题开发重点
+### 4.24b LinkManager.php / LinkSiteMeta / LinkNotify / FrontendLink.php（友情链接）★ 主题开发重点
 
 **后台 `LinkManager`：** 表 `link`；状态 0待审 / 1通过 / 2拒绝；`create` / `apply` / `update` / `setStatus` / `delete` / `listAll` / `listApproved`。
+
+**`LinkSiteMeta::fetch($url)`：** 服务端抓取公网页面解析名称/描述/图标；禁止内网与非 http(s)。
+
+**默认主题接口：** `POST /core/theme/default/api/sitemeta.php`（CSRF + 同源）；前端见 `assets/js/pages/applylink.js`。
+
+**`LinkNotify`：** 申请 → 通知管理员（`mail_notify_link_apply`）；通过 → 若联系方式含邮箱则通知申请人（`mail_notify_link_pass`）。
 
 **前台 `FrontendLink`：**
 
