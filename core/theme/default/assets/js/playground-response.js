@@ -54,10 +54,63 @@
     }
 
     function mediaKind(ct) {
-        var t = String(ct || '').toLowerCase();
+        var t = String(ct || '').toLowerCase().split(';')[0].trim();
         if (t.indexOf('image/') === 0) return 'image';
         if (t.indexOf('audio/') === 0) return 'audio';
         if (t.indexOf('video/') === 0) return 'video';
+        return '';
+    }
+
+    /** 从二进制头嗅探（Content-Type 缺失/错误时） */
+    function sniffKindFromBytes(u8) {
+        if (!u8 || u8.length < 12) return '';
+        // JPEG
+        if (u8[0] === 0xFF && u8[1] === 0xD8 && u8[2] === 0xFF) return 'image';
+        // PNG
+        if (u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4E && u8[3] === 0x47) return 'image';
+        // GIF
+        if (u8[0] === 0x47 && u8[1] === 0x49 && u8[2] === 0x46) return 'image';
+        // WEBP
+        if (u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x46
+            && u8[8] === 0x57 && u8[9] === 0x45 && u8[10] === 0x42 && u8[11] === 0x50) return 'image';
+        // WAVE
+        if (u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x46
+            && u8[8] === 0x57 && u8[9] === 0x41 && u8[10] === 0x56 && u8[11] === 0x45) return 'audio';
+        // OGG
+        if (u8[0] === 0x4F && u8[1] === 0x67 && u8[2] === 0x67 && u8[3] === 0x53) return 'audio';
+        // ID3 / MP3
+        if ((u8[0] === 0x49 && u8[1] === 0x44 && u8[2] === 0x33) || (u8[0] === 0xFF && (u8[1] & 0xE0) === 0xE0)) return 'audio';
+        // MP4 / M4A ftyp
+        if (u8[4] === 0x66 && u8[5] === 0x74 && u8[6] === 0x79 && u8[7] === 0x70) {
+            var brand = String.fromCharCode(u8[8], u8[9], u8[10], u8[11]).toLowerCase();
+            if (brand.indexOf('m4a') !== -1 || brand === 'mp4a') return 'audio';
+            return 'video';
+        }
+        // WebM / Matroska
+        if (u8[0] === 0x1A && u8[1] === 0x45 && u8[2] === 0xDF && u8[3] === 0xA3) return 'video';
+        return '';
+    }
+
+    function sniffKindFromBase64(b64) {
+        try {
+            var bin = atob(String(b64 || '').slice(0, 64));
+            var u8 = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+            return sniffKindFromBytes(u8);
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function resolveMediaKind(data, ct, b64Body) {
+        var k = String(data && data.mediaKind ? data.mediaKind : '').toLowerCase();
+        if (k === 'image' || k === 'audio' || k === 'video') return k;
+        k = mediaKind(ct);
+        if (k) return k;
+        if (b64Body) {
+            k = sniffKindFromBase64(b64Body);
+            if (k) return k;
+        }
         return '';
     }
 
@@ -65,12 +118,12 @@
         var safe = escapeHtml(objectUrl);
         var tip = note ? '<div class="pg-media-tip">' + escapeHtml(note) + '</div>' : '';
         if (kind === 'video') {
-            return '<div class="pg-media-wrap"><video controls preload="metadata" playsinline class="pg-media-el"><source src="' + safe + '"></video>' + tip + '</div>';
+            return '<div class="pg-media-wrap"><video controls preload="metadata" playsinline class="pg-media-el" src="' + safe + '"></video>' + tip + '</div>';
         }
         if (kind === 'audio') {
-            return '<div class="pg-media-wrap"><audio controls preload="metadata" class="pg-media-el pg-media-el--audio"><source src="' + safe + '"></audio>' + tip + '</div>';
+            return '<div class="pg-media-wrap"><audio controls preload="metadata" class="pg-media-el pg-media-el--audio" src="' + safe + '"></audio>' + tip + '</div>';
         }
-        return '<div class="pg-media-wrap"><img src="' + safe + '" alt="" class="pg-media-el pg-media-el--img" loading="lazy" decoding="async">' + tip + '</div>';
+        return '<div class="pg-media-wrap"><img src="' + safe + '" alt="预览" class="pg-media-el pg-media-el--img" loading="lazy" decoding="async" referrerpolicy="no-referrer">' + tip + '</div>';
     }
 
     function renderBinaryHint(ct, objectUrl) {
@@ -178,32 +231,40 @@
 
         if (encoding === 'url') {
             var mediaUrl = body;
-            var kindUrl = mediaKind(ct) || 'image';
-            if (kindUrl === 'image' || kindUrl === 'audio' || kindUrl === 'video') {
-                outputEl.innerHTML = renderMediaHtml(kindUrl, mediaUrl, (kindUrl.toUpperCase()) + ' 预览');
-            } else {
+            var kindUrl = resolveMediaKind(data, ct, '');
+            if (!kindUrl) {
+                // url 模式无魔数，按 contentType；仍未知则给可打开链接，勿默认当图片
                 outputEl.innerHTML = renderBinaryHint(ct || 'binary', mediaUrl);
+                return;
             }
+            outputEl.innerHTML = renderMediaHtml(kindUrl, mediaUrl, kindUrl.toUpperCase() + ' 预览');
             return;
         }
 
         if (encoding === 'base64') {
-            var kind = mediaKind(ct) || 'image';
+            var kind = resolveMediaKind(data, ct, body);
             try {
                 var bin = atob(body);
                 var len = bin.length;
                 var bytes = new Uint8Array(len);
                 for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
-                var blob = new Blob([bytes], { type: ct || 'application/octet-stream' });
+                if (!kind) {
+                    kind = sniffKindFromBytes(bytes);
+                }
+                var blobType = ct;
+                if (kind === 'image' && (!blobType || blobType.indexOf('image/') !== 0)) blobType = 'image/jpeg';
+                if (kind === 'video' && (!blobType || blobType.indexOf('video/') !== 0)) blobType = 'video/mp4';
+                if (kind === 'audio' && (!blobType || blobType.indexOf('audio/') !== 0)) blobType = 'audio/mpeg';
+                var blob = new Blob([bytes], { type: blobType || 'application/octet-stream' });
                 if (blob.size > 40 * 1024 * 1024) {
                     outputEl.innerHTML = '<div class="pg-media-wrap pg-media-wrap--hint"><p>媒体文件过大，请直接访问接口地址。</p></div>';
                     return;
                 }
                 var url = trackBlob(URL.createObjectURL(blob));
                 if (kind === 'image' || kind === 'audio' || kind === 'video') {
-                    outputEl.innerHTML = renderMediaHtml(kind, url, (kind.toUpperCase()) + ' · ' + Math.round(blob.size / 1024) + ' KB');
+                    outputEl.innerHTML = renderMediaHtml(kind, url, kind.toUpperCase() + ' · ' + Math.round(blob.size / 1024) + ' KB');
                 } else {
-                    outputEl.innerHTML = renderBinaryHint(ct, url);
+                    outputEl.innerHTML = renderBinaryHint(ct || 'binary', url);
                 }
             } catch (e) {
                 outputEl.innerHTML = renderBinaryHint(ct || 'binary', '');

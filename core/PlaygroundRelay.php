@@ -242,9 +242,16 @@ class PlaygroundRelay
             $body = substr($body, 0, self::MAX_BODY);
         }
 
-        $contentType = 'text/plain; charset=utf-8';
+        // 跟随重定向时 header 含多段，必须取最后一跳的 Content-Type
+        $headerBlob = self::lastResponseHeaders($headerBlob);
+        $contentType = 'application/octet-stream';
         if (preg_match('/^Content-Type:\s*(.+)$/mi', $headerBlob, $m)) {
             $contentType = trim($m[1]);
+        }
+        // 以文件魔数纠偏（上游常标错或标 octet-stream）
+        $sniffed = self::sniffMediaType($body);
+        if ($sniffed !== '') {
+            $contentType = $sniffed;
         }
 
         $ctLower = strtolower($contentType);
@@ -300,6 +307,11 @@ class PlaygroundRelay
     private static function packBinaryResult($http, $contentType, $body)
     {
         $ok = $http >= 200 && $http < 400;
+        $sniffed = self::sniffMediaType($body);
+        if ($sniffed !== '') {
+            $contentType = $sniffed;
+        }
+        $kind = self::mediaKindFromCt($contentType);
         $len = strlen($body);
         if ($len <= self::MAX_BINARY_INLINE) {
             return array(
@@ -307,6 +319,7 @@ class PlaygroundRelay
                 'msg'         => 'ok',
                 'http'        => $http,
                 'contentType' => $contentType,
+                'mediaKind'   => $kind,
                 'body'        => base64_encode($body),
                 'encoding'    => 'base64',
                 'displayUrl'  => '',
@@ -320,6 +333,7 @@ class PlaygroundRelay
                 'msg'         => '媒体已获取但无法生成预览，请直接访问接口地址',
                 'http'        => $http,
                 'contentType' => $contentType,
+                'mediaKind'   => $kind,
                 'body'        => '',
                 'encoding'    => 'omit',
                 'displayUrl'  => '',
@@ -331,10 +345,106 @@ class PlaygroundRelay
             'msg'         => 'ok',
             'http'        => $http,
             'contentType' => $contentType,
+            'mediaKind'   => $kind,
             'body'        => $mediaUrl,
             'encoding'    => 'url',
             'displayUrl'  => '',
         );
+    }
+
+    /**
+     * 取最后一跳响应头（curl FOLLOWLOCATION 时多段头拼在一起）
+     *
+     * @param string $headerBlob
+     * @return string
+     */
+    private static function lastResponseHeaders($headerBlob)
+    {
+        $headerBlob = (string) $headerBlob;
+        if ($headerBlob === '') {
+            return '';
+        }
+        if (!preg_match_all('/^HTTP\/\d(?:\.\d)?\s+\d+/mi', $headerBlob, $m, PREG_OFFSET_CAPTURE)) {
+            return $headerBlob;
+        }
+        $matches = $m[0];
+        $last = $matches[count($matches) - 1];
+        $offset = isset($last[1]) ? (int) $last[1] : 0;
+        return substr($headerBlob, $offset);
+    }
+
+    /**
+     * @param string $binary
+     * @return string 如 image/jpeg、video/mp4；无法识别返回空
+     */
+    private static function sniffMediaType($binary)
+    {
+        if (!is_string($binary) || strlen($binary) < 12) {
+            return '';
+        }
+        $b = $binary;
+        $h2 = substr($b, 0, 2);
+        $h3 = substr($b, 0, 3);
+        $h4 = substr($b, 0, 4);
+        $h6 = substr($b, 0, 6);
+        $h8 = substr($b, 0, 8);
+
+        if ($h3 === "\xFF\xD8\xFF") {
+            return 'image/jpeg';
+        }
+        if ($h8 === "\x89PNG\r\n\x1A\n") {
+            return 'image/png';
+        }
+        if ($h6 === 'GIF87a' || $h6 === 'GIF89a') {
+            return 'image/gif';
+        }
+        if ($h4 === 'RIFF' && substr($b, 8, 4) === 'WEBP') {
+            return 'image/webp';
+        }
+        if ($h4 === 'RIFF' && substr($b, 8, 4) === 'WAVE') {
+            return 'audio/wav';
+        }
+        if ($h4 === 'OggS') {
+            return 'audio/ogg';
+        }
+        if ($h3 === 'ID3' || ($h2 === "\xFF\xFB") || ($h2 === "\xFF\xF3") || ($h2 === "\xFF\xF2")) {
+            return 'audio/mpeg';
+        }
+        // ISO BMFF: ....ftyp....
+        if (strlen($b) >= 12 && substr($b, 4, 4) === 'ftyp') {
+            $brand = strtolower(substr($b, 8, 4));
+            if (strpos($brand, 'm4a') !== false || $brand === 'M4A ' || $brand === 'mp4a') {
+                return 'audio/mp4';
+            }
+            return 'video/mp4';
+        }
+        // EBML / WebM / Matroska
+        if ($h4 === "\x1A\x45\xDF\xA3") {
+            return 'video/webm';
+        }
+        if (substr($b, 0, 4) === "\x00\x00\x01\xBA" || substr($b, 0, 4) === "\x00\x00\x01\xB3") {
+            return 'video/mpeg';
+        }
+        return '';
+    }
+
+    /**
+     * @param string $contentType
+     * @return string image|audio|video|''
+     */
+    private static function mediaKindFromCt($contentType)
+    {
+        $t = strtolower(trim(explode(';', (string) $contentType, 2)[0]));
+        if (strpos($t, 'image/') === 0) {
+            return 'image';
+        }
+        if (strpos($t, 'audio/') === 0) {
+            return 'audio';
+        }
+        if (strpos($t, 'video/') === 0) {
+            return 'video';
+        }
+        return '';
     }
 
     /**
