@@ -4,7 +4,8 @@
  * 壳层 / 列表 / 表单等后台共用样式统一来自 /assets/css/admin.css。
  * 本文件只放默认主题用户中心的差异覆盖，禁止再整份复制 admin.css（见 E25 / 主题资源隔离规范）。
  *
- * 默认主题色板：Feer 黑白系（--vs-primary = #111），禁止写死与主题无关的亮蓝英雄条。
+ * 默认主题：页面背景由调色盘写 --page-bg；英雄条由 theme-picker 派生 --vs-uc-hero-bg。
+ * 禁止写死与调色盘无关的纯绿 / 纯蓝英雄条。
  */
 
 :root {
@@ -12,7 +13,13 @@
     --vs-uc-accent-soft: #d4d4d8;
     --vs-uc-accent-bg: #f4f4f5;
     --vs-uc-accent-ring: rgba(17, 17, 17, 0.12);
-    --vs-uc-hero-bg: linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 48%, #3f3f46 100%);
+    /* 无 JS 时的兜底：用 --page-bg 色相压暗（现代浏览器） */
+    --vs-uc-hero-bg: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--page-bg, #f8fafc) 18%, #0a0a0a) 0%,
+        color-mix(in srgb, var(--page-bg, #f8fafc) 40%, #1f2937) 52%,
+        color-mix(in srgb, var(--page-bg, #f8fafc) 55%, #334155) 100%
+    );
     --vs-uc-hero-fg: #ffffff;
 }
 
