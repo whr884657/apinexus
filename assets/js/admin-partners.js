@@ -1,5 +1,5 @@
 /**
- * 后台 · 合作伙伴管理
+ * 后台 · 合作伙伴管理（AJAX + 局部 DOM，禁止整页刷新）
  */
 (function () {
     'use strict';
@@ -11,6 +11,91 @@
 
     var overlay = document.getElementById('partnerFormOverlay');
     var form = document.getElementById('partnerForm');
+    var list = document.getElementById('partnerList');
+    var empty = document.getElementById('partnerEmpty');
+
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function syncEmpty() {
+        var has = list && list.querySelector('[data-partner-row]');
+        if (list) list.hidden = !has;
+        if (empty) empty.hidden = !!has;
+    }
+
+    function actionsHtml(link) {
+        var id = parseInt(link.id, 10) || 0;
+        var enabled = parseInt(link.enabled, 10);
+        if (enabled !== 0) enabled = 1;
+        var html = '<button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-partner-action="edit" data-link-id="' + id + '">编辑</button>';
+        if (enabled === 1) {
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-partner-action="disable" data-link-id="' + id + '">禁用</button>';
+        } else {
+            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary" data-partner-action="enable" data-link-id="' + id + '">启用</button>';
+        }
+        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger" data-partner-action="delete" data-link-id="' + id + '">删除</button>';
+        return html;
+    }
+
+    function iconHtml(link) {
+        var url = link.icon_url || '';
+        var name = link.name || '';
+        if (url) {
+            return '<img src="' + esc(url) + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer">';
+        }
+        var initial = name ? name.charAt(0) : '?';
+        return '<span class="vs-link-row__initial">' + esc(initial) + '</span>';
+    }
+
+    function rowHtml(link) {
+        var id = parseInt(link.id, 10) || 0;
+        var enabled = parseInt(link.enabled, 10);
+        if (enabled !== 0) enabled = 1;
+        var name = link.name || '';
+        var siteurl = link.siteurl || '';
+        var icon = link.icon || '';
+        var sort = link.sort != null ? link.sort : 0;
+        var label = enabled === 1 ? '启用' : '禁用';
+        var cls = enabled === 1 ? 'is-on' : 'is-off';
+        return (
+            '<div class="vs-link-row"' +
+            ' data-partner-row="' + id + '"' +
+            ' data-link-enabled="' + enabled + '"' +
+            ' data-name="' + esc(name) + '"' +
+            ' data-siteurl="' + esc(siteurl) + '"' +
+            ' data-icon="' + esc(icon) + '"' +
+            ' data-sort="' + esc(sort) + '"' +
+            ' data-enabled="' + enabled + '">' +
+            '<div class="vs-link-row__icon">' + iconHtml(link) + '</div>' +
+            '<div class="vs-link-row__main">' +
+            '<div class="vs-link-row__name" data-field="name">' + esc(name) + '</div>' +
+            '<a class="vs-link-row__url" data-field="siteurl" href="' + esc(siteurl) + '" target="_blank" rel="noopener noreferrer">' + esc(siteurl) + '</a>' +
+            '</div>' +
+            '<div class="vs-link-row__status">' +
+            '<span class="vs-link-status ' + cls + '" data-field="enabled_label">' + esc(label) + '</span>' +
+            '</div>' +
+            '<div class="vs-link-row__actions">' + actionsHtml(link) + '</div>' +
+            '</div>'
+        );
+    }
+
+    function upsertRow(link) {
+        if (!link || !list) return;
+        var id = parseInt(link.id, 10) || 0;
+        var html = rowHtml(link);
+        var existing = list.querySelector('[data-partner-row="' + id + '"]');
+        if (existing) {
+            existing.outerHTML = html;
+        } else {
+            list.insertAdjacentHTML('afterbegin', html);
+        }
+        syncEmpty();
+    }
 
     function openOverlay() {
         if (!overlay) return;
@@ -77,13 +162,19 @@
     if (form) {
         form.addEventListener('submit', function (e) {
             e.preventDefault();
+            var submitBtn = form.querySelector('[type="submit"]') || document.querySelector('button[form="partnerForm"]');
+            if (submitBtn) submitBtn.disabled = true;
             var fd = new FormData(form);
             postAction(fd).then(function (data) {
                 VS.showMessage(data.msg || '已保存', 'success');
                 closeOverlay();
-                window.location.reload();
+                if (data.link) {
+                    upsertRow(data.link);
+                }
             }).catch(function (err) {
                 VS.showMessage(err.message || '保存失败', 'error');
+            }).then(function () {
+                if (submitBtn) submitBtn.disabled = false;
             });
         });
     }
@@ -117,9 +208,38 @@
             fd.append('enabled', action === 'enable' ? '1' : '0');
             postAction(fd).then(function (data) {
                 VS.showMessage(data.msg || '已更新', 'success');
-                window.location.reload();
+                if (!row) return;
+                upsertRow({
+                    id: id,
+                    name: row.getAttribute('data-name') || '',
+                    siteurl: row.getAttribute('data-siteurl') || '',
+                    icon: row.getAttribute('data-icon') || '',
+                    icon_url: (row.querySelector('.vs-link-row__icon img') || {}).src || '',
+                    sort: row.getAttribute('data-sort') || 0,
+                    enabled: data.enabled != null ? data.enabled : (action === 'enable' ? 1 : 0)
+                });
             }).catch(function (err) {
                 VS.showMessage(err.message || '操作失败', 'error');
+            });
+            return;
+        }
+
+        if (action === 'delete') {
+            var ask = (window.VsModal && window.VsModal.confirm)
+                ? window.VsModal.confirm('删除后不可恢复，确定删除该合作伙伴？', '删除合作伙伴')
+                : Promise.resolve(window.confirm('确定删除该合作伙伴？'));
+            ask.then(function (ok) {
+                if (!ok) return;
+                var del = new FormData();
+                del.append('action', 'delete');
+                del.append('link_id', String(id));
+                postAction(del).then(function (data) {
+                    VS.showMessage(data.msg || '已删除', 'success');
+                    if (row) row.remove();
+                    syncEmpty();
+                }).catch(function (err) {
+                    VS.showMessage(err.message || '删除失败', 'error');
+                });
             });
         }
     });

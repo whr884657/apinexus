@@ -724,7 +724,7 @@ VsPlaygroundResponse.directRequest({
 - 申请页 `pages/applylink.php` + 根入口 `applylink.php`（短名无横线）
 - 页脚在二维码上方渲染已通过且启用的友链，末尾固定「申请友链」链到 `/applylink`
 - 禁止主题内 SQL；申请提交走 `applylink.php` POST + CSRF + `AjaxResponse`
-- 后台：`admin/content/links.php`（审核/启禁）、`admin/content/partners.php`（仅编辑/启禁）
+- 后台：`admin/content/links.php`（审核/启禁/删除）、`admin/content/partners.php`（编辑/启禁/删除）；操作须 AJAX 局部更新，禁止整页刷新（E61）
 **主题首页示例：**
 
 ```php

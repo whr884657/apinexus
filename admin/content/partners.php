@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/content/partners.php
- * 作用：合作伙伴管理（与友链共用 link 表；无审核，仅编辑/启禁）
+ * 作用：合作伙伴管理（与友链共用 link 表；无审核；编辑 / 启禁 / 删除）
  */
 
 require_once dirname(__DIR__) . '/init.php';
@@ -76,6 +76,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
     }
 
+    if ($action === 'delete') {
+        $id = isset($_POST['link_id']) ? (int) $_POST['link_id'] : 0;
+        $existing = LinkManager::findById($id);
+        if (!is_array($existing)
+            || LinkManager::normalizeKind(isset($existing['kind']) ? $existing['kind'] : -1) !== LinkManager::KIND_PARTNER
+        ) {
+            AjaxResponse::error('记录不存在');
+        }
+        $result = LinkManager::delete($id);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        AjaxResponse::success('合作伙伴已删除', array('link_id' => $id));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
@@ -125,6 +140,7 @@ function vs_render_partner_item(array $row)
             <?php else: ?>
                 <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary" data-partner-action="enable" data-link-id="<?php echo $id; ?>">启用</button>
             <?php endif; ?>
+            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger" data-partner-action="delete" data-link-id="<?php echo $id; ?>">删除</button>
         </div>
     </div>
     <?php

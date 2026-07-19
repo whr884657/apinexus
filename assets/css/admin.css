@@ -6245,70 +6245,147 @@ select.vs-input.vs-select {
 
 
 
-/* ---- 友情链接 / 合作伙伴管理 ---- */
-.vs-link-panel { padding: 0; }
-.vs-link-list { display: flex; flex-direction: column; gap: 0; }
+/* ---- 友情链接 / 合作伙伴管理（双端卡片列表） ---- */
+.vs-link-panel {
+    padding: 16px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+.vs-link-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 .vs-link-row {
     display: grid;
-    grid-template-columns: 48px 1fr auto auto;
-    gap: 12px;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    grid-template-areas:
+        "icon main status"
+        "actions actions actions";
+    gap: 10px 14px;
     align-items: center;
     padding: 14px 16px;
-    border-bottom: 1px solid var(--vs-border, #e5e7eb);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    background: var(--vs-white, #fff);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.vs-link-row:last-child { border-bottom: 0; }
+.vs-link-row:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
 .vs-link-row__icon {
-    width: 40px; height: 40px; border-radius: 10px;
-    background: #f3f4f6; display: flex; align-items: center; justify-content: center; overflow: hidden;
+    grid-area: icon;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
 }
-.vs-link-row__icon img { width: 100%; height: 100%; object-fit: cover; }
-.vs-link-row__initial { font-weight: 700; color: #111; }
-.vs-link-row__name { font-weight: 600; color: #111; }
-.vs-link-row__url { font-size: 12px; color: #6b7280; text-decoration: none; word-break: break-all; }
+.vs-link-row__icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vs-link-row__initial { font-weight: 700; color: #111; font-size: 15px; }
+.vs-link-row__main { grid-area: main; min-width: 0; }
+.vs-link-row__name {
+    font-weight: 600;
+    color: #111;
+    font-size: 14px;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vs-link-row__url {
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
+    text-decoration: none;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .vs-link-row__url:hover { color: #2563eb; }
 .vs-link-row__desc {
-    font-size: 12px; color: #9ca3af; margin-top: 2px;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 4px;
+    line-height: 1.45;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    max-height: 2.9em;
 }
-.vs-link-row__actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.vs-link-row__status {
+    grid-area: status;
+    justify-self: end;
+    align-self: start;
+    margin-top: 2px;
+}
+.vs-link-row__actions {
+    grid-area: actions;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+    padding-top: 10px;
+    border-top: 1px solid var(--vs-border, #e5e7eb);
+}
 .vs-link-status {
-    display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #f3f4f6; color: #6b7280;
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #6b7280;
+    white-space: nowrap;
 }
 .vs-link-status.is-on { background: #ecfdf5; color: #059669; }
 .vs-link-status.is-off { background: #fef2f2; color: #dc2626; }
 .vs-link-status.is-pending { background: #fffbeb; color: #d97706; }
+
+@media (min-width: 901px) {
+    .vs-link-panel { padding: 20px; }
+    .vs-link-list { gap: 12px; }
+    .vs-link-row {
+        grid-template-columns: 48px minmax(0, 1fr) auto minmax(220px, auto);
+        grid-template-areas: "icon main status actions";
+        align-items: center;
+        padding: 16px 18px;
+    }
+    .vs-link-row__status {
+        align-self: center;
+        margin-top: 0;
+        justify-self: center;
+    }
+    .vs-link-row__actions {
+        justify-self: end;
+        padding-top: 0;
+        border-top: 0;
+        max-width: none;
+    }
+}
+
 @media (max-width: 720px) {
-    .vs-link-panel { padding: 12px; background: transparent; box-shadow: none; border: 0; }
+    .vs-link-panel { padding: 12px; }
     .vs-link-list { gap: 10px; }
     .vs-link-row {
         grid-template-columns: 40px 1fr auto;
         grid-template-areas:
             "icon main status"
             "actions actions actions";
-        gap: 8px 10px;
         padding: 12px;
-        border: 1px solid var(--vs-border, #e5e7eb);
-        border-radius: 12px;
-        background: var(--vs-white, #fff);
-        box-shadow: var(--vs-shadow, 0 1px 2px rgba(0,0,0,.04));
         align-items: start;
     }
-    .vs-link-row:last-child { border-bottom: 1px solid var(--vs-border, #e5e7eb); }
-    .vs-link-row__icon { grid-area: icon; }
-    .vs-link-row__main { grid-area: main; min-width: 0; }
-    .vs-link-row__status { grid-area: status; justify-self: end; }
+    .vs-link-row__icon { width: 40px; height: 40px; }
     .vs-link-row__actions {
-        grid-area: actions;
-        justify-content: flex-end;
         padding-top: 10px;
-        margin-top: 2px;
         border-top: 1px solid var(--vs-border, #e5e7eb);
-    }
-    .vs-link-row__desc {
-        -webkit-line-clamp: 2;
-        max-height: 2.8em;
     }
 }
