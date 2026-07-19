@@ -743,6 +743,8 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 | `checkForUpdate()` | 检测是否有新版本 |
 | `fetchRemoteManifest()` | 按镜像顺序拉取 `update.json`（失败再试 `version.php`） |
 | `buildUpdatePackageUrls()` | 构建下载链（Gitee 发行包 → GitCode 归档 → GitHub 发行/归档） |
+| `copyFileSafe()` | 安全写入：chmod / 删旧 / copy / file_put_contents |
+| `isOptionalUpdatePath()` | 发行说明等非关键路径，写入失败可跳过 |
 | `downloadAndApply($version)` | 下载并应用更新包 |
 | `removeObsoleteFiles()` | 覆盖后删除 `install/obsolete-files.json` 声明的残留文件 |
 | `protectedRelativePaths()` | 更新时绝不可覆盖的路径 |

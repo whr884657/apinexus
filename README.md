@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-4.1.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-4.1.1-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像仓库-C71D23" alt="GitCode"></a>
@@ -250,12 +250,10 @@ location / {
 
 ## 版本记录
 
-### v4.1.0（2026-07-19）
+### v4.1.1（2026-07-19）
 
-- 在线更新三重兜底：**Gitee（默认）→ GitCode → GitHub**
-- 文档补充三仓库链接；`update.json` / `update-log.json` 同序拉取
-- README 版本记录仅保留最新一条；完整历史见 [更新记录.md](更新记录.md)
-- 移除 README「功能列表」大表，避免与简介重复
+- 修复在线更新因 `发行说明` 等文档不可写导致整次覆盖失败
+- 非关键文档写入失败时跳过并继续；写入链路多级兜底
 
 更多历史版本请查看 **[更新记录.md](更新记录.md)**。
 

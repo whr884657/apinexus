@@ -334,9 +334,13 @@ class Updater
         }
 
         $dbConfigHash = self::databaseConfigFingerprint();
+        $skippedDocs = 0;
 
         try {
-            self::copyTree($work['source_root'], VS_ROOT, self::protectedRelativePaths());
+            $copyResult = self::copyTree($work['source_root'], VS_ROOT, self::protectedRelativePaths());
+            if (is_array($copyResult) && !empty($copyResult['skipped']) && is_array($copyResult['skipped'])) {
+                $skippedDocs = count($copyResult['skipped']);
+            }
             $removed = self::removeObsoleteFiles($work['source_root'], VS_ROOT, self::protectedRelativePaths());
             self::assertDatabaseConfigUnchanged($dbConfigHash);
         } catch (Exception $e) {
@@ -352,6 +356,9 @@ class Updater
         $msg = '文件覆盖完成';
         if ($removed > 0) {
             $msg .= '，已清理 ' . $removed . ' 个废弃文件';
+        }
+        if ($skippedDocs > 0) {
+            $msg .= '，已跳过 ' . $skippedDocs . ' 个非关键文档（如发行说明）';
         }
 
         return array(
@@ -1083,12 +1090,97 @@ class Updater
     }
 
     /**
+     * 非关键路径：写入失败时跳过，不中断整次更新（发行说明等文档）
+     *
+     * @param string $relative
+     * @return bool
+     */
+    public static function isOptionalUpdatePath($relative)
+    {
+        $relative = str_replace('\\', '/', (string) $relative);
+        if ($relative === '更新记录.md' || $relative === 'LICENSE') {
+            return true;
+        }
+        if (strpos($relative, '发行说明/') === 0) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 确保目标目录可写
+     *
+     * @param string $dir
+     * @param string $relativeHint
+     * @return void
+     */
+    private static function ensureWritableDir($dir, $relativeHint)
+    {
+        if (!is_dir($dir)) {
+            if (!@mkdir($dir, 0755, true) && !is_dir($dir)) {
+                throw new Exception('无法创建目录：' . $relativeHint);
+            }
+        }
+        if (!is_writable($dir)) {
+            @chmod($dir, 0755);
+        }
+        if (!is_writable($dir)) {
+            throw new Exception('目录不可写：' . $relativeHint . '（请检查站点目录权限）');
+        }
+    }
+
+    /**
+     * 安全写入文件：chmod / 删旧 / copy / file_put_contents 多级兜底
+     *
+     * @param string $from
+     * @param string $to
+     * @param string $relative
+     * @return void
+     */
+    public static function copyFileSafe($from, $to, $relative)
+    {
+        $targetDir = dirname($to);
+        self::ensureWritableDir($targetDir, dirname($relative) === '.' ? '.' : dirname($relative));
+
+        if (is_dir($to)) {
+            throw new Exception('目标路径是目录而非文件：' . $relative);
+        }
+
+        if (is_file($to) && !is_writable($to)) {
+            @chmod($to, 0644);
+        }
+        if (is_file($to) && !is_writable($to)) {
+            @unlink($to);
+        }
+
+        if (@copy($from, $to)) {
+            return;
+        }
+
+        $data = @file_get_contents($from);
+        if ($data === false) {
+            throw new Exception('无法读取更新包文件：' . $relative);
+        }
+        if (@file_put_contents($to, $data) !== false) {
+            return;
+        }
+
+        $hint = '';
+        if (is_file($to) && !is_writable($to)) {
+            $hint = '（目标文件只读，请 chmod/删除后重试）';
+        } elseif (!is_writable($targetDir)) {
+            $hint = '（目录不可写）';
+        }
+        throw new Exception('无法写入文件：' . $relative . $hint);
+    }
+
+    /**
      * 递归复制目录（跳过受保护路径）
      *
      * @param string $src
      * @param string $dst
      * @param array  $protected
-     * @return void
+     * @return array{skipped: array<int, string>}
      */
     public static function copyTree($src, $dst, array $protected)
     {
@@ -1099,6 +1191,7 @@ class Updater
             throw new Exception('路径无效');
         }
 
+        $skipped = array();
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($src, RecursiveDirectoryIterator::SKIP_DOTS),
             RecursiveIteratorIterator::SELF_FIRST
@@ -1115,23 +1208,29 @@ class Updater
             $target = $dst . '/' . $relative;
 
             if ($item->isDir()) {
-                if (!is_dir($target)) {
-                    if (!@mkdir($target, 0755, true)) {
-                        throw new Exception('无法创建目录：' . $relative);
+                try {
+                    self::ensureWritableDir($target, $relative);
+                } catch (Exception $e) {
+                    if (self::isOptionalUpdatePath($relative . '/')) {
+                        $skipped[] = $relative;
+                        continue;
                     }
+                    throw $e;
                 }
             } else {
-                $targetDir = dirname($target);
-                if (!is_dir($targetDir)) {
-                    if (!@mkdir($targetDir, 0755, true)) {
-                        throw new Exception('无法创建目录：' . dirname($relative));
+                try {
+                    self::copyFileSafe($fullPath, $target, $relative);
+                } catch (Exception $e) {
+                    if (self::isOptionalUpdatePath($relative)) {
+                        $skipped[] = $relative;
+                        continue;
                     }
-                }
-                if (!@copy($fullPath, $target)) {
-                    throw new Exception('无法写入文件：' . $relative);
+                    throw $e;
                 }
             }
         }
+
+        return array('skipped' => $skipped);
     }
 
     /**
