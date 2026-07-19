@@ -166,7 +166,7 @@ vs_admin_layout_start('主题设置', 'theme');
         <h2 class="vs-panel__title">前台主题</h2>
     </div>
 
-    <nav class="vs-product-tabs" aria-label="主题设置导航">
+    <nav class="vs-product-tabs vs-theme-settings__tabs" aria-label="主题设置导航">
         <button type="button" class="vs-product-tabs__btn is-active" data-tab="switch" aria-selected="true">主题切换</button>
         <button type="button" class="vs-product-tabs__btn" data-tab="config" aria-selected="false">主题设置</button>
     </nav>
@@ -174,59 +174,63 @@ vs_admin_layout_start('主题设置', 'theme');
     <?php if (empty($themes)): ?>
         <?php vs_render_notice('warning', '', '未找到可用主题，请稍后重试或联系管理员。', array('compact' => true)); ?>
     <?php else: ?>
-        <div class="vs-product-tab-panel is-active" data-panel="switch" id="themeSwitchPanel">
-            <form method="post" action="" class="vs-form" id="themeSettingsForm" data-ajax="1">
-                <input type="hidden" name="action" value="save_theme">
-                <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
+        <div class="vs-theme-settings-desk">
+            <div class="vs-product-tab-panel is-active" data-panel="switch" id="themeSwitchPanel">
+                <h3 class="vs-theme-desk-title">主题切换</h3>
+                <form method="post" action="" class="vs-form" id="themeSettingsForm" data-ajax="1">
+                    <input type="hidden" name="action" value="save_theme">
+                    <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
 
-                <div class="vs-theme-gallery-wrap">
-                    <div class="vs-theme-gallery">
-                        <?php foreach ($themes as $theme): ?>
-                            <?php $isActive = $theme['id'] === $activeTheme; ?>
-                            <label class="vs-theme-card<?php echo $isActive ? ' is-active' : ''; ?>" data-theme-id="<?php echo vs_e($theme['id']); ?>">
-                                <input type="radio" name="frontend_theme" value="<?php echo vs_e($theme['id']); ?>"<?php echo $isActive ? ' checked' : ''; ?>>
-                                <div class="vs-theme-card__preview">
-                                    <?php if ($theme['preview_url'] !== ''): ?>
-                                        <img src="<?php echo vs_e($theme['preview_url']); ?>" alt="<?php echo vs_e($theme['name']); ?>" class="vs-theme-card__img" loading="lazy">
-                                    <?php else: ?>
-                                        <div class="vs-theme-card__placeholder">预览</div>
-                                    <?php endif; ?>
-                                    <?php if ($isActive): ?>
-                                        <span class="vs-theme-card__status">当前使用</span>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="vs-theme-card__body">
-                                    <div class="vs-theme-card__name"><?php echo vs_e($theme['name']); ?></div>
-                                    <?php if ($theme['version'] !== ''): ?>
-                                        <div class="vs-theme-card__version">v<?php echo vs_e($theme['version']); ?></div>
-                                    <?php endif; ?>
-                                </div>
-                            </label>
-                        <?php endforeach; ?>
+                    <div class="vs-theme-gallery-wrap">
+                        <div class="vs-theme-gallery">
+                            <?php foreach ($themes as $theme): ?>
+                                <?php $isActive = $theme['id'] === $activeTheme; ?>
+                                <label class="vs-theme-card<?php echo $isActive ? ' is-active' : ''; ?>" data-theme-id="<?php echo vs_e($theme['id']); ?>">
+                                    <input type="radio" name="frontend_theme" value="<?php echo vs_e($theme['id']); ?>"<?php echo $isActive ? ' checked' : ''; ?>>
+                                    <div class="vs-theme-card__preview">
+                                        <?php if ($theme['preview_url'] !== ''): ?>
+                                            <img src="<?php echo vs_e($theme['preview_url']); ?>" alt="<?php echo vs_e($theme['name']); ?>" class="vs-theme-card__img" loading="lazy">
+                                        <?php else: ?>
+                                            <div class="vs-theme-card__placeholder">预览</div>
+                                        <?php endif; ?>
+                                        <?php if ($isActive): ?>
+                                            <span class="vs-theme-card__status">当前使用</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="vs-theme-card__body">
+                                        <div class="vs-theme-card__name"><?php echo vs_e($theme['name']); ?></div>
+                                        <?php if ($theme['version'] !== ''): ?>
+                                            <div class="vs-theme-card__version">v<?php echo vs_e($theme['version']); ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
-                </div>
 
-                <div class="vs-form-actions">
-                    <button type="submit" class="vs-btn vs-btn--primary">保存主题</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="vs-product-tab-panel" data-panel="config" id="themeConfigPanel" hidden>
-            <div class="vs-theme-config-head">
-                <span class="vs-theme-config-head__label">正在配置</span>
-                <strong class="vs-theme-config-head__name" id="themeConfigActiveName"><?php echo vs_e($activeThemeName); ?></strong>
+                    <div class="vs-form-actions">
+                        <button type="submit" class="vs-btn vs-btn--primary">保存主题</button>
+                    </div>
+                </form>
             </div>
-            <form method="post" action="" class="vs-form vs-theme-config-form" id="themeConfigForm" data-ajax="1">
-                <input type="hidden" name="action" value="save_theme_settings">
-                <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
-                <div class="vs-theme-config-form__body" id="themeConfigFormBody">
-                    <?php vs_admin_render_theme_config_fields($activeTheme); ?>
+
+            <div class="vs-product-tab-panel" data-panel="config" id="themeConfigPanel" hidden>
+                <h3 class="vs-theme-desk-title">主题设置</h3>
+                <div class="vs-theme-config-head">
+                    <span class="vs-theme-config-head__label">正在配置</span>
+                    <strong class="vs-theme-config-head__name" id="themeConfigActiveName"><?php echo vs_e($activeThemeName); ?></strong>
                 </div>
-                <div class="vs-form-actions">
-                    <button type="submit" class="vs-btn vs-btn--primary" id="themeConfigSaveBtn"<?php echo count(ThemeManager::getSettingsSchema($activeTheme)) === 0 ? ' disabled' : ''; ?>>保存设置</button>
-                </div>
-            </form>
+                <form method="post" action="" class="vs-form vs-theme-config-form" id="themeConfigForm" data-ajax="1">
+                    <input type="hidden" name="action" value="save_theme_settings">
+                    <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
+                    <div class="vs-theme-config-form__body" id="themeConfigFormBody">
+                        <?php vs_admin_render_theme_config_fields($activeTheme); ?>
+                    </div>
+                    <div class="vs-form-actions">
+                        <button type="submit" class="vs-btn vs-btn--primary" id="themeConfigSaveBtn"<?php echo count(ThemeManager::getSettingsSchema($activeTheme)) === 0 ? ' disabled' : ''; ?>>保存设置</button>
+                    </div>
+                </form>
+            </div>
         </div>
     <?php endif; ?>
 </div>

@@ -84,19 +84,23 @@ class FrontendApi
      */
     public static function listForTheme()
     {
-        $apiData = array();
-
-        foreach (ApiManager::listPublic() as $row) {
-            if (!is_array($row)) {
-                continue;
+        return RedisCache::remember(
+            RedisCache::KEY_FRONTEND_API,
+            RedisCache::TTL_FRONTEND_API,
+            function () {
+                $apiData = array();
+                foreach (ApiManager::listPublic() as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+                    $item = self::formatForTheme($row);
+                    if ($item !== null) {
+                        $apiData[] = $item;
+                    }
+                }
+                return $apiData;
             }
-            $item = self::formatForTheme($row);
-            if ($item !== null) {
-                $apiData[] = $item;
-            }
-        }
-
-        return $apiData;
+        );
     }
 
     /**
