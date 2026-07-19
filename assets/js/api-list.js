@@ -175,12 +175,12 @@
     function requireKeyLabel(v) {
         var n = parseInt(v, 10) || 0;
         if (n === 1) {
-            return '必须';
+            return 'KEY 必填';
         }
         if (n === 2) {
-            return '可选';
+            return 'KEY 可选';
         }
-        return '不需要';
+        return '无需 KEY';
     }
 
     function postAction(action, payload) {

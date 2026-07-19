@@ -3,9 +3,11 @@
  */
 
 .links-page {
-    padding-top: 76px;
+    padding-top: 88px;
     padding-bottom: 2.5rem;
     max-width: 960px;
+    position: relative;
+    z-index: 10;
 }
 
 .links-page .page-header {
@@ -163,6 +165,6 @@
 
 @media (max-width: 640px) {
     .links-page {
-        padding-top: 70px;
+        padding-top: 80px;
     }
 }

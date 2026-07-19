@@ -48,6 +48,11 @@
     opacity: 0.35;
 }
 
+:root {
+    --nav-height: 60px;
+    --page-pad-top: 88px;
+}
+
 .feer-nav-link {
     color: var(--text-muted);
     text-decoration: none;

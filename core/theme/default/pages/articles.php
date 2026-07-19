@@ -1,5 +1,5 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
-<main class="content-wrapper" style="padding-top:70px;">
+<main class="content-wrapper" style="padding-top:88px;">
     <h1 class="page-title">文章</h1>
     <article class="article-card">
         <div class="article-card-inner right-image">

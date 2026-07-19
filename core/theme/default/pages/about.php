@@ -1,5 +1,5 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
-<main class="content-wrapper" style="padding-top:70px;">
+<main class="content-wrapper" style="padding-top:88px;">
     <h1 class="page-title">关于我们</h1>
     <div class="page-content markdown-body" id="page-content" data-type="html">
         <h2>关于 <?php echo vs_e($siteName); ?></h2>

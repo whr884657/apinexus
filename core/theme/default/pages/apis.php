@@ -6,7 +6,7 @@ $apiCount = count($apiData);
 $visibleLimit = FrontendCategory::tagVisibleLimit();
 $catIndex = 0;
 ?>
-<main class="main-wrapper container mx-auto px-4" style="padding-top:70px;">
+<main class="main-wrapper container mx-auto px-4" style="padding-top:88px;">
     <div class="page-header">
         <h1 class="section-title">全部接口</h1>
         <p class="text-sm font-mono" style="color: var(--text-muted);">共 <span id="apiTotalCount"><?php echo (int) $apiCount; ?></span> 个 API 接口</p>

@@ -3,9 +3,11 @@
  */
 
 .applylink-page {
-    padding-top: 76px;
+    padding-top: 88px;
     padding-bottom: 2.5rem;
     max-width: 720px;
+    position: relative;
+    z-index: 10;
 }
 
 .applylink-page .page-header {
@@ -179,7 +181,7 @@
 
 @media (max-width: 640px) {
     .applylink-page {
-        padding-top: 70px;
+        padding-top: 80px;
     }
 
     .form-card {

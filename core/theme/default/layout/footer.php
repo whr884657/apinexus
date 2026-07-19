@@ -9,8 +9,9 @@ $hasRuntime = vs_site_has_runtime();
 $runtimeStart = vs_site_runtime_start();
 $footerLinks = class_exists('FrontendLink') ? FrontendLink::listForTheme() : array();
 $applyUrl = rtrim($vsBase, '/') . '/applylink';
+$isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
 ?>
-<footer class="mt-12">
+<footer class="mt-12 feer-footer">
     <div class="container mx-auto px-6">
         <div class="py-8 border-b" style="border-color: var(--border-color);">
             <div class="flex flex-col md:flex-row gap-6 md:items-start md:justify-between">
@@ -24,7 +25,11 @@ $applyUrl = rtrim($vsBase, '/') . '/applylink';
                                class="footer-link-item"
                                data-friend-link="1"><?php echo vs_e($item['name']); ?></a>
                         <?php endforeach; ?>
-                        <a href="<?php echo vs_e($applyUrl); ?>" class="footer-link-item footer-link-item--apply">申请友情链接</a>
+                        <?php if ($isApplyPage): ?>
+                            <a href="<?php echo vs_e(rtrim($vsBase, '/')); ?>/links" class="footer-link-item">友情链接</a>
+                        <?php else: ?>
+                            <a href="<?php echo vs_e($applyUrl); ?>" class="footer-link-item footer-link-item--apply">申请友链</a>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="vs-foot-qr-wrap">

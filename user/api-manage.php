@@ -386,11 +386,11 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 <div>
                     <label class="vs-label" for="userApiFormNeedkey">密钥要求</label>
                     <select class="vs-input vs-select" id="userApiFormNeedkey" name="needkey" data-vs-pick>
-                        <option value="0">完全不需要</option>
-                        <option value="1">必须需要</option>
-                        <option value="2">可选（可填可不填）</option>
+                        <option value="0">无需 KEY</option>
+                        <option value="1">KEY 必填</option>
+                        <option value="2">KEY 可选</option>
                     </select>
-                    <p class="vs-form-hint">「完全不需要」与「可选」调用规则相同；选「完全不需要」时前台通常不展示密钥填写框。</p>
+                    <p class="vs-form-hint">「无需 KEY」与「KEY 可选」调用规则相同；选「无需 KEY」时前台通常不展示密钥填写框。</p>
                 </div>
             </div>
             <div class="vs-form-row vs-form-row--2">

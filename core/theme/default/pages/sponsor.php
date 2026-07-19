@@ -1,5 +1,5 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
-<main class="main-wrapper container mx-auto px-4" style="padding-top:70px;">
+<main class="main-wrapper container mx-auto px-4" style="padding-top:88px;">
     <div class="page-header">
         <h1 class="section-title">赞助我们</h1>
         <p class="text-sm font-mono" style="color: var(--text-muted);">感谢你一路同行，每一份支持都会用于站点维护与功能迭代</p>

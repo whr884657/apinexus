@@ -1160,10 +1160,10 @@ class ApiManager
     {
         $key = self::normalizeRequireKey($value);
         if ($key === self::KEY_REQUIRED) {
-            return 'KEY必填';
+            return 'KEY 必填';
         }
         if ($key === self::KEY_OPTIONAL) {
-            return 'KEY可选';
+            return 'KEY 可选';
         }
         return '';
     }
@@ -1322,7 +1322,7 @@ class ApiManager
             if ($price > 100000000) {
                 return '单次扣费积分过大';
             }
-            // 收费接口必须校验密钥，不允许「完全不需要」
+            // 收费接口必须校验密钥，不允许「无需 KEY」
             if ($requireKey === self::KEY_NONE) {
                 $requireKey = self::KEY_REQUIRED;
             }
@@ -1474,11 +1474,11 @@ class ApiManager
     public static function requireKeyLabel($value)
     {
         $map = array(
-            self::KEY_NONE     => '完全不需要',
-            self::KEY_REQUIRED => '必须需要',
-            self::KEY_OPTIONAL => '可选',
+            self::KEY_NONE     => '无需 KEY',
+            self::KEY_REQUIRED => 'KEY 必填',
+            self::KEY_OPTIONAL => 'KEY 可选',
         );
         $key = self::normalizeRequireKey($value);
-        return isset($map[$key]) ? $map[$key] : '完全不需要';
+        return isset($map[$key]) ? $map[$key] : '无需 KEY';
     }
 }

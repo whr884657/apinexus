@@ -76,7 +76,71 @@ class FrontendApi
                 ? (float) ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0)
                 : 0,
             'createtime'  => isset($row['createtime']) ? (string) $row['createtime'] : '',
+            'params_list' => self::parseParamsList(isset($row['params']) ? (string) $row['params'] : ''),
         );
+    }
+
+    /**
+     * 解析 params JSON 数组（管理端表格结构）；失败返回空数组
+     *
+     * @param string $raw
+     * @return array<int, array{name:string,type:string,required:bool,description:string,example:string}>
+     */
+    public static function parseParamsList($raw)
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return array();
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return array();
+        }
+        $out = array();
+        foreach ($decoded as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $name = '';
+            if (isset($item['name'])) {
+                $name = trim((string) $item['name']);
+            } elseif (isset($item['key'])) {
+                $name = trim((string) $item['key']);
+            }
+            if ($name === '') {
+                continue;
+            }
+            $desc = '';
+            if (isset($item['description'])) {
+                $desc = trim((string) $item['description']);
+            } elseif (isset($item['desc'])) {
+                $desc = trim((string) $item['desc']);
+            }
+            $out[] = array(
+                'name'        => $name,
+                'type'        => isset($item['type']) ? trim((string) $item['type']) : 'string',
+                'required'    => !empty($item['required']),
+                'description' => $desc,
+                'example'     => isset($item['example']) ? trim((string) $item['example']) : '',
+            );
+        }
+        return $out;
+    }
+
+    /**
+     * 美化 params JSON（供详情 JSON 视图）
+     *
+     * @param string $raw
+     * @return string
+     */
+    public static function prettyParamsJson($raw)
+    {
+        $list = self::parseParamsList($raw);
+        if ($list === array()) {
+            $raw = trim((string) $raw);
+            return $raw;
+        }
+        return (string) json_encode($list, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
     }
 
     /**

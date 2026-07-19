@@ -1,5 +1,5 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
-<main class="main-wrapper container mx-auto px-4" style="padding-top:70px;">
+<main class="main-wrapper container mx-auto px-4" style="padding-top:88px;">
     <div class="page-header">
         <h1 class="section-title">公益贡献者</h1>
         <p class="text-sm font-mono" style="color: var(--text-muted);">感谢每一位为开源社区贡献力量的开发者</p>

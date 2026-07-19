@@ -418,9 +418,9 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <div>
                         <label class="vs-label" for="apiListFormRequireKey">是否需要密钥</label>
                         <select class="vs-input vs-select" id="apiListFormRequireKey" name="needkey" data-vs-pick>
-                            <option value="0">完全不需要</option>
-                            <option value="1">必须需要</option>
-                            <option value="2">可选（可填可不填）</option>
+                            <option value="0">无需 KEY</option>
+                            <option value="1">KEY 必填</option>
+                            <option value="2">KEY 可选</option>
                         </select>
                     </div>
                 </div>
@@ -437,7 +437,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                         <input type="number" class="vs-input" id="apiListFormPrice" name="price" min="0.0001" step="0.0001" placeholder="如 0.1 或 1">
                     </div>
                 </div>
-                <p class="vs-form-hint">「完全不需要」与「可选」调用规则相同；选「完全不需要」时前台通常不展示密钥填写框，「可选」会展示可空输入。本页发布的接口默认审核通过。收费接口调用时须提供有效密钥且余额足够。</p>
+                <p class="vs-form-hint">「无需 KEY」与「KEY 可选」调用规则相同；选「无需 KEY」时前台通常不展示密钥填写框，「KEY 可选」会展示可空输入。本页发布的接口默认审核通过。收费接口调用时须提供有效密钥且余额足够。</p>
                 <div class="vs-form-row">
                     <label class="vs-label">接口图标</label>
                     <div class="vs-api-cat-icon-picker" id="apiListIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>

@@ -1,13 +1,13 @@
 {
-    "version": "4.4.0",
-    "title": "ApiNexus 4.4.0 默认主题详情页与友情链接体系",
-    "release_date": "2026-07-19",
-    "db_changes": true,
+    "version": "4.5.0",
+    "title": "ApiNexus 4.5.0 详情页体验与 KEY 文案规范",
+    "release_date": "2026-07-20",
+    "db_changes": false,
     "changes": [
-        "默认主题接口详情页重构：卡片分区、信息网格、计费\/文档展示（白色色板）",
-        "友情链接全链路：表 link、LinkManager、FrontendLink、后台审核",
-        "新增申请友链页 applylink（短名无横线）；页脚展示已通过友链并附申请入口",
-        "申请友链不再跳转仓库 Issue"
+        "默认主题详情页：顶栏避让、标题区优化、参数默认表格可切美化 JSON",
+        "详情页补齐详细文档 \/ AI 文档分区与在线测试（浏览器直连）",
+        "KEY 文案统一为：无需 KEY \/ KEY 必填 \/ KEY 可选",
+        "全站前台页脚「申请友链」；申请页去重页脚 CTA；各页顶栏 padding 统一"
     ],
     "repo": "xunjinlu\/apinexus",
     "branch": "main"
