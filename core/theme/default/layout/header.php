@@ -4,6 +4,13 @@ if (!defined('VS_THEME_RENDER')) {
 }
 $authBtnLabel = !empty($userLoggedIn) ? '用户中心' : $authLabel;
 $siteLogo = class_exists('SiteContext') ? trim(SiteContext::siteLogo()) : '';
+$avatarUrl = (!empty($userLoggedIn) && !empty($authAvatarUrl)) ? (string) $authAvatarUrl : '';
+if (!empty($userLoggedIn) && $avatarUrl === '' && class_exists('UserAvatar') && class_exists('UserAuth')) {
+    $authUser = UserAuth::user();
+    if (is_array($authUser)) {
+        $avatarUrl = UserAvatar::resolve($authUser);
+    }
+}
 ?>
 <canvas id="shader-canvas"></canvas>
 <div class="grid-overlay"></div>
@@ -20,7 +27,12 @@ $siteLogo = class_exists('SiteContext') ? trim(SiteContext::siteLogo()) : '';
         <?php endforeach; ?>
     </div>
     <div class="mt-auto">
-        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek w-full text-center block" onclick="closeSidebarNow()"><?php echo vs_e($authBtnLabel); ?></a>
+        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek w-full text-center auth-entry-btn<?php echo $avatarUrl !== '' ? ' auth-entry-btn--user' : ''; ?>" onclick="closeSidebarNow()">
+            <?php if ($avatarUrl !== ''): ?>
+                <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="" width="22" height="22" loading="lazy" referrerpolicy="no-referrer" decoding="async">
+            <?php endif; ?>
+            <span><?php echo vs_e($authBtnLabel); ?></span>
+        </a>
     </div>
 </aside>
 <nav class="nav-bar">
@@ -39,7 +51,12 @@ $siteLogo = class_exists('SiteContext') ? trim(SiteContext::siteLogo()) : '';
                    class="feer-nav-link<?php echo $activeNav === $item['id'] ? ' is-active' : ''; ?>"><?php echo vs_e($item['label']); ?></a>
             <?php endforeach; ?>
         </div>
-        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek text-xs py-2 px-4 hidden md:inline-block"><?php echo vs_e($authBtnLabel); ?></a>
+        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek text-xs py-2 px-4 hidden md:inline-flex auth-entry-btn<?php echo $avatarUrl !== '' ? ' auth-entry-btn--user' : ''; ?>">
+            <?php if ($avatarUrl !== ''): ?>
+                <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer" decoding="async">
+            <?php endif; ?>
+            <span><?php echo vs_e($authBtnLabel); ?></span>
+        </a>
         <button type="button" class="menu-btn md:hidden p-1" style="color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px;" onclick="toggleMobile()" aria-label="打开菜单">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>

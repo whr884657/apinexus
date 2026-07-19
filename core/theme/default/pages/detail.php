@@ -115,7 +115,7 @@ if (!$notFound) {
             </div>
             <div class="info-item">
                 <div class="info-label">分类</div>
-                <div class="info-value"><?php echo vs_e(!empty($api['category_name']) ? $api['category_name'] : '未分类'); ?></div>
+                <div class="info-value info-value--cat"><?php echo vs_e(!empty($api['category_name']) ? $api['category_name'] : '未分类'); ?></div>
             </div>
             <div class="info-item">
                 <div class="info-label">Calls</div>
@@ -123,16 +123,16 @@ if (!$notFound) {
             </div>
             <div class="info-item">
                 <div class="info-label">KEY</div>
-                <div class="info-value"><?php echo vs_e($keyLabel); ?></div>
+                <div class="info-value info-value--key"><?php echo vs_e($keyLabel); ?></div>
             </div>
             <div class="info-item">
                 <div class="info-label">计费</div>
-                <div class="info-value"><?php echo vs_e($chargeDetailLabel); ?></div>
+                <div class="info-value info-value--billing"><?php echo vs_e($chargeDetailLabel); ?></div>
             </div>
             <?php if (!empty($api['createtime'])): ?>
             <div class="info-item">
                 <div class="info-label">提交时间</div>
-                <div class="info-value"><?php echo vs_e($api['createtime']); ?></div>
+                <div class="info-value info-value--time"><?php echo vs_e($api['createtime']); ?></div>
             </div>
             <?php endif; ?>
         </div>
@@ -316,4 +316,6 @@ window.playgroundKeyContext = <?php echo json_encode(array(
     'userCenterUrl' => isset($playground['userCenterUrl']) ? (string) $playground['userCenterUrl'] : ($vsBase . '/user/index'),
     'loginUrl' => isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login'),
 ), JSON_UNESCAPED_UNICODE); ?>;
+window.VS_CSRF_TOKEN = <?php echo json_encode(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
+window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/play')); ?>;
 </script>

@@ -158,9 +158,111 @@
         return true;
     }
 
+    /**
+     * 同源中继结果渲染
+     * @param {{http:number,contentType:string,body:string,encoding:string,msg?:string,code?:number}} data
+     * @param {HTMLElement} outputEl
+     */
+    function renderRelayPayload(data, outputEl) {
+        if (!outputEl || !data) return;
+        revokeBlobUrls();
+        var encoding = String(data.encoding || 'text');
+        var ct = String(data.contentType || '').split(';')[0].trim().toLowerCase();
+        var body = data.body == null ? '' : String(data.body);
+
+        if (encoding === 'base64') {
+            var kind = mediaKind(ct) || 'image';
+            try {
+                var bin = atob(body);
+                var len = bin.length;
+                var bytes = new Uint8Array(len);
+                for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+                var blob = new Blob([bytes], { type: ct || 'application/octet-stream' });
+                if (blob.size > 40 * 1024 * 1024) {
+                    outputEl.innerHTML = '<div class="pg-media-wrap pg-media-wrap--hint"><p>媒体文件过大，请直接访问接口地址。</p></div>';
+                    return;
+                }
+                var url = trackBlob(URL.createObjectURL(blob));
+                if (kind === 'image' || kind === 'audio' || kind === 'video') {
+                    outputEl.innerHTML = renderMediaHtml(kind, url, (kind.toUpperCase()) + ' · ' + Math.round(blob.size / 1024) + ' KB');
+                } else {
+                    outputEl.innerHTML = renderBinaryHint(ct, url);
+                }
+            } catch (e) {
+                outputEl.innerHTML = renderBinaryHint(ct || 'binary', '');
+            }
+            return;
+        }
+
+        if (isProbablyBinary(ct, body)) {
+            outputEl.innerHTML = renderBinaryHint(ct || 'binary', '');
+            return;
+        }
+
+        var display = body || '';
+        var truncated = false;
+        if (display.length > MAX_TEXT_CHARS) {
+            display = display.slice(0, MAX_TEXT_CHARS);
+            truncated = true;
+        }
+        try {
+            var json = JSON.parse(body);
+            var pretty = JSON.stringify(json, null, 2);
+            if (pretty.length > MAX_TEXT_CHARS) {
+                pretty = pretty.slice(0, MAX_TEXT_CHARS);
+                truncated = true;
+            }
+            outputEl.innerHTML = syntaxHighlight(pretty)
+                + (truncated ? '\n<span class="json-null">// …已截断</span>' : '');
+        } catch (e2) {
+            if (/html/.test(ct)) {
+                var safeDoc = escapeHtml(display.slice(0, 80000));
+                outputEl.innerHTML = '<div class="pg-media-tip">// HTML 响应（沙箱预览）</div>'
+                    + '<iframe class="pg-html-frame" sandbox="" srcdoc="' + safeDoc.replace(/"/g, '&quot;') + '"></iframe>';
+                return;
+            }
+            outputEl.innerHTML = '<pre class="response-pre">' + escapeHtml(display)
+                + (truncated ? '\n// …已截断' : '') + '</pre>';
+        }
+    }
+
+    /**
+     * 调用同源中继
+     */
+    function relayRequest(opts) {
+        var playUrl = (typeof window.VS_PLAY_URL === 'string' && window.VS_PLAY_URL)
+            ? window.VS_PLAY_URL
+            : ((window.VS_BASE_URL || '') + '/play');
+        var csrf = (typeof window.VS_CSRF_TOKEN === 'string') ? window.VS_CSRF_TOKEN : '';
+        var payload = {
+            csrf_token: csrf,
+            api_id: opts.apiId,
+            method: opts.method || 'GET',
+            params: opts.params || {}
+        };
+        return fetch(playUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrf
+            },
+            body: JSON.stringify(payload)
+        }).then(function (res) {
+            return res.json().then(function (data) {
+                if (!data || typeof data !== 'object') {
+                    throw new Error('无效响应');
+                }
+                return data;
+            });
+        });
+    }
+
     global.VsPlaygroundResponse = {
         renderFetchResponse: renderFetchResponse,
         renderDirectMedia: renderDirectMedia,
+        renderRelayPayload: renderRelayPayload,
+        relayRequest: relayRequest,
         syntaxHighlight: syntaxHighlight,
         revokeBlobUrls: revokeBlobUrls,
         escapeHtml: escapeHtml

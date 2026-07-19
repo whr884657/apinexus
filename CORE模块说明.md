@@ -112,7 +112,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 PATH_INFO、多选方法、审核三态、统计、双端 UI、主题二可配统计/配色） |
+| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php`、`play.php` | ✅ 是 | **已完成**（本地/外链、详情 PATH_INFO、多选方法、审核三态、统计、在线测试同源中继、双端 UI） |
 | 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号最多 3 个；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
 | 积分与支付 | `PointsManager` / `OrderManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额） | `admin/finance/*`、`user/recharge`、`user/points`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（`user.points`、`api.charge/price`、表 `orders`；码支付扫码充值；API 调用扣费） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
@@ -224,6 +224,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前 `ApiStats::hitProxy` |
+| `PlaygroundRelay.php` | 前台在线测试同源中继：服务端 curl 代发（代理直打 `targeturl`，本地走 `resolveCallUrl`）；入口 `play.php` |
 | `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；本地注入 ≤3 行向上查找或 `api/hit.php` |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD（表 `apikey`；每用户最多 3 条；格式 `sk-`+32；含调用次数） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
@@ -566,6 +567,22 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 |------|------|
 | `notifyAdminsPending($api)` | 通知全部启用中的管理员邮箱 |
 | `notifyUserAuditResult($api, $audit, $reason)` | 通知投稿用户通过/不通过 |
+
+---
+
+### 4.21.2 PlaygroundRelay.php（前台 · 在线测试中继）★ 主题开发重点
+
+**作用：** 浏览器无法安全直连外链/代理 302 时，由服务端 curl 代发请求，避免 `Failed to fetch`。
+
+**入口：** 根目录 `play.php`（`POST` + 同源校验 + CSRF）。
+
+**行为摘要：**
+- 代理接口：直打 `targeturl`（不把本站 KEY 转发给上游）；统计走 `ApiStats::hitProxy`
+- 本地接口：`ApiManager::resolveCallUrl` + 参数（含 KEY）代发
+- 返回 JSON：`code/msg/http/contentType/body/encoding/displayUrl`；`displayUrl` 始终为公开 `endpoint`，供前端展示
+- 调用前走 `ApiStats::guardAccess`（密钥/积分/维护等）
+
+**主题对接：** 首页/详情 JS 须调用 `VsPlaygroundResponse.relayRequest`（`POST /play`），禁止 `fetch(endpoint)` 直连。
 
 ---
 

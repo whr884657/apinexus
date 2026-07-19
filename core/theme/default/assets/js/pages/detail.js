@@ -14,6 +14,10 @@
     var VsPR = window.VsPlaygroundResponse || null;
 
     function showToast(msg) {
+        if (window.VsToast && typeof window.VsToast.show === 'function') {
+            window.VsToast.show(msg || '已复制', 'success');
+            return;
+        }
         if (!toast) return;
         toast.textContent = msg || '已复制';
         toast.hidden = false;
@@ -217,9 +221,8 @@
 
             var method = getMethod();
             var params = collectParams();
-            var url = String(api.endpoint || '');
-            if (!url) {
-                responseEl.textContent = '未配置调用地址';
+            if (!api.id) {
+                responseEl.textContent = '接口无效';
                 setStatus('Error', 'err');
                 return;
             }
@@ -231,40 +234,41 @@
                 });
             }
             if (hasFiles) {
-                responseEl.textContent = '// 含文件上传的请求暂不支持浏览器直连调试';
+                responseEl.textContent = '// 含文件上传的请求暂不支持在线调试';
                 setStatus('Skip', 'wait');
                 return;
             }
 
-            if ((method === 'GET' || method === 'HEAD' || method === 'OPTIONS') && Object.keys(params).length) {
-                url += (url.indexOf('?') >= 0 ? '&' : '?') + new URLSearchParams(params).toString();
+            // 请求地址展示保持接口信息中的公开地址，不拼接参数、不跳转到上游
+            if (urlPreview) {
+                urlPreview.textContent = String(api.endpoint || page.getAttribute('data-endpoint') || '');
             }
-            if (urlPreview) urlPreview.textContent = url;
 
             responseEl.textContent = '// 正在发送请求...';
             setStatus('处理中', 'wait');
 
-            var opts = { method: method };
-            if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
-                if (Object.keys(params).length) {
-                    opts.headers = { 'Content-Type': 'application/json' };
-                    opts.body = JSON.stringify(params);
-                }
+            if (!VsPR || !VsPR.relayRequest) {
+                responseEl.textContent = '// 测试模块未加载，请刷新页面';
+                setStatus('Error', 'err');
+                return;
             }
 
-            fetch(url, opts).then(function (res) {
-                var ok = res.ok;
-                setStatus(res.status + (ok ? ' OK' : ' Error'), ok ? 'ok' : 'err');
-                if (VsPR && VsPR.renderFetchResponse) {
-                    return VsPR.renderFetchResponse(res, responseEl);
+            VsPR.relayRequest({
+                apiId: api.id,
+                method: method,
+                params: params
+            }).then(function (data) {
+                var http = parseInt(data.http, 10) || 0;
+                var ok = data.code === 1 || (http >= 200 && http < 400);
+                setStatus((http ? String(http) : '') + (ok ? ' OK' : ' Error'), ok ? 'ok' : 'err');
+                if (!ok && data.msg && !data.body) {
+                    responseEl.textContent = String(data.msg);
+                    return;
                 }
-                return res.text().then(function (text) {
-                    responseEl.textContent = text || '(空响应)';
-                });
+                VsPR.renderRelayPayload(data, responseEl);
             }).catch(function (err) {
                 setStatus('Error', 'err');
-                responseEl.textContent = '// 请求失败: ' + (err && err.message ? err.message : 'network error')
-                    + '\n// 若为跨域限制，请确认接口允许浏览器直连，或使用同源代理地址。';
+                responseEl.textContent = '// 请求失败: ' + (err && err.message ? err.message : 'network error');
             });
         });
     }

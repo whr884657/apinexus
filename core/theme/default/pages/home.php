@@ -188,12 +188,15 @@ var apiData = <?php echo json_encode($payload['apiData'], JSON_UNESCAPED_UNICODE
 var categoryNames = <?php echo json_encode($payload['categoryNames'], JSON_UNESCAPED_UNICODE); ?>;
 var statsDisplayMode = 1;
 var homeHeroConfig = <?php echo json_encode($homeHeroConfig, JSON_UNESCAPED_UNICODE); ?>;
-window.playgroundUserApiKey = null;
+<?php $pgCtx = vs_playground_session_context(); ?>
+window.playgroundUserApiKey = <?php echo json_encode($pgCtx['apiKey'], JSON_UNESCAPED_UNICODE); ?>;
 window.playgroundKeyContext = <?php echo json_encode(array(
-    'loggedIn' => !empty($userLoggedIn),
-    'apiKeyCount' => 0,
-    'userCenterUrl' => $authUrl,
-    'loginUrl' => $vsBase . '/user/login',
+    'loggedIn' => !empty($pgCtx['loggedIn']),
+    'apiKeyCount' => (int) $pgCtx['apiKeyCount'],
+    'userCenterUrl' => $pgCtx['userCenterUrl'],
+    'loginUrl' => $pgCtx['loginUrl'],
 ), JSON_UNESCAPED_UNICODE); ?>;
+window.VS_CSRF_TOKEN = <?php echo json_encode($pgCtx['csrf'], JSON_UNESCAPED_UNICODE); ?>;
+window.VS_PLAY_URL = <?php echo json_encode($pgCtx['playUrl'], JSON_UNESCAPED_UNICODE); ?>;
 </script>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('default', 'assets/js/pages/home-announcement.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

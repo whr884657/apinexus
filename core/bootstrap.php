@@ -46,6 +46,7 @@ require_once VS_ROOT . '/core/FrontendApi.php';
 require_once VS_ROOT . '/core/FrontendStats.php';
 require_once VS_ROOT . '/core/LinkManager.php';
 require_once VS_ROOT . '/core/FrontendLink.php';
+require_once VS_ROOT . '/core/PlaygroundRelay.php';
 require_once VS_ROOT . '/core/ThemeManager.php';
 require_once VS_ROOT . '/core/oauth/HttpClient.php';
 require_once VS_ROOT . '/core/oauth/OAuthConfig.php';

@@ -348,9 +348,14 @@
         .api-card { background: var(--bg-panel); border: 1px solid var(--border-color); padding: 1rem; transition: all 0.3s ease; position: relative; display: flex; flex-direction: column; }
         .api-card:hover { border-color: var(--accent-primary); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0, 255, 157, 0.1); }
 
-        .method-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 2px; font-weight: bold; font-family: 'JetBrains Mono', monospace; }
-        .get { background: rgba(0, 255, 157, 0.15); color: var(--accent-primary); }
-        .post { background: rgba(0, 212, 255, 0.15); color: var(--accent-secondary); }
+        .method-badge { display: inline-block; font-size: 0.65rem; padding: 2px 6px; border-radius: 2px; font-weight: bold; font-family: 'JetBrains Mono', monospace; line-height: 1.25; vertical-align: middle; }
+        .method-badge.get { background: rgba(0, 255, 157, 0.15); color: var(--accent-primary); }
+        .method-badge.post { background: rgba(0, 212, 255, 0.15); color: var(--accent-secondary); }
+        .method-badge.put { background: rgba(245, 158, 11, 0.18); color: #f59e0b; }
+        .method-badge.delete { background: rgba(239, 68, 68, 0.18); color: #f87171; }
+        .method-badge.patch { background: rgba(168, 85, 247, 0.18); color: #a855f7; }
+        [data-theme="light"] .method-badge.get { color: #059669; }
+        [data-theme="light"] .method-badge.post { color: #0284c7; }
 
         /* 与 method-badge 同形：方角小标签（免费 / 积分 / KEY / 维护） */
         .api-chip {
@@ -705,7 +710,24 @@
         .api-item.selected { background: rgba(0, 255, 157, 0.1); border-color: var(--accent-primary); }
 
         .api-select-trigger { width: 100%; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; overflow: hidden; }
-        .api-select-trigger #selected-api-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+        .api-select-trigger #selected-api-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+        .api-select-trigger #selected-api-text .selected-api-endpoint {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+        .api-select-trigger #selected-api-text .method-badge {
+            flex-shrink: 0;
+        }
 
         /* 参数输入区域 */
         .params-container { margin-top: 1rem; display: none; }
@@ -732,7 +754,7 @@
         
         /* 请求方式选择器 */
         .method-option {
-            padding: 0.35rem 0.75rem;
+            padding: 0.25rem 0.45rem;
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 0.75rem;
@@ -741,15 +763,20 @@
             transition: all 0.2s;
             color: var(--text-muted);
             background: transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
         }
         .method-option:hover {
             border-color: var(--accent-primary);
-            color: var(--accent-primary);
         }
         .method-option.active {
-            background: rgba(0, 255, 157, 0.15);
             border-color: var(--accent-primary);
-            color: var(--accent-primary);
+            background: rgba(17, 17, 17, 0.04);
+            box-shadow: 0 0 0 1px var(--accent-primary);
+        }
+        .method-option .method-badge {
+            pointer-events: none;
         }
 
         footer { border-top: 1px solid var(--border-color); background: var(--bg-panel); padding-top: 3rem; padding-bottom: 1.5rem; }

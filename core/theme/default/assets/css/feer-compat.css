@@ -303,3 +303,36 @@ body.vs-body.feer-front #stats-section {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
+
+/* 登录后顶栏/侧栏：头像 + 用户中心（覆盖 btn-geek 的 clip-path/overflow，避免把头像裁掉） */
+body.vs-body.feer-front .auth-entry-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    overflow: visible;
+}
+body.vs-body.feer-front .auth-entry-btn--user {
+    padding-left: 0.55rem;
+    clip-path: none;
+    overflow: visible;
+}
+body.vs-body.feer-front .auth-entry-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    display: inline-block;
+    background: rgba(17, 17, 17, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+body.vs-body.feer-front .mobile-sidebar .auth-entry-avatar {
+    width: 22px;
+    height: 22px;
+}
+
+/* 前台 Toast 顶栏避让 */
+body.vs-body.feer-front .vs-toast-host {
+    top: calc(68px + env(safe-area-inset-top, 0px));
+}

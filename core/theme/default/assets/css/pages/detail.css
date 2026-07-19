@@ -241,6 +241,10 @@
 
 .info-value--method { color: var(--accent-secondary); }
 .info-value--calls { color: #059669; }
+.info-value--billing { color: #c2410c; }
+.info-value--key { color: #2563eb; }
+.info-value--cat { color: var(--accent-primary); }
+.info-value--time { color: var(--text-muted); }
 
 .detail-notice {
     margin-top: 0.85rem;
@@ -575,15 +579,17 @@
 .copy-toast {
     position: fixed;
     left: 50%;
-    bottom: 2rem;
+    top: calc(72px + env(safe-area-inset-top, 0px));
+    bottom: auto;
     transform: translateX(-50%);
     z-index: 1200;
-    background: #111;
+    background: rgba(22, 119, 78, 0.97);
     color: #fff;
-    padding: 0.5rem 0.9rem;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    padding: 0.55rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    max-width: calc(100vw - 32px);
 }
 
 .playground-key-hint {

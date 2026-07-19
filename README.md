@@ -109,6 +109,8 @@ ApiNexus/
 ├── 404.php                     # 全站 404（含安全法律提示）
 ├── index.php                   # 前台首页（主题驱动）
 ├── apis.php                    # 全部接口列表 + 代理网关（对外 /apis/{短码}，内记统计）
+├── play.php                    # 前台在线测试同源中继（POST + CSRF）
+├── detail.php                  # 接口详情（PATH_INFO：/detail.php/{id}）
 ├── api/                        # 本地业务接口脚本（头部注入 ApiStats::hit）+ 统计代码使用说明.md
 │   └── yiyan/                  # 示例：随机一言
 ├── articles.php                # 前台 · 文章
@@ -249,6 +251,10 @@ location / {
 ---
 
 ## 版本记录
+
+### v4.7.0（2026-07-20）
+
+- 在线测试同源中继；首页 Method/KEY；详情地址与 Toast；登录头像
 
 ### v4.6.0（2026-07-20）
 

@@ -496,12 +496,21 @@ function closeSelectModal(e) {
     document.body.style.overflow = '';
 }
 
+function updateSelectedApiLabel(api, method) {
+    if (!selectedApiText || !api) return;
+    const m = String(method || api.method || 'GET').toUpperCase();
+    const ep = String(api.endpoint || '');
+    selectedApiText.innerHTML =
+        '<span class="method-badge ' + m.toLowerCase() + '">' + escapeApiModalText(m) + '</span>' +
+        '<span class="selected-api-endpoint">' + escapeApiModalText(ep) + '</span>';
+    selectedApiText.style.color = '';
+}
+
 function selectApi(id) {
     selectedApiId = id;
     // 使用宽松相等，因为ID可能是数字或字符串
     const api = apiData.find(a => a.id == id);
     if (api) {
-        selectedApiText.textContent = `${api.method} ${api.endpoint}`;
         hiddenApiSelect.value = id;
         const cfgTitle = document.getElementById('playground-config-title-text');
         if (cfgTitle) {
@@ -511,6 +520,7 @@ function selectApi(id) {
         }
         // 渲染请求方式选择器
         renderMethodSelector(api);
+        updateSelectedApiLabel(api, getSelectedMethod());
         // 渲染参数输入框
         renderParams(api);
     }
@@ -529,12 +539,14 @@ function renderMethodSelector(api) {
     }
 
     container.style.display = 'block';
-    selector.innerHTML = api.methods.map((method, index) => `
-        <label class="method-option ${index === 0 ? 'active' : ''}" data-method="${method}">
-            <input type="radio" name="request_method" value="${method}" ${index === 0 ? 'checked' : ''} style="display: none;">
-            ${method}
-        </label>
-    `).join('');
+    selector.innerHTML = api.methods.map((method, index) => {
+        const m = String(method).toUpperCase();
+        return `
+        <label class="method-option ${index === 0 ? 'active' : ''}" data-method="${escapeApiModalText(m)}">
+            <input type="radio" name="request_method" value="${escapeApiModalText(m)}" ${index === 0 ? 'checked' : ''} style="display: none;">
+            <span class="method-badge ${m.toLowerCase()}">${escapeApiModalText(m)}</span>
+        </label>`;
+    }).join('');
 
     // 添加点击事件
     selector.querySelectorAll('.method-option').forEach(option => {
@@ -543,6 +555,7 @@ function renderMethodSelector(api) {
             this.classList.add('active');
             const radio = this.querySelector('input[type="radio"]');
             if (radio) radio.checked = true;
+            updateSelectedApiLabel(api, this.getAttribute('data-method') || (radio && radio.value));
         });
     });
 }
@@ -866,85 +879,51 @@ async function sendRequest() {
         return;
     }
 
-    // 获取当前选中的请求方式
     const currentMethod = getSelectedMethod();
+    updateSelectedApiLabel(api, currentMethod);
 
     output.innerHTML = "<span style='color: var(--accent-secondary)'>// 正在发送请求...</span>";
     status.textContent = "处理中";
     status.className = "text-xs px-2 py-1 rounded bg-yellow-900 text-yellow-400 font-mono";
 
-    // 检查是否有文件上传
     const fileInputs = paramsContainer.querySelectorAll('input[type="file"]');
     const hasFiles = Array.from(fileInputs).some(input => input.files.length > 0);
+    if (hasFiles) {
+        output.innerHTML = '<span style="color: var(--text-muted)">// 含文件上传的请求暂不支持在线调试，请使用接口文档中的示例。</span>';
+        status.textContent = 'Skip';
+        status.className = "text-xs px-2 py-1 rounded bg-yellow-900 text-yellow-400 font-mono";
+        return;
+    }
 
-    // 构建完整的请求URL
-    let url = api.endpoint;
-
-    // 收集参数
     const params = {};
     const paramInputs = paramsContainer.querySelectorAll('.param-input');
     paramInputs.forEach(input => {
         if (input.type !== 'file' && input.value) params[input.dataset.param] = input.value;
     });
 
-    // 对于GET请求，构建带参数的URL
-    if ((currentMethod === 'GET' || currentMethod === 'HEAD' || currentMethod === 'OPTIONS') && Object.keys(params).length > 0) {
-        url += (url.includes('?') ? '&' : '?') + new URLSearchParams(params).toString();
-    }
-
-    // 对于视频/音频/图片类型且是GET请求，直接使用原始URL（流式加载，避免整包下载卡死）
-    const mediaTypeHint = String(api.returnType || api.returntype || '').toLowerCase();
-    const isMediaRequest = (mediaTypeHint === 'video' || mediaTypeHint === 'audio' || mediaTypeHint === 'image');
-    const isGetMethod = (currentMethod === 'GET' || currentMethod === 'HEAD');
-
-    if (isMediaRequest && isGetMethod && !hasFiles) {
-        status.textContent = "200 OK";
-        status.className = "text-xs px-2 py-1 rounded bg-green-900 text-green-400 font-mono";
-        if (window.VsPlaygroundResponse && window.VsPlaygroundResponse.renderDirectMedia) {
-            window.VsPlaygroundResponse.renderDirectMedia(output, url, mediaTypeHint);
-        }
-        return;
-    }
-
-    // 浏览器直连请求（无同源代理）
-    if (hasFiles && (currentMethod === 'POST' || currentMethod === 'PUT' || currentMethod === 'PATCH')) {
-        output.innerHTML = '<span style="color: var(--text-muted)">// 含文件上传的请求暂不支持浏览器直连调试，请使用接口文档中的 curl 示例。</span>';
-        status.textContent = 'Skip';
-        status.className = "text-xs px-2 py-1 rounded bg-yellow-900 text-yellow-400 font-mono";
-        return;
-    }
-
-    const fetchOpts = { method: currentMethod };
-    if (currentMethod === 'POST' || currentMethod === 'PUT' || currentMethod === 'PATCH') {
-        if (Object.keys(params).length > 0) {
-            fetchOpts.headers = { 'Content-Type': 'application/json' };
-            fetchOpts.body = JSON.stringify(params);
-        }
-    }
-
     const startTime = performance.now();
     try {
-        const response = await fetch(url, fetchOpts);
-        const elapsed = Math.round(performance.now() - startTime);
-        const ok = response.ok;
-        const httpStatus = response.status;
-        const statusText = ok ? `${httpStatus} OK` : `${httpStatus} Error`;
-        const statusStyle = ok ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400';
-
-        if (window.VsPlaygroundResponse && window.VsPlaygroundResponse.renderFetchResponse) {
-            await window.VsPlaygroundResponse.renderFetchResponse(response, output);
-        } else {
-            const rawText = await response.text();
-            output.textContent = rawText || '// 无返回内容';
+        if (!window.VsPlaygroundResponse || !window.VsPlaygroundResponse.relayRequest) {
+            throw new Error('测试模块未加载');
         }
-        status.textContent = `${statusText} ${elapsed}ms`;
-        status.className = `text-xs px-2 py-1 rounded font-mono ${statusStyle}`;
+        const data = await window.VsPlaygroundResponse.relayRequest({
+            apiId: api.id,
+            method: currentMethod,
+            params: params
+        });
+        const elapsed = Math.round(performance.now() - startTime);
+        const http = parseInt(data.http, 10) || 0;
+        const ok = data.code === 1 || (http >= 200 && http < 400);
+        status.textContent = (http ? (http + (ok ? ' OK' : ' Error')) : (ok ? 'OK' : 'Error')) + ' ' + elapsed + 'ms';
+        status.className = 'text-xs px-2 py-1 rounded font-mono ' + (ok ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400');
+        if (!ok && data.msg && !(data.body)) {
+            output.textContent = String(data.msg);
+            return;
+        }
+        window.VsPlaygroundResponse.renderRelayPayload(data, output);
     } catch (error) {
         const msg = error.message || '请求失败';
-        const hint = (msg.includes('Failed to fetch') || msg.includes('NetworkError'))
-            ? '（可能为跨域限制，请在新窗口打开接口 URL 或使用 curl）'
-            : '';
-        output.innerHTML = `<span style="color: #ef4444">// 请求失败: ${msg}${hint}</span>`;
+        output.innerHTML = `<span style="color: #ef4444">// 请求失败: ${msg}</span>`;
         status.textContent = "Error";
         status.className = "text-xs px-2 py-1 rounded bg-red-900 text-red-400 font-mono";
     }
