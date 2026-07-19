@@ -1,5 +1,5 @@
 -- ============================================================
--- misc-api 数据库结构定义（安装时执行）
+-- ApiNexus 数据库结构定义（安装时执行）
 -- 说明：{prefix} 为表前缀占位符，安装时自动替换
 -- 规范：字段名禁止下划线；详细中文 COMMENT；多态用 0/1/2…（见开发规范/数据库开发规范.md）
 -- ============================================================
@@ -49,9 +49,9 @@ CREATE TABLE IF NOT EXISTS `{prefix}config` (
 
 -- 初始系统配置
 INSERT INTO `{prefix}config` (`key`, `value`) VALUES
-('site_name', 'misc-api'),
+('site_name', 'ApiNexus'),
 ('site_description', '基于 PHP + MySQL 的轻量级 Web 管理系统'),
-('site_keywords', 'misc-api,PHP,MySQL,管理系统'),
+('site_keywords', 'ApiNexus,PHP,MySQL,管理系统'),
 ('site_favicon', ''),
 ('site_logo', ''),
 ('site_icp', ''),
@@ -65,7 +65,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_smtp_pass', ''),
 ('mail_smtp_secure', 'ssl'),
 ('mail_from_email', ''),
-('mail_from_name', 'misc-api'),
+('mail_from_name', 'ApiNexus'),
 ('mail_notify_submit', '1'),
 ('mail_notify_pass', '1'),
 ('mail_notify_fail', '1'),

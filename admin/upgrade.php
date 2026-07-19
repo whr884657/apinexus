@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/upgrade.php
- * 作用：misc-api 系统升级（手动检测、更新、更新记录）
+ * 作用：ApiNexus 系统升级（手动检测、更新、更新记录）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */

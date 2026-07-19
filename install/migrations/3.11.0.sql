@@ -1,4 +1,4 @@
--- misc-api 3.11.0
+-- ApiNexus 3.11.0
 -- 本地路径 / 代理外链 + 邮件通知开关配置
 
 ALTER TABLE `{prefix}api`

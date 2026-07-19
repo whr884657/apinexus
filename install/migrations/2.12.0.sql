@@ -1,4 +1,4 @@
--- misc-api 2.12.0：API 接口表（含审核状态）
+-- ApiNexus 2.12.0：API 接口表（含审核状态）
 
 CREATE TABLE IF NOT EXISTS `{prefix}api` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,

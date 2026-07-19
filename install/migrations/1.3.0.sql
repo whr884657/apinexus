@@ -1,4 +1,4 @@
--- misc-api 1.3.0：用户 OAuth 绑定字段
+-- ApiNexus 1.3.0：用户 OAuth 绑定字段
 
 ALTER TABLE `{prefix}user`
     ADD COLUMN `oauth_qq_openid` varchar(64) NOT NULL DEFAULT '' COMMENT 'QQ OpenID' AFTER `avatar_url`,

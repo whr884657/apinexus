@@ -1,4 +1,4 @@
--- misc-api 3.9.0：字段名去下划线，改为简短英文词；mail_code_rate_log → mailrate
+-- ApiNexus 3.9.0：字段名去下划线，改为简短英文词；mail_code_rate_log → mailrate
 
 -- ---------- admin ----------
 ALTER TABLE `{prefix}admin`

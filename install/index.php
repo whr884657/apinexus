@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：install/index.php
- * 作用：misc-api Web 五步安装向导（单文件实现全部安装逻辑）
+ * 作用：ApiNexus Web 五步安装向导（单文件实现全部安装逻辑）
  * @version 1.0.5
  */
 
@@ -195,7 +195,7 @@ function writeDatabaseConfig(array $config)
 function writeInstallLock()
 {
     $file = InstallChecker::lockFile();
-    $content = date('Y-m-d H:i:s') . ' | misc-api v' . VS_VERSION . "\n";
+    $content = date('Y-m-d H:i:s') . ' | ApiNexus v' . VS_VERSION . "\n";
     if (file_put_contents($file, $content) === false) {
         throw new Exception('无法写入 install.lock，请检查 config 目录权限');
     }
@@ -317,7 +317,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
 <div class="vs-page vs-install-page">
     <div class="vs-container">
         <div class="vs-install-header">
-            <h1 class="vs-install-title">misc-api 安装向导</h1>
+            <h1 class="vs-install-title">ApiNexus 安装向导</h1>
             <p class="vs-install-subtitle">版本 v<?php echo vs_e(VS_VERSION); ?></p>
         </div>
 
@@ -344,7 +344,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
 
             <?php if ($step === 1): ?>
                 <h2 class="vs-card-title">第一步：环境检测</h2>
-                <p class="vs-card-desc">系统将检测服务器环境是否满足 misc-api 运行要求。须安装 <strong>MySQL（pdo_mysql）</strong> 与 <strong>Redis</strong> 扩展，且 <code>config/</code>、<code>data/</code> 目录可写。</p>
+                <p class="vs-card-desc">系统将检测服务器环境是否满足 ApiNexus 运行要求。须安装 <strong>MySQL（pdo_mysql）</strong> 与 <strong>Redis</strong> 扩展，且 <code>config/</code>、<code>data/</code> 目录可写。</p>
                 <div class="vs-check-list">
                     <?php foreach ($envChecks as $check): ?>
                         <div class="vs-check-item<?php echo $check['pass'] ? ' is-pass' : ' is-fail'; ?>">
@@ -390,7 +390,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                         </div>
                         <div class="vs-form-row">
                             <label class="vs-label">数据库名</label>
-                            <input type="text" name="dbname" class="vs-input" value="<?php echo vs_e($dbConfig['dbname']); ?>" placeholder="misc-api" required>
+                            <input type="text" name="dbname" class="vs-input" value="<?php echo vs_e($dbConfig['dbname']); ?>" placeholder="apinexus" required>
                         </div>
                     </div>
                     <div id="dbTestMessage" class="vs-alert" role="alert" hidden></div>
@@ -417,7 +417,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                         </div>
                     </form>
                 <?php else: ?>
-                    <p class="vs-card-desc">数据库为空，可以直接创建 misc-api 所需的数据表。</p>
+                    <p class="vs-card-desc">数据库为空，可以直接创建 ApiNexus 所需的数据表。</p>
                     <form method="post" action="" class="vs-form">
                         <input type="hidden" name="step" value="3">
                         <input type="hidden" name="action" value="create_tables">
@@ -460,7 +460,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                 <div class="vs-success-block">
                     <div class="vs-success-icon">&#10003;</div>
                     <h2 class="vs-card-title">安装完成！</h2>
-                    <p class="vs-card-desc">misc-api v<?php echo vs_e(VS_VERSION); ?> 已成功安装，您可以开始使用了。</p>
+                    <p class="vs-card-desc">ApiNexus v<?php echo vs_e(VS_VERSION); ?> 已成功安装，您可以开始使用了。</p>
                     <div class="vs-form-actions vs-form-actions--center">
                         <a href="<?php echo vs_e($base); ?>/" class="vs-btn vs-btn--default">进入首页</a>
                         <a href="<?php echo vs_e($base); ?>/admin/login.php" class="vs-btn vs-btn--primary">进入后台</a>
@@ -470,7 +470,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
         </div>
 
         <div class="vs-install-footer">
-            <span>misc-api &copy; <?php echo date('Y'); ?> v<?php echo vs_e(VS_VERSION); ?></span>
+            <span>ApiNexus &copy; <?php echo date('Y'); ?> v<?php echo vs_e(VS_VERSION); ?></span>
         </div>
     </div>
 </div>

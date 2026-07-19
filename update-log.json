@@ -1,7 +1,18 @@
 {
     "versions": {
+        "4.0.0": {
+            "title": "ApiNexus 4.0.0 品牌与仓库全面更名",
+            "date": "2026-07-19",
+            "db_changes": false,
+            "changes": [
+                "产品名称由 misc-api 全面更名为 ApiNexus",
+                "Gitee 仓库迁移至 xunjinlu/apinexus",
+                "更新包命名改为 apinexus{版本}.zip；在线更新地址同步",
+                "默认站点名、发信显示名、Redis 键前缀等默认值同步为 ApiNexus / apinexus:"
+            ]
+        },
         "3.37.0": {
-            "title": "misc-api 3.37.0 日志体验与分页同高、Redis 可读化",
+            "title": "ApiNexus 3.37.0 日志体验与分页同高、Redis 可读化",
             "date": "2026-07-19",
             "db_changes": false,
             "changes": [
@@ -12,7 +23,7 @@
             ]
         },
         "3.36.0": {
-            "title": "misc-api 3.36.0 日志查询、主题布局与 Redis 缓存",
+            "title": "ApiNexus 3.36.0 日志查询、主题布局与 Redis 缓存",
             "date": "2026-07-19",
             "db_changes": false,
             "changes": [
@@ -23,7 +34,7 @@
             ]
         },
         "3.35.1": {
-            "title": "misc-api 3.35.1 积分英雄条跟随调色盘",
+            "title": "ApiNexus 3.35.1 积分英雄条跟随调色盘",
             "date": "2026-07-19",
             "db_changes": false,
             "changes": [
@@ -32,7 +43,7 @@
             ]
         },
         "3.35.0": {
-            "title": "misc-api 3.35.0 支付图标与主题配色、分页规范",
+            "title": "ApiNexus 3.35.0 支付图标与主题配色、分页规范",
             "date": "2026-07-19",
             "db_changes": false,
             "changes": [
@@ -44,7 +55,7 @@
             ]
         },
         "3.34.2": {
-            "title": "misc-api 3.34.2 财务列表桌面表格与手机紧凑卡",
+            "title": "ApiNexus 3.34.2 财务列表桌面表格与手机紧凑卡",
             "date": "2026-07-18",
             "db_changes": false,
             "changes": [
@@ -54,7 +65,7 @@
             ]
         },
         "3.34.1": {
-            "title": "misc-api 3.34.1 财务列表标题行与码支付直访 core",
+            "title": "ApiNexus 3.34.1 财务列表标题行与码支付直访 core",
             "date": "2026-07-18",
             "db_changes": false,
             "changes": [
@@ -63,7 +74,7 @@
             ]
         },
         "3.34.0": {
-            "title": "misc-api 3.34.0 财务页拆分与充值 UI 重构",
+            "title": "ApiNexus 3.34.0 财务页拆分与充值 UI 重构",
             "date": "2026-07-18",
             "db_changes": false,
             "changes": [
@@ -74,7 +85,7 @@
             ]
         },
         "3.33.0": {
-            "title": "misc-api 3.33.0 积分计费、订单与码支付充值",
+            "title": "ApiNexus 3.33.0 积分计费、订单与码支付充值",
             "date": "2026-07-18",
             "db_changes": true,
             "changes": [
@@ -85,7 +96,7 @@
             ]
         },
         "3.32.0": {
-            "title": "misc-api 3.32.0 参数类型嵌套选择器与自定义类型",
+            "title": "ApiNexus 3.32.0 参数类型嵌套选择器与自定义类型",
             "date": "2026-07-18",
             "db_changes": false,
             "changes": [
@@ -95,7 +106,7 @@
             ]
         },
         "3.31.1": {
-            "title": "misc-api 3.31.1 列表底栏外置与参数类型 vs-pick",
+            "title": "ApiNexus 3.31.1 列表底栏外置与参数类型 vs-pick",
             "date": "2026-07-18",
             "db_changes": false,
             "changes": [
@@ -105,7 +116,7 @@
             ]
         },
         "3.31.0": {
-            "title": "misc-api 3.31.0 请求参数表格编辑与主题壳层修复",
+            "title": "ApiNexus 3.31.0 请求参数表格编辑与主题壳层修复",
             "date": "2026-07-18",
             "db_changes": false,
             "changes": [
@@ -115,7 +126,7 @@
             ]
         },
         "3.30.0": {
-            "title": "misc-api 3.30.0 令牌页命名/复制与主题二导航调色",
+            "title": "ApiNexus 3.30.0 令牌页命名/复制与主题二导航调色",
             "date": "2026-07-18",
             "db_changes": false,
             "changes": [
@@ -125,7 +136,7 @@
             ]
         },
         "3.29.1": {
-            "title": "misc-api 3.29.1 调用守卫文案与统计规范完善",
+            "title": "ApiNexus 3.29.1 调用守卫文案与统计规范完善",
             "date": "2026-07-18",
             "db_changes": false,
             "changes": [
@@ -135,7 +146,7 @@
             ]
         },
         "3.29.0": {
-            "title": "misc-api 3.29.0 用户密钥体系与 API 管理体验",
+            "title": "ApiNexus 3.29.0 用户密钥体系与 API 管理体验",
             "date": "2026-07-18",
             "db_changes": true,
             "changes": [
@@ -146,7 +157,7 @@
             ]
         },
         "3.28.1": {
-            "title": "misc-api 3.28.1 页脚二维码与自定义徽章微调",
+            "title": "ApiNexus 3.28.1 页脚二维码与自定义徽章微调",
             "date": "2026-07-17",
             "db_changes": false,
             "changes": [
@@ -156,7 +167,7 @@
             ]
         },
         "3.28.0": {
-            "title": "misc-api 3.28.0 登录安全/底栏扩展/SEO 与日志纠偏",
+            "title": "ApiNexus 3.28.0 登录安全/底栏扩展/SEO 与日志纠偏",
             "date": "2026-07-17",
             "db_changes": true,
             "changes": [
@@ -168,7 +179,7 @@
             ]
         },
         "3.27.0": {
-            "title": "misc-api 3.27.0 主题二全页配色与双主题详情页",
+            "title": "ApiNexus 3.27.0 主题二全页配色与双主题详情页",
             "date": "2026-07-17",
             "db_changes": false,
             "changes": [
@@ -179,7 +190,7 @@
             ]
         },
         "3.26.0": {
-            "title": "misc-api 3.26.0 主题二卡片/配色与后台分页修复",
+            "title": "ApiNexus 3.26.0 主题二卡片/配色与后台分页修复",
             "date": "2026-07-17",
             "db_changes": false,
             "changes": [
@@ -190,7 +201,7 @@
             ]
         },
         "3.25.0": {
-            "title": "misc-api 3.25.0 详情 PATH_INFO 与去除外链代理",
+            "title": "ApiNexus 3.25.0 详情 PATH_INFO 与去除外链代理",
             "date": "2026-07-17",
             "db_changes": false,
             "changes": [
@@ -201,7 +212,7 @@
             ]
         },
         "3.24.0": {
-            "title": "misc-api 3.24.0 接口详情与后台体验大升级",
+            "title": "ApiNexus 3.24.0 接口详情与后台体验大升级",
             "date": "2026-07-17",
             "db_changes": false,
             "changes": [
@@ -212,7 +223,7 @@
             ]
         },
         "3.23.0": {
-            "title": "misc-api 3.23.0 接口列表真分列与审核红点",
+            "title": "ApiNexus 3.23.0 接口列表真分列与审核红点",
             "date": "2026-07-17",
             "db_changes": false,
             "changes": [
@@ -223,7 +234,7 @@
             ]
         },
         "3.22.0": {
-            "title": "misc-api 3.22.0 接口列表桌面行式与分页外置",
+            "title": "ApiNexus 3.22.0 接口列表桌面行式与分页外置",
             "date": "2026-07-17",
             "db_changes": false,
             "changes": [
@@ -234,7 +245,7 @@
             ]
         },
         "3.21.0": {
-            "title": "misc-api 3.21.0 接口列表卡片 UI 与搜索分页",
+            "title": "ApiNexus 3.21.0 接口列表卡片 UI 与搜索分页",
             "date": "2026-07-17",
             "db_changes": false,
             "changes": [
@@ -245,7 +256,7 @@
             ]
         },
         "3.20.0": {
-            "title": "misc-api 3.20.0 接口列表双端 UI 与统计注入简化",
+            "title": "ApiNexus 3.20.0 接口列表双端 UI 与统计注入简化",
             "date": "2026-07-16",
             "db_changes": false,
             "changes": [
@@ -256,7 +267,7 @@
             ]
         },
         "3.19.0": {
-            "title": "misc-api 3.19.0 接口卡片 UI 与统计字段增强",
+            "title": "ApiNexus 3.19.0 接口卡片 UI 与统计字段增强",
             "date": "2026-07-16",
             "db_changes": true,
             "changes": [
@@ -267,7 +278,7 @@
             ]
         },
         "3.18.0": {
-            "title": "misc-api 3.18.0 本地与代理接口调用统计",
+            "title": "ApiNexus 3.18.0 本地与代理接口调用统计",
             "date": "2026-07-16",
             "db_changes": true,
             "changes": [
@@ -278,7 +289,7 @@
             ]
         },
         "3.17.2": {
-            "title": "misc-api 3.17.2 接口审核页修复",
+            "title": "ApiNexus 3.17.2 接口审核页修复",
             "date": "2026-07-15",
             "db_changes": false,
             "changes": [
@@ -288,7 +299,7 @@
             ]
         },
         "3.17.1": {
-            "title": "misc-api 3.17.1 忘记密码与账号改密稳定性修复",
+            "title": "ApiNexus 3.17.1 忘记密码与账号改密稳定性修复",
             "date": "2026-07-15",
             "db_changes": false,
             "changes": [
@@ -298,7 +309,7 @@
             ]
         },
         "3.17.0": {
-            "title": "misc-api 3.17.0 用户 API 管理修复与列表标签优化",
+            "title": "ApiNexus 3.17.0 用户 API 管理修复与列表标签优化",
             "date": "2026-07-15",
             "db_changes": false,
             "changes": [
@@ -308,7 +319,7 @@
             ]
         },
         "3.16.2": {
-            "title": "misc-api 3.16.2 澄清路径样式规范与文档索引",
+            "title": "ApiNexus 3.16.2 澄清路径样式规范与文档索引",
             "date": "2026-07-15",
             "db_changes": false,
             "changes": [
@@ -318,7 +329,7 @@
             ]
         },
         "3.16.1": {
-            "title": "misc-api 3.16.1 修复宝塔伪静态花括号导致保存失败",
+            "title": "ApiNexus 3.16.1 修复宝塔伪静态花括号导致保存失败",
             "date": "2026-07-15",
             "db_changes": false,
             "changes": [
@@ -327,7 +338,7 @@
             ]
         },
         "3.16.0": {
-            "title": "misc-api 3.16.0 代理伪静态改用面板兼容写法",
+            "title": "ApiNexus 3.16.0 代理伪静态改用面板兼容写法",
             "date": "2026-07-15",
             "db_changes": false,
             "changes": [
@@ -337,7 +348,7 @@
             ]
         },
         "3.15.0": {
-            "title": "misc-api 3.15.0 代理公开地址去 .php 美观路径",
+            "title": "ApiNexus 3.15.0 代理公开地址去 .php 美观路径",
             "date": "2026-07-15",
             "db_changes": true,
             "changes": [
@@ -347,7 +358,7 @@
             ]
         },
         "3.14.0": {
-            "title": "misc-api 3.14.0 代理网关改为 PATH_INFO 路径式",
+            "title": "ApiNexus 3.14.0 代理网关改为 PATH_INFO 路径式",
             "date": "2026-07-15",
             "db_changes": true,
             "changes": [
@@ -357,7 +368,7 @@
             ]
         },
         "3.13.0": {
-            "title": "misc-api 3.13.0 代理表单修复与在线更新清理废弃文件",
+            "title": "ApiNexus 3.13.0 代理表单修复与在线更新清理废弃文件",
             "date": "2026-07-15",
             "db_changes": false,
             "changes": [
@@ -368,7 +379,7 @@
             ]
         },
         "3.12.0": {
-            "title": "misc-api 3.12.0 代理接口路径样式公开地址",
+            "title": "ApiNexus 3.12.0 代理接口路径样式公开地址",
             "date": "2026-07-15",
             "db_changes": true,
             "changes": [
@@ -379,7 +390,7 @@
             ]
         },
         "3.11.0": {
-            "title": "misc-api 3.11.0 本地/代理接口与邮件通知开关",
+            "title": "ApiNexus 3.11.0 本地/代理接口与邮件通知开关",
             "date": "2026-07-15",
             "db_changes": true,
             "changes": [
@@ -390,7 +401,7 @@
             ]
         },
         "3.10.0": {
-            "title": "misc-api 3.10.0 开发者投稿、审核三态与邮件通知",
+            "title": "ApiNexus 3.10.0 开发者投稿、审核三态与邮件通知",
             "date": "2026-07-14",
             "db_changes": true,
             "changes": [
@@ -401,7 +412,7 @@
             ]
         },
         "3.9.0": {
-            "title": "misc-api 3.9.0 数据库字段去下划线与短英文命名",
+            "title": "ApiNexus 3.9.0 数据库字段去下划线与短英文命名",
             "date": "2026-07-14",
             "db_changes": true,
             "changes": [
@@ -412,7 +423,7 @@
             ]
         },
         "3.8.1": {
-            "title": "misc-api 3.8.1 清理旧文件管理系统残留代码",
+            "title": "ApiNexus 3.8.1 清理旧文件管理系统残留代码",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -423,7 +434,7 @@
             ]
         },
         "3.8.0": {
-            "title": "misc-api 3.8.0 库表中文注释与数字状态 / 接口审核",
+            "title": "ApiNexus 3.8.0 库表中文注释与数字状态 / 接口审核",
             "date": "2026-07-14",
             "db_changes": true,
             "changes": [
@@ -435,7 +446,7 @@
             ]
         },
         "3.7.1": {
-            "title": "misc-api 3.7.1 接口列表交互与密钥三态修复",
+            "title": "ApiNexus 3.7.1 接口列表交互与密钥三态修复",
             "date": "2026-07-14",
             "db_changes": true,
             "changes": [
@@ -446,7 +457,7 @@
             ]
         },
         "3.7.0": {
-            "title": "misc-api 3.7.0 SVG 图标库扩展与接口列表体验优化",
+            "title": "ApiNexus 3.7.0 SVG 图标库扩展与接口列表体验优化",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -457,7 +468,7 @@
             ]
         },
         "3.6.0": {
-            "title": "misc-api 3.6.0 接口列表与 API 表结构重构",
+            "title": "ApiNexus 3.6.0 接口列表与 API 表结构重构",
             "date": "2026-07-14",
             "db_changes": true,
             "changes": [
@@ -469,7 +480,7 @@
             ]
         },
         "3.5.1": {
-            "title": "misc-api 3.5.1 恢复默认主题认证页原 UI",
+            "title": "ApiNexus 3.5.1 恢复默认主题认证页原 UI",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -479,7 +490,7 @@
             ]
         },
         "3.5.0": {
-            "title": "misc-api 3.5.0 默认主题认证页视觉统一",
+            "title": "ApiNexus 3.5.0 默认主题认证页视觉统一",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -489,7 +500,7 @@
             ]
         },
         "3.4.3": {
-            "title": "misc-api 3.4.3 修复 Redis 饼图 UI 错乱",
+            "title": "ApiNexus 3.4.3 修复 Redis 饼图 UI 错乱",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -499,7 +510,7 @@
             ]
         },
         "3.4.2": {
-            "title": "misc-api 3.4.2 Redis 引出线饼图",
+            "title": "ApiNexus 3.4.2 Redis 引出线饼图",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -509,7 +520,7 @@
             ]
         },
         "3.4.1": {
-            "title": "misc-api 3.4.1 Redis 交互监控图优化",
+            "title": "ApiNexus 3.4.1 Redis 交互监控图优化",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -519,7 +530,7 @@
             ]
         },
         "3.4.0": {
-            "title": "misc-api 3.4.0 认证占位、Redis 实时与卡片布局优化",
+            "title": "ApiNexus 3.4.0 认证占位、Redis 实时与卡片布局优化",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -531,7 +542,7 @@
             ]
         },
         "3.3.0": {
-            "title": "misc-api 3.3.0 UI 规范与 Redis 监控优化",
+            "title": "ApiNexus 3.3.0 UI 规范与 Redis 监控优化",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -544,7 +555,7 @@
             ]
         },
         "3.2.1": {
-            "title": "misc-api 3.2.1 注册页身份选择 UI 优化",
+            "title": "ApiNexus 3.2.1 注册页身份选择 UI 优化",
             "date": "2026-07-14",
             "db_changes": false,
             "changes": [
@@ -555,7 +566,7 @@
             ]
         },
         "3.2.0": {
-            "title": "misc-api 3.2.0 Redis 业务缓存与监控优化",
+            "title": "ApiNexus 3.2.0 Redis 业务缓存与监控优化",
             "date": "2026-07-13",
             "db_changes": false,
             "changes": [
@@ -566,7 +577,7 @@
             ]
         },
         "3.1.0": {
-            "title": "misc-api 3.1.0 Redis 管理监控页",
+            "title": "ApiNexus 3.1.0 Redis 管理监控页",
             "date": "2026-07-13",
             "db_changes": false,
             "changes": [
@@ -576,7 +587,7 @@
             ]
         },
         "3.0.0": {
-            "title": "misc-api 3.0.0 用户角色权限体系",
+            "title": "ApiNexus 3.0.0 用户角色权限体系",
             "date": "2026-07-13",
             "db_changes": true,
             "changes": [
@@ -588,7 +599,7 @@
             ]
         },
         "2.17.1": {
-            "title": "misc-api 2.17.1 前台分类与接口统一调度",
+            "title": "ApiNexus 2.17.1 前台分类与接口统一调度",
             "date": "2026-07-13",
             "db_changes": false,
             "changes": [
@@ -598,7 +609,7 @@
             ]
         },
         "2.17.0": {
-            "title": "misc-api 2.17.0 双主题接口分类对接",
+            "title": "ApiNexus 2.17.0 双主题接口分类对接",
             "date": "2026-07-13",
             "db_changes": false,
             "changes": [
@@ -608,7 +619,7 @@
             ]
         },
         "2.16.4": {
-            "title": "misc-api 2.16.4 弹窗按钮与分类图标扩充",
+            "title": "ApiNexus 2.16.4 弹窗按钮与分类图标扩充",
             "date": "2026-07-13",
             "db_changes": false,
             "changes": [
@@ -617,7 +628,7 @@
             ]
         },
         "2.16.3": {
-            "title": "misc-api 2.16.3 分类页标题栏与手机卡片布局",
+            "title": "ApiNexus 2.16.3 分类页标题栏与手机卡片布局",
             "date": "2026-07-13",
             "db_changes": false,
             "changes": [
@@ -627,7 +638,7 @@
             ]
         },
         "2.16.2": {
-            "title": "misc-api 2.16.2 分类页表格式重构与弹窗尺寸修复",
+            "title": "ApiNexus 2.16.2 分类页表格式重构与弹窗尺寸修复",
             "date": "2026-07-13",
             "db_changes": false,
             "changes": [
@@ -637,7 +648,7 @@
             ]
         },
         "2.16.1": {
-            "title": "misc-api 2.16.1 分类页 UI 与弹窗规范",
+            "title": "ApiNexus 2.16.1 分类页 UI 与弹窗规范",
             "date": "2026-07-13",
             "db_changes": false,
             "changes": [
@@ -647,7 +658,7 @@
             ]
         },
         "2.16.0": {
-            "title": "misc-api 2.16.0 接口分类页重构",
+            "title": "ApiNexus 2.16.0 接口分类页重构",
             "date": "2026-07-13",
             "db_changes": true,
             "changes": [
@@ -657,7 +668,7 @@
             ]
         },
         "2.15.1": {
-            "title": "misc-api 2.15.1 分类表名精简",
+            "title": "ApiNexus 2.15.1 分类表名精简",
             "date": "2026-07-13",
             "db_changes": true,
             "changes": [
@@ -667,7 +678,7 @@
             ]
         },
         "2.15.0": {
-            "title": "misc-api 2.15.0 后台接口分类管理",
+            "title": "ApiNexus 2.15.0 后台接口分类管理",
             "date": "2026-07-13",
             "db_changes": true,
             "changes": [
@@ -677,7 +688,7 @@
             ]
         },
         "2.14.4": {
-            "title": "misc-api 2.14.4 主题一统计与浅色固定",
+            "title": "ApiNexus 2.14.4 主题一统计与浅色固定",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -687,7 +698,7 @@
             ]
         },
         "2.14.3": {
-            "title": "misc-api 2.14.3 主题一 Hero 区修复",
+            "title": "ApiNexus 2.14.3 主题一 Hero 区修复",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -697,7 +708,7 @@
             ]
         },
         "2.14.2": {
-            "title": "misc-api 2.14.2 主题一布局根因修复",
+            "title": "ApiNexus 2.14.2 主题一布局根因修复",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -707,7 +718,7 @@
             ]
         },
         "2.14.1": {
-            "title": "misc-api 2.14.1 主题一布局修复",
+            "title": "ApiNexus 2.14.1 主题一布局修复",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -718,7 +729,7 @@
             ]
         },
         "2.14.0": {
-            "title": "misc-api 2.14.0 主题一参考 UI 完整复刻",
+            "title": "ApiNexus 2.14.0 主题一参考 UI 完整复刻",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -729,7 +740,7 @@
             ]
         },
         "2.13.0": {
-            "title": "misc-api 2.13.0 主题一前台 UI 全面重设计",
+            "title": "ApiNexus 2.13.0 主题一前台 UI 全面重设计",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -740,7 +751,7 @@
             ]
         },
         "2.12.2": {
-            "title": "misc-api 2.12.2 主题二统计胶囊样式恢复",
+            "title": "ApiNexus 2.12.2 主题二统计胶囊样式恢复",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -750,7 +761,7 @@
             ]
         },
         "2.12.1": {
-            "title": "misc-api 2.12.1 主题二首页与导航修复",
+            "title": "ApiNexus 2.12.1 主题二首页与导航修复",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -760,7 +771,7 @@
             ]
         },
         "2.12.0": {
-            "title": "misc-api 2.12.0 API 审核与主题体验优化",
+            "title": "ApiNexus 2.12.0 API 审核与主题体验优化",
             "date": "2026-07-12",
             "db_changes": true,
             "changes": [
@@ -770,7 +781,7 @@
             ]
         },
         "2.11.2": {
-            "title": "misc-api 2.11.2 青绿认证页 UI 还原",
+            "title": "ApiNexus 2.11.2 青绿认证页 UI 还原",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -780,7 +791,7 @@
             ]
         },
         "2.11.1": {
-            "title": "misc-api 2.11.1 青绿认证页双栏布局重构",
+            "title": "ApiNexus 2.11.1 青绿认证页双栏布局重构",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -790,7 +801,7 @@
             ]
         },
         "2.11.0": {
-            "title": "misc-api 2.11.0 限流表命名与青绿登录页",
+            "title": "ApiNexus 2.11.0 限流表命名与青绿登录页",
             "date": "2026-07-12",
             "db_changes": true,
             "changes": [
@@ -800,7 +811,7 @@
             ]
         },
         "2.10.2": {
-            "title": "misc-api 2.10.2 邮箱发信限流数据库化与防重放",
+            "title": "ApiNexus 2.10.2 邮箱发信限流数据库化与防重放",
             "date": "2026-07-12",
             "db_changes": true,
             "changes": [
@@ -810,7 +821,7 @@
             ]
         },
         "2.10.1": {
-            "title": "misc-api 2.10.1 邮箱验证码发信安全加固",
+            "title": "ApiNexus 2.10.1 邮箱验证码发信安全加固",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -820,7 +831,7 @@
             ]
         },
         "2.10.0": {
-            "title": "misc-api 2.10.0 后台主题设置二级导航重构",
+            "title": "ApiNexus 2.10.0 后台主题设置二级导航重构",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -830,7 +841,7 @@
             ]
         },
         "2.9.0": {
-            "title": "misc-api 2.9.0 后台主题设置与专属 data 存储",
+            "title": "ApiNexus 2.9.0 后台主题设置与专属 data 存储",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -840,7 +851,7 @@
             ]
         },
         "2.8.1": {
-            "title": "misc-api 2.8.1 青绿账号设置布局修复",
+            "title": "ApiNexus 2.8.1 青绿账号设置布局修复",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -849,7 +860,7 @@
             ]
         },
         "2.8.0": {
-            "title": "misc-api 2.8.0 青绿 FAB 弹出导航与前台渐变",
+            "title": "ApiNexus 2.8.0 青绿 FAB 弹出导航与前台渐变",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -859,7 +870,7 @@
             ]
         },
         "2.7.0": {
-            "title": "misc-api 2.7.0 青绿用户中心侧边栏重构",
+            "title": "ApiNexus 2.7.0 青绿用户中心侧边栏重构",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -869,7 +880,7 @@
             ]
         },
         "2.6.0": {
-            "title": "misc-api 2.6.0 青绿 st-dash 用户中心与无卡片认证页",
+            "title": "ApiNexus 2.6.0 青绿 st-dash 用户中心与无卡片认证页",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -879,7 +890,7 @@
             ]
         },
         "2.5.0": {
-            "title": "misc-api 2.5.0 青绿用户中心重构与登录态入口",
+            "title": "ApiNexus 2.5.0 青绿用户中心重构与登录态入口",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -889,7 +900,7 @@
             ]
         },
         "2.4.0": {
-            "title": "misc-api 2.4.0 青绿平台 UI 重设计",
+            "title": "ApiNexus 2.4.0 青绿平台 UI 重设计",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -900,7 +911,7 @@
             ]
         },
         "2.3.0": {
-            "title": "misc-api 2.3.0 主题完全隔离与青绿认证页",
+            "title": "ApiNexus 2.3.0 主题完全隔离与青绿认证页",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -911,7 +922,7 @@
             ]
         },
         "2.2.0": {
-            "title": "misc-api 2.2.0 用户中心主题联动与主题规范",
+            "title": "ApiNexus 2.2.0 用户中心主题联动与主题规范",
             "date": "2026-07-12",
             "db_changes": false,
             "changes": [
@@ -922,7 +933,7 @@
             ]
         },
         "2.1.1": {
-            "title": "misc-api 2.1.1 青绿平台主题与预览图规范",
+            "title": "ApiNexus 2.1.1 青绿平台主题与预览图规范",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -933,7 +944,7 @@
             ]
         },
         "2.1.0": {
-            "title": "misc-api 2.1.0 双主题优化与伪静态导航",
+            "title": "ApiNexus 2.1.0 双主题优化与伪静态导航",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -944,7 +955,7 @@
             ]
         },
         "2.0.0": {
-            "title": "misc-api 2.0.0 双主题体系与贡献者页面",
+            "title": "ApiNexus 2.0.0 双主题体系与贡献者页面",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -956,7 +967,7 @@
             ]
         },
         "1.9.0": {
-            "title": "misc-api 1.9.0 前台主题系统与多页面",
+            "title": "ApiNexus 1.9.0 前台主题系统与多页面",
             "date": "2026-07-11",
             "db_changes": true,
             "changes": [
@@ -967,7 +978,7 @@
             ]
         },
         "1.8.2": {
-            "title": "misc-api 1.8.2 用户管理与账号设置 UI 优化",
+            "title": "ApiNexus 1.8.2 用户管理与账号设置 UI 优化",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -977,7 +988,7 @@
             ]
         },
         "1.8.1": {
-            "title": "misc-api 1.8.1 管理员账号设置布局修复",
+            "title": "ApiNexus 1.8.1 管理员账号设置布局修复",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -986,7 +997,7 @@
             ]
         },
         "1.8.0": {
-            "title": "misc-api 1.8.0 安装检测增强与管理员用户绑定",
+            "title": "ApiNexus 1.8.0 安装检测增强与管理员用户绑定",
             "date": "2026-07-11",
             "db_changes": true,
             "changes": [
@@ -997,7 +1008,7 @@
             ]
         },
         "1.7.1": {
-            "title": "misc-api 1.7.1 数据大屏与 Redis 管理占位",
+            "title": "ApiNexus 1.7.1 数据大屏与 Redis 管理占位",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1006,7 +1017,7 @@
             ]
         },
         "1.7.0": {
-            "title": "misc-api 1.7.0 安全404、用户搜索与公告占位",
+            "title": "ApiNexus 1.7.0 安全404、用户搜索与公告占位",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1017,7 +1028,7 @@
             ]
         },
         "1.6.1": {
-            "title": "misc-api 1.6.1 用户中心菜单调整与主题设置占位",
+            "title": "ApiNexus 1.6.1 用户中心菜单调整与主题设置占位",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1027,7 +1038,7 @@
             ]
         },
         "1.6.0": {
-            "title": "misc-api 1.6.0 双端侧边栏导航扩展与占位页",
+            "title": "ApiNexus 1.6.0 双端侧边栏导航扩展与占位页",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1038,7 +1049,7 @@
             ]
         },
         "1.5.0": {
-            "title": "misc-api 1.5.0 表单 POST 安全与 AJAX 无刷新操作",
+            "title": "ApiNexus 1.5.0 表单 POST 安全与 AJAX 无刷新操作",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1049,7 +1060,7 @@
             ]
         },
         "1.4.4": {
-            "title": "misc-api 1.4.4 OAuth 绑定会话恢复与升级页版本箭头",
+            "title": "ApiNexus 1.4.4 OAuth 绑定会话恢复与升级页版本箭头",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1060,7 +1071,7 @@
             ]
         },
         "1.4.3": {
-            "title": "misc-api 1.4.3 账号设置提示条对齐修复",
+            "title": "ApiNexus 1.4.3 账号设置提示条对齐修复",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1070,7 +1081,7 @@
             ]
         },
         "1.4.2": {
-            "title": "misc-api 1.4.2 修复 Gitee OAuth 绑定 state 失效",
+            "title": "ApiNexus 1.4.2 修复 Gitee OAuth 绑定 state 失效",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1081,7 +1092,7 @@
             ]
         },
         "1.4.1": {
-            "title": "misc-api 1.4.1 账号设置页布局与按钮样式优化",
+            "title": "ApiNexus 1.4.1 账号设置页布局与按钮样式优化",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1091,7 +1102,7 @@
             ]
         },
         "1.4.0": {
-            "title": "misc-api 1.4.0 用户管理封禁删除与移动端优化",
+            "title": "ApiNexus 1.4.0 用户管理封禁删除与移动端优化",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1102,7 +1113,7 @@
             ]
         },
         "1.3.1": {
-            "title": "misc-api 1.3.1 OAuth 体验优化与安全加固",
+            "title": "ApiNexus 1.3.1 OAuth 体验优化与安全加固",
             "date": "2026-07-11",
             "db_changes": false,
             "changes": [
@@ -1114,7 +1125,7 @@
             ]
         },
         "1.3.0": {
-            "title": "misc-api 1.3.0 OAuth 聚合登录与用户管理",
+            "title": "ApiNexus 1.3.0 OAuth 聚合登录与用户管理",
             "date": "2026-07-11",
             "db_changes": true,
             "changes": [
@@ -1126,7 +1137,7 @@
             ]
         },
         "1.2.0": {
-            "title": "misc-api 1.2.0 注册策略与界面优化",
+            "title": "ApiNexus 1.2.0 注册策略与界面优化",
             "date": "2026-07-11",
             "db_changes": true,
             "changes": [
@@ -1138,7 +1149,7 @@
             ]
         },
         "1.1.1": {
-            "title": "misc-api 1.1.1 用户后台优化",
+            "title": "ApiNexus 1.1.1 用户后台优化",
             "date": "2026-07-11",
             "db_changes": true,
             "changes": [
@@ -1150,7 +1161,7 @@
             ]
         },
         "1.1.0": {
-            "title": "misc-api 1.1.0 用户体系",
+            "title": "ApiNexus 1.1.0 用户体系",
             "date": "2026-07-10",
             "db_changes": true,
             "changes": [
@@ -1163,11 +1174,11 @@
             ]
         },
         "1.0.0": {
-            "title": "misc-api 初始版本",
+            "title": "ApiNexus 初始版本",
             "date": "2026-07-10",
             "db_changes": false,
             "changes": [
-                "misc-api 初始版本发布",
+                "ApiNexus 初始版本发布",
                 "管理员认证与安全防护",
                 "系统设置（站点信息、邮箱发信）",
                 "在线更新机制",

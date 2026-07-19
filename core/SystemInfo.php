@@ -16,7 +16,7 @@ class SystemInfo
     public static function collect()
     {
         $info = array(
-            self::item('系统名称', 'misc-api'),
+            self::item('系统名称', 'ApiNexus'),
             self::item('系统版本', 'v' . VS_VERSION),
             self::item('PHP 版本', PHP_VERSION),
             self::item('操作系统', PHP_OS),

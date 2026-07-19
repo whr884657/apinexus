@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/includes/layout.php
- * 作用：misc-api 后台自定义布局（分组侧边栏）
+ * 作用：ApiNexus 后台自定义布局（分组侧边栏）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */

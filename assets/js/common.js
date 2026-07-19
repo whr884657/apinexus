@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/common.js
- * 作用：misc-api 全局公共脚本（Toast、JSON 解析）
+ * 作用：ApiNexus 全局公共脚本（Toast、JSON 解析）
  * @version 1.0.0
  */
 

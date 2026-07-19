@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/forgot.php
- * 作用：misc-api 管理员忘记密码（邮箱验证码重置）
+ * 作用：ApiNexus 管理员忘记密码（邮箱验证码重置）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */

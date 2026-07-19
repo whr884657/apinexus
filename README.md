@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>MISC-API</h1>
+  <h1>ApiNexus</h1>
 </div>
 
 <p align="center">
@@ -7,9 +7,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.37.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-4.0.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
-  <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
+  <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
   <img src="https://img.shields.io/badge/MySQL-5.7+-4479A1?logo=mysql&logoColor=white" alt="MySQL">
 </p>
@@ -18,7 +18,7 @@
 
 ## 项目简介
 
-**MISC-API** 是一套可自部署的**开放 API 接口平台**管理系统。基于 PHP + MySQL，无重型框架依赖，提供前台接口目录与在线调试、后台接口审核与分类管理，以及用户体系与云端在线更新。
+**ApiNexus** 是一套可自部署的**开放 API 接口平台**管理系统。基于 PHP + MySQL，无重型框架依赖，提供前台接口目录与在线调试、后台接口审核与分类管理，以及用户体系与云端在线更新。
 
 **主要能力：**
 
@@ -60,10 +60,10 @@
 
 | 平台 | 链接 |
 |------|------|
-| **Gitee（主仓库）** | [xunjinlu/misc-api](https://gitee.com/xunjinlu/misc-api) |
-| **发行版下载** | [Releases · 下载 ZIP](https://gitee.com/xunjinlu/misc-api/releases) |
+| **Gitee（主仓库）** | [xunjinlu/apinexus](https://gitee.com/xunjinlu/apinexus) |
+| **发行版下载** | [Releases · 下载 ZIP](https://gitee.com/xunjinlu/apinexus/releases) |
 
-压缩包命名：`misc-api{版本号}.zip`（如 `misc-api1.0.0.zip`）。各版本详细说明见 `发行说明/` 目录。
+压缩包命名：`apinexus{版本号}.zip`（如 `apinexus1.0.0.zip`）。各版本详细说明见 `发行说明/` 目录。
 
 ---
 
@@ -142,7 +142,7 @@
 ## 目录结构
 
 ```
-misc-api/
+ApiNexus/
 ├── README.md
 ├── CORE模块说明.md             # core/ 下全部 PHP 类说明与主题对接指南
 ├── LICENSE                     # 开源协议
@@ -282,13 +282,19 @@ location / {
 4. 若该版本含数据库结构变更，则执行 `install/migrations/` 增量 SQL
 5. 完成后自动清理 `data/update/` 临时文件
 
-**若在线更新失败：** 请从 [发行页](https://gitee.com/xunjinlu/misc-api/releases) 手动下载最新 `misc-api{版本}.zip` 覆盖（保留 `config/database.php`）。
+**若在线更新失败：** 请从 [发行页](https://gitee.com/xunjinlu/apinexus/releases) 手动下载最新 `apinexus{版本}.zip` 覆盖（保留 `config/database.php`）。
 
 **服务器要求：** PHP `ZipArchive` 扩展、可写项目目录、可访问云端更新源。
 
 ---
 
 ## 版本记录
+
+### v4.0.0（2026-07-19）
+
+- 产品全面更名为 **ApiNexus**；仓库迁移至 [xunjinlu/apinexus](https://gitee.com/xunjinlu/apinexus)
+- 更新包命名 `apinexus{版本}.zip`；在线更新与发行说明链接同步
+- 默认站点名、发信名、Redis 键前缀等与新品牌对齐
 
 ### v3.37.0（2026-07-19）
 
@@ -630,7 +636,7 @@ location / {
 ### v3.2.0（2026-07-13）
 
 - **Redis 业务缓存**：新增 `RedisCache.php`；公开接口列表、分类标签读 Redis；发信限流优先 Redis 写入，减轻 MySQL 压力
-- **Redis 管理页**：聚焦 misc-api 业务缓存（命中率、各缓存项状态、可一键清空）；服务器信息收折展示；移动端布局优化
+- **Redis 管理页**：聚焦 ApiNexus 业务缓存（命中率、各缓存项状态、可一键清空）；服务器信息收折展示；移动端布局优化
 - **接口分类**：修复桌面端「接口/状态/操作」列错位；手机端卡片显示「接口数量」
 
 ### v3.1.0（2026-07-13）
@@ -736,7 +742,7 @@ location / {
 
 ### v2.14.0（2026-07-12）
 
-- **主题一参考 UI 完整复刻**：迁入粒子背景、Glitch Hero、终端、接口目录、在线调试、合作伙伴等；绿色色板改为 misc-api 白色主题
+- **主题一参考 UI 完整复刻**：迁入粒子背景、Glitch Hero、终端、接口目录、在线调试、合作伙伴等；绿色色板改为 ApiNexus 白色主题
 - 新增 `api-proxy.php`、`ThemeManager::defaultFrontendAssets()` 多资源加载；默认主题 v1.5.0
 
 ### v2.13.0（2026-07-12）
@@ -1065,7 +1071,7 @@ location / {
 
 **变更说明：**
 
-- misc-api 初始版本发布
+- ApiNexus 初始版本发布
 - 管理员认证与安全防护
 - 系统设置（站点信息、邮箱发信）
 - 在线更新机制
@@ -1078,7 +1084,7 @@ location / {
 
 ## 开源协议
 
-本项目采用 **[misc-api 开源许可协议](LICENSE)**。
+本项目采用 **[ApiNexus 开源许可协议](LICENSE)**。
 
 ### 您可以
 
@@ -1099,7 +1105,7 @@ location / {
 
 ## 作者与仓库
 
-- 仓库地址：[https://gitee.com/xunjinlu/misc-api](https://gitee.com/xunjinlu/misc-api)
+- 仓库地址：[https://gitee.com/xunjinlu/apinexus](https://gitee.com/xunjinlu/apinexus)
 - 问题反馈：请通过 Gitee Issues 提交
 
 ---

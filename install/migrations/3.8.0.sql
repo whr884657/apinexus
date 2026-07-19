@@ -1,4 +1,4 @@
--- misc-api 3.8.0
+-- ApiNexus 3.8.0
 -- 1) 全表白字段中文 COMMENT
 -- 2) api.status：英文串 → 数字（0正常 1禁用 2维护）
 -- 3) api.audit_status：审核（0不通过 1通过；存量/管理员默认通过）

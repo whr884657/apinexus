@@ -157,7 +157,7 @@ class OAuthState
             return $key;
         }
 
-        $parts = array('misc-api-oauth-state-v1');
+        $parts = array('apinexus-oauth-state-v1');
         $lockFile = VS_ROOT . '/config/install.lock';
         if (is_file($lockFile)) {
             $parts[] = trim((string) @file_get_contents($lockFile));

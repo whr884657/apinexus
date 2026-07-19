@@ -1,4 +1,4 @@
--- misc-api 1.2.0：注册邮箱策略、移除多域名功能
+-- ApiNexus 1.2.0：注册邮箱策略、移除多域名功能
 
 INSERT INTO `{prefix}config` (`key`, `value`) VALUES ('register_policy', '{"email_suffixes":[]}')
 ON DUPLICATE KEY UPDATE `key` = `key`;

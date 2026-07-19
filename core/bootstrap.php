@@ -1,6 +1,6 @@
 <?php
 /**
- * misc-api 系统引导入口，按序加载 core 下全部核心类
+ * ApiNexus 系统引导入口，按序加载 core 下全部核心类
  */
 
 defined('VS_ROOT') or define('VS_ROOT', dirname(__DIR__));

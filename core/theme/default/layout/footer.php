@@ -15,10 +15,10 @@ $runtimeStart = vs_site_runtime_start();
                 <div class="flex-1" style="min-width: 0;">
                     <h4 class="font-bold text-sm mb-4 font-mono" style="color: var(--accent-primary);">// 友情链接</h4>
                     <div class="flex flex-wrap gap-3 footer-links text-sm" id="friendLinks">
-                        <a href="https://gitee.com/xunjinlu/misc-api" target="_blank" rel="noopener noreferrer" class="footer-link-item">misc-api 开源仓库</a>
+                        <a href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer" class="footer-link-item">ApiNexus 开源仓库</a>
                         <a href="<?php echo vs_e($vsBase); ?>/links" class="footer-link-item">友情链接</a>
                         <a href="<?php echo vs_e($vsBase); ?>/about" class="footer-link-item">关于我们</a>
-                        <a href="https://gitee.com/xunjinlu/misc-api/releases" target="_blank" rel="noopener noreferrer" class="footer-link-item">更新日志</a>
+                        <a href="https://gitee.com/xunjinlu/apinexus/releases" target="_blank" rel="noopener noreferrer" class="footer-link-item">更新日志</a>
                     </div>
                 </div>
                 <div class="vs-foot-qr-wrap">

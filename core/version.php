@@ -1,6 +1,6 @@
 <?php
 /**
- * misc-api 系统当前版本号常量
+ * ApiNexus 系统当前版本号常量
  *
  * 说明：
  * - 在线更新、关于页、update.json 均读取此常量
@@ -8,5 +8,5 @@
  */
 
 if (!defined('VS_VERSION')) {
-    define('VS_VERSION', '3.37.0');
+    define('VS_VERSION', '4.0.0');
 }

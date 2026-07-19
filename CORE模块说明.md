@@ -1,4 +1,4 @@
-# misc-api · core 核心模块说明
+# ApiNexus · core 核心模块说明
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
@@ -8,7 +8,7 @@
 
 ## 一、core 目录是做什么的？
 
-`core/` 是 misc-api 的**业务内核**：所有与数据库、认证、配置、前台数据调度相关的 PHP 类都集中在这里。  
+`core/` 是 ApiNexus 的**业务内核**：所有与数据库、认证、配置、前台数据调度相关的 PHP 类都集中在这里。  
 入口页（如 `index.php`、`admin/`、`user/`）只需：
 
 ```php
@@ -59,7 +59,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 
 ### 2.1 core 的核心作用
 
-`core/` 是整个 misc-api 的**后端数据中心与规则引擎**，承担：
+`core/` 是整个 ApiNexus 的**后端数据中心与规则引擎**，承担：
 
 1. **统一数据出口** — 主题、入口页、AJAX 都通过 core 类取数，避免各主题各写一套 SQL  
 2. **统一业务规则** — 审核状态、启禁、排序、可见性等逻辑只写一次  
@@ -702,7 +702,7 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 | `formatUptime($seconds)` | 格式化为「N 天 N 小时 N 分 N 秒」 |
 | `versionLabel()` | 关于页一行摘要 |
 
-**配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`misc_api:`）。
+**配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`apinexus:`）。
 
 **业务缓存项（`RedisCache`）：**
 
@@ -732,7 +732,7 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 ### 4.28 Updater.php
 
-**作用：** 从 Gitee 检测新版本、下载 `misc-api{版本}.zip`、解压覆盖（保护 `config/`、`data/`），并按清单清理废弃文件。
+**作用：** 从 Gitee 检测新版本、下载 `apinexus{版本}.zip`、解压覆盖（保护 `config/`、`data/`），并按清单清理废弃文件。
 
 | 方法 | 说明 |
 |------|------|

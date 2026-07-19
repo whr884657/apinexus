@@ -12,7 +12,7 @@
         <div class="donate-block">
             <h2 class="section-title section-title--sm">其他支持方式</h2>
             <ul class="donate-list">
-                <li>为 <a href="https://gitee.com/xunjinlu/misc-api" target="_blank" rel="noopener noreferrer">Gitee 仓库</a> 点 Star</li>
+                <li>为 <a href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer">Gitee 仓库</a> 点 Star</li>
                 <li>提交 Bug 反馈与功能建议</li>
                 <li>参与文档完善与接口贡献</li>
             </ul>

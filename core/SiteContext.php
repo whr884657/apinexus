@@ -64,7 +64,7 @@ class SiteContext
 
         self::$cache = array(
             'host'               => self::currentHost(),
-            'site_name'          => trim((string) Config::get('site_name', 'misc-api')),
+            'site_name'          => trim((string) Config::get('site_name', 'ApiNexus')),
             'site_description'   => trim((string) Config::get('site_description', '')),
             'site_keywords'      => trim((string) Config::get('site_keywords', '')),
             'site_favicon'       => trim((string) Config::get('site_favicon', '')),
@@ -93,7 +93,7 @@ class SiteContext
     {
         $ctx = self::resolve();
         $name = trim($ctx['site_name']);
-        return $name !== '' ? $name : 'misc-api';
+        return $name !== '' ? $name : 'ApiNexus';
     }
 
     /**

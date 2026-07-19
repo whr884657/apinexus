@@ -6,7 +6,7 @@
     <div class="st-grid-3">
         <div class="st-card st-contrib">
             <div class="st-contrib__avatar">M</div>
-            <div class="st-card__title">misc-api 团队</div>
+            <div class="st-card__title">ApiNexus 团队</div>
             <div class="st-card__meta">核心开发</div>
         </div>
         <div class="st-card st-contrib">
@@ -20,6 +20,6 @@
             <div class="st-card__meta">接口发布</div>
         </div>
     </div>
-    <p class="st-notice-box" style="margin-top:16px;text-align:center;">欢迎通过 Gitee 提交 Issue 与 PR，共同完善 misc-api。</p>
+    <p class="st-notice-box" style="margin-top:16px;text-align:center;">欢迎通过 Gitee 提交 Issue 与 PR，共同完善 ApiNexus。</p>
 </section>
 </div></main>

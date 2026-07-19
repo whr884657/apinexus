@@ -146,7 +146,7 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
     <section id="home-partners" class="py-24 border-t" style="border-color: var(--border-color);">
         <div class="partners-section-header"><h2 class="section-title">合作伙伴</h2></div>
         <div class="partners-grid">
-            <a class="partner-tile" href="https://gitee.com/xunjinlu/misc-api" target="_blank" rel="noopener noreferrer" title="Gitee">
+            <a class="partner-tile" href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer" title="Gitee">
                 <img src="https://gitee.com/static/images/logo_themecolor.png" alt="Gitee" loading="lazy">
                 <span class="partner-tile-name">Gitee</span>
             </a>
