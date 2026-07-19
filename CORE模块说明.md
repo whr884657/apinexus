@@ -624,7 +624,7 @@ fetch(window.VS_PLAY_URL, {
 
 默认主题也可直接用 `VsPlaygroundResponse.relayRequest({ apiId, method, params })`。
 
-**禁止：** 主题内 `fetch(接口 endpoint)` 直连外链/代理（易触发跨域 Failed to fetch）；也**禁止**把中继入口再拷到根目录或单一主题包。
+**主题对接：** 首页/详情 JS 须调用 `VsPlaygroundResponse.relayRequest`（`POST /core/playground/relay.php`），禁止 `fetch(endpoint)` 直连。视频/大体积媒体：中继可能返回 `encoding=omit` 或 `base64`；前端勿对中继响应盲目 `res.json()`（应用 `text()` 再 `JSON.parse` 并处理空体）。
 
 **放置原则：** 多主题可共用的后台能力放 `core/`；仅某一主题 UI 用的资源放该主题包。根目录只保留前台可见的页面入口（见《页面文件命名规范》§根目录）。
 

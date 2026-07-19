@@ -6,8 +6,11 @@
 
 class PlaygroundRelay
 {
-    /** 响应体最大字节（约 4MB） */
-    const MAX_BODY = 4194304;
+    /** 响应体最大字节（约 2MB；过大时预览截断，避免 JSON 编码撑爆） */
+    const MAX_BODY = 2097152;
+
+    /** 二进制预览上限（约 768KB；视频等更大则只提示） */
+    const MAX_BINARY_PREVIEW = 786432;
 
     /** 超时秒数 */
     const TIMEOUT = 25;
@@ -244,10 +247,21 @@ class PlaygroundRelay
         }
 
         $ctLower = strtolower($contentType);
-        $isBinary = (bool) preg_match('#^(image|audio|video)/#', $ctLower)
-            || (bool) preg_match('#octet-stream|application/pdf|application/zip|application/x-|font/#', $ctLower);
+        $isBinary = self::looksBinary($ctLower, $body);
 
         if ($isBinary) {
+            $len = strlen($body);
+            if ($len > self::MAX_BINARY_PREVIEW) {
+                return array(
+                    'ok'          => $http >= 200 && $http < 400,
+                    'msg'         => '媒体体积较大，在线预览已跳过，请直接访问接口地址',
+                    'http'        => $http,
+                    'contentType' => $contentType,
+                    'body'        => '',
+                    'encoding'    => 'omit',
+                    'displayUrl'  => '',
+                );
+            }
             return array(
                 'ok'          => $http >= 200 && $http < 400,
                 'msg'         => 'ok',
@@ -259,6 +273,35 @@ class PlaygroundRelay
             );
         }
 
+        // 文本须为合法 UTF-8，否则 json_encode 会失败导致前端 Unexpected end of JSON input
+        $isUtf8 = function_exists('mb_check_encoding')
+            ? mb_check_encoding($body, 'UTF-8')
+            : (bool) preg_match('//u', $body);
+        if (!$isUtf8) {
+            $converted = null;
+            if (function_exists('mb_convert_encoding')) {
+                $converted = @mb_convert_encoding($body, 'UTF-8', 'UTF-8, GBK, GB2312, BIG5, ISO-8859-1');
+            }
+            $body = is_string($converted) ? $converted : preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $body);
+            $okUtf8 = is_string($body) && (
+                function_exists('mb_check_encoding')
+                    ? mb_check_encoding($body, 'UTF-8')
+                    : (bool) preg_match('//u', $body)
+            );
+            if (!$okUtf8) {
+                $rawBody = substr((string) substr($raw, $headerSize), 0, self::MAX_BINARY_PREVIEW);
+                return array(
+                    'ok'          => $http >= 200 && $http < 400,
+                    'msg'         => '上游返回非文本内容，已按二进制处理',
+                    'http'        => $http,
+                    'contentType' => $contentType !== '' ? $contentType : 'application/octet-stream',
+                    'body'        => base64_encode($rawBody),
+                    'encoding'    => 'base64',
+                    'displayUrl'  => '',
+                );
+            }
+        }
+
         return array(
             'ok'          => $http >= 200 && $http < 400,
             'msg'         => 'ok',
@@ -268,5 +311,29 @@ class PlaygroundRelay
             'encoding'    => 'text',
             'displayUrl'  => '',
         );
+    }
+
+    /**
+     * @param string $ctLower
+     * @param string $body
+     * @return bool
+     */
+    private static function looksBinary($ctLower, $body)
+    {
+        if (preg_match('#^(image|audio|video)/#', $ctLower)) {
+            return true;
+        }
+        if (preg_match('#octet-stream|application/pdf|application/zip|application/x-|font/#', $ctLower)) {
+            return true;
+        }
+        if ($body === '') {
+            return false;
+        }
+        // 无 Content-Type 或标成 text 但仍含大量空字节 → 当二进制
+        $sample = substr($body, 0, 4096);
+        if (strpos($sample, "\0") !== false) {
+            return true;
+        }
+        return false;
     }
 }

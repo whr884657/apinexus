@@ -304,18 +304,22 @@ body.vs-body.feer-front #stats-section {
     }
 }
 
-/* 登录后顶栏/侧栏：头像 + 用户中心（覆盖 btn-geek 的 clip-path/overflow，避免把头像裁掉） */
+/* 登录态入口：仅侧栏底部；禁用 btn-geek::before，避免 overflow:visible 时左侧「大黑块」 */
 body.vs-body.feer-front .auth-entry-btn {
-    display: inline-flex !important;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    overflow: visible;
+    position: relative;
+    overflow: hidden;
+    clip-path: none;
+}
+body.vs-body.feer-front .auth-entry-btn::before {
+    display: none !important;
+    content: none !important;
 }
 body.vs-body.feer-front .auth-entry-btn--user {
     padding-left: 0.55rem;
-    clip-path: none;
-    overflow: visible;
 }
 body.vs-body.feer-front .auth-entry-avatar {
     width: 20px;
@@ -326,6 +330,17 @@ body.vs-body.feer-front .auth-entry-avatar {
     display: inline-block;
     background: rgba(17, 17, 17, 0.06);
     border: 1px solid rgba(0, 0, 0, 0.08);
+}
+body.vs-body.feer-front .mobile-sidebar .sidebar-auth-slot {
+    width: 100%;
+    margin-top: auto;
+    padding-top: 1rem;
+}
+body.vs-body.feer-front .mobile-sidebar .auth-entry-btn {
+    display: inline-flex !important;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100%;
 }
 body.vs-body.feer-front .mobile-sidebar .auth-entry-avatar {
     width: 22px;
