@@ -104,6 +104,42 @@
         return document.body && document.body.classList.contains('vs-admin-body') && !isThemePickerDisabled();
     }
 
+    /**
+     * 由页面背景色派生「当前积分 / 余额」英雄条渐变（保留色相，压暗）
+     * 默认主题用户中心须跟随调色盘，禁止写死纯绿/纯蓝块。
+     */
+    function heroGradientFromPageBg(hex) {
+        var rgb = hexToRgb(hex);
+        if (!rgb) {
+            return '';
+        }
+        var c1 = rgbToHex(
+            rgb.r * 0.16 + 10,
+            rgb.g * 0.20 + 12,
+            rgb.b * 0.26 + 16
+        );
+        var c2 = rgbToHex(
+            rgb.r * 0.38 + 24,
+            rgb.g * 0.44 + 32,
+            rgb.b * 0.52 + 44
+        );
+        var c3 = rgbToHex(
+            rgb.r * 0.55 + 36,
+            rgb.g * 0.58 + 48,
+            rgb.b * 0.62 + 58
+        );
+        return 'linear-gradient(135deg, ' + c1 + ' 0%, ' + c2 + ' 52%, ' + c3 + ' 100%)';
+    }
+
+    function paintUcHero(color) {
+        var gradient = heroGradientFromPageBg(color);
+        if (!gradient) {
+            return;
+        }
+        document.documentElement.style.setProperty('--vs-uc-hero-bg', gradient);
+        document.documentElement.style.setProperty('--vs-uc-hero-fg', '#ffffff');
+    }
+
     function paintPage(color) {
         var normalized = normalizeHex(color);
         if (!normalized) return false;
@@ -111,6 +147,10 @@
         document.documentElement.style.backgroundColor = normalized;
         if (document.body) {
             document.body.style.backgroundColor = normalized;
+        }
+        /* 主题二无调色盘，勿覆盖其青绿英雄条 */
+        if (!isThemePickerDisabled()) {
+            paintUcHero(normalized);
         }
         return true;
     }
@@ -162,6 +202,8 @@
         savedColor = DEFAULT_BG;
         currentColor = DEFAULT_BG;
         document.documentElement.style.removeProperty('--page-bg');
+        document.documentElement.style.removeProperty('--vs-uc-hero-bg');
+        document.documentElement.style.removeProperty('--vs-uc-hero-fg');
         document.documentElement.style.backgroundColor = '';
         if (document.body) {
             document.body.style.backgroundColor = '';

@@ -5551,7 +5551,16 @@ select.vs-input.vs-select {
     padding: 20px 22px;
     margin-bottom: 16px;
     border-radius: 14px;
-    background: var(--vs-uc-hero-bg, linear-gradient(135deg, #111 0%, #2d2d2d 55%, #3f3f46 100%));
+    /* 默认主题：由调色盘派生 --vs-uc-hero-bg；主题二在 slate user.css 写死青绿 */
+    background: var(
+        --vs-uc-hero-bg,
+        linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--page-bg, #f8fafc) 18%, #0a0a0a) 0%,
+            color-mix(in srgb, var(--page-bg, #f8fafc) 40%, #1f2937) 55%,
+            color-mix(in srgb, var(--page-bg, #f8fafc) 55%, #334155) 100%
+        )
+    );
     color: var(--vs-uc-hero-fg, #fff);
 }
 .vs-recharge-hero__label,
