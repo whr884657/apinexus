@@ -217,19 +217,30 @@
 
 .st-auth__pw-toggle {
     position: absolute;
-    right: 0;
-    bottom: 10px;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
     border: 0;
     background: transparent;
     color: var(--st-auth-fg3);
-    font-size: 12px;
-    font-weight: 500;
     cursor: pointer;
-    padding: 4px 6px;
+    padding: 4px;
+    line-height: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .st-auth__pw-toggle:hover {
     color: var(--st-auth-accent);
+}
+
+.st-auth__pw-toggle svg {
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+    display: block;
 }
 
 .st-auth__row {

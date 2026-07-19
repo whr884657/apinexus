@@ -5402,13 +5402,23 @@ select.vs-input.vs-select {
 
 @media (max-width: 900px) {
     .vs-content__head:has(.vs-finance-head-actions) {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         align-items: center;
+        row-gap: 10px;
+    }
+    .vs-content__head:has(.vs-finance-head-actions) .vs-content__title {
+        flex: 0 1 auto;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: visible;
+        text-overflow: clip;
     }
     .vs-content__head:has(.vs-finance-head-actions) .vs-content__actions {
-        flex: 0 0 auto;
-        margin-left: 8px;
-        width: auto;
+        flex: 1 1 100%;
+        margin-left: 0;
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
     }
     .vs-finance-row--head {
         display: none;
@@ -6210,23 +6220,31 @@ select.vs-input.vs-select {
     box-sizing: border-box !important;
 }
 
-/* 积分变动等：手机端标题与刷新必须同行 */
+/* 财务页手机端：标题可独占一行，筛选/刷新换行后靠右 */
 @media (max-width: 900px) {
     .vs-content__head:has(.vs-finance-head-actions) {
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
         align-items: center !important;
+        row-gap: 10px !important;
     }
     .vs-content__head:has(.vs-finance-head-actions) .vs-content__title {
-        flex: 1 1 auto !important;
+        flex: 0 1 auto !important;
         min-width: 0 !important;
+        max-width: 100% !important;
         white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
     }
     .vs-content__head:has(.vs-finance-head-actions) .vs-content__actions {
-        flex: 0 0 auto !important;
-        margin-left: 8px !important;
-        width: auto !important;
+        flex: 1 1 100% !important;
+        margin-left: 0 !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+    }
+    .vs-finance-head-actions {
+        width: 100%;
+        justify-content: flex-end;
     }
 }
 

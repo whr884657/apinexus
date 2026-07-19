@@ -22,7 +22,7 @@ vs_slate_auth_shell_start('绑定' . $providerLabel . '账号', '请使用已注
     <div class="st-auth__field">
         <div class="st-auth__pw-wrap">
             <input class="st-auth__input" id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required aria-label="密码">
-            <button type="button" class="st-auth__pw-toggle" data-st-pw-toggle aria-label="显示密码">显示</button>
+            <?php echo vs_slate_pw_toggle_html(); ?>
         </div>
     </div>
     <button type="submit" class="st-auth__submit" id="bindBtn">确认绑定并登录</button>

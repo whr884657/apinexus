@@ -13,7 +13,12 @@
         if (!input) return;
         var show = input.type === 'password';
         input.type = show ? 'text' : 'password';
-        btn.textContent = show ? '隐藏' : '显示';
+        var eye = btn.querySelector('.st-auth__eye');
+        var eyeOff = btn.querySelector('.st-auth__eye-off');
+        if (eye && eyeOff) {
+            eye.style.display = show ? 'none' : '';
+            eyeOff.style.display = show ? '' : 'none';
+        }
         btn.setAttribute('aria-label', show ? '隐藏密码' : '显示密码');
     });
 

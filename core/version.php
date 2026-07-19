@@ -8,5 +8,5 @@
  */
 
 if (!defined('VS_VERSION')) {
-    define('VS_VERSION', '4.1.1');
+    define('VS_VERSION', '4.2.0');
 }
