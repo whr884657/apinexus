@@ -146,29 +146,42 @@
         revokeBlobUrls();
 
         var ct = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-        var kind = mediaKind(ct);
 
-        if (kind) {
-            return response.blob().then(function (blob) {
-                if (blob.size > 40 * 1024 * 1024) {
+        return response.arrayBuffer().then(function (buf) {
+            var u8 = new Uint8Array(buf);
+            var kind = mediaKind(ct) || sniffKindFromBytes(u8);
+
+            if (kind === 'image' || kind === 'audio' || kind === 'video') {
+                if (buf.byteLength > 40 * 1024 * 1024) {
                     outputEl.innerHTML = '<div class="pg-media-wrap pg-media-wrap--hint"><p>媒体文件过大（&gt;40MB），请直接访问接口地址。</p></div>';
                     return;
                 }
-                var url = trackBlob(URL.createObjectURL(blob));
-                outputEl.innerHTML = renderMediaHtml(kind, url, kind.toUpperCase() + ' · ' + Math.round(blob.size / 1024) + ' KB');
-            });
-        }
+                var blobType = ct;
+                if (kind === 'image' && (!blobType || blobType.indexOf('image/') !== 0)) blobType = 'image/jpeg';
+                if (kind === 'video' && (!blobType || blobType.indexOf('video/') !== 0)) blobType = 'video/mp4';
+                if (kind === 'audio' && (!blobType || blobType.indexOf('audio/') !== 0)) blobType = 'audio/mpeg';
+                var mediaBlob = new Blob([buf], { type: blobType || 'application/octet-stream' });
+                var mediaUrl = trackBlob(URL.createObjectURL(mediaBlob));
+                outputEl.innerHTML = renderMediaHtml(kind, mediaUrl, kind.toUpperCase() + ' · ' + Math.round(mediaBlob.size / 1024) + ' KB');
+                return;
+            }
 
-        if (/octet-stream|application\/pdf|application\/zip|application\/x-|font\//.test(ct)) {
-            return response.blob().then(function (blob) {
-                var url = trackBlob(URL.createObjectURL(blob));
-                outputEl.innerHTML = renderBinaryHint(ct, url);
-            });
-        }
+            if (/octet-stream|application\/pdf|application\/zip|application\/x-|font\//.test(ct)) {
+                var binBlob = new Blob([buf], { type: ct || 'application/octet-stream' });
+                var binUrl = trackBlob(URL.createObjectURL(binBlob));
+                outputEl.innerHTML = renderBinaryHint(ct, binUrl);
+                return;
+            }
 
-        return response.text().then(function (text) {
+            var text = '';
+            try {
+                text = new TextDecoder('utf-8').decode(u8);
+            } catch (e0) {
+                text = '';
+            }
             if (isProbablyBinary(ct, text)) {
-                outputEl.innerHTML = renderBinaryHint(ct || 'binary', '');
+                var hintBlob = new Blob([buf], { type: ct || 'application/octet-stream' });
+                outputEl.innerHTML = renderBinaryHint(ct || 'binary', trackBlob(URL.createObjectURL(hintBlob)));
                 return;
             }
             var display = text || '';
@@ -197,6 +210,52 @@
                     + (truncated ? '\n// …已截断' : '') + '</pre>';
             }
         });
+    }
+
+    /**
+     * 拼查询串（GET/POST 均拼进 URL，保证 KEY 可读）
+     */
+    function buildUrlWithParams(endpoint, params) {
+        var url = String(endpoint || '');
+        var keys = Object.keys(params || {});
+        if (!keys.length) return url;
+        var parts = [];
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            var v = params[k];
+            parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(v == null ? '' : String(v)));
+        }
+        return url + (url.indexOf('?') >= 0 ? '&' : '?') + parts.join('&');
+    }
+
+    /**
+     * 浏览器直连公开 endpoint（统计记真实 path，不经中继）
+     * @param {{endpoint:string,method?:string,params?:object}} opts
+     * @returns {Promise<Response>}
+     */
+    function directRequest(opts) {
+        var endpoint = String(opts && opts.endpoint ? opts.endpoint : '');
+        if (!endpoint) {
+            return Promise.reject(new Error('缺少接口地址'));
+        }
+        var method = String(opts && opts.method ? opts.method : 'GET').toUpperCase();
+        if (!method) method = 'GET';
+        var params = (opts && opts.params && typeof opts.params === 'object') ? opts.params : {};
+        var url = buildUrlWithParams(endpoint, params);
+        var init = {
+            method: method,
+            credentials: 'same-origin',
+            redirect: 'follow'
+        };
+        if (method !== 'GET' && method !== 'HEAD') {
+            var body = new URLSearchParams();
+            Object.keys(params).forEach(function (k) {
+                body.append(k, params[k] == null ? '' : String(params[k]));
+            });
+            init.headers = { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' };
+            init.body = body.toString();
+        }
+        return fetch(url, init);
     }
 
     /**
@@ -305,7 +364,7 @@
     }
 
     /**
-     * 调用同源中继
+     * @deprecated 4.8.0 起默认主题改用 directRequest；保留仅兼容旧调用
      */
     function relayRequest(opts) {
         var playUrl = (typeof window.VS_PLAY_URL === 'string' && window.VS_PLAY_URL)
@@ -350,6 +409,8 @@
         renderFetchResponse: renderFetchResponse,
         renderDirectMedia: renderDirectMedia,
         renderRelayPayload: renderRelayPayload,
+        directRequest: directRequest,
+        buildUrlWithParams: buildUrlWithParams,
         relayRequest: relayRequest,
         syntaxHighlight: syntaxHighlight,
         revokeBlobUrls: revokeBlobUrls,

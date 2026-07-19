@@ -1,12 +1,12 @@
 {
-    "version": "4.7.3",
-    "title": "ApiNexus 4.7.3 媒体类型纠偏与友链标题",
+    "version": "4.8.0",
+    "title": "ApiNexus 4.8.0 在线测试浏览器直连与统计纠偏",
     "release_date": "2026-07-20",
     "db_changes": false,
     "changes": [
-        "在线测试按文件魔数识别图\/音\/视频，修复视频被标成 IMAGE",
-        "修复重定向后 Content-Type 取错导致图片 POST 无法预览",
-        "友情链接页补齐双斜线页面标题"
+        "在线测试改为浏览器直连公开 endpoint，日志记录真实接口路径",
+        "中继不再写入 apilog，避免 path 被记成 relay.php",
+        "直连响应按 Content-Type + 魔数正确预览图/音/视频"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

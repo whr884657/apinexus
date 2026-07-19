@@ -112,7 +112,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php`、`core/playground/relay.php` | ✅ 是 | **已完成**（本地/外链、详情 PATH_INFO、多选方法、审核三态、统计、在线测试同源中继、双端 UI） |
+| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 PATH_INFO、多选方法、审核三态、统计、在线测试浏览器直连、双端 UI） |
 | 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号最多 3 个；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
 | 积分与支付 | `PointsManager` / `OrderManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额） | `admin/finance/*`、`user/recharge`、`user/points`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（`user.points`、`api.charge/price`、表 `orders`；码支付扫码充值；API 调用扣费） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
@@ -224,7 +224,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前 `ApiStats::hitProxy` |
-| `PlaygroundRelay.php` | 前台在线测试同源中继：服务端 curl 代发（代理直打 `targeturl`，本地走 `resolveCallUrl`）；入口 `core/playground/relay.php` |
+| `PlaygroundRelay.php` | 可选中继（兼容旧主题）；**默认主题 v4.8.0+ 浏览器直连**；中继内禁止写 `apilog` |
 | `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；本地注入 ≤3 行向上查找或 `api/hit.php` |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD（表 `apikey`；每用户最多 3 条；格式 `sk-`+32；含调用次数） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
@@ -570,63 +570,27 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 
 ---
 
-### 4.21.2 PlaygroundRelay.php（前台 · 在线测试中继）★ 主题开发重点
+### 4.21.2 前台在线测试（默认：浏览器直连）★ 主题开发重点
 
-**作用：** 浏览器无法安全直连外链/代理 302 时，由服务端 curl 代发请求，避免 `Failed to fetch`。
-
-**入口（各主题共用，勿放根目录）：** `core/playground/relay.php`  
-**公网地址：** `{站点根}/core/playground/relay.php`（带 `.php` 直访，**不依赖** Nginx 伪静态；与码支付回调同模式）
-
-**行为摘要：**
-- 代理接口：直打 `targeturl`（不把本站 KEY 转发给上游）；统计走 `ApiStats::hitProxy`
-- 本地接口：`ApiManager::resolveCallUrl` + 参数（含 KEY）代发
-- 返回 JSON：`code/msg/http/contentType/body/encoding/displayUrl`；`displayUrl` 始终为公开 `endpoint`，供前端展示
-- 调用前走 `ApiStats::guardAccess`（密钥/积分/维护等）
-
-#### 主题如何调用（自研主题必读）
-
-1. **取地址与 CSRF / KEY 上下文**（推荐）：
-
-```php
-$pg = vs_playground_session_context();
-// $pg['playUrl']  → 中继 URL
-// $pg['csrf']     → CSRF
-// $pg['apiKey']   → 当前用户首个启用密钥（未登录为空）
-```
-
-2. **前端注入**（页面底部或页内 script）：
-
-```html
-<script>
-window.VS_PLAY_URL = <?php echo json_encode($pg['playUrl']); ?>;
-window.VS_CSRF_TOKEN = <?php echo json_encode($pg['csrf']); ?>;
-</script>
-```
-
-3. **发起测试**（POST JSON，同源 + CSRF）：
+**默认主题（v4.8.0+）：** 浏览器直连公开 `endpoint`，由本地 `ApiStats::hit` / 代理 `ApiProxy→hitProxy` 记账，`apilog.path` 为真实路径。
 
 ```js
-fetch(window.VS_PLAY_URL, {
-  method: 'POST',
-  credentials: 'same-origin',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-CSRF-Token': window.VS_CSRF_TOKEN || ''
-  },
-  body: JSON.stringify({
-    csrf_token: window.VS_CSRF_TOKEN || '',
-    api_id: 123,
-    method: 'GET',
-    params: { key: '...', q: 'demo' }
-  })
-}).then(r => r.json());
+VsPlaygroundResponse.directRequest({
+  endpoint: api.endpoint, // /api/... 或 /apis/{短码}
+  method: 'GET',
+  params: { key: '...', q: 'demo' }
+}).then(function (res) {
+  return VsPlaygroundResponse.renderFetchResponse(res, outputEl);
+});
 ```
 
-默认主题也可直接用 `VsPlaygroundResponse.relayRequest({ apiId, method, params })`。
+**KEY 上下文：** `vs_playground_session_context()` → `apiKey` / `loggedIn` / `apiKeyCount`（勿再依赖中继 CSRF）。
 
-**主题对接：** 首页/详情 JS 须调用 `VsPlaygroundResponse.relayRequest`。媒体：优先读返回字段 `mediaKind`，再 Content-Type，再文件魔数；**禁止**未知默认 image。重定向场景须取最后一跳 Content-Type。
+**可选中继 `PlaygroundRelay`：** 仅兼容旧主题；入口 `core/playground/relay.php`；**禁止**在中继内写 `apilog`（见 E57）。
 
-**放置原则：** 多主题可共用的后台能力放 `core/`；仅某一主题 UI 用的资源放该主题包。根目录只保留前台可见的页面入口（见《页面文件命名规范》§根目录）。
+**媒体：** Content-Type + 文件魔数；**禁止**未知默认 `image`。
+
+**放置原则：** 多主题共用能力放 `core/`；主题 UI 放主题包；根目录不新增内部入口。
 
 ---
 
