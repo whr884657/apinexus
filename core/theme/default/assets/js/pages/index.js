@@ -350,7 +350,10 @@ function buildApiTagSpans(api) {
     if ((api.points || 0) <= 0) {
         spans.push('<span class="api-chip api-chip--free">免费</span>');
     } else {
-        spans.push(`<span class="api-chip api-chip--points">${api.points}积分/次</span>`);
+        const label = api.billing_label
+            ? String(api.billing_label)
+            : (`${api.points}积分/次`);
+        spans.push(`<span class="api-chip api-chip--points">${escapeApiModalText(label)}</span>`);
     }
     var keyMode = parseInt(api.needkey, 10) || 0;
     if (keyMode === 1) {
@@ -645,7 +648,7 @@ function renderParams(api) {
                                    class="param-input" 
                                    data-param="${p.name}"
                                    data-type="${inputType}"
-                                   placeholder="${p.placeholder || p.name}"
+                                   placeholder="${escapeApiModalText(p.example || p.placeholder || p.description || p.name)}"
                                    ${p.required ? 'required' : ''}>
                         </div>
                     `;
@@ -889,21 +892,16 @@ async function sendRequest() {
         url += (url.includes('?') ? '&' : '?') + new URLSearchParams(params).toString();
     }
 
-    // 对于视频/音频/图片类型且是GET请求，直接使用原始URL（流式加载，避免代理下载延迟）
-    const isMediaRequest = (api.returnType === 'video' || api.returnType === 'audio' || api.returnType === 'image');
+    // 对于视频/音频/图片类型且是GET请求，直接使用原始URL（流式加载，避免整包下载卡死）
+    const mediaTypeHint = String(api.returnType || api.returntype || '').toLowerCase();
+    const isMediaRequest = (mediaTypeHint === 'video' || mediaTypeHint === 'audio' || mediaTypeHint === 'image');
     const isGetMethod = (currentMethod === 'GET' || currentMethod === 'HEAD');
 
     if (isMediaRequest && isGetMethod && !hasFiles) {
-        // 直接使用原始URL，浏览器会流式加载
         status.textContent = "200 OK";
         status.className = "text-xs px-2 py-1 rounded bg-green-900 text-green-400 font-mono";
-
-        if (api.returnType === 'video') {
-            output.innerHTML = `<div style="text-align: center; padding: 1rem;"><video controls style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid var(--border-color); background: #000;" preload="metadata"><source src="${url}" type="video/mp4"><source src="${url}" type="video/webm"><source src="${url}" type="video/ogg">您的浏览器不支持视频播放</video><div style="margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-muted);">视频类型: 流式加载</div><div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">提示: 视频直接从源站加载，无需等待下载完成</div></div>`;
-        } else if (api.returnType === 'audio') {
-            output.innerHTML = `<div style="text-align: center; padding: 1rem;"><svg class="w-12 h-12" style="color: #ec4899;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg><audio controls autoplay style="width: 100%; max-width: 400px; margin-top: 1rem;" preload="metadata"><source src="${url}" type="audio/mpeg"><source src="${url}" type="audio/wav"><source src="${url}" type="audio/ogg">您的浏览器不支持音频播放</audio><div style="margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-muted);">音频类型: 流式加载</div><div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">提示: 音频直接从源站加载，无需等待下载完成</div></div>`;
-        } else if (api.returnType === 'image') {
-            output.innerHTML = `<div style="text-align: center; padding: 1rem;"><img src="${url}" style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid var(--border-color);" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><div style="display: none; color: #ef4444;">图片加载失败</div><div style="margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-muted);">图片类型: 直接加载</div></div>`;
+        if (window.VsPlaygroundResponse && window.VsPlaygroundResponse.renderDirectMedia) {
+            window.VsPlaygroundResponse.renderDirectMedia(output, url, mediaTypeHint);
         }
         return;
     }
@@ -930,27 +928,14 @@ async function sendRequest() {
         const elapsed = Math.round(performance.now() - startTime);
         const ok = response.ok;
         const httpStatus = response.status;
-        const contentType = response.headers.get('content-type') || '';
         const statusText = ok ? `${httpStatus} OK` : `${httpStatus} Error`;
         const statusStyle = ok ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400';
 
-        if (contentType.includes('image/')) {
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            output.innerHTML = `<div style="text-align: center; padding: 1rem;"><img src="${objectUrl}" style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid var(--border-color);"></div>`;
-        } else if (contentType.includes('text/html')) {
-            const rawText = await response.text();
-            output.innerHTML = `<div style="padding: 0.5rem;"><div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem;">// HTML响应</div><iframe style="width: 100%; height: 200px; border: 1px solid var(--border-color); border-radius: 4px; background: #fff;" srcdoc="${rawText.replace(/"/g, '&quot;')}"></iframe></div>`;
+        if (window.VsPlaygroundResponse && window.VsPlaygroundResponse.renderFetchResponse) {
+            await window.VsPlaygroundResponse.renderFetchResponse(response, output);
         } else {
             const rawText = await response.text();
-            try {
-                const result = JSON.parse(rawText);
-                output.innerHTML = syntaxHighlight(JSON.stringify(result, null, 2));
-            } catch (e) {
-                output.innerHTML = rawText
-                    ? `<pre class="response-pre" style="white-space: pre-wrap; word-break: break-word;">${rawText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`
-                    : '<span style="color: var(--text-muted)">// 无返回内容</span>';
-            }
+            output.textContent = rawText || '// 无返回内容';
         }
         status.textContent = `${statusText} ${elapsed}ms`;
         status.className = `text-xs px-2 py-1 rounded font-mono ${statusStyle}`;
@@ -966,10 +951,15 @@ async function sendRequest() {
 }
 
 function syntaxHighlight(json) {
+    if (window.VsPlaygroundResponse && window.VsPlaygroundResponse.syntaxHighlight) {
+        return window.VsPlaygroundResponse.syntaxHighlight(json);
+    }
     json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-        let cls = 'syntax-c';
-        if (/^"/.test(match)) { cls = /:$/.test(match) ? 'syntax-k' : 'syntax-s'; }
+        let cls = 'json-number';
+        if (/^"/.test(match)) { cls = /:$/.test(match) ? 'json-key' : 'json-string'; }
+        else if (/true|false/.test(match)) { cls = 'json-boolean'; }
+        else if (/null/.test(match)) { cls = 'json-null'; }
         return '<span class="' + cls + '">' + match + '</span>';
     });
 }

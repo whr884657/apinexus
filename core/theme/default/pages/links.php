@@ -13,7 +13,6 @@ $applyUrl = $vsBase . '/applylink';
     <?php if (count($friendLinks) === 0): ?>
     <div class="empty-state">
         <p>暂无友情链接</p>
-        <a href="<?php echo vs_e($applyUrl); ?>" class="apply-btn">申请友链</a>
     </div>
     <?php else: ?>
     <div class="links-grid">

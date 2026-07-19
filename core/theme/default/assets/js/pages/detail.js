@@ -1,5 +1,5 @@
 /**
- * 接口详情页：复制 / 参数表JSON切换 / Markdown / 在线测试
+ * 接口详情页：复制 / 参数表JSON切换 / Markdown / 在线测试 / JSON 高亮
  */
 (function () {
     'use strict';
@@ -11,6 +11,7 @@
 
     var toast = document.getElementById('detailCopyToast');
     var toastTimer = null;
+    var VsPR = window.VsPlaygroundResponse || null;
 
     function showToast(msg) {
         if (!toast) return;
@@ -86,6 +87,23 @@
             }
         });
     });
+
+    /* ---- JSON 语法高亮（静态示例） ---- */
+    function highlightJsonBlocks() {
+        if (!VsPR || !VsPR.syntaxHighlight) return;
+        page.querySelectorAll('pre.json-hl').forEach(function (pre) {
+            var raw = pre.textContent || '';
+            var trimmed = raw.trim();
+            if (!trimmed) return;
+            try {
+                var obj = JSON.parse(trimmed);
+                pre.innerHTML = VsPR.syntaxHighlight(JSON.stringify(obj, null, 2));
+            } catch (e) {
+                /* 非 JSON 保持纯文本 */
+            }
+        });
+    }
+    highlightJsonBlocks();
 
     /* ---- Markdown ---- */
     function decodeEntities(html) {
@@ -189,24 +207,6 @@
 
     autofillKey();
 
-    function syntaxHighlight(json) {
-        return String(json)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-                var cls = 'number';
-                if (/^"/.test(match)) {
-                    cls = /:$/.test(match) ? 'key' : 'string';
-                } else if (/true|false/.test(match)) {
-                    cls = 'boolean';
-                } else if (/null/.test(match)) {
-                    cls = 'null';
-                }
-                return '<span class="json-' + cls + '">' + match + '</span>';
-            });
-    }
-
     if (sendBtn && api && responseEl) {
         sendBtn.addEventListener('click', function () {
             if (page.getAttribute('data-maintenance') === '1' || api.maintenance) {
@@ -255,20 +255,11 @@
             fetch(url, opts).then(function (res) {
                 var ok = res.ok;
                 setStatus(res.status + (ok ? ' OK' : ' Error'), ok ? 'ok' : 'err');
-                var ct = (res.headers.get('content-type') || '').toLowerCase();
-                if (ct.indexOf('image/') === 0) {
-                    return res.blob().then(function (blob) {
-                        var obj = URL.createObjectURL(blob);
-                        responseEl.innerHTML = '<div style="text-align:center;padding:0.5rem;"><img src="' + obj + '" style="max-width:100%;max-height:320px;border-radius:6px;"></div>';
-                    });
+                if (VsPR && VsPR.renderFetchResponse) {
+                    return VsPR.renderFetchResponse(res, responseEl);
                 }
                 return res.text().then(function (text) {
-                    try {
-                        var json = JSON.parse(text);
-                        responseEl.innerHTML = syntaxHighlight(JSON.stringify(json, null, 2));
-                    } catch (e) {
-                        responseEl.textContent = text || '(空响应)';
-                    }
+                    responseEl.textContent = text || '(空响应)';
                 });
             }).catch(function (err) {
                 setStatus('Error', 'err');

@@ -2,9 +2,19 @@
     function injectStyle() {
         if (document.getElementById('external-link-modal-style')) return;
         var css = ''
-        + '.external-link-mask{position:fixed;inset:0;background:transparent;backdrop-filter:none;z-index:9998;display:none;}'
-        + '.external-link-mask.show{display:block;}'
-        + '.external-link-dialog{position:fixed;z-index:9999;left:50%;top:50%;transform:translate(-50%,-50%);max-width:420px;width:90%;background:var(--bg-panel);border-radius:14px;border:1px solid var(--border-color);box-shadow:0 18px 40px rgba(15,23,42,0.7);padding:1.4rem 1.5rem 1.25rem;}'
+        + ':root{'
+        + '--modal-open-dur:250ms;'
+        + '--modal-close-dur:150ms;'
+        + '--modal-scale:0.96;'
+        + '--modal-scale-close:0.96;'
+        + '--modal-ease:cubic-bezier(0.22,1,0.36,1);'
+        + '}'
+        + '.external-link-mask{position:fixed;inset:0;background:transparent;backdrop-filter:none;z-index:9998;opacity:0;pointer-events:none;transition:opacity var(--modal-open-dur) var(--modal-ease);}'
+        + '.external-link-mask.is-open{opacity:1;pointer-events:auto;}'
+        + '.external-link-mask.is-closing{opacity:0;pointer-events:none;transition:opacity var(--modal-close-dur) var(--modal-ease);}'
+        + '.external-link-dialog.t-modal{position:fixed;z-index:9999;left:50%;top:50%;max-width:420px;width:90%;background:var(--bg-panel);border-radius:14px;border:1px solid var(--border-color);box-shadow:0 18px 40px rgba(15,23,42,0.7);padding:1.4rem 1.5rem 1.25rem;transform-origin:center;transform:translate(-50%,-50%) scale(var(--modal-scale));opacity:0;pointer-events:none;transition:transform var(--modal-open-dur) var(--modal-ease),opacity var(--modal-open-dur) var(--modal-ease);will-change:transform,opacity;}'
+        + '.external-link-dialog.t-modal.is-open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto;}'
+        + '.external-link-dialog.t-modal.is-closing{transform:translate(-50%,-50%) scale(var(--modal-scale-close));opacity:0;pointer-events:none;transition:transform var(--modal-close-dur) var(--modal-ease),opacity var(--modal-close-dur) var(--modal-ease);}'
         + '[data-theme="light"] .external-link-dialog{background:#ffffff;box-shadow:0 16px 32px rgba(148,163,184,0.35);}'
         + '.external-link-title{font-size:.95rem;font-weight:600;margin-bottom:.35rem;}'
         + '.external-link-subtitle{font-size:.78rem;color:var(--text-muted);margin-bottom:.85rem;}'
@@ -12,7 +22,8 @@
         + '[data-theme="light"] .external-link-url{background:#f9fafb;}'
         + '.external-link-actions{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:flex-end;}'
         + '.external-link-btn{border-radius:999px;font-size:.78rem;padding:.45rem .95rem;border:1px solid var(--border-color);background:transparent;color:var(--text-muted);cursor:pointer;}'
-        + '.external-link-btn-primary{border-color:var(--accent-primary);background:var(--accent-primary);color:#020817;}';
+        + '.external-link-btn-primary{border-color:var(--accent-primary);background:var(--accent-primary);color:#020817;}'
+        + '@media (prefers-reduced-motion:reduce){.external-link-dialog.t-modal,.external-link-mask{transition:none!important;}}';
         var style = document.createElement('style');
         style.id = 'external-link-modal-style';
         style.textContent = css;
@@ -26,14 +37,12 @@
         var mask = document.createElement('div');
         mask.id = 'external-link-mask';
         mask.className = 'external-link-mask';
-        mask.style.display = 'none';
 
         var dialog = document.createElement('div');
         dialog.id = 'external-link-dialog';
-        dialog.className = 'external-link-dialog';
-        dialog.style.display = 'none';
-        dialog.style.visibility = 'hidden';
-        dialog.style.opacity = '0';
+        dialog.className = 'external-link-dialog t-modal';
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
 
         dialog.innerHTML = ''
           + '<div class="external-link-title" id="external-link-title">外部链接跳转提示</div>'
@@ -62,6 +71,10 @@
         var confirmBtn = document.getElementById('external-link-confirm');
 
         var pendingHref = null;
+        var closeTimer = null;
+        var closeMs = parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue('--modal-close-dur')
+        ) || 150;
 
         function openModal(href, type) {
             pendingHref = href;
@@ -81,20 +94,31 @@
 
             if (urlEl) urlEl.textContent = displayUrl;
 
-            mask.style.display = 'block';
-            mask.classList.add('show');
-            dialog.style.display = 'block';
-            dialog.style.visibility = 'visible';
-            dialog.style.opacity = '1';
+            if (closeTimer) {
+                clearTimeout(closeTimer);
+                closeTimer = null;
+            }
+            mask.classList.remove('is-closing');
+            dialog.classList.remove('is-closing');
+            mask.classList.add('is-open');
+            dialog.classList.add('is-open');
         }
 
         function closeModal() {
-            mask.classList.remove('show');
-            mask.style.display = 'none';
-            dialog.style.display = 'none';
-            dialog.style.visibility = 'hidden';
-            dialog.style.opacity = '0';
+            if (!dialog.classList.contains('is-open') && !mask.classList.contains('is-open')) return;
+
+            mask.classList.remove('is-open');
+            dialog.classList.remove('is-open');
+            mask.classList.add('is-closing');
+            dialog.classList.add('is-closing');
             pendingHref = null;
+
+            if (closeTimer) clearTimeout(closeTimer);
+            closeTimer = setTimeout(function () {
+                mask.classList.remove('is-closing');
+                dialog.classList.remove('is-closing');
+                closeTimer = null;
+            }, closeMs);
         }
 
         if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
@@ -151,4 +175,3 @@
         });
     });
 })();
-

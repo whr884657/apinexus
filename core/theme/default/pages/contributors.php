@@ -2,7 +2,7 @@
 <main class="main-wrapper container mx-auto px-4" style="padding-top:88px;">
     <div class="page-header">
         <h1 class="section-title">公益贡献者</h1>
-        <p class="text-sm font-mono" style="color: var(--text-muted);">感谢每一位为开源社区贡献力量的开发者</p>
+        <p class="text-sm font-mono page-subtitle" style="color: var(--text-muted); margin: -1.25rem 0 1.5rem;">感谢每一位为开源社区贡献力量的开发者</p>
     </div>
     <div class="thank-you-banner">
         <h2>衷心感谢</h2>

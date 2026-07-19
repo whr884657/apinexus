@@ -650,7 +650,7 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 | `params_list` | 解析后的参数表（name/type/required/description/example） |
 | `maintenance` | 1=维护中 |
 | `needkey` / `needkey_label` | 密钥要求（文案：`无需 KEY` / `KEY 必填` / `KEY 可选`） |
-| `charge` / `charge_label` / `points` | 计费 |
+| `charge` / `charge_label` / `points` / `billing_label` | 计费；`billing_label` 为「免费」或「N积分/次」 |
 | `calls` / `icon` / `detail_url` / `createtime` | 其它 |
 
 ---
@@ -670,7 +670,7 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 
 - 列表页 `pages/links.php` → `FrontendLink::listForTheme()`
 - 申请页 `pages/applylink.php` + 根入口 `applylink.php`（短名无横线）
-- 页脚在二维码上方渲染已通过友链，末尾固定「申请友情链接」链到 `/applylink`
+- 页脚在二维码上方渲染已通过友链，末尾固定「申请友链」链到 `/applylink`（申请页页脚改链 `/links`，避免重复 CTA）
 - 禁止主题内 SQL；申请提交走 `applylink.php` POST + CSRF + `AjaxResponse`
 
 **主题首页示例：**

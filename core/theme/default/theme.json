@@ -1,7 +1,7 @@
 {
     "id": "default",
     "name": "默认主题",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "author": "ApiNexus",
     "description": "参考 FeerApi 前台 UI 完整复刻，白色主题色板；含粒子背景、终端 Hero、接口目录与在线调试",
     "preview": "preview.png",
@@ -35,6 +35,18 @@
             "label": "首页说明段落（主标题下方长文案）",
             "type": "textarea",
             "placeholder": "留空则用站点描述；再空则用内置默认介绍"
+        },
+        {
+            "key": "hero_badge_1",
+            "label": "首页 Hero 标签 1",
+            "type": "text",
+            "placeholder": "默认：完全免费"
+        },
+        {
+            "key": "hero_badge_2",
+            "label": "首页 Hero 标签 2",
+            "type": "text",
+            "placeholder": "默认：无需密钥"
         },
         {
             "key": "show_partners",

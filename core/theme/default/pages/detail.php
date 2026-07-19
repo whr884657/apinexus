@@ -13,10 +13,17 @@ $playground = isset($playground) && is_array($playground) ? $playground : array(
 
 $methods = (!$notFound && isset($api['methods']) && is_array($api['methods'])) ? $api['methods'] : array('GET');
 $primaryMethod = !$notFound && !empty($api['method']) ? (string) $api['method'] : (isset($methods[0]) ? (string) $methods[0] : 'GET');
-$chargeLabel = !$notFound && !empty($api['charge_label']) ? (string) $api['charge_label'] : '免费';
 $points = !$notFound && isset($api['points']) ? (float) $api['points'] : 0;
-if (!empty($api['charge']) && $points > 0) {
-    $chargeLabel = rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.') . ' 积分';
+$billingLabel = !$notFound && !empty($api['billing_label'])
+    ? (string) $api['billing_label']
+    : FrontendApi::billingLabel(
+        !$notFound && isset($api['charge']) ? $api['charge'] : 0,
+        $points
+    );
+$chargeDetailLabel = $billingLabel;
+if (!$notFound && !empty($api['charge']) && $points > 0) {
+    $fmt = rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.');
+    $chargeDetailLabel = $fmt . ' 积分 / 次';
 }
 $callsLabel = !$notFound ? number_format((int) (isset($api['calls']) ? $api['calls'] : 0)) : '0';
 $paramsList = (!$notFound && isset($api['params_list']) && is_array($api['params_list'])) ? $api['params_list'] : array();
@@ -24,6 +31,25 @@ $paramsRaw = (!$notFound && isset($api['params'])) ? (string) $api['params'] : '
 $paramsPretty = $paramsRaw !== '' ? FrontendApi::prettyParamsJson($paramsRaw) : '';
 $hasParamsTable = count($paramsList) > 0;
 $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey_label'] : '无需 KEY';
+
+$recommendApi = null;
+if (!$notFound) {
+    $pool = FrontendApi::listForTheme();
+    $candidates = array();
+    $curId = (int) $api['id'];
+    foreach ($pool as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        if ((int) (isset($item['id']) ? $item['id'] : 0) === $curId) {
+            continue;
+        }
+        $candidates[] = $item;
+    }
+    if ($candidates !== array()) {
+        $recommendApi = $candidates[array_rand($candidates)];
+    }
+}
 ?>
 <main class="main-wrapper container mx-auto px-4 detail-page" id="apiDetailPage"
       data-endpoint="<?php echo $notFound ? '' : vs_e(isset($api['endpoint']) ? $api['endpoint'] : ''); ?>"
@@ -55,7 +81,7 @@ $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey
                 <?php if (!empty($api['maintenance'])): ?>
                     <span class="api-chip api-chip--maintenance">维护中</span>
                 <?php else: ?>
-                    <span class="api-chip"><?php echo vs_e($chargeLabel); ?></span>
+                    <span class="api-chip <?php echo $points > 0 ? 'api-chip--points' : 'api-chip--free'; ?>"><?php echo vs_e($billingLabel); ?></span>
                 <?php endif; ?>
                 <span class="api-chip api-chip--key"><?php echo vs_e($keyLabel); ?></span>
                 <?php if (!empty($api['category_name'])): ?>
@@ -101,7 +127,7 @@ $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey
             </div>
             <div class="info-item">
                 <div class="info-label">计费</div>
-                <div class="info-value"><?php echo vs_e($chargeLabel); ?></div>
+                <div class="info-value"><?php echo vs_e($chargeDetailLabel); ?></div>
             </div>
             <?php if (!empty($api['createtime'])): ?>
             <div class="info-item">
@@ -109,10 +135,6 @@ $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey
                 <div class="info-value"><?php echo vs_e($api['createtime']); ?></div>
             </div>
             <?php endif; ?>
-            <div class="info-item">
-                <div class="info-label">API ID</div>
-                <div class="info-value font-mono">#<?php echo (int) $api['id']; ?></div>
-            </div>
         </div>
 
         <?php if (!empty($api['maintenance'])): ?>
@@ -123,7 +145,7 @@ $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey
     <?php if ($paramsRaw !== ''): ?>
     <section class="detail-card" id="detailParamsCard">
         <div class="detail-section-title detail-section-title--tools">
-            <span>请求参数</span>
+            <span class="detail-section-title__text">请求参数</span>
             <div class="detail-tools">
                 <?php if ($hasParamsTable): ?>
                 <button type="button" class="btn-mode is-active" data-params-mode="table">表格</button>
@@ -158,11 +180,11 @@ $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey
             </table>
         </div>
         <div class="code-block" id="paramsJsonMode" hidden>
-            <pre class="code-content font-mono" id="paramsJsonCode"><?php echo vs_e($paramsPretty); ?></pre>
+            <pre class="code-content font-mono json-hl" id="paramsJsonCode"><?php echo vs_e($paramsPretty); ?></pre>
         </div>
         <?php else: ?>
         <div class="code-block">
-            <pre class="code-content font-mono"><?php echo vs_e($paramsRaw); ?></pre>
+            <pre class="code-content font-mono json-hl"><?php echo vs_e($paramsRaw); ?></pre>
         </div>
         <?php endif; ?>
     </section>
@@ -171,11 +193,11 @@ $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey
     <?php if (!empty($api['response'])): ?>
     <section class="detail-card">
         <div class="detail-section-title detail-section-title--tools">
-            <span>返回示例</span>
+            <span class="detail-section-title__text">返回示例</span>
             <button type="button" class="btn-copy" data-copy="<?php echo vs_e($api['response']); ?>">复制</button>
         </div>
         <div class="code-block">
-            <pre class="code-content font-mono" id="responseSample"><?php echo vs_e($api['response']); ?></pre>
+            <pre class="code-content font-mono json-hl" id="responseSample"><?php echo vs_e($api['response']); ?></pre>
         </div>
     </section>
     <?php endif; ?>
@@ -236,8 +258,7 @@ $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey
                             <input type="file" class="param-input" data-param="<?php echo vs_e($p['name']); ?>">
                             <?php else: ?>
                             <input type="text" class="param-input form-input" data-param="<?php echo vs_e($p['name']); ?>"
-                                   placeholder="<?php echo vs_e($p['example'] !== '' ? $p['example'] : $p['description']); ?>"
-                                   value="<?php echo vs_e($p['example']); ?>">
+                                   placeholder="<?php echo vs_e($p['example'] !== '' ? $p['example'] : ($p['description'] !== '' ? $p['description'] : $p['name'])); ?>">
                             <?php endif; ?>
                         </label>
                         <?php endforeach; ?>
@@ -260,12 +281,20 @@ $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey
         <?php endif; ?>
     </section>
 
-    <div class="detail-actions">
-        <a href="<?php echo vs_e($vsBase); ?>/apis" class="btn-geek">返回全部接口</a>
-        <?php if (!empty($api['endpoint']) && empty($api['maintenance'])): ?>
-        <a href="<?php echo vs_e($api['endpoint']); ?>" class="btn-geek" target="_blank" rel="noopener noreferrer">打开接口</a>
-        <?php endif; ?>
-    </div>
+    <?php if ($recommendApi !== null): ?>
+    <section class="detail-card detail-recommend">
+        <h2 class="detail-section-title">推荐接口</h2>
+        <div class="card-container detail-recommend__grid">
+            <?php
+            $apiData = array($recommendApi);
+            $showDetailBtn = true;
+            $cardExtraClass = 'api-card-compact';
+            include __DIR__ . '/../partials/api-cards-html.php';
+            ?>
+        </div>
+    </section>
+    <?php endif; ?>
+
     <?php endif; ?>
 </main>
 <div class="copy-toast" id="detailCopyToast" hidden>已复制</div>

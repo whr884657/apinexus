@@ -2,7 +2,7 @@
 <main class="main-wrapper container mx-auto px-4" style="padding-top:88px;">
     <div class="page-header">
         <h1 class="section-title">赞助我们</h1>
-        <p class="text-sm font-mono" style="color: var(--text-muted);">感谢你一路同行，每一份支持都会用于站点维护与功能迭代</p>
+        <p class="text-sm font-mono page-subtitle" style="color: var(--text-muted); margin: -1.25rem 0 1.5rem;">感谢你一路同行，每一份支持都会用于站点维护与功能迭代</p>
     </div>
     <section class="py-4 donate-page">
         <div class="donate-block">

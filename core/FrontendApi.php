@@ -75,9 +75,33 @@ class FrontendApi
             'points'      => ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0) === ApiManager::CHARGE_PAID
                 ? (float) ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0)
                 : 0,
+            'billing_label' => self::billingLabel(
+                ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0),
+                isset($row['price']) ? $row['price'] : 0
+            ),
             'createtime'  => isset($row['createtime']) ? (string) $row['createtime'] : '',
             'params_list' => self::parseParamsList(isset($row['params']) ? (string) $row['params'] : ''),
         );
+    }
+
+    /**
+     * 前台计费文案：免费 / N积分/次
+     *
+     * @param int   $charge
+     * @param mixed $price
+     * @return string
+     */
+    public static function billingLabel($charge, $price = 0)
+    {
+        if (ApiManager::normalizeCharge($charge) !== ApiManager::CHARGE_PAID) {
+            return '免费';
+        }
+        $points = (float) ApiManager::normalizePrice($price);
+        if ($points <= 0) {
+            return '收费';
+        }
+        $fmt = rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.');
+        return $fmt . '积分/次';
     }
 
     /**

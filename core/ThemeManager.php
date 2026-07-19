@@ -686,10 +686,15 @@ class ThemeManager
         );
 
         $pageJsMap = array(
-            'home'         => array('assets/js/pages/index-terminal.js', 'assets/js/pages/index.js'),
+            'home'         => array(
+                'assets/js/playground-response.js',
+                'assets/js/pages/index-terminal.js',
+                'assets/js/pages/index.js',
+            ),
             'apis'         => array('assets/js/pages/apis-page.js'),
             'detail'       => array(
                 'https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js',
+                'assets/js/playground-response.js',
                 'assets/js/pages/detail.js',
             ),
             'articles'     => array('assets/js/pages/articles-page.js'),

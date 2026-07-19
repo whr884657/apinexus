@@ -25,6 +25,14 @@ $heroLeadSetting = ThemeManager::themeSettingStr('hero_lead', '');
 $heroLine2Plain = ThemeManager::themeSettingStr('hero_line2_plain', '');
 $heroLine2Accent = ThemeManager::themeSettingStr('hero_line2_accent', '');
 $heroLine2Rest = ThemeManager::themeSettingStr('hero_line2_rest', '');
+$heroBadge1 = ThemeManager::themeSettingStr('hero_badge_1', '');
+$heroBadge2 = ThemeManager::themeSettingStr('hero_badge_2', '');
+if ($heroBadge1 === '') {
+    $heroBadge1 = '完全免费';
+}
+if ($heroBadge2 === '') {
+    $heroBadge2 = '无需密钥';
+}
 $heroGlitchSource = $heroTitleSetting !== '' ? $heroTitleSetting : $siteName;
 $heroGlitch = strtoupper(preg_replace('/\s+/', ' ', $heroGlitchSource));
 $heroDesc = $heroLeadSetting !== ''
@@ -38,8 +46,8 @@ if ($logoSlug === '') {
 }
 
 $homeHeroConfig = array(
-    'tagFree'       => '完全免费',
-    'tagKey'        => '轻量部署',
+    'tagFree'       => $heroBadge1,
+    'tagKey'        => $heroBadge2,
     'glitchLine'    => $heroGlitch,
     'startDelayMs'  => 500,
     'glitchPauseMs' => 1500,
@@ -74,8 +82,8 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
         <div class="flex flex-col lg:flex-row gap-8 lg:gap-12 items-stretch">
             <div class="hero-left-content flex flex-col justify-center">
                 <div class="flex flex-wrap gap-3 mb-6">
-                    <span class="tag-free px-3 py-1 rounded text-xs font-bold font-mono">完全免费</span>
-                    <span class="tag-new px-3 py-1 rounded text-xs font-bold font-mono">无需密钥</span>
+                    <span class="tag-free px-3 py-1 rounded text-xs font-bold font-mono"><?php echo vs_e($heroBadge1); ?></span>
+                    <span class="tag-new px-3 py-1 rounded text-xs font-bold font-mono"><?php echo vs_e($heroBadge2); ?></span>
                 </div>
                 <h1 class="font-mono glitch-text mb-4" id="hero-title" data-text="<?php echo vs_e($heroGlitch); ?>"></h1>
                 <p class="text-lg sm:text-xl mb-8 max-w-2xl font-light" style="color: var(--text-muted); line-height: 1.8;"><?php echo $heroDescHtml; ?></p>
