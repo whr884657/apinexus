@@ -20,7 +20,7 @@ class OAuthHttpClient
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_CONNECTTIMEOUT => $timeout,
                 CURLOPT_TIMEOUT        => $timeout,
-                CURLOPT_USERAGENT      => 'misc-api-OAuth/' . VS_VERSION,
+                CURLOPT_USERAGENT      => 'ApiNexus-OAuth/' . VS_VERSION,
             ));
             $body = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -35,7 +35,7 @@ class OAuthHttpClient
             'http' => array(
                 'method'  => 'GET',
                 'timeout' => $timeout,
-                'header'  => 'User-Agent: misc-api-OAuth/' . VS_VERSION . "\r\n",
+                'header'  => 'User-Agent: ApiNexus-OAuth/' . VS_VERSION . "\r\n",
             ),
         ));
 
@@ -62,7 +62,7 @@ class OAuthHttpClient
                 CURLOPT_HTTPHEADER     => array('Content-Type: application/x-www-form-urlencoded'),
                 CURLOPT_CONNECTTIMEOUT => $timeout,
                 CURLOPT_TIMEOUT        => $timeout,
-                CURLOPT_USERAGENT      => 'misc-api-OAuth/' . VS_VERSION,
+                CURLOPT_USERAGENT      => 'ApiNexus-OAuth/' . VS_VERSION,
             ));
             $response = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -77,7 +77,7 @@ class OAuthHttpClient
             'http' => array(
                 'method'  => 'POST',
                 'header'  => "Content-Type: application/x-www-form-urlencoded\r\n"
-                    . 'User-Agent: misc-api-OAuth/' . VS_VERSION . "\r\n"
+                    . 'User-Agent: ApiNexus-OAuth/' . VS_VERSION . "\r\n"
                     . 'Content-Length: ' . strlen($body) . "\r\n",
                 'content' => $body,
                 'timeout' => $timeout,

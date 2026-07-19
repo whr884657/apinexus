@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/modal.js
- * 作用：misc-api 统一弹窗（替代 alert / confirm）
+ * 作用：ApiNexus 统一弹窗（替代 alert / confirm）
  * @version 1.0.0
  */
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * misc-api 前台首页
+ * ApiNexus 前台首页
  */
 
 define('VS_ROOT', __DIR__);

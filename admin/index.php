@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/index.php
- * 作用：misc-api 管理员后台首页（控制台）
+ * 作用：ApiNexus 管理员后台首页（控制台）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */
@@ -17,7 +17,7 @@ vs_admin_layout_start('控制台', 'dashboard');
 <div class="vs-panel">
     <div class="vs-panel__header">
         <h2 class="vs-panel__title">欢迎回来，<?php echo vs_e($vsAdmin ? $vsAdmin['username'] : '管理员'); ?></h2>
-        <p class="vs-panel__desc"><?php echo vs_e($siteDesc !== '' ? $siteDesc : 'misc-api 管理控制台'); ?></p>
+        <p class="vs-panel__desc"><?php echo vs_e($siteDesc !== '' ? $siteDesc : 'ApiNexus 管理控制台'); ?></p>
     </div>
 
     <?php if (!$mailEnabled): ?>

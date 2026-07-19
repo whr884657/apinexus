@@ -1,4 +1,4 @@
--- misc-api 3.33.0：积分余额、接口计费、订单表、支付配置、apilog.cost 精度
+-- ApiNexus 3.33.0：积分余额、接口计费、订单表、支付配置、apilog.cost 精度
 -- 规范：字段无下划线；中文 COMMENT；多态用数字
 
 ALTER TABLE `{prefix}user`

@@ -6,12 +6,12 @@
     </div>
     <div class="thank-you-banner">
         <h2>衷心感谢</h2>
-        <p>感谢以下成员对 misc-api 与接口生态的支持。<br>正是有了你们的贡献，平台才能持续迭代与完善。</p>
+        <p>感谢以下成员对 ApiNexus 与接口生态的支持。<br>正是有了你们的贡献，平台才能持续迭代与完善。</p>
     </div>
     <div class="contributors-grid">
         <div class="contributor-card">
             <div class="contributor-avatar-placeholder"><span>M</span></div>
-            <div class="contributor-name">misc-api 团队</div>
+            <div class="contributor-name">ApiNexus 团队</div>
             <p class="contributor-bio">核心开发与架构维护</p>
             <div class="contributor-stats">
                 <div class="contributor-stat"><div class="contributor-stat-value">—</div><div class="contributor-stat-label">接口数</div></div>

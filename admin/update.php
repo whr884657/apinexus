@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/update.php
- * 作用：misc-api 在线更新 API（版本检测 / 执行更新）
+ * 作用：ApiNexus 在线更新 API（版本检测 / 执行更新）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */

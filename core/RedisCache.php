@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/RedisCache.php
- * 作用：misc-api 业务数据 Redis 缓存（读写分离 MySQL，降低高频查询与限流写入压力）
+ * 作用：ApiNexus 业务数据 Redis 缓存（读写分离 MySQL，降低高频查询与限流写入压力）
  */
 
 class RedisCache

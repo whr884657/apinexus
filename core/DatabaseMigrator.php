@@ -4,7 +4,7 @@
  * 作用：版本更新时执行 install/migrations 下的增量 SQL（数据库结构更新）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
- * 仅处理 misc-api 正式库表（admin / user / config / api / category / mailrate / apilog / apikey / orders）。
+ * 仅处理 ApiNexus 正式库表（admin / user / config / api / category / mailrate / apilog / apikey / orders）。
  */
 
 class DatabaseMigrator
@@ -404,7 +404,7 @@ class DatabaseMigrator
     }
 
     /**
-     * 校验迁移脚本是否使用了表前缀占位符（仅检查 misc-api 正式表）
+     * 校验迁移脚本是否使用了表前缀占位符（仅检查 ApiNexus 正式表）
      *
      * @param string $sql
      * @param string $prefix

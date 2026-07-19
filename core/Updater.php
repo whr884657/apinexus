@@ -1,16 +1,16 @@
 <?php
 /**
  * 文件：core/Updater.php
- * 作用：misc-api 在线更新（云端版本检测与更新包应用）
+ * 作用：ApiNexus 在线更新（云端版本检测与更新包应用）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */
 
 class Updater
 {
-    const MANIFEST_URL = 'https://gitee.com/xunjinlu/misc-api/raw/main/update.json';
-    const VERSION_URL  = 'https://gitee.com/xunjinlu/misc-api/raw/main/core/version.php';
-    const DEFAULT_REPO = 'xunjinlu/misc-api';
+    const MANIFEST_URL = 'https://gitee.com/xunjinlu/apinexus/raw/main/update.json';
+    const VERSION_URL  = 'https://gitee.com/xunjinlu/apinexus/raw/main/core/version.php';
+    const DEFAULT_REPO = 'xunjinlu/apinexus';
     const DEFAULT_BRANCH = 'main';
 
     /** 云端更新可信域名（直连 HTTPS，不依赖本地 CA 证书包） */
@@ -199,7 +199,7 @@ class Updater
             'check'   => $check,
             'manifest'=> $manifest,
             'updateDir' => self::updateDir(),
-            'zipPath'   => self::updateDir() . '/misc-api-update.zip',
+            'zipPath'   => self::updateDir() . '/apinexus-update.zip',
             'extractDir'=> self::updateDir() . '/extract',
         );
     }
@@ -581,7 +581,7 @@ class Updater
         $ver = ltrim(trim($version), 'vV');
         if ($ver !== '') {
             $tag = 'v' . $ver;
-        $fileName = 'misc-api' . $ver . '.zip';
+            $fileName = 'apinexus' . $ver . '.zip';
             $urls[] = array(
                 'label' => '云端发行包',
                 'url'   => self::buildReleasePackageUrl($repo, $ver),
@@ -594,7 +594,7 @@ class Updater
     /**
      * 云端发行版压缩包直链
      *
-     * @param string $repo  如 xunjinlu/misc-api
+     * @param string $repo  如 xunjinlu/apinexus
      * @param string $version 如 1.0.22
      * @return string
      */
@@ -602,13 +602,13 @@ class Updater
     {
         $ver = ltrim(trim($version), 'vV');
         $tag = 'v' . $ver;
-        $fileName = 'misc-api' . $ver . '.zip';
+        $fileName = 'apinexus' . $ver . '.zip';
         return 'https://gitee.com/' . $repo . '/releases/download/'
             . rawurlencode($tag) . '/' . rawurlencode($fileName);
     }
 
     /**
-     * 是否为 misc-api 更新可信 HTTPS 地址（仅白名单域名）
+     * 是否为 ApiNexus 更新可信 HTTPS 地址（仅白名单域名）
      *
      * @param string $url
      * @return bool
@@ -699,7 +699,7 @@ class Updater
                 CURLOPT_MAXREDIRS        => 10,
                 CURLOPT_CONNECTTIMEOUT => $timeout,
                 CURLOPT_TIMEOUT        => $timeout,
-                CURLOPT_USERAGENT      => 'misc-api-Updater/' . self::localVersion(),
+                CURLOPT_USERAGENT      => 'ApiNexus-Updater/' . self::localVersion(),
             ));
             self::configureCurlSsl($ch, $url);
             $body = curl_exec($ch);
@@ -724,7 +724,7 @@ class Updater
             'http' => array(
                 'method'  => 'GET',
                 'timeout' => $timeout,
-                'header'  => "User-Agent: misc-api-Updater/" . self::localVersion() . "\r\n",
+                'header'  => "User-Agent: ApiNexus-Updater/" . self::localVersion() . "\r\n",
             ),
             'ssl' => $sslOptions,
         ));
@@ -760,7 +760,7 @@ class Updater
                 CURLOPT_MAXREDIRS      => 10,
                 CURLOPT_CONNECTTIMEOUT => 30,
                 CURLOPT_TIMEOUT        => 300,
-                CURLOPT_USERAGENT      => 'misc-api-Updater/' . self::localVersion(),
+                CURLOPT_USERAGENT      => 'ApiNexus-Updater/' . self::localVersion(),
             ));
             self::configureCurlSsl($ch, $url);
             $ok = curl_exec($ch) !== false;
@@ -978,7 +978,7 @@ class Updater
     }
 
     /**
-     * 目录是否像 misc-api 项目根
+     * 目录是否像 ApiNexus 项目根
      *
      * @param string $dir
      * @return bool

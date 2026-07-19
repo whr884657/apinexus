@@ -1,4 +1,4 @@
--- misc-api 3.29.0
+-- ApiNexus 3.29.0
 -- 新增用户 API 调用密钥表 apikey（勿命名为 token，避免与大模型计费 token 冲突）
 -- 若站点已误建 token 表，由 DatabaseMigrator::reconcileSchemaState 重命名为 apikey
 

@@ -3,7 +3,7 @@
     <h1 class="page-title">关于我们</h1>
     <div class="page-content markdown-body" id="page-content" data-type="html">
         <h2>关于 <?php echo vs_e($siteName); ?></h2>
-        <p><strong><?php echo vs_e($siteName); ?></strong> 是基于 misc-api 构建的 API 接口展示与管理平台。</p>
+        <p><strong><?php echo vs_e($siteName); ?></strong> 是基于 ApiNexus 构建的 API 接口展示与管理平台。</p>
         <h3>我们的使命</h3>
         <ul>
             <li>提供免费、稳定、易用的 API 接口展示能力</li>
@@ -14,7 +14,7 @@
         <ul>
             <li>系统版本：v<?php echo vs_e(VS_VERSION); ?></li>
             <li>当前主题：<?php echo vs_e($themeId); ?></li>
-            <li>开源仓库：<a href="https://gitee.com/xunjinlu/misc-api" target="_blank" rel="noopener noreferrer">gitee.com/xunjinlu/misc-api</a></li>
+            <li>开源仓库：<a href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer">gitee.com/xunjinlu/apinexus</a></li>
         </ul>
     </div>
 </main>

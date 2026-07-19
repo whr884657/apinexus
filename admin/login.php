@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/login.php
- * 作用：misc-api 管理员登录页面
+ * 作用：ApiNexus 管理员登录页面
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */

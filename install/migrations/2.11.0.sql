@@ -1,2 +1,2 @@
--- misc-api 2.11.0：邮箱验证码限流表命名规范化（见 DatabaseMigrator::applyMailCodeRateLogMigration）
+-- ApiNexus 2.11.0：邮箱验证码限流表命名规范化（见 DatabaseMigrator::applyMailCodeRateLogMigration）
 -- 新表名：{prefix}mail_code_rate_log（替代 security_rate_hit）

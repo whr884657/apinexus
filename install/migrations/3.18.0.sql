@@ -1,4 +1,4 @@
--- misc-api 3.18.0
+-- ApiNexus 3.18.0
 -- 新增 API 调用日志表 apilog（本地注入 + 代理网关共用）
 
 CREATE TABLE IF NOT EXISTS `{prefix}apilog` (

@@ -163,10 +163,10 @@ class ApiNotify
     private static function siteName()
     {
         try {
-            $name = trim((string) Config::get('site_name', 'misc-api'));
-            return $name !== '' ? $name : 'misc-api';
+            $name = trim((string) Config::get('site_name', 'ApiNexus'));
+            return $name !== '' ? $name : 'ApiNexus';
         } catch (Exception $e) {
-            return 'misc-api';
+            return 'ApiNexus';
         }
     }
 

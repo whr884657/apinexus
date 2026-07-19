@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/RedisService.php
- * 作用：Redis 连接、业务缓存监控与 misc-api 专用键空间
+ * 作用：Redis 连接、业务缓存监控与 ApiNexus 专用键空间
  */
 
 class RedisService
@@ -98,9 +98,9 @@ class RedisService
             $database = 0;
         }
 
-        $prefix = trim((string) Config::get(self::CONFIG_PREFIX, 'misc_api:'));
+        $prefix = trim((string) Config::get(self::CONFIG_PREFIX, 'apinexus:'));
         if ($prefix === '') {
-            $prefix = 'misc_api:';
+            $prefix = 'apinexus:';
         }
 
         return array(

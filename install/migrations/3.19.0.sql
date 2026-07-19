@@ -1,4 +1,4 @@
--- misc-api 3.19.0
+-- ApiNexus 3.19.0
 -- apilog 增加 IP 归属地字段（预留，后续系统设置开启解析后写入）
 
 ALTER TABLE `{prefix}apilog`

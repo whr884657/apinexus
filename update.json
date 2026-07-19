@@ -1,14 +1,14 @@
 {
-    "version": "3.37.0",
-    "title": "misc-api 3.37.0 日志体验与分页同高、Redis 可读化",
+    "version": "4.0.0",
+    "title": "ApiNexus 4.0.0 品牌与仓库全面更名",
     "release_date": "2026-07-19",
     "db_changes": false,
     "changes": [
-        "底部分页「每页」与上一页/下一页强制同高 32px（覆盖 vs-input 40px）",
-        "日志查询：工具栏下移、查看按钮、方法/状态色、IP 归属地、用户名、管理员明文密钥、首屏预取",
-        "Redis 监控按「缓存了什么」展示；去掉「轻量」文案；今日调用走缓存",
-        "积分变动手机端标题与刷新同行；管理员积分流水显示完整密钥"
+        "产品名称由 misc-api 全面更名为 ApiNexus",
+        "Gitee 仓库迁移至 xunjinlu/apinexus",
+        "更新包命名改为 apinexus{版本}.zip；在线更新地址同步",
+        "默认站点名、发信显示名、Redis 键前缀等默认值同步为 ApiNexus / apinexus:"
     ],
-    "repo": "xunjinlu/misc-api",
+    "repo": "xunjinlu/apinexus",
     "branch": "main"
 }

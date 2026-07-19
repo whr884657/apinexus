@@ -1,4 +1,4 @@
--- misc-api 2.15.0：API 接口分类表（历史表名 api_category，2.15.1 重命名为 category）
+-- ApiNexus 2.15.0：API 接口分类表（历史表名 api_category，2.15.1 重命名为 category）
 
 CREATE TABLE IF NOT EXISTS `{prefix}api_category` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,

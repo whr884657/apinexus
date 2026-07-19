@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/admin.js
- * 作用：misc-api 后台框架交互（侧边栏展开/收缩）
+ * 作用：ApiNexus 后台框架交互（侧边栏展开/收缩）
  * @version 1.0.0
  */
 

@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/admin-login.js
- * 作用：misc-api 管理员登录页交互脚本
+ * 作用：ApiNexus 管理员登录页交互脚本
  * @version 1.0.0
  */
 

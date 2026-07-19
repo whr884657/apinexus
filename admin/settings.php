@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/settings.php
- * 作用：misc-api 后台系统设置（站点信息、用户注册、OAuth、邮箱发信）
+ * 作用：ApiNexus 后台系统设置（站点信息、用户注册、OAuth、邮箱发信）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */

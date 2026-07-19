@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/install.js
- * 作用：misc-api 安装向导交互脚本
+ * 作用：ApiNexus 安装向导交互脚本
  * @version 1.0.0
  */
 

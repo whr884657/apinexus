@@ -29,7 +29,7 @@ class Mailer
         $pass = Config::get('mail_smtp_pass');
         $secure = Config::get('mail_smtp_secure', 'ssl');
         $fromEmail = Config::get('mail_from_email');
-        $fromName = Config::get('mail_from_name', 'misc-api');
+        $fromName = Config::get('mail_from_name', 'ApiNexus');
 
         return self::sendSmtp($host, $port, $user, $pass, $secure, $fromEmail, $fromName, $to, $subject, $body);
     }

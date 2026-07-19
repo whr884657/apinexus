@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/helpers.php
- * 作用：misc-api 通用辅助函数
+ * 作用：ApiNexus 通用辅助函数
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */
@@ -304,7 +304,7 @@ function vs_page_title($pageTitle, $siteName = null)
         if (class_exists('SiteContext') && InstallChecker::isInstalled()) {
             $siteName = SiteContext::siteName();
         } else {
-            $siteName = 'misc-api';
+            $siteName = 'ApiNexus';
         }
     }
 
@@ -312,7 +312,7 @@ function vs_page_title($pageTitle, $siteName = null)
     $siteName = trim((string) $siteName);
 
     if ($siteName === '') {
-        $siteName = 'misc-api';
+        $siteName = 'ApiNexus';
     }
 
     if ($pageTitle === '' || $pageTitle === $siteName) {
@@ -539,7 +539,7 @@ function vs_render_seo_meta(array $opts = array())
 function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true, array $extraCssHrefs = array(), array $headScripts = array(), $bodyClass = 'vs-body')
 {
     $base = vs_base_url();
-    $siteName = 'misc-api';
+    $siteName = 'ApiNexus';
     $favicon = '';
     $keywords = '';
     $description = '';
@@ -821,7 +821,7 @@ function vs_render_404_page()
     }
 
     $base = vs_base_url();
-    $siteName = 'misc-api';
+    $siteName = 'ApiNexus';
     if (class_exists('InstallChecker') && InstallChecker::isInstalled() && class_exists('SiteContext')) {
         $siteName = SiteContext::siteName();
     }

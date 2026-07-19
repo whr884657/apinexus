@@ -5,7 +5,7 @@
     <p class="st-page-desc">资讯与教程，后台内容运营模块上线后同步展示</p>
     <div class="st-card-list">
         <div class="st-card">
-            <div class="st-card__title">欢迎使用 misc-api</div>
+            <div class="st-card__title">欢迎使用 ApiNexus</div>
             <div class="st-card__meta">系统 · 示例条目</div>
             <div class="st-card__desc">内容运营模块完善后，文章将在此列表展示。</div>
         </div>

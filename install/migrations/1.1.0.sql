@@ -1,4 +1,4 @@
--- misc-api 1.1.0：新增用户表
+-- ApiNexus 1.1.0：新增用户表
 CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
     `username` varchar(50) NOT NULL,

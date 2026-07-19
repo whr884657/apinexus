@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/account.php
- * 作用：misc-api 后台账号设置（用户名、邮箱、头像、密码、用户绑定）
+ * 作用：ApiNexus 后台账号设置（用户名、邮箱、头像、密码、用户绑定）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */

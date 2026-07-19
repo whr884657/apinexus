@@ -1,4 +1,4 @@
--- misc-api 3.6.0：重建 API 接口表（清除旧审核结构，改为后台接口列表字段）
+-- ApiNexus 3.6.0：重建 API 接口表（清除旧审核结构，改为后台接口列表字段）
 
 DROP TABLE IF EXISTS `{prefix}api`;
 
