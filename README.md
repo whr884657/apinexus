@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>ApiNexus</h1>
+  <h1>APINEXUS</h1>
 </div>
 
 <p align="center">
@@ -7,13 +7,19 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-4.1.1-blue" alt="version">
-  <img src="https://img.shields.io/badge/License-开源-green" alt="license">
-  <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
-  <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像仓库-C71D23" alt="GitCode"></a>
-  <a href="https://github.com/whr884657/apinexus"><img src="https://img.shields.io/badge/GitHub-镜像仓库-181717?logo=github" alt="GitHub"></a>
-  <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
-  <img src="https://img.shields.io/badge/MySQL-5.7+-4479A1?logo=mysql&logoColor=white" alt="MySQL">
+  <code>version 4.1.1</code>
+  ·
+  <code>License 开源</code>
+  ·
+  <a href="https://gitee.com/xunjinlu/apinexus"><code>Gitee</code></a>
+  ·
+  <a href="https://gitcode.com/xunjinlu/apinexus"><code>GitCode</code></a>
+  ·
+  <a href="https://github.com/whr884657/apinexus"><code>GitHub</code></a>
+  ·
+  <code>PHP 7.4+</code>
+  ·
+  <code>MySQL 5.7+</code>
 </p>
 
 ---
