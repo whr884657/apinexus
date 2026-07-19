@@ -122,7 +122,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 文章 | — | — | 占位 | ❌ 否 | **待开发** |
 | 友情链接 | — | — | 占位 | ❌ 否 | **待开发** |
 | 公告 | — | — | 占位 | ❌ 否 | **待开发** |
-| Redis 缓存 | — | `RedisService` / `RedisCache` | `admin/system/redis.php` | 后台专用 | **业务缓存已接入**（接口/分类/限流） |
+| Redis 缓存 | — | `RedisService` / `RedisCache` | `admin/system/redis.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 限流） |
 | 贡献者 | — | — | 占位 | ❌ 否 | **待开发** |
 
 > 上表「待开发」项：须先完成 `XxxManager` + `FrontendXxx` 并注册 bootstrap，主题才能接入；在此之前主题页仅能做静态占位。
@@ -230,7 +230,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表与详情（**主题向**） |
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
-| `RedisCache.php` | 业务数据缓存（接口列表、分类）；键空间自动维护 |
+| `RedisCache.php` | 业务数据缓存（公开接口、前台展示格式化列表、分类、日志分页）；键空间自动维护 |
+| `ApiLogManager.php` | API 调用日志分页查询、搜索、详情格式化（列表走短 TTL Redis） |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
 | `SystemInfo.php` | 关于页环境信息 |
@@ -702,6 +703,17 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 | `versionLabel()` | 关于页一行摘要 |
 
 **配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`misc_api:`）。
+
+**业务缓存项（`RedisCache`）：**
+
+| 逻辑键 | TTL | 写入入口 | 说明 |
+|--------|-----|----------|------|
+| `cache:api:public_list` | 120s | `ApiManager::listPublic` | MySQL 公开接口原始行 |
+| `cache:frontend:api_list` | 120s | `FrontendApi::listForTheme` | 主题用格式化列表（**须单独 remember，勿只依赖 public_list**） |
+| `cache:frontend:category_tags` | 300s | `FrontendCategory::listTags` | 前台分类标签 |
+| `cache:apilog:page:{md5}` | 45s | `ApiLogManager::listPaged` | 日志分页轻量缓存（按筛选条件摘要；短 TTL 抗亿级表扫库） |
+
+接口/分类变更时调用 `RedisCache::invalidateFrontend()`。日志缓存依赖短 TTL，高并发写入时勿每次 INSERT 全量 SCAN 清理。
 
 ---
 

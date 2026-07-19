@@ -9,12 +9,16 @@ class RedisCache
     const KEY_FRONTEND_API = 'cache:frontend:api_list';
     const KEY_FRONTEND_CATEGORY = 'cache:frontend:category_tags';
     const KEY_API_PUBLIC = 'cache:api:public_list';
+    /** 日志分页缓存键前缀（后接 md5 条件摘要） */
+    const KEY_APILOG_PAGE_PREFIX = 'cache:apilog:page:';
     const KEY_STAT_HITS = 'stats:cache_hits';
     const KEY_STAT_MISSES = 'stats:cache_misses';
 
     const TTL_FRONTEND_API = 120;
     const TTL_FRONTEND_CATEGORY = 300;
     const TTL_API_PUBLIC = 120;
+    /** 日志列表短 TTL：亿级表不宜长缓存，减轻重复 COUNT/翻页压力 */
+    const TTL_APILOG_PAGE = 45;
 
     const MAX_RATE_LIMIT_KEYS = 2000;
     const STAT_MAX_VALUE = 100000000;
@@ -94,6 +98,56 @@ class RedisCache
         self::forget(self::KEY_FRONTEND_API);
         self::forget(self::KEY_FRONTEND_CATEGORY);
         self::forget(self::KEY_API_PUBLIC);
+    }
+
+    /**
+     * 日志分页缓存键（按筛选条件摘要）
+     *
+     * @param array $opts
+     * @return string
+     */
+    public static function apilogPageKey(array $opts)
+    {
+        $norm = array(
+            'page'     => (int) (isset($opts['page']) ? $opts['page'] : 1),
+            'pagesize' => (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20),
+            'q'        => isset($opts['q']) ? (string) $opts['q'] : '',
+            'ok'       => array_key_exists('ok', $opts) ? $opts['ok'] : null,
+            'apiid'    => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
+        );
+        return self::KEY_APILOG_PAGE_PREFIX . md5(json_encode($norm));
+    }
+
+    /**
+     * 清理日志列表缓存（写入新日志后调用；无匹配键时静默）
+     *
+     * @return int 删除键数
+     */
+    public static function invalidateApiLog()
+    {
+        if (!self::enabled()) {
+            return 0;
+        }
+
+        try {
+            return (int) RedisService::withClient(function (Redis $redis) {
+                $pattern = RedisService::buildKey(self::KEY_APILOG_PAGE_PREFIX) . '*';
+                $deleted = 0;
+                $it = null;
+                do {
+                    $keys = $redis->scan($it, $pattern, 80);
+                    if ($keys === false) {
+                        break;
+                    }
+                    if (!empty($keys)) {
+                        $deleted += (int) $redis->del($keys);
+                    }
+                } while ($it !== 0 && $it !== null);
+                return $deleted;
+            });
+        } catch (Exception $e) {
+            return 0;
+        }
     }
 
     /**
@@ -220,13 +274,86 @@ class RedisCache
                 'key' => self::KEY_FRONTEND_CATEGORY,
                 'ttl_hint' => self::TTL_FRONTEND_CATEGORY . ' 秒',
             ),
+            array(
+                'id' => 'apilog_page',
+                'label' => 'API 调用日志分页（轻量）',
+                'key' => self::KEY_APILOG_PAGE_PREFIX,
+                'ttl_hint' => self::TTL_APILOG_PAGE . ' 秒',
+                'pattern' => true,
+            ),
         );
 
         $rows = array();
         foreach ($defs as $def) {
-            $rows[] = array_merge($def, self::inspectKey($def['key']));
+            if (!empty($def['pattern'])) {
+                $rows[] = array_merge($def, self::inspectKeyPattern($def['key']));
+            } else {
+                $rows[] = array_merge($def, self::inspectKey($def['key']));
+            }
         }
         return $rows;
+    }
+
+    /**
+     * 前缀键族占用概览（日志分页等多键缓存）
+     *
+     * @param string $logicalPrefix
+     * @return array
+     */
+    private static function inspectKeyPattern($logicalPrefix)
+    {
+        $result = array(
+            'cached' => false,
+            'ttl_seconds' => null,
+            'size_bytes' => 0,
+            'size_human' => '—',
+            'key_count' => 0,
+        );
+
+        if (!self::enabled()) {
+            return $result;
+        }
+
+        try {
+            return RedisService::withClient(function (Redis $redis) use ($logicalPrefix, $result) {
+                $pattern = RedisService::buildKey($logicalPrefix) . '*';
+                $count = 0;
+                $size = 0;
+                $minTtl = null;
+                $it = null;
+                do {
+                    $keys = $redis->scan($it, $pattern, 80);
+                    if ($keys === false) {
+                        break;
+                    }
+                    foreach ($keys as $fullKey) {
+                        $count++;
+                        $raw = $redis->get($fullKey);
+                        if (is_string($raw)) {
+                            $size += strlen($raw);
+                        }
+                        $ttl = (int) $redis->ttl($fullKey);
+                        if ($ttl >= 0 && ($minTtl === null || $ttl < $minTtl)) {
+                            $minTtl = $ttl;
+                        }
+                    }
+                } while ($it !== 0 && $it !== null);
+
+                if ($count <= 0) {
+                    return $result;
+                }
+
+                return array(
+                    'cached' => true,
+                    'ttl_seconds' => $minTtl,
+                    'size_bytes' => $size,
+                    'size_human' => RedisService::formatBytes($size),
+                    'key_count' => $count,
+                );
+            });
+        } catch (Exception $e) {
+            return $result;
+        }
     }
 
     /**

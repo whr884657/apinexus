@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.35.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.36.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -104,9 +104,9 @@
 | 交易财务（占位） | `/admin/finance/` | 支付、订单、赞助、积分 |
 | 用户管理 | `/admin/users.php` | 查看用户、搜索、封禁/解封/删除 |
 | 公告管理（占位） | `/admin/content/announcements.php` | 后续开发 |
-| 日志查询（占位） | `/admin/system/logs.php` | 后续开发 |
+| 日志查询 | `/admin/system/logs` | 搜索 / 桌面列表 / 手机卡片+抽屉详情 |
 | Redis 管理 | `/admin/system/redis.php` | 业务缓存环形图监控（扇区悬停/点击明细、缓存占用） |
-| 主题设置 | `/admin/system/theme.php` | 主题切换 + 各主题独立配置 |
+| 主题设置 | `/admin/system/theme.php` | 宽屏左右分栏：主题切换 + 主题配置 |
 | 账号设置 | `/admin/account.php` | 修改资料、发布身份绑定用户账号 |
 | 系统设置 | `/admin/settings.php` | 站点信息、注册策略、OAuth、邮箱发信 |
 | 系统升级 | `/admin/upgrade.php` | 手动检测更新、安装更新、查看更新记录 |
@@ -210,7 +210,8 @@ misc-api/
 │   ├── FrontendUser.php        # 前台用户资料（主题/用户中心调用）
 │   ├── UserRole.php            # 用户角色与权限判断
 │   ├── RedisService.php        # Redis 连接与监控采集
-│   ├── RedisCache.php          # 业务数据缓存（接口/分类/限流）
+│   ├── RedisCache.php          # 业务数据缓存（接口/分类/日志分页/限流）
+│   ├── ApiLogManager.php       # API 调用日志查询与格式化
 │   ├── theme/default/          # 默认主题（FeerApi 风白色 UI）
 │   ├── theme/slate/            # 主题二（API 平台风）
 │   │   └── preview.png         # 主题预览图
@@ -288,6 +289,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.36.0（2026-07-19）
+
+- 主题二右下角圆形按钮三横线垂直居中
+- 主题设置宽屏左右分栏；画廊卡片固定列宽，消除右侧空白
+- 管理员日志查询：搜索、筛选、桌面列表、手机卡片 + 抽屉详情
+- Redis：修复前台接口展示缓存未写入；新增调用日志分页轻量缓存
 
 ### v3.35.1（2026-07-19）
 

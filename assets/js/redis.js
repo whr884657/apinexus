@@ -415,7 +415,9 @@
             html += '</div><div class="vs-redis-entry__status">';
             if (cached) {
                 html += '<span class="vs-redis-badge vs-redis-badge--on">已缓存</span>';
-                html += '<span class="vs-redis-entry__detail" data-redis-ttl-text>剩余 ' + ttl + ' 秒 · ' + escapeHtml(size) + '</span>';
+                var countHint = entry.key_count ? (' · ' + entry.key_count + ' 个键') : '';
+                html += '<span class="vs-redis-entry__detail" data-redis-ttl-text>剩余 ' + ttl + ' 秒 · '
+                    + escapeHtml(size) + escapeHtml(countHint) + '</span>';
             } else {
                 html += '<span class="vs-redis-badge vs-redis-badge--off">未缓存</span>';
                 html += '<span class="vs-redis-entry__detail">下次访问时自动建立</span>';

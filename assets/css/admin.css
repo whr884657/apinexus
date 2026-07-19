@@ -2293,7 +2293,8 @@ select.vs-input.vs-select {
 
 .vs-theme-gallery {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, 260px);
+    justify-content: start;
     gap: 16px;
 }
 
@@ -5743,6 +5744,276 @@ select.vs-input.vs-select {
     }
     .vs-recharge-pay-btn {
         min-height: 48px;
+    }
+}
+
+/* ── 主题设置：宽屏左右分栏 ── */
+.vs-theme-desk-title {
+    display: none;
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--vs-text);
+}
+
+@media (min-width: 901px) {
+    .vs-theme-settings__tabs {
+        display: none;
+    }
+
+    .vs-theme-settings-desk {
+        display: grid;
+        grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.15fr);
+        gap: 24px;
+        align-items: start;
+        padding-top: 24px;
+    }
+
+    .vs-theme-settings-desk .vs-product-tab-panel {
+        padding-top: 0;
+        display: block !important;
+    }
+
+    .vs-theme-settings-desk .vs-product-tab-panel[hidden] {
+        display: block !important;
+    }
+
+    .vs-theme-desk-title {
+        display: block;
+    }
+
+    .vs-theme-settings-desk .vs-theme-gallery {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 240px));
+    }
+
+    .vs-theme-settings-desk .vs-theme-config-form__body {
+        max-height: calc(100vh - 280px);
+        overflow: auto;
+        padding-right: 4px;
+    }
+}
+
+/* ── API 调用日志 ── */
+.vs-log-head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.vs-log-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.vs-log-search__input {
+    width: min(280px, 42vw);
+    height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
+}
+
+.vs-log-panel {
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.vs-log-list {
+    min-height: 120px;
+}
+
+.vs-log-table-wrap {
+    overflow-x: auto;
+}
+
+.vs-log-grid {
+    min-width: 720px;
+}
+
+.vs-log-row {
+    display: grid;
+    grid-template-columns:
+        minmax(160px, 1.8fr)
+        72px
+        minmax(110px, 1fr)
+        72px
+        72px
+        minmax(140px, 1.1fr);
+    gap: 8px 12px;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eef2f7;
+    cursor: pointer;
+    background: #fff;
+}
+
+.vs-log-row:hover {
+    background: #f8fafc;
+}
+
+.vs-log-row--head {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: default;
+}
+
+.vs-log-row--head:hover {
+    background: #f8fafc;
+}
+
+.vs-log-cell {
+    min-width: 0;
+    font-size: 13px;
+    color: #334155;
+}
+
+.vs-log-c-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.vs-log-sub {
+    display: block;
+    font-size: 12px;
+    color: #94a3b8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vs-log-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+
+.vs-log-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.vs-log-status.is-ok {
+    color: #047857;
+    background: #ecfdf5;
+}
+
+.vs-log-status.is-fail {
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
+.vs-log-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+}
+
+.vs-log-card {
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.vs-log-card:active {
+    background: #f8fafc;
+}
+
+.vs-log-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.vs-log-card__name {
+    font-size: 14px;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vs-log-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.vs-log-card__time {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.vs-log-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vs-log-detail__row {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+}
+
+.vs-log-detail__label {
+    font-size: 12px;
+    color: #94a3b8;
+    padding-top: 2px;
+}
+
+.vs-log-detail__value {
+    font-size: 13px;
+    color: #334155;
+    word-break: break-all;
+    line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+    .vs-content__head:has(.vs-log-head-actions) .vs-content__actions {
+        flex: 1 1 100%;
+    }
+
+    .vs-log-head-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .vs-log-search {
+        flex: 1 1 100%;
+    }
+
+    .vs-log-search__input {
+        flex: 1 1 auto;
+        width: auto;
+    }
+
+    .vs-log-cards {
+        display: flex;
+    }
+}
+
+@media (min-width: 901px) {
+    .vs-log-cards {
+        display: none;
     }
 }
 
