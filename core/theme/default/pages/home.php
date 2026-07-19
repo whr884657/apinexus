@@ -153,22 +153,29 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
             </div>
         </div>
     </section>
-    <?php if (ThemeManager::themeSettingBool('show_partners', true)): ?>
+    <?php
+    $homePartners = (class_exists('FrontendPartner') && ThemeManager::themeSettingBool('show_partners', true))
+        ? FrontendPartner::listForTheme()
+        : array();
+    if (count($homePartners) > 0):
+    ?>
     <section id="home-partners" class="py-24 border-t" style="border-color: var(--border-color);">
         <div class="partners-section-header"><h2 class="section-title">合作伙伴</h2></div>
         <div class="partners-grid">
-            <a class="partner-tile" href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer" title="Gitee">
-                <img src="https://gitee.com/static/images/logo_themecolor.png" alt="Gitee" loading="lazy">
-                <span class="partner-tile-name">Gitee</span>
-            </a>
-            <a class="partner-tile" href="https://github.com" target="_blank" rel="noopener noreferrer" title="GitHub">
-                <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub" loading="lazy">
-                <span class="partner-tile-name">GitHub</span>
-            </a>
-            <div class="partner-tile partner-tile--static" title="PHP">
-                <img src="https://www.php.net/favicon.ico" alt="PHP" loading="lazy">
-                <span class="partner-tile-name">PHP</span>
-            </div>
+            <?php foreach ($homePartners as $partner): ?>
+                <a class="partner-tile<?php echo empty($partner['icon']) ? ' partner-tile--fallback' : ''; ?>"
+                   href="<?php echo vs_e($partner['siteurl']); ?>"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   title="<?php echo vs_e($partner['name']); ?>">
+                    <?php if (!empty($partner['icon'])): ?>
+                        <img src="<?php echo vs_e($partner['icon']); ?>" alt="<?php echo vs_e($partner['name']); ?>" loading="lazy" referrerpolicy="no-referrer">
+                    <?php else: ?>
+                        <span class="partner-tile-initial" aria-hidden="true"><?php echo vs_e($partner['initial']); ?></span>
+                    <?php endif; ?>
+                    <span class="partner-tile-name"><?php echo vs_e($partner['name']); ?></span>
+                </a>
+            <?php endforeach; ?>
         </div>
     </section>
     <?php endif; ?>

@@ -1,12 +1,14 @@
 {
-    "version": "4.9.0",
-    "title": "ApiNexus 4.9.0 友链一键获取与申请通知",
+    "version": "5.0.0",
+    "title": "ApiNexus 5.0.0 友链禁用与合作伙伴共用",
     "release_date": "2026-07-20",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "申请友链支持一键获取站点名称/图标/描述（TDK）",
-        "友链申请通知管理员；审核通过且联系方式含邮箱时通知申请人",
-        "修复后台「添加友链」弹窗不显示（缺少 is-open）"
+        "友情链接支持禁用/启用（不改变审核状态，前台不展示）",
+        "友情链接与合作伙伴共用 link 表（kind 区分）",
+        "后台合作伙伴管理页（编辑/启禁 + 响应式弹窗）",
+        "默认主题首页合作伙伴区改为读取 FrontendPartner",
+        "优化友链后台手机端卡片边框与按钮右对齐；前台描述限高"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

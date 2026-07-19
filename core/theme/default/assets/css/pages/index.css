@@ -498,6 +498,14 @@
             transition: transform 0.25s ease;
         }
 
+        .partner-tile-initial {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1;
+            user-select: none;
+        }
+
         .partner-tile-name {
             position: absolute;
             left: 6px;

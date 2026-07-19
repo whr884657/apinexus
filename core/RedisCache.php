@@ -9,6 +9,7 @@ class RedisCache
     const KEY_FRONTEND_API = 'cache:frontend:api_list';
     const KEY_FRONTEND_CATEGORY = 'cache:frontend:category_tags';
     const KEY_FRONTEND_LINK = 'cache:frontend:link_list';
+    const KEY_FRONTEND_PARTNER = 'cache:frontend:partner_list';
     const KEY_API_PUBLIC = 'cache:api:public_list';
     /** 日志查询结果缓存键前缀（后台列表 / 后续图表等凡读 apilog 均可复用） */
     const KEY_APILOG_PAGE_PREFIX = 'cache:apilog:query:';
@@ -20,6 +21,7 @@ class RedisCache
     const TTL_FRONTEND_API = 120;
     const TTL_FRONTEND_CATEGORY = 300;
     const TTL_FRONTEND_LINK = 300;
+    const TTL_FRONTEND_PARTNER = 300;
     const TTL_API_PUBLIC = 120;
     /** 日志查询/列表短 TTL，降低大表反复扫库 */
     const TTL_APILOG_PAGE = 45;
@@ -103,6 +105,7 @@ class RedisCache
         self::forget(self::KEY_FRONTEND_API);
         self::forget(self::KEY_FRONTEND_CATEGORY);
         self::forget(self::KEY_FRONTEND_LINK);
+        self::forget(self::KEY_FRONTEND_PARTNER);
         self::forget(self::KEY_API_PUBLIC);
     }
 
@@ -291,10 +294,18 @@ class RedisCache
             array(
                 'id' => 'frontend_link',
                 'label' => '前台友情链接',
-                'desc' => '页脚与友链页展示的已通过友链列表',
+                'desc' => '页脚与友链页展示的已通过且启用的友链列表',
                 'key' => self::KEY_FRONTEND_LINK,
                 'ttl_hint' => self::TTL_FRONTEND_LINK . ' 秒',
                 'chart_color' => '#06b6d4',
+            ),
+            array(
+                'id' => 'frontend_partner',
+                'label' => '前台合作伙伴',
+                'desc' => '首页合作伙伴区展示的已启用列表',
+                'key' => self::KEY_FRONTEND_PARTNER,
+                'ttl_hint' => self::TTL_FRONTEND_PARTNER . ' 秒',
+                'chart_color' => '#14b8a6',
             ),
             array(
                 'id' => 'apilog_query',

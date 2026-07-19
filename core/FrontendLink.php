@@ -16,8 +16,13 @@ class FrontendLink
             $row = LinkManager::formatRow($row);
         }
 
+        $kind = LinkManager::normalizeKind(isset($row['kind']) ? $row['kind'] : LinkManager::KIND_FRIEND);
         $status = LinkManager::normalizeStatus(isset($row['status']) ? $row['status'] : LinkManager::STATUS_PENDING);
-        if ($status !== LinkManager::STATUS_APPROVED) {
+        $enabled = LinkManager::normalizeEnabled(isset($row['enabled']) ? $row['enabled'] : LinkManager::ENABLED_ON);
+        if ($kind !== LinkManager::KIND_FRIEND
+            || $status !== LinkManager::STATUS_APPROVED
+            || $enabled !== LinkManager::ENABLED_ON
+        ) {
             return null;
         }
 

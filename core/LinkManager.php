@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/LinkManager.php
- * 作用：友情链接管理（后台 CRUD / 审核；前台申请入口）
+ * 作用：友情链接 / 合作伙伴共用管理（表 link；kind 区分）
  */
 
 class LinkManager
@@ -9,6 +9,12 @@ class LinkManager
     const STATUS_PENDING = 0;
     const STATUS_APPROVED = 1;
     const STATUS_REJECTED = 2;
+
+    const KIND_FRIEND = 0;
+    const KIND_PARTNER = 1;
+
+    const ENABLED_OFF = 0;
+    const ENABLED_ON = 1;
 
     /**
      * @return string
@@ -46,6 +52,24 @@ class LinkManager
     }
 
     /**
+     * @param mixed $kind
+     * @return int
+     */
+    public static function normalizeKind($kind)
+    {
+        return ((int) $kind === self::KIND_PARTNER) ? self::KIND_PARTNER : self::KIND_FRIEND;
+    }
+
+    /**
+     * @param mixed $enabled
+     * @return int
+     */
+    public static function normalizeEnabled($enabled)
+    {
+        return ((int) $enabled === self::ENABLED_OFF) ? self::ENABLED_OFF : self::ENABLED_ON;
+    }
+
+    /**
      * @param mixed $status
      * @return string
      */
@@ -59,6 +83,15 @@ class LinkManager
             return '已拒绝';
         }
         return '待审核';
+    }
+
+    /**
+     * @param mixed $enabled
+     * @return string
+     */
+    public static function enabledLabel($enabled)
+    {
+        return self::normalizeEnabled($enabled) === self::ENABLED_ON ? '启用' : '禁用';
     }
 
     /**
@@ -111,22 +144,27 @@ class LinkManager
     {
         $id = (int) (isset($row['id']) ? $row['id'] : 0);
         $status = self::normalizeStatus(isset($row['status']) ? $row['status'] : self::STATUS_PENDING);
+        $kind = self::normalizeKind(isset($row['kind']) ? $row['kind'] : self::KIND_FRIEND);
+        $enabled = self::normalizeEnabled(isset($row['enabled']) ? $row['enabled'] : self::ENABLED_ON);
         $icon = isset($row['icon']) ? trim((string) $row['icon']) : '';
         $siteurl = isset($row['siteurl']) ? trim((string) $row['siteurl']) : '';
 
         return array(
-            'id'          => $id,
-            'name'        => isset($row['name']) ? trim((string) $row['name']) : '',
-            'siteurl'     => $siteurl,
-            'icon'        => $icon,
-            'icon_url'    => self::normalizeIcon($icon),
-            'description' => isset($row['description']) ? trim((string) $row['description']) : '',
-            'contact'     => isset($row['contact']) ? trim((string) $row['contact']) : '',
-            'status'      => $status,
-            'status_label'=> self::statusLabel($status),
-            'sort'        => isset($row['sort']) ? (int) $row['sort'] : 0,
-            'createtime'  => isset($row['createtime']) ? (string) $row['createtime'] : '',
-            'updatetime'  => isset($row['updatetime']) ? (string) $row['updatetime'] : '',
+            'id'           => $id,
+            'name'         => isset($row['name']) ? trim((string) $row['name']) : '',
+            'siteurl'      => $siteurl,
+            'icon'         => $icon,
+            'icon_url'     => self::normalizeIcon($icon),
+            'description'  => isset($row['description']) ? trim((string) $row['description']) : '',
+            'contact'      => isset($row['contact']) ? trim((string) $row['contact']) : '',
+            'kind'         => $kind,
+            'enabled'      => $enabled,
+            'enabled_label'=> self::enabledLabel($enabled),
+            'status'       => $status,
+            'status_label' => self::statusLabel($status),
+            'sort'         => isset($row['sort']) ? (int) $row['sort'] : 0,
+            'createtime'   => isset($row['createtime']) ? (string) $row['createtime'] : '',
+            'updatetime'   => isset($row['updatetime']) ? (string) $row['updatetime'] : '',
         );
     }
 
@@ -152,20 +190,25 @@ class LinkManager
     }
 
     /**
-     * @param int|null $status null=全部
+     * @param int|null $status null=全部（审核态）
+     * @param int|null $kind   null=全部类型
      * @return array<int, array>
      */
-    public static function listAll($status = null)
+    public static function listAll($status = null, $kind = null)
     {
         if (!self::tableReady()) {
             return array();
         }
         try {
             $pdo = Database::connect();
-            $sql = 'SELECT * FROM `' . self::table() . '`';
+            $sql = 'SELECT * FROM `' . self::table() . '` WHERE 1=1';
             $params = array();
+            if ($kind !== null) {
+                $sql .= ' AND `kind` = ?';
+                $params[] = self::normalizeKind($kind);
+            }
             if ($status !== null) {
-                $sql .= ' WHERE `status` = ?';
+                $sql .= ' AND `status` = ?';
                 $params[] = self::normalizeStatus($status);
             }
             $sql .= ' ORDER BY `sort` ASC, `id` DESC';
@@ -187,31 +230,100 @@ class LinkManager
     }
 
     /**
-     * 前台展示用：已通过
+     * 前台友链：已通过且启用
      *
      * @return array<int, array>
      */
     public static function listApproved()
     {
-        return self::listAll(self::STATUS_APPROVED);
+        if (!self::tableReady()) {
+            return array();
+        }
+        try {
+            $pdo = Database::connect();
+            $sql = 'SELECT * FROM `' . self::table() . '`
+                WHERE `kind` = ? AND `status` = ? AND `enabled` = ?
+                ORDER BY `sort` ASC, `id` DESC';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array(self::KIND_FRIEND, self::STATUS_APPROVED, self::ENABLED_ON));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $out = array();
+            if (is_array($rows)) {
+                foreach ($rows as $row) {
+                    if (is_array($row)) {
+                        $out[] = self::formatRow($row);
+                    }
+                }
+            }
+            return $out;
+        } catch (Exception $e) {
+            return array();
+        }
+    }
+
+    /**
+     * 前台合作伙伴：启用
+     *
+     * @return array<int, array>
+     */
+    public static function listPartnersEnabled()
+    {
+        if (!self::tableReady()) {
+            return array();
+        }
+        try {
+            $pdo = Database::connect();
+            $sql = 'SELECT * FROM `' . self::table() . '`
+                WHERE `kind` = ? AND `enabled` = ?
+                ORDER BY `sort` ASC, `id` DESC';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array(self::KIND_PARTNER, self::ENABLED_ON));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $out = array();
+            if (is_array($rows)) {
+                foreach ($rows as $row) {
+                    if (is_array($row)) {
+                        $out[] = self::formatRow($row);
+                    }
+                }
+            }
+            return $out;
+        } catch (Exception $e) {
+            return array();
+        }
     }
 
     /**
      * @param string $siteurl
+     * @param int    $kind
+     * @param int    $excludeId
      * @return bool
      */
-    public static function urlExists($siteurl)
+    public static function urlExists($siteurl, $kind = self::KIND_FRIEND, $excludeId = 0)
     {
         $siteurl = self::normalizeUrl($siteurl);
+        $kind = self::normalizeKind($kind);
+        $excludeId = (int) $excludeId;
         if ($siteurl === '' || !self::tableReady()) {
             return false;
         }
         try {
             $pdo = Database::connect();
-            $stmt = $pdo->prepare(
-                'SELECT `id` FROM `' . self::table() . '` WHERE `siteurl` = ? AND `status` IN (?, ?) LIMIT 1'
-            );
-            $stmt->execute(array($siteurl, self::STATUS_PENDING, self::STATUS_APPROVED));
+            if ($kind === self::KIND_PARTNER) {
+                $sql = 'SELECT `id` FROM `' . self::table() . '` WHERE `siteurl` = ? AND `kind` = ?';
+                $params = array($siteurl, $kind);
+            } else {
+                $sql = 'SELECT `id` FROM `' . self::table() . '`
+                    WHERE `siteurl` = ? AND `kind` = ? AND `status` IN (?, ?)';
+                $params = array($siteurl, $kind, self::STATUS_PENDING, self::STATUS_APPROVED);
+            }
+            if ($excludeId > 0) {
+                $sql .= ' AND `id` <> ?';
+                $params[] = $excludeId;
+            }
+            $sql .= ' LIMIT 1';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
             return (bool) $stmt->fetchColumn();
         } catch (Exception $e) {
             return false;
@@ -221,51 +333,69 @@ class LinkManager
     /**
      * @param array $data
      * @param int   $defaultStatus
-     * @return array|string 成功返回 formatRow，失败返回错误文案
+     * @return array|string
      */
     public static function create(array $data, $defaultStatus = self::STATUS_PENDING)
     {
         if (!self::tableReady()) {
-            return '友情链接功能尚未就绪，请先执行数据库结构更新';
+            return '功能尚未就绪，请先执行数据库结构更新';
         }
 
+        $kind = self::normalizeKind(isset($data['kind']) ? $data['kind'] : self::KIND_FRIEND);
         $name = trim((string) (isset($data['name']) ? $data['name'] : ''));
         $siteurl = self::normalizeUrl(isset($data['siteurl']) ? $data['siteurl'] : '');
         $icon = trim((string) (isset($data['icon']) ? $data['icon'] : ''));
-        $description = trim((string) (isset($data['description']) ? $data['description'] : ''));
-        $contact = trim((string) (isset($data['contact']) ? $data['contact'] : ''));
+        $description = ($kind === self::KIND_PARTNER)
+            ? ''
+            : trim((string) (isset($data['description']) ? $data['description'] : ''));
+        $contact = ($kind === self::KIND_PARTNER)
+            ? ''
+            : trim((string) (isset($data['contact']) ? $data['contact'] : ''));
         $sort = isset($data['sort']) ? (int) $data['sort'] : 0;
-        $status = self::normalizeStatus(
-            isset($data['status']) ? $data['status'] : $defaultStatus
+        $enabled = self::normalizeEnabled(
+            isset($data['enabled']) ? $data['enabled'] : self::ENABLED_ON
         );
 
+        if ($kind === self::KIND_PARTNER) {
+            $status = self::STATUS_APPROVED;
+        } else {
+            $status = self::normalizeStatus(
+                isset($data['status']) ? $data['status'] : $defaultStatus
+            );
+        }
+
         if ($name === '' || mb_strlen($name, 'UTF-8') > 50) {
-            return '请填写网站名称（不超过 50 字）';
+            return '请填写名称（不超过 50 字）';
         }
         if ($siteurl === '') {
-            return '请填写有效的网站链接';
+            return '请填写有效的跳转链接';
         }
         if (mb_strlen($description, 'UTF-8') > 200) {
-            return '网站简介不超过 200 字';
+            return '简介不超过 200 字';
         }
         if (mb_strlen($contact, 'UTF-8') > 100) {
             return '联系方式不超过 100 字';
         }
         if ($icon !== '' && self::normalizeIcon($icon) === '' && !preg_match('#^https?://#i', $icon)) {
-            return '头像链接格式无效';
+            return '图标链接格式无效';
         }
-        if (self::urlExists($siteurl)) {
-            return '该链接已申请或已通过，请勿重复提交';
+        if (self::urlExists($siteurl, $kind)) {
+            return $kind === self::KIND_PARTNER
+                ? '该跳转链接已存在'
+                : '该链接已申请或已通过，请勿重复提交';
         }
 
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
                 'INSERT INTO `' . self::table() . '`
-                (`name`, `siteurl`, `icon`, `description`, `contact`, `status`, `sort`, `createtime`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())'
+                (`name`, `siteurl`, `icon`, `description`, `contact`, `kind`, `enabled`, `status`, `sort`, `createtime`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
             );
-            $stmt->execute(array($name, $siteurl, $icon, $description, $contact, $status, $sort));
+            $stmt->execute(array(
+                $name, $siteurl, $icon, $description, $contact,
+                $kind, $enabled, $status, $sort,
+            ));
             $id = (int) $pdo->lastInsertId();
             self::invalidateCache();
             $row = self::findById($id);
@@ -276,14 +406,16 @@ class LinkManager
     }
 
     /**
-     * 前台申请（固定待审）
+     * 前台申请友链（固定待审）
      *
      * @param array $data
      * @return array|string
      */
     public static function apply(array $data)
     {
+        $data['kind'] = self::KIND_FRIEND;
         $data['status'] = self::STATUS_PENDING;
+        $data['enabled'] = self::ENABLED_ON;
         return self::create($data, self::STATUS_PENDING);
     }
 
@@ -297,49 +429,58 @@ class LinkManager
         $id = (int) $id;
         $existing = self::findById($id);
         if (!is_array($existing)) {
-            return '友链不存在';
+            return '记录不存在';
         }
 
+        $kind = self::normalizeKind(isset($existing['kind']) ? $existing['kind'] : self::KIND_FRIEND);
         $name = trim((string) (isset($data['name']) ? $data['name'] : $existing['name']));
         $siteurl = self::normalizeUrl(isset($data['siteurl']) ? $data['siteurl'] : $existing['siteurl']);
         $icon = array_key_exists('icon', $data)
             ? trim((string) $data['icon'])
             : (isset($existing['icon']) ? (string) $existing['icon'] : '');
-        $description = array_key_exists('description', $data)
-            ? trim((string) $data['description'])
-            : (isset($existing['description']) ? (string) $existing['description'] : '');
-        $contact = array_key_exists('contact', $data)
-            ? trim((string) $data['contact'])
-            : (isset($existing['contact']) ? (string) $existing['contact'] : '');
         $sort = isset($data['sort']) ? (int) $data['sort'] : (int) (isset($existing['sort']) ? $existing['sort'] : 0);
-        $status = isset($data['status'])
-            ? self::normalizeStatus($data['status'])
-            : self::normalizeStatus(isset($existing['status']) ? $existing['status'] : self::STATUS_PENDING);
+        $enabled = isset($data['enabled'])
+            ? self::normalizeEnabled($data['enabled'])
+            : self::normalizeEnabled(isset($existing['enabled']) ? $existing['enabled'] : self::ENABLED_ON);
+
+        if ($kind === self::KIND_PARTNER) {
+            $description = '';
+            $contact = '';
+            $status = self::STATUS_APPROVED;
+        } else {
+            $description = array_key_exists('description', $data)
+                ? trim((string) $data['description'])
+                : (isset($existing['description']) ? (string) $existing['description'] : '');
+            $contact = array_key_exists('contact', $data)
+                ? trim((string) $data['contact'])
+                : (isset($existing['contact']) ? (string) $existing['contact'] : '');
+            $status = isset($data['status'])
+                ? self::normalizeStatus($data['status'])
+                : self::normalizeStatus(isset($existing['status']) ? $existing['status'] : self::STATUS_PENDING);
+        }
 
         if ($name === '' || mb_strlen($name, 'UTF-8') > 50) {
-            return '请填写网站名称（不超过 50 字）';
+            return '请填写名称（不超过 50 字）';
         }
         if ($siteurl === '') {
-            return '请填写有效的网站链接';
+            return '请填写有效的跳转链接';
+        }
+        if (self::urlExists($siteurl, $kind, $id)) {
+            return '该跳转链接已存在于其它记录中';
         }
 
         try {
             $pdo = Database::connect();
-            $dup = $pdo->prepare(
-                'SELECT `id` FROM `' . self::table() . '` WHERE `siteurl` = ? AND `id` <> ? AND `status` IN (?, ?) LIMIT 1'
-            );
-            $dup->execute(array($siteurl, $id, self::STATUS_PENDING, self::STATUS_APPROVED));
-            if ($dup->fetchColumn()) {
-                return '该链接已存在于其它记录中';
-            }
-
             $stmt = $pdo->prepare(
                 'UPDATE `' . self::table() . '` SET
                 `name` = ?, `siteurl` = ?, `icon` = ?, `description` = ?, `contact` = ?,
-                `status` = ?, `sort` = ?, `updatetime` = NOW()
-                WHERE `id` = ? LIMIT 1'
+                `enabled` = ?, `status` = ?, `sort` = ?, `updatetime` = NOW()
+                WHERE `id` = ? AND `kind` = ? LIMIT 1'
             );
-            $stmt->execute(array($name, $siteurl, $icon, $description, $contact, $status, $sort, $id));
+            $stmt->execute(array(
+                $name, $siteurl, $icon, $description, $contact,
+                $enabled, $status, $sort, $id, $kind,
+            ));
             self::invalidateCache();
             return true;
         } catch (Exception $e) {
@@ -355,8 +496,12 @@ class LinkManager
     public static function setStatus($id, $status)
     {
         $id = (int) $id;
-        if (!is_array(self::findById($id))) {
+        $row = self::findById($id);
+        if (!is_array($row)) {
             return '友链不存在';
+        }
+        if (self::normalizeKind(isset($row['kind']) ? $row['kind'] : 0) !== self::KIND_FRIEND) {
+            return '合作伙伴无需审核';
         }
         $status = self::normalizeStatus($status);
         try {
@@ -373,6 +518,33 @@ class LinkManager
     }
 
     /**
+     * 启用 / 禁用（不改变审核状态）
+     *
+     * @param int $id
+     * @param int $enabled
+     * @return true|string
+     */
+    public static function setEnabled($id, $enabled)
+    {
+        $id = (int) $id;
+        if (!is_array(self::findById($id))) {
+            return '记录不存在';
+        }
+        $enabled = self::normalizeEnabled($enabled);
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '` SET `enabled` = ?, `updatetime` = NOW() WHERE `id` = ? LIMIT 1'
+            );
+            $stmt->execute(array($enabled, $id));
+            self::invalidateCache();
+            return true;
+        } catch (Exception $e) {
+            return '操作失败';
+        }
+    }
+
+    /**
      * @param int $id
      * @return true|string
      */
@@ -380,7 +552,7 @@ class LinkManager
     {
         $id = (int) $id;
         if (!is_array(self::findById($id))) {
-            return '友链不存在';
+            return '记录不存在';
         }
         try {
             $pdo = Database::connect();
@@ -400,6 +572,7 @@ class LinkManager
     {
         if (class_exists('RedisCache')) {
             RedisCache::forget(RedisCache::KEY_FRONTEND_LINK);
+            RedisCache::forget(RedisCache::KEY_FRONTEND_PARTNER);
         }
     }
 }

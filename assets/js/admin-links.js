@@ -19,7 +19,10 @@
         overlay.hidden = false;
         overlay.classList.add('is-open');
         overlay.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('is-overlay-open');
+        if (window.VSPick) {
+            window.VSPick.init(overlay);
+        }
     }
 
     function closeOverlay() {
@@ -27,7 +30,7 @@
         overlay.hidden = true;
         overlay.classList.remove('is-open');
         overlay.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
+        document.body.classList.remove('is-overlay-open');
     }
 
     function fillForm(data) {
@@ -40,7 +43,14 @@
         document.getElementById('linkDesc').value = data.description || '';
         document.getElementById('linkContact').value = data.contact || '';
         document.getElementById('linkSort').value = data.sort != null ? data.sort : 0;
-        document.getElementById('linkStatus').value = data.status != null ? String(data.status) : '1';
+        var statusEl = document.getElementById('linkStatus');
+        var enabledEl = document.getElementById('linkEnabled');
+        statusEl.value = data.status != null ? String(data.status) : '1';
+        enabledEl.value = data.enabled != null ? String(data.enabled) : '1';
+        if (window.VSPick) {
+            window.VSPick.refresh(statusEl);
+            window.VSPick.refresh(enabledEl);
+        }
     }
 
     function postAction(fd) {
@@ -59,7 +69,7 @@
     var addBtn = document.getElementById('linkOpenAddBtn');
     if (addBtn) {
         addBtn.addEventListener('click', function () {
-            fillForm({ action: 'create', title: '添加友链', status: 1, sort: 0 });
+            fillForm({ action: 'create', title: '添加友链', status: 1, enabled: 1, sort: 0 });
             openOverlay();
         });
     }
@@ -107,7 +117,8 @@
                 description: row.getAttribute('data-description') || '',
                 contact: row.getAttribute('data-contact') || '',
                 sort: row.getAttribute('data-sort') || 0,
-                status: row.getAttribute('data-link-status') || 1
+                status: row.getAttribute('data-link-status') || 1,
+                enabled: row.getAttribute('data-link-enabled') || 1
             });
             openOverlay();
             return;
@@ -127,20 +138,39 @@
             return;
         }
 
-        if (action === 'delete') {
-            if (!window.confirm('确定删除该友链？')) return;
-            var del = new FormData();
-            del.append('action', 'delete');
-            del.append('link_id', String(id));
-            postAction(del).then(function (data) {
-                VS.showMessage(data.msg || '已删除', 'success');
-                if (row) row.remove();
-                if (list && list.children.length === 0) {
-                    if (list) list.hidden = true;
-                    if (empty) empty.hidden = false;
-                }
+        if (action === 'enable' || action === 'disable') {
+            var en = new FormData();
+            en.append('action', 'set_enabled');
+            en.append('link_id', String(id));
+            en.append('enabled', action === 'enable' ? '1' : '0');
+            postAction(en).then(function (data) {
+                VS.showMessage(data.msg || '已更新', 'success');
+                reloadPage();
             }).catch(function (err) {
-                VS.showMessage(err.message || '删除失败', 'error');
+                VS.showMessage(err.message || '操作失败', 'error');
+            });
+            return;
+        }
+
+        if (action === 'delete') {
+            var ask = (window.VsModal && window.VsModal.confirm)
+                ? window.VsModal.confirm('删除后不可恢复，确定删除该友链？', '删除友链')
+                : Promise.resolve(window.confirm('确定删除该友链？'));
+            ask.then(function (ok) {
+                if (!ok) return;
+                var del = new FormData();
+                del.append('action', 'delete');
+                del.append('link_id', String(id));
+                postAction(del).then(function (data) {
+                    VS.showMessage(data.msg || '已删除', 'success');
+                    if (row) row.remove();
+                    if (list && list.children.length === 0) {
+                        list.hidden = true;
+                        if (empty) empty.hidden = false;
+                    }
+                }).catch(function (err) {
+                    VS.showMessage(err.message || '删除失败', 'error');
+                });
             });
         }
     });
