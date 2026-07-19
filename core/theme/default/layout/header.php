@@ -26,9 +26,9 @@ if (!empty($userLoggedIn) && $avatarUrl === '' && class_exists('UserAvatar') && 
                onclick="closeSidebarNow()"><?php echo vs_e($item['label']); ?></a>
         <?php endforeach; ?>
     </div>
-    <div class="mt-auto">
-        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek w-full text-center auth-entry-btn<?php echo $avatarUrl !== '' ? ' auth-entry-btn--user' : ''; ?>" onclick="closeSidebarNow()">
-            <?php if ($avatarUrl !== ''): ?>
+    <div class="mt-auto sidebar-auth-slot">
+        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek w-full text-center auth-entry-btn<?php echo ($avatarUrl !== '' && !empty($userLoggedIn)) ? ' auth-entry-btn--user' : ''; ?>" onclick="closeSidebarNow()">
+            <?php if ($avatarUrl !== '' && !empty($userLoggedIn)): ?>
                 <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="" width="22" height="22" loading="lazy" referrerpolicy="no-referrer" decoding="async">
             <?php endif; ?>
             <span><?php echo vs_e($authBtnLabel); ?></span>
@@ -51,14 +51,18 @@ if (!empty($userLoggedIn) && $avatarUrl === '' && class_exists('UserAvatar') && 
                    class="feer-nav-link<?php echo $activeNav === $item['id'] ? ' is-active' : ''; ?>"><?php echo vs_e($item['label']); ?></a>
             <?php endforeach; ?>
         </div>
-        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek text-xs py-2 px-4 hidden md:inline-flex auth-entry-btn<?php echo $avatarUrl !== '' ? ' auth-entry-btn--user' : ''; ?>">
-            <?php if ($avatarUrl !== ''): ?>
-                <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer" decoding="async">
-            <?php endif; ?>
+        <?php /* 登录态入口仅放侧栏底部；顶栏不展示用户中心/头像。已登录时桌面也显示菜单以便打开侧栏 */ ?>
+        <?php if (empty($userLoggedIn)): ?>
+        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek text-xs py-2 px-4 hidden md:inline-flex auth-entry-btn">
             <span><?php echo vs_e($authBtnLabel); ?></span>
         </a>
         <button type="button" class="menu-btn md:hidden p-1" style="color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px;" onclick="toggleMobile()" aria-label="打开菜单">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
+        <?php else: ?>
+        <button type="button" class="menu-btn p-1" style="color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px;" onclick="toggleMobile()" aria-label="打开菜单">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <?php endif; ?>
     </div>
 </nav>

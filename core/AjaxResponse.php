@@ -20,7 +20,18 @@ class AjaxResponse
         }
         http_response_code($httpCode);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data, JSON_UNESCAPED_UNICODE);
+        $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+        if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+            $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+        }
+        $encoded = json_encode($data, $flags);
+        if ($encoded === false) {
+            $encoded = json_encode(array(
+                'code' => 0,
+                'msg'  => '响应编码失败，请缩小返回体或检查上游 Content-Type',
+            ), JSON_UNESCAPED_UNICODE);
+        }
+        echo $encoded !== false ? $encoded : '{"code":0,"msg":"响应编码失败"}';
         exit;
     }
 

@@ -170,6 +170,12 @@
         var ct = String(data.contentType || '').split(';')[0].trim().toLowerCase();
         var body = data.body == null ? '' : String(data.body);
 
+        if (encoding === 'omit') {
+            var tip = (data.msg && String(data.msg)) || '媒体体积较大，在线预览已跳过，请直接访问接口地址';
+            outputEl.innerHTML = '<div class="pg-media-wrap pg-media-wrap--hint"><p>' + escapeHtml(tip) + '</p></div>';
+            return;
+        }
+
         if (encoding === 'base64') {
             var kind = mediaKind(ct) || 'image';
             try {
@@ -249,7 +255,17 @@
             },
             body: JSON.stringify(payload)
         }).then(function (res) {
-            return res.json().then(function (data) {
+            return res.text().then(function (text) {
+                var raw = (text == null) ? '' : String(text).trim();
+                if (!raw) {
+                    throw new Error('中继返回空响应（HTTP ' + res.status + '）');
+                }
+                var data;
+                try {
+                    data = JSON.parse(raw);
+                } catch (e) {
+                    throw new Error('中继返回非 JSON（HTTP ' + res.status + '）');
+                }
                 if (!data || typeof data !== 'object') {
                     throw new Error('无效响应');
                 }
