@@ -732,12 +732,17 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 ### 4.28 Updater.php
 
-**作用：** 从 Gitee 检测新版本、下载 `apinexus{版本}.zip`、解压覆盖（保护 `config/`、`data/`），并按清单清理废弃文件。
+**作用：** 检测新版本、下载 `apinexus{版本}.zip`、解压覆盖（保护 `config/`、`data/`），并按清单清理废弃文件。
+
+**更新源顺序（三重兜底）：** Gitee（默认）→ GitCode → GitHub。`update.json` / `version.php` / 更新包均按此顺序尝试；可信域名单含 gitee / gitcode / github 相关主机。
 
 | 方法 | 说明 |
 |------|------|
+| `updateMirrors()` | 三源镜像配置（清单 / version / update-log URL） |
 | `localVersion()` | 本地版本 |
 | `checkForUpdate()` | 检测是否有新版本 |
+| `fetchRemoteManifest()` | 按镜像顺序拉取 `update.json`（失败再试 `version.php`） |
+| `buildUpdatePackageUrls()` | 构建下载链（Gitee 发行包 → GitCode 归档 → GitHub 发行/归档） |
 | `downloadAndApply($version)` | 下载并应用更新包 |
 | `removeObsoleteFiles()` | 覆盖后删除 `install/obsolete-files.json` 声明的残留文件 |
 | `protectedRelativePaths()` | 更新时绝不可覆盖的路径 |
@@ -748,11 +753,12 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 ### 4.28 UpdateLog.php
 
-**作用：** 读取版本历史（优先云端 `update-log.json`，失败读本地）。
+**作用：** 读取版本历史（优先云端 `update-log.json`：Gitee → GitCode → GitHub，失败读本地）。
 
 | 方法 | 说明 |
 |------|------|
-| `getVersions()` | 版本列表 |
+| `remoteUrls()` | 各镜像 update-log 地址 |
+| `allVersions()` / `payloadForApi()` | 版本列表 |
 | `getVersion($ver)` | 单个版本详情 |
 
 ---
