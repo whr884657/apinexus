@@ -3,4 +3,32 @@
  *
  * 壳层 / 列表 / 表单等后台共用样式统一来自 /assets/css/admin.css。
  * 本文件只放默认主题用户中心的差异覆盖，禁止再整份复制 admin.css（见 E25 / 主题资源隔离规范）。
+ *
+ * 默认主题色板：Feer 黑白系（--vs-primary = #111），禁止写死与主题无关的亮蓝英雄条。
  */
+
+:root {
+    --vs-uc-accent: #111111;
+    --vs-uc-accent-soft: #d4d4d8;
+    --vs-uc-accent-bg: #f4f4f5;
+    --vs-uc-accent-ring: rgba(17, 17, 17, 0.12);
+    --vs-uc-hero-bg: linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 48%, #3f3f46 100%);
+    --vs-uc-hero-fg: #ffffff;
+}
+
+/* 令牌 / 积分列表：默认主题保持中性黑描边 */
+.vs-admin-shell .vs-panel {
+    border: 1px solid #e5e7eb;
+}
+
+.vs-points-item__title {
+    color: #111;
+}
+
+.vs-ledger-amount.is-inc {
+    color: #15803d;
+}
+
+.vs-ledger-amount.is-dec {
+    color: #b91c1c;
+}

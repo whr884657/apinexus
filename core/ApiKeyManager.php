@@ -36,13 +36,13 @@ class ApiKeyManager
     }
 
     /**
-     * 生成 SK- + 32 位随机十六进制字符
+     * 生成 sk- + 32 位随机十六进制字符（小写前缀）
      *
      * @return string
      */
     public static function generateSecret()
     {
-        return 'SK-' . bin2hex(random_bytes(16));
+        return 'sk-' . bin2hex(random_bytes(16));
     }
 
     /**

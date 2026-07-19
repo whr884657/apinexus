@@ -636,3 +636,50 @@ body.st-uc-menu-open {
         bottom: 16px;
     }
 }
+
+/* ── 充值 / 积分 / 令牌：青绿主题色（禁止照搬默认主题亮蓝） ── */
+.st-uc-body {
+    --vs-uc-accent: var(--st-uc-accent);
+    --vs-uc-accent-soft: rgba(36, 166, 106, 0.35);
+    --vs-uc-accent-bg: rgba(36, 166, 106, 0.08);
+    --vs-uc-accent-ring: rgba(36, 166, 106, 0.18);
+    --vs-uc-hero-bg: linear-gradient(135deg, #0d3d28 0%, #168855 52%, #24a66a 100%);
+    --vs-uc-hero-fg: #ffffff;
+}
+
+.st-uc-body .vs-recharge-card.is-selected,
+.st-uc-body .vs-recharge-card.is-hot.is-selected {
+    background: rgba(36, 166, 106, 0.08);
+}
+
+.st-uc-body .vs-panel {
+    border: 1px solid var(--st-uc-border);
+    box-shadow: 0 2px 12px rgba(36, 166, 106, 0.06);
+}
+
+.st-uc-body .vs-points-item {
+    border-bottom-color: rgba(36, 166, 106, 0.12);
+}
+
+.st-uc-body .vs-points-item__title {
+    color: var(--st-uc-text);
+}
+
+.st-uc-body .vs-ledger-amount.is-inc {
+    color: #0f7a45;
+}
+
+.st-uc-body .vs-ledger-amount.is-dec {
+    color: #c0392b;
+}
+
+.st-uc-body .vs-api-tag--status.is-on,
+.st-uc-body .vs-api-list-status.is-normal {
+    background: rgba(36, 166, 106, 0.14);
+    color: #0f7a45;
+}
+
+.st-uc-body .vs-user-token-list .vs-api-item:hover,
+.st-uc-body .vs-user-api-list .vs-api-item:hover {
+    background: rgba(36, 166, 106, 0.05);
+}

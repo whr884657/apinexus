@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.34.2-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.35.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -26,7 +26,7 @@
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
 - **API 管理（已实现）**：后台接口列表与分类；接口审核（待审核/通过/不通过，可选拒绝原因）；用户中心开发者投稿与邮件通知
 - **调用统计（v3.18+）**：本地脚本头 ≤3 行 `ApiStats::hit()`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`（含 `iploc` 预留）
-- **用户令牌（v3.29+）**：表 `apikey`；用户中心与管理员后台均可管理；格式 `SK-`+32 位；每账号最多 3 个；本地/代理调用已校验密钥并累计次数
+- **用户令牌（v3.29+）**：表 `apikey`；用户中心与管理员后台均可管理；格式 `sk-`+32 位（小写前缀）；每账号最多 3 个；本地/代理调用已校验密钥并累计次数
 - **积分计费与充值（v3.33+ / v3.34）**：接口收费扣积分；用户充值中心扫码支付；订单管理与积分变动分栏；回调直访 `core/play/codeplay/notify.php`
 
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
@@ -87,7 +87,7 @@
 | 用户忘记密码 | `/user/forgot.php` | 邮箱验证码重置密码 |
 | 用户中心 | `/user/index.php` | 登录后控制台首页 |
 | API 管理 | `/user/api-manage.php` | 仅开发者：提交/编辑/删除自有接口，查看审核状态与拒绝原因；手机卡片分页 |
-| 令牌管理 | `/user/keys.php` | 创建/编辑/重置/禁用/删除调用令牌（每账号最多 3 个，格式 SK-…；点击密钥可复制） |
+| 令牌管理 | `/user/keys.php` | 创建/编辑/重置/禁用/删除调用令牌（每账号最多 3 个，格式 sk-…；点击密钥可复制） |
 | 积分变动（占位） | `/user/points.php` | 后续开发 |
 | 接口列表（占位） | `/user/apis.php` | 后续开发 |
 | 用户账号设置 | `/user/account.php` | 修改资料、头像、密码 |
@@ -288,6 +288,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.35.0（2026-07-19）
+
+- 支付图标换站内 SVG；支付配置去多余标题并补内边距
+- 订单工具栏左右布局与按钮同高；分页控件统一 32px
+- 令牌前缀 `sk-`；用户充值/积分主题色与宽屏布局
 
 ### v3.34.2（2026-07-18）
 

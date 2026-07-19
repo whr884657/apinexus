@@ -4787,16 +4787,32 @@ select.vs-input.vs-select {
     flex: 0 0 auto !important;
 }
 
-.vs-api-pager .vs-api-list-pagesize .vs-pick__btn,
-.vs-api-pager .vs-api-list-pagesize__select {
-    width: 56px !important;
-    min-width: 56px !important;
-    height: 28px !important;
-    min-height: 28px !important;
-    padding: 0 22px 0 8px !important;
-    font-size: 12px !important;
-    line-height: 26px !important;
+/* 底部分页控件统一高度（写死，见《列表底部分页规范》） */
+.vs-api-list-footer .vs-api-pager .vs-api-list-pagesize .vs-pick__btn,
+.vs-api-list-footer .vs-api-pager .vs-api-list-pagesize__select,
+.vs-api-list-footer .vs-api-pager__nav,
+.vs-api-list-footer .vs-api-pager__num {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
     box-sizing: border-box !important;
+    font-size: 12px !important;
+    line-height: 30px !important;
+    border-radius: var(--vs-btn-radius, 10px) !important;
+}
+.vs-api-list-footer .vs-api-pager .vs-api-list-pagesize .vs-pick__btn,
+.vs-api-list-footer .vs-api-pager .vs-api-list-pagesize__select {
+    width: 64px !important;
+    min-width: 64px !important;
+    padding: 0 22px 0 10px !important;
+}
+.vs-api-list-footer .vs-api-pager__nav,
+.vs-api-list-footer .vs-api-pager__num {
+    padding: 0 12px !important;
+    min-width: 0 !important;
+}
+.vs-api-list-footer .vs-api-pager .vs-api-list-pagesize__label {
+    line-height: 32px !important;
 }
 
 .vs-api-pager .vs-api-list-pagesize .vs-pick__btn::after {
@@ -4807,8 +4823,8 @@ select.vs-input.vs-select {
 
 .vs-api-pager__nav,
 .vs-api-pager__num {
-    height: 28px !important;
-    min-height: 28px !important;
+    height: 32px !important;
+    min-height: 32px !important;
     box-sizing: border-box !important;
 }
 
@@ -5173,19 +5189,20 @@ select.vs-input.vs-select {
     cursor: pointer;
 }
 .vs-pay-method-btn.is-on {
-    border-color: #2563eb;
-    background: #eff6ff;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+    border-color: var(--vs-uc-accent, #111);
+    background: var(--vs-uc-accent-bg, #f4f4f5);
+    box-shadow: 0 0 0 2px var(--vs-uc-accent-ring, rgba(17, 17, 17, 0.12));
 }
 .vs-pay-ico {
     width: 22px;
     height: 22px;
     flex-shrink: 0;
     display: block;
+    object-fit: contain;
 }
-/* 财务页：标题与工具栏紧挨，不左右撑满留白 */
+/* 财务页：标题居左，筛选/刷新居右（同一行） */
 .vs-content__head:has(.vs-finance-head-actions) {
-    justify-content: flex-start;
+    justify-content: space-between;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px 14px;
@@ -5194,13 +5211,14 @@ select.vs-input.vs-select {
     flex: 0 0 auto;
 }
 .vs-content__head:has(.vs-finance-head-actions) .vs-content__actions {
-    flex: 0 1 auto;
-    min-width: 0;
+    flex: 0 0 auto;
+    margin-left: auto;
 }
 .vs-finance-head-actions {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
 }
 .vs-finance-filters {
@@ -5208,11 +5226,27 @@ select.vs-input.vs-select {
     flex-wrap: wrap;
     gap: 6px;
 }
+/* 筛选与刷新统一高度（覆盖 .vs-btn 44px / .vs-btn--outline 28px） */
 .vs-finance-filters .vs-btn,
 .vs-finance-refresh {
-    min-height: 34px;
-    padding: 0 12px;
-    font-size: 13px;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
+    border-radius: var(--vs-btn-radius, 10px) !important;
+}
+
+.vs-pay-config-panel {
+    padding: 0 !important;
+}
+.vs-pay-config-panel > .vs-panel__body {
+    padding: 24px 28px;
+}
+.vs-pay-config-panel > .vs-panel__foot,
+.vs-pay-config-panel > .vs-finance-form-foot {
+    padding: 16px 28px;
 }
 
 .vs-finance-panel {
@@ -5455,8 +5489,8 @@ select.vs-input.vs-select {
     background: #fff;
 }
 .vs-pkg-card.is-hot {
-    border-color: #93c5fd;
-    background: #f8fbff;
+    border-color: #a1a1aa;
+    background: #fafafa;
 }
 .vs-pkg-card__name {
     font-weight: 600;
@@ -5467,15 +5501,15 @@ select.vs-input.vs-select {
 .vs-pkg-card__badge {
     font-size: 11px;
     padding: 1px 6px;
-    border-radius: 999px;
-    background: #2563eb;
+    border-radius: 6px;
+    background: #111;
     color: #fff;
 }
 .vs-pkg-card__money {
     margin-top: 8px;
     font-size: 20px;
     font-weight: 700;
-    color: #2563eb;
+    color: #111;
 }
 .vs-pkg-card__points {
     margin-top: 4px;
@@ -5503,8 +5537,10 @@ select.vs-input.vs-select {
 }
 .vs-recharge,
 .vs-points {
-    max-width: 920px;
+    max-width: none;
+    width: 100%;
 }
+/* 英雄条 / 套餐强调色：由主题 user.css 覆盖 CSS 变量 */
 .vs-recharge-hero,
 .vs-points-hero {
     display: flex;
@@ -5515,8 +5551,8 @@ select.vs-input.vs-select {
     padding: 20px 22px;
     margin-bottom: 16px;
     border-radius: 14px;
-    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #1d4ed8 100%);
-    color: #fff;
+    background: var(--vs-uc-hero-bg, linear-gradient(135deg, #111 0%, #2d2d2d 55%, #3f3f46 100%));
+    color: var(--vs-uc-hero-fg, #fff);
 }
 .vs-recharge-hero__label,
 .vs-points-hero__label {
@@ -5564,16 +5600,16 @@ select.vs-input.vs-select {
     transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 .vs-recharge-card:hover {
-    border-color: #93c5fd;
+    border-color: var(--vs-uc-accent-soft, #d4d4d8);
 }
 .vs-recharge-card.is-selected,
 .vs-recharge-card.is-hot.is-selected {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-    background: #eff6ff;
+    border-color: var(--vs-uc-accent, #111);
+    box-shadow: 0 0 0 2px var(--vs-uc-accent-ring, rgba(17, 17, 17, 0.12));
+    background: var(--vs-uc-accent-bg, #f4f4f5);
 }
 .vs-recharge-card.is-hot {
-    border-color: #93c5fd;
+    border-color: var(--vs-uc-accent-soft, #d4d4d8);
 }
 .vs-recharge-card--custom {
     border-style: dashed;
@@ -5585,8 +5621,8 @@ select.vs-input.vs-select {
     right: 10px;
     font-size: 11px;
     padding: 1px 6px;
-    border-radius: 999px;
-    background: #2563eb;
+    border-radius: 6px;
+    background: var(--vs-uc-accent, #111);
     color: #fff;
 }
 .vs-recharge-card__name {
@@ -5597,7 +5633,7 @@ select.vs-input.vs-select {
     margin-top: 10px;
     font-size: 22px;
     font-weight: 700;
-    color: #2563eb;
+    color: var(--vs-uc-accent, #111);
 }
 .vs-recharge-card__points {
     margin-top: 4px;

@@ -43,12 +43,6 @@ if ($packagesJson === false) {
     $packagesJson = '[]';
 }
 
-$payIcons = array(
-    'alipay' => '<svg class="vs-pay-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#1677FF"/><path fill="#fff" d="M6.2 15.4c1.7 1.1 3.5 1.7 5.3 1.7 2.7 0 4.6-1.3 4.6-3.2 0-1.5-1.1-2.5-3.3-3.1l-1.7-.4c-.9-.2-1.3-.5-1.3-1 0-.6.6-1 1.6-1 1.1 0 2.2.3 3.3.9l.7-1.8c-1.1-.6-2.4-.9-3.9-.9-2.5 0-4.1 1.3-4.1 3.1 0 1.5 1.1 2.5 3.2 3l1.7.4c1 .2 1.5.5 1.5 1.1 0 .6-.7 1.1-1.9 1.1-1.4 0-2.8-.5-4.1-1.4l-.6 1.5z"/></svg>',
-    'wxpay'  => '<svg class="vs-pay-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#07C160"/><path fill="#fff" d="M9.4 8.2c-2.7 0-4.9 1.8-4.9 4 0 1.3.7 2.4 1.9 3.2l-.5 1.5 1.7-.9c.5.1 1 .2 1.5.2.2 0 .4 0 .6-.1-.1-.3-.2-.7-.2-1 0-2.1 2-3.8 4.5-3.8.2 0 .4 0 .6.1C14.1 9.7 11.9 8.2 9.4 8.2zm-1.9 2.1a.7.7 0 110 1.4.7.7 0 010-1.4zm3.5 0a.7.7 0 110 1.4.7.7 0 010-1.4zm4.4.9c-2.3 0-4.1 1.5-4.1 3.3 0 1.8 1.8 3.3 4.1 3.3.5 0 1-.1 1.4-.2l1.4.8-.4-1.3c1-.7 1.6-1.6 1.6-2.6 0-1.8-1.8-3.3-4-3.3zm-1.5 1.8a.6.6 0 110 1.2.6.6 0 010-1.2zm3 0a.6.6 0 110 1.2.6.6 0 010-1.2z"/></svg>',
-    'qqpay'  => '<svg class="vs-pay-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#12B7F5"/><path fill="#fff" d="M12 5.5c-2 0-3.5 1.6-3.5 4.1 0 1.6.5 3.1 1.1 4.2-.9.4-1.5 1.1-1.5 1.9 0 .8.6 1.4 1.7 1.7-.1.4-.3 1-.3 1.4 0 .7.5 1.2 1.4 1.2.7 0 1.3-.3 1.7-.8.4.5 1 .8 1.7.8.9 0 1.4-.5 1.4-1.2 0-.4-.2-1-.3-1.4 1.1-.3 1.7-.9 1.7-1.7 0-.8-.6-1.5-1.5-1.9.6-1.1 1.1-2.6 1.1-4.2 0-2.5-1.5-4.1-3.5-4.1z"/></svg>',
-);
-
 vs_admin_layout_start('支付配置', 'payment');
 
 if (!$cfg['ready']) {
@@ -56,12 +50,11 @@ if (!$cfg['ready']) {
 }
 ?>
 
-<form method="post" data-ajax="1" id="payConfigForm" class="vs-panel vs-finance-panel">
+<form method="post" data-ajax="1" id="payConfigForm" class="vs-panel vs-pay-config-panel">
     <input type="hidden" name="action" value="save">
     <input type="hidden" name="packages" id="payPackages" value="<?php echo vs_e($packagesJson); ?>">
     <div class="vs-panel__body">
         <div class="vs-form-section">
-            <h2 class="vs-form-section__title">码支付网关</h2>
             <div class="vs-form-row">
                 <label class="vs-label" for="payUrl">接口地址</label>
                 <input type="url" class="vs-input" id="payUrl" name="url" value="<?php echo vs_e($cfg['url']); ?>"
@@ -107,7 +100,7 @@ if (!$cfg['ready']) {
                         $on = in_array($code, $methods, true);
                         ?>
                         <button type="button" class="vs-pay-method-btn<?php echo $on ? ' is-on' : ''; ?>" data-method="<?php echo vs_e($code); ?>" aria-pressed="<?php echo $on ? 'true' : 'false'; ?>">
-                            <?php echo $payIcons[$code]; ?>
+                            <?php echo PayConfig::iconHtml($code); ?>
                             <span><?php echo vs_e($label); ?></span>
                         </button>
                         <input type="checkbox" class="vs-pay-method-input" name="methods[]" value="<?php echo vs_e($code); ?>"<?php echo $on ? ' checked' : ''; ?> hidden>

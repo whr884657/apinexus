@@ -67,9 +67,9 @@ $methods = $cfg['methods'];
 $rate = PayConfig::fmtPoints($cfg['rate']);
 
 $payIcons = array(
-    'alipay' => '<svg class="vs-pay-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#1677FF"/><path fill="#fff" d="M6.2 15.4c1.7 1.1 3.5 1.7 5.3 1.7 2.7 0 4.6-1.3 4.6-3.2 0-1.5-1.1-2.5-3.3-3.1l-1.7-.4c-.9-.2-1.3-.5-1.3-1 0-.6.6-1 1.6-1 1.1 0 2.2.3 3.3.9l.7-1.8c-1.1-.6-2.4-.9-3.9-.9-2.5 0-4.1 1.3-4.1 3.1 0 1.5 1.1 2.5 3.2 3l1.7.4c1 .2 1.5.5 1.5 1.1 0 .6-.7 1.1-1.9 1.1-1.4 0-2.8-.5-4.1-1.4l-.6 1.5z"/></svg>',
-    'wxpay'  => '<svg class="vs-pay-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#07C160"/><path fill="#fff" d="M9.4 8.2c-2.7 0-4.9 1.8-4.9 4 0 1.3.7 2.4 1.9 3.2l-.5 1.5 1.7-.9c.5.1 1 .2 1.5.2.2 0 .4 0 .6-.1-.1-.3-.2-.7-.2-1 0-2.1 2-3.8 4.5-3.8.2 0 .4 0 .6.1C14.1 9.7 11.9 8.2 9.4 8.2zm-1.9 2.1a.7.7 0 110 1.4.7.7 0 010-1.4zm3.5 0a.7.7 0 110 1.4.7.7 0 010-1.4zm4.4.9c-2.3 0-4.1 1.5-4.1 3.3 0 1.8 1.8 3.3 4.1 3.3.5 0 1-.1 1.4-.2l1.4.8-.4-1.3c1-.7 1.6-1.6 1.6-2.6 0-1.8-1.8-3.3-4-3.3zm-1.5 1.8a.6.6 0 110 1.2.6.6 0 010-1.2zm3 0a.6.6 0 110 1.2.6.6 0 010-1.2z"/></svg>',
-    'qqpay'  => '<svg class="vs-pay-ico" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#12B7F5"/><path fill="#fff" d="M12 5.5c-2 0-3.5 1.6-3.5 4.1 0 1.6.5 3.1 1.1 4.2-.9.4-1.5 1.1-1.5 1.9 0 .8.6 1.4 1.7 1.7-.1.4-.3 1-.3 1.4 0 .7.5 1.2 1.4 1.2.7 0 1.3-.3 1.7-.8.4.5 1 .8 1.7.8.9 0 1.4-.5 1.4-1.2 0-.4-.2-1-.3-1.4 1.1-.3 1.7-.9 1.7-1.7 0-.8-.6-1.5-1.5-1.9.6-1.1 1.1-2.6 1.1-4.2 0-2.5-1.5-4.1-3.5-4.1z"/></svg>',
+    'alipay' => PayConfig::iconHtml('alipay'),
+    'wxpay'  => PayConfig::iconHtml('wxpay'),
+    'qqpay'  => PayConfig::iconHtml('qqpay'),
 );
 
 vs_user_layout_start('充值中心', 'recharge');
@@ -113,7 +113,7 @@ vs_user_layout_start('充值中心', 'recharge');
         <div class="vs-pay-method-btns vs-pay-method-btns--pick" id="rechargePayMethods" role="group">
             <?php foreach ($methods as $i => $m): ?>
                 <button type="button" class="vs-pay-method-btn<?php echo $i === 0 ? ' is-on' : ''; ?>" data-paytype="<?php echo vs_e($m); ?>" aria-pressed="<?php echo $i === 0 ? 'true' : 'false'; ?>">
-                    <?php echo isset($payIcons[$m]) ? $payIcons[$m] : ''; ?>
+                    <?php echo PayConfig::iconHtml($m); ?>
                     <span><?php echo vs_e(PayConfig::methodLabel($m)); ?></span>
                 </button>
             <?php endforeach; ?>

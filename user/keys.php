@@ -177,7 +177,7 @@ vs_user_layout_start('令牌管理', 'keys', $headerActions);
         vs_render_notice(
             'info',
             '',
-            '每个账号最多 ' . ApiKeyManager::MAX_PER_USER . ' 个令牌。令牌以 SK- 开头；禁用后即使泄露也无法继续调用。',
+            '每个账号最多 ' . ApiKeyManager::MAX_PER_USER . ' 个令牌。令牌以 sk- 开头；禁用后即使泄露也无法继续调用。',
             array('compact' => true)
         );
         ?>

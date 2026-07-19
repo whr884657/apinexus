@@ -242,4 +242,53 @@ class PayConfig
         $type = strtolower((string) $type);
         return isset($map[$type]) ? $map[$type] : $type;
     }
+
+    /**
+     * 支付方式图标相对站点根路径
+     *
+     * @param string $type alipay|wxpay|qqpay
+     * @return string
+     */
+    public static function iconPath($type)
+    {
+        $map = array(
+            'alipay' => '/assets/img/zhfubao.svg',
+            'wxpay'  => '/assets/img/weixinzhifu.svg',
+            'qqpay'  => '/assets/img/QQ.svg',
+        );
+        $type = strtolower((string) $type);
+        return isset($map[$type]) ? $map[$type] : '';
+    }
+
+    /**
+     * 支付方式图标完整 URL
+     *
+     * @param string $type
+     * @return string
+     */
+    public static function iconUrl($type)
+    {
+        $path = self::iconPath($type);
+        if ($path === '') {
+            return '';
+        }
+        return rtrim(vs_base_url(), '/') . $path;
+    }
+
+    /**
+     * 支付方式图标 HTML（img）
+     *
+     * @param string $type
+     * @param string $class
+     * @return string
+     */
+    public static function iconHtml($type, $class = 'vs-pay-ico')
+    {
+        $url = self::iconUrl($type);
+        if ($url === '') {
+            return '';
+        }
+        $label = self::methodLabel($type);
+        return '<img class="' . vs_e($class) . '" src="' . vs_e($url) . '" alt="' . vs_e($label) . '" width="22" height="22" loading="lazy" decoding="async">';
+    }
 }
