@@ -7,19 +7,13 @@
 </p>
 
 <p align="center">
-  <code>version 4.1.1</code>
-  ·
-  <code>License 开源</code>
-  ·
-  <a href="https://gitee.com/xunjinlu/apinexus"><code>Gitee</code></a>
-  ·
-  <a href="https://gitcode.com/xunjinlu/apinexus"><code>GitCode</code></a>
-  ·
-  <a href="https://github.com/whr884657/apinexus"><code>GitHub</code></a>
-  ·
-  <code>PHP 7.4+</code>
-  ·
-  <code>MySQL 5.7+</code>
+  <img src="https://img.shields.io/badge/version-4.1.1-blue" alt="version">
+  <img src="https://img.shields.io/badge/License-%E5%BC%80%E6%BA%90-green" alt="license">
+  <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-%E4%BB%A3%E7%A0%81%E4%BB%93%E5%BA%93-C71D23?logo=gitee" alt="Gitee"></a>
+  <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-%E9%95%9C%E5%83%8F%E4%BB%93%E5%BA%93-C71D23" alt="GitCode"></a>
+  <a href="https://github.com/whr884657/apinexus"><img src="https://img.shields.io/badge/GitHub-%E9%95%9C%E5%83%8F%E4%BB%93%E5%BA%93-181717?logo=github" alt="GitHub"></a>
+  <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
+  <img src="https://img.shields.io/badge/MySQL-5.7+-4479A1?logo=mysql&logoColor=white" alt="MySQL">
 </p>
 
 ---
