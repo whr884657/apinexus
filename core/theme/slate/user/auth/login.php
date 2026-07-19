@@ -25,7 +25,7 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
     <div class="st-auth__field">
         <div class="st-auth__pw-wrap">
             <input class="st-auth__input" id="password" name="password" type="password" placeholder="请输入密码" autocomplete="current-password" maxlength="64" required aria-label="密码">
-            <button type="button" class="st-auth__pw-toggle" data-st-pw-toggle aria-label="显示密码">显示</button>
+            <?php echo vs_slate_pw_toggle_html(); ?>
         </div>
     </div>
     <div class="st-auth__row">

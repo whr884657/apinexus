@@ -107,7 +107,13 @@ ThemeManager::renderThemeAuthHead('忘记密码');
 
     function parseWaitSeconds(msg) {
         var match = /请\s*(\d+)\s*秒/.exec(msg || '');
-        return match ? parseInt(match[1], 10) : 120;
+        return match ? parseInt(match[1], 10) : 0;
+    }
+
+    function resetSendCodeBtn() {
+        if (!sendCodeBtn) return;
+        sendCodeBtn.disabled = false;
+        sendCodeBtn.textContent = '获取验证码';
     }
 
     function applyMailTicket(data) {
@@ -171,7 +177,12 @@ ThemeManager::renderThemeAuthHead('忘记密码');
                         startCountdown(120);
                     } else {
                         showMessage(data.msg || '发送失败', 'error');
-                        startCountdown(parseWaitSeconds(data.msg));
+                        var waitSec = parseWaitSeconds(data.msg);
+                        if (waitSec > 0) {
+                            startCountdown(waitSec);
+                        } else {
+                            resetSendCodeBtn();
+                        }
                     }
                 })
                 .catch(function () {
