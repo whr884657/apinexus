@@ -8,16 +8,29 @@
 
 class Updater
 {
+    /** 默认清单 / 版本地址（Gitee 主源；实际拉取按 updateMirrors 顺序兜底） */
     const MANIFEST_URL = 'https://gitee.com/xunjinlu/apinexus/raw/main/update.json';
     const VERSION_URL  = 'https://gitee.com/xunjinlu/apinexus/raw/main/core/version.php';
     const DEFAULT_REPO = 'xunjinlu/apinexus';
     const DEFAULT_BRANCH = 'main';
+    /** GitHub 镜像仓库（owner 与国内仓不同） */
+    const GITHUB_REPO = 'whr884657/apinexus';
+    /** GitCode 镜像仓库 */
+    const GITCODE_REPO = 'xunjinlu/apinexus';
 
     /** 云端更新可信域名（直连 HTTPS，不依赖本地 CA 证书包） */
     const TRUSTED_UPDATE_HOSTS = array(
         'gitee.com',
         'www.gitee.com',
         'foruda.gitee.com',
+        'gitcode.com',
+        'www.gitcode.com',
+        'raw.gitcode.com',
+        'github.com',
+        'www.github.com',
+        'raw.githubusercontent.com',
+        'objects.githubusercontent.com',
+        'codeload.github.com',
     );
 
     /** @var string 最近一次下载/网络错误说明 */
@@ -529,41 +542,86 @@ class Updater
     }
 
     /**
-     * 拉取远程 update.json
+     * 更新源镜像列表（顺序：Gitee → GitCode → GitHub）
+     *
+     * @return array
+     */
+    public static function updateMirrors()
+    {
+        return array(
+            array(
+                'id'             => 'gitee',
+                'label'          => 'Gitee',
+                'repo'           => self::DEFAULT_REPO,
+                'manifest_url'   => 'https://gitee.com/' . self::DEFAULT_REPO . '/raw/' . self::DEFAULT_BRANCH . '/update.json',
+                'version_url'    => 'https://gitee.com/' . self::DEFAULT_REPO . '/raw/' . self::DEFAULT_BRANCH . '/core/version.php',
+                'update_log_url' => 'https://gitee.com/' . self::DEFAULT_REPO . '/raw/' . self::DEFAULT_BRANCH . '/update-log.json',
+            ),
+            array(
+                'id'             => 'gitcode',
+                'label'          => 'GitCode',
+                'repo'           => self::GITCODE_REPO,
+                'manifest_url'   => 'https://raw.gitcode.com/' . self::GITCODE_REPO . '/raw/' . self::DEFAULT_BRANCH . '/update.json',
+                'version_url'    => 'https://raw.gitcode.com/' . self::GITCODE_REPO . '/raw/' . self::DEFAULT_BRANCH . '/core/version.php',
+                'update_log_url' => 'https://raw.gitcode.com/' . self::GITCODE_REPO . '/raw/' . self::DEFAULT_BRANCH . '/update-log.json',
+            ),
+            array(
+                'id'             => 'github',
+                'label'          => 'GitHub',
+                'repo'           => self::GITHUB_REPO,
+                'manifest_url'   => 'https://raw.githubusercontent.com/' . self::GITHUB_REPO . '/' . self::DEFAULT_BRANCH . '/update.json',
+                'version_url'    => 'https://raw.githubusercontent.com/' . self::GITHUB_REPO . '/' . self::DEFAULT_BRANCH . '/core/version.php',
+                'update_log_url' => 'https://raw.githubusercontent.com/' . self::GITHUB_REPO . '/' . self::DEFAULT_BRANCH . '/update-log.json',
+            ),
+        );
+    }
+
+    /**
+     * 拉取远程 update.json（Gitee → GitCode → GitHub；失败再试各源 version.php）
      *
      * @return array|null
      */
     public static function fetchRemoteManifest()
     {
-        $body = self::httpGet(self::MANIFEST_URL, 15);
-        if ($body !== false && $body !== '') {
+        foreach (self::updateMirrors() as $mirror) {
+            $body = self::httpGet($mirror['manifest_url'], 15);
+            if ($body === false || $body === '') {
+                continue;
+            }
             $data = json_decode($body, true);
             if (is_array($data) && !empty($data['version'])) {
+                if (empty($data['repo'])) {
+                    $data['repo'] = $mirror['repo'];
+                }
+                if (empty($data['branch'])) {
+                    $data['branch'] = self::DEFAULT_BRANCH;
+                }
                 return $data;
             }
         }
 
-        $versionBody = self::httpGet(self::VERSION_URL, 15);
-        if ($versionBody === false || $versionBody === '') {
-            return null;
-        }
-
-        if (preg_match("/define\s*\(\s*'VS_VERSION'\s*,\s*'([^']+)'\s*\)/", $versionBody, $matches)) {
-            return array(
-                'version'      => $matches[1],
-                'title'        => '版本更新',
-                'release_date' => '',
-                'changes'      => array('检测到新版本，建议立即更新'),
-                'repo'         => self::DEFAULT_REPO,
-                'branch'       => self::DEFAULT_BRANCH,
-            );
+        foreach (self::updateMirrors() as $mirror) {
+            $versionBody = self::httpGet($mirror['version_url'], 15);
+            if ($versionBody === false || $versionBody === '') {
+                continue;
+            }
+            if (preg_match("/define\s*\(\s*'VS_VERSION'\s*,\s*'([^']+)'\s*\)/", $versionBody, $matches)) {
+                return array(
+                    'version'      => $matches[1],
+                    'title'        => '版本更新',
+                    'release_date' => '',
+                    'changes'      => array('检测到新版本，建议立即更新'),
+                    'repo'         => $mirror['repo'],
+                    'branch'       => self::DEFAULT_BRANCH,
+                );
+            }
         }
 
         return null;
     }
 
     /**
-     * 构建更新包下载地址（优先云端发行版附件）
+     * 构建更新包下载地址（Gitee 发行包优先，再 GitCode / GitHub）
      *
      * @param string $repo
      * @param string $branch
@@ -579,20 +637,51 @@ class Updater
         }
 
         $ver = ltrim(trim($version), 'vV');
-        if ($ver !== '') {
-            $tag = 'v' . $ver;
-            $fileName = 'apinexus' . $ver . '.zip';
-            $urls[] = array(
-                'label' => '云端发行包',
-                'url'   => self::buildReleasePackageUrl($repo, $ver),
-            );
+        if ($ver === '') {
+            return $urls;
         }
+
+        $tag = 'v' . $ver;
+        $fileName = 'apinexus' . $ver . '.zip';
+        $giteeRepo = self::DEFAULT_REPO;
+        if (is_string($repo) && $repo !== '' && strpos($repo, '/') !== false
+            && stripos($repo, 'github.com') === false
+            && stripos($repo, 'gitcode') === false
+            && stripos($repo, 'whr884657') === false
+        ) {
+            $giteeRepo = $repo;
+        }
+
+        $urls[] = array(
+            'label' => 'Gitee 发行包',
+            'url'   => self::buildReleasePackageUrl($giteeRepo, $ver),
+        );
+        $urls[] = array(
+            'label' => 'GitCode 标签包',
+            'url'   => 'https://raw.gitcode.com/' . self::GITCODE_REPO
+                . '/archive/refs/tags/' . rawurlencode($tag) . '.zip',
+        );
+        $urls[] = array(
+            'label' => 'GitCode 分支包',
+            'url'   => 'https://raw.gitcode.com/' . self::GITCODE_REPO
+                . '/archive/refs/heads/' . rawurlencode($tag) . '.zip',
+        );
+        $urls[] = array(
+            'label' => 'GitHub 发行包',
+            'url'   => 'https://github.com/' . self::GITHUB_REPO . '/releases/download/'
+                . rawurlencode($tag) . '/' . rawurlencode($fileName),
+        );
+        $urls[] = array(
+            'label' => 'GitHub 标签包',
+            'url'   => 'https://github.com/' . self::GITHUB_REPO . '/archive/refs/tags/'
+                . rawurlencode($tag) . '.zip',
+        );
 
         return $urls;
     }
 
     /**
-     * 云端发行版压缩包直链
+     * Gitee 发行版压缩包直链（默认主源）
      *
      * @param string $repo  如 xunjinlu/apinexus
      * @param string $version 如 1.0.22
@@ -603,6 +692,9 @@ class Updater
         $ver = ltrim(trim($version), 'vV');
         $tag = 'v' . $ver;
         $fileName = 'apinexus' . $ver . '.zip';
+        if ($repo === '' || !is_string($repo)) {
+            $repo = self::DEFAULT_REPO;
+        }
         return 'https://gitee.com/' . $repo . '/releases/download/'
             . rawurlencode($tag) . '/' . rawurlencode($fileName);
     }

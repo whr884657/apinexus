@@ -14,7 +14,8 @@
         <ul>
             <li>系统版本：v<?php echo vs_e(VS_VERSION); ?></li>
             <li>当前主题：<?php echo vs_e($themeId); ?></li>
-            <li>开源仓库：<a href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer">gitee.com/xunjinlu/apinexus</a></li>
+            <li>开源仓库（Gitee 主）：<a href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer">gitee.com/xunjinlu/apinexus</a></li>
+            <li>镜像：<a href="https://gitcode.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer">GitCode</a> · <a href="https://github.com/whr884657/apinexus" target="_blank" rel="noopener noreferrer">GitHub</a></li>
         </ul>
     </div>
 </main>

@@ -40,7 +40,7 @@ class UpdateLog
     }
 
     /**
-     * 构建云端 raw 地址
+     * 构建云端 raw 地址（默认 Gitee 主源；实际拉取见 fetchRemote 多源兜底）
      *
      * @param string|null $repo
      * @param string|null $branch
@@ -59,6 +59,22 @@ class UpdateLog
         }
 
         return 'https://gitee.com/' . $repo . '/raw/' . $branch . '/' . self::LOCAL_FILE;
+    }
+
+    /**
+     * 各镜像 update-log.json 地址（Gitee → GitCode → GitHub）
+     *
+     * @return array
+     */
+    public static function remoteUrls()
+    {
+        $urls = array();
+        foreach (Updater::updateMirrors() as $mirror) {
+            if (!empty($mirror['update_log_url'])) {
+                $urls[] = $mirror['update_log_url'];
+            }
+        }
+        return $urls;
     }
 
     /**
@@ -96,7 +112,7 @@ class UpdateLog
     }
 
     /**
-     * 从云端拉取 update-log.json
+     * 从云端拉取 update-log.json（Gitee → GitCode → GitHub）
      *
      * @param string|null $repo
      * @param string|null $branch
@@ -104,18 +120,29 @@ class UpdateLog
      */
     public static function fetchRemote($repo = null, $branch = null)
     {
-        $url = self::remoteUrl($repo, $branch);
-        $body = Updater::httpGet($url, 15);
-        if ($body === false || $body === '') {
-            return null;
+        $urls = self::remoteUrls();
+        if ($repo !== null || $branch !== null) {
+            array_unshift($urls, self::remoteUrl($repo, $branch));
         }
 
-        $data = json_decode($body, true);
-        if (!is_array($data) || empty($data['versions']) || !is_array($data['versions'])) {
-            return null;
+        $seen = array();
+        foreach ($urls as $url) {
+            if ($url === '' || isset($seen[$url])) {
+                continue;
+            }
+            $seen[$url] = true;
+            $body = Updater::httpGet($url, 15);
+            if ($body === false || $body === '') {
+                continue;
+            }
+            $data = json_decode($body, true);
+            if (!is_array($data) || empty($data['versions']) || !is_array($data['versions'])) {
+                continue;
+            }
+            return $data;
         }
 
-        return $data;
+        return null;
     }
 
     /**
