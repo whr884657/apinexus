@@ -3745,9 +3745,9 @@ select.vs-input.vs-select {
 
 .vs-api-list-pagesize__select {
     width: 72px;
-    height: 36px;
+    height: 32px;
     padding: 0 8px;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .vs-api-pager {
@@ -5227,14 +5227,15 @@ select.vs-input.vs-select {
     flex-wrap: wrap;
     gap: 6px;
 }
-/* 筛选与刷新统一高度（覆盖 .vs-btn 44px / .vs-btn--outline 28px） */
+/* 筛选与刷新统一高度（覆盖 .vs-btn 44px / .vs-btn--outline 28px）；与底部分页同为 32px */
 .vs-finance-filters .vs-btn,
 .vs-finance-refresh {
-    height: 36px !important;
-    min-height: 36px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
     padding: 0 14px !important;
-    font-size: 13px !important;
-    line-height: 1 !important;
+    font-size: 12px !important;
+    line-height: 30px !important;
     box-sizing: border-box !important;
     border-radius: var(--vs-btn-radius, 10px) !important;
 }
@@ -5400,8 +5401,14 @@ select.vs-input.vs-select {
 }
 
 @media (max-width: 900px) {
+    .vs-content__head:has(.vs-finance-head-actions) {
+        flex-wrap: nowrap;
+        align-items: center;
+    }
     .vs-content__head:has(.vs-finance-head-actions) .vs-content__actions {
-        flex: 1 1 100%;
+        flex: 0 0 auto;
+        margin-left: 8px;
+        width: auto;
     }
     .vs-finance-row--head {
         display: none;
@@ -5794,12 +5801,12 @@ select.vs-input.vs-select {
 }
 
 /* ── API 调用日志 ── */
-.vs-log-head-actions {
+.vs-log-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
 .vs-log-search {
@@ -5807,13 +5814,22 @@ select.vs-input.vs-select {
     align-items: center;
     gap: 8px;
     min-width: 0;
+    flex: 1 1 220px;
 }
 
 .vs-log-search__input {
-    width: min(280px, 42vw);
-    height: 32px;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 140px;
+    max-width: 320px;
+    height: 32px !important;
     padding: 0 10px;
-    font-size: 13px;
+    font-size: 12px;
+    box-sizing: border-box;
+}
+
+.vs-log-toolbar .vs-finance-filters {
+    flex: 0 0 auto;
 }
 
 .vs-log-panel {
@@ -5830,24 +5846,26 @@ select.vs-input.vs-select {
 }
 
 .vs-log-grid {
-    min-width: 720px;
+    min-width: 780px;
 }
 
 .vs-log-row {
     display: grid;
     grid-template-columns:
-        minmax(160px, 1.8fr)
+        minmax(150px, 1.6fr)
+        88px
+        minmax(120px, 1.1fr)
         72px
-        minmax(110px, 1fr)
         72px
-        72px
-        minmax(140px, 1.1fr);
+        minmax(130px, 1fr)
+        72px;
     gap: 8px 12px;
     align-items: center;
     padding: 12px 16px;
     border-bottom: 1px solid #eef2f7;
     cursor: pointer;
     background: #fff;
+    transition: background 0.12s;
 }
 
 .vs-log-row:hover {
@@ -5892,6 +5910,26 @@ select.vs-input.vs-select {
     font-size: 12px;
 }
 
+.vs-log-method {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+}
+
+.vs-log-method.is-get { color: #047857; background: #ecfdf5; }
+.vs-log-method.is-post { color: #1d4ed8; background: #eff6ff; }
+.vs-log-method.is-put { color: #b45309; background: #fffbeb; }
+.vs-log-method.is-delete { color: #b91c1c; background: #fef2f2; }
+.vs-log-method.is-patch { color: #6d28d9; background: #f5f3ff; }
+.vs-log-method.is-other { color: #475569; background: #f1f5f9; }
+
 .vs-log-status {
     display: inline-flex;
     align-items: center;
@@ -5909,6 +5947,35 @@ select.vs-input.vs-select {
 .vs-log-status.is-fail {
     color: #b91c1c;
     background: #fef2f2;
+}
+
+.vs-log-http {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.vs-log-http.is-2xx { color: #047857; }
+.vs-log-http.is-3xx { color: #1d4ed8; }
+.vs-log-http.is-4xx { color: #b45309; }
+.vs-log-http.is-5xx { color: #b91c1c; }
+
+.vs-log-view {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.vs-log-row:hover .vs-log-view {
+    border-color: #111;
+    color: #111;
 }
 
 .vs-log-cards {
@@ -5954,6 +6021,14 @@ select.vs-input.vs-select {
     font-size: 12px;
     color: #64748b;
     margin-bottom: 6px;
+    align-items: center;
+}
+
+.vs-log-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .vs-log-card__time {
@@ -5964,46 +6039,99 @@ select.vs-input.vs-select {
 .vs-log-detail {
     display: flex;
     flex-direction: column;
+    gap: 0;
+}
+
+.vs-log-detail__hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    margin: -4px 0 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    border: 1px solid #e2e8f0;
+}
+
+.vs-log-detail__hero-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-right: auto;
+}
+
+.vs-log-detail__section {
+    margin-bottom: 16px;
+}
+
+.vs-log-detail__section-title {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.vs-log-detail__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 10px;
 }
 
-.vs-log-detail__row {
-    display: grid;
-    grid-template-columns: 88px minmax(0, 1fr);
-    gap: 10px;
-    align-items: start;
+.vs-log-detail__item {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    min-width: 0;
+}
+
+.vs-log-detail__item--full {
+    grid-column: 1 / -1;
 }
 
 .vs-log-detail__label {
-    font-size: 12px;
+    display: block;
+    font-size: 11px;
     color: #94a3b8;
-    padding-top: 2px;
+    margin-bottom: 4px;
 }
 
 .vs-log-detail__value {
+    display: block;
     font-size: 13px;
-    color: #334155;
+    color: #0f172a;
     word-break: break-all;
-    line-height: 1.5;
+    line-height: 1.45;
 }
 
 @media (max-width: 900px) {
-    .vs-content__head:has(.vs-log-head-actions) .vs-content__actions {
-        flex: 1 1 100%;
-    }
-
-    .vs-log-head-actions {
-        width: 100%;
-        justify-content: stretch;
+    .vs-log-toolbar {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .vs-log-search {
-        flex: 1 1 100%;
+        flex: 1 1 auto;
+        width: 100%;
     }
 
     .vs-log-search__input {
+        max-width: none;
+    }
+
+    .vs-log-toolbar .vs-finance-filters {
+        width: 100%;
+    }
+
+    .vs-log-toolbar .vs-finance-filters .vs-btn {
         flex: 1 1 auto;
-        width: auto;
+    }
+
+    .vs-log-row--head {
+        display: none;
     }
 
     .vs-log-cards {
@@ -6014,6 +6142,91 @@ select.vs-input.vs-select {
 @media (min-width: 901px) {
     .vs-log-cards {
         display: none;
+    }
+}
+
+/* ═══ 底部分页强制同高（必须置末，覆盖 .vs-input 40px / .vs-btn 44px）═══ */
+.vs-api-list-footer .vs-api-pager .vs-pick__btn.vs-input,
+.vs-api-list-footer .vs-api-pager .vs-pick__btn,
+.vs-api-list-footer .vs-api-pager .vs-api-list-pagesize__select,
+.vs-api-list-footer .vs-api-pager .vs-api-pager__nav,
+.vs-api-list-footer .vs-api-pager button.vs-api-pager__nav,
+.vs-api-list-footer .vs-api-pager .vs-api-pager__num {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    font-size: 12px !important;
+    line-height: 30px !important;
+    box-sizing: border-box !important;
+    border-radius: var(--vs-btn-radius, 10px) !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-pick__btn.vs-input,
+.vs-api-list-footer .vs-api-pager .vs-pick__btn,
+.vs-api-list-footer .vs-api-pager .vs-api-list-pagesize__select {
+    width: 64px !important;
+    min-width: 64px !important;
+    padding-left: 10px !important;
+    padding-right: 22px !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-api-list-pagesize__label {
+    line-height: 32px !important;
+    font-size: 12px !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-api-pager__nav,
+.vs-api-list-footer .vs-api-pager button.vs-api-pager__nav,
+.vs-api-list-footer .vs-api-pager .vs-api-pager__num {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    min-width: 0 !important;
+    background: #fff !important;
+    color: #334155 !important;
+    border: 1px solid #cbd5e1 !important;
+    font-weight: 500 !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-api-pager__nav:disabled,
+.vs-api-list-footer .vs-api-pager button.vs-api-pager__nav:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+}
+
+/* 列表页标题行工具栏统一 32px（日志/财务筛选刷新/搜索） */
+.vs-log-toolbar .vs-btn,
+.vs-log-toolbar .vs-log-search__input,
+.vs-finance-filters .vs-btn,
+.vs-finance-refresh {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    font-size: 12px !important;
+    line-height: 30px !important;
+    box-sizing: border-box !important;
+}
+
+/* 积分变动等：手机端标题与刷新必须同行 */
+@media (max-width: 900px) {
+    .vs-content__head:has(.vs-finance-head-actions) {
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+    }
+    .vs-content__head:has(.vs-finance-head-actions) .vs-content__title {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    .vs-content__head:has(.vs-finance-head-actions) .vs-content__actions {
+        flex: 0 0 auto !important;
+        margin-left: 8px !important;
+        width: auto !important;
     }
 }
 

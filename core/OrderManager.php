@@ -275,9 +275,14 @@ class OrderManager
             foreach ($rows as $row) {
                 if (!empty($row['keysecret'])) {
                     $sec = (string) $row['keysecret'];
-                    $row['keymask'] = strlen($sec) > 10
-                        ? (substr($sec, 0, 6) . '****' . substr($sec, -4))
-                        : '****';
+                    // 管理员列表（无 userid 过滤）显示完整密钥；用户中心仍脱敏
+                    if ($userid > 0) {
+                        $row['keymask'] = strlen($sec) > 10
+                            ? (substr($sec, 0, 6) . '****' . substr($sec, -4))
+                            : '****';
+                    } else {
+                        $row['keymask'] = $sec;
+                    }
                 }
                 $list[] = self::formatRow($row);
             }

@@ -711,9 +711,12 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 | `cache:api:public_list` | 120s | `ApiManager::listPublic` | MySQL 公开接口原始行 |
 | `cache:frontend:api_list` | 120s | `FrontendApi::listForTheme` | 主题用格式化列表（**须单独 remember，勿只依赖 public_list**） |
 | `cache:frontend:category_tags` | 300s | `FrontendCategory::listTags` | 前台分类标签 |
-| `cache:apilog:page:{md5}` | 45s | `ApiLogManager::listPaged` | 日志分页轻量缓存（按筛选条件摘要；短 TTL 抗亿级表扫库） |
+| `cache:apilog:query:{md5}` | 45s | `ApiLogManager::listPaged` | 日志查询结果（后台列表 / 后续图表等凡读均可复用） |
+| `cache:apilog:today_count` | 30s | `ApiLogManager::countToday` | 今日调用次数（首页统计等） |
 
-接口/分类变更时调用 `RedisCache::invalidateFrontend()`。日志缓存依赖短 TTL，高并发写入时勿每次 INSERT 全量 SCAN 清理。
+接口/分类变更时调用 `RedisCache::invalidateFrontend()`。日志相关调用 `RedisCache::invalidateApiLog()`；高并发写入时亦可依赖短 TTL，勿每次 INSERT 全量 SCAN。
+
+监控页环形图「缓存了什么」按业务项分扇区；列表展示中文名称与用途说明，**禁止**对外展示「轻量」等实现向形容词。
 
 ---
 

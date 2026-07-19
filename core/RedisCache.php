@@ -9,16 +9,19 @@ class RedisCache
     const KEY_FRONTEND_API = 'cache:frontend:api_list';
     const KEY_FRONTEND_CATEGORY = 'cache:frontend:category_tags';
     const KEY_API_PUBLIC = 'cache:api:public_list';
-    /** 日志分页缓存键前缀（后接 md5 条件摘要） */
-    const KEY_APILOG_PAGE_PREFIX = 'cache:apilog:page:';
+    /** 日志查询结果缓存键前缀（后台列表 / 后续图表等凡读 apilog 均可复用） */
+    const KEY_APILOG_PAGE_PREFIX = 'cache:apilog:query:';
+    /** 今日调用次数等汇总统计 */
+    const KEY_APILOG_TODAY = 'cache:apilog:today_count';
     const KEY_STAT_HITS = 'stats:cache_hits';
     const KEY_STAT_MISSES = 'stats:cache_misses';
 
     const TTL_FRONTEND_API = 120;
     const TTL_FRONTEND_CATEGORY = 300;
     const TTL_API_PUBLIC = 120;
-    /** 日志列表短 TTL：亿级表不宜长缓存，减轻重复 COUNT/翻页压力 */
+    /** 日志查询/列表短 TTL，降低大表反复扫库 */
     const TTL_APILOG_PAGE = 45;
+    const TTL_APILOG_STATS = 30;
 
     const MAX_RATE_LIMIT_KEYS = 2000;
     const STAT_MAX_VALUE = 100000000;
@@ -128,6 +131,8 @@ class RedisCache
         if (!self::enabled()) {
             return 0;
         }
+
+        self::forget(self::KEY_APILOG_TODAY);
 
         try {
             return (int) RedisService::withClient(function (Redis $redis) {
@@ -258,28 +263,44 @@ class RedisCache
         $defs = array(
             array(
                 'id' => 'api_public',
-                'label' => '公开接口列表（MySQL 查询缓存）',
+                'label' => '公开接口列表',
+                'desc' => '已上线接口的原始数据，供前台/后台列表读取',
                 'key' => self::KEY_API_PUBLIC,
                 'ttl_hint' => self::TTL_API_PUBLIC . ' 秒',
+                'chart_color' => '#3b82f6',
             ),
             array(
                 'id' => 'frontend_api',
-                'label' => '前台接口展示数据',
+                'label' => '前台接口展示',
+                'desc' => '主题首页/接口页用的格式化接口卡片数据',
                 'key' => self::KEY_FRONTEND_API,
                 'ttl_hint' => self::TTL_FRONTEND_API . ' 秒',
+                'chart_color' => '#10b981',
             ),
             array(
                 'id' => 'frontend_category',
                 'label' => '前台分类标签',
+                'desc' => '主题分类筛选条（「全部」与各分类名）',
                 'key' => self::KEY_FRONTEND_CATEGORY,
                 'ttl_hint' => self::TTL_FRONTEND_CATEGORY . ' 秒',
+                'chart_color' => '#f59e0b',
             ),
             array(
-                'id' => 'apilog_page',
-                'label' => 'API 调用日志分页（轻量）',
+                'id' => 'apilog_query',
+                'label' => 'API 调用日志',
+                'desc' => '日志查询页、今日调用统计等读库结果（短时缓存）',
                 'key' => self::KEY_APILOG_PAGE_PREFIX,
                 'ttl_hint' => self::TTL_APILOG_PAGE . ' 秒',
                 'pattern' => true,
+                'chart_color' => '#8b5cf6',
+            ),
+            array(
+                'id' => 'apilog_today',
+                'label' => '今日调用次数',
+                'desc' => '首页等展示的「今日调用」汇总数字',
+                'key' => self::KEY_APILOG_TODAY,
+                'ttl_hint' => self::TTL_APILOG_STATS . ' 秒',
+                'chart_color' => '#ec4899',
             ),
         );
 

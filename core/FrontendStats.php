@@ -27,19 +27,9 @@ class FrontendStats
      */
     public static function todayCallCount()
     {
-        if (!class_exists('ApiStats') || !ApiStats::tableReady()) {
+        if (!class_exists('ApiLogManager')) {
             return 0;
         }
-        try {
-            $pdo = Database::connect();
-            $table = Database::table('apilog');
-            // createtime 为 datetime（ApiStats::write 使用 NOW()）
-            $stmt = $pdo->query(
-                'SELECT COUNT(*) FROM `' . $table . '` WHERE `createtime` >= CURDATE() AND `createtime` < DATE_ADD(CURDATE(), INTERVAL 1 DAY)'
-            );
-            return max(0, (int) $stmt->fetchColumn());
-        } catch (Exception $e) {
-            return 0;
-        }
+        return ApiLogManager::countToday();
     }
 }

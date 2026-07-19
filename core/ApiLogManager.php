@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/ApiLogManager.php
- * 作用：API 调用日志查询（分页 / 搜索；列表结果走 Redis 轻量缓存）
+ * 作用：API 调用日志查询（分页 / 搜索 / 详情；查询结果走 Redis 短 TTL 缓存，供后台与前台统计复用）
  */
 
 class ApiLogManager
@@ -23,6 +23,53 @@ class ApiLogManager
     }
 
     /**
+     * @param string $method
+     * @return string
+     */
+    public static function methodClass($method)
+    {
+        $m = strtoupper(trim((string) $method));
+        if ($m === 'GET') {
+            return 'is-get';
+        }
+        if ($m === 'POST') {
+            return 'is-post';
+        }
+        if ($m === 'PUT') {
+            return 'is-put';
+        }
+        if ($m === 'DELETE') {
+            return 'is-delete';
+        }
+        if ($m === 'PATCH') {
+            return 'is-patch';
+        }
+        return 'is-other';
+    }
+
+    /**
+     * @param int $code
+     * @return string
+     */
+    public static function httpClass($code)
+    {
+        $code = (int) $code;
+        if ($code >= 200 && $code < 300) {
+            return 'is-2xx';
+        }
+        if ($code >= 300 && $code < 400) {
+            return 'is-3xx';
+        }
+        if ($code >= 400 && $code < 500) {
+            return 'is-4xx';
+        }
+        if ($code >= 500) {
+            return 'is-5xx';
+        }
+        return '';
+    }
+
+    /**
      * @param array $row
      * @return array|null
      */
@@ -35,49 +82,45 @@ class ApiLogManager
         $apitype = (int) (isset($row['apitype']) ? $row['apitype'] : 0);
         $charged = (int) (isset($row['charged']) ? $row['charged'] : 0) === 1;
         $apikey = isset($row['apikey']) ? (string) $row['apikey'] : '';
-        $keyMask = $apikey === '' ? '' : self::maskKey($apikey);
+        $method = isset($row['method']) ? (string) $row['method'] : '';
+        $httpcode = (int) (isset($row['httpcode']) ? $row['httpcode'] : 0);
+        $userid = (int) (isset($row['userid']) ? $row['userid'] : 0);
+        $username = isset($row['username']) ? trim((string) $row['username']) : '';
+        $iploc = isset($row['iploc']) ? trim((string) $row['iploc']) : '';
 
         return array(
-            'id'           => (int) (isset($row['id']) ? $row['id'] : 0),
-            'apiid'        => (int) (isset($row['apiid']) ? $row['apiid'] : 0),
-            'apiname'      => isset($row['apiname']) ? (string) $row['apiname'] : '',
-            'apitype'      => $apitype,
-            'apitype_label'=> $apitype === 1 ? '代理' : '本地',
-            'userid'       => (int) (isset($row['userid']) ? $row['userid'] : 0),
-            'apikey_mask'  => $keyMask,
-            'method'       => isset($row['method']) ? (string) $row['method'] : '',
-            'ip'           => isset($row['ip']) ? (string) $row['ip'] : '',
-            'iploc'        => isset($row['iploc']) ? (string) $row['iploc'] : '',
-            'host'         => isset($row['host']) ? (string) $row['host'] : '',
-            'path'         => isset($row['path']) ? (string) $row['path'] : '',
-            'url'          => isset($row['url']) ? (string) $row['url'] : '',
-            'referer'      => isset($row['referer']) ? (string) $row['referer'] : '',
-            'origin'       => isset($row['origin']) ? (string) $row['origin'] : '',
-            'domain'       => isset($row['domain']) ? (string) $row['domain'] : '',
-            'ua'           => isset($row['ua']) ? (string) $row['ua'] : '',
-            'ok'           => $ok ? 1 : 0,
-            'ok_label'     => $ok ? '成功' : '失败',
-            'ok_class'     => $ok ? 'is-ok' : 'is-fail',
-            'httpcode'     => (int) (isset($row['httpcode']) ? $row['httpcode'] : 0),
-            'charged'      => $charged ? 1 : 0,
-            'charged_label'=> $charged ? '已扣费' : '未扣费',
-            'cost'         => number_format((float) (isset($row['cost']) ? $row['cost'] : 0), 4, '.', ''),
-            'createtime'   => isset($row['createtime']) ? (string) $row['createtime'] : '',
+            'id'            => (int) (isset($row['id']) ? $row['id'] : 0),
+            'apiid'         => (int) (isset($row['apiid']) ? $row['apiid'] : 0),
+            'apiname'       => isset($row['apiname']) ? (string) $row['apiname'] : '',
+            'apitype'       => $apitype,
+            'apitype_label' => $apitype === 1 ? '代理' : '本地',
+            'userid'        => $userid,
+            'username'      => $username,
+            'user_label'    => $userid > 0
+                ? ($username !== '' ? $username : ('用户 #' . $userid))
+                : '匿名',
+            'apikey'        => $apikey,
+            'method'        => $method,
+            'method_class'  => self::methodClass($method),
+            'ip'            => isset($row['ip']) ? (string) $row['ip'] : '',
+            'iploc'         => $iploc,
+            'host'          => isset($row['host']) ? (string) $row['host'] : '',
+            'path'          => isset($row['path']) ? (string) $row['path'] : '',
+            'url'           => isset($row['url']) ? (string) $row['url'] : '',
+            'referer'       => isset($row['referer']) ? (string) $row['referer'] : '',
+            'origin'        => isset($row['origin']) ? (string) $row['origin'] : '',
+            'domain'        => isset($row['domain']) ? (string) $row['domain'] : '',
+            'ua'            => isset($row['ua']) ? (string) $row['ua'] : '',
+            'ok'            => $ok ? 1 : 0,
+            'ok_label'      => $ok ? '成功' : '失败',
+            'ok_class'      => $ok ? 'is-ok' : 'is-fail',
+            'httpcode'      => $httpcode,
+            'http_class'    => self::httpClass($httpcode),
+            'charged'       => $charged ? 1 : 0,
+            'charged_label' => $charged ? '已扣费' : '未扣费',
+            'cost'          => number_format((float) (isset($row['cost']) ? $row['cost'] : 0), 4, '.', ''),
+            'createtime'    => isset($row['createtime']) ? (string) $row['createtime'] : '',
         );
-    }
-
-    /**
-     * @param string $key
-     * @return string
-     */
-    public static function maskKey($key)
-    {
-        $key = (string) $key;
-        $len = strlen($key);
-        if ($len <= 8) {
-            return $key === '' ? '' : str_repeat('*', $len);
-        }
-        return substr($key, 0, 4) . str_repeat('*', max(4, $len - 8)) . substr($key, -4);
     }
 
     /**
@@ -92,7 +135,11 @@ class ApiLogManager
         }
         try {
             $pdo = Database::connect();
-            $stmt = $pdo->prepare('SELECT * FROM `' . self::table() . '` WHERE `id` = ? LIMIT 1');
+            $sql = 'SELECT l.*, u.`username`
+                FROM `' . self::table() . '` l
+                LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`
+                WHERE l.`id` = ? LIMIT 1';
+            $stmt = $pdo->prepare($sql);
             $stmt->execute(array($id));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             return $row ? self::formatRow($row) : null;
@@ -102,7 +149,35 @@ class ApiLogManager
     }
 
     /**
-     * 分页列表（短 TTL Redis 缓存，降低大表反复扫库）
+     * 今日调用次数（短 TTL 缓存，供首页统计等复用）
+     *
+     * @return int
+     */
+    public static function countToday()
+    {
+        if (!self::tableReady()) {
+            return 0;
+        }
+        return (int) RedisCache::remember(
+            RedisCache::KEY_APILOG_TODAY,
+            RedisCache::TTL_APILOG_STATS,
+            function () {
+                try {
+                    $pdo = Database::connect();
+                    $stmt = $pdo->query(
+                        'SELECT COUNT(*) FROM `' . self::table() . '`
+                         WHERE `createtime` >= CURDATE() AND `createtime` < DATE_ADD(CURDATE(), INTERVAL 1 DAY)'
+                    );
+                    return max(0, (int) $stmt->fetchColumn());
+                } catch (Exception $e) {
+                    return 0;
+                }
+            }
+        );
+    }
+
+    /**
+     * 分页列表（短 TTL Redis 缓存；后台列表、后续图表等凡读 apilog 聚合/列表均可走本层）
      *
      * @param array $opts page, pagesize, q, ok(null|0|1), apiid
      * @return array{list:array,total:int,page:int,pagesize:int}
@@ -139,31 +214,30 @@ class ApiLogManager
 
                     if ($q !== '') {
                         $like = '%' . $q . '%';
-                        $where[] = '(`apiname` LIKE ? OR `path` LIKE ? OR `ip` LIKE ? OR `url` LIKE ? OR `apikey` LIKE ? OR `domain` LIKE ?)';
-                        $bind[] = $like;
-                        $bind[] = $like;
-                        $bind[] = $like;
-                        $bind[] = $like;
-                        $bind[] = $like;
-                        $bind[] = $like;
+                        $where[] = '(l.`apiname` LIKE ? OR l.`path` LIKE ? OR l.`ip` LIKE ? OR l.`url` LIKE ? OR l.`apikey` LIKE ? OR l.`domain` LIKE ? OR l.`iploc` LIKE ? OR u.`username` LIKE ?)';
+                        for ($i = 0; $i < 8; $i++) {
+                            $bind[] = $like;
+                        }
                     }
                     if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
-                        $where[] = '`ok` = ?';
+                        $where[] = 'l.`ok` = ?';
                         $bind[] = (int) $ok;
                     }
                     if ($apiid > 0) {
-                        $where[] = '`apiid` = ?';
+                        $where[] = 'l.`apiid` = ?';
                         $bind[] = $apiid;
                     }
 
                     $whereSql = implode(' AND ', $where);
-                    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM `' . self::table() . '` WHERE ' . $whereSql);
+                    $from = '`' . self::table() . '` l LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`';
+
+                    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM ' . $from . ' WHERE ' . $whereSql);
                     $countStmt->execute($bind);
                     $total = (int) $countStmt->fetchColumn();
 
                     $offset = ($page - 1) * $pagesize;
-                    $sql = 'SELECT * FROM `' . self::table() . '` WHERE ' . $whereSql
-                        . ' ORDER BY `id` DESC LIMIT ' . (int) $pagesize . ' OFFSET ' . (int) $offset;
+                    $sql = 'SELECT l.*, u.`username` FROM ' . $from . ' WHERE ' . $whereSql
+                        . ' ORDER BY l.`id` DESC LIMIT ' . (int) $pagesize . ' OFFSET ' . (int) $offset;
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute($bind);
                     $list = array();

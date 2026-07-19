@@ -5,6 +5,7 @@
 (function () {
     'use strict';
 
+    var pageRoot = document.getElementById('logsPage');
     var body = document.getElementById('logsListBody');
     var footer = document.getElementById('logsFooter');
     var pagerNav = document.getElementById('logsPagerNav');
@@ -17,6 +18,7 @@
     var okFilter = '';
     var q = '';
     var returnFocusEl = null;
+    var bootUsed = false;
 
     function escapeHtml(s) {
         return String(s == null ? '' : s)
@@ -36,14 +38,40 @@
         return Math.min(50, n);
     }
 
+    function parseBoot() {
+        if (!pageRoot) {
+            return null;
+        }
+        var raw = pageRoot.getAttribute('data-boot');
+        if (!raw) {
+            return null;
+        }
+        try {
+            return JSON.parse(raw);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function methodBadge(row) {
+        return '<span class="vs-log-method ' + escapeHtml(row.method_class || 'is-other') + '">'
+            + escapeHtml(row.method || '—') + '</span>';
+    }
+
+    function httpBadge(row) {
+        return '<span class="vs-log-http ' + escapeHtml(row.http_class || '') + '">'
+            + escapeHtml(row.httpcode) + '</span>';
+    }
+
     function headHtml() {
         return '<div class="vs-log-row vs-log-row--head" aria-hidden="true">'
             + '<div class="vs-log-cell">接口</div>'
             + '<div class="vs-log-cell">方法</div>'
-            + '<div class="vs-log-cell">IP</div>'
+            + '<div class="vs-log-cell">IP / 归属地</div>'
             + '<div class="vs-log-cell">结果</div>'
             + '<div class="vs-log-cell">状态码</div>'
             + '<div class="vs-log-cell">时间</div>'
+            + '<div class="vs-log-cell">操作</div>'
             + '</div>';
     }
 
@@ -53,26 +81,18 @@
             + '<strong>' + escapeHtml(row.apiname || ('#' + row.apiid)) + '</strong>'
             + '<span class="vs-log-sub">' + escapeHtml(row.path || '') + '</span>'
             + '</div>'
-            + '<div class="vs-log-cell vs-log-c-method">'
-            + '<span class="vs-finance-m-label">方法</span>'
-            + escapeHtml(row.method || '—')
-            + '</div>'
+            + '<div class="vs-log-cell vs-log-c-method">' + methodBadge(row) + '</div>'
             + '<div class="vs-log-cell vs-log-c-ip">'
-            + '<span class="vs-finance-m-label">IP</span>'
             + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
-            + (row.iploc ? '<span class="vs-log-sub">' + escapeHtml(row.iploc) + '</span>' : '')
+            + '<span class="vs-log-sub">' + escapeHtml(row.iploc !== undefined && row.iploc !== null && row.iploc !== '' ? row.iploc : '—') + '</span>'
             + '</div>'
             + '<div class="vs-log-cell vs-log-c-ok">'
             + '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '">'
             + escapeHtml(row.ok_label) + '</span>'
             + '</div>'
-            + '<div class="vs-log-cell vs-log-c-code">'
-            + '<span class="vs-finance-m-label">状态码</span>'
-            + escapeHtml(row.httpcode)
-            + '</div>'
-            + '<div class="vs-log-cell vs-log-c-time">'
-            + escapeHtml(row.createtime || '—')
-            + '</div>'
+            + '<div class="vs-log-cell vs-log-c-code">' + httpBadge(row) + '</div>'
+            + '<div class="vs-log-cell vs-log-c-time">' + escapeHtml(row.createtime || '—') + '</div>'
+            + '<div class="vs-log-cell vs-log-c-act"><span class="vs-log-view">查看</span></div>'
             + '</article>';
     }
 
@@ -84,40 +104,58 @@
             + escapeHtml(row.ok_label) + '</span>'
             + '</div>'
             + '<div class="vs-log-card__meta">'
-            + '<span>' + escapeHtml(row.method || '—') + '</span>'
+            + methodBadge(row)
             + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
-            + '<span>HTTP ' + escapeHtml(row.httpcode) + '</span>'
+            + '<span>' + escapeHtml(row.iploc !== undefined && row.iploc !== null && row.iploc !== '' ? row.iploc : '—') + '</span>'
+            + httpBadge(row)
             + '</div>'
-            + '<div class="vs-log-card__time">' + escapeHtml(row.createtime || '—') + '</div>'
+            + '<div class="vs-log-card__foot">'
+            + '<span class="vs-log-card__time">' + escapeHtml(row.createtime || '—') + '</span>'
+            + '<span class="vs-log-view">查看详情</span>'
+            + '</div>'
             + '</article>';
     }
 
+    function detailItem(label, value, full) {
+        var v = value == null || value === '' ? '—' : String(value);
+        return '<div class="vs-log-detail__item' + (full ? ' vs-log-detail__item--full' : '') + '">'
+            + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+            + '<span class="vs-log-detail__value">' + escapeHtml(v) + '</span>'
+            + '</div>';
+    }
+
     function detailHtml(row) {
-        function line(label, value) {
-            var v = value == null || value === '' ? '—' : String(value);
-            return '<div class="vs-log-detail__row">'
-                + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
-                + '<span class="vs-log-detail__value">' + escapeHtml(v) + '</span>'
-                + '</div>';
-        }
         return '<div class="vs-log-detail">'
-            + line('记录 ID', row.id)
-            + line('接口', (row.apiname || '') + (row.apiid ? ' (#' + row.apiid + ')' : ''))
-            + line('类型', row.apitype_label)
-            + line('方法', row.method)
-            + line('结果', row.ok_label)
-            + line('HTTP', row.httpcode)
-            + line('IP', row.ip + (row.iploc ? ' · ' + row.iploc : ''))
-            + line('路径', row.path)
-            + line('完整 URL', row.url)
-            + line('来源域名', row.domain)
-            + line('Referer', row.referer)
-            + line('Origin', row.origin)
-            + line('密钥', row.apikey_mask)
-            + line('用户 ID', row.userid || '匿名')
-            + line('扣费', row.charged_label + (row.charged ? ' · ' + row.cost : ''))
-            + line('User-Agent', row.ua)
-            + line('时间', row.createtime)
+            + '<div class="vs-log-detail__hero">'
+            + '<span class="vs-log-detail__hero-name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</span>'
+            + methodBadge(row)
+            + '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '">' + escapeHtml(row.ok_label) + '</span>'
+            + httpBadge(row)
+            + '</div>'
+            + '<div class="vs-log-detail__section">'
+            + '<h4 class="vs-log-detail__section-title">调用信息</h4>'
+            + '<div class="vs-log-detail__grid">'
+            + detailItem('记录 ID', row.id)
+            + detailItem('接口 ID', row.apiid)
+            + detailItem('类型', row.apitype_label)
+            + detailItem('时间', row.createtime)
+            + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '匿名'))
+            + detailItem('密钥', row.apikey)
+            + detailItem('扣费', (row.charged_label || '') + (row.charged ? (' · ' + row.cost) : ''))
+            + '</div></div>'
+            + '<div class="vs-log-detail__section">'
+            + '<h4 class="vs-log-detail__section-title">网络与来源</h4>'
+            + '<div class="vs-log-detail__grid">'
+            + detailItem('IP', row.ip)
+            + detailItem('IP 归属地', row.iploc)
+            + detailItem('来源域名', row.domain)
+            + detailItem('Host', row.host)
+            + detailItem('路径', row.path, true)
+            + detailItem('完整 URL', row.url, true)
+            + detailItem('Referer', row.referer, true)
+            + detailItem('Origin', row.origin, true)
+            + detailItem('User-Agent', row.ua, true)
+            + '</div></div>'
             + '</div>';
     }
 
@@ -166,6 +204,38 @@
         });
     }
 
+    function renderPager(total, pagesize) {
+        if (footer) {
+            footer.hidden = false;
+        }
+        if (totalEl) {
+            totalEl.textContent = '共 ' + total + ' 条';
+        }
+        if (pagerNav) {
+            var pages = Math.max(1, Math.ceil(total / pagesize));
+            pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
+                + '<span class="vs-api-pager__info">' + page + ' / ' + pages + '</span>'
+                + '<button type="button" class="vs-api-pager__nav" data-p="1"' + (page >= pages ? ' disabled' : '') + '>下一页</button>';
+        }
+    }
+
+    function renderList(list, total, pagesize) {
+        if (!body) {
+            return;
+        }
+        if (!list.length) {
+            body.innerHTML = '<p class="vs-empty vs-finance-empty">暂无调用记录</p>';
+        } else if (isMobile()) {
+            body.innerHTML = '<div class="vs-log-cards">' + list.map(cardHtml).join('') + '</div>';
+        } else {
+            body.innerHTML = '<div class="vs-log-table-wrap"><div class="vs-log-grid">'
+                + headHtml()
+                + list.map(rowHtml).join('')
+                + '</div></div>';
+        }
+        renderPager(total, pagesize);
+    }
+
     function load() {
         if (!body || !window.VS) {
             return;
@@ -186,30 +256,7 @@
                 body.innerHTML = '<p class="vs-empty vs-finance-empty">' + escapeHtml((data && data.msg) || '加载失败') + '</p>';
                 return;
             }
-            var list = data.list || [];
-            var total = data.total || 0;
-            if (!list.length) {
-                body.innerHTML = '<p class="vs-empty vs-finance-empty">暂无调用记录</p>';
-            } else if (isMobile()) {
-                body.innerHTML = '<div class="vs-log-cards">' + list.map(cardHtml).join('') + '</div>';
-            } else {
-                body.innerHTML = '<div class="vs-log-table-wrap"><div class="vs-log-grid">'
-                    + headHtml()
-                    + list.map(rowHtml).join('')
-                    + '</div></div>';
-            }
-            if (footer) {
-                footer.hidden = false;
-            }
-            if (totalEl) {
-                totalEl.textContent = '共 ' + total + ' 条';
-            }
-            if (pagerNav) {
-                var pages = Math.max(1, Math.ceil(total / pagesize));
-                pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
-                    + '<span class="vs-api-pager__info">' + page + ' / ' + pages + '</span>'
-                    + '<button type="button" class="vs-api-pager__nav" data-p="1"' + (page >= pages ? ' disabled' : '') + '>下一页</button>';
-            }
+            renderList(data.list || [], data.total || 0, pagesize);
         }).catch(function () {
             body.innerHTML = '<p class="vs-empty vs-finance-empty">网络异常</p>';
         });
@@ -318,5 +365,16 @@
         }
     });
 
-    load();
+    // 首屏：服务端已预取第一页，先渲染再避免空白等待
+    var boot = parseBoot();
+    if (boot && Array.isArray(boot.list) && !q && okFilter === '' && page === 1) {
+        bootUsed = true;
+        page = boot.page || 1;
+        renderList(boot.list, boot.total || 0, boot.pagesize || getPageSize());
+        if (pageRoot) {
+            pageRoot.removeAttribute('data-boot');
+        }
+    } else {
+        load();
+    }
 })();

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-3.36.0-blue" alt="version">
+  <img src="https://img.shields.io/badge/version-3.37.0-blue" alt="version">
   <img src="https://img.shields.io/badge/License-开源-green" alt="license">
   <a href="https://gitee.com/xunjinlu/misc-api"><img src="https://img.shields.io/badge/Gitee-代码仓库-C71D23?logo=gitee" alt="Gitee"></a>
   <img src="https://img.shields.io/badge/PHP-7.4+-777BB4?logo=php&logoColor=white" alt="PHP">
@@ -289,6 +289,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v3.37.0（2026-07-19）
+
+- 底部分页与列表工具栏按钮强制同高 32px（修复「每页」偏高）
+- 日志查询体验：查看入口、配色、归属地/用户名/明文密钥、首屏预取；手机标题不再被挤乱
+- Redis 监控可读化（按缓存业务项）；今日调用纳入缓存；去掉「轻量」文案
+- 积分变动手机端标题与刷新同行；管理员流水显示完整密钥
 
 ### v3.36.0（2026-07-19）
 

@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'clear_cache') {
         RedisCache::invalidateFrontend();
+        RedisCache::invalidateApiLog();
         AjaxResponse::success('业务缓存已清空', array('snapshot' => RedisService::collectMonitorSnapshot()));
     }
 
@@ -39,54 +40,50 @@ $cacheKeyPercent = $keyTotal > 0 ? round(($cacheKeys / $keyTotal) * 100, 1) : 0;
 
 $entries = isset($biz['entries']) ? $biz['entries'] : array();
 $cachedCount = 0;
+$entrySegments = array();
 foreach ($entries as $entry) {
     if (!empty($entry['cached'])) {
         $cachedCount++;
     }
+    $bytes = isset($entry['size_bytes']) ? (int) $entry['size_bytes'] : 0;
+    $entrySegments[] = array(
+        'id' => isset($entry['id']) ? (string) $entry['id'] : '',
+        'label' => isset($entry['label']) ? (string) $entry['label'] : '',
+        'value' => $bytes > 0 ? $bytes : (!empty($entry['cached']) ? 1 : 0),
+        'color' => isset($entry['chart_color']) ? (string) $entry['chart_color'] : '#94a3b8',
+        'unit' => $bytes > 0 ? '字节' : '项',
+        'extra' => (!empty($entry['cached']) ? '已缓存' : '未缓存')
+            . (isset($entry['desc']) && $entry['desc'] !== '' ? ' · ' . $entry['desc'] : ''),
+    );
 }
 $entryTotal = count($entries);
-$entryCachedPercent = $entryTotal > 0 ? round(($cachedCount / $entryTotal) * 100, 1) : 0;
 $cacheMemory = isset($biz['cache_memory_human']) ? (string) $biz['cache_memory_human'] : '—';
 
 $chartBoot = array(
     'hit' => array(
-        'title' => '命中分布',
+        'title' => '读写命中',
         'centerValue' => $hitTotal > 0 ? ($hitPercent . '%') : '—',
-        'centerHint' => '命中率',
+        'centerHint' => '缓存命中率',
         'segments' => array(
-            array('id' => 'hits', 'label' => '命中', 'value' => $hits, 'color' => '#10b981', 'unit' => '次'),
-            array('id' => 'misses', 'label' => '未命中', 'value' => $misses, 'color' => '#d1d5db', 'unit' => '次'),
+            array('id' => 'hits', 'label' => '命中（读到缓存）', 'value' => $hits, 'color' => '#10b981', 'unit' => '次'),
+            array('id' => 'misses', 'label' => '未命中（回源 MySQL）', 'value' => $misses, 'color' => '#d1d5db', 'unit' => '次'),
         ),
     ),
     'keys' => array(
-        'title' => '键类型分布',
+        'title' => '键用途分布',
         'centerValue' => $keyTotal > 0 ? ($cacheKeyPercent . '%') : '—',
-        'centerHint' => '数据缓存占比',
+        'centerHint' => '业务数据占比',
         'segments' => array(
-            array('id' => 'cache', 'label' => '数据缓存', 'value' => $cacheKeys, 'color' => '#3b82f6', 'unit' => '个键'),
-            array('id' => 'rate', 'label' => '发信限流', 'value' => $rateKeys, 'color' => '#fbbf24', 'unit' => '个键'),
+            array('id' => 'cache', 'label' => '业务数据缓存', 'value' => $cacheKeys, 'color' => '#3b82f6', 'unit' => '个键', 'extra' => '接口/分类/日志等'),
+            array('id' => 'rate', 'label' => '发信限流键', 'value' => $rateKeys, 'color' => '#fbbf24', 'unit' => '个键', 'extra' => '防刷验证码'),
         ),
     ),
     'entries' => array(
-        'title' => '缓存项状态',
+        'title' => '缓存了什么',
         'centerValue' => $cacheMemory !== '' ? $cacheMemory : '—',
-        'centerHint' => '缓存占用',
-        'segments' => array(
-            array(
-                'id' => 'cached',
-                'label' => '已缓存',
-                'value' => $cachedCount,
-                'color' => '#8b5cf6',
-                'unit' => '项',
-                'extra' => '占用 ' . $cacheMemory,
-            ),
-            array(
-                'id' => 'uncached',
-                'label' => '未缓存',
-                'value' => max(0, $entryTotal - $cachedCount),
-                'color' => '#e5e7eb',
-                'unit' => '项',
-            ),
+        'centerHint' => '业务缓存占用',
+        'segments' => !empty($entrySegments) ? $entrySegments : array(
+            array('id' => 'empty', 'label' => '暂无缓存项', 'value' => 1, 'color' => '#e5e7eb', 'unit' => ''),
         ),
     ),
 );
@@ -103,7 +100,7 @@ vs_admin_layout_start(
      data-chart-boot="<?php echo vs_e(json_encode($chartBoot, JSON_UNESCAPED_UNICODE)); ?>">
     <div class="vs-panel__header">
         <h2 class="vs-panel__title">Redis 缓存监控</h2>
-        <p class="vs-panel__desc">悬停或点击环形图扇区查看明细；仅高频读取的数据写入 Redis，其余仍走 MySQL。</p>
+        <p class="vs-panel__desc">扇区按「缓存了什么」划分：悬停可看名称与用途；下方列表有完整说明。</p>
     </div>
 
     <div id="redisStatusNotice">
@@ -140,8 +137,10 @@ vs_admin_layout_start(
                     <div class="vs-redis-entry__main">
                         <div class="vs-redis-entry__title"><?php echo vs_e($entry['label']); ?></div>
                         <div class="vs-redis-entry__meta">
-                            刷新周期 <?php echo vs_e($entry['ttl_hint']); ?>
-                            · 键 <?php echo vs_e($entry['key']); ?>
+                            <?php if (!empty($entry['desc'])): ?>
+                                <?php echo vs_e($entry['desc']); ?> ·
+                            <?php endif; ?>
+                            约每 <?php echo vs_e($entry['ttl_hint']); ?> 自动过期
                         </div>
                     </div>
                     <div class="vs-redis-entry__status">

@@ -45,33 +45,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $tableReady = ApiLogManager::tableReady();
-$headerActions = '';
+$boot = array('list' => array(), 'total' => 0, 'page' => 1, 'pagesize' => 20);
 if ($tableReady) {
-    ob_start();
-    ?>
-    <div class="vs-log-head-actions" id="logsToolbar">
-        <div class="vs-log-search">
-            <input type="search" class="vs-input vs-log-search__input" id="logsSearchInput"
-                   placeholder="搜索接口名 / IP / 路径 / 密钥…" autocomplete="off">
-            <button type="button" class="vs-btn vs-btn--primary" id="logsSearchBtn">搜索</button>
-        </div>
-        <div class="vs-finance-filters" role="group" aria-label="调用结果">
-            <button type="button" class="vs-btn vs-btn--primary vs-log-filter is-active" data-ok="">全部</button>
-            <button type="button" class="vs-btn vs-btn--default vs-log-filter" data-ok="1">成功</button>
-            <button type="button" class="vs-btn vs-btn--default vs-log-filter" data-ok="0">失败</button>
-        </div>
-        <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="logsRefreshBtn">刷新</button>
-    </div>
-    <?php
-    $headerActions = ob_get_clean();
+    $boot = ApiLogManager::listPaged(array('page' => 1, 'pagesize' => 20));
 }
 
-vs_admin_layout_start('日志查询', 'logs', $headerActions);
+vs_admin_layout_start('日志查询', 'logs');
 ?>
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先完成系统升级以同步调用日志表。', array('compact' => true)); ?>
 <?php else: ?>
-<div class="vs-panel vs-log-panel">
+<div class="vs-log-toolbar" id="logsToolbar">
+    <div class="vs-log-search">
+        <input type="search" class="vs-input vs-log-search__input" id="logsSearchInput"
+               placeholder="搜索接口名 / IP / 路径 / 密钥 / 用户…" autocomplete="off">
+        <button type="button" class="vs-btn vs-btn--primary" id="logsSearchBtn">搜索</button>
+    </div>
+    <div class="vs-finance-filters" role="group" aria-label="调用结果">
+        <button type="button" class="vs-btn vs-btn--primary vs-log-filter is-active" data-ok="">全部</button>
+        <button type="button" class="vs-btn vs-btn--default vs-log-filter" data-ok="1">成功</button>
+        <button type="button" class="vs-btn vs-btn--default vs-log-filter" data-ok="0">失败</button>
+    </div>
+    <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="logsRefreshBtn">刷新</button>
+</div>
+
+<div class="vs-panel vs-log-panel" id="logsPage" data-boot="<?php echo vs_e(json_encode($boot, JSON_UNESCAPED_UNICODE)); ?>">
     <div class="vs-log-list" id="logsListBody">
         <p class="vs-empty vs-finance-empty">加载中…</p>
     </div>

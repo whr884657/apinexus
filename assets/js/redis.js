@@ -321,55 +321,50 @@
         var cacheKeyPercent = keyTotal > 0 ? Math.round((cacheKeys / keyTotal) * 1000) / 10 : 0;
 
         var entries = biz.entries || [];
-        var cachedCount = 0;
-        entries.forEach(function (entry) {
-            if (entry.cached) {
-                cachedCount += 1;
-            }
-        });
-        var entryTotal = entries.length;
         var memory = biz.cache_memory_human || '—';
+        var entrySegments = entries.map(function (entry) {
+            var bytes = entry.size_bytes != null ? parseInt(entry.size_bytes, 10) : 0;
+            if (isNaN(bytes)) {
+                bytes = 0;
+            }
+            return {
+                id: entry.id || '',
+                label: entry.label || '',
+                value: bytes > 0 ? bytes : (entry.cached ? 1 : 0),
+                color: entry.chart_color || '#94a3b8',
+                unit: bytes > 0 ? '字节' : '项',
+                extra: (entry.cached ? '已缓存' : '未缓存')
+                    + (entry.desc ? (' · ' + entry.desc) : '')
+            };
+        });
+        if (!entrySegments.length) {
+            entrySegments = [{ id: 'empty', label: '暂无缓存项', value: 1, color: '#e5e7eb', unit: '' }];
+        }
 
         return {
             hit: {
-                title: '命中分布',
+                title: '读写命中',
                 centerValue: hitTotal > 0 ? hitPercent + '%' : '—',
-                centerHint: '命中率',
+                centerHint: '缓存命中率',
                 segments: [
-                    { id: 'hits', label: '命中', value: hits, color: '#10b981', unit: '次' },
-                    { id: 'misses', label: '未命中', value: misses, color: '#d1d5db', unit: '次' }
+                    { id: 'hits', label: '命中（读到缓存）', value: hits, color: '#10b981', unit: '次' },
+                    { id: 'misses', label: '未命中（回源 MySQL）', value: misses, color: '#d1d5db', unit: '次' }
                 ]
             },
             keys: {
-                title: '键类型分布',
+                title: '键用途分布',
                 centerValue: keyTotal > 0 ? cacheKeyPercent + '%' : '—',
-                centerHint: '数据缓存占比',
+                centerHint: '业务数据占比',
                 segments: [
-                    { id: 'cache', label: '数据缓存', value: cacheKeys, color: '#3b82f6', unit: '个键' },
-                    { id: 'rate', label: '发信限流', value: rateKeys, color: '#fbbf24', unit: '个键' }
+                    { id: 'cache', label: '业务数据缓存', value: cacheKeys, color: '#3b82f6', unit: '个键', extra: '接口/分类/日志等' },
+                    { id: 'rate', label: '发信限流键', value: rateKeys, color: '#fbbf24', unit: '个键', extra: '防刷验证码' }
                 ]
             },
             entries: {
-                title: '缓存项状态',
+                title: '缓存了什么',
                 centerValue: memory,
-                centerHint: '缓存占用',
-                segments: [
-                    {
-                        id: 'cached',
-                        label: '已缓存',
-                        value: cachedCount,
-                        color: '#8b5cf6',
-                        unit: '项',
-                        extra: '占用 ' + memory
-                    },
-                    {
-                        id: 'uncached',
-                        label: '未缓存',
-                        value: Math.max(0, entryTotal - cachedCount),
-                        color: '#e5e7eb',
-                        unit: '项'
-                    }
-                ]
+                centerHint: '业务缓存占用',
+                segments: entrySegments
             }
         };
     }
@@ -410,8 +405,9 @@
                 + (cached ? ttl : '') + '" data-size="' + escapeHtml(size) + '">';
             html += '<div class="vs-redis-entry__main">';
             html += '<div class="vs-redis-entry__title">' + escapeHtml(entry.label || '') + '</div>';
-            html += '<div class="vs-redis-entry__meta">刷新周期 ' + escapeHtml(entry.ttl_hint || '')
-                + ' · 键 ' + escapeHtml(entry.key || '') + '</div>';
+            html += '<div class="vs-redis-entry__meta">'
+                + (entry.desc ? (escapeHtml(entry.desc) + ' · ') : '')
+                + '约每 ' + escapeHtml(entry.ttl_hint || '') + ' 自动过期</div>';
             html += '</div><div class="vs-redis-entry__status">';
             if (cached) {
                 html += '<span class="vs-redis-badge vs-redis-badge--on">已缓存</span>';
