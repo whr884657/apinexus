@@ -71,38 +71,12 @@
         });
     }
 
-    function isDeskLayout() {
-        return window.matchMedia('(min-width: 901px)').matches;
-    }
-
-    function applyDeskPanels() {
-        if (!isDeskLayout()) {
-            return false;
-        }
-        if (switchPanel) {
-            switchPanel.classList.add('is-active');
-            switchPanel.hidden = false;
-        }
-        if (configPanel) {
-            configPanel.classList.add('is-active');
-            configPanel.hidden = false;
-        }
-        if (configBody && configBody.getAttribute('data-needs-reload') === '1') {
-            reloadConfigPanel();
-        }
-        return true;
-    }
-
     function switchTab(tabId) {
         tabButtons.forEach(function (btn) {
             var on = btn.getAttribute('data-tab') === tabId;
             btn.classList.toggle('is-active', on);
             btn.setAttribute('aria-selected', on ? 'true' : 'false');
         });
-
-        if (applyDeskPanels()) {
-            return;
-        }
 
         if (switchPanel) {
             switchPanel.classList.toggle('is-active', tabId === 'switch');
@@ -157,16 +131,6 @@
         btn.addEventListener('click', function () {
             switchTab(btn.getAttribute('data-tab') || 'switch');
         });
-    });
-
-    applyDeskPanels();
-    window.addEventListener('resize', function () {
-        if (isDeskLayout()) {
-            applyDeskPanels();
-        } else {
-            var activeBtn = document.querySelector('.vs-product-tabs__btn.is-active');
-            switchTab(activeBtn ? (activeBtn.getAttribute('data-tab') || 'switch') : 'switch');
-        }
     });
 
     if (form) {

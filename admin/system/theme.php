@@ -162,10 +162,6 @@ vs_admin_layout_start('主题设置', 'theme');
 ?>
 
 <div class="vs-panel vs-theme-settings" id="themeSettingsPage" data-active-theme="<?php echo vs_e($activeTheme); ?>" data-active-name="<?php echo vs_e($activeThemeName); ?>">
-    <div class="vs-panel__header">
-        <h2 class="vs-panel__title">前台主题</h2>
-    </div>
-
     <nav class="vs-product-tabs vs-theme-settings__tabs" aria-label="主题设置导航">
         <button type="button" class="vs-product-tabs__btn is-active" data-tab="switch" aria-selected="true">主题切换</button>
         <button type="button" class="vs-product-tabs__btn" data-tab="config" aria-selected="false">主题设置</button>
@@ -176,7 +172,6 @@ vs_admin_layout_start('主题设置', 'theme');
     <?php else: ?>
         <div class="vs-theme-settings-desk">
             <div class="vs-product-tab-panel is-active" data-panel="switch" id="themeSwitchPanel">
-                <h3 class="vs-theme-desk-title">主题切换</h3>
                 <form method="post" action="" class="vs-form" id="themeSettingsForm" data-ajax="1">
                     <input type="hidden" name="action" value="save_theme">
                     <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
@@ -215,7 +210,6 @@ vs_admin_layout_start('主题设置', 'theme');
             </div>
 
             <div class="vs-product-tab-panel" data-panel="config" id="themeConfigPanel" hidden>
-                <h3 class="vs-theme-desk-title">主题设置</h3>
                 <div class="vs-theme-config-head">
                     <span class="vs-theme-config-head__label">正在配置</span>
                     <strong class="vs-theme-config-head__name" id="themeConfigActiveName"><?php echo vs_e($activeThemeName); ?></strong>

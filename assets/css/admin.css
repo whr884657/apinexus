@@ -2556,7 +2556,7 @@ select.vs-input.vs-select {
 }
 
 .vs-theme-config-form__body {
-    max-width: 640px;
+    max-width: none;
 }
 
 .vs-theme-config-empty {
@@ -2616,6 +2616,29 @@ select.vs-input.vs-select {
 @media (max-width: 640px) {
     .vs-theme-config-checks {
         grid-template-columns: 1fr;
+    }
+}
+
+/* 主题配置：宽屏多列铺开，避免挤在一侧 */
+@media (min-width: 901px) {
+    .vs-theme-config-form__body {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 28px;
+        row-gap: 4px;
+        align-items: start;
+    }
+
+    .vs-theme-config-form__body > .vs-theme-config-group,
+    .vs-theme-config-form__body > .vs-theme-config-empty,
+    .vs-theme-config-form__body > .vs-theme-config-field:has(textarea) {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (min-width: 1280px) {
+    .vs-theme-config-form__body {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
@@ -5764,50 +5787,13 @@ select.vs-input.vs-select {
     }
 }
 
-/* ── 主题设置：宽屏左右分栏 ── */
-.vs-theme-desk-title {
+/* ── 主题设置：Tab 分页（电脑/手机统一，不做左右分栏） ── */
+.vs-theme-settings .vs-panel__header {
     display: none;
-    margin: 0 0 14px;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--vs-text);
 }
 
-@media (min-width: 901px) {
-    .vs-theme-settings__tabs {
-        display: none;
-    }
-
-    .vs-theme-settings-desk {
-        display: grid;
-        grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.15fr);
-        gap: 24px;
-        align-items: start;
-        padding-top: 24px;
-    }
-
-    .vs-theme-settings-desk .vs-product-tab-panel {
-        padding-top: 0;
-        display: block !important;
-    }
-
-    .vs-theme-settings-desk .vs-product-tab-panel[hidden] {
-        display: block !important;
-    }
-
-    .vs-theme-desk-title {
-        display: block;
-    }
-
-    .vs-theme-settings-desk .vs-theme-gallery {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 240px));
-    }
-
-    .vs-theme-settings-desk .vs-theme-config-form__body {
-        max-height: calc(100vh - 280px);
-        overflow: auto;
-        padding-right: 4px;
-    }
+.vs-theme-settings__tabs {
+    margin-top: 0;
 }
 
 /* ── API 调用日志 ── */
