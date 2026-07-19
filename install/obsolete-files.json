@@ -16,6 +16,7 @@
         "本地与代理接口统计识别机制-可移植说明.md",
         "本地API头部注入统计机制-可移植说明.md",
         "paynotify.php",
-        "payreturn.php"
+        "payreturn.php",
+        "play.php"
     ]
 }

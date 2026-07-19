@@ -68,7 +68,7 @@ $isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
 <script>
 window.VS_BASE_URL = <?php echo json_encode(rtrim($vsBase, '/')); ?>;
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode(AuthSecurity::csrfToken()); ?>;
-window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(rtrim($vsBase, '/') . '/play'); ?>;
+window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(rtrim($vsBase, '/') . '/core/playground/relay.php'); ?>;
 </script>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/assets/css/toast.css?v=<?php echo vs_e(VS_VERSION); ?>">
 <script src="<?php echo vs_e($vsBase); ?>/assets/js/common.js?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

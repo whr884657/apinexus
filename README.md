@@ -109,7 +109,6 @@ ApiNexus/
 ├── 404.php                     # 全站 404（含安全法律提示）
 ├── index.php                   # 前台首页（主题驱动）
 ├── apis.php                    # 全部接口列表 + 代理网关（对外 /apis/{短码}，内记统计）
-├── play.php                    # 前台在线测试同源中继（POST + CSRF）
 ├── detail.php                  # 接口详情（PATH_INFO：/detail.php/{id}）
 ├── api/                        # 本地业务接口脚本（头部注入 ApiStats::hit）+ 统计代码使用说明.md
 │   └── yiyan/                  # 示例：随机一言
@@ -164,6 +163,8 @@ ApiNexus/
 │   ├── ApiManager.php          # 接口列表 CRUD 与状态
 │   ├── ApiStats.php            # 本地/代理调用统计（apilog）
 │   ├── ApiProxy.php            # 代理网关 /apis/{短码}
+│   ├── PlaygroundRelay.php     # 在线测试同源中继（类）
+│   ├── playground/relay.php    # 在线测试中继入口（多主题共用，带 .php 直访）
 │   ├── ApiCategoryManager.php  # 接口分类（后台 CRUD）
 │   ├── FrontendCategory.php    # 前台分类（主题调用）
 │   ├── FrontendApi.php         # 前台公开接口（主题调用）

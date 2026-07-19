@@ -4,7 +4,7 @@
     "release_date": "2026-07-20",
     "db_changes": false,
     "changes": [
-        "在线测试改为同源中继 play.php，修复代理\/外链 Failed to fetch",
+        "在线测试改为同源中继 core/playground/relay.php，修复代理\/外链 Failed to fetch",
         "首页终端：Method 徽章渲染与切换同步；登录用户 KEY 自动填入",
         "详情页：请求地址保持公开地址；信息区配色；复制提示改顶部 Toast",
         "侧栏\/顶栏登录后显示头像 +「用户中心」"

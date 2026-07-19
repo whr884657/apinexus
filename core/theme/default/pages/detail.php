@@ -317,5 +317,5 @@ window.playgroundKeyContext = <?php echo json_encode(array(
     'loginUrl' => isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login'),
 ), JSON_UNESCAPED_UNICODE); ?>;
 window.VS_CSRF_TOKEN = <?php echo json_encode(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
-window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/play')); ?>;
+window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/core/playground/relay.php')); ?>;
 </script>
