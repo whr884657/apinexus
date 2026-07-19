@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/PlaygroundRelay.php
- * 作用：前台在线测试同源中继 —— 服务端代发请求，避免浏览器跨域 Failed to fetch
+ * 作用：可选同源中继（兼容旧主题）。默认主题 v4.8.0+ 用浏览器直连公开 endpoint，勿在此写 apilog。
  */
 
 class PlaygroundRelay
@@ -80,9 +80,7 @@ class PlaygroundRelay
         if ($guard !== true) {
             $msg = (is_array($guard) && isset($guard['msg'])) ? (string) $guard['msg'] : '无法调用';
             $code = (is_array($guard) && isset($guard['http'])) ? (int) $guard['http'] : 403;
-            if (ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0) === ApiManager::APITYPE_PROXY) {
-                ApiStats::hitProxy($row, false, $code);
-            }
+            // 中继禁止写 apilog：REQUEST_URI 是 relay.php，会污染 path（见 E57）
             return array(
                 'ok'          => false,
                 'msg'         => $msg,
@@ -98,14 +96,13 @@ class PlaygroundRelay
         if ($apitype === ApiManager::APITYPE_PROXY) {
             $target = trim((string) (isset($row['targeturl']) ? $row['targeturl'] : ''));
             if ($target === '' || !preg_match('#^https?://#i', $target)) {
-                ApiStats::hitProxy($row, false, 500);
                 return self::fail('上游地址无效', 500, $displayUrl);
             }
             $upstreamParams = $params;
             unset($upstreamParams['key'], $upstreamParams['api_key'], $upstreamParams['apikey']);
             $fetchUrl = self::mergeQuery($target, $upstreamParams);
             $result = self::httpRequest($fetchUrl, $method, $upstreamParams);
-            ApiStats::hitProxy($row, !empty($result['ok']), isset($result['http']) ? (int) $result['http'] : 0);
+            // 不在此 hitProxy：默认主题已改浏览器直连 /apis/{短码}，由 ApiProxy 记账
             $result['displayUrl'] = $displayUrl;
             return $result;
         }

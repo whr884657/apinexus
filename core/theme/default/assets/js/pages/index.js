@@ -900,7 +900,7 @@ async function sendRequest() {
     paramInputs.forEach(input => {
         if (input.type !== 'file' && input.value) params[input.dataset.param] = input.value;
     });
-    // POST/GET 均确保 KEY 进入 params（中继会拼进 Query）
+    // POST/GET 均确保 KEY 进入 params（直连会拼进 Query，POST 另带 form body）
     applyPlaygroundSessionApiKey(api, paramsContainer);
     const keyModeSend = parseInt(api.needkey, 10) || 0;
     if (keyModeSend === 1 || keyModeSend === 2) {
@@ -918,29 +918,36 @@ async function sendRequest() {
         }
     }
 
+    const endpoint = String(api.endpoint || '').trim();
+    if (!endpoint) {
+        output.innerHTML = '<span style="color: #ef4444">// 缺少接口地址</span>';
+        status.textContent = 'Error';
+        status.className = 'text-xs px-2 py-1 rounded bg-red-900 text-red-400 font-mono';
+        return;
+    }
+
     const startTime = performance.now();
     try {
-        if (!window.VsPlaygroundResponse || !window.VsPlaygroundResponse.relayRequest) {
+        if (!window.VsPlaygroundResponse || !window.VsPlaygroundResponse.directRequest) {
             throw new Error('测试模块未加载');
         }
-        const data = await window.VsPlaygroundResponse.relayRequest({
-            apiId: api.id,
+        const res = await window.VsPlaygroundResponse.directRequest({
+            endpoint: endpoint,
             method: currentMethod,
             params: params
         });
         const elapsed = Math.round(performance.now() - startTime);
-        const http = parseInt(data.http, 10) || 0;
-        const ok = data.code === 1 || (http >= 200 && http < 400);
+        const http = res.status || 0;
+        const ok = http >= 200 && http < 400;
         status.textContent = (http ? (http + (ok ? ' OK' : ' Error')) : (ok ? 'OK' : 'Error')) + ' ' + elapsed + 'ms';
         status.className = 'text-xs px-2 py-1 rounded font-mono ' + (ok ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400');
-        if (!ok && data.msg && !(data.body)) {
-            output.textContent = String(data.msg);
-            return;
-        }
-        window.VsPlaygroundResponse.renderRelayPayload(data, output);
+        await window.VsPlaygroundResponse.renderFetchResponse(res, output);
     } catch (error) {
-        const msg = error.message || '请求失败';
-        output.innerHTML = `<span style="color: #ef4444">// 请求失败: ${msg}</span>`;
+        const raw = (error && error.message) ? String(error.message) : '请求失败';
+        const msg = /failed to fetch|networkerror|load failed/i.test(raw)
+            ? '请求失败（浏览器无法完成，常见于跨域或上游未允许跨域）'
+            : raw;
+        output.innerHTML = `<span style="color: #ef4444">// ${msg}</span>`;
         status.textContent = "Error";
         status.className = "text-xs px-2 py-1 rounded bg-red-900 text-red-400 font-mono";
     }

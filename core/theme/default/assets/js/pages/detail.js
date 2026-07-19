@@ -272,31 +272,38 @@
             responseEl.textContent = '// 正在发送请求...';
             setStatus('处理中', 'wait');
 
-            if (!VsPR || !VsPR.relayRequest) {
+            if (!VsPR || !VsPR.directRequest || !VsPR.renderFetchResponse) {
                 responseEl.textContent = '// 测试模块未加载，请刷新页面';
                 setStatus('Error', 'err');
                 return;
             }
 
-            VsPR.relayRequest({
-                apiId: api.id,
+            var endpoint = String(api.endpoint || page.getAttribute('data-endpoint') || '').trim();
+            if (!endpoint) {
+                responseEl.textContent = '// 缺少接口地址';
+                setStatus('Error', 'err');
+                return;
+            }
+
+            VsPR.directRequest({
+                endpoint: endpoint,
                 method: method,
                 params: params
-            }).then(function (data) {
-                var http = parseInt(data.http, 10) || 0;
-                var ok = data.code === 1 || (http >= 200 && http < 400);
+            }).then(function (res) {
+                var http = res.status || 0;
+                var ok = http >= 200 && http < 400;
                 setStatus((http ? String(http) : '') + (ok ? ' OK' : ' Error'), ok ? 'ok' : 'err');
                 if (urlPreview) {
                     urlPreview.textContent = String(api.endpoint || page.getAttribute('data-endpoint') || '');
                 }
-                if (!ok && data.msg && !data.body) {
-                    responseEl.textContent = String(data.msg);
-                    return;
-                }
-                VsPR.renderRelayPayload(data, responseEl);
+                return VsPR.renderFetchResponse(res, responseEl);
             }).catch(function (err) {
                 setStatus('Error', 'err');
-                responseEl.textContent = '// 请求失败: ' + (err && err.message ? err.message : 'network error');
+                var raw = err && err.message ? String(err.message) : 'network error';
+                var msg = /failed to fetch|networkerror|load failed/i.test(raw)
+                    ? '请求失败（浏览器无法完成，常见于跨域或上游未允许跨域）'
+                    : raw;
+                responseEl.textContent = '// 请求失败: ' + msg;
             });
         });
     }
