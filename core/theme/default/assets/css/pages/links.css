@@ -2,6 +2,8 @@
  * 友情链接列表（默认主题）
  */
 
+/* 顶距：须盖过 feer-compat「.main-wrapper.container { padding-top:0 }」，并与 apis 页一致用内联 88px */
+body.vs-body.feer-front .main-wrapper.container.links-page,
 .links-page {
     padding-top: 88px;
     padding-bottom: 2.5rem;
@@ -10,9 +12,10 @@
     z-index: 10;
 }
 
-.links-page .page-header {
+.links-page .page-header,
+.links-page .page-header--compact {
     margin-bottom: 0;
-    padding-bottom: 0;
+    padding: 0;
     border-bottom: none;
 }
 
@@ -167,7 +170,8 @@
 }
 
 @media (max-width: 640px) {
+    body.vs-body.feer-front .main-wrapper.container.links-page,
     .links-page {
-        padding-top: 80px;
+        padding-top: 88px;
     }
 }

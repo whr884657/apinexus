@@ -9,8 +9,8 @@ $siteCard = isset($siteCard) && is_array($siteCard) ? $siteCard : (class_exists(
 ));
 $csrf = class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '';
 ?>
-<main class="main-wrapper container mx-auto px-4 applylink-page">
-    <div class="page-header">
+<main class="main-wrapper container mx-auto px-4 applylink-page" style="padding-top:88px;">
+    <div class="page-header page-header--compact">
         <h1 class="section-title">申请友链</h1>
         <p class="applylink-lead">欢迎优质网站交换友链，共同发展</p>
     </div>

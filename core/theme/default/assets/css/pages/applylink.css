@@ -2,6 +2,7 @@
  * 申请友链页（默认主题）
  */
 
+body.vs-body.feer-front .main-wrapper.container.applylink-page,
 .applylink-page {
     padding-top: 88px;
     padding-bottom: 2.5rem;
@@ -10,9 +11,10 @@
     z-index: 10;
 }
 
-.applylink-page .page-header {
+.applylink-page .page-header,
+.applylink-page .page-header--compact {
     margin-bottom: 0;
-    padding-bottom: 0;
+    padding: 0;
     border-bottom: none;
 }
 
@@ -180,8 +182,9 @@
 }
 
 @media (max-width: 640px) {
+    body.vs-body.feer-front .main-wrapper.container.applylink-page,
     .applylink-page {
-        padding-top: 80px;
+        padding-top: 88px;
     }
 
     .form-card {

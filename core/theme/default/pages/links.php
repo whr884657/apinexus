@@ -4,8 +4,8 @@ $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
 $friendLinks = class_exists('FrontendLink') ? FrontendLink::listForTheme() : array();
 $applyUrl = $vsBase . '/applylink';
 ?>
-<main class="main-wrapper container mx-auto px-4 links-page">
-    <div class="page-header">
+<main class="main-wrapper container mx-auto px-4 links-page" style="padding-top:88px;">
+    <div class="page-header page-header--compact">
         <h1 class="section-title"><span class="section-title__mark" aria-hidden="true">//</span>友情链接</h1>
         <p class="links-lead">与优质站点互相推荐，共同成长</p>
     </div>
