@@ -22,13 +22,20 @@
     margin: 0 0 2rem;
     display: flex;
     align-items: center;
+    color: var(--text-main);
 }
 
-.links-page .section-title::before {
-    content: '//';
+/* 双斜线标记：HTML 实体 + CSS，避免被 Tailwind preflight 清掉 ::before */
+.links-page .section-title__mark {
     color: var(--accent-primary);
     margin-right: 0.5rem;
     font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.links-page .section-title::before {
+    content: none;
+    display: none;
 }
 
 .links-lead {

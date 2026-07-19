@@ -1,12 +1,12 @@
 {
-    "version": "4.7.2",
-    "title": "ApiNexus 4.7.2 在线测试媒体预览与详情绑定修复",
+    "version": "4.7.3",
+    "title": "ApiNexus 4.7.3 媒体类型纠偏与友链标题",
     "release_date": "2026-07-20",
     "db_changes": false,
     "changes": [
-        "修复详情页推荐卡污染 $api 导致测试绑错接口",
-        "媒体（图\/音\/视频）落盘同源预览，可在线播放",
-        "POST 请求携带 Query KEY + form body\/Content-Length，修复未填密钥与 No Content Length"
+        "在线测试按文件魔数识别图\/音\/视频，修复视频被标成 IMAGE",
+        "修复重定向后 Content-Type 取错导致图片 POST 无法预览",
+        "友情链接页补齐双斜线页面标题"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
