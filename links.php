@@ -11,4 +11,6 @@ if (!InstallChecker::isInstalled()) {
     vs_redirect(vs_base_url() . '/install/');
 }
 
-vs_frontend_page('links', '友情链接');
+vs_frontend_page('links', '友情链接', array(
+    'activeNav' => 'links',
+));

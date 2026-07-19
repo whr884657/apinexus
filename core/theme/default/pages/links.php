@@ -1,21 +1,51 @@
-<?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
-<main class="content-wrapper" style="padding-top:70px;">
-    <h1 class="page-title">友情链接</h1>
-    <div class="links-grid">
-        <a href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer" class="link-card" style="text-decoration: none;">
-            <div class="link-avatar">G</div>
-            <div class="link-info"><span class="link-name">ApiNexus 开源仓库</span><p class="link-desc">项目源码、Issue 与发行版</p><p class="link-url">gitee.com/xunjinlu/apinexus</p></div>
-        </a>
-        <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="link-card" style="text-decoration: none;">
-            <div class="link-avatar">GH</div>
-            <div class="link-info"><span class="link-name">GitHub</span><p class="link-desc">全球最大的代码托管平台</p><p class="link-url">github.com</p></div>
-        </a>
+<?php if (!defined('VS_THEME_RENDER')) { exit; }
+
+$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$friendLinks = class_exists('FrontendLink') ? FrontendLink::listForTheme() : array();
+$applyUrl = $vsBase . '/applylink';
+?>
+<main class="main-wrapper container mx-auto px-4 links-page">
+    <div class="page-header">
+        <h1 class="section-title">友情链接</h1>
+        <p class="links-lead">与优质站点互相推荐，共同成长</p>
     </div>
+
+    <?php if (count($friendLinks) === 0): ?>
+    <div class="empty-state">
+        <p>暂无友情链接</p>
+        <a href="<?php echo vs_e($applyUrl); ?>" class="apply-btn">申请友链</a>
+    </div>
+    <?php else: ?>
+    <div class="links-grid">
+        <?php foreach ($friendLinks as $item): ?>
+            <a href="<?php echo vs_e($item['siteurl']); ?>"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="link-card"
+               data-friend-link="1">
+                <?php if (!empty($item['icon'])): ?>
+                    <img class="link-avatar" src="<?php echo vs_e($item['icon']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+                <?php else: ?>
+                    <div class="link-avatar"><?php echo vs_e($item['initial']); ?></div>
+                <?php endif; ?>
+                <div class="link-info">
+                    <span class="link-name"><?php echo vs_e($item['name']); ?></span>
+                    <?php if (!empty($item['description'])): ?>
+                        <p class="link-desc"><?php echo vs_e($item['description']); ?></p>
+                    <?php endif; ?>
+                    <p class="link-url"><?php echo vs_e(!empty($item['host']) ? $item['host'] : $item['siteurl']); ?></p>
+                </div>
+            </a>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
     <div class="apply-section">
         <h2 class="apply-title">申请友链</h2>
-        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">欢迎交换友情链接，请通过 Gitee Issue 或用户中心联系站长</p>
-        <a href="https://gitee.com/xunjinlu/apinexus/issues" target="_blank" rel="noopener noreferrer" class="apply-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>申请友链
+        <p class="apply-hint">欢迎交换友情链接。请先在贵站添加本站信息，再提交申请。</p>
+        <a href="<?php echo vs_e($applyUrl); ?>" class="apply-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            申请友情链接
         </a>
     </div>
 </main>

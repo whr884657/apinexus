@@ -668,6 +668,7 @@ class ThemeManager
             'articles'     => 'assets/css/pages/articles.css',
             'about'        => 'assets/css/pages/about.css',
             'links'        => 'assets/css/pages/links.css',
+            'applylink'    => 'assets/css/pages/applylink.css',
             'contributors' => 'assets/css/pages/contributors.css',
             'sponsor'      => 'assets/css/pages/donate.css',
         );
@@ -687,15 +688,25 @@ class ThemeManager
         $pageJsMap = array(
             'home'         => array('assets/js/pages/index-terminal.js', 'assets/js/pages/index.js'),
             'apis'         => array('assets/js/pages/apis-page.js'),
+            'detail'       => array(
+                'https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js',
+                'assets/js/pages/detail.js',
+            ),
             'articles'     => array('assets/js/pages/articles-page.js'),
             'about'        => array('assets/js/pages/about-page.js'),
             'links'        => array('assets/js/pages/links-page.js'),
+            'applylink'    => array('assets/js/pages/applylink.js'),
             'contributors' => array('assets/js/pages/contributors-page.js'),
             'sponsor'      => array('assets/js/pages/donate.js'),
         );
         if (isset($pageJsMap[$pageKey])) {
             foreach ($pageJsMap[$pageKey] as $rel) {
-                $js[] = $asset($rel);
+                $rel = (string) $rel;
+                if (preg_match('#^https?://#i', $rel)) {
+                    $js[] = $rel;
+                } else {
+                    $js[] = $asset($rel);
+                }
             }
         }
 

@@ -1,10 +1,13 @@
 {
-    "version": "4.3.1",
-    "title": "ApiNexus 4.3.1 主题卡片手机端自适应宽度",
+    "version": "4.4.0",
+    "title": "ApiNexus 4.4.0 默认主题详情页与友情链接体系",
     "release_date": "2026-07-19",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "主题切换：手机端主题卡片改为自适应铺满，左右仅保留面板内边距，不再固定 260px 过窄"
+        "默认主题接口详情页重构：卡片分区、信息网格、计费\/文档展示（白色色板）",
+        "友情链接全链路：表 link、LinkManager、FrontendLink、后台审核",
+        "新增申请友链页 applylink（短名无横线）；页脚展示已通过友链并附申请入口",
+        "申请友链不再跳转仓库 Issue"
     ],
     "repo": "xunjinlu\/apinexus",
     "branch": "main"

@@ -134,8 +134,8 @@
                 // ignore parse errors
             }
 
-            // 申请友链（apply-link.php）不弹窗，直接跳转
-            if (u && u.pathname.indexOf('apply-link.php') !== -1) return;
+            // 申请友链页不弹窗，直接跳转
+            if (u && (u.pathname.indexOf('/applylink') !== -1 || u.pathname.indexOf('applylink.php') !== -1)) return;
 
             // 合作伙伴直接跳转，不弹窗
             if (a.closest('.partners-grid')) return;

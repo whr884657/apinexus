@@ -120,7 +120,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
 | 第三方登录 | `oauth/*` | `OAuthService` | 系统设置 | ✅ 是 | **已完成** |
 | 文章 | — | — | 占位 | ❌ 否 | **待开发** |
-| 友情链接 | — | — | 占位 | ❌ 否 | **待开发** |
+| 友情链接 | `LinkManager` | `FrontendLink` | `admin/content/links.php`、`links.php`、`applylink.php` | ✅ 是 | **已完成**（表 `link`；前台申请 + 后台审核；页脚/友链页展示已通过项） |
 | 公告 | — | — | 占位 | ❌ 否 | **待开发** |
 | Redis 缓存 | — | `RedisService` / `RedisCache` | `admin/system/redis.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 限流） |
 | 贡献者 | — | — | 占位 | ❌ 否 | **待开发** |
@@ -227,10 +227,12 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；本地注入 ≤3 行向上查找或 `api/hit.php` |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD（表 `apikey`；每用户最多 3 条；格式 `sk-`+32；含调用次数） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
+| `LinkManager.php` | 友情链接 CRUD / 审核 / 前台申请（**后台向**） |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表与详情（**主题向**） |
+| `FrontendLink.php` | 前台已通过友链列表与本站友链卡片（**主题向**） |
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
-| `RedisCache.php` | 业务数据缓存（公开接口、前台展示格式化列表、分类、日志分页）；键空间自动维护 |
+| `RedisCache.php` | 业务数据缓存（公开接口、前台展示、分类、友链、日志分页）；键空间自动维护 |
 | `ApiLogManager.php` | API 调用日志分页查询、搜索、详情格式化（列表走短 TTL Redis） |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
@@ -631,6 +633,7 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 | 方法 | 说明 |
 |------|------|
 | `listForTheme()` | 接口数组，供模板或 `json_encode` 给 JS |
+| `findForThemeById($id)` | 单条详情（审核通过且非禁用） |
 | `countForTheme()` | 公开接口数量 |
 
 **返回字段（每条）：**
@@ -640,10 +643,34 @@ if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
 | `id` | 接口 ID |
 | `name` | 名称 |
 | `desc` | 描述 |
-| `category` | 分类 id 字符串（空表示未匹配到库内分类） |
-| `method` / `methods` | 请求方式 |
-| `endpoint` / `full_url` | 地址 |
-| `maintenance` / `require_api_key` / `points_cost` | 扩展字段（默认 0） |
+| `category` / `category_name` | 分类 id / 原始分类名 |
+| `method` / `methods` / `method_label` | 请求方式 |
+| `endpoint` | 调用地址 |
+| `params` / `response` / `doc` / `aidoc` | 参数、返回、文档 |
+| `maintenance` | 1=维护中 |
+| `needkey` / `needkey_label` | 密钥要求 |
+| `charge` / `charge_label` / `points` | 计费 |
+| `calls` / `icon` / `detail_url` / `createtime` | 其它 |
+
+---
+
+### 4.24b LinkManager.php / FrontendLink.php（友情链接）★ 主题开发重点
+
+**后台 `LinkManager`：** 表 `link`；状态 0待审 / 1通过 / 2拒绝；`create` / `apply` / `update` / `setStatus` / `delete` / `listAll` / `listApproved`。
+
+**前台 `FrontendLink`：**
+
+| 方法 | 说明 |
+|------|------|
+| `listForTheme()` | 已通过友链（含 name/siteurl/icon/description/host/initial） |
+| `siteCard()` | 本站友链信息（申请页展示：name/url/desc/icon） |
+
+**主题约定：**
+
+- 列表页 `pages/links.php` → `FrontendLink::listForTheme()`
+- 申请页 `pages/applylink.php` + 根入口 `applylink.php`（短名无横线）
+- 页脚在二维码上方渲染已通过友链，末尾固定「申请友情链接」链到 `/applylink`
+- 禁止主题内 SQL；申请提交走 `applylink.php` POST + CSRF + `AjaxResponse`
 
 **主题首页示例：**
 
@@ -839,7 +866,7 @@ MySQL
 | 用户管理 | `UserManager` | `UserAuth`（当前用户） | ✅ 可调用 |
 | 站点配置 | 后台设置页 → `Config` | `SiteContext` / `ThemeManager::themeSetting()` | ✅ 可调用 |
 | 文章 | `ArticleManager`（规划） | `FrontendArticle`（规划） | ⏳ 待 core 开发 |
-| 友情链接 | `LinkManager`（规划） | `FrontendLink`（规划） | ⏳ 待 core 开发 |
+| 友情链接 | `LinkManager` | `FrontendLink` | ✅ 可调用 |
 | 公告 | `AnnouncementManager`（规划） | `FrontendAnnouncement`（规划） | ⏳ 待 core 开发 |
 
 ---

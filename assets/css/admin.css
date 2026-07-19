@@ -6244,3 +6244,46 @@ select.vs-input.vs-select {
 }
 
 
+
+/* ---- 友情链接管理 ---- */
+.vs-link-panel { padding: 0; }
+.vs-link-list { display: flex; flex-direction: column; gap: 0; }
+.vs-link-row {
+    display: grid;
+    grid-template-columns: 48px 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--vs-border, #e5e7eb);
+}
+.vs-link-row:last-child { border-bottom: 0; }
+.vs-link-row__icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: #f3f4f6; display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.vs-link-row__icon img { width: 100%; height: 100%; object-fit: cover; }
+.vs-link-row__initial { font-weight: 700; color: #111; }
+.vs-link-row__name { font-weight: 600; color: #111; }
+.vs-link-row__url { font-size: 12px; color: #6b7280; text-decoration: none; word-break: break-all; }
+.vs-link-row__url:hover { color: #2563eb; }
+.vs-link-row__desc { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+.vs-link-row__actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.vs-link-status {
+    display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #f3f4f6; color: #6b7280;
+}
+.vs-link-status.is-on { background: #ecfdf5; color: #059669; }
+.vs-link-status.is-off { background: #fef2f2; color: #dc2626; }
+.vs-link-status.is-pending { background: #fffbeb; color: #d97706; }
+@media (max-width: 720px) {
+    .vs-link-row {
+        grid-template-columns: 40px 1fr;
+        grid-template-areas:
+            "icon main"
+            "status status"
+            "actions actions";
+    }
+    .vs-link-row__icon { grid-area: icon; }
+    .vs-link-row__main { grid-area: main; }
+    .vs-link-row__status { grid-area: status; }
+    .vs-link-row__actions { grid-area: actions; justify-content: flex-start; }
+}

@@ -1,5 +1,5 @@
 /**
- * 接口详情页（默认主题）
+ * 接口详情页（默认主题 · 白色色板）
  */
 
 .detail-page {
@@ -9,7 +9,7 @@
 }
 
 .detail-crumb {
-    color: var(--text-muted, #71717a);
+    color: var(--text-muted);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -17,7 +17,7 @@
 }
 
 .detail-crumb a {
-    color: var(--accent-primary, #00ff9d);
+    color: var(--accent-secondary);
     text-decoration: none;
 }
 
@@ -29,91 +29,228 @@
     opacity: 0.5;
 }
 
-.detail-hero {
+.detail-header {
     margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detail-header__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
 }
 
 .detail-meta {
     display: flex;
     flex-wrap: wrap;
     gap: 0.45rem;
-    margin-bottom: 0.75rem;
 }
 
 .detail-title {
-    margin-bottom: 0.35rem;
-}
-
-.detail-id {
-    font-size: 0.8rem;
-    color: var(--text-muted, #71717a);
-    margin-bottom: 0.75rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+    color: var(--text-main);
+    line-height: 1.35;
 }
 
 .detail-desc,
 .detail-lead {
-    color: var(--text-muted, #71717a);
+    color: var(--text-muted);
     line-height: 1.7;
-    margin: 0 0 1rem;
+    margin: 0;
+    font-size: 0.9rem;
 }
 
-.detail-panel {
-    border: 1px solid var(--border-color, rgba(0, 255, 157, 0.15));
-    background: var(--bg-panel, rgba(12, 12, 18, 0.95));
+.detail-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 1rem 1.1rem 1.15rem;
     margin-bottom: 1rem;
 }
 
-.detail-panel--empty {
+.detail-card--empty {
     text-align: center;
     padding: 2rem 1.25rem;
 }
 
-.detail-h {
-    font-size: 0.9rem;
+.detail-section-title {
+    font-size: 1rem;
     font-weight: 700;
-    margin: 0 0 0.65rem;
+    margin: 0 0 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--text-main);
 }
 
-.detail-pre {
-    margin: 0;
-    padding: 0.75rem 0.85rem;
+.detail-section-title::before {
+    content: '//';
+    color: var(--accent-primary);
+    margin-right: 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+}
+
+.detail-page .endpoint-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--endpoint-bg);
+    border: 1px solid var(--endpoint-border);
     border-radius: 8px;
-    border: 1px solid var(--border-color, rgba(0, 255, 157, 0.15));
-    background: rgba(0, 0, 0, 0.2);
-    color: var(--text-main, #e4e4e7);
-    font-size: 0.78rem;
-    line-height: 1.6;
+    padding: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.endpoint-box__text {
+    font-size: 0.82rem;
+    color: var(--text-main);
+    word-break: break-all;
+    line-height: 1.5;
+}
+
+.endpoint-box__method {
+    color: var(--accent-secondary);
+    font-weight: 700;
+    margin-right: 0.4rem;
+}
+
+.btn-copy {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 0.25rem 0.55rem;
+    font-size: 0.7rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.btn-copy:hover {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+    .info-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.info-item {
+    padding: 0.75rem;
+    background: rgba(17, 17, 17, 0.03);
+    border-radius: 8px;
+    border: 1px solid transparent;
+}
+
+[data-theme="dark"] .info-item {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.info-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+}
+
+.info-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text-main);
+    word-break: break-word;
+}
+
+.info-value--method {
+    color: var(--accent-secondary);
+}
+
+.info-value--calls {
+    color: #059669;
+}
+
+.detail-notice {
+    margin-top: 0.85rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.detail-notice--warn {
+    background: rgba(249, 115, 22, 0.08);
+    border: 1px solid rgba(249, 115, 22, 0.25);
+    color: #c2410c;
+}
+
+.code-block {
+    background: var(--bg-code);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.code-content {
+    margin: 0;
+    padding: 0.85rem;
     overflow-x: auto;
+    font-size: 0.75rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text-main);
+}
+
+.detail-md {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.75;
     white-space: pre-wrap;
     word-break: break-word;
 }
 
-[data-theme="light"] .detail-pre {
-    background: rgba(15, 23, 42, 0.03);
-}
-
-.detail-doc {
-    color: var(--text-muted, #71717a);
-    line-height: 1.8;
-    white-space: pre-wrap;
-    word-break: break-word;
+.detail-md.is-parsed {
+    white-space: normal;
 }
 
 .detail-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.65rem;
-    margin-top: 0.85rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
 }
 
-.detail-actions--inline {
-    margin-top: 0.75rem;
-}
-
-.detail-page .endpoint-box {
-    margin-top: 0;
+.copy-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 2rem;
+    transform: translateX(-50%);
+    z-index: 1200;
+    background: #111;
+    color: #fff;
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 @media (max-width: 640px) {
@@ -122,13 +259,26 @@
         padding-bottom: 2rem;
     }
 
-    .detail-panel {
+    .detail-card {
         padding: 0.9rem;
         border-radius: 8px;
+    }
+
+    .detail-title {
+        font-size: 1.15rem;
     }
 
     .detail-actions .btn-geek {
         flex: 1 1 auto;
         text-align: center;
+    }
+
+    .detail-page .endpoint-box {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .detail-page .endpoint-box .btn-copy {
+        align-self: flex-end;
     }
 }

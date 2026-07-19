@@ -71,9 +71,11 @@ class FrontendApi
             'icon'        => $iconRaw !== '' ? ApiCategoryManager::resolveIconUrl($iconRaw) : '',
             'detail_url'  => $id > 0 ? vs_api_detail_url($id) : '',
             'charge'      => ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0),
+            'charge_label'=> ApiManager::chargeLabel(isset($row['charge']) ? $row['charge'] : 0),
             'points'      => ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0) === ApiManager::CHARGE_PAID
                 ? (float) ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0)
                 : 0,
+            'createtime'  => isset($row['createtime']) ? (string) $row['createtime'] : '',
         );
     }
 
