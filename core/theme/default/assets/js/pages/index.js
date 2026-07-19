@@ -900,6 +900,23 @@ async function sendRequest() {
     paramInputs.forEach(input => {
         if (input.type !== 'file' && input.value) params[input.dataset.param] = input.value;
     });
+    // POST/GET 均确保 KEY 进入 params（中继会拼进 Query）
+    applyPlaygroundSessionApiKey(api, paramsContainer);
+    const keyModeSend = parseInt(api.needkey, 10) || 0;
+    if (keyModeSend === 1 || keyModeSend === 2) {
+        let hasKey = false;
+        Object.keys(params).forEach(function (k) {
+            const n = String(k).toLowerCase();
+            if (n === 'key' || n === 'api_key' || n === 'apikey') hasKey = true;
+        });
+        if (!hasKey) {
+            const keyInput = findKeyParamInput(paramsContainer);
+            const fromInput = keyInput && keyInput.type !== 'file' ? String(keyInput.value || '').trim() : '';
+            const fromSession = getPlaygroundUserApiKey();
+            const k = fromInput || fromSession;
+            if (k) params.key = k;
+        }
+    }
 
     const startTime = performance.now();
     try {

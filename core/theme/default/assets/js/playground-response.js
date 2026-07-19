@@ -176,6 +176,17 @@
             return;
         }
 
+        if (encoding === 'url') {
+            var mediaUrl = body;
+            var kindUrl = mediaKind(ct) || 'image';
+            if (kindUrl === 'image' || kindUrl === 'audio' || kindUrl === 'video') {
+                outputEl.innerHTML = renderMediaHtml(kindUrl, mediaUrl, (kindUrl.toUpperCase()) + ' 预览');
+            } else {
+                outputEl.innerHTML = renderBinaryHint(ct || 'binary', mediaUrl);
+            }
+            return;
+        }
+
         if (encoding === 'base64') {
             var kind = mediaKind(ct) || 'image';
             try {

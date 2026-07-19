@@ -6,14 +6,14 @@
 
 class PlaygroundRelay
 {
-    /** 响应体最大字节（约 2MB；过大时预览截断，避免 JSON 编码撑爆） */
-    const MAX_BODY = 2097152;
+    /** 上游响应体最大读取（约 16MB，供媒体预览落盘） */
+    const MAX_BODY = 16777216;
 
-    /** 二进制预览上限（约 768KB；视频等更大则只提示） */
-    const MAX_BINARY_PREVIEW = 786432;
+    /** 小体积二进制仍可走 base64（约 384KB） */
+    const MAX_BINARY_INLINE = 393216;
 
     /** 超时秒数 */
-    const TIMEOUT = 25;
+    const TIMEOUT = 45;
 
     /**
      * @param int    $apiId
@@ -103,7 +103,7 @@ class PlaygroundRelay
             }
             $upstreamParams = $params;
             unset($upstreamParams['key'], $upstreamParams['api_key'], $upstreamParams['apikey']);
-            $fetchUrl = self::mergeQuery($target, $upstreamParams, $method);
+            $fetchUrl = self::mergeQuery($target, $upstreamParams);
             $result = self::httpRequest($fetchUrl, $method, $upstreamParams);
             ApiStats::hitProxy($row, !empty($result['ok']), isset($result['http']) ? (int) $result['http'] : 0);
             $result['displayUrl'] = $displayUrl;
@@ -140,17 +140,14 @@ class PlaygroundRelay
     }
 
     /**
+     * 合并查询参数（所有 Method 均拼到 URL，确保 KEY 等对本地/上游可读）
+     *
      * @param string $url
      * @param array  $params
-     * @param string $method
      * @return string
      */
-    private static function mergeQuery($url, array $params, $method)
+    private static function mergeQuery($url, array $params)
     {
-        $method = strtoupper($method);
-        if ($method !== 'GET' && $method !== 'HEAD' && $method !== 'OPTIONS') {
-            return $url;
-        }
         if ($params === array()) {
             return $url;
         }
@@ -193,11 +190,13 @@ class PlaygroundRelay
             return self::fail('服务器未启用 curl，无法完成测试');
         }
 
+        // 一律把参数拼进 Query（含 POST），避免上游/本地脚本只读 $_GET['key'] 时报未填密钥
+        $url = self::mergeQuery($url, $params);
+
         $ch = curl_init();
         $headers = array('Accept: */*', 'User-Agent: ApiNexus-Playground/' . VS_VERSION);
 
         if ($method === 'GET' || $method === 'HEAD' || $method === 'OPTIONS') {
-            $url = self::mergeQuery($url, $params, $method);
             curl_setopt($ch, CURLOPT_HTTPGET, true);
             if ($method === 'HEAD') {
                 curl_setopt($ch, CURLOPT_NOBODY, true);
@@ -205,10 +204,12 @@ class PlaygroundRelay
                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
             }
         } else {
+            // form-urlencoded + 明确 Content-Length，避免部分上游报 No Content Length
+            $bodyStr = http_build_query($params);
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-            $json = json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $json !== false ? $json : '{}');
-            $headers[] = 'Content-Type: application/json; charset=utf-8';
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $bodyStr);
+            $headers[] = 'Content-Type: application/x-www-form-urlencoded';
+            $headers[] = 'Content-Length: ' . (string) strlen($bodyStr);
         }
 
         curl_setopt_array($ch, array(
@@ -250,27 +251,7 @@ class PlaygroundRelay
         $isBinary = self::looksBinary($ctLower, $body);
 
         if ($isBinary) {
-            $len = strlen($body);
-            if ($len > self::MAX_BINARY_PREVIEW) {
-                return array(
-                    'ok'          => $http >= 200 && $http < 400,
-                    'msg'         => '媒体体积较大，在线预览已跳过，请直接访问接口地址',
-                    'http'        => $http,
-                    'contentType' => $contentType,
-                    'body'        => '',
-                    'encoding'    => 'omit',
-                    'displayUrl'  => '',
-                );
-            }
-            return array(
-                'ok'          => $http >= 200 && $http < 400,
-                'msg'         => 'ok',
-                'http'        => $http,
-                'contentType' => $contentType,
-                'body'        => base64_encode($body),
-                'encoding'    => 'base64',
-                'displayUrl'  => '',
-            );
+            return self::packBinaryResult($http, $contentType, $body);
         }
 
         // 文本须为合法 UTF-8，否则 json_encode 会失败导致前端 Unexpected end of JSON input
@@ -289,15 +270,10 @@ class PlaygroundRelay
                     : (bool) preg_match('//u', $body)
             );
             if (!$okUtf8) {
-                $rawBody = substr((string) substr($raw, $headerSize), 0, self::MAX_BINARY_PREVIEW);
-                return array(
-                    'ok'          => $http >= 200 && $http < 400,
-                    'msg'         => '上游返回非文本内容，已按二进制处理',
-                    'http'        => $http,
-                    'contentType' => $contentType !== '' ? $contentType : 'application/octet-stream',
-                    'body'        => base64_encode($rawBody),
-                    'encoding'    => 'base64',
-                    'displayUrl'  => '',
+                return self::packBinaryResult(
+                    $http,
+                    $contentType !== '' ? $contentType : 'application/octet-stream',
+                    substr((string) substr($raw, $headerSize), 0, self::MAX_BODY)
                 );
             }
         }
@@ -311,6 +287,119 @@ class PlaygroundRelay
             'encoding'    => 'text',
             'displayUrl'  => '',
         );
+    }
+
+    /**
+     * 二进制：小体积 base64；大体积落盘返回同源预览 URL（供 video/img/audio 播放）
+     *
+     * @param int    $http
+     * @param string $contentType
+     * @param string $body
+     * @return array
+     */
+    private static function packBinaryResult($http, $contentType, $body)
+    {
+        $ok = $http >= 200 && $http < 400;
+        $len = strlen($body);
+        if ($len <= self::MAX_BINARY_INLINE) {
+            return array(
+                'ok'          => $ok,
+                'msg'         => 'ok',
+                'http'        => $http,
+                'contentType' => $contentType,
+                'body'        => base64_encode($body),
+                'encoding'    => 'base64',
+                'displayUrl'  => '',
+            );
+        }
+
+        $mediaUrl = self::storeMediaPreview($body, $contentType);
+        if ($mediaUrl === '') {
+            return array(
+                'ok'          => $ok,
+                'msg'         => '媒体已获取但无法生成预览，请直接访问接口地址',
+                'http'        => $http,
+                'contentType' => $contentType,
+                'body'        => '',
+                'encoding'    => 'omit',
+                'displayUrl'  => '',
+            );
+        }
+
+        return array(
+            'ok'          => $ok,
+            'msg'         => 'ok',
+            'http'        => $http,
+            'contentType' => $contentType,
+            'body'        => $mediaUrl,
+            'encoding'    => 'url',
+            'displayUrl'  => '',
+        );
+    }
+
+    /**
+     * @param string $binary
+     * @param string $contentType
+     * @return string 同源预览 URL，失败返回空串
+     */
+    private static function storeMediaPreview($binary, $contentType)
+    {
+        $root = defined('VS_ROOT') ? VS_ROOT : dirname(__DIR__);
+        $dir = $root . '/data/playground';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        if (!is_dir($dir) || !is_writable($dir)) {
+            return '';
+        }
+
+        self::cleanupMediaPreview($dir);
+
+        $token = bin2hex(random_bytes(16));
+        $binPath = $dir . '/' . $token . '.bin';
+        $metaPath = $dir . '/' . $token . '.json';
+        if (@file_put_contents($binPath, $binary) === false) {
+            return '';
+        }
+        $meta = array(
+            'ct'      => (string) $contentType,
+            'expires' => time() + 3600,
+            'bytes'   => strlen($binary),
+        );
+        @file_put_contents($metaPath, json_encode($meta, JSON_UNESCAPED_UNICODE));
+
+        return rtrim(vs_base_url(), '/') . '/core/playground/media.php?t=' . rawurlencode($token);
+    }
+
+    /**
+     * @param string $dir
+     * @return void
+     */
+    private static function cleanupMediaPreview($dir)
+    {
+        $now = time();
+        $files = @scandir($dir);
+        if (!is_array($files)) {
+            return;
+        }
+        foreach ($files as $f) {
+            if ($f === '.' || $f === '..') {
+                continue;
+            }
+            if (substr($f, -5) !== '.json') {
+                continue;
+            }
+            $metaPath = $dir . '/' . $f;
+            $raw = @file_get_contents($metaPath);
+            $meta = is_string($raw) ? json_decode($raw, true) : null;
+            $exp = (is_array($meta) && isset($meta['expires'])) ? (int) $meta['expires'] : 0;
+            if ($exp > 0 && $exp > $now) {
+                continue;
+            }
+            $token = substr($f, 0, -5);
+            @unlink($metaPath);
+            @unlink($dir . '/' . $token . '.bin');
+        }
     }
 
     /**
@@ -329,7 +418,6 @@ class PlaygroundRelay
         if ($body === '') {
             return false;
         }
-        // 无 Content-Type 或标成 text 但仍含大量空字节 → 当二进制
         $sample = substr($body, 0, 4096);
         if (strpos($sample, "\0") !== false) {
             return true;

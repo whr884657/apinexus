@@ -1,5 +1,15 @@
 {
     "versions": {
+        "4.7.2": {
+            "title": "ApiNexus 4.7.2 在线测试媒体预览与详情绑定修复",
+            "date": "2026-07-20",
+            "db_changes": false,
+            "changes": [
+                "修复详情页推荐卡污染 $api 导致测试绑错接口",
+                "媒体（图\/音\/视频）落盘同源预览，可在线播放",
+                "POST 请求携带 Query KEY + form body\/Content-Length，修复未填密钥与 No Content Length"
+            ]
+        },
         "4.7.1": {
             "title": "ApiNexus 4.7.1 视频测试与登录入口修复",
             "date": "2026-07-20",

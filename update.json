@@ -1,12 +1,12 @@
 {
-    "version": "4.7.1",
-    "title": "ApiNexus 4.7.1 视频测试与登录入口修复",
+    "version": "4.7.2",
+    "title": "ApiNexus 4.7.2 在线测试媒体预览与详情绑定修复",
     "release_date": "2026-07-20",
     "db_changes": false,
     "changes": [
-        "修复视频等二进制接口在线测试 Unexpected end of JSON input",
-        "登录后顶栏不再显示用户中心/头像，仅侧栏底部展示",
-        "修复侧栏底部 btn-geek::before 导致的大黑块"
+        "修复详情页推荐卡污染 $api 导致测试绑错接口",
+        "媒体（图\/音\/视频）落盘同源预览，可在线播放",
+        "POST 请求携带 Query KEY + form body\/Content-Length，修复未填密钥与 No Content Length"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

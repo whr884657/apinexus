@@ -33,6 +33,7 @@ $hasParamsTable = count($paramsList) > 0;
 $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey_label'] : '无需 KEY';
 
 $recommendApi = null;
+$pageApiSnapshot = (!$notFound && is_array($api)) ? $api : null;
 if (!$notFound) {
     $pool = FrontendApi::listForTheme();
     $candidates = array();
@@ -52,6 +53,7 @@ if (!$notFound) {
 }
 ?>
 <main class="main-wrapper container mx-auto px-4 detail-page" id="apiDetailPage"
+      data-api-id="<?php echo $notFound ? '0' : (int) $api['id']; ?>"
       data-endpoint="<?php echo $notFound ? '' : vs_e(isset($api['endpoint']) ? $api['endpoint'] : ''); ?>"
       data-maintenance="<?php echo (!$notFound && !empty($api['maintenance'])) ? '1' : '0'; ?>">
     <nav class="detail-crumb text-sm" aria-label="面包屑">
@@ -290,6 +292,10 @@ if (!$notFound) {
             $showDetailBtn = true;
             $cardExtraClass = 'api-card-compact';
             include __DIR__ . '/../partials/api-cards-html.php';
+            // 推荐卡渲染后恢复当前详情接口，避免污染后续脚本数据
+            if (is_array($pageApiSnapshot)) {
+                $api = $pageApiSnapshot;
+            }
             ?>
         </div>
     </section>
@@ -299,14 +305,17 @@ if (!$notFound) {
 </main>
 <div class="copy-toast" id="detailCopyToast" hidden>已复制</div>
 <script>
-window.detailApiData = <?php echo json_encode($notFound ? null : array(
-    'id' => (int) $api['id'],
-    'name' => $api['name'],
-    'endpoint' => isset($api['endpoint']) ? $api['endpoint'] : '',
+<?php
+$jsApi = is_array($pageApiSnapshot) ? $pageApiSnapshot : ((!$notFound && is_array($api)) ? $api : null);
+?>
+window.detailApiData = <?php echo json_encode($jsApi === null ? null : array(
+    'id' => (int) $jsApi['id'],
+    'name' => isset($jsApi['name']) ? $jsApi['name'] : '',
+    'endpoint' => isset($jsApi['endpoint']) ? $jsApi['endpoint'] : '',
     'methods' => $methods,
     'method' => $primaryMethod,
-    'maintenance' => !empty($api['maintenance']) ? 1 : 0,
-    'needkey' => isset($api['needkey']) ? (int) $api['needkey'] : 0,
+    'maintenance' => !empty($jsApi['maintenance']) ? 1 : 0,
+    'needkey' => isset($jsApi['needkey']) ? (int) $jsApi['needkey'] : 0,
     'params_list' => $paramsList,
 ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 window.playgroundUserApiKey = <?php echo json_encode(isset($playground['apiKey']) ? (string) $playground['apiKey'] : ''); ?>;

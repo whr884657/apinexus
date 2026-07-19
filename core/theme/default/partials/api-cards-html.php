@@ -33,30 +33,31 @@ $vsSplitMethods = function (array $methods) {
     return array(array_slice($clean, 0, 2), $extra);
 };
 
-foreach ($apis as $api):
-    if (!is_array($api)) {
+// 使用 $cardApi，禁止覆盖页面级 $api（详情页推荐卡曾污染 detailApiData）
+foreach ($apis as $cardApi):
+    if (!is_array($cardApi)) {
         continue;
     }
-    $name = trim((string) (isset($api['name']) ? $api['name'] : ''));
+    $name = trim((string) (isset($cardApi['name']) ? $cardApi['name'] : ''));
     if ($name === '') {
         continue;
     }
-    $desc = trim((string) (isset($api['desc']) ? $api['desc'] : ''));
-    $cat = (string) (isset($api['category']) ? $api['category'] : '');
-    $methods = isset($api['methods']) && is_array($api['methods']) ? $api['methods'] : array('GET');
+    $desc = trim((string) (isset($cardApi['desc']) ? $cardApi['desc'] : ''));
+    $cat = (string) (isset($cardApi['category']) ? $cardApi['category'] : '');
+    $methods = isset($cardApi['methods']) && is_array($cardApi['methods']) ? $cardApi['methods'] : array('GET');
     list($showMethods, $methodExtra) = $vsSplitMethods($methods);
-    $endpoint = trim((string) (isset($api['endpoint']) ? $api['endpoint'] : ''));
+    $endpoint = trim((string) (isset($cardApi['endpoint']) ? $cardApi['endpoint'] : ''));
     $nameKey = function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name);
     $descKey = function_exists('mb_strtolower') ? mb_strtolower($desc, 'UTF-8') : strtolower($desc);
-    $maintenance = !empty($api['maintenance']);
-    $apiId = (int) (isset($api['id']) ? $api['id'] : 0);
-    $detailUrl = !empty($api['detail_url'])
-        ? (string) $api['detail_url']
+    $maintenance = !empty($cardApi['maintenance']);
+    $apiId = (int) (isset($cardApi['id']) ? $cardApi['id'] : 0);
+    $detailUrl = !empty($cardApi['detail_url'])
+        ? (string) $cardApi['detail_url']
         : ($apiId > 0 ? vs_api_detail_url($apiId) : ($vsBase . '/apis'));
-    $points = isset($api['points']) ? (float) $api['points'] : 0;
-    $needkey = isset($api['needkey']) ? (int) $api['needkey'] : 0;
-    $billingLabel = !empty($api['billing_label'])
-        ? (string) $api['billing_label']
+    $points = isset($cardApi['points']) ? (float) $cardApi['points'] : 0;
+    $needkey = isset($cardApi['needkey']) ? (int) $cardApi['needkey'] : 0;
+    $billingLabel = !empty($cardApi['billing_label'])
+        ? (string) $cardApi['billing_label']
         : ($points > 0
             ? (rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.') . '积分/次')
             : '免费');

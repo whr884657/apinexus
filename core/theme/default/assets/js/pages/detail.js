@@ -211,20 +211,45 @@
 
     autofillKey();
 
-    if (sendBtn && api && responseEl) {
+    if (sendBtn && responseEl) {
         sendBtn.addEventListener('click', function () {
+            // 每次发送以页面 data + detailApiData 为准，避免被推荐卡污染
+            var pageApi = window.detailApiData;
+            var pageId = parseInt(page.getAttribute('data-api-id') || '0', 10) || 0;
+            if ((!pageApi || !pageApi.id) && pageId > 0) {
+                pageApi = { id: pageId, endpoint: page.getAttribute('data-endpoint') || '' };
+            }
+            if (!pageApi || !pageApi.id) {
+                responseEl.textContent = '接口无效';
+                setStatus('Error', 'err');
+                return;
+            }
+            if (pageId > 0 && parseInt(pageApi.id, 10) !== pageId) {
+                pageApi.id = pageId;
+                pageApi.endpoint = page.getAttribute('data-endpoint') || pageApi.endpoint || '';
+            }
+            api = pageApi;
+
             if (page.getAttribute('data-maintenance') === '1' || api.maintenance) {
                 responseEl.textContent = '维护中，暂不可测试';
                 setStatus('维护中', 'err');
                 return;
             }
 
+            autofillKey();
             var method = getMethod();
             var params = collectParams();
-            if (!api.id) {
-                responseEl.textContent = '接口无效';
-                setStatus('Error', 'err');
-                return;
+            var need = parseInt(api.needkey, 10) || 0;
+            if (need === 1 || need === 2) {
+                var hasKey = false;
+                Object.keys(params).forEach(function (k) {
+                    var n = String(k).toLowerCase();
+                    if (n === 'key' || n === 'api_key' || n === 'apikey') hasKey = true;
+                });
+                if (!hasKey) {
+                    var keyVal = (typeof window.playgroundUserApiKey === 'string') ? window.playgroundUserApiKey.trim() : '';
+                    if (keyVal) params.key = keyVal;
+                }
             }
 
             var hasFiles = false;
@@ -261,6 +286,9 @@
                 var http = parseInt(data.http, 10) || 0;
                 var ok = data.code === 1 || (http >= 200 && http < 400);
                 setStatus((http ? String(http) : '') + (ok ? ' OK' : ' Error'), ok ? 'ok' : 'err');
+                if (urlPreview) {
+                    urlPreview.textContent = String(api.endpoint || page.getAttribute('data-endpoint') || '');
+                }
                 if (!ok && data.msg && !data.body) {
                     responseEl.textContent = String(data.msg);
                     return;

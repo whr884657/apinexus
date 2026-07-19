@@ -624,7 +624,7 @@ fetch(window.VS_PLAY_URL, {
 
 默认主题也可直接用 `VsPlaygroundResponse.relayRequest({ apiId, method, params })`。
 
-**主题对接：** 首页/详情 JS 须调用 `VsPlaygroundResponse.relayRequest`（`POST /core/playground/relay.php`），禁止 `fetch(endpoint)` 直连。视频/大体积媒体：中继可能返回 `encoding=omit` 或 `base64`；前端勿对中继响应盲目 `res.json()`（应用 `text()` 再 `JSON.parse` 并处理空体）。
+**主题对接：** 首页/详情 JS 须调用 `VsPlaygroundResponse.relayRequest`（`POST /core/playground/relay.php`），禁止 `fetch(endpoint)` 直连。媒体：中继可返回 `encoding=url`（`core/playground/media.php?t=`）或 `base64`；前端勿盲目 `res.json()`。POST 参数会拼进 Query 并以 form-urlencoded 发送（含 Content-Length）。卡片模板循环变量勿用 `$api`，以免污染详情页。
 
 **放置原则：** 多主题可共用的后台能力放 `core/`；仅某一主题 UI 用的资源放该主题包。根目录只保留前台可见的页面入口（见《页面文件命名规范》§根目录）。
 
