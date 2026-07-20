@@ -274,6 +274,13 @@ class UserAuth
             AuthSecurity::clearLegacySecureSessionCookie();
 
             return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 注册新用户
      *
      * @param string $username
      * @param string $email
