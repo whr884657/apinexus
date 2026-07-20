@@ -23,6 +23,20 @@ class ApiLogManager
     }
 
     /**
+     * 是否记录详细调用日志（关闭时仅累加 api.calls，不写 apilog）
+     *
+     * @return bool
+     */
+    public static function detailEnabled()
+    {
+        try {
+            return trim((string) Config::get('apilog_detail', '1')) !== '0';
+        } catch (Exception $e) {
+            return true;
+        }
+    }
+
+    /**
      * @param string $method
      * @return string
      */

@@ -24,4 +24,8 @@ if (!InstallChecker::isInstalled()) {
     vs_redirect(vs_base_url() . '/install/');
 }
 
-vs_frontend_page('apis', '全部接口');
+vs_frontend_page('apis', '全部接口', array(
+    'seo' => array(
+        'description' => vs_seo_truncate('浏览全部已上线的公开 API 接口，支持分类筛选与详情查看。'),
+    ),
+));

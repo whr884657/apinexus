@@ -237,8 +237,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendLink.php` | 前台已通过且启用的友链列表与本站友链卡片（**主题向**） |
 | `FrontendPartner.php` | 前台已启用合作伙伴列表（**主题向**） |
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
-| `RedisCache.php` | 业务数据缓存（公开接口、前台展示、分类、友链、合作伙伴、日志分页）；键空间自动维护 |
-| `ApiLogManager.php` | API 调用日志分页查询、搜索、详情格式化（列表走短 TTL Redis） |
+| `RedisCache.php` | 业务数据缓存（**v5.1.0+ 仅 apilog 查询/统计**）；键空间自动维护 |
+| `ApiLogManager.php` | API 调用日志分页查询、搜索、详情格式化；`detailEnabled()` 控制是否写 apilog |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
 | `SystemInfo.php` | 关于页环境信息 |
@@ -284,7 +284,8 @@ echo 'v' . VS_VERSION;     // v2.17.1
 | `vs_e($value)` | HTML 转义，模板输出必用 |
 | `vs_base_url()` | 站点根 URL（含协议域名） |
 | `vs_redirect($url)` | HTTP 重定向 |
-| `vs_render_head()` / `vs_render_foot()` | 输出 HTML 头尾 |
+| `vs_render_seo_meta()` / `vs_seo_defaults()` / `vs_seo_abs_url()` | SEO / OG / 分享 meta 统一输出 |
+| `vs_render_head()` / `vs_render_foot()` | 输出 HTML 头尾（head 支持 `$seoOpts` 页面级覆盖） |
 | `vs_frontend_page($pageKey, $title)` | **前台页面统一入口**（自动选主题、加载 CSS/JS） |
 | `vs_render_notice()` | 后台提示块 |
 | `vs_render_site_logo()` | 站点 Logo |
@@ -784,17 +785,16 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 **配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`apinexus:`）。
 
-**业务缓存项（`RedisCache`）：**
+**业务缓存项（`RedisCache`，v5.1.0+）：**
 
 | 逻辑键 | TTL | 写入入口 | 说明 |
 |--------|-----|----------|------|
-| `cache:api:public_list` | 120s | `ApiManager::listPublic` | MySQL 公开接口原始行 |
-| `cache:frontend:api_list` | 120s | `FrontendApi::listForTheme` | 主题用格式化列表（**须单独 remember，勿只依赖 public_list**） |
-| `cache:frontend:category_tags` | 300s | `FrontendCategory::listTags` | 前台分类标签 |
-| `cache:apilog:query:{md5}` | 45s | `ApiLogManager::listPaged` | 日志查询结果（后台列表 / 后续图表等凡读均可复用） |
-| `cache:apilog:today_count` | 30s | `ApiLogManager::countToday` | 今日调用次数（首页统计等） |
+| `cache:apilog:query:{md5}` | 45s | `ApiLogManager::listPaged` | 日志查询结果（后台列表 / 图表等） |
+| `cache:apilog:today_count` | 30s | `ApiLogManager::countToday` | 今日调用次数汇总 |
 
-接口/分类变更时调用 `RedisCache::invalidateFrontend()`。日志相关调用 `RedisCache::invalidateApiLog()`；高并发写入时亦可依赖短 TTL，勿每次 INSERT 全量 SCAN。
+**不再缓存（直读 MySQL）：** 公开接口列表、前台格式化接口、分类标签、友链、合作伙伴等小数据量项。
+
+`RedisCache::invalidateFrontend()` 仅清理旧版遗留键。日志相关调用 `RedisCache::invalidateApiLog()`。
 
 监控页环形图「缓存了什么」按业务项分扇区；列表展示中文名称与用途说明，**禁止**对外展示「轻量」等实现向形容词。
 

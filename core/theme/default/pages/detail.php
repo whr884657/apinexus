@@ -38,6 +38,7 @@ if (!$notFound) {
     $pool = FrontendApi::listForTheme();
     $candidates = array();
     $curId = (int) $api['id'];
+    $curCat = isset($api['category']) ? (string) $api['category'] : '';
     foreach ($pool as $item) {
         if (!is_array($item)) {
             continue;
@@ -48,7 +49,22 @@ if (!$notFound) {
         $candidates[] = $item;
     }
     if ($candidates !== array()) {
-        $recommendApi = $candidates[array_rand($candidates)];
+        $sameCat = array();
+        foreach ($candidates as $item) {
+            if ($curCat !== '' && (string) (isset($item['category']) ? $item['category'] : '') === $curCat) {
+                $sameCat[] = $item;
+            }
+        }
+        $pickPool = $sameCat !== array() ? $sameCat : $candidates;
+        usort($pickPool, function ($a, $b) {
+            $ca = isset($a['calls']) ? (int) $a['calls'] : 0;
+            $cb = isset($b['calls']) ? (int) $b['calls'] : 0;
+            if ($ca !== $cb) {
+                return $cb - $ca;
+            }
+            return (int) (isset($b['id']) ? $b['id'] : 0) - (int) (isset($a['id']) ? $a['id'] : 0);
+        });
+        $recommendApi = $pickPool[0];
     }
 }
 ?>
@@ -286,13 +302,12 @@ if (!$notFound) {
     <?php if ($recommendApi !== null): ?>
     <section class="detail-card detail-recommend">
         <h2 class="detail-section-title">推荐接口</h2>
-        <div class="card-container detail-recommend__grid">
+        <div class="detail-recommend__grid">
             <?php
             $apiData = array($recommendApi);
             $showDetailBtn = true;
-            $cardExtraClass = 'api-card-compact';
+            $cardShell = false;
             include __DIR__ . '/../partials/api-cards-html.php';
-            // 推荐卡渲染后恢复当前详情接口，避免污染后续脚本数据
             if (is_array($pageApiSnapshot)) {
                 $api = $pageApiSnapshot;
             }

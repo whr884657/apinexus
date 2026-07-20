@@ -11,4 +11,8 @@ if (!InstallChecker::isInstalled()) {
     vs_redirect(vs_base_url() . '/install/');
 }
 
-vs_frontend_page('articles', '文章');
+vs_frontend_page('articles', '文章', array(
+    'seo' => array(
+        'description' => vs_seo_truncate(SiteContext::siteName() . ' 技术文章与平台动态。'),
+    ),
+));

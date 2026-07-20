@@ -10,6 +10,7 @@ if (!isset($apiData) || !is_array($apiData)) {
 $apis = $apiData;
 $showDetailBtn = !isset($showDetailBtn) || $showDetailBtn;
 $cardExtraClass = isset($cardExtraClass) ? trim((string) $cardExtraClass) : '';
+$cardShell = !isset($cardShell) || $cardShell;
 $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
 
 /**
@@ -62,8 +63,9 @@ foreach ($apis as $cardApi):
             ? (rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.') . '积分/次')
             : '免费');
     $cardClass = 'api-card' . ($cardExtraClass !== '' ? ' ' . $cardExtraClass : '');
+    $shellClass = $cardShell ? $cardClass : 'detail-recommend__body';
     ?>
-<div class="<?php echo vs_e($cardClass); ?>" data-category="<?php echo vs_e($cat); ?>" data-name="<?php echo vs_e($nameKey); ?>" data-desc="<?php echo vs_e($descKey); ?>" style="position: relative;">
+<div class="<?php echo vs_e($shellClass); ?>" data-category="<?php echo vs_e($cat); ?>" data-name="<?php echo vs_e($nameKey); ?>" data-desc="<?php echo vs_e($descKey); ?>"<?php echo $cardShell ? ' style="position: relative;"' : ''; ?>>
     <?php if (!$maintenance): ?>
     <div style="position: absolute; top: 0.75rem; right: 0.75rem; display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end;">
         <?php if ($points > 0): ?>
@@ -94,7 +96,7 @@ foreach ($apis as $cardApi):
     <p class="text-xs mb-2" style="color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?php echo vs_e($desc); ?></p>
     <?php endif; ?>
     <?php if ($endpoint !== ''): ?>
-    <div class="endpoint-box font-mono" style="background: var(--endpoint-bg); border: 1px solid var(--endpoint-border); color: var(--accent-primary);"><?php echo vs_e($endpoint); ?></div>
+    <div class="endpoint-box font-mono"><?php echo vs_e($endpoint); ?></div>
     <?php endif; ?>
     <?php if ($showDetailBtn): ?>
     <a href="<?php echo vs_e($detailUrl); ?>" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>

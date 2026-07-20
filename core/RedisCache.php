@@ -268,46 +268,6 @@ class RedisCache
     {
         $defs = array(
             array(
-                'id' => 'api_public',
-                'label' => '公开接口列表',
-                'desc' => '已上线接口的原始数据，供前台/后台列表读取',
-                'key' => self::KEY_API_PUBLIC,
-                'ttl_hint' => self::TTL_API_PUBLIC . ' 秒',
-                'chart_color' => '#3b82f6',
-            ),
-            array(
-                'id' => 'frontend_api',
-                'label' => '前台接口展示',
-                'desc' => '主题首页/接口页用的格式化接口卡片数据',
-                'key' => self::KEY_FRONTEND_API,
-                'ttl_hint' => self::TTL_FRONTEND_API . ' 秒',
-                'chart_color' => '#10b981',
-            ),
-            array(
-                'id' => 'frontend_category',
-                'label' => '前台分类标签',
-                'desc' => '主题分类筛选条（「全部」与各分类名）',
-                'key' => self::KEY_FRONTEND_CATEGORY,
-                'ttl_hint' => self::TTL_FRONTEND_CATEGORY . ' 秒',
-                'chart_color' => '#f59e0b',
-            ),
-            array(
-                'id' => 'frontend_link',
-                'label' => '前台友情链接',
-                'desc' => '页脚与友链页展示的已通过且启用的友链列表',
-                'key' => self::KEY_FRONTEND_LINK,
-                'ttl_hint' => self::TTL_FRONTEND_LINK . ' 秒',
-                'chart_color' => '#06b6d4',
-            ),
-            array(
-                'id' => 'frontend_partner',
-                'label' => '前台合作伙伴',
-                'desc' => '首页合作伙伴区展示的已启用列表',
-                'key' => self::KEY_FRONTEND_PARTNER,
-                'ttl_hint' => self::TTL_FRONTEND_PARTNER . ' 秒',
-                'chart_color' => '#14b8a6',
-            ),
-            array(
                 'id' => 'apilog_query',
                 'label' => 'API 调用日志',
                 'desc' => '日志查询页、今日调用统计等读库结果（短时缓存）',

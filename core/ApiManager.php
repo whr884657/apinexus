@@ -177,16 +177,10 @@ class ApiManager
      */
     public static function listPublic()
     {
-        return RedisCache::remember(
-            RedisCache::KEY_API_PUBLIC,
-            RedisCache::TTL_API_PUBLIC,
-            function () {
-                return self::listFiltered(array(
-                    'status_in' => array(self::STATUS_NORMAL, self::STATUS_MAINTENANCE),
-                    'audit'     => self::AUDIT_APPROVED,
-                ));
-            }
-        );
+        return self::listFiltered(array(
+            'status_in' => array(self::STATUS_NORMAL, self::STATUS_MAINTENANCE),
+            'audit'     => self::AUDIT_APPROVED,
+        ));
     }
 
     /**

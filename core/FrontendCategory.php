@@ -45,13 +45,7 @@ class FrontendCategory
      */
     public static function listTags()
     {
-        return RedisCache::remember(
-            RedisCache::KEY_FRONTEND_CATEGORY,
-            RedisCache::TTL_FRONTEND_CATEGORY,
-            function () {
-                return self::buildTags();
-            }
-        );
+        return self::buildTags();
     }
 
     /**

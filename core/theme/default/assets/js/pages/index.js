@@ -375,7 +375,13 @@ function escapeApiModalText(s) {
 
 function renderAPI(data) {
     const container = document.getElementById('api-list');
-    const displayData = data.slice(0, 8); // 只显示8个
+    const sorted = data.slice().sort(function (a, b) {
+        const ca = parseInt(a && a.calls, 10) || 0;
+        const cb = parseInt(b && b.calls, 10) || 0;
+        if (ca !== cb) return cb - ca;
+        return (parseInt(b && b.id, 10) || 0) - (parseInt(a && a.id, 10) || 0);
+    });
+    const displayData = sorted.slice(0, 8);
 
     if (displayData.length === 0) {
         container.innerHTML = `<div class="col-span-full text-center py-12" style="color: var(--text-muted);">没有找到相关接口</div>`;
@@ -407,7 +413,7 @@ function renderAPI(data) {
             </div>
             <h3 class="font-bold">${api.name}</h3>
             <p style="color: var(--text-muted);">${api.desc}</p>
-            <div class="endpoint-box font-mono" style="background: var(--endpoint-bg); border: 1px solid var(--endpoint-border); color: var(--accent-primary);">
+            <div class="endpoint-box font-mono">
                 ${api.endpoint}
             </div>
             <a href="${api.detail_url || ((window.VS_BASE_URL || '') + '/detail.php/' + (api.id || ''))}" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>

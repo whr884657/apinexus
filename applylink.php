@@ -43,4 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 vs_frontend_page('applylink', '申请友链', array(
     'activeNav' => 'links',
     'siteCard'  => FrontendLink::siteCard(),
+    'seo' => array(
+        'description' => vs_seo_truncate('提交友情链接申请，填写站点信息与联系方式。'),
+    ),
 ));

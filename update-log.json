@@ -1,5 +1,18 @@
 {
     "versions": {
+        "5.1.0": {
+            "title": "ApiNexus 5.1.0 SEO 全站优化与性能调优",
+            "date": "2026-07-20",
+            "db_changes": false,
+            "changes": [
+                "全站 SEO 增强：OG / Twitter / itemprop / 绝对 URL，各页独立描述",
+                "详情页推荐接口去嵌套卡片，endpoint 样式与首页统一",
+                "首页接口目录固定按调用量排序，不再随机",
+                "在线测试增加超时、重试与 no-store，提升稳定性",
+                "系统设置新增 API 详细日志开关（关闭后仅记 calls）",
+                "Redis 缓存范围精简：仅保留 apilog 查询类大数据缓存"
+            ]
+        },
         "5.0.1": {
             "title": "ApiNexus 5.0.1 友链/合作伙伴静态更新与删除",
             "date": "2026-07-20",

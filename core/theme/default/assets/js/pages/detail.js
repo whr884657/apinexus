@@ -211,6 +211,8 @@
 
     autofillKey();
 
+    var pgAbort = null;
+
     if (sendBtn && responseEl) {
         sendBtn.addEventListener('click', function () {
             // 每次发送以页面 data + detailApiData 为准，避免被推荐卡污染
@@ -271,6 +273,10 @@
 
             responseEl.textContent = '// 正在发送请求...';
             setStatus('处理中', 'wait');
+
+            if (pgAbort) {
+                try { pgAbort.abort(); } catch (e) { /* ignore */ }
+            }
 
             if (!VsPR || !VsPR.directRequest || !VsPR.renderFetchResponse) {
                 responseEl.textContent = '// 测试模块未加载，请刷新页面';

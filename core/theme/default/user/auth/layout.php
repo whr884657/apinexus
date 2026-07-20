@@ -18,11 +18,12 @@ function vs_theme_auth_head($pageTitle)
     echo '<html lang="zh-CN">' . "\n";
     echo '<head>' . "\n";
     echo '<meta charset="UTF-8">' . "\n";
-    vs_render_seo_meta(array(
+    vs_render_seo_meta(vs_seo_defaults(array(
         'title'       => vs_page_title($pageTitle, $siteName),
+        'description' => SiteContext::siteDescription() !== '' ? SiteContext::siteDescription() : ($siteName . ' 登录 / 注册'),
         'robots'      => 'noindex,nofollow',
         'site_name'   => $siteName,
-    ));
+    )));
     echo '<title>' . vs_e(vs_page_title($pageTitle, $siteName)) . '</title>' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">' . "\n";
     if ($favicon !== '') {

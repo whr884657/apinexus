@@ -13,4 +13,7 @@ if (!InstallChecker::isInstalled()) {
 
 vs_frontend_page('links', '友情链接', array(
     'activeNav' => 'links',
+    'seo' => array(
+        'description' => vs_seo_truncate('本站友情链接列表，欢迎互换优质站点链接。'),
+    ),
 ));
