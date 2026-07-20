@@ -61,13 +61,52 @@ class AuthSecurity
     const OAUTH_CALLBACK_IP_WINDOW = 900;
 
     /**
+     * 会话 Cookie 是否使用 Secure
+     *
+     * 说明：不可按「当前请求是否 HTTPS」动态切换。HTTP/HTTPS 双协议并存时，
+     * Secure 时真时假会写入两份会话 Cookie，导致 CSRF 与「登录凭证已失效」。
+     * 默认不设 Secure（双协议共享会话）；仅当配置 force_https=1 时强制 Secure。
+     *
+     * @return bool
+     */
+    public static function sessionCookieSecure()
+    {
+        if (class_exists('InstallChecker') && InstallChecker::isInstalled() && class_exists('Config')) {
+            try {
+                if (trim((string) Config::get('force_https', '0')) === '1') {
+                    return true;
+                }
+            } catch (Exception $e) {
+                // 配置不可用时按非强制处理
+            }
+        }
+        return false;
+    }
+
+    /**
      * 配置 Session Cookie 安全属性（须在 session_start 之前调用）
      *
      * @return void
      */
     public static function configureSessionCookies()
     {
-        $secure = self::isHttps();
+        $secure = self::sessionCookieSecure();
+        $name = session_name();
+
+        // 仅 HTTPS 响应能清除 Secure Cookie；避免双协议下残留 Secure 会话
+        if (!headers_sent() && !$secure && self::isHttps()) {
+            if (PHP_VERSION_ID >= 70300) {
+                setcookie($name, '', array(
+                    'expires'  => time() - 42000,
+                    'path'     => '/',
+                    'secure'   => true,
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                ));
+            } else {
+                setcookie($name, '', time() - 42000, '/; samesite=Lax', '', true, true);
+            }
+        }
 
         if (PHP_VERSION_ID >= 70300) {
             session_set_cookie_params(array(
@@ -83,6 +122,9 @@ class AuthSecurity
 
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.cookie_samesite', 'Lax');
+        ini_set('session.cookie_secure', $secure ? '1' : '0');
         // 避免短时会话回收导致 CSRF 偶发失效（登录/发信页长时间停留）
         ini_set('session.gc_maxlifetime', '86400');
     }
@@ -94,13 +136,30 @@ class AuthSecurity
      */
     public static function isHttps()
     {
-        return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443)
-            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+            return true;
+        }
+        if (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443) {
+            return true;
+        }
+        if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+            $proto = strtolower(trim((string) $_SERVER['HTTP_X_FORWARDED_PROTO']));
+            // 可能是 "https,http" 取第一个
+            if (strpos($proto, ',') !== false) {
+                $proto = trim(explode(',', $proto)[0]);
+            }
+            if ($proto === 'https') {
+                return true;
+            }
+        }
+        if (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower((string) $_SERVER['HTTP_X_FORWARDED_SSL']) === 'on') {
+            return true;
+        }
+        return false;
     }
 
     /**
-     * 认证页安全响应头
+     * 认证页安全响应头（禁止 CDN / 浏览器缓存登录页，防止 CSRF 与会话脱节）
      *
      * @return void
      */
@@ -109,9 +168,14 @@ class AuthSecurity
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: SAMEORIGIN');
         header('Referrer-Policy: strict-origin-when-cross-origin');
-        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
         header('Pragma: no-cache');
-        if (self::isHttps()) {
+        header('Expires: 0');
+        header('Vary: Cookie');
+        // 常见 CDN 识别头，避免登录 HTML 被边缘节点缓存
+        header('CDN-Cache-Control: no-store');
+        header('Cloudflare-CDN-Cache-Control: no-store');
+        if (self::isHttps() && self::sessionCookieSecure()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         }
     }
@@ -123,9 +187,20 @@ class AuthSecurity
      */
     public static function ensureCsrfToken()
     {
-        if (empty($_SESSION[self::CSRF_SESSION_KEY])) {
+        if (empty($_SESSION[self::CSRF_SESSION_KEY]) || !is_string($_SESSION[self::CSRF_SESSION_KEY])) {
             $_SESSION[self::CSRF_SESSION_KEY] = bin2hex(random_bytes(32));
         }
+    }
+
+    /**
+     * 轮换 CSRF Token（校验失败后下发，供前端回填并自动重试）
+     *
+     * @return string
+     */
+    public static function rotateCsrfToken()
+    {
+        $_SESSION[self::CSRF_SESSION_KEY] = bin2hex(random_bytes(32));
+        return $_SESSION[self::CSRF_SESSION_KEY];
     }
 
     /**
@@ -136,7 +211,7 @@ class AuthSecurity
     public static function csrfToken()
     {
         self::ensureCsrfToken();
-        return $_SESSION[self::CSRF_SESSION_KEY];
+        return (string) $_SESSION[self::CSRF_SESSION_KEY];
     }
 
     /**
@@ -147,7 +222,10 @@ class AuthSecurity
      */
     public static function validateCsrf($token)
     {
-        if (!isset($_SESSION[self::CSRF_SESSION_KEY]) || !is_string($token)) {
+        if (!isset($_SESSION[self::CSRF_SESSION_KEY]) || !is_string($_SESSION[self::CSRF_SESSION_KEY])) {
+            return false;
+        }
+        if (!is_string($token) || $token === '') {
             return false;
         }
         return hash_equals($_SESSION[self::CSRF_SESSION_KEY], $token);
@@ -572,7 +650,11 @@ class AuthSecurity
 
         if (!self::validateSameOrigin()) {
             if (function_exists('vs_auth_json')) {
-                vs_auth_json(array('code' => 0, 'msg' => '请求来源无效，请从本站页面操作'), 403);
+                vs_auth_json(array(
+                    'code' => 0,
+                    'msg'  => '请求来源无效，请从本站页面操作',
+                    'csrf' => self::rotateCsrfToken(),
+                ), 403);
             }
             http_response_code(403);
             exit;
@@ -584,7 +666,7 @@ class AuthSecurity
                 vs_auth_json(array(
                     'code' => 0,
                     'msg'  => '登录凭证已失效，请刷新页面后重试',
-                    'csrf' => self::csrfToken(),
+                    'csrf' => self::rotateCsrfToken(),
                 ), 403);
             }
             http_response_code(403);

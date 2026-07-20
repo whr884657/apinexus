@@ -466,9 +466,11 @@ $admin = Auth::user();
 
 | 方法 | 说明 |
 |------|------|
-| `csrfToken()` | 获取 CSRF Token |
+| `configureSessionCookies()` / `sessionCookieSecure()` | Session Cookie；禁止按当前 HTTPS 动态切换 Secure（双协议双 Cookie，E63）；默认 false，`force_https=1` 才 Secure |
+| `csrfToken()` / `rotateCsrfToken()` | 获取 / 轮换 CSRF |
 | `validateCsrf($token)` | 校验 CSRF |
-| `requireAuthPost()` | POST 必须带合法 CSRF |
+| `requireAuthPost()` | POST 必须带合法 CSRF；失败 JSON 含新 `csrf` |
+| `sendSecurityHeaders()` | 认证页 `no-store` + CDN 禁缓存 |
 | `checkLoginAllowed($username)` | 登录是否被限流 |
 | `recordLoginFailure($username)` | 记录登录失败 |
 | `checkMailCodeAllowed($email)` | 发验证码是否允许 |
@@ -478,8 +480,7 @@ $admin = Auth::user();
 
 ```php
 AuthSecurity::requireAuthPost();
-// 或 JSON 接口中：
-if (!AuthSecurity::validateCsrf($_POST['csrf_token'] ?? '')) { ... }
+// 前端：assets/js/auth-csrf.js → VsAuthCsrf.postForm() 凭证失败自动重试一次
 ```
 
 ---

@@ -282,12 +282,20 @@ function vs_require_secure_post()
     }
 
     if (!AuthSecurity::validateSameOrigin()) {
-        AjaxResponse::error('请求来源无效，请从本站页面操作', 403);
+        AjaxResponse::json(array(
+            'code' => 0,
+            'msg'  => '请求来源无效，请从本站页面操作',
+            'csrf' => AuthSecurity::rotateCsrfToken(),
+        ), 403);
     }
 
     $token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
     if (!AuthSecurity::validateCsrf($token)) {
-        AjaxResponse::error('登录凭证已失效，请刷新页面后重试', 403);
+        AjaxResponse::json(array(
+            'code' => 0,
+            'msg'  => '登录凭证已失效，请刷新页面后重试',
+            'csrf' => AuthSecurity::rotateCsrfToken(),
+        ), 403);
     }
 }
 

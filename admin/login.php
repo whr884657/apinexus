@@ -189,16 +189,19 @@ vs_auth_head('登录');
 
         if (loginBtn) loginBtn.disabled = true;
 
-        var body = new FormData(form);
-        body.append('action', 'login');
-
-        fetch(form.action || window.location.href, {
-            method: 'POST',
-            body: body,
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
-        })
-            .then(function (res) {
+        var post = (window.VsAuthCsrf && VsAuthCsrf.postForm)
+            ? VsAuthCsrf.postForm(form, { action: 'login' })
+            : fetch(form.action || window.location.href, {
+                method: 'POST',
+                body: (function () {
+                    var b = new FormData(form);
+                    b.append('action', 'login');
+                    return b;
+                })(),
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json' }
+            }).then(function (res) {
                 return res.text().then(function (text) {
                     var data = null;
                     try {
@@ -206,13 +209,16 @@ vs_auth_head('登录');
                     } catch (err) {
                         data = null;
                     }
-                    if (!data || typeof data !== 'object') {
-                        throw new Error('bad_json');
-                    }
                     return data;
                 });
-            })
+            });
+
+        post
             .then(function (data) {
+                if (!data || typeof data !== 'object') {
+                    showMessage('网络异常或会话已过期，请刷新页面后重试', 'error');
+                    return;
+                }
                 if (data.csrf && form.csrf_token) {
                     form.csrf_token.value = data.csrf;
                 }

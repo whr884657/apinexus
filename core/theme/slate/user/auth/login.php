@@ -103,14 +103,20 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
         var password = form.password.value;
         if (!username || !password) { showMessage('请完整填写账号和密码', 'error'); return; }
         if (window.stAuthSetLoading) window.stAuthSetLoading(loginBtn, true);
-        var body = new FormData(form);
-        body.append('action', 'login');
-        fetch(form.action || window.location.href, { method: 'POST', body: body, credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-            .then(function (r) {
+        var post = (window.VsAuthCsrf && VsAuthCsrf.postForm)
+            ? VsAuthCsrf.postForm(form, { action: 'login' })
+            : fetch(form.action || window.location.href, {
+                method: 'POST',
+                body: (function () { var b = new FormData(form); b.append('action', 'login'); return b; })(),
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json' }
+            }).then(function (r) {
                 return r.text().then(function (text) {
                     try { return text ? JSON.parse(text) : null; } catch (err) { return null; }
                 });
-            })
+            });
+        post
             .then(function (data) {
                 if (!data || typeof data !== 'object') { showMessage('网络异常或会话已过期，请刷新页面后重试', 'error'); return; }
                 if (data.csrf && form.csrf_token) form.csrf_token.value = data.csrf;

@@ -140,6 +140,7 @@ function vs_auth_head($title)
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/auth-login.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/theme-picker.css?v=' . VS_VERSION . '">' . "\n";
+    echo '<script src="' . vs_e($base) . '/assets/js/auth-csrf.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '</head>' . "\n";
     echo '<body>' . "\n";
 }
@@ -186,6 +187,7 @@ function vs_auth_foot($characterOptionsJs = '')
  */
 function vs_auth_json(array $data, $code = 200)
 {
+    AuthSecurity::sendSecurityHeaders();
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);

@@ -1,5 +1,15 @@
 {
     "versions": {
+        "5.2.0": {
+            "title": "ApiNexus 5.2.0 登录凭证 CSRF 双协议修复",
+            "date": "2026-07-20",
+            "db_changes": false,
+            "changes": [
+                "修复 HTTP/HTTPS 双协议下会话 Cookie Secure 切换导致「登录凭证已失效」",
+                "认证页禁止 CDN/浏览器缓存；CSRF 失败自动轮换并前端重试一次",
+                "管理员与两套主题用户登录统一使用 VsAuthCsrf 提交助手"
+            ]
+        },
         "5.1.1": {
             "title": "ApiNexus 5.1.1 首页随机与 SEO trim 弃用修复",
             "date": "2026-07-20",
