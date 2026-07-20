@@ -85,6 +85,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'footer_qr2_enabled' => isset($_POST['footer_qr2_enabled']) ? '1' : '0',
                 'footer_qr2_name'    => trim(isset($_POST['footer_qr2_name']) ? $_POST['footer_qr2_name'] : ''),
                 'footer_qr2_url'     => trim(isset($_POST['footer_qr2_url']) ? $_POST['footer_qr2_url'] : ''),
+                'sponsor_qr_alipay'  => trim(isset($_POST['sponsor_qr_alipay']) ? $_POST['sponsor_qr_alipay'] : ''),
+                'sponsor_qr_wechat'  => trim(isset($_POST['sponsor_qr_wechat']) ? $_POST['sponsor_qr_wechat'] : ''),
+                'sponsor_qr_qq'      => trim(isset($_POST['sponsor_qr_qq']) ? $_POST['sponsor_qr_qq'] : ''),
             ));
             SiteContext::clearCache();
             AjaxResponse::success('站点扩展设置已保存');
@@ -382,6 +385,29 @@ vs_admin_accordion_start(
             </div>
         </div>
         <?php vs_render_notice('tip', '', '需同时启用主题设置中的「显示页脚二维码」才会在前台展示。', array('compact' => true)); ?>
+
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">赞助收款码</h4>
+        <?php vs_render_notice('tip', '', '填写图片 URL 后，默认主题「赞助」页会按已配置项展示（支付宝 / 微信 / QQ）。留空则不显示对应平台。', array('compact' => true)); ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="sponsorQrAlipay">支付宝收款码</label>
+            <input type="text" name="sponsor_qr_alipay" id="sponsorQrAlipay" class="vs-input"
+                   value="<?php echo vs_e(Config::get('sponsor_qr_alipay', '')); ?>"
+                   placeholder="/upload/alipay.png 或 https://…">
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="sponsorQrWechat">微信收款码</label>
+            <input type="text" name="sponsor_qr_wechat" id="sponsorQrWechat" class="vs-input"
+                   value="<?php echo vs_e(Config::get('sponsor_qr_wechat', '')); ?>"
+                   placeholder="/upload/wechat.png 或 https://…">
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="sponsorQrQq">QQ 收款码</label>
+            <input type="text" name="sponsor_qr_qq" id="sponsorQrQq" class="vs-input"
+                   value="<?php echo vs_e(Config::get('sponsor_qr_qq', '')); ?>"
+                   placeholder="/upload/qq.png 或 https://…">
+        </div>
 
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存站点扩展</button>

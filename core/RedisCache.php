@@ -10,6 +10,7 @@ class RedisCache
     const KEY_FRONTEND_CATEGORY = 'cache:frontend:category_tags';
     const KEY_FRONTEND_LINK = 'cache:frontend:link_list';
     const KEY_FRONTEND_PARTNER = 'cache:frontend:partner_list';
+    const KEY_FRONTEND_SPONSOR = 'cache:frontend:sponsor_list';
     const KEY_API_PUBLIC = 'cache:api:public_list';
     /** 日志查询结果缓存键前缀（后台列表 / 后续图表等凡读 apilog 均可复用） */
     const KEY_APILOG_PAGE_PREFIX = 'cache:apilog:query:';

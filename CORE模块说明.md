@@ -122,6 +122,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 文章 | — | — | 占位 | ❌ 否 | **待开发** |
 | 友情链接 | `LinkManager` / `LinkSiteMeta` / `LinkNotify` | `FrontendLink` | `admin/content/links.php`、`links.php`、`applylink.php`、`core/theme/default/api/sitemeta.php` | ✅ 是 | **已完成**（表 `link`；`kind=0`；审核 + 启禁；一键 TDK；邮件通知） |
 | 合作伙伴 | `LinkManager`（共用） | `FrontendPartner` | `admin/content/partners.php`、默认主题首页 | ✅ 是 | **已完成**（表 `link`；`kind=1`；无审核；仅编辑/启禁） |
+| 赞助 | `LinkManager`（共用） | `FrontendSponsor` | `admin/finance/sponsor.php`、`sponsor.php`、默认主题赞助页、系统设置收款码 | ✅ 是 | **已完成**（表 `link`；`kind=2`；简介=赞助说明；收款码配置） |
 | 公告 | — | — | 占位 | ❌ 否 | **待开发** |
 | Redis 缓存 | — | `RedisService` / `RedisCache` | `admin/system/redis.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 限流） |
 | 贡献者 | — | — | 占位 | ❌ 否 | **待开发** |
@@ -229,13 +230,14 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；本地注入 ≤3 行向上查找或 `api/hit.php` |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD（表 `apikey`；每用户最多 3 条；格式 `sk-`+32；含调用次数） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
-| `LinkManager.php` | 友情链接 / 合作伙伴共用 CRUD（`kind`/`enabled`；友链审核；前台申请）（**后台向**） |
+| `LinkManager.php` | 友情链接 / 合作伙伴 / 赞助共用 CRUD（`kind` 0/1/2；友链审核；前台申请）（**后台向**） |
 | `LinkSiteMeta.php` | 抓取外站 HTML 解析 title/description/favicon（友链一键填充；防 SSRF） |
 | `LinkNotify.php` | 友链申请通知管理员；通过后通知申请人邮箱 |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
 | `FrontendApi.php` | 前台公开接口列表与详情（**主题向**） |
 | `FrontendLink.php` | 前台已通过且启用的友链列表与本站友链卡片（**主题向**） |
 | `FrontendPartner.php` | 前台已启用合作伙伴列表（**主题向**） |
+| `FrontendSponsor.php` | 前台赞助收款码 + 赞助名单（**主题向**） |
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
 | `RedisCache.php` | 业务数据缓存（**v5.1.0+ 仅 apilog 查询/统计**）；键空间自动维护 |
 | `ApiLogManager.php` | API 调用日志分页查询、搜索、详情格式化；`detailEnabled()` 控制是否写 apilog |
@@ -687,19 +689,20 @@ VsPlaygroundResponse.directRequest({
 
 ---
 
-### 4.24b LinkManager.php / LinkSiteMeta / LinkNotify / FrontendLink.php / FrontendPartner.php（友链与合作伙伴）★ 主题开发重点
+### 4.24b LinkManager.php / LinkSiteMeta / LinkNotify / FrontendLink.php / FrontendPartner.php / FrontendSponsor.php（友链·合作伙伴·赞助）★ 主题开发重点
 
-**共用表 `link`（v5.0.0）：**
+**共用表 `link`（v5.0.0+，赞助 v5.5.0）：**
 
 | 字段 | 含义 |
 |------|------|
-| `kind` | `0` 友情链接 · `1` 合作伙伴 |
+| `kind` | `0` 友情链接 · `1` 合作伙伴 · `2` 赞助 |
 | `enabled` | `0` 禁用 · `1` 启用（禁用后前台不展示；友链审核状态不变） |
-| `status` | 审核：`0` 待审 · `1` 通过 · `2` 拒绝（合作伙伴固定为通过） |
-| `name` / `siteurl` / `icon` | 名称、跳转链接、图标链接（双方共用） |
-| `description` / `contact` | 仅友情链接使用 |
+| `status` | 审核：`0` 待审 · `1` 通过 · `2` 拒绝（合作伙伴与赞助固定为通过） |
+| `name` / `siteurl` / `icon` | 名称、跳转链接、图标/头像（赞助 siteurl 可选） |
+| `description` | 友链简介 / **赞助说明（金额或其它支持）** |
+| `contact` | 仅友情链接使用 |
 
-**后台 `LinkManager`：** `create` / `apply` / `update` / `setStatus` / `setEnabled` / `delete` / `listAll($status,$kind)` / `listApproved` / `listPartnersEnabled`。
+**后台 `LinkManager`：** `create` / `apply` / `update` / `setStatus` / `setEnabled` / `delete` / `listAll($status,$kind)` / `listApproved` / `listPartnersEnabled` / `listSponsorsEnabled`。
 
 **`LinkSiteMeta::fetch($url)`：** 服务端抓取公网页面解析名称/描述/图标；禁止内网与非 http(s)。
 
@@ -720,14 +723,24 @@ VsPlaygroundResponse.directRequest({
 |------|------|
 | `listForTheme()` | 已启用合作伙伴（name/siteurl/icon/initial） |
 
+**前台 `FrontendSponsor`：**
+
+| 方法 | 说明 |
+|------|------|
+| `paymentQrs()` | 已配置收款码（alipay/wechat/qq；空不返回） |
+| `listForTheme()` | 已启用赞助（name/siteurl/icon/description/initial） |
+
+**配置键：** `sponsor_qr_alipay` / `sponsor_qr_wechat` / `sponsor_qr_qq`
+
 **主题约定：**
 
 - 列表页 `pages/links.php` → `FrontendLink::listForTheme()`
 - 首页合作伙伴区 → `FrontendPartner::listForTheme()`（勿写死外链）
+- 赞助页 `pages/sponsor.php` → `FrontendSponsor::paymentQrs()` + `listForTheme()`（默认主题已实现；主题二后续对齐）
 - 申请页 `pages/applylink.php` + 根入口 `applylink.php`（短名无横线）
 - 页脚在二维码上方渲染已通过且启用的友链，末尾固定「申请友链」链到 `/applylink`
 - 禁止主题内 SQL；申请提交走 `applylink.php` POST + CSRF + `AjaxResponse`
-- 后台：`admin/content/links.php`（审核/启禁/删除）、`admin/content/partners.php`（编辑/启禁/删除）；操作须 AJAX 局部更新，禁止整页刷新（E61）
+- 后台：`admin/content/links.php`、`admin/content/partners.php`、`admin/finance/sponsor.php`；操作须 AJAX 局部更新，禁止整页刷新（E61）
 **主题首页示例：**
 
 ```php
@@ -927,6 +940,7 @@ MySQL
 | 文章 | `ArticleManager`（规划） | `FrontendArticle`（规划） | ⏳ 待 core 开发 |
 | 友情链接 | `LinkManager` | `FrontendLink` | ✅ 可调用（已通过且启用） |
 | 合作伙伴 | `LinkManager` | `FrontendPartner` | ✅ 可调用（已启用） |
+| 赞助 | `LinkManager` | `FrontendSponsor` | ✅ 可调用（收款码 + 已启用名单） |
 | 公告 | `AnnouncementManager`（规划） | `FrontendAnnouncement`（规划） | ⏳ 待 core 开发 |
 
 ---

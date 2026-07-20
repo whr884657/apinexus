@@ -6303,6 +6303,15 @@ select.vs-input.vs-select {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.vs-link-row__desc {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.4;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .vs-link-row__url {
     display: block;
     font-size: 12px;
@@ -6312,6 +6321,11 @@ select.vs-input.vs-select {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+.vs-link-row__url.is-empty {
+    color: #94a3b8;
+    pointer-events: none;
+    text-decoration: none;
 }
 .vs-link-row__url:hover { color: #2563eb; }
 .vs-link-row__desc {

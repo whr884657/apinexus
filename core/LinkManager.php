@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/LinkManager.php
- * 作用：友情链接 / 合作伙伴共用管理（表 link；kind 区分）
+ * 作用：友情链接 / 合作伙伴 / 赞助共用管理（表 link；kind 区分）
  */
 
 class LinkManager
@@ -12,6 +12,7 @@ class LinkManager
 
     const KIND_FRIEND = 0;
     const KIND_PARTNER = 1;
+    const KIND_SPONSOR = 2;
 
     const ENABLED_OFF = 0;
     const ENABLED_ON = 1;
@@ -57,7 +58,27 @@ class LinkManager
      */
     public static function normalizeKind($kind)
     {
-        return ((int) $kind === self::KIND_PARTNER) ? self::KIND_PARTNER : self::KIND_FRIEND;
+        $n = (int) $kind;
+        if ($n === self::KIND_PARTNER || $n === self::KIND_SPONSOR) {
+            return $n;
+        }
+        return self::KIND_FRIEND;
+    }
+
+    /**
+     * @param mixed $kind
+     * @return string
+     */
+    public static function kindLabel($kind)
+    {
+        $n = self::normalizeKind($kind);
+        if ($n === self::KIND_PARTNER) {
+            return '合作伙伴';
+        }
+        if ($n === self::KIND_SPONSOR) {
+            return '赞助';
+        }
+        return '友情链接';
     }
 
     /**
@@ -268,6 +289,26 @@ class LinkManager
      */
     public static function listPartnersEnabled()
     {
+        return self::listEnabledByKind(self::KIND_PARTNER);
+    }
+
+    /**
+     * 前台赞助：启用
+     *
+     * @return array<int, array>
+     */
+    public static function listSponsorsEnabled()
+    {
+        return self::listEnabledByKind(self::KIND_SPONSOR);
+    }
+
+    /**
+     * @param int $kind
+     * @return array<int, array>
+     */
+    private static function listEnabledByKind($kind)
+    {
+        $kind = self::normalizeKind($kind);
         if (!self::tableReady()) {
             return array();
         }
@@ -277,7 +318,7 @@ class LinkManager
                 WHERE `kind` = ? AND `enabled` = ?
                 ORDER BY `sort` ASC, `id` DESC';
             $stmt = $pdo->prepare($sql);
-            $stmt->execute(array(self::KIND_PARTNER, self::ENABLED_ON));
+            $stmt->execute(array($kind, self::ENABLED_ON));
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $out = array();
             if (is_array($rows)) {
@@ -309,7 +350,7 @@ class LinkManager
         }
         try {
             $pdo = Database::connect();
-            if ($kind === self::KIND_PARTNER) {
+            if ($kind === self::KIND_PARTNER || $kind === self::KIND_SPONSOR) {
                 $sql = 'SELECT `id` FROM `' . self::table() . '` WHERE `siteurl` = ? AND `kind` = ?';
                 $params = array($siteurl, $kind);
             } else {
@@ -343,12 +384,15 @@ class LinkManager
 
         $kind = self::normalizeKind(isset($data['kind']) ? $data['kind'] : self::KIND_FRIEND);
         $name = trim((string) (isset($data['name']) ? $data['name'] : ''));
-        $siteurl = self::normalizeUrl(isset($data['siteurl']) ? $data['siteurl'] : '');
+        $siteurlRaw = trim((string) (isset($data['siteurl']) ? $data['siteurl'] : ''));
+        $siteurl = $siteurlRaw === '' ? '' : self::normalizeUrl($siteurlRaw);
         $icon = trim((string) (isset($data['icon']) ? $data['icon'] : ''));
-        $description = ($kind === self::KIND_PARTNER)
+        $isPartner = ($kind === self::KIND_PARTNER);
+        $isSponsor = ($kind === self::KIND_SPONSOR);
+        $description = $isPartner
             ? ''
             : trim((string) (isset($data['description']) ? $data['description'] : ''));
-        $contact = ($kind === self::KIND_PARTNER)
+        $contact = ($isPartner || $isSponsor)
             ? ''
             : trim((string) (isset($data['contact']) ? $data['contact'] : ''));
         $sort = isset($data['sort']) ? (int) $data['sort'] : 0;
@@ -356,7 +400,7 @@ class LinkManager
             isset($data['enabled']) ? $data['enabled'] : self::ENABLED_ON
         );
 
-        if ($kind === self::KIND_PARTNER) {
+        if ($isPartner || $isSponsor) {
             $status = self::STATUS_APPROVED;
         } else {
             $status = self::normalizeStatus(
@@ -367,8 +411,14 @@ class LinkManager
         if ($name === '' || mb_strlen($name, 'UTF-8') > 50) {
             return '请填写名称（不超过 50 字）';
         }
-        if ($siteurl === '') {
+        if ($siteurl === '' && !$isSponsor) {
             return '请填写有效的跳转链接';
+        }
+        if ($siteurlRaw !== '' && $siteurl === '') {
+            return '请填写有效的跳转链接';
+        }
+        if ($isSponsor && $description === '') {
+            return '请填写赞助说明（金额或其它支持）';
         }
         if (mb_strlen($description, 'UTF-8') > 200) {
             return '简介不超过 200 字';
@@ -379,8 +429,8 @@ class LinkManager
         if ($icon !== '' && self::normalizeIcon($icon) === '' && !preg_match('#^https?://#i', $icon)) {
             return '图标链接格式无效';
         }
-        if (self::urlExists($siteurl, $kind)) {
-            return $kind === self::KIND_PARTNER
+        if ($siteurl !== '' && self::urlExists($siteurl, $kind)) {
+            return ($isPartner || $isSponsor)
                 ? '该跳转链接已存在'
                 : '该链接已申请或已通过，请勿重复提交';
         }
@@ -434,7 +484,10 @@ class LinkManager
 
         $kind = self::normalizeKind(isset($existing['kind']) ? $existing['kind'] : self::KIND_FRIEND);
         $name = trim((string) (isset($data['name']) ? $data['name'] : $existing['name']));
-        $siteurl = self::normalizeUrl(isset($data['siteurl']) ? $data['siteurl'] : $existing['siteurl']);
+        $siteurlRaw = array_key_exists('siteurl', $data)
+            ? trim((string) $data['siteurl'])
+            : trim((string) (isset($existing['siteurl']) ? $existing['siteurl'] : ''));
+        $siteurl = $siteurlRaw === '' ? '' : self::normalizeUrl($siteurlRaw);
         $icon = array_key_exists('icon', $data)
             ? trim((string) $data['icon'])
             : (isset($existing['icon']) ? (string) $existing['icon'] : '');
@@ -443,8 +496,17 @@ class LinkManager
             ? self::normalizeEnabled($data['enabled'])
             : self::normalizeEnabled(isset($existing['enabled']) ? $existing['enabled'] : self::ENABLED_ON);
 
-        if ($kind === self::KIND_PARTNER) {
+        $isPartner = ($kind === self::KIND_PARTNER);
+        $isSponsor = ($kind === self::KIND_SPONSOR);
+
+        if ($isPartner) {
             $description = '';
+            $contact = '';
+            $status = self::STATUS_APPROVED;
+        } elseif ($isSponsor) {
+            $description = array_key_exists('description', $data)
+                ? trim((string) $data['description'])
+                : (isset($existing['description']) ? (string) $existing['description'] : '');
             $contact = '';
             $status = self::STATUS_APPROVED;
         } else {
@@ -462,10 +524,19 @@ class LinkManager
         if ($name === '' || mb_strlen($name, 'UTF-8') > 50) {
             return '请填写名称（不超过 50 字）';
         }
-        if ($siteurl === '') {
+        if ($siteurl === '' && !$isSponsor) {
             return '请填写有效的跳转链接';
         }
-        if (self::urlExists($siteurl, $kind, $id)) {
+        if ($siteurlRaw !== '' && $siteurl === '') {
+            return '请填写有效的跳转链接';
+        }
+        if ($isSponsor && $description === '') {
+            return '请填写赞助说明（金额或其它支持）';
+        }
+        if (mb_strlen($description, 'UTF-8') > 200) {
+            return '简介不超过 200 字';
+        }
+        if ($siteurl !== '' && self::urlExists($siteurl, $kind, $id)) {
             return '该跳转链接已存在于其它记录中';
         }
 
@@ -573,6 +644,7 @@ class LinkManager
         if (class_exists('RedisCache')) {
             RedisCache::forget(RedisCache::KEY_FRONTEND_LINK);
             RedisCache::forget(RedisCache::KEY_FRONTEND_PARTNER);
+            RedisCache::forget(RedisCache::KEY_FRONTEND_SPONSOR);
         }
     }
 }

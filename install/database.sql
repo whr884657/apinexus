@@ -81,6 +81,9 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('footer_qr2_enabled', '0'),
 ('footer_qr2_name', ''),
 ('footer_qr2_url', ''),
+('sponsor_qr_alipay', ''),
+('sponsor_qr_wechat', ''),
+('sponsor_qr_qq', ''),
 ('pay_url', ''),
 ('pay_pid', ''),
 ('pay_key', ''),
@@ -226,11 +229,11 @@ CREATE TABLE IF NOT EXISTS `{prefix}link` (
     `name` varchar(50) NOT NULL COMMENT '名称',
     `siteurl` varchar(255) NOT NULL COMMENT '跳转链接',
     `icon` varchar(255) NOT NULL DEFAULT '' COMMENT '图标链接',
-    `description` varchar(200) NOT NULL DEFAULT '' COMMENT '简介（仅友情链接使用）',
+    `description` varchar(200) NOT NULL DEFAULT '' COMMENT '简介：友情链接简介 / 赞助说明（金额或其它支持）',
     `contact` varchar(100) NOT NULL DEFAULT '' COMMENT '联系方式（仅友情链接使用）',
-    `kind` tinyint(1) NOT NULL DEFAULT 0 COMMENT '类型：0友情链接 1合作伙伴',
+    `kind` tinyint(1) NOT NULL DEFAULT 0 COMMENT '类型：0友情链接 1合作伙伴 2赞助',
     `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用：0禁用 1启用',
-    `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '审核状态：0待审 1通过 2拒绝（合作伙伴固定为1）',
+    `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '审核状态：0待审 1通过 2拒绝（合作伙伴与赞助固定为1）',
     `sort` int(11) NOT NULL DEFAULT 0 COMMENT '排序权重（越小越前）',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申请/创建时间',
     `updatetime` datetime DEFAULT NULL COMMENT '最后更新时间',
@@ -239,4 +242,4 @@ CREATE TABLE IF NOT EXISTS `{prefix}link` (
     KEY `idx_kind` (`kind`),
     KEY `idx_enabled` (`enabled`),
     KEY `idx_sort` (`sort`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='友情链接与合作伙伴';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='友情链接、合作伙伴与赞助';

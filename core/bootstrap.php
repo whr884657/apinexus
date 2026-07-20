@@ -49,6 +49,7 @@ require_once VS_ROOT . '/core/LinkSiteMeta.php';
 require_once VS_ROOT . '/core/LinkNotify.php';
 require_once VS_ROOT . '/core/FrontendLink.php';
 require_once VS_ROOT . '/core/FrontendPartner.php';
+require_once VS_ROOT . '/core/FrontendSponsor.php';
 require_once VS_ROOT . '/core/PlaygroundRelay.php';
 require_once VS_ROOT . '/core/ThemeManager.php';
 require_once VS_ROOT . '/core/oauth/HttpClient.php';

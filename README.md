@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.4.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-5.5.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -255,6 +255,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v5.5.0（2026-07-21）
+
+- 友情链接 / 合作伙伴 / 赞助共用 `link` 表（`kind=2` 赞助）
+- 后台赞助管理；系统设置收款码；默认主题赞助页（二维码 + 赞助榜）
 
 ### v5.4.0（2026-07-21）
 
