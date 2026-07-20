@@ -466,7 +466,9 @@ $admin = Auth::user();
 
 | 方法 | 说明 |
 |------|------|
-| `configureSessionCookies()` / `sessionCookieSecure()` | Session Cookie；禁止按当前 HTTPS 动态切换 Secure（双协议双 Cookie，E63）；默认 false，`force_https=1` 才 Secure |
+| `configureSessionCookies()` / `sessionCookieSecure()` | Session Cookie；禁止按当前 HTTPS 动态切换 Secure（E63）；默认 false，`force_https=1` 才 Secure；**禁止每请求清除 Secure Cookie**（E64） |
+| `clearLegacySecureSessionCookie()` | 仅登录成功时一次性清除历史 Secure 会话 Cookie |
+| `clearSessionCookie()` | 退出时同时清除 Secure / 非 Secure 会话 Cookie |
 | `csrfToken()` / `rotateCsrfToken()` | 获取 / 轮换 CSRF |
 | `validateCsrf($token)` | 校验 CSRF |
 | `requireAuthPost()` | POST 必须带合法 CSRF；失败 JSON 含新 `csrf` |

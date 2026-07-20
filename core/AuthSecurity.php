@@ -86,27 +86,15 @@ class AuthSecurity
     /**
      * 配置 Session Cookie 安全属性（须在 session_start 之前调用）
      *
+     * 说明：禁止在每个请求里下发「清除 Secure 会话 Cookie」。
+     * 普通页面刷新时 PHP 往往不再重写会话 Cookie，若仍下发 Secure 删除头，
+     * 部分浏览器会把非 Secure 会话 Cookie 一并删掉，表现为登录后一刷新就退出（E64）。
+     *
      * @return void
      */
     public static function configureSessionCookies()
     {
         $secure = self::sessionCookieSecure();
-        $name = session_name();
-
-        // 仅 HTTPS 响应能清除 Secure Cookie；避免双协议下残留 Secure 会话
-        if (!headers_sent() && !$secure && self::isHttps()) {
-            if (PHP_VERSION_ID >= 70300) {
-                setcookie($name, '', array(
-                    'expires'  => time() - 42000,
-                    'path'     => '/',
-                    'secure'   => true,
-                    'httponly' => true,
-                    'samesite' => 'Lax',
-                ));
-            } else {
-                setcookie($name, '', time() - 42000, '/; samesite=Lax', '', true, true);
-            }
-        }
 
         if (PHP_VERSION_ID >= 70300) {
             session_set_cookie_params(array(
@@ -127,6 +115,70 @@ class AuthSecurity
         ini_set('session.cookie_secure', $secure ? '1' : '0');
         // 避免短时会话回收导致 CSRF 偶发失效（登录/发信页长时间停留）
         ini_set('session.gc_maxlifetime', '86400');
+    }
+
+    /**
+     * 一次性清除历史 Secure 会话 Cookie（仅登录成功等迁移场景调用）
+     *
+     * 说明：双协议升级后，旧 Secure Cookie 可能遮蔽新的非 Secure 会话。
+     * 只在登录成功响应中调用一次；禁止放进每个页面请求。
+     *
+     * @return void
+     */
+    public static function clearLegacySecureSessionCookie()
+    {
+        if (headers_sent() || self::sessionCookieSecure() || !self::isHttps()) {
+            return;
+        }
+
+        $name = session_name();
+        if (PHP_VERSION_ID >= 70300) {
+            setcookie($name, '', array(
+                'expires'  => time() - 42000,
+                'path'     => '/',
+                'secure'   => true,
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ));
+        } else {
+            setcookie($name, '', time() - 42000, '/; samesite=Lax', '', true, true);
+        }
+    }
+
+    /**
+     * 退出时清除会话 Cookie（同时清 Secure / 非 Secure，避免残留遮蔽）
+     *
+     * @return void
+     */
+    public static function clearSessionCookie()
+    {
+        if (headers_sent() || !ini_get('session.use_cookies')) {
+            return;
+        }
+
+        $name = session_name();
+        $params = session_get_cookie_params();
+        $path = isset($params['path']) ? $params['path'] : '/';
+        $domain = isset($params['domain']) ? $params['domain'] : '';
+        $httponly = !empty($params['httponly']);
+        $samesite = isset($params['samesite']) && $params['samesite'] !== ''
+            ? $params['samesite']
+            : 'Lax';
+
+        foreach (array(false, true) as $secureFlag) {
+            if (PHP_VERSION_ID >= 70300) {
+                setcookie($name, '', array(
+                    'expires'  => time() - 42000,
+                    'path'     => $path,
+                    'domain'   => $domain,
+                    'secure'   => $secureFlag,
+                    'httponly' => $httponly,
+                    'samesite' => $samesite,
+                ));
+            } else {
+                setcookie($name, '', time() - 42000, $path . '; samesite=' . $samesite, $domain, $secureFlag, $httponly);
+            }
+        }
     }
 
     /**
