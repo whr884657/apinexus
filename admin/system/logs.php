@@ -71,14 +71,14 @@ vs_admin_layout_start('日志查询', 'logs');
 
 <div class="vs-panel vs-log-panel" id="logsPage" data-boot="<?php echo vs_e(json_encode($boot, JSON_UNESCAPED_UNICODE)); ?>">
     <div class="vs-log-list" id="logsListBody">
-        <p class="vs-empty vs-finance-empty">加载中…</p>
+        <?php vs_render_loading('正在加载日志'); ?>
     </div>
 </div>
 <div class="vs-api-list-footer" id="logsFooter" hidden>
     <div class="vs-api-pager" id="logsPager">
         <label class="vs-api-list-pagesize" for="logsPageSize">
             <span class="vs-api-list-pagesize__label">每页</span>
-            <select class="vs-input vs-select" id="logsPageSize" data-vs-pick>
+            <select class="vs-input vs-select" id="logsPageSize" data-vs-pick="sheet">
                 <option value="10">10</option>
                 <option value="20" selected>20</option>
                 <option value="30">30</option>
@@ -99,7 +99,7 @@ vs_admin_layout_start('日志查询', 'logs');
             <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
         </header>
         <div class="vs-overlay__body" id="logsDetailBody">
-            <p class="vs-empty">加载中…</p>
+            <?php vs_render_loading('正在加载详情', array('compact' => true)); ?>
         </div>
         <footer class="vs-overlay__foot">
             <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">关闭</button>

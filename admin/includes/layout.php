@@ -297,10 +297,14 @@ function vs_admin_layout_end(array $extraScripts = array())
     echo '<script src="' . vs_e($vsBase) . '/assets/js/modal.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/vs-update.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
+    echo '<script src="' . vs_e($vsBase) . '/assets/js/vs-pick.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/theme-picker.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/admin.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/update-check.js?v=' . VS_VERSION . '"></script>' . "\n";
     foreach ($extraScripts as $js) {
+        if ($js === 'vs-pick.js' || $js === 'common.js' || $js === 'modal.js') {
+            continue;
+        }
         echo '<script src="' . vs_e($vsBase) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '"></script>' . "\n";
     }
     echo '</body></html>';

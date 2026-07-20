@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.3.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-5.4.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -255,6 +255,12 @@ location / {
 ---
 
 ## 版本记录
+
+### v5.4.0（2026-07-21）
+
+- 首页浏览器标题仅显示站点名（去掉「首页-」）
+- 底栏「每页」统一 vs-pick 弹层；与翻页按钮同高 32px
+- 全站列表加载动效（替换纯文字「加载中」）
 
 ### v5.3.0（2026-07-21）
 

@@ -564,3 +564,150 @@ a:hover {
         gap: 8px;
     }
 }
+
+/* ═══ 全站数据加载动效（列表 / 详情 / 配置面板）═══ */
+.vs-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 48px 20px;
+    min-height: 140px;
+    text-align: center;
+    color: var(--vs-text-secondary, #6b7280);
+}
+.vs-loading--compact {
+    padding: 28px 16px;
+    min-height: 96px;
+    gap: 10px;
+}
+.vs-loading__orbit {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+.vs-loading__ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2.5px solid rgba(15, 23, 42, 0.08);
+    border-top-color: #0f172a;
+    animation: vs-loading-spin 0.75s linear infinite;
+}
+.vs-loading__dot {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin: -3.5px 0 0 -3.5px;
+    border-radius: 50%;
+    background: #0f172a;
+    animation: vs-loading-pulse 1s ease-in-out infinite;
+}
+.vs-loading__text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    color: var(--vs-text-secondary, #64748b);
+}
+@keyframes vs-loading-spin {
+    to { transform: rotate(360deg); }
+}
+@keyframes vs-loading-pulse {
+    0%, 100% { transform: scale(0.85); opacity: 0.55; }
+    50% { transform: scale(1.15); opacity: 1; }
+}
+
+/* vs-pick 弹层模式（底栏「每页」等，居中/底部抽屉，非下拉） */
+.vs-pick-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+.vs-pick-sheet[hidden] {
+    display: none !important;
+}
+.vs-pick-sheet__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.38);
+}
+.vs-pick-sheet__panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 360px;
+    margin: 0 12px 16px;
+    background: #fff;
+    border-radius: 16px 16px 14px 14px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+    padding: 12px 12px 14px;
+    animation: vs-pick-sheet-up 0.2s ease;
+}
+.vs-pick-sheet__handle {
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    margin: 2px auto 10px;
+}
+.vs-pick-sheet__title {
+    margin: 0 4px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+}
+.vs-pick-sheet__options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+.vs-pick-sheet__option {
+    display: block;
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 12px 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f172a;
+    cursor: pointer;
+    text-align: center;
+}
+.vs-pick-sheet__option:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+}
+.vs-pick-sheet__option.is-selected {
+    border-color: #0f172a;
+    background: #0f172a;
+    color: #fff;
+}
+@keyframes vs-pick-sheet-up {
+    from { transform: translateY(12px); opacity: 0.6; }
+    to { transform: translateY(0); opacity: 1; }
+}
+@media (min-width: 901px) {
+    .vs-pick-sheet {
+        align-items: center;
+    }
+    .vs-pick-sheet__panel {
+        margin: 0;
+        border-radius: 14px;
+        animation: vs-pick-sheet-pop 0.18s ease;
+    }
+    .vs-pick-sheet__handle {
+        display: none;
+    }
+    @keyframes vs-pick-sheet-pop {
+        from { transform: scale(0.96); opacity: 0.5; }
+        to { transform: scale(1); opacity: 1; }
+    }
+}

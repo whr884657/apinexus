@@ -317,7 +317,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
         <div class="vs-api-pager" id="apiListPager">
             <label class="vs-api-list-pagesize" for="apiListPageSize">
                 <span class="vs-api-list-pagesize__label">每页</span>
-                <select class="vs-input vs-select vs-api-list-pagesize__select" id="apiListPageSize" data-vs-pick>
+                <select class="vs-input vs-select vs-api-list-pagesize__select" id="apiListPageSize" data-vs-pick="sheet">
                     <option value="10">10</option>
                     <option value="20" selected>20</option>
                     <option value="50">50</option>

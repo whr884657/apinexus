@@ -97,7 +97,11 @@
         if (!configBody) {
             return;
         }
-        configBody.innerHTML = '<p class="vs-theme-config-empty">加载中…</p>';
+        if (window.VS && VS.setLoading) {
+            VS.setLoading(configBody, '正在加载主题配置', true);
+        } else {
+            configBody.innerHTML = '<p class="vs-theme-config-empty">正在加载</p>';
+        }
         if (configSaveBtn) {
             configSaveBtn.disabled = true;
         }

@@ -87,6 +87,43 @@
         return null;
     };
 
+    /**
+     * 数据加载动效 HTML（列表 / 详情面板统一用）
+     *
+     * @param {string} [label]
+     * @param {boolean} [compact]
+     * @returns {string}
+     */
+    global.VS.loadingHtml = function (label, compact) {
+        var text = String(label == null || label === '' ? '正在加载' : label);
+        if (text === '加载中' || text === '加载中…' || text === '加载中...') {
+            text = '正在加载';
+        }
+        var safe = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        return '<div class="vs-loading' + (compact ? ' vs-loading--compact' : '') + '" role="status" aria-live="polite" aria-busy="true">'
+            + '<div class="vs-loading__orbit" aria-hidden="true">'
+            + '<span class="vs-loading__ring"></span><span class="vs-loading__dot"></span></div>'
+            + '<p class="vs-loading__text">' + safe + '</p></div>';
+    };
+
+    /**
+     * 将容器设为加载态
+     *
+     * @param {HTMLElement|null} el
+     * @param {string} [label]
+     * @param {boolean} [compact]
+     */
+    global.VS.setLoading = function (el, label, compact) {
+        if (!el) {
+            return;
+        }
+        el.innerHTML = global.VS.loadingHtml(label, compact);
+    };
+
     var toastHost = null;
 
     function ensureToastHost() {

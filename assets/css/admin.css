@@ -5056,6 +5056,9 @@ select.vs-input.vs-select {
 .vs-pick.is-open .vs-pick__btn::after {
     transform: translateY(-20%) rotate(225deg);
 }
+.vs-pick[data-vs-pick-mode="sheet"] .vs-pick__panel {
+    display: none !important;
+}
 .vs-pick__panel {
     position: absolute;
     left: 0;

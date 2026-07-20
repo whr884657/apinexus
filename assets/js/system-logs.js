@@ -188,7 +188,9 @@
         if (!detailBody || !window.VS) {
             return;
         }
-        detailBody.innerHTML = '<p class="vs-empty">加载中…</p>';
+        detailBody.innerHTML = (window.VS && VS.loadingHtml)
+            ? VS.loadingHtml('正在加载详情', true)
+            : '<p class="vs-empty">正在加载</p>';
         openOverlay();
         var fd = new FormData();
         fd.append('action', 'detail');
@@ -241,6 +243,9 @@
             return;
         }
         var pagesize = getPageSize();
+        if (window.VS && VS.setLoading) {
+            VS.setLoading(body, '正在加载日志');
+        }
         var fd = new FormData();
         fd.append('action', 'list');
         fd.append('page', String(page));

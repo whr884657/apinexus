@@ -52,6 +52,32 @@ function vs_render_notice($type, $title, $body, array $options = array())
 }
 
 /**
+ * 数据列表加载态（动效 + 文案，禁止纯文字「加载中」）
+ *
+ * @param string $label 可选短文案，默认「正在加载」
+ * @param array  $options compact=true 时更紧凑
+ * @return void
+ */
+function vs_render_loading($label = '正在加载', array $options = array())
+{
+    $label = trim((string) $label);
+    if ($label === '' || $label === '加载中' || $label === '加载中…' || $label === '加载中...') {
+        $label = '正在加载';
+    }
+    $classes = 'vs-loading';
+    if (!empty($options['compact'])) {
+        $classes .= ' vs-loading--compact';
+    }
+    echo '<div class="' . vs_e($classes) . '" role="status" aria-live="polite" aria-busy="true">' . "\n";
+    echo '<div class="vs-loading__orbit" aria-hidden="true">'
+        . '<span class="vs-loading__ring"></span>'
+        . '<span class="vs-loading__dot"></span>'
+        . '</div>' . "\n";
+    echo '<p class="vs-loading__text">' . vs_e($label) . '</p>' . "\n";
+    echo '</div>' . "\n";
+}
+
+/**
  * 渲染系统版本展示（有新版本时显示箭头与可点击的新版本号）
  *
  * @param array|null $updateCheck Updater::checkForUpdate() 结果
@@ -323,7 +349,7 @@ function vs_page_title($pageTitle, $siteName = null)
         $siteName = 'ApiNexus';
     }
 
-    if ($pageTitle === '' || $pageTitle === $siteName) {
+    if ($pageTitle === '' || $pageTitle === $siteName || $pageTitle === '首页') {
         return $siteName;
     }
 

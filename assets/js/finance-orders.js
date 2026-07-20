@@ -79,6 +79,9 @@
             return;
         }
         var pagesize = getPageSize();
+        if (window.VS && VS.setLoading) {
+            VS.setLoading(body, '正在加载订单');
+        }
         var fd = new FormData();
         fd.append('action', 'list');
         fd.append('page', String(page));

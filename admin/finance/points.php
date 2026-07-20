@@ -44,14 +44,14 @@ vs_admin_layout_start('积分变动', 'points', $headerActions);
 <?php else: ?>
 <div class="vs-panel vs-finance-panel">
     <div class="vs-finance-table" id="pointsListBody">
-        <p class="vs-empty vs-finance-empty">加载中…</p>
+        <?php vs_render_loading('正在加载积分变动'); ?>
     </div>
 </div>
 <div class="vs-api-list-footer" id="pointsFooter" hidden>
     <div class="vs-api-pager" id="pointsPager">
         <label class="vs-api-list-pagesize" for="pointsPageSize">
             <span class="vs-api-list-pagesize__label">每页</span>
-            <select class="vs-input vs-select" id="pointsPageSize" data-vs-pick>
+            <select class="vs-input vs-select" id="pointsPageSize" data-vs-pick="sheet">
                 <option value="10">10</option>
                 <option value="20" selected>20</option>
                 <option value="30">30</option>

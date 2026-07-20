@@ -1,13 +1,13 @@
 {
-    "version": "5.3.0",
-    "title": "ApiNexus 5.3.0 主题设置改存 MySQL",
+    "version": "5.4.0",
+    "title": "ApiNexus 5.4.0 首页标题 / 分页选择 / 加载动效",
     "release_date": "2026-07-21",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "主题设置改为 MySQL config.themesettings（按主题 ID 分段 JSON），不再写入主题目录 settings.json",
-        "后台扫描主题包时自动为新主题补齐配置段；旧 settings.json 一次性迁入",
-        "发行 ZIP 改用 PHP ZipArchive 打包，修复在线更新无法读取部分主题文件",
-        "同步主题规范 / CORE 说明；升级请执行数据库结构更新"
+        "双主题首页浏览器标题去掉「首页-」前缀，仅显示站点名称",
+        "后台/用户中心全局加载 vs-pick；底栏「每页」改为弹层选择（与上一页/下一页同高 32px）",
+        "全站数据列表统一加载动效（VS.setLoading / vs_render_loading），替换单调「加载中」文案",
+        "同步列表分页 / 自定义选择面板 / 界面提示规范"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

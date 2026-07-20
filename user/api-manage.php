@@ -305,7 +305,7 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
     <div class="vs-api-pager" id="userApiPager">
         <label class="vs-api-list-pagesize" for="userApiPageSize">
             <span class="vs-api-list-pagesize__label">每页</span>
-            <select class="vs-input vs-select vs-api-list-pagesize__select" id="userApiPageSize" data-vs-pick>
+            <select class="vs-input vs-select vs-api-list-pagesize__select" id="userApiPageSize" data-vs-pick="sheet">
                 <option value="10">10</option>
                 <option value="20" selected>20</option>
                 <option value="50">50</option>

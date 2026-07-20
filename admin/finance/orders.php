@@ -52,14 +52,14 @@ vs_admin_layout_start('订单管理', 'orders', $headerActions);
 <?php else: ?>
 <div class="vs-panel vs-finance-panel">
     <div class="vs-finance-table" id="ordersListBody">
-        <p class="vs-empty vs-finance-empty">加载中…</p>
+        <?php vs_render_loading('正在加载订单'); ?>
     </div>
 </div>
 <div class="vs-api-list-footer" id="ordersFooter" hidden>
     <div class="vs-api-pager" id="ordersPager">
         <label class="vs-api-list-pagesize" for="ordersPageSize">
             <span class="vs-api-list-pagesize__label">每页</span>
-            <select class="vs-input vs-select" id="ordersPageSize" data-vs-pick>
+            <select class="vs-input vs-select" id="ordersPageSize" data-vs-pick="sheet">
                 <option value="10">10</option>
                 <option value="20" selected>20</option>
                 <option value="30">30</option>

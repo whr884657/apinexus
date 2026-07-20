@@ -30,6 +30,9 @@
 
     function load() {
         var pagesize = getPageSize();
+        if (window.VS && VS.setLoading) {
+            VS.setLoading(body, '正在加载积分变动');
+        }
         var fd = new FormData();
         fd.append('action', 'list');
         fd.append('page', String(page));

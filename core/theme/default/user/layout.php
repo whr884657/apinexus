@@ -129,13 +129,14 @@ function vs_theme_user_layout_end(array $extraScripts = array())
     echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/modal.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
+    echo '<script src="' . vs_e($vsBase) . '/assets/js/vs-pick.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/theme-picker.js?v=' . VS_VERSION . '"></script>' . "\n";
     $userJs = ThemeManager::userScriptHref();
     if ($userJs !== '') {
         echo '<script src="' . vs_e($userJs) . '"></script>' . "\n";
     }
     foreach ($extraScripts as $js) {
-        if ($js === 'modal.js') {
+        if ($js === 'modal.js' || $js === 'vs-pick.js' || $js === 'common.js') {
             continue;
         }
         echo '<script src="' . vs_e($vsBase) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '"></script>' . "\n";
