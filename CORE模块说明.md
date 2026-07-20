@@ -662,7 +662,7 @@ VsPlaygroundResponse.directRequest({
 
 | 方法 | 说明 |
 |------|------|
-| `listForTheme()` | 接口数组，供模板或 `json_encode` 给 JS |
+| `listForTheme()` | 接口数组，供模板或 `json_encode` 给 JS（**不做调用量排序**；首页随机由主题 JS 负责） |
 | `findForThemeById($id)` | 单条详情（审核通过且非禁用） |
 | `countForTheme()` | 公开接口数量 |
 

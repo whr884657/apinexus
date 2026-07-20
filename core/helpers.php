@@ -42,10 +42,10 @@ function vs_render_notice($type, $title, $body, array $options = array())
     $bodyHtml = !empty($options['allow_html']) ? $body : vs_e($body);
 
     echo '<div class="' . vs_e(implode(' ', $classes)) . '" role="note">' . "\n";
-    if (trim($title) !== '') {
+    if (trim((string) $title) !== '') {
         echo '<p class="vs-notice__title">' . vs_e($title) . '</p>' . "\n";
     }
-    if (trim(strip_tags($bodyHtml)) !== '') {
+    if (trim(strip_tags((string) $bodyHtml)) !== '') {
         echo '<div class="vs-notice__text">' . $bodyHtml . '</div>' . "\n";
     }
     echo '</div>' . "\n";
@@ -510,7 +510,9 @@ function vs_seo_abs_url($path)
  */
 function vs_seo_truncate($text, $max = 160)
 {
-    $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $text)));
+    // preg_replace 失败时可能返回 null，PHP 8.1+ trim(null) 会触发 Deprecated
+    $cleaned = preg_replace('/\s+/u', ' ', strip_tags((string) ($text === null ? '' : $text)));
+    $text = trim((string) ($cleaned === null ? '' : $cleaned));
     if ($text === '') {
         return '';
     }
@@ -569,17 +571,23 @@ function vs_seo_defaults(array $overrides = array())
  */
 function vs_render_seo_meta(array $opts = array())
 {
-    $title = isset($opts['title']) ? trim((string) $opts['title']) : '';
-    $description = isset($opts['description']) ? trim((string) $opts['description']) : '';
-    $keywords = isset($opts['keywords']) ? trim((string) $opts['keywords']) : '';
-    $image = isset($opts['image']) ? trim((string) $opts['image']) : '';
-    $url = isset($opts['url']) ? trim((string) $opts['url']) : '';
-    $robots = isset($opts['robots']) ? trim((string) $opts['robots']) : '';
-    $canonical = isset($opts['canonical']) ? trim((string) $opts['canonical']) : '';
-    $themeColor = isset($opts['theme_color']) ? trim((string) $opts['theme_color']) : '';
-    $type = isset($opts['type']) ? trim((string) $opts['type']) : 'website';
-    $siteName = isset($opts['site_name']) ? trim((string) $opts['site_name']) : '';
-    $locale = isset($opts['locale']) ? trim((string) $opts['locale']) : 'zh_CN';
+    $title = trim((string) (isset($opts['title']) ? $opts['title'] : ''));
+    $description = trim((string) (isset($opts['description']) ? $opts['description'] : ''));
+    $keywords = trim((string) (isset($opts['keywords']) ? $opts['keywords'] : ''));
+    $image = trim((string) (isset($opts['image']) ? $opts['image'] : ''));
+    $url = trim((string) (isset($opts['url']) ? $opts['url'] : ''));
+    $robots = trim((string) (isset($opts['robots']) ? $opts['robots'] : ''));
+    $canonical = trim((string) (isset($opts['canonical']) ? $opts['canonical'] : ''));
+    $themeColor = trim((string) (isset($opts['theme_color']) ? $opts['theme_color'] : ''));
+    $type = trim((string) (isset($opts['type']) ? $opts['type'] : 'website'));
+    if ($type === '') {
+        $type = 'website';
+    }
+    $siteName = trim((string) (isset($opts['site_name']) ? $opts['site_name'] : ''));
+    $locale = trim((string) (isset($opts['locale']) ? $opts['locale'] : 'zh_CN'));
+    if ($locale === '') {
+        $locale = 'zh_CN';
+    }
 
     if ($siteName === '' && class_exists('SiteContext') && InstallChecker::isInstalled()) {
         $siteName = SiteContext::siteName();
@@ -741,7 +749,7 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     }
     echo '<script>(function(){try{var t=localStorage.getItem("theme");if(t!=="dark"&&t!=="light"){t="light"}document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>' . "\n";
     echo '</head>' . "\n";
-    echo '<body class="' . vs_e(trim($bodyClass)) . '">' . "\n";
+    echo '<body class="' . vs_e(trim((string) $bodyClass)) . '">' . "\n";
 }
 
 /**

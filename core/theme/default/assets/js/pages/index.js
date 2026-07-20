@@ -375,13 +375,15 @@ function escapeApiModalText(s) {
 
 function renderAPI(data) {
     const container = document.getElementById('api-list');
-    const sorted = data.slice().sort(function (a, b) {
-        const ca = parseInt(a && a.calls, 10) || 0;
-        const cb = parseInt(b && b.calls, 10) || 0;
-        if (ca !== cb) return cb - ca;
-        return (parseInt(b && b.id, 10) || 0) - (parseInt(a && a.id, 10) || 0);
-    });
-    const displayData = sorted.slice(0, 8);
+    // 首页接口目录：纯随机展示（禁止按调用量排序）
+    const shuffled = data.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = tmp;
+    }
+    const displayData = shuffled.slice(0, 8);
 
     if (displayData.length === 0) {
         container.innerHTML = `<div class="col-span-full text-center py-12" style="color: var(--text-muted);">没有找到相关接口</div>`;
