@@ -49,19 +49,13 @@ class FrontendPartner
      */
     public static function listForTheme()
     {
-        return RedisCache::remember(
-            RedisCache::KEY_FRONTEND_PARTNER,
-            RedisCache::TTL_FRONTEND_PARTNER,
-            function () {
-                $out = array();
-                foreach (LinkManager::listPartnersEnabled() as $row) {
-                    $item = self::formatForTheme($row);
-                    if ($item !== null) {
-                        $out[] = $item;
-                    }
-                }
-                return $out;
+        $out = array();
+        foreach (LinkManager::listPartnersEnabled() as $row) {
+            $item = self::formatForTheme($row);
+            if ($item !== null) {
+                $out[] = $item;
             }
-        );
+        }
+        return $out;
     }
 }

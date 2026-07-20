@@ -15,4 +15,10 @@ if ($heroDesc === '') {
     $heroDesc = '基于 PHP + MySQL 的轻量级 Web 管理系统，全面适配电脑端与手机端。';
 }
 
-vs_frontend_page('home', '首页', array('heroDesc' => $heroDesc));
+vs_frontend_page('home', '首页', array(
+    'heroDesc' => $heroDesc,
+    'seo' => array(
+        'description' => vs_seo_truncate($heroDesc),
+        'type' => 'website',
+    ),
+));

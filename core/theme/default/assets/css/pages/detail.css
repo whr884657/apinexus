@@ -541,16 +541,39 @@
     background: #fff;
 }
 
-.detail-recommend .card-container,
 .detail-recommend__grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    max-width: 420px;
+    display: block;
+    max-width: none;
+}
+
+.detail-recommend .detail-recommend__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
 .detail-recommend .endpoint-box {
-    margin-top: auto;
+    background: var(--endpoint-bg, rgba(17, 17, 17, 0.04));
+    border: 1px solid var(--endpoint-border, rgba(17, 17, 17, 0.12));
+    border-radius: 4px;
+    padding: 0.4rem 0.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-primary);
+    word-break: break-all;
+    margin-top: 0.35rem;
+    display: block;
+}
+
+.detail-recommend .detail-recommend__body h3 {
+    font-size: 0.95rem;
+    margin: 0.15rem 0;
+}
+
+.detail-recommend .detail-recommend__body p {
+    font-size: 0.8rem;
+    margin: 0 0 0.35rem;
+    color: var(--text-muted);
 }
 
 .detail-page .api-chip {

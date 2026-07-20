@@ -335,6 +335,10 @@ class ApiStats
             ApiKeyManager::incrementCalls((int) self::$keyCtx['keyid']);
         }
 
+        if (!class_exists('ApiLogManager') || !ApiLogManager::detailEnabled()) {
+            return;
+        }
+
         if (!self::tableReady()) {
             return;
         }

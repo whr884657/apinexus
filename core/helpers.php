@@ -463,9 +463,108 @@ function vs_render_footer_qrs($modifier = '')
 }
 
 /**
- * 渲染 SEO / Open Graph / Twitter 元标签
+ * 当前页面 canonical 绝对 URL
  *
- * @param array $opts title, description, keywords, image, url, robots, canonical, theme_color, type
+ * @return string
+ */
+function vs_seo_canonical_url()
+{
+    $base = rtrim(vs_base_url(), '/');
+    if (!empty($_SERVER['REQUEST_URI'])) {
+        $path = strtok((string) $_SERVER['REQUEST_URI'], '?');
+        if ($path !== false && $path !== '') {
+            return $base . $path;
+        }
+    }
+    return $base . '/';
+}
+
+/**
+ * 转为绝对 URL（OG / 分享图须为绝对地址，QQ/微信抓取才稳定）
+ *
+ * @param string $path
+ * @return string
+ */
+function vs_seo_abs_url($path)
+{
+    $path = trim((string) $path);
+    if ($path === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    $base = rtrim(vs_base_url(), '/');
+    if ($path[0] !== '/') {
+        $path = '/' . $path;
+    }
+    return $base . $path;
+}
+
+/**
+ * 截断 meta description（搜索引擎 / 社交平台建议 ≤160 字）
+ *
+ * @param string $text
+ * @param int    $max
+ * @return string
+ */
+function vs_seo_truncate($text, $max = 160)
+{
+    $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $text)));
+    if ($text === '') {
+        return '';
+    }
+    if (function_exists('mb_strlen') && mb_strlen($text, 'UTF-8') > $max) {
+        return rtrim(mb_substr($text, 0, $max - 1, 'UTF-8')) . '…';
+    }
+    if (strlen($text) > $max) {
+        return rtrim(substr($text, 0, $max - 1)) . '…';
+    }
+    return $text;
+}
+
+/**
+ * 构建页面 SEO 默认项（可被页面级覆盖）
+ *
+ * @param array $overrides
+ * @return array
+ */
+function vs_seo_defaults(array $overrides = array())
+{
+    $siteName = 'ApiNexus';
+    $siteDesc = '';
+    $keywords = '';
+    $favicon = '';
+    if (class_exists('SiteContext') && InstallChecker::isInstalled()) {
+        $siteName = SiteContext::siteName();
+        $siteDesc = SiteContext::siteDescription();
+        $keywords = SiteContext::siteKeywords();
+        $favicon = SiteContext::siteFavicon();
+    }
+
+    $canonical = vs_seo_canonical_url();
+    $image = $favicon !== '' ? vs_seo_abs_url(vs_favicon_href($favicon)) : '';
+    $desc = $siteDesc !== '' ? $siteDesc : $siteName;
+
+    $defaults = array(
+        'title'       => $siteName,
+        'description' => vs_seo_truncate($desc),
+        'keywords'    => $keywords,
+        'image'       => $image,
+        'url'         => $canonical,
+        'canonical'   => $canonical,
+        'robots'      => 'index,follow',
+        'type'        => 'website',
+        'site_name'   => $siteName,
+    );
+
+    return array_merge($defaults, $overrides);
+}
+
+/**
+ * 渲染 SEO / Open Graph / Twitter / Schema 元标签
+ *
+ * @param array $opts title, description, keywords, image, url, robots, canonical, theme_color, type, locale
  * @return void
  */
 function vs_render_seo_meta(array $opts = array())
@@ -480,10 +579,28 @@ function vs_render_seo_meta(array $opts = array())
     $themeColor = isset($opts['theme_color']) ? trim((string) $opts['theme_color']) : '';
     $type = isset($opts['type']) ? trim((string) $opts['type']) : 'website';
     $siteName = isset($opts['site_name']) ? trim((string) $opts['site_name']) : '';
+    $locale = isset($opts['locale']) ? trim((string) $opts['locale']) : 'zh_CN';
 
     if ($siteName === '' && class_exists('SiteContext') && InstallChecker::isInstalled()) {
         $siteName = SiteContext::siteName();
     }
+
+    if ($image !== '') {
+        $image = vs_seo_abs_url($image);
+    }
+    if ($url !== '') {
+        $url = vs_seo_abs_url($url);
+    }
+    if ($canonical !== '') {
+        $canonical = vs_seo_abs_url($canonical);
+    }
+    if ($description !== '') {
+        $description = vs_seo_truncate($description);
+    }
+
+    echo '<meta http-equiv="X-UA-Compatible" content="IE=edge">' . "\n";
+    echo '<meta name="renderer" content="webkit">' . "\n";
+    echo '<meta name="format-detection" content="telephone=no">' . "\n";
 
     if ($description !== '') {
         echo '<meta name="description" content="' . vs_e($description) . '">' . "\n";
@@ -500,17 +617,28 @@ function vs_render_seo_meta(array $opts = array())
     if ($themeColor !== '') {
         echo '<meta name="theme-color" content="' . vs_e($themeColor) . '">' . "\n";
     }
+    if ($siteName !== '') {
+        echo '<meta name="application-name" content="' . vs_e($siteName) . '">' . "\n";
+        echo '<meta name="apple-mobile-web-app-title" content="' . vs_e($siteName) . '">' . "\n";
+    }
+    echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
+    echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n";
+    echo '<meta name="mobile-web-app-capable" content="yes">' . "\n";
 
     if ($title !== '') {
+        echo '<meta itemprop="name" content="' . vs_e($title) . '">' . "\n";
         echo '<meta property="og:title" content="' . vs_e($title) . '">' . "\n";
         echo '<meta name="twitter:title" content="' . vs_e($title) . '">' . "\n";
     }
     if ($description !== '') {
+        echo '<meta itemprop="description" content="' . vs_e($description) . '">' . "\n";
         echo '<meta property="og:description" content="' . vs_e($description) . '">' . "\n";
         echo '<meta name="twitter:description" content="' . vs_e($description) . '">' . "\n";
     }
     if ($image !== '') {
+        echo '<meta itemprop="image" content="' . vs_e($image) . '">' . "\n";
         echo '<meta property="og:image" content="' . vs_e($image) . '">' . "\n";
+        echo '<meta property="og:image:secure_url" content="' . vs_e($image) . '">' . "\n";
         echo '<meta name="twitter:image" content="' . vs_e($image) . '">' . "\n";
     }
     if ($url !== '') {
@@ -521,6 +649,9 @@ function vs_render_seo_meta(array $opts = array())
     }
     if ($siteName !== '') {
         echo '<meta property="og:site_name" content="' . vs_e($siteName) . '">' . "\n";
+    }
+    if ($locale !== '') {
+        echo '<meta property="og:locale" content="' . vs_e($locale) . '">' . "\n";
     }
     echo '<meta name="twitter:card" content="' . vs_e($image !== '' ? 'summary_large_image' : 'summary') . '">' . "\n";
 }
@@ -534,16 +665,17 @@ function vs_render_seo_meta(array $opts = array())
  * @param array  $extraCssHrefs 完整 URL（如主题 assets）
  * @param array  $headScripts   head 内联脚本或外链（完整 URL）
  * @param string $bodyClass     body 额外 class
+ * @param array  $seoOpts       页面级 SEO 覆盖（description / image / robots 等）
  * @return void
  */
-function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true, array $extraCssHrefs = array(), array $headScripts = array(), $bodyClass = 'vs-body')
+function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true, array $extraCssHrefs = array(), array $headScripts = array(), $bodyClass = 'vs-body', array $seoOpts = array())
 {
     $base = vs_base_url();
     $siteName = 'ApiNexus';
     $favicon = '';
     $keywords = '';
     $description = '';
-    $canonical = $base . '/';
+    $canonical = vs_seo_canonical_url();
 
     if ($useSiteConfig && class_exists('InstallChecker') && InstallChecker::isInstalled()) {
         $siteName = SiteContext::siteName();
@@ -552,31 +684,32 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
         $description = SiteContext::siteDescription();
     }
 
-    if (!empty($_SERVER['REQUEST_URI'])) {
-        $path = strtok((string) $_SERVER['REQUEST_URI'], '?');
-        if ($path !== false && $path !== '') {
-            $canonical = rtrim($base, '/') . $path;
-        }
-    }
-
     $pageTitle = vs_page_title($title, $siteName);
-    $ogImage = $favicon !== '' ? vs_favicon_href($favicon) : '';
+    $ogImage = $favicon !== '' ? vs_seo_abs_url(vs_favicon_href($favicon)) : '';
+
+    $seo = vs_seo_defaults(array(
+        'title'       => $pageTitle,
+        'description' => $description !== '' ? $description : $siteName,
+        'keywords'    => $keywords,
+        'image'       => $ogImage,
+        'url'         => $canonical,
+        'canonical'   => $canonical,
+        'robots'      => 'index,follow',
+        'site_name'   => $siteName,
+    ));
+    if ($seoOpts !== array()) {
+        $seo = array_merge($seo, $seoOpts);
+    }
+    if (!isset($seo['title']) || trim((string) $seo['title']) === '') {
+        $seo['title'] = $pageTitle;
+    }
 
     echo '<!DOCTYPE html>' . "\n";
     echo '<html lang="zh-CN">' . "\n";
     echo '<head>' . "\n";
     echo '<meta charset="UTF-8">' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
-    vs_render_seo_meta(array(
-        'title'       => $pageTitle,
-        'description' => $description,
-        'keywords'    => $keywords,
-        'image'       => $ogImage,
-        'url'         => $canonical,
-        'robots'      => 'index,follow',
-        'canonical'   => $canonical,
-        'site_name'   => $siteName,
-    ));
+    vs_render_seo_meta($seo);
     echo '<title>' . vs_e($pageTitle) . '</title>' . "\n";
     if ($favicon !== '') {
         echo '<link rel="icon" href="' . vs_e(vs_favicon_href($favicon)) . '">' . "\n";
@@ -647,6 +780,12 @@ function vs_render_foot(array $jsFiles = array(), array $extraJsHrefs = array())
  */
 function vs_frontend_page($pageKey, $pageTitle, array $pageData = array())
 {
+    $seoOpts = array();
+    if (isset($pageData['seo']) && is_array($pageData['seo'])) {
+        $seoOpts = $pageData['seo'];
+        unset($pageData['seo']);
+    }
+
     $extraCss = array();
     $extraJs = array();
     $headScripts = array();
@@ -670,7 +809,7 @@ function vs_frontend_page($pageKey, $pageTitle, array $pageData = array())
         }
     }
 
-    vs_render_head($pageTitle, array(), true, $extraCss, $headScripts, $bodyClass);
+    vs_render_head($pageTitle, array(), true, $extraCss, $headScripts, $bodyClass, $seoOpts);
 
     ThemeManager::renderBody($pageKey, $pageTitle, $pageData);
 

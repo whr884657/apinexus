@@ -12,6 +12,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
+    if ($action === 'save_apilog') {
+        try {
+            Config::setMany(array(
+                'apilog_detail' => isset($_POST['apilog_detail']) ? '1' : '0',
+            ));
+            AjaxResponse::success('日志设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败：' . $e->getMessage());
+        }
+    }
+
     if ($action === 'save_site') {
         try {
             Config::setMany(array(
@@ -374,6 +385,28 @@ vs_admin_accordion_start(
 
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存站点扩展</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-apilog',
+    'API 日志',
+    '低配服务器可关闭详细日志，仅保留调用次数统计'
+);
+?>
+    <form method="post" action="" class="vs-form" id="apilogForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_apilog">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="apilog_detail" value="1" <?php echo (!isset($vsCfg['apilog_detail']) || $vsCfg['apilog_detail'] !== '0') ? 'checked' : ''; ?>>
+                <span>记录详细调用日志（IP、UA、来源等写入 apilog 表）</span>
+            </label>
+        </div>
+        <?php vs_render_notice('tip', '', '关闭后仍会计入各接口 calls 与密钥调用次数，但不写入 apilog，适合带宽/性能有限的小站点。', array('compact' => true)); ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存日志设置</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>

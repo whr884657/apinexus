@@ -233,7 +233,9 @@
      * @param {{endpoint:string,method?:string,params?:object}} opts
      * @returns {Promise<Response>}
      */
-    function directRequest(opts) {
+    function directRequest(opts, attempt) {
+        attempt = attempt || 0;
+        var maxAttempts = 3;
         var endpoint = String(opts && opts.endpoint ? opts.endpoint : '');
         if (!endpoint) {
             return Promise.reject(new Error('缺少接口地址'));
@@ -242,11 +244,20 @@
         if (!method) method = 'GET';
         var params = (opts && opts.params && typeof opts.params === 'object') ? opts.params : {};
         var url = buildUrlWithParams(endpoint, params);
+        var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var timeoutId = null;
         var init = {
             method: method,
             credentials: 'same-origin',
-            redirect: 'follow'
+            redirect: 'follow',
+            cache: 'no-store'
         };
+        if (controller) {
+            init.signal = controller.signal;
+            timeoutId = setTimeout(function () {
+                try { controller.abort(); } catch (e) { /* ignore */ }
+            }, 30000);
+        }
         if (method !== 'GET' && method !== 'HEAD') {
             var body = new URLSearchParams();
             Object.keys(params).forEach(function (k) {
@@ -255,7 +266,22 @@
             init.headers = { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' };
             init.body = body.toString();
         }
-        return fetch(url, init);
+        return fetch(url, init).then(function (res) {
+            if (timeoutId) clearTimeout(timeoutId);
+            return res;
+        }).catch(function (err) {
+            if (timeoutId) clearTimeout(timeoutId);
+            var msg = err && err.message ? String(err.message) : '';
+            var retriable = /abort|failed|network|timeout/i.test(msg) || err.name === 'AbortError';
+            if (retriable && attempt + 1 < maxAttempts) {
+                return new Promise(function (resolve) {
+                    setTimeout(resolve, 350 * (attempt + 1));
+                }).then(function () {
+                    return directRequest(opts, attempt + 1);
+                });
+            }
+            throw err;
+        });
     }
 
     /**
