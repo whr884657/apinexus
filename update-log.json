@@ -1,5 +1,15 @@
 {
     "versions": {
+        "5.3.0": {
+            "title": "ApiNexus 5.3.0 主题设置改存 MySQL",
+            "date": "2026-07-21",
+            "db_changes": true,
+            "changes": [
+                "主题设置改为 MySQL config.themesettings（按主题 ID 分段 JSON），不再写入主题目录 settings.json",
+                "后台扫描主题包时自动为新主题补齐配置段；旧 settings.json 一次性迁入",
+                "同步主题规范 / CORE 说明；升级请执行数据库结构更新"
+            ]
+        },
         "5.2.0": {
             "title": "ApiNexus 5.2.0 登录会话与认证 CSRF 加固（重做）",
             "date": "2026-07-21",

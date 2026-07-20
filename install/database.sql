@@ -70,6 +70,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_pass', '1'),
 ('mail_notify_fail', '1'),
 ('frontend_theme', 'default'),
+('themesettings', '{}'),
 ('site_runtime_start', ''),
 ('footer_html_left', ''),
 ('footer_html_center', ''),
