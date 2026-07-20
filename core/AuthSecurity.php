@@ -63,32 +63,22 @@ class AuthSecurity
     /**
      * 会话 Cookie 是否使用 Secure
      *
-     * 说明：不可按「当前请求是否 HTTPS」动态切换。HTTP/HTTPS 双协议并存时，
-     * Secure 时真时假会写入两份会话 Cookie，导致 CSRF 与「登录凭证已失效」。
-     * 默认不设 Secure（双协议共享会话）；仅当配置 force_https=1 时强制 Secure。
+     * 说明（v5.2.0 重做）：
+     * - 与 v5.1.1 一致：跟随当前请求是否 HTTPS（`isHttps()`）。
+     * - 禁止默认 Secure=false：HTTPS 站点会导致登录成功但会话 Cookie 无法稳定保持。
+     * - 禁止登录/每个请求再下发「清除 Secure 会话 Cookie」：会误删刚写入的会话（E64/E65）。
+     * - 双协议并存时的 CSRF 偶发，靠认证页禁缓存 + `rotateCsrfToken` + `VsAuthCsrf` 重试缓解；
+     *   生产建议只走 HTTPS，并可配置 force_https 做跳转（不在此强制改 Cookie 策略）。
      *
      * @return bool
      */
     public static function sessionCookieSecure()
     {
-        if (class_exists('InstallChecker') && InstallChecker::isInstalled() && class_exists('Config')) {
-            try {
-                if (trim((string) Config::get('force_https', '0')) === '1') {
-                    return true;
-                }
-            } catch (Exception $e) {
-                // 配置不可用时按非强制处理
-            }
-        }
-        return false;
+        return self::isHttps();
     }
 
     /**
      * 配置 Session Cookie 安全属性（须在 session_start 之前调用）
-     *
-     * 说明：禁止在每个请求里下发「清除 Secure 会话 Cookie」。
-     * 普通页面刷新时 PHP 往往不再重写会话 Cookie，若仍下发 Secure 删除头，
-     * 部分浏览器会把非 Secure 会话 Cookie 一并删掉，表现为登录后一刷新就退出（E64）。
      *
      * @return void
      */
@@ -118,35 +108,7 @@ class AuthSecurity
     }
 
     /**
-     * 一次性清除历史 Secure 会话 Cookie（仅登录成功等迁移场景调用）
-     *
-     * 说明：双协议升级后，旧 Secure Cookie 可能遮蔽新的非 Secure 会话。
-     * 只在登录成功响应中调用一次；禁止放进每个页面请求。
-     *
-     * @return void
-     */
-    public static function clearLegacySecureSessionCookie()
-    {
-        if (headers_sent() || self::sessionCookieSecure() || !self::isHttps()) {
-            return;
-        }
-
-        $name = session_name();
-        if (PHP_VERSION_ID >= 70300) {
-            setcookie($name, '', array(
-                'expires'  => time() - 42000,
-                'path'     => '/',
-                'secure'   => true,
-                'httponly' => true,
-                'samesite' => 'Lax',
-            ));
-        } else {
-            setcookie($name, '', time() - 42000, '/; samesite=Lax', '', true, true);
-        }
-    }
-
-    /**
-     * 退出时清除会话 Cookie（同时清 Secure / 非 Secure，避免残留遮蔽）
+     * 退出时清除会话 Cookie（同时清 Secure / 非 Secure，避免历史残留）
      *
      * @return void
      */

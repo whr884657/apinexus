@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.2.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-5.2.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -254,13 +254,9 @@ location / {
 
 ## 版本记录
 
-### v5.2.1（2026-07-21）
+### v5.2.0（2026-07-21，重做）
 
-- 修复登录后刷新强制退出（禁止每请求清除 Secure 会话 Cookie）
-
-### v5.2.0（2026-07-20）
-
-- 修复 HTTP/HTTPS 双协议与 CDN 下「登录凭证已失效」；认证 CSRF 自动轮换与重试
+- 登录会话 Cookie Secure 对齐 v5.1.1；认证页禁 CDN 缓存；CSRF 自动轮换重试（作废错误的旧 5.2.0/5.2.1 包）
 
 ### v5.1.1（2026-07-20）
 

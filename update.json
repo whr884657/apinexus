@@ -1,12 +1,12 @@
 {
-    "version": "5.2.1",
-    "title": "ApiNexus 5.2.1 登录后刷新退出修复",
+    "version": "5.2.0",
+    "title": "ApiNexus 5.2.0 登录会话与认证 CSRF 加固（重做）",
     "release_date": "2026-07-21",
     "db_changes": false,
     "changes": [
-        "修复登录成功后刷新页面强制退出：禁止每请求清除 Secure 会话 Cookie",
-        "登录成功仅一次性清除历史 Secure Cookie；退出时 Secure/非 Secure 双清",
-        "完善修改流程记录与专项规范同步约定（本地开发规范）"
+        "会话 Cookie Secure 恢复为跟随当前 HTTPS（对齐 v5.1.1），修复登录成功却无法进入后台",
+        "禁止登录/每请求下发清除会话 Cookie；退出时 Secure/非 Secure 双清",
+        "认证页禁止 CDN/浏览器缓存；CSRF 失败轮换并前端 VsAuthCsrf 自动重试一次"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

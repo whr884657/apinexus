@@ -1,37 +1,36 @@
 # ApiNexus 5.2.0 发行说明
 
 **版本：** 5.2.0  
-**日期：** 2026-07-20  
-**类型：** 中版本（登录 CSRF / 双协议会话修复）
+**日期：** 2026-07-21  
+**类型：** 中版本（登录会话 / 认证 CSRF 加固，**作废此前错误的 5.2.0 / 5.2.1 包**）
 
-## 问题现象
+## 重要说明
 
-管理员后台与两套主题用户登录，在以下场景高频提示「登录凭证已失效」：
+此前推送的 **5.2.0 / 5.2.1** 会话 Cookie 策略有误（默认非 Secure + 登录时清除 Secure Cookie），会导致：
 
-- 站点同时支持 HTTP 与 HTTPS
-- 站点接入 CDN 缓存
-- 清除浏览器缓存后仍失败，换网络/换手机偶发恢复
+- 登录成功但无法进入后台  
+- 或登录后一刷新即退出  
 
-## 根因
+本包为**从 v5.1.1 基线重做**的正确 5.2.0。请删除站点上旧的 5.2.x 包后覆盖安装，并**清一次本站 Cookie** 再登录。
 
-1. **会话 Cookie 的 `Secure` 随当前请求协议切换**：HTTPS 写入 Secure Cookie，HTTP 写入非 Secure Cookie，浏览器同时保留两份会话，CSRF 与页面凭证必然错位。
-2. **CDN 可能缓存登录页 HTML**，页面内嵌 CSRF 与真实会话脱节。
+## 保留的加固（相对 5.1.1）
 
-## 修复
+1. 认证页 `Cache-Control` / `CDN-Cache-Control: no-store`，避免 CDN 缓存登录 HTML  
+2. CSRF 失败时 `rotateCsrfToken()`；前端 `assets/js/auth-csrf.js`（`VsAuthCsrf`）回填并重试一次  
+3. `isHttps()` 兼容 `X-Forwarded-Proto` 多值；退出时 Secure / 非 Secure 会话 Cookie 双清  
 
-1. 会话 Cookie **不再按当前是否 HTTPS 动态设 Secure**；默认双协议共享同一会话；仅配置 `force_https=1` 时启用 Secure。
-2. HTTPS 响应主动清除历史 Secure 会话 Cookie，消除双 Cookie。
-3. 认证页加强 `Cache-Control` / `CDN-Cache-Control: no-store`，禁止边缘缓存。
-4. CSRF 失败时 **轮换** 新凭证并返回；前端 `auth-csrf.js` 自动回填并 **重试一次**。
-5. 管理员登录 + 默认主题 / slate 用户登录统一走 `VsAuthCsrf`。
+## 会话 Cookie（对齐 5.1.1）
+
+- `Secure` **跟随当前请求是否 HTTPS**（`AuthSecurity::sessionCookieSecure()` → `isHttps()`）  
+- **禁止**默认 `Secure=false`  
+- **禁止**登录成功或每个请求下发「清除 Secure 会话 Cookie」  
 
 ## 升级
 
-1. 覆盖代码后，建议用户 **清除本站 Cookie 一次**（或无痕窗口）再登录。  
-2. **无需**数据库结构更新。  
-3. 若站点仅允许 HTTPS，可在配置中设置 `force_https=1`（写入 `vs_config`）。  
-4. CDN 请对 `/admin/login`、`/user/login` 等认证路径关闭缓存。
+1. 覆盖代码  
+2. 清浏览器本站 Cookie 后重新登录  
+3. **无需**数据库结构更新  
 
 ## 数据库变更
 
-否
+无

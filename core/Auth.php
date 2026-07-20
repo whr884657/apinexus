@@ -43,8 +43,6 @@ class Auth
                 if (session_status() === PHP_SESSION_ACTIVE) {
                     session_regenerate_id(true);
                 }
-                // 登录成功时一次性清掉历史 Secure 会话 Cookie，避免遮蔽；禁止每请求清除（E64）
-                AuthSecurity::clearLegacySecureSessionCookie();
                 return $admin;
             }
         } catch (Exception $e) {
