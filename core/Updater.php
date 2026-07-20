@@ -304,12 +304,53 @@ class Updater
             $zip->close();
             return array('ok' => false, 'msg' => '解压更新包失败');
         }
+
+        // 个别环境下 extractTo 可能漏文件：按条目兜底补齐
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entryName = $zip->getNameIndex($i);
+            if ($entryName === false || substr($entryName, -1) === '/') {
+                continue;
+            }
+            $entryName = str_replace('\\', '/', $entryName);
+            $dest = rtrim(str_replace('\\', '/', $ctx['extractDir']), '/') . '/' . $entryName;
+            if (is_file($dest) && filesize($dest) > 0) {
+                continue;
+            }
+            $data = $zip->getFromIndex($i);
+            if ($data === false) {
+                $zip->close();
+                return array('ok' => false, 'msg' => '解压更新包失败：无法读取 ' . $entryName);
+            }
+            $dir = dirname($dest);
+            if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+                $zip->close();
+                return array('ok' => false, 'msg' => '解压更新包失败：无法创建目录 ' . dirname($entryName));
+            }
+            if (@file_put_contents($dest, $data) === false) {
+                $zip->close();
+                return array('ok' => false, 'msg' => '解压更新包失败：无法写入 ' . $entryName);
+            }
+        }
         $zip->close();
 
-        $sourceRoot = self::detectExtractRoot($ctx['extractDir']);
-        if ($sourceRoot === null) {
+        $probe = array(
+            'core/version.php',
+            'core/Updater.php',
+            'core/theme/slate/user/auth/register.php',
+            'core/theme/default/user/auth/register.php',
+        );
+        $sourceRootProbe = self::detectExtractRoot($ctx['extractDir']);
+        if ($sourceRootProbe === null) {
             return array('ok' => false, 'msg' => '更新包结构异常，未找到有效目录');
         }
+        foreach ($probe as $rel) {
+            $probePath = rtrim(str_replace('\\', '/', $sourceRootProbe), '/') . '/' . $rel;
+            if (!is_file($probePath) || !is_readable($probePath) || filesize($probePath) <= 0) {
+                return array('ok' => false, 'msg' => '更新包解压不完整，缺少文件：' . $rel . '（请重新下载发行包）');
+            }
+        }
+
+        $sourceRoot = $sourceRootProbe;
 
         $work['extracted'] = true;
         $work['source_root'] = $sourceRoot;
@@ -1157,9 +1198,15 @@ class Updater
             return;
         }
 
-        $data = @file_get_contents($from);
+        $data = false;
+        if (is_file($from) && is_readable($from)) {
+            $data = @file_get_contents($from);
+        }
         if ($data === false) {
-            throw new Exception('无法读取更新包文件：' . $relative);
+            $hint = !is_file($from)
+                ? '（解压后源文件不存在，请重新下载更新包）'
+                : '（解压后源文件不可读）';
+            throw new Exception('无法读取更新包文件：' . $relative . $hint);
         }
         if (@file_put_contents($to, $data) !== false) {
             return;

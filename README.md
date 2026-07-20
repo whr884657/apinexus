@@ -259,6 +259,7 @@ location / {
 ### v5.3.0（2026-07-21）
 
 - 主题设置改存 MySQL `themesettings`（按主题 ID 分段）；扫描主题包自动补齐；旧 JSON 一次性迁入
+- 发行 ZIP 改用 PHP ZipArchive 打包；修复在线更新无法读取部分主题文件（如 `register.php`）
 
 ### v5.2.0（2026-07-21，重做）
 

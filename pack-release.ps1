@@ -1,6 +1,6 @@
-# ApiNexus release ZIP packer (tracked). Prefer this over hand-written robocopy.
-# Usage: .\pack-release.ps1 [-Version 5.2.0]
-# Excludes: .gitignore directory rules + any root dir whose name contains U+53C2 U+8003 (can-kao).
+# ApiNexus release ZIP packer (tracked).
+# Usage: .\pack-release.ps1 [-Version 5.3.0]
+# Builds ZIP via PHP ZipArchive (tools/build-release-zip.php) for Updater compatibility.
 
 param(
     [Parameter(Mandatory = $false)]
@@ -21,7 +21,6 @@ $xd = New-Object 'System.Collections.Generic.List[string]'
 [void]$xd.Add('.git')
 [void]$xd.Add('release')
 
-# Parse directory rules from .gitignore (UTF-8)
 $gi = Join-Path $src '.gitignore'
 Get-Content -LiteralPath $gi -Encoding UTF8 | ForEach-Object {
     $line = $_.Trim()
@@ -35,7 +34,6 @@ Get-Content -LiteralPath $gi -Encoding UTF8 | ForEach-Object {
     }
 }
 
-# Any root directory whose name contains "参考" (can-kao)
 $cankao = [string]::Concat([char]0x53C2, [char]0x8003)
 Get-ChildItem -LiteralPath $src -Directory -Force | ForEach-Object {
     if ($_.Name.Contains($cankao) -and -not $xd.Contains($_.Name)) {
@@ -43,51 +41,20 @@ Get-ChildItem -LiteralPath $src -Directory -Force | ForEach-Object {
     }
 }
 
-$tmp = Join-Path $env:TEMP ("apinexus{0}_build" -f $Version)
 $zipDir = Join-Path $src 'release'
 $zip = Join-Path $zipDir ("apinexus{0}.zip" -f $Version)
-
 if (-not (Test-Path -LiteralPath $zipDir)) {
     New-Item -ItemType Directory -Path $zipDir -Force | Out-Null
 }
-if (Test-Path -LiteralPath $tmp) {
-    Remove-Item -LiteralPath $tmp -Recurse -Force
-}
-New-Item -ItemType Directory -Path $tmp -Force | Out-Null
-
-$robocopyArgs = @($src, $tmp, '/E', '/XD') + $xd.ToArray() + @('/XF', '*.zip', '/NFL', '/NDL', '/NJH', '/NJS', '/nc', '/ns', '/np')
-& robocopy @robocopyArgs | Out-Null
-if ($LASTEXITCODE -ge 8) {
-    throw "robocopy failed with code $LASTEXITCODE"
-}
-
 if (Test-Path -LiteralPath $zip) {
     Remove-Item -LiteralPath $zip -Force
 }
-Compress-Archive -Path (Join-Path $tmp '*') -DestinationPath $zip -Force
-Remove-Item -LiteralPath $tmp -Recurse -Force
 
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-$za = [System.IO.Compression.ZipFile]::OpenRead($zip)
-try {
-    $bad = New-Object 'System.Collections.Generic.List[string]'
-    foreach ($e in $za.Entries) {
-        $n = $e.FullName
-        if ($n.Contains($cankao)) { [void]$bad.Add($n); continue }
-        foreach ($ex in $xd) {
-            if ($ex -eq '.git' -or $ex -eq 'release') { continue }
-            if ($n.StartsWith($ex + '/') -or $n.StartsWith($ex + '\')) {
-                [void]$bad.Add($n)
-                break
-            }
-        }
-    }
-    if ($bad.Count -gt 0) {
-        $preview = ($bad | Select-Object -First 20) -join "`n"
-        throw "ZIP contains forbidden paths:`n$preview"
-    }
-} finally {
-    $za.Dispose()
+$excludeCsv = ($xd -join ',')
+$builder = Join-Path $src 'tools\build-release-zip.php'
+& php $builder $src $zip $excludeCsv
+if ($LASTEXITCODE -ne 0) {
+    throw "build-release-zip.php failed with code $LASTEXITCODE"
 }
 
 $size = (Get-Item -LiteralPath $zip).Length

@@ -6,6 +6,7 @@
     "changes": [
         "主题设置改为 MySQL config.themesettings（按主题 ID 分段 JSON），不再写入主题目录 settings.json",
         "后台扫描主题包时自动为新主题补齐配置段；旧 settings.json 一次性迁入",
+        "发行 ZIP 改用 PHP ZipArchive 打包，修复在线更新无法读取部分主题文件",
         "同步主题规范 / CORE 说明；升级请执行数据库结构更新"
     ],
     "repo": "xunjinlu/apinexus",
