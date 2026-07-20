@@ -1,13 +1,12 @@
 {
-    "version": "5.2.0",
-    "title": "ApiNexus 5.2.0 登录会话与认证 CSRF 加固（重做）",
+    "version": "5.3.0",
+    "title": "ApiNexus 5.3.0 主题设置改存 MySQL",
     "release_date": "2026-07-21",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "会话 Cookie Secure 恢复为跟随当前 HTTPS（对齐 v5.1.1），修复登录成功却无法进入后台",
-        "禁止登录/每请求下发清除会话 Cookie；退出时 Secure/非 Secure 双清",
-        "认证页禁止 CDN/浏览器缓存；CSRF 失败轮换并前端 VsAuthCsrf 自动重试一次",
-        "发行 ZIP 强制排除「默认主题参考UI（主题一）」等参考目录；新增 pack-release.ps1"
+        "主题设置改为 MySQL config.themesettings（按主题 ID 分段 JSON），不再写入主题目录 settings.json",
+        "后台扫描主题包时自动为新主题补齐配置段；旧 settings.json 一次性迁入",
+        "同步主题规范 / CORE 说明；升级请执行数据库结构更新"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

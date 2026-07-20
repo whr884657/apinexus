@@ -17,6 +17,8 @@
         "本地API头部注入统计机制-可移植说明.md",
         "paynotify.php",
         "payreturn.php",
-        "play.php"
+        "play.php",
+        "core/theme/default/data/settings.json",
+        "core/theme/slate/data/settings.json"
     ]
 }

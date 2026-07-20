@@ -746,17 +746,21 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 ### 4.25 ThemeManager.php（主题引擎）
 
-**作用：** 主题发现、切换、模板渲染、资源 URL。
+**作用：** 主题发现、切换、模板渲染、资源 URL、主题设置读写。
 
 **主题目录：** `core/theme/{themeId}/`（须含 `theme.json`）
+
+**主题设置存储（v5.3.0+）：** MySQL `config` 键 `themesettings`，值为 JSON 对象，键为主题 ID（如 `default` / `slate`），值为该主题配置。`listThemes()` 扫描主题包后自动为缺失主题补空对象；旧 `data/settings.json` 仅一次性迁入，不再写入。
 
 | 方法 | 说明 |
 |------|------|
 | `activeId()` | 当前主题 ID（读 Config `frontend_theme`） |
-| `listThemes()` | 已安装主题列表 |
+| `listThemes()` | 已安装主题列表（并 sync `themesettings`） |
 | `setActive($themeId)` | 切换主题 |
+| `readThemeData` / `writeThemeData` | 读/写某主题配置段（库） |
+| `readAllThemesettings` / `syncThemesettingsEntries` | 总表读写与扫描补齐 |
 | `renderBody($pageKey, $title, $data)` | 渲染 layout + pages |
-| `themeSetting($key, $default)` | 读主题 settings |
+| `themeSetting($key, $default)` | 读当前主题 settings |
 | `assetUrl($themeId, $relative)` | 主题静态资源 URL |
 | `navItems()` | 前台导航项 |
 | `defaultFrontendAssets($pageKey)` | 默认主题专用 CSS/JS  bundle |
@@ -766,7 +770,7 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 1. 复制 `core/theme/default/` 或 `slate/` 为 `core/theme/mytheme/`
 2. 编写 `theme.json`（id、name、settings 等）
 3. 在 `pages/` 下写 PHP，**分类与接口只调 `FrontendCategory` / `FrontendApi`**
-4. 后台「系统设置 → 前台主题」切换，或 `Config::set('frontend_theme', 'mytheme')`
+4. 后台「主题设置」切换主题；打开页面时会自动在 `themesettings` 中新增该主题配置段
 
 **主题隔离：** 各主题 CSS/JS **完全独立**，无跨主题文件回退。默认主题认证页使用本包 `auth.css` / `auth.js`，角色交互由全局 `assets/js/auth-characters.js` 提供（v3.5.1 起不再依赖 anime.js）。  
 **用户中心壳层：** 公共样式用 `/assets/css/admin.css`；各主题 `assets/user.css` **只写增量覆盖**，禁止整份复制 `admin.css`（见 E25、《主题资源隔离规范》）。

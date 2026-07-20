@@ -9,10 +9,18 @@
 class ThemeManager
 {
     const CONFIG_KEY = 'frontend_theme';
+    /** 全站主题设置总表（JSON：{ "default": {...}, "slate": {...} }） */
+    const SETTINGS_CONFIG_KEY = 'themesettings';
     const DEFAULT_THEME = 'default';
 
     /** @var array|null */
     private static $navCache = null;
+
+    /** @var array|null 当前主题 settings 请求内缓存 */
+    private static $themeSettingCache = null;
+
+    /** @var array|null */
+    private static $themeSettingSchemaDefaults = null;
 
     public static function themesRoot()
     {
@@ -85,6 +93,9 @@ class ThemeManager
             return strcmp($a['name'], $b['name']);
         });
 
+        // 扫描主题包后，确保 MySQL themesettings 中每个主题都有独立配置段
+        self::syncThemesettingsEntries($themes);
+
         return $themes;
     }
 
@@ -125,6 +136,7 @@ class ThemeManager
             return '无效的主题';
         }
         Config::set(self::CONFIG_KEY, $themeId);
+        self::clearThemeSettingCache();
         return true;
     }
 
@@ -140,7 +152,7 @@ class ThemeManager
     }
 
     /**
-     * 主题专属数据文件路径（core/theme/{id}/data/*.json）
+     * 历史磁盘路径（仅一次性迁移读取，v5.3.0 起不再写入）
      *
      * @param string $themeId
      * @param string $filename
@@ -159,13 +171,125 @@ class ThemeManager
     }
 
     /**
-     * @param string $themeId
-     * @param string $filename
-     * @return array<string, mixed>
+     * 读取 themesettings 总表（Config）
+     *
+     * @return array<string, array>
      */
-    public static function readThemeData($themeId, $filename = 'settings.json')
+    public static function readAllThemesettings()
     {
-        $file = self::themeDataFile($themeId, $filename);
+        $raw = Config::get(self::SETTINGS_CONFIG_KEY, '{}');
+        if (!is_string($raw) || trim($raw) === '') {
+            return array();
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return array();
+        }
+        $out = array();
+        foreach ($decoded as $themeId => $payload) {
+            $themeId = trim((string) $themeId);
+            if ($themeId === '' || !is_array($payload)) {
+                continue;
+            }
+            $out[$themeId] = $payload;
+        }
+        return $out;
+    }
+
+    /**
+     * 写回 themesettings 总表
+     *
+     * @param array<string, array> $all
+     * @return true|string
+     */
+    public static function writeAllThemesettings(array $all)
+    {
+        $clean = array();
+        foreach ($all as $themeId => $payload) {
+            $themeId = trim((string) $themeId);
+            if ($themeId === '' || !preg_match('/^[a-z0-9][a-z0-9_-]{0,31}$/i', $themeId)) {
+                continue;
+            }
+            $clean[$themeId] = is_array($payload) ? $payload : array();
+        }
+        $encoded = json_encode($clean, JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            return '主题设置编码失败';
+        }
+        try {
+            Config::set(self::SETTINGS_CONFIG_KEY, $encoded);
+        } catch (Exception $e) {
+            return '写入主题设置失败';
+        }
+        self::clearThemeSettingCache();
+        return true;
+    }
+
+    /**
+     * 扫描主题包后，为缺失主题自动补齐空配置段；并一次性迁入旧 settings.json
+     *
+     * @param array|null $themes listThemes() 结果；null 时自行扫描
+     * @return void
+     */
+    public static function syncThemesettingsEntries($themes = null)
+    {
+        if (!class_exists('Config') || !class_exists('InstallChecker') || !InstallChecker::isInstalled()) {
+            return;
+        }
+
+        if ($themes === null) {
+            // 避免 listThemes ↔ sync 递归：此处只扫目录
+            $themes = array();
+            $root = self::themesRoot();
+            if (is_dir($root)) {
+                $dirs = glob($root . '/*', GLOB_ONLYDIR);
+                if (is_array($dirs)) {
+                    foreach ($dirs as $dir) {
+                        $id = basename($dir);
+                        if (self::isValidTheme($id)) {
+                            $themes[] = array('id' => $id);
+                        }
+                    }
+                }
+            }
+        }
+
+        $all = self::readAllThemesettings();
+        $changed = false;
+
+        foreach ($themes as $theme) {
+            $id = isset($theme['id']) ? trim((string) $theme['id']) : '';
+            if ($id === '' || !self::isValidTheme($id)) {
+                continue;
+            }
+            if (!isset($all[$id]) || !is_array($all[$id])) {
+                $migrated = self::readLegacyThemeDataFile($id);
+                $all[$id] = is_array($migrated) ? $migrated : array();
+                $changed = true;
+            } elseif ($all[$id] === array()) {
+                // 库中为空对象时，尝试迁入磁盘遗留配置（仅一次有数据才写）
+                $migrated = self::readLegacyThemeDataFile($id);
+                if (!empty($migrated)) {
+                    $all[$id] = $migrated;
+                    $changed = true;
+                }
+            }
+        }
+
+        if ($changed) {
+            self::writeAllThemesettings($all);
+        }
+    }
+
+    /**
+     * 读取旧版磁盘 settings.json（迁移用）
+     *
+     * @param string $themeId
+     * @return array
+     */
+    private static function readLegacyThemeDataFile($themeId)
+    {
+        $file = self::themeDataFile($themeId, 'settings.json');
         if ($file === '' || !is_file($file)) {
             return array();
         }
@@ -174,31 +298,66 @@ class ThemeManager
     }
 
     /**
+     * 读取指定主题的设置（来自 MySQL config.themesettings）
+     *
+     * @param string $themeId
+     * @param string $filename 保留参数兼容旧调用，仅 settings.json 有效
+     * @return array<string, mixed>
+     */
+    public static function readThemeData($themeId, $filename = 'settings.json')
+    {
+        $themeId = trim((string) $themeId);
+        if ($themeId === '' || !self::isValidTheme($themeId)) {
+            return array();
+        }
+        $filename = basename((string) $filename);
+        if ($filename !== '' && strtolower($filename) !== 'settings.json') {
+            return array();
+        }
+
+        $all = self::readAllThemesettings();
+        if (!isset($all[$themeId]) || !is_array($all[$themeId])) {
+            $migrated = self::readLegacyThemeDataFile($themeId);
+            $all[$themeId] = $migrated;
+            self::writeAllThemesettings($all);
+            return $migrated;
+        }
+        return $all[$themeId];
+    }
+
+    /**
+     * 写入指定主题的设置到 MySQL（themesettings 中以主题 ID 为键）
+     *
      * @param string $themeId
      * @param array<string, mixed> $data
-     * @param string $filename
+     * @param string $filename 保留参数兼容旧调用
      * @return true|string
      */
     public static function writeThemeData($themeId, array $data, $filename = 'settings.json')
     {
-        $file = self::themeDataFile($themeId, $filename);
-        if ($file === '') {
+        $themeId = trim((string) $themeId);
+        if ($themeId === '' || !self::isValidTheme($themeId)) {
             return '无效的主题';
         }
-        $dir = dirname($file);
-        if (!is_dir($dir)) {
-            if (!@mkdir($dir, 0755, true) && !is_dir($dir)) {
-                return '无法创建主题数据目录';
-            }
+        $filename = basename((string) $filename);
+        if ($filename !== '' && strtolower($filename) !== 'settings.json') {
+            return '不支持的配置文件';
         }
-        $encoded = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        if ($encoded === false) {
-            return '数据编码失败';
-        }
-        if (@file_put_contents($file, $encoded . "\n", LOCK_EX) === false) {
-            return '写入主题数据失败';
-        }
-        return true;
+
+        $all = self::readAllThemesettings();
+        $all[$themeId] = $data;
+        return self::writeAllThemesettings($all);
+    }
+
+    /**
+     * 清除 themeSetting() 请求内缓存
+     *
+     * @return void
+     */
+    public static function clearThemeSettingCache()
+    {
+        self::$themeSettingCache = null;
+        self::$themeSettingSchemaDefaults = null;
     }
 
     /**
@@ -210,26 +369,23 @@ class ThemeManager
      */
     public static function themeSetting($key, $default = '')
     {
-        static $cache = null;
-        static $schemaDefaults = null;
-
-        if ($cache === null) {
+        if (self::$themeSettingCache === null) {
             $themeId = self::activeId();
-            $cache = self::readThemeData($themeId);
-            $schemaDefaults = array();
+            self::$themeSettingCache = self::readThemeData($themeId);
+            self::$themeSettingSchemaDefaults = array();
             foreach (self::getSettingsSchema($themeId) as $field) {
                 if (!empty($field['key']) && array_key_exists('default', $field)) {
-                    $schemaDefaults[$field['key']] = $field['default'];
+                    self::$themeSettingSchemaDefaults[$field['key']] = $field['default'];
                 }
             }
         }
 
         $key = (string) $key;
-        if (array_key_exists($key, $cache)) {
-            return $cache[$key];
+        if (array_key_exists($key, self::$themeSettingCache)) {
+            return self::$themeSettingCache[$key];
         }
-        if (is_array($schemaDefaults) && array_key_exists($key, $schemaDefaults)) {
-            return $schemaDefaults[$key];
+        if (is_array(self::$themeSettingSchemaDefaults) && array_key_exists($key, self::$themeSettingSchemaDefaults)) {
+            return self::$themeSettingSchemaDefaults[$key];
         }
         return $default;
     }
