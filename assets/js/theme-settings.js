@@ -122,6 +122,9 @@
                 }
                 configBody.innerHTML = payload.html || '<p class="vs-theme-config-empty">当前主题暂无可调整的项目</p>';
                 configBody.removeAttribute('data-needs-reload');
+                if (window.VSPick && typeof window.VSPick.refresh === 'function') {
+                    window.VSPick.refresh(configBody);
+                }
                 if (configSaveBtn) {
                     configSaveBtn.disabled = !payload.has_schema;
                 }

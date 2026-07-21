@@ -53,7 +53,7 @@ function vs_admin_render_theme_config_fields($themeId)
             echo '</textarea>';
         } elseif ($type === 'select') {
             echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';
-            echo '<select class="vs-input" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']">';
+            echo '<select class="vs-input vs-select" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']" data-vs-pick>';
             $options = !empty($field['options']) ? $field['options'] : array();
             foreach ($options as $opt) {
                 if (!is_array($opt) || !isset($opt['value'])) {
@@ -65,6 +65,9 @@ function vs_admin_render_theme_config_fields($themeId)
                 echo '<option value="' . vs_e($optVal) . '"' . $selected . '>' . vs_e($optLabel) . '</option>';
             }
             echo '</select>';
+            if ($key === 'stats_num_format') {
+                echo '<p class="vs-form-hint">完整数字：实时有多少显示多少；单位转换：达到千/万后显示为 K+、W+</p>';
+            }
         } else {
             $inputType = $type === 'number' ? 'number' : 'text';
             echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';

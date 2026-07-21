@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.6.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-5.7.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -31,7 +31,7 @@
 - **用户令牌（v3.29+）**：表 `apikey`；用户中心与管理员后台均可管理；格式 `sk-`+32 位（小写前缀）；每账号最多 3 个；本地/代理调用已校验密钥并累计次数
 - **积分计费与充值（v3.33+ / v3.34）**：接口收费扣积分；用户充值中心扫码支付；订单管理与积分变动分栏；回调直访 `core/play/codeplay/notify.php`
 
-- **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**
+- **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**；首页「累计调用」可在主题设置中选完整数字或单位转换（v5.7.0+）
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - **友情链接 / 合作伙伴（v5.0+）**：共用表 `link`；友链可审核与禁用；合作伙伴管理员直加（编辑/启禁）；默认主题首页合作伙伴区读库展示
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
@@ -260,57 +260,12 @@ location / {
 
 ## 版本记录
 
-### v5.6.1（2026-07-21）
+### v5.7.0（2026-07-21）
 
-- 路径式伪静态改为一条通用规则（`/{页}/{数字ID}`），覆盖详情及后续同类页
+- 主题设置新增「累计调用次数显示」：完整数字 / 单位转换（K+、W+）二选一
+- 默认主题与主题二首页同步；完善主题与开发规范专项债约定
 
-### v5.6.0（2026-07-21）
-
-- 接口详情对外改为 `/detail/{id}`；Nginx / Apache 增加详情伪静态
-
-### v5.5.2（2026-07-21）
-
-- 默认主题赞助页去除「其它支持方式」；感谢支持卡片改为多列网格
-- 仓库移除 `pack-release.ps1` / `tools/`
-
-### v5.5.1（2026-07-21）
-
-- 默认主题赞助页：单二维码切换；电脑左右布局；「赞助榜」改为「感谢支持」
-
-### v5.5.0（2026-07-21）
-
-- 友情链接 / 合作伙伴 / 赞助共用 `link` 表（`kind=2` 赞助）
-- 后台赞助管理；系统设置收款码；默认主题赞助页（二维码 + 赞助榜）
-
-### v5.4.0（2026-07-21）
-
-- 首页浏览器标题仅显示站点名（去掉「首页-」）
-- 底栏「每页」统一 vs-pick 弹层；与翻页按钮同高 32px
-- 全站列表加载动效（替换纯文字「加载中」）
-
-### v5.3.0（2026-07-21）
-
-- 主题设置改存 MySQL `themesettings`（按主题 ID 分段）；扫描主题包自动补齐；旧 JSON 一次性迁入
-- 发行 ZIP 改用 PHP ZipArchive 打包；修复在线更新无法读取部分主题文件（如 `register.php`）
-
-### v5.2.0（2026-07-21，重做）
-
-- 登录会话 Cookie Secure 对齐 v5.1.1；认证页禁 CDN 缓存；CSRF 自动轮换重试（作废错误的旧 5.2.0/5.2.1 包）
-- 发行包强制排除 `默认主题参考UI（主题一）` 等本地参考目录
-
-### v5.1.1（2026-07-20）
-
-- 首页接口目录改为纯随机；修复 SEO `trim(null)` Deprecated 闪现报错
-
-### v5.1.0（2026-07-20）
-
-- 全站 SEO 增强；详情推荐接口 UI；首页接口固定排序；在线测试稳定性；API 日志开关；Redis 缓存精简
-
-### v5.0.1（2026-07-20）
-
-- 合作伙伴支持删除；友链/合作伙伴操作改为 AJAX 局部更新（不刷新页面）；电脑端列表卡片布局优化
-
-更多历史版本请查看 **[更新记录.md](更新记录.md)**。
+完整历史见 **[更新记录.md](更新记录.md)**。
 
 ---
 

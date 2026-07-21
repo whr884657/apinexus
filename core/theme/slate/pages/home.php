@@ -35,22 +35,24 @@ $showStatCats = $statOn('show_stat_cats', true);
 $showStatUsers = $statOn('show_stat_users', false);
 $showStatToday = $statOn('show_stat_today', true);
 $showStatCalls = $statOn('show_stat_calls', true);
+$statsNumFormat = ThemeManager::themeSetting('stats_num_format', 'compact');
+$statsNumFormat = ($statsNumFormat === 'full') ? 'full' : 'compact';
 
 $statItems = array();
 if ($showStatApis) {
-    $statItems[] = array('label' => '收录', 'suffix' => '个接口', 'id' => 'stStatTotal', 'target' => $apiCount);
+    $statItems[] = array('label' => '收录', 'suffix' => '个接口', 'id' => 'stStatTotal', 'target' => $apiCount, 'format' => 'full');
 }
 if ($showStatCats) {
-    $statItems[] = array('label' => '分类', 'suffix' => '个', 'id' => 'stStatCats', 'target' => $catCount);
+    $statItems[] = array('label' => '分类', 'suffix' => '个', 'id' => 'stStatCats', 'target' => $catCount, 'format' => 'full');
 }
 if ($showStatUsers) {
-    $statItems[] = array('label' => '用户', 'suffix' => '人', 'id' => 'stStatUsers', 'target' => $userCount);
+    $statItems[] = array('label' => '用户', 'suffix' => '人', 'id' => 'stStatUsers', 'target' => $userCount, 'format' => 'full');
 }
 if ($showStatToday) {
-    $statItems[] = array('label' => '今日调用', 'suffix' => '次', 'id' => 'stStatToday', 'target' => $todayCalls);
+    $statItems[] = array('label' => '今日调用', 'suffix' => '次', 'id' => 'stStatToday', 'target' => $todayCalls, 'format' => 'full');
 }
 if ($showStatCalls) {
-    $statItems[] = array('label' => '累计调用', 'suffix' => '次', 'id' => 'stStatAll', 'target' => $totalCalls);
+    $statItems[] = array('label' => '累计调用', 'suffix' => '次', 'id' => 'stStatAll', 'target' => $totalCalls, 'format' => $statsNumFormat);
 }
 $showStats = $showStats && count($statItems) > 0;
 ?>
@@ -63,7 +65,7 @@ $showStats = $showStats && count($statItems) > 0;
     <div class="st-stat-pill" role="group" aria-label="接口统计">
         <?php foreach ($statItems as $i => $item): ?>
             <?php if ($i > 0): ?><span class="st-stat-pill__sep" aria-hidden="true"></span><?php endif; ?>
-            <span class="st-stat-pill__item"><?php echo vs_e($item['label']); ?> <strong class="st-stat-num" id="<?php echo vs_e($item['id']); ?>" data-target="<?php echo (int) $item['target']; ?>">0</strong> <?php echo vs_e($item['suffix']); ?></span>
+            <span class="st-stat-pill__item"><?php echo vs_e($item['label']); ?> <strong class="st-stat-num" id="<?php echo vs_e($item['id']); ?>" data-target="<?php echo (int) $item['target']; ?>" data-format="<?php echo vs_e(isset($item['format']) ? $item['format'] : 'full'); ?>">0</strong> <?php echo vs_e($item['suffix']); ?></span>
         <?php endforeach; ?>
     </div>
     <?php endif; ?>

@@ -768,6 +768,8 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 **主题设置存储（v5.3.0+）：** MySQL `config` 键 `themesettings`，值为 JSON 对象，键为主题 ID（如 `default` / `slate`），值为该主题配置。`listThemes()` 扫描主题包后自动为缺失主题补空对象；旧 `data/settings.json` 仅一次性迁入，不再写入。
 
+**常用展示配置（v5.7.0+）：** `stats_num_format` = `full`（完整数字）| `compact`（单位转换）；由各主题 `theme.json` settings 声明，首页「累计调用」读取。
+
 | 方法 | 说明 |
 |------|------|
 | `activeId()` | 当前主题 ID（读 Config `frontend_theme`） |

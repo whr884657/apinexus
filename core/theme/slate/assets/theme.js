@@ -186,6 +186,19 @@
         });
     }
 
+    function formatStatNumber(num, format) {
+        num = Math.max(0, Math.round(Number(num) || 0));
+        if (format === 'compact') {
+            if (num >= 10000) {
+                return (num / 10000).toFixed(1).replace(/\.0$/, '') + 'W';
+            }
+            if (num >= 1000) {
+                return Math.floor(num / 1000) + 'K';
+            }
+        }
+        return num.toLocaleString();
+    }
+
     function animateNum(el, target, duration) {
         if (!el) {
             return;
@@ -194,13 +207,17 @@
         if (!isNaN(parsed)) {
             target = parsed;
         }
+        var format = (el.getAttribute('data-format') || 'full') === 'compact' ? 'compact' : 'full';
         var start = performance.now();
         function step(now) {
             var p = Math.min((now - start) / duration, 1);
             var eased = 1 - Math.pow(1 - p, 3);
-            el.textContent = Math.round(target * eased).toLocaleString();
+            var current = Math.round(target * eased);
+            el.textContent = formatStatNumber(current, format);
             if (p < 1) {
                 requestAnimationFrame(step);
+            } else {
+                el.textContent = formatStatNumber(target, format);
             }
         }
         requestAnimationFrame(step);
