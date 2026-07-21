@@ -19,6 +19,10 @@ $payload = array(
 $apiCount = ApiManager::countApproved();
 $catCount = FrontendCategory::countEnabled();
 $totalCalls = ApiManager::totalCallCount();
+$statsNumFormat = ThemeManager::themeSetting('stats_num_format', 'compact');
+$statsNumFormat = ($statsNumFormat === 'full') ? 'full' : 'compact';
+// 0=完整数字；1=单位转换（与主题 JS statsDisplayMode 一致）
+$statsDisplayMode = ($statsNumFormat === 'full') ? 0 : 1;
 
 $heroTitleSetting = ThemeManager::themeSettingStr('hero_title', '');
 $heroLeadSetting = ThemeManager::themeSettingStr('hero_lead', '');
@@ -98,7 +102,7 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
     <section id="stats-section" class="py-20 grid grid-cols-2 md:grid-cols-4 gap-8 border-b" style="border-color: var(--border-color);">
         <div class="text-center"><div class="stat-value stat-green"><span class="counter" data-target="<?php echo (int) $apiCount; ?>">0</span><span class="counter-suffix"></span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">API 接口</div></div>
         <div class="text-center"><div class="stat-value stat-cyan"><span class="counter" data-target="<?php echo (int) min(99, max(1, $catCount)); ?>">0</span><span class="counter-suffix"></span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">接口分类</div></div>
-        <div class="text-center"><div class="stat-value stat-green"><span class="counter" data-target="<?php echo (int) $totalCalls; ?>">0</span><span class="counter-suffix"></span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">累计调用次数</div></div>
+        <div class="text-center"><div class="stat-value stat-green"><span class="counter" data-stat="calls" data-target="<?php echo (int) $totalCalls; ?>">0</span><span class="counter-suffix"></span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">累计调用次数</div></div>
         <div class="text-center"><div class="stat-value stat-cyan"><span class="counter" data-target="99">0</span><span class="counter-suffix">%</span></div><div class="text-xs mt-2 uppercase tracking-widest font-mono" style="color: var(--text-muted)">可用性</div></div>
     </section>
     <section id="apis" class="py-24">
@@ -193,7 +197,7 @@ $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p>
 <script>
 var apiData = <?php echo json_encode($payload['apiData'], JSON_UNESCAPED_UNICODE); ?>;
 var categoryNames = <?php echo json_encode($payload['categoryNames'], JSON_UNESCAPED_UNICODE); ?>;
-var statsDisplayMode = 1;
+var statsDisplayMode = <?php echo (int) $statsDisplayMode; ?>;
 var homeHeroConfig = <?php echo json_encode($homeHeroConfig, JSON_UNESCAPED_UNICODE); ?>;
 <?php $pgCtx = vs_playground_session_context(); ?>
 window.playgroundUserApiKey = <?php echo json_encode($pgCtx['apiKey'], JSON_UNESCAPED_UNICODE); ?>;

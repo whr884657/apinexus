@@ -69,13 +69,11 @@ const animateCounterMode1 = (el, suffixEl, target) => {
         const currentValue = Math.floor(startVal + (endVal - startVal) * segmentProgress);
 
         el.textContent = currentValue.toLocaleString();
-        if (suffixEl) suffixEl.textContent = '+';
 
         if (currentSegment < segmentCount || currentValue < target) {
             window.requestAnimationFrame(step);
         } else {
             el.textContent = target.toLocaleString();
-            if (suffixEl) suffixEl.textContent = '+';
         }
     };
 
@@ -188,36 +186,44 @@ const animateCounterMode2 = (el, suffixEl, target) => {
 const animateCounter = (el, suffixEl) => {
     const target = +el.getAttribute('data-target');
     const originalSuffix = suffixEl ? suffixEl.textContent.trim() : '';
-    const useDynamicSuffix = (originalSuffix === '');
+    const isCallsStat = el.getAttribute('data-stat') === 'calls';
+    const mode = (typeof statsDisplayMode === 'number') ? statsDisplayMode : 1;
 
-    // 只对总调用次数使用模式判断，其他统计项使用简单动画
-    if (useDynamicSuffix) {
-        if (statsDisplayMode === 0) {
+    // 仅「累计调用次数」按主题设置切换完整数字 / 单位转换
+    if (isCallsStat) {
+        if (mode === 0) {
             animateCounterMode1(el, suffixEl, target);
         } else {
             animateCounterMode2(el, suffixEl, target);
         }
-    } else {
-        // 其他统计项（延迟、接口数量等）使用简单递增动画
-        const totalDuration = 1500;
-        const startTime = performance.now();
-
-        const step = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / totalDuration, 1);
-            const currentValue = Math.floor(target * progress);
-
-            el.textContent = currentValue;
-
-            if (progress < 1) {
-                window.requestAnimationFrame(step);
-            } else {
-                el.textContent = target;
-            }
-        };
-
-        window.requestAnimationFrame(step);
+        return;
     }
+
+    // 其它统计项：完整整数递增；保留原有后缀（如 %）
+    const totalDuration = 1500;
+    const startTime = performance.now();
+
+    const step = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / totalDuration, 1);
+        const currentValue = Math.floor(target * progress);
+
+        el.textContent = currentValue.toLocaleString();
+        if (suffixEl && originalSuffix !== '') {
+            suffixEl.textContent = originalSuffix;
+        }
+
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        } else {
+            el.textContent = target.toLocaleString();
+            if (suffixEl && originalSuffix !== '') {
+                suffixEl.textContent = originalSuffix;
+            }
+        }
+    };
+
+    window.requestAnimationFrame(step);
 };
 
 const statsObserver = new IntersectionObserver((entries) => {

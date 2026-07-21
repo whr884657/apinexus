@@ -1,7 +1,7 @@
 {
     "id": "slate",
     "name": "主题二",
-    "version": "2.18.0",
+    "version": "2.19.0",
     "author": "ApiNexus",
     "description": "主题二：可配首页统计与浅色主题色；API 平台风首页与全部接口页",
     "preview": "preview.png",
@@ -55,6 +55,16 @@
             "label": "统计：累计调用次数",
             "type": "checkbox",
             "default": true
+        },
+        {
+            "key": "stats_num_format",
+            "label": "累计调用次数显示",
+            "type": "select",
+            "default": "compact",
+            "options": [
+                {"value": "full", "label": "完整数字（不转换单位）"},
+                {"value": "compact", "label": "单位转换（如 1K+、1.2W+）"}
+            ]
         },
         {
             "key": "color_preset",
