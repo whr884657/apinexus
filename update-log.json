@@ -1,5 +1,15 @@
 {
     "versions": {
+        "5.6.0": {
+            "title": "ApiNexus 5.6.0 接口详情去 .php 路径式地址",
+            "date": "2026-07-21",
+            "db_changes": false,
+            "changes": [
+                "接口详情对外地址改为 /detail/{id}（不再使用 /detail.php/{id}）",
+                "Nginx / Apache 伪静态增加 detail 规则，并支持后续同类页面扩展",
+                "出站 vs_api_detail_url、双主题详情链接兜底同步；入站兼容旧 PATH_INFO"
+            ]
+        },
         "5.5.2": {
             "title": "ApiNexus 5.5.2 赞助页精简与网格布局",
             "date": "2026-07-21",

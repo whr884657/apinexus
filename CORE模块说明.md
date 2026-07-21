@@ -112,7 +112,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 PATH_INFO、多选方法、审核三态、统计、在线测试浏览器直连、双端 UI） |
+| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 `/detail/{id}`、多选方法、审核三态、统计、在线测试浏览器直连、双端 UI） |
 | 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号最多 3 个；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
 | 积分与支付 | `PointsManager` / `OrderManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额） | `admin/finance/*`、`user/recharge`、`user/points`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（`user.points`、`api.charge/price`、表 `orders`；码支付扫码充值；API 调用扣费） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
@@ -987,7 +987,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 | 按钮样式 | `开发规范/按钮样式规范.md`（本地维护） |
 | 界面提示 / Toast | `开发规范/界面提示规范.md` §8（本地维护） |
 | 界面勿泄露实现细节 | `开发规范/界面勿泄露实现细节.md`（禁止把库枚举写到页面） |
-| 查询串转路径样式 | `开发规范/查询串转路径样式规范.md`（**主体：PATH_INFO `/脚本.php/标识`，无需伪静态**；代理去 .php 见 `nginx伪静态配置.md`） |
+| 查询串转路径样式 | `开发规范/查询串转路径样式规范.md`（**对外主链：`/{页面}/{标识}` 无 `.php`**；伪静态见 `nginx伪静态配置.md`；旧 PATH_INFO 仅入站兼容） |
 | 本地/代理调用统计 | `开发规范/本地与代理接口统计机制.md`（`ApiStats` + `apilog`） |
 | 主题资源隔离 | `开发规范/主题资源隔离规范.md` |
 | 开发易错点 | `开发规范/开发易错点备忘.md` |

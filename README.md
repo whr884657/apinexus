@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.5.2-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-5.6.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -112,7 +112,7 @@ ApiNexus/
 ├── 404.php                     # 全站 404（含安全法律提示）
 ├── index.php                   # 前台首页（主题驱动）
 ├── apis.php                    # 全部接口列表 + 代理网关（对外 /apis/{短码}，内记统计）
-├── detail.php                  # 接口详情（PATH_INFO：/detail.php/{id}）
+├── detail.php                  # 接口详情（对外 /detail/{id}，伪静态 → ?id=）
 ├── api/                        # 本地业务接口脚本（头部注入 ApiStats::hit）+ 统计代码使用说明.md
 │   └── yiyan/                  # 示例：随机一言
 ├── articles.php                # 前台 · 文章
@@ -209,7 +209,7 @@ ApiNexus/
 
 ### Apache
 
-项目根目录 `.htaccess` 已含：全站可用规则 + `/apis/{短码}` → `apis.php?_vs_slug=短码`。启用 `mod_rewrite` 即可。
+项目根目录 `.htaccess` 已含：全站可用规则 + `/apis/{短码}` → `apis.php?_vs_slug=短码` + `/detail/{id}` → `detail.php?id=`。启用 `mod_rewrite` 即可。
 
 ### Nginx（宝塔「伪静态」请只粘贴英文规则，不要带中文注释）
 
@@ -219,16 +219,19 @@ ApiNexus/
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
+location ~ ^/detail/([0-9]+)/?$ {
+    rewrite ^/detail/([0-9]+)/?$ /detail.php?id=$1 last;
+}
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
 }
 ```
 
-若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` 段，并放在 `location /` **上面**。
+若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` / `detail` 段，并放在 `location /` **上面**。
 
-> **注意：** 不要写 `[a-z0-9]{3,64}`。宝塔伪静态保存时会吞掉 `{…}`，正则变成 `^/apis/([a-z0-9]` 导致 `pcre_compile() failed: missing )`。长度校验由 PHP 完成即可。  
-> **注意：** 不要 rewrite 到 `/apis.php/$1`（PATH_INFO），面板 PHP 常只匹配以 `.php` 结尾的 URI。  
-> **接口详情不需要伪静态：** 出站地址为 `/detail.php/{id}`（PATH_INFO），由 PHP 解析。
+> **注意：** 不要写 `[a-z0-9]{3,64}` 或 `[0-9]{1,10}`。宝塔伪静态保存时会吞掉 `{…}`，正则变成残缺导致 `pcre_compile() failed: missing )`。长度校验由 PHP 完成即可。  
+> **注意：** 不要 rewrite 到 `/apis.php/$1` 或 `/detail.php/$1`（PATH_INFO），面板 PHP 常只匹配以 `.php` 结尾的 URI。  
+> **接口详情（v5.6.0+）：** 出站地址为 `/detail/{id}`，必须配置上方 `detail` 伪静态。
 
 详情见 [`nginx伪静态配置.md`](nginx伪静态配置.md)。
 
@@ -255,6 +258,10 @@ location / {
 ---
 
 ## 版本记录
+
+### v5.6.0（2026-07-21）
+
+- 接口详情对外改为 `/detail/{id}`；Nginx / Apache 增加详情伪静态
 
 ### v5.5.2（2026-07-21）
 
