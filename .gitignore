@@ -28,6 +28,10 @@ Thumbs.db
 release/
 release/*.zip
 
+# 禁止提交的本地打包工具（发版用临时 PHP ZipArchive，用完即删；勿再建 tools/）
+/tools/
+/pack-release.ps1
+
 # 本地参考文档（其它项目 README 范本，勿提交）
 README - 副本.md
 

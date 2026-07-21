@@ -99,13 +99,4 @@ $firstQr = $qrCount > 0 ? $paymentQrs[0] : null;
             <?php endif; ?>
         </section>
     </div>
-
-    <section class="donate-section donate-section--more">
-        <h2 class="donate-section__title">其它支持方式</h2>
-        <ul class="donate-list">
-            <li>为 <a href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer">Gitee 仓库</a> 点 Star</li>
-            <li>提交 Bug 反馈与功能建议</li>
-            <li>参与文档完善与接口贡献</li>
-        </ul>
-    </section>
 </main>

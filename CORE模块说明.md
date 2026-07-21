@@ -736,7 +736,7 @@ VsPlaygroundResponse.directRequest({
 
 - 列表页 `pages/links.php` → `FrontendLink::listForTheme()`
 - 首页合作伙伴区 → `FrontendPartner::listForTheme()`（勿写死外链）
-- 赞助页 `pages/sponsor.php` → `FrontendSponsor::paymentQrs()` + `listForTheme()`（默认主题：单码切换 + 桌面左右布局 +「感谢支持」；主题二后续对齐）
+- 赞助页 `pages/sponsor.php` → `FrontendSponsor::paymentQrs()` + `listForTheme()`（默认主题：单码切换 + 桌面左右布局 +「感谢支持」+ 赞助卡片多列网格；**禁止**「其它支持方式」；主题二后续对齐）
 - 申请页 `pages/applylink.php` + 根入口 `applylink.php`（短名无横线）
 - 页脚在二维码上方渲染已通过且启用的友链，末尾固定「申请友链」链到 `/applylink`
 - 禁止主题内 SQL；申请提交走 `applylink.php` POST + CSRF + `AjaxResponse`
