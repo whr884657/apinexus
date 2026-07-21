@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：detail.php
- * 作用：接口详情页入口（PATH_INFO：/detail.php/{id}，不依赖伪静态）
+ * 作用：接口详情页入口（对外 /detail/{id}，伪静态落到本脚本 ?id=）
  */
 
 define('VS_ROOT', __DIR__);

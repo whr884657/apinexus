@@ -183,7 +183,7 @@ function vs_is_allowed_avatar_url($url)
 }
 
 /**
- * 接口详情公开地址（PATH_INFO：/detail.php/{id}，不依赖伪静态）
+ * 接口详情公开地址（无 .php：/detail/{id}，依赖伪静态）
  *
  * @param int $apiId
  * @return string
@@ -194,16 +194,26 @@ function vs_api_detail_url($apiId)
     if ($apiId <= 0) {
         return rtrim(vs_base_url(), '/') . '/apis';
     }
-    return rtrim(vs_base_url(), '/') . '/detail.php/' . $apiId;
+    return rtrim(vs_base_url(), '/') . '/detail/' . $apiId;
 }
 
 /**
- * 从当前请求解析资源数字 ID（PATH_INFO / SCRIPT_NAME 相对还原）
+ * 从当前请求解析资源数字 ID
+ * 优先 $_GET['id']（伪静态 /detail/{id} → detail.php?id=）；其次 PATH_INFO（兼容旧 /detail.php/{id}）
  *
+ * @param string $queryKey 查询参数名，默认 id
  * @return int
  */
-function vs_resolve_path_id()
+function vs_resolve_path_id($queryKey = 'id')
 {
+    $queryKey = is_string($queryKey) && $queryKey !== '' ? $queryKey : 'id';
+    if (isset($_GET[$queryKey])) {
+        $fromGet = (string) $_GET[$queryKey];
+        if ($fromGet !== '' && ctype_digit($fromGet)) {
+            return (int) $fromGet;
+        }
+    }
+
     $info = '';
     if (!empty($_SERVER['PATH_INFO'])) {
         $info = (string) $_SERVER['PATH_INFO'];

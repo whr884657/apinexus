@@ -7,6 +7,9 @@
 
     # /apis/{slug} -> apis.php?_vs_slug= (no {n,m} quantifiers)
     RewriteRule ^apis/([a-z0-9]+)/?$ apis.php?_vs_slug=$1 [QSA,L]
+
+    # /detail/{id} -> detail.php?id= (no PATH_INFO rewrite)
+    RewriteRule ^detail/([0-9]+)/?$ detail.php?id=$1 [QSA,L]
 </IfModule>
 
 ErrorDocument 404 /404.php

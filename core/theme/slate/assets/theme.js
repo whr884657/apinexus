@@ -267,7 +267,7 @@
         var detailUrl = String(api.detail_url || '').trim();
         var base = (window.VS_BASE_URL || '').replace(/\/$/, '');
         if (!detailUrl && api.id) {
-            detailUrl = base + '/detail.php/' + api.id;
+            detailUrl = base + '/detail/' + api.id;
         }
         if (!detailUrl) {
             detailUrl = base + '/apis';
