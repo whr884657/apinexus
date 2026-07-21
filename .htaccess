@@ -5,11 +5,11 @@
 
     RewriteRule ^config/ - [F,L]
 
-    # /apis/{slug} -> apis.php?_vs_slug= (no {n,m} quantifiers)
+    # /apis/{slug} -> apis.php?_vs_slug= (proxy; must be before generic id rule)
     RewriteRule ^apis/([a-z0-9]+)/?$ apis.php?_vs_slug=$1 [QSA,L]
 
-    # /detail/{id} -> detail.php?id= (no PATH_INFO rewrite)
-    RewriteRule ^detail/([0-9]+)/?$ detail.php?id=$1 [QSA,L]
+    # Generic: /{page}/{numericId} -> /{page}.php?id= (detail/article/...)
+    RewriteRule ^([a-z0-9_-]+)/([0-9]+)/?$ $1.php?id=$2 [QSA,L]
 </IfModule>
 
 ErrorDocument 404 /404.php

@@ -1,5 +1,15 @@
 {
     "versions": {
+        "5.6.1": {
+            "title": "ApiNexus 5.6.1 通用路径式伪静态",
+            "date": "2026-07-21",
+            "db_changes": false,
+            "changes": [
+                "伪静态改为一条通用规则：/{页面名}/{数字ID} → /{页面名}.php?id=（覆盖 detail 及后续文章等详情页）",
+                "删除仅兼容 detail 的单页规则；apis 代理规则仍置顶",
+                "新增 vs_path_resource_url；规范与 nginx/Apache/README 同步"
+            ]
+        },
         "5.6.0": {
             "title": "ApiNexus 5.6.0 接口详情去 .php 路径式地址",
             "date": "2026-07-21",

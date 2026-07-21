@@ -285,6 +285,9 @@ echo 'v' . VS_VERSION;     // v2.17.1
 |------|------|
 | `vs_e($value)` | HTML 转义，模板输出必用 |
 | `vs_base_url()` | 站点根 URL（含协议域名） |
+| `vs_path_resource_url($script, $id)` | 路径式资源 URL：`/{脚本}/{id}`（通用伪静态） |
+| `vs_api_detail_url($apiId)` | 接口详情 URL（→ `/detail/{id}`） |
+| `vs_resolve_path_id()` | 入站解析资源数字 ID（GET 优先，兼容 PATH_INFO） |
 | `vs_redirect($url)` | HTTP 重定向 |
 | `vs_render_seo_meta()` / `vs_seo_defaults()` / `vs_seo_abs_url()` | SEO / OG / 分享 meta 统一输出 |
 | `vs_render_head()` / `vs_render_foot()` | 输出 HTML 头尾（head 支持 `$seoOpts` 页面级覆盖） |
@@ -987,7 +990,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 | 按钮样式 | `开发规范/按钮样式规范.md`（本地维护） |
 | 界面提示 / Toast | `开发规范/界面提示规范.md` §8（本地维护） |
 | 界面勿泄露实现细节 | `开发规范/界面勿泄露实现细节.md`（禁止把库枚举写到页面） |
-| 查询串转路径样式 | `开发规范/查询串转路径样式规范.md`（**对外主链：`/{页面}/{标识}` 无 `.php`**；伪静态见 `nginx伪静态配置.md`；旧 PATH_INFO 仅入站兼容） |
+| 查询串转路径样式 | `开发规范/查询串转路径样式规范.md`（**一条通用伪静态** `/{页}/{数字ID}`→`/{页}.php?id=`；代理 `/apis/{短码}` 另置顶） |
 | 本地/代理调用统计 | `开发规范/本地与代理接口统计机制.md`（`ApiStats` + `apilog`） |
 | 主题资源隔离 | `开发规范/主题资源隔离规范.md` |
 | 开发易错点 | `开发规范/开发易错点备忘.md` |

@@ -183,7 +183,28 @@ function vs_is_allowed_avatar_url($url)
 }
 
 /**
- * 接口详情公开地址（无 .php：/detail/{id}，依赖伪静态）
+ * 路径式资源公开地址：/{脚本名}/{数字ID}（无 .php；依赖通用伪静态）
+ *
+ * @param string $script 根入口脚本名，如 detail / article（可带 .php，会去掉）
+ * @param int    $id
+ * @return string
+ */
+function vs_path_resource_url($script, $id)
+{
+    $script = strtolower(basename(str_replace('\\', '/', (string) $script)));
+    if (substr($script, -4) === '.php') {
+        $script = substr($script, 0, -4);
+    }
+    $script = preg_replace('/[^a-z0-9_-]/', '', $script);
+    $id = (int) $id;
+    if ($script === '' || $id <= 0) {
+        return rtrim(vs_base_url(), '/');
+    }
+    return rtrim(vs_base_url(), '/') . '/' . $script . '/' . $id;
+}
+
+/**
+ * 接口详情公开地址（无 .php：/detail/{id}，依赖通用伪静态）
  *
  * @param int $apiId
  * @return string
@@ -194,7 +215,7 @@ function vs_api_detail_url($apiId)
     if ($apiId <= 0) {
         return rtrim(vs_base_url(), '/') . '/apis';
     }
-    return rtrim(vs_base_url(), '/') . '/detail/' . $apiId;
+    return vs_path_resource_url('detail', $apiId);
 }
 
 /**

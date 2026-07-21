@@ -17,7 +17,7 @@ location / {
 ```
 
 3. 按下面「情况 A / B」复制对应代码块 → 保存 → **重载 Nginx**。  
-4. 浏览器测试：`https://你的域名/apis/已有短码`（应能跳转）；`/apis` 仍是接口列表；`/detail/数字ID` 能打开接口详情。
+4. 浏览器测试：`/apis/已有短码`（代理）；`/apis`（列表）；`/detail/数字ID`（详情）；日后 `/article/数字ID` 等同理，**无需再加规则**。
 
 ---
 
@@ -31,8 +31,8 @@ location / {
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
-location ~ ^/detail/([0-9]+)/?$ {
-    rewrite ^/detail/([0-9]+)/?$ /detail.php?id=$1 last;
+location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
+    rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
@@ -47,24 +47,27 @@ location / {
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
-location ~ ^/detail/([0-9]+)/?$ {
-    rewrite ^/detail/([0-9]+)/?$ /detail.php?id=$1 last;
+location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
+    rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
 ```
 
-若站点**已有** `apis` 段，只需再追加 `detail` 那一段（同样放在 `location /` 上面）。
+若站点**已有**旧的「仅 detail」单页规则，请**删掉**那条，改用上面的**通用**第二段。
 
-### 后续其它「页面 + 数字 ID」入口
+### 两条规则分别干什么？
 
-模式与 `detail` 相同（勿加花括号量词、勿写成 PATH_INFO）：
+| 顺序 | 规则 | 作用 |
+|------|------|------|
+| 1（必须在上） | `/apis/{短码}` | **代理网关**（特殊：内部 `_vs_slug`，不是 `?id=`） |
+| 2 | `/{页面名}/{数字ID}` | **通用路径式资源**：落到 `/{页面名}.php?id={数字ID}` |
 
-```nginx
-location ~ ^/页面名/([0-9]+)/?$ {
-    rewrite ^/页面名/([0-9]+)/?$ /页面名.php?id=$1 last;
-}
-```
+因此：
 
-（将「页面名」换成真实根入口文件名，不含 `.php`。）
+- `/detail/11` → `detail.php?id=11`
+- `/article/5` → `article.php?id=5`（以后有文章详情入口即可，**不用再写伪静态**）
+- 任意根目录入口脚本 `xxx.php`，只要出站写成 `/xxx/数字`，同一条规则生效
+
+**不要**为每个新详情页再复制一条 `location`。
 
 ---
 
@@ -72,9 +75,10 @@ location ~ ^/页面名/([0-9]+)/?$ {
 
 1. **不要**在代码框内容里加中文注释，宝塔界面容易乱。  
 2. **不要**写成 `[a-z0-9]{3,64}` 或 `[0-9]{1,10}` —— 宝塔保存时可能吃掉花括号，报 `pcre_compile() failed: missing )`。长度由 PHP 校验即可。  
-3. **不要**写成 `/apis.php/$1` 或 `/detail.php/$1`（PATH_INFO）—— 很多面板的 PHP 规则只认「以 `.php` 结尾」的路径，会 404。必须用 `xxx.php?参数=$1`。  
-4. 短码规则、详情规则与原来的「全站去 .php」可同时存在：`/apis` 走列表，`/apis/短码` 走代理，`/detail/11` 走详情，`/articles` 等仍走 `try_files`。  
-5. **码支付回调不要加伪静态**：公网地址为 `core/play/codeplay/notify.php` / `return.php`（直接访问 core，带 `.php`），下单时作为 `notify_url` / `return_url` 传给平台。
+3. **不要**写成 `/xxx.php/$1`（PATH_INFO）—— 面板 PHP 常只认「以 `.php` 结尾」的 URI。必须用 `/$1.php?id=$2`。  
+4. **`apis` 段必须写在通用段上面**，否则纯数字短码可能被当成 `apis.php?id=`。  
+5. 通用段只匹配「恰好两段且第二段为纯数字」；`/articles`、`/admin/login`、`/user/apis` 等不受影响。  
+6. **码支付回调不要加伪静态**：`core/play/codeplay/notify.php` / `return.php` 直访（带 `.php`）。
 
 ---
 
@@ -82,11 +86,11 @@ location ~ ^/页面名/([0-9]+)/?$ {
 
 | 浏览器地址 | 作用 |
 |------------|------|
-| `/apis` | 全部接口列表 |
-| `/apis/短码` | 代理外链（内部用 `_vs_slug`，地址栏仍好看） |
-| `/detail/数字ID` | 接口详情（伪静态 → `detail.php?id=`，**v5.6.0+**） |
-| `/core/play/codeplay/notify.php` | 码支付异步回调（直访 core，无伪静态） |
-| `/core/play/codeplay/return.php` | 码支付浏览器回跳 |
-| `/articles` 等 | 和以前一样，走去 `.php` 的 `try_files` |
+| `/apis` | 全部接口列表（`try_files`） |
+| `/apis/短码` | 代理外链（专用规则 → `_vs_slug`） |
+| `/detail/数字ID` | 接口详情（通用规则 → `detail.php?id=`） |
+| `/其它根入口名/数字ID` | 同类资源页（同一条通用规则） |
+| `/core/play/codeplay/notify.php` | 码支付异步回调（直访，无伪静态） |
+| `/articles` 等 | 去 `.php` 的 `try_files` |
 
-保存、重载后仍异常时：先确认伪静态已生效，再确认 `apis` / `detail` 段是否在 `location /` 之前。
+保存、重载后仍异常时：先确认伪静态已生效，再确认 **apis 在通用规则之上**、通用规则在 `location /` 之上。
