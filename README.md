@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.5.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-5.5.2-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -70,7 +70,7 @@
 
 压缩包命名：`apinexus{版本号}.zip`（如 `apinexus4.1.0.zip`）。各版本详细说明见 `发行说明/` 目录。
 
-**禁止打进仓库 / 发行 ZIP：** `默认主题参考UI（主题一）/`、其它根目录「参考*」对照目录、`开发规范/`、`修改流程记录/`。打包请用根目录 `pack-release.ps1`（会自检排除）。
+**禁止打进仓库 / 发行 ZIP：** `默认主题参考UI（主题一）/`、其它根目录「参考*」对照目录、`开发规范/`、`修改流程记录/`、`tools/`、`pack-release.ps1`。发行包须用 **PHP ZipArchive**（临时脚本，用完即删），禁止 `Compress-Archive`。
 
 完整版本历史见 **[更新记录.md](更新记录.md)**。
 
@@ -256,6 +256,11 @@ location / {
 
 ## 版本记录
 
+### v5.5.2（2026-07-21）
+
+- 默认主题赞助页去除「其它支持方式」；感谢支持卡片改为多列网格
+- 仓库移除 `pack-release.ps1` / `tools/`
+
 ### v5.5.1（2026-07-21）
 
 - 默认主题赞助页：单二维码切换；电脑左右布局；「赞助榜」改为「感谢支持」
@@ -279,7 +284,7 @@ location / {
 ### v5.2.0（2026-07-21，重做）
 
 - 登录会话 Cookie Secure 对齐 v5.1.1；认证页禁 CDN 缓存；CSRF 自动轮换重试（作废错误的旧 5.2.0/5.2.1 包）
-- 发行包强制排除 `默认主题参考UI（主题一）` 等本地参考目录（`pack-release.ps1`）
+- 发行包强制排除 `默认主题参考UI（主题一）` 等本地参考目录
 
 ### v5.1.1（2026-07-20）
 

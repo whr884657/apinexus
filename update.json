@@ -1,12 +1,12 @@
 {
-    "version": "5.5.1",
-    "title": "ApiNexus 5.5.1 默认主题赞助页布局优化",
+    "version": "5.5.2",
+    "title": "ApiNexus 5.5.2 赞助页精简与网格布局",
     "release_date": "2026-07-21",
     "db_changes": false,
     "changes": [
-        "默认主题赞助页：单容器切换收款码（手机省空间；电脑可悬停/点击切换）",
-        "电脑端改为左右布局（左扫码 / 右感谢支持）；文案「赞助榜」改为「感谢支持」",
-        "保留「其它支持方式」板块"
+        "默认主题赞助页去除「其它支持方式」板块",
+        "感谢支持赞助卡片改为多列网格（电脑/平板），避免单列长条拉满",
+        "仓库移除 pack-release.ps1 与 tools/；发行包改用临时 PHP ZipArchive 打包"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
