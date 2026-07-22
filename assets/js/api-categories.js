@@ -28,6 +28,7 @@
     var transferForm = document.getElementById('apiCategoryTransferForm');
     var transferId = document.getElementById('apiCatTransferId');
     var transferTarget = document.getElementById('apiCatTransferTarget');
+    var transferOptions = document.getElementById('apiCatTransferOptions');
     var transferHint = document.getElementById('apiCatTransferHint');
     var transferSubmitBtn = document.getElementById('apiCatTransferSubmitBtn');
 
@@ -83,36 +84,47 @@
         document.body.appendChild(transferOverlay);
     }
 
-    function refreshTransferPick() {
-        if (!transferTarget || !window.VSPick) {
+    function setTransferTarget(targetId) {
+        var tid = String(targetId || '');
+        if (transferTarget) {
+            transferTarget.value = tid;
+        }
+        if (!transferOptions) {
             return;
         }
-        if (transferTarget.getAttribute('data-vs-pick-ready') === '1') {
-            window.VSPick.refresh(transferTarget);
-        } else {
-            window.VSPick.enhance(transferTarget);
-        }
+        transferOptions.querySelectorAll('.vs-cat-transfer-option').forEach(function (btn) {
+            var selected = btn.getAttribute('data-target-id') === tid;
+            btn.classList.toggle('is-selected', selected);
+            btn.setAttribute('aria-checked', selected ? 'true' : 'false');
+        });
     }
 
     function fillTransferTargetOptions(excludeId) {
-        if (!transferTarget) {
+        if (!transferOptions || !transferTarget) {
             return 0;
         }
         var exclude = parseInt(excludeId, 10);
-        transferTarget.innerHTML = '<option value="">请选择目标分类</option>';
+        transferOptions.innerHTML = '';
+        transferTarget.value = '';
         var count = 0;
         allCategories.forEach(function (cat) {
             if (parseInt(cat.id, 10) === exclude) {
                 return;
             }
-            var opt = document.createElement('option');
-            opt.value = String(cat.id);
-            opt.textContent = cat.name || '';
-            transferTarget.appendChild(opt);
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'vs-cat-transfer-option';
+            btn.setAttribute('role', 'radio');
+            btn.setAttribute('aria-checked', 'false');
+            btn.setAttribute('data-target-id', String(cat.id));
+            var apiN = parseInt(cat.api_count != null ? cat.api_count : (cat.count != null ? cat.count : 0), 10) || 0;
+            btn.innerHTML = '<span class="vs-cat-transfer-option__name"></span>'
+                + '<span class="vs-cat-transfer-option__count"></span>';
+            btn.querySelector('.vs-cat-transfer-option__name').textContent = cat.name || ('分类 #' + cat.id);
+            btn.querySelector('.vs-cat-transfer-option__count').textContent = apiN > 0 ? (apiN + ' 个接口') : '';
+            transferOptions.appendChild(btn);
             count += 1;
         });
-        transferTarget.value = '';
-        refreshTransferPick();
         return count;
     }
 
@@ -391,17 +403,15 @@
         transferOverlay.setAttribute('aria-hidden', 'false');
         transferOverlay.classList.add('is-open');
         document.body.classList.add('is-overlay-open');
-        if (transferTarget) {
-            transferTarget.focus();
+        var firstOpt = transferOptions ? transferOptions.querySelector('.vs-cat-transfer-option') : null;
+        if (firstOpt) {
+            firstOpt.focus();
         }
     }
 
     function closeTransferOverlay() {
         if (!transferOverlay) {
             return;
-        }
-        if (window.VSPick) {
-            window.VSPick.close();
         }
         transferOverlay.hidden = true;
         transferOverlay.setAttribute('aria-hidden', 'true');
@@ -480,7 +490,11 @@
                     }
                 } else {
                     appendItem(Object.assign({ api_count: data.api_count || 0 }, cat));
-                    allCategories.unshift({ id: cat.id, name: cat.name || '' });
+                    allCategories.unshift({
+                        id: cat.id,
+                        name: cat.name || '',
+                        api_count: data.api_count || 0
+                    });
                     page.setAttribute('data-categories', JSON.stringify(allCategories));
                 }
             })
@@ -521,6 +535,16 @@
     if (transferOverlay) {
         transferOverlay.querySelectorAll('[data-transfer-overlay-close]').forEach(function (el) {
             el.addEventListener('click', closeTransferOverlay);
+        });
+    }
+
+    if (transferOptions) {
+        transferOptions.addEventListener('click', function (e) {
+            var btn = e.target.closest('.vs-cat-transfer-option');
+            if (!btn || !transferOptions.contains(btn)) {
+                return;
+            }
+            setTransferTarget(btn.getAttribute('data-target-id') || '');
         });
     }
 

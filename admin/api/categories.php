@@ -91,8 +91,9 @@ $iconBase = rtrim(vs_base_url(), '/');
 $categoriesForJs = array();
 foreach ($categories as $row) {
     $categoriesForJs[] = array(
-        'id'   => (int) $row['id'],
-        'name' => (string) $row['name'],
+        'id'        => (int) $row['id'],
+        'name'      => (string) $row['name'],
+        'api_count' => (int) (isset($row['api_count']) ? $row['api_count'] : 0),
     );
 }
 
@@ -228,7 +229,7 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
     </div>
 </div>
 
-<div class="vs-overlay vs-overlay--lg" id="apiCategoryTransferOverlay" hidden aria-hidden="true">
+<div class="vs-overlay vs-overlay--form" id="apiCategoryTransferOverlay" hidden aria-hidden="true">
     <div class="vs-overlay__backdrop" data-transfer-overlay-close="1"></div>
     <div class="vs-overlay__panel" role="dialog" aria-labelledby="apiCategoryTransferTitle" aria-modal="true">
         <div class="vs-overlay__handle" aria-hidden="true"></div>
@@ -238,17 +239,16 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
         </header>
         <form id="apiCategoryTransferForm" class="vs-overlay__body vs-form" autocomplete="off">
             <input type="hidden" id="apiCatTransferId" name="category_id" value="">
+            <input type="hidden" id="apiCatTransferTarget" name="target_id" value="" required>
             <p class="vs-form-hint" id="apiCatTransferHint"></p>
             <div class="vs-form-row">
-                <label class="vs-label" for="apiCatTransferTarget">转移接口至其他分类</label>
-                <select class="vs-input vs-select" id="apiCatTransferTarget" name="target_id" data-vs-pick="sheet" required>
-                    <option value="">请选择目标分类</option>
-                </select>
+                <span class="vs-label" id="apiCatTransferOptionsLabel">选择目标分类</span>
+                <div class="vs-cat-transfer-options" id="apiCatTransferOptions" role="radiogroup" aria-labelledby="apiCatTransferOptionsLabel"></div>
             </div>
         </form>
         <footer class="vs-overlay__foot">
-            <button type="button" class="vs-btn vs-btn--pill" data-transfer-overlay-close="1">取消</button>
-            <button type="submit" form="apiCategoryTransferForm" class="vs-btn vs-btn--pill vs-btn--pill-danger" id="apiCatTransferSubmitBtn">确认删除</button>
+            <button type="button" class="vs-btn vs-btn--default" data-transfer-overlay-close="1">取消</button>
+            <button type="submit" form="apiCategoryTransferForm" class="vs-btn vs-btn--danger" id="apiCatTransferSubmitBtn">确认删除</button>
         </footer>
     </div>
 </div>

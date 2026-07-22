@@ -78,33 +78,58 @@
             cover: el.getAttribute('data-cover') || '',
             coverlayout: parseInt(el.getAttribute('data-coverlayout'), 10) || 0,
             status: parseInt(el.getAttribute('data-status'), 10) || 0,
+            status_label: el.getAttribute('data-status-label') || '已发布',
             ispinned: parseInt(el.getAttribute('data-ispinned'), 10) || 0,
-            ispopup: parseInt(el.getAttribute('data-ispopup'), 10) || 0
+            ispopup: parseInt(el.getAttribute('data-ispopup'), 10) || 0,
+            views: parseInt(el.getAttribute('data-views'), 10) || 0,
+            createtime: el.getAttribute('data-createtime') || ''
         };
     }
 
-    function metaHtml(item) {
-        var parts = ['<span>' + esc(item.status_label || '已发布') + '</span>'];
-        if (isAnnouncement && Number(item.ispinned) === 1) parts.push('<span>置顶</span>');
-        if (isAnnouncement && Number(item.ispopup) === 1) parts.push('<span>弹窗</span>');
-        if (!isAnnouncement) {
-            parts.push('<span>阅读 ' + (item.views || 0) + '</span>');
-            if (item.cover) parts.push('<span>有封面</span>');
-            if (item.coverlayout_label) parts.push('<span>' + esc(item.coverlayout_label) + '</span>');
+    function statusTagClass(status) {
+        var n = Number(status);
+        if (n === 1) return 'is-normal';
+        return 'is-disabled';
+    }
+
+    function tagsHtml(item) {
+        var html = '<span class="vs-api-tag vs-api-tag--status ' + statusTagClass(item.status) + '">'
+            + esc(item.status_label || '已发布') + '</span>';
+        if (isAnnouncement && Number(item.ispinned) === 1) {
+            html += '<span class="vs-api-tag vs-api-tag--cat">置顶</span>';
         }
-        if (item.createtime) parts.push('<span>' + esc(item.createtime) + '</span>');
-        return parts.join('');
+        if (isAnnouncement && Number(item.ispopup) === 1) {
+            html += '<span class="vs-api-tag vs-api-tag--proxy">弹窗</span>';
+        }
+        if (!isAnnouncement && item.cover) {
+            html += '<span class="vs-api-tag vs-api-tag--key">有封面</span>';
+        }
+        if (!isAnnouncement && item.coverlayout_label) {
+            html += '<span class="vs-api-tag vs-api-tag--local">' + esc(item.coverlayout_label) + '</span>';
+        }
+        return html;
+    }
+
+    function metaBlockHtml(item) {
+        var html = '';
+        if (!isAnnouncement) {
+            html += '<div class="vs-api-item__calls" title="阅读量">阅读：<strong>'
+                + (item.views || 0) + '</strong></div>';
+        }
+        html += '<div class="vs-api-item__author" title="发布时间">'
+            + esc(item.createtime || '') + '</div>';
+        return html;
     }
 
     function actionsHtml(item) {
-        var html = '<button type="button" class="vs-btn vs-btn--default vs-btn--sm" data-act="edit">编辑</button>';
+        var html = '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-act="edit">编辑</button>';
         if (isAnnouncement) {
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-act="pin">'
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-act="pin">'
                 + (Number(item.ispinned) === 1 ? '取消置顶' : '置顶') + '</button>';
-            html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-act="popup">'
+            html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-act="popup">'
                 + (Number(item.ispopup) === 1 ? '取消弹窗' : '设为弹窗') + '</button>';
         }
-        html += '<button type="button" class="vs-btn vs-btn--danger vs-btn--sm" data-act="delete">删除</button>';
+        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-api-list-action" data-act="delete">删除</button>';
         return html;
     }
 
@@ -116,16 +141,18 @@
             + ' data-cover="' + esc(item.cover || '') + '"'
             + ' data-coverlayout="' + (item.coverlayout != null ? item.coverlayout : 0) + '"'
             + ' data-status="' + item.status + '"'
+            + ' data-status-label="' + esc(item.status_label || '已发布') + '"'
             + ' data-ispinned="' + (item.ispinned || 0) + '"'
-            + ' data-ispopup="' + (item.ispopup || 0) + '">'
-            + '<div class="vs-content-item__main">'
+            + ' data-ispopup="' + (item.ispopup || 0) + '"'
+            + ' data-views="' + (item.views || 0) + '"'
+            + ' data-createtime="' + esc(item.createtime || '') + '">'
             + '<div class="vs-api-item__title">'
             + '<span class="vs-api-item__name">' + esc(item.title) + '</span>'
             + '<span class="vs-api-item__id">#' + item.id + '</span>'
             + '</div>'
-            + '<div class="vs-content-item__meta">' + metaHtml(item) + '</div>'
-            + '</div>'
-            + '<div class="vs-api-item__actions vs-content-item__actions">' + actionsHtml(item) + '</div>'
+            + '<div class="vs-api-item__tags">' + tagsHtml(item) + '</div>'
+            + '<div class="vs-api-item__meta">' + metaBlockHtml(item) + '</div>'
+            + '<div class="vs-api-item__actions">' + actionsHtml(item) + '</div>'
             + '</div>';
     }
 
@@ -211,11 +238,6 @@
                 }
                 if (act === 'pin') data.ispinned = res.ispinned;
                 if (act === 'popup') data.ispopup = res.ispopup;
-                var metaEl = row.querySelector('.vs-content-item__meta span');
-                data.status_label = metaEl ? metaEl.textContent : '已发布';
-                var timeEl = row.querySelector('.vs-content-item__meta span:last-child');
-                row.setAttribute('data-ispinned', String(data.ispinned || 0));
-                row.setAttribute('data-ispopup', String(data.ispopup || 0));
                 upsertRow({
                     id: data.id,
                     title: data.title,
@@ -227,7 +249,8 @@
                     status_label: data.status_label || '已发布',
                     ispinned: data.ispinned,
                     ispopup: data.ispopup,
-                    createtime: timeEl ? timeEl.textContent : ''
+                    views: data.views || 0,
+                    createtime: data.createtime || ''
                 });
                 if (VS.showMessage) VS.showMessage(res.msg || '已更新', 'success');
             });

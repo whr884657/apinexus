@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-7.1.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-7.2.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v7.2.0（2026-07-23）
+
+- 公告/文章列表对齐 API 卡片（桌面四列 / 手机满宽），修复竖排细条
+- 分类删除转移改为弹窗内联点选，禁止再套选择弹层
 
 ### v7.1.0（2026-07-23）
 

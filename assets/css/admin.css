@@ -6426,94 +6426,213 @@ select.vs-input.vs-select {
     }
 }
 
-/* 公告 / 文章管理列表（对齐 vs-api-item 卡片） */
+/* 公告 / 文章管理列表：独立于 API 网格，对齐卡片视觉与响应式 */
 .vs-content-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
 }
 
-.vs-content-item.vs-api-item {
-    display: flex;
-    flex-direction: column;
+.vs-content-list .vs-content-item.vs-api-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 12px 14px !important;
+    margin: 0 !important;
+    border: 1px solid var(--vs-border, #e5e7eb) !important;
+    border-radius: 12px !important;
+    border-bottom: 1px solid var(--vs-border, #e5e7eb) !important;
+    background: #fff !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
+    grid-template-rows: none !important;
+}
+
+.vs-content-list .vs-content-item.vs-api-item:hover {
+    border-color: #cbd5e1 !important;
+}
+
+.vs-content-list .vs-content-item .vs-api-item__title,
+.vs-content-list .vs-content-item .vs-api-item__tags,
+.vs-content-list .vs-content-item .vs-api-item__meta,
+.vs-content-list .vs-content-item .vs-api-item__actions {
+    grid-area: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+}
+
+.vs-content-list .vs-content-item .vs-api-item__title {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+}
+
+.vs-content-list .vs-content-item .vs-api-item__name {
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 100% !important;
+    writing-mode: horizontal-tb !important;
+}
+
+.vs-content-list .vs-content-item .vs-api-item__id {
+    color: #94a3b8 !important;
+    font-size: 12px !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+
+.vs-content-list .vs-content-item .vs-api-item__tags {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    justify-content: flex-start !important;
+    overflow: visible !important;
+}
+
+.vs-content-list .vs-content-item .vs-api-item__meta {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px 14px !important;
+}
+
+.vs-content-list .vs-content-item .vs-api-item__calls,
+.vs-content-list .vs-content-item .vs-api-item__author {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    font-size: 12px !important;
+    color: #64748b !important;
+    white-space: nowrap !important;
+    writing-mode: horizontal-tb !important;
+}
+
+.vs-content-list .vs-content-item .vs-api-item__actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 6px !important;
+    padding-top: 4px !important;
+    border-top: 1px dashed var(--vs-border, #e5e7eb) !important;
+    overflow: visible !important;
+}
+
+.vs-content-list .vs-content-item .vs-api-item__actions .vs-btn {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    width: auto !important;
+    flex-shrink: 0 !important;
+}
+
+@media (min-width: 901px) {
+    .vs-content-list .vs-content-item.vs-api-item {
+        display: grid !important;
+        grid-template-columns: minmax(160px, 1.4fr) minmax(140px, 1fr) minmax(140px, 0.9fr) auto !important;
+        grid-template-areas: "title tags meta actions" !important;
+        align-items: center !important;
+        gap: 8px 12px !important;
+        padding: 12px 14px !important;
+    }
+
+    .vs-content-list .vs-content-item .vs-api-item__title { grid-area: title !important; }
+    .vs-content-list .vs-content-item .vs-api-item__tags { grid-area: tags !important; }
+    .vs-content-list .vs-content-item .vs-api-item__meta { grid-area: meta !important; }
+    .vs-content-list .vs-content-item .vs-api-item__actions {
+        grid-area: actions !important;
+        width: auto !important;
+        border-top: none !important;
+        padding-top: 0 !important;
+        justify-content: flex-end !important;
+        flex-wrap: nowrap !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .vs-content-list {
+        gap: 10px !important;
+    }
+
+    .vs-content-list .vs-content-item.vs-api-item {
+        padding: 10px 12px !important;
+        border-radius: 10px !important;
+    }
+
+    .vs-content-list .vs-content-item .vs-api-item__name {
+        white-space: normal !important;
+        line-height: 1.35 !important;
+    }
+
+    .vs-content-list .vs-content-item .vs-api-item__actions {
+        justify-content: flex-end !important;
+    }
+
+    .vs-content-list .vs-content-item .vs-api-item__actions .vs-btn {
+        flex: 0 0 auto !important;
+    }
+}
+
+/* 分类转移：弹窗/抽屉内联选项，禁止再套 vs-pick 弹层 */
+.vs-cat-transfer-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 8px;
-    padding: 12px 14px;
-    min-height: 72px;
+    margin-top: 4px;
+}
+
+.vs-cat-transfer-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 10px 12px;
     border: 1px solid var(--vs-border, #e5e7eb);
-    border-radius: 12px;
-    background: var(--vs-content-bg, #fff);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    border-radius: var(--vs-btn-radius, 10px);
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+    font-size: 13px;
+    color: var(--vs-text, #0f172a);
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
-.vs-content-item.vs-api-item:hover {
-    border-color: #cbd5e1;
+.vs-cat-transfer-option:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
 }
 
-.vs-content-item__main {
+.vs-cat-transfer-option.is-selected {
+    border-color: var(--vs-primary, #111111);
+    background: #f1f5f9;
+    box-shadow: inset 0 0 0 1px var(--vs-primary, #111111);
+}
+
+.vs-cat-transfer-option__name {
     flex: 1;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.vs-content-item__meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    color: #64748b;
-    font-size: 12px;
-    line-height: 1.4;
-}
-
-.vs-content-item .vs-api-item__title {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    min-width: 0;
-}
-
-.vs-content-item .vs-api-item__name {
-    font-weight: 700;
-    font-size: 15px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 600;
 }
 
-.vs-content-item .vs-api-item__id {
-    color: #94a3b8;
-    font-size: 12px;
+.vs-cat-transfer-option__count {
     flex-shrink: 0;
-}
-
-.vs-content-item__actions,
-.vs-content-item .vs-api-item__actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    width: 100%;
-    padding-top: 2px;
-}
-
-.vs-content-item__actions .vs-btn,
-.vs-content-item .vs-api-item__actions .vs-btn {
-    height: 28px;
-    min-height: 28px;
-    padding: 0 10px;
     font-size: 12px;
+    color: #64748b;
 }
 
-@media (max-width: 640px) {
-    .vs-content-item.vs-api-item {
-        padding: 10px 12px;
-        min-height: 68px;
-    }
-
-    .vs-content-item__actions,
-    .vs-content-item .vs-api-item__actions {
-        justify-content: flex-end;
+@media (max-width: 767px) {
+    .vs-cat-transfer-options {
+        grid-template-columns: 1fr;
     }
 }
