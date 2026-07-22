@@ -20,11 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
     $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
+    $days = isset($_POST['days']) ? (int) $_POST['days'] : OrderManager::DEFAULT_QUERY_DAYS;
+    $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
     $data = OrderManager::listPaged(array(
-        'userid'   => $userId,
-        'page'     => $page,
-        'pagesize' => $pagesize,
-        'scope'    => 'ledger',
+        'userid'    => $userId,
+        'page'      => $page,
+        'pagesize'  => $pagesize,
+        'scope'     => 'ledger',
+        'days'      => $days,
+        'before_id' => $beforeId,
     ));
     $data['balance'] = PayConfig::fmtPoints(PointsManager::balance($userId));
     AjaxResponse::success('ok', $data);
@@ -46,7 +50,18 @@ vs_user_layout_start('积分变动', 'points');
     </div>
 
     <div class="vs-panel vs-finance-panel">
-        <div class="vs-finance-table vs-points-list" id="pointsListBody">
+        <div class="vs-finance-head-actions" style="margin-bottom:12px">
+            <label class="vs-api-list-pagesize" for="userPointsDays">
+                <span class="vs-api-list-pagesize__label">近</span>
+                <select class="vs-input vs-select" id="userPointsDays" data-vs-pick>
+                    <?php foreach (array(7, 14, 30, 90, 180, 365) as $d): ?>
+                        <option value="<?php echo (int) $d; ?>"<?php echo (int) $d === (int) OrderManager::DEFAULT_QUERY_DAYS ? ' selected' : ''; ?>><?php echo (int) $d; ?> 天</option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+        </div>
+        <div class="vs-finance-table vs-points-list" id="pointsListBody"
+             data-default-days="<?php echo (int) OrderManager::DEFAULT_QUERY_DAYS; ?>">
             <?php vs_render_loading('正在加载积分变动'); ?>
         </div>
     </div>

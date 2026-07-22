@@ -17,10 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
     $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
+    $days = isset($_POST['days']) ? (int) $_POST['days'] : OrderManager::DEFAULT_QUERY_DAYS;
+    $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
     $data = OrderManager::listPaged(array(
-        'page'     => $page,
-        'pagesize' => $pagesize,
-        'scope'    => 'ledger',
+        'page'      => $page,
+        'pagesize'  => $pagesize,
+        'scope'     => 'ledger',
+        'days'      => $days,
+        'before_id' => $beforeId,
     ));
     AjaxResponse::success('ok', $data);
 }
@@ -30,7 +34,15 @@ $headerActions = '';
 if ($tableReady) {
     ob_start();
     ?>
-    <div class="vs-finance-head-actions">
+    <div class="vs-finance-head-actions" id="pointsToolbar">
+        <label class="vs-api-list-pagesize" for="pointsDays">
+            <span class="vs-api-list-pagesize__label">近</span>
+            <select class="vs-input vs-select" id="pointsDays" data-vs-pick>
+                <?php foreach (array(7, 14, 30, 90, 180, 365) as $d): ?>
+                    <option value="<?php echo (int) $d; ?>"<?php echo (int) $d === (int) OrderManager::DEFAULT_QUERY_DAYS ? ' selected' : ''; ?>><?php echo (int) $d; ?> 天</option>
+                <?php endforeach; ?>
+            </select>
+        </label>
         <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="pointsRefreshBtn">刷新</button>
     </div>
     <?php
@@ -42,7 +54,8 @@ vs_admin_layout_start('积分变动', 'points', $headerActions);
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先完成系统升级以同步 orders 表。', array('compact' => true)); ?>
 <?php else: ?>
-<div class="vs-panel vs-finance-panel">
+<?php vs_render_notice('tip', '', '默认只查近 ' . (int) OrderManager::DEFAULT_QUERY_DAYS . ' 天积分变动，按最新记录翻页。积分流水全部留在库内，不做冷热归档。', array('compact' => true)); ?>
+<div class="vs-panel vs-finance-panel" id="pointsPage" data-default-days="<?php echo (int) OrderManager::DEFAULT_QUERY_DAYS; ?>">
     <div class="vs-finance-table" id="pointsListBody">
         <?php vs_render_loading('正在加载积分变动'); ?>
     </div>

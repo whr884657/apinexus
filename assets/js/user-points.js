@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/user-points.js
- * 作用：用户积分变动列表
+ * 作用：用户积分变动列表（时间窗 / keyset / Abort）
  */
 (function () {
     'use strict';
@@ -8,11 +8,19 @@
     if (!body || !window.VS) {
         return;
     }
-    var page = 1;
     var pagerNav = document.getElementById('pointsPagerNav');
     var totalEl = document.getElementById('pointsTotal');
     var footer = document.getElementById('pointsFooter');
     var pageSizeEl = document.getElementById('userPointsPageSize');
+    var daysEl = document.getElementById('userPointsDays');
+
+    var page = 1;
+    var days = parseInt(body.getAttribute('data-default-days'), 10) || 30;
+    var cursorStack = [0];
+    var nextBeforeId = 0;
+    var hasMore = false;
+    var loading = false;
+    var listAbort = null;
 
     function escapeHtml(s) {
         return String(s == null ? '' : s)
@@ -22,31 +30,76 @@
 
     function getPageSize() {
         var n = pageSizeEl ? parseInt(pageSizeEl.value, 10) : 20;
-        if (!n || n < 1) {
-            n = 20;
-        }
+        if (!n || n < 1) n = 20;
         return Math.min(50, n);
     }
 
-    function load() {
-        var pagesize = getPageSize();
-        if (window.VS && VS.setLoading) {
-            VS.setLoading(body, '正在加载积分变动');
+    function getDays() {
+        var n = daysEl ? parseInt(daysEl.value, 10) : days;
+        if (!n || n < 1) n = days;
+        return Math.min(365, n);
+    }
+
+    function resetCursors() {
+        page = 1;
+        cursorStack = [0];
+        nextBeforeId = 0;
+        hasMore = false;
+    }
+
+    function setControlsDisabled(disabled) {
+        if (daysEl) daysEl.disabled = !!disabled;
+        if (pageSizeEl) pageSizeEl.disabled = !!disabled;
+    }
+
+    function renderPager(total) {
+        if (footer) footer.hidden = false;
+        if (totalEl) totalEl.textContent = '共 ' + total + ' 条（近 ' + getDays() + ' 天）';
+        if (pagerNav) {
+            pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
+                + '<span class="vs-api-pager__info">' + page + '</span>'
+                + '<button type="button" class="vs-api-pager__nav" data-p="1"' + (!hasMore ? ' disabled' : '') + '>下一页</button>';
         }
+    }
+
+    function load() {
+        if (loading) return;
+        if (listAbort) {
+            try { listAbort.abort(); } catch (e) { /* ignore */ }
+        }
+        listAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+
+        var pagesize = getPageSize();
+        var beforeId = cursorStack[page - 1] || 0;
+        loading = true;
+        setControlsDisabled(true);
+        if (VS.setLoading) VS.setLoading(body, '正在加载积分变动');
+
         var fd = new FormData();
         fd.append('action', 'list');
         fd.append('page', String(page));
         fd.append('pagesize', String(pagesize));
-        VS.postForm(fd).then(function (data) {
+        fd.append('days', String(getDays()));
+        fd.append('before_id', String(beforeId));
+
+        var opts = listAbort ? { signal: listAbort.signal } : {};
+        VS.postForm(fd, window.location.href, opts).then(function (data) {
+            loading = false;
+            setControlsDisabled(false);
             if (!data || data.code !== 1) {
                 body.innerHTML = '<p class="vs-empty vs-finance-empty">加载失败</p>';
                 return;
             }
             if (data.balance != null) {
                 var bal = document.getElementById('pointsBalance');
-                if (bal) {
-                    bal.textContent = data.balance;
-                }
+                if (bal) bal.textContent = data.balance;
+            }
+            nextBeforeId = parseInt(data.next_before_id, 10) || 0;
+            hasMore = !!data.has_more;
+            if (cursorStack.length === page) {
+                cursorStack.push(nextBeforeId);
+            } else {
+                cursorStack[page] = nextBeforeId;
             }
             var list = data.list || [];
             if (!list.length) {
@@ -72,38 +125,38 @@
                         + '</div></div>';
                 }).join('');
             }
-            var total = data.total || 0;
-            if (footer) {
-                footer.hidden = false;
-            }
-            if (totalEl) {
-                totalEl.textContent = '共 ' + total + ' 条';
-            }
-            if (pagerNav) {
-                var pages = Math.max(1, Math.ceil(total / pagesize));
-                pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
-                    + '<span class="vs-api-pager__info">' + page + ' / ' + pages + '</span>'
-                    + '<button type="button" class="vs-api-pager__nav" data-p="1"' + (page >= pages ? ' disabled' : '') + '>下一页</button>';
-            }
+            renderPager(data.total || 0);
+        }).catch(function (err) {
+            loading = false;
+            setControlsDisabled(false);
+            if (err && err.name === 'AbortError') return;
+            body.innerHTML = '<p class="vs-empty vs-finance-empty">网络异常</p>';
         });
     }
 
     if (pagerNav) {
         pagerNav.addEventListener('click', function (e) {
             var btn = e.target.closest('[data-p]');
-            if (!btn || btn.disabled) {
-                return;
+            if (!btn || btn.disabled || loading) return;
+            var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
+            if (delta > 0 && hasMore) {
+                page += 1;
+                load();
+            } else if (delta < 0 && page > 1) {
+                page -= 1;
+                load();
             }
-            page += parseInt(btn.getAttribute('data-p'), 10) || 0;
-            if (page < 1) {
-                page = 1;
-            }
-            load();
         });
     }
     if (pageSizeEl) {
         pageSizeEl.addEventListener('change', function () {
-            page = 1;
+            resetCursors();
+            load();
+        });
+    }
+    if (daysEl) {
+        daysEl.addEventListener('change', function () {
+            resetCursors();
             load();
         });
     }

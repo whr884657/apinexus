@@ -13,7 +13,10 @@ class ApiLogArchive
 {
     const DEFAULT_HOT_DAYS = 30;
     const MAX_HOT_DAYS = 365;
-    const SHARD_ROWS = 1000;
+    /** 每个 SQLite 分片默认条数（可配置） */
+    const DEFAULT_SHARD_ROWS = 5000;
+    const MIN_SHARD_ROWS = 100;
+    const MAX_SHARD_ROWS = 50000;
     const BATCH_ROWS = 5000;
     const LOCK_TTL = 1800;
     const CATALOG_VERSION = 2;
@@ -74,6 +77,43 @@ class ApiLogArchive
     public static function sqliteAvailable()
     {
         return extension_loaded('pdo_sqlite') && in_array('sqlite', PDO::getAvailableDrivers(), true);
+    }
+
+    /**
+     * 每个冷库分片写入条数（可配置，默认 5000）
+     *
+     * @return int
+     */
+    public static function shardRows()
+    {
+        try {
+            $n = (int) Config::get('apilog_shard_rows', (string) self::DEFAULT_SHARD_ROWS);
+        } catch (Exception $e) {
+            $n = self::DEFAULT_SHARD_ROWS;
+        }
+        if ($n < self::MIN_SHARD_ROWS) {
+            $n = self::DEFAULT_SHARD_ROWS;
+        }
+        if ($n > self::MAX_SHARD_ROWS) {
+            $n = self::MAX_SHARD_ROWS;
+        }
+        return $n;
+    }
+
+    /**
+     * @param int $n
+     * @return int
+     */
+    public static function clampShardRows($n)
+    {
+        $n = (int) $n;
+        if ($n < self::MIN_SHARD_ROWS) {
+            $n = self::MIN_SHARD_ROWS;
+        }
+        if ($n > self::MAX_SHARD_ROWS) {
+            $n = self::MAX_SHARD_ROWS;
+        }
+        return $n;
     }
 
     /**
@@ -509,7 +549,7 @@ class ApiLogArchive
                 continue;
             }
             $buffer[] = $pack;
-            if (count($buffer) >= self::SHARD_ROWS) {
+            if (count($buffer) >= self::shardRows()) {
                 $flush();
             }
         }

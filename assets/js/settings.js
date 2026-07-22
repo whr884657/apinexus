@@ -70,11 +70,13 @@
         var urlInput = document.getElementById('apilogCronUrl');
         var archiveChk = document.getElementById('apilog_archive_enabled');
         var hotRow = document.getElementById('apilogHotDaysRow');
+        var shardRow = document.getElementById('apilogShardRowsRow');
         var cronBox = document.getElementById('apilogCronBox');
 
         function syncArchiveUi() {
             var on = !!(archiveChk && archiveChk.checked);
             if (hotRow) hotRow.hidden = !on;
+            if (shardRow) shardRow.hidden = !on;
             if (cronBox) cronBox.hidden = !on;
         }
         if (archiveChk) {

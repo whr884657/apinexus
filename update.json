@@ -1,13 +1,13 @@
 {
-    "version": "5.8.0",
-    "title": "ApiNexus 5.8.0 日志查询防打爆与冷热归档",
+    "version": "5.9.0",
+    "title": "ApiNexus 5.9.0 订单积分查询优化与分片可配",
     "release_date": "2026-07-22",
     "db_changes": true,
     "changes": [
-        "后台日志查询强制时间窗；COUNT 去掉 JOIN；keyset 翻页 + Abort 互斥；复合索引",
-        "冷热归档可开关：热数据留库，冷数据三层索引 + SQLite 分片（约 1000 条/片），历史全部可查",
-        "系统设置可生成计划任务密钥；高配站长可关闭冷热分离；须启用 PDO SQLite",
-        "升级请执行数据库结构更新，开启归档后请配置凌晨计划任务"
+        "冷库每个分片条数可配置（默认 5000）",
+        "订单管理 / 积分变动 / 用户中心积分：时间窗 + keyset 翻页，禁止深页 OFFSET",
+        "orders 复合索引；COUNT 无 JOIN；充值列表收敛 JOIN；Redis 总数短缓存",
+        "积分流水不做冷热归档，全部留库；升级请执行数据库结构更新"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
