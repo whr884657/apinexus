@@ -104,6 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             Config::setMany(array(
                 'site_runtime_start' => trim(isset($_POST['site_runtime_start']) ? $_POST['site_runtime_start'] : ''),
+                'profile_wallpaper'  => trim(isset($_POST['profile_wallpaper']) ? $_POST['profile_wallpaper'] : ''),
                 'footer_html_left'   => isset($_POST['footer_html_left']) ? (string) $_POST['footer_html_left'] : '',
                 'footer_html_center' => isset($_POST['footer_html_center']) ? (string) $_POST['footer_html_center'] : '',
                 'footer_html_right'  => isset($_POST['footer_html_right']) ? (string) $_POST['footer_html_right'] : '',
@@ -334,7 +335,7 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-site-extra',
     '站点扩展',
-    '网站运行时间、页脚自定义栏与二维码'
+    '网站运行时间、个人主页默认背景、页脚自定义栏与二维码'
 );
 ?>
     <form method="post" action="" class="vs-form" id="siteExtraForm" data-ajax="1">
@@ -355,6 +356,24 @@ vs_admin_accordion_start(
                    value="<?php echo vs_e(Config::get('site_runtime_start', '')); ?>"
                    placeholder="YYYY-MM-DD HH:MM:SS">
             <?php vs_render_notice('tip', '', '格式示例：2024-01-01 00:00:00', array('field' => true, 'compact' => true)); ?>
+        </div>
+
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">个人主页默认背景</h4>
+        <?php
+        vs_render_notice(
+            'tip',
+            '',
+            '所有未自定义背景的开发者主页共用此图。可填固定图片地址，也可填支持随机出图的图片接口地址。用户在账号设置里填写自己的背景后，将优先使用用户自定义。',
+            array('compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label">默认背景图地址</label>
+            <input type="text" name="profile_wallpaper" class="vs-input"
+                   value="<?php echo vs_e(Config::get('profile_wallpaper', '')); ?>"
+                   placeholder="https://example.com/wallpaper.jpg" maxlength="500">
         </div>
 
         <hr class="vs-divider">

@@ -9,6 +9,9 @@ require_once __DIR__ . '/init.php';
 $error = '';
 $success = '';
 $avatarUrl = $vsUser && isset($vsUser['avatar']) ? trim((string) $vsUser['avatar']) : '';
+$bio = $vsUser && isset($vsUser['bio']) ? trim((string) $vsUser['bio']) : '';
+$blog = $vsUser && isset($vsUser['blog']) ? trim((string) $vsUser['blog']) : '';
+$wallpaper = $vsUser && isset($vsUser['wallpaper']) ? trim((string) $vsUser['wallpaper']) : '';
 $avatarPreview = is_array($vsUserProfile) ? $vsUserProfile['avatar'] : UserAvatar::resolve($vsUser);
 $roleLabel = is_array($vsUserProfile) ? $vsUserProfile['role_label'] : UserRole::label(UserRole::ROLE_USER);
 $oauthProviders = OAuthService::enabledProviders();
@@ -37,6 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim(isset($_POST['username']) ? $_POST['username'] : '');
     $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
     $avatarUrl = trim(isset($_POST['avatar']) ? $_POST['avatar'] : '');
+    $bio = trim(isset($_POST['bio']) ? $_POST['bio'] : '');
+    $blog = trim(isset($_POST['blog']) ? $_POST['blog'] : '');
+    $wallpaper = trim(isset($_POST['wallpaper']) ? $_POST['wallpaper'] : '');
     $newPassword = isset($_POST['new_password']) ? $_POST['new_password'] : '';
     $newPassword2 = isset($_POST['new_password2']) ? $_POST['new_password2'] : '';
     $oldPassword = isset($_POST['old_password']) ? $_POST['old_password'] : '';
@@ -50,7 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newPassword !== '' ? $newPassword : null,
         $newPassword !== '' ? $oldPassword : null,
         $avatarUrl,
-        $username
+        $username,
+        $bio,
+        $blog,
+        $wallpaper
     );
 
     if ($result !== true) {
@@ -113,6 +122,28 @@ vs_user_layout_start('账号设置', 'account');
                             <input type="email" name="email" id="accountEmail" class="vs-input" required
                                    value="<?php echo vs_e($vsUser ? $vsUser['email'] : ''); ?>" placeholder="user@example.com">
                             <?php vs_render_notice('tip', '', '用于找回密码；QQ 邮箱可自动匹配 QQ 头像', array('field' => true, 'compact' => true)); ?>
+                        </div>
+                    </div>
+                    <div class="vs-form-row vs-form-row--account">
+                        <label class="vs-label" for="accountBio">个人简介</label>
+                        <div class="vs-form-row__field">
+                            <textarea name="bio" id="accountBio" class="vs-textarea" rows="3" maxlength="200"
+                                      placeholder="介绍一下自己（公开主页展示）"><?php echo vs_e($bio); ?></textarea>
+                        </div>
+                    </div>
+                    <div class="vs-form-row vs-form-row--account">
+                        <label class="vs-label" for="accountBlog">博客链接</label>
+                        <div class="vs-form-row__field">
+                            <input type="url" name="blog" id="accountBlog" class="vs-input"
+                                   value="<?php echo vs_e($blog); ?>" placeholder="https://example.com" maxlength="500">
+                        </div>
+                    </div>
+                    <div class="vs-form-row vs-form-row--account">
+                        <label class="vs-label" for="accountWallpaper">主页背景</label>
+                        <div class="vs-form-row__field">
+                            <input type="url" name="wallpaper" id="accountWallpaper" class="vs-input"
+                                   value="<?php echo vs_e($wallpaper); ?>" placeholder="https://example.com/bg.jpg" maxlength="500">
+                            <?php vs_render_notice('tip', '', '留空则使用站点统一默认背景；填写后仅你的公开主页使用此图', array('field' => true, 'compact' => true)); ?>
                         </div>
                     </div>
                 </div>

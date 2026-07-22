@@ -474,4 +474,87 @@
     if (document.getElementById('stApisPage')) {
         initApisPage();
     }
+
+    // 个人主页：搜索 / 排序 / 延迟检测
+    var profilePage = document.getElementById('profilePage');
+    if (profilePage) {
+        var list = document.getElementById('apiList');
+        var input = document.getElementById('apiSearch');
+        var cards = list ? Array.prototype.slice.call(list.querySelectorAll('.api-card-stack')) : [];
+        var currentSort = 'random';
+        var pingUrl = profilePage.getAttribute('data-ping-url') || '/core/ping.php';
+
+        function applyProfileFilter() {
+            if (!list) return;
+            var q = input ? String(input.value || '').trim().toLowerCase() : '';
+            var visible = cards.filter(function (card) {
+                var name = (card.getAttribute('data-name') || '').toLowerCase();
+                var show = !q || name.indexOf(q) !== -1;
+                card.style.display = show ? '' : 'none';
+                return show;
+            });
+            var ordered = visible.slice();
+            if (currentSort === 'asc') {
+                ordered.sort(function (a, b) {
+                    return (a.getAttribute('data-name') || '').localeCompare(b.getAttribute('data-name') || '', 'zh');
+                });
+            } else if (currentSort === 'desc') {
+                ordered.sort(function (a, b) {
+                    return (b.getAttribute('data-name') || '').localeCompare(a.getAttribute('data-name') || '', 'zh');
+                });
+            } else {
+                for (var i = ordered.length - 1; i > 0; i--) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    var t = ordered[i];
+                    ordered[i] = ordered[j];
+                    ordered[j] = t;
+                }
+            }
+            ordered.forEach(function (card) { list.appendChild(card); });
+        }
+
+        if (input) input.addEventListener('input', applyProfileFilter);
+        document.querySelectorAll('.sort-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.sort-btn').forEach(function (el) {
+                    el.classList.toggle('active', el === btn);
+                });
+                currentSort = btn.getAttribute('data-sort') || 'random';
+                applyProfileFilter();
+            });
+        });
+
+        var domainMap = {};
+        cards.forEach(function (card) {
+            var domain = card.getAttribute('data-domain');
+            if (!domain) return;
+            if (!domainMap[domain]) domainMap[domain] = [];
+            domainMap[domain].push(card);
+        });
+        var queue = Object.keys(domainMap);
+        var delay = 0;
+        function setLatency(domain, text) {
+            domainMap[domain].forEach(function (card) {
+                var el = card.querySelector('.api-latency-result');
+                if (el) el.textContent = text;
+            });
+        }
+        function pingNext() {
+            if (!queue.length) return;
+            var domain = queue.shift();
+            fetch(pingUrl + (pingUrl.indexOf('?') >= 0 ? '&' : '?') + 'host=' + encodeURIComponent(domain))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data && Number(data.ok) === 1 && Number(data.avg) > 0) {
+                        setLatency(domain, Math.round(Number(data.avg)) + ' ms');
+                    } else {
+                        setLatency(domain, '超时');
+                    }
+                })
+                .catch(function () { setLatency(domain, '超时'); });
+            delay += 120;
+            setTimeout(pingNext, delay);
+        }
+        pingNext();
+    }
 })();

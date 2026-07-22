@@ -169,7 +169,7 @@ class UserAuth
             $pdo = Database::connect();
             $table = Database::table('user');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `username`, `email`, `avatar`, `qqopenid`, `giteeid`, `role`, `createtime`, `lastlogin` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                'SELECT `id`, `username`, `email`, `avatar`, `bio`, `blog`, `wallpaper`, `qqopenid`, `giteeid`, `role`, `createtime`, `lastlogin` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array(self::id()));
             return $stmt->fetch() ?: null;
@@ -441,9 +441,21 @@ class UserAuth
      * @param string|null $oldPassword
      * @param string|null $avatarUrl
      * @param string|null $username
+     * @param string|null $bio
+     * @param string|null $blog
+     * @param string|null $wallpaper
      * @return true|string
      */
-    public static function updateAccount($email, $newPassword = null, $oldPassword = null, $avatarUrl = null, $username = null)
+    public static function updateAccount(
+        $email,
+        $newPassword = null,
+        $oldPassword = null,
+        $avatarUrl = null,
+        $username = null,
+        $bio = null,
+        $blog = null,
+        $wallpaper = null
+    )
     {
         if (!self::check()) {
             return '请先登录';
@@ -473,6 +485,21 @@ class UserAuth
         $avatarUrl = $avatarUrl === null ? null : trim((string) $avatarUrl);
         if ($avatarUrl !== null && $avatarUrl !== '' && !vs_is_allowed_avatar_url($avatarUrl)) {
             return '头像链接格式不正确';
+        }
+
+        $bio = $bio === null ? null : trim((string) $bio);
+        if ($bio !== null && vs_unicode_len($bio) > 200) {
+            return '个人简介不能超过 200 个字符';
+        }
+
+        $blog = $blog === null ? null : trim((string) $blog);
+        if ($blog !== null && $blog !== '' && !vs_is_allowed_http_url($blog)) {
+            return '博客链接格式不正确';
+        }
+
+        $wallpaper = $wallpaper === null ? null : trim((string) $wallpaper);
+        if ($wallpaper !== null && $wallpaper !== '' && !vs_is_allowed_http_url($wallpaper)) {
+            return '背景图链接格式不正确';
         }
 
         if ($newPassword !== null && $newPassword !== '') {
@@ -516,24 +543,37 @@ class UserAuth
             }
 
             $savedAvatar = $avatarUrl !== null ? $avatarUrl : '';
+            $savedBio = $bio !== null ? $bio : '';
+            $savedBlog = $blog !== null ? $blog : '';
+            $savedWallpaper = $wallpaper !== null ? $wallpaper : '';
+            $uid = self::id();
 
-            if ($newPassword !== null && $newPassword !== '') {
-                if ($username !== null) {
-                    $stmt = $pdo->prepare(
-                        'UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar` = ?, `password` = ? WHERE `id` = ?'
-                    );
-                    $stmt->execute(array($username, $email, $savedAvatar, vs_password_hash($newPassword), self::id()));
-                } else {
-                    $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar` = ?, `password` = ? WHERE `id` = ?');
-                    $stmt->execute(array($email, $savedAvatar, vs_password_hash($newPassword), self::id()));
-                }
-            } elseif ($username !== null) {
-                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `username` = ?, `email` = ?, `avatar` = ? WHERE `id` = ?');
-                $stmt->execute(array($username, $email, $savedAvatar, self::id()));
-            } else {
-                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `email` = ?, `avatar` = ? WHERE `id` = ?');
-                $stmt->execute(array($email, $savedAvatar, self::id()));
+            $fields = array('`email` = ?', '`avatar` = ?');
+            $params = array($email, $savedAvatar);
+            if ($bio !== null) {
+                $fields[] = '`bio` = ?';
+                $params[] = $savedBio;
             }
+            if ($blog !== null) {
+                $fields[] = '`blog` = ?';
+                $params[] = $savedBlog;
+            }
+            if ($wallpaper !== null) {
+                $fields[] = '`wallpaper` = ?';
+                $params[] = $savedWallpaper;
+            }
+            if ($username !== null) {
+                array_unshift($fields, '`username` = ?');
+                array_unshift($params, $username);
+            }
+            if ($newPassword !== null && $newPassword !== '') {
+                $fields[] = '`password` = ?';
+                $params[] = vs_password_hash($newPassword);
+            }
+            $params[] = $uid;
+
+            $stmt = $pdo->prepare('UPDATE `' . $table . '` SET ' . implode(', ', $fields) . ' WHERE `id` = ?');
+            $stmt->execute($params);
 
             if ($username !== null && isset($_SESSION['vs_user_username'])) {
                 $_SESSION['vs_user_username'] = $username;
