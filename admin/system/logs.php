@@ -78,7 +78,7 @@ vs_admin_layout_start('日志查询', 'logs');
 vs_render_notice(
     'tip',
     '',
-    '默认仅查询近 ' . (int) $queryDays . ' 天日志，避免大表拖垮低配服务器。可在下方切换时间范围；过期清理请到系统设置 → API 日志。',
+    '默认仅查询近 ' . (int) $queryDays . ' 天日志。热数据在 MySQL，超出热数据天数的冷数据从本机归档合并读出；归档计划任务请到系统设置 → API 日志。',
     array('compact' => true)
 );
 ?>
@@ -92,7 +92,7 @@ vs_render_notice(
         <span class="vs-api-list-pagesize__label">近</span>
         <select class="vs-input vs-select" id="logsDays" data-vs-pick>
             <?php
-            $dayOpts = array(1, 3, 7, 14, 30, 90);
+            $dayOpts = array(1, 3, 7, 14, 30, 90, 180, 365);
             foreach ($dayOpts as $d):
                 $sel = ((int) $queryDays === (int) $d) ? ' selected' : '';
             ?>

@@ -189,6 +189,41 @@ class DatabaseMigrator
         if (!in_array('5.8.0', $applied, true) && self::tableIndexExists('apilog', 'idx_createtime_id')) {
             self::markApplied('5.8.0');
         }
+
+        // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
+        self::ensureApilogArchiveConfig();
+    }
+
+    /**
+     * 确保调用日志冷热归档配置存在（幂等）
+     *
+     * @return void
+     */
+    private static function ensureApilogArchiveConfig()
+    {
+        try {
+            $all = Config::all();
+            $hot = isset($all['apilog_hot_days']) ? trim((string) $all['apilog_hot_days']) : '';
+            if ($hot === '' || (int) $hot < 1) {
+                $fromKeep = isset($all['apilog_keep_days']) ? (int) $all['apilog_keep_days'] : 30;
+                if ($fromKeep < 1) {
+                    $fromKeep = 30;
+                }
+                Config::set('apilog_hot_days', (string) $fromKeep);
+            }
+            if (!array_key_exists('apilog_cron_key', $all)) {
+                Config::set('apilog_cron_key', '');
+            }
+            if (array_key_exists('apilog_keep_days', $all)) {
+                $pdo = Database::connect();
+                $table = Database::table('config');
+                $stmt = $pdo->prepare('DELETE FROM `' . $table . '` WHERE `key` = ?');
+                $stmt->execute(array('apilog_keep_days'));
+                Config::clearCache();
+            }
+        } catch (Exception $e) {
+            // 留待下次结构更新重试
+        }
     }
 
     /**

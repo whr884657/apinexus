@@ -93,7 +93,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('pay_packages', '[{"id":"base1","name":"体验包","money":"1.00","points":"1000","hot":0},{"id":"base10","name":"常用包","money":"10.00","points":"11000","hot":1},{"id":"base50","name":"超值包","money":"50.00","points":"60000","hot":0}]'),
 ('apilog_detail', '1'),
 ('apilog_query_days', '7'),
-('apilog_keep_days', '30');
+('apilog_hot_days', '30'),
+('apilog_cron_key', '');
 
 -- 邮箱验证码发信频率限制记录
 CREATE TABLE IF NOT EXISTS `{prefix}mailrate` (
