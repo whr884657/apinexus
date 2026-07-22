@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.9.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-5.9.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,10 +262,15 @@ location / {
 
 ## 版本记录
 
+### v5.9.1（2026-07-22）
+
+- 订单/积分列表取消「查询天数」，只按每页条数取最新记录
+- 修复日志/订单/积分首屏一直加载中；积分页刷新与标题同行
+
 ### v5.9.0（2026-07-22）
 
 - 冷库分片条数可配置（默认 5000）
-- 订单/积分列表：时间窗 + keyset，防打爆；积分不做冷热归档
+- 订单/积分列表：keyset 翻页，防打爆；积分不做冷热归档
 - 复合索引；升级请执行数据库结构更新
 
 ### v5.8.0（2026-07-22）

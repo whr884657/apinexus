@@ -5455,6 +5455,14 @@ select.vs-input.vs-select {
         display: flex;
         justify-content: flex-end;
     }
+    .vs-content__head:has(.vs-finance-head-actions--simple) {
+        flex-wrap: nowrap;
+    }
+    .vs-content__head:has(.vs-finance-head-actions--simple) .vs-content__actions {
+        flex: 0 0 auto;
+        width: auto;
+        margin-left: auto;
+    }
     .vs-finance-row--head {
         display: none;
     }
@@ -6218,7 +6226,7 @@ select.vs-input.vs-select {
     box-sizing: border-box !important;
 }
 
-/* 财务页手机端：标题可独占一行，筛选/刷新换行后靠右 */
+/* 财务页手机端：筛选较多时可换行；仅刷新（积分变动）与标题同排 */
 @media (max-width: 900px) {
     .vs-content__head:has(.vs-finance-head-actions) {
         flex-wrap: wrap !important;
@@ -6243,6 +6251,17 @@ select.vs-input.vs-select {
     .vs-finance-head-actions {
         width: 100%;
         justify-content: flex-end;
+    }
+    .vs-content__head:has(.vs-finance-head-actions--simple) {
+        flex-wrap: nowrap !important;
+    }
+    .vs-content__head:has(.vs-finance-head-actions--simple) .vs-content__actions {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        margin-left: auto !important;
+    }
+    .vs-finance-head-actions--simple {
+        width: auto;
     }
 }
 

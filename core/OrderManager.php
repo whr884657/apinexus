@@ -25,9 +25,6 @@ class OrderManager
     const STATUS_DONE = 1;
     const STATUS_CANCEL = 2;
 
-    /** 后台/用户中心列表默认时间窗（天） */
-    const DEFAULT_QUERY_DAYS = 30;
-    const MAX_QUERY_DAYS = 365;
     const QUERY_TIMEOUT_MS = 5000;
 
     /**
@@ -226,26 +223,10 @@ class OrderManager
     }
 
     /**
-     * @param int $days
-     * @return int
-     */
-    public static function clampQueryDays($days)
-    {
-        $days = (int) $days;
-        if ($days < 1) {
-            $days = self::DEFAULT_QUERY_DAYS;
-        }
-        if ($days > self::MAX_QUERY_DAYS) {
-            $days = self::MAX_QUERY_DAYS;
-        }
-        return $days;
-    }
-
-    /**
-     * 分页列表：强制时间窗 + COUNT 无 JOIN + keyset（before_id），避免深页 OFFSET / 全表扫
+     * 分页列表：仅按每页条数 + keyset（before_id）取最新记录，禁止深页 OFFSET / 全表 COUNT
      *
-     * @param array $opts userid?, status?, scope(recharge|ledger)?, pagesize, days, before_id
-     * @return array{list:array,total:int,page:int,pagesize:int,days:int,before_id:int,next_before_id:int,has_more:bool}
+     * @param array $opts userid?, status?, scope(recharge|ledger)?, pagesize, before_id
+     * @return array{list:array,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool}
      */
     public static function listPaged(array $opts = array())
     {
@@ -254,7 +235,6 @@ class OrderManager
         $userid = isset($opts['userid']) ? (int) $opts['userid'] : 0;
         $status = array_key_exists('status', $opts) ? $opts['status'] : null;
         $scope = isset($opts['scope']) ? trim((string) $opts['scope']) : '';
-        $days = isset($opts['days']) ? self::clampQueryDays((int) $opts['days']) : self::DEFAULT_QUERY_DAYS;
         $beforeId = isset($opts['before_id']) ? (int) $opts['before_id'] : 0;
         if ($beforeId < 0) {
             $beforeId = 0;
@@ -262,10 +242,8 @@ class OrderManager
 
         $empty = array(
             'list'           => array(),
-            'total'          => 0,
             'page'           => $page,
             'pagesize'       => $pagesize,
-            'days'           => $days,
             'before_id'      => $beforeId,
             'next_before_id' => 0,
             'has_more'       => false,
@@ -278,8 +256,8 @@ class OrderManager
             $pdo = Database::connect();
             self::applyQueryTimeout($pdo);
 
-            $where = array('o.`createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)');
-            $bind = array($days);
+            $where = array('1=1');
+            $bind = array();
 
             if ($userid > 0) {
                 $where[] = 'o.`userid` = ?';
@@ -302,53 +280,6 @@ class OrderManager
                 $bind[] = $beforeId;
             }
             $sqlWhere = implode(' AND ', $where);
-
-            $countBind = $bind;
-            $countWhere = $sqlWhere;
-            if ($beforeId > 0) {
-                // 总数按时间窗+业务条件统计，不含 before_id
-                $countWhereParts = array();
-                $countBind = array();
-                $countWhereParts[] = 'o.`createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)';
-                $countBind[] = $days;
-                if ($userid > 0) {
-                    $countWhereParts[] = 'o.`userid` = ?';
-                    $countBind[] = $userid;
-                }
-                if ($scope === 'recharge') {
-                    $countWhereParts[] = 'o.`direct` = ? AND o.`kind` = ?';
-                    $countBind[] = self::DIRECT_INC;
-                    $countBind[] = self::KIND_RECHARGE;
-                } elseif ($scope === 'ledger') {
-                    $countWhereParts[] = 'o.`status` = ?';
-                    $countBind[] = self::STATUS_DONE;
-                }
-                if ($status !== null && $status !== '') {
-                    $countWhereParts[] = 'o.`status` = ?';
-                    $countBind[] = (int) $status;
-                }
-                $countWhere = implode(' AND ', $countWhereParts);
-            }
-
-            $countFactory = function () use ($pdo, $countWhere, $countBind) {
-                $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . self::table() . '` o WHERE ' . $countWhere);
-                $stmt->execute($countBind);
-                return (int) $stmt->fetchColumn();
-            };
-            if (class_exists('RedisCache')) {
-                $total = (int) RedisCache::remember(
-                    RedisCache::ordersRangeTotalKey(array(
-                        'scope'  => $scope,
-                        'userid' => $userid,
-                        'status' => $status,
-                        'days'   => $days,
-                    )),
-                    RedisCache::TTL_ORDERS_RANGE_TOTAL,
-                    $countFactory
-                );
-            } else {
-                $total = (int) call_user_func($countFactory);
-            }
 
             $needLedgerJoins = ($scope === 'ledger');
             $select = 'SELECT o.*, u.`username`';
@@ -400,10 +331,8 @@ class OrderManager
 
             return array(
                 'list'           => $list,
-                'total'          => $total,
                 'page'           => $page,
                 'pagesize'       => $pagesize,
-                'days'           => $days,
                 'before_id'      => $beforeId,
                 'next_before_id' => $nextBefore,
                 'has_more'       => $hasMore,

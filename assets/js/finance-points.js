@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/finance-points.js
- * 作用：管理员积分变动列表（时间窗 / keyset / Abort）
+ * 作用：管理员积分变动列表（每页固定条数 + keyset / Abort）
  */
 (function () {
     'use strict';
@@ -10,15 +10,13 @@
     var pagerNav = document.getElementById('pointsPagerNav');
     var totalEl = document.getElementById('pointsTotal');
     var pageSizeEl = document.getElementById('pointsPageSize');
-    var daysEl = document.getElementById('pointsDays');
     var refreshBtn = document.getElementById('pointsRefreshBtn');
 
     var page = 1;
-    var days = pageRoot ? (parseInt(pageRoot.getAttribute('data-default-days'), 10) || 30) : 30;
     var cursorStack = [0];
     var nextBeforeId = 0;
     var hasMore = false;
-    var loading = false;
+    var loadSeq = 0;
     var listAbort = null;
 
     function escapeHtml(s) {
@@ -33,12 +31,6 @@
         return Math.min(50, n);
     }
 
-    function getDays() {
-        var n = daysEl ? parseInt(daysEl.value, 10) : days;
-        if (!n || n < 1) n = days;
-        return Math.min(365, n);
-    }
-
     function resetCursors() {
         page = 1;
         cursorStack = [0];
@@ -48,7 +40,6 @@
 
     function setControlsDisabled(disabled) {
         if (refreshBtn) refreshBtn.disabled = !!disabled;
-        if (daysEl) daysEl.disabled = !!disabled;
         if (pageSizeEl) pageSizeEl.disabled = !!disabled;
     }
 
@@ -102,9 +93,13 @@
             + '</article>';
     }
 
-    function renderPager(total) {
+    function renderPager() {
         if (footer) footer.hidden = false;
-        if (totalEl) totalEl.textContent = '共 ' + total + ' 条（近 ' + getDays() + ' 天）';
+        if (totalEl) {
+            totalEl.textContent = hasMore
+                ? ('本页 ' + getPageSize() + ' 条，还有更多')
+                : ('本页最多 ' + getPageSize() + ' 条');
+        }
         if (pagerNav) {
             pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
                 + '<span class="vs-api-pager__info">' + page + '</span>'
@@ -113,15 +108,19 @@
     }
 
     function load() {
-        if (!body || !window.VS || loading) return;
+        if (!body) return;
+        if (!window.VS) {
+            setTimeout(load, 40);
+            return;
+        }
         if (listAbort) {
             try { listAbort.abort(); } catch (e) { /* ignore */ }
         }
         listAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
 
+        var seq = ++loadSeq;
         var pagesize = getPageSize();
         var beforeId = cursorStack[page - 1] || 0;
-        loading = true;
         setControlsDisabled(true);
         if (VS.setLoading) VS.setLoading(body, '正在加载积分变动');
 
@@ -129,12 +128,11 @@
         fd.append('action', 'list');
         fd.append('page', String(page));
         fd.append('pagesize', String(pagesize));
-        fd.append('days', String(getDays()));
         fd.append('before_id', String(beforeId));
 
         var opts = listAbort ? { signal: listAbort.signal } : {};
         VS.postForm(fd, window.location.href, opts).then(function (data) {
-            loading = false;
+            if (seq !== loadSeq) return;
             setControlsDisabled(false);
             if (!data || data.code !== 1) {
                 body.innerHTML = '<p class="vs-empty vs-finance-empty">' + escapeHtml((data && data.msg) || '加载失败') + '</p>';
@@ -154,11 +152,11 @@
                 body.innerHTML = '<div class="vs-finance-table-wrap"><div class="vs-finance-grid">'
                     + headHtml() + list.map(rowHtml).join('') + '</div></div>';
             }
-            renderPager(data.total || 0);
+            renderPager();
         }).catch(function (err) {
-            loading = false;
-            setControlsDisabled(false);
             if (err && err.name === 'AbortError') return;
+            if (seq !== loadSeq) return;
+            setControlsDisabled(false);
             body.innerHTML = '<p class="vs-empty vs-finance-empty">网络异常</p>';
         });
     }
@@ -166,7 +164,7 @@
     if (pagerNav) {
         pagerNav.addEventListener('click', function (e) {
             var btn = e.target.closest('[data-p]');
-            if (!btn || btn.disabled || loading) return;
+            if (!btn || btn.disabled) return;
             var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
             if (delta > 0 && hasMore) {
                 page += 1;
@@ -183,17 +181,13 @@
             load();
         });
     }
-    if (daysEl) {
-        daysEl.addEventListener('change', function () {
-            resetCursors();
-            load();
-        });
-    }
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
             resetCursors();
             load();
         });
     }
-    load();
+    if (pageRoot || body) {
+        load();
+    }
 })();

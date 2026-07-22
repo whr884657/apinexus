@@ -1,13 +1,13 @@
 {
-    "version": "5.9.0",
-    "title": "ApiNexus 5.9.0 订单积分查询优化与分片可配",
+    "version": "5.9.1",
+    "title": "ApiNexus 5.9.1 订单积分按页取数与首屏加载修复",
     "release_date": "2026-07-22",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "冷库每个分片条数可配置（默认 5000）",
-        "订单管理 / 积分变动 / 用户中心积分：时间窗 + keyset 翻页，禁止深页 OFFSET",
-        "orders 复合索引；COUNT 无 JOIN；充值列表收敛 JOIN；Redis 总数短缓存",
-        "积分流水不做冷热归档，全部留库；升级请执行数据库结构更新"
+        "订单/积分列表取消「查询天数」，只按每页条数 + keyset 取最新记录，禁止全表 COUNT",
+        "修复日志查询、订单管理、积分变动首屏一直加载中的问题",
+        "管理端积分变动：刷新按钮与标题在手机端同一行",
+        "同步纠偏订单与积分查询性能规范（无 30 天时间窗）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

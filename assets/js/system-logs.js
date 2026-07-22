@@ -26,7 +26,7 @@
     var cursorStack = [0];
     var nextBeforeId = 0;
     var hasMore = false;
-    var loading = false;
+    var loadSeq = 0;
     var listAbort = null;
     var returnFocusEl = null;
 
@@ -297,7 +297,11 @@
     }
 
     function load() {
-        if (!body || !window.VS) {
+        if (!body) {
+            return;
+        }
+        if (!window.VS) {
+            setTimeout(load, 40);
             return;
         }
         if (listAbort) {
@@ -307,11 +311,11 @@
         }
         listAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
 
+        var seq = ++loadSeq;
         var pagesize = getPageSize();
         var beforeId = cursorStack[page - 1] || 0;
-        loading = true;
         setControlsDisabled(true);
-        if (window.VS && VS.setLoading) {
+        if (VS.setLoading) {
             VS.setLoading(body, '正在加载日志');
         }
         var fd = new FormData();
@@ -328,7 +332,9 @@
         }
         var opts = listAbort ? { signal: listAbort.signal } : {};
         VS.postForm(fd, window.location.href, opts).then(function (data) {
-            loading = false;
+            if (seq !== loadSeq) {
+                return;
+            }
             setControlsDisabled(false);
             if (!data || data.code !== 1) {
                 body.innerHTML = '<p class="vs-empty vs-finance-empty">' + escapeHtml((data && data.msg) || '加载失败') + '</p>';
@@ -339,7 +345,9 @@
             if (err && err.name === 'AbortError') {
                 return;
             }
-            loading = false;
+            if (seq !== loadSeq) {
+                return;
+            }
             setControlsDisabled(false);
             body.innerHTML = '<p class="vs-empty vs-finance-empty">网络异常</p>';
         });
@@ -375,7 +383,7 @@
     if (pagerNav) {
         pagerNav.addEventListener('click', function (e) {
             var btn = e.target.closest('[data-p]');
-            if (!btn || btn.disabled || loading) {
+            if (!btn || btn.disabled) {
                 return;
             }
             var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
@@ -401,9 +409,6 @@
 
     document.querySelectorAll('.vs-log-filter').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            if (loading) {
-                return;
-            }
             document.querySelectorAll('.vs-log-filter').forEach(function (el) {
                 el.classList.toggle('is-active', el === btn);
                 el.classList.toggle('vs-btn--primary', el === btn);
@@ -444,9 +449,6 @@
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
-            if (loading) {
-                return;
-            }
             load();
         });
     }
