@@ -79,7 +79,7 @@ $methods = (!$notFound && isset($api['methods']) && is_array($api['methods'])) ?
     <?php if (!empty($api['doc'])): ?>
     <div class="st-detail__panel">
         <h2 class="st-detail__h">接口文档</h2>
-        <div class="st-detail__doc"><?php echo vs_e($api['doc']); ?></div>
+        <div class="st-detail__doc markdown-body"><?php echo Markdown::render((string) $api['doc']); ?></div>
     </div>
     <?php endif; ?>
 
@@ -90,6 +90,7 @@ $methods = (!$notFound && isset($api['methods']) && is_array($api['methods'])) ?
 </section>
 </div>
 </main>
+<link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
 <script>
 (function () {
     var btn = document.getElementById('stDetailCopyBtn');

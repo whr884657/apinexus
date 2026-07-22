@@ -1,0 +1,85 @@
+/* ApiNexus Markdown 渲染样式（前台 + 后台预览共用） */
+.vs-md-body { line-height: 1.75; word-break: break-word; }
+.vs-md-body img,
+.vs-md-body video {
+    max-width: 100%;
+    border-radius: 10px;
+    display: block;
+    margin: 0.75rem 0;
+}
+.vs-md-video video {
+    width: 100%;
+    background: #0b1220;
+    border-radius: 12px;
+}
+.vs-md-card {
+    border: 1px solid #059669;
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    margin: 1rem 0;
+    background: rgba(5, 150, 105, 0.06);
+}
+.vs-md-card__title { font-weight: 700; margin-bottom: 0.4rem; }
+.vs-md-alert {
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    border-left: 4px solid;
+}
+.vs-md-alert--tip { background: rgba(59,130,246,.08); border-color: #3b82f6; }
+.vs-md-alert--warning { background: rgba(245,158,11,.1); border-color: #f59e0b; }
+.vs-md-alert--success { background: rgba(5,150,105,.1); border-color: #059669; }
+.vs-md-alert--danger { background: rgba(239,68,68,.1); border-color: #ef4444; }
+.vs-md-collapse {
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem;
+    margin: 1rem 0;
+}
+.vs-md-collapse summary { cursor: pointer; font-weight: 600; }
+.vs-md-btn {
+    display: inline-block;
+    color: #fff !important;
+    text-decoration: none !important;
+    padding: 0.45rem 1rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+.vs-md-timeline { list-style: none; padding: 0; margin: 1rem 0; border-left: 2px solid #059669; }
+.vs-md-timeline li { padding: 0.35rem 0 0.35rem 1rem; position: relative; }
+.vs-md-timeline li::before {
+    content: '';
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #059669;
+    position: absolute; left: -5px; top: 0.7rem;
+}
+.vs-md-timeline__time { font-weight: 700; margin-right: 0.5rem; color: #059669; }
+.vs-md-music {
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    background: rgba(5,150,105,.08);
+    margin: 1rem 0;
+}
+.vs-md-music audio { width: 100%; margin-top: 0.4rem; }
+.vs-md-indent { text-indent: 2em; }
+.vs-md-body pre {
+    border-radius: 10px;
+    overflow-x: auto;
+    padding: 0.85rem 1rem;
+    background: #0f172a;
+    color: #e2e8f0;
+}
+.vs-md-body code {
+    border-radius: 6px;
+    padding: 0.1em 0.35em;
+    background: rgba(15,23,42,.06);
+}
+.vs-md-body pre code { background: transparent; padding: 0; }
+.vs-md-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+.vs-md-body th, .vs-md-body td { border: 1px solid rgba(0,0,0,.1); padding: 0.45rem 0.6rem; }
+.vs-md-body blockquote {
+    margin: 1rem 0;
+    padding: 0.4rem 0.9rem;
+    border-left: 3px solid #059669;
+    color: #64748b;
+}

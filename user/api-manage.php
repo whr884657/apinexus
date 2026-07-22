@@ -431,12 +431,12 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 <p class="vs-form-hint">返回示例保持 JSON 文本填写即可。</p>
             </div>
             <div class="vs-form-row">
-                <label class="vs-label" for="userApiFormDoc">普通文档</label>
-                <textarea class="vs-input vs-textarea" id="userApiFormDoc" name="doc" rows="5"></textarea>
+                <label class="vs-label" for="userApiFormDoc">普通文档（Markdown）</label>
+                <textarea class="vs-input vs-textarea" id="userApiFormDoc" name="doc" rows="5" data-vs-md></textarea>
             </div>
             <div class="vs-form-row">
-                <label class="vs-label" for="userApiFormAidoc">AI 文档</label>
-                <textarea class="vs-input vs-textarea" id="userApiFormAidoc" name="aidoc" rows="5"></textarea>
+                <label class="vs-label" for="userApiFormAidoc">AI 文档（Markdown）</label>
+                <textarea class="vs-input vs-textarea" id="userApiFormAidoc" name="aidoc" rows="5" data-vs-md></textarea>
             </div>
             <div class="vs-form-row">
                 <label class="vs-label">接口图标</label>
@@ -467,4 +467,5 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
 <?php endif; ?>
 
 <?php
+echo Markdown::renderAssetsHtml();
 vs_user_layout_end($tableReady ? array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'user-api-manage.js') : array());

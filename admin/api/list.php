@@ -472,14 +472,14 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 
             <div class="vs-api-list-form-pane" data-api-form-pane="docs" hidden>
                 <div class="vs-form-row">
-                    <label class="vs-label" for="apiListFormDocNormal">普通文档</label>
+                    <label class="vs-label" for="apiListFormDocNormal">普通文档（Markdown）</label>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocNormal" name="doc" rows="10"
-                              placeholder="面向普通用户的接口说明…"></textarea>
+                              data-vs-md placeholder="面向普通用户的接口说明…"></textarea>
                 </div>
                 <div class="vs-form-row">
-                    <label class="vs-label" for="apiListFormDocAi">AI 文档</label>
+                    <label class="vs-label" for="apiListFormDocAi">AI 文档（Markdown）</label>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="aidoc" rows="10"
-                              placeholder="面向 AI / Agent 的结构化说明…"></textarea>
+                              data-vs-md placeholder="面向 AI / Agent 的结构化说明…"></textarea>
                 </div>
             </div>
         </form>
@@ -490,4 +490,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
     </div>
 </div>
 
-<?php vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'api-list.js')); ?>
+<?php
+echo Markdown::renderAssetsHtml();
+vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'api-list.js'));
+?>

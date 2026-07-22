@@ -95,4 +95,22 @@
 
     requestAnimationFrame(revealBanner);
     window.addEventListener('resize', setupMarqueeSpeed);
+
+    // 设为弹窗的公告：首次进入自动弹出（同日只弹一次）
+    (function tryAutoPopup() {
+        var data = getAnnData();
+        if (!data || !data.home || !data.home.autopopup || !modalHome) {
+            return;
+        }
+        var dayKey = LS_KEY + '_' + (new Date().toISOString().slice(0, 10));
+        try {
+            if (localStorage.getItem(dayKey) === '1') {
+                return;
+            }
+            localStorage.setItem(dayKey, '1');
+        } catch (e) { /* ignore */ }
+        setTimeout(function () {
+            openModal(modalHome);
+        }, 600);
+    })();
 })();

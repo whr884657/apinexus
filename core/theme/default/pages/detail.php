@@ -223,7 +223,7 @@ if (!$notFound) {
     <section class="detail-card" id="detailDocCard">
         <h2 class="detail-section-title">详细文档</h2>
         <?php if (!empty($api['doc'])): ?>
-        <div class="markdown-body detail-md" data-detail-md><?php echo vs_e($api['doc']); ?></div>
+        <div class="markdown-body detail-md is-parsed"><?php echo Markdown::render((string) $api['doc']); ?></div>
         <?php else: ?>
         <p class="detail-empty-hint">暂无详细文档</p>
         <?php endif; ?>
@@ -232,7 +232,7 @@ if (!$notFound) {
     <section class="detail-card" id="detailAiDocCard">
         <h2 class="detail-section-title">AI 文档</h2>
         <?php if (!empty($api['aidoc'])): ?>
-        <div class="markdown-body detail-md" data-detail-md><?php echo vs_e($api['aidoc']); ?></div>
+        <div class="markdown-body detail-md is-parsed"><?php echo Markdown::render((string) $api['aidoc']); ?></div>
         <?php else: ?>
         <p class="detail-empty-hint">暂无 AI 文档</p>
         <?php endif; ?>
@@ -343,3 +343,4 @@ window.playgroundKeyContext = <?php echo json_encode(array(
 window.VS_CSRF_TOKEN = <?php echo json_encode(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
 window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/core/playground/relay.php')); ?>;
 </script>
+<link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">

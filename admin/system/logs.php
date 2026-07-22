@@ -50,38 +50,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $tableReady = ApiLogManager::tableReady();
 $queryDays = ApiLogManager::queryDaysDefault();
-$boot = array(
-    'list'           => array(),
-    'total'          => 0,
-    'page'           => 1,
-    'pagesize'       => 20,
-    'days'           => $queryDays,
-    'before_id'      => 0,
-    'next_before_id' => 0,
-    'has_more'       => false,
-    'total_approx'   => false,
-);
-if ($tableReady) {
-    $boot = ApiLogManager::listPaged(array(
-        'page'     => 1,
-        'pagesize' => 20,
-        'days'     => $queryDays,
-    ));
-}
 
 vs_admin_layout_start('日志查询', 'logs');
 ?>
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先完成系统升级以同步调用日志表。', array('compact' => true)); ?>
 <?php else: ?>
-<?php
-vs_render_notice(
-    'tip',
-    '',
-    '默认仅查询近 ' . (int) $queryDays . ' 天日志。若已启用冷热归档，超出热数据天数的记录从本机归档合并读出；相关开关与计划任务在系统设置 → API 日志。',
-    array('compact' => true)
-);
-?>
 <div class="vs-log-toolbar" id="logsToolbar">
     <div class="vs-log-search">
         <input type="search" class="vs-input vs-log-search__input" id="logsSearchInput"
@@ -109,7 +83,6 @@ vs_render_notice(
 </div>
 
 <div class="vs-panel vs-log-panel" id="logsPage"
-     data-boot="<?php echo vs_e(json_encode($boot, JSON_UNESCAPED_UNICODE)); ?>"
      data-default-days="<?php echo (int) $queryDays; ?>">
     <div class="vs-log-list" id="logsListBody">
         <?php vs_render_loading('正在加载日志'); ?>
