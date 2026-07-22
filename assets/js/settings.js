@@ -68,6 +68,19 @@
         var copyBtn = document.getElementById('apilogCopyCronUrlBtn');
         var keyInput = document.getElementById('apilogCronKey');
         var urlInput = document.getElementById('apilogCronUrl');
+        var archiveChk = document.getElementById('apilog_archive_enabled');
+        var hotRow = document.getElementById('apilogHotDaysRow');
+        var cronBox = document.getElementById('apilogCronBox');
+
+        function syncArchiveUi() {
+            var on = !!(archiveChk && archiveChk.checked);
+            if (hotRow) hotRow.hidden = !on;
+            if (cronBox) cronBox.hidden = !on;
+        }
+        if (archiveChk) {
+            archiveChk.addEventListener('change', syncArchiveUi);
+            syncArchiveUi();
+        }
 
         if (genBtn) {
             genBtn.addEventListener('click', function () {

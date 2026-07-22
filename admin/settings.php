@@ -24,9 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hotDays = ApiLogArchive::MAX_HOT_DAYS;
             }
             Config::setMany(array(
-                'apilog_detail'     => isset($_POST['apilog_detail']) ? '1' : '0',
-                'apilog_query_days' => (string) $queryDays,
-                'apilog_hot_days'   => (string) $hotDays,
+                'apilog_detail'           => isset($_POST['apilog_detail']) ? '1' : '0',
+                'apilog_archive_enabled'  => isset($_POST['apilog_archive_enabled']) ? '1' : '0',
+                'apilog_query_days'       => (string) $queryDays,
+                'apilog_hot_days'         => (string) $hotDays,
             ));
             AjaxResponse::success('日志设置已保存');
         } catch (Exception $e) {
@@ -443,7 +444,7 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-apilog',
     'API 日志',
-    '热数据留近期库内、冷数据归档到本机；计划任务须密钥'
+    '详细日志、冷热归档与计划任务'
 );
 ?>
     <?php
@@ -451,8 +452,10 @@ vs_admin_accordion_start(
     if ($cfgHotDays < 1) {
         $cfgHotDays = ApiLogArchive::DEFAULT_HOT_DAYS;
     }
+    $archiveOn = !isset($vsCfg['apilog_archive_enabled']) || $vsCfg['apilog_archive_enabled'] !== '0';
     $cronKey = isset($vsCfg['apilog_cron_key']) ? (string) $vsCfg['apilog_cron_key'] : '';
     $cronUrl = ApiLogArchive::cronUrl();
+    $sqliteOk = ApiLogArchive::sqliteAvailable();
     ?>
     <form method="post" action="" class="vs-form" id="apilogForm" data-ajax="1">
         <input type="hidden" name="action" value="save_apilog">
@@ -473,24 +476,34 @@ vs_admin_accordion_start(
                     <option value="<?php echo (int) $d; ?>"<?php echo $cfgQueryDays === $d ? ' selected' : ''; ?>><?php echo (int) $d; ?> 天</option>
                 <?php endforeach; ?>
             </select>
-            <?php vs_render_notice('tip', '', '默认只查近期，减轻压力；更久远的记录可从归档中一并读出。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '默认只查近期，减轻压力；开启冷热归档后，更久远的记录可从本机归档一并读出。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="apilog_archive_enabled" id="apilog_archive_enabled" value="1" <?php echo $archiveOn ? 'checked' : ''; ?>>
+                <span>启用调用日志冷热归档</span>
+            </label>
+            <?php vs_render_notice('tip', '', '低配或日志量很大的站点建议开启，把超过热数据天数的日志归档到本机，减轻在线库压力且日志全部保留。若服务器性能足够强（大核数、大内存、磁盘充足），自认可长期扛住全量日志在线查询，可以关闭本项，不必做冷热分离。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row" id="apilogHotDaysRow"<?php echo $archiveOn ? '' : ' hidden'; ?>>
             <label class="vs-label" for="apilog_hot_days">热数据天数</label>
             <input type="number" class="vs-input" id="apilog_hot_days" name="apilog_hot_days" min="1" max="<?php echo (int) ApiLogArchive::MAX_HOT_DAYS; ?>"
                    value="<?php echo (int) $cfgHotDays; ?>">
-            <?php vs_render_notice('tip', '', '超过该天数的日志由计划任务归档到本机，日志全部保留，不会丢弃。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '超过该天数的日志由计划任务归档到本机，不会丢弃。', array('field' => true, 'compact' => true)); ?>
         </div>
+        <?php if (!$sqliteOk): ?>
+            <?php vs_render_notice('warning', '', '当前 PHP 未启用 PDO SQLite。开启冷热归档前请先安装并启用该扩展，否则计划任务无法写入冷库。', array('compact' => true)); ?>
+        <?php endif; ?>
         <?php vs_render_notice('tip', '', '关闭详细日志后仍会计入各接口与密钥调用次数，适合带宽或性能有限的小站点。', array('compact' => true)); ?>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存日志设置</button>
         </div>
     </form>
-    <div class="vs-form" style="margin-top:16px" id="apilogCronBox">
+    <div class="vs-form" style="margin-top:16px" id="apilogCronBox"<?php echo $archiveOn ? '' : ' hidden'; ?>>
         <div class="vs-form-row">
             <label class="vs-label">冷热归档计划任务</label>
             <input type="text" class="vs-input" id="apilogCronUrl" readonly value="<?php echo vs_e($cronUrl); ?>" placeholder="请先生成密钥">
-            <?php vs_render_notice('tip', '', '请在服务器计划任务中配置每日凌晨调用（须带密钥）。示例：0 2 * * * curl -fsS 「上方链接」', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '启用冷热归档后，请在服务器计划任务中配置每日凌晨调用（须带密钥）。示例：0 2 * * * curl -fsS 「上方链接」', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row">
             <label class="vs-label">任务密钥</label>

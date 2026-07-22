@@ -78,7 +78,7 @@ vs_admin_layout_start('日志查询', 'logs');
 vs_render_notice(
     'tip',
     '',
-    '默认仅查询近 ' . (int) $queryDays . ' 天日志。热数据在 MySQL，超出热数据天数的冷数据从本机归档合并读出；归档计划任务请到系统设置 → API 日志。',
+    '默认仅查询近 ' . (int) $queryDays . ' 天日志。若已启用冷热归档，超出热数据天数的记录从本机归档合并读出；相关开关与计划任务在系统设置 → API 日志。',
     array('compact' => true)
 );
 ?>

@@ -94,6 +94,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('apilog_detail', '1'),
 ('apilog_query_days', '7'),
 ('apilog_hot_days', '30'),
+('apilog_archive_enabled', '1'),
 ('apilog_cron_key', '');
 
 -- 邮箱验证码发信频率限制记录
