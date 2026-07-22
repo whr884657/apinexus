@@ -34,10 +34,10 @@
         var color, title, url, text;
         switch (type) {
             case 'card':
-                color = attrs.color || '#059669';
+                color = attrs.color || '';
                 title = attrs.title || '';
-                return '<div class="vs-md-card" style="border-color:' + esc(color) + ';">'
-                    + (title ? '<div class="vs-md-card__title" style="color:' + esc(color) + ';">' + esc(title) + '</div>' : '')
+                return '<div class="vs-md-card"' + (color ? ' style="border-color:' + esc(color) + ';"' : '') + '>'
+                    + (title ? '<div class="vs-md-card__title"' + (color ? ' style="color:' + esc(color) + ';"' : '') + '>' + esc(title) + '</div>' : '')
                     + '<div class="vs-md-card__body">' + mdInline(body) + '</div></div>';
             case 'tip':
             case 'warning':
@@ -49,12 +49,12 @@
                 return '<details class="vs-md-collapse"><summary>' + esc(title)
                     + '</summary><div class="vs-md-collapse__body">' + mdInline(body) + '</div></details>';
             case 'button':
-                color = attrs.color || '#059669';
+                color = attrs.color || '';
                 text = attrs.text || '按钮';
                 url = attrs.url || attrs.text_url || '#';
-                return '<p class="vs-md-btn-wrap"><a class="vs-md-btn" href="' + esc(url)
-                    + '" style="background:' + esc(color) + ';" target="_blank" rel="noopener noreferrer">'
-                    + esc(text) + '</a></p>';
+                return '<p class="vs-md-btn-wrap"><a class="vs-md-btn" href="' + esc(url) + '"'
+                    + (color ? ' style="background:' + esc(color) + ';"' : '')
+                    + ' target="_blank" rel="noopener noreferrer">' + esc(text) + '</a></p>';
             case 'timeline':
                 return '<ul class="vs-md-timeline">' + String(body).split(/\n+/).map(function (line) {
                     line = line.trim();

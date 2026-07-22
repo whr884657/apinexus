@@ -68,6 +68,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('分类已删除', array('category_id' => $id));
     }
 
+    if ($action === 'delete_move') {
+        $id = isset($_POST['category_id']) ? (int) $_POST['category_id'] : 0;
+        $targetId = isset($_POST['target_id']) ? (int) $_POST['target_id'] : 0;
+        $result = ApiCategoryManager::deleteAndMove($id, $targetId);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        AjaxResponse::success('分类已删除，接口已转移', array(
+            'category_id' => $id,
+            'target_id'   => $targetId,
+        ));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
@@ -75,6 +88,13 @@ $categories = ApiCategoryManager::listAll();
 $tableReady = ApiCategoryManager::tableReady();
 $defaultIconPaths = ApiCategoryManager::defaultIconPaths();
 $iconBase = rtrim(vs_base_url(), '/');
+$categoriesForJs = array();
+foreach ($categories as $row) {
+    $categoriesForJs[] = array(
+        'id'   => (int) $row['id'],
+        'name' => (string) $row['name'],
+    );
+}
 
 /**
  * @param array $row
@@ -144,7 +164,8 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
 
 <div class="vs-panel vs-api-cat-panel" id="apiCategoriesPage"
      data-icon-base="<?php echo vs_e($iconBase); ?>"
-     data-default-icons="<?php echo vs_e(json_encode($defaultIconPaths, JSON_UNESCAPED_UNICODE)); ?>">
+     data-default-icons="<?php echo vs_e(json_encode($defaultIconPaths, JSON_UNESCAPED_UNICODE)); ?>"
+     data-categories="<?php echo vs_e(json_encode($categoriesForJs, JSON_UNESCAPED_UNICODE)); ?>">
 
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '分类管理功能尚未就绪，请前往「系统管理 → 系统升级」完成更新。', array('compact' => true)); ?>
@@ -207,4 +228,29 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
     </div>
 </div>
 
-<?php vs_admin_layout_end(array('icon-picker.js', 'api-categories.js')); ?>
+<div class="vs-overlay vs-overlay--lg" id="apiCategoryTransferOverlay" hidden aria-hidden="true">
+    <div class="vs-overlay__backdrop" data-transfer-overlay-close="1"></div>
+    <div class="vs-overlay__panel" role="dialog" aria-labelledby="apiCategoryTransferTitle" aria-modal="true">
+        <div class="vs-overlay__handle" aria-hidden="true"></div>
+        <header class="vs-overlay__head">
+            <h3 class="vs-overlay__title" id="apiCategoryTransferTitle">删除分类</h3>
+            <button type="button" class="vs-overlay__close" data-transfer-overlay-close="1" aria-label="关闭">&times;</button>
+        </header>
+        <form id="apiCategoryTransferForm" class="vs-overlay__body vs-form" autocomplete="off">
+            <input type="hidden" id="apiCatTransferId" name="category_id" value="">
+            <p class="vs-form-hint" id="apiCatTransferHint"></p>
+            <div class="vs-form-row">
+                <label class="vs-label" for="apiCatTransferTarget">转移接口至其他分类</label>
+                <select class="vs-input vs-select" id="apiCatTransferTarget" name="target_id" data-vs-pick="sheet" required>
+                    <option value="">请选择目标分类</option>
+                </select>
+            </div>
+        </form>
+        <footer class="vs-overlay__foot">
+            <button type="button" class="vs-btn vs-btn--pill" data-transfer-overlay-close="1">取消</button>
+            <button type="submit" form="apiCategoryTransferForm" class="vs-btn vs-btn--pill vs-btn--pill-danger" id="apiCatTransferSubmitBtn">确认删除</button>
+        </footer>
+    </div>
+</div>
+
+<?php vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-categories.js')); ?>

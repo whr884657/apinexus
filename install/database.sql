@@ -269,6 +269,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}content` (
   `summary` varchar(500) NOT NULL DEFAULT '' COMMENT '摘要',
   `body` mediumtext NOT NULL COMMENT '正文Markdown',
   `cover` varchar(500) NOT NULL DEFAULT '' COMMENT '封面图链接（文章用，公告可空）',
+  `coverlayout` tinyint(1) NOT NULL DEFAULT 0 COMMENT '封面布局：0左侧 1右侧 2背景（仅文章）',
   `ispinned` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否置顶：0否 1是',
   `ispopup` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否弹窗：0否 1是（公告）',
   `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态：0草稿 1已发布 2下架',

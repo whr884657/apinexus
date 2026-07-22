@@ -4,18 +4,20 @@
  * 作用：Markdown + 扩展短码渲染（公告/文章/API 文档共用）
  *
  * 短码示例（编辑器插入的是简化标记，由本类展开为完整 HTML）：
- * :::card color=#059669 title=标题
+ * :::card title=标题
  * 内容
  * :::
  * :::tip|warning|success|danger
  * :::collapse title=折叠标题
- * :::button color=#059669 text=按钮 text_url=https://
+ * :::button text=按钮 url=https://
  * :::timeline
  * - 2024 | 节点说明
  * :::
  * :::music url=https://... title=歌名
  * :::indent 首行缩进段落
  * 视频：@[video](https://...mp4)
+ *
+ * 强调色跟随主题 CSS 变量（--accent-primary / --vs-primary / --st-accent），短码 color 仅作可选覆盖。
  */
 
 class Markdown
@@ -132,12 +134,13 @@ class Markdown
     {
         switch ($type) {
             case 'card':
-                $color = isset($attrs['color']) ? $attrs['color'] : '#059669';
+                $color = isset($attrs['color']) ? trim((string) $attrs['color']) : '';
                 $title = isset($attrs['title']) ? $attrs['title'] : '';
-                $style = 'border-color:' . vs_e($color) . ';';
-                $h = $title !== '' ? '<div class="vs-md-card__title" style="color:' . vs_e($color) . ';">'
+                $style = $color !== '' ? 'border-color:' . vs_e($color) . ';' : '';
+                $titleStyle = $color !== '' ? ' style="color:' . vs_e($color) . ';"' : '';
+                $h = $title !== '' ? '<div class="vs-md-card__title"' . $titleStyle . '>'
                     . vs_e($title) . '</div>' : '';
-                return '<div class="vs-md-card" style="' . $style . '">' . $h
+                return '<div class="vs-md-card"' . ($style !== '' ? ' style="' . $style . '"' : '') . '>' . $h
                     . '<div class="vs-md-card__body">' . self::parseMarkdown($body) . '</div></div>';
 
             case 'tip':
@@ -154,11 +157,12 @@ class Markdown
                     . self::parseMarkdown($body) . '</div></details>';
 
             case 'button':
-                $color = isset($attrs['color']) ? $attrs['color'] : '#059669';
+                $color = isset($attrs['color']) ? trim((string) $attrs['color']) : '';
                 $text = isset($attrs['text']) ? $attrs['text'] : '按钮';
                 $url = isset($attrs['url']) ? $attrs['url'] : (isset($attrs['text_url']) ? $attrs['text_url'] : '#');
-                return '<p class="vs-md-btn-wrap"><a class="vs-md-btn" href="' . vs_e($url)
-                    . '" style="background:' . vs_e($color) . ';" target="_blank" rel="noopener noreferrer">'
+                $btnStyle = $color !== '' ? ' style="background:' . vs_e($color) . ';"' : '';
+                return '<p class="vs-md-btn-wrap"><a class="vs-md-btn" href="' . vs_e($url) . '"'
+                    . $btnStyle . ' target="_blank" rel="noopener noreferrer">'
                     . vs_e($text) . '</a></p>';
 
             case 'timeline':

@@ -19,16 +19,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error((string) $publishUid);
         }
         $payload = array(
-            'kind'     => $kind,
-            'title'    => isset($_POST['title']) ? (string) $_POST['title'] : '',
-            'summary'  => isset($_POST['summary']) ? (string) $_POST['summary'] : '',
-            'body'     => isset($_POST['body']) ? (string) $_POST['body'] : '',
-            'cover'    => isset($_POST['cover']) ? (string) $_POST['cover'] : '',
-            'ispinned' => 0,
-            'ispopup'  => 0,
-            'status'   => isset($_POST['status']) ? (int) $_POST['status'] : ContentManager::STATUS_PUBLISHED,
-            'userid'   => $publishUid,
-            'sort'     => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
+            'kind'        => $kind,
+            'title'       => isset($_POST['title']) ? (string) $_POST['title'] : '',
+            'summary'     => isset($_POST['summary']) ? (string) $_POST['summary'] : '',
+            'body'        => isset($_POST['body']) ? (string) $_POST['body'] : '',
+            'cover'       => isset($_POST['cover']) ? (string) $_POST['cover'] : '',
+            'coverlayout' => isset($_POST['coverlayout']) ? (int) $_POST['coverlayout'] : ContentManager::COVER_LEFT,
+            'ispinned'    => 0,
+            'ispopup'     => 0,
+            'status'      => ContentManager::STATUS_PUBLISHED,
+            'userid'      => $publishUid,
+            'sort'        => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
         );
         if ($action === 'create') {
             $result = ContentManager::create($payload);
@@ -114,20 +115,20 @@ echo Markdown::renderAssetsHtml();
                 <input class="vs-input" type="url" name="cover" id="contentCover" maxlength="500" placeholder="https://">
             </div>
             <div class="vs-field">
+                <label class="vs-label" for="contentCoverLayout">封面布局</label>
+                <select class="vs-input vs-select" name="coverlayout" id="contentCoverLayout" data-vs-pick>
+                    <option value="0">左侧</option>
+                    <option value="1">右侧</option>
+                    <option value="2">背景</option>
+                </select>
+            </div>
+            <div class="vs-field">
                 <label class="vs-label" for="contentSummary">摘要</label>
                 <input class="vs-input" type="text" name="summary" id="contentSummary" maxlength="500">
             </div>
             <div class="vs-field">
                 <label class="vs-label" for="contentBody">正文（Markdown）</label>
-                <textarea class="vs-input vs-textarea" name="body" id="contentBody" data-vs-md rows="14"></textarea>
-            </div>
-            <div class="vs-field">
-                <label class="vs-label" for="contentStatus">状态</label>
-                <select class="vs-input vs-select" name="status" id="contentStatus" data-vs-pick>
-                    <option value="1">已发布</option>
-                    <option value="0">草稿</option>
-                    <option value="2">下架</option>
-                </select>
+                <textarea class="vs-input vs-textarea" name="body" id="contentBody" data-vs-md="desktop" rows="14"></textarea>
             </div>
         </form>
         <footer class="vs-overlay__foot">

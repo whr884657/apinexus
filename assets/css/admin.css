@@ -6426,14 +6426,94 @@ select.vs-input.vs-select {
     }
 }
 
-/* 公告 / 文章管理列表 */
-.vs-content-list { display: flex; flex-direction: column; gap: 10px; }
-.vs-content-row {
-    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
-    padding: 14px 16px; border: 1px solid var(--vs-border, #e5e7eb); border-radius: 12px; background: #fff;
+/* 公告 / 文章管理列表（对齐 vs-api-item 卡片） */
+.vs-content-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
-.vs-content-row__main { min-width: 0; flex: 1; }
-.vs-content-row__title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
-.vs-content-row__meta { display: flex; flex-wrap: wrap; gap: 8px; color: #64748b; font-size: 12px; }
-.vs-content-row__actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.vs-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #334155; }
+
+.vs-content-item.vs-api-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    min-height: 72px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    background: var(--vs-content-bg, #fff);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.vs-content-item.vs-api-item:hover {
+    border-color: #cbd5e1;
+}
+
+.vs-content-item__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vs-content-item__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.vs-content-item .vs-api-item__title {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+}
+
+.vs-content-item .vs-api-item__name {
+    font-weight: 700;
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vs-content-item .vs-api-item__id {
+    color: #94a3b8;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.vs-content-item__actions,
+.vs-content-item .vs-api-item__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    width: 100%;
+    padding-top: 2px;
+}
+
+.vs-content-item__actions .vs-btn,
+.vs-content-item .vs-api-item__actions .vs-btn {
+    height: 28px;
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+@media (max-width: 640px) {
+    .vs-content-item.vs-api-item {
+        padding: 10px 12px;
+        min-height: 68px;
+    }
+
+    .vs-content-item__actions,
+    .vs-content-item .vs-api-item__actions {
+        justify-content: flex-end;
+    }
+}

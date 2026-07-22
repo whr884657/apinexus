@@ -45,22 +45,18 @@
     function fillForm(row) {
         form.content_id.value = row ? String(row.id || 0) : '0';
         form.title.value = row ? (row.title || '') : '';
-        form.summary.value = row ? (row.summary || '') : '';
         form.body.value = row ? (row.body || '') : '';
+        if (form.summary) {
+            form.summary.value = row ? (row.summary || '') : '';
+        }
         if (form.cover) {
             form.cover.value = row ? (row.cover || '') : '';
         }
-        if (form.status) {
-            form.status.value = row ? String(row.status != null ? row.status : 1) : '1';
+        if (form.coverlayout) {
+            form.coverlayout.value = row ? String(row.coverlayout != null ? row.coverlayout : 0) : '0';
             if (window.VSPick && VSPick.refresh) {
-                VSPick.refresh(form.status);
+                VSPick.refresh(form.coverlayout);
             }
-        }
-        if (form.ispinned) {
-            form.ispinned.checked = !!(row && Number(row.ispinned) === 1);
-        }
-        if (form.ispopup) {
-            form.ispopup.checked = !!(row && Number(row.ispopup) === 1);
         }
         if (formTitle) {
             formTitle.textContent = row && row.id
@@ -80,6 +76,7 @@
             summary: el.getAttribute('data-summary') || '',
             body: el.getAttribute('data-body') || '',
             cover: el.getAttribute('data-cover') || '',
+            coverlayout: parseInt(el.getAttribute('data-coverlayout'), 10) || 0,
             status: parseInt(el.getAttribute('data-status'), 10) || 0,
             ispinned: parseInt(el.getAttribute('data-ispinned'), 10) || 0,
             ispopup: parseInt(el.getAttribute('data-ispopup'), 10) || 0
@@ -87,12 +84,13 @@
     }
 
     function metaHtml(item) {
-        var parts = ['<span>' + esc(item.status_label || '') + '</span>'];
+        var parts = ['<span>' + esc(item.status_label || '已发布') + '</span>'];
         if (isAnnouncement && Number(item.ispinned) === 1) parts.push('<span>置顶</span>');
         if (isAnnouncement && Number(item.ispopup) === 1) parts.push('<span>弹窗</span>');
         if (!isAnnouncement) {
             parts.push('<span>阅读 ' + (item.views || 0) + '</span>');
             if (item.cover) parts.push('<span>有封面</span>');
+            if (item.coverlayout_label) parts.push('<span>' + esc(item.coverlayout_label) + '</span>');
         }
         if (item.createtime) parts.push('<span>' + esc(item.createtime) + '</span>');
         return parts.join('');
@@ -111,19 +109,23 @@
     }
 
     function renderRow(item) {
-        return '<div class="vs-content-row" data-content-row="' + item.id + '"'
+        return '<div class="vs-api-item vs-content-item" data-content-row="' + item.id + '"'
             + ' data-title="' + esc(item.title) + '"'
-            + ' data-summary="' + esc(item.summary) + '"'
+            + ' data-summary="' + esc(item.summary || '') + '"'
             + ' data-body="' + esc(item.body) + '"'
             + ' data-cover="' + esc(item.cover || '') + '"'
+            + ' data-coverlayout="' + (item.coverlayout != null ? item.coverlayout : 0) + '"'
             + ' data-status="' + item.status + '"'
             + ' data-ispinned="' + (item.ispinned || 0) + '"'
             + ' data-ispopup="' + (item.ispopup || 0) + '">'
-            + '<div class="vs-content-row__main">'
-            + '<div class="vs-content-row__title">' + esc(item.title) + '</div>'
-            + '<div class="vs-content-row__meta">' + metaHtml(item) + '</div>'
+            + '<div class="vs-content-item__main">'
+            + '<div class="vs-api-item__title">'
+            + '<span class="vs-api-item__name">' + esc(item.title) + '</span>'
+            + '<span class="vs-api-item__id">#' + item.id + '</span>'
             + '</div>'
-            + '<div class="vs-content-row__actions">' + actionsHtml(item) + '</div>'
+            + '<div class="vs-content-item__meta">' + metaHtml(item) + '</div>'
+            + '</div>'
+            + '<div class="vs-api-item__actions vs-content-item__actions">' + actionsHtml(item) + '</div>'
             + '</div>';
     }
 
@@ -209,10 +211,9 @@
                 }
                 if (act === 'pin') data.ispinned = res.ispinned;
                 if (act === 'popup') data.ispopup = res.ispopup;
-                data.status_label = row.querySelector('.vs-content-row__meta span')
-                    ? row.querySelector('.vs-content-row__meta span').textContent
-                    : '';
-                // 重新拉一行展示：用本地数据刷新属性
+                var metaEl = row.querySelector('.vs-content-item__meta span');
+                data.status_label = metaEl ? metaEl.textContent : '已发布';
+                var timeEl = row.querySelector('.vs-content-item__meta span:last-child');
                 row.setAttribute('data-ispinned', String(data.ispinned || 0));
                 row.setAttribute('data-ispopup', String(data.ispopup || 0));
                 upsertRow({
@@ -221,11 +222,12 @@
                     summary: data.summary,
                     body: data.body,
                     cover: data.cover,
+                    coverlayout: data.coverlayout,
                     status: data.status,
-                    status_label: data.status === 1 ? '已发布' : (data.status === 2 ? '已下架' : '草稿'),
+                    status_label: data.status_label || '已发布',
                     ispinned: data.ispinned,
                     ispopup: data.ispopup,
-                    createtime: ''
+                    createtime: timeEl ? timeEl.textContent : ''
                 });
                 if (VS.showMessage) VS.showMessage(res.msg || '已更新', 'success');
             });
@@ -237,11 +239,9 @@
             var id = parseInt(form.content_id.value, 10) || 0;
             var fd = new FormData(form);
             fd.set('action', id > 0 ? 'update' : 'create');
-            if (form.ispinned) {
-                fd.set('ispinned', form.ispinned.checked ? '1' : '0');
-            }
-            if (form.ispopup) {
-                fd.set('ispopup', form.ispopup.checked ? '1' : '0');
+            fd.set('status', '1');
+            if (isAnnouncement) {
+                fd.delete('summary');
             }
             saveBtn.disabled = true;
             post(fd).then(function (res) {
