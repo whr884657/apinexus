@@ -1,5 +1,5 @@
--- ApiNexus 5.8.0：apilog 复合索引 + 冷热归档配置
--- 说明：加速时间窗列表与 COUNT；热数据天数 + 计划任务密钥（禁止无归档直接删日志）
+-- ApiNexus 5.8.0：apilog 复合索引 + 冷热归档配置（SQLite 冷库）
+-- 说明：加速时间窗列表与 COUNT；热天数 + 归档开关 + 计划任务密钥
 
 ALTER TABLE `{prefix}apilog`
   ADD INDEX `idx_createtime_id` (`createtime`, `id`),
@@ -10,6 +10,9 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES ('apilog_query_days', '7')
 ON DUPLICATE KEY UPDATE `value` = `value`;
 
 INSERT INTO `{prefix}config` (`key`, `value`) VALUES ('apilog_hot_days', '30')
+ON DUPLICATE KEY UPDATE `value` = `value`;
+
+INSERT INTO `{prefix}config` (`key`, `value`) VALUES ('apilog_archive_enabled', '1')
 ON DUPLICATE KEY UPDATE `value` = `value`;
 
 INSERT INTO `{prefix}config` (`key`, `value`) VALUES ('apilog_cron_key', '')

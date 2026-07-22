@@ -214,6 +214,9 @@ class DatabaseMigrator
             if (!array_key_exists('apilog_cron_key', $all)) {
                 Config::set('apilog_cron_key', '');
             }
+            if (!array_key_exists('apilog_archive_enabled', $all)) {
+                Config::set('apilog_archive_enabled', '1');
+            }
             if (array_key_exists('apilog_keep_days', $all)) {
                 $pdo = Database::connect();
                 $table = Database::table('config');

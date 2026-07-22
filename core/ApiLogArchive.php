@@ -1,12 +1,12 @@
 <?php
 /**
  * 文件：core/ApiLogArchive.php
- * 作用：调用日志冷热分层——热数据留 MySQL，冷数据按日归档到 data/apilog（目录索引 + ID 段分片）
+ * 作用：调用日志冷热分层——热数据留 MySQL；冷数据三层索引 + SQLite 分片（多读少写）
  *
- * 目录结构：
- *   data/apilog/catalog.json
- *   data/apilog/YYYY-MM-DD/index.json
- *   data/apilog/YYYY-MM-DD/s0001.jsonl …
+ * 目录结构（三层分离）：
+ *   data/apilog/catalog/catalog.json     ← 总索引（日期 / ID 段 → 哪一天）
+ *   data/apilog/days/YYYY-MM-DD/index.json ← 日索引（ID 段 → 哪个 .db）
+ *   data/apilog/shards/YYYY-MM-DD/s0001.db ← 日志正文（SQLite，约 1000 条/片）
  */
 
 class ApiLogArchive
@@ -16,6 +16,7 @@ class ApiLogArchive
     const SHARD_ROWS = 1000;
     const BATCH_ROWS = 5000;
     const LOCK_TTL = 1800;
+    const CATALOG_VERSION = 2;
 
     /**
      * @return string
@@ -26,7 +27,57 @@ class ApiLogArchive
     }
 
     /**
-     * MySQL 热数据天数（超出则归档到本地，不删除业务含义上的日志）
+     * @return string
+     */
+    public static function catalogPath()
+    {
+        return self::rootDir() . '/catalog/catalog.json';
+    }
+
+    /**
+     * @param string $day
+     * @return string
+     */
+    public static function dayIndexPath($day)
+    {
+        $day = self::safeDay($day);
+        return self::rootDir() . '/days/' . $day . '/index.json';
+    }
+
+    /**
+     * @param string $day
+     * @return string
+     */
+    public static function shardDir($day)
+    {
+        $day = self::safeDay($day);
+        return self::rootDir() . '/shards/' . $day;
+    }
+
+    /**
+     * 是否启用冷热归档（关闭后计划任务不归档，日志全留库）
+     *
+     * @return bool
+     */
+    public static function isEnabled()
+    {
+        try {
+            return trim((string) Config::get('apilog_archive_enabled', '1')) !== '0';
+        } catch (Exception $e) {
+            return true;
+        }
+    }
+
+    /**
+     * @return bool
+     */
+    public static function sqliteAvailable()
+    {
+        return extension_loaded('pdo_sqlite') && in_array('sqlite', PDO::getAvailableDrivers(), true);
+    }
+
+    /**
+     * MySQL 热数据天数
      *
      * @return int
      */
@@ -59,8 +110,6 @@ class ApiLogArchive
     }
 
     /**
-     * 生成计划任务密钥（64 位十六进制）
-     *
      * @return string
      */
     public static function generateCronKey()
@@ -86,8 +135,6 @@ class ApiLogArchive
     }
 
     /**
-     * 计划任务入口 URL（相对站点根）
-     *
      * @return string
      */
     public static function cronUrl()
@@ -102,15 +149,19 @@ class ApiLogArchive
     }
 
     /**
-     * 确保目录与拒访文件存在
-     *
      * @return bool
      */
     public static function ensureStorage()
     {
         $root = self::rootDir();
-        if (!is_dir($root)) {
-            if (!@mkdir($root, 0755, true) && !is_dir($root)) {
+        $dirs = array(
+            $root,
+            $root . '/catalog',
+            $root . '/days',
+            $root . '/shards',
+        );
+        foreach ($dirs as $dir) {
+            if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
                 return false;
             }
         }
@@ -122,25 +173,33 @@ class ApiLogArchive
         if (!is_file($idx)) {
             @file_put_contents($idx, '');
         }
-        if (!is_file($root . '/catalog.json')) {
-            self::writeJson($root . '/catalog.json', array(
-                'version'  => 1,
-                'updated'  => date('c'),
-                'days'     => array(),
+        if (!is_file(self::catalogPath())) {
+            self::writeJson(self::catalogPath(), array(
+                'version' => self::CATALOG_VERSION,
+                'format'  => 'sqlite',
+                'updated' => date('c'),
+                'days'    => array(),
             ));
         }
         return is_dir($root) && is_writable($root);
     }
 
     /**
-     * 执行一轮归档：把热数据窗口之外的行写入本地分片，成功后再从 MySQL 删除
-     *
      * @param int|null $limit
      * @return array{ok:bool,msg:string,archived:int,days:array,deleted:int}
      */
     public static function runOnce($limit = null)
     {
         $empty = array('ok' => false, 'msg' => '', 'archived' => 0, 'days' => array(), 'deleted' => 0);
+        if (!self::isEnabled()) {
+            $empty['ok'] = true;
+            $empty['msg'] = '冷热归档未开启，跳过';
+            return $empty;
+        }
+        if (!self::sqliteAvailable()) {
+            $empty['msg'] = '服务器未启用 PDO SQLite，无法写入冷库';
+            return $empty;
+        }
         if (!class_exists('ApiLogManager') || !ApiLogManager::tableReady()) {
             $empty['msg'] = '日志表未就绪';
             return $empty;
@@ -233,9 +292,7 @@ class ApiLogArchive
     }
 
     /**
-     * 冷库：按时间窗统计条数
-     *
-     * @param int $days 近 N 天（相对今天）
+     * @param int $days
      * @return int
      */
     public static function countInQueryWindow($days)
@@ -258,9 +315,7 @@ class ApiLogArchive
     }
 
     /**
-     * 冷库：查询列表（id DESC，支持 before_id / 简单筛选）
-     *
-     * @param array $opts days, before_id, pagesize, q, ok, apiid
+     * @param array $opts
      * @return array{list:array,has_more:bool,next_before_id:int}
      */
     public static function listInQueryWindow(array $opts)
@@ -280,6 +335,12 @@ class ApiLogArchive
             foreach ($catalog['days'] as $day => $meta) {
                 if (!is_string($day) || $day < $from || $day > $to) {
                     continue;
+                }
+                if ($beforeId > 0) {
+                    $min = isset($meta['min_id']) ? (int) $meta['min_id'] : 0;
+                    if ($min >= $beforeId) {
+                        continue;
+                    }
                 }
                 $dayKeys[] = $day;
             }
@@ -320,7 +381,7 @@ class ApiLogArchive
 
     /**
      * @param int $id
-     * @return array|null 原始行（含 username 空串）
+     * @return array|null
      */
     public static function findById($id)
     {
@@ -352,10 +413,9 @@ class ApiLogArchive
     public static function readCatalog()
     {
         self::ensureStorage();
-        $path = self::rootDir() . '/catalog.json';
-        $data = self::readJson($path);
+        $data = self::readJson(self::catalogPath());
         if (!is_array($data)) {
-            return array('version' => 1, 'days' => array());
+            return array('version' => self::CATALOG_VERSION, 'format' => 'sqlite', 'days' => array());
         }
         if (!isset($data['days']) || !is_array($data['days'])) {
             $data['days'] = array();
@@ -364,8 +424,18 @@ class ApiLogArchive
     }
 
     /**
+     * @param string $day
+     * @return string
+     */
+    private static function safeDay($day)
+    {
+        $day = preg_replace('/[^0-9\-]/', '', (string) $day);
+        return $day;
+    }
+
+    /**
      * @param array $row
-     * @return string Y-m-d
+     * @return string
      */
     private static function rowDay(array $row)
     {
@@ -380,19 +450,25 @@ class ApiLogArchive
     /**
      * @param string $day
      * @param array  $rows
-     * @return int[] 成功写入的 id 列表（仅这些可从 MySQL 删除）
+     * @return int[]
      */
     private static function appendDayRows($day, array $rows)
     {
-        $day = preg_replace('/[^0-9\-]/', '', (string) $day);
+        $day = self::safeDay($day);
         if ($day === '' || empty($rows)) {
             return array();
         }
-        $dir = self::rootDir() . '/' . $day;
-        if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+
+        $dayDir = self::rootDir() . '/days/' . $day;
+        $shardDir = self::shardDir($day);
+        if (!is_dir($dayDir) && !@mkdir($dayDir, 0755, true) && !is_dir($dayDir)) {
             return array();
         }
-        $indexPath = $dir . '/index.json';
+        if (!is_dir($shardDir) && !@mkdir($shardDir, 0755, true) && !is_dir($shardDir)) {
+            return array();
+        }
+
+        $indexPath = self::dayIndexPath($day);
         $index = self::readJson($indexPath);
         if (!is_array($index)) {
             $index = array('day' => $day, 'shards' => array());
@@ -402,43 +478,29 @@ class ApiLogArchive
         }
 
         $writtenIds = array();
-        $bufferLines = array();
-        $bufferIds = array();
-        $bufMin = 0;
-        $bufMax = 0;
+        $buffer = array();
 
-        $flush = function () use (&$bufferLines, &$bufferIds, &$bufMin, &$bufMax, &$index, &$writtenIds, $dir) {
-            if (empty($bufferLines)) {
+        $flush = function () use (&$buffer, &$index, &$writtenIds, $shardDir) {
+            if (empty($buffer)) {
                 return;
             }
             $seq = count($index['shards']) + 1;
-            $file = 's' . str_pad((string) $seq, 4, '0', STR_PAD_LEFT) . '.jsonl';
-            $path = $dir . '/' . $file;
-            $fh = fopen($path, 'ab');
-            if (!$fh) {
-                $bufferLines = array();
-                $bufferIds = array();
-                $bufMin = 0;
-                $bufMax = 0;
+            $file = 's' . str_pad((string) $seq, 4, '0', STR_PAD_LEFT) . '.db';
+            $path = $shardDir . '/' . $file;
+            $ids = self::writeSqliteShard($path, $buffer, true);
+            $buffer = array();
+            if (empty($ids)) {
                 return;
             }
-            foreach ($bufferLines as $line) {
-                fwrite($fh, $line . "\n");
-            }
-            fclose($fh);
             $index['shards'][] = array(
                 'file'   => $file,
-                'min_id' => $bufMin,
-                'max_id' => $bufMax,
-                'count'  => count($bufferLines),
+                'min_id' => min($ids),
+                'max_id' => max($ids),
+                'count'  => count($ids),
             );
-            foreach ($bufferIds as $wid) {
+            foreach ($ids as $wid) {
                 $writtenIds[] = (int) $wid;
             }
-            $bufferLines = array();
-            $bufferIds = array();
-            $bufMin = 0;
-            $bufMax = 0;
         };
 
         foreach ($rows as $row) {
@@ -446,25 +508,8 @@ class ApiLogArchive
             if ($pack === null) {
                 continue;
             }
-            $id = (int) $pack['id'];
-            $line = json_encode($pack, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            if ($line === false) {
-                continue;
-            }
-            if (empty($bufferLines)) {
-                $bufMin = $id;
-                $bufMax = $id;
-            } else {
-                if ($id < $bufMin) {
-                    $bufMin = $id;
-                }
-                if ($id > $bufMax) {
-                    $bufMax = $id;
-                }
-            }
-            $bufferLines[] = $line;
-            $bufferIds[] = $id;
-            if (count($bufferLines) >= self::SHARD_ROWS) {
+            $buffer[] = $pack;
+            if (count($buffer) >= self::SHARD_ROWS) {
                 $flush();
             }
         }
@@ -496,6 +541,8 @@ class ApiLogArchive
         self::writeJson($indexPath, $index);
 
         $catalog = self::readCatalog();
+        $catalog['version'] = self::CATALOG_VERSION;
+        $catalog['format'] = 'sqlite';
         $catalog['days'][$day] = array(
             'min_id' => $minId,
             'max_id' => $maxId,
@@ -503,9 +550,124 @@ class ApiLogArchive
             'shards' => count($index['shards']),
         );
         $catalog['updated'] = date('c');
-        self::writeJson(self::rootDir() . '/catalog.json', $catalog);
+        self::writeJson(self::catalogPath(), $catalog);
 
         return $writtenIds;
+    }
+
+    /**
+     * @param string $path
+     * @param array  $rows
+     * @param bool   $create
+     * @return int[]
+     */
+    private static function writeSqliteShard($path, array $rows, $create)
+    {
+        if (empty($rows)) {
+            return array();
+        }
+        if (strpos($path, '..') !== false) {
+            return array();
+        }
+        try {
+            $pdo = new PDO('sqlite:' . $path);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            if ($create || !self::sqliteTableReady($pdo)) {
+                self::initSqliteSchema($pdo);
+            }
+            $pdo->exec('PRAGMA synchronous = NORMAL');
+            $pdo->beginTransaction();
+            $sql = 'INSERT OR REPLACE INTO `log` (
+                `id`,`apiid`,`apiname`,`apitype`,`userid`,`apikey`,`method`,`ip`,`iploc`,
+                `host`,`path`,`url`,`referer`,`origin`,`domain`,`ua`,`ok`,`httpcode`,`charged`,`cost`,`createtime`
+            ) VALUES (
+                :id,:apiid,:apiname,:apitype,:userid,:apikey,:method,:ip,:iploc,
+                :host,:path,:url,:referer,:origin,:domain,:ua,:ok,:httpcode,:charged,:cost,:createtime
+            )';
+            $stmt = $pdo->prepare($sql);
+            $ids = array();
+            foreach ($rows as $row) {
+                $id = (int) $row['id'];
+                $stmt->execute(array(
+                    ':id'         => $id,
+                    ':apiid'      => (int) $row['apiid'],
+                    ':apiname'    => (string) $row['apiname'],
+                    ':apitype'    => (int) $row['apitype'],
+                    ':userid'     => (int) $row['userid'],
+                    ':apikey'     => (string) $row['apikey'],
+                    ':method'     => (string) $row['method'],
+                    ':ip'         => (string) $row['ip'],
+                    ':iploc'      => (string) $row['iploc'],
+                    ':host'       => (string) $row['host'],
+                    ':path'       => (string) $row['path'],
+                    ':url'        => (string) $row['url'],
+                    ':referer'    => (string) $row['referer'],
+                    ':origin'     => (string) $row['origin'],
+                    ':domain'     => (string) $row['domain'],
+                    ':ua'         => (string) $row['ua'],
+                    ':ok'         => (int) $row['ok'],
+                    ':httpcode'   => (int) $row['httpcode'],
+                    ':charged'    => (int) $row['charged'],
+                    ':cost'       => (string) $row['cost'],
+                    ':createtime' => (string) $row['createtime'],
+                ));
+                $ids[] = $id;
+            }
+            $pdo->commit();
+            return $ids;
+        } catch (Exception $e) {
+            return array();
+        }
+    }
+
+    /**
+     * @param PDO $pdo
+     * @return bool
+     */
+    private static function sqliteTableReady(PDO $pdo)
+    {
+        try {
+            $pdo->query('SELECT 1 FROM `log` LIMIT 1');
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * @param PDO $pdo
+     * @return void
+     */
+    private static function initSqliteSchema(PDO $pdo)
+    {
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS `log` (
+                `id` INTEGER PRIMARY KEY NOT NULL,
+                `apiid` INTEGER NOT NULL DEFAULT 0,
+                `apiname` TEXT NOT NULL DEFAULT \'\',
+                `apitype` INTEGER NOT NULL DEFAULT 0,
+                `userid` INTEGER NOT NULL DEFAULT 0,
+                `apikey` TEXT NOT NULL DEFAULT \'\',
+                `method` TEXT NOT NULL DEFAULT \'\',
+                `ip` TEXT NOT NULL DEFAULT \'\',
+                `iploc` TEXT NOT NULL DEFAULT \'\',
+                `host` TEXT NOT NULL DEFAULT \'\',
+                `path` TEXT NOT NULL DEFAULT \'\',
+                `url` TEXT NOT NULL DEFAULT \'\',
+                `referer` TEXT NOT NULL DEFAULT \'\',
+                `origin` TEXT NOT NULL DEFAULT \'\',
+                `domain` TEXT NOT NULL DEFAULT \'\',
+                `ua` TEXT NOT NULL DEFAULT \'\',
+                `ok` INTEGER NOT NULL DEFAULT 1,
+                `httpcode` INTEGER NOT NULL DEFAULT 200,
+                `charged` INTEGER NOT NULL DEFAULT 0,
+                `cost` TEXT NOT NULL DEFAULT \'0\',
+                `createtime` TEXT NOT NULL DEFAULT \'\'
+            )'
+        );
+        $pdo->exec('CREATE INDEX IF NOT EXISTS `idx_log_id` ON `log` (`id`)');
+        $pdo->exec('CREATE INDEX IF NOT EXISTS `idx_log_ok` ON `log` (`ok`)');
+        $pdo->exec('CREATE INDEX IF NOT EXISTS `idx_log_apiid` ON `log` (`apiid`)');
     }
 
     /**
@@ -518,9 +680,29 @@ class ApiLogArchive
         if ($id <= 0) {
             return null;
         }
-        unset($row['username']);
-        $row['id'] = $id;
-        return $row;
+        return array(
+            'id'         => $id,
+            'apiid'      => isset($row['apiid']) ? (int) $row['apiid'] : 0,
+            'apiname'    => isset($row['apiname']) ? (string) $row['apiname'] : '',
+            'apitype'    => isset($row['apitype']) ? (int) $row['apitype'] : 0,
+            'userid'     => isset($row['userid']) ? (int) $row['userid'] : 0,
+            'apikey'     => isset($row['apikey']) ? (string) $row['apikey'] : '',
+            'method'     => isset($row['method']) ? (string) $row['method'] : '',
+            'ip'         => isset($row['ip']) ? (string) $row['ip'] : '',
+            'iploc'      => isset($row['iploc']) ? (string) $row['iploc'] : '',
+            'host'       => isset($row['host']) ? (string) $row['host'] : '',
+            'path'       => isset($row['path']) ? (string) $row['path'] : '',
+            'url'        => isset($row['url']) ? (string) $row['url'] : '',
+            'referer'    => isset($row['referer']) ? (string) $row['referer'] : '',
+            'origin'     => isset($row['origin']) ? (string) $row['origin'] : '',
+            'domain'     => isset($row['domain']) ? (string) $row['domain'] : '',
+            'ua'         => isset($row['ua']) ? (string) $row['ua'] : '',
+            'ok'         => isset($row['ok']) ? (int) $row['ok'] : 1,
+            'httpcode'   => isset($row['httpcode']) ? (int) $row['httpcode'] : 200,
+            'charged'    => isset($row['charged']) ? (int) $row['charged'] : 0,
+            'cost'       => isset($row['cost']) ? (string) $row['cost'] : '0',
+            'createtime' => isset($row['createtime']) ? (string) $row['createtime'] : '',
+        );
     }
 
     /**
@@ -556,8 +738,10 @@ class ApiLogArchive
      */
     private static function readDayFiltered($day, $beforeId, $limit, $q, $ok, $apiid)
     {
-        $dir = self::rootDir() . '/' . $day;
-        $index = self::readJson($dir . '/index.json');
+        if (!self::sqliteAvailable()) {
+            return array();
+        }
+        $index = self::readJson(self::dayIndexPath($day));
         if (!is_array($index) || empty($index['shards']) || !is_array($index['shards'])) {
             return array();
         }
@@ -569,58 +753,32 @@ class ApiLogArchive
         });
 
         $out = array();
+        $shardDir = self::shardDir($day);
         foreach ($shards as $sh) {
             if (count($out) >= $limit) {
                 break;
             }
             $min = isset($sh['min_id']) ? (int) $sh['min_id'] : 0;
             $max = isset($sh['max_id']) ? (int) $sh['max_id'] : 0;
-            if ($beforeId > 0 && $max > 0 && $max < $beforeId && $min < $beforeId) {
-                // shard may still contain ids < beforeId
-            }
             if ($beforeId > 0 && $min >= $beforeId) {
                 continue;
             }
             $file = isset($sh['file']) ? (string) $sh['file'] : '';
-            if ($file === '' || strpos($file, '..') !== false) {
+            if ($file === '' || strpos($file, '..') !== false || substr($file, -3) !== '.db') {
                 continue;
             }
-            $path = $dir . '/' . $file;
+            $path = $shardDir . '/' . $file;
             if (!is_file($path)) {
                 continue;
             }
-            $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            if (!is_array($lines)) {
-                continue;
-            }
-            $rows = array();
-            foreach ($lines as $line) {
-                $obj = json_decode($line, true);
-                if (!is_array($obj)) {
-                    continue;
-                }
-                $id = isset($obj['id']) ? (int) $obj['id'] : 0;
-                if ($id <= 0) {
-                    continue;
-                }
-                if ($beforeId > 0 && $id >= $beforeId) {
-                    continue;
-                }
-                if (!self::rowMatches($obj, $q, $ok, $apiid)) {
-                    continue;
-                }
-                $obj['username'] = '';
-                $rows[] = $obj;
-            }
-            usort($rows, function ($a, $b) {
-                return ((int) $b['id']) - ((int) $a['id']);
-            });
+            $rows = self::querySqliteShard($path, $beforeId, $limit - count($out), $q, $ok, $apiid);
             foreach ($rows as $r) {
                 $out[] = $r;
                 if (count($out) >= $limit) {
                     break;
                 }
             }
+            unset($max);
         }
         return $out;
     }
@@ -632,11 +790,14 @@ class ApiLogArchive
      */
     private static function findInDay($day, $id)
     {
-        $dir = self::rootDir() . '/' . $day;
-        $index = self::readJson($dir . '/index.json');
+        if (!self::sqliteAvailable()) {
+            return null;
+        }
+        $index = self::readJson(self::dayIndexPath($day));
         if (!is_array($index) || empty($index['shards'])) {
             return null;
         }
+        $shardDir = self::shardDir($day);
         foreach ($index['shards'] as $sh) {
             $min = isset($sh['min_id']) ? (int) $sh['min_id'] : 0;
             $max = isset($sh['max_id']) ? (int) $sh['max_id'] : 0;
@@ -644,63 +805,81 @@ class ApiLogArchive
                 continue;
             }
             $file = isset($sh['file']) ? (string) $sh['file'] : '';
-            if ($file === '' || strpos($file, '..') !== false) {
+            if ($file === '' || strpos($file, '..') !== false || substr($file, -3) !== '.db') {
                 continue;
             }
-            $path = $dir . '/' . $file;
+            $path = $shardDir . '/' . $file;
             if (!is_file($path)) {
                 continue;
             }
-            $fh = fopen($path, 'rb');
-            if (!$fh) {
+            try {
+                $pdo = new PDO('sqlite:' . $path);
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $stmt = $pdo->prepare('SELECT * FROM `log` WHERE `id` = ? LIMIT 1');
+                $stmt->execute(array($id));
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (is_array($row)) {
+                    $row['username'] = '';
+                    return $row;
+                }
+            } catch (Exception $e) {
                 continue;
             }
-            while (($line = fgets($fh)) !== false) {
-                $obj = json_decode(trim($line), true);
-                if (!is_array($obj)) {
-                    continue;
-                }
-                if ((int) (isset($obj['id']) ? $obj['id'] : 0) === $id) {
-                    fclose($fh);
-                    $obj['username'] = '';
-                    return $obj;
-                }
-            }
-            fclose($fh);
         }
         return null;
     }
 
     /**
-     * @param array  $row
+     * @param string $path
+     * @param int    $beforeId
+     * @param int    $limit
      * @param string $q
      * @param mixed  $ok
      * @param int    $apiid
-     * @return bool
+     * @return array
      */
-    private static function rowMatches(array $row, $q, $ok, $apiid)
+    private static function querySqliteShard($path, $beforeId, $limit, $q, $ok, $apiid)
     {
-        if ($apiid > 0 && (int) (isset($row['apiid']) ? $row['apiid'] : 0) !== $apiid) {
-            return false;
-        }
-        if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
-            if ((int) (isset($row['ok']) ? $row['ok'] : 0) !== (int) $ok) {
-                return false;
+        $limit = max(1, (int) $limit);
+        try {
+            $pdo = new PDO('sqlite:' . $path);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $where = array('1=1');
+            $bind = array();
+            if ($beforeId > 0) {
+                $where[] = '`id` < ?';
+                $bind[] = $beforeId;
             }
+            if ($apiid > 0) {
+                $where[] = '`apiid` = ?';
+                $bind[] = $apiid;
+            }
+            if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
+                $where[] = '`ok` = ?';
+                $bind[] = (int) $ok;
+            }
+            if ($q !== '') {
+                $where[] = '(
+                    `apiname` LIKE ? OR `path` LIKE ? OR `ip` LIKE ? OR `url` LIKE ?
+                    OR `apikey` LIKE ? OR `domain` LIKE ? OR `iploc` LIKE ?
+                )';
+                $like = '%' . $q . '%';
+                for ($i = 0; $i < 7; $i++) {
+                    $bind[] = $like;
+                }
+            }
+            $sql = 'SELECT * FROM `log` WHERE ' . implode(' AND ', $where) . ' ORDER BY `id` DESC LIMIT ' . $limit;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($bind);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as &$r) {
+                $r['username'] = '';
+            }
+            unset($r);
+            return is_array($rows) ? $rows : array();
+        } catch (Exception $e) {
+            return array();
         }
-        if ($q === '') {
-            return true;
-        }
-        $hay = strtolower(
-            (isset($row['apiname']) ? $row['apiname'] : '') . ' ' .
-            (isset($row['path']) ? $row['path'] : '') . ' ' .
-            (isset($row['ip']) ? $row['ip'] : '') . ' ' .
-            (isset($row['url']) ? $row['url'] : '') . ' ' .
-            (isset($row['apikey']) ? $row['apikey'] : '') . ' ' .
-            (isset($row['domain']) ? $row['domain'] : '') . ' ' .
-            (isset($row['iploc']) ? $row['iploc'] : '')
-        );
-        return strpos($hay, strtolower($q)) !== false;
     }
 
     /**
@@ -738,7 +917,9 @@ class ApiLogArchive
         $catalog = self::readCatalog();
         $catalog['updated'] = date('c');
         $catalog['hot_days'] = self::hotDays();
-        self::writeJson(self::rootDir() . '/catalog.json', $catalog);
+        $catalog['version'] = self::CATALOG_VERSION;
+        $catalog['format'] = 'sqlite';
+        self::writeJson(self::catalogPath(), $catalog);
     }
 
     /**
@@ -765,6 +946,10 @@ class ApiLogArchive
      */
     private static function writeJson($path, array $data)
     {
+        $dir = dirname($path);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+            return false;
+        }
         $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
         if ($json === false) {
             return false;
