@@ -22,24 +22,87 @@ class DatabaseMigrator
     }
 
     /**
+     * 规范化版本号（去 v 前缀、空白）
+     *
+     * @param mixed $version
+     * @return string
+     */
+    public static function normalizeVersionToken($version)
+    {
+        $v = trim((string) $version);
+        if ($v === '') {
+            return '';
+        }
+        if (isset($v[0]) && ($v[0] === 'v' || $v[0] === 'V')) {
+            $v = substr($v, 1);
+        }
+        return trim($v);
+    }
+
+    /**
+     * 写入 schema_migrations（写后清缓存并校验）
+     *
+     * @param array $versions
+     * @return void
+     * @throws Exception
+     */
+    private static function writeAppliedVersions(array $versions)
+    {
+        $clean = array();
+        foreach ($versions as $v) {
+            $n = self::normalizeVersionToken($v);
+            if ($n === '' || !preg_match('/^\d+\.\d+\.\d+$/', $n)) {
+                continue;
+            }
+            if (!in_array($n, $clean, true)) {
+                $clean[] = $n;
+            }
+        }
+        usort($clean, 'version_compare');
+        $json = json_encode(array_values($clean), JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new Exception('schema_migrations 序列化失败');
+        }
+        Config::set(self::CONFIG_KEY, $json);
+        Config::clearCache();
+
+        $verify = self::getAppliedVersions();
+        if ($verify !== array_values($clean)) {
+            // 二次直写兜底（避免缓存/键冲突导致页面仍见旧值）
+            $pdo = Database::connect();
+            $table = Database::table('config');
+            $stmt = $pdo->prepare(
+                'INSERT INTO `' . $table . '` (`key`, `value`) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)'
+            );
+            $stmt->execute(array(self::CONFIG_KEY, $json));
+            Config::clearCache();
+        }
+    }
+
+    /**
      * 执行尚未应用的结构更新
      *
      * @return array
      */
-    public static function runPending()
+    public static function runPending($maxVersion = null)
     {
         if (!InstallChecker::isInstalled()) {
             return array('ok' => true, 'msg' => '系统未安装，跳过数据库结构更新', 'applied' => array());
         }
 
-        // 回退后先清掉高于代码版本的假记录，再 reconcile
         if (defined('VS_VERSION')) {
             self::pruneAppliedAboveCodeVersion(VS_VERSION);
         }
 
         self::reconcileSchemaState();
 
-        $pending = self::getPendingFiles();
+        // 在线更新必须限制上限；未传时默认不超过当前代码版本（禁止一次跑光磁盘上的未来 .sql）
+        if ($maxVersion === null || $maxVersion === '') {
+            $maxVersion = defined('VS_VERSION') ? VS_VERSION : null;
+        }
+
+        $pending = self::getPendingFiles($maxVersion);
         if (count($pending) === 0) {
             return array('ok' => true, 'msg' => '数据库结构已是最新', 'applied' => array());
         }
@@ -330,9 +393,10 @@ class DatabaseMigrator
     /**
      * 待执行的结构更新脚本（按版本升序）
      *
+     * @param string|null $maxVersion 仅返回 <= 该版本的脚本；在线更新必须传入目标版本，禁止一次跑光未来版
      * @return array
      */
-    public static function getPendingFiles()
+    public static function getPendingFiles($maxVersion = null)
     {
         self::reconcileSchemaState();
 
@@ -348,12 +412,17 @@ class DatabaseMigrator
             return array();
         }
 
+        $maxVersion = $maxVersion !== null ? self::normalizeVersionToken($maxVersion) : null;
+
         foreach ($files as $file) {
             $base = basename($file, '.sql');
             if (!preg_match('/^\d+\.\d+\.\d+$/', $base)) {
                 continue;
             }
             if (in_array($base, $applied, true)) {
+                continue;
+            }
+            if ($maxVersion !== null && $maxVersion !== '' && version_compare($base, $maxVersion, '>')) {
                 continue;
             }
             $pending[$base] = $file;
@@ -366,11 +435,12 @@ class DatabaseMigrator
     /**
      * 是否存在待执行的结构更新
      *
+     * @param string|null $maxVersion
      * @return bool
      */
-    public static function hasPendingMigrations()
+    public static function hasPendingMigrations($maxVersion = null)
     {
-        return count(self::getPendingFiles()) > 0;
+        return count(self::getPendingFiles($maxVersion)) > 0;
     }
 
     /**
@@ -394,16 +464,27 @@ class DatabaseMigrator
     public static function getAppliedVersions()
     {
         $raw = Config::get(self::CONFIG_KEY, '');
-        if ($raw === '') {
+        if ($raw === '' || $raw === null) {
             return array();
         }
-
-        $data = json_decode($raw, true);
+        if (is_array($raw)) {
+            $data = $raw;
+        } else {
+            $data = json_decode((string) $raw, true);
+        }
         if (!is_array($data)) {
             return array();
         }
 
-        return array_values($data);
+        $out = array();
+        foreach ($data as $v) {
+            $n = self::normalizeVersionToken($v);
+            if ($n !== '' && preg_match('/^\d+\.\d+\.\d+$/', $n) && !in_array($n, $out, true)) {
+                $out[] = $n;
+            }
+        }
+        usort($out, 'version_compare');
+        return $out;
     }
 
     /**
@@ -415,19 +496,18 @@ class DatabaseMigrator
      */
     public static function markApplied($version)
     {
-        $version = trim((string) $version);
+        $version = self::normalizeVersionToken($version);
         if ($version === '') {
             return;
         }
         // 代码版本尚未升到该迁移版本时禁止写入（防止回退后 reconcile 再次写回假记录）
-        if (defined('VS_VERSION') && version_compare($version, VS_VERSION, '>')) {
+        if (defined('VS_VERSION') && version_compare($version, self::normalizeVersionToken(VS_VERSION), '>')) {
             return;
         }
         $applied = self::getAppliedVersions();
         if (!in_array($version, $applied, true)) {
             $applied[] = $version;
-            usort($applied, 'version_compare');
-            Config::set(self::CONFIG_KEY, json_encode($applied, JSON_UNESCAPED_UNICODE));
+            self::writeAppliedVersions($applied);
         }
     }
 
@@ -439,22 +519,21 @@ class DatabaseMigrator
      */
     public static function unmarkApplied($version)
     {
-        $version = trim((string) $version);
+        $version = self::normalizeVersionToken($version);
         if ($version === '') {
             return;
         }
         $applied = self::getAppliedVersions();
         $next = array();
         foreach ($applied as $v) {
-            if ((string) $v !== $version) {
+            if (self::normalizeVersionToken($v) !== $version) {
                 $next[] = $v;
             }
         }
         if (count($next) === count($applied)) {
             return;
         }
-        Config::set(self::CONFIG_KEY, json_encode(array_values($next), JSON_UNESCAPED_UNICODE));
-        Config::clearCache();
+        self::writeAppliedVersions($next);
     }
 
     /**
@@ -466,11 +545,25 @@ class DatabaseMigrator
      */
     public static function pruneAppliedAboveCodeVersion($codeVersion)
     {
-        $codeVersion = trim((string) $codeVersion);
+        $codeVersion = self::normalizeVersionToken($codeVersion);
         if ($codeVersion === '' || !InstallChecker::isInstalled()) {
             return array();
         }
 
+        // 先用缓存快速判断；确有超出版本再清缓存重读并写入（避免每请求都 reload config）
+        $applied = self::getAppliedVersions();
+        $maybeRemove = false;
+        foreach ($applied as $v) {
+            if (version_compare(self::normalizeVersionToken($v), $codeVersion, '>')) {
+                $maybeRemove = true;
+                break;
+            }
+        }
+        if (!$maybeRemove) {
+            return array();
+        }
+
+        Config::clearCache();
         $applied = self::getAppliedVersions();
         if (count($applied) === 0) {
             return array();
@@ -479,7 +572,10 @@ class DatabaseMigrator
         $kept = array();
         $removed = array();
         foreach ($applied as $v) {
-            $v = (string) $v;
+            $v = self::normalizeVersionToken($v);
+            if ($v === '') {
+                continue;
+            }
             if (version_compare($v, $codeVersion, '>')) {
                 $removed[] = $v;
             } else {
@@ -491,8 +587,7 @@ class DatabaseMigrator
             return array();
         }
 
-        Config::set(self::CONFIG_KEY, json_encode(array_values($kept), JSON_UNESCAPED_UNICODE));
-        Config::clearCache();
+        self::writeAppliedVersions($kept);
         return $removed;
     }
 
@@ -592,9 +687,41 @@ class DatabaseMigrator
         try {
             $pdo = Database::connect();
             $table = Database::table($tableShort);
-            $stmt = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '` LIKE ?');
-            $stmt->execute(array($column));
-            return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+            $column = trim((string) $column);
+            if ($column === '') {
+                return false;
+            }
+
+            // 优先 INFORMATION_SCHEMA（SHOW COLUMNS + 预处理 LIKE 在部分 MySQL 上会误判）
+            try {
+                $dbName = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+                if ($dbName !== '') {
+                    $stmt = $pdo->prepare(
+                        'SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
+                         LIMIT 1'
+                    );
+                    $stmt->execute(array($dbName, $table, $column));
+                    if ($stmt->fetch(PDO::FETCH_NUM)) {
+                        return true;
+                    }
+                    // INFORMATION_SCHEMA 未命中时仍用 SHOW 兜底（权限/延迟）
+                }
+            } catch (Exception $e) {
+                // fall through
+            }
+
+            $sql = 'SHOW COLUMNS FROM `' . str_replace('`', '``', $table) . '`';
+            $stmt = $pdo->query($sql);
+            if (!$stmt) {
+                return false;
+            }
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if (isset($row['Field']) && strcasecmp((string) $row['Field'], $column) === 0) {
+                    return true;
+                }
+            }
+            return false;
         } catch (Exception $e) {
             return false;
         }
