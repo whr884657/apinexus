@@ -70,3 +70,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
     AuthSecurity::ensureCsrfToken();
 }
+
+// 代码版本回退（改 version.php）后：自动清除高于当前代码版本的 schema_migrations 假记录
+if (InstallChecker::isInstalled()) {
+    try {
+        DatabaseMigrator::pruneAppliedAboveCodeVersion(VS_VERSION);
+    } catch (Exception $e) {
+        // 安装/库异常时忽略，不影响正常请求
+    }
+}

@@ -268,6 +268,7 @@ class Updater
         self::ensureSessionStarted();
         self::setUpdateWork(array(
             'version' => $check['remote_version'],
+            'from_version' => isset($check['local_version']) ? (string) $check['local_version'] : self::localVersion(),
             'downloaded' => true,
         ));
 
@@ -434,13 +435,29 @@ class Updater
         if ($targetVersion === '' && !empty($work['version'])) {
             $targetVersion = (string) $work['version'];
         }
+        $fromVersion = !empty($work['from_version']) ? (string) $work['from_version'] : '';
+        if ($fromVersion === '') {
+            $fromVersion = '0.0.0';
+        }
 
-        // 以 update-log 的 db_changes 为准，不得仅凭「当前无 pending 文件」误报无变更
-        $expectDb = ($targetVersion !== '') && UpdateLog::versionHasDbChanges($targetVersion);
+        $expectDb = ($targetVersion !== '') && (
+            UpdateLog::versionHasDbChanges($targetVersion)
+            || is_file(DatabaseMigrator::migrationsDir() . '/' . $targetVersion . '.sql')
+        );
 
         $applied = array();
         try {
-            // 始终尝试执行尚未应用的脚本
+            DatabaseMigrator::pruneAppliedAboveCodeVersion(self::localVersion());
+
+            $forced = DatabaseMigrator::forceMigrateRange($fromVersion, $targetVersion);
+            if (is_array($forced)) {
+                foreach ($forced as $v) {
+                    if (!in_array($v, $applied, true)) {
+                        $applied[] = $v;
+                    }
+                }
+            }
+
             if (DatabaseMigrator::hasPendingMigrations()) {
                 $migration = DatabaseMigrator::runPending();
                 if (empty($migration['ok'])) {
@@ -451,24 +468,22 @@ class Updater
                     );
                 }
                 if (!empty($migration['applied']) && is_array($migration['applied'])) {
-                    $applied = $migration['applied'];
+                    foreach ($migration['applied'] as $v) {
+                        if (!in_array($v, $applied, true)) {
+                            $applied[] = $v;
+                        }
+                    }
                 }
             }
 
-            // 本版声明含库变更时：强制确保目标版本结构（幂等），避免漏执行却提示「无变更」
-            if ($expectDb) {
-                $ensured = DatabaseMigrator::ensureVersionSchema($targetVersion);
-                if (!empty($ensured['applied']) && !in_array($targetVersion, $applied, true)) {
-                    $applied[] = $targetVersion;
-                }
-                if (!DatabaseMigrator::versionSchemaReady($targetVersion)) {
-                    return array(
-                        'ok'      => false,
-                        'msg'     => '文件已更新，但数据库结构未就绪（v' . $targetVersion
-                            . '），请到系统升级页重试或手动执行结构更新',
-                        'version' => $targetVersion,
-                    );
-                }
+            if ($expectDb && !DatabaseMigrator::versionSchemaReady($targetVersion)
+                && DatabaseMigrator::hasSchemaProbe($targetVersion)) {
+                return array(
+                    'ok'      => false,
+                    'msg'     => '文件已更新，但数据库结构未就绪（v' . $targetVersion
+                        . '），请到系统升级页点击「执行数据库结构更新」',
+                    'version' => $targetVersion,
+                );
             }
         } catch (Exception $e) {
             return array(
@@ -513,6 +528,15 @@ class Updater
     {
         $applied = array();
         try {
+            DatabaseMigrator::pruneAppliedAboveCodeVersion(self::localVersion());
+
+            $local = self::localVersion();
+            // 从 0 扫到当前代码版本：结构未就绪的一律重跑
+            $forced = DatabaseMigrator::forceMigrateRange('0.0.0', $local);
+            if (is_array($forced)) {
+                $applied = $forced;
+            }
+
             if (DatabaseMigrator::hasPendingMigrations()) {
                 $migration = DatabaseMigrator::runPending();
                 if (empty($migration['ok'])) {
@@ -523,15 +547,11 @@ class Updater
                     );
                 }
                 if (!empty($migration['applied']) && is_array($migration['applied'])) {
-                    $applied = $migration['applied'];
-                }
-            }
-
-            $local = self::localVersion();
-            if (UpdateLog::versionHasDbChanges($local) || !DatabaseMigrator::versionSchemaReady($local)) {
-                $ensured = DatabaseMigrator::ensureVersionSchema($local);
-                if (!empty($ensured['applied']) && !in_array($local, $applied, true)) {
-                    $applied[] = $local;
+                    foreach ($migration['applied'] as $v) {
+                        if (!in_array($v, $applied, true)) {
+                            $applied[] = $v;
+                        }
+                    }
                 }
             }
         } catch (Exception $e) {

@@ -335,6 +335,12 @@ class UpdateLog
             return true;
         }
 
+        // 本地存在对应迁移脚本 → 一律视为含库变更（防日志漏标导致跳过）
+        $sqlFile = DatabaseMigrator::migrationsDir() . '/' . $version . '.sql';
+        if (is_file($sqlFile)) {
+            return true;
+        }
+
         if (!empty($row['migration'])) {
             return DatabaseMigrator::isMigrationPending($row['migration']);
         }

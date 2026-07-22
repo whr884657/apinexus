@@ -32,6 +32,11 @@ class DatabaseMigrator
             return array('ok' => true, 'msg' => '系统未安装，跳过数据库结构更新', 'applied' => array());
         }
 
+        // 回退后先清掉高于代码版本的假记录，再 reconcile
+        if (defined('VS_VERSION')) {
+            self::pruneAppliedAboveCodeVersion(VS_VERSION);
+        }
+
         self::reconcileSchemaState();
 
         $pending = self::getPendingFiles();
@@ -47,6 +52,9 @@ class DatabaseMigrator
 
             foreach ($pending as $version => $file) {
                 self::executeFile($pdo, $file, $prefix);
+                if (self::hasSchemaProbe($version) && !self::versionSchemaReady($version)) {
+                    throw new Exception('版本 v' . $version . ' 结构更新后校验失败');
+                }
                 self::markApplied($version);
                 $applied[] = $version;
             }
@@ -407,12 +415,169 @@ class DatabaseMigrator
      */
     public static function markApplied($version)
     {
+        $version = trim((string) $version);
+        if ($version === '') {
+            return;
+        }
+        // 代码版本尚未升到该迁移版本时禁止写入（防止回退后 reconcile 再次写回假记录）
+        if (defined('VS_VERSION') && version_compare($version, VS_VERSION, '>')) {
+            return;
+        }
         $applied = self::getAppliedVersions();
         if (!in_array($version, $applied, true)) {
             $applied[] = $version;
             usort($applied, 'version_compare');
             Config::set(self::CONFIG_KEY, json_encode($applied, JSON_UNESCAPED_UNICODE));
         }
+    }
+
+    /**
+     * 取消已应用标记（结构未就绪或代码版本回退时）
+     *
+     * @param string $version
+     * @return void
+     */
+    public static function unmarkApplied($version)
+    {
+        $version = trim((string) $version);
+        if ($version === '') {
+            return;
+        }
+        $applied = self::getAppliedVersions();
+        $next = array();
+        foreach ($applied as $v) {
+            if ((string) $v !== $version) {
+                $next[] = $v;
+            }
+        }
+        if (count($next) === count($applied)) {
+            return;
+        }
+        Config::set(self::CONFIG_KEY, json_encode(array_values($next), JSON_UNESCAPED_UNICODE));
+        Config::clearCache();
+    }
+
+    /**
+     * 代码版本回退时：清除 schema_migrations 中高于当前代码版本的执行记录
+     * （避免回退后再次升级时因「假已执行」而跳过 SQL）
+     *
+     * @param string $codeVersion VS_VERSION
+     * @return array 被清除的版本号列表
+     */
+    public static function pruneAppliedAboveCodeVersion($codeVersion)
+    {
+        $codeVersion = trim((string) $codeVersion);
+        if ($codeVersion === '' || !InstallChecker::isInstalled()) {
+            return array();
+        }
+
+        $applied = self::getAppliedVersions();
+        if (count($applied) === 0) {
+            return array();
+        }
+
+        $kept = array();
+        $removed = array();
+        foreach ($applied as $v) {
+            $v = (string) $v;
+            if (version_compare($v, $codeVersion, '>')) {
+                $removed[] = $v;
+            } else {
+                $kept[] = $v;
+            }
+        }
+
+        if (count($removed) === 0) {
+            return array();
+        }
+
+        Config::set(self::CONFIG_KEY, json_encode(array_values($kept), JSON_UNESCAPED_UNICODE));
+        Config::clearCache();
+        return $removed;
+    }
+
+    /**
+     * 结构未就绪时强制取消标记并执行（含区间内所有有 .sql 的版本）
+     *
+     * @param string $fromVersion 升级前版本（不含）
+     * @param string $toVersion   升级后版本（含）
+     * @return array 实际执行成功的版本号
+     */
+    public static function forceMigrateRange($fromVersion, $toVersion)
+    {
+        $fromVersion = trim((string) $fromVersion);
+        $toVersion = trim((string) $toVersion);
+        if ($toVersion === '') {
+            return array();
+        }
+
+        $dir = self::migrationsDir();
+        if (!is_dir($dir)) {
+            throw new Exception('缺少 install/migrations 目录，请重新下载更新包');
+        }
+
+        $files = glob($dir . '/*.sql');
+        if ($files === false) {
+            $files = array();
+        }
+
+        $candidates = array();
+        foreach ($files as $file) {
+            $base = basename($file, '.sql');
+            if (!preg_match('/^\d+\.\d+\.\d+$/', $base)) {
+                continue;
+            }
+            if ($fromVersion !== '' && version_compare($base, $fromVersion, '<=')) {
+                continue;
+            }
+            if (version_compare($base, $toVersion, '>')) {
+                continue;
+            }
+            $candidates[$base] = $file;
+        }
+        uksort($candidates, 'version_compare');
+
+        $appliedNow = array();
+        $pdo = Database::connect();
+        $prefix = Database::prefix();
+
+        foreach ($candidates as $version => $file) {
+            if (self::versionSchemaReady($version)) {
+                self::markApplied($version);
+                continue;
+            }
+            // 假「已执行」记录必须先清掉再跑
+            self::unmarkApplied($version);
+            self::executeFile($pdo, $file, $prefix);
+            if (!self::versionSchemaReady($version)) {
+                // 无专用探测的旧脚本：执行成功即认
+                if (!self::hasSchemaProbe($version)) {
+                    self::markApplied($version);
+                    $appliedNow[] = $version;
+                    continue;
+                }
+                throw new Exception(
+                    '版本 v' . $version . ' 数据库结构更新后校验失败（表/字段未就绪）'
+                );
+            }
+            self::markApplied($version);
+            $appliedNow[] = $version;
+        }
+
+        Config::clearCache();
+        return $appliedNow;
+    }
+
+    /**
+     * 该版本是否有可探测的结构就绪条件
+     *
+     * @param string $version
+     * @return bool
+     */
+    public static function hasSchemaProbe($version)
+    {
+        $version = trim((string) $version);
+        return ($version === '7.0.0' || $version === '7.1.0');
     }
 
     /**
@@ -484,6 +649,11 @@ class DatabaseMigrator
             return;
         }
 
+        if ($version === '7.0.0') {
+            self::applyContentTable($pdo, $prefix);
+            return;
+        }
+
         if ($version === '7.1.0') {
             self::applyContentCoverLayoutColumn($pdo, $prefix);
             return;
@@ -493,6 +663,9 @@ class DatabaseMigrator
         $sql = str_replace('{prefix}', $prefix, $sql);
         self::assertPrefixedTables($sql, $prefix, basename($file));
         $statements = DatabaseInstaller::parseSqlStatements($sql);
+        if (count($statements) === 0) {
+            throw new Exception('结构更新脚本无有效 SQL：' . basename($file));
+        }
 
         foreach ($statements as $statement) {
             self::execStatement($pdo, $statement);
@@ -639,6 +812,43 @@ class DatabaseMigrator
             'UPDATE `' . $apiTable . '` SET `userid` = ? WHERE `userid` = 0'
         );
         $upd->execute(array($uid));
+    }
+
+    /**
+     * v7.0.0：content 共用表（幂等）
+     *
+     * @param PDO    $pdo
+     * @param string $prefix
+     * @return void
+     */
+    public static function applyContentTable(PDO $pdo, $prefix)
+    {
+        if (self::tableExists('content')) {
+            return;
+        }
+        $table = $prefix . 'content';
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS `' . $table . '` (
+              `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT \'主键ID\',
+              `kind` tinyint(1) NOT NULL DEFAULT 0 COMMENT \'类型：0公告 1文章\',
+              `title` varchar(200) NOT NULL DEFAULT \'\' COMMENT \'标题\',
+              `summary` varchar(500) NOT NULL DEFAULT \'\' COMMENT \'摘要\',
+              `body` mediumtext NOT NULL COMMENT \'正文Markdown\',
+              `cover` varchar(500) NOT NULL DEFAULT \'\' COMMENT \'封面图链接（文章用，公告可空）\',
+              `ispinned` tinyint(1) NOT NULL DEFAULT 0 COMMENT \'是否置顶：0否 1是\',
+              `ispopup` tinyint(1) NOT NULL DEFAULT 0 COMMENT \'是否弹窗：0否 1是（公告）\',
+              `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT \'状态：0草稿 1已发布 2下架\',
+              `userid` int(10) unsigned NOT NULL DEFAULT 0 COMMENT \'发布者用户ID\',
+              `views` int(10) unsigned NOT NULL DEFAULT 0 COMMENT \'阅读量\',
+              `sort` int(11) NOT NULL DEFAULT 0 COMMENT \'排序权重（越小越前）\',
+              `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT \'创建时间\',
+              `updatetime` datetime DEFAULT NULL COMMENT \'最后更新时间\',
+              PRIMARY KEY (`id`),
+              KEY `idx_kind_status_id` (`kind`, `status`, `id`),
+              KEY `idx_kind_pin_id` (`kind`, `ispinned`, `id`),
+              KEY `idx_kind_popup` (`kind`, `ispopup`, `status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'公告与文章共用内容表\''
+        );
     }
 
     /**
