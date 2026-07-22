@@ -6,7 +6,7 @@
     var track = btn ? btn.querySelector('.home-announcement-track') : null;
     var dataEl = document.getElementById('feer-announcement-client-data');
 
-    var LS_KEY = 'feer_announcement_popup_seen';
+    var LS_DISMISS_PREFIX = 'feer_announcement_dismiss_';
     var annDataCache = null;
 
     function getAnnData() {
@@ -18,6 +18,26 @@
             annDataCache = null;
         }
         return annDataCache;
+    }
+
+    function dismissKey() {
+        var data = getAnnData();
+        var key = (data && data.home && data.home.popup_key) ? String(data.home.popup_key) : 'default';
+        return LS_DISMISS_PREFIX + key;
+    }
+
+    function isDismissed() {
+        try {
+            return localStorage.getItem(dismissKey()) === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function markDismissed() {
+        try {
+            localStorage.setItem(dismissKey(), '1');
+        } catch (e) { /* ignore */ }
     }
 
     var hydrated = false;
@@ -54,7 +74,13 @@
     document.addEventListener('click', function (e) {
         var t = e.target;
         if (!t || !t.getAttribute) return;
+        if (t.getAttribute('data-announcement-dismiss') === '1') {
+            markDismissed();
+            closeModalEl(t.closest('.home-announcement-modal'));
+            return;
+        }
         if (t.getAttribute('data-close-announcement') === '1') {
+            // 「我知道了」/关闭：仅关闭，下次访问仍可自动弹出
             closeModalEl(t.closest('.home-announcement-modal'));
         }
     });
@@ -96,19 +122,15 @@
     requestAnimationFrame(revealBanner);
     window.addEventListener('resize', setupMarqueeSpeed);
 
-    // 设为弹窗的公告：首次进入自动弹出（同日只弹一次）
+    // 弹窗公告：自动弹出；仅「不再提示」写入本地存储后不再弹出（清缓存可恢复）
     (function tryAutoPopup() {
         var data = getAnnData();
         if (!data || !data.home || !data.home.autopopup || !modalHome) {
             return;
         }
-        var dayKey = LS_KEY + '_' + (new Date().toISOString().slice(0, 10));
-        try {
-            if (localStorage.getItem(dayKey) === '1') {
-                return;
-            }
-            localStorage.setItem(dayKey, '1');
-        } catch (e) { /* ignore */ }
+        if (isDismissed()) {
+            return;
+        }
         setTimeout(function () {
             openModal(modalHome);
         }, 600);

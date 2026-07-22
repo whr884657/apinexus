@@ -92,10 +92,8 @@
             { id: 'download', label: '从云端下载资源' },
             { id: 'extract', label: '解压更新包' },
             { id: 'deploy', label: '覆盖系统文件' },
+            { id: 'migrate', label: hasDb ? '执行数据库更新' : '检查数据库结构' },
         ];
-        if (hasDb) {
-            steps.push({ id: 'migrate', label: '执行数据库更新' });
-        }
 
         var html = '<div class="vs-update-progress">';
         html += '<p class="vs-update-progress__hint">正在从云端获取更新，请勿关闭页面…</p>';

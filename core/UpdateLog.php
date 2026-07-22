@@ -14,6 +14,16 @@ class UpdateLog
     private static $resolvedPayload = null;
 
     /**
+     * 清除单次请求缓存（文件覆盖后须重读本地/云端 update-log）
+     *
+     * @return void
+     */
+    public static function clearResolvedCache()
+    {
+        self::$resolvedPayload = null;
+    }
+
+    /**
      * 本地更新记录文件路径
      *
      * @return string

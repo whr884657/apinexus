@@ -71,30 +71,45 @@ if ($action === 'apply') {
     ));
 }
 
-if ($action === 'apply_step') {
-    @set_time_limit(600);
-    @ini_set('memory_limit', '256M');
+    if ($action === 'apply_step') {
+        @set_time_limit(600);
+        @ini_set('memory_limit', '256M');
 
-    $step = isset($_POST['step']) ? trim($_POST['step']) : '';
+        $step = isset($_POST['step']) ? trim($_POST['step']) : '';
 
-    try {
-        $result = Updater::applyUpdateStep($step);
-    } catch (Throwable $e) {
-        AjaxResponse::error('更新异常：' . $e->getMessage());
+        try {
+            $result = Updater::applyUpdateStep($step);
+        } catch (Throwable $e) {
+            AjaxResponse::error('更新异常：' . $e->getMessage());
+        }
+
+        if (empty($result['ok'])) {
+            AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '更新失败');
+        }
+
+        if ($step === 'migrate') {
+            unset($_SESSION['vs_update_dismiss']);
+        }
+
+        AjaxResponse::success($result['msg'], array(
+            'step'    => isset($result['step']) ? $result['step'] : $step,
+            'version' => isset($result['version']) ? $result['version'] : '',
+        ));
     }
 
-    if (empty($result['ok'])) {
-        AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '更新失败');
+    if ($action === 'migrate_schema') {
+        @set_time_limit(300);
+        try {
+            $result = Updater::runSchemaMigrateNow();
+        } catch (Throwable $e) {
+            AjaxResponse::error('结构更新异常：' . $e->getMessage());
+        }
+        if (empty($result['ok'])) {
+            AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '结构更新失败');
+        }
+        AjaxResponse::success($result['msg'], array(
+            'applied' => isset($result['applied']) ? $result['applied'] : array(),
+        ));
     }
 
-    if ($step === 'migrate') {
-        unset($_SESSION['vs_update_dismiss']);
-    }
-
-    AjaxResponse::success($result['msg'], array(
-        'step'    => isset($result['step']) ? $result['step'] : $step,
-        'version' => isset($result['version']) ? $result['version'] : '',
-    ));
-}
-
-AjaxResponse::error('未知操作', 400);
+    AjaxResponse::error('未知操作', 400);

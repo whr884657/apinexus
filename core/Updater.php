@@ -139,7 +139,8 @@ class Updater
             'title'                => isset($manifest['title']) ? $manifest['title'] : '',
             'release_date'         => isset($manifest['release_date']) ? $manifest['release_date'] : '',
             'changes'              => isset($manifest['changes']) && is_array($manifest['changes']) ? $manifest['changes'] : array(),
-            'has_db_changes'       => UpdateLog::versionHasDbChanges($remote),
+            'has_db_changes'       => UpdateLog::versionHasDbChanges($remote)
+                || DatabaseMigrator::hasPendingMigrations(),
             'repo'                 => isset($manifest['repo']) ? $manifest['repo'] : self::DEFAULT_REPO,
             'branch'               => isset($manifest['branch']) ? $manifest['branch'] : self::DEFAULT_BRANCH,
             'error'                => '',
@@ -394,6 +395,14 @@ class Updater
         unset($work['source_root'], $work['downloaded'], $work['extracted']);
         self::setUpdateWork($work);
 
+        // 释放旧 PHP 字节码，确保下一步 migrate 加载新的 DatabaseMigrator / 迁移逻辑
+        if (function_exists('opcache_reset')) {
+            @opcache_reset();
+        }
+        if (class_exists('UpdateLog', false) && method_exists('UpdateLog', 'clearResolvedCache')) {
+            UpdateLog::clearResolvedCache();
+        }
+
         $msg = '文件覆盖完成';
         if ($removed > 0) {
             $msg .= '，已清理 ' . $removed . ' 个废弃文件';
@@ -421,28 +430,66 @@ class Updater
         }
 
         $check = $ctx['check'];
-        $migration = array('ok' => true, 'applied' => array(), 'msg' => '无数据库结构变更，已跳过');
-        if (DatabaseMigrator::hasPendingMigrations()) {
-            $migration = DatabaseMigrator::runPending();
-            if (empty($migration['ok'])) {
-                return array(
-                    'ok'      => false,
-                    'msg'     => '文件已更新，但' . $migration['msg'],
-                    'version' => $check['remote_version'],
-                );
+        $targetVersion = isset($check['remote_version']) ? (string) $check['remote_version'] : '';
+        if ($targetVersion === '' && !empty($work['version'])) {
+            $targetVersion = (string) $work['version'];
+        }
+
+        // 以 update-log 的 db_changes 为准，不得仅凭「当前无 pending 文件」误报无变更
+        $expectDb = ($targetVersion !== '') && UpdateLog::versionHasDbChanges($targetVersion);
+
+        $applied = array();
+        try {
+            // 始终尝试执行尚未应用的脚本
+            if (DatabaseMigrator::hasPendingMigrations()) {
+                $migration = DatabaseMigrator::runPending();
+                if (empty($migration['ok'])) {
+                    return array(
+                        'ok'      => false,
+                        'msg'     => '文件已更新，但' . $migration['msg'],
+                        'version' => $targetVersion,
+                    );
+                }
+                if (!empty($migration['applied']) && is_array($migration['applied'])) {
+                    $applied = $migration['applied'];
+                }
             }
+
+            // 本版声明含库变更时：强制确保目标版本结构（幂等），避免漏执行却提示「无变更」
+            if ($expectDb) {
+                $ensured = DatabaseMigrator::ensureVersionSchema($targetVersion);
+                if (!empty($ensured['applied']) && !in_array($targetVersion, $applied, true)) {
+                    $applied[] = $targetVersion;
+                }
+                if (!DatabaseMigrator::versionSchemaReady($targetVersion)) {
+                    return array(
+                        'ok'      => false,
+                        'msg'     => '文件已更新，但数据库结构未就绪（v' . $targetVersion
+                            . '），请到系统升级页重试或手动执行结构更新',
+                        'version' => $targetVersion,
+                    );
+                }
+            }
+        } catch (Exception $e) {
+            return array(
+                'ok'      => false,
+                'msg'     => '文件已更新，但数据库结构更新失败：' . $e->getMessage(),
+                'version' => $targetVersion,
+            );
         }
 
         self::clearUpdateWork();
 
-        $msg = '更新完成，当前版本 v' . $check['remote_version'];
-        if (!empty($migration['applied'])) {
-            $msg .= '，已同步数据库结构（' . implode('、', $migration['applied']) . '）';
+        $msg = '更新完成，当前版本 v' . $targetVersion;
+        if (count($applied) > 0) {
+            $msg .= '，已同步数据库结构（' . implode('、', $applied) . '）';
+        } elseif ($expectDb) {
+            $msg .= '，数据库结构已就绪（本版含结构变更，当前库已满足）';
         } else {
             $msg .= '（本次无数据库结构变更）';
         }
 
-        $remaining = UpdateLog::countVersionsAfter($check['remote_version']);
+        $remaining = UpdateLog::countVersionsAfter($targetVersion);
         if ($remaining > 0) {
             $msg .= '。尚有 ' . $remaining . ' 个版本待升级，请刷新页面后继续执行更新';
         } else {
@@ -452,8 +499,57 @@ class Updater
         return array(
             'ok'      => true,
             'msg'     => $msg,
-            'version' => $check['remote_version'],
+            'version' => $targetVersion,
             'step'    => 'migrate',
+        );
+    }
+
+    /**
+     * 手动执行数据库结构更新（不依赖是否有新版本；供已升级但漏跑迁移的站点）
+     *
+     * @return array
+     */
+    public static function runSchemaMigrateNow()
+    {
+        $applied = array();
+        try {
+            if (DatabaseMigrator::hasPendingMigrations()) {
+                $migration = DatabaseMigrator::runPending();
+                if (empty($migration['ok'])) {
+                    return array(
+                        'ok'      => false,
+                        'msg'     => isset($migration['msg']) ? $migration['msg'] : '结构更新失败',
+                        'applied' => isset($migration['applied']) ? $migration['applied'] : array(),
+                    );
+                }
+                if (!empty($migration['applied']) && is_array($migration['applied'])) {
+                    $applied = $migration['applied'];
+                }
+            }
+
+            $local = self::localVersion();
+            if (UpdateLog::versionHasDbChanges($local) || !DatabaseMigrator::versionSchemaReady($local)) {
+                $ensured = DatabaseMigrator::ensureVersionSchema($local);
+                if (!empty($ensured['applied']) && !in_array($local, $applied, true)) {
+                    $applied[] = $local;
+                }
+            }
+        } catch (Exception $e) {
+            return array('ok' => false, 'msg' => $e->getMessage(), 'applied' => $applied);
+        }
+
+        if (count($applied) > 0) {
+            return array(
+                'ok'      => true,
+                'msg'     => '已同步数据库结构（' . implode('、', $applied) . '）',
+                'applied' => $applied,
+            );
+        }
+
+        return array(
+            'ok'      => true,
+            'msg'     => '数据库结构已是最新',
+            'applied' => array(),
         );
     }
 

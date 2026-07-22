@@ -71,6 +71,7 @@ if (count($announceList) > 0) {
     $announceTitle = $first['title'];
     $announceHtml = isset($first['body_html']) ? $first['body_html'] : $announceHtml;
 }
+$announcePopupKey = '';
 if (count($announcePopup) > 0) {
     $pop = $announcePopup[0];
     $announceTitle = $pop['title'];
@@ -78,6 +79,14 @@ if (count($announcePopup) > 0) {
     if (isset($pop['preview']) && $pop['preview'] !== '') {
         $announceMarquee = $pop['preview'];
     }
+    $ids = array();
+    foreach ($announcePopup as $p) {
+        if (isset($p['id'])) {
+            $ids[] = (int) $p['id'];
+        }
+    }
+    sort($ids);
+    $announcePopupKey = implode('-', $ids);
 }
 ?>
 <div class="home-announcement-bundle">
@@ -88,13 +97,23 @@ if (count($announcePopup) > 0) {
         <span class="home-announcement-action">点击查看</span>
     </button>
 </section>
-<script type="application/json" id="feer-announcement-client-data"><?php echo json_encode(array('home' => array('title' => $announceTitle, 'html' => $announceHtml, 'autopopup' => count($announcePopup) > 0)), JSON_UNESCAPED_UNICODE); ?></script>
+<script type="application/json" id="feer-announcement-client-data"><?php echo json_encode(array(
+    'home' => array(
+        'title'     => $announceTitle,
+        'html'      => $announceHtml,
+        'autopopup' => count($announcePopup) > 0,
+        'popup_key' => $announcePopupKey,
+    ),
+), JSON_UNESCAPED_UNICODE); ?></script>
 <div class="home-announcement-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true">
     <div class="home-announcement-modal__mask" data-close-announcement="1"></div>
     <div class="home-announcement-modal__card" role="dialog" aria-modal="true">
         <div class="home-announcement-modal__head"><h3 class="home-announcement-modal__title"><?php echo vs_e($announceTitle); ?></h3><button type="button" class="home-announcement-modal__close" data-close-announcement="1">关闭</button></div>
         <div class="home-announcement-modal__body markdown-body" data-announcement-body="home"></div>
-        <div class="home-announcement-modal__footer"><button type="button" class="home-announcement-btn-ok" data-close-announcement="1">我知道了</button></div>
+        <div class="home-announcement-modal__footer">
+            <button type="button" class="home-announcement-btn-secondary" data-announcement-dismiss="1">不再提示</button>
+            <button type="button" class="home-announcement-btn-ok" data-close-announcement="1">我知道了</button>
+        </div>
     </div>
 </div>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">

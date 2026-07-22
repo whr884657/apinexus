@@ -33,6 +33,7 @@ vs_admin_layout_start('系统升级', 'upgrade');
     <div class="vs-upgrade-actions">
         <button type="button" class="vs-btn vs-btn--primary" id="upgradeCheckBtn">检测更新</button>
         <button type="button" class="vs-btn vs-btn--default" id="upgradeApplyBtn">安装更新</button>
+        <button type="button" class="vs-btn vs-btn--outline" id="upgradeMigrateBtn">执行数据库结构更新</button>
     </div>
 
     <?php

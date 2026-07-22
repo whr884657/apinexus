@@ -85,11 +85,14 @@
             slots.push(renderBlock(type, parseAttrs(attrRaw), String(body || '').trim()));
             return '\n\n' + key + '\n\n';
         });
-        text = text.replace(/@\[video\]\((https?:\/\/[^\s)]+)\)/gi, function (_, url) {
-            return '\n\n<div class="vs-md-video"><video controls preload="metadata" src="'
-                + esc(url) + '"></video></div>\n\n';
+        text = text.replace(/@\[video\]\((https?:\/\/[^\s\)]+)\)/gi, function (_, url) {
+            var key = '<!--MDSLOT' + slots.length + '-->';
+            slots.push('<div class="vs-md-video"><video controls preload="metadata" src="'
+                + esc(url) + '"></video></div>');
+            return '\n\n' + key + '\n\n';
         });
         var html = mdInline(text);
+        // DOMPurify 可能剥掉 video：插槽在消毒后再注入受控 HTML
         slots.forEach(function (frag, i) {
             html = html.split('<!--MDSLOT' + i + '-->').join(frag);
         });

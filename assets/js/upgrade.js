@@ -9,6 +9,7 @@
     var statusEl = document.getElementById('upgradeStatus');
     var checkBtn = document.getElementById('upgradeCheckBtn');
     var updateBtn = document.getElementById('upgradeApplyBtn');
+    var migrateBtn = document.getElementById('upgradeMigrateBtn');
     var versionEl = document.getElementById('upgradeVersionDisplay');
     var lastCheck = null;
 
@@ -105,6 +106,35 @@
                 cancelText: '取消',
                 confirmText: '继续更新',
             });
+        });
+    }
+
+    if (migrateBtn) {
+        migrateBtn.addEventListener('click', function () {
+            migrateBtn.disabled = true;
+            setStatus('正在执行数据库结构更新…', 'info');
+            var body = new FormData();
+            body.append('action', 'migrate_schema');
+            body.append('csrf_token', window.VS_CSRF_TOKEN || '');
+            fetch((window.VS_BASE_URL || '') + '/admin/update.php', {
+                method: 'POST',
+                body: body,
+                credentials: 'same-origin',
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (res) {
+                    if (res && res.code === 1) {
+                        setStatus(res.msg || '结构更新完成', 'success');
+                    } else {
+                        setStatus((res && res.msg) || '结构更新失败', 'error');
+                    }
+                })
+                .catch(function () {
+                    setStatus('网络异常，请稍后重试', 'error');
+                })
+                .finally(function () {
+                    migrateBtn.disabled = false;
+                });
         });
     }
 

@@ -36,7 +36,7 @@ class Markdown
 
         $slots = array();
         $text = self::extractBlocks($text, $slots);
-        $text = self::replaceInlineMedia($text);
+        $text = self::extractInlineMedia($text, $slots);
 
         $html = self::parseMarkdown($text);
         foreach ($slots as $key => $fragment) {
@@ -106,21 +106,36 @@ class Markdown
     }
 
     /**
+     * 视频/媒体短码 → 插槽（须在 Parsedown SafeMode 之前抽出，否则 HTML 会被转义成乱码）
+     *
+     * @param string               $text
+     * @param array<string,string> $slots
+     * @return string
+     */
+    private static function extractInlineMedia($text, array &$slots)
+    {
+        $n = count($slots);
+        // 自定义视频：@[video](url) — URL 允许 query/hash
+        return preg_replace_callback(
+            '/@\[video\]\((https?:\/\/[^\s\)]+)\)/i',
+            function ($m) use (&$slots, &$n) {
+                $url = vs_e($m[1]);
+                $key = "\x00MDSLOT" . ($n++) . "\x00";
+                $slots[$key] = '<div class="vs-md-video"><video controls preload="metadata" src="'
+                    . $url . '"></video></div>';
+                return "\n\n" . $key . "\n\n";
+            },
+            $text
+        );
+    }
+
+    /**
+     * @deprecated 保留空实现名避免外部误调；请用 extractInlineMedia
      * @param string $text
      * @return string
      */
     private static function replaceInlineMedia($text)
     {
-        // 自定义视频：@[video](url)
-        $text = preg_replace_callback(
-            '/@\[video\]\((https?:\/\/[^\s)]+)\)/i',
-            function ($m) {
-                $url = vs_e($m[1]);
-                return "\n\n<div class=\"vs-md-video\"><video controls preload=\"metadata\" src=\""
-                    . $url . "\"></video></div>\n\n";
-            },
-            $text
-        );
         return $text;
     }
 

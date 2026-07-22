@@ -484,6 +484,11 @@ class DatabaseMigrator
             return;
         }
 
+        if ($version === '7.1.0') {
+            self::applyContentCoverLayoutColumn($pdo, $prefix);
+            return;
+        }
+
         $sql = file_get_contents($file);
         $sql = str_replace('{prefix}', $prefix, $sql);
         self::assertPrefixedTables($sql, $prefix, basename($file));
@@ -634,6 +639,89 @@ class DatabaseMigrator
             'UPDATE `' . $apiTable . '` SET `userid` = ? WHERE `userid` = 0'
         );
         $upd->execute(array($uid));
+    }
+
+    /**
+     * v7.1.0：content.coverlayout（幂等）
+     *
+     * @param PDO    $pdo
+     * @param string $prefix
+     * @return void
+     */
+    public static function applyContentCoverLayoutColumn(PDO $pdo, $prefix)
+    {
+        if (self::tableColumnExists('content', 'coverlayout')) {
+            return;
+        }
+        if (!self::tableExists('content')) {
+            throw new Exception('content 表不存在，请先完成 7.0.0 结构更新');
+        }
+        $table = $prefix . 'content';
+        $pdo->exec(
+            'ALTER TABLE `' . $table . '` ADD COLUMN `coverlayout` tinyint(1) NOT NULL DEFAULT 0 '
+            . 'COMMENT \'封面布局：0左侧 1右侧 2背景（仅文章）\' AFTER `cover`'
+        );
+    }
+
+    /**
+     * 指定版本要求的库结构是否已就绪
+     *
+     * @param string $version
+     * @return bool
+     */
+    public static function versionSchemaReady($version)
+    {
+        $version = trim((string) $version);
+        if ($version === '7.1.0') {
+            return self::tableExists('content') && self::tableColumnExists('content', 'coverlayout');
+        }
+        if ($version === '7.0.0') {
+            return self::tableExists('content');
+        }
+        $file = self::migrationsDir() . '/' . $version . '.sql';
+        if (!is_file($file)) {
+            return true;
+        }
+        return in_array($version, self::getAppliedVersions(), true);
+    }
+
+    /**
+     * 确保目标版本结构已落地（幂等；在线更新 migrate 步强制对齐）
+     *
+     * @param string $version
+     * @return array{applied:bool,msg:string}
+     */
+    public static function ensureVersionSchema($version)
+    {
+        $version = trim((string) $version);
+        if ($version === '') {
+            return array('applied' => false, 'msg' => '');
+        }
+
+        if (self::versionSchemaReady($version)) {
+            self::markApplied($version);
+            return array('applied' => false, 'msg' => '结构已就绪');
+        }
+
+        $file = self::migrationsDir() . '/' . $version . '.sql';
+        if (!is_file($file)) {
+            throw new Exception(
+                '版本 v' . $version . ' 标记含数据库变更，但缺少 install/migrations/'
+                . $version . '.sql，请重新下载更新包'
+            );
+        }
+
+        $pdo = Database::connect();
+        $prefix = Database::prefix();
+        self::executeFile($pdo, $file, $prefix);
+        self::markApplied($version);
+        Config::clearCache();
+
+        if (!self::versionSchemaReady($version)) {
+            throw new Exception('版本 v' . $version . ' 结构更新后校验失败，请手动执行数据库结构更新');
+        }
+
+        return array('applied' => true, 'msg' => '已执行 ' . $version);
     }
 
     /**
