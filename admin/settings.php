@@ -15,25 +15,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save_apilog') {
         try {
             $queryDays = isset($_POST['apilog_query_days']) ? (int) $_POST['apilog_query_days'] : ApiLogManager::DEFAULT_QUERY_DAYS;
-            $keepDays = isset($_POST['apilog_keep_days']) ? (int) $_POST['apilog_keep_days'] : ApiLogManager::DEFAULT_KEEP_DAYS;
+            $hotDays = isset($_POST['apilog_hot_days']) ? (int) $_POST['apilog_hot_days'] : ApiLogArchive::DEFAULT_HOT_DAYS;
             $queryDays = ApiLogManager::clampQueryDays($queryDays);
-            if ($keepDays < 0) {
-                $keepDays = 0;
+            if ($hotDays < 1) {
+                $hotDays = ApiLogArchive::DEFAULT_HOT_DAYS;
             }
-            if ($keepDays > ApiLogManager::MAX_KEEP_DAYS) {
-                $keepDays = ApiLogManager::MAX_KEEP_DAYS;
+            if ($hotDays > ApiLogArchive::MAX_HOT_DAYS) {
+                $hotDays = ApiLogArchive::MAX_HOT_DAYS;
             }
             Config::setMany(array(
                 'apilog_detail'     => isset($_POST['apilog_detail']) ? '1' : '0',
                 'apilog_query_days' => (string) $queryDays,
-                'apilog_keep_days'  => (string) $keepDays,
+                'apilog_hot_days'   => (string) $hotDays,
             ));
-            if ($keepDays > 0) {
-                ApiLogManager::purgeExpired(2000);
-            }
             AjaxResponse::success('日志设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败：' . $e->getMessage());
+        }
+    }
+
+    if ($action === 'generate_apilog_cron_key') {
+        try {
+            $key = ApiLogArchive::generateCronKey();
+            Config::set('apilog_cron_key', $key);
+            AjaxResponse::success('计划任务密钥已生成', array(
+                'cron_key' => $key,
+                'cron_url' => ApiLogArchive::cronUrl(),
+            ));
+        } catch (Exception $e) {
+            AjaxResponse::error('生成失败：' . $e->getMessage());
         }
     }
 
@@ -433,9 +443,17 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-apilog',
     'API 日志',
-    '低配服务器可关闭详细日志，并限制查询与保留天数'
+    '热数据留近期库内、冷数据归档到本机；计划任务须密钥'
 );
 ?>
+    <?php
+    $cfgHotDays = isset($vsCfg['apilog_hot_days']) ? (int) $vsCfg['apilog_hot_days'] : ApiLogArchive::DEFAULT_HOT_DAYS;
+    if ($cfgHotDays < 1) {
+        $cfgHotDays = ApiLogArchive::DEFAULT_HOT_DAYS;
+    }
+    $cronKey = isset($vsCfg['apilog_cron_key']) ? (string) $vsCfg['apilog_cron_key'] : '';
+    $cronUrl = ApiLogArchive::cronUrl();
+    ?>
     <form method="post" action="" class="vs-form" id="apilogForm" data-ajax="1">
         <input type="hidden" name="action" value="save_apilog">
         <div class="vs-form-row">
@@ -450,24 +468,39 @@ vs_admin_accordion_start(
                 <?php
                 $cfgQueryDays = isset($vsCfg['apilog_query_days']) ? (int) $vsCfg['apilog_query_days'] : ApiLogManager::DEFAULT_QUERY_DAYS;
                 $cfgQueryDays = ApiLogManager::clampQueryDays($cfgQueryDays);
-                foreach (array(1, 3, 7, 14, 30, 90) as $d):
+                foreach (array(1, 3, 7, 14, 30, 90, 180, 365) as $d):
                 ?>
                     <option value="<?php echo (int) $d; ?>"<?php echo $cfgQueryDays === $d ? ' selected' : ''; ?>><?php echo (int) $d; ?> 天</option>
                 <?php endforeach; ?>
             </select>
-            <?php vs_render_notice('tip', '', '日志查询页默认只看近期数据，避免大表计数拖垮服务器。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '默认只查近期，减轻压力；更久远的记录可从归档中一并读出。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row">
-            <label class="vs-label" for="apilog_keep_days">详细日志保留天数</label>
-            <input type="number" class="vs-input" id="apilog_keep_days" name="apilog_keep_days" min="0" max="<?php echo (int) ApiLogManager::MAX_KEEP_DAYS; ?>"
-                   value="<?php echo isset($vsCfg['apilog_keep_days']) ? (int) $vsCfg['apilog_keep_days'] : (int) ApiLogManager::DEFAULT_KEEP_DAYS; ?>">
-            <?php vs_render_notice('tip', '', '超出天数的旧记录会自动分批清理；填 0 表示不自动清理。保存时会立即清理一批。', array('field' => true, 'compact' => true)); ?>
+            <label class="vs-label" for="apilog_hot_days">热数据天数</label>
+            <input type="number" class="vs-input" id="apilog_hot_days" name="apilog_hot_days" min="1" max="<?php echo (int) ApiLogArchive::MAX_HOT_DAYS; ?>"
+                   value="<?php echo (int) $cfgHotDays; ?>">
+            <?php vs_render_notice('tip', '', '超过该天数的日志由计划任务归档到本机，日志全部保留，不会丢弃。', array('field' => true, 'compact' => true)); ?>
         </div>
         <?php vs_render_notice('tip', '', '关闭详细日志后仍会计入各接口与密钥调用次数，适合带宽或性能有限的小站点。', array('compact' => true)); ?>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存日志设置</button>
         </div>
     </form>
+    <div class="vs-form" style="margin-top:16px" id="apilogCronBox">
+        <div class="vs-form-row">
+            <label class="vs-label">冷热归档计划任务</label>
+            <input type="text" class="vs-input" id="apilogCronUrl" readonly value="<?php echo vs_e($cronUrl); ?>" placeholder="请先生成密钥">
+            <?php vs_render_notice('tip', '', '请在服务器计划任务中配置每日凌晨调用（须带密钥）。示例：0 2 * * * curl -fsS 「上方链接」', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">任务密钥</label>
+            <input type="text" class="vs-input" id="apilogCronKey" readonly value="<?php echo vs_e($cronKey); ?>" placeholder="尚未生成">
+        </div>
+        <div class="vs-form-actions">
+            <button type="button" class="vs-btn vs-btn--outline" id="apilogGenCronKeyBtn">生成 / 重置密钥</button>
+            <button type="button" class="vs-btn vs-btn--default" id="apilogCopyCronUrlBtn">复制任务链接</button>
+        </div>
+    </div>
 <?php vs_admin_accordion_end(); ?>
 
 <?php

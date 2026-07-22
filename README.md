@@ -175,7 +175,9 @@ ApiNexus/
 │   ├── UserRole.php            # 用户角色与权限判断
 │   ├── RedisService.php        # Redis 连接与监控采集
 │   ├── RedisCache.php          # 业务数据缓存（接口/分类/日志分页/限流）
-│   ├── ApiLogManager.php       # API 调用日志查询与格式化
+│   ├── ApiLogManager.php       # API 调用日志查询（热冷合并）
+│   ├── ApiLogArchive.php       # 调用日志冷热归档（本机多级索引分片）
+│   ├── cron/apilogarchive.php  # 冷热归档计划任务入口（须密钥）
 │   ├── theme/default/          # 默认主题（FeerApi 风白色 UI）
 │   ├── theme/slate/            # 主题二（API 平台风）
 │   │   └── preview.png         # 主题预览图
@@ -263,7 +265,8 @@ location / {
 ### v5.8.0（2026-07-22）
 
 - 后台日志查询防打爆：时间窗 + COUNT 去 JOIN + keyset 翻页 + Abort 互斥
-- 复合索引与保留天数清理；升级请执行数据库结构更新
+- 冷热归档：热数据留库、冷数据本机多级索引分片，历史全部可查；计划任务须密钥
+- 复合索引与配置项；升级请执行数据库结构更新并配置凌晨归档任务
 
 完整历史见 **[更新记录.md](更新记录.md)**。
 

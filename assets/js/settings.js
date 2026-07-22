@@ -1,7 +1,7 @@
 /**
  * 文件：assets/js/settings.js
  * 作用：系统设置页 AJAX 保存与折叠板块
- * @version 1.3.0
+ * @version 1.4.0
  */
 
 (function () {
@@ -63,11 +63,71 @@
         });
     }
 
+    function bindApilogCron() {
+        var genBtn = document.getElementById('apilogGenCronKeyBtn');
+        var copyBtn = document.getElementById('apilogCopyCronUrlBtn');
+        var keyInput = document.getElementById('apilogCronKey');
+        var urlInput = document.getElementById('apilogCronUrl');
+
+        if (genBtn) {
+            genBtn.addEventListener('click', function () {
+                if (!window.confirm('生成新密钥后，旧的计划任务链接将立即失效，是否继续？')) {
+                    return;
+                }
+                genBtn.disabled = true;
+                var fd = new FormData();
+                fd.append('action', 'generate_apilog_cron_key');
+                window.VS.postForm(fd, window.location.href)
+                    .then(function (data) {
+                        if (data.code === 1) {
+                            if (keyInput) keyInput.value = data.cron_key || '';
+                            if (urlInput) urlInput.value = data.cron_url || '';
+                            showFlash(data.msg || '密钥已生成', 'success');
+                        } else {
+                            showFlash((data && data.msg) || '生成失败', 'error');
+                        }
+                    })
+                    .catch(function () {
+                        showFlash('网络异常，请稍后重试', 'error');
+                    })
+                    .finally(function () {
+                        genBtn.disabled = false;
+                    });
+            });
+        }
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function () {
+                var url = urlInput ? String(urlInput.value || '').trim() : '';
+                if (!url || url.indexOf('key=') < 0) {
+                    showFlash('请先生成密钥', 'error');
+                    return;
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(function () {
+                        showFlash('任务链接已复制', 'success');
+                    }).catch(function () {
+                        showFlash('复制失败，请手动选中复制', 'error');
+                    });
+                } else if (urlInput) {
+                    urlInput.select();
+                    try {
+                        document.execCommand('copy');
+                        showFlash('任务链接已复制', 'success');
+                    } catch (e) {
+                        showFlash('复制失败，请手动选中复制', 'error');
+                    }
+                }
+            });
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
-        ['siteForm', 'registerForm', 'oauthForm', 'siteExtraForm', 'mailForm', 'testMailForm'].forEach(function (id) {
+        ['siteForm', 'registerForm', 'oauthForm', 'siteExtraForm', 'mailForm', 'testMailForm', 'apilogForm'].forEach(function (id) {
             bindAjaxForm(document.getElementById(id));
         });
+        bindApilogCron();
     });
 })();

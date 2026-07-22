@@ -1,21 +1,15 @@
 <?php
 /**
  * 文件：core/ApiLogManager.php
- * 作用：API 调用日志查询（默认时间窗 / 去 JOIN 计数 / keyset 分页 / 短 TTL 缓存 / 过期清理）
+ * 作用：API 调用日志查询（时间窗 / 热冷合并 / keyset / 短 TTL；冷数据见 ApiLogArchive）
  */
 
 class ApiLogManager
 {
     /** 默认查询最近天数 */
     const DEFAULT_QUERY_DAYS = 7;
-    /** 查询天数上限（禁止默认真·全历史） */
-    const MAX_QUERY_DAYS = 90;
-    /** 默认保留天数（超出则分片删除） */
-    const DEFAULT_KEEP_DAYS = 30;
-    /** 保留天数上限 */
-    const MAX_KEEP_DAYS = 365;
-    /** 单次清理行数上限 */
-    const PURGE_BATCH = 1000;
+    /** 查询天数上限（可覆盖冷归档） */
+    const MAX_QUERY_DAYS = 365;
     /** SELECT 会话超时（毫秒，MySQL 8+；不支持则忽略） */
     const QUERY_TIMEOUT_MS = 5000;
 
@@ -65,24 +59,13 @@ class ApiLogManager
     }
 
     /**
-     * 日志保留天数（0=不自动清理）
+     * 热数据天数（超出由归档任务迁到本地冷库）
      *
      * @return int
      */
     public static function keepDays()
     {
-        try {
-            $n = (int) Config::get('apilog_keep_days', (string) self::DEFAULT_KEEP_DAYS);
-        } catch (Exception $e) {
-            $n = self::DEFAULT_KEEP_DAYS;
-        }
-        if ($n < 0) {
-            $n = 0;
-        }
-        if ($n > self::MAX_KEEP_DAYS) {
-            $n = self::MAX_KEEP_DAYS;
-        }
-        return $n;
+        return ApiLogArchive::hotDays();
     }
 
     /**
@@ -209,23 +192,34 @@ class ApiLogManager
     public static function findById($id)
     {
         $id = (int) $id;
-        if ($id <= 0 || !self::tableReady()) {
+        if ($id <= 0) {
             return null;
         }
-        try {
-            $pdo = Database::connect();
-            self::applyQueryTimeout($pdo);
-            $sql = 'SELECT l.*, u.`username`
-                FROM `' . self::table() . '` l
-                LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`
-                WHERE l.`id` = ? LIMIT 1';
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute(array($id));
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $row ? self::formatRow($row) : null;
-        } catch (Exception $e) {
-            return null;
+        if (self::tableReady()) {
+            try {
+                $pdo = Database::connect();
+                self::applyQueryTimeout($pdo);
+                $sql = 'SELECT l.*, u.`username`
+                    FROM `' . self::table() . '` l
+                    LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`
+                    WHERE l.`id` = ? LIMIT 1';
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(array($id));
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($row) {
+                    return self::formatRow($row);
+                }
+            } catch (Exception $e) {
+                // fall through to cold
+            }
         }
+        if (class_exists('ApiLogArchive')) {
+            $cold = ApiLogArchive::findById($id);
+            if ($cold) {
+                return self::formatRow($cold);
+            }
+        }
+        return null;
     }
 
     /**
@@ -291,8 +285,6 @@ class ApiLogManager
             return $empty;
         }
 
-        self::maybePurge();
-
         $cacheKey = RedisCache::apilogPageKey(array(
             'page'      => $page,
             'pagesize'  => $pagesize,
@@ -329,28 +321,60 @@ class ApiLogManager
                         . ' ORDER BY l.`id` DESC LIMIT ' . ((int) $pagesize + 1);
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute($filters['bind']);
-                    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $hotRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                    $hasMore = count($rows) > $pagesize;
-                    if ($hasMore) {
-                        $rows = array_slice($rows, 0, $pagesize);
-                    }
-
-                    $list = array();
-                    foreach ($rows as $row) {
+                    $merged = array();
+                    foreach ($hotRows as $row) {
                         $item = self::formatRow($row);
                         if ($item !== null) {
-                            $list[] = $item;
+                            $merged[] = $item;
                         }
                     }
 
+                    $needMore = ($pagesize + 1) - count($merged);
+                    if ($needMore > 0 && class_exists('ApiLogArchive')) {
+                        $cold = ApiLogArchive::listInQueryWindow(array(
+                            'days'      => $days,
+                            'before_id' => $beforeId,
+                            'pagesize'  => $needMore,
+                            'q'         => $q,
+                            'ok'        => $ok,
+                            'apiid'     => $apiid,
+                        ));
+                        foreach ($cold['list'] as $crow) {
+                            $item = self::formatRow($crow);
+                            if ($item === null) {
+                                continue;
+                            }
+                            $dup = false;
+                            foreach ($merged as $m) {
+                                if ((int) $m['id'] === (int) $item['id']) {
+                                    $dup = true;
+                                    break;
+                                }
+                            }
+                            if (!$dup) {
+                                $merged[] = $item;
+                            }
+                        }
+                    }
+
+                    usort($merged, function ($a, $b) {
+                        return ((int) $b['id']) - ((int) $a['id']);
+                    });
+
+                    $hasMore = count($merged) > $pagesize;
+                    if ($hasMore) {
+                        $merged = array_slice($merged, 0, $pagesize);
+                    }
+
                     $nextBefore = 0;
-                    if (!empty($list)) {
-                        $nextBefore = (int) $list[count($list) - 1]['id'];
+                    if (!empty($merged)) {
+                        $nextBefore = (int) $merged[count($merged) - 1]['id'];
                     }
 
                     return array(
-                        'list'           => $list,
+                        'list'           => $merged,
                         'total'          => $total,
                         'page'           => $page,
                         'pagesize'       => $pagesize,
@@ -365,58 +389,6 @@ class ApiLogManager
                 }
             }
         );
-    }
-
-    /**
-     * 分片删除超出保留期的日志
-     *
-     * @param int|null $limit
-     * @return int 删除行数
-     */
-    public static function purgeExpired($limit = null)
-    {
-        $keep = self::keepDays();
-        if ($keep <= 0 || !self::tableReady()) {
-            return 0;
-        }
-        $limit = $limit === null ? self::PURGE_BATCH : max(1, min(5000, (int) $limit));
-        try {
-            $pdo = Database::connect();
-            $stmt = $pdo->prepare(
-                'DELETE FROM `' . self::table() . '`
-                 WHERE `createtime` < DATE_SUB(NOW(), INTERVAL ? DAY)
-                 ORDER BY `createtime` ASC
-                 LIMIT ' . (int) $limit
-            );
-            $stmt->execute(array($keep));
-            $n = (int) $stmt->rowCount();
-            if ($n > 0 && class_exists('RedisCache')) {
-                RedisCache::invalidateApiLog();
-            }
-            return $n;
-        } catch (Exception $e) {
-            return 0;
-        }
-    }
-
-    /**
-     * 低概率触发清理，避免列表接口每次扫删
-     *
-     * @return void
-     */
-    public static function maybePurge()
-    {
-        if (self::keepDays() <= 0) {
-            return;
-        }
-        try {
-            if (random_int(1, 20) !== 1) {
-                return;
-            }
-        } catch (Exception $e) {
-            return;
-        }
-        self::purgeExpired();
     }
 
     /**
@@ -502,13 +474,15 @@ class ApiLogManager
                          WHERE `createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)'
                     );
                     $stmt->execute(array((int) $days));
-                    return max(0, (int) $stmt->fetchColumn());
+                    $hot = max(0, (int) $stmt->fetchColumn());
+                    $cold = class_exists('ApiLogArchive') ? ApiLogArchive::countInQueryWindow($days) : 0;
+                    return $hot + $cold;
                 }
             );
             return array('total' => (int) $cached, 'approx' => true);
         }
 
-        // 有筛选：仅扫 apilog（搜索词不含 user 表；用户名条件用 EXISTS，避免 COUNT JOIN）
+        // 有筛选：热库精确 COUNT；冷库在列表侧合并（总数为热库结果，允许近似）
         $where = array('`createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)');
         $bind = array((int) $days);
         if ($q !== '') {
@@ -530,6 +504,8 @@ class ApiLogManager
 
         $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . self::table() . '` WHERE ' . implode(' AND ', $where));
         $stmt->execute($bind);
-        return array('total' => max(0, (int) $stmt->fetchColumn()), 'approx' => false);
+        $hot = max(0, (int) $stmt->fetchColumn());
+        $cold = class_exists('ApiLogArchive') ? ApiLogArchive::countInQueryWindow($days) : 0;
+        return array('total' => $hot + $cold, 'approx' => $cold > 0);
     }
 }
