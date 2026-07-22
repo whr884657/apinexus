@@ -449,7 +449,10 @@ class Updater
         try {
             DatabaseMigrator::pruneAppliedAboveCodeVersion(self::localVersion());
 
-            $forced = DatabaseMigrator::forceMigrateRange($fromVersion, $targetVersion);
+            // 只允许跑到「本次目标版本」：禁止因磁盘残留未来 .sql 而一次跑光 7.x
+            $cap = $targetVersion !== '' ? $targetVersion : self::localVersion();
+
+            $forced = DatabaseMigrator::forceMigrateRange($fromVersion, $cap);
             if (is_array($forced)) {
                 foreach ($forced as $v) {
                     if (!in_array($v, $applied, true)) {
@@ -458,8 +461,8 @@ class Updater
                 }
             }
 
-            if (DatabaseMigrator::hasPendingMigrations()) {
-                $migration = DatabaseMigrator::runPending();
+            if (DatabaseMigrator::hasPendingMigrations($cap)) {
+                $migration = DatabaseMigrator::runPending($cap);
                 if (empty($migration['ok'])) {
                     return array(
                         'ok'      => false,
@@ -531,14 +534,14 @@ class Updater
             DatabaseMigrator::pruneAppliedAboveCodeVersion(self::localVersion());
 
             $local = self::localVersion();
-            // 从 0 扫到当前代码版本：结构未就绪的一律重跑
+            // 从 0 扫到当前代码版本（含）：结构未就绪的一律重跑；绝不越过 VS_VERSION
             $forced = DatabaseMigrator::forceMigrateRange('0.0.0', $local);
             if (is_array($forced)) {
                 $applied = $forced;
             }
 
-            if (DatabaseMigrator::hasPendingMigrations()) {
-                $migration = DatabaseMigrator::runPending();
+            if (DatabaseMigrator::hasPendingMigrations($local)) {
+                $migration = DatabaseMigrator::runPending($local);
                 if (empty($migration['ok'])) {
                     return array(
                         'ok'      => false,
