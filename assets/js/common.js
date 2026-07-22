@@ -28,17 +28,24 @@
      *
      * @param {HTMLFormElement|FormData} formOrData
      * @param {string} [url]
+     * @param {{signal?: AbortSignal}} [opts]
      * @returns {Promise<object>}
      */
-    global.VS.postForm = function (formOrData, url) {
+    global.VS.postForm = function (formOrData, url, opts) {
         var body = formOrData instanceof FormData ? formOrData : new FormData(formOrData);
         global.VS.ensureCsrf(body);
+        opts = opts || {};
 
-        return fetch(url || window.location.href, {
+        var fetchOpts = {
             method: 'POST',
             body: body,
             credentials: 'same-origin'
-        }).then(function (res) {
+        };
+        if (opts.signal) {
+            fetchOpts.signal = opts.signal;
+        }
+
+        return fetch(url || window.location.href, fetchOpts).then(function (res) {
             return res.text().then(function (text) {
                 var data = global.VS.parseJsonResponse(text);
                 if (!data) {

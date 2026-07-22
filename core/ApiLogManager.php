@@ -1,11 +1,24 @@
 <?php
 /**
  * 文件：core/ApiLogManager.php
- * 作用：API 调用日志查询（分页 / 搜索 / 详情；查询结果走 Redis 短 TTL 缓存，供后台与前台统计复用）
+ * 作用：API 调用日志查询（默认时间窗 / 去 JOIN 计数 / keyset 分页 / 短 TTL 缓存 / 过期清理）
  */
 
 class ApiLogManager
 {
+    /** 默认查询最近天数 */
+    const DEFAULT_QUERY_DAYS = 7;
+    /** 查询天数上限（禁止默认真·全历史） */
+    const MAX_QUERY_DAYS = 90;
+    /** 默认保留天数（超出则分片删除） */
+    const DEFAULT_KEEP_DAYS = 30;
+    /** 保留天数上限 */
+    const MAX_KEEP_DAYS = 365;
+    /** 单次清理行数上限 */
+    const PURGE_BATCH = 1000;
+    /** SELECT 会话超时（毫秒，MySQL 8+；不支持则忽略） */
+    const QUERY_TIMEOUT_MS = 5000;
+
     /**
      * @return string
      */
@@ -34,6 +47,58 @@ class ApiLogManager
         } catch (Exception $e) {
             return true;
         }
+    }
+
+    /**
+     * 后台列表默认查询天数
+     *
+     * @return int
+     */
+    public static function queryDaysDefault()
+    {
+        try {
+            $n = (int) Config::get('apilog_query_days', (string) self::DEFAULT_QUERY_DAYS);
+        } catch (Exception $e) {
+            $n = self::DEFAULT_QUERY_DAYS;
+        }
+        return self::clampQueryDays($n);
+    }
+
+    /**
+     * 日志保留天数（0=不自动清理）
+     *
+     * @return int
+     */
+    public static function keepDays()
+    {
+        try {
+            $n = (int) Config::get('apilog_keep_days', (string) self::DEFAULT_KEEP_DAYS);
+        } catch (Exception $e) {
+            $n = self::DEFAULT_KEEP_DAYS;
+        }
+        if ($n < 0) {
+            $n = 0;
+        }
+        if ($n > self::MAX_KEEP_DAYS) {
+            $n = self::MAX_KEEP_DAYS;
+        }
+        return $n;
+    }
+
+    /**
+     * @param int $days
+     * @return int
+     */
+    public static function clampQueryDays($days)
+    {
+        $days = (int) $days;
+        if ($days < 1) {
+            $days = self::DEFAULT_QUERY_DAYS;
+        }
+        if ($days > self::MAX_QUERY_DAYS) {
+            $days = self::MAX_QUERY_DAYS;
+        }
+        return $days;
     }
 
     /**
@@ -149,6 +214,7 @@ class ApiLogManager
         }
         try {
             $pdo = Database::connect();
+            self::applyQueryTimeout($pdo);
             $sql = 'SELECT l.*, u.`username`
                 FROM `' . self::table() . '` l
                 LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`
@@ -178,6 +244,7 @@ class ApiLogManager
             function () {
                 try {
                     $pdo = Database::connect();
+                    self::applyQueryTimeout($pdo);
                     $stmt = $pdo->query(
                         'SELECT COUNT(*) FROM `' . self::table() . '`
                          WHERE `createtime` >= CURDATE() AND `createtime` < DATE_ADD(CURDATE(), INTERVAL 1 DAY)'
@@ -191,10 +258,10 @@ class ApiLogManager
     }
 
     /**
-     * 分页列表（短 TTL Redis 缓存；后台列表、后续图表等凡读 apilog 聚合/列表均可走本层）
+     * 分页列表（强制时间窗 + COUNT 无 JOIN + keyset + 短 TTL）
      *
-     * @param array $opts page, pagesize, q, ok(null|0|1), apiid
-     * @return array{list:array,total:int,page:int,pagesize:int}
+     * @param array $opts page, pagesize, q, ok(null|0|1), apiid, days, before_id
+     * @return array{list:array,total:int,page:int,pagesize:int,days:int,before_id:int,next_before_id:int,has_more:bool,total_approx:bool}
      */
     public static function listPaged(array $opts = array())
     {
@@ -203,75 +270,266 @@ class ApiLogManager
         $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
         $ok = array_key_exists('ok', $opts) ? $opts['ok'] : null;
         $apiid = isset($opts['apiid']) ? (int) $opts['apiid'] : 0;
+        $days = isset($opts['days']) ? self::clampQueryDays((int) $opts['days']) : self::queryDaysDefault();
+        $beforeId = isset($opts['before_id']) ? (int) $opts['before_id'] : 0;
+        if ($beforeId < 0) {
+            $beforeId = 0;
+        }
 
-        $empty = array('list' => array(), 'total' => 0, 'page' => $page, 'pagesize' => $pagesize);
+        $empty = array(
+            'list'           => array(),
+            'total'          => 0,
+            'page'           => $page,
+            'pagesize'       => $pagesize,
+            'days'           => $days,
+            'before_id'      => $beforeId,
+            'next_before_id' => 0,
+            'has_more'       => false,
+            'total_approx'   => false,
+        );
         if (!self::tableReady()) {
             return $empty;
         }
 
+        self::maybePurge();
+
         $cacheKey = RedisCache::apilogPageKey(array(
-            'page'     => $page,
-            'pagesize' => $pagesize,
-            'q'        => $q,
-            'ok'       => $ok,
-            'apiid'    => $apiid,
+            'page'      => $page,
+            'pagesize'  => $pagesize,
+            'q'         => $q,
+            'ok'        => $ok,
+            'apiid'     => $apiid,
+            'days'      => $days,
+            'before_id' => $beforeId,
         ));
 
         return RedisCache::remember(
             $cacheKey,
             RedisCache::TTL_APILOG_PAGE,
-            function () use ($page, $pagesize, $q, $ok, $apiid, $empty) {
+            function () use ($page, $pagesize, $q, $ok, $apiid, $days, $beforeId, $empty) {
                 try {
                     $pdo = Database::connect();
-                    $where = array('1=1');
-                    $bind = array();
+                    self::applyQueryTimeout($pdo);
 
-                    if ($q !== '') {
-                        $like = '%' . $q . '%';
-                        $where[] = '(l.`apiname` LIKE ? OR l.`path` LIKE ? OR l.`ip` LIKE ? OR l.`url` LIKE ? OR l.`apikey` LIKE ? OR l.`domain` LIKE ? OR l.`iploc` LIKE ? OR u.`username` LIKE ?)';
-                        for ($i = 0; $i < 8; $i++) {
-                            $bind[] = $like;
-                        }
-                    }
-                    if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
-                        $where[] = 'l.`ok` = ?';
-                        $bind[] = (int) $ok;
-                    }
-                    if ($apiid > 0) {
-                        $where[] = 'l.`apiid` = ?';
-                        $bind[] = $apiid;
+                    $filters = self::buildFilters($q, $ok, $apiid, $days, $beforeId);
+                    $needUserJoin = ($q !== '');
+
+                    $totalMeta = self::resolveTotal($pdo, $filters, $q, $ok, $apiid, $days);
+                    $total = (int) $totalMeta['total'];
+                    $totalApprox = !empty($totalMeta['approx']);
+
+                    $from = '`' . self::table() . '` l';
+                    if ($needUserJoin) {
+                        $from .= ' LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`';
                     }
 
-                    $whereSql = implode(' AND ', $where);
-                    $from = '`' . self::table() . '` l LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`';
-
-                    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM ' . $from . ' WHERE ' . $whereSql);
-                    $countStmt->execute($bind);
-                    $total = (int) $countStmt->fetchColumn();
-
-                    $offset = ($page - 1) * $pagesize;
-                    $sql = 'SELECT l.*, u.`username` FROM ' . $from . ' WHERE ' . $whereSql
-                        . ' ORDER BY l.`id` DESC LIMIT ' . (int) $pagesize . ' OFFSET ' . (int) $offset;
+                    $select = $needUserJoin ? 'SELECT l.*, u.`username`' : 'SELECT l.*, \'\' AS `username`';
+                    $sql = $select . ' FROM ' . $from
+                        . ' WHERE ' . $filters['whereSql']
+                        . ' ORDER BY l.`id` DESC LIMIT ' . ((int) $pagesize + 1);
                     $stmt = $pdo->prepare($sql);
-                    $stmt->execute($bind);
+                    $stmt->execute($filters['bind']);
+                    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    $hasMore = count($rows) > $pagesize;
+                    if ($hasMore) {
+                        $rows = array_slice($rows, 0, $pagesize);
+                    }
+
                     $list = array();
-                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    foreach ($rows as $row) {
                         $item = self::formatRow($row);
                         if ($item !== null) {
                             $list[] = $item;
                         }
                     }
 
+                    $nextBefore = 0;
+                    if (!empty($list)) {
+                        $nextBefore = (int) $list[count($list) - 1]['id'];
+                    }
+
                     return array(
-                        'list'     => $list,
-                        'total'    => $total,
-                        'page'     => $page,
-                        'pagesize' => $pagesize,
+                        'list'           => $list,
+                        'total'          => $total,
+                        'page'           => $page,
+                        'pagesize'       => $pagesize,
+                        'days'           => $days,
+                        'before_id'      => $beforeId,
+                        'next_before_id' => $nextBefore,
+                        'has_more'       => $hasMore,
+                        'total_approx'   => $totalApprox,
                     );
                 } catch (Exception $e) {
                     return $empty;
                 }
             }
         );
+    }
+
+    /**
+     * 分片删除超出保留期的日志
+     *
+     * @param int|null $limit
+     * @return int 删除行数
+     */
+    public static function purgeExpired($limit = null)
+    {
+        $keep = self::keepDays();
+        if ($keep <= 0 || !self::tableReady()) {
+            return 0;
+        }
+        $limit = $limit === null ? self::PURGE_BATCH : max(1, min(5000, (int) $limit));
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'DELETE FROM `' . self::table() . '`
+                 WHERE `createtime` < DATE_SUB(NOW(), INTERVAL ? DAY)
+                 ORDER BY `createtime` ASC
+                 LIMIT ' . (int) $limit
+            );
+            $stmt->execute(array($keep));
+            $n = (int) $stmt->rowCount();
+            if ($n > 0 && class_exists('RedisCache')) {
+                RedisCache::invalidateApiLog();
+            }
+            return $n;
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 低概率触发清理，避免列表接口每次扫删
+     *
+     * @return void
+     */
+    public static function maybePurge()
+    {
+        if (self::keepDays() <= 0) {
+            return;
+        }
+        try {
+            if (random_int(1, 20) !== 1) {
+                return;
+            }
+        } catch (Exception $e) {
+            return;
+        }
+        self::purgeExpired();
+    }
+
+    /**
+     * @param PDO $pdo
+     * @return void
+     */
+    private static function applyQueryTimeout($pdo)
+    {
+        try {
+            $pdo->exec('SET SESSION MAX_EXECUTION_TIME=' . (int) self::QUERY_TIMEOUT_MS);
+        } catch (Exception $e) {
+            // MySQL 5.7 / MariaDB 等不支持则忽略
+        }
+    }
+
+    /**
+     * @param string     $q
+     * @param mixed      $ok
+     * @param int        $apiid
+     * @param int        $days
+     * @param int        $beforeId
+     * @return array{whereSql:string,bind:array,hasExtra:bool}
+     */
+    private static function buildFilters($q, $ok, $apiid, $days, $beforeId)
+    {
+        $where = array('l.`createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)');
+        $bind = array((int) $days);
+        $hasExtra = false;
+
+        if ($q !== '') {
+            $like = '%' . $q . '%';
+            $where[] = '(l.`apiname` LIKE ? OR l.`path` LIKE ? OR l.`ip` LIKE ? OR l.`url` LIKE ? OR l.`apikey` LIKE ? OR l.`domain` LIKE ? OR l.`iploc` LIKE ? OR u.`username` LIKE ?)';
+            for ($i = 0; $i < 8; $i++) {
+                $bind[] = $like;
+            }
+            $hasExtra = true;
+        }
+        if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
+            $where[] = 'l.`ok` = ?';
+            $bind[] = (int) $ok;
+            $hasExtra = true;
+        }
+        if ($apiid > 0) {
+            $where[] = 'l.`apiid` = ?';
+            $bind[] = $apiid;
+            $hasExtra = true;
+        }
+        if ($beforeId > 0) {
+            $where[] = 'l.`id` < ?';
+            $bind[] = $beforeId;
+        }
+
+        return array(
+            'whereSql' => implode(' AND ', $where),
+            'bind'     => $bind,
+            'hasExtra' => $hasExtra,
+        );
+    }
+
+    /**
+     * COUNT 永不 JOIN；无额外筛选时走独立较长 TTL 缓存
+     *
+     * @param PDO    $pdo
+     * @param array  $filters
+     * @param string $q
+     * @param mixed  $ok
+     * @param int    $apiid
+     * @param int    $days
+     * @return array{total:int,approx:bool}
+     */
+    private static function resolveTotal($pdo, array $filters, $q, $ok, $apiid, $days)
+    {
+        $hasExtra = !empty($filters['hasExtra']);
+
+        if (!$hasExtra) {
+            $cacheKey = RedisCache::apilogRangeTotalKey($days);
+            $cached = RedisCache::remember(
+                $cacheKey,
+                RedisCache::TTL_APILOG_RANGE_TOTAL,
+                function () use ($pdo, $days) {
+                    $stmt = $pdo->prepare(
+                        'SELECT COUNT(*) FROM `' . self::table() . '`
+                         WHERE `createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)'
+                    );
+                    $stmt->execute(array((int) $days));
+                    return max(0, (int) $stmt->fetchColumn());
+                }
+            );
+            return array('total' => (int) $cached, 'approx' => true);
+        }
+
+        // 有筛选：仅扫 apilog（搜索词不含 user 表；用户名条件用 EXISTS，避免 COUNT JOIN）
+        $where = array('`createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)');
+        $bind = array((int) $days);
+        if ($q !== '') {
+            $like = '%' . $q . '%';
+            $where[] = '(`apiname` LIKE ? OR `path` LIKE ? OR `ip` LIKE ? OR `url` LIKE ? OR `apikey` LIKE ? OR `domain` LIKE ? OR `iploc` LIKE ?
+                OR EXISTS (SELECT 1 FROM `' . Database::table('user') . '` u WHERE u.`id` = `' . self::table() . '`.`userid` AND u.`username` LIKE ?))';
+            for ($i = 0; $i < 8; $i++) {
+                $bind[] = $like;
+            }
+        }
+        if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
+            $where[] = '`ok` = ?';
+            $bind[] = (int) $ok;
+        }
+        if ($apiid > 0) {
+            $where[] = '`apiid` = ?';
+            $bind[] = $apiid;
+        }
+
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . self::table() . '` WHERE ' . implode(' AND ', $where));
+        $stmt->execute($bind);
+        return array('total' => max(0, (int) $stmt->fetchColumn()), 'approx' => false);
     }
 }

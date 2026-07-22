@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.7.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-5.8.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -260,10 +260,10 @@ location / {
 
 ## 版本记录
 
-### v5.7.0（2026-07-21）
+### v5.8.0（2026-07-22）
 
-- 主题设置新增「累计调用次数显示」：完整数字 / 单位转换（K+、W+）二选一
-- 默认主题与主题二首页同步；完善主题与开发规范专项债约定
+- 后台日志查询防打爆：时间窗 + COUNT 去 JOIN + keyset 翻页 + Abort 互斥
+- 复合索引与保留天数清理；升级请执行数据库结构更新
 
 完整历史见 **[更新记录.md](更新记录.md)**。
 

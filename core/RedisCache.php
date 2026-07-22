@@ -16,6 +16,8 @@ class RedisCache
     const KEY_APILOG_PAGE_PREFIX = 'cache:apilog:query:';
     /** 今日调用次数等汇总统计 */
     const KEY_APILOG_TODAY = 'cache:apilog:today_count';
+    /** 时间窗内无筛选时的总数缓存前缀 */
+    const KEY_APILOG_RANGE_TOTAL_PREFIX = 'cache:apilog:range_total:';
     const KEY_STAT_HITS = 'stats:cache_hits';
     const KEY_STAT_MISSES = 'stats:cache_misses';
 
@@ -27,6 +29,8 @@ class RedisCache
     /** 日志查询/列表短 TTL，降低大表反复扫库 */
     const TTL_APILOG_PAGE = 45;
     const TTL_APILOG_STATS = 30;
+    /** 时间窗总数稍长，避免每次进页都 COUNT */
+    const TTL_APILOG_RANGE_TOTAL = 90;
 
     const MAX_RATE_LIMIT_KEYS = 2000;
     const STAT_MAX_VALUE = 100000000;
@@ -119,13 +123,26 @@ class RedisCache
     public static function apilogPageKey(array $opts)
     {
         $norm = array(
-            'page'     => (int) (isset($opts['page']) ? $opts['page'] : 1),
-            'pagesize' => (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20),
-            'q'        => isset($opts['q']) ? (string) $opts['q'] : '',
-            'ok'       => array_key_exists('ok', $opts) ? $opts['ok'] : null,
-            'apiid'    => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
+            'page'      => (int) (isset($opts['page']) ? $opts['page'] : 1),
+            'pagesize'  => (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20),
+            'q'         => isset($opts['q']) ? (string) $opts['q'] : '',
+            'ok'        => array_key_exists('ok', $opts) ? $opts['ok'] : null,
+            'apiid'     => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
+            'days'      => (int) (isset($opts['days']) ? $opts['days'] : 7),
+            'before_id' => (int) (isset($opts['before_id']) ? $opts['before_id'] : 0),
         );
         return self::KEY_APILOG_PAGE_PREFIX . md5(json_encode($norm));
+    }
+
+    /**
+     * 时间窗内无筛选总数缓存键
+     *
+     * @param int $days
+     * @return string
+     */
+    public static function apilogRangeTotalKey($days)
+    {
+        return self::KEY_APILOG_RANGE_TOTAL_PREFIX . max(1, (int) $days);
     }
 
     /**
@@ -143,18 +160,20 @@ class RedisCache
 
         try {
             return (int) RedisService::withClient(function (Redis $redis) {
-                $pattern = RedisService::buildKey(self::KEY_APILOG_PAGE_PREFIX) . '*';
                 $deleted = 0;
-                $it = null;
-                do {
-                    $keys = $redis->scan($it, $pattern, 80);
-                    if ($keys === false) {
-                        break;
-                    }
-                    if (!empty($keys)) {
-                        $deleted += (int) $redis->del($keys);
-                    }
-                } while ($it !== 0 && $it !== null);
+                foreach (array(self::KEY_APILOG_PAGE_PREFIX, self::KEY_APILOG_RANGE_TOTAL_PREFIX) as $prefix) {
+                    $pattern = RedisService::buildKey($prefix) . '*';
+                    $it = null;
+                    do {
+                        $keys = $redis->scan($it, $pattern, 80);
+                        if ($keys === false) {
+                            break;
+                        }
+                        if (!empty($keys)) {
+                            $deleted += (int) $redis->del($keys);
+                        }
+                    } while ($it !== 0 && $it !== null);
+                }
                 return $deleted;
             });
         } catch (Exception $e) {
@@ -276,6 +295,15 @@ class RedisCache
                 'ttl_hint' => self::TTL_APILOG_PAGE . ' 秒',
                 'pattern' => true,
                 'chart_color' => '#8b5cf6',
+            ),
+            array(
+                'id' => 'apilog_range_total',
+                'label' => '日志时间窗总数',
+                'desc' => '无筛选时近期日志条数（避免每次进页全表 COUNT）',
+                'key' => self::KEY_APILOG_RANGE_TOTAL_PREFIX,
+                'ttl_hint' => self::TTL_APILOG_RANGE_TOTAL . ' 秒',
+                'pattern' => true,
+                'chart_color' => '#a78bfa',
             ),
             array(
                 'id' => 'apilog_today',

@@ -14,9 +14,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_apilog') {
         try {
+            $queryDays = isset($_POST['apilog_query_days']) ? (int) $_POST['apilog_query_days'] : ApiLogManager::DEFAULT_QUERY_DAYS;
+            $keepDays = isset($_POST['apilog_keep_days']) ? (int) $_POST['apilog_keep_days'] : ApiLogManager::DEFAULT_KEEP_DAYS;
+            $queryDays = ApiLogManager::clampQueryDays($queryDays);
+            if ($keepDays < 0) {
+                $keepDays = 0;
+            }
+            if ($keepDays > ApiLogManager::MAX_KEEP_DAYS) {
+                $keepDays = ApiLogManager::MAX_KEEP_DAYS;
+            }
             Config::setMany(array(
-                'apilog_detail' => isset($_POST['apilog_detail']) ? '1' : '0',
+                'apilog_detail'     => isset($_POST['apilog_detail']) ? '1' : '0',
+                'apilog_query_days' => (string) $queryDays,
+                'apilog_keep_days'  => (string) $keepDays,
             ));
+            if ($keepDays > 0) {
+                ApiLogManager::purgeExpired(2000);
+            }
             AjaxResponse::success('日志设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败：' . $e->getMessage());
@@ -419,7 +433,7 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-apilog',
     'API 日志',
-    '低配服务器可关闭详细日志，仅保留调用次数统计'
+    '低配服务器可关闭详细日志，并限制查询与保留天数'
 );
 ?>
     <form method="post" action="" class="vs-form" id="apilogForm" data-ajax="1">
@@ -427,10 +441,29 @@ vs_admin_accordion_start(
         <div class="vs-form-row">
             <label class="vs-checkbox">
                 <input type="checkbox" name="apilog_detail" value="1" <?php echo (!isset($vsCfg['apilog_detail']) || $vsCfg['apilog_detail'] !== '0') ? 'checked' : ''; ?>>
-                <span>记录详细调用日志（IP、UA、来源等写入 apilog 表）</span>
+                <span>记录详细调用日志（IP、UA、来源等）</span>
             </label>
         </div>
-        <?php vs_render_notice('tip', '', '关闭后仍会计入各接口 calls 与密钥调用次数，但不写入 apilog，适合带宽/性能有限的小站点。', array('compact' => true)); ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="apilog_query_days">后台默认查询天数</label>
+            <select class="vs-input vs-select" id="apilog_query_days" name="apilog_query_days" data-vs-pick>
+                <?php
+                $cfgQueryDays = isset($vsCfg['apilog_query_days']) ? (int) $vsCfg['apilog_query_days'] : ApiLogManager::DEFAULT_QUERY_DAYS;
+                $cfgQueryDays = ApiLogManager::clampQueryDays($cfgQueryDays);
+                foreach (array(1, 3, 7, 14, 30, 90) as $d):
+                ?>
+                    <option value="<?php echo (int) $d; ?>"<?php echo $cfgQueryDays === $d ? ' selected' : ''; ?>><?php echo (int) $d; ?> 天</option>
+                <?php endforeach; ?>
+            </select>
+            <?php vs_render_notice('tip', '', '日志查询页默认只看近期数据，避免大表计数拖垮服务器。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="apilog_keep_days">详细日志保留天数</label>
+            <input type="number" class="vs-input" id="apilog_keep_days" name="apilog_keep_days" min="0" max="<?php echo (int) ApiLogManager::MAX_KEEP_DAYS; ?>"
+                   value="<?php echo isset($vsCfg['apilog_keep_days']) ? (int) $vsCfg['apilog_keep_days'] : (int) ApiLogManager::DEFAULT_KEEP_DAYS; ?>">
+            <?php vs_render_notice('tip', '', '超出天数的旧记录会自动分批清理；填 0 表示不自动清理。保存时会立即清理一批。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php vs_render_notice('tip', '', '关闭详细日志后仍会计入各接口与密钥调用次数，适合带宽或性能有限的小站点。', array('compact' => true)); ?>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存日志设置</button>
         </div>

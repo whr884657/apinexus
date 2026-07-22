@@ -184,6 +184,31 @@ class DatabaseMigrator
         }
 
         // 新装无历史 /proxy.php?s= 地址时，3.12.0 的 UPDATE 幂等，不强制跳过
+
+        // 新装已含 5.8.0 apilog 复合索引时跳过
+        if (!in_array('5.8.0', $applied, true) && self::tableIndexExists('apilog', 'idx_createtime_id')) {
+            self::markApplied('5.8.0');
+        }
+    }
+
+    /**
+     * 索引是否已存在
+     *
+     * @param string $tableShort 不含前缀的表名
+     * @param string $indexName
+     * @return bool
+     */
+    public static function tableIndexExists($tableShort, $indexName)
+    {
+        try {
+            $pdo = Database::connect();
+            $table = Database::table($tableShort);
+            $stmt = $pdo->prepare('SHOW INDEX FROM `' . $table . '` WHERE `Key_name` = ?');
+            $stmt->execute(array($indexName));
+            return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            return false;
+        }
     }
 
     /**

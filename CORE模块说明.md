@@ -240,7 +240,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendSponsor.php` | 前台赞助收款码 + 赞助名单（**主题向**） |
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
 | `RedisCache.php` | 业务数据缓存（**v5.1.0+ 仅 apilog 查询/统计**）；键空间自动维护 |
-| `ApiLogManager.php` | API 调用日志分页查询、搜索、详情格式化；`detailEnabled()` 控制是否写 apilog |
+| `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、保留清理；`detailEnabled()` 控制是否写详细日志 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
 | `SystemInfo.php` | 关于页环境信息 |
@@ -813,7 +813,8 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 | 逻辑键 | TTL | 写入入口 | 说明 |
 |--------|-----|----------|------|
-| `cache:apilog:query:{md5}` | 45s | `ApiLogManager::listPaged` | 日志查询结果（后台列表 / 图表等） |
+| `cache:apilog:query:{md5}` | 45s | `ApiLogManager::listPaged` | 日志查询结果（含 days/before_id） |
+| `cache:apilog:range_total:{days}` | 90s | `ApiLogManager::listPaged` | 时间窗内无筛选总数（避免每次进页 COUNT） |
 | `cache:apilog:today_count` | 30s | `ApiLogManager::countToday` | 今日调用次数汇总 |
 
 **不再缓存（直读 MySQL）：** 公开接口列表、前台格式化接口、分类标签、友链、合作伙伴等小数据量项。

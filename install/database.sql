@@ -90,7 +90,10 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('pay_channel', '{"alipay":"","wxpay":"","qqpay":""}'),
 ('pay_methods', '["alipay","wxpay"]'),
 ('pay_rate', '1000'),
-('pay_packages', '[{"id":"base1","name":"体验包","money":"1.00","points":"1000","hot":0},{"id":"base10","name":"常用包","money":"10.00","points":"11000","hot":1},{"id":"base50","name":"超值包","money":"50.00","points":"60000","hot":0}]');
+('pay_packages', '[{"id":"base1","name":"体验包","money":"1.00","points":"1000","hot":0},{"id":"base10","name":"常用包","money":"10.00","points":"11000","hot":1},{"id":"base50","name":"超值包","money":"50.00","points":"60000","hot":0}]'),
+('apilog_detail', '1'),
+('apilog_query_days', '7'),
+('apilog_keep_days', '30');
 
 -- 邮箱验证码发信频率限制记录
 CREATE TABLE IF NOT EXISTS `{prefix}mailrate` (
@@ -163,7 +166,10 @@ CREATE TABLE IF NOT EXISTS `{prefix}apilog` (
     KEY `idx_apiid` (`apiid`),
     KEY `idx_userid` (`userid`),
     KEY `idx_ip` (`ip`),
-    KEY `idx_createtime` (`createtime`)
+    KEY `idx_createtime` (`createtime`),
+    KEY `idx_createtime_id` (`createtime`, `id`),
+    KEY `idx_ok_createtime` (`ok`, `createtime`),
+    KEY `idx_apiid_createtime` (`apiid`, `createtime`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API调用日志';
 
 -- 用户 API 调用密钥表
