@@ -190,6 +190,11 @@ class DatabaseMigrator
             self::markApplied('5.8.0');
         }
 
+        // 新装已含 5.9.0 orders 复合索引时跳过
+        if (!in_array('5.9.0', $applied, true) && self::tableIndexExists('orders', 'idx_userid_status_id')) {
+            self::markApplied('5.9.0');
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
     }
@@ -216,6 +221,9 @@ class DatabaseMigrator
             }
             if (!array_key_exists('apilog_archive_enabled', $all)) {
                 Config::set('apilog_archive_enabled', '1');
+            }
+            if (!array_key_exists('apilog_shard_rows', $all)) {
+                Config::set('apilog_shard_rows', '5000');
             }
             if (array_key_exists('apilog_keep_days', $all)) {
                 $pdo = Database::connect();

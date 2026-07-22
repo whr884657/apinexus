@@ -18,6 +18,8 @@ class RedisCache
     const KEY_APILOG_TODAY = 'cache:apilog:today_count';
     /** 时间窗内无筛选时的总数缓存前缀 */
     const KEY_APILOG_RANGE_TOTAL_PREFIX = 'cache:apilog:range_total:';
+    /** 订单/积分流水时间窗总数 */
+    const KEY_ORDERS_RANGE_TOTAL_PREFIX = 'cache:orders:range_total:';
     const KEY_STAT_HITS = 'stats:cache_hits';
     const KEY_STAT_MISSES = 'stats:cache_misses';
 
@@ -31,6 +33,7 @@ class RedisCache
     const TTL_APILOG_STATS = 30;
     /** 时间窗总数稍长，避免每次进页都 COUNT */
     const TTL_APILOG_RANGE_TOTAL = 90;
+    const TTL_ORDERS_RANGE_TOTAL = 90;
 
     const MAX_RATE_LIMIT_KEYS = 2000;
     const STAT_MAX_VALUE = 100000000;
@@ -143,6 +146,54 @@ class RedisCache
     public static function apilogRangeTotalKey($days)
     {
         return self::KEY_APILOG_RANGE_TOTAL_PREFIX . max(1, (int) $days);
+    }
+
+    /**
+     * 订单/积分流水时间窗总数缓存键
+     *
+     * @param array $opts
+     * @return string
+     */
+    public static function ordersRangeTotalKey(array $opts)
+    {
+        $norm = array(
+            'scope'  => isset($opts['scope']) ? (string) $opts['scope'] : '',
+            'userid' => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
+            'status' => array_key_exists('status', $opts) ? $opts['status'] : null,
+            'days'   => (int) (isset($opts['days']) ? $opts['days'] : 30),
+        );
+        return self::KEY_ORDERS_RANGE_TOTAL_PREFIX . md5(json_encode($norm));
+    }
+
+    /**
+     * 清理订单/积分流水列表相关缓存
+     *
+     * @return int
+     */
+    public static function invalidateOrders()
+    {
+        if (!self::enabled()) {
+            return 0;
+        }
+        try {
+            return (int) RedisService::withClient(function (Redis $redis) {
+                $deleted = 0;
+                $pattern = RedisService::buildKey(self::KEY_ORDERS_RANGE_TOTAL_PREFIX) . '*';
+                $it = null;
+                do {
+                    $keys = $redis->scan($it, $pattern, 80);
+                    if ($keys === false) {
+                        break;
+                    }
+                    if (!empty($keys)) {
+                        $deleted += (int) $redis->del($keys);
+                    }
+                } while ($it !== 0 && $it !== null);
+                return $deleted;
+            });
+        } catch (Exception $e) {
+            return 0;
+        }
     }
 
     /**

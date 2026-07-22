@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $queryDays = isset($_POST['apilog_query_days']) ? (int) $_POST['apilog_query_days'] : ApiLogManager::DEFAULT_QUERY_DAYS;
             $hotDays = isset($_POST['apilog_hot_days']) ? (int) $_POST['apilog_hot_days'] : ApiLogArchive::DEFAULT_HOT_DAYS;
+            $shardRows = isset($_POST['apilog_shard_rows']) ? (int) $_POST['apilog_shard_rows'] : ApiLogArchive::DEFAULT_SHARD_ROWS;
             $queryDays = ApiLogManager::clampQueryDays($queryDays);
             if ($hotDays < 1) {
                 $hotDays = ApiLogArchive::DEFAULT_HOT_DAYS;
@@ -23,11 +24,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($hotDays > ApiLogArchive::MAX_HOT_DAYS) {
                 $hotDays = ApiLogArchive::MAX_HOT_DAYS;
             }
+            $shardRows = ApiLogArchive::clampShardRows($shardRows);
             Config::setMany(array(
                 'apilog_detail'           => isset($_POST['apilog_detail']) ? '1' : '0',
                 'apilog_archive_enabled'  => isset($_POST['apilog_archive_enabled']) ? '1' : '0',
                 'apilog_query_days'       => (string) $queryDays,
                 'apilog_hot_days'         => (string) $hotDays,
+                'apilog_shard_rows'       => (string) $shardRows,
             ));
             AjaxResponse::success('日志设置已保存');
         } catch (Exception $e) {
@@ -452,6 +455,8 @@ vs_admin_accordion_start(
     if ($cfgHotDays < 1) {
         $cfgHotDays = ApiLogArchive::DEFAULT_HOT_DAYS;
     }
+    $cfgShardRows = isset($vsCfg['apilog_shard_rows']) ? (int) $vsCfg['apilog_shard_rows'] : ApiLogArchive::DEFAULT_SHARD_ROWS;
+    $cfgShardRows = ApiLogArchive::clampShardRows($cfgShardRows);
     $archiveOn = !isset($vsCfg['apilog_archive_enabled']) || $vsCfg['apilog_archive_enabled'] !== '0';
     $cronKey = isset($vsCfg['apilog_cron_key']) ? (string) $vsCfg['apilog_cron_key'] : '';
     $cronUrl = ApiLogArchive::cronUrl();
@@ -490,6 +495,14 @@ vs_admin_accordion_start(
             <input type="number" class="vs-input" id="apilog_hot_days" name="apilog_hot_days" min="1" max="<?php echo (int) ApiLogArchive::MAX_HOT_DAYS; ?>"
                    value="<?php echo (int) $cfgHotDays; ?>">
             <?php vs_render_notice('tip', '', '超过该天数的日志由计划任务归档到本机，不会丢弃。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row" id="apilogShardRowsRow"<?php echo $archiveOn ? '' : ' hidden'; ?>>
+            <label class="vs-label" for="apilog_shard_rows">每个分片条数</label>
+            <input type="number" class="vs-input" id="apilog_shard_rows" name="apilog_shard_rows"
+                   min="<?php echo (int) ApiLogArchive::MIN_SHARD_ROWS; ?>"
+                   max="<?php echo (int) ApiLogArchive::MAX_SHARD_ROWS; ?>"
+                   value="<?php echo (int) $cfgShardRows; ?>">
+            <?php vs_render_notice('tip', '', '每个本机分片文件写入多少条日志。默认 5000；机器性能更好可适当调大，磁盘更省文件数。', array('field' => true, 'compact' => true)); ?>
         </div>
         <?php if (!$sqliteOk): ?>
             <?php vs_render_notice('warning', '', '当前 PHP 未启用 PDO SQLite。开启冷热归档前请先安装并启用该扩展，否则计划任务无法写入冷库。', array('compact' => true)); ?>

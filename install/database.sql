@@ -95,6 +95,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('apilog_query_days', '7'),
 ('apilog_hot_days', '30'),
 ('apilog_archive_enabled', '1'),
+('apilog_shard_rows', '5000'),
 ('apilog_cron_key', '');
 
 -- 邮箱验证码发信频率限制记录
@@ -228,7 +229,11 @@ CREATE TABLE IF NOT EXISTS `{prefix}orders` (
     KEY `idx_direct` (`direct`),
     KEY `idx_kind` (`kind`),
     KEY `idx_status` (`status`),
-    KEY `idx_createtime` (`createtime`)
+    KEY `idx_createtime` (`createtime`),
+    KEY `idx_createtime_id` (`createtime`, `id`),
+    KEY `idx_userid_status_id` (`userid`, `status`, `id`),
+    KEY `idx_direct_kind_status_id` (`direct`, `kind`, `status`, `id`),
+    KEY `idx_status_id` (`status`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='积分与支付订单';
 
 -- 友情链接与合作伙伴（共用表，kind 区分）

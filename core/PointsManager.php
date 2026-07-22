@@ -323,6 +323,9 @@ class PointsManager
             ));
 
             $pdo->commit();
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateOrders();
+            }
             return true;
         } catch (Exception $e) {
             try {
@@ -347,7 +350,11 @@ class PointsManager
                 'UPDATE `' . OrderManager::table() . '` SET `status` = ? WHERE `orderno` = ? AND `status` = ?'
             );
             $stmt->execute(array(OrderManager::STATUS_CANCEL, $orderno, OrderManager::STATUS_PENDING));
-            return $stmt->rowCount() > 0;
+            $ok = $stmt->rowCount() > 0;
+            if ($ok && class_exists('RedisCache')) {
+                RedisCache::invalidateOrders();
+            }
+            return $ok;
         } catch (Exception $e) {
             return false;
         }

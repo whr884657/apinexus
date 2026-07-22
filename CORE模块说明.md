@@ -241,7 +241,9 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
 | `RedisCache.php` | 业务数据缓存（**v5.1.0+ 仅 apilog 查询/统计**）；键空间自动维护 |
 | `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`detailEnabled()` 控制是否写详细日志 |
-| `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片、计划任务密钥 |
+| `OrderManager.php` | 积分/充值订单：时间窗 + COUNT 无 JOIN + keyset 翻页；写入后失效 Redis 总数缓存 |
+| `PointsManager.php` | 余额读写、扣费、充值完成/取消；列表走 OrderManager |
+| `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（条数可配）、计划任务密钥 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
 | `SystemInfo.php` | 关于页环境信息 |
@@ -817,6 +819,7 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 | `cache:apilog:query:{md5}` | 45s | `ApiLogManager::listPaged` | 日志查询结果（含 days/before_id） |
 | `cache:apilog:range_total:{days}` | 90s | `ApiLogManager::listPaged` | 时间窗内无筛选总数（避免每次进页 COUNT） |
 | `cache:apilog:today_count` | 30s | `ApiLogManager::countToday` | 今日调用次数汇总 |
+| `cache:orders:range_total:{md5}` | 90s | `OrderManager::listPaged` | 订单/积分时间窗总数 |
 
 **不再缓存（直读 MySQL）：** 公开接口列表、前台格式化接口、分类标签、友链、合作伙伴等小数据量项。
 

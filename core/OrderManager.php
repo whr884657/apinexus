@@ -25,6 +25,11 @@ class OrderManager
     const STATUS_DONE = 1;
     const STATUS_CANCEL = 2;
 
+    /** 后台/用户中心列表默认时间窗（天） */
+    const DEFAULT_QUERY_DAYS = 30;
+    const MAX_QUERY_DAYS = 365;
+    const QUERY_TIMEOUT_MS = 5000;
+
     /**
      * @return string
      */
@@ -210,15 +215,37 @@ class OrderManager
                 (string) (isset($data['remark']) ? $data['remark'] : ''),
                 isset($data['paytime']) ? $data['paytime'] : null,
             ));
-            return (int) $pdo->lastInsertId();
+            $newId = (int) $pdo->lastInsertId();
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateOrders();
+            }
+            return $newId;
         } catch (Exception $e) {
             return false;
         }
     }
 
     /**
-     * @param array $opts userid?, status?, scope(recharge|ledger)?, page, pagesize
-     * @return array{list:array,total:int,page:int,pagesize:int}
+     * @param int $days
+     * @return int
+     */
+    public static function clampQueryDays($days)
+    {
+        $days = (int) $days;
+        if ($days < 1) {
+            $days = self::DEFAULT_QUERY_DAYS;
+        }
+        if ($days > self::MAX_QUERY_DAYS) {
+            $days = self::MAX_QUERY_DAYS;
+        }
+        return $days;
+    }
+
+    /**
+     * 分页列表：强制时间窗 + COUNT 无 JOIN + keyset（before_id），避免深页 OFFSET / 全表扫
+     *
+     * @param array $opts userid?, status?, scope(recharge|ledger)?, pagesize, days, before_id
+     * @return array{list:array,total:int,page:int,pagesize:int,days:int,before_id:int,next_before_id:int,has_more:bool}
      */
     public static function listPaged(array $opts = array())
     {
@@ -227,16 +254,33 @@ class OrderManager
         $userid = isset($opts['userid']) ? (int) $opts['userid'] : 0;
         $status = array_key_exists('status', $opts) ? $opts['status'] : null;
         $scope = isset($opts['scope']) ? trim((string) $opts['scope']) : '';
+        $days = isset($opts['days']) ? self::clampQueryDays((int) $opts['days']) : self::DEFAULT_QUERY_DAYS;
+        $beforeId = isset($opts['before_id']) ? (int) $opts['before_id'] : 0;
+        if ($beforeId < 0) {
+            $beforeId = 0;
+        }
 
-        $empty = array('list' => array(), 'total' => 0, 'page' => $page, 'pagesize' => $pagesize);
+        $empty = array(
+            'list'           => array(),
+            'total'          => 0,
+            'page'           => $page,
+            'pagesize'       => $pagesize,
+            'days'           => $days,
+            'before_id'      => $beforeId,
+            'next_before_id' => 0,
+            'has_more'       => false,
+        );
         if (!self::tableReady()) {
             return $empty;
         }
 
         try {
             $pdo = Database::connect();
-            $where = array('1=1');
-            $bind = array();
+            self::applyQueryTimeout($pdo);
+
+            $where = array('o.`createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)');
+            $bind = array($days);
+
             if ($userid > 0) {
                 $where[] = 'o.`userid` = ?';
                 $bind[] = $userid;
@@ -253,29 +297,87 @@ class OrderManager
                 $where[] = 'o.`status` = ?';
                 $bind[] = (int) $status;
             }
+            if ($beforeId > 0) {
+                $where[] = 'o.`id` < ?';
+                $bind[] = $beforeId;
+            }
             $sqlWhere = implode(' AND ', $where);
 
-            $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . self::table() . '` o WHERE ' . $sqlWhere);
-            $stmt->execute($bind);
-            $total = (int) $stmt->fetchColumn();
+            $countBind = $bind;
+            $countWhere = $sqlWhere;
+            if ($beforeId > 0) {
+                // 总数按时间窗+业务条件统计，不含 before_id
+                $countWhereParts = array();
+                $countBind = array();
+                $countWhereParts[] = 'o.`createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)';
+                $countBind[] = $days;
+                if ($userid > 0) {
+                    $countWhereParts[] = 'o.`userid` = ?';
+                    $countBind[] = $userid;
+                }
+                if ($scope === 'recharge') {
+                    $countWhereParts[] = 'o.`direct` = ? AND o.`kind` = ?';
+                    $countBind[] = self::DIRECT_INC;
+                    $countBind[] = self::KIND_RECHARGE;
+                } elseif ($scope === 'ledger') {
+                    $countWhereParts[] = 'o.`status` = ?';
+                    $countBind[] = self::STATUS_DONE;
+                }
+                if ($status !== null && $status !== '') {
+                    $countWhereParts[] = 'o.`status` = ?';
+                    $countBind[] = (int) $status;
+                }
+                $countWhere = implode(' AND ', $countWhereParts);
+            }
 
-            $offset = ($page - 1) * $pagesize;
-            $sql = 'SELECT o.*, u.`username`, a.`name` AS apiname, k.`secret` AS keysecret
-                    FROM `' . self::table() . '` o
-                    LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = o.`userid`
-                    LEFT JOIN `' . Database::table('api') . '` a ON a.`id` = o.`apiid`
-                    LEFT JOIN `' . Database::table('apikey') . '` k ON k.`id` = o.`keyid`
-                    WHERE ' . $sqlWhere . '
-                    ORDER BY o.`id` DESC
-                    LIMIT ' . (int) $pagesize . ' OFFSET ' . (int) $offset;
+            $countFactory = function () use ($pdo, $countWhere, $countBind) {
+                $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . self::table() . '` o WHERE ' . $countWhere);
+                $stmt->execute($countBind);
+                return (int) $stmt->fetchColumn();
+            };
+            if (class_exists('RedisCache')) {
+                $total = (int) RedisCache::remember(
+                    RedisCache::ordersRangeTotalKey(array(
+                        'scope'  => $scope,
+                        'userid' => $userid,
+                        'status' => $status,
+                        'days'   => $days,
+                    )),
+                    RedisCache::TTL_ORDERS_RANGE_TOTAL,
+                    $countFactory
+                );
+            } else {
+                $total = (int) call_user_func($countFactory);
+            }
+
+            $needLedgerJoins = ($scope === 'ledger');
+            $select = 'SELECT o.*, u.`username`';
+            $from = '`' . self::table() . '` o LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = o.`userid`';
+            if ($needLedgerJoins) {
+                $select .= ', a.`name` AS apiname, k.`secret` AS keysecret';
+                $from .= ' LEFT JOIN `' . Database::table('api') . '` a ON a.`id` = o.`apiid`'
+                    . ' LEFT JOIN `' . Database::table('apikey') . '` k ON k.`id` = o.`keyid`';
+            } else {
+                $select .= ', \'\' AS apiname, \'\' AS keysecret';
+            }
+
+            $sql = $select . ' FROM ' . $from
+                . ' WHERE ' . $sqlWhere
+                . ' ORDER BY o.`id` DESC'
+                . ' LIMIT ' . ((int) $pagesize + 1);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($bind);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $hasMore = count($rows) > $pagesize;
+            if ($hasMore) {
+                $rows = array_slice($rows, 0, $pagesize);
+            }
+
             $list = array();
             foreach ($rows as $row) {
                 if (!empty($row['keysecret'])) {
                     $sec = (string) $row['keysecret'];
-                    // 管理员列表（无 userid 过滤）显示完整密钥；用户中心仍脱敏
                     if ($userid > 0) {
                         $row['keymask'] = strlen($sec) > 10
                             ? (substr($sec, 0, 6) . '****' . substr($sec, -4))
@@ -284,11 +386,43 @@ class OrderManager
                         $row['keymask'] = $sec;
                     }
                 }
-                $list[] = self::formatRow($row);
+                $item = self::formatRow($row);
+                if ($item !== null) {
+                    $list[] = $item;
+                }
             }
-            return array('list' => $list, 'total' => $total, 'page' => $page, 'pagesize' => $pagesize);
+
+            $nextBefore = 0;
+            if (!empty($list)) {
+                $last = $list[count($list) - 1];
+                $nextBefore = isset($last['id']) ? (int) $last['id'] : 0;
+            }
+
+            return array(
+                'list'           => $list,
+                'total'          => $total,
+                'page'           => $page,
+                'pagesize'       => $pagesize,
+                'days'           => $days,
+                'before_id'      => $beforeId,
+                'next_before_id' => $nextBefore,
+                'has_more'       => $hasMore,
+            );
         } catch (Exception $e) {
             return $empty;
+        }
+    }
+
+    /**
+     * @param PDO $pdo
+     * @return void
+     */
+    private static function applyQueryTimeout(PDO $pdo)
+    {
+        try {
+            $pdo->exec('SET SESSION MAX_EXECUTION_TIME=' . (int) self::QUERY_TIMEOUT_MS);
+        } catch (Exception $e) {
+            // MySQL 5.7 / 不支持时忽略
         }
     }
 }
