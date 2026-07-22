@@ -47,9 +47,32 @@ $articles = FrontendArticle::listForTheme(30);
     <?php if (count($articles) === 0): ?>
         <p style="color:var(--text-muted);padding:2rem 0;">暂无已发布文章。</p>
     <?php else: ?>
-        <?php foreach ($articles as $a): ?>
-            <article class="article-card">
-                <div class="article-card-inner<?php echo $a['cover'] !== '' ? ' right-image' : ''; ?>">
+        <?php foreach ($articles as $a):
+            $coverlayout = isset($a['coverlayout'])
+                ? ContentManager::normalizeCoverLayout($a['coverlayout'])
+                : ContentManager::COVER_RIGHT;
+            $hasCover = $a['cover'] !== '';
+            $innerClass = 'none-image';
+            $cardClass = 'article-card';
+            if ($hasCover) {
+                if ($coverlayout === ContentManager::COVER_LEFT) {
+                    $innerClass = 'left-image';
+                } elseif ($coverlayout === ContentManager::COVER_BG) {
+                    $innerClass = 'background-image';
+                    $cardClass .= ' has-bg';
+                } else {
+                    $innerClass = 'right-image';
+                }
+            }
+        ?>
+            <article class="<?php echo vs_e($cardClass); ?>">
+                <?php if ($hasCover && $coverlayout === ContentManager::COVER_BG): ?>
+                    <div class="article-card-bg" style="background-image:url('<?php echo vs_e($a['cover']); ?>');"></div>
+                <?php endif; ?>
+                <div class="article-card-inner <?php echo vs_e($innerClass); ?>">
+                    <?php if ($hasCover && $coverlayout === ContentManager::COVER_LEFT): ?>
+                        <img class="article-card-cover left" src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+                    <?php endif; ?>
                     <div class="article-card-content">
                         <a href="<?php echo vs_e(vs_path_resource_url('articles', $a['id'])); ?>" class="article-card-title"><?php echo vs_e($a['title']); ?></a>
                         <?php if ($a['summary'] !== ''): ?>
@@ -60,10 +83,8 @@ $articles = FrontendArticle::listForTheme(30);
                             <span>阅读 <?php echo vs_e($a['views_label']); ?></span>
                         </div>
                     </div>
-                    <?php if ($a['cover'] !== ''): ?>
-                        <div class="article-card-image">
-                            <img src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
-                        </div>
+                    <?php if ($hasCover && $coverlayout === ContentManager::COVER_RIGHT): ?>
+                        <img class="article-card-cover right" src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
                     <?php endif; ?>
                 </div>
             </article>

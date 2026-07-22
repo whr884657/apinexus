@@ -21,16 +21,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $payload = array(
             'kind'     => $kind,
             'title'    => isset($_POST['title']) ? (string) $_POST['title'] : '',
-            'summary'  => isset($_POST['summary']) ? (string) $_POST['summary'] : '',
+            'summary'  => '',
             'body'     => isset($_POST['body']) ? (string) $_POST['body'] : '',
             'cover'    => '',
-            'ispinned' => !empty($_POST['ispinned']) ? 1 : 0,
-            'ispopup'  => !empty($_POST['ispopup']) ? 1 : 0,
-            'status'   => isset($_POST['status']) ? (int) $_POST['status'] : ContentManager::STATUS_PUBLISHED,
+            'status'   => ContentManager::STATUS_PUBLISHED,
             'userid'   => $publishUid,
             'sort'     => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
         );
         if ($action === 'create') {
+            $payload['ispinned'] = 0;
+            $payload['ispopup'] = 0;
             $result = ContentManager::create($payload);
             if (!is_array($result)) {
                 AjaxResponse::error($result);
@@ -136,24 +136,8 @@ echo Markdown::renderAssetsHtml();
                 <input class="vs-input" type="text" name="title" id="contentTitle" maxlength="200" required>
             </div>
             <div class="vs-field">
-                <label class="vs-label" for="contentSummary">摘要（首页跑马灯优先用摘要）</label>
-                <input class="vs-input" type="text" name="summary" id="contentSummary" maxlength="500">
-            </div>
-            <div class="vs-field">
                 <label class="vs-label" for="contentBody">正文（Markdown）</label>
-                <textarea class="vs-input vs-textarea" name="body" id="contentBody" data-vs-md rows="12"></textarea>
-            </div>
-            <div class="vs-field-row" style="display:flex;flex-wrap:wrap;gap:1rem;">
-                <label class="vs-check"><input type="checkbox" name="ispinned" id="contentPinned" value="1"> 置顶</label>
-                <label class="vs-check"><input type="checkbox" name="ispopup" id="contentPopup" value="1"> 弹窗展示</label>
-            </div>
-            <div class="vs-field">
-                <label class="vs-label" for="contentStatus">状态</label>
-                <select class="vs-input vs-select" name="status" id="contentStatus" data-vs-pick>
-                    <option value="1">已发布</option>
-                    <option value="0">草稿</option>
-                    <option value="2">下架</option>
-                </select>
+                <textarea class="vs-input vs-textarea" name="body" id="contentBody" data-vs-md="off" rows="12"></textarea>
             </div>
         </form>
         <footer class="vs-overlay__foot">

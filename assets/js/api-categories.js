@@ -24,13 +24,25 @@
     var iconPicker = document.getElementById('apiCatIconPicker');
     var iconUrlInput = document.getElementById('apiCatIconUrl');
     var iconCountHint = document.getElementById('apiCatIconCountHint');
+    var transferOverlay = document.getElementById('apiCategoryTransferOverlay');
+    var transferForm = document.getElementById('apiCategoryTransferForm');
+    var transferId = document.getElementById('apiCatTransferId');
+    var transferTarget = document.getElementById('apiCatTransferTarget');
+    var transferHint = document.getElementById('apiCatTransferHint');
+    var transferSubmitBtn = document.getElementById('apiCatTransferSubmitBtn');
 
     var iconBase = (page.getAttribute('data-icon-base') || '').replace(/\/$/, '');
     var defaultIcons = [];
+    var allCategories = [];
     try {
         defaultIcons = JSON.parse(page.getAttribute('data-default-icons') || '[]');
     } catch (e) {
         defaultIcons = [];
+    }
+    try {
+        allCategories = JSON.parse(page.getAttribute('data-categories') || '[]');
+    } catch (e) {
+        allCategories = [];
     }
     defaultIcons = defaultIcons.map(function (item) {
         var u = String(item || '');
@@ -45,6 +57,8 @@
 
     var formMode = 'create';
     var returnFocusEl = null;
+    var transferReturnFocusEl = null;
+    var transferRowEl = null;
     var iconCtl = null;
 
     if (iconCountHint && defaultIcons.length) {
@@ -63,6 +77,64 @@
 
     if (formOverlay && formOverlay.parentNode !== document.body) {
         document.body.appendChild(formOverlay);
+    }
+
+    if (transferOverlay && transferOverlay.parentNode !== document.body) {
+        document.body.appendChild(transferOverlay);
+    }
+
+    function refreshTransferPick() {
+        if (!transferTarget || !window.VSPick) {
+            return;
+        }
+        if (transferTarget.getAttribute('data-vs-pick-ready') === '1') {
+            window.VSPick.refresh(transferTarget);
+        } else {
+            window.VSPick.enhance(transferTarget);
+        }
+    }
+
+    function fillTransferTargetOptions(excludeId) {
+        if (!transferTarget) {
+            return 0;
+        }
+        var exclude = parseInt(excludeId, 10);
+        transferTarget.innerHTML = '<option value="">请选择目标分类</option>';
+        var count = 0;
+        allCategories.forEach(function (cat) {
+            if (parseInt(cat.id, 10) === exclude) {
+                return;
+            }
+            var opt = document.createElement('option');
+            opt.value = String(cat.id);
+            opt.textContent = cat.name || '';
+            transferTarget.appendChild(opt);
+            count += 1;
+        });
+        transferTarget.value = '';
+        refreshTransferPick();
+        return count;
+    }
+
+    function removeCategoryRow(row) {
+        if (row) {
+            row.remove();
+        }
+        if (listEl && !listEl.querySelector('.vs-api-cat-row')) {
+            if (tableEl) {
+                tableEl.hidden = true;
+            }
+            if (emptyEl) {
+                emptyEl.hidden = false;
+            }
+        }
+    }
+
+    function syncCategoriesAfterDelete(deletedId) {
+        allCategories = allCategories.filter(function (cat) {
+            return parseInt(cat.id, 10) !== parseInt(deletedId, 10);
+        });
+        page.setAttribute('data-categories', JSON.stringify(allCategories));
     }
 
     function postAction(action, fields) {
@@ -298,6 +370,81 @@
         returnFocusEl = null;
     }
 
+    function openTransferOverlay(catId, rowEl, apiCount, catName) {
+        if (!transferOverlay) {
+            return;
+        }
+        var others = fillTransferTargetOptions(catId);
+        if (others === 0) {
+            window.VS.showMessage('没有其他分类可转移接口，请先创建目标分类', 'error');
+            return;
+        }
+        transferReturnFocusEl = document.activeElement;
+        transferRowEl = rowEl || null;
+        if (transferId) {
+            transferId.value = String(catId);
+        }
+        if (transferHint) {
+            transferHint.textContent = '分类「' + (catName || '') + '」下仍有 ' + apiCount + ' 个接口，删除前需转移至其他分类。';
+        }
+        transferOverlay.hidden = false;
+        transferOverlay.setAttribute('aria-hidden', 'false');
+        transferOverlay.classList.add('is-open');
+        document.body.classList.add('is-overlay-open');
+        if (transferTarget) {
+            transferTarget.focus();
+        }
+    }
+
+    function closeTransferOverlay() {
+        if (!transferOverlay) {
+            return;
+        }
+        if (window.VSPick) {
+            window.VSPick.close();
+        }
+        transferOverlay.hidden = true;
+        transferOverlay.setAttribute('aria-hidden', 'true');
+        transferOverlay.classList.remove('is-open');
+        document.body.classList.remove('is-overlay-open');
+        transferRowEl = null;
+        if (transferReturnFocusEl && transferReturnFocusEl.focus) {
+            transferReturnFocusEl.focus();
+        }
+        transferReturnFocusEl = null;
+    }
+
+    function handleTransferSubmit() {
+        var catId = transferId ? transferId.value : '';
+        var targetId = transferTarget ? transferTarget.value : '';
+        if (!targetId) {
+            window.VS.showMessage('请选择目标分类', 'error');
+            return;
+        }
+        if (transferSubmitBtn) {
+            transferSubmitBtn.disabled = true;
+        }
+        postAction('delete_move', {
+            category_id: catId,
+            target_id: targetId
+        }).then(function (data) {
+            if (data.code !== 1) {
+                window.VS.showMessage(data.msg || '删除失败', 'error');
+                return;
+            }
+            window.VS.showMessage(data.msg || '分类已删除', 'success');
+            syncCategoriesAfterDelete(catId);
+            removeCategoryRow(transferRowEl);
+            closeTransferOverlay();
+        }).catch(function () {
+            window.VS.showMessage('网络异常，请稍后重试', 'error');
+        }).finally(function () {
+            if (transferSubmitBtn) {
+                transferSubmitBtn.disabled = false;
+            }
+        });
+    }
+
     function handleFormSubmit() {
         var name = formName ? formName.value.trim() : '';
         if (!name) {
@@ -333,6 +480,8 @@
                     }
                 } else {
                     appendItem(Object.assign({ api_count: data.api_count || 0 }, cat));
+                    allCategories.unshift({ id: cat.id, name: cat.name || '' });
+                    page.setAttribute('data-categories', JSON.stringify(allCategories));
                 }
             })
             .catch(function () {
@@ -369,8 +518,21 @@
         });
     }
 
+    if (transferOverlay) {
+        transferOverlay.querySelectorAll('[data-transfer-overlay-close]').forEach(function (el) {
+            el.addEventListener('click', closeTransferOverlay);
+        });
+    }
+
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && formOverlay && formOverlay.classList.contains('is-open')) {
+        if (e.key !== 'Escape') {
+            return;
+        }
+        if (transferOverlay && transferOverlay.classList.contains('is-open')) {
+            closeTransferOverlay();
+            return;
+        }
+        if (formOverlay && formOverlay.classList.contains('is-open')) {
             closeFormOverlay();
         }
     });
@@ -379,6 +541,13 @@
         formEl.addEventListener('submit', function (e) {
             e.preventDefault();
             handleFormSubmit();
+        });
+    }
+
+    if (transferForm) {
+        transferForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            handleTransferSubmit();
         });
     }
 
@@ -423,7 +592,9 @@
         if (action === 'delete') {
             var apiCount = parseInt(btn.getAttribute('data-api-count') || '0', 10);
             if (apiCount > 0) {
-                window.VS.showMessage('该分类下仍有 ' + apiCount + ' 个接口，无法删除', 'error');
+                var catNameEl = row ? row.querySelector('[data-field="name"]') : null;
+                var catName = catNameEl ? catNameEl.textContent : '';
+                openTransferOverlay(catId, row, apiCount, catName);
                 return;
             }
             if (!window.confirm('确定删除该分类？')) {
@@ -435,17 +606,8 @@
                     return;
                 }
                 window.VS.showMessage(data.msg || '分类已删除', 'success');
-                if (row) {
-                    row.remove();
-                }
-                if (listEl && !listEl.querySelector('.vs-api-cat-row')) {
-                    if (tableEl) {
-                        tableEl.hidden = true;
-                    }
-                    if (emptyEl) {
-                        emptyEl.hidden = false;
-                    }
-                }
+                syncCategoriesAfterDelete(catId);
+                removeCategoryRow(row);
             }).catch(function () {
                 window.VS.showMessage('网络异常，请稍后重试', 'error');
             });

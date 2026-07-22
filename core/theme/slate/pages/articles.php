@@ -46,13 +46,39 @@ $articles = FrontendArticle::listForTheme(30);
         <p class="st-notice-box">暂无已发布文章。</p>
     <?php else: ?>
     <div class="st-card-list">
-        <?php foreach ($articles as $a): ?>
-            <a class="st-card" href="<?php echo vs_e(vs_path_resource_url('articles', $a['id'])); ?>" style="text-decoration:none;color:inherit;display:block;">
-                <div class="st-card__title"><?php echo vs_e($a['title']); ?></div>
-                <div class="st-card__meta"><?php echo vs_e($a['createtime']); ?> · 阅读 <?php echo vs_e($a['views_label']); ?></div>
-                <?php if ($a['summary'] !== ''): ?>
-                    <div class="st-card__desc"><?php echo vs_e($a['summary']); ?></div>
+        <?php foreach ($articles as $a):
+            $coverlayout = isset($a['coverlayout'])
+                ? ContentManager::normalizeCoverLayout($a['coverlayout'])
+                : ContentManager::COVER_RIGHT;
+            $hasCover = $a['cover'] !== '';
+            $cardClass = 'st-article-card';
+            if ($hasCover && $coverlayout === ContentManager::COVER_BG) {
+                $cardClass .= ' st-article-card--bg';
+            } elseif ($hasCover && $coverlayout === ContentManager::COVER_LEFT) {
+                $cardClass .= ' st-article-card--left';
+            } elseif ($hasCover && $coverlayout === ContentManager::COVER_RIGHT) {
+                $cardClass .= ' st-article-card--right';
+            }
+        ?>
+            <a class="<?php echo vs_e($cardClass); ?>" href="<?php echo vs_e(vs_path_resource_url('articles', $a['id'])); ?>" style="text-decoration:none;color:inherit;display:block;">
+                <?php if ($hasCover && $coverlayout === ContentManager::COVER_BG): ?>
+                    <div class="st-article-card__bg" style="background-image:url('<?php echo vs_e($a['cover']); ?>');"></div>
                 <?php endif; ?>
+                <div class="st-article-card__inner">
+                    <?php if ($hasCover && $coverlayout === ContentManager::COVER_LEFT): ?>
+                        <img class="st-article-card__cover" src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+                    <?php endif; ?>
+                    <div class="st-article-card__body">
+                        <div class="st-card__title"><?php echo vs_e($a['title']); ?></div>
+                        <div class="st-card__meta"><?php echo vs_e($a['createtime']); ?> · 阅读 <?php echo vs_e($a['views_label']); ?></div>
+                        <?php if ($a['summary'] !== ''): ?>
+                            <div class="st-card__desc"><?php echo vs_e($a['summary']); ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <?php if ($hasCover && $coverlayout === ContentManager::COVER_RIGHT): ?>
+                        <img class="st-article-card__cover" src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+                    <?php endif; ?>
+                </div>
             </a>
         <?php endforeach; ?>
     </div>

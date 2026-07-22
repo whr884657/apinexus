@@ -414,6 +414,97 @@ class ApiCategoryManager
     }
 
     /**
+     * 除指定 id 外的全部分类（formatRow 格式）
+     *
+     * @param int $excludeId
+     * @return array
+     */
+    public static function listOthers($excludeId)
+    {
+        $excludeId = (int) $excludeId;
+        if ($excludeId <= 0 || !self::tableReady()) {
+            return array();
+        }
+
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT * FROM `' . self::table() . '` WHERE `id` != ? ORDER BY `id` DESC'
+            );
+            $stmt->execute(array($excludeId));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!is_array($rows)) {
+                return array();
+            }
+
+            $out = array();
+            foreach ($rows as $row) {
+                $formatted = self::formatRow($row);
+                if ($formatted !== null) {
+                    $out[] = $formatted;
+                }
+            }
+            return $out;
+        } catch (Exception $e) {
+            return array();
+        }
+    }
+
+    /**
+     * 将接口迁移至目标分类后删除源分类
+     *
+     * @param int $id
+     * @param int $targetId
+     * @return true|string
+     */
+    public static function deleteAndMove($id, $targetId)
+    {
+        $id = (int) $id;
+        $targetId = (int) $targetId;
+        if ($id <= 0 || $targetId <= 0) {
+            return '无效操作';
+        }
+        if ($id === $targetId) {
+            return '不能转移到自身';
+        }
+
+        $row = self::findById($id);
+        if (!$row) {
+            return '分类不存在';
+        }
+
+        $target = self::findById($targetId);
+        if (!$target) {
+            return '目标分类不存在';
+        }
+
+        $oldName = (string) $row['name'];
+        $targetName = (string) $target['name'];
+
+        try {
+            $pdo = Database::connect();
+            $pdo->beginTransaction();
+
+            $apiStmt = $pdo->prepare(
+                'UPDATE `' . ApiManager::table() . '` SET `category` = ? WHERE `category` = ?'
+            );
+            $apiStmt->execute(array($targetName, $oldName));
+
+            $delStmt = $pdo->prepare('DELETE FROM `' . self::table() . '` WHERE `id` = ?');
+            $delStmt->execute(array($id));
+
+            $pdo->commit();
+            RedisCache::invalidateFrontend();
+            return true;
+        } catch (Exception $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            return '删除失败，请稍后重试';
+        }
+    }
+
+    /**
      * @param int $id
      * @return true|string
      */

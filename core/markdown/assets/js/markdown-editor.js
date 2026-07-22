@@ -27,11 +27,11 @@
         { label: '视频', snip: '@[video](https://example.com/a.mp4)\n' },
         { label: '音乐', snip: ':::music url=https://example.com/a.mp3 title=歌名\n:::\n' },
         { sep: true },
-        { label: '卡片', snip: ':::card color=#059669 title=卡片标题\n卡片内容\n:::\n' },
+        { label: '卡片', snip: ':::card title=卡片标题\n卡片内容\n:::\n' },
         { label: '提示', snip: ':::tip\n提示内容\n:::\n' },
         { label: '警告', snip: ':::warning\n警告内容\n:::\n' },
         { label: '折叠', snip: ':::collapse title=点击展开\n隐藏内容\n:::\n' },
-        { label: '按钮', snip: ':::button color=#059669 text=立即前往 url=https://\n:::\n' },
+        { label: '按钮', snip: ':::button text=立即前往 url=https://\n:::\n' },
         { label: '时间轴', snip: ':::timeline\n- 2024.01 | 节点说明\n- 2024.06 | 节点说明\n:::\n' },
         { label: '缩进', snip: ':::indent\n首行缩进段落\n:::\n' },
         { label: '居中', snip: '<p style="text-align:center">居中文字</p>\n' }
@@ -48,6 +48,19 @@
         ta.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
+    function resolveMode(textarea, opts) {
+        var raw = (opts && opts.preview) || textarea.getAttribute('data-vs-md') || 'desktop';
+        raw = String(raw).toLowerCase();
+        if (raw === '0' || raw === 'off' || raw === 'never' || raw === 'false') {
+            return 'off';
+        }
+        if (raw === '1' || raw === 'always' || raw === 'on' || raw === 'true') {
+            return 'always';
+        }
+        // data-vs-md 空属性也走 desktop
+        return 'desktop';
+    }
+
     function mount(textarea, opts) {
         opts = opts || {};
         if (!textarea || textarea.getAttribute('data-vs-md-ready') === '1') {
@@ -59,8 +72,9 @@
             textarea.style.minHeight = String(opts.height) + 'px';
         }
 
+        var mode = resolveMode(textarea, opts);
         var wrap = document.createElement('div');
-        wrap.className = 'vs-md-editor';
+        wrap.className = 'vs-md-editor vs-md-editor--' + mode;
         textarea.parentNode.insertBefore(wrap, textarea);
 
         var bar = document.createElement('div');
@@ -87,22 +101,30 @@
         panes.className = 'vs-md-panes';
         panes.appendChild(textarea);
 
-        var preview = document.createElement('div');
-        preview.className = 'vs-md-preview';
-        panes.appendChild(preview);
+        var preview = null;
+        if (mode !== 'off') {
+            preview = document.createElement('div');
+            preview.className = 'vs-md-preview';
+            panes.appendChild(preview);
+        }
         wrap.appendChild(panes);
 
         function refresh() {
+            if (!preview) {
+                return;
+            }
             if (global.VsMarkdown && typeof global.VsMarkdown.render === 'function') {
                 preview.innerHTML = global.VsMarkdown.render(textarea.value || '');
             } else {
                 preview.textContent = textarea.value || '';
             }
         }
-        textarea.addEventListener('input', refresh);
-        refresh();
+        if (preview) {
+            textarea.addEventListener('input', refresh);
+            refresh();
+        }
 
-        return { wrap: wrap, preview: preview, refresh: refresh };
+        return { wrap: wrap, preview: preview, refresh: refresh, mode: mode };
     }
 
     function mountAll(root) {

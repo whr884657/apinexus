@@ -13,6 +13,10 @@ class ContentManager
     const STATUS_PUBLISHED = 1;
     const STATUS_OFF = 2;
 
+    const COVER_LEFT = 0;
+    const COVER_RIGHT = 1;
+    const COVER_BG = 2;
+
     /**
      * @return string
      */
@@ -27,9 +31,11 @@ class ContentManager
     public static function tableReady()
     {
         try {
-            $pdo = Database::connect();
-            $stmt = $pdo->query('SHOW TABLES LIKE ' . $pdo->quote(self::table()));
-            return $stmt && $stmt->fetchColumn();
+            if (!DatabaseMigrator::tableExists('content')) {
+                return false;
+            }
+            // 7.1.0+ 需要 coverlayout
+            return DatabaseMigrator::tableColumnExists('content', 'coverlayout');
         } catch (Exception $e) {
             return false;
         }
@@ -96,6 +102,67 @@ class ContentManager
     }
 
     /**
+     * @param mixed $layout
+     * @return int
+     */
+    public static function normalizeCoverLayout($layout)
+    {
+        $n = (int) $layout;
+        if ($n === self::COVER_RIGHT || $n === self::COVER_BG) {
+            return $n;
+        }
+        return self::COVER_LEFT;
+    }
+
+    /**
+     * @param mixed $layout
+     * @return string
+     */
+    public static function coverLayoutLabel($layout)
+    {
+        $n = self::normalizeCoverLayout($layout);
+        if ($n === self::COVER_RIGHT) {
+            return '封面右侧';
+        }
+        if ($n === self::COVER_BG) {
+            return '封面背景';
+        }
+        return '封面左侧';
+    }
+
+    /**
+     * Markdown 正文转纯文本预览（跑马灯等）
+     *
+     * @param string $md
+     * @param int    $maxLen
+     * @return string
+     */
+    public static function plainTextPreview($md, $maxLen = 80)
+    {
+        $text = (string) $md;
+        if ($text === '') {
+            return '';
+        }
+        $text = preg_replace('/```[\s\S]*?```/', ' ', $text);
+        $text = preg_replace('/`[^`]*`/', ' ', $text);
+        $text = preg_replace('/!\[[^\]]*\]\([^)]*\)/', ' ', $text);
+        $text = preg_replace('/\[([^\]]*)\]\([^)]*\)/', '$1', $text);
+        $text = preg_replace('/^#{1,6}\s+/m', '', $text);
+        $text = preg_replace('/^>\s+/m', '', $text);
+        $text = preg_replace('/^[-*+]\s+/m', '', $text);
+        $text = preg_replace('/^\d+\.\s+/m', '', $text);
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        $text = preg_replace('/\s+/u', ' ', $text);
+        $text = trim($text);
+        $maxLen = max(1, (int) $maxLen);
+        if (mb_strlen($text, 'UTF-8') <= $maxLen) {
+            return $text;
+        }
+        return mb_substr($text, 0, $maxLen, 'UTF-8') . '…';
+    }
+
+    /**
      * @param array $row
      * @return array
      */
@@ -113,6 +180,8 @@ class ContentManager
             'summary'       => isset($row['summary']) ? trim((string) $row['summary']) : '',
             'body'          => isset($row['body']) ? (string) $row['body'] : '',
             'cover'         => isset($row['cover']) ? trim((string) $row['cover']) : '',
+            'coverlayout'   => self::normalizeCoverLayout(isset($row['coverlayout']) ? $row['coverlayout'] : self::COVER_LEFT),
+            'coverlayout_label' => self::coverLayoutLabel(isset($row['coverlayout']) ? $row['coverlayout'] : self::COVER_LEFT),
             'ispinned'      => self::normalizeFlag(isset($row['ispinned']) ? $row['ispinned'] : 0),
             'ispopup'       => self::normalizeFlag(isset($row['ispopup']) ? $row['ispopup'] : 0),
             'status'        => $status,
@@ -281,6 +350,7 @@ class ContentManager
         $summary = trim((string) (isset($data['summary']) ? $data['summary'] : ''));
         $body = isset($data['body']) ? (string) $data['body'] : '';
         $cover = trim((string) (isset($data['cover']) ? $data['cover'] : ''));
+        $coverlayout = self::normalizeCoverLayout(isset($data['coverlayout']) ? $data['coverlayout'] : self::COVER_LEFT);
         $ispinned = self::normalizeFlag(isset($data['ispinned']) ? $data['ispinned'] : 0);
         $ispopup = self::normalizeFlag(isset($data['ispopup']) ? $data['ispopup'] : 0);
         $status = self::normalizeStatus(isset($data['status']) ? $data['status'] : self::STATUS_DRAFT);
@@ -296,11 +366,11 @@ class ContentManager
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
                 'INSERT INTO `' . self::table() . '`
-                (`kind`, `title`, `summary`, `body`, `cover`, `ispinned`, `ispopup`, `status`, `userid`, `sort`, `createtime`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+                (`kind`, `title`, `summary`, `body`, `cover`, `coverlayout`, `ispinned`, `ispopup`, `status`, `userid`, `sort`, `createtime`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
             );
             $stmt->execute(array(
-                $kind, $title, $summary, $body, $cover,
+                $kind, $title, $summary, $body, $cover, $coverlayout,
                 $ispinned, $ispopup, $status, $userid, $sort,
             ));
             $id = (int) $pdo->lastInsertId();
@@ -337,6 +407,9 @@ class ContentManager
         $cover = array_key_exists('cover', $data)
             ? trim((string) $data['cover'])
             : trim((string) (isset($existing['cover']) ? $existing['cover'] : ''));
+        $coverlayout = array_key_exists('coverlayout', $data)
+            ? self::normalizeCoverLayout($data['coverlayout'])
+            : self::normalizeCoverLayout(isset($existing['coverlayout']) ? $existing['coverlayout'] : self::COVER_LEFT);
         $ispinned = isset($data['ispinned'])
             ? self::normalizeFlag($data['ispinned'])
             : self::normalizeFlag(isset($existing['ispinned']) ? $existing['ispinned'] : 0);
@@ -362,13 +435,13 @@ class ContentManager
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
                 'UPDATE `' . self::table() . '` SET
-                `kind` = ?, `title` = ?, `summary` = ?, `body` = ?, `cover` = ?,
+                `kind` = ?, `title` = ?, `summary` = ?, `body` = ?, `cover` = ?, `coverlayout` = ?,
                 `ispinned` = ?, `ispopup` = ?, `status` = ?, `userid` = ?, `sort` = ?,
                 `updatetime` = NOW()
                 WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array(
-                $kind, $title, $summary, $body, $cover,
+                $kind, $title, $summary, $body, $cover, $coverlayout,
                 $ispinned, $ispopup, $status, $userid, $sort, $id,
             ));
             return true;

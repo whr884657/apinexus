@@ -41,6 +41,7 @@ class FrontendAnnouncement
         }
 
         $body = isset($row['body']) ? (string) $row['body'] : '';
+        $preview = ContentManager::plainTextPreview($body, 80);
 
         return array(
             'id'         => (int) (isset($row['id']) ? $row['id'] : 0),
@@ -48,6 +49,7 @@ class FrontendAnnouncement
             'summary'    => trim((string) (isset($row['summary']) ? $row['summary'] : '')),
             'body'       => $body,
             'body_html'  => self::bodyHtml($body),
+            'preview'    => $preview !== '' ? $preview : $title,
             'ispinned'   => ContentManager::normalizeFlag(isset($row['ispinned']) ? $row['ispinned'] : 0),
             'ispopup'    => ContentManager::normalizeFlag(isset($row['ispopup']) ? $row['ispopup'] : 0),
             'createtime' => isset($row['createtime']) ? (string) $row['createtime'] : '',

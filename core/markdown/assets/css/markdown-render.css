@@ -1,5 +1,11 @@
-/* ApiNexus Markdown 渲染样式（前台 + 后台预览共用） */
-.vs-md-body { line-height: 1.75; word-break: break-word; }
+/* ApiNexus Markdown 渲染：跟随当前主题强调色（默认主题黑、后台 --vs-primary、slate --st-accent） */
+.vs-md-body {
+    --vs-md-accent: var(--accent-primary, var(--vs-accent, var(--vs-primary, var(--st-accent, #111111))));
+    --vs-md-accent-soft: rgba(17, 17, 17, 0.06);
+    --vs-md-accent-soft: color-mix(in srgb, var(--vs-md-accent) 12%, transparent);
+    line-height: 1.75;
+    word-break: break-word;
+}
 .vs-md-body img,
 .vs-md-body video {
     max-width: 100%;
@@ -13,13 +19,17 @@
     border-radius: 12px;
 }
 .vs-md-card {
-    border: 1px solid #059669;
+    border: 1px solid var(--vs-md-accent);
     border-radius: 12px;
     padding: 0.9rem 1rem;
     margin: 1rem 0;
-    background: rgba(5, 150, 105, 0.06);
+    background: var(--vs-md-accent-soft);
 }
-.vs-md-card__title { font-weight: 700; margin-bottom: 0.4rem; }
+.vs-md-card__title {
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    color: var(--vs-md-accent);
+}
 .vs-md-alert {
     border-radius: 10px;
     padding: 0.75rem 1rem;
@@ -28,10 +38,13 @@
 }
 .vs-md-alert--tip { background: rgba(59,130,246,.08); border-color: #3b82f6; }
 .vs-md-alert--warning { background: rgba(245,158,11,.1); border-color: #f59e0b; }
-.vs-md-alert--success { background: rgba(5,150,105,.1); border-color: #059669; }
+.vs-md-alert--success {
+    background: var(--vs-md-accent-soft);
+    border-color: var(--vs-md-accent);
+}
 .vs-md-alert--danger { background: rgba(239,68,68,.1); border-color: #ef4444; }
 .vs-md-collapse {
-    border: 1px solid rgba(0,0,0,.08);
+    border: 1px solid var(--border-color, rgba(0,0,0,.08));
     border-radius: 10px;
     padding: 0.5rem 0.85rem;
     margin: 1rem 0;
@@ -44,20 +57,26 @@
     padding: 0.45rem 1rem;
     border-radius: 10px;
     font-size: 0.9rem;
+    background: var(--vs-md-accent);
 }
-.vs-md-timeline { list-style: none; padding: 0; margin: 1rem 0; border-left: 2px solid #059669; }
+.vs-md-timeline {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+    border-left: 2px solid var(--vs-md-accent);
+}
 .vs-md-timeline li { padding: 0.35rem 0 0.35rem 1rem; position: relative; }
 .vs-md-timeline li::before {
     content: '';
     width: 8px; height: 8px; border-radius: 50%;
-    background: #059669;
+    background: var(--vs-md-accent);
     position: absolute; left: -5px; top: 0.7rem;
 }
-.vs-md-timeline__time { font-weight: 700; margin-right: 0.5rem; color: #059669; }
+.vs-md-timeline__time { font-weight: 700; margin-right: 0.5rem; color: var(--vs-md-accent); }
 .vs-md-music {
     border-radius: 12px;
     padding: 0.75rem 1rem;
-    background: rgba(5,150,105,.08);
+    background: var(--vs-md-accent-soft);
     margin: 1rem 0;
 }
 .vs-md-music audio { width: 100%; margin-top: 0.4rem; }
@@ -76,10 +95,13 @@
 }
 .vs-md-body pre code { background: transparent; padding: 0; }
 .vs-md-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-.vs-md-body th, .vs-md-body td { border: 1px solid rgba(0,0,0,.1); padding: 0.45rem 0.6rem; }
+.vs-md-body th, .vs-md-body td {
+    border: 1px solid var(--border-color, rgba(0,0,0,.1));
+    padding: 0.45rem 0.6rem;
+}
 .vs-md-body blockquote {
     margin: 1rem 0;
     padding: 0.4rem 0.9rem;
-    border-left: 3px solid #059669;
-    color: #64748b;
+    border-left: 3px solid var(--vs-md-accent);
+    color: var(--text-muted, #64748b);
 }

@@ -67,7 +67,7 @@ $announceTitle = '网站公告';
 $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p><p>系统版本 v' . vs_e(VS_VERSION) . ' 已上线，欢迎体验。</p>';
 if (count($announceList) > 0) {
     $first = $announceList[0];
-    $announceMarquee = $first['summary'] !== '' ? $first['summary'] : $first['title'];
+    $announceMarquee = isset($first['preview']) && $first['preview'] !== '' ? $first['preview'] : $first['title'];
     $announceTitle = $first['title'];
     $announceHtml = isset($first['body_html']) ? $first['body_html'] : $announceHtml;
 }
@@ -75,8 +75,8 @@ if (count($announcePopup) > 0) {
     $pop = $announcePopup[0];
     $announceTitle = $pop['title'];
     $announceHtml = isset($pop['body_html']) ? $pop['body_html'] : $announceHtml;
-    if ($pop['summary'] !== '') {
-        $announceMarquee = $pop['summary'];
+    if (isset($pop['preview']) && $pop['preview'] !== '') {
+        $announceMarquee = $pop['preview'];
     }
 }
 ?>

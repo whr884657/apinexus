@@ -38,9 +38,6 @@
     grid-template-columns: 1fr 1fr;
     min-height: 280px;
 }
-@media (max-width: 900px) {
-    .vs-md-panes { grid-template-columns: 1fr; }
-}
 .vs-md-input {
     width: 100%;
     min-height: 280px;
@@ -60,6 +57,14 @@
     max-height: 480px;
     background: #fcfcfd;
 }
+
+/* 公告：无预览；文章：仅桌面预览 */
+.vs-md-editor--off .vs-md-preview { display: none !important; }
+.vs-md-editor--off .vs-md-panes { grid-template-columns: 1fr; }
+
 @media (max-width: 900px) {
+    .vs-md-panes { grid-template-columns: 1fr; }
+    .vs-md-editor--desktop .vs-md-preview { display: none !important; }
+    .vs-md-editor--desktop .vs-md-panes { grid-template-columns: 1fr; }
     .vs-md-preview { border-left: 0; border-top: 1px solid var(--vs-border, #e2e8f0); }
 }

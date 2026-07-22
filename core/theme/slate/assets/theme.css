@@ -1127,6 +1127,60 @@ body.st-drawer-open {
     gap: 12px;
 }
 
+.st-article-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 120px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(244, 252, 248, 0.95) 100%);
+    border: 1px solid var(--st-border);
+    border-radius: 10px;
+    transition: box-shadow 0.15s, transform 0.15s, background 0.15s;
+    box-shadow: 0 2px 8px rgba(36, 166, 106, 0.04);
+}
+
+.st-article-card:hover {
+    background: linear-gradient(145deg, #fff 0%, #eef9f3 100%);
+    box-shadow: 0 4px 16px rgba(36, 166, 106, 0.12);
+    transform: translateY(-2px);
+}
+
+.st-article-card__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 110px;
+    padding: 16px 20px;
+}
+
+.st-article-card__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.st-article-card__cover {
+    width: 100px;
+    height: 70px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.st-article-card__bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.22;
+    pointer-events: none;
+}
+
+.st-article-card--bg .st-article-card__inner {
+    min-height: 140px;
+}
+
 .st-card-link {
     display: flex;
     align-items: center;

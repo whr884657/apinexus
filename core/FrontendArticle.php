@@ -43,15 +43,20 @@ class FrontendArticle
 
         $body = isset($row['body']) ? (string) $row['body'] : '';
         $views = isset($row['views']) ? (int) $row['views'] : 0;
+        $coverlayout = ContentManager::normalizeCoverLayout(
+            isset($row['coverlayout']) ? $row['coverlayout'] : ContentManager::COVER_LEFT
+        );
 
         $item = array(
-            'id'          => (int) (isset($row['id']) ? $row['id'] : 0),
-            'title'       => $title,
-            'summary'     => trim((string) (isset($row['summary']) ? $row['summary'] : '')),
-            'cover'       => trim((string) (isset($row['cover']) ? $row['cover'] : '')),
-            'views'       => $views,
-            'views_label' => number_format($views),
-            'createtime'  => isset($row['createtime']) ? (string) $row['createtime'] : '',
+            'id'                => (int) (isset($row['id']) ? $row['id'] : 0),
+            'title'             => $title,
+            'summary'           => trim((string) (isset($row['summary']) ? $row['summary'] : '')),
+            'cover'             => trim((string) (isset($row['cover']) ? $row['cover'] : '')),
+            'coverlayout'       => $coverlayout,
+            'coverlayout_label' => ContentManager::coverLayoutLabel($coverlayout),
+            'views'             => $views,
+            'views_label'       => number_format($views),
+            'createtime'        => isset($row['createtime']) ? (string) $row['createtime'] : '',
         );
 
         if ($withBody) {

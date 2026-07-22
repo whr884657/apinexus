@@ -3,24 +3,7 @@
  * 来源: articles.php
  */
 
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-        }
-        [data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-        }
+/* 色板由 theme-tokens.css 提供，禁止在此写死绿色强调色 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
@@ -52,14 +35,14 @@
         .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 2rem; }
         .page-title::before { content: '//'; color: var(--accent-primary); margin-right: 0.5rem; font-family: 'JetBrains Mono', monospace; }
         
-        .article-card { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; transition: all 0.3s; overflow: hidden; position: relative; }
+        .article-card { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; transition: all 0.3s; overflow: hidden; position: relative; min-height: 120px; }
         .article-card:hover { border-color: var(--accent-primary); transform: translateY(-2px); }
         .article-card.has-bg { background: transparent; }
-        .article-card-inner { display: flex; gap: 1rem; padding: 1.25rem; align-items: flex-start; position: relative; z-index: 1; }
+        .article-card-inner { display: flex; gap: 1rem; padding: 1.25rem; align-items: center; position: relative; z-index: 1; min-height: 110px; }
         .article-card-inner.left-image { flex-direction: row; }
         .article-card-inner.right-image { flex-direction: row; }
         .article-card-inner.none-image { flex-direction: row; }
-        .article-card-inner.background-image { flex-direction: row; min-height: unset; align-items: flex-start; background: transparent; }
+        .article-card-inner.background-image { flex-direction: row; min-height: 140px; align-items: center; background: transparent; }
         
         .article-card-cover { width: 100px; height: 70px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
         .article-card-cover.left { margin-right: 0; order: -1; }
