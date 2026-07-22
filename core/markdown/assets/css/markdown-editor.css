@@ -1,0 +1,65 @@
+/* Markdown 编辑器外壳 */
+.vs-md-editor {
+    border: 1px solid var(--vs-border, #e2e8f0);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+}
+.vs-md-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid var(--vs-border, #e2e8f0);
+    background: #f8fafc;
+}
+.vs-md-toolbar button {
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #334155;
+    line-height: 1.4;
+}
+.vs-md-toolbar button:hover {
+    border-color: #cbd5e1;
+    background: #fff;
+}
+.vs-md-toolbar__sep {
+    width: 1px;
+    background: #e2e8f0;
+    margin: 2px 4px;
+    align-self: stretch;
+}
+.vs-md-panes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 280px;
+}
+@media (max-width: 900px) {
+    .vs-md-panes { grid-template-columns: 1fr; }
+}
+.vs-md-input {
+    width: 100%;
+    min-height: 280px;
+    border: 0;
+    resize: vertical;
+    padding: 12px 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    outline: none;
+    box-sizing: border-box;
+}
+.vs-md-preview {
+    border-left: 1px solid var(--vs-border, #e2e8f0);
+    padding: 12px 14px;
+    overflow: auto;
+    max-height: 480px;
+    background: #fcfcfd;
+}
+@media (max-width: 900px) {
+    .vs-md-preview { border-left: 0; border-top: 1px solid var(--vs-border, #e2e8f0); }
+}

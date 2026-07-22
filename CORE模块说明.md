@@ -119,11 +119,12 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
 | 第三方登录 | `oauth/*` | `OAuthService` | 系统设置 | ✅ 是 | **已完成** |
-| 文章 | — | — | 占位 | ❌ 否 | **待开发** |
+| 文章 | `ContentManager`（kind=1） | `FrontendArticle` | `admin/content/articles.php`、`articles.php` | ✅ 是 | **已完成**（与公告共用 `content` 表；Markdown；封面） |
 | 友情链接 | `LinkManager` / `LinkSiteMeta` / `LinkNotify` | `FrontendLink` | `admin/content/links.php`、`links.php`、`applylink.php`、`core/theme/default/api/sitemeta.php` | ✅ 是 | **已完成**（表 `link`；`kind=0`；审核 + 启禁；一键 TDK；邮件通知） |
 | 合作伙伴 | `LinkManager`（共用） | `FrontendPartner` | `admin/content/partners.php`、默认主题首页 | ✅ 是 | **已完成**（表 `link`；`kind=1`；无审核；仅编辑/启禁） |
 | 赞助 | `LinkManager`（共用） | `FrontendSponsor` | `admin/finance/sponsor.php`、`sponsor.php`、默认主题赞助页、系统设置收款码 | ✅ 是 | **已完成**（表 `link`；`kind=2`；简介=赞助说明；收款码配置） |
-| 公告 | — | — | 占位 | ❌ 否 | **待开发** |
+| 公告 | `ContentManager`（kind=0） | `FrontendAnnouncement` | `admin/content/announcements.php`、首页弹窗/跑马灯 | ✅ 是 | **已完成**（置顶/弹窗；Markdown；与文章共用表） |
+| Markdown | `Markdown`（`core/markdown/`） | 编辑器 + 渲染 | 公告/文章/API 文档编辑 | ✅ 是 | **已完成**（本地 marked/purify/Parsedown；短码扩展） |
 | Redis 缓存 | — | `RedisService` / `RedisCache` | `admin/system/redis.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 限流） |
 | 贡献者 | `FrontendContributor` | `FrontendContributor` | `contributors.php`、`profile.php`、`core/ping.php` | ✅ 是 | **已完成**（开发者卡片、公开主页、加入时间、壁纸、延迟检测） |
 
@@ -193,8 +194,9 @@ FrontendArticle::findBySlug($slug);           // 详情页
 3. **读站点名/描述** → `SiteContext`（或模板注入的 `$siteName`）  
 4. **当前登录用户** → `FrontendUser::current()`（推荐）或 `UserAuth::user()`  
 5. **是否开发者** → `UserRole::currentCanPublishApi()`
-5. **未来读文章** → 等 `FrontendArticle` 开发完成后再调用  
-6. **永远不要**在主题里写 SQL 或直接调 `*Manager` 做前台展示  
+5. **读文章** → `FrontendArticle::listForTheme()` / `findById()`  
+6. **读公告** → `FrontendAnnouncement::listForTheme()` / `listPopups()`  
+7. **永远不要**在主题里写 SQL 或直接调 `*Manager` 做前台展示  
 
 ---
 
@@ -954,11 +956,12 @@ MySQL
 | 接口审核/上下线 | `ApiManager` | `FrontendApi` | ✅ 可调用 |
 | 用户管理 | `UserManager` | `UserAuth`（当前用户） | ✅ 可调用 |
 | 站点配置 | 后台设置页 → `Config` | `SiteContext` / `ThemeManager::themeSetting()` | ✅ 可调用 |
-| 文章 | `ArticleManager`（规划） | `FrontendArticle`（规划） | ⏳ 待 core 开发 |
-| 友情链接 | `LinkManager` | `FrontendLink` | ✅ 可调用（已通过且启用） |
+| 文章 | `ContentManager`（kind=1） | `FrontendArticle` | ✅ 已完成 |
+| 友链 | `LinkManager` | `FrontendLink` | ✅ 可调用（已通过且启用） |
 | 合作伙伴 | `LinkManager` | `FrontendPartner` | ✅ 可调用（已启用） |
 | 赞助 | `LinkManager` | `FrontendSponsor` | ✅ 可调用（收款码 + 已启用名单） |
-| 公告 | `AnnouncementManager`（规划） | `FrontendAnnouncement`（规划） | ⏳ 待 core 开发 |
+| 公告 | `ContentManager`（kind=0） | `FrontendAnnouncement` | ✅ 已完成 |
+| Markdown | `Markdown` | 编辑器资源 `core/markdown/assets` | ✅ |
 
 ---
 

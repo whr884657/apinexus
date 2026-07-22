@@ -1,31 +1,72 @@
-<?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
+<?php if (!defined('VS_THEME_RENDER')) { exit; }
+
+$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$siteName = isset($siteName) ? $siteName : SiteContext::siteName();
+$articleId = function_exists('vs_resolve_path_id') ? (int) vs_resolve_path_id('id') : (isset($_GET['id']) ? (int) $_GET['id'] : 0);
+
+if ($articleId > 0) {
+    $article = FrontendArticle::findById($articleId, true);
+    if ($article === null) {
+        http_response_code(404);
+        ?>
+<main class="content-wrapper" style="padding-top:88px;">
+    <h1 class="page-title">文章不存在</h1>
+    <p style="color:var(--text-muted);"><a href="<?php echo vs_e($vsBase); ?>/articles">返回文章列表</a></p>
+</main>
+        <?php
+        return;
+    }
+    ?>
+<main class="content-wrapper" style="padding-top:88px;">
+    <p class="text-sm" style="margin-bottom:1rem;"><a href="<?php echo vs_e($vsBase); ?>/articles" style="color:var(--accent-primary);">← 文章列表</a></p>
+    <article class="article-detail">
+        <h1 class="page-title" style="margin-bottom:0.5rem;"><?php echo vs_e($article['title']); ?></h1>
+        <div class="article-card-meta" style="margin-bottom:1.25rem;">
+            <span><?php echo vs_e($article['createtime']); ?></span>
+            <span>阅读 <?php echo vs_e($article['views_label']); ?></span>
+        </div>
+        <?php if (!empty($article['cover'])): ?>
+            <img class="article-cover" src="<?php echo vs_e($article['cover']); ?>" alt=""
+                 style="width:100%;max-height:360px;object-fit:cover;border-radius:12px;margin-bottom:1.25rem;"
+                 loading="lazy" referrerpolicy="no-referrer">
+        <?php endif; ?>
+        <div class="markdown-body vs-md-body article-content">
+            <?php echo $article['body_html']; ?>
+        </div>
+    </article>
+</main>
+<link rel="stylesheet" href="<?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
+    <?php
+    return;
+}
+
+$articles = FrontendArticle::listForTheme(30);
+?>
 <main class="content-wrapper" style="padding-top:88px;">
     <h1 class="page-title">文章</h1>
-    <article class="article-card">
-        <div class="article-card-inner right-image">
-            <div class="article-card-content">
-                <a href="<?php echo vs_e($vsBase); ?>/articles" class="article-card-title"><?php echo vs_e($siteName); ?> 平台使用指南</a>
-                <p class="article-card-excerpt">本文介绍如何快速接入平台接口，包括注册登录、提交接口与审核流程。</p>
-                <div class="article-card-meta"><span>v<?php echo vs_e(VS_VERSION); ?></span><span>公告</span></div>
-            </div>
-        </div>
-    </article>
-    <article class="article-card">
-        <div class="article-card-inner">
-            <div class="article-card-content">
-                <a href="<?php echo vs_e($vsBase); ?>/apis" class="article-card-title">如何浏览全部接口</a>
-                <p class="article-card-excerpt">在全部接口页可按分类筛选、关键词搜索，查看已通过审核的公开 API。</p>
-                <div class="article-card-meta"><span>教程</span><span>接口</span></div>
-            </div>
-        </div>
-    </article>
-    <article class="article-card">
-        <div class="article-card-inner">
-            <div class="article-card-content">
-                <span class="article-card-title" style="cursor:default;">文章模块建设中</span>
-                <p class="article-card-excerpt">后续可在后台内容运营中发布更多资讯、教程与公告。</p>
-                <div class="article-card-meta"><span>敬请期待</span></div>
-            </div>
-        </div>
-    </article>
+    <?php if (count($articles) === 0): ?>
+        <p style="color:var(--text-muted);padding:2rem 0;">暂无已发布文章。</p>
+    <?php else: ?>
+        <?php foreach ($articles as $a): ?>
+            <article class="article-card">
+                <div class="article-card-inner<?php echo $a['cover'] !== '' ? ' right-image' : ''; ?>">
+                    <div class="article-card-content">
+                        <a href="<?php echo vs_e(vs_path_resource_url('articles', $a['id'])); ?>" class="article-card-title"><?php echo vs_e($a['title']); ?></a>
+                        <?php if ($a['summary'] !== ''): ?>
+                            <p class="article-card-excerpt"><?php echo vs_e($a['summary']); ?></p>
+                        <?php endif; ?>
+                        <div class="article-card-meta">
+                            <span><?php echo vs_e($a['createtime']); ?></span>
+                            <span>阅读 <?php echo vs_e($a['views_label']); ?></span>
+                        </div>
+                    </div>
+                    <?php if ($a['cover'] !== ''): ?>
+                        <div class="article-card-image">
+                            <img src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </article>
+        <?php endforeach; ?>
+    <?php endif; ?>
 </main>

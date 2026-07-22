@@ -81,21 +81,6 @@
         hasMore = false;
     }
 
-    function parseBoot() {
-        if (!pageRoot) {
-            return null;
-        }
-        var raw = pageRoot.getAttribute('data-boot');
-        if (!raw) {
-            return null;
-        }
-        try {
-            return JSON.parse(raw);
-        } catch (e) {
-            return null;
-        }
-    }
-
     function methodBadge(row) {
         return '<span class="vs-log-method ' + escapeHtml(row.method_class || 'is-other') + '">'
             + escapeHtml(row.method || '—') + '</span>';
@@ -300,7 +285,7 @@
         if (!body) {
             return;
         }
-        if (!window.VS) {
+        if (!window.VS || typeof VS.postForm !== 'function') {
             setTimeout(load, 40);
             return;
         }
@@ -342,10 +327,12 @@
             }
             applyListPayload(data, pagesize);
         }).catch(function (err) {
-            if (err && err.name === 'AbortError') {
+            if (seq !== loadSeq) {
                 return;
             }
-            if (seq !== loadSeq) {
+            // 被更新请求中止时不改 UI；若仍是当前 seq 的 Abort，复位加载态（E77）
+            if (err && err.name === 'AbortError') {
+                setControlsDisabled(false);
                 return;
             }
             setControlsDisabled(false);
@@ -477,24 +464,8 @@
         }
     });
 
-    var boot = parseBoot();
-    if (boot && Array.isArray(boot.list) && !q && okFilter === '' && page === 1) {
-        page = boot.page || 1;
-        days = boot.days || days;
-        nextBeforeId = parseInt(boot.next_before_id, 10) || 0;
-        hasMore = !!boot.has_more;
-        if (pageRoot) {
-            pageRoot.setAttribute('data-total-approx', boot.total_approx ? '1' : '0');
-            pageRoot.removeAttribute('data-boot');
-        }
-        if (daysEl && boot.days) {
-            daysEl.value = String(boot.days);
-            if (window.VSPick && typeof window.VSPick.refresh === 'function') {
-                window.VSPick.refresh(daysEl.parentNode || document);
-            }
-        }
-        renderList(boot.list, boot.total || 0, boot.pagesize || getPageSize());
-    } else {
+    // 首屏只走 AJAX（与积分/订单一致），避免 data-boot 过大解析失败导致一直加载中（E77）
+    if (body) {
         load();
     }
 })();

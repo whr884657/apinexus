@@ -6425,3 +6425,15 @@ select.vs-input.vs-select {
         border-top: 1px solid var(--vs-border, #e5e7eb);
     }
 }
+
+/* 公告 / 文章管理列表 */
+.vs-content-list { display: flex; flex-direction: column; gap: 10px; }
+.vs-content-row {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border: 1px solid var(--vs-border, #e5e7eb); border-radius: 12px; background: #fff;
+}
+.vs-content-row__main { min-width: 0; flex: 1; }
+.vs-content-row__title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+.vs-content-row__meta { display: flex; flex-wrap: wrap; gap: 8px; color: #64748b; font-size: 12px; }
+.vs-content-row__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.vs-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #334155; }

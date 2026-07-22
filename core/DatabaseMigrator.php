@@ -200,6 +200,11 @@ class DatabaseMigrator
             self::markApplied('6.0.0');
         }
 
+        // 新装已含 7.0.0 内容表时跳过
+        if (!in_array('7.0.0', $applied, true) && self::tableExists('content')) {
+            self::markApplied('7.0.0');
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
     }

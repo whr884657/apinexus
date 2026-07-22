@@ -60,25 +60,44 @@ $homeHeroConfig = array(
     'line2Rest'     => $heroLine2Rest !== '' ? $heroLine2Rest : ' 接口平台',
 );
 
+$announceList = class_exists('FrontendAnnouncement') ? FrontendAnnouncement::listForTheme() : array();
+$announcePopup = class_exists('FrontendAnnouncement') ? FrontendAnnouncement::listPopups() : array();
+$announceMarquee = '欢迎使用 ' . $siteName . '，当前版本 v' . VS_VERSION . ' 已上线！';
+$announceTitle = '网站公告';
 $announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p><p>系统版本 v' . vs_e(VS_VERSION) . ' 已上线，欢迎体验。</p>';
+if (count($announceList) > 0) {
+    $first = $announceList[0];
+    $announceMarquee = $first['summary'] !== '' ? $first['summary'] : $first['title'];
+    $announceTitle = $first['title'];
+    $announceHtml = isset($first['body_html']) ? $first['body_html'] : $announceHtml;
+}
+if (count($announcePopup) > 0) {
+    $pop = $announcePopup[0];
+    $announceTitle = $pop['title'];
+    $announceHtml = isset($pop['body_html']) ? $pop['body_html'] : $announceHtml;
+    if ($pop['summary'] !== '') {
+        $announceMarquee = $pop['summary'];
+    }
+}
 ?>
 <div class="home-announcement-bundle">
 <section class="home-announcement-wrap home-announcement-wrap--ready container mx-auto px-4" id="homeAnnouncementWrap">
     <button type="button" class="home-announcement-bar" id="homeAnnouncementBtn" aria-label="查看公告详情">
         <span class="home-announcement-label">公告</span>
-        <span class="home-announcement-marquee"><span class="home-announcement-track is-ready" style="--notice-start:600px;--notice-end:-400px;--notice-duration:24s">欢迎使用 <?php echo vs_e($siteName); ?>，当前版本 v<?php echo vs_e(VS_VERSION); ?> 已上线！</span></span>
+        <span class="home-announcement-marquee"><span class="home-announcement-track is-ready" style="--notice-start:600px;--notice-end:-400px;--notice-duration:24s"><?php echo vs_e($announceMarquee); ?></span></span>
         <span class="home-announcement-action">点击查看</span>
     </button>
 </section>
-<script type="application/json" id="feer-announcement-client-data"><?php echo json_encode(array('home' => array('title' => '网站公告', 'html' => $announceHtml)), JSON_UNESCAPED_UNICODE); ?></script>
+<script type="application/json" id="feer-announcement-client-data"><?php echo json_encode(array('home' => array('title' => $announceTitle, 'html' => $announceHtml, 'autopopup' => count($announcePopup) > 0)), JSON_UNESCAPED_UNICODE); ?></script>
 <div class="home-announcement-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true">
     <div class="home-announcement-modal__mask" data-close-announcement="1"></div>
     <div class="home-announcement-modal__card" role="dialog" aria-modal="true">
-        <div class="home-announcement-modal__head"><h3 class="home-announcement-modal__title">网站公告</h3><button type="button" class="home-announcement-modal__close" data-close-announcement="1">关闭</button></div>
+        <div class="home-announcement-modal__head"><h3 class="home-announcement-modal__title"><?php echo vs_e($announceTitle); ?></h3><button type="button" class="home-announcement-modal__close" data-close-announcement="1">关闭</button></div>
         <div class="home-announcement-modal__body markdown-body" data-announcement-body="home"></div>
         <div class="home-announcement-modal__footer"><button type="button" class="home-announcement-btn-ok" data-close-announcement="1">我知道了</button></div>
     </div>
 </div>
+<link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
 </div>
 <div class="home-page-body-stack">
 <main class="main-wrapper container mx-auto px-4">
