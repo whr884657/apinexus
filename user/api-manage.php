@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$row) {
             return '接口不存在';
         }
-        if ((int) $row['userid'] !== $userId) {
+        if (!AdminUserBinding::userOwnsApi($userId, (int) $row['userid'])) {
             return '无权操作该接口';
         }
         return $row;
@@ -104,6 +104,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = ApiManager::update($id, $data);
         if ($result !== true) {
             AjaxResponse::error($result);
+        }
+        // 历史管理员未挂身份的接口：首次由绑定用户保存时补挂 userid
+        if ((int) $owned['userid'] === 0) {
+            ApiManager::attachUserIdIfOrphan($id, $userId);
         }
         $row = ApiManager::findById($id);
         $formatted = ApiManager::formatRow($row);

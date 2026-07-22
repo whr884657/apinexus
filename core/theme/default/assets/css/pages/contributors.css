@@ -67,9 +67,34 @@
         .contributor-stat-value { font-weight: 700; color: var(--accent-primary); font-family: 'JetBrains Mono', monospace; }
         .contributor-stat-label { color: var(--text-muted); font-size: 0.7rem; }
         
-        .thank-you-banner { background: linear-gradient(135deg, rgba(0, 255, 157, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%); border: 1px solid var(--border-color); border-radius: 12px; padding: 2rem; margin: 2rem 1rem; max-width: 800px; margin-left: auto; margin-right: auto; text-align: center; }
-        .thank-you-banner h2 { font-size: 1.25rem; margin-bottom: 0.75rem; color: var(--accent-primary); }
-        .thank-you-banner p { color: var(--text-muted); line-height: 1.8; }
+        .contrib-intro {
+            max-width: 1200px;
+            margin: 0 auto 0.5rem;
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--accent-primary);
+            background: rgba(0, 255, 157, 0.04);
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+        }
+        [data-theme="light"] .contrib-intro {
+            background: rgba(5, 150, 105, 0.05);
+        }
+        .contrib-intro__code {
+            font-size: 0.75rem;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.02em;
+        }
+        .contrib-intro__prompt {
+            color: var(--accent-secondary);
+            margin-right: 0.35rem;
+        }
+        .contrib-intro__text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin: 0;
+        }
         
         .empty-state { text-align: center; padding: 4rem 1rem; color: var(--text-muted); }
         

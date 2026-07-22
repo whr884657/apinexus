@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-6.0.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-6.0.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v6.0.1（2026-07-22）
+
+- 修复绑定用户个人主页漏掉管理员后台发布接口
+- 贡献者页感谢区主题化；个人主页接口桌面网格多列
 
 ### v6.0.0（2026-07-22）
 

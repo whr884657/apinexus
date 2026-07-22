@@ -217,7 +217,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `UserAuth.php` | **用户**登录、注册、重置密码 |
 | `UserRole.php` | 用户角色常量与权限判断（普通用户/开发者） |
 | `FrontendUser.php` | 前台用户资料调度（用户名、头像、简介、博客、壁纸、角色） |
-| `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间） |
+| `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间；归属含绑定身份下历史 userid=0） |
 | `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据 |
 | `RateLimitStore.php` | 限流计数存储（MySQL） |
 | `AjaxResponse.php` | 后台 AJAX 统一 JSON 响应 |
@@ -530,6 +530,12 @@ AuthSecurity::requireAuthPost();
 | `bind($adminId, $account)` | 绑定 |
 | `unbind($adminId)` | 解绑 |
 | `publishUserId($adminId)` | 发布时使用的 user_id |
+| `isUserBoundToAdmin($userId)` | 用户是否为某管理员的绑定身份 |
+| `activeBindUserCount()` | 全站有效绑定身份去重数量 |
+| `userOwnsApi($userId, $apiUserId)` | 接口是否归属该用户（含唯一绑定下的历史 userid=0） |
+| `sqlApiOwnedByUser($alias)` | 归属条件 SQL（两个相同 userId 占位符） |
+
+**历史说明：** v3.17.2–v3.30.x 管理员发布曾写 `userid=0`；v3.31.0+ 写绑定用户。贡献者/个人主页须按 `userOwnsApi` / `sqlApiOwnedByUser` 统计，不可只认 `userid = 用户`。
 
 ---
 

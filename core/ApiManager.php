@@ -327,11 +327,39 @@ class ApiManager
         if ($userId <= 0) {
             return array();
         }
-        return self::listFiltered(array('userid' => $userId));
+        // 含绑定身份下历史管理员发布（userid=0）的接口
+        return self::listFiltered(array('owned_by_user' => $userId));
     }
 
     /**
-     * @param array $opts status|status_in|audit|userid
+     * 将历史未挂用户的接口挂到指定用户（仅 userid=0 时生效）
+     *
+     * @param int $apiId
+     * @param int $userId
+     * @return true|string
+     */
+    public static function attachUserIdIfOrphan($apiId, $userId)
+    {
+        $apiId = (int) $apiId;
+        $userId = (int) $userId;
+        if ($apiId <= 0 || $userId <= 0 || !self::tableReady()) {
+            return '参数无效';
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '` SET `userid` = ?, `updatetime` = NOW()'
+                . ' WHERE `id` = ? AND `userid` = 0 LIMIT 1'
+            );
+            $stmt->execute(array($userId, $apiId));
+            return true;
+        } catch (Exception $e) {
+            return '挂载用户失败：' . $e->getMessage();
+        }
+    }
+
+    /**
+     * @param array $opts status|status_in|audit|userid|owned_by_user|user_submitted
      * @return array
      */
     public static function listFiltered(array $opts = array())
@@ -379,7 +407,12 @@ class ApiManager
                 }
             }
 
-            if (isset($opts['userid']) && (int) $opts['userid'] > 0) {
+            if (isset($opts['owned_by_user']) && (int) $opts['owned_by_user'] > 0) {
+                $uid = (int) $opts['owned_by_user'];
+                $where[] = AdminUserBinding::sqlApiOwnedByUser('a');
+                $params[] = $uid;
+                $params[] = $uid;
+            } elseif (isset($opts['userid']) && (int) $opts['userid'] > 0) {
                 $where[] = 'a.`userid` = ?';
                 $params[] = (int) $opts['userid'];
             } elseif (!empty($opts['user_submitted'])) {

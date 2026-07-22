@@ -9,9 +9,10 @@ $authUrl = isset($authUrl) ? $authUrl : ($vsBase . '/user/login');
         <h1 class="section-title">公益贡献者</h1>
         <p class="text-sm font-mono page-subtitle" style="color: var(--text-muted); margin: -1.25rem 0 1.5rem;">感谢每一位为开源社区贡献力量的开发者</p>
     </div>
-    <div class="thank-you-banner">
-        <h2>衷心感谢</h2>
-        <p>感谢以下开发者无私分享他们的 API 接口，为整个开发者社区提供了宝贵的资源。<br>正是有了你们的贡献，才让更多开发者能够快速构建自己的项目。</p>
+
+    <div class="contrib-intro" role="note">
+        <p class="contrib-intro__code font-mono"><span class="contrib-intro__prompt">$</span> cat contributors.readme</p>
+        <p class="contrib-intro__text">下列开发者已公开分享接口。点击卡片进入个人主页，查看其全部已发布接口与调用数据。</p>
     </div>
 
     <?php if (count($contributors) === 0): ?>

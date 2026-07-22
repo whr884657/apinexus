@@ -49,7 +49,7 @@ $apis = (!$notFound && isset($profile['apis']) && is_array($profile['apis'])) ? 
                     <button type="button" class="sort-btn" data-sort="desc">倒序</button>
                 </div>
             </div>
-            <div id="apiList" class="st-grid-2">
+            <div id="apiList" class="st-api-grid">
                 <?php if (count($apis) === 0): ?>
                     <p class="st-page-desc">暂无公开接口</p>
                 <?php else: ?>

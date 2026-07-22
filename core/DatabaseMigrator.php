@@ -469,6 +469,11 @@ class DatabaseMigrator
             return;
         }
 
+        if ($version === '6.0.1') {
+            self::backfillOrphanAdminApis($pdo, $prefix);
+            return;
+        }
+
         $sql = file_get_contents($file);
         $sql = str_replace('{prefix}', $prefix, $sql);
         self::assertPrefixedTables($sql, $prefix, basename($file));
@@ -587,6 +592,38 @@ class DatabaseMigrator
             }
             throw $e;
         }
+    }
+
+    /**
+     * v6.0.1：历史管理员发布 userid=0 回填到全站唯一绑定身份
+     *
+     * @param PDO    $pdo
+     * @param string $prefix
+     * @return void
+     */
+    public static function backfillOrphanAdminApis(PDO $pdo, $prefix)
+    {
+        $adminTable = $prefix . 'admin';
+        $apiTable = $prefix . 'api';
+
+        $stmt = $pdo->query(
+            'SELECT DISTINCT `binduid` FROM `' . $adminTable . '`'
+            . ' WHERE `binduid` IS NOT NULL AND `binduid` > 0 AND `status` = 1'
+        );
+        $uids = $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : array();
+        if (!is_array($uids) || count($uids) !== 1) {
+            return;
+        }
+
+        $uid = (int) $uids[0];
+        if ($uid <= 0) {
+            return;
+        }
+
+        $upd = $pdo->prepare(
+            'UPDATE `' . $apiTable . '` SET `userid` = ? WHERE `userid` = 0'
+        );
+        $upd->execute(array($uid));
     }
 
     /**

@@ -157,4 +157,72 @@ class AdminUserBinding
             return '解绑失败：' . $e->getMessage();
         }
     }
+
+    /**
+     * 全站有效绑定身份数量（去重 binduid）
+     *
+     * @return int
+     */
+    public static function activeBindUserCount()
+    {
+        try {
+            $pdo = Database::connect();
+            $n = $pdo->query(
+                'SELECT COUNT(DISTINCT `binduid`) FROM `' . Database::table('admin') . '`'
+                . ' WHERE `binduid` IS NOT NULL AND `binduid` > 0 AND `status` = 1'
+            )->fetchColumn();
+            return (int) $n;
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 接口是否归属该前台用户
+     * - 直接：api.userid = 用户
+     * - 历史：api.userid = 0，且该用户为当前唯一绑定身份（多绑定时无法判断历史归属，不计入）
+     *
+     * @param int $userId
+     * @param int $apiUserId
+     * @return bool
+     */
+    public static function userOwnsApi($userId, $apiUserId)
+    {
+        $userId = (int) $userId;
+        $apiUserId = (int) $apiUserId;
+        if ($userId <= 0) {
+            return false;
+        }
+        if ($apiUserId === $userId) {
+            return true;
+        }
+        if ($apiUserId === 0
+            && self::isUserBoundToAdmin($userId)
+            && self::activeBindUserCount() === 1) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * SQL：接口归属指定用户（含唯一绑定身份下的历史 userid=0）
+     * 调用方需绑定两个相同的 userId 参数
+     *
+     * @param string $apiAlias
+     * @return string
+     */
+    public static function sqlApiOwnedByUser($apiAlias = 'a')
+    {
+        $apiAlias = preg_replace('/[^a-zA-Z0-9_]/', '', (string) $apiAlias);
+        if ($apiAlias === '') {
+            $apiAlias = 'a';
+        }
+        $adminTable = Database::table('admin');
+        return '(' . $apiAlias . '.`userid` = ? OR (' . $apiAlias . '.`userid` = 0 AND EXISTS ('
+            . 'SELECT 1 FROM `' . $adminTable . '` ad'
+            . ' WHERE ad.`binduid` = ? AND ad.`status` = 1 LIMIT 1'
+            . ') AND (SELECT COUNT(DISTINCT ad2.`binduid`) FROM `' . $adminTable . '` ad2'
+            . ' WHERE ad2.`binduid` IS NOT NULL AND ad2.`binduid` > 0 AND ad2.`status` = 1) = 1'
+            . '))';
+    }
 }

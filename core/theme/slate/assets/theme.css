@@ -1158,6 +1158,12 @@ body.st-drawer-open {
     gap: 12px;
 }
 
+.st-api-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+
 .st-notice-box {
     padding: 14px 16px;
     border-radius: 10px;
@@ -1500,7 +1506,8 @@ body.st-nav-fab-open {
     }
 
     .st-grid-2,
-    .st-grid-3 {
+    .st-grid-3,
+    .st-api-grid {
         grid-template-columns: 1fr;
     }
 

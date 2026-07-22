@@ -80,16 +80,11 @@
     color: var(--accent-primary);
 }
 #apiList {
-    column-count: 1;
-    column-gap: 1rem;
-}
-@media (min-width: 640px) {
-    #apiList { column-count: 2; }
-}
-@media (min-width: 1024px) {
-    #apiList { column-count: 3; }
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
 }
 #apiList .api-card-stack {
-    break-inside: avoid;
-    margin-bottom: 1rem;
+    margin-bottom: 0;
+    min-width: 0;
 }

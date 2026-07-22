@@ -71,6 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error($result);
         }
         $row = ApiManager::findById($id);
+        // 历史管理员发布未挂身份：保存时补挂当前绑定用户
+        if ($row && (int) $row['userid'] === 0) {
+            $publishUid = AdminUserBinding::publishUserId((int) Auth::id());
+            if (is_int($publishUid) && $publishUid > 0) {
+                ApiManager::attachUserIdIfOrphan($id, $publishUid);
+                $row = ApiManager::findById($id);
+            }
+        }
         $formatted = ApiManager::formatRow($row);
         AjaxResponse::success('接口已保存', array(
             'api'         => $formatted,

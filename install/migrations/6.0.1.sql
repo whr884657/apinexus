@@ -1,0 +1,3 @@
+-- ApiNexus 6.0.1：历史管理员发布接口（userid=0）回填到全站唯一绑定身份
+-- 实际执行见 DatabaseMigrator::backfillOrphanAdminApis（本文件由迁移器按版本号分支调用）
+-- 条件：启用管理员中恰好只有一个有效 binduid 时，将 api.userid=0 挂到该用户

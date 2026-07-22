@@ -2,6 +2,9 @@
 /**
  * 文件：core/FrontendContributor.php
  * 作用：前台贡献者列表与公开个人主页（主题只调本类，禁止直读库）
+ *
+ * 归属规则：api.userid = 用户，或（userid=0 且该用户为管理员当前绑定身份）——
+ * 管理员后台发布与绑定用户前台发布视为同一作者。
  */
 
 class FrontendContributor
@@ -22,20 +25,7 @@ class FrontendContributor
             $auditOk = (int) ApiManager::AUDIT_APPROVED;
             $roleDev = UserRole::ROLE_DEVELOPER;
 
-            $sql = 'SELECT u.`id`, u.`username`, u.`email`, u.`avatar`, u.`bio`, u.`blog`, u.`wallpaper`,'
-                . ' u.`role`, u.`createtime`,'
-                . ' COUNT(a.`id`) AS apicount,'
-                . ' COALESCE(SUM(a.`calls`), 0) AS callsum'
-                . ' FROM `' . $userTable . '` u'
-                . ' INNER JOIN `' . $apiTable . '` a ON a.`userid` = u.`id`'
-                . ' AND a.`status` IN (' . $statusNormal . ', ' . $statusMaint . ')';
-            if (ApiManager::hasAuditColumn()) {
-                $sql .= ' AND a.`audit` = ' . $auditOk;
-            }
-            $sql .= ' WHERE u.`status` = 1 AND u.`role` = ?'
-                . ' GROUP BY u.`id`, u.`username`, u.`email`, u.`avatar`, u.`bio`, u.`blog`, u.`wallpaper`, u.`role`, u.`createtime`'
-                . ' ORDER BY callsum DESC, apicount DESC, u.`id` DESC';
-
+            $sql = self::listSql($userTable, $apiTable, $statusNormal, $statusMaint, $auditOk);
             $stmt = $pdo->prepare($sql);
             $stmt->execute(array($roleDev));
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -50,6 +40,40 @@ class FrontendContributor
         } catch (Exception $e) {
             return array();
         }
+    }
+
+    /**
+     * @param string $userTable
+     * @param string $apiTable
+     * @param int    $statusNormal
+     * @param int    $statusMaint
+     * @param int    $auditOk
+     * @return string
+     */
+    private static function listSql($userTable, $apiTable, $statusNormal, $statusMaint, $auditOk)
+    {
+        $adminTable = Database::table('admin');
+        // userid 直接挂用户；或历史 userid=0 且全站仅一个有效绑定身份且即为该用户
+        $own = '(a.`userid` = u.`id` OR (a.`userid` = 0 AND EXISTS ('
+            . 'SELECT 1 FROM `' . $adminTable . '` ad WHERE ad.`binduid` = u.`id` AND ad.`status` = 1 LIMIT 1'
+            . ') AND (SELECT COUNT(DISTINCT ad2.`binduid`) FROM `' . $adminTable . '` ad2'
+            . ' WHERE ad2.`binduid` IS NOT NULL AND ad2.`binduid` > 0 AND ad2.`status` = 1) = 1))';
+
+        $sql = 'SELECT u.`id`, u.`username`, u.`email`, u.`avatar`, u.`bio`, u.`blog`, u.`wallpaper`,'
+            . ' u.`role`, u.`createtime`,'
+            . ' COUNT(a.`id`) AS apicount,'
+            . ' COALESCE(SUM(a.`calls`), 0) AS callsum'
+            . ' FROM `' . $userTable . '` u'
+            . ' INNER JOIN `' . $apiTable . '` a ON ' . $own
+            . ' AND a.`status` IN (' . (int) $statusNormal . ', ' . (int) $statusMaint . ')';
+        if (ApiManager::hasAuditColumn()) {
+            $sql .= ' AND a.`audit` = ' . (int) $auditOk;
+        }
+        $sql .= ' WHERE u.`status` = 1 AND u.`role` = ?'
+            . ' GROUP BY u.`id`, u.`username`, u.`email`, u.`avatar`, u.`bio`, u.`blog`, u.`wallpaper`, u.`role`, u.`createtime`'
+            . ' HAVING apicount > 0'
+            . ' ORDER BY callsum DESC, apicount DESC, u.`id` DESC';
+        return $sql;
     }
 
     /**
@@ -112,11 +136,26 @@ class FrontendContributor
         if ($userId <= 0) {
             return array();
         }
-        $rows = ApiManager::listFiltered(array(
-            'userid'    => $userId,
-            'status_in' => array(ApiManager::STATUS_NORMAL, ApiManager::STATUS_MAINTENANCE),
-            'audit'     => ApiManager::AUDIT_APPROVED,
-        ));
+
+        try {
+            $pdo = Database::connect();
+            $apiTable = Database::table('api');
+            $ownSql = AdminUserBinding::sqlApiOwnedByUser('a');
+            $sql = 'SELECT a.* FROM `' . $apiTable . '` a WHERE ' . $ownSql
+                . ' AND a.`status` IN (?, ?)';
+            $params = array($userId, $userId, ApiManager::STATUS_NORMAL, ApiManager::STATUS_MAINTENANCE);
+            if (ApiManager::hasAuditColumn()) {
+                $sql .= ' AND a.`audit` = ?';
+                $params[] = ApiManager::AUDIT_APPROVED;
+            }
+            $sql .= ' ORDER BY a.`id` DESC';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            return array();
+        }
+
         $list = array();
         foreach ($rows as $row) {
             $item = FrontendApi::formatForTheme($row);
