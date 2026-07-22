@@ -125,7 +125,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 赞助 | `LinkManager`（共用） | `FrontendSponsor` | `admin/finance/sponsor.php`、`sponsor.php`、默认主题赞助页、系统设置收款码 | ✅ 是 | **已完成**（表 `link`；`kind=2`；简介=赞助说明；收款码配置） |
 | 公告 | — | — | 占位 | ❌ 否 | **待开发** |
 | Redis 缓存 | — | `RedisService` / `RedisCache` | `admin/system/redis.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 限流） |
-| 贡献者 | — | — | 占位 | ❌ 否 | **待开发** |
+| 贡献者 | `FrontendContributor` | `FrontendContributor` | `contributors.php`、`profile.php`、`core/ping.php` | ✅ 是 | **已完成**（开发者卡片、公开主页、加入时间、壁纸、延迟检测） |
 
 > 上表「待开发」项：须先完成 `XxxManager` + `FrontendXxx` 并注册 bootstrap，主题才能接入；在此之前主题页仅能做静态占位。
 
@@ -216,7 +216,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `Auth.php` | **管理员**登录与会话 |
 | `UserAuth.php` | **用户**登录、注册、重置密码 |
 | `UserRole.php` | 用户角色常量与权限判断（普通用户/开发者） |
-| `FrontendUser.php` | 前台用户资料调度（用户名、头像、邮箱、角色） |
+| `FrontendUser.php` | 前台用户资料调度（用户名、头像、简介、博客、壁纸、角色） |
+| `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间） |
 | `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据 |
 | `RateLimitStore.php` | 限流计数存储（MySQL） |
 | `AjaxResponse.php` | 后台 AJAX 统一 JSON 响应 |

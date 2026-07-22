@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-5.9.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-6.0.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -113,6 +113,7 @@ ApiNexus/
 ├── index.php                   # 前台首页（主题驱动）
 ├── apis.php                    # 全部接口列表 + 代理网关（对外 /apis/{短码}，内记统计）
 ├── detail.php                  # 接口详情（对外 /detail/{id}，伪静态 → ?id=）
+├── profile.php                 # 开发者公开主页（对外 /profile/{id}）
 ├── api/                        # 本地业务接口脚本（头部注入 ApiStats::hit）+ 统计代码使用说明.md
 │   └── yiyan/                  # 示例：随机一言
 ├── articles.php                # 前台 · 文章
@@ -261,6 +262,13 @@ location / {
 ---
 
 ## 版本记录
+
+### v6.0.0（2026-07-22）
+
+- 贡献者页真实开发者数据（头像、接口数、调用量、加入时间），卡片进入公开主页
+- 新增 `/profile/{id}` 个人主页（双主题）；简介 / 博客 / 背景壁纸
+- 全站默认壁纸可配；用户可自定义覆盖；`core/ping.php` 延迟检测
+- 升级请执行数据库结构更新
 
 ### v5.9.1（2026-07-22）
 

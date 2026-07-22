@@ -195,6 +195,11 @@ class DatabaseMigrator
             self::markApplied('5.9.0');
         }
 
+        // 新装已含 6.0.0 用户资料字段时跳过
+        if (!in_array('6.0.0', $applied, true) && self::tableColumnExists('user', 'wallpaper')) {
+            self::markApplied('6.0.0');
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
     }

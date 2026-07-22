@@ -219,6 +219,32 @@ function vs_api_detail_url($apiId)
 }
 
 /**
+ * 开发者公开主页地址（无 .php：/profile/{id}）
+ *
+ * @param int $userId
+ * @return string
+ */
+function vs_profile_url($userId)
+{
+    $userId = (int) $userId;
+    if ($userId <= 0) {
+        return rtrim(vs_base_url(), '/') . '/contributors';
+    }
+    return vs_path_resource_url('profile', $userId);
+}
+
+/**
+ * 通用 http(s) 外链校验（头像 / 壁纸 / 博客）
+ *
+ * @param string $url
+ * @return bool
+ */
+function vs_is_allowed_http_url($url)
+{
+    return vs_is_allowed_avatar_url($url);
+}
+
+/**
  * 从当前请求解析资源数字 ID
  * 优先 $_GET['id']（伪静态 /detail/{id} → detail.php?id=）；其次 PATH_INFO（兼容旧 /detail.php/{id}）
  *

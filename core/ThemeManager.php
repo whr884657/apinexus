@@ -826,6 +826,7 @@ class ThemeManager
             'links'        => 'assets/css/pages/links.css',
             'applylink'    => 'assets/css/pages/applylink.css',
             'contributors' => 'assets/css/pages/contributors.css',
+            'profile'      => 'assets/css/pages/profile.css',
             'sponsor'      => 'assets/css/pages/donate.css',
         );
         if (isset($pageCssMap[$pageKey])) {
@@ -858,6 +859,10 @@ class ThemeManager
             'links'        => array('assets/js/pages/links-page.js'),
             'applylink'    => array('assets/js/pages/applylink.js'),
             'contributors' => array('assets/js/pages/contributors-page.js'),
+            'profile'      => array(
+                'assets/js/pages/profile.js',
+                'assets/js/pages/profile-search.js',
+            ),
             'sponsor'      => array('assets/js/pages/donate.js'),
         );
         if (isset($pageJsMap[$pageKey])) {

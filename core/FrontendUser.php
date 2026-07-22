@@ -40,6 +40,9 @@ class FrontendUser
             'username' => (string) $user['username'],
             'email' => (string) $user['email'],
             'avatar' => UserAvatar::resolve($user),
+            'bio' => isset($user['bio']) ? trim((string) $user['bio']) : '',
+            'blog' => isset($user['blog']) ? trim((string) $user['blog']) : '',
+            'wallpaper' => isset($user['wallpaper']) ? trim((string) $user['wallpaper']) : '',
             'role' => $role,
             'role_label' => UserRole::label($role),
             'can_publish_api' => UserRole::canPublishApi($role),
@@ -48,6 +51,7 @@ class FrontendUser
                 : '0',
             'createtime' => isset($user['createtime']) ? (string) $user['createtime'] : '',
             'lastlogin' => isset($user['lastlogin']) ? (string) $user['lastlogin'] : '',
+            'profile_url' => UserRole::canPublishApi($role) ? vs_profile_url((int) $user['id']) : '',
         );
     }
 }
