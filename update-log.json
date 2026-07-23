@@ -1,5 +1,16 @@
 {
     "versions": {
+        "7.5.0": {
+            "title": "ApiNexus 7.5.0 SEO 图标与系统描述抓取修复",
+            "date": "2026-07-23",
+            "db_changes": false,
+            "changes": [
+                "修复反向代理下 OG/图标变成 http 导致微信/QQ/百度抓不到图标",
+                "分享图优先 Logo；补齐 apple-touch-icon 与 og:image 尺寸/类型",
+                "分享描述强制系统「站点描述」，禁止主题 Hero 徽章渗入",
+                "默认主题首页 H1 静态输出、徽章 aria-hidden、SEO 兜底文案"
+            ]
+        },
         "7.4.0": {
             "title": "ApiNexus 7.4.0 列表取数纠偏与内容卡片/Markdown 去绿",
             "date": "2026-07-23",

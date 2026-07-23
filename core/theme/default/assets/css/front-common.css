@@ -32,6 +32,19 @@ a.btn-geek *, a.btn-secondary *, a.btn-danger *, a.btn * {
 
 body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.4s, color 0.4s; }
 
+/* SEO 抓取兜底文案：对用户不可见，供社交/搜索在 meta 失效时优先读到系统描述 */
+.vs-seo-fallback-desc {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
 .font-mono { font-family: 'JetBrains Mono', monospace; }
 
 #shader-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }

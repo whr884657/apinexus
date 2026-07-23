@@ -1,13 +1,13 @@
 {
-    "version": "7.4.0",
-    "title": "ApiNexus 7.4.0 列表取数纠偏与内容卡片/Markdown 去绿",
+    "version": "7.5.0",
+    "title": "ApiNexus 7.5.0 SEO 图标与系统描述抓取修复",
     "release_date": "2026-07-23",
     "db_changes": false,
     "changes": [
-        "日志查询去掉「近 N 天」，只按底部每页条数 + keyset 取数（与订单/积分一致）",
-        "公告/文章管理列表固定行高、标题单行省略、操作靠右",
-        "Markdown 强调色钉死黑白灰（后台/默认主题），禁止回落成绿色；slate 显式覆盖",
-        "完善列表取数与内容卡片规范（E89/E90/E91）"
+        "修复反向代理下 OG/图标变成 http 导致微信/QQ/百度抓不到图标",
+        "分享图优先 Logo；补齐 apple-touch-icon 与 og:image 尺寸/类型",
+        "分享描述强制系统「站点描述」，禁止主题 Hero 徽章渗入",
+        "默认主题首页 H1 静态输出、徽章 aria-hidden、SEO 兜底文案"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

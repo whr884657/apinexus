@@ -127,15 +127,13 @@ function vs_auth_head($title)
     echo '<meta charset="utf-8">' . "\n";
     vs_render_seo_meta(vs_seo_defaults(array(
         'title'       => vs_page_title($title, $siteName),
-        'description' => SiteContext::siteDescription() !== '' ? SiteContext::siteDescription() : ($siteName . ' 登录'),
+        'description' => vs_seo_site_description($siteName . ' 登录'),
         'robots'      => 'noindex,nofollow',
         'site_name'   => $siteName,
     )));
     echo '<title>' . vs_e(vs_page_title($title, $siteName)) . '</title>' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">' . "\n";
-    if ($favicon !== '') {
-        echo '<link rel="icon" href="' . vs_e(vs_favicon_href($favicon)) . '" type="image/x-icon">' . "\n";
-    }
+    vs_render_site_icons($favicon, vs_seo_share_image());
     vs_auth_bg_script();
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/auth-login.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
