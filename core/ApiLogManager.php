@@ -1,14 +1,14 @@
 <?php
 /**
  * 文件：core/ApiLogManager.php
- * 作用：API 调用日志查询（时间窗 / 热冷合并 / keyset / 短 TTL；冷数据见 ApiLogArchive）
+ * 作用：API 调用日志查询（每页条数 + keyset / 热冷合并 / 短 TTL；冷数据见 ApiLogArchive）
  */
 
 class ApiLogManager
 {
-    /** 默认查询最近天数 */
+    /** @deprecated 列表已取消「近 N 天」；保留常量以免旧配置报错 */
     const DEFAULT_QUERY_DAYS = 7;
-    /** 查询天数上限（可覆盖冷归档） */
+    /** @deprecated */
     const MAX_QUERY_DAYS = 365;
     /** SELECT 会话超时（毫秒，MySQL 8+；不支持则忽略） */
     const QUERY_TIMEOUT_MS = 5000;
@@ -252,10 +252,11 @@ class ApiLogManager
     }
 
     /**
-     * 分页列表（强制时间窗 + COUNT 无 JOIN + keyset + 短 TTL）
+     * 分页列表：仅按底部「每页条数」+ before_id keyset 取最新记录。
+     * 禁止「近 N 天」时间窗、禁止全表 COUNT、禁止深页 OFFSET。
      *
-     * @param array $opts page, pagesize, q, ok(null|0|1), apiid, days, before_id
-     * @return array{list:array,total:int,page:int,pagesize:int,days:int,before_id:int,next_before_id:int,has_more:bool,total_approx:bool}
+     * @param array $opts page, pagesize, q, ok(null|0|1), apiid, before_id
+     * @return array{list:array,total:int,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool,total_approx:bool}
      */
     public static function listPaged(array $opts = array())
     {
@@ -264,7 +265,6 @@ class ApiLogManager
         $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
         $ok = array_key_exists('ok', $opts) ? $opts['ok'] : null;
         $apiid = isset($opts['apiid']) ? (int) $opts['apiid'] : 0;
-        $days = isset($opts['days']) ? self::clampQueryDays((int) $opts['days']) : self::queryDaysDefault();
         $beforeId = isset($opts['before_id']) ? (int) $opts['before_id'] : 0;
         if ($beforeId < 0) {
             $beforeId = 0;
@@ -275,7 +275,6 @@ class ApiLogManager
             'total'          => 0,
             'page'           => $page,
             'pagesize'       => $pagesize,
-            'days'           => $days,
             'before_id'      => $beforeId,
             'next_before_id' => 0,
             'has_more'       => false,
@@ -291,24 +290,19 @@ class ApiLogManager
             'q'         => $q,
             'ok'        => $ok,
             'apiid'     => $apiid,
-            'days'      => $days,
             'before_id' => $beforeId,
         ));
 
         return RedisCache::remember(
             $cacheKey,
             RedisCache::TTL_APILOG_PAGE,
-            function () use ($page, $pagesize, $q, $ok, $apiid, $days, $beforeId, $empty) {
+            function () use ($page, $pagesize, $q, $ok, $apiid, $beforeId, $empty) {
                 try {
                     $pdo = Database::connect();
                     self::applyQueryTimeout($pdo);
 
-                    $filters = self::buildFilters($q, $ok, $apiid, $days, $beforeId);
+                    $filters = self::buildFilters($q, $ok, $apiid, $beforeId);
                     $needUserJoin = ($q !== '');
-
-                    $totalMeta = self::resolveTotal($pdo, $filters, $q, $ok, $apiid, $days);
-                    $total = (int) $totalMeta['total'];
-                    $totalApprox = !empty($totalMeta['approx']);
 
                     $from = '`' . self::table() . '` l';
                     if ($needUserJoin) {
@@ -334,7 +328,7 @@ class ApiLogManager
                     $needMore = ($pagesize + 1) - count($merged);
                     if ($needMore > 0 && class_exists('ApiLogArchive')) {
                         $cold = ApiLogArchive::listInQueryWindow(array(
-                            'days'      => $days,
+                            'days'      => 0,
                             'before_id' => $beforeId,
                             'pagesize'  => $needMore,
                             'q'         => $q,
@@ -375,14 +369,13 @@ class ApiLogManager
 
                     return array(
                         'list'           => $merged,
-                        'total'          => $total,
+                        'total'          => 0,
                         'page'           => $page,
                         'pagesize'       => $pagesize,
-                        'days'           => $days,
                         'before_id'      => $beforeId,
                         'next_before_id' => $nextBefore,
                         'has_more'       => $hasMore,
-                        'total_approx'   => $totalApprox,
+                        'total_approx'   => false,
                     );
                 } catch (Exception $e) {
                     return $empty;
@@ -405,17 +398,16 @@ class ApiLogManager
     }
 
     /**
-     * @param string     $q
-     * @param mixed      $ok
-     * @param int        $apiid
-     * @param int        $days
-     * @param int        $beforeId
+     * @param string $q
+     * @param mixed  $ok
+     * @param int    $apiid
+     * @param int    $beforeId
      * @return array{whereSql:string,bind:array,hasExtra:bool}
      */
-    private static function buildFilters($q, $ok, $apiid, $days, $beforeId)
+    private static function buildFilters($q, $ok, $apiid, $beforeId)
     {
-        $where = array('l.`createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)');
-        $bind = array((int) $days);
+        $where = array('1=1');
+        $bind = array();
         $hasExtra = false;
 
         if ($q !== '') {
@@ -446,66 +438,5 @@ class ApiLogManager
             'bind'     => $bind,
             'hasExtra' => $hasExtra,
         );
-    }
-
-    /**
-     * COUNT 永不 JOIN；无额外筛选时走独立较长 TTL 缓存
-     *
-     * @param PDO    $pdo
-     * @param array  $filters
-     * @param string $q
-     * @param mixed  $ok
-     * @param int    $apiid
-     * @param int    $days
-     * @return array{total:int,approx:bool}
-     */
-    private static function resolveTotal($pdo, array $filters, $q, $ok, $apiid, $days)
-    {
-        $hasExtra = !empty($filters['hasExtra']);
-
-        if (!$hasExtra) {
-            $cacheKey = RedisCache::apilogRangeTotalKey($days);
-            $cached = RedisCache::remember(
-                $cacheKey,
-                RedisCache::TTL_APILOG_RANGE_TOTAL,
-                function () use ($pdo, $days) {
-                    $stmt = $pdo->prepare(
-                        'SELECT COUNT(*) FROM `' . self::table() . '`
-                         WHERE `createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)'
-                    );
-                    $stmt->execute(array((int) $days));
-                    $hot = max(0, (int) $stmt->fetchColumn());
-                    $cold = class_exists('ApiLogArchive') ? ApiLogArchive::countInQueryWindow($days) : 0;
-                    return $hot + $cold;
-                }
-            );
-            return array('total' => (int) $cached, 'approx' => true);
-        }
-
-        // 有筛选：热库精确 COUNT；冷库在列表侧合并（总数为热库结果，允许近似）
-        $where = array('`createtime` >= DATE_SUB(NOW(), INTERVAL ? DAY)');
-        $bind = array((int) $days);
-        if ($q !== '') {
-            $like = '%' . $q . '%';
-            $where[] = '(`apiname` LIKE ? OR `path` LIKE ? OR `ip` LIKE ? OR `url` LIKE ? OR `apikey` LIKE ? OR `domain` LIKE ? OR `iploc` LIKE ?
-                OR EXISTS (SELECT 1 FROM `' . Database::table('user') . '` u WHERE u.`id` = `' . self::table() . '`.`userid` AND u.`username` LIKE ?))';
-            for ($i = 0; $i < 8; $i++) {
-                $bind[] = $like;
-            }
-        }
-        if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
-            $where[] = '`ok` = ?';
-            $bind[] = (int) $ok;
-        }
-        if ($apiid > 0) {
-            $where[] = '`apiid` = ?';
-            $bind[] = $apiid;
-        }
-
-        $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . self::table() . '` WHERE ' . implode(' AND ', $where));
-        $stmt->execute($bind);
-        $hot = max(0, (int) $stmt->fetchColumn());
-        $cold = class_exists('ApiLogArchive') ? ApiLogArchive::countInQueryWindow($days) : 0;
-        return array('total' => $hot + $cold, 'approx' => $cold > 0);
     }
 }

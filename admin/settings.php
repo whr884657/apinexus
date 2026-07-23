@@ -14,10 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_apilog') {
         try {
-            $queryDays = isset($_POST['apilog_query_days']) ? (int) $_POST['apilog_query_days'] : ApiLogManager::DEFAULT_QUERY_DAYS;
             $hotDays = isset($_POST['apilog_hot_days']) ? (int) $_POST['apilog_hot_days'] : ApiLogArchive::DEFAULT_HOT_DAYS;
             $shardRows = isset($_POST['apilog_shard_rows']) ? (int) $_POST['apilog_shard_rows'] : ApiLogArchive::DEFAULT_SHARD_ROWS;
-            $queryDays = ApiLogManager::clampQueryDays($queryDays);
             if ($hotDays < 1) {
                 $hotDays = ApiLogArchive::DEFAULT_HOT_DAYS;
             }
@@ -28,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Config::setMany(array(
                 'apilog_detail'           => isset($_POST['apilog_detail']) ? '1' : '0',
                 'apilog_archive_enabled'  => isset($_POST['apilog_archive_enabled']) ? '1' : '0',
-                'apilog_query_days'       => (string) $queryDays,
                 'apilog_hot_days'         => (string) $hotDays,
                 'apilog_shard_rows'       => (string) $shardRows,
             ));
@@ -488,19 +485,6 @@ vs_admin_accordion_start(
                 <input type="checkbox" name="apilog_detail" value="1" <?php echo (!isset($vsCfg['apilog_detail']) || $vsCfg['apilog_detail'] !== '0') ? 'checked' : ''; ?>>
                 <span>记录详细调用日志（IP、UA、来源等）</span>
             </label>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label" for="apilog_query_days">后台默认查询天数</label>
-            <select class="vs-input vs-select" id="apilog_query_days" name="apilog_query_days" data-vs-pick>
-                <?php
-                $cfgQueryDays = isset($vsCfg['apilog_query_days']) ? (int) $vsCfg['apilog_query_days'] : ApiLogManager::DEFAULT_QUERY_DAYS;
-                $cfgQueryDays = ApiLogManager::clampQueryDays($cfgQueryDays);
-                foreach (array(1, 3, 7, 14, 30, 90, 180, 365) as $d):
-                ?>
-                    <option value="<?php echo (int) $d; ?>"<?php echo $cfgQueryDays === $d ? ' selected' : ''; ?>><?php echo (int) $d; ?> 天</option>
-                <?php endforeach; ?>
-            </select>
-            <?php vs_render_notice('tip', '', '默认只查近期，减轻压力；开启冷热归档后，更久远的记录可从本机归档一并读出。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row">
             <label class="vs-checkbox">

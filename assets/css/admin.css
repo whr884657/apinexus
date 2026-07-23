@@ -6426,58 +6426,60 @@ select.vs-input.vs-select {
     }
 }
 
-/* 公告 / 文章管理列表：独立于 API 网格，对齐卡片视觉与响应式 */
+/* 公告 / 文章管理列表：固定行高，对齐 API 列表；标题单行省略，操作靠右 */
 .vs-content-list {
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
+    gap: 0 !important;
+    width: 100% !important;
 }
 
 .vs-content-list .vs-content-item.vs-api-item {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 8px !important;
-    padding: 12px 14px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 0.9fr) max-content !important;
+    grid-template-areas: "title tags meta actions" !important;
+    align-items: center !important;
+    gap: 8px 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 56px !important;
+    height: 56px !important;
+    max-height: 56px !important;
+    box-sizing: border-box !important;
+    padding: 0 14px !important;
     margin: 0 !important;
-    border: 1px solid var(--vs-border, #e5e7eb) !important;
-    border-radius: 12px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
     border-bottom: 1px solid var(--vs-border, #e5e7eb) !important;
-    background: #fff !important;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
-    grid-template-columns: none !important;
-    grid-template-areas: none !important;
-    grid-template-rows: none !important;
+    background: var(--vs-content-bg, #fff) !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
 }
 
 .vs-content-list .vs-content-item.vs-api-item:hover {
-    border-color: #cbd5e1 !important;
-}
-
-.vs-content-list .vs-content-item .vs-api-item__title,
-.vs-content-list .vs-content-item .vs-api-item__tags,
-.vs-content-list .vs-content-item .vs-api-item__meta,
-.vs-content-list .vs-content-item .vs-api-item__actions {
-    grid-area: auto !important;
-    width: 100% !important;
-    max-width: none !important;
+    background: #f8fafc !important;
+    border-color: var(--vs-border, #e5e7eb) !important;
 }
 
 .vs-content-list .vs-content-item .vs-api-item__title {
+    grid-area: title !important;
     display: flex !important;
-    align-items: baseline !important;
+    align-items: center !important;
     gap: 8px !important;
     min-width: 0 !important;
-    flex-wrap: wrap !important;
+    max-width: 100% !important;
+    flex-wrap: nowrap !important;
+    overflow: hidden !important;
 }
 
 .vs-content-list .vs-content-item .vs-api-item__name {
-    font-weight: 700 !important;
-    font-size: 15px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
-    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
     writing-mode: horizontal-tb !important;
 }
 
@@ -6489,18 +6491,24 @@ select.vs-input.vs-select {
 }
 
 .vs-content-list .vs-content-item .vs-api-item__tags {
+    grid-area: tags !important;
     display: flex !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     gap: 6px !important;
     justify-content: flex-start !important;
-    overflow: visible !important;
+    align-items: center !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
 }
 
 .vs-content-list .vs-content-item .vs-api-item__meta {
+    grid-area: meta !important;
     display: flex !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
     gap: 8px 14px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
 }
 
 .vs-content-list .vs-content-item .vs-api-item__calls,
@@ -6511,17 +6519,23 @@ select.vs-input.vs-select {
     font-size: 12px !important;
     color: #64748b !important;
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     writing-mode: horizontal-tb !important;
 }
 
 .vs-content-list .vs-content-item .vs-api-item__actions {
+    grid-area: actions !important;
     display: flex !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: flex-end !important;
+    justify-self: end !important;
     gap: 6px !important;
-    padding-top: 4px !important;
-    border-top: 1px dashed var(--vs-border, #e5e7eb) !important;
+    width: max-content !important;
+    margin-left: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
     overflow: visible !important;
 }
 
@@ -6531,30 +6545,7 @@ select.vs-input.vs-select {
     padding: 0 10px !important;
     font-size: 12px !important;
     width: auto !important;
-    flex-shrink: 0 !important;
-}
-
-@media (min-width: 901px) {
-    .vs-content-list .vs-content-item.vs-api-item {
-        display: grid !important;
-        grid-template-columns: minmax(160px, 1.4fr) minmax(140px, 1fr) minmax(140px, 0.9fr) auto !important;
-        grid-template-areas: "title tags meta actions" !important;
-        align-items: center !important;
-        gap: 8px 12px !important;
-        padding: 12px 14px !important;
-    }
-
-    .vs-content-list .vs-content-item .vs-api-item__title { grid-area: title !important; }
-    .vs-content-list .vs-content-item .vs-api-item__tags { grid-area: tags !important; }
-    .vs-content-list .vs-content-item .vs-api-item__meta { grid-area: meta !important; }
-    .vs-content-list .vs-content-item .vs-api-item__actions {
-        grid-area: actions !important;
-        width: auto !important;
-        border-top: none !important;
-        padding-top: 0 !important;
-        justify-content: flex-end !important;
-        flex-wrap: nowrap !important;
-    }
+    flex: 0 0 auto !important;
 }
 
 @media (max-width: 900px) {
@@ -6563,21 +6554,38 @@ select.vs-input.vs-select {
     }
 
     .vs-content-list .vs-content-item.vs-api-item {
-        padding: 10px 12px !important;
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "title"
+            "tags"
+            "meta"
+            "actions" !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        padding: 12px !important;
+        border: 1px solid var(--vs-border, #e5e7eb) !important;
         border-radius: 10px !important;
+        gap: 8px !important;
+        overflow: hidden !important;
     }
 
     .vs-content-list .vs-content-item .vs-api-item__name {
-        white-space: normal !important;
+        white-space: nowrap !important;
         line-height: 1.35 !important;
     }
 
-    .vs-content-list .vs-content-item .vs-api-item__actions {
-        justify-content: flex-end !important;
+    .vs-content-list .vs-content-item .vs-api-item__tags {
+        flex-wrap: wrap !important;
     }
 
-    .vs-content-list .vs-content-item .vs-api-item__actions .vs-btn {
-        flex: 0 0 auto !important;
+    .vs-content-list .vs-content-item .vs-api-item__actions {
+        width: 100% !important;
+        justify-content: flex-end !important;
+        padding-top: 6px !important;
+        border-top: 1px dashed var(--vs-border, #e5e7eb) !important;
+        flex-wrap: wrap !important;
     }
 }
 

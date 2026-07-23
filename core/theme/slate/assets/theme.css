@@ -5,6 +5,8 @@
     --st-accent: #24a66a;
     --st-accent-h: #168855;
     --st-accent-bg: #e8f5ee;
+    /* Markdown 强调色：仅主题二显式覆盖为青绿（共享 markdown-render 默认黑） */
+    --vs-md-accent: var(--st-accent);
     --st-fg: #1a1a2e;
     --st-fg2: #555770;
     --st-fg3: #8b8da3;

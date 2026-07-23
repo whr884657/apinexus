@@ -1,6 +1,8 @@
-/* ApiNexus Markdown 渲染：跟随当前主题强调色（默认主题黑、后台 --vs-primary、slate --st-accent） */
-.vs-md-body {
-    --vs-md-accent: var(--accent-primary, var(--vs-accent, var(--vs-primary, var(--st-accent, #111111))));
+/* ApiNexus Markdown 渲染：默认黑白灰；禁止回落成主题二青绿 */
+.vs-md-body,
+.vs-md-preview {
+    /* 默认钉死黑色；主题可用 --vs-md-accent 覆盖（slate 在 theme.css 设置） */
+    --vs-md-accent: var(--vs-primary, var(--accent-primary, #111111));
     --vs-md-accent-soft: rgba(17, 17, 17, 0.06);
     --vs-md-accent-soft: color-mix(in srgb, var(--vs-md-accent) 12%, transparent);
     line-height: 1.75;
@@ -19,7 +21,7 @@
     border-radius: 12px;
 }
 .vs-md-card {
-    border: 1px solid var(--vs-md-accent);
+    border: 1px solid var(--vs-md-accent) !important;
     border-radius: 12px;
     padding: 0.9rem 1rem;
     margin: 1rem 0;
@@ -28,7 +30,7 @@
 .vs-md-card__title {
     font-weight: 700;
     margin-bottom: 0.4rem;
-    color: var(--vs-md-accent);
+    color: var(--vs-md-accent) !important;
 }
 .vs-md-alert {
     border-radius: 10px;
@@ -57,7 +59,7 @@
     padding: 0.45rem 1rem;
     border-radius: 10px;
     font-size: 0.9rem;
-    background: var(--vs-md-accent);
+    background: var(--vs-md-accent) !important;
 }
 .vs-md-timeline {
     list-style: none;

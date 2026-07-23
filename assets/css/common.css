@@ -18,6 +18,8 @@
     --vs-desktop-modal-height: min(92vh, 860px);
     --vs-primary: #111111;
     --vs-primary-hover: #2d2d2d;
+    /* 后台 Markdown：钉死黑强调色，禁止回落成任何绿色 */
+    --vs-md-accent: #111111;
     --vs-danger: #dc2626;
     --vs-danger-hover: #ef4444;
     --vs-success: #15803d;

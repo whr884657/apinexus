@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/system-logs.js
- * 作用：管理员 API 调用日志（时间窗 / keyset 翻页 / Abort 防叠请求 / 抽屉详情）
+ * 作用：管理员 API 调用日志（每页条数 + keyset 翻页 / Abort 防叠请求 / 抽屉详情）
  */
 (function () {
     'use strict';
@@ -11,7 +11,6 @@
     var pagerNav = document.getElementById('logsPagerNav');
     var totalEl = document.getElementById('logsTotal');
     var pageSizeEl = document.getElementById('logsPageSize');
-    var daysEl = document.getElementById('logsDays');
     var searchInput = document.getElementById('logsSearchInput');
     var overlay = document.getElementById('logsDetailOverlay');
     var detailBody = document.getElementById('logsDetailBody');
@@ -21,7 +20,6 @@
     var page = 1;
     var okFilter = '';
     var q = '';
-    var days = pageRoot ? (parseInt(pageRoot.getAttribute('data-default-days'), 10) || 7) : 7;
     /** 每页进入时的 before_id；第 1 页为 0 */
     var cursorStack = [0];
     var nextBeforeId = 0;
@@ -48,23 +46,12 @@
         return Math.min(50, n);
     }
 
-    function getDays() {
-        var n = daysEl ? parseInt(daysEl.value, 10) : days;
-        if (!n || n < 1) {
-            n = days;
-        }
-        return Math.min(90, n);
-    }
-
     function setControlsDisabled(disabled) {
         if (refreshBtn) {
             refreshBtn.disabled = !!disabled;
         }
         if (searchBtn) {
             searchBtn.disabled = !!disabled;
-        }
-        if (daysEl) {
-            daysEl.disabled = !!disabled;
         }
         if (pageSizeEl) {
             pageSizeEl.disabled = !!disabled;
@@ -239,11 +226,7 @@
             footer.hidden = false;
         }
         if (totalEl) {
-            var label = '共 ' + total + ' 条';
-            if (total && pageRoot && pageRoot.getAttribute('data-total-approx') === '1') {
-                label += '（近期）';
-            }
-            totalEl.textContent = label;
+            totalEl.textContent = '每页 ' + pagesize + ' 条';
         }
         if (pagerNav) {
             pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
@@ -272,13 +255,7 @@
     function applyListPayload(data, pagesize) {
         nextBeforeId = parseInt(data.next_before_id, 10) || 0;
         hasMore = !!data.has_more;
-        if (pageRoot) {
-            pageRoot.setAttribute('data-total-approx', data.total_approx ? '1' : '0');
-        }
-        if (data.days) {
-            days = parseInt(data.days, 10) || days;
-        }
-        renderList(data.list || [], data.total || 0, pagesize);
+        renderList(data.list || [], 0, pagesize);
     }
 
     function load() {
@@ -307,7 +284,6 @@
         fd.append('action', 'list');
         fd.append('page', String(page));
         fd.append('pagesize', String(pagesize));
-        fd.append('days', String(getDays()));
         fd.append('before_id', String(beforeId));
         if (q) {
             fd.append('q', q);
@@ -421,14 +397,6 @@
 
     if (pageSizeEl) {
         pageSizeEl.addEventListener('change', function () {
-            resetCursors();
-            load();
-        });
-    }
-
-    if (daysEl) {
-        daysEl.addEventListener('change', function () {
-            days = getDays();
             resetCursors();
             load();
         });

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-7.3.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-7.4.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,11 @@ location / {
 ---
 
 ## 版本记录
+
+### v7.4.0（2026-07-23）
+
+- 日志查询去掉「近 N 天」，只按底部每页条数 + keyset
+- 公告/文章列表固定行高、操作靠右；Markdown 强调色钉死黑白灰
 
 ### v7.3.0（2026-07-23）
 

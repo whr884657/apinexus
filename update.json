@@ -1,13 +1,13 @@
 {
-    "version": "7.3.0",
-    "title": "ApiNexus 7.3.0 默认主题灰粒子与 Markdown 中文引用",
+    "version": "7.4.0",
+    "title": "ApiNexus 7.4.0 列表取数纠偏与内容卡片/Markdown 去绿",
     "release_date": "2026-07-23",
     "db_changes": false,
     "changes": [
-        "默认主题全站粒子统一为灰点（shell.js + --particle-color），去掉子页绿色粒子 JS",
-        "清页面绿色 :root / 网格覆盖，对齐 theme-tokens 黑白灰",
-        "贡献者页去掉终端乱码引导条，缩短介绍文案",
-        "Markdown 引用改为中文弯引号样式，强调色跟主题（禁绿竖线）"
+        "日志查询去掉「近 N 天」，只按底部每页条数 + keyset 取数（与订单/积分一致）",
+        "公告/文章管理列表固定行高、标题单行省略、操作靠右",
+        "Markdown 强调色钉死黑白灰（后台/默认主题），禁止回落成绿色；slate 显式覆盖",
+        "完善列表取数与内容卡片规范（E89/E90/E91）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

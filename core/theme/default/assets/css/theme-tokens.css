@@ -12,6 +12,7 @@
     --text-main: #111111;
     --text-muted: #6b7280;
     --accent-primary: #111111;
+    --vs-md-accent: #111111;
     --accent-secondary: #2563eb;
     --border-color: rgba(17, 17, 17, 0.12);
     --glow-primary: rgba(17, 17, 17, 0.14);
@@ -31,6 +32,7 @@
     --text-main: #e5e7eb;
     --text-muted: #9ca3af;
     --accent-primary: #f3f4f6;
+    --vs-md-accent: #f3f4f6;
     --accent-secondary: #93c5fd;
     --border-color: rgba(255, 255, 255, 0.1);
     --glow-primary: rgba(255, 255, 255, 0.1);

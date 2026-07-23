@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/system/logs.php
- * 作用：API 调用日志查询（时间窗 / keyset 翻页 / 搜索 / 抽屉详情）
+ * 作用：API 调用日志查询（每页条数 + keyset 翻页 / 搜索 / 抽屉详情）
  */
 
 require_once dirname(__DIR__) . '/init.php';
@@ -19,7 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $q = isset($_POST['q']) ? trim((string) $_POST['q']) : '';
         $ok = array_key_exists('ok', $_POST) && $_POST['ok'] !== '' ? (int) $_POST['ok'] : null;
         $apiid = isset($_POST['apiid']) ? (int) $_POST['apiid'] : 0;
-        $days = isset($_POST['days']) ? (int) $_POST['days'] : ApiLogManager::queryDaysDefault();
         $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
         $data = ApiLogManager::listPaged(array(
             'page'      => $page,
@@ -27,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'q'         => $q,
             'ok'        => $ok,
             'apiid'     => $apiid,
-            'days'      => $days,
             'before_id' => $beforeId,
         ));
         AjaxResponse::success('ok', $data);
@@ -49,7 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $tableReady = ApiLogManager::tableReady();
-$queryDays = ApiLogManager::queryDaysDefault();
 
 vs_admin_layout_start('日志查询', 'logs');
 ?>
@@ -62,18 +59,6 @@ vs_admin_layout_start('日志查询', 'logs');
                placeholder="搜索接口名 / IP / 路径 / 密钥 / 用户…" autocomplete="off">
         <button type="button" class="vs-btn vs-btn--primary" id="logsSearchBtn">搜索</button>
     </div>
-    <label class="vs-api-list-pagesize" for="logsDays">
-        <span class="vs-api-list-pagesize__label">近</span>
-        <select class="vs-input vs-select" id="logsDays" data-vs-pick>
-            <?php
-            $dayOpts = array(1, 3, 7, 14, 30, 90, 180, 365);
-            foreach ($dayOpts as $d):
-                $sel = ((int) $queryDays === (int) $d) ? ' selected' : '';
-            ?>
-                <option value="<?php echo (int) $d; ?>"<?php echo $sel; ?>><?php echo (int) $d; ?> 天</option>
-            <?php endforeach; ?>
-        </select>
-    </label>
     <div class="vs-finance-filters" role="group" aria-label="调用结果">
         <button type="button" class="vs-btn vs-btn--primary vs-log-filter is-active" data-ok="">全部</button>
         <button type="button" class="vs-btn vs-btn--default vs-log-filter" data-ok="1">成功</button>
@@ -82,8 +67,7 @@ vs_admin_layout_start('日志查询', 'logs');
     <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="logsRefreshBtn">刷新</button>
 </div>
 
-<div class="vs-panel vs-log-panel" id="logsPage"
-     data-default-days="<?php echo (int) $queryDays; ?>">
+<div class="vs-panel vs-log-panel" id="logsPage">
     <div class="vs-log-list" id="logsListBody">
         <?php vs_render_loading('正在加载日志'); ?>
     </div>

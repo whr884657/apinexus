@@ -131,7 +131,6 @@ class RedisCache
             'q'         => isset($opts['q']) ? (string) $opts['q'] : '',
             'ok'        => array_key_exists('ok', $opts) ? $opts['ok'] : null,
             'apiid'     => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
-            'days'      => (int) (isset($opts['days']) ? $opts['days'] : 7),
             'before_id' => (int) (isset($opts['before_id']) ? $opts['before_id'] : 0),
         );
         return self::KEY_APILOG_PAGE_PREFIX . md5(json_encode($norm));

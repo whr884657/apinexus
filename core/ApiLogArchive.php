@@ -360,7 +360,7 @@ class ApiLogArchive
      */
     public static function listInQueryWindow(array $opts)
     {
-        $days = max(1, (int) (isset($opts['days']) ? $opts['days'] : 7));
+        $days = (int) (isset($opts['days']) ? $opts['days'] : 0);
         $beforeId = isset($opts['before_id']) ? (int) $opts['before_id'] : 0;
         $pagesize = max(1, min(50, (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20)));
         $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
@@ -370,10 +370,17 @@ class ApiLogArchive
         $catalog = self::readCatalog();
         $dayKeys = array();
         if (!empty($catalog['days']) && is_array($catalog['days'])) {
-            $from = date('Y-m-d', strtotime('-' . ($days - 1) . ' days'));
+            // days<=0：不按时间窗过滤，按 id keyset 取冷库（与列表「仅每页条数」一致）
+            $from = null;
             $to = date('Y-m-d');
+            if ($days > 0) {
+                $from = date('Y-m-d', strtotime('-' . ($days - 1) . ' days'));
+            }
             foreach ($catalog['days'] as $day => $meta) {
-                if (!is_string($day) || $day < $from || $day > $to) {
+                if (!is_string($day)) {
+                    continue;
+                }
+                if ($from !== null && ($day < $from || $day > $to)) {
                     continue;
                 }
                 if ($beforeId > 0) {
