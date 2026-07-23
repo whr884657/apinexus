@@ -3,30 +3,12 @@
  * 来源: contributors.php
  */
 
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-        }
-        [data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.3s, color 0.3s; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
         #shader-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-        .grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(0, 255, 157, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 157, 0.03) 1px, transparent 1px); background-size: 50px 50px; mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%); opacity: 0.5; }
+        .grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(107, 114, 128, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(107, 114, 128, 0.03) 1px, transparent 1px); background-size: 50px 50px; mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%); opacity: 0.5; }
         [data-theme="light"] .grid-overlay { opacity: 0.1; }
         .main-wrapper { position: relative; z-index: 10; }
         
@@ -49,11 +31,11 @@
         .contributors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; padding: 2rem 1rem; max-width: 1200px; margin: 0 auto; }
         
         .contributor-card { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; transition: all 0.3s; }
-        .contributor-card:hover { border-color: var(--accent-primary); transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0, 255, 157, 0.1); }
+        .contributor-card:hover { border-color: var(--accent-primary); transform: translateY(-5px); box-shadow: 0 10px 30px rgba(107, 114, 128, 0.1); }
         .contributor-card-link { text-decoration: none; color: inherit; display: block; cursor: pointer; }
         
         .contributor-avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent-primary); object-fit: cover; margin: 0 auto 1rem; }
-        .contributor-avatar-placeholder { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent-primary); background: rgba(0, 255, 157, 0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+        .contributor-avatar-placeholder { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent-primary); background: rgba(107, 114, 128, 0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
         .contributor-avatar-placeholder span { font-size: 2rem; font-weight: 700; color: var(--accent-primary); }
         
         .contributor-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
@@ -69,31 +51,26 @@
         
         .contrib-intro {
             max-width: 1200px;
-            margin: 0 auto 0.5rem;
-            padding: 1rem 1.25rem;
+            margin: 0 auto 1rem;
+            padding: 0.85rem 1.1rem;
             border: 1px solid var(--border-color);
-            border-left: 3px solid var(--accent-primary);
-            background: rgba(0, 255, 157, 0.04);
-            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
-        }
-        [data-theme="light"] .contrib-intro {
-            background: rgba(5, 150, 105, 0.05);
-        }
-        .contrib-intro__code {
-            font-size: 0.75rem;
-            color: var(--accent-primary);
-            margin-bottom: 0.5rem;
-            letter-spacing: 0.02em;
-        }
-        .contrib-intro__prompt {
-            color: var(--accent-secondary);
-            margin-right: 0.35rem;
+            border-radius: 10px;
+            background: rgba(17, 17, 17, 0.03);
         }
         .contrib-intro__text {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: var(--text-muted);
             line-height: 1.7;
             margin: 0;
+            word-break: break-word;
+        }
+        .contributor-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 28px rgba(17, 17, 17, 0.08);
+        }
+        .contributor-avatar-placeholder {
+            background: rgba(17, 17, 17, 0.06);
         }
         
         .empty-state { text-align: center; padding: 4rem 1rem; color: var(--text-muted); }

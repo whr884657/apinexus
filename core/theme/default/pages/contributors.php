@@ -7,12 +7,11 @@ $authUrl = isset($authUrl) ? $authUrl : ($vsBase . '/user/login');
 <main class="main-wrapper container mx-auto px-4" style="padding-top:88px;">
     <div class="page-header">
         <h1 class="section-title">公益贡献者</h1>
-        <p class="text-sm font-mono page-subtitle" style="color: var(--text-muted); margin: -1.25rem 0 1.5rem;">感谢每一位为开源社区贡献力量的开发者</p>
+        <p class="text-sm page-subtitle" style="color: var(--text-muted); margin: -1.25rem 0 1.5rem;">感谢每一位为开源社区贡献力量的开发者</p>
     </div>
 
     <div class="contrib-intro" role="note">
-        <p class="contrib-intro__code font-mono"><span class="contrib-intro__prompt">$</span> cat contributors.readme</p>
-        <p class="contrib-intro__text">下列开发者已公开分享接口。点击卡片进入个人主页，查看其全部已发布接口与调用数据。</p>
+        <p class="contrib-intro__text">下列开发者已公开分享接口。点击卡片可进入个人主页，查看其已发布的接口与调用数据。</p>
     </div>
 
     <?php if (count($contributors) === 0): ?>

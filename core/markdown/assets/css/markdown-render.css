@@ -99,9 +99,42 @@
     border: 1px solid var(--border-color, rgba(0,0,0,.1));
     padding: 0.45rem 0.6rem;
 }
+.vs-md-body th {
+    background: var(--vs-md-accent-soft);
+    color: var(--text-main, #111111);
+    font-weight: 600;
+}
 .vs-md-body blockquote {
-    margin: 1rem 0;
-    padding: 0.4rem 0.9rem;
-    border-left: 3px solid var(--vs-md-accent);
-    color: var(--text-muted, #64748b);
+    position: relative;
+    margin: 1.25rem 0;
+    padding: 1rem 1.4rem 1rem 1.55rem;
+    border: 0;
+    border-left: 0;
+    color: var(--text-main, #111111);
+    background: var(--vs-md-accent-soft);
+    border-radius: 10px;
+    font-style: normal;
+    line-height: 1.8;
+}
+.vs-md-body blockquote::before {
+    content: '“';
+    position: absolute;
+    left: 0.55rem;
+    top: 0.1rem;
+    font-size: 1.75rem;
+    line-height: 1;
+    color: var(--vs-md-accent);
+    opacity: 0.45;
+    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', serif;
+}
+.vs-md-body blockquote::after {
+    content: '”';
+    position: absolute;
+    right: 0.55rem;
+    bottom: 0;
+    font-size: 1.75rem;
+    line-height: 1;
+    color: var(--vs-md-accent);
+    opacity: 0.45;
+    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', serif;
 }

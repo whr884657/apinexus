@@ -142,9 +142,9 @@ body.vs-body.feer-front .main-wrapper.container.applylink-page,
 }
 
 .alert-success {
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid #10b981;
-    color: #059669;
+    background: rgba(17, 17, 17, 0.1);
+    border: 1px solid #111111;
+    color: #111111;
 }
 
 .alert-error {

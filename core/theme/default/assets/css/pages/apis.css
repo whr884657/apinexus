@@ -3,32 +3,12 @@
  * 来源: apis.php
  */
 
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-            --glow-primary: rgba(0, 255, 157, 0.7);
-        }
-        [data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-            --glow-primary: rgba(5, 150, 105, 0.4);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.4s, color 0.4s; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
         #shader-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-        .grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(0, 255, 157, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 157, 0.03) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.5; }
+        .grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(107, 114, 128, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(107, 114, 128, 0.03) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.5; }
         .main-wrapper { position: relative; z-index: 10; }
         
         .nav-bar { position: fixed; top: 0; width: 100%; z-index: 100; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); backdrop-filter: blur(12px); height: 60px; }
@@ -70,10 +50,10 @@
         @media (max-width: 640px) { .card-container { grid-template-columns: 1fr; } }
         
         .api-card { background: var(--bg-panel); border: 1px solid var(--border-color); padding: 1rem; transition: all 0.3s ease; position: relative; display: flex; flex-direction: column; }
-        .api-card:hover { border-color: var(--accent-primary); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0, 255, 157, 0.1); }
+        .api-card:hover { border-color: var(--accent-primary); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(107, 114, 128, 0.1); }
         
         .method-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 2px; font-weight: bold; font-family: 'JetBrains Mono', monospace; }
-        .get { background: rgba(0, 255, 157, 0.15); color: var(--accent-primary); }
+        .get { background: rgba(107, 114, 128, 0.15); color: var(--accent-primary); }
         .post { background: rgba(0, 212, 255, 0.15); color: var(--accent-secondary); }
         .api-item-more { font-size: 0.65rem; padding: 2px 6px; border-radius: 2px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); background: rgba(17, 17, 17, 0.06); }
         
@@ -129,7 +109,7 @@
     vertical-align: middle;
     white-space: nowrap;
 }
-.api-chip--free { background: rgba(0, 255, 157, 0.15); color: var(--accent-primary); }
+.api-chip--free { background: rgba(107, 114, 128, 0.15); color: var(--accent-primary); }
 .api-chip--points { background: rgba(245, 158, 11, 0.18); color: #f59e0b; }
 .api-chip--key { background: rgba(59, 130, 246, 0.18); color: #60a5fa; }
 .api-chip--maintenance { background: rgba(239, 68, 68, 0.18); color: #f87171; }

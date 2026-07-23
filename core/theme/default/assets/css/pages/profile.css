@@ -8,7 +8,7 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin-icon { animation: spin 1s linear infinite; }
 .profile-hero-fallback {
-    background: linear-gradient(135deg, rgba(0,255,157,0.18), rgba(0,212,255,0.12));
+    background: linear-gradient(135deg, rgba(107, 114, 128,0.18), rgba(0,212,255,0.12));
 }
 .upf-glass {
     background: rgba(12, 12, 18, 0.75);
@@ -30,7 +30,7 @@
 }
 .upf-api-card-bg:hover {
     border-color: var(--accent-primary);
-    box-shadow: 0 8px 24px rgba(0, 255, 157, 0.06);
+    box-shadow: 0 8px 24px rgba(107, 114, 128, 0.06);
 }
 .upf-btn-primary {
     background: var(--accent-primary);
@@ -47,12 +47,12 @@
     border-color: var(--accent-primary);
     color: var(--accent-primary);
 }
-.tag-get { background: rgba(34,197,94,0.12); color: #22c55e; }
+.tag-get { background: rgba(17, 17, 17,0.12); color: #111111; }
 .tag-post { background: rgba(59,130,246,0.12); color: #3b82f6; }
 .tag-put { background: rgba(249,115,22,0.12); color: #f97316; }
 .tag-delete { background: rgba(239,68,68,0.12); color: #ef4444; }
 .tag-patch { background: rgba(168,85,247,0.12); color: #a855f7; }
-.tag-free { background: rgba(34,197,94,0.15) !important; color: #22c55e !important; }
+.tag-free { background: rgba(17, 17, 17,0.15) !important; color: #111111 !important; }
 .tag-points { background: rgba(245,158,11,0.15) !important; color: #f59e0b !important; }
 .profile-search-input {
     width: 100%;

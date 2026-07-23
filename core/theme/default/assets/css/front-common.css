@@ -4,28 +4,20 @@
  * 包含: 主题变量、粒子画布、导航栏、侧边栏、页脚等
  */
 
-/* === from: about.php === */
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-            --particle-color: 0, 255, 157;
-        }
-
+/* === 公共色板兜底（最终以 theme-tokens.css 为准；禁止参考 UI 绿色） === */
+:root,
 [data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-            --particle-color: 100, 116, 139;
-        }
+    --bg-deep: #f8fafc;
+    --bg-panel: rgba(255, 255, 255, 0.98);
+    --text-main: #111111;
+    --text-muted: #6b7280;
+    --accent-primary: #111111;
+    --accent-secondary: #2563eb;
+    --border-color: rgba(17, 17, 17, 0.12);
+    --particle-color: 107, 114, 128;
+    --line-color-alpha: 0.08;
+    --glow-primary: rgba(17, 17, 17, 0.14);
+}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -44,7 +36,7 @@ body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); colo
 
 #shader-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 
-.grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(0, 255, 157, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 157, 0.03) 1px, transparent 1px); background-size: 50px 50px; mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%); opacity: 0.5; }
+.grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(107, 114, 128, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(107, 114, 128, 0.03) 1px, transparent 1px); background-size: 50px 50px; mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%); opacity: 0.5; }
 
 [data-theme="light"] .grid-overlay { opacity: 0.1; }
 
@@ -88,66 +80,15 @@ footer { border-top: 1px solid var(--border-color); background: var(--bg-panel);
     .footer-custom-left, .footer-custom-center, .footer-custom-right { text-align: center; }
 }
 
-/* === from: api-detail.php === */
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --bg-code: #0d0d14;
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-            --glow-primary: rgba(0, 255, 157, 0.7);
-            --particle-color: 0, 255, 157;
-            --line-color-alpha: 0.15;
-            --endpoint-bg: rgba(0, 255, 157, 0.08);
-            --endpoint-border: rgba(0, 255, 157, 0.2);
-        }
 
-[data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --bg-code: #f1f5f9;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-            --particle-color: 100, 116, 139;
-            --line-color-alpha: 0.1;
-            --endpoint-bg: rgba(5, 150, 105, 0.08);
-            --endpoint-border: rgba(5, 150, 105, 0.2);
-        }
+/* === from: api-detail.php === */
 
 .qrcode-box-small { width: 70px; height: 70px; padding: 4px; background: #fff; border-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); }
 
 .beian-link { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
 
-/* === from: api-docs.php === */
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --bg-card: rgba(20, 20, 30, 0.8);
-            --bg-code: #0d0d14;
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-        }
 
-[data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --bg-card: rgba(248, 250, 252, 0.9);
-            --bg-code: #f1f5f9;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-        }
+/* === from: api-docs.php === */
 
 body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; font-size: 14px; }
 
@@ -164,30 +105,10 @@ footer { border-top: 1px solid var(--border-color); background: var(--bg-panel);
 /* 友情链接样式 */
         .footer-links a { color: var(--text-muted); text-decoration: none; transition: color 0.2s; }
 
+
 /* === from: apis.php === */
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-            --glow-primary: rgba(0, 255, 157, 0.7);
-        }
 
-[data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-            --glow-primary: rgba(5, 150, 105, 0.4);
-        }
-
-.grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(0, 255, 157, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 157, 0.03) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.5; }
+.grid-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; background-image: linear-gradient(rgba(107, 114, 128, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(107, 114, 128, 0.03) 1px, transparent 1px); background-size: 50px 50px; opacity: 0.5; }
 
 .btn-geek { background: transparent; border: 1px solid var(--accent-primary); color: var(--accent-primary); padding: 0.65rem 1.5rem; font-weight: 600; font-size: 0.85rem; position: relative; overflow: hidden; cursor: pointer; transition: all 0.3s; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); text-decoration: none; display: inline-block; }
 
@@ -195,18 +116,8 @@ footer { border-top: 1px solid var(--border-color); background: var(--bg-panel);
 .sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 199; opacity: 0; visibility: hidden; transition: all 0.3s; }
 .sidebar-overlay.active { opacity: 1; visibility: visible; }
 
+
 /* === from: apply-link.php === */
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-            --glow-primary: rgba(0, 255, 157, 0.7);
-            --particle-color: 0, 255, 157;
-        }
 
 .nav-bar { position: fixed; top: 0; width: 100%; z-index: 100; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); backdrop-filter: blur(12px); height: 60px; }
 
@@ -220,73 +131,29 @@ footer { border-top: 1px solid var(--border-color); background: var(--bg-panel);
 /* 小尺寸二维码样式（与友情链接页保持一致） */
 .qrcode-box-small { width: 70px; height: 70px; padding: 4px; background: #fff; border-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); }
 
-/* === from: article.php === */
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-        }
 
-[data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-        }
+/* === from: article.php === */
 
 footer { border-top: 1px solid var(--border-color); background: var(--bg-panel); padding-top: 3rem; padding-bottom: 1.5rem; }
 
+
 /* === from: articles.php === */
+
 body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
 
+
 /* === from: contributors.php === */
+
 body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.3s, color 0.3s; }
 
-/* === from: index.php === */
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-            --glow-primary: rgba(0, 255, 157, 0.7);
-            --code-bg: rgba(0, 0, 0, 0.5);
-            --particle-color: 0, 255, 157;
-            --line-color-alpha: 0.15;
-            --endpoint-bg: rgba(0, 255, 157, 0.08);
-            --endpoint-border: rgba(0, 255, 157, 0.2);
-        }
 
-[data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-            --glow-primary: rgba(5, 150, 105, 0.4);
-            --code-bg: #f1f5f9;
-            --particle-color: 100, 116, 139;
-            --line-color-alpha: 0.1;
-            --endpoint-bg: rgba(5, 150, 105, 0.08);
-            --endpoint-border: rgba(5, 150, 105, 0.2);
-        }
+/* === from: index.php === */
 
 * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--accent-primary) transparent; }
 
 body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); overflow-x: hidden; transition: background 0.4s ease, color 0.4s ease; }
 
-[data-theme="light"] .grid-overlay { opacity: 0.1; background-image: linear-gradient(rgba(5, 150, 105, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(5, 150, 105, 0.08) 1px, transparent 1px); }
+[data-theme="light"] .grid-overlay { opacity: 0.1; background-image: linear-gradient(rgba(17, 17, 17, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(17, 17, 17, 0.08) 1px, transparent 1px); }
 
 .sidebar-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 199; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
 .sidebar-overlay.active { opacity: 1; visibility: visible; }
@@ -294,28 +161,8 @@ body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); colo
 .mobile-sidebar { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: var(--bg-panel); border-left: 1px solid var(--border-color); z-index: 200; padding: 2rem 1.5rem; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; box-shadow: -5px 0 30px rgba(0,0,0,0.2); }
 .mobile-sidebar.open { right: 0; }
 
-/* === from: links.php === */
-:root {
-            --bg-deep: #050508;
-            --bg-panel: rgba(12, 12, 18, 0.95);
-            --bg-card: rgba(20, 20, 30, 0.8);
-            --text-main: #e4e4e7;
-            --text-muted: #71717a;
-            --accent-primary: #00ff9d;
-            --accent-secondary: #00d4ff;
-            --border-color: rgba(0, 255, 157, 0.15);
-        }
 
-[data-theme="light"] {
-            --bg-deep: #ffffff;
-            --bg-panel: rgba(255, 255, 255, 0.98);
-            --bg-card: rgba(248, 250, 252, 0.9);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --accent-primary: #059669;
-            --accent-secondary: #0284c7;
-            --border-color: rgba(5, 150, 105, 0.15);
-        }
+/* === from: links.php === */
 
 /* --- 页面标题双斜线（各页可复用；勿依赖易被重置的 ::before） --- */
 .section-title__mark {
@@ -337,7 +184,7 @@ body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); colo
     line-height: 1.25;
     vertical-align: middle;
 }
-.method-badge.get { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.method-badge.get { background: rgba(17, 17, 17, 0.15); color: #111111; }
 .method-badge.post { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
 .method-badge.put { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
 .method-badge.delete { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
@@ -367,7 +214,7 @@ body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); colo
     line-height: 1.25;
     vertical-align: middle;
 }
-.api-status-badge--active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.api-status-badge--active { background: rgba(17, 17, 17, 0.15); color: #111111; }
 .api-status-badge--disabled { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 .api-status-badge--maintenance { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 .api-status-badge--pending { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
@@ -380,8 +227,8 @@ body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); colo
     font-weight: 600;
     font-size: 0.6rem;
     padding: 2px 6px;
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
+    background: rgba(17, 17, 17, 0.2);
+    color: #111111;
     line-height: 1.25;
     vertical-align: middle;
 }

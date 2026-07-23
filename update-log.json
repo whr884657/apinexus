@@ -1,5 +1,16 @@
 {
     "versions": {
+        "7.3.0": {
+            "title": "ApiNexus 7.3.0 默认主题灰粒子与 Markdown 中文引用",
+            "date": "2026-07-23",
+            "db_changes": false,
+            "changes": [
+                "默认主题全站粒子统一为灰点（shell.js + --particle-color），去掉子页绿色粒子 JS",
+                "清页面绿色 :root / 网格覆盖，对齐 theme-tokens 黑白灰",
+                "贡献者页去掉终端乱码引导条，缩短介绍文案",
+                "Markdown 引用改为中文弯引号样式，强调色跟主题（禁绿竖线）"
+            ]
+        },
         "7.2.0": {
             "title": "ApiNexus 7.2.0 内容列表与分类转移体验",
             "date": "2026-07-23",

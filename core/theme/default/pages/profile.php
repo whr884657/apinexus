@@ -39,7 +39,7 @@ $totalCalls = !$notFound ? (isset($profile['calls_label']) ? $profile['calls_lab
                              class="w-20 h-20 md:w-28 md:h-28 rounded-full avatar-ring object-cover"
                              referrerpolicy="no-referrer" decoding="async"
                              onerror="this.style.display='none';document.getElementById('avatarPh').style.display='flex';">
-                        <div id="avatarPh" class="hidden w-20 h-20 md:w-28 md:h-28 rounded-full avatar-ring flex items-center justify-center" style="background: rgba(0, 255, 157, 0.08);">
+                        <div id="avatarPh" class="hidden w-20 h-20 md:w-28 md:h-28 rounded-full avatar-ring flex items-center justify-center" style="background: rgba(17, 17, 17, 0.06);">
                             <span class="text-3xl md:text-4xl font-bold" style="color: var(--accent-primary); font-family: 'JetBrains Mono', monospace;"><?php echo vs_e($profile['letter']); ?></span>
                         </div>
                         <div class="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2" style="border-color: var(--bg-deep);"></div>
