@@ -10,15 +10,12 @@ if (!InstallChecker::isInstalled()) {
     vs_redirect(vs_base_url() . '/install/');
 }
 
-$heroDesc = SiteContext::siteDescription();
-if ($heroDesc === '') {
-    $heroDesc = '基于 PHP + MySQL 的轻量级 Web 管理系统，全面适配电脑端与手机端。';
-}
+// SEO 描述：只认系统设置「站点描述」，禁止主题 Hero 标签/文案渗入
+$seoDesc = vs_seo_site_description();
 
 vs_frontend_page('home', '', array(
-    'heroDesc' => $heroDesc,
     'seo' => array(
-        'description' => vs_seo_truncate($heroDesc),
-        'type' => 'website',
+        'description' => $seoDesc,
+        'type'        => 'website',
     ),
 ));

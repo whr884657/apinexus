@@ -304,8 +304,11 @@ function vs_base_url()
         return $cached;
     }
 
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
+    // 与 AuthSecurity::isHttps 一致：兼容反向代理 X-Forwarded-Proto（SEO/OG 绝对 URL 必须准）
+    $https = class_exists('AuthSecurity')
+        ? AuthSecurity::isHttps()
+        : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443));
     $scheme = $https ? 'https' : 'http';
     $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
 
@@ -583,13 +586,107 @@ function vs_seo_abs_url($path)
         return '';
     }
     if (preg_match('#^https?://#i', $path)) {
-        return $path;
+        return vs_seo_prefer_https($path);
     }
     $base = rtrim(vs_base_url(), '/');
     if ($path[0] !== '/') {
         $path = '/' . $path;
     }
-    return $base . $path;
+    return vs_seo_prefer_https($base . $path);
+}
+
+/**
+ * 当前请求为 HTTPS 时，把 http:// 升级为 https://（OG secure_url / 社交抓取）
+ *
+ * @param string $url
+ * @return string
+ */
+function vs_seo_prefer_https($url)
+{
+    $url = trim((string) $url);
+    if ($url === '' || stripos($url, 'http://') !== 0) {
+        return $url;
+    }
+    $forceHttps = class_exists('AuthSecurity') ? AuthSecurity::isHttps() : false;
+    if (!$forceHttps) {
+        return $url;
+    }
+    return 'https://' . substr($url, 7);
+}
+
+/**
+ * 推断图片 MIME（供 og:image:type / link type）
+ *
+ * @param string $url
+ * @return string
+ */
+function vs_seo_image_mime($url)
+{
+    $path = (string) parse_url((string) $url, PHP_URL_PATH);
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    if ($ext === 'png') {
+        return 'image/png';
+    }
+    if ($ext === 'jpg' || $ext === 'jpeg') {
+        return 'image/jpeg';
+    }
+    if ($ext === 'webp') {
+        return 'image/webp';
+    }
+    if ($ext === 'gif') {
+        return 'image/gif';
+    }
+    if ($ext === 'svg') {
+        return 'image/svg+xml';
+    }
+    if ($ext === 'ico') {
+        return 'image/x-icon';
+    }
+    return '';
+}
+
+/**
+ * 社交分享图：优先 Logo（通常更大），其次 Favicon；必须绝对 URL
+ * 主题 Hero 图文禁止进入 SEO 图片链。
+ *
+ * @return string
+ */
+function vs_seo_share_image()
+{
+    if (!class_exists('SiteContext') || !InstallChecker::isInstalled()) {
+        return '';
+    }
+    $logo = trim((string) SiteContext::siteLogo());
+    if ($logo !== '') {
+        return vs_seo_abs_url(vs_favicon_href($logo));
+    }
+    $favicon = trim((string) SiteContext::siteFavicon());
+    if ($favicon !== '') {
+        return vs_seo_abs_url(vs_favicon_href($favicon));
+    }
+    return '';
+}
+
+/**
+ * 系统级站点描述（SEO 唯一主源）；禁止用主题 Hero 标签/标题顶替
+ *
+ * @param string $fallback 系统描述为空时的兜底（一般为站点名）
+ * @return string
+ */
+function vs_seo_site_description($fallback = '')
+{
+    $desc = '';
+    if (class_exists('SiteContext') && InstallChecker::isInstalled()) {
+        $desc = trim((string) SiteContext::siteDescription());
+    }
+    if ($desc !== '') {
+        return vs_seo_truncate($desc);
+    }
+    $fallback = trim((string) $fallback);
+    if ($fallback === '' && class_exists('SiteContext') && InstallChecker::isInstalled()) {
+        $fallback = SiteContext::siteName();
+    }
+    return vs_seo_truncate($fallback !== '' ? $fallback : 'ApiNexus');
 }
 
 /**
@@ -625,23 +722,19 @@ function vs_seo_truncate($text, $max = 160)
 function vs_seo_defaults(array $overrides = array())
 {
     $siteName = 'ApiNexus';
-    $siteDesc = '';
     $keywords = '';
-    $favicon = '';
     if (class_exists('SiteContext') && InstallChecker::isInstalled()) {
         $siteName = SiteContext::siteName();
-        $siteDesc = SiteContext::siteDescription();
         $keywords = SiteContext::siteKeywords();
-        $favicon = SiteContext::siteFavicon();
     }
 
     $canonical = vs_seo_canonical_url();
-    $image = $favicon !== '' ? vs_seo_abs_url(vs_favicon_href($favicon)) : '';
-    $desc = $siteDesc !== '' ? $siteDesc : $siteName;
+    $image = vs_seo_share_image();
+    $desc = vs_seo_site_description($siteName);
 
     $defaults = array(
         'title'       => $siteName,
-        'description' => vs_seo_truncate($desc),
+        'description' => $desc,
         'keywords'    => $keywords,
         'image'       => $image,
         'url'         => $canonical,
@@ -735,9 +828,24 @@ function vs_render_seo_meta(array $opts = array())
         echo '<meta name="twitter:description" content="' . vs_e($description) . '">' . "\n";
     }
     if ($image !== '') {
+        $imageMime = vs_seo_image_mime($image);
+        $imageSecure = vs_seo_prefer_https($image);
+        if (stripos($imageSecure, 'http://') === 0) {
+            $imageSecure = 'https://' . substr($imageSecure, 7);
+        }
         echo '<meta itemprop="image" content="' . vs_e($image) . '">' . "\n";
         echo '<meta property="og:image" content="' . vs_e($image) . '">' . "\n";
-        echo '<meta property="og:image:secure_url" content="' . vs_e($image) . '">' . "\n";
+        echo '<meta property="og:image:url" content="' . vs_e($image) . '">' . "\n";
+        echo '<meta property="og:image:secure_url" content="' . vs_e($imageSecure) . '">' . "\n";
+        if ($imageMime !== '') {
+            echo '<meta property="og:image:type" content="' . vs_e($imageMime) . '">' . "\n";
+        }
+        // 社交平台建议 ≥300；未知真实尺寸时给保守占位，避免因缺尺寸被拒
+        echo '<meta property="og:image:width" content="512">' . "\n";
+        echo '<meta property="og:image:height" content="512">' . "\n";
+        if ($siteName !== '') {
+            echo '<meta property="og:image:alt" content="' . vs_e($siteName) . '">' . "\n";
+        }
         echo '<meta name="twitter:image" content="' . vs_e($image) . '">' . "\n";
     }
     if ($url !== '') {
@@ -773,22 +881,21 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     $siteName = 'ApiNexus';
     $favicon = '';
     $keywords = '';
-    $description = '';
     $canonical = vs_seo_canonical_url();
 
     if ($useSiteConfig && class_exists('InstallChecker') && InstallChecker::isInstalled()) {
         $siteName = SiteContext::siteName();
         $favicon = SiteContext::siteFavicon();
         $keywords = SiteContext::siteKeywords();
-        $description = SiteContext::siteDescription();
     }
 
     $pageTitle = vs_page_title($title, $siteName);
-    $ogImage = $favicon !== '' ? vs_seo_abs_url(vs_favicon_href($favicon)) : '';
+    $ogImage = vs_seo_share_image();
+    $description = vs_seo_site_description($siteName);
 
     $seo = vs_seo_defaults(array(
         'title'       => $pageTitle,
-        'description' => $description !== '' ? $description : $siteName,
+        'description' => $description,
         'keywords'    => $keywords,
         'image'       => $ogImage,
         'url'         => $canonical,
@@ -798,6 +905,15 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     ));
     if ($seoOpts !== array()) {
         $seo = array_merge($seo, $seoOpts);
+    }
+    // 首页等未显式传 description 时，强制系统站点描述（禁止主题 Hero 渗入）
+    if (!isset($seoOpts['description']) || trim((string) $seoOpts['description']) === '') {
+        $seo['description'] = $description;
+    } else {
+        $seo['description'] = vs_seo_truncate((string) $seoOpts['description']);
+    }
+    if (!isset($seo['image']) || trim((string) $seo['image']) === '') {
+        $seo['image'] = $ogImage;
     }
     if (!isset($seo['title']) || trim((string) $seo['title']) === '') {
         $seo['title'] = $pageTitle;
@@ -810,9 +926,7 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
     vs_render_seo_meta($seo);
     echo '<title>' . vs_e($pageTitle) . '</title>' . "\n";
-    if ($favicon !== '') {
-        echo '<link rel="icon" href="' . vs_e(vs_favicon_href($favicon)) . '">' . "\n";
-    }
+    vs_render_site_icons($favicon, $ogImage);
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/common.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/modal.css?v=' . VS_VERSION . '">' . "\n";
@@ -928,13 +1042,47 @@ function vs_favicon_href($path)
         return '';
     }
     if (preg_match('#^https?://#i', $path)) {
-        return $path;
+        return vs_seo_prefer_https($path);
     }
     $base = vs_base_url();
     if ($path[0] !== '/') {
         $path = '/' . $path;
     }
-    return $base . $path;
+    return vs_seo_prefer_https($base . $path);
+}
+
+/**
+ * 输出站点图标 link（浏览器 tab + Apple + 快捷方式）
+ * 须绝对 URL；QQ/微信/百度抓图标依赖这些标签 + og:image。
+ *
+ * @param string $favicon 原始 favicon 配置
+ * @param string $shareImage 已绝对化的分享图（可与 logo 相同）
+ * @return void
+ */
+function vs_render_site_icons($favicon, $shareImage = '')
+{
+    $iconHref = '';
+    $favicon = trim((string) $favicon);
+    if ($favicon !== '') {
+        $iconHref = vs_seo_abs_url(vs_favicon_href($favicon));
+    }
+    $touchHref = trim((string) $shareImage);
+    if ($touchHref === '') {
+        $touchHref = $iconHref;
+    } else {
+        $touchHref = vs_seo_abs_url($touchHref);
+    }
+
+    if ($iconHref !== '') {
+        $mime = vs_seo_image_mime($iconHref);
+        $typeAttr = $mime !== '' ? ' type="' . vs_e($mime) . '"' : '';
+        echo '<link rel="icon" href="' . vs_e($iconHref) . '"' . $typeAttr . '>' . "\n";
+        echo '<link rel="shortcut icon" href="' . vs_e($iconHref) . '"' . $typeAttr . '>' . "\n";
+    }
+    if ($touchHref !== '') {
+        echo '<link rel="apple-touch-icon" href="' . vs_e($touchHref) . '">' . "\n";
+        echo '<link rel="apple-touch-icon-precomposed" href="' . vs_e($touchHref) . '">' . "\n";
+    }
 }
 
 /**

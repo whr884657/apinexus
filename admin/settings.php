@@ -198,19 +198,20 @@ vs_admin_accordion_start(
                 <input type="text" name="site_favicon" class="vs-input"
                        value="<?php echo vs_e(Config::get('site_favicon', '')); ?>"
                        placeholder="/assets/img/favicon.ico 或 https://...">
-                <?php vs_render_notice('tip', '', '浏览器标签页小图标，支持相对路径或完整 URL', array('field' => true, 'compact' => true)); ?>
+                <?php vs_render_notice('tip', '', '浏览器标签页图标。建议同时配置下方 Logo（PNG≥300px），微信/QQ 分享图优先用 Logo。', array('field' => true, 'compact' => true)); ?>
             </div>
             <div class="vs-form-row">
                 <label class="vs-label">站点 Logo</label>
                 <input type="text" name="site_logo" class="vs-input"
                        value="<?php echo vs_e(Config::get('site_logo', '')); ?>"
                        placeholder="/assets/img/logo.png 或 https://...">
-                <?php vs_render_notice('tip', '', '用于前台页眉与后台侧栏展示', array('field' => true, 'compact' => true)); ?>
+                <?php vs_render_notice('tip', '', '页眉展示；同时作为社交分享图（og:image），建议正方形 PNG/JPG，勿仅用 .ico', array('field' => true, 'compact' => true)); ?>
             </div>
         </div>
         <div class="vs-form-row">
             <label class="vs-label">系统描述</label>
             <textarea name="site_description" class="vs-textarea" rows="3"><?php echo vs_e(Config::get('site_description', '')); ?></textarea>
+            <?php vs_render_notice('tip', '', '搜索引擎与微信/QQ 分享摘要只认此处「系统描述」，不会用主题 Hero 标签或首页营销文案。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row">
             <label class="vs-label">关键词</label>

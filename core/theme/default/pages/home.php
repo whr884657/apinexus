@@ -121,13 +121,18 @@ if (count($announcePopup) > 0) {
 <div class="home-page-body-stack">
 <main class="main-wrapper container mx-auto px-4">
     <section class="hero-section">
+        <?php
+        // 抓取兜底：系统级站点描述须先于 Hero 标签出现；主题徽章不得成为分享摘要
+        $seoFallbackDesc = $siteDesc !== '' ? $siteDesc : $siteName;
+        ?>
+        <p class="vs-seo-fallback-desc"><?php echo vs_e($seoFallbackDesc); ?></p>
         <div class="flex flex-col lg:flex-row gap-8 lg:gap-12 items-stretch">
             <div class="hero-left-content flex flex-col justify-center">
-                <div class="flex flex-wrap gap-3 mb-6">
+                <div class="flex flex-wrap gap-3 mb-6" aria-hidden="true">
                     <span class="tag-free px-3 py-1 rounded text-xs font-bold font-mono"><?php echo vs_e($heroBadge1); ?></span>
                     <span class="tag-new px-3 py-1 rounded text-xs font-bold font-mono"><?php echo vs_e($heroBadge2); ?></span>
                 </div>
-                <h1 class="font-mono glitch-text mb-4" id="hero-title" data-text="<?php echo vs_e($heroGlitch); ?>"></h1>
+                <h1 class="font-mono glitch-text mb-4" id="hero-title" data-text="<?php echo vs_e($heroGlitch); ?>"><?php echo vs_e($heroGlitch); ?></h1>
                 <p class="text-lg sm:text-xl mb-8 max-w-2xl font-light" style="color: var(--text-muted); line-height: 1.8;"><?php echo $heroDescHtml; ?></p>
                 <div class="flex flex-wrap gap-4">
                     <button type="button" class="btn-geek" onclick="document.getElementById('apis').scrollIntoView({behavior: 'smooth'})">查看接口</button>
