@@ -260,10 +260,13 @@
     margin-left: var(--vs-sidebar-width);
     min-height: 100vh;
     width: calc(100% - var(--vs-sidebar-width));
+    max-width: 100%;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     transition: margin-left 0.28s ease, width 0.28s ease;
     background: var(--page-bg, var(--vs-content-bg));
+    overflow-x: clip;
 }
 
 /* ── 顶部栏 ── */
@@ -368,6 +371,9 @@
     flex: 1;
     padding: 20px;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     background: var(--page-bg, var(--vs-content-bg));
 }
 
@@ -6647,51 +6653,89 @@ select.vs-input.vs-select {
 
 /* ============================================================
    接口列表页 — 表格 + 移动端卡片（#apiListPage 作用域）
+   搜索栏在 layout headerActions（.vs-content__actions）内，
+   样式不可再挂在 #apiListPage 下，否则放大镜定位失效。
    ============================================================ */
+#apiListPage {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+}
+
 #apiListPage .vs-api-list-filters {
     display: flex;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
     margin-bottom: 16px;
+    max-width: 100%;
+    min-width: 0;
 }
 
 #apiListPage .vs-api-list-filters .vs-input,
 #apiListPage .vs-api-list-filters .vs-select,
 #apiListPage .vs-api-list-filters .vs-pick {
     width: auto;
-    min-width: 160px;
+    min-width: 140px;
+    max-width: 100%;
 }
 
-#apiListPage .vs-api-list-toolbar {
+/* 标题行工具栏（搜索 + 添加）— 挂在 .vs-content__actions */
+.vs-content__actions:has(.vs-api-list-toolbar) {
+    max-width: min(520px, 62%);
+    min-width: 0;
+}
+
+.vs-content__head:has(.vs-api-list-toolbar) {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.vs-api-list-toolbar.vs-search-bar,
+.vs-content__actions .vs-api-list-toolbar {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
     margin-bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
-#apiListPage .vs-search-bar__input-wrap {
+.vs-api-list-toolbar .vs-search-bar__input-wrap {
     position: relative;
-    flex: 1;
-    min-width: 200px;
-    max-width: 360px;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: min(280px, 100%);
+    max-width: 320px;
 }
 
-#apiListPage .vs-search-bar__input-wrap svg {
+.vs-api-list-toolbar .vs-search-bar__input-wrap svg {
     position: absolute;
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
     color: var(--vs-text-secondary, #6b7280);
     pointer-events: none;
+    z-index: 1;
 }
 
-#apiListPage .vs-search-bar__input {
+.vs-api-list-toolbar .vs-search-bar__input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
     padding-left: 36px !important;
     height: 36px;
     font-size: 13px;
+}
+
+.vs-api-list-toolbar .vs-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 #apiListPage .method-badge {
@@ -6909,30 +6953,39 @@ select.vs-input.vs-select {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 #apiListPage .api-card__header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 8px;
+    min-width: 0;
 }
 
 #apiListPage .api-card__header-left {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-shrink: 0;
+    flex: 1 1 auto;
     min-width: 0;
 }
 
-#apiListPage .api-card__header-right {
+#apiListPage .api-card__header > .vs-badge[data-field="status_label"] {
+    flex-shrink: 0;
+}
+
+#apiListPage .api-card__tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    justify-content: flex-end;
-    flex-shrink: 0;
-    max-width: 60%;
+    gap: 6px;
+    align-items: center;
+    max-width: 100%;
+    min-width: 0;
 }
 
 #apiListPage .api-card__name {
@@ -6942,22 +6995,27 @@ select.vs-input.vs-select {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 #apiListPage .api-card__info {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 18px;
+    gap: 8px 14px;
     font-size: 12px;
     color: var(--vs-text-secondary, #6b7280);
-    justify-content: flex-end;
+    justify-content: flex-start;
+    max-width: 100%;
+    min-width: 0;
 }
 
 #apiListPage .api-card__info-item {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    white-space: nowrap;
+    flex-wrap: wrap;
+    max-width: 100%;
 }
 
 #apiListPage .api-card__info-value,
@@ -6971,9 +7029,10 @@ select.vs-input.vs-select {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    justify-content: flex-end;
+    justify-content: flex-start;
     padding-top: 10px;
     border-top: 1px dashed #cbd5e1;
+    max-width: 100%;
 }
 
 #apiListPage .api-card__actions .vs-btn--sm {
@@ -7004,30 +7063,84 @@ select.vs-input.vs-select {
 
     #apiListPage .mobile-api-cards {
         display: flex;
+        max-width: 100%;
+        min-width: 0;
     }
 
     #apiListPage .vs-api-list-filters {
         flex-direction: row;
-        align-items: center;
+        align-items: stretch;
         gap: 6px;
+        flex-wrap: wrap;
     }
 
     #apiListPage .vs-api-list-filters .vs-input,
     #apiListPage .vs-api-list-filters .vs-select,
     #apiListPage .vs-api-list-filters .vs-pick {
-        flex: 1;
+        flex: 1 1 calc(33.33% - 6px);
         min-width: 0 !important;
         width: auto !important;
+        max-width: 100%;
         font-size: 12px;
     }
 
-    #apiListPage .vs-search-bar {
-        flex-wrap: nowrap;
+    #apiListPage .vs-api-list-filters .vs-pick__btn {
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        box-sizing: border-box;
     }
 
-    #apiListPage .vs-search-bar__input-wrap {
+    /* 手机：标题 + 添加同一行；搜索独占下一行（对齐参考设计） */
+    .vs-content__head:has(.vs-api-list-toolbar) {
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .vs-content__head:has(.vs-api-list-toolbar) .vs-content__title {
+        flex: 1 1 auto;
+        min-width: 0;
+        order: 1;
+    }
+
+    .vs-content__head:has(.vs-api-list-toolbar) .vs-content__actions {
+        display: contents;
+        max-width: none;
+    }
+
+    .vs-content__head:has(.vs-api-list-toolbar) .vs-api-list-toolbar {
+        display: contents;
+    }
+
+    .vs-content__head:has(.vs-api-list-toolbar) .vs-search-bar__input-wrap {
+        flex: 1 1 100%;
+        order: 3;
+        width: 100%;
         max-width: none;
         min-width: 0;
+    }
+
+    .vs-content__head:has(.vs-api-list-toolbar) .vs-api-list-toolbar .vs-btn {
+        order: 2;
+        flex-shrink: 0;
+    }
+
+    #apiListPage .vs-api-list-panel,
+    #apiListPage .vs-panel {
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: clip;
+        box-sizing: border-box;
+    }
+
+    #apiListPage .vs-api-list-footer {
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     #apiListPage .action-btns {

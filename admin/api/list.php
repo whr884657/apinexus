@@ -402,15 +402,15 @@ function vs_render_api_list_mobile_card(array $ctx)
                 </div>
                 <span class="api-card__name" data-field="name"><?php echo vs_e($api['name']); ?></span>
             </div>
-            <div class="api-card__header-right" data-field="tags">
-                <?php if ($ctx['category'] !== ''): ?>
-                    <span class="vs-badge vs-badge--default" data-field="category"><?php echo vs_e($ctx['category']); ?></span>
-                <?php endif; ?>
-                <span class="type-badge <?php echo vs_e($ctx['typeClass']); ?>" data-field="apitype_badge"><?php echo vs_e($ctx['typeBadge']); ?></span>
-                <?php echo vs_api_list_charge_badge_html($ctx['charge'], $ctx['price']); ?>
-                <?php echo vs_api_list_key_badge_html($ctx['keyBadge']); ?>
-                <span class="vs-badge <?php echo vs_e($ctx['statusBadgeClass']); ?>" data-field="status_label"><?php echo vs_e($ctx['statusText']); ?></span>
-            </div>
+            <span class="vs-badge <?php echo vs_e($ctx['statusBadgeClass']); ?>" data-field="status_label"><?php echo vs_e($ctx['statusText']); ?></span>
+        </div>
+        <div class="api-card__tags" data-field="tags">
+            <?php if ($ctx['category'] !== ''): ?>
+                <span class="vs-badge vs-badge--default" data-field="category"><?php echo vs_e($ctx['category']); ?></span>
+            <?php endif; ?>
+            <span class="type-badge <?php echo vs_e($ctx['typeClass']); ?>" data-field="apitype_badge"><?php echo vs_e($ctx['typeBadge']); ?></span>
+            <?php echo vs_api_list_charge_badge_html($ctx['charge'], $ctx['price']); ?>
+            <?php echo vs_api_list_key_badge_html($ctx['keyBadge']); ?>
         </div>
         <div class="api-card__info">
             <span class="api-card__info-item"><span class="api-card__info-label">提交者</span> <span class="api-card__info-value" data-field="username"><?php echo vs_e($ctx['username']); ?></span></span>

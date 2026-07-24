@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-8.0.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-8.0.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v8.0.1（2026-07-24）
+
+**类型：** 小版本修复
+
+**变更说明：**
+
+- 修复接口列表搜索框放大镜飞出输入框
+- 手机端标题+添加同行、搜索下一行满宽；消除左右滑动与大片空白
+- 手机卡片标签独立换行，缓解拥挤错位
 
 ### v8.0.0（2026-07-24）
 

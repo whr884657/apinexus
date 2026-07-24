@@ -616,8 +616,6 @@
             + escapeHtml(typeBadge) + '</span>';
         html += chargeBadgeHtml(api);
         html += keyBadgeHtml(api.needkey_badge || '');
-        html += '<span class="vs-badge ' + statusBadgeClass(api.status) + '" data-field="status_label">'
-            + escapeHtml(displayStatusLabel(api.status)) + '</span>';
         return html;
     }
 
@@ -691,7 +689,9 @@
         html += '<div class="api-card__icon"><img src="' + escapeHtml(icon)
             + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" data-field="icon"></div>';
         html += '<span class="api-card__name" data-field="name">' + escapeHtml(api.name || '') + '</span></div>';
-        html += '<div class="api-card__header-right" data-field="tags">' + buildMobileTagsHtml(api) + '</div></div>';
+        html += '<span class="vs-badge ' + statusBadgeClass(api.status) + '" data-field="status_label">'
+            + escapeHtml(displayStatusLabel(api.status)) + '</span></div>';
+        html += '<div class="api-card__tags" data-field="tags">' + buildMobileTagsHtml(api) + '</div>';
         html += '<div class="api-card__info">';
         html += '<span class="api-card__info-item"><span class="api-card__info-label">提交者</span> <span class="api-card__info-value" data-field="username">'
             + escapeHtml(username) + '</span></span>';
