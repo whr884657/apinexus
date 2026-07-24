@@ -8546,6 +8546,10 @@ select.vs-input.vs-select {
     white-space: pre-wrap;
     word-break: break-word;
 }
+#adminFbDetailOverlay .fb-modal__content.is-empty-reply {
+    color: var(--vs-text-secondary, #6b7280);
+    font-style: italic;
+}
 #adminFbDetailOverlay .fb-modal__meta {
     display: flex;
     align-items: center;

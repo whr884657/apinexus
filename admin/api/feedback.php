@@ -316,9 +316,13 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
                 <div class="fb-modal__label">反馈内容</div>
                 <div class="fb-modal__content" id="adminFbDetailContent"></div>
             </div>
-            <div class="fb-modal__field">
+            <div class="fb-modal__field" id="adminFbDetailReplyEditWrap">
                 <div class="fb-modal__label">处理回复（选填）</div>
-                <textarea class="vs-input vs-textarea" id="adminFbDetailReply" placeholder="可填写处理说明，点击「标记已处理」一并发送给用户..." rows="4"></textarea>
+                <textarea class="vs-input vs-textarea" id="adminFbDetailReply" placeholder="可填写处理说明，点击「标记已处理」一并发送给用户；也可留空直接标记..." rows="4"></textarea>
+            </div>
+            <div class="fb-modal__field" id="adminFbDetailReplyViewWrap" hidden>
+                <div class="fb-modal__label">处理回复</div>
+                <div class="fb-modal__content" id="adminFbDetailReplyView">—</div>
             </div>
         </div>
         <footer class="vs-overlay__foot">

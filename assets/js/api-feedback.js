@@ -40,6 +40,9 @@
         var detailUser = document.getElementById('adminFbDetailUser');
         var detailContent = document.getElementById('adminFbDetailContent');
         var detailReply = document.getElementById('adminFbDetailReply');
+        var detailReplyEditWrap = document.getElementById('adminFbDetailReplyEditWrap');
+        var detailReplyViewWrap = document.getElementById('adminFbDetailReplyViewWrap');
+        var detailReplyView = document.getElementById('adminFbDetailReplyView');
         var detailMarkBtn = document.getElementById('adminFbDetailMarkBtn');
         var detailDeleteBtn = document.getElementById('adminFbDetailDeleteBtn');
         var currentPage = 1;
@@ -254,9 +257,13 @@
                     detailStatus.textContent = '已处理';
                     detailStatus.className = 'vs-badge vs-badge--success';
                 }
-                if (detailMarkBtn) {
-                    detailMarkBtn.hidden = true;
+                var replyText = '';
+                if (pair.desktop) {
+                    replyText = pair.desktop.getAttribute('data-reply') || '';
+                } else if (pair.mobile) {
+                    replyText = pair.mobile.getAttribute('data-reply') || '';
                 }
+                setReplyMode(false, replyText);
             }
         }
 
@@ -271,7 +278,37 @@
             applyView();
         }
 
-        function openOverlay() {
+        /**
+         * 待处理：可编辑回复 + 显示「标记已处理」
+         * 已处理：只读展示已保存回复 + 隐藏标记按钮
+         */
+        function setReplyMode(pending, replyText) {
+            var text = replyText == null ? '' : String(replyText);
+            if (detailReplyEditWrap) {
+                detailReplyEditWrap.hidden = !pending;
+            }
+            if (detailReplyViewWrap) {
+                detailReplyViewWrap.hidden = !!pending;
+            }
+            if (pending) {
+                if (detailReply) {
+                    detailReply.value = text;
+                }
+            } else if (detailReplyView) {
+                var empty = text === '';
+                detailReplyView.textContent = empty ? '（未填写回复）' : text;
+                if (empty) {
+                    detailReplyView.classList.add('is-empty-reply');
+                } else {
+                    detailReplyView.classList.remove('is-empty-reply');
+                }
+            }
+            if (detailMarkBtn) {
+                detailMarkBtn.hidden = !pending;
+            }
+        }
+
+        function openOverlay(focusReply) {
             if (!overlay) {
                 return;
             }
@@ -279,7 +316,8 @@
             overlay.classList.add('is-open');
             overlay.setAttribute('aria-hidden', 'false');
             document.body.classList.add('is-overlay-open');
-            if (detailReply) {
+            var canFocus = focusReply && detailReply && (!detailReplyEditWrap || !detailReplyEditWrap.hidden);
+            if (canFocus) {
                 setTimeout(function () {
                     detailReply.focus();
                 }, 50);
@@ -300,7 +338,7 @@
             returnFocusEl = null;
         }
 
-        function openDetail(id, fromEl) {
+        function openDetail(id, fromEl, preferFocusReply) {
             var pair = getPair(id);
             var src = pair.desktop || pair.mobile;
             if (!src) {
@@ -308,6 +346,7 @@
             }
             returnFocusEl = fromEl || null;
             var pending = src.getAttribute('data-feedback-status') === '0';
+            var replyText = src.getAttribute('data-reply') || '';
             if (detailIdEl) {
                 detailIdEl.value = String(id);
             }
@@ -329,13 +368,8 @@
             if (detailContent) {
                 detailContent.textContent = src.getAttribute('data-content') || '';
             }
-            if (detailReply) {
-                detailReply.value = src.getAttribute('data-reply') || '';
-            }
-            if (detailMarkBtn) {
-                detailMarkBtn.hidden = !pending;
-            }
-            openOverlay();
+            setReplyMode(pending, replyText);
+            openOverlay(!!preferFocusReply && pending);
         }
 
         function markDone(id, replyText) {
@@ -348,10 +382,14 @@
                 if (!ok(res)) {
                     throw new Error(msg(res, '操作失败'));
                 }
+                var savedReply = payload.reply;
+                if (res && res.feedback && res.feedback.reply != null) {
+                    savedReply = String(res.feedback.reply);
+                }
                 var pair = getPair(id);
                 [pair.desktop, pair.mobile].forEach(function (el) {
                     if (el) {
-                        el.setAttribute('data-reply', payload.reply);
+                        el.setAttribute('data-reply', savedReply);
                     }
                 });
                 setPairDone(pair);
@@ -369,14 +407,14 @@
             var viewBtn = e.target.closest('.vs-fb-view');
             if (viewBtn) {
                 e.preventDefault();
-                openDetail(viewBtn.getAttribute('data-feedback-id'), viewBtn);
+                openDetail(viewBtn.getAttribute('data-feedback-id'), viewBtn, false);
                 return;
             }
             var markBtn = e.target.closest('.vs-fb-mark');
             if (markBtn) {
                 e.preventDefault();
-                // 列表快捷标记：无回复正文，直接处理并通知用户
-                markDone(markBtn.getAttribute('data-feedback-id'), '');
+                // 列表「标记已处理」必须先打开抽屉，再在弹窗内确认（可留空回复）
+                openDetail(markBtn.getAttribute('data-feedback-id'), markBtn, true);
             }
         });
 
