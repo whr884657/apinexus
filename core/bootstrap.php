@@ -37,6 +37,7 @@ require_once VS_ROOT . '/core/ApiStats.php';
 require_once VS_ROOT . '/core/ApiLogManager.php';
 require_once VS_ROOT . '/core/ApiLogArchive.php';
 require_once VS_ROOT . '/core/ApiKeyManager.php';
+require_once VS_ROOT . '/core/ApiFeedbackManager.php';
 require_once VS_ROOT . '/core/ApiCategoryManager.php';
 require_once VS_ROOT . '/core/PayConfig.php';
 require_once VS_ROOT . '/core/OrderManager.php';
