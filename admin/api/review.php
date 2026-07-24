@@ -4,7 +4,7 @@
  * 作用：接口审核（待审 / 通过 / 不通过；可选填写不通过原因；邮件通知投稿用户）
  *
  * 说明：仅展示开发者投稿（userid>0）。管理员在「接口列表」发布的接口默认已通过，不进入本页。
- * 筛选用页面内按钮，不改 URL。数值编码仅存在于服务端常量与库表。
+ * 筛选用页面内 Tab + 搜索，不改 URL。数值编码仅存在于服务端常量与库表。
  */
 
 require_once dirname(__DIR__) . '/init.php';
@@ -79,30 +79,270 @@ foreach ($apis as $row) {
     }
 }
 
-vs_admin_layout_start('接口审核', 'api-review');
+/**
+ * @param int $audit
+ * @return string
+ */
+function vs_api_review_badge_class($audit)
+{
+    $audit = ApiManager::normalizeAuditStatus($audit);
+    if ($audit === ApiManager::AUDIT_APPROVED) {
+        return 'vs-badge--success';
+    }
+    if ($audit === ApiManager::AUDIT_REJECTED) {
+        return 'vs-badge--error';
+    }
+    return 'vs-badge--warning';
+}
+
+/**
+ * 列表短文案（与 Tab 一致）
+ *
+ * @param int $audit
+ * @return string
+ */
+function vs_api_review_badge_text($audit)
+{
+    $audit = ApiManager::normalizeAuditStatus($audit);
+    if ($audit === ApiManager::AUDIT_APPROVED) {
+        return '已通过';
+    }
+    if ($audit === ApiManager::AUDIT_REJECTED) {
+        return '未通过';
+    }
+    return '待审核';
+}
+
+/**
+ * @param string $time
+ * @return string
+ */
+function vs_api_review_time_text($time)
+{
+    $time = trim((string) $time);
+    if ($time === '') {
+        return '—';
+    }
+    if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/', $time, $m)) {
+        return $m[0];
+    }
+    return $time;
+}
+
+/**
+ * @param int $audit
+ * @param int $apiId
+ * @param string $listEditBase
+ * @return string
+ */
+function vs_api_review_action_buttons_html($audit, $apiId, $listEditBase)
+{
+    $audit = ApiManager::normalizeAuditStatus($audit);
+    $apiId = (int) $apiId;
+    $html = '<div class="action-btns">';
+    if ($listEditBase !== '') {
+        $html .= '<a class="vs-btn vs-btn--sm vs-btn--outline" href="'
+            . vs_e($listEditBase . $apiId) . '">编辑</a>';
+    }
+    if ($audit !== ApiManager::AUDIT_APPROVED) {
+        $html .= '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success vs-api-review-action" data-audit="1">通过</button>';
+    }
+    if ($audit !== ApiManager::AUDIT_REJECTED) {
+        $html .= '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger vs-api-review-deny" data-audit="2">不通过</button>';
+    }
+    $html .= '</div>';
+    return $html;
+}
+
+/**
+ * @param array $row
+ * @return array|null
+ */
+function vs_api_review_row_context(array $row)
+{
+    $api = ApiManager::formatRowSummary($row);
+    if (!$api) {
+        return null;
+    }
+    $apiId = (int) $api['id'];
+    $audit = (int) $api['audit'];
+    $callUrl = isset($api['call_url']) ? (string) $api['call_url'] : (string) $api['endpoint'];
+    $username = isset($api['username']) ? trim((string) $api['username']) : '';
+    if ($username === '') {
+        $username = ((int) $api['userid'] > 0) ? ('用户#' . (int) $api['userid']) : '未知';
+    }
+    $createtime = isset($api['createtime']) ? (string) $api['createtime'] : '';
+    $timeText = vs_api_review_time_text($createtime);
+    $badgeClass = vs_api_review_badge_class($audit);
+    $badgeText = vs_api_review_badge_text($audit);
+    $reason = isset($api['rejectreason']) ? (string) $api['rejectreason'] : '';
+    $searchHay = mb_strtolower(
+        $api['name'] . ' ' . $callUrl . ' ' . $api['endpoint'] . ' ' . $username . ' #' . $apiId,
+        'UTF-8'
+    );
+    $avatarChar = '';
+    if (function_exists('mb_substr')) {
+        $avatarChar = mb_substr($username, 0, 1, 'UTF-8');
+    } else {
+        $avatarChar = substr($username, 0, 1);
+    }
+    if ($avatarChar === '') {
+        $avatarChar = '?';
+    }
+
+    return array(
+        'api'         => $api,
+        'apiId'       => $apiId,
+        'audit'       => $audit,
+        'callUrl'     => $callUrl,
+        'username'    => $username,
+        'avatarChar'  => $avatarChar,
+        'createtime'  => $createtime,
+        'timeText'    => $timeText,
+        'badgeClass'  => $badgeClass,
+        'badgeText'   => $badgeText,
+        'reason'      => $reason,
+        'searchHay'   => $searchHay,
+    );
+}
+
+/**
+ * @param array $ctx
+ * @param string $listEditBase
+ * @return void
+ */
+function vs_render_api_review_desktop_row(array $ctx, $listEditBase)
+{
+    $api = $ctx['api'];
+    $attrs = ' data-api-row="' . (int) $ctx['apiId'] . '"'
+        . ' data-api-id="' . (int) $ctx['apiId'] . '"'
+        . ' data-audit="' . (int) $ctx['audit'] . '"'
+        . ' data-search="' . vs_e($ctx['searchHay']) . '"';
+    ?>
+    <tr class="vs-api-review-row"<?php echo $attrs; ?>>
+        <td>
+            <div class="review-name-cell">
+                <div class="review-icon">
+                    <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" data-field="icon">
+                </div>
+                <div class="review-name-meta">
+                    <span class="review-name-text" data-field="name"><?php echo vs_e($api['name']); ?></span>
+                    <span class="review-path" data-field="call_url" title="<?php echo vs_e($ctx['callUrl']); ?>"><?php echo vs_e($ctx['callUrl']); ?></span>
+                </div>
+            </div>
+        </td>
+        <td>
+            <div class="applicant-cell">
+                <span class="applicant-avatar" aria-hidden="true"><?php echo vs_e($ctx['avatarChar']); ?></span>
+                <span class="applicant-name" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
+            </div>
+        </td>
+        <td><span class="time-cell" data-field="createtime"><?php echo vs_e($ctx['timeText']); ?></span></td>
+        <td>
+            <span class="vs-badge <?php echo vs_e($ctx['badgeClass']); ?>" data-field="audit_label"><?php echo vs_e($ctx['badgeText']); ?></span>
+            <div class="vs-api-review-reason" data-field="rejectreason"<?php echo $ctx['reason'] === '' ? ' hidden' : ''; ?>>
+                <?php echo vs_e($ctx['reason'] !== '' ? ('原因：' . $ctx['reason']) : ''); ?>
+            </div>
+        </td>
+        <td class="vs-api-review-actions-cell" data-field="actions">
+            <?php echo vs_api_review_action_buttons_html($ctx['audit'], $ctx['apiId'], $listEditBase); ?>
+        </td>
+    </tr>
+    <?php
+}
+
+/**
+ * @param array $ctx
+ * @param string $listEditBase
+ * @return void
+ */
+function vs_render_api_review_mobile_card(array $ctx, $listEditBase)
+{
+    $api = $ctx['api'];
+    $attrs = ' data-api-row="' . (int) $ctx['apiId'] . '"'
+        . ' data-api-id="' . (int) $ctx['apiId'] . '"'
+        . ' data-audit="' . (int) $ctx['audit'] . '"'
+        . ' data-search="' . vs_e($ctx['searchHay']) . '"';
+    ?>
+    <div class="review-card vs-api-review-row"<?php echo $attrs; ?>>
+        <div class="review-card__header">
+            <div class="review-card__header-left">
+                <span class="api-id" data-field="id">#<?php echo (int) $ctx['apiId']; ?></span>
+                <div class="review-card__icon">
+                    <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" data-field="icon">
+                </div>
+                <span class="review-card__name" data-field="name"><?php echo vs_e($api['name']); ?></span>
+            </div>
+            <div class="review-card__tags">
+                <span class="vs-badge <?php echo vs_e($ctx['badgeClass']); ?>" data-field="audit_label"><?php echo vs_e($ctx['badgeText']); ?></span>
+            </div>
+        </div>
+        <div class="review-card__info">
+            <span class="review-card__info-item">
+                <span class="review-card__info-label">开发者</span>
+                <span class="review-card__info-value" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
+            </span>
+            <span class="review-card__info-item">
+                <span class="review-card__info-label">提交时间</span>
+                <span class="review-card__info-value" data-field="createtime"><?php echo vs_e($ctx['timeText']); ?></span>
+            </span>
+        </div>
+        <div class="vs-api-review-reason" data-field="rejectreason"<?php echo $ctx['reason'] === '' ? ' hidden' : ''; ?>>
+            <?php echo vs_e($ctx['reason'] !== '' ? ('原因：' . $ctx['reason']) : ''); ?>
+        </div>
+        <div class="review-card__actions" data-field="actions">
+            <?php echo vs_api_review_action_buttons_html($ctx['audit'], $ctx['apiId'], $listEditBase); ?>
+        </div>
+    </div>
+    <?php
+}
+
+$headerActions = '';
+if ($hasAudit) {
+    ob_start();
+    ?>
+    <div class="vs-search-bar vs-api-list-toolbar">
+        <div class="vs-search-bar__input-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" class="vs-input vs-search-bar__input" id="apiReviewSearchInput"
+                   placeholder="搜索接口名称或开发者..." autocomplete="off">
+        </div>
+    </div>
+    <?php
+    $headerActions = ob_get_clean();
+}
+
+vs_admin_layout_start('接口审核', 'api-review', $headerActions);
 ?>
 
-<div class="vs-panel vs-api-review-panel" id="apiReviewPage"
+<div id="apiReviewPage"
      data-list-edit-base="<?php echo vs_e($listEditBase); ?>"
      data-has-table="<?php echo $hasAudit && count($apis) > 0 ? '1' : '0'; ?>">
-    <?php if (!$tableReady): ?>
-        <?php vs_render_notice('warning', '', '接口管理功能尚未就绪，请先前往「系统升级」完成更新。', array('compact' => true)); ?>
-        <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
-    <?php elseif (!$hasAudit): ?>
-        <?php vs_render_notice('warning', '', '当前系统尚未具备审核功能，请先前往「系统升级」完成结构更新。', array('compact' => true)); ?>
-        <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
-    <?php else: ?>
-        <?php vs_render_notice('info', '', '本页仅显示开发者投稿的接口。管理员在「接口列表」直接发布的接口默认已通过审核，不会出现在这里。不通过时可填写原因（选填），系统将邮件通知投稿用户。', array('compact' => true)); ?>
 
-        <div class="vs-api-review-tabs" id="apiReviewFilters" role="tablist" aria-label="审核筛选">
-            <button type="button" class="vs-btn vs-btn--primary vs-api-review-filter vs-api-review-tabs__btn is-active" data-filter="0">
-                待审核<span class="vs-api-review-tabs__badge"><?php echo (int) $counts['0']; ?></span>
+    <?php if (!$tableReady): ?>
+        <div class="vs-panel vs-api-review-panel">
+            <?php vs_render_notice('warning', '', '接口管理功能尚未就绪，请先前往「系统升级」完成更新。', array('compact' => true)); ?>
+            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
+        </div>
+    <?php elseif (!$hasAudit): ?>
+        <div class="vs-panel vs-api-review-panel">
+            <?php vs_render_notice('warning', '', '当前系统尚未具备审核功能，请先前往「系统升级」完成结构更新。', array('compact' => true)); ?>
+            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
+        </div>
+    <?php else: ?>
+        <div class="vs-api-list-tip">
+            <?php vs_render_notice('info', '', '本页仅显示开发者投稿的接口。管理员在「接口列表」直接发布的接口默认已通过审核，不会出现在这里。不通过时可填写原因（选填），系统将邮件通知投稿用户。', array('compact' => true)); ?>
+        </div>
+
+        <div class="vs-tabs vs-api-review-tabs" id="apiReviewFilters" role="tablist" aria-label="审核筛选">
+            <button type="button" class="vs-tabs__btn vs-api-review-filter is-active" data-filter="0" role="tab" aria-selected="true">
+                待审核<span class="vs-badge vs-badge--warning vs-api-review-tabs__badge" data-count="0"><?php echo (int) $counts['0']; ?></span>
             </button>
-            <button type="button" class="vs-btn vs-btn--default vs-api-review-filter vs-api-review-tabs__btn" data-filter="1">
-                已通过<span class="vs-api-review-tabs__badge"><?php echo (int) $counts['1']; ?></span>
+            <button type="button" class="vs-tabs__btn vs-api-review-filter" data-filter="1" role="tab" aria-selected="false">
+                已通过<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="1"><?php echo (int) $counts['1']; ?></span>
             </button>
-            <button type="button" class="vs-btn vs-btn--default vs-api-review-filter vs-api-review-tabs__btn" data-filter="2">
-                未通过<span class="vs-api-review-tabs__badge"><?php echo (int) $counts['2']; ?></span>
+            <button type="button" class="vs-tabs__btn vs-api-review-filter" data-filter="2" role="tab" aria-selected="false">
+                未通过<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="2"><?php echo (int) $counts['2']; ?></span>
             </button>
         </div>
 
@@ -115,91 +355,64 @@ vs_admin_layout_start('接口审核', 'api-review');
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiReviewFilterEmpty" hidden>
             <div class="vs-api-list-empty__card">
                 <h3 class="vs-api-list-empty__title">暂无匹配项</h3>
-                <p class="vs-api-list-empty__desc">当前筛选项下没有接口，可切换上方「待审核 / 已通过 / 未通过」查看。</p>
+                <p class="vs-api-list-empty__desc">当前筛选或搜索下没有接口，可切换上方「待审核 / 已通过 / 未通过」或清空搜索。</p>
             </div>
         </div>
 
-        <?php if (count($apis) > 0): ?>
-            <div class="vs-api-review-list" id="apiReviewTable">
-                <?php foreach ($apis as $row): ?>
-                    <?php
-                    $api = ApiManager::formatRowSummary($row);
-                    if (!$api) {
-                        continue;
-                    }
-                    $audit = (int) $api['audit'];
-                    $reason = isset($api['rejectreason']) ? (string) $api['rejectreason'] : '';
-                    $callUrl = isset($api['call_url']) ? (string) $api['call_url'] : (string) $api['endpoint'];
-                    $rowHidden = $audit !== ApiManager::AUDIT_PENDING ? ' hidden' : '';
-                    $statusClass = 'is-normal';
-                    if ((int) $api['status'] === ApiManager::STATUS_DISABLED) {
-                        $statusClass = 'is-disabled';
-                    } elseif ((int) $api['status'] === ApiManager::STATUS_MAINTENANCE) {
-                        $statusClass = 'is-maintenance';
-                    }
-                    $methodSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) $api['method']));
-                    if ($methodSlug === '') {
-                        $methodSlug = 'get';
-                    }
-                    $typeBadge = isset($api['apitype_badge']) ? (string) $api['apitype_badge'] : ApiManager::apiTypeBadge(isset($api['apitype']) ? $api['apitype'] : 0);
-                    $keyBadge = isset($api['needkey_badge']) ? (string) $api['needkey_badge'] : ApiManager::requireKeyBadge(isset($api['needkey']) ? $api['needkey'] : 0);
-                    $category = isset($api['category']) ? trim((string) $api['category']) : '';
-                    $username = isset($api['username']) ? trim((string) $api['username']) : '';
-                    if ($username === '') {
-                        $username = ((int) $api['userid'] > 0) ? ('用户#' . (int) $api['userid']) : '未知';
-                    }
-                    $typeClass = ($typeBadge === '代理') ? 'vs-api-tag--proxy' : 'vs-api-tag--local';
-                    ?>
-                    <div class="vs-api-item vs-api-review-row" data-api-id="<?php echo (int) $api['id']; ?>" data-audit="<?php echo $audit; ?>"<?php echo $rowHidden; ?>>
-                        <div class="vs-api-item__icon">
-                            <img src="<?php echo vs_e($api['icon']); ?>" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer">
-                        </div>
-                        <div class="vs-api-item__title">
-                            <span class="vs-api-item__name"><?php echo vs_e($api['name']); ?></span>
-                            <span class="vs-api-item__id">#<?php echo (int) $api['id']; ?></span>
-                        </div>
-                        <div class="vs-api-item__endpoint">
-                            <span class="vs-api-list-method vs-api-list-method--<?php echo vs_e($methodSlug); ?>"><?php echo vs_e($api['method']); ?></span>
-                            <span class="vs-api-item__url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
-                        </div>
-                        <div class="vs-api-item__tags">
-                            <?php if ($category !== ''): ?>
-                                <span class="vs-api-tag vs-api-tag--cat"><?php echo vs_e($category); ?></span>
-                            <?php endif; ?>
-                            <span class="vs-api-tag vs-api-tag--free" data-field="charge_tag"><?php
-                                $charge = isset($api['charge']) ? (int) $api['charge'] : 0;
-                                $price = isset($api['price']) ? (string) $api['price'] : '0';
-                                echo ($charge === 1 && (float) $price > 0) ? vs_e('每次 ' . $price . ' 积分') : '免费';
-                            ?></span>
-                            <?php if ($keyBadge !== ''): ?>
-                                <span class="vs-api-tag vs-api-tag--key"><?php echo vs_e($keyBadge); ?></span>
-                            <?php endif; ?>
-                            <span class="vs-api-tag <?php echo $typeClass; ?>"><?php echo vs_e($typeBadge); ?></span>
-                            <span class="vs-api-tag vs-api-tag--audit <?php echo vs_e($api['audit_class']); ?>" data-field="audit_label"><?php echo vs_e($api['audit_label']); ?></span>
-                        </div>
-                        <div class="vs-api-item__meta">
-                            <div class="vs-api-item__status">
-                                状态：<span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>"><?php echo vs_e($api['status_label']); ?></span>
-                            </div>
-                            <div class="vs-api-item__calls" title="请求次数">请求：<strong><?php echo (int) $api['calls']; ?></strong></div>
-                            <div class="vs-api-item__author" title="提交者">提交：<em><?php echo vs_e($username); ?></em></div>
-                        </div>
-                        <div class="vs-api-review-reason" data-field="rejectreason"<?php echo $reason === '' ? ' hidden' : ''; ?>>
-                            原因：<?php echo vs_e($reason); ?>
-                        </div>
-                        <div class="vs-api-item__actions vs-api-review-row__actions">
-                            <a class="vs-btn vs-btn--outline" href="<?php echo vs_e($listEditBase . (int) $api['id']); ?>">编辑</a>
-                            <?php if ($audit !== ApiManager::AUDIT_APPROVED): ?>
-                            <button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-pass vs-api-review-action<?php echo $audit === ApiManager::AUDIT_APPROVED ? ' is-active' : ''; ?>" data-audit="1">通过</button>
-                            <?php endif; ?>
-                            <?php if ($audit !== ApiManager::AUDIT_REJECTED): ?>
-                            <button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-btn--status vs-btn--status-deny vs-api-review-deny<?php echo $audit === ApiManager::AUDIT_REJECTED ? ' is-active' : ''; ?>" data-audit="2">不通过</button>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
+        <div class="vs-api-list-table-card vs-api-list-table-wrap" id="apiReviewTableWrap"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
+            <div class="vs-table-responsive">
+                <table class="vs-table vs-api-review-table">
+                    <thead>
+                        <tr>
+                            <th>接口名称</th>
+                            <th>开发者</th>
+                            <th>提交时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="apiReviewBody">
+                        <?php foreach ($apis as $row): ?>
+                            <?php
+                            $reviewCtx = vs_api_review_row_context($row);
+                            if ($reviewCtx) {
+                                vs_render_api_review_desktop_row($reviewCtx, $listEditBase);
+                            }
+                            ?>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-        <?php endif; ?>
+        </div>
+
+        <div class="mobile-review-cards" id="apiReviewMobile"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
+            <?php foreach ($apis as $row): ?>
+                <?php
+                $reviewCtx = vs_api_review_row_context($row);
+                if ($reviewCtx) {
+                    vs_render_api_review_mobile_card($reviewCtx, $listEditBase);
+                }
+                ?>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="vs-api-list-footer" id="apiReviewFooter"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
+            <div class="vs-api-pager" id="apiReviewPager">
+                <label class="vs-api-list-pagesize" for="apiReviewPageSize">
+                    <span class="vs-api-list-pagesize__label">每页</span>
+                    <select class="vs-input vs-select vs-api-list-pagesize__select" id="apiReviewPageSize" data-vs-pick="sheet">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                    </select>
+                </label>
+                <button type="button" class="vs-api-pager__nav" id="apiReviewPrevBtn" aria-label="上一页">上一页</button>
+                <div class="vs-api-pager__nums" id="apiReviewPagerNums" role="navigation" aria-label="页码"></div>
+                <button type="button" class="vs-api-pager__nav" id="apiReviewNextBtn" aria-label="下一页">下一页</button>
+            </div>
+            <p class="vs-api-list-stats" id="apiReviewStats">共 <?php echo (int) count($apis); ?> 条</p>
+        </div>
     <?php endif; ?>
 </div>
 

@@ -1143,6 +1143,8 @@ class ApiManager
             'category'       => $full['category'],
             'userid'         => $full['userid'],
             'username'       => $full['username'],
+            'createtime'     => $full['createtime'],
+            'updatetime'     => $full['updatetime'],
         );
     }
 

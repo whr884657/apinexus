@@ -2413,113 +2413,53 @@ select.vs-input.vs-select {
     font-weight: 500;
 }
 
-.vs-api-review-tabs {
+/* 接口审核 Tab（旧按钮式已废弃，统一底部描边 Tab） */
+.vs-tabs.vs-api-review-tabs {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 2px;
+    border-bottom: 1px solid var(--vs-border, #e5e7eb);
     margin-bottom: 16px;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-.vs-api-review-tabs__btn {
+.vs-tabs.vs-api-review-tabs .vs-tabs__btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 14px;
-    border-radius: var(--vs-btn-radius, 10px);
-    border: 1px solid var(--vs-border);
-    background: var(--vs-white);
-    color: var(--vs-text-secondary);
-    text-decoration: none;
-    font-size: 13px;
+    padding: 10px 18px;
+    font-size: 14px;
     font-weight: 500;
-    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    color: var(--vs-text-secondary, #6b7280);
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
 }
 
-.vs-api-review-tabs__btn:hover {
-    border-color: #111;
-    color: var(--vs-text);
+.vs-tabs.vs-api-review-tabs .vs-tabs__btn:hover {
+    color: var(--vs-text, #111);
 }
 
-.vs-api-review-tabs__btn.is-active {
-    border-color: #111;
-    background: #111;
-    color: #fff;
-}
-
-.vs-api-review-tabs__badge {
-    display: inline-flex;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 999px;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    background: #ef4444;
-    color: #fff;
-}
-
-.vs-api-review-tabs__btn.is-active .vs-api-review-tabs__badge {
-    background: #fff;
-    color: #111;
-}
-
-.vs-api-review-list {
-    border: 1px solid var(--vs-border);
-    border-radius: 12px;
-    overflow: hidden;
-    background: var(--vs-content-bg);
-}
-
-.vs-api-review-list[hidden] {
-    display: none !important;
-}
-
-.vs-api-review-list .vs-api-item {
-    grid-template-columns: 40px minmax(120px, 1.2fr) minmax(140px, 1.4fr) minmax(180px, 2fr) 72px minmax(200px, 1.2fr);
-    grid-template-areas:
-        "icon title tags endpoint calls actions"
-        ". meta meta meta meta meta"
-        ". reason reason reason reason reason";
-}
-
-.vs-api-item__meta,
-.vs-api-review-meta {
-    grid-area: meta;
-    font-size: 12px;
-    color: var(--vs-text-secondary);
+.vs-tabs.vs-api-review-tabs .vs-tabs__btn.is-active {
+    color: var(--vs-text, #111);
+    border-bottom-color: #111;
 }
 
 .vs-api-review-reason {
-    grid-area: reason;
+    margin-top: 6px;
     font-size: 12px;
     color: #b91c1c;
+    line-height: 1.4;
+    max-width: 220px;
 }
 
 .vs-api-review-reason[hidden] {
     display: none !important;
-}
-
-@media (max-width: 900px) {
-    .vs-api-review-list {
-        border: none;
-        background: transparent;
-        overflow: visible;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .vs-api-review-list .vs-api-item {
-        grid-template-areas:
-            "icon title tags"
-            "endpoint endpoint endpoint"
-            "meta meta meta"
-            "reason reason reason"
-            "calls calls calls"
-            "actions actions actions";
-    }
 }
 
 .vs-api-status {
@@ -6867,6 +6807,7 @@ select.vs-input.vs-select {
     gap: 6px;
     align-items: center;
     flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 #apiListPage .action-btns .vs-btn--sm {
@@ -7029,7 +6970,7 @@ select.vs-input.vs-select {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    justify-content: flex-start;
+    justify-content: flex-end;
     padding-top: 10px;
     border-top: 1px dashed #cbd5e1;
     max-width: 100%;
@@ -7152,6 +7093,369 @@ select.vs-input.vs-select {
 #apiListPage .vs-api-list-footer .vs-api-pager .vs-pick__btn,
 #apiListPage .vs-api-list-footer .vs-api-pager__nav,
 #apiListPage .vs-api-list-footer .vs-api-pager__num {
+    height: 32px !important;
+    min-height: 32px;
+}
+
+/* ============================================================
+   接口审核页 — 表格 + 移动端卡片（#apiReviewPage 作用域）
+   搜索栏样式复用 .vs-api-list-toolbar（勿只挂 #apiReviewPage，见 E95）
+   ============================================================ */
+#apiReviewPage {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+}
+
+#apiReviewPage .vs-api-list-tip {
+    margin-bottom: 12px;
+    max-width: 100%;
+    min-width: 0;
+}
+
+#apiReviewPage .vs-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 9999px;
+    white-space: nowrap;
+}
+
+#apiReviewPage .vs-badge--success { background: #f0faf5; color: #15803d; }
+#apiReviewPage .vs-badge--warning { background: #fff7e8; color: #e37318; }
+#apiReviewPage .vs-badge--error { background: #fff0f0; color: #dc2626; }
+#apiReviewPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+
+#apiReviewPage .vs-api-review-tabs__badge {
+    margin-left: 2px;
+    min-width: 18px;
+    justify-content: center;
+}
+
+#apiReviewPage .vs-tabs__btn.is-active .vs-api-review-tabs__badge.vs-badge--default {
+    background: #f1f5f9;
+    color: #6b7280;
+}
+
+#apiReviewPage .review-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+#apiReviewPage .review-icon,
+#apiReviewPage .review-card__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+#apiReviewPage .review-icon img,
+#apiReviewPage .review-card__icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+#apiReviewPage .review-name-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+#apiReviewPage .review-name-text {
+    font-weight: 500;
+    color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#apiReviewPage .review-path {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 320px;
+}
+
+#apiReviewPage .applicant-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+#apiReviewPage .applicant-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+#apiReviewPage .applicant-name {
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#apiReviewPage .time-cell {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    white-space: nowrap;
+}
+
+#apiReviewPage .action-btns {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+#apiReviewPage .action-btns .vs-btn--sm {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+#apiReviewPage .vs-btn--outline-success {
+    border-color: #b8e6cc;
+    background: transparent;
+    color: #15803d;
+}
+
+#apiReviewPage .vs-btn--outline-success:hover {
+    background: #f0faf5;
+    border-color: #15803d;
+}
+
+#apiReviewPage .vs-btn--outline-danger {
+    border-color: #ffd6d6;
+    background: transparent;
+    color: #dc2626;
+}
+
+#apiReviewPage .vs-btn--outline-danger:hover {
+    background: #fff0f0;
+    border-color: #dc2626;
+}
+
+#apiReviewPage .vs-api-list-table-card {
+    padding: 0;
+    overflow: hidden;
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    max-width: 100%;
+    min-width: 0;
+}
+
+#apiReviewPage .vs-api-review-table th:first-child,
+#apiReviewPage .vs-api-review-table td:first-child {
+    padding-left: 20px;
+}
+
+#apiReviewPage .vs-api-review-table th:last-child,
+#apiReviewPage .vs-api-review-table td:last-child {
+    padding-right: 20px;
+}
+
+#apiReviewPage .vs-api-review-table th {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+#apiReviewPage .vs-api-review-actions-cell {
+    text-align: right;
+}
+
+#apiReviewPage .mobile-review-cards {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 100%;
+    min-width: 0;
+}
+
+#apiReviewPage .review-card {
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+#apiReviewPage .review-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+#apiReviewPage .review-card__header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#apiReviewPage .review-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+#apiReviewPage .review-card__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+#apiReviewPage .api-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+#apiReviewPage .review-card__info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    justify-content: flex-end;
+    max-width: 100%;
+    min-width: 0;
+}
+
+#apiReviewPage .review-card__info-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+#apiReviewPage .review-card__info-value {
+    color: var(--vs-text, #111);
+    font-weight: 500;
+}
+
+#apiReviewPage .review-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 10px;
+    border-top: 1px dashed #cbd5e1;
+    max-width: 100%;
+}
+
+#apiReviewPage .review-card__actions .vs-btn--sm {
+    padding: 5px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+#apiReviewPage .review-card .vs-api-review-reason {
+    max-width: 100%;
+    text-align: right;
+}
+
+#apiReviewPage tr[data-api-row][hidden],
+#apiReviewPage .review-card[data-api-row][hidden] {
+    display: none !important;
+}
+
+@media (min-width: 769px) {
+    #apiReviewPage .vs-api-list-table-wrap {
+        display: block;
+    }
+
+    #apiReviewPage .mobile-review-cards {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #apiReviewPage .vs-api-list-table-wrap {
+        display: none !important;
+    }
+
+    #apiReviewPage .mobile-review-cards {
+        display: flex;
+    }
+
+    #apiReviewPage .vs-tabs.vs-api-review-tabs .vs-tabs__btn {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    #apiReviewPage .vs-api-list-footer {
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #apiReviewPage .vs-panel,
+    #apiReviewPage .vs-api-review-panel {
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: clip;
+        box-sizing: border-box;
+    }
+}
+
+#apiReviewPage .vs-api-list-footer .vs-api-list-pagesize__select,
+#apiReviewPage .vs-api-list-footer .vs-api-pager .vs-pick__btn,
+#apiReviewPage .vs-api-list-footer .vs-api-pager__nav,
+#apiReviewPage .vs-api-list-footer .vs-api-pager__num {
     height: 32px !important;
     min-height: 32px;
 }
