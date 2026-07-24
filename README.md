@@ -130,7 +130,7 @@ ApiNexus/
 │   ├── api/                    # API 管理
 │   │   ├── list.php            # 接口列表（添加/编辑/状态）
 │   │   ├── categories.php      # 接口分类
-│   │   └── review.php / docs.php / feedback.php  # 占位
+│   │   └── review.php / docs.php / feedback.php  # 审核/文档/反馈
 │   ├── content/                # 内容运营（占位）
 │   ├── finance/                # 交易财务（支付配置/订单/积分）
 │   ├── system/                 # 系统管理扩展（日志等）
