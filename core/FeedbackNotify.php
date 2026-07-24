@@ -7,7 +7,7 @@
 class FeedbackNotify
 {
     /**
-     * 用户提交新反馈后，通知全体可用管理员
+     * 用户提交新反馈后，通知管理员 + 接口发布者（userid>0 的开发者）
      *
      * @param array $feedback ApiFeedbackManager::formatRow
      * @return array{ok:bool,sent:int,error:string}
@@ -18,12 +18,23 @@ class FeedbackNotify
             return array('ok' => false, 'sent' => 0, 'error' => '邮箱发信未配置');
         }
         if (Config::get('mail_notify_feedback_admin', '1') !== '1') {
-            return array('ok' => false, 'sent' => 0, 'error' => '已关闭新反馈通知管理员邮件');
+            return array('ok' => false, 'sent' => 0, 'error' => '已关闭新反馈通知邮件');
         }
 
         $emails = self::adminEmails();
+        $apiId = isset($feedback['apiid']) ? (int) $feedback['apiid'] : 0;
+        $ownerId = self::apiOwnerUserId($apiId);
+        $submitterId = isset($feedback['userid']) ? (int) $feedback['userid'] : 0;
+        // 接口由前台用户发布时，额外通知发布者（与管理员邮箱去重；不重复通知提交者本人）
+        if ($ownerId > 0 && $ownerId !== $submitterId) {
+            $ownerEmail = self::userEmail($ownerId);
+            if ($ownerEmail !== '' && filter_var($ownerEmail, FILTER_VALIDATE_EMAIL)) {
+                $emails[$ownerEmail] = $ownerEmail;
+            }
+        }
+        $emails = array_values($emails);
         if (count($emails) === 0) {
-            return array('ok' => false, 'sent' => 0, 'error' => '未找到管理员邮箱');
+            return array('ok' => false, 'sent' => 0, 'error' => '未找到可通知的邮箱');
         }
 
         $siteName = self::siteName();
@@ -32,14 +43,14 @@ class FeedbackNotify
             $apiName = '相关接口';
         }
         $username = isset($feedback['username']) ? trim((string) $feedback['username']) : '';
-        $userId = isset($feedback['userid']) ? (int) $feedback['userid'] : 0;
+        $userId = $submitterId;
         $content = isset($feedback['content']) ? trim((string) $feedback['content']) : '';
         $id = isset($feedback['id']) ? (int) $feedback['id'] : 0;
-        $apiId = isset($feedback['apiid']) ? (int) $feedback['apiid'] : 0;
+        $detailUrl = $apiId > 0 ? vs_api_detail_url($apiId) : '';
 
         $subject = '【' . $siteName . '】有新的接口反馈待处理';
-        $body = '<p>您好，站长：</p>';
-        $body .= '<p>有用户提交了接口反馈，请登录管理后台「接口反馈」处理。</p>';
+        $body = '<p>您好：</p>';
+        $body .= '<p>接口「' . self::e($apiName) . '」收到新的用户反馈，请及时处理。</p>';
         $body .= '<ul>';
         $body .= '<li>反馈编号：' . $id . '</li>';
         $body .= '<li>关联接口：' . self::e($apiName) . ($apiId > 0 ? ('（#' . $apiId . '）') : '') . '</li>';
@@ -50,6 +61,10 @@ class FeedbackNotify
             $body .= '<p style="padding:12px;background:#f8fafc;border-radius:8px;">'
                 . nl2br(self::e($content)) . '</p>';
         }
+        if ($detailUrl !== '') {
+            $body .= '<p>接口详情：<a href="' . self::e($detailUrl) . '">' . self::e($detailUrl) . '</a></p>';
+        }
+        $body .= '<p>管理员可在后台「接口反馈」中处理；开发者后续也可在用户中心处理自有接口反馈。</p>';
         $body .= '<p>本邮件由系统自动发送。</p>';
 
         return self::sendToMany($emails, $subject, $body);
@@ -138,7 +153,32 @@ class FeedbackNotify
         } catch (Exception $e) {
             return array();
         }
-        return array_values($list);
+        return $list;
+    }
+
+    /**
+     * 接口发布者用户 ID（0 表示管理员发布或未绑定）
+     *
+     * @param int $apiid
+     * @return int
+     */
+    private static function apiOwnerUserId($apiid)
+    {
+        $apiid = (int) $apiid;
+        if ($apiid <= 0) {
+            return 0;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT `userid` FROM `' . Database::table('api') . '` WHERE `id` = ? LIMIT 1'
+            );
+            $stmt->execute(array($apiid));
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return is_array($row) && isset($row['userid']) ? (int) $row['userid'] : 0;
+        } catch (Exception $e) {
+            return 0;
+        }
     }
 
     /**

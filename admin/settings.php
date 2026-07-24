@@ -612,7 +612,7 @@ vs_admin_accordion_start(
             </label>
             <label class="vs-checkbox" style="margin-top:8px;display:flex;">
                 <input type="checkbox" name="mail_notify_feedback_admin" value="1" <?php echo (!isset($vsCfg['mail_notify_feedback_admin']) || $vsCfg['mail_notify_feedback_admin'] === '1') ? 'checked' : ''; ?>>
-                <span>有新的接口反馈时，通知管理员</span>
+                <span>有新的接口反馈时，通知管理员与接口发布者</span>
             </label>
             <label class="vs-checkbox" style="margin-top:8px;display:flex;">
                 <input type="checkbox" name="mail_notify_feedback" value="1" <?php echo (!isset($vsCfg['mail_notify_feedback']) || $vsCfg['mail_notify_feedback'] === '1') ? 'checked' : ''; ?>>

@@ -1,12 +1,11 @@
 {
-    "version": "9.2.2",
-    "title": "ApiNexus 9.2.2 修复反馈弹窗与邮件通知",
+    "version": "9.2.3",
+    "title": "ApiNexus 9.2.3 反馈处理流程简化与发布者通知",
     "release_date": "2026-07-25",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "修复后台查看/标记反馈无反应：弹窗补齐 is-open，AJAX 改为识别 code/msg",
-        "用户提交反馈后可邮件通知管理员（可开关）",
-        "处理完成通知用户逻辑保持，并避免误报操作失败"
+        "去掉「保存回复」：标记已处理时一并保存回复并通知提交用户",
+        "新反馈邮件同时通知管理员与接口发布者（开发者投稿接口）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

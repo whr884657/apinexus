@@ -40,7 +40,6 @@
         var detailUser = document.getElementById('adminFbDetailUser');
         var detailContent = document.getElementById('adminFbDetailContent');
         var detailReply = document.getElementById('adminFbDetailReply');
-        var detailSaveBtn = document.getElementById('adminFbDetailSaveBtn');
         var detailMarkBtn = document.getElementById('adminFbDetailMarkBtn');
         var detailDeleteBtn = document.getElementById('adminFbDetailDeleteBtn');
         var currentPage = 1;
@@ -339,16 +338,23 @@
             openOverlay();
         }
 
-        function markDone(id) {
+        function markDone(id, replyText) {
             if (marking) {
                 return Promise.resolve();
             }
             marking = true;
-            return postAction('mark_done', { feedback_id: id }).then(function (res) {
+            var payload = { feedback_id: id, reply: replyText == null ? '' : String(replyText) };
+            return postAction('mark_done', payload).then(function (res) {
                 if (!ok(res)) {
                     throw new Error(msg(res, '操作失败'));
                 }
-                setPairDone(getPair(id));
+                var pair = getPair(id);
+                [pair.desktop, pair.mobile].forEach(function (el) {
+                    if (el) {
+                        el.setAttribute('data-reply', payload.reply);
+                    }
+                });
+                setPairDone(pair);
                 applyView();
                 window.VS.showMessage(msg(res, '已标记为已处理'), 'success');
                 return res;
@@ -369,7 +375,8 @@
             var markBtn = e.target.closest('.vs-fb-mark');
             if (markBtn) {
                 e.preventDefault();
-                markDone(markBtn.getAttribute('data-feedback-id'));
+                // 列表快捷标记：无回复正文，直接处理并通知用户
+                markDone(markBtn.getAttribute('data-feedback-id'), '');
             }
         });
 
@@ -387,33 +394,6 @@
             }
         });
 
-        if (detailSaveBtn) {
-            detailSaveBtn.addEventListener('click', function () {
-                var id = detailIdEl ? detailIdEl.value : '';
-                if (!id) {
-                    return;
-                }
-                var reply = detailReply ? detailReply.value : '';
-                detailSaveBtn.disabled = true;
-                postAction('save_reply', { feedback_id: id, reply: reply, mark_done: '0' }).then(function (res) {
-                    if (!ok(res)) {
-                        throw new Error(msg(res, '保存失败'));
-                    }
-                    var pair = getPair(id);
-                    [pair.desktop, pair.mobile].forEach(function (el) {
-                        if (el) {
-                            el.setAttribute('data-reply', reply);
-                        }
-                    });
-                    window.VS.showMessage(msg(res, '回复已保存'), 'success');
-                }).catch(function (err) {
-                    window.VS.showMessage((err && err.message) ? err.message : '保存失败', 'error');
-                }).then(function () {
-                    detailSaveBtn.disabled = false;
-                });
-            });
-        }
-
         if (detailMarkBtn) {
             detailMarkBtn.addEventListener('click', function () {
                 var id = detailIdEl ? detailIdEl.value : '';
@@ -421,27 +401,16 @@
                     return;
                 }
                 var reply = detailReply ? detailReply.value : '';
-                marking = true;
                 detailMarkBtn.disabled = true;
-                postAction('save_reply', { feedback_id: id, reply: reply, mark_done: '1' }).then(function (res) {
-                    if (!ok(res)) {
-                        throw new Error(msg(res, '操作失败'));
-                    }
-                    var pair = getPair(id);
-                    [pair.desktop, pair.mobile].forEach(function (el) {
-                        if (el) {
-                            el.setAttribute('data-reply', reply);
-                        }
-                    });
-                    setPairDone(pair);
-                    applyView();
-                    window.VS.showMessage(msg(res, '已标记为已处理'), 'success');
-                    closeOverlay();
-                }).catch(function (err) {
-                    window.VS.showMessage((err && err.message) ? err.message : '操作失败', 'error');
-                }).then(function () {
-                    marking = false;
+                markDone(id, reply).then(function () {
                     detailMarkBtn.disabled = false;
+                    if (overlay && overlay.classList.contains('is-open')) {
+                        var pair = getPair(id);
+                        var src = pair.desktop || pair.mobile;
+                        if (src && src.getAttribute('data-feedback-status') === '1') {
+                            closeOverlay();
+                        }
+                    }
                 });
             });
         }

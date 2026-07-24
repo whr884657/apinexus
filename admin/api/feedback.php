@@ -20,8 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'mark_done') {
         $before = ApiFeedbackManager::findById($id);
-        $wasDone = is_array($before)
-            && (int) $before['status'] === ApiFeedbackManager::STATUS_DONE;
+        if (!is_array($before)) {
+            AjaxResponse::error('反馈不存在');
+        }
+        $wasDone = (int) $before['status'] === ApiFeedbackManager::STATUS_DONE;
+        $reply = isset($_POST['reply']) ? (string) $_POST['reply'] : '';
+        $replyResult = ApiFeedbackManager::setReply($id, $reply);
+        if ($replyResult !== true) {
+            AjaxResponse::error($replyResult);
+        }
         $result = ApiFeedbackManager::setStatus($id, ApiFeedbackManager::STATUS_DONE);
         if ($result !== true) {
             AjaxResponse::error($result);
@@ -31,29 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             FeedbackNotify::notifyUserHandled($row);
         }
         AjaxResponse::success('已标记为已处理', array('feedback' => $row));
-    }
-
-    if ($action === 'save_reply') {
-        $before = ApiFeedbackManager::findById($id);
-        $wasDone = is_array($before)
-            && (int) $before['status'] === ApiFeedbackManager::STATUS_DONE;
-        $reply = isset($_POST['reply']) ? (string) $_POST['reply'] : '';
-        $result = ApiFeedbackManager::setReply($id, $reply);
-        if ($result !== true) {
-            AjaxResponse::error($result);
-        }
-        $markDone = isset($_POST['mark_done']) && (string) $_POST['mark_done'] === '1';
-        if ($markDone) {
-            $st = ApiFeedbackManager::setStatus($id, ApiFeedbackManager::STATUS_DONE);
-            if ($st !== true) {
-                AjaxResponse::error($st);
-            }
-        }
-        $row = ApiFeedbackManager::formatRow(ApiFeedbackManager::findById($id));
-        if ($markDone && !$wasDone && is_array($row) && class_exists('FeedbackNotify')) {
-            FeedbackNotify::notifyUserHandled($row);
-        }
-        AjaxResponse::success($markDone ? '已保存并标记已处理' : '回复已保存', array('feedback' => $row));
     }
 
     if ($action === 'delete') {
@@ -333,14 +317,13 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
                 <div class="fb-modal__content" id="adminFbDetailContent"></div>
             </div>
             <div class="fb-modal__field">
-                <div class="fb-modal__label">处理回复</div>
-                <textarea class="vs-input vs-textarea" id="adminFbDetailReply" placeholder="请输入处理回复内容..." rows="4"></textarea>
+                <div class="fb-modal__label">处理回复（选填）</div>
+                <textarea class="vs-input vs-textarea" id="adminFbDetailReply" placeholder="可填写处理说明，点击「标记已处理」一并发送给用户..." rows="4"></textarea>
             </div>
         </div>
         <footer class="vs-overlay__foot">
             <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">关闭</button>
             <button type="button" class="vs-btn vs-btn--outline-danger" id="adminFbDetailDeleteBtn">删除</button>
-            <button type="button" class="vs-btn vs-btn--outline" id="adminFbDetailSaveBtn">保存回复</button>
             <button type="button" class="vs-btn vs-btn--primary" id="adminFbDetailMarkBtn">标记已处理</button>
         </footer>
     </div>
