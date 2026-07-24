@@ -19,15 +19,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = isset($_POST['feedback_id']) ? (int) $_POST['feedback_id'] : 0;
 
     if ($action === 'mark_done') {
+        $before = ApiFeedbackManager::findById($id);
+        $wasDone = is_array($before)
+            && (int) $before['status'] === ApiFeedbackManager::STATUS_DONE;
         $result = ApiFeedbackManager::setStatus($id, ApiFeedbackManager::STATUS_DONE);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
         $row = ApiFeedbackManager::formatRow(ApiFeedbackManager::findById($id));
+        if (!$wasDone && is_array($row) && class_exists('FeedbackNotify')) {
+            FeedbackNotify::notifyUserHandled($row);
+        }
         AjaxResponse::success('已标记为已处理', array('feedback' => $row));
     }
 
     if ($action === 'save_reply') {
+        $before = ApiFeedbackManager::findById($id);
+        $wasDone = is_array($before)
+            && (int) $before['status'] === ApiFeedbackManager::STATUS_DONE;
         $reply = isset($_POST['reply']) ? (string) $_POST['reply'] : '';
         $result = ApiFeedbackManager::setReply($id, $reply);
         if ($result !== true) {
@@ -41,6 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         $row = ApiFeedbackManager::formatRow(ApiFeedbackManager::findById($id));
+        if ($markDone && !$wasDone && is_array($row) && class_exists('FeedbackNotify')) {
+            FeedbackNotify::notifyUserHandled($row);
+        }
         AjaxResponse::success($markDone ? '已保存并标记已处理' : '回复已保存', array('feedback' => $row));
     }
 

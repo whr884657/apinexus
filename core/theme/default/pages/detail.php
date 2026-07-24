@@ -299,6 +299,37 @@ if (!$notFound) {
         <?php endif; ?>
     </section>
 
+    <section class="detail-card" id="detailFeedbackCard"
+             data-logged-in="<?php echo !empty($playground['loggedIn']) ? '1' : '0'; ?>"
+             data-login-url="<?php echo vs_e(isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login')); ?>"
+             data-feedback-ready="<?php echo !empty($playground['feedbackReady']) ? '1' : '0'; ?>">
+        <h2 class="detail-section-title">接口反馈</h2>
+        <?php if (empty($playground['feedbackReady'])): ?>
+        <p class="detail-empty-hint">反馈功能暂未开放，请稍后再试。</p>
+        <?php else: ?>
+        <p class="detail-feedback__hint">发现接口问题或有改进建议？登录后可直接提交，我们会尽快处理并邮件通知结果。</p>
+        <form id="detailFeedbackForm" class="detail-feedback" method="post" action="" novalidate>
+            <input type="hidden" name="action" value="submit_feedback">
+            <input type="hidden" name="apiid" value="<?php echo (int) $api['id']; ?>">
+            <label class="detail-feedback__label" for="detailFeedbackContent">问题描述</label>
+            <textarea class="form-input detail-feedback__textarea" id="detailFeedbackContent" name="content"
+                      rows="4" maxlength="2000"
+                      placeholder="请描述遇到的问题、期望效果或改进建议（至少 5 个字）"
+                      <?php echo empty($playground['loggedIn']) ? '' : 'required'; ?>></textarea>
+            <div class="detail-feedback__foot">
+                <span class="detail-feedback__meta" id="detailFeedbackMeta">
+                    <?php if (!empty($playground['loggedIn'])): ?>
+                        已登录，可直接提交
+                    <?php else: ?>
+                        未登录：点击提交将跳转登录
+                    <?php endif; ?>
+                </span>
+                <button type="submit" class="btn-geek detail-feedback__submit" id="detailFeedbackBtn">提交反馈</button>
+            </div>
+        </form>
+        <?php endif; ?>
+    </section>
+
     <?php if ($recommendApi !== null): ?>
     <section class="detail-card detail-recommend">
         <h2 class="detail-section-title">推荐接口</h2>
@@ -339,8 +370,10 @@ window.playgroundKeyContext = <?php echo json_encode(array(
     'apiKeyCount' => isset($playground['apiKeyCount']) ? (int) $playground['apiKeyCount'] : 0,
     'userCenterUrl' => isset($playground['userCenterUrl']) ? (string) $playground['userCenterUrl'] : ($vsBase . '/user/index'),
     'loginUrl' => isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login'),
+    'feedbackReady' => !empty($playground['feedbackReady']),
 ), JSON_UNESCAPED_UNICODE); ?>;
 window.VS_CSRF_TOKEN = <?php echo json_encode(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
 window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/core/playground/relay.php')); ?>;
+window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(rtrim($vsBase, '/')); ?>;
 </script>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">

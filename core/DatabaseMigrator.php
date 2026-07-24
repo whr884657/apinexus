@@ -286,6 +286,14 @@ class DatabaseMigrator
             self::markApplied('9.0.0');
         }
 
+        // 新装已含 9.2.0 反馈邮件开关时跳过
+        if (!in_array('9.2.0', $applied, true)) {
+            $allCfg = Config::all();
+            if (isset($allCfg['mail_notify_feedback'])) {
+                self::markApplied('9.2.0');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
     }

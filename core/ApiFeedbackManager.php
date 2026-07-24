@@ -202,4 +202,85 @@ class ApiFeedbackManager
             return '删除失败';
         }
     }
+
+    /**
+     * 登录用户提交反馈
+     *
+     * @param int    $apiid
+     * @param int    $userid
+     * @param string $content
+     * @return array|string 成功返回 formatRow，失败返回错误文案
+     */
+    public static function create($apiid, $userid, $content)
+    {
+        if (!self::tableReady()) {
+            return '反馈功能暂未就绪，请稍后再试';
+        }
+
+        $apiid = (int) $apiid;
+        $userid = (int) $userid;
+        $content = trim((string) $content);
+
+        if ($apiid <= 0) {
+            return '无效的接口';
+        }
+        if ($userid <= 0) {
+            return '请登录后提交反馈问题';
+        }
+        if ($content === '') {
+            return '请填写反馈内容';
+        }
+
+        $len = function_exists('mb_strlen') ? mb_strlen($content, 'UTF-8') : strlen($content);
+        if ($len < 5) {
+            return '反馈内容至少 5 个字';
+        }
+        if ($len > 2000) {
+            return '反馈内容不能超过 2000 字';
+        }
+
+        if (function_exists('mb_substr')) {
+            $content = mb_substr($content, 0, 2000, 'UTF-8');
+        } else {
+            $content = substr($content, 0, 2000);
+        }
+
+        $api = class_exists('FrontendApi') ? FrontendApi::findForThemeById($apiid) : null;
+        if ($api === null) {
+            return '接口不存在或不可用';
+        }
+
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('feedback');
+
+            // 同一用户同一接口 60 秒内防刷
+            $chk = $pdo->prepare(
+                'SELECT `id` FROM `' . $table . '`
+                 WHERE `userid` = ? AND `apiid` = ?
+                   AND `createtime` >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
+                 ORDER BY `id` DESC LIMIT 1'
+            );
+            $chk->execute(array($userid, $apiid));
+            if ($chk->fetch()) {
+                return '提交过于频繁，请稍后再试';
+            }
+
+            $stmt = $pdo->prepare(
+                'INSERT INTO `' . $table . '`
+                 (`apiid`, `userid`, `content`, `reply`, `status`, `createtime`)
+                 VALUES (?, ?, ?, \'\', ?, NOW())'
+            );
+            $stmt->execute(array($apiid, $userid, $content, self::STATUS_PENDING));
+            $id = (int) $pdo->lastInsertId();
+            if ($id <= 0) {
+                return '提交失败，请稍后重试';
+            }
+            $row = self::findById($id);
+            $formatted = self::formatRow($row);
+            return $formatted ? $formatted : '提交失败，请稍后重试';
+        } catch (Exception $e) {
+            return '提交失败，请稍后重试';
+        }
+    }
 }

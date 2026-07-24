@@ -10,6 +10,7 @@ $base = isset($base) ? $base : $vsBase;
 $expiredMsg = isset($expiredMsg) ? $expiredMsg : '';
 $oauthError = isset($oauthError) ? $oauthError : '';
 $oauthProviders = isset($oauthProviders) ? $oauthProviders : array('qq' => false, 'gitee' => false);
+$loginRedirect = isset($loginRedirect) ? (string) $loginRedirect : '';
 
 ThemeManager::renderThemeAuthHead($pageTitle);
 ?>
@@ -28,6 +29,9 @@ ThemeManager::renderThemeAuthHead($pageTitle);
 
             <form id="loginForm" method="post" action="" novalidate>
                 <?php vs_auth_csrf_field(); ?>
+                <?php if ($loginRedirect !== ''): ?>
+                <input type="hidden" name="redirect" value="<?php echo vs_e($loginRedirect); ?>">
+                <?php endif; ?>
                 <div class="field">
                     <input id="username" name="username" type="text" placeholder="请输入用户名或邮箱" autocomplete="username" maxlength="64" required aria-label="用户名或邮箱">
                 </div>

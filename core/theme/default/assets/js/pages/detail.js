@@ -313,4 +313,110 @@
             });
         });
     }
+
+    /* —— 接口反馈 —— */
+    (function initFeedback() {
+        var card = document.getElementById('detailFeedbackCard');
+        var form = document.getElementById('detailFeedbackForm');
+        if (!card || !form) {
+            return;
+        }
+
+        function toast(msg, type) {
+            if (window.VsToast && typeof window.VsToast.show === 'function') {
+                window.VsToast.show(msg, type || 'info');
+                return;
+            }
+            if (window.VS && typeof window.VS.showMessage === 'function') {
+                window.VS.showMessage(msg, type || 'info');
+                return;
+            }
+            showToast(msg);
+        }
+
+        function goLogin() {
+            var url = card.getAttribute('data-login-url')
+                || (window.playgroundKeyContext && window.playgroundKeyContext.loginUrl)
+                || ((window.VS_BASE_URL || '') + '/user/login');
+            toast('请登录后提交反馈问题', 'warning');
+            setTimeout(function () {
+                window.location.href = url;
+            }, 600);
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var loggedIn = card.getAttribute('data-logged-in') === '1'
+                || (window.playgroundKeyContext && window.playgroundKeyContext.loggedIn);
+            if (!loggedIn) {
+                goLogin();
+                return;
+            }
+
+            var ready = card.getAttribute('data-feedback-ready') !== '0';
+            if (!ready) {
+                toast('反馈功能暂未开放', 'error');
+                return;
+            }
+
+            var ta = document.getElementById('detailFeedbackContent');
+            var content = ta ? String(ta.value || '').trim() : '';
+            if (content.length < 5) {
+                toast('反馈内容至少 5 个字', 'error');
+                return;
+            }
+
+            var btn = document.getElementById('detailFeedbackBtn');
+            if (btn) {
+                btn.disabled = true;
+            }
+
+            var csrf = (typeof window.VS_CSRF_TOKEN === 'string') ? window.VS_CSRF_TOKEN : '';
+            var fd = new FormData(form);
+            fd.set('csrf_token', csrf);
+            if (!fd.get('apiid')) {
+                fd.set('apiid', String(page.getAttribute('data-api-id') || '0'));
+            }
+
+            var postUrl = window.location.pathname || (window.location.href.split('?')[0]);
+            var doPost = (window.VS && typeof window.VS.postForm === 'function')
+                ? window.VS.postForm(fd, postUrl)
+                : fetch(postUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'X-CSRF-Token': csrf },
+                    body: fd
+                }).then(function (res) {
+                    return res.json().then(function (data) {
+                        if (data && typeof data.csrf === 'string') {
+                            window.VS_CSRF_TOKEN = data.csrf;
+                        }
+                        return data;
+                    });
+                });
+
+            Promise.resolve(doPost).then(function (data) {
+                if (btn) {
+                    btn.disabled = false;
+                }
+                if (!data || data.code !== 1) {
+                    if (data && (data.need_login === 1 || data.need_login === true)) {
+                        goLogin();
+                        return;
+                    }
+                    toast((data && data.msg) ? data.msg : '提交失败', 'error');
+                    return;
+                }
+                toast(data.msg || '反馈已提交', 'success');
+                if (ta) {
+                    ta.value = '';
+                }
+            }).catch(function () {
+                if (btn) {
+                    btn.disabled = false;
+                }
+                toast('网络异常，请稍后重试', 'error');
+            });
+        });
+    })();
 })();

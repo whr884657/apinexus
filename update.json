@@ -1,13 +1,13 @@
 {
-    "version": "9.1.0",
-    "title": "ApiNexus 9.1.0 令牌/反馈手机筛选与文档代码块优化",
+    "version": "9.2.0",
+    "title": "ApiNexus 9.2.0 详情页接口反馈与处理邮件通知",
     "release_date": "2026-07-25",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "令牌管理 / 接口反馈：手机端隐藏状态下拉，仅保留搜索（E100）",
-        "接口文档：请求/响应代码块改为白底浅色 + 本地 VsSyntax 语法高亮（E101）",
-        "文档 Tab 高度适配 Markdown（挂载 markdown-render.css）；共享渲染 pre 同步浅色",
-        "规范补 §2.15～2.17 / §九～§十一 / Markdown §6.1 / E100～E101"
+        "默认主题 API 详情页新增「接口反馈」板块：登录可提交，未登录提示并跳转登录",
+        "ApiFeedbackManager::create / FrontendFeedback / FeedbackNotify；CSRF+防刷",
+        "管理员标记已处理（可附回复）后邮件通知用户；系统设置开关 mail_notify_feedback",
+        "登录支持安全 redirect 回跳详情页；规范补 §2.18 / E102"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

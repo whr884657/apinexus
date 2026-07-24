@@ -355,6 +355,53 @@ function vs_redirect($url)
 }
 
 /**
+ * 校验登录后回跳地址（仅允许本站绝对 URL 或以 / 开头的站内路径）
+ *
+ * @param string $candidate
+ * @return string 合法回跳 URL（绝对），非法则空串
+ */
+function vs_safe_login_redirect($candidate)
+{
+    $candidate = trim((string) $candidate);
+    if ($candidate === '' || strlen($candidate) > 512) {
+        return '';
+    }
+    if (preg_match('/[\x00-\x1f\x7f]/', $candidate)) {
+        return '';
+    }
+
+    $base = rtrim(vs_base_url(), '/');
+    $path = '';
+
+    if (preg_match('#^https?://#i', $candidate)) {
+        if (strpos($candidate, $base . '/') !== 0 && $candidate !== $base) {
+            return '';
+        }
+        $path = substr($candidate, strlen($base));
+        if ($path === false || $path === '') {
+            $path = '/';
+        }
+    } elseif (isset($candidate[0]) && $candidate[0] === '/') {
+        if (strpos($candidate, '//') === 0) {
+            return '';
+        }
+        $path = $candidate;
+    } else {
+        return '';
+    }
+
+    if ($path === '' || $path[0] !== '/') {
+        return '';
+    }
+    // 禁止跳到安装/后台登录等敏感入口以外的危险路径：仅允许前台与用户中心
+    if (preg_match('#^/(install|admin)(/|$)#i', $path)) {
+        return '';
+    }
+
+    return $base . $path;
+}
+
+/**
  * 校验 POST 请求（同源 + CSRF），失败时返回 JSON 错误
  *
  * @return void

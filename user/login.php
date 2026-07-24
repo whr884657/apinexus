@@ -20,12 +20,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
 UserAuth::redirectIfLoggedIn();
 
 $siteName = SiteContext::siteName();
+$loginRedirect = vs_safe_login_redirect(
+    isset($_GET['redirect']) ? $_GET['redirect'] : (isset($_POST['redirect']) ? $_POST['redirect'] : '')
+);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'login') {
     vs_auth_require_post();
 
     $username = trim(isset($_POST['username']) ? $_POST['username'] : '');
     $password = isset($_POST['password']) ? $_POST['password'] : '';
+    $loginRedirect = vs_safe_login_redirect(
+        isset($_POST['redirect']) ? $_POST['redirect'] : $loginRedirect
+    );
 
     if ($username === '' || $password === '') {
         vs_auth_json(array('code' => 0, 'msg' => '请输入账号和密码'));
@@ -37,10 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     if (UserAuth::login($username, $password)) {
+        $go = $loginRedirect !== '' ? $loginRedirect : ($base . '/user/index');
         vs_auth_json(array(
             'code' => 1,
             'msg'  => '登录成功',
-            'url'  => $base . '/user/index',
+            'url'  => $go,
         ));
     }
 
@@ -61,4 +68,5 @@ ThemeManager::renderAuthPage('login', '用户登录', array(
     'expiredMsg'     => $expiredMsg,
     'oauthError'     => $oauthError,
     'oauthProviders' => $oauthProviders,
+    'loginRedirect'  => $loginRedirect,
 ));
