@@ -1,13 +1,12 @@
 {
-    "version": "9.2.1",
-    "title": "ApiNexus 9.2.1 详情页反馈位置与文档折叠优化",
+    "version": "9.2.2",
+    "title": "ApiNexus 9.2.2 修复反馈弹窗与邮件通知",
     "release_date": "2026-07-25",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "接口反馈移到返回示例下方，去掉多余说明文案",
-        "反馈字数限制改为 5～500 字",
-        "详细文档默认折叠，点击展开",
-        "清理近期更新说明中含糊的「规范补」表述"
+        "修复后台查看/标记反馈无反应：弹窗补齐 is-open，AJAX 改为识别 code/msg",
+        "用户提交反馈后可邮件通知管理员（可开关）",
+        "处理完成通知用户逻辑保持，并避免误报操作失败"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

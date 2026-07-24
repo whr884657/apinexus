@@ -35,6 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::error($result);
     }
 
+    if (class_exists('FeedbackNotify')) {
+        FeedbackNotify::notifyAdminsPending($result);
+    }
+
     AjaxResponse::success('反馈已提交，我们会尽快处理', array(
         'feedback' => array(
             'id'     => isset($result['id']) ? (int) $result['id'] : 0,

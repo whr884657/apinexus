@@ -45,6 +45,7 @@
         var detailDeleteBtn = document.getElementById('adminFbDetailDeleteBtn');
         var currentPage = 1;
         var returnFocusEl = null;
+        var marking = false;
 
         if (overlay && overlay.parentNode !== document.body) {
             document.body.appendChild(overlay);
@@ -61,12 +62,12 @@
             return window.VS.postForm(fd);
         }
 
-        function escapeHtml(text) {
-            return String(text)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
+        function ok(res) {
+            return res && Number(res.code) === 1;
+        }
+
+        function msg(res, fallback) {
+            return (res && res.msg) ? String(res.msg) : fallback;
         }
 
         function defaultPageSize() {
@@ -245,7 +246,11 @@
                     actions.innerHTML = buildActions(id, false);
                 }
             });
-            if (detailIdEl && String(detailIdEl.value) === String(pair.desktop ? pair.desktop.getAttribute('data-feedback-row') : '')) {
+            var openId = detailIdEl ? String(detailIdEl.value) : '';
+            var rowId = pair.desktop
+                ? pair.desktop.getAttribute('data-feedback-row')
+                : (pair.mobile ? pair.mobile.getAttribute('data-feedback-row') : '');
+            if (openId && rowId && openId === String(rowId)) {
                 if (detailStatus) {
                     detailStatus.textContent = '已处理';
                     detailStatus.className = 'vs-badge vs-badge--success';
@@ -272,9 +277,13 @@
                 return;
             }
             overlay.hidden = false;
+            overlay.classList.add('is-open');
             overlay.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('is-overlay-open');
             if (detailReply) {
-                detailReply.focus();
+                setTimeout(function () {
+                    detailReply.focus();
+                }, 50);
             }
         }
 
@@ -282,8 +291,10 @@
             if (!overlay) {
                 return;
             }
+            overlay.classList.remove('is-open');
             overlay.hidden = true;
             overlay.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('is-overlay-open');
             if (returnFocusEl && typeof returnFocusEl.focus === 'function') {
                 returnFocusEl.focus();
             }
@@ -329,27 +340,35 @@
         }
 
         function markDone(id) {
+            if (marking) {
+                return Promise.resolve();
+            }
+            marking = true;
             return postAction('mark_done', { feedback_id: id }).then(function (res) {
-                if (!res || !res.success) {
-                    throw new Error((res && res.message) || '操作失败');
+                if (!ok(res)) {
+                    throw new Error(msg(res, '操作失败'));
                 }
                 setPairDone(getPair(id));
                 applyView();
-                window.VS.showMessage(res.message || '已标记为已处理', 'success');
+                window.VS.showMessage(msg(res, '已标记为已处理'), 'success');
                 return res;
             }).catch(function (err) {
-                window.VS.showMessage(err.message || '操作失败', 'error');
+                window.VS.showMessage((err && err.message) ? err.message : '操作失败', 'error');
+            }).then(function () {
+                marking = false;
             });
         }
 
         page.addEventListener('click', function (e) {
             var viewBtn = e.target.closest('.vs-fb-view');
             if (viewBtn) {
+                e.preventDefault();
                 openDetail(viewBtn.getAttribute('data-feedback-id'), viewBtn);
                 return;
             }
             var markBtn = e.target.closest('.vs-fb-mark');
             if (markBtn) {
+                e.preventDefault();
                 markDone(markBtn.getAttribute('data-feedback-id'));
             }
         });
@@ -363,7 +382,7 @@
         }
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && overlay && !overlay.hidden) {
+            if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open')) {
                 closeOverlay();
             }
         });
@@ -377,8 +396,8 @@
                 var reply = detailReply ? detailReply.value : '';
                 detailSaveBtn.disabled = true;
                 postAction('save_reply', { feedback_id: id, reply: reply, mark_done: '0' }).then(function (res) {
-                    if (!res || !res.success) {
-                        throw new Error((res && res.message) || '保存失败');
+                    if (!ok(res)) {
+                        throw new Error(msg(res, '保存失败'));
                     }
                     var pair = getPair(id);
                     [pair.desktop, pair.mobile].forEach(function (el) {
@@ -386,9 +405,9 @@
                             el.setAttribute('data-reply', reply);
                         }
                     });
-                    window.VS.showMessage(res.message || '回复已保存', 'success');
+                    window.VS.showMessage(msg(res, '回复已保存'), 'success');
                 }).catch(function (err) {
-                    window.VS.showMessage(err.message || '保存失败', 'error');
+                    window.VS.showMessage((err && err.message) ? err.message : '保存失败', 'error');
                 }).then(function () {
                     detailSaveBtn.disabled = false;
                 });
@@ -398,14 +417,15 @@
         if (detailMarkBtn) {
             detailMarkBtn.addEventListener('click', function () {
                 var id = detailIdEl ? detailIdEl.value : '';
-                if (!id) {
+                if (!id || marking) {
                     return;
                 }
                 var reply = detailReply ? detailReply.value : '';
+                marking = true;
                 detailMarkBtn.disabled = true;
                 postAction('save_reply', { feedback_id: id, reply: reply, mark_done: '1' }).then(function (res) {
-                    if (!res || !res.success) {
-                        throw new Error((res && res.message) || '操作失败');
+                    if (!ok(res)) {
+                        throw new Error(msg(res, '操作失败'));
                     }
                     var pair = getPair(id);
                     [pair.desktop, pair.mobile].forEach(function (el) {
@@ -415,11 +435,12 @@
                     });
                     setPairDone(pair);
                     applyView();
-                    window.VS.showMessage(res.message || '已标记为已处理', 'success');
+                    window.VS.showMessage(msg(res, '已标记为已处理'), 'success');
                     closeOverlay();
                 }).catch(function (err) {
-                    window.VS.showMessage(err.message || '操作失败', 'error');
+                    window.VS.showMessage((err && err.message) ? err.message : '操作失败', 'error');
                 }).then(function () {
+                    marking = false;
                     detailMarkBtn.disabled = false;
                 });
             });
@@ -431,21 +452,28 @@
                 if (!id) {
                     return;
                 }
-                if (!window.confirm('确定删除该反馈？')) {
-                    return;
-                }
-                detailDeleteBtn.disabled = true;
-                postAction('delete', { feedback_id: id }).then(function (res) {
-                    if (!res || !res.success) {
-                        throw new Error((res && res.message) || '删除失败');
+                var doDelete = function () {
+                    detailDeleteBtn.disabled = true;
+                    postAction('delete', { feedback_id: id }).then(function (res) {
+                        if (!ok(res)) {
+                            throw new Error(msg(res, '删除失败'));
+                        }
+                        removePair(id);
+                        closeOverlay();
+                        window.VS.showMessage(msg(res, '反馈已删除'), 'success');
+                    }).catch(function (err) {
+                        window.VS.showMessage((err && err.message) ? err.message : '删除失败', 'error');
+                    }).then(function () {
+                        detailDeleteBtn.disabled = false;
+                    });
+                };
+                var ask = (window.VsModal && typeof window.VsModal.confirm === 'function')
+                    ? window.VsModal.confirm('确定删除该反馈？', '删除反馈', { danger: true })
+                    : Promise.resolve(window.confirm('确定删除该反馈？'));
+                ask.then(function (yes) {
+                    if (yes) {
+                        doDelete();
                     }
-                    removePair(id);
-                    closeOverlay();
-                    window.VS.showMessage(res.message || '反馈已删除', 'success');
-                }).catch(function (err) {
-                    window.VS.showMessage(err.message || '删除失败', 'error');
-                }).then(function () {
-                    detailDeleteBtn.disabled = false;
                 });
             });
         }
