@@ -220,13 +220,43 @@ if (!$notFound) {
     </section>
     <?php endif; ?>
 
-    <section class="detail-card" id="detailDocCard">
-        <h2 class="detail-section-title">详细文档</h2>
-        <?php if (!empty($api['doc'])): ?>
-        <div class="markdown-body detail-md is-parsed"><?php echo Markdown::render((string) $api['doc']); ?></div>
+    <section class="detail-card" id="detailFeedbackCard"
+             data-logged-in="<?php echo !empty($playground['loggedIn']) ? '1' : '0'; ?>"
+             data-login-url="<?php echo vs_e(isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login')); ?>"
+             data-feedback-ready="<?php echo !empty($playground['feedbackReady']) ? '1' : '0'; ?>">
+        <h2 class="detail-section-title">接口反馈</h2>
+        <?php if (empty($playground['feedbackReady'])): ?>
+        <p class="detail-empty-hint">反馈功能暂未开放，请稍后再试。</p>
         <?php else: ?>
-        <p class="detail-empty-hint">暂无详细文档</p>
+        <form id="detailFeedbackForm" class="detail-feedback" method="post" action="" novalidate>
+            <input type="hidden" name="action" value="submit_feedback">
+            <input type="hidden" name="apiid" value="<?php echo (int) $api['id']; ?>">
+            <label class="detail-feedback__label" for="detailFeedbackContent">问题描述</label>
+            <textarea class="form-input detail-feedback__textarea" id="detailFeedbackContent" name="content"
+                      rows="4" maxlength="500"
+                      placeholder="请描述遇到的问题或改进建议（5～500 字）"
+                      <?php echo empty($playground['loggedIn']) ? '' : 'required'; ?>></textarea>
+            <div class="detail-feedback__foot">
+                <button type="submit" class="btn-geek detail-feedback__submit" id="detailFeedbackBtn">提交反馈</button>
+            </div>
+        </form>
         <?php endif; ?>
+    </section>
+
+    <section class="detail-card detail-fold is-collapsed" id="detailDocCard">
+        <button type="button" class="detail-fold__toggle" id="detailDocToggle" aria-expanded="false" aria-controls="detailDocBody">
+            <span class="detail-section-title detail-fold__title">详细文档</span>
+            <span class="detail-fold__chevron" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+        </button>
+        <div class="detail-fold__body" id="detailDocBody" hidden>
+            <?php if (!empty($api['doc'])): ?>
+            <div class="markdown-body detail-md is-parsed"><?php echo Markdown::render((string) $api['doc']); ?></div>
+            <?php else: ?>
+            <p class="detail-empty-hint">暂无详细文档</p>
+            <?php endif; ?>
+        </div>
     </section>
 
     <section class="detail-card" id="detailAiDocCard">
@@ -296,37 +326,6 @@ if (!$notFound) {
                 </div>
             </div>
         </div>
-        <?php endif; ?>
-    </section>
-
-    <section class="detail-card" id="detailFeedbackCard"
-             data-logged-in="<?php echo !empty($playground['loggedIn']) ? '1' : '0'; ?>"
-             data-login-url="<?php echo vs_e(isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login')); ?>"
-             data-feedback-ready="<?php echo !empty($playground['feedbackReady']) ? '1' : '0'; ?>">
-        <h2 class="detail-section-title">接口反馈</h2>
-        <?php if (empty($playground['feedbackReady'])): ?>
-        <p class="detail-empty-hint">反馈功能暂未开放，请稍后再试。</p>
-        <?php else: ?>
-        <p class="detail-feedback__hint">发现接口问题或有改进建议？登录后可直接提交，我们会尽快处理并邮件通知结果。</p>
-        <form id="detailFeedbackForm" class="detail-feedback" method="post" action="" novalidate>
-            <input type="hidden" name="action" value="submit_feedback">
-            <input type="hidden" name="apiid" value="<?php echo (int) $api['id']; ?>">
-            <label class="detail-feedback__label" for="detailFeedbackContent">问题描述</label>
-            <textarea class="form-input detail-feedback__textarea" id="detailFeedbackContent" name="content"
-                      rows="4" maxlength="2000"
-                      placeholder="请描述遇到的问题、期望效果或改进建议（至少 5 个字）"
-                      <?php echo empty($playground['loggedIn']) ? '' : 'required'; ?>></textarea>
-            <div class="detail-feedback__foot">
-                <span class="detail-feedback__meta" id="detailFeedbackMeta">
-                    <?php if (!empty($playground['loggedIn'])): ?>
-                        已登录，可直接提交
-                    <?php else: ?>
-                        未登录：点击提交将跳转登录
-                    <?php endif; ?>
-                </span>
-                <button type="submit" class="btn-geek detail-feedback__submit" id="detailFeedbackBtn">提交反馈</button>
-            </div>
-        </form>
         <?php endif; ?>
     </section>
 

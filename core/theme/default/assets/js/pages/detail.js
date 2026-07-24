@@ -314,6 +314,22 @@
         });
     }
 
+    /* —— 详细文档折叠（默认收起） —— */
+    (function initDocFold() {
+        var card = document.getElementById('detailDocCard');
+        var btn = document.getElementById('detailDocToggle');
+        var body = document.getElementById('detailDocBody');
+        if (!card || !btn || !body) {
+            return;
+        }
+        btn.addEventListener('click', function () {
+            var open = card.classList.toggle('is-open');
+            card.classList.toggle('is-collapsed', !open);
+            body.hidden = !open;
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    })();
+
     /* —— 接口反馈 —— */
     (function initFeedback() {
         var card = document.getElementById('detailFeedbackCard');
@@ -363,6 +379,10 @@
             var content = ta ? String(ta.value || '').trim() : '';
             if (content.length < 5) {
                 toast('反馈内容至少 5 个字', 'error');
+                return;
+            }
+            if (content.length > 500) {
+                toast('反馈内容不能超过 500 字', 'error');
                 return;
             }
 

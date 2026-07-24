@@ -1,13 +1,13 @@
 {
-    "version": "9.2.0",
-    "title": "ApiNexus 9.2.0 详情页接口反馈与处理邮件通知",
+    "version": "9.2.1",
+    "title": "ApiNexus 9.2.1 详情页反馈位置与文档折叠优化",
     "release_date": "2026-07-25",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "默认主题 API 详情页新增「接口反馈」板块：登录可提交，未登录提示并跳转登录",
-        "ApiFeedbackManager::create / FrontendFeedback / FeedbackNotify；CSRF+防刷",
-        "管理员标记已处理（可附回复）后邮件通知用户；系统设置开关 mail_notify_feedback",
-        "登录支持安全 redirect 回跳详情页；规范补 §2.18 / E102"
+        "接口反馈移到返回示例下方，去掉多余说明文案",
+        "反馈字数限制改为 5～500 字",
+        "详细文档默认折叠，点击展开",
+        "清理近期更新说明中含糊的「规范补」表述"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

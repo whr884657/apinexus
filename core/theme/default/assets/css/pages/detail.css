@@ -655,12 +655,6 @@
 }
 
 /* —— 接口反馈 —— */
-.detail-feedback__hint {
-    margin: 0 0 0.85rem;
-    font-size: 0.875rem;
-    line-height: 1.65;
-    color: var(--text-muted, #64748b);
-}
 .detail-feedback__label {
     display: block;
     margin-bottom: 0.4rem;
@@ -690,14 +684,10 @@
 .detail-feedback__foot {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 0.75rem;
     flex-wrap: wrap;
     margin-top: 0.85rem;
-}
-.detail-feedback__meta {
-    font-size: 0.75rem;
-    color: var(--text-muted, #64748b);
 }
 .detail-feedback__submit {
     flex: 0 0 auto;
@@ -712,4 +702,40 @@
         width: 100%;
         text-align: center;
     }
+}
+
+/* —— 详细文档折叠 —— */
+.detail-fold__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+}
+.detail-fold__title {
+    margin: 0;
+    flex: 1 1 auto;
+}
+.detail-fold__chevron {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--text-muted, #64748b);
+    transition: transform 0.2s ease;
+}
+.detail-fold.is-open .detail-fold__chevron {
+    transform: rotate(180deg);
+}
+.detail-fold__body {
+    margin-top: 0.85rem;
+}
+.detail-fold.is-collapsed .detail-fold__body {
+    display: none;
 }

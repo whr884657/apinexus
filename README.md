@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-9.2.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-9.2.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v9.2.1（2026-07-25）
+
+**类型：** 小版本优化（详情页体验）
+
+**变更说明：**
+
+- 接口反馈上移到返回示例下方，去掉多余提示
+- 反馈限 500 字；详细文档默认折叠
 
 ### v9.2.0（2026-07-25）
 

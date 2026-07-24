@@ -235,14 +235,14 @@ class ApiFeedbackManager
         if ($len < 5) {
             return '反馈内容至少 5 个字';
         }
-        if ($len > 2000) {
-            return '反馈内容不能超过 2000 字';
+        if ($len > 500) {
+            return '反馈内容不能超过 500 字';
         }
 
         if (function_exists('mb_substr')) {
-            $content = mb_substr($content, 0, 2000, 'UTF-8');
+            $content = mb_substr($content, 0, 500, 'UTF-8');
         } else {
-            $content = substr($content, 0, 2000);
+            $content = substr($content, 0, 500);
         }
 
         $api = class_exists('FrontendApi') ? FrontendApi::findForThemeById($apiid) : null;
