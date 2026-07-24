@@ -6644,3 +6644,401 @@ select.vs-input.vs-select {
         grid-template-columns: 1fr;
     }
 }
+
+/* ============================================================
+   接口列表页 — 表格 + 移动端卡片（#apiListPage 作用域）
+   ============================================================ */
+#apiListPage .vs-api-list-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+#apiListPage .vs-api-list-filters .vs-input,
+#apiListPage .vs-api-list-filters .vs-select,
+#apiListPage .vs-api-list-filters .vs-pick {
+    width: auto;
+    min-width: 160px;
+}
+
+#apiListPage .vs-api-list-toolbar {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-bottom: 0;
+}
+
+#apiListPage .vs-search-bar__input-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 360px;
+}
+
+#apiListPage .vs-search-bar__input-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--vs-text-secondary, #6b7280);
+    pointer-events: none;
+}
+
+#apiListPage .vs-search-bar__input {
+    padding-left: 36px !important;
+    height: 36px;
+    font-size: 13px;
+}
+
+#apiListPage .method-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+#apiListPage .method-badge--get { background: #f0f6ff; color: #2563eb; }
+#apiListPage .method-badge--post { background: #f0faf5; color: #15803d; }
+#apiListPage .method-badge--put { background: #fff7e8; color: #e37318; }
+#apiListPage .method-badge--delete { background: #fff0f0; color: #dc2626; }
+#apiListPage .method-badge--patch { background: #f1f5f9; color: #475569; }
+
+#apiListPage .method-list {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+#apiListPage .api-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+#apiListPage .api-icon,
+#apiListPage .api-card__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+#apiListPage .api-icon img,
+#apiListPage .api-card__icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+#apiListPage .api-name-text {
+    font-weight: 500;
+    color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#apiListPage .api-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    font-weight: 500;
+}
+
+#apiListPage .charge-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#apiListPage .charge-badge--free { background: #f0faf5; color: #15803d; }
+#apiListPage .charge-badge--points { background: #fff7e8; color: #e37318; }
+
+#apiListPage .key-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#apiListPage .key-badge--required { background: #fff0f0; color: #dc2626; }
+#apiListPage .key-badge--optional { background: #f0f6ff; color: #2563eb; }
+#apiListPage .key-badge--none { background: #f1f5f9; color: #64748b; }
+
+#apiListPage .type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#apiListPage .type-badge--local { background: #eef2ff; color: #4338ca; }
+#apiListPage .type-badge--proxy { background: #fdf2f8; color: #be185d; }
+
+#apiListPage .vs-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 9999px;
+    white-space: nowrap;
+}
+
+#apiListPage .vs-badge--success { background: #f0faf5; color: #15803d; }
+#apiListPage .vs-badge--warning { background: #fff7e8; color: #e37318; }
+#apiListPage .vs-badge--error { background: #fff0f0; color: #dc2626; }
+#apiListPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+
+#apiListPage .action-btns {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#apiListPage .action-btns .vs-btn--sm {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+#apiListPage .vs-btn--outline-warning {
+    border-color: #f5d9a8;
+    background: transparent;
+    color: #e37318;
+}
+
+#apiListPage .vs-btn--outline-warning:hover {
+    background: #fff7e8;
+    border-color: #e37318;
+}
+
+#apiListPage .vs-btn--outline-success {
+    border-color: #b8e6cc;
+    background: transparent;
+    color: #15803d;
+}
+
+#apiListPage .vs-btn--outline-success:hover {
+    background: #f0faf5;
+    border-color: #15803d;
+}
+
+#apiListPage .vs-api-list-table-card {
+    padding: 0;
+    overflow: hidden;
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+#apiListPage .vs-api-list-table th:first-child,
+#apiListPage .vs-api-list-table td:first-child {
+    padding-left: 20px;
+}
+
+#apiListPage .vs-api-list-table th:last-child,
+#apiListPage .vs-api-list-table td:last-child {
+    padding-right: 20px;
+}
+
+#apiListPage .vs-api-list-table th {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+#apiListPage .vs-api-list-calls-cell {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+}
+
+#apiListPage .vs-api-list-author {
+    font-size: 13px;
+    color: var(--vs-text, #111);
+}
+
+#apiListPage tr[data-api-row].is-enter {
+    animation: vs-row-fade 0.38s ease both;
+    animation-delay: calc(var(--row-i, 0) * 28ms);
+}
+
+#apiListPage .mobile-api-cards {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#apiListPage .api-card {
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#apiListPage .api-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#apiListPage .api-card__header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+#apiListPage .api-card__header-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    max-width: 60%;
+}
+
+#apiListPage .api-card__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#apiListPage .api-card__info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    justify-content: flex-end;
+}
+
+#apiListPage .api-card__info-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+#apiListPage .api-card__info-value,
+#apiListPage .api-card__calls {
+    color: var(--vs-text, #111);
+    font-weight: 500;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+#apiListPage .api-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 10px;
+    border-top: 1px dashed #cbd5e1;
+}
+
+#apiListPage .api-card__actions .vs-btn--sm {
+    padding: 5px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+#apiListPage tr[data-api-row][hidden],
+#apiListPage .api-card[data-api-row][hidden] {
+    display: none !important;
+}
+
+@media (min-width: 769px) {
+    #apiListPage .vs-api-list-table-wrap {
+        display: block;
+    }
+
+    #apiListPage .mobile-api-cards {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #apiListPage .vs-api-list-table-wrap {
+        display: none !important;
+    }
+
+    #apiListPage .mobile-api-cards {
+        display: flex;
+    }
+
+    #apiListPage .vs-api-list-filters {
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+    }
+
+    #apiListPage .vs-api-list-filters .vs-input,
+    #apiListPage .vs-api-list-filters .vs-select,
+    #apiListPage .vs-api-list-filters .vs-pick {
+        flex: 1;
+        min-width: 0 !important;
+        width: auto !important;
+        font-size: 12px;
+    }
+
+    #apiListPage .vs-search-bar {
+        flex-wrap: nowrap;
+    }
+
+    #apiListPage .vs-search-bar__input-wrap {
+        max-width: none;
+        min-width: 0;
+    }
+
+    #apiListPage .action-btns {
+        flex-wrap: wrap;
+    }
+}
+
+#apiListPage .vs-api-list-footer .vs-api-list-pagesize__select,
+#apiListPage .vs-api-list-footer .vs-api-pager .vs-pick__btn,
+#apiListPage .vs-api-list-footer .vs-api-pager__nav,
+#apiListPage .vs-api-list-footer .vs-api-pager__num {
+    height: 32px !important;
+    min-height: 32px;
+}

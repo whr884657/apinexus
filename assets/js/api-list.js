@@ -10,11 +10,15 @@
         return;
     }
 
-    var tableEl = document.getElementById('apiListTable');
+    var tableWrapEl = document.getElementById('apiListTableWrap');
     var listEl = document.getElementById('apiListBody');
+    var mobileEl = document.getElementById('apiListMobile');
     var emptyEl = document.getElementById('apiListEmpty');
     var searchEmptyEl = document.getElementById('apiListSearchEmpty');
     var searchInput = document.getElementById('apiListSearchInput');
+    var filterCategoryEl = document.getElementById('apiListFilterCategory');
+    var filterStatusEl = document.getElementById('apiListFilterStatus');
+    var filterSortEl = document.getElementById('apiListFilterSort');
     var pageSizeEl = document.getElementById('apiListPageSize');
     var footerEl = document.getElementById('apiListFooter');
     var pagerEl = document.getElementById('apiListPager');
@@ -210,26 +214,110 @@
         return u || '';
     }
 
-    function statusClass(status) {
+    function displayStatusLabel(status) {
         var n = normalizeStatus(status);
         if (n === 1) {
-            return 'is-disabled';
+            return '已禁用';
         }
         if (n === 2) {
-            return 'is-maintenance';
+            return '维护中';
         }
-        return 'is-normal';
+        return '正常';
     }
 
-    function auditClass(audit) {
-        var n = normalizeAudit(audit);
+    function statusBadgeClass(status) {
+        var n = normalizeStatus(status);
         if (n === 1) {
-            return 'is-approved';
+            return 'vs-badge--error';
         }
         if (n === 2) {
-            return 'is-rejected';
+            return 'vs-badge--warning';
         }
-        return 'is-pending';
+        return 'vs-badge--success';
+    }
+
+    function typeBadgeClass(badge) {
+        return badge === '代理' ? 'type-badge--proxy' : 'type-badge--local';
+    }
+
+    function formatCalls(n) {
+        var num = parseInt(n, 10) || 0;
+        try {
+            return num.toLocaleString('zh-CN');
+        } catch (e) {
+            return String(num);
+        }
+    }
+
+    function chargeBadgeHtml(api) {
+        var charge = parseInt(api.charge, 10) === 1;
+        var price = api.price != null ? String(api.price) : '0';
+        if (charge && parseFloat(price) > 0) {
+            return '<span class="charge-badge charge-badge--points" data-field="charge_tag">'
+                + escapeHtml(price + '积分/次') + '</span>';
+        }
+        return '<span class="charge-badge charge-badge--free" data-field="charge_tag">免费</span>';
+    }
+
+    function keyBadgeHtml(keyBadge) {
+        var badge = keyBadge ? String(keyBadge).trim() : '';
+        if (!badge) {
+            return '<span class="key-badge key-badge--none" data-field="needkey_badge">KEY 不必要</span>';
+        }
+        var cls = 'key-badge--optional';
+        if (badge.indexOf('必填') !== -1) {
+            cls = 'key-badge--required';
+        }
+        return '<span class="key-badge ' + cls + '" data-field="needkey_badge">' + escapeHtml(badge) + '</span>';
+    }
+
+    function categoryBadgeHtml(category) {
+        var cat = category ? String(category).trim() : '';
+        var text = cat || '未分类';
+        return '<span class="vs-badge vs-badge--default" data-field="category">' + escapeHtml(text) + '</span>';
+    }
+
+    function getRowPair(apiId) {
+        var id = String(apiId);
+        return {
+            desktop: listEl ? listEl.querySelector('tr[data-api-row="' + id + '"]') : null,
+            mobile: mobileEl ? mobileEl.querySelector('.api-card[data-api-row="' + id + '"]') : null
+        };
+    }
+
+    function rowDataAttrs(api) {
+        var status = normalizeStatus(api.status);
+        var audit = normalizeAudit(api.audit);
+        var callUrl = callUrlOf(api);
+        var typeBadge = api.apitype_badge || '本地';
+        var username = displayUsername(api);
+        var category = api.category ? String(api.category).trim() : '';
+        var search = (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' '
+            + category + ' ' + typeBadge + ' ' + username).toLowerCase();
+        return {
+            status: status,
+            audit: audit,
+            category: category,
+            calls: parseInt(api.calls, 10) || 0,
+            name: String(api.name || ''),
+            search: search,
+            payload: JSON.stringify(api)
+        };
+    }
+
+    function applyRowDataAttrs(el, api) {
+        if (!el || !api) {
+            return;
+        }
+        var d = rowDataAttrs(api);
+        el.setAttribute('data-api-row', String(api.id));
+        el.setAttribute('data-api-status', String(d.status));
+        el.setAttribute('data-api-audit', String(d.audit));
+        el.setAttribute('data-api-category', d.category);
+        el.setAttribute('data-api-calls', String(d.calls));
+        el.setAttribute('data-api-name', d.name);
+        el.setAttribute('data-search', d.search);
+        el.setAttribute('data-payload', d.payload);
     }
 
     function getSelectedIconUrl() {
@@ -286,10 +374,19 @@
     }
 
     function markRowsEnter() {
-        page.querySelectorAll('.vs-api-item').forEach(function (row, i) {
+        if (!listEl) {
+            return;
+        }
+        listEl.querySelectorAll('tr[data-api-row]').forEach(function (row, i) {
             row.style.setProperty('--row-i', String(Math.min(i, 20)));
             row.classList.add('is-enter');
         });
+        if (mobileEl) {
+            mobileEl.querySelectorAll('.api-card[data-api-row]').forEach(function (row, i) {
+                row.style.setProperty('--row-i', String(Math.min(i, 20)));
+                row.classList.add('is-enter');
+            });
+        }
     }
 
     function switchFormTab(tab) {
@@ -317,13 +414,29 @@
         if (!methods.length) {
             methods = ['GET'];
         }
-        var html = '<span class="vs-api-list-methods" data-field="method">';
+        var html = '<div class="method-list" data-field="method">';
         methods.forEach(function (m) {
             var slug = methodSlug(m);
-            html += '<span class="vs-api-list-method vs-api-list-method--' + escapeHtml(slug) + '">'
+            html += '<span class="method-badge method-badge--' + escapeHtml(slug) + '">'
                 + escapeHtml(String(m).toUpperCase()) + '</span>';
         });
-        html += '</span>';
+        html += '</div>';
+        return html;
+    }
+
+    function methodBadgesInlineHtml(api) {
+        var methods = (api && api.methods && api.methods.length)
+            ? api.methods
+            : String((api && (api.method_label || api.method)) || 'GET').split(/[\s,|\/]+/).filter(Boolean);
+        if (!methods.length) {
+            methods = ['GET'];
+        }
+        var html = '';
+        methods.forEach(function (m) {
+            var slug = methodSlug(m);
+            html += '<span class="method-badge method-badge--' + escapeHtml(slug) + '">'
+                + escapeHtml(String(m).toUpperCase()) + '</span>';
+        });
         return html;
     }
 
@@ -492,91 +605,109 @@
         return uid > 0 ? ('用户#' + uid) : '管理员';
     }
 
-    function typeTagClass(badge) {
-        return badge === '代理' ? 'vs-api-tag--proxy' : 'vs-api-tag--local';
-    }
-
-    function buildTagsHtml(api) {
-        var audit = normalizeAudit(api.audit);
+    function buildMobileTagsHtml(api) {
         var typeBadge = api.apitype_badge || '本地';
-        var keyBadge = api.needkey_badge || '';
-        var category = api.category ? String(api.category) : '';
+        var category = api.category ? String(api.category).trim() : '';
         var html = '';
         if (category) {
-            html += '<span class="vs-api-tag vs-api-tag--cat" data-field="category">' + escapeHtml(category) + '</span>';
+            html += categoryBadgeHtml(category);
         }
-        var charge = parseInt(api.charge, 10) === 1;
-        var price = api.price != null ? String(api.price) : '0';
-        var chargeText = (charge && parseFloat(price) > 0) ? ('每次 ' + price + ' 积分') : '免费';
-        html += '<span class="vs-api-tag vs-api-tag--free" data-field="charge_tag">' + escapeHtml(chargeText) + '</span>';
-        if (keyBadge) {
-            html += '<span class="vs-api-tag vs-api-tag--key" data-field="needkey_badge">' + escapeHtml(keyBadge) + '</span>';
-        }
-        html += '<span class="vs-api-tag ' + typeTagClass(typeBadge) + '" data-field="apitype_badge">'
+        html += '<span class="type-badge ' + typeBadgeClass(typeBadge) + '" data-field="apitype_badge">'
             + escapeHtml(typeBadge) + '</span>';
-        if (audit !== 1) {
-            html += '<span class="vs-api-tag vs-api-tag--audit ' + auditClass(audit) + '" data-field="audit_label">'
-                + escapeHtml(api.audit_label || '') + '</span>';
-        }
+        html += chargeBadgeHtml(api);
+        html += keyBadgeHtml(api.needkey_badge || '');
+        html += '<span class="vs-badge ' + statusBadgeClass(api.status) + '" data-field="status_label">'
+            + escapeHtml(displayStatusLabel(api.status)) + '</span>';
         return html;
     }
 
     function buildActionButtons(api) {
         var id = api.id;
         var status = normalizeStatus(api.status);
-        var html = '';
-        html += '<button type="button" class="vs-btn vs-btn--outline vs-api-list-action" data-api-action="edit" data-api-id="' + id + '">编辑</button>';
-        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-normal vs-api-list-action'
-            + (status === 0 ? ' is-active' : '') + '" data-api-action="normal" data-api-id="' + id + '">正常</button>';
-        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-maint vs-api-list-action'
-            + (status === 2 ? ' is-active' : '') + '" data-api-action="maintenance" data-api-id="' + id + '">维护</button>';
-        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--status vs-btn--status-disabled vs-api-list-action'
-            + (status === 1 ? ' is-active' : '') + '" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
-        html += '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
+        var html = '<div class="action-btns">';
+        html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-api-list-action" data-api-action="edit" data-api-id="' + id + '">编辑</button>';
+        if (status === 0) {
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning vs-api-list-action" data-api-action="maintenance" data-api-id="' + id + '">维护</button>';
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning vs-api-list-action" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
+        } else if (status === 2) {
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success vs-api-list-action" data-api-action="normal" data-api-id="' + id + '">恢复正常</button>';
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning vs-api-list-action" data-api-action="disable" data-api-id="' + id + '">禁用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
+        } else {
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success vs-api-list-action" data-api-action="normal" data-api-id="' + id + '">启用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger vs-api-list-action" data-api-action="delete" data-api-id="' + id + '">删除</button>';
+        }
+        html += '</div>';
         return html;
     }
 
-    function buildItemHtml(api) {
+    function buildDesktopRowHtml(api) {
         var icon = safeIconUrl(api.icon);
-        var status = normalizeStatus(api.status);
-        var audit = normalizeAudit(api.audit);
-        var callUrl = callUrlOf(api);
         var typeBadge = api.apitype_badge || '本地';
         var username = displayUsername(api);
-        var search = (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' '
-            + String(api.category || '') + ' ' + typeBadge + ' ' + username).toLowerCase();
-        var payload = escapeHtml(JSON.stringify(api));
+        var d = rowDataAttrs(api);
+        var html = '<tr data-api-row="' + api.id + '"'
+            + ' data-api-status="' + d.status + '"'
+            + ' data-api-audit="' + d.audit + '"'
+            + ' data-api-category="' + escapeHtml(d.category) + '"'
+            + ' data-api-calls="' + d.calls + '"'
+            + ' data-api-name="' + escapeHtml(d.name) + '"'
+            + ' data-search="' + escapeHtml(d.search) + '"'
+            + ' data-payload="' + escapeHtml(d.payload) + '">';
+        html += '<td><span class="api-id" data-field="id">' + (parseInt(api.id, 10) || 0) + '</span></td>';
+        html += '<td><div class="api-name-cell"><div class="api-icon"><img src="' + escapeHtml(icon)
+            + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" data-field="icon"></div>'
+            + '<span class="api-name-text" data-field="name">' + escapeHtml(api.name || '') + '</span></div></td>';
+        html += '<td><span class="vs-api-list-author" data-field="username">' + escapeHtml(username) + '</span></td>';
+        html += '<td data-field="category_cell">' + categoryBadgeHtml(d.category) + '</td>';
+        html += '<td><span class="type-badge ' + typeBadgeClass(typeBadge) + '" data-field="apitype_badge">'
+            + escapeHtml(typeBadge) + '</span></td>';
+        html += '<td>' + methodBadgesHtml(api) + '</td>';
+        html += '<td>' + chargeBadgeHtml(api) + '</td>';
+        html += '<td>' + keyBadgeHtml(api.needkey_badge || '') + '</td>';
+        html += '<td><span class="vs-badge ' + statusBadgeClass(api.status) + '" data-field="status_label">'
+            + escapeHtml(displayStatusLabel(api.status)) + '</span></td>';
+        html += '<td class="vs-api-list-calls-cell"><span data-field="calls">' + formatCalls(api.calls) + '</span></td>';
+        html += '<td>' + buildActionButtons(api) + '</td>';
+        html += '</tr>';
+        return html;
+    }
 
-        var html = '<div class="vs-api-item" data-api-row="' + api.id + '"'
-            + ' data-api-status="' + status + '"'
-            + ' data-api-audit="' + audit + '"'
-            + ' data-search="' + escapeHtml(search) + '"'
-            + ' data-payload="' + payload + '">';
-        html += '<div class="vs-api-item__icon"><img src="' + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" data-field="icon"></div>';
-        html += '<div class="vs-api-item__title">';
-        html += '<span class="vs-api-item__name" data-field="name">' + escapeHtml(api.name || '') + '</span>';
-        html += '<span class="vs-api-item__id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
-        html += '</div>';
-        html += '<div class="vs-api-item__endpoint">';
-        html += methodBadgesHtml(api);
-        html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span>';
-        html += '</div>';
-        html += '<div class="vs-api-item__tags" data-field="tags">' + buildTagsHtml(api) + '</div>';
-        html += '<div class="vs-api-item__meta">';
-        html += '<div class="vs-api-item__status">状态：<span class="vs-api-tag vs-api-tag--status '
-            + statusClass(status) + '" data-field="status_label">' + escapeHtml(api.status_label || String(status)) + '</span></div>';
-        html += '<div class="vs-api-item__calls" title="请求次数">请求：<strong data-field="calls">'
-            + (parseInt(api.calls, 10) || 0) + '</strong></div>';
-        html += '<div class="vs-api-item__author" title="提交者">提交：<em data-field="username">' + escapeHtml(username) + '</em></div>';
-        html += '</div>';
-        html += '<div class="vs-api-item__actions">' + buildActionButtons(api) + '</div>';
-        html += '</div>';
+    function buildMobileCardHtml(api) {
+        var icon = safeIconUrl(api.icon);
+        var username = displayUsername(api);
+        var d = rowDataAttrs(api);
+        var html = '<div class="api-card" data-api-row="' + api.id + '"'
+            + ' data-api-status="' + d.status + '"'
+            + ' data-api-audit="' + d.audit + '"'
+            + ' data-api-category="' + escapeHtml(d.category) + '"'
+            + ' data-api-calls="' + d.calls + '"'
+            + ' data-api-name="' + escapeHtml(d.name) + '"'
+            + ' data-search="' + escapeHtml(d.search) + '"'
+            + ' data-payload="' + escapeHtml(d.payload) + '">';
+        html += '<div class="api-card__header"><div class="api-card__header-left">';
+        html += '<span class="api-id" data-field="id">#' + (parseInt(api.id, 10) || 0) + '</span>';
+        html += '<div class="api-card__icon"><img src="' + escapeHtml(icon)
+            + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" data-field="icon"></div>';
+        html += '<span class="api-card__name" data-field="name">' + escapeHtml(api.name || '') + '</span></div>';
+        html += '<div class="api-card__header-right" data-field="tags">' + buildMobileTagsHtml(api) + '</div></div>';
+        html += '<div class="api-card__info">';
+        html += '<span class="api-card__info-item"><span class="api-card__info-label">提交者</span> <span class="api-card__info-value" data-field="username">'
+            + escapeHtml(username) + '</span></span>';
+        html += '<span class="api-card__info-item"><span class="api-card__info-label">方式</span> ' + methodBadgesInlineHtml(api) + '</span>';
+        html += '<span class="api-card__info-item"><span class="api-card__info-label">调用</span> <span class="api-card__calls" data-field="calls">'
+            + formatCalls(api.calls) + '</span></span></div>';
+        html += '<div class="api-card__actions">' + buildActionButtons(api) + '</div></div>';
         return html;
     }
 
     function ensureListVisible() {
-        if (tableEl) {
-            tableEl.hidden = false;
+        if (tableWrapEl) {
+            tableWrapEl.hidden = false;
+        }
+        if (mobileEl) {
+            mobileEl.hidden = false;
         }
         if (emptyEl) {
             emptyEl.hidden = true;
@@ -587,7 +718,7 @@
         if (!listEl) {
             return;
         }
-        var rows = listEl.querySelectorAll('.vs-api-item');
+        var rows = listEl.querySelectorAll('tr[data-api-row]');
         var visible = 0;
         rows.forEach(function (row) {
             if (!row.hidden) {
@@ -598,8 +729,11 @@
         if (emptyEl) {
             emptyEl.hidden = hasAny;
         }
-        if (tableEl) {
-            tableEl.hidden = !hasAny;
+        if (tableWrapEl) {
+            tableWrapEl.hidden = !hasAny;
+        }
+        if (mobileEl) {
+            mobileEl.hidden = !hasAny;
         }
         if (searchEmptyEl) {
             searchEmptyEl.hidden = !(hasAny && visible === 0);
@@ -621,19 +755,86 @@
         return n;
     }
 
+    function getSortMode() {
+        return filterSortEl ? String(filterSortEl.value || 'newest') : 'newest';
+    }
+
+    function sortMatchedRows(rows) {
+        var mode = getSortMode();
+        rows.sort(function (a, b) {
+            var idA = parseInt(a.getAttribute('data-api-row'), 10) || 0;
+            var idB = parseInt(b.getAttribute('data-api-row'), 10) || 0;
+            var callsA = parseInt(a.getAttribute('data-api-calls'), 10) || 0;
+            var callsB = parseInt(b.getAttribute('data-api-calls'), 10) || 0;
+            var nameA = String(a.getAttribute('data-api-name') || '').toLowerCase();
+            var nameB = String(b.getAttribute('data-api-name') || '').toLowerCase();
+            if (mode === 'calls-desc') {
+                return callsB - callsA || idB - idA;
+            }
+            if (mode === 'calls-asc') {
+                return callsA - callsB || idB - idA;
+            }
+            if (mode === 'name-az') {
+                if (nameA < nameB) {
+                    return -1;
+                }
+                if (nameA > nameB) {
+                    return 1;
+                }
+                return idB - idA;
+            }
+            return idB - idA;
+        });
+        return rows;
+    }
+
+    function syncRowOrder(rows) {
+        if (!listEl) {
+            return;
+        }
+        rows.forEach(function (row) {
+            listEl.appendChild(row);
+            if (mobileEl) {
+                var id = row.getAttribute('data-api-row');
+                var card = mobileEl.querySelector('.api-card[data-api-row="' + id + '"]');
+                if (card) {
+                    mobileEl.appendChild(card);
+                }
+            }
+        });
+    }
+
     function matchedRows() {
         if (!listEl) {
             return [];
         }
         var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-        var all = Array.prototype.slice.call(listEl.querySelectorAll('.vs-api-item'));
-        if (!q) {
-            return all;
-        }
-        return all.filter(function (row) {
-            var hay = row.getAttribute('data-search') || '';
-            return hay.indexOf(q) !== -1;
+        var cat = filterCategoryEl ? String(filterCategoryEl.value || '').trim() : '';
+        var statusFilter = filterStatusEl ? String(filterStatusEl.value || '') : '';
+        var all = Array.prototype.slice.call(listEl.querySelectorAll('tr[data-api-row]'));
+        var filtered = all.filter(function (row) {
+            if (q) {
+                var hay = row.getAttribute('data-search') || '';
+                if (hay.indexOf(q) === -1) {
+                    return false;
+                }
+            }
+            if (cat) {
+                var rowCat = row.getAttribute('data-api-category') || '';
+                if (rowCat !== cat) {
+                    return false;
+                }
+            }
+            if (statusFilter !== '') {
+                if (String(row.getAttribute('data-api-status')) !== statusFilter) {
+                    return false;
+                }
+            }
+            return true;
         });
+        filtered = sortMatchedRows(filtered);
+        syncRowOrder(filtered);
+        return filtered;
     }
 
     function buildStatsText(total, maint, pending) {
@@ -653,7 +854,7 @@
         if (!listEl || !statsEl) {
             return;
         }
-        var rows = listEl.querySelectorAll('.vs-api-item');
+        var rows = listEl.querySelectorAll('tr[data-api-row]');
         var total = rows.length;
         var maint = 0;
         var pending = 0;
@@ -700,7 +901,7 @@
             return;
         }
         var matched = matchedRows();
-        var all = listEl.querySelectorAll('.vs-api-item');
+        var all = listEl.querySelectorAll('tr[data-api-row]');
         var size = getPageSize();
         var totalPages = Math.max(1, Math.ceil(matched.length / size) || 1);
         if (currentPage > totalPages) {
@@ -717,12 +918,20 @@
         });
         all.forEach(function (row) {
             var key = String(row.getAttribute('data-api-row'));
+            var card = mobileEl ? mobileEl.querySelector('.api-card[data-api-row="' + key + '"]') : null;
             if (!Object.prototype.hasOwnProperty.call(indexMap, key)) {
                 row.hidden = true;
+                if (card) {
+                    card.hidden = true;
+                }
                 return;
             }
             var idx = indexMap[key];
-            row.hidden = !(idx >= start && idx < end);
+            var show = idx >= start && idx < end;
+            row.hidden = !show;
+            if (card) {
+                card.hidden = !show;
+            }
         });
         if (footerEl) {
             footerEl.hidden = matched.length === 0 && all.length === 0;
@@ -753,33 +962,26 @@
         }
     }
 
-    function updateItem(rowEl, api) {
+    function updateRowFields(rowEl, api) {
         if (!rowEl || !api) {
             return;
         }
-        var callUrl = callUrlOf(api);
+        applyRowDataAttrs(rowEl, api);
         var typeBadge = api.apitype_badge || '本地';
         var username = displayUsername(api);
-        var status = normalizeStatus(api.status);
-        rowEl.setAttribute('data-api-status', String(status));
-        rowEl.setAttribute('data-api-audit', String(normalizeAudit(api.audit)));
-        rowEl.setAttribute(
-            'data-search',
-            (String(api.name || '') + ' ' + callUrl + ' ' + String(api.endpoint || '') + ' '
-                + String(api.category || '') + ' ' + typeBadge + ' ' + username).toLowerCase()
-        );
-        rowEl.setAttribute('data-payload', JSON.stringify(api));
+        var category = api.category ? String(api.category).trim() : '';
+        var isDesktop = rowEl.tagName === 'TR';
 
         var idEl = rowEl.querySelector('[data-field="id"]');
         if (idEl) {
-            idEl.textContent = '#' + (parseInt(api.id, 10) || 0);
+            idEl.textContent = isDesktop ? String(parseInt(api.id, 10) || 0) : ('#' + (parseInt(api.id, 10) || 0));
         }
         var nameEl = rowEl.querySelector('[data-field="name"]');
         if (nameEl) {
             nameEl.textContent = api.name || '';
         }
         var methodEl = rowEl.querySelector('[data-field="method"]');
-        if (methodEl) {
+        if (methodEl && isDesktop) {
             var wrap = document.createElement('div');
             wrap.innerHTML = methodBadgesHtml(api);
             var next = wrap.firstChild;
@@ -787,14 +989,9 @@
                 methodEl.parentNode.replaceChild(next, methodEl);
             }
         }
-        var urlEl = rowEl.querySelector('[data-field="call_url"]');
-        if (urlEl) {
-            urlEl.textContent = callUrl;
-            urlEl.setAttribute('title', callUrl);
-        }
         var callsEl = rowEl.querySelector('[data-field="calls"]');
         if (callsEl) {
-            callsEl.textContent = String(parseInt(api.calls, 10) || 0);
+            callsEl.textContent = formatCalls(api.calls);
         }
         var userEl = rowEl.querySelector('[data-field="username"]');
         if (userEl) {
@@ -802,29 +999,91 @@
         }
         var statusEl = rowEl.querySelector('[data-field="status_label"]');
         if (statusEl) {
-            statusEl.textContent = api.status_label || String(status);
-            statusEl.className = 'vs-api-tag vs-api-tag--status ' + statusClass(status);
+            statusEl.textContent = displayStatusLabel(api.status);
+            statusEl.className = 'vs-badge ' + statusBadgeClass(api.status);
+        }
+        var catCell = rowEl.querySelector('[data-field="category_cell"]');
+        if (catCell) {
+            catCell.innerHTML = categoryBadgeHtml(category);
+        }
+        var catEl = rowEl.querySelector('[data-field="category"]');
+        if (catEl && !catCell) {
+            if (category) {
+                catEl.textContent = category;
+                catEl.hidden = false;
+            } else {
+                catEl.hidden = true;
+            }
+        }
+        var typeEl = rowEl.querySelector('[data-field="apitype_badge"]');
+        if (typeEl) {
+            typeEl.textContent = typeBadge;
+            typeEl.className = 'type-badge ' + typeBadgeClass(typeBadge);
+        }
+        var chargeEl = rowEl.querySelector('[data-field="charge_tag"]');
+        if (chargeEl) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = chargeBadgeHtml(api);
+            var nextCharge = tmp.firstChild;
+            if (nextCharge) {
+                chargeEl.parentNode.replaceChild(nextCharge, chargeEl);
+            }
+        }
+        var keyEl = rowEl.querySelector('[data-field="needkey_badge"]');
+        if (keyEl) {
+            var tmpKey = document.createElement('div');
+            tmpKey.innerHTML = keyBadgeHtml(api.needkey_badge || '');
+            var nextKey = tmpKey.firstChild;
+            if (nextKey) {
+                keyEl.parentNode.replaceChild(nextKey, keyEl);
+            }
         }
         var tagsEl = rowEl.querySelector('[data-field="tags"]');
-        if (tagsEl) {
-            tagsEl.innerHTML = buildTagsHtml(api);
+        if (tagsEl && !isDesktop) {
+            tagsEl.innerHTML = buildMobileTagsHtml(api);
         }
         var iconImg = rowEl.querySelector('[data-field="icon"]');
         if (iconImg) {
             iconImg.src = safeIconUrl(api.icon);
         }
-        var actions = rowEl.querySelector('.vs-api-item__actions');
+        var actions = rowEl.querySelector('.action-btns');
         if (actions) {
-            actions.innerHTML = buildActionButtons(api);
+            actions.outerHTML = buildActionButtons(api);
+        } else {
+            var actionsWrap = rowEl.querySelector('.api-card__actions');
+            if (actionsWrap) {
+                actionsWrap.innerHTML = buildActionButtons(api);
+            }
+        }
+        if (!isDesktop) {
+            var methodInfoItems = rowEl.querySelectorAll('.api-card__info-item');
+            if (methodInfoItems.length > 1) {
+                methodInfoItems[1].innerHTML = '<span class="api-card__info-label">方式</span> ' + methodBadgesInlineHtml(api);
+            }
+        }
+    }
+
+    function updateItem(apiId, api) {
+        if (!api) {
+            return;
+        }
+        var pair = getRowPair(apiId);
+        if (pair.desktop) {
+            updateRowFields(pair.desktop, api);
+        }
+        if (pair.mobile) {
+            updateRowFields(pair.mobile, api);
         }
     }
 
     function appendItem(api) {
         ensureListVisible();
-        if (!listEl) {
-            return;
+        if (listEl) {
+            listEl.insertAdjacentHTML('afterbegin', buildDesktopRowHtml(api));
         }
-        listEl.insertAdjacentHTML('afterbegin', buildItemHtml(api));
+        if (mobileEl) {
+            mobileEl.insertAdjacentHTML('afterbegin', buildMobileCardHtml(api));
+        }
         currentPage = 1;
         refreshStatsFromDom();
         applyListView();
@@ -1119,11 +1378,8 @@
                 closeFormOverlay();
                 var summary = data.api_summary || data.api || {};
                 if (formMode === 'edit') {
-                    var rowEl = page.querySelector('[data-api-row="' + summary.id + '"]');
-                    if (rowEl) {
-                        updateItem(rowEl, summary);
-                        applySearchFilter();
-                    }
+                    updateItem(summary.id, summary);
+                    applySearchFilter();
                 } else {
                     appendItem(summary);
                 }
@@ -1198,6 +1454,13 @@
         searchInput.addEventListener('input', applySearchFilter);
     }
 
+    [filterCategoryEl, filterStatusEl, filterSortEl].forEach(function (el) {
+        if (!el) {
+            return;
+        }
+        el.addEventListener('change', applySearchFilter);
+    });
+
     if (pageSizeEl) {
         if (!pageSizeEl.value) {
             pageSizeEl.value = String(defaultPageSize());
@@ -1250,7 +1513,8 @@
         }
         var action = btn.getAttribute('data-api-action');
         var apiId = btn.getAttribute('data-api-id');
-        var row = page.querySelector('[data-api-row="' + apiId + '"]');
+        var pair = getRowPair(apiId);
+        var row = pair.desktop;
 
         if (action === 'edit') {
             postAction('get', { api_id: apiId }).then(function (data) {
@@ -1298,9 +1562,10 @@
                 window.VS.showMessage(data.msg || '状态已更新', 'success');
                 var api = parseRowPayload(row) || { id: parseInt(apiId, 10) || 0 };
                 api.status = normalizeStatus(data.status !== undefined ? data.status : nextStatus);
-                api.status_label = data.status_label || api.status;
-                updateItem(row, api);
+                api.status_label = displayStatusLabel(api.status);
+                updateItem(apiId, api);
                 refreshStatsFromDom();
+                applyListView();
             }).catch(function () {
                 window.VS.showMessage('网络异常，请稍后重试', 'error');
             });
@@ -1318,8 +1583,11 @@
                         return;
                     }
                     window.VS.showMessage(data.msg || '接口已删除', 'success');
-                    if (row) {
-                        row.remove();
+                    if (pair.desktop) {
+                        pair.desktop.remove();
+                    }
+                    if (pair.mobile) {
+                        pair.mobile.remove();
                     }
                     refreshStatsFromDom();
                     applyListView();

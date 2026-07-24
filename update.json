@@ -1,13 +1,13 @@
 {
-    "version": "7.5.0",
-    "title": "ApiNexus 7.5.0 SEO 图标与系统描述抓取修复",
-    "release_date": "2026-07-23",
+    "version": "8.0.0",
+    "title": "ApiNexus 8.0.0 管理员接口列表全面重构",
+    "release_date": "2026-07-24",
     "db_changes": false,
     "changes": [
-        "修复反向代理下 OG/图标变成 http 导致微信/QQ/百度抓不到图标",
-        "分享图优先 Logo；补齐 apple-touch-icon 与 og:image 尺寸/类型",
-        "分享描述强制系统「站点描述」，禁止主题 Hero 徽章渗入",
-        "默认主题首页 H1 静态输出、徽章 aria-hidden、SEO 兜底文案"
+        "管理员「接口列表」按参考设计全面重构：电脑端表格 + 手机端卡片双端同步",
+        "新增分类/状态/排序筛选（静态过滤，地址栏无查询串）",
+        "操作按钮随状态变化：维护/禁用、恢复正常、启用",
+        "底部分页统一 10/20/30/50 + vs-pick 弹层；完善列表与后台 UI 规范"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
