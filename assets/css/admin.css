@@ -7459,3 +7459,306 @@ select.vs-input.vs-select {
     height: 32px !important;
     min-height: 32px;
 }
+
+/* ============================================================
+   接口分类页 — 表格 + 移动端卡片（#apiCategoriesPage）
+   搜索复用 .vs-api-list-toolbar（防 E95）
+   ============================================================ */
+#apiCategoriesPage {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+}
+
+#apiCategoriesPage .vs-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 9999px;
+    white-space: nowrap;
+}
+
+#apiCategoriesPage .vs-badge--success { background: #f0faf5; color: #15803d; }
+#apiCategoriesPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+
+#apiCategoriesPage .cat-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+#apiCategoriesPage .cat-icon,
+#apiCategoriesPage .cat-card__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+#apiCategoriesPage .cat-card__icon {
+    width: 36px;
+    height: 36px;
+}
+
+#apiCategoriesPage .cat-icon img,
+#apiCategoriesPage .cat-card__icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+#apiCategoriesPage .cat-name-text {
+    font-weight: 500;
+    color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#apiCategoriesPage .cat-desc {
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#apiCategoriesPage .cat-count {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vs-text, #111);
+}
+
+#apiCategoriesPage .action-btns {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+#apiCategoriesPage .action-btns .vs-btn--sm {
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+#apiCategoriesPage .vs-btn--outline-warning {
+    border-color: #f5d9a8;
+    background: transparent;
+    color: #e37318;
+}
+
+#apiCategoriesPage .vs-btn--outline-warning:hover {
+    background: #fff7e8;
+    border-color: #e37318;
+}
+
+#apiCategoriesPage .vs-btn--outline-success {
+    border-color: #b8e6cc;
+    background: transparent;
+    color: #15803d;
+}
+
+#apiCategoriesPage .vs-btn--outline-success:hover {
+    background: #f0faf5;
+    border-color: #15803d;
+}
+
+#apiCategoriesPage .vs-btn--outline-danger {
+    border-color: #ffd6d6;
+    background: transparent;
+    color: #dc2626;
+}
+
+#apiCategoriesPage .vs-btn--outline-danger:hover {
+    background: #fff0f0;
+    border-color: #dc2626;
+}
+
+#apiCategoriesPage .vs-api-list-table-card {
+    padding: 0;
+    overflow: hidden;
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    max-width: 100%;
+    min-width: 0;
+}
+
+#apiCategoriesPage .vs-api-cat-table th:first-child,
+#apiCategoriesPage .vs-api-cat-table td:first-child {
+    padding-left: 20px;
+}
+
+#apiCategoriesPage .vs-api-cat-table th:last-child,
+#apiCategoriesPage .vs-api-cat-table td:last-child {
+    padding-right: 20px;
+}
+
+#apiCategoriesPage .vs-api-cat-table th {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+#apiCategoriesPage .vs-api-cat-actions-cell {
+    text-align: right;
+}
+
+#apiCategoriesPage .mobile-cat-cards {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 100%;
+    min-width: 0;
+}
+
+#apiCategoriesPage .cat-card {
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+#apiCategoriesPage .cat-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+#apiCategoriesPage .cat-card__header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+#apiCategoriesPage .cat-card__header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+#apiCategoriesPage .cat-card__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+#apiCategoriesPage .cat-card__count {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vs-text, #111);
+    white-space: nowrap;
+}
+
+#apiCategoriesPage .cat-card__desc {
+    font-size: 13px;
+    color: var(--vs-text-secondary, #6b7280);
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+#apiCategoriesPage .cat-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px dashed #cbd5e1;
+    max-width: 100%;
+}
+
+#apiCategoriesPage .cat-card__actions .vs-btn--sm {
+    padding: 5px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+#apiCategoriesPage tr[data-category-row][hidden],
+#apiCategoriesPage .cat-card[data-category-row][hidden] {
+    display: none !important;
+}
+
+@media (min-width: 769px) {
+    #apiCategoriesPage .vs-api-list-table-wrap {
+        display: block;
+    }
+
+    #apiCategoriesPage .mobile-cat-cards {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #apiCategoriesPage .vs-api-list-table-wrap {
+        display: none !important;
+    }
+
+    #apiCategoriesPage .mobile-cat-cards {
+        display: flex;
+    }
+
+    #apiCategoriesPage .cat-desc {
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    #apiCategoriesPage .vs-api-list-footer {
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #apiCategoriesPage .vs-panel,
+    #apiCategoriesPage .vs-api-cat-panel {
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: clip;
+        box-sizing: border-box;
+    }
+}
+
+#apiCategoriesPage .vs-api-list-footer .vs-api-list-pagesize__select,
+#apiCategoriesPage .vs-api-list-footer .vs-api-pager .vs-pick__btn,
+#apiCategoriesPage .vs-api-list-footer .vs-api-pager__nav,
+#apiCategoriesPage .vs-api-list-footer .vs-api-pager__num {
+    height: 32px !important;
+    min-height: 32px;
+}
+

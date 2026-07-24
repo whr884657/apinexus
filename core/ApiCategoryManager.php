@@ -53,7 +53,7 @@ class ApiCategoryManager
         }
 
         $dir = self::iconLibraryDir();
-        $files = array();
+        $nums = array();
         if (is_dir($dir)) {
             $list = scandir($dir);
             if (is_array($list)) {
@@ -61,38 +61,18 @@ class ApiCategoryManager
                     if (!is_string($name) || $name === '.' || $name === '..') {
                         continue;
                     }
-                    if (!preg_match('/^[a-z0-9\-]+\.svg$/i', $name)) {
+                    // 仅数字文件名 SVG（手工去重后的图标库）；禁止英文名图标
+                    if (!preg_match('/^(\d+)\.svg$/i', $name, $m)) {
                         continue;
                     }
-                    $files[] = strtolower($name);
+                    $nums[(int) $m[1]] = strtolower($name);
                 }
             }
         }
-
-        // 常用图标靠前，其余按文件名排序
-        $preferred = array(
-            'image.svg', 'video.svg', 'music.svg', 'tool.svg', 'ai.svg',
-            'search.svg', 'weather.svg', 'live.svg', 'hot.svg',
-            'douyin.svg', 'kuaishou.svg', 'bilibili.svg', 'wechat.svg', 'qq.svg',
-            'api.svg', 'map.svg', 'express.svg', 'lottery.svg', 'random.svg',
-        );
-        $preferredSet = array_fill_keys($preferred, true);
-        $head = array();
-        foreach ($preferred as $name) {
-            if (in_array($name, $files, true)) {
-                $head[] = $name;
-            }
-        }
-        $tail = array();
-        foreach ($files as $name) {
-            if (!isset($preferredSet[$name])) {
-                $tail[] = $name;
-            }
-        }
-        sort($tail, SORT_STRING);
+        ksort($nums, SORT_NUMERIC);
 
         $paths = array();
-        foreach (array_merge($head, $tail) as $name) {
+        foreach ($nums as $name) {
             $paths[] = '/assets/img/category-icons/' . $name;
         }
 
@@ -129,7 +109,7 @@ class ApiCategoryManager
             return isset($defaults[0]) ? $defaults[0] : '';
         }
 
-        if (preg_match('#^/assets/img/category-icons/[a-z0-9\-]+\.svg$#i', $icon)) {
+        if (preg_match('#^/assets/img/category-icons/\d+\.svg$#i', $icon)) {
             return rtrim(vs_base_url(), '/') . $icon;
         }
 
@@ -576,7 +556,7 @@ class ApiCategoryManager
             $icon = substr($icon, strlen($base));
         }
 
-        if (preg_match('#^/assets/img/category-icons/[a-z0-9\-]+\.svg$#i', $icon)) {
+        if (preg_match('#^/assets/img/category-icons/\d+\.svg$#i', $icon)) {
             return $icon;
         }
 
