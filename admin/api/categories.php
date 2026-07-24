@@ -158,7 +158,7 @@ function vs_render_api_cat_desktop_row(array $ctx)
         . ' data-category-status="' . ($ctx['enabled'] ? '1' : '0') . '"'
         . ' data-search="' . vs_e($ctx['search']) . '"';
     ?>
-    <tr class="vs-api-cat-row"<?php echo $attrs; ?>>
+    <tr<?php echo $attrs; ?>>
         <td>
             <div class="cat-name-cell">
                 <div class="cat-icon">
@@ -195,20 +195,20 @@ function vs_render_api_cat_mobile_card(array $ctx)
         . ' data-category-status="' . ($ctx['enabled'] ? '1' : '0') . '"'
         . ' data-search="' . vs_e($ctx['search']) . '"';
     ?>
-    <div class="cat-card vs-api-cat-row"<?php echo $attrs; ?>>
+    <div class="cat-card"<?php echo $attrs; ?>>
         <div class="cat-card__header">
             <div class="cat-card__header-left">
                 <div class="cat-card__icon">
                     <img src="<?php echo vs_e($ctx['icon']); ?>" alt="" width="36" height="36" loading="lazy" referrerpolicy="no-referrer" data-field="icon">
                 </div>
-                <span class="cat-card__name" data-field="name"><?php echo vs_e($ctx['name']); ?></span>
+                <div class="cat-card__title-wrap">
+                    <span class="cat-card__name" data-field="name"><?php echo vs_e($ctx['name']); ?></span>
+                    <span class="vs-badge <?php echo $ctx['enabled'] ? 'vs-badge--success' : 'vs-badge--default'; ?>" data-field="status_label">
+                        <?php echo $ctx['enabled'] ? '启用' : '禁用'; ?>
+                    </span>
+                </div>
             </div>
-            <div class="cat-card__header-right">
-                <span class="vs-badge <?php echo $ctx['enabled'] ? 'vs-badge--success' : 'vs-badge--default'; ?>" data-field="status_label">
-                    <?php echo $ctx['enabled'] ? '启用' : '禁用'; ?>
-                </span>
-                <span class="cat-card__count"><span data-field="api_count"><?php echo (int) $ctx['apiCount']; ?></span> 个</span>
-            </div>
+            <span class="cat-card__count"><span data-field="api_count"><?php echo (int) $ctx['apiCount']; ?></span> 个</span>
         </div>
         <div class="cat-card__desc" data-field="description"><?php
             echo $ctx['desc'] !== '' ? vs_e($ctx['desc']) : '暂无描述';
@@ -303,9 +303,11 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
                         <option value="50">50</option>
                     </select>
                 </label>
-                <button type="button" class="vs-api-pager__nav" id="apiCatPrevBtn" aria-label="上一页">上一页</button>
-                <div class="vs-api-pager__nums" id="apiCatPagerNums" role="navigation" aria-label="页码"></div>
-                <button type="button" class="vs-api-pager__nav" id="apiCatNextBtn" aria-label="下一页">下一页</button>
+                <div class="vs-api-pager__navs" id="apiCatPagerNav">
+                    <button type="button" class="vs-api-pager__nav" id="apiCatPrevBtn" aria-label="上一页">上一页</button>
+                    <div class="vs-api-pager__nums" id="apiCatPagerNums" role="navigation" aria-label="页码"></div>
+                    <button type="button" class="vs-api-pager__nav" id="apiCatNextBtn" aria-label="下一页">下一页</button>
+                </div>
             </div>
             <p class="vs-api-list-stats" id="apiCatStats">共 <?php echo (int) count($categories); ?> 条</p>
         </div>

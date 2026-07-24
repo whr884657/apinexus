@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-8.2.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-8.3.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v8.3.0（2026-07-25）
+
+**类型：** 中版本修复（分类页布局纠偏）
+
+**变更说明：**
+
+- 修复旧 grid CSS 压垮表格：名称显示「—」、操作竖排、分页不可见
+- 电脑端白底密表恢复；手机卡片对齐参考设计
+- 底栏翻页与「每页」同行，控件 32px
 
 ### v8.2.0（2026-07-25）
 

@@ -301,7 +301,7 @@
             var desc = row.description || '';
             var name = row.name || '';
             var hay = searchHay(name, desc, catId).toLowerCase();
-            var html = '<tr class="vs-api-cat-row" data-category-row="' + catId + '"'
+            var html = '<tr data-category-row="' + catId + '"'
                 + ' data-category-status="' + (enabled ? '1' : '0') + '"'
                 + ' data-search="' + escapeHtml(hay) + '">';
             html += '<td><div class="cat-name-cell"><div class="cat-icon"><img src="'
@@ -326,17 +326,17 @@
             var desc = row.description || '';
             var name = row.name || '';
             var hay = searchHay(name, desc, catId).toLowerCase();
-            var html = '<div class="cat-card vs-api-cat-row" data-category-row="' + catId + '"'
+            var html = '<div class="cat-card" data-category-row="' + catId + '"'
                 + ' data-category-status="' + (enabled ? '1' : '0') + '"'
                 + ' data-search="' + escapeHtml(hay) + '">';
             html += '<div class="cat-card__header"><div class="cat-card__header-left">'
                 + '<div class="cat-card__icon"><img src="' + escapeHtml(icon)
                 + '" alt="" width="36" height="36" loading="lazy" referrerpolicy="no-referrer" data-field="icon"></div>'
-                + '<span class="cat-card__name" data-field="name">' + escapeHtml(name) + '</span></div>'
-                + '<div class="cat-card__header-right"><span class="vs-badge '
+                + '<div class="cat-card__title-wrap"><span class="cat-card__name" data-field="name">'
+                + escapeHtml(name) + '</span><span class="vs-badge '
                 + (enabled ? 'vs-badge--success' : 'vs-badge--default')
-                + '" data-field="status_label">' + (enabled ? '启用' : '禁用') + '</span>'
-                + '<span class="cat-card__count"><span data-field="api_count">' + apiCount + '</span> 个</span></div></div>';
+                + '" data-field="status_label">' + (enabled ? '启用' : '禁用') + '</span></div></div>'
+                + '<span class="cat-card__count"><span data-field="api_count">' + apiCount + '</span> 个</span></div>';
             html += '<div class="cat-card__desc" data-field="description">'
                 + (desc ? escapeHtml(desc) : '暂无描述') + '</div>';
             html += '<div class="cat-card__actions" data-field="actions">'
