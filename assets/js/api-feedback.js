@@ -305,6 +305,12 @@
             }
             if (detailMarkBtn) {
                 detailMarkBtn.hidden = !pending;
+                detailMarkBtn.setAttribute('aria-hidden', pending ? 'false' : 'true');
+                if (pending) {
+                    detailMarkBtn.removeAttribute('tabindex');
+                } else {
+                    detailMarkBtn.setAttribute('tabindex', '-1');
+                }
             }
         }
 

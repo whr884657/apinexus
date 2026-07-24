@@ -8447,6 +8447,12 @@ select.vs-input.vs-select {
 #apiFeedbackPage .feedback-card[data-feedback-row][hidden] {
     display: none !important;
 }
+/* .vs-btn 的 display:inline-flex 会盖住原生 [hidden]，已处理详情须强制隐藏标记按钮 */
+#adminFbDetailOverlay #adminFbDetailMarkBtn[hidden],
+#adminFbDetailOverlay #adminFbDetailReplyEditWrap[hidden],
+#adminFbDetailOverlay #adminFbDetailReplyViewWrap[hidden] {
+    display: none !important;
+}
 #apiFeedbackPage .vs-api-list-footer {
     display: flex;
     flex-direction: column;

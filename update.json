@@ -1,11 +1,10 @@
 {
-    "version": "9.2.4",
-    "title": "ApiNexus 9.2.4 反馈标记须先开抽屉与已处理只读回复",
+    "version": "9.2.5",
+    "title": "ApiNexus 9.2.5 已处理反馈弹窗隐藏标记按钮",
     "release_date": "2026-07-25",
     "db_changes": false,
     "changes": [
-        "列表「标记已处理」改为先打开抽屉，再在弹窗内确认（可留空回复）",
-        "已处理反馈「查看」只读展示已保存回复，并隐藏「标记已处理」按钮"
+        "修复已处理反馈「查看」弹窗仍显示「标记已处理」按钮（CSS 覆盖 hidden）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
