@@ -50,6 +50,7 @@ class ApiFeedbackManager
             $sql = 'SELECT f.`id`, f.`apiid`, f.`userid`, f.`content`, f.`reply`, f.`status`,
                            f.`createtime`, f.`updatetime`,
                            u.`username` AS `username`,
+                           u.`email` AS `email`,
                            a.`name` AS `api_name`
                     FROM `' . $fbTable . '` f
                     LEFT JOIN `' . $userTable . '` u ON u.`id` = f.`userid`
@@ -81,6 +82,7 @@ class ApiFeedbackManager
                 'SELECT f.`id`, f.`apiid`, f.`userid`, f.`content`, f.`reply`, f.`status`,
                         f.`createtime`, f.`updatetime`,
                         u.`username` AS `username`,
+                        u.`email` AS `email`,
                         a.`name` AS `api_name`
                  FROM `' . $fbTable . '` f
                  LEFT JOIN `' . $userTable . '` u ON u.`id` = f.`userid`
@@ -118,6 +120,7 @@ class ApiFeedbackManager
             'createtime'   => isset($row['createtime']) ? (string) $row['createtime'] : '',
             'updatetime'   => isset($row['updatetime']) ? (string) $row['updatetime'] : '',
             'username'     => isset($row['username']) ? (string) $row['username'] : '',
+            'email'        => isset($row['email']) ? trim((string) $row['email']) : '',
             'api_name'     => isset($row['api_name']) ? (string) $row['api_name'] : '',
         );
     }

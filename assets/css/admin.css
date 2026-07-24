@@ -8541,6 +8541,14 @@ select.vs-input.vs-select {
     color: var(--vs-text, #111);
     line-height: 1.65;
 }
+#adminFbDetailOverlay .fb-modal__email-link {
+    color: var(--vs-primary, #2563eb);
+    text-decoration: none;
+    word-break: break-all;
+}
+#adminFbDetailOverlay .fb-modal__email-link:hover {
+    text-decoration: underline;
+}
 #adminFbDetailOverlay .fb-modal__content {
     padding: 14px;
     background: var(--vs-bg, #f8fafc);

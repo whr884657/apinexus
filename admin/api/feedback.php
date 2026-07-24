@@ -67,13 +67,14 @@ function vs_admin_fb_row_ctx(array $row)
     $pending = (int) $fb['status'] === ApiFeedbackManager::STATUS_PENDING;
     $username = $fb['username'] !== '' ? $fb['username'] : ('用户#' . $fb['userid']);
     $avatar = mb_substr($username, 0, 1, 'UTF-8');
+    $email = isset($fb['email']) ? trim((string) $fb['email']) : '';
     $apiName = $fb['api_name'] !== '' ? $fb['api_name'] : ($fb['apiid'] > 0 ? ('接口#' . $fb['apiid']) : '—');
     $time = $fb['createtime'];
     if ($time !== '' && strlen($time) >= 16) {
         $time = substr($time, 0, 16);
     }
     $content = $fb['content'];
-    $search = mb_strtolower($content . ' ' . $apiName . ' ' . $username . ' #' . $id, 'UTF-8');
+    $search = mb_strtolower($content . ' ' . $apiName . ' ' . $username . ' ' . $email . ' #' . $id, 'UTF-8');
 
     return array(
         'id'       => $id,
@@ -83,6 +84,7 @@ function vs_admin_fb_row_ctx(array $row)
         'reply'    => $fb['reply'],
         'api_name' => $apiName,
         'username' => $username,
+        'email'    => $email,
         'avatar'   => $avatar,
         'time'     => $time,
         'search'   => $search,
@@ -123,6 +125,7 @@ function vs_render_admin_fb_desktop_row(array $ctx)
         . ' data-reply="' . vs_e($ctx['reply']) . '"'
         . ' data-api-name="' . vs_e($ctx['api_name']) . '"'
         . ' data-username="' . vs_e($ctx['username']) . '"'
+        . ' data-email="' . vs_e($ctx['email']) . '"'
         . ' data-time="' . vs_e($ctx['time']) . '"';
     ?>
     <tr<?php echo $attrs; ?>>
@@ -167,6 +170,7 @@ function vs_render_admin_fb_mobile_card(array $ctx)
         . ' data-reply="' . vs_e($ctx['reply']) . '"'
         . ' data-api-name="' . vs_e($ctx['api_name']) . '"'
         . ' data-username="' . vs_e($ctx['username']) . '"'
+        . ' data-email="' . vs_e($ctx['email']) . '"'
         . ' data-time="' . vs_e($ctx['time']) . '"';
     ?>
     <div class="feedback-card"<?php echo $attrs; ?>>
@@ -311,6 +315,10 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
             <div class="fb-modal__field">
                 <div class="fb-modal__label">提交者</div>
                 <div class="fb-modal__value" id="adminFbDetailUser">—</div>
+            </div>
+            <div class="fb-modal__field">
+                <div class="fb-modal__label">注册邮箱</div>
+                <div class="fb-modal__value" id="adminFbDetailEmail">—</div>
             </div>
             <div class="fb-modal__field">
                 <div class="fb-modal__label">反馈内容</div>

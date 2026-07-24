@@ -38,6 +38,7 @@
         var detailStatus = document.getElementById('adminFbDetailStatus');
         var detailApi = document.getElementById('adminFbDetailApi');
         var detailUser = document.getElementById('adminFbDetailUser');
+        var detailEmail = document.getElementById('adminFbDetailEmail');
         var detailContent = document.getElementById('adminFbDetailContent');
         var detailReply = document.getElementById('adminFbDetailReply');
         var detailReplyEditWrap = document.getElementById('adminFbDetailReplyEditWrap');
@@ -370,6 +371,19 @@
                 var uname = src.getAttribute('data-username') || '—';
                 var time = src.getAttribute('data-time') || '';
                 detailUser.textContent = uname + (time ? (' · ' + time) : '');
+            }
+            if (detailEmail) {
+                var email = (src.getAttribute('data-email') || '').trim();
+                detailEmail.textContent = '';
+                if (email !== '') {
+                    var mailLink = document.createElement('a');
+                    mailLink.href = 'mailto:' + email;
+                    mailLink.className = 'fb-modal__email-link';
+                    mailLink.textContent = email;
+                    detailEmail.appendChild(mailLink);
+                } else {
+                    detailEmail.textContent = '（未填写邮箱）';
+                }
             }
             if (detailContent) {
                 detailContent.textContent = src.getAttribute('data-content') || '';
