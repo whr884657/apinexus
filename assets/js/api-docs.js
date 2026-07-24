@@ -189,6 +189,10 @@
                 applySearch();
             });
         }
+
+        if (window.VsSyntax && typeof window.VsSyntax.highlightAll === 'function') {
+            window.VsSyntax.highlightAll(page);
+        }
     }
 
     if (document.readyState === 'loading') {

@@ -211,7 +211,7 @@ if ($tableReady) {
             <input type="search" class="vs-input vs-search-bar__input" id="adminFbSearchInput"
                    placeholder="搜索反馈内容、接口名或用户..." autocomplete="off">
         </div>
-        <select class="vs-input vs-select" id="adminFbStatusFilter" data-vs-pick aria-label="状态筛选">
+        <select class="vs-input vs-select vs-toolbar-filter" id="adminFbStatusFilter" data-vs-pick aria-label="状态筛选">
             <option value="">全部</option>
             <option value="0">待处理</option>
             <option value="1">已处理</option>

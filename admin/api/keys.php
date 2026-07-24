@@ -189,7 +189,7 @@ if ($tableReady) {
             <input type="search" class="vs-input vs-search-bar__input" id="adminKeySearchInput"
                    placeholder="搜索令牌 Key 或用户名..." autocomplete="off">
         </div>
-        <select class="vs-input vs-select" id="adminKeyStatusFilter" data-vs-pick aria-label="状态筛选">
+        <select class="vs-input vs-select vs-toolbar-filter" id="adminKeyStatusFilter" data-vs-pick aria-label="状态筛选">
             <option value="">全部状态</option>
             <option value="1">正常</option>
             <option value="0">已禁用</option>

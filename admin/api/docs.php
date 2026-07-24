@@ -393,13 +393,13 @@ vs_admin_layout_start('接口文档', 'api-docs');
                                         <div class="code-block__head">
                                             <span class="code-block__lang">cURL</span>
                                         </div>
-                                        <pre class="code-block__pre"><code><?php echo vs_e($item['examples']['curl']); ?></code></pre>
+                                        <pre class="code-block__pre"><code class="language-bash" data-vs-syn="bash"><?php echo vs_e($item['examples']['curl']); ?></code></pre>
                                     </div>
                                     <div class="code-block">
                                         <div class="code-block__head">
                                             <span class="code-block__lang">JavaScript</span>
                                         </div>
-                                        <pre class="code-block__pre"><code><?php echo vs_e($item['examples']['js']); ?></code></pre>
+                                        <pre class="code-block__pre"><code class="language-javascript" data-vs-syn="javascript"><?php echo vs_e($item['examples']['js']); ?></code></pre>
                                     </div>
                                 </div>
                             </div>
@@ -413,7 +413,7 @@ vs_admin_layout_start('接口文档', 'api-docs');
                                             <div class="code-block__head">
                                                 <span class="code-block__lang">JSON</span>
                                             </div>
-                                            <pre class="code-block__pre"><code><?php echo vs_e($item['response_pretty']); ?></code></pre>
+                                            <pre class="code-block__pre"><code class="language-json" data-vs-syn="json"><?php echo vs_e($item['response_pretty']); ?></code></pre>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -437,4 +437,6 @@ vs_admin_layout_start('接口文档', 'api-docs');
 </div>
 
 <?php
-vs_admin_layout_end(array('api-docs.js'));
+$mdCss = rtrim(vs_base_url(), '/') . '/core/markdown/assets/css/markdown-render.css';
+echo '<link rel="stylesheet" href="' . vs_e($mdCss) . '?v=' . vs_e(VS_VERSION) . '">' . "\n";
+vs_admin_layout_end(array('vs-syntax.js', 'api-docs.js'));
