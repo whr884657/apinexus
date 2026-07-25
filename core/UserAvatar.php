@@ -41,6 +41,25 @@ class UserAvatar
     }
 
     /**
+     * 按邮箱解析头像（QQ 邮箱用 qlogo，否则本地随机）
+     *
+     * @param string $email
+     * @param int    $seed 备用种子（未用邮箱 crc32 时）
+     * @return string
+     */
+    public static function resolveByEmail($email, $seed = 0)
+    {
+        $email = trim((string) $email);
+        $qq = self::extractQqFromEmail($email);
+        if ($qq !== '') {
+            return 'https://q1.qlogo.cn/g?b=qq&nk=' . rawurlencode($qq) . '&s=640';
+        }
+
+        $hash = $email !== '' ? abs(crc32(strtolower($email))) : (int) $seed;
+        return self::localRandomAvatar($hash > 0 ? $hash : 1);
+    }
+
+    /**
      * 从 QQ 邮箱提取 QQ 号
      *
      * @param string $email

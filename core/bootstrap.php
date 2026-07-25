@@ -56,6 +56,8 @@ require_once VS_ROOT . '/core/FrontendPartner.php';
 require_once VS_ROOT . '/core/FrontendSponsor.php';
 require_once VS_ROOT . '/core/FrontendContributor.php';
 require_once VS_ROOT . '/core/ContentManager.php';
+require_once VS_ROOT . '/core/CommentManager.php';
+require_once VS_ROOT . '/core/FrontendComment.php';
 require_once VS_ROOT . '/core/markdown/Markdown.php';
 require_once VS_ROOT . '/core/FrontendAnnouncement.php';
 require_once VS_ROOT . '/core/FrontendArticle.php';

@@ -182,21 +182,21 @@ function vs_render_link_item(array $row)
             <span class="vs-link-status <?php echo vs_e($statusClass); ?>" data-field="status_label"><?php echo vs_e($displayLabel); ?></span>
         </div>
         <div class="vs-link-row__actions">
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-link-action="edit" data-link-id="<?php echo $id; ?>">编辑</button>
+            <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="edit" data-link-id="<?php echo $id; ?>">编辑</button>
             <?php if ($status !== LinkManager::STATUS_APPROVED): ?>
-                <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary" data-link-action="approve" data-link-id="<?php echo $id; ?>">通过</button>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="approve" data-link-id="<?php echo $id; ?>">通过</button>
             <?php endif; ?>
             <?php if ($status !== LinkManager::STATUS_REJECTED): ?>
-                <button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-link-action="reject" data-link-id="<?php echo $id; ?>">拒绝</button>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="reject" data-link-id="<?php echo $id; ?>">拒绝</button>
             <?php endif; ?>
             <?php if ($status === LinkManager::STATUS_APPROVED): ?>
                 <?php if ($enabled === LinkManager::ENABLED_ON): ?>
-                    <button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-link-action="disable" data-link-id="<?php echo $id; ?>">禁用</button>
+                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="disable" data-link-id="<?php echo $id; ?>">禁用</button>
                 <?php else: ?>
-                    <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary" data-link-action="enable" data-link-id="<?php echo $id; ?>">启用</button>
+                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="enable" data-link-id="<?php echo $id; ?>">启用</button>
                 <?php endif; ?>
             <?php endif; ?>
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger" data-link-action="delete" data-link-id="<?php echo $id; ?>">删除</button>
+            <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger" data-link-action="delete" data-link-id="<?php echo $id; ?>">删除</button>
         </div>
     </div>
     <?php

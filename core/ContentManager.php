@@ -172,6 +172,17 @@ class ContentManager
         $kind = self::normalizeKind(isset($row['kind']) ? $row['kind'] : self::KIND_ANNOUNCEMENT);
         $status = self::normalizeStatus(isset($row['status']) ? $row['status'] : self::STATUS_DRAFT);
 
+        $userid = isset($row['userid']) ? (int) $row['userid'] : 0;
+        $username = isset($row['username']) ? trim((string) $row['username']) : '';
+        $authorAvatar = '';
+        if ($userid > 0) {
+            $authorAvatar = UserAvatar::resolve(array(
+                'id'    => $userid,
+                'email' => isset($row['email']) ? trim((string) $row['email']) : '',
+                'avatar'=> isset($row['user_avatar']) ? trim((string) $row['user_avatar']) : '',
+            ));
+        }
+
         return array(
             'id'            => $id,
             'kind'          => $kind,
@@ -186,12 +197,27 @@ class ContentManager
             'ispopup'       => self::normalizeFlag(isset($row['ispopup']) ? $row['ispopup'] : 0),
             'status'        => $status,
             'status_label'  => self::statusLabel($status),
-            'userid'        => isset($row['userid']) ? (int) $row['userid'] : 0,
+            'userid'        => $userid,
+            'username'      => $username,
+            'author_avatar' => $authorAvatar,
             'views'         => isset($row['views']) ? (int) $row['views'] : 0,
             'sort'          => isset($row['sort']) ? (int) $row['sort'] : 0,
             'createtime'    => isset($row['createtime']) ? (string) $row['createtime'] : '',
             'updatetime'    => isset($row['updatetime']) ? (string) $row['updatetime'] : '',
         );
+    }
+
+    /**
+     * @return string
+     */
+    private static function selectWithUserSql()
+    {
+        $contentTable = self::table();
+        $userTable = Database::table('user');
+
+        return 'SELECT c.*, u.`username`, u.`email`, u.`avatar` AS `user_avatar`'
+            . ' FROM `' . $contentTable . '` c'
+            . ' LEFT JOIN `' . $userTable . '` u ON u.`id` = c.`userid`';
     }
 
     /**
@@ -206,7 +232,7 @@ class ContentManager
         }
         try {
             $pdo = Database::connect();
-            $stmt = $pdo->prepare('SELECT * FROM `' . self::table() . '` WHERE `id` = ? LIMIT 1');
+            $stmt = $pdo->prepare(self::selectWithUserSql() . ' WHERE c.`id` = ? LIMIT 1');
             $stmt->execute(array($id));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             return is_array($row) ? $row : null;
@@ -227,13 +253,13 @@ class ContentManager
         }
         try {
             $pdo = Database::connect();
-            $sql = 'SELECT * FROM `' . self::table() . '` WHERE `kind` = ?';
+            $sql = self::selectWithUserSql() . ' WHERE c.`kind` = ?';
             $params = array(self::normalizeKind($kind));
             if ($status !== null) {
-                $sql .= ' AND `status` = ?';
+                $sql .= ' AND c.`status` = ?';
                 $params[] = self::normalizeStatus($status);
             }
-            $sql .= ' ORDER BY `sort` ASC, `id` DESC';
+            $sql .= ' ORDER BY c.`sort` ASC, c.`id` DESC';
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

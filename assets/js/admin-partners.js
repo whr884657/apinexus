@@ -32,13 +32,13 @@
         var id = parseInt(link.id, 10) || 0;
         var enabled = parseInt(link.enabled, 10);
         if (enabled !== 0) enabled = 1;
-        var html = '<button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-partner-action="edit" data-link-id="' + id + '">编辑</button>';
+        var html = '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-partner-action="edit" data-link-id="' + id + '">编辑</button>';
         if (enabled === 1) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-partner-action="disable" data-link-id="' + id + '">禁用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning" data-partner-action="disable" data-link-id="' + id + '">禁用</button>';
         } else {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary" data-partner-action="enable" data-link-id="' + id + '">启用</button>';
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-partner-action="enable" data-link-id="' + id + '">启用</button>';
         }
-        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger" data-partner-action="delete" data-link-id="' + id + '">删除</button>';
+        html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger" data-partner-action="delete" data-link-id="' + id + '">删除</button>';
         return html;
     }
 
@@ -69,12 +69,14 @@
             ' data-name="' + esc(name) + '"' +
             ' data-siteurl="' + esc(siteurl) + '"' +
             ' data-icon="' + esc(icon) + '"' +
+            ' data-description="' + esc(link.description || '') + '"' +
             ' data-sort="' + esc(sort) + '"' +
             ' data-enabled="' + enabled + '">' +
             '<div class="vs-link-row__icon">' + iconHtml(link) + '</div>' +
             '<div class="vs-link-row__main">' +
             '<div class="vs-link-row__name" data-field="name">' + esc(name) + '</div>' +
             '<a class="vs-link-row__url" data-field="siteurl" href="' + esc(siteurl) + '" target="_blank" rel="noopener noreferrer">' + esc(siteurl) + '</a>' +
+            (link.description ? ('<div class="vs-link-row__desc" data-field="description">' + esc(link.description) + '</div>') : '') +
             '</div>' +
             '<div class="vs-link-row__status">' +
             '<span class="vs-link-status ' + cls + '" data-field="enabled_label">' + esc(label) + '</span>' +
@@ -123,6 +125,10 @@
         document.getElementById('partnerName').value = data.name || '';
         document.getElementById('partnerUrl').value = data.siteurl || '';
         document.getElementById('partnerIcon').value = data.icon || '';
+        var descEl = document.getElementById('partnerDesc');
+        if (descEl) {
+            descEl.value = data.description || '';
+        }
         document.getElementById('partnerSort').value = data.sort != null ? data.sort : 0;
         var enabledEl = document.getElementById('partnerEnabled');
         enabledEl.value = data.enabled != null ? String(data.enabled) : '1';
@@ -194,6 +200,7 @@
                 name: row.getAttribute('data-name') || '',
                 siteurl: row.getAttribute('data-siteurl') || '',
                 icon: row.getAttribute('data-icon') || '',
+                description: row.getAttribute('data-description') || '',
                 sort: row.getAttribute('data-sort') || 0,
                 enabled: row.getAttribute('data-link-enabled') || 1
             });

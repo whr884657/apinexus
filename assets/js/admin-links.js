@@ -49,21 +49,21 @@
         var status = parseInt(link.status, 10) || 0;
         var enabled = parseInt(link.enabled, 10);
         if (enabled !== 0) enabled = 1;
-        var html = '<button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-link-action="edit" data-link-id="' + id + '">编辑</button>';
+        var html = '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="edit" data-link-id="' + id + '">编辑</button>';
         if (status !== 1) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary" data-link-action="approve" data-link-id="' + id + '">通过</button>';
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="approve" data-link-id="' + id + '">通过</button>';
         }
         if (status !== 2) {
-            html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-link-action="reject" data-link-id="' + id + '">拒绝</button>';
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="reject" data-link-id="' + id + '">拒绝</button>';
         }
         if (status === 1) {
             if (enabled === 1) {
-                html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-link-action="disable" data-link-id="' + id + '">禁用</button>';
+                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="disable" data-link-id="' + id + '">禁用</button>';
             } else {
-                html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary" data-link-action="enable" data-link-id="' + id + '">启用</button>';
+                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="enable" data-link-id="' + id + '">启用</button>';
             }
         }
-        html += '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger" data-link-action="delete" data-link-id="' + id + '">删除</button>';
+        html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger" data-link-action="delete" data-link-id="' + id + '">删除</button>';
         return html;
     }
 

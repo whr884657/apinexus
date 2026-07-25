@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-9.2.6-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.0.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.0.0（2026-07-25）
+
+**类型：** 大版本（内容运营 UI + 评论）
+
+**变更说明：**
+
+- 公告/文章双 DOM 列表（表格 + 手机卡片）与底栏分页
+- 评论管理上线（邮箱必填；QQ/本地头像）
+- 合作伙伴简介；友链/伙伴按钮规范对齐
 
 ### v9.2.6（2026-07-25）
 

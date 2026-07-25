@@ -13,12 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create') {
         $result = LinkManager::create(array(
-            'kind'    => LinkManager::KIND_PARTNER,
-            'name'    => isset($_POST['name']) ? (string) $_POST['name'] : '',
-            'siteurl' => isset($_POST['siteurl']) ? (string) $_POST['siteurl'] : '',
-            'icon'    => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
-            'sort'    => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
-            'enabled' => isset($_POST['enabled']) ? (int) $_POST['enabled'] : LinkManager::ENABLED_ON,
+            'kind'        => LinkManager::KIND_PARTNER,
+            'name'        => isset($_POST['name']) ? (string) $_POST['name'] : '',
+            'siteurl'     => isset($_POST['siteurl']) ? (string) $_POST['siteurl'] : '',
+            'icon'        => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
+            'description' => isset($_POST['description']) ? (string) $_POST['description'] : '',
+            'sort'        => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
+            'enabled'     => isset($_POST['enabled']) ? (int) $_POST['enabled'] : LinkManager::ENABLED_ON,
         ), LinkManager::STATUS_APPROVED);
         if (!is_array($result)) {
             AjaxResponse::error($result);
@@ -35,11 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error('记录不存在');
         }
         $result = LinkManager::update($id, array(
-            'name'    => isset($_POST['name']) ? (string) $_POST['name'] : '',
-            'siteurl' => isset($_POST['siteurl']) ? (string) $_POST['siteurl'] : '',
-            'icon'    => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
-            'sort'    => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
-            'enabled' => isset($_POST['enabled']) ? (int) $_POST['enabled'] : LinkManager::ENABLED_ON,
+            'name'        => isset($_POST['name']) ? (string) $_POST['name'] : '',
+            'siteurl'     => isset($_POST['siteurl']) ? (string) $_POST['siteurl'] : '',
+            'icon'        => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
+            'description' => isset($_POST['description']) ? (string) $_POST['description'] : '',
+            'sort'        => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
+            'enabled'     => isset($_POST['enabled']) ? (int) $_POST['enabled'] : LinkManager::ENABLED_ON,
         ));
         if ($result !== true) {
             AjaxResponse::error($result);
@@ -117,6 +119,7 @@ function vs_render_partner_item(array $row)
          data-name="<?php echo vs_e($name); ?>"
          data-siteurl="<?php echo vs_e($siteurl); ?>"
          data-icon="<?php echo vs_e(isset($row['icon']) ? (string) $row['icon'] : ''); ?>"
+         data-description="<?php echo vs_e(isset($row['description']) ? (string) $row['description'] : ''); ?>"
          data-sort="<?php echo (int) $row['sort']; ?>"
          data-enabled="<?php echo $enabled; ?>">
         <div class="vs-link-row__icon">
@@ -129,18 +132,21 @@ function vs_render_partner_item(array $row)
         <div class="vs-link-row__main">
             <div class="vs-link-row__name" data-field="name"><?php echo vs_e($name); ?></div>
             <a class="vs-link-row__url" data-field="siteurl" href="<?php echo vs_e($siteurl); ?>" target="_blank" rel="noopener noreferrer"><?php echo vs_e($siteurl); ?></a>
+            <?php if (!empty($row['description'])): ?>
+                <div class="vs-link-row__desc" data-field="description"><?php echo vs_e((string) $row['description']); ?></div>
+            <?php endif; ?>
         </div>
         <div class="vs-link-row__status">
             <span class="vs-link-status <?php echo vs_e($statusClass); ?>" data-field="enabled_label"><?php echo vs_e($label); ?></span>
         </div>
         <div class="vs-link-row__actions">
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-partner-action="edit" data-link-id="<?php echo $id; ?>">编辑</button>
+            <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-partner-action="edit" data-link-id="<?php echo $id; ?>">编辑</button>
             <?php if ($enabled === LinkManager::ENABLED_ON): ?>
-                <button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-partner-action="disable" data-link-id="<?php echo $id; ?>">禁用</button>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning" data-partner-action="disable" data-link-id="<?php echo $id; ?>">禁用</button>
             <?php else: ?>
-                <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary" data-partner-action="enable" data-link-id="<?php echo $id; ?>">启用</button>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-partner-action="enable" data-link-id="<?php echo $id; ?>">启用</button>
             <?php endif; ?>
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger" data-partner-action="delete" data-link-id="<?php echo $id; ?>">删除</button>
+            <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger" data-partner-action="delete" data-link-id="<?php echo $id; ?>">删除</button>
         </div>
     </div>
     <?php
@@ -195,6 +201,10 @@ vs_admin_layout_start('合作伙伴', 'partners', $headerActions);
             <div class="vs-field">
                 <label class="vs-label" for="partnerIcon">图标链接（选填）</label>
                 <input type="text" class="vs-input" id="partnerIcon" name="icon" maxlength="255" placeholder="https://…/icon.png">
+            </div>
+            <div class="vs-field">
+                <label class="vs-label" for="partnerDesc">简介（选填）</label>
+                <input type="text" class="vs-input" id="partnerDesc" name="description" maxlength="200" placeholder="简要介绍该合作伙伴">
             </div>
             <div class="vs-field">
                 <label class="vs-label" for="partnerSort">排序</label>

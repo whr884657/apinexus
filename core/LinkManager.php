@@ -389,9 +389,7 @@ class LinkManager
         $icon = trim((string) (isset($data['icon']) ? $data['icon'] : ''));
         $isPartner = ($kind === self::KIND_PARTNER);
         $isSponsor = ($kind === self::KIND_SPONSOR);
-        $description = $isPartner
-            ? ''
-            : trim((string) (isset($data['description']) ? $data['description'] : ''));
+        $description = trim((string) (isset($data['description']) ? $data['description'] : ''));
         $contact = ($isPartner || $isSponsor)
             ? ''
             : trim((string) (isset($data['contact']) ? $data['contact'] : ''));
@@ -500,7 +498,9 @@ class LinkManager
         $isSponsor = ($kind === self::KIND_SPONSOR);
 
         if ($isPartner) {
-            $description = '';
+            $description = array_key_exists('description', $data)
+                ? trim((string) $data['description'])
+                : (isset($existing['description']) ? (string) $existing['description'] : '');
             $contact = '';
             $status = self::STATUS_APPROVED;
         } elseif ($isSponsor) {
