@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
     if ($action === 'refresh' || $action === 'snapshot') {
+        DashboardStats::assertAjaxRateLimit($action);
         try {
             AjaxResponse::success('ok', array(
                 'snapshot' => DashboardStats::consoleSnapshot($action === 'refresh'),
@@ -47,7 +48,7 @@ vs_admin_layout_start(
 
 <div id="adminDashPage"
      class="admin-dash-page"
-     data-boot="<?php echo vs_e(json_encode($boot, JSON_UNESCAPED_UNICODE)); ?>"
+     data-boot="<?php echo DashboardStats::bootAttrJson($boot); ?>"
      data-logs-url="<?php echo vs_e($vsBase); ?>/admin/system/logs">
 
     <?php if (!$mailEnabled): ?>

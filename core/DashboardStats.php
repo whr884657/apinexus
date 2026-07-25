@@ -16,6 +16,60 @@ class DashboardStats
     private static $epochCache = null;
 
     /**
+     * 控制台/大屏 AJAX 限流（按管理员）
+     *
+     * @param string $action live|refresh|snapshot
+     * @return void 超限时直接 AjaxResponse::error
+     */
+    public static function assertAjaxRateLimit($action)
+    {
+        $action = (string) $action;
+        $admin = class_exists('Auth') ? Auth::user() : null;
+        $aid = ($admin && isset($admin['id'])) ? (int) $admin['id'] : 0;
+        $bucket = 'admin:dashboard:' . $action . ':' . $aid;
+        $max = 20;
+        $window = 60;
+        if ($action === 'live') {
+            $max = 24; // 约 5s 一轮，留余量
+            $window = 60;
+        } elseif ($action === 'refresh') {
+            $max = 10;
+            $window = 60;
+        } elseif ($action === 'snapshot') {
+            $max = 20;
+            $window = 60;
+        }
+        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, $window, $max, true)) {
+            AjaxResponse::error('操作过于频繁，请稍后再试', 429);
+        }
+    }
+
+    /**
+     * data-boot 安全 JSON（防属性/`<` 注入）
+     *
+     * @param array $data
+     * @return string
+     */
+    public static function bootAttrJson(array $data)
+    {
+        $flags = JSON_UNESCAPED_UNICODE;
+        if (defined('JSON_HEX_TAG')) {
+            $flags |= JSON_HEX_TAG;
+        }
+        if (defined('JSON_HEX_AMP')) {
+            $flags |= JSON_HEX_AMP;
+        }
+        if (defined('JSON_HEX_APOS')) {
+            $flags |= JSON_HEX_APOS;
+        }
+        $json = json_encode($data, $flags);
+        if ($json === false) {
+            $json = '{}';
+        }
+        return vs_e($json);
+    }
+
+    /**
      * 控制台整页快照
      *
      * @param bool $refresh
@@ -290,7 +344,7 @@ class DashboardStats
             try {
                 $pdo = Database::connect();
                 self::applyTimeout($pdo);
-                $sql = 'SELECT l.`id`, l.`apiname`, l.`path`, l.`method`, l.`ok`, l.`httpcode`,
+                $sql = 'SELECT l.`id`, l.`apiname`, l.`ok`, l.`httpcode`,
                         l.`userid`, l.`apikey`, l.`createtime`, u.`username`
                     FROM `' . Database::table('apilog') . '` l
                     LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`
@@ -320,19 +374,18 @@ class DashboardStats
                             : '';
                         $codeLabel = $label !== '' ? ($code . ' · ' . $label) : (string) $code;
                     }
+                    // 仪表盘最小化字段：不下发 path/method/apikey，降低 XSS 面与敏感路径泄露
                     $out[] = array(
-                        'id'       => (int) $r['id'],
-                        'time'     => date('H:i:s', strtotime((string) $r['createtime'])),
-                        'apiname'  => (string) $r['apiname'],
-                        'path'     => (string) $r['path'],
-                        'method'   => (string) $r['method'],
-                        'ok'       => $ok ? 1 : 0,
-                        'status'   => $ok ? 'success' : 'error',
-                        'httpcode' => $code,
+                        'id'         => (int) $r['id'],
+                        'time'       => date('H:i:s', strtotime((string) $r['createtime'])),
+                        'apiname'    => (string) $r['apiname'],
+                        'ok'         => $ok ? 1 : 0,
+                        'status'     => $ok ? 'success' : 'error',
+                        'httpcode'   => $code,
                         'code_label' => $codeLabel,
-                        'caller'   => $caller,
-                        'initial'  => $initial !== '' ? $initial : '访',
-                        'level'    => $ok ? ($code >= 200 && $code < 300 ? 'success' : 'info') : 'error',
+                        'caller'     => $caller,
+                        'initial'    => $initial !== '' ? $initial : '访',
+                        'level'      => $ok ? ($code >= 200 && $code < 300 ? 'success' : 'info') : 'error',
                     );
                 }
                 return $out;

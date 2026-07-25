@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
     if ($action === 'refresh' || $action === 'snapshot') {
+        DashboardStats::assertAjaxRateLimit($action);
         try {
             AjaxResponse::success('ok', array(
                 'snapshot' => DashboardStats::screenSnapshot($action === 'refresh'),
@@ -19,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     if ($action === 'live') {
+        DashboardStats::assertAjaxRateLimit('live');
         try {
             AjaxResponse::success('ok', array(
                 'live' => DashboardStats::screenLiveTick(),
@@ -55,7 +57,7 @@ vs_admin_layout_start(
 
 <div id="adminScreenPage"
      class="vs-datascreen vs-datascreen--light"
-     data-boot="<?php echo vs_e(json_encode($boot, JSON_UNESCAPED_UNICODE)); ?>">
+     data-boot="<?php echo DashboardStats::bootAttrJson($boot); ?>">
 
     <header class="ds-header">
         <div>
