@@ -82,7 +82,7 @@
             + '<span class="vs-finance-user">' + escapeHtml(row.username || ('#' + row.userid)) + '</span>'
             + '</div>'
             + '<div class="vs-finance-cell vs-finance-c-kind">'
-            + '<span class="vs-ledger-kind">' + escapeHtml(row.kind_label) + '</span>'
+            + '<span class="vs-ledger-kind ' + escapeHtml(row.kind_class || '') + '">' + escapeHtml(row.kind_label) + '</span>'
             + '</div>'
             + '</div>'
             + '<div class="vs-finance-cell vs-finance-c-amount">'

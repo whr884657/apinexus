@@ -231,7 +231,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `CommentNotify.php` | 文章评论邮件通知（新评论通知管理员；被引用/管理员回复通知用户） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前 `ApiStats::hitProxy` |
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；**默认主题 v4.8.0+ 浏览器直连**；中继内禁止写 `apilog` |
-| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；本地注入 ≤3 行向上查找或 `api/hit.php` |
+| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；`guardAccess`/`lightGate` 含密钥与 QPM；本地注入 ≤3 行向上查找或 `api/hit.php` |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD（表 `apikey`；每用户最多 3 条；格式 `sk-`+32；含调用次数） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `LinkManager.php` | 友情链接 / 合作伙伴 / 赞助共用 CRUD（`kind` 0/1/2；友链审核；前台申请）（**后台向**） |
@@ -245,7 +245,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
 | `RedisCache.php` | 业务数据缓存（**v5.1.0+ 仅 apilog 查询/统计**）；键空间自动维护 |
 | `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`detailEnabled()` 控制是否写详细日志 |
-| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到 |
+| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索 EXISTS + `kind_class` |
 | `PointsManager.php` | 余额读写、扣费、充值完成/取消、`giftOnRegister` / `checkin`；列表走 OrderManager |
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（条数可配）、计划任务密钥 |
@@ -574,14 +574,16 @@ AuthSecurity::requireAuthPost();
 **审核 `audit`（数字）：** `0` 待审核 / `1` 通过 / `2` 不通过（管理员发布默认通过；用户投稿为待审核）  
 **拒绝原因 `rejectreason`：** 不通过时可填，邮件与用户 API 管理页可见  
 **密钥 `needkey`（数字）：** `0` 不需要 / `1` 必须 / `2` 可选  
+**QPM `qpm`（v10.5.0）：** `0` 不限制 / `>0` 每分钟最大请求次数（无需/可选按 IP，必须按 IP+密钥）
 
 | 方法 | 说明 |
 |------|------|
 | `listPublic()` | 前台可见：审核通过且非禁用（含维护中） |
 | `listAll` / `listByAudit` / `listByUser` / `listFiltered` | 列表筛选（支持 userid） |
 | `create` / `update` / `delete` / `setStatus` / `setAuditStatus` | 写操作（`setAuditStatus` 可带拒绝原因） |
-| `formatRow` | 格式化（含 `rejectreason` / `audit_class`） |
+| `formatRow` | 格式化（含 `rejectreason` / `audit_class` / `qpm` / `qpm_label`） |
 | `normalizeRequireKey` / `requireKeyLabel` 等 | 数字归一与中文标签 |
+| `normalizeQpm` / `qpmLabel` / `hasQpmColumn` | QPM 归一、展示文案、列探测 |
 | `apiTypeBadge` / `requireKeyBadge` | 列表短标签：代理/本地；KEY可选/必填 |
 | `countPendingReview()` | 待审核投稿数（侧边栏红点） |
 
@@ -701,7 +703,9 @@ VsPlaygroundResponse.directRequest({
 | `params_list` | 解析后的参数表（name/type/required/description/example） |
 | `maintenance` | 1=维护中 |
 | `needkey` / `needkey_label` | 密钥要求（文案：`无需 KEY` / `KEY 必填` / `KEY 可选`） |
+| `qpm` / `qpm_label` | 每分钟上限；文案「不限制」或「N/MIN」 |
 | `charge` / `charge_label` / `points` / `billing_label` | 计费；`billing_label` 为「免费」或「N积分/次」 |
+| `author` | 开发者作者卡（无则 null）；含 `profile_url` |
 | `calls` / `icon` / `detail_url` / `createtime` | 其它 |
 
 ---

@@ -239,6 +239,42 @@
     word-break: break-word;
 }
 
+.info-value--author {
+    font-family: inherit;
+}
+
+.detail-author {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: inherit;
+    text-decoration: none;
+    max-width: 100%;
+}
+
+.detail-author:hover .detail-author__name {
+    text-decoration: underline;
+}
+
+.detail-author__avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(17, 17, 17, 0.06);
+}
+
+.detail-author__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.detail-author__empty {
+    color: var(--text-muted);
+}
+
 .info-value--method { color: var(--accent-secondary); }
 .info-value--calls { color: #111111; }
 .info-value--billing { color: #c2410c; }

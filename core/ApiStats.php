@@ -205,7 +205,58 @@ class ApiStats
                 return array('http' => 403, 'msg' => '该接口不可用');
             }
         }
-        return self::evaluateKey($row);
+        $keyOk = self::evaluateKey($row);
+        if ($keyOk !== true) {
+            return $keyOk;
+        }
+        return self::evaluateQpm($row);
+    }
+
+    /**
+     * QPM 限流：0 不限；>0 为每分钟上限。
+     * needkey=必须 → IP+密钥；无需/可选 → 仅 IP。
+     *
+     * @param array $row
+     * @return true|array{http:int,msg:string}
+     */
+    private static function evaluateQpm(array $row)
+    {
+        if (!class_exists('ApiManager') || !ApiManager::hasQpmColumn()) {
+            return true;
+        }
+        $qpm = ApiManager::normalizeQpm(isset($row['qpm']) ? $row['qpm'] : 0);
+        if ($qpm <= 0) {
+            return true;
+        }
+        if (!class_exists('RateLimitStore')) {
+            return true;
+        }
+        $apiId = (int) (isset($row['id']) ? $row['id'] : 0);
+        if ($apiId <= 0) {
+            return true;
+        }
+        $ip = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
+        $need = ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : ApiManager::KEY_NONE);
+        if (ApiManager::hasChargeColumns()) {
+            $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
+            $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
+            if ($charge === ApiManager::CHARGE_PAID && $price > 0 && $need === ApiManager::KEY_NONE) {
+                $need = ApiManager::KEY_REQUIRED;
+            }
+        }
+        if ($need === ApiManager::KEY_REQUIRED) {
+            $keyId = !empty(self::$keyCtx['valid']) ? (int) self::$keyCtx['keyid'] : 0;
+            if ($keyId <= 0) {
+                return array('http' => 401, 'msg' => '请提供调用密钥');
+            }
+            $bucket = 'apiqpm:' . $apiId . ':ip:' . $ip . ':key:' . $keyId;
+        } else {
+            $bucket = 'apiqpm:' . $apiId . ':ip:' . $ip;
+        }
+        if (!RateLimitStore::allow($bucket, 60, $qpm, true)) {
+            return array('http' => 429, 'msg' => '请求过于频繁，请稍后再试');
+        }
+        return true;
     }
 
     /**

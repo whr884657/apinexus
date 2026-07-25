@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'doc'         => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
             'aidoc'       => isset($_POST['aidoc']) ? (string) $_POST['aidoc'] : '',
             'needkey'     => isset($_POST['needkey']) ? (int) $_POST['needkey'] : 0,
+            'qpm'         => isset($_POST['qpm']) ? (int) $_POST['qpm'] : 0,
             'charge'      => isset($_POST['charge']) ? (int) $_POST['charge'] : 0,
             'price'       => isset($_POST['price']) ? $_POST['price'] : 0,
             'status'      => isset($_POST['status']) ? $_POST['status'] : ApiManager::STATUS_NORMAL,
@@ -663,18 +664,25 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>
+                        <label class="vs-label" for="apiListFormQpm">QPM 每分钟上限</label>
+                        <input type="number" class="vs-input" id="apiListFormQpm" name="qpm" min="0" max="1000000" step="1" value="0" placeholder="0 表示不限制">
+                    </div>
+                    <div>
                         <label class="vs-label" for="apiListFormCharge">是否收费</label>
                         <select class="vs-input vs-select" id="apiListFormCharge" name="charge" data-vs-pick>
                             <option value="0">免费</option>
                             <option value="1">收费</option>
                         </select>
                     </div>
-                    <div id="apiListPriceRow" hidden>
+                </div>
+                <div class="vs-form-row vs-form-row--2" id="apiListPriceRow" hidden>
+                    <div>
                         <label class="vs-label" for="apiListFormPrice">每次扣除积分</label>
                         <input type="number" class="vs-input" id="apiListFormPrice" name="price" min="0.0001" step="0.0001" placeholder="如 0.1 或 1">
                     </div>
+                    <div></div>
                 </div>
-                <p class="vs-form-hint">「无需 KEY」与「KEY 可选」调用规则相同；选「无需 KEY」时前台通常不展示密钥填写框，「KEY 可选」会展示可空输入。本页发布的接口默认审核通过。收费接口调用时须提供有效密钥且余额足够。</p>
+                <p class="vs-form-hint">「无需 KEY」与「KEY 可选」调用规则相同；选「无需 KEY」时前台通常不展示密钥填写框，「KEY 可选」会展示可空输入。QPM 填 0 不限制；大于 0 为每分钟最大请求数（无需/可选密钥按 IP，必填密钥按 IP+密钥）。本页发布的接口默认审核通过。收费接口调用时须提供有效密钥且余额足够。</p>
                 <div class="vs-form-row">
                     <label class="vs-label">接口图标</label>
                     <div class="vs-api-cat-icon-picker" id="apiListIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>

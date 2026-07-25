@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}api` (
     `aidoc` mediumtext COMMENT 'AI文档',
     `calls` bigint unsigned NOT NULL DEFAULT 0 COMMENT '累计请求次数',
     `needkey` tinyint(1) NOT NULL DEFAULT 0 COMMENT '密钥要求：0不需要 1必须 2可选',
+    `qpm` int unsigned NOT NULL DEFAULT 0 COMMENT '每分钟请求上限：0不限制；大于0为每分钟最大次数',
     `charge` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否收费：0免费 1收费',
     `price` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '每次调用扣除积分（收费时有效）',
     `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '接口状态：0正常 1禁用 2维护',

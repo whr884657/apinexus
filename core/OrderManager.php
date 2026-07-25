@@ -97,6 +97,38 @@ class OrderManager
     }
 
     /**
+     * 类型标签 CSS 修饰类
+     *
+     * @param int $direct
+     * @param int $kind
+     * @return string
+     */
+    public static function kindClass($direct, $kind)
+    {
+        $direct = (int) $direct;
+        $kind = (int) $kind;
+        if ($direct === self::DIRECT_INC) {
+            if ($kind === self::KIND_ADMIN_ADD) {
+                return 'is-admin-add';
+            }
+            if ($kind === self::KIND_REGISTER) {
+                return 'is-register';
+            }
+            if ($kind === self::KIND_CHECKIN) {
+                return 'is-checkin';
+            }
+            return 'is-recharge';
+        }
+        if ($kind === self::KIND_ADMIN_SUB) {
+            return 'is-admin-sub';
+        }
+        if ($kind === self::KIND_AI) {
+            return 'is-ai';
+        }
+        return 'is-api';
+    }
+
+    /**
      * @param int $status
      * @return string
      */
@@ -130,6 +162,7 @@ class OrderManager
             'direct'     => $direct,
             'kind'       => $kind,
             'kind_label' => self::kindLabel($direct, $kind),
+            'kind_class' => self::kindClass($direct, $kind),
             'amount'     => PayConfig::fmtPoints(isset($row['amount']) ? $row['amount'] : 0),
             'balance'    => PayConfig::fmtPoints(isset($row['balance']) ? $row['balance'] : 0),
             'money'      => number_format((float) (isset($row['money']) ? $row['money'] : 0), 2, '.', ''),
@@ -296,39 +329,15 @@ class OrderManager
             }
 
             $needLedgerJoins = ($scope === 'ledger');
-            $searchApi = ($q !== '' && $needLedgerJoins);
 
             if ($q !== '') {
-                $like = '%' . $q . '%';
-                $or = array(
-                    'o.`orderno` LIKE ?',
-                    'o.`tradeno` LIKE ?',
-                    'o.`remark` LIKE ?',
-                    'u.`username` LIKE ?',
-                    'u.`email` LIKE ?',
-                );
-                $bind[] = $like;
-                $bind[] = $like;
-                $bind[] = $like;
-                $bind[] = $like;
-                $bind[] = $like;
-                if (ctype_digit($q)) {
-                    $or[] = 'o.`userid` = ?';
-                    $bind[] = (int) $q;
-                } else {
-                    $or[] = 'CAST(o.`userid` AS CHAR) LIKE ?';
-                    $bind[] = $like;
+                $search = self::buildSearchFilter($q, $needLedgerJoins);
+                if ($search['sql'] !== '') {
+                    $where[] = $search['sql'];
+                    foreach ($search['bind'] as $b) {
+                        $bind[] = $b;
+                    }
                 }
-                if ($searchApi) {
-                    $or[] = 'a.`name` LIKE ?';
-                    $bind[] = $like;
-                }
-                foreach (self::kindSearchPairs($q) as $pair) {
-                    $or[] = '(o.`direct` = ? AND o.`kind` = ?)';
-                    $bind[] = $pair[0];
-                    $bind[] = $pair[1];
-                }
-                $where[] = '(' . implode(' OR ', $or) . ')';
             }
 
             $countWhere = $where;
@@ -386,12 +395,17 @@ class OrderManager
                 $nextBefore = isset($last['id']) ? (int) $last['id'] : 0;
             }
 
-            $total = self::countFilteredCached(array(
-                'scope'  => $scope,
-                'userid' => $userid,
-                'status' => $status,
-                'q'      => $q,
-            ), $countWhere, $countBind, $q !== '', $searchApi);
+            $total = 0;
+            try {
+                $total = self::countFilteredCached(array(
+                    'scope'  => $scope,
+                    'userid' => $userid,
+                    'status' => $status,
+                    'q'      => $q,
+                ), $countWhere, $countBind);
+            } catch (Exception $e) {
+                $total = count($list);
+            }
 
             return array(
                 'list'           => $list,
@@ -405,6 +419,65 @@ class OrderManager
         } catch (Exception $e) {
             return $empty;
         }
+    }
+
+    /**
+     * 构建搜索条件（EXISTS，避免 COUNT/列表 JOIN 不一致导致整页空结果）
+     *
+     * @param string $q
+     * @param bool   $includeApiName
+     * @return array{sql:string,bind:array}
+     */
+    private static function buildSearchFilter($q, $includeApiName = false)
+    {
+        $q = trim((string) $q);
+        if ($q === '') {
+            return array('sql' => '', 'bind' => array());
+        }
+        $like = '%' . $q . '%';
+        $or = array();
+        $bind = array();
+
+        $or[] = 'o.`orderno` LIKE ?';
+        $bind[] = $like;
+        $or[] = 'o.`tradeno` LIKE ?';
+        $bind[] = $like;
+        $or[] = 'o.`remark` LIKE ?';
+        $bind[] = $like;
+
+        $userTable = Database::table('user');
+        $or[] = 'EXISTS (
+            SELECT 1 FROM `' . $userTable . '` su
+            WHERE su.`id` = o.`userid`
+              AND (su.`username` LIKE ? OR su.`email` LIKE ?)
+        )';
+        $bind[] = $like;
+        $bind[] = $like;
+
+        if (ctype_digit($q)) {
+            $or[] = 'o.`userid` = ?';
+            $bind[] = (int) $q;
+        }
+
+        if ($includeApiName) {
+            $apiTable = Database::table('api');
+            $or[] = 'EXISTS (
+                SELECT 1 FROM `' . $apiTable . '` sa
+                WHERE sa.`id` = o.`apiid` AND sa.`name` LIKE ?
+            )';
+            $bind[] = $like;
+        }
+
+        foreach (self::kindSearchPairs($q) as $pair) {
+            $or[] = '(o.`direct` = ? AND o.`kind` = ?)';
+            $bind[] = $pair[0];
+            $bind[] = $pair[1];
+        }
+
+        return array(
+            'sql'  => '(' . implode(' OR ', $or) . ')',
+            'bind' => $bind,
+        );
     }
 
     /**
@@ -424,9 +497,9 @@ class OrderManager
             array(self::DIRECT_INC, self::KIND_ADMIN_ADD, array('加款', '管理员加款')),
             array(self::DIRECT_INC, self::KIND_REGISTER, array('注册', '赠送', '注册赠送')),
             array(self::DIRECT_INC, self::KIND_CHECKIN, array('签到', '每日签到')),
-            array(self::DIRECT_DEC, self::KIND_API, array('API', 'api', '调用', 'API调用', '接口')),
+            array(self::DIRECT_DEC, self::KIND_API, array('API调用', '接口调用', '调用接口')),
             array(self::DIRECT_DEC, self::KIND_ADMIN_SUB, array('扣款', '管理员扣款')),
-            array(self::DIRECT_DEC, self::KIND_AI, array('AI', 'ai')),
+            array(self::DIRECT_DEC, self::KIND_AI, array('AI调用')),
         );
         $out = array();
         $seen = array();
@@ -447,6 +520,15 @@ class OrderManager
                     break;
                 }
             }
+            // 短英文单独精确匹配，避免邮箱里的 api 误伤
+            if (!$hit && (strcasecmp($q, 'api') === 0 || strcasecmp($q, 'ai') === 0)) {
+                if ($row[1] === self::KIND_API && strcasecmp($q, 'api') === 0 && $row[0] === self::DIRECT_DEC) {
+                    $hit = true;
+                }
+                if ($row[1] === self::KIND_AI && strcasecmp($q, 'ai') === 0 && $row[0] === self::DIRECT_DEC) {
+                    $hit = true;
+                }
+            }
             if (!$hit) {
                 continue;
             }
@@ -461,29 +543,20 @@ class OrderManager
     }
 
     /**
-     * 当前筛选条件下总数（短 TTL 缓存；不含 before_id）
+     * 当前筛选条件下总数（短 TTL 缓存；不含 before_id；WHERE 已用 EXISTS 时无需 JOIN）
      *
      * @param array $cacheOpts
      * @param array $where
      * @param array $bind
-     * @param bool  $needUserJoin 搜索用户名时需 JOIN user
-     * @param bool  $needApiJoin  搜索接口名时需 JOIN api
      * @return int
      */
-    private static function countFilteredCached(array $cacheOpts, array $where, array $bind, $needUserJoin = false, $needApiJoin = false)
+    private static function countFilteredCached(array $cacheOpts, array $where, array $bind)
     {
-        $factory = function () use ($where, $bind, $needUserJoin, $needApiJoin) {
+        $factory = function () use ($where, $bind) {
             try {
                 $pdo = Database::connect();
                 self::applyQueryTimeout($pdo);
-                $from = '`' . self::table() . '` o';
-                if ($needUserJoin || $needApiJoin) {
-                    $from .= ' LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = o.`userid`';
-                }
-                if ($needApiJoin) {
-                    $from .= ' LEFT JOIN `' . Database::table('api') . '` a ON a.`id` = o.`apiid`';
-                }
-                $sql = 'SELECT COUNT(*) FROM ' . $from . ' WHERE ' . implode(' AND ', $where);
+                $sql = 'SELECT COUNT(*) FROM `' . self::table() . '` o WHERE ' . implode(' AND ', $where);
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($bind);
                 return max(0, (int) $stmt->fetchColumn());

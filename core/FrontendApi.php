@@ -67,6 +67,8 @@ class FrontendApi
             'maintenance' => $status === ApiManager::STATUS_MAINTENANCE ? 1 : 0,
             'needkey'     => ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_label' => ApiManager::requireKeyLabel(isset($row['needkey']) ? $row['needkey'] : 0),
+            'qpm'         => ApiManager::normalizeQpm(isset($row['qpm']) ? $row['qpm'] : 0),
+            'qpm_label'   => ApiManager::qpmLabel(isset($row['qpm']) ? $row['qpm'] : 0),
             'calls'       => isset($row['calls']) ? (int) $row['calls'] : 0,
             'icon'        => $iconRaw !== '' ? ApiCategoryManager::resolveIconUrl($iconRaw) : '',
             'detail_url'  => $id > 0 ? vs_api_detail_url($id) : '',
@@ -81,6 +83,31 @@ class FrontendApi
             ),
             'createtime'  => isset($row['createtime']) ? (string) $row['createtime'] : '',
             'params_list' => self::parseParamsList(isset($row['params']) ? (string) $row['params'] : ''),
+            'author'      => self::authorForTheme(isset($row['userid']) ? (int) $row['userid'] : 0),
+        );
+    }
+
+    /**
+     * 详情页作者卡片（无则 null）
+     *
+     * @param int $userId
+     * @return array{id:int,username:string,avatar:string,profile_url:string}|null
+     */
+    private static function authorForTheme($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0 || !class_exists('FrontendContributor')) {
+            return null;
+        }
+        $profile = FrontendContributor::findProfile($userId);
+        if (!is_array($profile) || empty($profile['id'])) {
+            return null;
+        }
+        return array(
+            'id'          => (int) $profile['id'],
+            'username'    => isset($profile['username']) ? (string) $profile['username'] : '',
+            'avatar'      => isset($profile['avatar']) ? (string) $profile['avatar'] : '',
+            'profile_url' => isset($profile['profile_url']) ? (string) $profile['profile_url'] : vs_profile_url($userId),
         );
     }
 

@@ -5408,6 +5408,34 @@ select.vs-input.vs-select {
     font-weight: 600;
     width: fit-content;
 }
+.vs-ledger-kind.is-recharge {
+    background: #ecfdf5;
+    color: #047857;
+}
+.vs-ledger-kind.is-admin-add {
+    background: #eef2ff;
+    color: #4338ca;
+}
+.vs-ledger-kind.is-register {
+    background: #fff7ed;
+    color: #c2410c;
+}
+.vs-ledger-kind.is-checkin {
+    background: #f0fdfa;
+    color: #0f766e;
+}
+.vs-ledger-kind.is-api {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+.vs-ledger-kind.is-admin-sub {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+.vs-ledger-kind.is-ai {
+    background: #faf5ff;
+    color: #7e22ce;
+}
 .vs-ledger-amount {
     font-weight: 700;
     font-size: 14px;

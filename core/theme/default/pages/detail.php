@@ -147,6 +147,25 @@ if (!$notFound) {
                 <div class="info-label">计费</div>
                 <div class="info-value info-value--billing"><?php echo vs_e($chargeDetailLabel); ?></div>
             </div>
+            <div class="info-item">
+                <div class="info-label">QPM</div>
+                <div class="info-value info-value--qpm"><?php echo vs_e(isset($api['qpm_label']) ? $api['qpm_label'] : '不限制'); ?></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">作者</div>
+                <div class="info-value info-value--author">
+                    <?php if (!empty($api['author']) && is_array($api['author']) && !empty($api['author']['profile_url'])): ?>
+                    <a class="detail-author" href="<?php echo vs_e($api['author']['profile_url']); ?>">
+                        <?php if (!empty($api['author']['avatar'])): ?>
+                        <img class="detail-author__avatar" src="<?php echo vs_e($api['author']['avatar']); ?>" alt="" width="22" height="22" loading="lazy">
+                        <?php endif; ?>
+                        <span class="detail-author__name"><?php echo vs_e(!empty($api['author']['username']) ? $api['author']['username'] : '开发者'); ?></span>
+                    </a>
+                    <?php else: ?>
+                    <span class="detail-author__empty">—</span>
+                    <?php endif; ?>
+                </div>
+            </div>
             <?php if (!empty($api['createtime'])): ?>
             <div class="info-item">
                 <div class="info-label">提交时间</div>

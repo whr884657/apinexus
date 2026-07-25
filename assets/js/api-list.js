@@ -48,6 +48,7 @@
         proxyslug: document.getElementById('apiListFormProxySlug'),
         category: document.getElementById('apiListFormCategory'),
         requireKey: document.getElementById('apiListFormRequireKey'),
+        qpm: document.getElementById('apiListFormQpm'),
         charge: document.getElementById('apiListFormCharge'),
         price: document.getElementById('apiListFormPrice'),
         priceRow: document.getElementById('apiListPriceRow'),
@@ -1120,6 +1121,9 @@
         if (fields.requireKey) {
             fields.requireKey.value = '0';
         }
+        if (fields.qpm) {
+            fields.qpm.value = '0';
+        }
         if (fields.charge) {
             fields.charge.value = '0';
         }
@@ -1191,6 +1195,10 @@
         }
         if (fields.requireKey) {
             fields.requireKey.value = String(parseInt(api.needkey, 10) || 0);
+        }
+        if (fields.qpm) {
+            var qpmVal = parseInt(api.qpm, 10);
+            fields.qpm.value = String(isNaN(qpmVal) || qpmVal < 0 ? 0 : qpmVal);
         }
         if (fields.charge) {
             fields.charge.value = String(parseInt(api.charge, 10) === 1 ? 1 : 0);
@@ -1293,6 +1301,7 @@
             doc: fields.docNormal ? fields.docNormal.value : '',
             aidoc: fields.docAi ? fields.docAi.value : '',
             needkey: fields.requireKey ? String(fields.requireKey.value || '0') : '0',
+            qpm: fields.qpm ? String(Math.max(0, parseInt(fields.qpm.value, 10) || 0)) : '0',
             charge: fields.charge ? String(parseInt(fields.charge.value, 10) === 1 ? 1 : 0) : '0',
             price: fields.price ? String(fields.price.value || '') : '',
             status: fields.status ? String(normalizeStatus(fields.status.value)) : '0',

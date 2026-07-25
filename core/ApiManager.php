@@ -142,6 +142,58 @@ class ApiManager
     }
 
     /**
+     * 是否已具备 qpm 字段（迁移 10.5.0 后为 true）
+     *
+     * @return bool
+     */
+    public static function hasQpmColumn()
+    {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
+        try {
+            $pdo = Database::connect();
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('qpm'));
+            $ok = $col && $col->fetchColumn();
+        } catch (Exception $e) {
+            $ok = false;
+        }
+        return $ok;
+    }
+
+    /**
+     * @param mixed $v
+     * @return int
+     */
+    public static function normalizeQpm($v)
+    {
+        $n = (int) $v;
+        if ($n < 0) {
+            $n = 0;
+        }
+        if ($n > 1000000) {
+            $n = 1000000;
+        }
+        return $n;
+    }
+
+    /**
+     * 前台/后台展示：不限制 或 N/MIN
+     *
+     * @param mixed $v
+     * @return string
+     */
+    public static function qpmLabel($v)
+    {
+        $n = self::normalizeQpm($v);
+        if ($n <= 0) {
+            return '不限制';
+        }
+        return $n . '/MIN';
+    }
+
+    /**
      * @param mixed $v
      * @return int
      */
@@ -597,6 +649,7 @@ class ApiManager
             }
             $id = (int) $pdo->lastInsertId();
             self::applyChargeFields($id, $parsed);
+            self::applyQpmField($id, $parsed);
             RedisCache::invalidateFrontend();
             $row = self::findById($id);
             return self::formatRow($row);
@@ -774,6 +827,7 @@ class ApiManager
                 ));
             }
             self::applyChargeFields($apiId, $parsed);
+            self::applyQpmField($apiId, $parsed);
             RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
@@ -1076,6 +1130,8 @@ class ApiManager
             'needkey'       => self::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_label' => self::requireKeyLabel(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_badge' => self::requireKeyBadge(isset($row['needkey']) ? $row['needkey'] : 0),
+            'qpm'           => self::normalizeQpm(isset($row['qpm']) ? $row['qpm'] : 0),
+            'qpm_label'     => self::qpmLabel(isset($row['qpm']) ? $row['qpm'] : 0),
             'charge'        => self::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0),
             'charge_label'  => self::chargeLabel(isset($row['charge']) ? $row['charge'] : 0),
             'price'         => class_exists('PayConfig')
@@ -1129,6 +1185,8 @@ class ApiManager
             'needkey'        => $full['needkey'],
             'needkey_label'  => $full['needkey_label'],
             'needkey_badge'  => $full['needkey_badge'],
+            'qpm'            => $full['qpm'],
+            'qpm_label'      => $full['qpm_label'],
             'charge'         => $full['charge'],
             'charge_label'   => $full['charge_label'],
             'price'          => $full['price'],
@@ -1390,6 +1448,7 @@ class ApiManager
             'doc'         => $docNormal,
             'aidoc'       => $docAi,
             'needkey'     => $requireKey,
+            'qpm'         => self::normalizeQpm(isset($data['qpm']) ? $data['qpm'] : 0),
             'charge'      => $charge,
             'price'       => $price,
             'status'      => $status,
@@ -1419,6 +1478,33 @@ class ApiManager
             $stmt->execute(array(
                 self::normalizeCharge(isset($parsed['charge']) ? $parsed['charge'] : 0),
                 self::normalizePrice(isset($parsed['price']) ? $parsed['price'] : 0),
+                $apiId,
+            ));
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
+     * 写入 QPM 字段（独立 UPDATE，兼容未迁移站点）
+     *
+     * @param int   $apiId
+     * @param array $parsed
+     * @return void
+     */
+    private static function applyQpmField($apiId, array $parsed)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId <= 0 || !self::hasQpmColumn()) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '` SET `qpm` = ? WHERE `id` = ?'
+            );
+            $stmt->execute(array(
+                self::normalizeQpm(isset($parsed['qpm']) ? $parsed['qpm'] : 0),
                 $apiId,
             ));
         } catch (Exception $e) {
