@@ -509,14 +509,9 @@ class ApiStats
             $userid = (int) UserAuth::id();
         }
 
-        $apikeyStore = mb_substr($apikey, 0, 128, 'UTF-8');
-        if ($apikeyStore !== '' && class_exists('ApiLogManager')) {
-            $apikeyStore = ApiLogManager::maskApikey($apikeyStore);
-        }
-
         return array(
             'userid'  => $userid,
-            'apikey'  => $apikeyStore,
+            'apikey'  => mb_substr($apikey, 0, 128, 'UTF-8'),
             'method'  => mb_substr($method, 0, 16, 'UTF-8'),
             'ip'      => mb_substr($ip, 0, 45, 'UTF-8'),
             'iploc'   => '',

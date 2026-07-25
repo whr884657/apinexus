@@ -151,6 +151,71 @@
             + '</div>';
     }
 
+    function eyeIconSvg(off) {
+        if (off) {
+            return '<svg class="vs-log-secret__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">'
+                + '<path fill="currentColor" d="M12 7a5 5 0 0 1 5 5c0 .7-.15 1.36-.4 1.96l1.48 1.48A9.8 9.8 0 0 0 21 12c-1.73-4.39-6-7.5-9-7.5-1.1 0-2.16.3-3.12.82l1.5 1.5c.5-.2 1.05-.32 1.62-.32zm-7.03-.61 1.66 1.66A9.8 9.8 0 0 0 3 12c1.73 4.39 6 7.5 9 7.5 1.55 0 3.03-.45 4.3-1.22l1.7 1.7 1.27-1.27L5.24 4.12 3.97 5.39zm5.5 5.5 3.25 3.25A3 3 0 0 1 9 12c0-.2.02-.4.06-.58l1.41 1.41zM12 9a3 3 0 0 1 2.83 4.01l-3.84-3.84c.32-.1.66-.17 1.01-.17z"/>'
+                + '</svg>';
+        }
+        return '<svg class="vs-log-secret__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">'
+            + '<path fill="currentColor" d="M12 5c-5 0-9.27 3.11-11 7 1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 .001 6.001A3 3 0 0 0 12 9z"/>'
+            + '</svg>';
+    }
+
+    function detailSecretItem(label, fullKey, maskedKey) {
+        var full = fullKey == null ? '' : String(fullKey);
+        var masked = maskedKey == null || maskedKey === '' ? '' : String(maskedKey);
+        if (full === '' && masked === '') {
+            return detailItem(label, '—');
+        }
+        if (masked === '') {
+            masked = full;
+        }
+        // 已是打码入库的旧数据：无明文可揭，只展示
+        var canReveal = full !== '' && full !== masked;
+        var show = canReveal ? masked : (full || masked);
+        var btn = canReveal
+            ? ('<button type="button" class="vs-log-secret__toggle" aria-label="显示密钥" aria-pressed="false" title="显示/隐藏密钥">'
+                + eyeIconSvg(false) + '</button>')
+            : '';
+        return '<div class="vs-log-detail__item vs-log-detail__item--secret">'
+            + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+            + '<div class="vs-log-secret" data-revealed="0"'
+            + ' data-full="' + escapeHtml(full) + '"'
+            + ' data-masked="' + escapeHtml(masked) + '">'
+            + '<span class="vs-log-detail__value vs-log-secret__text">' + escapeHtml(show) + '</span>'
+            + btn
+            + '</div></div>';
+    }
+
+    function bindSecretToggles(root) {
+        if (!root) {
+            return;
+        }
+        root.querySelectorAll('.vs-log-secret__toggle').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var wrap = btn.closest('.vs-log-secret');
+                if (!wrap) {
+                    return;
+                }
+                var text = wrap.querySelector('.vs-log-secret__text');
+                var on = wrap.getAttribute('data-revealed') === '1';
+                var next = !on;
+                wrap.setAttribute('data-revealed', next ? '1' : '0');
+                if (text) {
+                    text.textContent = next
+                        ? (wrap.getAttribute('data-full') || '')
+                        : (wrap.getAttribute('data-masked') || '');
+                }
+                btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+                btn.setAttribute('aria-label', next ? '隐藏密钥' : '显示密钥');
+                btn.innerHTML = eyeIconSvg(next);
+            });
+        });
+    }
+
     function detailHtml(row) {
         return '<div class="vs-log-detail">'
             + '<div class="vs-log-detail__hero">'
@@ -169,7 +234,7 @@
             + detailItem('结果', row.ok_label)
             + detailItem('状态码', httpcodeDisplay(row), true)
             + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '匿名'))
-            + detailItem('密钥', row.apikey)
+            + detailSecretItem('密钥', row.apikey, row.apikey_masked)
             + detailItem('扣费', (row.charged_label || '') + (row.charged ? (' · ' + row.cost) : ''))
             + '</div></div>'
             + '<div class="vs-log-detail__section">'
@@ -230,6 +295,7 @@
                 return;
             }
             detailBody.innerHTML = detailHtml(data.row);
+            bindSecretToggles(detailBody);
         }).catch(function () {
             detailBody.innerHTML = '<p class="vs-empty">网络异常</p>';
         });

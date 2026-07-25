@@ -231,7 +231,9 @@ class ApiLogManager
             'user_label'     => $userid > 0
                 ? ($username !== '' ? $username : ('用户 #' . $userid))
                 : '匿名',
-            'apikey'         => self::maskApikey($apikey),
+            // apikey=完整（管理员可点眼睛查看）；apikey_masked=默认展示
+            'apikey'         => $apikey,
+            'apikey_masked'  => self::maskApikey($apikey),
             'method'         => $method,
             'method_class'   => self::methodClass($method),
             'ip'             => isset($row['ip']) ? (string) $row['ip'] : '',

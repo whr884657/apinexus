@@ -290,13 +290,8 @@ class PointsManager
                 return false;
             }
 
-            // 回调金额必须与下单金额一致（允许 0.01 元误差），防止少付多充
-            $orderMoney = round((float) $order['money'], 2);
-            $paidMoney = $money !== '' ? round((float) $money, 2) : 0.0;
-            if ($orderMoney > 0 && ($paidMoney <= 0 || abs($paidMoney - $orderMoney) > 0.01)) {
-                $pdo->rollBack();
-                return false;
-            }
+            // 码支付：禁止用回调 money 与本地订单 money 比对（见《支付开发规范》§2.6）。
+            // 履约只认：验签通过 + 支付成功态 + out_trade_no 命中本站 orderno；积分以本地订单 amount 为准。
 
             $userId = (int) $order['userid'];
             $amount = (float) $order['amount'];

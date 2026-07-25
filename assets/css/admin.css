@@ -6175,6 +6175,46 @@ select.vs-input.vs-select {
     line-height: 1.45;
 }
 
+.vs-log-secret {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+}
+
+.vs-log-secret__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.vs-log-secret__toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin: -4px -4px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.vs-log-secret__toggle:hover,
+.vs-log-secret__toggle:focus-visible {
+    color: #0f172a;
+    background: #e2e8f0;
+    outline: none;
+}
+
+.vs-log-secret[data-revealed="1"] .vs-log-secret__toggle {
+    color: #2563eb;
+}
+
 @media (max-width: 900px) {
     .vs-log-toolbar {
         flex-direction: column;
