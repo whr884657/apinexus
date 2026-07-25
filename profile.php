@@ -19,10 +19,10 @@ if ($profile === null) {
     vs_frontend_page('profile', '用户不存在', array(
         'profile'  => null,
         'notFound' => true,
-        'seo' => array(
+        'seo'      => vs_page_seo_pack('用户不存在', array(
             'description' => '该用户不存在或暂无公开主页。',
             'robots'      => 'noindex,follow',
-        ),
+        )),
     ));
     exit;
 }
@@ -38,8 +38,8 @@ vs_frontend_page('profile', $pageTitle, array(
     'wallpaper' => $wallpaper,
     'notFound'  => false,
     'pingUrl'   => rtrim(vs_base_url(), '/') . '/core/ping.php',
-    'seo' => array(
+    'seo'       => vs_page_seo_pack($pageTitle, array(
         'description' => vs_seo_truncate($desc),
         'type'        => 'profile',
-    ),
+    )),
 ));

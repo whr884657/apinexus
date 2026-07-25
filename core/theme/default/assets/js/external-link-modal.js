@@ -21,8 +21,11 @@
         + '.external-link-url{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:.75rem;color:var(--accent-primary);background:rgba(15,23,42,.7);border-radius:8px;border:1px solid var(--border-color);padding:.5rem .6rem;word-break:break-all;margin-bottom:.9rem;}'
         + '[data-theme="light"] .external-link-url{background:#f9fafb;}'
         + '.external-link-actions{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:flex-end;}'
-        + '.external-link-btn{border-radius:999px;font-size:.78rem;padding:.45rem .95rem;border:1px solid var(--border-color);background:transparent;color:var(--text-muted);cursor:pointer;}'
-        + '.external-link-btn-primary{border-color:var(--accent-primary);background:var(--accent-primary);color:#020817;}'
+        + '.external-link-btn{border-radius:999px;font-size:.78rem;padding:.45rem .95rem;border:1px solid var(--border-color);background:transparent;color:var(--text-main);cursor:pointer;}'
+        + '.external-link-btn:hover{border-color:var(--text-muted);}'
+        /* 浅色主题 accent 为黑：主按钮必须用白字；深色主题 accent 为浅灰：主按钮用深字 */
+        + '.external-link-btn-primary{border-color:#111111;background:#111111;color:#ffffff;}'
+        + '[data-theme="dark"] .external-link-btn-primary{border-color:#f3f4f6;background:#f3f4f6;color:#111111;}'
         + '@media (prefers-reduced-motion:reduce){.external-link-dialog.t-modal,.external-link-mask{transition:none!important;}}';
         var style = document.createElement('style');
         style.id = 'external-link-modal-style';

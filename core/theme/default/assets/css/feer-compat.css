@@ -108,6 +108,7 @@
 
 @media (min-width: 768px) {
     .md\:flex { display: flex !important; }
+    .md\:inline-flex { display: inline-flex !important; }
     .md\:inline-block { display: inline-block !important; }
     .md\:hidden { display: none !important; }
     .md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -304,7 +305,31 @@ body.vs-body.feer-front #stats-section {
     }
 }
 
-/* 登录态入口：仅侧栏底部；禁用 btn-geek::before，避免 overflow:visible 时左侧「大黑块」 */
+/* 顶栏登录/注册：电脑端显示，手机端隐藏（禁止用 .hidden，其 !important 会压死 md: 工具类） */
+body.vs-body.feer-front .nav-auth-desktop {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+}
+body.vs-body.feer-front .nav-bar .auth-entry-btn--nav {
+    display: none;
+}
+body.vs-body.feer-front .nav-menu-mobile {
+    display: inline-flex;
+}
+@media (min-width: 768px) {
+    body.vs-body.feer-front .nav-auth-desktop {
+        display: inline-flex;
+    }
+    body.vs-body.feer-front .nav-bar .auth-entry-btn--nav {
+        display: inline-flex !important;
+    }
+    body.vs-body.feer-front .nav-menu-mobile {
+        display: none !important;
+    }
+}
+
+/* 登录态入口；禁用 btn-geek::before，避免 overflow:visible 时左侧「大黑块」 */
 body.vs-body.feer-front .auth-entry-btn {
     display: inline-flex;
     align-items: center;

@@ -1,12 +1,13 @@
 {
-    "version": "10.8.1",
-    "title": "ApiNexus 10.8.1 码支付回调与日志密钥展示",
+    "version": "10.8.2",
+    "title": "ApiNexus 10.8.2 顶栏登录、双层 SEO 与外链按钮",
     "release_date": "2026-07-26",
     "db_changes": false,
     "changes": [
-        "码支付异步回调取消金额一致性校验：只认验签、支付成功态与订单号（同额并发/收款码累加场景）",
-        "调用日志详情密钥默认打码，管理员可点小眼睛切换明文；落库仍存完整密钥",
-        "规范：《支付开发规范》§2.6、E116 禁止擅自加回金额比对"
+        "修复默认主题电脑端顶栏登录/注册不显示（.hidden !important 压死 md:inline-flex，且兼容层缺 md:inline-flex）",
+        "前台双层 SEO：根入口 vs_page_seo_pack + 主题微数据/JSON-LD，强化描述与分享图抓取",
+        "修复默认主题外链跳转「继续访问」黑底黑字对比度",
+        "规范：SEO §四双层、主题规范顶栏认证、E117"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

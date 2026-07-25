@@ -238,7 +238,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `LinkSiteMeta.php` | 抓取外站 HTML 解析 title/description/favicon（友链一键填充；防 SSRF） |
 | `LinkNotify.php` | 友链申请通知管理员；通过后通知申请人邮箱 |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
-| `FrontendApi.php` | 前台公开接口列表与详情（**主题向**） |
+| `FrontendApi.php` | 前台公开接口列表与详情（**主题向**）；入口 SEO 见 `vs_page_seo_pack`（v10.8.2） |
 | `FrontendLink.php` | 前台已通过且启用的友链列表与本站友链卡片（**主题向**） |
 | `FrontendPartner.php` | 前台已启用合作伙伴列表（**主题向**） |
 | `FrontendSponsor.php` | 前台赞助收款码 + 赞助名单（**主题向**） |

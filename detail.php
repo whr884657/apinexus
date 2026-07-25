@@ -64,23 +64,24 @@ if ($api === null) {
         'apiId'       => $apiId,
         'notFound'    => true,
         'playground'  => $playground,
-        'seo' => array(
+        'seo'         => vs_page_seo_pack('接口不存在', array(
             'description' => '该接口不存在、未通过审核或已下架。',
             'robots'      => 'noindex,follow',
-        ),
+        )),
     ));
     exit;
 }
 
 $pageTitle = isset($api['name']) ? ((string) $api['name'] . ' · 接口详情') : '接口详情';
 $apiDesc = isset($api['desc']) ? trim((string) $api['desc']) : '';
+$seo = vs_page_seo_pack($pageTitle, array(
+    'description' => vs_seo_truncate($apiDesc !== '' ? $apiDesc : ($api['name'] . ' - 接口详情与在线测试')),
+    'type'        => 'article',
+));
 vs_frontend_page('detail', $pageTitle, array(
     'api'        => $api,
     'apiId'      => $apiId,
     'notFound'   => false,
     'playground' => $playground,
-    'seo' => array(
-        'description' => vs_seo_truncate($apiDesc !== '' ? $apiDesc : ($api['name'] . ' - 接口详情与在线测试')),
-        'type'        => 'article',
-    ),
+    'seo'        => $seo,
 ));

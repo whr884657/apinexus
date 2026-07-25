@@ -1,5 +1,16 @@
 {
     "versions": {
+        "10.8.2": {
+            "title": "ApiNexus 10.8.2 顶栏登录、双层 SEO 与外链按钮",
+            "date": "2026-07-26",
+            "db_changes": false,
+            "changes": [
+                "修复默认主题电脑端顶栏登录/注册不显示（.hidden !important 压死 md:inline-flex，且兼容层缺 md:inline-flex）",
+                "前台双层 SEO：根入口 vs_page_seo_pack + 主题微数据/JSON-LD，强化描述与分享图抓取",
+                "修复默认主题外链跳转「继续访问」黑底黑字对比度",
+                "规范：SEO §四双层、主题规范顶栏认证、E117"
+            ]
+        },
         "10.8.1": {
             "title": "ApiNexus 10.8.1 码支付回调与日志密钥展示",
             "date": "2026-07-26",

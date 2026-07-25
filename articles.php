@@ -43,16 +43,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $articleId = vs_resolve_path_id('id');
 $pageTitle = '文章';
-$seo = array(
+$seo = vs_page_seo_pack('文章', array(
     'description' => vs_seo_truncate(SiteContext::siteName() . ' 技术文章与平台动态。'),
-);
+));
 
 if ($articleId > 0) {
     $article = FrontendArticle::findById($articleId, true);
     if (is_array($article) && !empty($article['title'])) {
         $pageTitle = (string) $article['title'];
         $sum = isset($article['summary']) ? trim((string) $article['summary']) : '';
-        $seo['description'] = vs_seo_truncate($sum !== '' ? $sum : ($pageTitle . ' · ' . SiteContext::siteName()));
+        $seo = vs_page_seo_pack($pageTitle, array(
+            'description' => vs_seo_truncate($sum !== '' ? $sum : ($pageTitle . ' · ' . SiteContext::siteName())),
+            'type'        => 'article',
+        ));
     }
 }
 

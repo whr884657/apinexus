@@ -11,9 +11,11 @@ if (!InstallChecker::isInstalled()) {
     vs_redirect(vs_base_url() . '/install/');
 }
 
+$seo = vs_page_seo_pack('友情链接', array(
+    'description' => vs_seo_truncate('本站友情链接列表，欢迎互换优质站点链接。'),
+));
+
 vs_frontend_page('links', '友情链接', array(
     'activeNav' => 'links',
-    'seo' => array(
-        'description' => vs_seo_truncate('本站友情链接列表，欢迎互换优质站点链接。'),
-    ),
+    'seo'       => $seo,
 ));

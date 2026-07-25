@@ -21,6 +21,11 @@ $stTintSwatches = array(
     array('id' => 'cyan', 'hex' => '#ecfeff', 'label' => '浅青'),
 );
 ?>
+<?php
+if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_seo_block')) {
+    vs_render_theme_seo_block($pageSeo);
+}
+?>
 <div class="st-root<?php echo $stNavUseFab ? ' st-root--nav-fab' : ''; ?>" data-nav-mode="<?php echo vs_e($stNavExpandMode); ?>" data-st-default-tint="<?php echo vs_e($stColorPreset); ?>">
 <header class="st-bar">
     <div class="st-wrap st-bar__inner">

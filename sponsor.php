@@ -11,8 +11,10 @@ if (!InstallChecker::isInstalled()) {
     vs_redirect(vs_base_url() . '/install/');
 }
 
+$seo = vs_page_seo_pack('赞助', array(
+    'description' => vs_seo_truncate('支持 ' . SiteContext::siteName() . ' 持续发展，了解赞助方式。'),
+));
+
 vs_frontend_page('sponsor', '赞助', array(
-    'seo' => array(
-        'description' => vs_seo_truncate('支持 ' . SiteContext::siteName() . ' 持续发展，了解赞助方式。'),
-    ),
+    'seo' => $seo,
 ));

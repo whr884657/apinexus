@@ -908,6 +908,143 @@ function vs_render_seo_meta(array $opts = array())
         echo '<meta property="og:locale" content="' . vs_e($locale) . '">' . "\n";
     }
     echo '<meta name="twitter:card" content="' . vs_e($image !== '' ? 'summary_large_image' : 'summary') . '">' . "\n";
+    // QQ / 微信等还会读 JSON-LD
+    vs_render_seo_jsonld(array(
+        'site_name'   => $siteName,
+        'description' => $description,
+        'url'         => $url !== '' ? $url : $canonical,
+        'image'       => $image,
+        'title'       => $title,
+    ));
+}
+
+/**
+ * 前台入口页 SEO 打包：保证 description / keywords / image / site_name 齐全（双层 SEO 的入口层）
+ *
+ * @param string $pageTitle 页面短标题（不含站点名后缀亦可）
+ * @param array  $overrides description / type / robots / image / keywords / title 等
+ * @return array
+ */
+function vs_page_seo_pack($pageTitle = '', array $overrides = array())
+{
+    $siteName = 'ApiNexus';
+    $keywords = '';
+    if (class_exists('SiteContext') && InstallChecker::isInstalled()) {
+        $siteName = SiteContext::siteName();
+        $keywords = SiteContext::siteKeywords();
+    }
+    $title = trim((string) $pageTitle);
+    if ($title === '' || $title === $siteName) {
+        $fullTitle = $siteName;
+    } else {
+        $fullTitle = $title . ' · ' . $siteName;
+    }
+    $pack = vs_seo_defaults(array(
+        'title'       => $fullTitle,
+        'description' => vs_seo_site_description($siteName),
+        'keywords'    => $keywords,
+        'image'       => vs_seo_share_image(),
+        'type'        => 'website',
+        'site_name'   => $siteName,
+        'robots'      => 'index,follow',
+    ));
+    if ($overrides !== array()) {
+        $pack = array_merge($pack, $overrides);
+    }
+    if (!isset($pack['description']) || trim((string) $pack['description']) === '') {
+        $pack['description'] = vs_seo_site_description($siteName);
+    } else {
+        $pack['description'] = vs_seo_truncate((string) $pack['description']);
+    }
+    if (!isset($pack['keywords']) || trim((string) $pack['keywords']) === '') {
+        $pack['keywords'] = $keywords;
+    }
+    if (!isset($pack['image']) || trim((string) $pack['image']) === '') {
+        $pack['image'] = vs_seo_share_image();
+    }
+    if (!isset($pack['site_name']) || trim((string) $pack['site_name']) === '') {
+        $pack['site_name'] = $siteName;
+    }
+    if (!isset($pack['title']) || trim((string) $pack['title']) === '') {
+        $pack['title'] = $fullTitle;
+    }
+    $pack['image'] = vs_seo_abs_url((string) $pack['image']);
+    return $pack;
+}
+
+/**
+ * JSON-LD WebSite（供搜索引擎 / 部分社交抓取）
+ *
+ * @param array $opts 与 vs_render_seo_meta 相同字段
+ * @return void
+ */
+function vs_render_seo_jsonld(array $opts = array())
+{
+    $name = trim((string) (isset($opts['site_name']) ? $opts['site_name'] : ''));
+    $desc = trim((string) (isset($opts['description']) ? $opts['description'] : ''));
+    $url = trim((string) (isset($opts['url']) ? $opts['url'] : ''));
+    $image = trim((string) (isset($opts['image']) ? $opts['image'] : ''));
+    if ($url === '') {
+        $url = vs_seo_canonical_url();
+    }
+    $url = vs_seo_abs_url($url);
+    $home = rtrim(vs_base_url(), '/') . '/';
+    if ($name === '' && class_exists('SiteContext') && InstallChecker::isInstalled()) {
+        $name = SiteContext::siteName();
+    }
+    if ($name === '') {
+        return;
+    }
+    $data = array(
+        '@context'    => 'https://schema.org',
+        '@type'       => 'WebSite',
+        'name'        => $name,
+        'url'         => $home,
+        'description' => $desc !== '' ? $desc : $name,
+    );
+    if ($image !== '') {
+        $data['image'] = vs_seo_abs_url($image);
+        $data['thumbnailUrl'] = $data['image'];
+    }
+    if ($url !== '' && $url !== $home) {
+        $data['mainEntityOfPage'] = $url;
+    }
+    echo '<script type="application/ld+json">'
+        . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        . '</script>' . "\n";
+}
+
+/**
+ * 主题层 SEO 微数据块（双层 SEO：与 head meta 互补，供页面内抓取）
+ *
+ * @param array $seo
+ * @return void
+ */
+function vs_render_theme_seo_block(array $seo = array())
+{
+    if ($seo === array()) {
+        $seo = vs_page_seo_pack();
+    }
+    $name = trim((string) (isset($seo['site_name']) ? $seo['site_name'] : ''));
+    $desc = trim((string) (isset($seo['description']) ? $seo['description'] : ''));
+    $image = trim((string) (isset($seo['image']) ? $seo['image'] : ''));
+    $title = trim((string) (isset($seo['title']) ? $seo['title'] : $name));
+    $url = trim((string) (isset($seo['url']) ? $seo['url'] : vs_seo_canonical_url()));
+    if ($name === '') {
+        return;
+    }
+    echo '<div class="vs-theme-seo" itemscope itemtype="https://schema.org/WebPage" hidden aria-hidden="true">' . "\n";
+    echo '<meta itemprop="name" content="' . vs_e($title) . '">' . "\n";
+    if ($desc !== '') {
+        echo '<meta itemprop="description" content="' . vs_e($desc) . '">' . "\n";
+    }
+    if ($image !== '') {
+        echo '<link itemprop="image" href="' . vs_e(vs_seo_abs_url($image)) . '">' . "\n";
+        echo '<meta itemprop="image" content="' . vs_e(vs_seo_abs_url($image)) . '">' . "\n";
+    }
+    echo '<link itemprop="url" href="' . vs_e(vs_seo_abs_url($url)) . '">' . "\n";
+    echo '<meta itemprop="isPartOf" content="' . vs_e($name) . '">' . "\n";
+    echo '</div>' . "\n";
 }
 
 /**
@@ -1045,6 +1182,9 @@ function vs_frontend_page($pageKey, $pageTitle, array $pageData = array())
         $seoOpts = $pageData['seo'];
         unset($pageData['seo']);
     }
+    // 入口层未打包时补齐 keywords / image / site_name，避免社交只抓到 keywords
+    $seoOpts = vs_page_seo_pack($pageTitle, $seoOpts);
+    $pageData['pageSeo'] = $seoOpts;
 
     $extraCss = array();
     $extraJs = array();
