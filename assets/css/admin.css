@@ -8951,11 +8951,20 @@ select.vs-input.vs-select {
     background: linear-gradient(135deg, #f8fafc, #f1f5f9);
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+}
+#adminAboutPage .about-team-item--link {
+    cursor: pointer;
 }
 #adminAboutPage .about-team-item:hover {
     transform: translateY(-1px);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+#adminAboutPage .about-team-item--link:hover {
+    border-color: #cbd5e1;
+    background: #fff;
 }
 #adminAboutPage .about-team-avatar {
     width: 44px;
@@ -8974,6 +8983,10 @@ select.vs-input.vs-select {
     border: 1px solid #e2e8f0;
     background: #fff;
 }
+#adminAboutPage .about-team-meta {
+    min-width: 0;
+    flex: 1;
+}
 #adminAboutPage .about-team-name {
     font-size: 0.9375rem;
     font-weight: 600;
@@ -8983,16 +8996,17 @@ select.vs-input.vs-select {
     color: var(--vs-text-secondary, #6b7280);
     margin-top: 3px;
 }
-#adminAboutPage .about-team-site {
-    display: inline-block;
-    margin-top: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #2563eb;
-    text-decoration: none;
+#adminAboutPage .about-team-arrow {
+    color: #94a3b8;
+    display: inline-flex;
+    opacity: 0.65;
+    flex-shrink: 0;
+    transition: color 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
 }
-#adminAboutPage .about-team-site:hover {
-    text-decoration: underline;
+#adminAboutPage .about-team-item--link:hover .about-team-arrow {
+    color: #475569;
+    opacity: 1;
+    transform: translate(1px, -1px);
 }
 
 #adminAboutPage .about-link-list {

@@ -117,7 +117,14 @@ vs_admin_layout_start('关于', 'about');
             <div class="about-panel-body">
                 <div class="about-team-grid">
                     <?php foreach ($catalog['team'] as $member): ?>
-                        <div class="about-team-item">
+                        <?php
+                        $hasSite = !empty($member['site']);
+                        $teamTag = $hasSite ? 'a' : 'div';
+                        $teamAttrs = $hasSite
+                            ? ' href="' . vs_e($member['site']) . '" target="_blank" rel="noopener noreferrer" title="' . vs_e($member['name']) . '"'
+                            : '';
+                        ?>
+                        <<?php echo $teamTag; ?> class="about-team-item<?php echo $hasSite ? ' about-team-item--link' : ''; ?>"<?php echo $teamAttrs; ?>>
                             <?php if (!empty($member['avatar'])): ?>
                                 <img class="about-team-avatar about-team-avatar--img" src="<?php echo vs_e($member['avatar']); ?>" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer" decoding="async">
                             <?php else: ?>
@@ -127,16 +134,18 @@ vs_admin_layout_start('关于', 'about');
                                         : substr($member['name'], 0, 1));
                                 ?></div>
                             <?php endif; ?>
-                            <div>
+                            <div class="about-team-meta">
                                 <div class="about-team-name"><?php echo vs_e($member['name']); ?></div>
                                 <?php if (!empty($member['role'])): ?>
                                     <div class="about-team-role"><?php echo vs_e($member['role']); ?></div>
                                 <?php endif; ?>
-                                <?php if (!empty($member['site'])): ?>
-                                    <a class="about-team-site" href="<?php echo vs_e($member['site']); ?>" target="_blank" rel="noopener noreferrer">官网</a>
-                                <?php endif; ?>
                             </div>
-                        </div>
+                            <?php if ($hasSite): ?>
+                                <span class="about-team-arrow" aria-hidden="true">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+                                </span>
+                            <?php endif; ?>
+                        </<?php echo $teamTag; ?>>
                     <?php endforeach; ?>
                 </div>
             </div>
