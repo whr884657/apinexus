@@ -1,14 +1,12 @@
 {
-    "version": "10.5.0",
-    "title": "ApiNexus 10.5.0 积分搜索修复与接口 QPM",
+    "version": "10.5.1",
+    "title": "ApiNexus 10.5.1 修复前台接口列表内存溢出",
     "release_date": "2026-07-26",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "积分变动搜索改为 EXISTS，修复用户名/邮箱/类型文案搜不到",
-        "积分类型标签按种类配色（注册赠送、签到、API 调用等）",
-        "接口新增 QPM 每分钟上限：0 不限制；本地与代理共用守卫",
-        "默认主题详情页展示 QPM 与作者（头像+名链个人主页）",
-        "迁移 10.5.0.sql（api.qpm）；同步规范 §2.22 / E109"
+        "修复 formatForTheme 嵌套 findProfile 导致默认主题内存耗尽",
+        "作者信息仅详情页轻量查询；列表不再拉作者",
+        "缓存 hasAuditColumn 探测结果"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

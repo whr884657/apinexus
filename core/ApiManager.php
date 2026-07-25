@@ -79,13 +79,18 @@ class ApiManager
      */
     public static function hasAuditColumn()
     {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
         try {
             $pdo = Database::connect();
             $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('audit'));
-            return $col && $col->fetchColumn();
+            $ok = (bool) ($col && $col->fetchColumn());
         } catch (Exception $e) {
-            return false;
+            $ok = false;
         }
+        return $ok;
     }
 
     /**

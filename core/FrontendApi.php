@@ -13,9 +13,10 @@ class FrontendApi
      * 将库行转为前台主题用结构
      *
      * @param array $row
+     * @param bool  $withAuthor 仅详情需要；列表禁止拉取作者，避免 findProfile↔formatForTheme 递归爆内存
      * @return array|null
      */
-    public static function formatForTheme(array $row)
+    public static function formatForTheme(array $row, $withAuthor = false)
     {
         $name = trim((string) (isset($row['name']) ? $row['name'] : ''));
         if ($name === '') {
@@ -83,12 +84,12 @@ class FrontendApi
             ),
             'createtime'  => isset($row['createtime']) ? (string) $row['createtime'] : '',
             'params_list' => self::parseParamsList(isset($row['params']) ? (string) $row['params'] : ''),
-            'author'      => self::authorForTheme(isset($row['userid']) ? (int) $row['userid'] : 0),
+            'author'      => $withAuthor ? self::authorForTheme(isset($row['userid']) ? (int) $row['userid'] : 0) : null,
         );
     }
 
     /**
-     * 详情页作者卡片（无则 null）
+     * 详情页作者轻量卡（禁止走 findProfile，避免再拉接口列表形成递归）
      *
      * @param int $userId
      * @return array{id:int,username:string,avatar:string,profile_url:string}|null
@@ -96,19 +97,37 @@ class FrontendApi
     private static function authorForTheme($userId)
     {
         $userId = (int) $userId;
-        if ($userId <= 0 || !class_exists('FrontendContributor')) {
+        if ($userId <= 0 || !class_exists('UserRole') || !class_exists('Database')) {
             return null;
         }
-        $profile = FrontendContributor::findProfile($userId);
-        if (!is_array($profile) || empty($profile['id'])) {
-            return null;
+        static $cache = array();
+        if (array_key_exists($userId, $cache)) {
+            return $cache[$userId];
         }
-        return array(
-            'id'          => (int) $profile['id'],
-            'username'    => isset($profile['username']) ? (string) $profile['username'] : '',
-            'avatar'      => isset($profile['avatar']) ? (string) $profile['avatar'] : '',
-            'profile_url' => isset($profile['profile_url']) ? (string) $profile['profile_url'] : vs_profile_url($userId),
-        );
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT `id`, `username`, `avatar`, `role`, `status`'
+                . ' FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1'
+            );
+            $stmt->execute(array($userId));
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row || (int) $row['status'] !== 1) {
+                return $cache[$userId] = null;
+            }
+            if (UserRole::normalize(isset($row['role']) ? $row['role'] : '') !== UserRole::ROLE_DEVELOPER) {
+                return $cache[$userId] = null;
+            }
+            $avatar = isset($row['avatar']) ? trim((string) $row['avatar']) : '';
+            return $cache[$userId] = array(
+                'id'          => (int) $row['id'],
+                'username'    => isset($row['username']) ? (string) $row['username'] : '',
+                'avatar'      => $avatar,
+                'profile_url' => vs_profile_url($userId),
+            );
+        } catch (Exception $e) {
+            return $cache[$userId] = null;
+        }
     }
 
     /**
@@ -230,7 +249,7 @@ class FrontendApi
         if (!is_array($row)) {
             return null;
         }
-        return self::formatForTheme($row);
+        return self::formatForTheme($row, true);
     }
 
     /**

@@ -1,5 +1,15 @@
 {
     "versions": {
+        "10.5.1": {
+            "title": "ApiNexus 10.5.1 修复前台接口列表内存溢出",
+            "date": "2026-07-26",
+            "db_changes": false,
+            "changes": [
+                "修复 formatForTheme 嵌套 findProfile 导致默认主题内存耗尽",
+                "作者信息仅详情页轻量查询；列表不再拉作者",
+                "缓存 hasAuditColumn 探测结果"
+            ]
+        },
         "10.5.0": {
             "title": "ApiNexus 10.5.0 积分搜索修复与接口 QPM",
             "date": "2026-07-26",
