@@ -7,7 +7,8 @@
             "changes": [
                 "管理员控制台重做：KPI、7 日趋势、彩色 TOP10、系统概览、最近调用（含手机端）",
                 "数据大屏落地：实时 KPI、24h 趋势、中国/世界飞线地图、全屏与深浅色、轻量轮询",
-                "新增 DashboardStats 分层 Redis 缓存；路径改为 /admin/screen（废弃 data-screen.php）"
+                "新增 DashboardStats 分层 Redis 缓存；路径改为 /admin/screen（废弃 data-screen.php）",
+                "复查修复：24h 整点桶、7 日单次聚合、累计涨跌比与异常保底"
             ]
         },
         "10.6.1": {

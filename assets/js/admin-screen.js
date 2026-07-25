@@ -168,13 +168,15 @@
         }
 
         svg.onmousemove = function (e) {
-            var t = e.target.closest('[data-tip]');
             if (!tip) return;
+            var el = e.target;
+            if (el && el.nodeType === 3) el = el.parentElement;
+            var t = (el && typeof el.closest === 'function') ? el.closest('[data-tip]') : null;
             if (!t) {
                 tip.hidden = true;
                 return;
             }
-            tip.innerHTML = esc(t.getAttribute('data-tip') || '');
+            tip.textContent = t.getAttribute('data-tip') || '';
             tip.hidden = false;
             var rect = host.getBoundingClientRect();
             tip.style.left = (e.clientX - rect.left) + 'px';
@@ -399,7 +401,16 @@
             var live = res.live;
             renderClock(live.server_time);
             if (live.kpi) {
-                boot.kpi = Object.assign({}, boot.kpi || {}, live.kpi);
+                var merged = {};
+                var prev = boot.kpi || {};
+                var k;
+                for (k in prev) {
+                    if (Object.prototype.hasOwnProperty.call(prev, k)) merged[k] = prev[k];
+                }
+                for (k in live.kpi) {
+                    if (Object.prototype.hasOwnProperty.call(live.kpi, k)) merged[k] = live.kpi[k];
+                }
+                boot.kpi = merged;
             }
             if (live.current_rpm != null) boot.current_rpm = live.current_rpm;
             renderKpi(boot.kpi, boot.current_rpm);

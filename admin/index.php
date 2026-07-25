@@ -10,15 +10,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
     if ($action === 'refresh' || $action === 'snapshot') {
-        AjaxResponse::success('ok', array(
-            'snapshot' => DashboardStats::consoleSnapshot($action === 'refresh'),
-        ));
+        try {
+            AjaxResponse::success('ok', array(
+                'snapshot' => DashboardStats::consoleSnapshot($action === 'refresh'),
+            ));
+        } catch (Exception $e) {
+            AjaxResponse::error('统计暂时不可用，请稍后重试');
+        }
     }
     AjaxResponse::error('未知操作');
 }
 
 $mailEnabled = Config::isMailEnabled();
-$boot = DashboardStats::consoleSnapshot(false);
+try {
+    $boot = DashboardStats::consoleSnapshot(false);
+} catch (Exception $e) {
+    $boot = array(
+        'server_time'  => date('Y-m-d H:i:s'),
+        'weekday'      => '',
+        'kpi'          => array(),
+        'type_trend'   => array('labels' => array(), 'guest' => array(), 'key' => array(), 'points' => array()),
+        'rate_trend'   => array('labels' => array(), 'success' => array(), 'fail' => array()),
+        'top_apis'     => array(),
+        'sys_overview' => array(),
+        'recent'       => array(),
+    );
+}
 
 vs_admin_layout_start(
     '控制台',

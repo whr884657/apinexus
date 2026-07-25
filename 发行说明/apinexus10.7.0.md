@@ -12,3 +12,9 @@
 - 无数据库结构变更
 - 强刷后台静态资源（`admin-dashboard.css` / `admin-dashboard.js` / `admin-screen.js`）
 - 书签若指向旧 `/admin/data-screen` 请改为 `/admin/screen`
+
+## 同版本补丁（复查）
+
+- 近 24 小时趋势改为按整点时间桶聚合，修复跨日同小时叠算
+- 7 日趋势 / 火花图改为单次 SQL 聚合，降低大日志表超时风险
+- 累计调用涨跌比不再用 `max(1, …)` 扭曲分母；统计异常时页面保底不白屏

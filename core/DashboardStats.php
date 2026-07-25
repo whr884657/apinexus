@@ -111,6 +111,7 @@ class DashboardStats
             $apiCountWeek = self::countApisCreatedSince(date('Y-m-d 00:00:00', strtotime('-7 day')));
             $userCount = self::countUsers();
             $userToday = self::countUsersCreatedSince(date('Y-m-d 00:00:00'));
+            $spark7 = self::sparkFromDaily(7);
 
             $todayOk = (int) $okFail['ok'];
             $todayFail = (int) $okFail['fail'];
@@ -127,13 +128,13 @@ class DashboardStats
             return array(
                 'api_total'       => $apiCount,
                 'api_delta'       => $apiCountWeek,
-                'api_spark'       => self::sparkFromDaily(7),
+                'api_spark'       => $spark7,
                 'user_total'      => $userCount,
                 'user_delta'      => $userToday,
                 'user_spark'      => self::sparkFromUsers(7),
                 'today_calls'     => $today,
                 'today_delta'     => self::pctDelta($today, $yesterday),
-                'today_spark'     => self::sparkFromDaily(7),
+                'today_spark'     => $spark7,
                 'success_rate'    => $rate,
                 'success_delta'   => round($rate - $yRate, 2),
                 'fail_rate'       => $failRate,
@@ -141,13 +142,13 @@ class DashboardStats
                 'success_count'   => $todayOk,
                 'fail_count'      => $todayFail,
                 'total_calls'     => $total,
-                'total_delta'     => self::pctDelta($total, max(1, $weekAgoTotal)),
+                'total_delta'     => self::pctDelta($total, $weekAgoTotal),
             );
         });
     }
 
     /**
-     * 近 7 日：游客 / 密钥 / 积分
+     * 近 7 日：游客 / 密钥 / 积分（单次聚合，避免 7 次全表扫）
      *
      * @return array
      */
@@ -158,10 +159,11 @@ class DashboardStats
             $guest = array();
             $key = array();
             $points = array();
+            $byDay = self::typeCountsLastDays(7);
             for ($i = 6; $i >= 0; $i--) {
                 $day = date('Y-m-d', strtotime('-' . $i . ' day'));
                 $labels[] = self::weekdayLabel(strtotime($day));
-                $row = self::typeCountsForDay($day);
+                $row = isset($byDay[$day]) ? $byDay[$day] : array('guest' => 0, 'key' => 0, 'points' => 0);
                 $guest[] = (int) $row['guest'];
                 $key[] = (int) $row['key'];
                 $points[] = (int) $row['points'];
@@ -176,7 +178,7 @@ class DashboardStats
     }
 
     /**
-     * 近 7 日成功率 / 失败率
+     * 近 7 日成功率 / 失败率（单次聚合）
      *
      * @return array
      */
@@ -186,10 +188,11 @@ class DashboardStats
             $labels = array();
             $success = array();
             $fail = array();
+            $byDay = self::okFailLastDays(7);
             for ($i = 6; $i >= 0; $i--) {
                 $day = date('Y-m-d', strtotime('-' . $i . ' day'));
                 $labels[] = self::weekdayLabel(strtotime($day));
-                $of = self::okFailDay($day);
+                $of = isset($byDay[$day]) ? $byDay[$day] : array('ok' => 0, 'fail' => 0);
                 $t = max(1, (int) $of['ok'] + (int) $of['fail']);
                 $success[] = round(((int) $of['ok']) * 100 / $t, 2);
                 $fail[] = round(((int) $of['fail']) * 100 / $t, 2);
@@ -340,43 +343,47 @@ class DashboardStats
     }
 
     /**
-     * 近 24 小时按小时
+     * 近 24 小时按「整点桶」聚合（禁止只用 HOUR()，否则跨日同小时会叠在一起）
      *
      * @return array
      */
     private static function hourly24h()
     {
         return self::remember('hourly_24h', self::TTL_HOUR, function () {
-            $map = array_fill(0, 24, 0);
+            $nowHour = strtotime(date('Y-m-d H:00:00'));
+            $bucketStarts = array();
+            $labels = array();
+            $series = array_fill(0, 24, 0);
+            for ($i = 23; $i >= 0; $i--) {
+                $ts = $nowHour - ($i * 3600);
+                $bucketStarts[] = $ts;
+                $labels[] = $i === 0 ? '现在' : date('H:00', $ts);
+            }
             if (!ApiLogManager::tableReady()) {
-                return array('labels' => self::hourLabels(), 'series' => array_values($map));
+                return array('labels' => $labels, 'series' => $series);
             }
             try {
                 $pdo = Database::connect();
                 self::applyTimeout($pdo);
-                $sql = 'SELECT HOUR(`createtime`) AS h, COUNT(*) AS c
-                    FROM `' . Database::table('apilog') . '`
-                    WHERE `createtime` >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-                    GROUP BY HOUR(`createtime`)';
-                foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                    $h = (int) $r['h'];
-                    if ($h >= 0 && $h < 24) {
-                        $map[$h] = (int) $r['c'];
-                    }
+                $start = date('Y-m-d H:i:s', $bucketStarts[0]);
+                $stmt = $pdo->prepare(
+                    'SELECT DATE_FORMAT(`createtime`, \'%Y-%m-%d %H:00:00\') AS slot, COUNT(*) AS c
+                     FROM `' . Database::table('apilog') . '`
+                     WHERE `createtime` >= ?
+                     GROUP BY slot'
+                );
+                $stmt->execute(array($start));
+                $map = array();
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                    $map[(string) $r['slot']] = (int) $r['c'];
+                }
+                foreach ($bucketStarts as $idx => $ts) {
+                    $key = date('Y-m-d H:00:00', $ts);
+                    $series[$idx] = isset($map[$key]) ? (int) $map[$key] : 0;
                 }
             } catch (Exception $e) {
                 // ignore
             }
-            // 按「当前小时往前 24」重排为时间序
-            $nowH = (int) date('G');
-            $series = array();
-            $labels = array();
-            for ($i = 23; $i >= 0; $i--) {
-                $h = ($nowH - $i + 24) % 24;
-                $series[] = (int) $map[$h];
-                $labels[] = sprintf('%02d:00', $h);
-            }
-            $labels[count($labels) - 1] = '现在';
             return array('labels' => $labels, 'series' => $series);
         });
     }
@@ -595,38 +602,79 @@ class DashboardStats
     }
 
     /**
-     * @param string $day Y-m-d
-     * @return array{guest:int,key:int,points:int}
+     * @param int $days
+     * @return array<string,array{guest:int,key:int,points:int}>
      */
-    private static function typeCountsForDay($day)
+    private static function typeCountsLastDays($days)
     {
-        $empty = array('guest' => 0, 'key' => 0, 'points' => 0);
+        $days = max(1, min(31, (int) $days));
+        $out = array();
         if (!ApiLogManager::tableReady()) {
-            return $empty;
+            return $out;
         }
         try {
             $pdo = Database::connect();
             self::applyTimeout($pdo);
-            $start = $day . ' 00:00:00';
-            $end = $day . ' 23:59:59';
+            $start = date('Y-m-d 00:00:00', strtotime('-' . ($days - 1) . ' day'));
             $stmt = $pdo->prepare(
-                'SELECT
+                'SELECT DATE(`createtime`) AS d,
                     SUM(CASE WHEN `charged` = 1 THEN 1 ELSE 0 END) AS points_c,
                     SUM(CASE WHEN `charged` = 0 AND `apikey` <> \'\' THEN 1 ELSE 0 END) AS key_c,
                     SUM(CASE WHEN `charged` = 0 AND (`apikey` = \'\' OR `apikey` IS NULL) THEN 1 ELSE 0 END) AS guest_c
                  FROM `' . Database::table('apilog') . '`
-                 WHERE `createtime` >= ? AND `createtime` <= ?'
+                 WHERE `createtime` >= ?
+                 GROUP BY DATE(`createtime`)'
             );
-            $stmt->execute(array($start, $end));
-            $r = $stmt->fetch(PDO::FETCH_ASSOC);
-            return array(
-                'guest'  => (int) (isset($r['guest_c']) ? $r['guest_c'] : 0),
-                'key'    => (int) (isset($r['key_c']) ? $r['key_c'] : 0),
-                'points' => (int) (isset($r['points_c']) ? $r['points_c'] : 0),
-            );
+            $stmt->execute(array($start));
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $d = (string) $r['d'];
+                $out[$d] = array(
+                    'guest'  => (int) (isset($r['guest_c']) ? $r['guest_c'] : 0),
+                    'key'    => (int) (isset($r['key_c']) ? $r['key_c'] : 0),
+                    'points' => (int) (isset($r['points_c']) ? $r['points_c'] : 0),
+                );
+            }
         } catch (Exception $e) {
-            return $empty;
+            return array();
         }
+        return $out;
+    }
+
+    /**
+     * @param int $days
+     * @return array<string,array{ok:int,fail:int}>
+     */
+    private static function okFailLastDays($days)
+    {
+        $days = max(1, min(31, (int) $days));
+        $out = array();
+        if (!ApiLogManager::tableReady()) {
+            return $out;
+        }
+        try {
+            $pdo = Database::connect();
+            self::applyTimeout($pdo);
+            $start = date('Y-m-d 00:00:00', strtotime('-' . ($days - 1) . ' day'));
+            $stmt = $pdo->prepare(
+                'SELECT DATE(`createtime`) AS d,
+                    SUM(CASE WHEN `ok` = 1 THEN 1 ELSE 0 END) AS ok_c,
+                    SUM(CASE WHEN `ok` = 0 THEN 1 ELSE 0 END) AS fail_c
+                 FROM `' . Database::table('apilog') . '`
+                 WHERE `createtime` >= ?
+                 GROUP BY DATE(`createtime`)'
+            );
+            $stmt->execute(array($start));
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $d = (string) $r['d'];
+                $out[$d] = array(
+                    'ok'   => (int) (isset($r['ok_c']) ? $r['ok_c'] : 0),
+                    'fail' => (int) (isset($r['fail_c']) ? $r['fail_c'] : 0),
+                );
+            }
+        } catch (Exception $e) {
+            return array();
+        }
+        return $out;
     }
 
     /**
@@ -898,10 +946,31 @@ class DashboardStats
      */
     private static function sparkFromDaily($days)
     {
+        $days = max(1, min(31, (int) $days));
+        $map = array();
+        if (ApiLogManager::tableReady()) {
+            try {
+                $pdo = Database::connect();
+                self::applyTimeout($pdo);
+                $start = date('Y-m-d 00:00:00', strtotime('-' . ($days - 1) . ' day'));
+                $stmt = $pdo->prepare(
+                    'SELECT DATE(`createtime`) AS d, COUNT(*) AS c
+                     FROM `' . Database::table('apilog') . '`
+                     WHERE `createtime` >= ?
+                     GROUP BY DATE(`createtime`)'
+                );
+                $stmt->execute(array($start));
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                    $map[(string) $r['d']] = (int) $r['c'];
+                }
+            } catch (Exception $e) {
+                $map = array();
+            }
+        }
         $out = array();
         for ($i = $days - 1; $i >= 0; $i--) {
             $d = date('Y-m-d', strtotime('-' . $i . ' day'));
-            $out[] = self::countRange($d . ' 00:00:00', $d . ' 23:59:59');
+            $out[] = isset($map[$d]) ? (int) $map[$d] : 0;
         }
         return $out;
     }
@@ -954,18 +1023,6 @@ class DashboardStats
         $map = array('日', '一', '二', '三', '四', '五', '六');
         $n = (int) date('w', $ts === null ? time() : (int) $ts);
         return '周' . $map[$n];
-    }
-
-    /**
-     * @return string[]
-     */
-    private static function hourLabels()
-    {
-        $out = array();
-        for ($i = 0; $i < 24; $i++) {
-            $out[] = sprintf('%02d:00', $i);
-        }
-        return $out;
     }
 
     /**

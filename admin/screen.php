@@ -10,19 +10,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
     if ($action === 'refresh' || $action === 'snapshot') {
-        AjaxResponse::success('ok', array(
-            'snapshot' => DashboardStats::screenSnapshot($action === 'refresh'),
-        ));
+        try {
+            AjaxResponse::success('ok', array(
+                'snapshot' => DashboardStats::screenSnapshot($action === 'refresh'),
+            ));
+        } catch (Exception $e) {
+            AjaxResponse::error('统计暂时不可用，请稍后重试');
+        }
     }
     if ($action === 'live') {
-        AjaxResponse::success('ok', array(
-            'live' => DashboardStats::screenLiveTick(),
-        ));
+        try {
+            AjaxResponse::success('ok', array(
+                'live' => DashboardStats::screenLiveTick(),
+            ));
+        } catch (Exception $e) {
+            AjaxResponse::error('实时数据暂时不可用');
+        }
     }
     AjaxResponse::error('未知操作');
 }
 
-$boot = DashboardStats::screenSnapshot(false);
+try {
+    $boot = DashboardStats::screenSnapshot(false);
+} catch (Exception $e) {
+    $boot = array(
+        'server_time' => date('Y-m-d H:i:s'),
+        'kpi'         => array(),
+        'hourly'      => array('labels' => array(), 'series' => array()),
+        'top_apis'    => array(),
+        'geo'         => array('china' => array('cities' => array(), 'flows' => array()), 'world' => array('cities' => array(), 'flows' => array())),
+        'recent'      => array(),
+        'current_rpm' => 0,
+    );
+}
 
 vs_admin_layout_start(
     '数据大屏',
