@@ -4,7 +4,7 @@
  * 作用：ApiNexus 后台关于页面（产品信息 / 运行环境 / 链接 / 致谢）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
- *       开发维护 / 链接 / 技术栈由 AboutCatalog 云端优先加载。
+ *       开发维护 / 链接 / 技术栈由 AboutCatalog 本地优先加载（无本地文件再拉云端）。
  */
 
 require_once __DIR__ . '/init.php';
@@ -129,8 +129,11 @@ vs_admin_layout_start('关于', 'about');
                             <?php endif; ?>
                             <div>
                                 <div class="about-team-name"><?php echo vs_e($member['name']); ?></div>
-                                <?php if ($member['role'] !== ''): ?>
+                                <?php if (!empty($member['role'])): ?>
                                     <div class="about-team-role"><?php echo vs_e($member['role']); ?></div>
+                                <?php endif; ?>
+                                <?php if (!empty($member['site'])): ?>
+                                    <a class="about-team-site" href="<?php echo vs_e($member['site']); ?>" target="_blank" rel="noopener noreferrer">官网</a>
                                 <?php endif; ?>
                             </div>
                         </div>

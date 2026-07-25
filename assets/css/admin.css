@@ -8983,6 +8983,17 @@ select.vs-input.vs-select {
     color: var(--vs-text-secondary, #6b7280);
     margin-top: 3px;
 }
+#adminAboutPage .about-team-site {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #2563eb;
+    text-decoration: none;
+}
+#adminAboutPage .about-team-site:hover {
+    text-decoration: underline;
+}
 
 #adminAboutPage .about-link-list {
     display: flex;

@@ -1,9 +1,12 @@
 <?php
 /**
  * 文件：core/AboutCatalog.php
- * 作用：关于页「开发与维护 / 相关链接 / 技术基础」目录（云端优先，本地兜底）
+ * 作用：关于页「开发与维护 / 相关链接 / 技术基础」目录（本地优先，无本地文件再拉云端）
  *
- * 说明：数据文件路径故意深藏于 core 多层目录，便于随仓库更新同步；页面优先拉云端。
+ * 说明：
+ * - 数据文件深藏于 core 多层目录，随整包更新落到本地。
+ * - 顺序：本地 JSON →（仅本地缺失时）云端 raw → 内置默认。
+ * - 兼容：旧站无文件时靠云端/默认；新云端多字段/新人不会撑爆旧版 normalize。
  */
 
 class AboutCatalog
@@ -11,11 +14,11 @@ class AboutCatalog
     /** 相对 VS_ROOT 的隐蔽数据路径（勿在前台暴露） */
     const REL_PATH = 'core/vx/seed/r9/m2/catalog.json';
 
-    const CACHE_KEY = 'cache:about:catalog';
+    const CACHE_KEY = 'cache:about:catalog:v2';
     const CACHE_TTL = 1800;
 
     /**
-     * 加载目录：Redis 缓存 → 云端 raw → 本地文件 → 内置默认
+     * 加载目录：Redis 缓存 → 本地文件 → 云端 raw → 内置默认
      *
      * @return array{team:array,links:array,tech:array,note:string}
      */
@@ -34,23 +37,27 @@ class AboutCatalog
     }
 
     /**
+     * 本地优先；无本地文件才请求云端（兼容未带上 catalog 的旧包）
+     *
      * @return array
      */
     private static function fetchFresh()
     {
-        $cloud = self::fetchCloud();
-        if (is_array($cloud)) {
-            return $cloud;
-        }
         $local = self::loadLocal();
-        if (is_array($local)) {
+        if (is_array($local) && self::looksValid($local)) {
             return $local;
         }
+
+        $cloud = self::fetchCloud();
+        if (is_array($cloud) && self::looksValid($cloud)) {
+            return $cloud;
+        }
+
         return self::defaults();
     }
 
     /**
-     * 按更新源顺序拉取 raw catalog.json
+     * 按更新源顺序拉取 raw catalog.json（仅本地缺失时调用）
      *
      * @return array|null
      */
@@ -111,11 +118,11 @@ class AboutCatalog
     private static function loadLocal()
     {
         $path = VS_ROOT . '/' . str_replace('\\', '/', self::REL_PATH);
-        if (!is_file($path)) {
+        if (!is_file($path) || !is_readable($path)) {
             return null;
         }
         $raw = @file_get_contents($path);
-        if ($raw === false || $raw === '') {
+        if ($raw === false || trim($raw) === '') {
             return null;
         }
         $data = json_decode($raw, true);
@@ -132,6 +139,8 @@ class AboutCatalog
     }
 
     /**
+     * 宽松归一化：缺段用默认补齐；未知字段忽略；新人/新图标不导致页面报错
+     *
      * @param array $data
      * @return array{team:array,links:array,tech:array,note:string}
      */
@@ -144,10 +153,17 @@ class AboutCatalog
                 if (!is_array($row) || empty($row['name'])) {
                     continue;
                 }
+                $site = '';
+                if (!empty($row['site'])) {
+                    $site = self::safeHttpUrl((string) $row['site']);
+                } elseif (!empty($row['url'])) {
+                    $site = self::safeHttpUrl((string) $row['url']);
+                }
                 $team[] = array(
                     'name'   => (string) $row['name'],
                     'role'   => isset($row['role']) ? (string) $row['role'] : '',
                     'avatar' => isset($row['avatar']) ? (string) $row['avatar'] : '',
+                    'site'   => $site,
                 );
             }
         }
@@ -161,9 +177,13 @@ class AboutCatalog
                 if (!is_array($row) || empty($row['name']) || empty($row['href'])) {
                     continue;
                 }
+                $href = self::safeHttpUrl((string) $row['href']);
+                if ($href === '') {
+                    continue;
+                }
                 $links[] = array(
                     'name' => (string) $row['name'],
-                    'href' => (string) $row['href'],
+                    'href' => $href,
                     'icon' => isset($row['icon']) ? (string) $row['icon'] : '',
                 );
             }
@@ -178,9 +198,13 @@ class AboutCatalog
                 if (!is_array($row) || empty($row['name'])) {
                     continue;
                 }
+                $href = '';
+                if (!empty($row['href'])) {
+                    $href = self::safeHttpUrl((string) $row['href']);
+                }
                 $tech[] = array(
                     'name' => (string) $row['name'],
-                    'href' => isset($row['href']) ? (string) $row['href'] : '',
+                    'href' => $href,
                     'icon' => isset($row['icon']) ? (string) $row['icon'] : '',
                     'tone' => isset($row['tone']) ? (string) $row['tone'] : 'default',
                 );
@@ -204,6 +228,24 @@ class AboutCatalog
     }
 
     /**
+     * 仅允许 http(s) 外链，避免脏数据写入 href
+     *
+     * @param string $url
+     * @return string
+     */
+    private static function safeHttpUrl($url)
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+        if (!preg_match('#^https?://#i', $url)) {
+            return '';
+        }
+        return $url;
+    }
+
+    /**
      * @return array{team:array,links:array,tech:array,note:string}
      */
     private static function defaults()
@@ -212,8 +254,9 @@ class AboutCatalog
             'team' => array(
                 array(
                     'name'   => '尋鯨錄',
-                    'role'   => '作者 · 基础维护',
+                    'role'   => '开发 · 维护',
                     'avatar' => 'https://q1.qlogo.cn/g?b=qq&nk=3202089153&s=640',
+                    'site'   => 'https://www.xunjinlu.fun/',
                 ),
             ),
             'links' => array(
