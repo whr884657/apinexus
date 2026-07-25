@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.4.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.4.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.4.1（2026-07-26）
+
+**类型：** 小版本修复（设置 CSRF + 财务搜索）
+
+**变更说明：**
+
+- 修复系统设置「每日签到」保存未挂 AJAX，导致登录凭证失效
+- 订单管理、积分变动标题行增加搜索
 
 ### v10.4.0（2026-07-26）
 

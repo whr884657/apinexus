@@ -11,8 +11,11 @@
     var totalEl = document.getElementById('pointsTotal');
     var pageSizeEl = document.getElementById('pointsPageSize');
     var refreshBtn = document.getElementById('pointsRefreshBtn');
+    var searchInput = document.getElementById('pointsSearchInput');
+    var searchBtn = document.getElementById('pointsSearchBtn');
 
     var page = 1;
+    var q = '';
     var cursorStack = [0];
     var nextBeforeId = 0;
     var hasMore = false;
@@ -41,6 +44,8 @@
 
     function setControlsDisabled(disabled) {
         if (refreshBtn) refreshBtn.disabled = !!disabled;
+        if (searchBtn) searchBtn.disabled = !!disabled;
+        if (searchInput) searchInput.disabled = !!disabled;
         if (pageSizeEl) pageSizeEl.disabled = !!disabled;
     }
 
@@ -128,6 +133,7 @@
         fd.append('page', String(page));
         fd.append('pagesize', String(pagesize));
         fd.append('before_id', String(beforeId));
+        if (q) fd.append('q', q);
 
         var opts = listAbort ? { signal: listAbort.signal } : {};
         VS.postForm(fd, window.location.href, opts).then(function (data) {
@@ -147,7 +153,8 @@
             }
             var list = data.list || [];
             if (!list.length) {
-                body.innerHTML = '<p class="vs-empty vs-finance-empty">暂无积分变动</p>';
+                body.innerHTML = '<p class="vs-empty vs-finance-empty">'
+                    + (q ? '未找到匹配的积分变动' : '暂无积分变动') + '</p>';
             } else {
                 body.innerHTML = '<div class="vs-finance-table-wrap"><div class="vs-finance-grid">'
                     + headHtml() + list.map(rowHtml).join('') + '</div></div>';
@@ -175,6 +182,24 @@
             }
         });
     }
+
+    function runSearch() {
+        q = searchInput ? String(searchInput.value || '').trim() : '';
+        resetCursors();
+        load();
+    }
+    if (searchBtn) {
+        searchBtn.addEventListener('click', runSearch);
+    }
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                runSearch();
+            }
+        });
+    }
+
     if (pageSizeEl) {
         pageSizeEl.addEventListener('change', function () {
             resetCursors();

@@ -5212,6 +5212,32 @@ select.vs-input.vs-select {
     justify-content: flex-end;
     gap: 8px;
 }
+.vs-finance-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1 1 200px;
+}
+.vs-finance-search__input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 140px;
+    max-width: 280px;
+    height: 32px !important;
+    padding: 0 10px;
+    font-size: 12px;
+    box-sizing: border-box;
+}
+.vs-finance-search .vs-btn {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 14px !important;
+    font-size: 12px !important;
+    line-height: 30px !important;
+    box-sizing: border-box !important;
+}
 .vs-finance-filters {
     display: inline-flex;
     flex-wrap: wrap;
@@ -6206,6 +6232,13 @@ select.vs-input.vs-select {
     .vs-finance-head-actions {
         width: 100%;
         justify-content: flex-end;
+    }
+    .vs-finance-search {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+    .vs-finance-search__input {
+        max-width: none;
     }
     .vs-content__head:has(.vs-finance-head-actions--simple) {
         flex-wrap: nowrap !important;

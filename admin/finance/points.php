@@ -18,11 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
     $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
     $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
+    $q = isset($_POST['q']) ? trim((string) $_POST['q']) : '';
     $data = OrderManager::listPaged(array(
         'page'      => $page,
         'pagesize'  => $pagesize,
         'scope'     => 'ledger',
         'before_id' => $beforeId,
+        'q'         => $q,
     ));
     AjaxResponse::success('ok', $data);
 }
@@ -32,7 +34,12 @@ $headerActions = '';
 if ($tableReady) {
     ob_start();
     ?>
-    <div class="vs-finance-head-actions vs-finance-head-actions--simple" id="pointsToolbar">
+    <div class="vs-finance-head-actions" id="pointsToolbar">
+        <div class="vs-finance-search">
+            <input type="search" class="vs-input vs-finance-search__input" id="pointsSearchInput"
+                   placeholder="搜索用户 / 说明 / 接口 / 订单号…" autocomplete="off">
+            <button type="button" class="vs-btn vs-btn--primary" id="pointsSearchBtn">搜索</button>
+        </div>
         <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="pointsRefreshBtn">刷新</button>
     </div>
     <?php

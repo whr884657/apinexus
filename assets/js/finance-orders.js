@@ -11,9 +11,12 @@
     var totalEl = document.getElementById('ordersTotal');
     var pageSizeEl = document.getElementById('ordersPageSize');
     var refreshBtn = document.getElementById('orderRefreshBtn');
+    var searchInput = document.getElementById('ordersSearchInput');
+    var searchBtn = document.getElementById('ordersSearchBtn');
 
     var page = 1;
     var status = '';
+    var q = '';
     var cursorStack = [0];
     var nextBeforeId = 0;
     var hasMore = false;
@@ -42,6 +45,8 @@
 
     function setControlsDisabled(disabled) {
         if (refreshBtn) refreshBtn.disabled = !!disabled;
+        if (searchBtn) searchBtn.disabled = !!disabled;
+        if (searchInput) searchInput.disabled = !!disabled;
         if (pageSizeEl) pageSizeEl.disabled = !!disabled;
         document.querySelectorAll('.vs-finance-filter').forEach(function (btn) {
             btn.disabled = !!disabled;
@@ -131,6 +136,7 @@
         fd.append('pagesize', String(pagesize));
         fd.append('before_id', String(beforeId));
         if (status !== '') fd.append('status', status);
+        if (q) fd.append('q', q);
 
         var opts = listAbort ? { signal: listAbort.signal } : {};
         VS.postForm(fd, window.location.href, opts).then(function (data) {
@@ -150,7 +156,8 @@
             }
             var list = data.list || [];
             if (!list.length) {
-                body.innerHTML = '<p class="vs-empty vs-finance-empty">暂无充值订单</p>';
+                body.innerHTML = '<p class="vs-empty vs-finance-empty">'
+                    + (q ? '未找到匹配的订单' : '暂无充值订单') + '</p>';
             } else {
                 body.innerHTML = '<div class="vs-finance-table-wrap"><div class="vs-finance-grid">'
                     + headHtml() + list.map(rowHtml).join('') + '</div></div>';
@@ -191,6 +198,23 @@
             load();
         });
     });
+
+    function runSearch() {
+        q = searchInput ? String(searchInput.value || '').trim() : '';
+        resetCursors();
+        load();
+    }
+    if (searchBtn) {
+        searchBtn.addEventListener('click', runSearch);
+    }
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                runSearch();
+            }
+        });
+    }
 
     if (pageSizeEl) {
         pageSizeEl.addEventListener('change', function () {

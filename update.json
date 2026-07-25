@@ -1,13 +1,12 @@
 {
-    "version": "10.4.0",
-    "title": "ApiNexus 10.4.0 日志刷新与注册/签到积分",
+    "version": "10.4.1",
+    "title": "ApiNexus 10.4.1 签到设置 CSRF 与财务搜索",
     "release_date": "2026-07-26",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "日志查询刷新：invalidate 列表缓存并回第一页，展示当前库中最新日志",
-        "注册赠送积分：系统设置开关与数量；邮箱注册成功后入账 orders",
-        "每日签到：开关与随机积分区间；默认主题用户中心横幅；同日唯一；流水记「每日签到」",
-        "迁移 10.4.0.sql（checkin 表 + 配置项 + orders.kind 注释）；同步规范 §2.21 / E107"
+        "修复系统设置「每日签到」保存未挂 AJAX 导致 CSRF 失效",
+        "订单管理、积分变动增加搜索（订单号/用户/平台单号/说明/接口）",
+        "同步 E108 与订单积分查询规范"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

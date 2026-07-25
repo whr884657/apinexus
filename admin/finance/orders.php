@@ -19,12 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
     $status = array_key_exists('status', $_POST) && $_POST['status'] !== '' ? (int) $_POST['status'] : null;
     $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
+    $q = isset($_POST['q']) ? trim((string) $_POST['q']) : '';
     $data = OrderManager::listPaged(array(
         'page'      => $page,
         'pagesize'  => $pagesize,
         'status'    => $status,
         'scope'     => 'recharge',
         'before_id' => $beforeId,
+        'q'         => $q,
     ));
     AjaxResponse::success('ok', $data);
 }
@@ -35,6 +37,11 @@ if ($tableReady) {
     ob_start();
     ?>
     <div class="vs-finance-head-actions" id="ordersToolbar">
+        <div class="vs-finance-search">
+            <input type="search" class="vs-input vs-finance-search__input" id="ordersSearchInput"
+                   placeholder="搜索订单号 / 用户 / 平台单号…" autocomplete="off">
+            <button type="button" class="vs-btn vs-btn--primary" id="ordersSearchBtn">搜索</button>
+        </div>
         <div class="vs-finance-filters" role="group" aria-label="订单状态">
             <button type="button" class="vs-btn vs-btn--primary vs-finance-filter is-active" data-status="">全部</button>
             <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="0">待支付</button>

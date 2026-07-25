@@ -159,6 +159,7 @@ class RedisCache
             'scope'  => isset($opts['scope']) ? (string) $opts['scope'] : '',
             'userid' => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
             'status' => array_key_exists('status', $opts) ? $opts['status'] : null,
+            'q'      => isset($opts['q']) ? (string) $opts['q'] : '',
         );
         return self::KEY_ORDERS_RANGE_TOTAL_PREFIX . md5(json_encode($norm));
     }

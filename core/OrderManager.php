@@ -235,7 +235,7 @@ class OrderManager
     /**
      * 分页列表：每页条数 + keyset；附带筛选总数（短 TTL 缓存 COUNT，禁止深页 OFFSET）
      *
-     * @param array $opts userid?, status?, scope(recharge|ledger)?, pagesize, before_id
+     * @param array $opts userid?, status?, scope(recharge|ledger)?, q?, pagesize, before_id
      * @return array{list:array,total:int,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool}
      */
     public static function listPaged(array $opts = array())
@@ -245,6 +245,14 @@ class OrderManager
         $userid = isset($opts['userid']) ? (int) $opts['userid'] : 0;
         $status = array_key_exists('status', $opts) ? $opts['status'] : null;
         $scope = isset($opts['scope']) ? trim((string) $opts['scope']) : '';
+        $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
+        if (function_exists('mb_substr')) {
+            if (mb_strlen($q) > 64) {
+                $q = mb_substr($q, 0, 64);
+            }
+        } elseif (strlen($q) > 64) {
+            $q = substr($q, 0, 64);
+        }
         $beforeId = isset($opts['before_id']) ? (int) $opts['before_id'] : 0;
         if ($beforeId < 0) {
             $beforeId = 0;
@@ -287,6 +295,32 @@ class OrderManager
                 $bind[] = (int) $status;
             }
 
+            $needLedgerJoins = ($scope === 'ledger');
+            $searchApi = ($q !== '' && $needLedgerJoins);
+
+            if ($q !== '') {
+                $like = '%' . $q . '%';
+                $or = array(
+                    'o.`orderno` LIKE ?',
+                    'o.`tradeno` LIKE ?',
+                    'o.`remark` LIKE ?',
+                    'u.`username` LIKE ?',
+                );
+                $bind[] = $like;
+                $bind[] = $like;
+                $bind[] = $like;
+                $bind[] = $like;
+                if (ctype_digit($q)) {
+                    $or[] = 'o.`userid` = ?';
+                    $bind[] = (int) $q;
+                }
+                if ($searchApi) {
+                    $or[] = 'a.`name` LIKE ?';
+                    $bind[] = $like;
+                }
+                $where[] = '(' . implode(' OR ', $or) . ')';
+            }
+
             $countWhere = $where;
             $countBind = $bind;
             if ($beforeId > 0) {
@@ -295,7 +329,6 @@ class OrderManager
             }
             $sqlWhere = implode(' AND ', $where);
 
-            $needLedgerJoins = ($scope === 'ledger');
             $select = 'SELECT o.*, u.`username`';
             $from = '`' . self::table() . '` o LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = o.`userid`';
             if ($needLedgerJoins) {
@@ -347,7 +380,8 @@ class OrderManager
                 'scope'  => $scope,
                 'userid' => $userid,
                 'status' => $status,
-            ), $countWhere, $countBind);
+                'q'      => $q,
+            ), $countWhere, $countBind, $q !== '', $searchApi);
 
             return array(
                 'list'           => $list,
@@ -369,15 +403,24 @@ class OrderManager
      * @param array $cacheOpts
      * @param array $where
      * @param array $bind
+     * @param bool  $needUserJoin 搜索用户名时需 JOIN user
+     * @param bool  $needApiJoin  搜索接口名时需 JOIN api
      * @return int
      */
-    private static function countFilteredCached(array $cacheOpts, array $where, array $bind)
+    private static function countFilteredCached(array $cacheOpts, array $where, array $bind, $needUserJoin = false, $needApiJoin = false)
     {
-        $factory = function () use ($where, $bind) {
+        $factory = function () use ($where, $bind, $needUserJoin, $needApiJoin) {
             try {
                 $pdo = Database::connect();
                 self::applyQueryTimeout($pdo);
-                $sql = 'SELECT COUNT(*) FROM `' . self::table() . '` o WHERE ' . implode(' AND ', $where);
+                $from = '`' . self::table() . '` o';
+                if ($needUserJoin || $needApiJoin) {
+                    $from .= ' LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = o.`userid`';
+                }
+                if ($needApiJoin) {
+                    $from .= ' LEFT JOIN `' . Database::table('api') . '` a ON a.`id` = o.`apiid`';
+                }
+                $sql = 'SELECT COUNT(*) FROM ' . $from . ' WHERE ' . implode(' AND ', $where);
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($bind);
                 return max(0, (int) $stmt->fetchColumn());
