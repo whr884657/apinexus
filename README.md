@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.4.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.4.2-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.4.2（2026-07-26）
+
+**类型：** 小版本修复（财务搜索 + 积分页布局）
+
+**变更说明：**
+
+- 搜索支持邮箱、类型文案（注册赠送 / 签到等）
+- 积分变动刷新：手机与标题同行右侧；桌面紧跟搜索按钮
 
 ### v10.4.1（2026-07-26）
 

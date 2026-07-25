@@ -5238,6 +5238,19 @@ select.vs-input.vs-select {
     line-height: 30px !important;
     box-sizing: border-box !important;
 }
+/* 积分变动：桌面端 搜索框+搜索按钮+刷新 同一行（刷新在搜索后） */
+.vs-finance-head-actions--points {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+}
+.vs-finance-head-actions--points .vs-finance-search {
+    order: 1;
+    flex: 0 1 auto;
+}
+.vs-finance-head-actions--points .vs-finance-refresh {
+    order: 2;
+    flex: 0 0 auto;
+}
 .vs-finance-filters {
     display: inline-flex;
     flex-wrap: wrap;
@@ -6250,6 +6263,51 @@ select.vs-input.vs-select {
     }
     .vs-finance-head-actions--simple {
         width: auto;
+    }
+}
+
+/* 积分变动手机端：标题行右侧放刷新，下一行放搜索 */
+@media (max-width: 900px) {
+    .vs-content__head:has(#pointsToolbar) {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        grid-template-areas:
+            "title refresh"
+            "search search" !important;
+        align-items: center !important;
+        column-gap: 10px !important;
+        row-gap: 10px !important;
+    }
+    .vs-content__head:has(#pointsToolbar) .vs-content__title {
+        grid-area: title !important;
+        flex: none !important;
+        max-width: none !important;
+        margin: 0 !important;
+    }
+    .vs-content__head:has(#pointsToolbar) .vs-content__actions {
+        display: contents !important;
+        flex: none !important;
+        width: auto !important;
+        margin: 0 !important;
+    }
+    #pointsToolbar.vs-finance-head-actions--points {
+        display: contents !important;
+        width: auto !important;
+    }
+    #pointsToolbar .vs-finance-refresh {
+        grid-area: refresh !important;
+        order: unset !important;
+        justify-self: end !important;
+    }
+    #pointsToolbar .vs-finance-search {
+        grid-area: search !important;
+        order: unset !important;
+        width: 100% !important;
+        flex: 1 1 auto !important;
+        max-width: none !important;
+    }
+    #pointsToolbar .vs-finance-search__input {
+        max-width: none !important;
     }
 }
 

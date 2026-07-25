@@ -39,7 +39,7 @@ if ($tableReady) {
     <div class="vs-finance-head-actions" id="ordersToolbar">
         <div class="vs-finance-search">
             <input type="search" class="vs-input vs-finance-search__input" id="ordersSearchInput"
-                   placeholder="搜索订单号 / 用户 / 平台单号…" autocomplete="off">
+                   placeholder="搜索订单号 / 用户 / 邮箱 / 平台单号…" autocomplete="off">
             <button type="button" class="vs-btn vs-btn--primary" id="ordersSearchBtn">搜索</button>
         </div>
         <div class="vs-finance-filters" role="group" aria-label="订单状态">

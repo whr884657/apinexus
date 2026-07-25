@@ -305,7 +305,9 @@ class OrderManager
                     'o.`tradeno` LIKE ?',
                     'o.`remark` LIKE ?',
                     'u.`username` LIKE ?',
+                    'u.`email` LIKE ?',
                 );
+                $bind[] = $like;
                 $bind[] = $like;
                 $bind[] = $like;
                 $bind[] = $like;
@@ -313,10 +315,18 @@ class OrderManager
                 if (ctype_digit($q)) {
                     $or[] = 'o.`userid` = ?';
                     $bind[] = (int) $q;
+                } else {
+                    $or[] = 'CAST(o.`userid` AS CHAR) LIKE ?';
+                    $bind[] = $like;
                 }
                 if ($searchApi) {
                     $or[] = 'a.`name` LIKE ?';
                     $bind[] = $like;
+                }
+                foreach (self::kindSearchPairs($q) as $pair) {
+                    $or[] = '(o.`direct` = ? AND o.`kind` = ?)';
+                    $bind[] = $pair[0];
+                    $bind[] = $pair[1];
                 }
                 $where[] = '(' . implode(' OR ', $or) . ')';
             }
@@ -395,6 +405,59 @@ class OrderManager
         } catch (Exception $e) {
             return $empty;
         }
+    }
+
+    /**
+     * 按类型文案关键词匹配 direct+kind（如「注册」「注册赠送」「签到」）
+     *
+     * @param string $q
+     * @return array<int,array{0:int,1:int}>
+     */
+    private static function kindSearchPairs($q)
+    {
+        $q = trim((string) $q);
+        if ($q === '') {
+            return array();
+        }
+        $map = array(
+            array(self::DIRECT_INC, self::KIND_RECHARGE, array('充值', '用户充值')),
+            array(self::DIRECT_INC, self::KIND_ADMIN_ADD, array('加款', '管理员加款')),
+            array(self::DIRECT_INC, self::KIND_REGISTER, array('注册', '赠送', '注册赠送')),
+            array(self::DIRECT_INC, self::KIND_CHECKIN, array('签到', '每日签到')),
+            array(self::DIRECT_DEC, self::KIND_API, array('API', 'api', '调用', 'API调用', '接口')),
+            array(self::DIRECT_DEC, self::KIND_ADMIN_SUB, array('扣款', '管理员扣款')),
+            array(self::DIRECT_DEC, self::KIND_AI, array('AI', 'ai')),
+        );
+        $out = array();
+        $seen = array();
+        foreach ($map as $row) {
+            $hit = false;
+            foreach ($row[2] as $label) {
+                if ($q === $label) {
+                    $hit = true;
+                    break;
+                }
+                if (function_exists('mb_strpos')) {
+                    if (mb_strpos($label, $q) !== false || mb_strpos($q, $label) !== false) {
+                        $hit = true;
+                        break;
+                    }
+                } elseif (strpos($label, $q) !== false || strpos($q, $label) !== false) {
+                    $hit = true;
+                    break;
+                }
+            }
+            if (!$hit) {
+                continue;
+            }
+            $key = $row[0] . ':' . $row[1];
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out[] = array($row[0], $row[1]);
+        }
+        return $out;
     }
 
     /**
