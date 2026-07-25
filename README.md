@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.6.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.6.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -263,6 +263,16 @@ location / {
 
 ## 版本记录
 
+### v10.6.1（2026-07-26）
+
+**类型：** 小版本修复（日志时区 + 状态码说明 + Redis UI）
+
+**变更说明：**
+
+- 业务时区统一东八区，修复调用日志显示 UTC 偏移
+- 调用日志详情展示状态码含义（401/402/403/429 等）
+- Redis 业务项改回中文；连接状态格仅运行时长与版本
+
 ### v10.6.0（2026-07-26）
 
 **类型：** 中版本（列表 QPM + 积分大规模搜索 + Redis 业务缓存）
@@ -272,7 +282,7 @@ location / {
 - 管理端 / 用户端接口列表：`qpm>0` 显示 `QPM N/MIN`，为 0 不显示
 - 积分变动搜索：先解析用户/类型再精确过滤，避免大表 `%LIKE%` 超时「搜不到」
 - `orders.remark` 前缀索引；迁移 `install/migrations/10.6.0.sql`
-- Redis 业务缓存列出更多逻辑键；搜索放大镜对齐；去掉中文用途说明
+- Redis 业务缓存列出更多项；搜索放大镜对齐
 
 ### v10.5.1（2026-07-26）
 

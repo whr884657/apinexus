@@ -414,14 +414,9 @@
             text = '连接正常';
         }
         setField('status_text', text);
-        setField('status_text_cell', text);
         var badge = panel.querySelector('[data-redis-status-badge]');
         if (badge) {
             badge.className = 'redis-status-badge redis-status-badge--' + tone;
-        }
-        var dot = panel.querySelector('[data-redis-status-dot]');
-        if (dot) {
-            dot.className = 'redis-info-cell__status-dot redis-info-cell__status-dot--' + tone;
         }
         var notice = document.getElementById('redisStatusNotice');
         if (!notice) return;
@@ -493,7 +488,6 @@
         setField('redis_version', server.redis_version || '—');
         setField('used_memory_human', server.used_memory_human || '—');
         setField('used_memory_peak_human', server.used_memory_peak_human || '—');
-        setField('connected_clients', server.connected_clients != null ? String(server.connected_clients) : '—');
         syncUptime(server);
         setStatusUi(snapshot);
         renderBars(biz);

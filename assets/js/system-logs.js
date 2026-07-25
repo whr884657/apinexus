@@ -78,6 +78,18 @@
             + escapeHtml(row.httpcode) + '</span>';
     }
 
+    function httpcodeDisplay(row) {
+        var code = row && row.httpcode != null ? String(row.httpcode) : '';
+        var label = row && row.httpcode_label ? String(row.httpcode_label) : '';
+        if (code === '' && !label) {
+            return '—';
+        }
+        if (label) {
+            return code + ' · ' + label;
+        }
+        return code;
+    }
+
     function headHtml() {
         return '<div class="vs-log-row vs-log-row--head" aria-hidden="true">'
             + '<div class="vs-log-cell">接口</div>'
@@ -154,6 +166,8 @@
             + detailItem('接口 ID', row.apiid)
             + detailItem('类型', row.apitype_label)
             + detailItem('时间', row.createtime)
+            + detailItem('结果', row.ok_label)
+            + detailItem('状态码', httpcodeDisplay(row), true)
             + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '匿名'))
             + detailItem('密钥', row.apikey)
             + detailItem('扣费', (row.charged_label || '') + (row.charged ? (' · ' + row.cost) : ''))

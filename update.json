@@ -1,13 +1,12 @@
 {
-    "version": "10.6.0",
-    "title": "ApiNexus 10.6.0 列表 QPM 标签与积分大规模搜索",
+    "version": "10.6.1",
+    "title": "ApiNexus 10.6.1 日志时区与状态码说明",
     "release_date": "2026-07-26",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "管理端/用户端接口列表卡片：qpm>0 显示 QPM N/MIN，为 0 不显示",
-        "积分变动搜索改为先解析用户/类型再精确过滤，避免大表 LIKE 超时",
-        "orders 增加 remark 前缀索引；迁移 install/migrations/10.6.0.sql",
-        "Redis 业务缓存：列出更多逻辑键、搜索放大镜对齐、去掉中文用途说明"
+        "业务时区统一东八区：PHP Asia/Shanghai + MySQL session +08:00，修复调用日志时间偏移",
+        "调用日志详情增加状态码可读说明（401/402/403/429 等）",
+        "Redis 业务缓存项改回中文名称；连接状态格仅显示运行时长与版本"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

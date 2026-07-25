@@ -77,9 +77,25 @@ class Database
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ));
+            self::applySessionTimezone($pdo);
             return $pdo;
         } catch (PDOException $e) {
             throw new Exception('数据库连接失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 会话时区：东八区，保证 NOW()/CURDATE() 与 PHP Asia/Shanghai 一致
+     *
+     * @param PDO $pdo
+     * @return void
+     */
+    private static function applySessionTimezone(PDO $pdo)
+    {
+        try {
+            $pdo->exec("SET time_zone = '+08:00'");
+        } catch (Exception $e) {
+            // 部分托管环境禁止改 session time_zone，忽略以免阻断连接
         }
     }
 

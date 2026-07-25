@@ -7,6 +7,11 @@ defined('VS_ROOT') or define('VS_ROOT', dirname(__DIR__));
 
 require_once VS_ROOT . '/core/version.php';
 require_once VS_ROOT . '/core/helpers.php';
+
+// 业务时间统一东八区（与 MySQL session time_zone 对齐，避免日志/订单写成 UTC）
+if (function_exists('date_default_timezone_set')) {
+    @date_default_timezone_set('Asia/Shanghai');
+}
 require_once VS_ROOT . '/core/InstallChecker.php';
 require_once VS_ROOT . '/core/Database.php';
 require_once VS_ROOT . '/core/DatabaseInstaller.php';

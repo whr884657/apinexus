@@ -905,6 +905,9 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0;
 }
+#adminRedisPage .redis-info-grid--compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 #adminRedisPage .redis-info-cell {
     padding: 16px 18px;
     border-right: 1px solid var(--vs-border, #e5e7eb);
@@ -1041,9 +1044,8 @@
 }
 #adminRedisPage .redis-entry-name {
     font-weight: 600;
-    font-size: 0.8125rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    word-break: break-all;
+    font-size: 0.875rem;
+    word-break: normal;
 }
 #adminRedisPage .redis-entry-desc {
     margin-top: 2px;

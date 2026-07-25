@@ -132,6 +132,56 @@ class ApiLogManager
     }
 
     /**
+     * 状态码可读说明（与 ApiStats 守卫文案对齐；未知码给区间提示）
+     *
+     * @param int $code
+     * @return string
+     */
+    public static function httpcodeLabel($code)
+    {
+        $code = (int) $code;
+        $map = array(
+            200 => '调用成功',
+            201 => '已创建',
+            204 => '无内容',
+            301 => '永久重定向',
+            302 => '代理跳转成功',
+            304 => '未修改',
+            400 => '请求参数有误',
+            401 => '未提供密钥或密钥错误',
+            402 => '积分余额不足',
+            403 => '接口不可用或密钥已禁用',
+            404 => '接口不存在',
+            405 => '请求方法不允许',
+            408 => '请求超时',
+            429 => '请求过于频繁（QPM 限制）',
+            500 => '服务器内部错误',
+            502 => '上游网关错误',
+            503 => '服务暂不可用',
+            504 => '上游网关超时',
+        );
+        if (isset($map[$code])) {
+            return $map[$code];
+        }
+        if ($code <= 0) {
+            return '未记录状态码';
+        }
+        if ($code >= 200 && $code < 300) {
+            return '成功类响应';
+        }
+        if ($code >= 300 && $code < 400) {
+            return '重定向类响应';
+        }
+        if ($code >= 400 && $code < 500) {
+            return '客户端错误';
+        }
+        if ($code >= 500 && $code < 600) {
+            return '服务端错误';
+        }
+        return 'HTTP ' . $code;
+    }
+
+    /**
      * @param array $row
      * @return array|null
      */
@@ -149,39 +199,41 @@ class ApiLogManager
         $userid = (int) (isset($row['userid']) ? $row['userid'] : 0);
         $username = isset($row['username']) ? trim((string) $row['username']) : '';
         $iploc = isset($row['iploc']) ? trim((string) $row['iploc']) : '';
+        $httpLabel = self::httpcodeLabel($httpcode);
 
         return array(
-            'id'            => (int) (isset($row['id']) ? $row['id'] : 0),
-            'apiid'         => (int) (isset($row['apiid']) ? $row['apiid'] : 0),
-            'apiname'       => isset($row['apiname']) ? (string) $row['apiname'] : '',
-            'apitype'       => $apitype,
-            'apitype_label' => $apitype === 1 ? '代理' : '本地',
-            'userid'        => $userid,
-            'username'      => $username,
-            'user_label'    => $userid > 0
+            'id'             => (int) (isset($row['id']) ? $row['id'] : 0),
+            'apiid'          => (int) (isset($row['apiid']) ? $row['apiid'] : 0),
+            'apiname'        => isset($row['apiname']) ? (string) $row['apiname'] : '',
+            'apitype'        => $apitype,
+            'apitype_label'  => $apitype === 1 ? '代理' : '本地',
+            'userid'         => $userid,
+            'username'       => $username,
+            'user_label'     => $userid > 0
                 ? ($username !== '' ? $username : ('用户 #' . $userid))
                 : '匿名',
-            'apikey'        => $apikey,
-            'method'        => $method,
-            'method_class'  => self::methodClass($method),
-            'ip'            => isset($row['ip']) ? (string) $row['ip'] : '',
-            'iploc'         => $iploc,
-            'host'          => isset($row['host']) ? (string) $row['host'] : '',
-            'path'          => isset($row['path']) ? (string) $row['path'] : '',
-            'url'           => isset($row['url']) ? (string) $row['url'] : '',
-            'referer'       => isset($row['referer']) ? (string) $row['referer'] : '',
-            'origin'        => isset($row['origin']) ? (string) $row['origin'] : '',
-            'domain'        => isset($row['domain']) ? (string) $row['domain'] : '',
-            'ua'            => isset($row['ua']) ? (string) $row['ua'] : '',
-            'ok'            => $ok ? 1 : 0,
-            'ok_label'      => $ok ? '成功' : '失败',
-            'ok_class'      => $ok ? 'is-ok' : 'is-fail',
-            'httpcode'      => $httpcode,
-            'http_class'    => self::httpClass($httpcode),
-            'charged'       => $charged ? 1 : 0,
-            'charged_label' => $charged ? '已扣费' : '未扣费',
-            'cost'          => number_format((float) (isset($row['cost']) ? $row['cost'] : 0), 4, '.', ''),
-            'createtime'    => isset($row['createtime']) ? (string) $row['createtime'] : '',
+            'apikey'         => $apikey,
+            'method'         => $method,
+            'method_class'   => self::methodClass($method),
+            'ip'             => isset($row['ip']) ? (string) $row['ip'] : '',
+            'iploc'          => $iploc,
+            'host'           => isset($row['host']) ? (string) $row['host'] : '',
+            'path'           => isset($row['path']) ? (string) $row['path'] : '',
+            'url'            => isset($row['url']) ? (string) $row['url'] : '',
+            'referer'        => isset($row['referer']) ? (string) $row['referer'] : '',
+            'origin'         => isset($row['origin']) ? (string) $row['origin'] : '',
+            'domain'         => isset($row['domain']) ? (string) $row['domain'] : '',
+            'ua'             => isset($row['ua']) ? (string) $row['ua'] : '',
+            'ok'             => $ok ? 1 : 0,
+            'ok_label'       => $ok ? '成功' : '失败',
+            'ok_class'       => $ok ? 'is-ok' : 'is-fail',
+            'httpcode'       => $httpcode,
+            'httpcode_label' => $httpLabel,
+            'http_class'     => self::httpClass($httpcode),
+            'charged'        => $charged ? 1 : 0,
+            'charged_label'  => $charged ? '已扣费' : '未扣费',
+            'cost'           => number_format((float) (isset($row['cost']) ? $row['cost'] : 0), 4, '.', ''),
+            'createtime'     => isset($row['createtime']) ? (string) $row['createtime'] : '',
         );
     }
 

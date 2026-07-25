@@ -214,25 +214,14 @@ vs_admin_layout_start(
                 <span data-redis-field="status_text"><?php echo vs_e($statusText); ?></span>
             </span>
         </div>
-        <div class="redis-info-grid">
-            <div class="redis-info-cell">
-                <div class="redis-info-cell__label">状态</div>
-                <div class="redis-info-cell__value redis-info-cell__value--status">
-                    <span class="redis-info-cell__status-dot redis-info-cell__status-dot--<?php echo vs_e($statusTone); ?>" data-redis-status-dot></span>
-                    <span data-redis-field="status_text_cell"><?php echo vs_e($statusText); ?></span>
-                </div>
-            </div>
-            <div class="redis-info-cell">
-                <div class="redis-info-cell__label">版本</div>
-                <div class="redis-info-cell__value" data-redis-field="redis_version"><?php echo vs_e(!empty($server['redis_version']) ? $server['redis_version'] : '—'); ?></div>
-            </div>
+        <div class="redis-info-grid redis-info-grid--compact">
             <div class="redis-info-cell">
                 <div class="redis-info-cell__label">运行时长</div>
                 <div class="redis-info-cell__value" data-redis-field="uptime_human" data-uptime-seconds="<?php echo (int) (isset($server['uptime_seconds']) ? $server['uptime_seconds'] : 0); ?>"><?php echo vs_e(!empty($server['uptime_human']) ? $server['uptime_human'] : '—'); ?></div>
             </div>
             <div class="redis-info-cell">
-                <div class="redis-info-cell__label">连接数</div>
-                <div class="redis-info-cell__value" data-redis-field="connected_clients"><?php echo vs_e(isset($server['connected_clients']) ? (string) (int) $server['connected_clients'] : '—'); ?></div>
+                <div class="redis-info-cell__label">版本</div>
+                <div class="redis-info-cell__value" data-redis-field="redis_version"><?php echo vs_e(!empty($server['redis_version']) ? $server['redis_version'] : '—'); ?></div>
             </div>
         </div>
     </section>

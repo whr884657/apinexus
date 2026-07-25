@@ -245,7 +245,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
 | `RedisCache.php` | 业务数据缓存（前台/公开列表遗留键 + apilog + orders 窗总数等）；监控页展示逻辑键名（v10.6.0） |
 | `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`detailEnabled()` 控制是否写详细日志 |
-| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0） |
+| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0）；业务时区东八区（v10.6.1） |
 | `PointsManager.php` | 余额读写、扣费、充值完成/取消、`giftOnRegister` / `checkin`；列表走 OrderManager |
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（条数可配）、计划任务密钥 |
