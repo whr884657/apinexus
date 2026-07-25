@@ -534,7 +534,7 @@ class CommentManager
             $stmt = $pdo->prepare(
                 'SELECT * FROM `' . self::table() . '`
                  WHERE `contentid` = ? AND `status` = ?
-                 ORDER BY `ispinned` DESC, `id` ASC'
+                 ORDER BY `ispinned` DESC, `id` DESC'
             );
             $stmt->execute(array($contentid, self::STATUS_APPROVED));
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

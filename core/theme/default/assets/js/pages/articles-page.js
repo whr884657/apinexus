@@ -101,7 +101,7 @@
                 + '<span class="article-cmt-ref__text">' + esc(c.parent.excerpt || '') + '</span></button>';
         }
         var replyHtml = c.reply
-            ? '<div class="article-cmt-admin-reply"><span class="article-cmt-admin-reply__label">作者回复</span>' + nl2br(c.reply) + '</div>'
+            ? '<div class="article-cmt-admin-reply"><span class="article-cmt-admin-reply__label">管理员回复</span>' + nl2br(c.reply) + '</div>'
             : '';
         var excerpt = (c.body || '').replace(/\s+/g, ' ').slice(0, 80);
         return '<div class="article-cmt-item' + pin + '" data-cmt-id="' + esc(c.id) + '" id="cmt-' + esc(c.id) + '">'

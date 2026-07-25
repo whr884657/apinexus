@@ -163,6 +163,8 @@ class RedisService
                 'uptime_seconds' => 0,
                 'uptime_human' => '',
                 'used_memory_human' => '',
+                'used_memory_peak_human' => '',
+                'connected_clients' => 0,
             ),
             'collected_at' => date('Y-m-d H:i:s'),
         );
@@ -190,6 +192,8 @@ class RedisService
                     'uptime_seconds' => $uptimeSec,
                     'uptime_human' => self::formatUptime($uptimeSec),
                     'used_memory_human' => self::infoValue($info, 'used_memory_human'),
+                    'used_memory_peak_human' => self::infoValue($info, 'used_memory_peak_human'),
+                    'connected_clients' => (int) self::infoValue($info, 'connected_clients', '0'),
                 );
 
                 $snapshot['business']['cache_enabled'] = true;

@@ -832,6 +832,269 @@
     }
 }
 
+/* ---- Redis 管理页重设计 (v10.3.0) ---- */
+#adminRedisPage {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+#adminRedisPage .admin-redis-notice { margin: 0; }
+#adminRedisPage .redis-panel {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+#adminRedisPage .redis-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--vs-border, #e5e7eb);
+}
+#adminRedisPage .redis-panel__head--stack {
+    flex-direction: column;
+    align-items: stretch;
+}
+#adminRedisPage .redis-panel__head-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+#adminRedisPage .redis-panel__title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--vs-text, #0f172a);
+}
+#adminRedisPage .redis-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+#adminRedisPage .redis-status-badge__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+#adminRedisPage .redis-status-badge--online {
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+}
+#adminRedisPage .redis-status-badge--offline,
+#adminRedisPage .redis-status-badge--danger {
+    color: #b45309;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+}
+#adminRedisPage .redis-status-badge--danger {
+    color: #b91c1c;
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+#adminRedisPage .redis-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+}
+#adminRedisPage .redis-info-cell {
+    padding: 16px 18px;
+    border-right: 1px solid var(--vs-border, #e5e7eb);
+    min-width: 0;
+}
+#adminRedisPage .redis-info-cell:last-child { border-right: none; }
+#adminRedisPage .redis-info-cell__label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 6px;
+}
+#adminRedisPage .redis-info-cell__value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--vs-text, #0f172a);
+    font-variant-numeric: tabular-nums;
+    word-break: break-word;
+}
+#adminRedisPage .redis-info-cell__value--status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9375rem;
+}
+#adminRedisPage .redis-info-cell__status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+    flex-shrink: 0;
+}
+#adminRedisPage .redis-info-cell__status-dot--online { background: #10b981; }
+#adminRedisPage .redis-info-cell__status-dot--offline { background: #f59e0b; }
+#adminRedisPage .redis-info-cell__status-dot--danger { background: #ef4444; }
+#adminRedisPage .redis-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+#adminRedisPage .redis-muted { color: #94a3b8; font-size: 0.8125rem; }
+#adminRedisPage .redis-mem-layout {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    padding: 18px;
+}
+#adminRedisPage .redis-overview-donut {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    width: min(220px, 100%);
+}
+#adminRedisPage .redis-mem-bars {
+    flex: 1;
+    min-width: 0;
+}
+#adminRedisPage .redis-mem-bars__title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--vs-text, #0f172a);
+}
+#adminRedisPage .redis-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 0;
+}
+#adminRedisPage .redis-bar-label {
+    width: 72px;
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+#adminRedisPage .redis-bar-track {
+    flex: 1;
+    height: 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+#adminRedisPage .redis-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.45s ease;
+    min-width: 0;
+}
+#adminRedisPage .redis-bar-fill--hit { background: #10b981; }
+#adminRedisPage .redis-bar-fill--miss { background: #cbd5e1; }
+#adminRedisPage .redis-bar-fill--cache { background: #3b82f6; }
+#adminRedisPage .redis-bar-fill--rate { background: #fbbf24; }
+#adminRedisPage .redis-bar-fill--mem { background: #64748b; }
+#adminRedisPage .redis-bar-value {
+    width: 88px;
+    flex-shrink: 0;
+    text-align: right;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--vs-text, #0f172a);
+}
+#adminRedisPage .vs-redis-charts {
+    margin-top: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+#adminRedisPage .redis-entry-search { width: 100%; max-width: 360px; }
+#adminRedisPage .redis-entry-search .vs-search-bar__input-wrap { width: 100%; max-width: none; }
+#adminRedisPage .redis-entry-name { font-weight: 600; font-size: 0.875rem; }
+#adminRedisPage .redis-entry-desc {
+    margin-top: 2px;
+    font-size: 0.75rem;
+    color: #64748b;
+    line-height: 1.45;
+}
+#adminRedisPage .redis-entry-cards {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+}
+#adminRedisPage .redis-entry-card {
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+#adminRedisPage .redis-entry-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+#adminRedisPage .redis-entry-card__title {
+    font-weight: 700;
+    font-size: 0.9375rem;
+}
+#adminRedisPage .redis-entry-card__desc {
+    font-size: 0.8125rem;
+    color: #64748b;
+    line-height: 1.5;
+}
+#adminRedisPage .redis-entry-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+#adminRedisPage .redis-entry-card__meta strong { color: #0f172a; }
+#adminRedisPage .redis-entry-table-wrap { padding: 0 0 4px; }
+#adminRedisPage .vs-info-grid { padding: 14px 18px 18px; }
+@media (min-width: 769px) {
+    #adminRedisPage .redis-entry-table-wrap { display: block; }
+    #adminRedisPage .redis-entry-cards { display: none !important; }
+}
+@media (max-width: 900px) {
+    #adminRedisPage .redis-info-grid { grid-template-columns: 1fr 1fr; }
+    #adminRedisPage .redis-info-cell:nth-child(2n) { border-right: none; }
+    #adminRedisPage .redis-info-cell {
+        border-bottom: 1px solid var(--vs-border, #e5e7eb);
+    }
+    #adminRedisPage .redis-info-cell:nth-last-child(-n+2) { border-bottom: none; }
+}
+@media (max-width: 768px) {
+    #adminRedisPage .redis-mem-layout {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        padding: 14px;
+    }
+    #adminRedisPage .redis-overview-donut { width: 100%; }
+    #adminRedisPage .redis-bar-label { width: 64px; }
+    #adminRedisPage .redis-bar-value { width: 72px; }
+    #adminRedisPage .vs-redis-charts {
+        grid-template-columns: 1fr;
+    }
+    #adminRedisPage .redis-entry-table-wrap { display: none !important; }
+    #adminRedisPage .redis-entry-cards { display: flex !important; }
+    #adminRedisPage .redis-entry-search { max-width: none; }
+    #adminRedisPage .redis-panel__head { padding: 12px 14px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .vs-redis-donut-seg,
     .vs-redis-chart-card,

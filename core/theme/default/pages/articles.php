@@ -143,7 +143,7 @@ if ($articleId > 0) {
                                 <div class="article-cmt-body"><?php echo $bodyHtml; ?></div>
                                 <?php if (!empty($c['reply'])): ?>
                                     <div class="article-cmt-admin-reply">
-                                        <span class="article-cmt-admin-reply__label">作者回复</span>
+                                        <span class="article-cmt-admin-reply__label">管理员回复</span>
                                         <?php echo nl2br(vs_e($c['reply']), false); ?>
                                     </div>
                                 <?php endif; ?>
