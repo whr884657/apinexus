@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.6.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.7.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -34,7 +34,7 @@
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**；首页「累计调用」可在主题设置中选完整数字或单位转换（v5.7.0+）
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - **友情链接 / 合作伙伴（v5.0+）**：共用表 `link`；友链可审核与禁用；合作伙伴管理员直加（编辑/启禁）；默认主题首页合作伙伴区读库展示
-- 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
+- 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）；控制台 / 大屏含 KPI·趋势·飞线地图（v10.7.0）
 - 用户中心侧边栏：控制台、API 管理（仅开发者，可投稿）、**令牌管理**（创建/重置/禁用，每账号最多 3 个）、积分变动、接口列表、账号设置（部分为占位页）
 - **用户角色**：普通用户（调用全站接口、管理令牌）/ 开发者（可进入 API 管理提交接口待审）；注册页横条分段选择身份，管理员可转换身份
 - 用户管理：列表查看、搜索、封禁/解封/删除、身份转换（AJAX 无整页刷新）
@@ -134,8 +134,8 @@ ApiNexus/
 │   ├── content/                # 内容运营（占位）
 │   ├── finance/                # 交易财务（支付配置/订单/积分）
 │   ├── system/                 # 系统管理扩展（日志等）
-│   ├── index.php               # 控制台
-│   ├── data-screen.php         # 数据大屏（占位）
+│   ├── index.php               # 控制台（KPI / 趋势 / TOP）
+│   ├── screen.php              # 数据大屏（飞线地图 / 实时日志）
 │   ├── users.php               # 用户管理
 │   ├── login.php / forgot.php
 │   ├── account.php             # 账号设置
@@ -262,6 +262,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.7.0（2026-07-26）
+
+**类型：** 中版本（控制台 + 数据大屏）
+
+**变更说明：**
+
+- 管理员控制台重做：KPI、7 日趋势、彩色 TOP10、系统概览、最近调用（含手机端）
+- 数据大屏落地：实时 KPI、24h 趋势、中国/世界飞线地图、全屏与深浅色、轻量轮询
+- 新增 `DashboardStats` 分层 Redis 缓存；路径改为 `/admin/screen`
 
 ### v10.6.1（2026-07-26）
 

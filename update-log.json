@@ -1,5 +1,15 @@
 {
     "versions": {
+        "10.7.0": {
+            "title": "ApiNexus 10.7.0 控制台与数据大屏",
+            "date": "2026-07-26",
+            "db_changes": false,
+            "changes": [
+                "管理员控制台重做：KPI、7 日趋势、彩色 TOP10、系统概览、最近调用（含手机端）",
+                "数据大屏落地：实时 KPI、24h 趋势、中国/世界飞线地图、全屏与深浅色、轻量轮询",
+                "新增 DashboardStats 分层 Redis 缓存；路径改为 /admin/screen（废弃 data-screen.php）"
+            ]
+        },
         "10.6.1": {
             "title": "ApiNexus 10.6.1 日志时区与状态码说明",
             "date": "2026-07-26",

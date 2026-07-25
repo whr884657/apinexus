@@ -21,10 +21,10 @@ function vs_admin_menu_groups()
             'url'   => '/admin/index',
         ),
         array(
-            'id'    => 'data-screen',
+            'id'    => 'screen',
             'title' => '数据大屏',
             'icon'  => 'ai',
-            'url'   => '/admin/data-screen',
+            'url'   => '/admin/screen',
         ),
         array(
             'id'       => 'api',

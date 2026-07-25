@@ -1,0 +1,14 @@
+# ApiNexus 10.7.0
+
+## 本版要点
+
+- **控制台重做**：KPI（接口/用户/今日调用/成功率）、近 7 日类型与成功率趋势、彩色 TOP10、系统概览、最近调用筛选；适配手机端
+- **数据大屏落地**：实时 KPI、近 24 小时调用趋势、中国/世界示意飞线地图、接口 TOP、滚动日志；支持全屏与深浅色；约 5 秒轻量轮询
+- **性能**：`DashboardStats` + Redis 分层 TTL，避免每次打开/轮询扫爆 `apilog`
+- **路径**：数据大屏改为 `/admin/screen`（文件 `screen.php`）；旧 `data-screen.php` 升级时自动清理
+
+## 升级注意
+
+- 无数据库结构变更
+- 强刷后台静态资源（`admin-dashboard.css` / `admin-dashboard.js` / `admin-screen.js`）
+- 书签若指向旧 `/admin/data-screen` 请改为 `/admin/screen`

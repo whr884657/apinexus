@@ -1,0 +1,283 @@
+/**
+ * 文件：assets/js/admin-dashboard.js
+ * 作用：管理员控制台渲染（KPI / 趋势 / TOP10 / 概览 / 最近调用）
+ */
+(function () {
+    'use strict';
+
+    var page = document.getElementById('adminDashPage');
+    if (!page || !window.VS) return;
+
+    var BAR_COLORS = ['#2563eb', '#06b6d4', '#8b5cf6', '#f59e0b', '#10b981', '#ec4899', '#3b82f6', '#14b8a6', '#a855f7', '#fb923c'];
+    var filter = 'all';
+    var boot = {};
+
+    try {
+        boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
+    } catch (e) {
+        boot = {};
+    }
+
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function fmtNum(n) {
+        n = parseInt(n, 10) || 0;
+        return n.toLocaleString('zh-CN');
+    }
+
+    function deltaHtml(v, suffix) {
+        var n = parseFloat(v);
+        if (isNaN(n)) n = 0;
+        var up = n >= 0;
+        var cls = up ? 'dash-kpi__delta--up' : 'dash-kpi__delta--down';
+        var sign = up ? '+' : '';
+        return '<span class="dash-kpi__delta ' + cls + '">' + sign + esc(String(n)) + esc(suffix || '') + '</span>';
+    }
+
+    function sparkSvg(values, color) {
+        values = Array.isArray(values) ? values : [];
+        if (!values.length) values = [0];
+        var w = 120, h = 36, pad = 2;
+        var max = Math.max.apply(null, values.concat([1]));
+        var min = Math.min.apply(null, values);
+        var span = Math.max(1, max - min);
+        var pts = values.map(function (v, i) {
+            var x = pad + (i * (w - pad * 2)) / Math.max(1, values.length - 1);
+            var y = h - pad - ((v - min) / span) * (h - pad * 2);
+            return x.toFixed(1) + ',' + y.toFixed(1);
+        }).join(' ');
+        var area = pad + ',' + (h - pad) + ' ' + pts + ' ' + (w - pad) + ',' + (h - pad);
+        return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true">'
+            + '<polygon points="' + area + '" fill="' + color + '" opacity="0.12"></polygon>'
+            + '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.8"></polyline>'
+            + '</svg>';
+    }
+
+    function lineChart(el, labels, seriesList, opts) {
+        if (!el) return;
+        opts = opts || {};
+        var w = 560, h = 220, L = 42, R = 12, T = 16, B = 28;
+        var all = [];
+        seriesList.forEach(function (s) { all = all.concat(s.data || []); });
+        var max = Math.max.apply(null, all.concat([1]));
+        var min = opts.min != null ? opts.min : Math.min.apply(null, all.concat([0]));
+        if (opts.fixedMin != null) min = opts.fixedMin;
+        if (opts.fixedMax != null) max = opts.fixedMax;
+        var span = Math.max(0.0001, max - min);
+        var n = Math.max(1, (labels || []).length);
+        function xAt(i) { return L + (i * (w - L - R)) / Math.max(1, n - 1); }
+        function yAt(v) { return T + (1 - (v - min) / span) * (h - T - B); }
+        var grid = '';
+        for (var g = 0; g < 4; g++) {
+            var gy = T + g * (h - T - B) / 3;
+            grid += '<line x1="' + L + '" y1="' + gy + '" x2="' + (w - R) + '" y2="' + gy + '" stroke="#e5e7eb" stroke-width="1"/>';
+        }
+        var paths = seriesList.map(function (s) {
+            var d = (s.data || []).map(function (v, i) {
+                return (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(v).toFixed(1);
+            }).join(' ');
+            var dash = s.dashed ? ' stroke-dasharray="5 4"' : '';
+            return '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="2"' + dash + '/>';
+        }).join('');
+        var xLabels = '';
+        (labels || []).forEach(function (lb, i) {
+            if (n > 8 && i % 2 === 1 && i !== n - 1) return;
+            xLabels += '<text x="' + xAt(i) + '" y="' + (h - 8) + '" text-anchor="middle" fill="#94a3b8" font-size="11">' + esc(lb) + '</text>';
+        });
+        el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" role="img">' + grid + paths + xLabels + '</svg>';
+    }
+
+    function renderKpi(kpi) {
+        kpi = kpi || {};
+        var grid = document.getElementById('dashKpiGrid');
+        if (!grid) return;
+        var cards = [
+            {
+                label: '接口总数',
+                value: fmtNum(kpi.api_total),
+                delta: deltaHtml(kpi.api_delta, ' 较上周'),
+                spark: sparkSvg(kpi.api_spark, '#2563eb'),
+                meta: ''
+            },
+            {
+                label: '注册用户',
+                value: fmtNum(kpi.user_total),
+                delta: deltaHtml(kpi.user_delta, ' 今日新增'),
+                spark: sparkSvg(kpi.user_spark, '#06b6d4'),
+                meta: ''
+            },
+            {
+                label: '今日调用',
+                value: fmtNum(kpi.today_calls),
+                delta: deltaHtml(kpi.today_delta, '% 较昨日'),
+                spark: sparkSvg(kpi.today_spark, '#8b5cf6'),
+                meta: ''
+            },
+            {
+                label: '调用成功率',
+                value: (parseFloat(kpi.success_rate) || 0).toFixed(2) + '%',
+                delta: deltaHtml(kpi.success_delta, '% 较昨日'),
+                spark: '',
+                meta: '<span>成功 <strong>' + fmtNum(kpi.success_count) + '</strong></span>'
+                    + '<span>失败 <strong>' + fmtNum(kpi.fail_count) + '</strong></span>'
+            }
+        ];
+        grid.innerHTML = cards.map(function (c) {
+            return '<article class="dash-kpi">'
+                + '<div class="dash-kpi__top"><span class="dash-kpi__label">' + esc(c.label) + '</span>' + c.delta + '</div>'
+                + '<div class="dash-kpi__value">' + esc(c.value) + '</div>'
+                + (c.spark ? '<div class="dash-kpi__chart">' + c.spark + '</div>' : '')
+                + (c.meta ? '<div class="dash-kpi__meta">' + c.meta + '</div>' : '')
+                + '</article>';
+        }).join('');
+    }
+
+    function renderTrends(data) {
+        var type = data.type_trend || {};
+        var rate = data.rate_trend || {};
+        var typeLegend = document.getElementById('dashTypeLegend');
+        var rateLegend = document.getElementById('dashRateLegend');
+        if (typeLegend) {
+            typeLegend.innerHTML = [
+                ['游客', 'guest'], ['密钥', 'key'], ['积分', 'points']
+            ].map(function (x) {
+                return '<span class="dash-chart-legend__item"><i class="dash-chart-legend__line dash-chart-legend__line--' + x[1] + '"></i>' + x[0] + '</span>';
+            }).join('');
+        }
+        if (rateLegend) {
+            rateLegend.innerHTML = [
+                ['成功率', 'ok'], ['失败率', 'fail']
+            ].map(function (x) {
+                return '<span class="dash-chart-legend__item"><i class="dash-chart-legend__line dash-chart-legend__line--' + x[1] + '"></i>' + x[0] + '</span>';
+            }).join('');
+        }
+        lineChart(document.getElementById('dashTypeChart'), type.labels || [], [
+            { data: type.guest || [], color: '#64748b' },
+            { data: type.key || [], color: '#2563eb' },
+            { data: type.points || [], color: '#f59e0b', dashed: true }
+        ]);
+        lineChart(document.getElementById('dashRateChart'), rate.labels || [], [
+            { data: rate.success || [], color: '#16a34a' },
+            { data: rate.fail || [], color: '#dc2626', dashed: true }
+        ], { fixedMin: 0, fixedMax: 100 });
+    }
+
+    function renderTop(list) {
+        var el = document.getElementById('dashTopBars');
+        if (!el) return;
+        list = Array.isArray(list) ? list : [];
+        if (!list.length) {
+            el.innerHTML = '<div class="dash-empty">今日暂无调用排行</div>';
+            return;
+        }
+        el.innerHTML = list.map(function (row, i) {
+            var pct = Math.max(2, parseFloat(row.pct) || 0);
+            var color = BAR_COLORS[i % BAR_COLORS.length];
+            return '<div class="dash-bar">'
+                + '<div class="dash-bar__name" title="' + esc(row.name) + '">' + esc(row.name) + '</div>'
+                + '<div class="dash-bar__track"><div class="dash-bar__fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
+                + '<div class="dash-bar__count">' + fmtNum(row.count) + '</div>'
+                + '</div>';
+        }).join('');
+    }
+
+    function renderSys(list) {
+        var el = document.getElementById('dashSys');
+        if (!el) return;
+        list = Array.isArray(list) ? list : [];
+        el.innerHTML = list.map(function (row) {
+            return '<div class="dash-sys-item">'
+                + '<span class="dash-sys-dot is-' + esc(row.tone || 'neutral') + '"></span>'
+                + '<span class="dash-sys-name">' + esc(row.name) + '</span>'
+                + '<span class="dash-sys-num">' + esc(row.value) + '</span>'
+                + '</div>';
+        }).join('');
+    }
+
+    function renderRecent(list) {
+        var el = document.getElementById('dashRecentTable');
+        if (!el) return;
+        list = Array.isArray(list) ? list : [];
+        var rows = list.filter(function (r) {
+            if (filter === 'success') return r.status === 'success';
+            if (filter === 'error') return r.status === 'error';
+            return true;
+        });
+        if (!rows.length) {
+            el.innerHTML = '<div class="dash-empty">暂无匹配记录</div>';
+            return;
+        }
+        var html = '<table class="dash-table"><thead><tr>'
+            + '<th>时间</th><th>接口名称</th><th>调用者</th><th>状态</th><th>错误码</th>'
+            + '</tr></thead><tbody>';
+        rows.forEach(function (r) {
+            var ok = r.status === 'success';
+            html += '<tr>'
+                + '<td data-label="时间">' + esc(r.time) + '</td>'
+                + '<td data-label="接口">' + esc(r.apiname) + '</td>'
+                + '<td data-label="调用者"><span class="dash-caller"><span class="dash-caller__avatar">' + esc(r.initial || '访') + '</span>' + esc(r.caller) + '</span></td>'
+                + '<td data-label="状态"><span class="dash-status ' + (ok ? 'is-ok' : 'is-fail') + '">' + (ok ? '成功' : '失败') + '</span></td>'
+                + '<td data-label="错误码">' + esc(ok ? '—' : (r.code_label || r.httpcode || '—')) + '</td>'
+                + '</tr>';
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    }
+
+    function renderAll(data) {
+        boot = data || boot;
+        var dateEl = page.querySelector('[data-dash-date]');
+        if (dateEl) {
+            dateEl.textContent = (boot.server_time || '') + ' · ' + (boot.weekday || '');
+        }
+        renderKpi(boot.kpi);
+        renderTrends(boot);
+        renderTop(boot.top_apis);
+        renderSys(boot.sys_overview);
+        renderRecent(boot.recent);
+    }
+
+    function post(action) {
+        var fd = new FormData();
+        fd.append('action', action);
+        return window.VS.postForm(fd);
+    }
+
+    var refreshBtn = document.getElementById('dashRefreshBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function () {
+            refreshBtn.disabled = true;
+            post('refresh').then(function (res) {
+                if (!res || res.code !== 1 || !res.snapshot) {
+                    window.VS.showMessage((res && res.msg) || '刷新失败', 'error');
+                    return;
+                }
+                renderAll(res.snapshot);
+                window.VS.showMessage('已刷新', 'success');
+            }).catch(function () {
+                window.VS.showMessage('网络异常', 'error');
+            }).then(function () {
+                refreshBtn.disabled = false;
+            });
+        });
+    }
+
+    var filters = document.getElementById('dashRecentFilters');
+    if (filters) {
+        filters.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-filter]');
+            if (!btn) return;
+            filter = btn.getAttribute('data-filter') || 'all';
+            Array.prototype.forEach.call(filters.querySelectorAll('[data-filter]'), function (b) {
+                b.classList.toggle('is-active', b === btn);
+            });
+            renderRecent(boot.recent);
+        });
+    }
+
+    renderAll(boot);
+})();

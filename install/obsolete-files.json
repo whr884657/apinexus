@@ -19,6 +19,7 @@
         "payreturn.php",
         "play.php",
         "core/theme/default/data/settings.json",
-        "core/theme/slate/data/settings.json"
+        "core/theme/slate/data/settings.json",
+        "admin/data-screen.php"
     ]
 }
