@@ -71,7 +71,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = isset($_POST['register_email_suffixes']) ? $_POST['register_email_suffixes'] : '';
             $suffixes = RegisterPolicy::parseSuffixInput($input);
             RegisterPolicy::saveEmailSuffixes($suffixes);
+            $giftPoints = isset($_POST['register_gift_points']) ? (int) $_POST['register_gift_points'] : 0;
+            if ($giftPoints < 0) {
+                $giftPoints = 0;
+            }
+            if ($giftPoints > 1000000) {
+                $giftPoints = 1000000;
+            }
+            Config::setMany(array(
+                'register_gift_enabled' => isset($_POST['register_gift_enabled']) ? '1' : '0',
+                'register_gift_points'  => (string) $giftPoints,
+            ));
             AjaxResponse::success('注册设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败：' . $e->getMessage());
+        }
+    }
+
+    if ($action === 'save_checkin') {
+        try {
+            $min = isset($_POST['checkin_points_min']) ? (int) $_POST['checkin_points_min'] : 10;
+            $max = isset($_POST['checkin_points_max']) ? (int) $_POST['checkin_points_max'] : 30;
+            if ($min < 1) {
+                $min = 1;
+            }
+            if ($max < $min) {
+                $max = $min;
+            }
+            if ($max > 1000000) {
+                $max = 1000000;
+            }
+            Config::setMany(array(
+                'checkin_enabled'    => isset($_POST['checkin_enabled']) ? '1' : '0',
+                'checkin_points_min' => (string) $min,
+                'checkin_points_max' => (string) $max,
+            ));
+            AjaxResponse::success('签到设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败：' . $e->getMessage());
         }
@@ -264,8 +299,54 @@ vs_admin_accordion_start(
             <textarea name="register_email_suffixes" class="vs-textarea" rows="5"
                       placeholder="qq.com&#10;163.com&#10;gmail.com"><?php echo vs_e($registerSuffixes); ?></textarea>
         </div>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_gift_enabled" value="1" <?php echo Config::get('register_gift_enabled', '0') === '1' ? 'checked' : ''; ?>>
+                <span>新用户注册成功后赠送积分</span>
+            </label>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">注册赠送积分数量</label>
+            <input type="number" name="register_gift_points" class="vs-input" min="0" max="1000000" step="1"
+                   value="<?php echo vs_e(Config::get('register_gift_points', '100')); ?>">
+            <p class="vs-form-hint">仅在上方开关开启时生效；填写 0 表示不赠送。</p>
+        </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存注册设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-checkin',
+    '每日签到',
+    '开启后用户中心可签到领取随机积分'
+);
+?>
+    <form method="post" action="" class="vs-form" id="checkinForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_checkin">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="checkin_enabled" value="1" <?php echo Config::get('checkin_enabled', '0') === '1' ? 'checked' : ''; ?>>
+                <span>启用每日签到赠送积分</span>
+            </label>
+        </div>
+        <div class="vs-form-row vs-form-row--inline">
+            <div class="vs-form-col">
+                <label class="vs-label">最低赠送积分</label>
+                <input type="number" name="checkin_points_min" class="vs-input" min="1" max="1000000" step="1"
+                       value="<?php echo vs_e(Config::get('checkin_points_min', '10')); ?>">
+            </div>
+            <div class="vs-form-col">
+                <label class="vs-label">最高赠送积分</label>
+                <input type="number" name="checkin_points_max" class="vs-input" min="1" max="1000000" step="1"
+                       value="<?php echo vs_e(Config::get('checkin_points_max', '30')); ?>">
+            </div>
+        </div>
+        <p class="vs-form-hint">每次签到在最低与最高之间随机赠送；每位用户每天仅可签到一次。</p>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存签到设置</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>

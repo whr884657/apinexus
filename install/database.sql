@@ -78,6 +78,11 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_feedback_admin', '1'),
 ('mail_notify_comment_admin', '1'),
 ('mail_notify_comment', '1'),
+('register_gift_enabled', '0'),
+('register_gift_points', '100'),
+('checkin_enabled', '0'),
+('checkin_points_min', '10'),
+('checkin_points_max', '30'),
 ('frontend_theme', 'default'),
 ('themesettings', '{}'),
 ('site_runtime_start', ''),
@@ -238,7 +243,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}orders` (
     `orderno` varchar(64) NOT NULL COMMENT '订单号（全局唯一）',
     `userid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联用户ID（对应user.id）',
     `direct` tinyint(1) NOT NULL COMMENT '方向：0减少 1增加',
-    `kind` tinyint(1) NOT NULL COMMENT '类型：增加时0用户充值1管理员加款；减少时0API调用1管理员扣款2AI调用(预留)',
+    `kind` tinyint(1) NOT NULL COMMENT '类型：增加时0用户充值1管理员加款2注册赠送3每日签到；减少时0API调用1管理员扣款2AI调用(预留)',
     `amount` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '变动积分（正数）',
     `balance` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '变动后积分余额',
     `money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '实付金额（元，充值订单）',
@@ -262,6 +267,18 @@ CREATE TABLE IF NOT EXISTS `{prefix}orders` (
     KEY `idx_direct_kind_status_id` (`direct`, `kind`, `status`, `id`),
     KEY `idx_status_id` (`status`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='积分与支付订单';
+
+-- 用户每日签到
+CREATE TABLE IF NOT EXISTS `{prefix}checkin` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `userid` int unsigned NOT NULL DEFAULT 0 COMMENT '用户ID',
+  `checkindate` date NOT NULL COMMENT '签到日期（按天唯一）',
+  `points` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '本次签到获得积分',
+  `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '签到时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_userid_date` (`userid`, `checkindate`),
+  KEY `idx_checkindate` (`checkindate`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户每日签到记录';
 
 -- 友情链接与合作伙伴（共用表，kind 区分）
 CREATE TABLE IF NOT EXISTS `{prefix}link` (

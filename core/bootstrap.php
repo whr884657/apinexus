@@ -60,6 +60,7 @@ require_once VS_ROOT . '/core/ContentManager.php';
 require_once VS_ROOT . '/core/CommentManager.php';
 require_once VS_ROOT . '/core/CommentNotify.php';
 require_once VS_ROOT . '/core/FrontendComment.php';
+require_once VS_ROOT . '/core/CheckinManager.php';
 require_once VS_ROOT . '/core/markdown/Markdown.php';
 require_once VS_ROOT . '/core/FrontendAnnouncement.php';
 require_once VS_ROOT . '/core/FrontendArticle.php';

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.3.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.4.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,17 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.4.0（2026-07-26）
+
+**类型：** 中版本功能（积分运营 + 日志刷新）
+
+**变更说明：**
+
+- 日志查询「刷新」清列表缓存并回到最新一页
+- 注册赠送积分（系统设置开关 / 数量）
+- 每日签到（随机区间积分；默认主题用户中心横幅；流水记入 orders）
+- 迁移 `install/migrations/10.4.0.sql`
 
 ### v10.3.0（2026-07-25）
 

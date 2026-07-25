@@ -310,6 +310,14 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 10.4.0 签到表与积分赠送配置时跳过
+        if (!in_array('10.4.0', $applied, true) && self::tableExists('checkin')) {
+            $allCfg4 = Config::all();
+            if (isset($allCfg4['register_gift_enabled']) && isset($allCfg4['checkin_enabled'])) {
+                self::markApplied('10.4.0');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
     }

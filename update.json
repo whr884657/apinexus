@@ -1,13 +1,13 @@
 {
-    "version": "10.3.0",
-    "title": "ApiNexus 10.3.0 评论倒序与 Redis 管理页重设计",
-    "release_date": "2026-07-25",
-    "db_changes": false,
+    "version": "10.4.0",
+    "title": "ApiNexus 10.4.0 日志刷新与注册/签到积分",
+    "release_date": "2026-07-26",
+    "db_changes": true,
     "changes": [
-        "前台评论改为越新越上（置顶仍优先）；作者回复改为管理员回复",
-        "后台 Redis 管理页参照重设计：连接状态格、缓存概览、双环图、业务缓存双 DOM",
-        "禁止命令控制台与裸 Key 浏览器；补齐手机端自适应",
-        "同步主题与开发规范（§2.20 / E106）"
+        "日志查询刷新：invalidate 列表缓存并回第一页，展示当前库中最新日志",
+        "注册赠送积分：系统设置开关与数量；邮箱注册成功后入账 orders",
+        "每日签到：开关与随机积分区间；默认主题用户中心横幅；同日唯一；流水记「每日签到」",
+        "迁移 10.4.0.sql（checkin 表 + 配置项 + orders.kind 注释）；同步规范 §2.21 / E107"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

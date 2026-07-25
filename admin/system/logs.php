@@ -20,6 +20,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ok = array_key_exists('ok', $_POST) && $_POST['ok'] !== '' ? (int) $_POST['ok'] : null;
         $apiid = isset($_POST['apiid']) ? (int) $_POST['apiid'] : 0;
         $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
+        // 刷新：清掉列表缓存后从最新 id 重拉，避免短 TTL 命中旧页
+        if (!empty($_POST['refresh']) && (string) $_POST['refresh'] === '1') {
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateApiLog();
+            }
+            $page = 1;
+            $beforeId = 0;
+        }
         $data = ApiLogManager::listPaged(array(
             'page'      => $page,
             'pagesize'  => $pagesize,

@@ -114,7 +114,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
 | 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 `/detail/{id}`、多选方法、审核三态、统计、在线测试浏览器直连、双端 UI） |
 | 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号最多 3 个；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
-| 积分与支付 | `PointsManager` / `OrderManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额） | `admin/finance/*`、`user/recharge`、`user/points`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（`user.points`、`api.charge/price`、表 `orders`；码支付扫码充值；API 调用扣费） |
+| 积分与支付 | `PointsManager` / `OrderManager` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；v10.4.0 注册赠送 / 每日签到；表 `orders` + `checkin`） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
@@ -245,8 +245,9 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
 | `RedisCache.php` | 业务数据缓存（**v5.1.0+ 仅 apilog 查询/统计**）；键空间自动维护 |
 | `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`detailEnabled()` 控制是否写详细日志 |
-| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders` |
-| `PointsManager.php` | 余额读写、扣费、充值完成/取消；列表走 OrderManager |
+| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到 |
+| `PointsManager.php` | 余额读写、扣费、充值完成/取消、`giftOnRegister` / `checkin`；列表走 OrderManager |
+| `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（条数可配）、计划任务密钥 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |

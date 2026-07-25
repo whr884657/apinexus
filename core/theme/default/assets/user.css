@@ -39,3 +39,50 @@
 .vs-ledger-amount.is-dec {
     color: #b91c1c;
 }
+
+/* 每日签到横幅：跟调色盘英雄条变量 */
+.uc-checkin-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 0 0 16px;
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: var(--vs-uc-hero-bg);
+    color: var(--vs-uc-hero-fg, #fff);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+.uc-checkin-banner__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.uc-checkin-banner__title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+.uc-checkin-banner__desc {
+    font-size: 0.8125rem;
+    opacity: 0.88;
+    line-height: 1.45;
+}
+.uc-checkin-banner__btn {
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.96) !important;
+    color: #0f172a !important;
+    border-color: transparent !important;
+}
+.uc-checkin-banner__btn:hover {
+    filter: brightness(0.97);
+}
+@media (max-width: 640px) {
+    .uc-checkin-banner {
+        padding: 14px;
+    }
+    .uc-checkin-banner__btn {
+        width: 100%;
+    }
+}

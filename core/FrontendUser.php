@@ -54,4 +54,48 @@ class FrontendUser
             'profile_url' => UserRole::canPublishApi($role) ? vs_profile_url((int) $user['id']) : '',
         );
     }
+
+    /**
+     * 用户中心签到横幅状态（主题只读本方法）
+     *
+     * @return array{enabled:bool,checked_today:bool,min:int,max:int,show_banner:bool}
+     */
+    public static function checkinBanner()
+    {
+        $empty = array(
+            'enabled'       => false,
+            'checked_today' => false,
+            'min'           => 0,
+            'max'           => 0,
+            'show_banner'   => false,
+        );
+        if (!class_exists('CheckinManager')) {
+            return $empty;
+        }
+        $user = self::current();
+        if (!$user) {
+            return $empty;
+        }
+        return CheckinManager::bannerState((int) $user['id']);
+    }
+
+    /**
+     * 当前用户签到
+     *
+     * @return array{ok:bool,msg:string,amount?:float,balance?:float,points?:string}
+     */
+    public static function doCheckin()
+    {
+        if (!UserAuth::check()) {
+            return array('ok' => false, 'msg' => '请先登录');
+        }
+        if (!class_exists('PointsManager')) {
+            return array('ok' => false, 'msg' => '积分系统未就绪');
+        }
+        $result = PointsManager::checkin((int) UserAuth::id());
+        if (!empty($result['ok']) && isset($result['balance'])) {
+            $result['points'] = PayConfig::fmtPoints($result['balance']);
+        }
+        return $result;
+    }
 }

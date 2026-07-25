@@ -13,6 +13,10 @@ class OrderManager
     const KIND_RECHARGE = 0;
     /** 增加：管理员加款 */
     const KIND_ADMIN_ADD = 1;
+    /** 增加：注册赠送 */
+    const KIND_REGISTER = 2;
+    /** 增加：每日签到 */
+    const KIND_CHECKIN = 3;
 
     /** 减少：API 调用 */
     const KIND_API = 0;
@@ -74,6 +78,12 @@ class OrderManager
         if ($direct === self::DIRECT_INC) {
             if ($kind === self::KIND_ADMIN_ADD) {
                 return '管理员加款';
+            }
+            if ($kind === self::KIND_REGISTER) {
+                return '注册赠送';
+            }
+            if ($kind === self::KIND_CHECKIN) {
+                return '每日签到';
             }
             return '用户充值';
         }

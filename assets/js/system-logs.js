@@ -258,12 +258,14 @@
         renderList(data.list || [], parseInt(data.total, 10) || 0, pagesize);
     }
 
-    function load() {
+    function load(opts) {
+        opts = opts || {};
+        var isRefresh = !!opts.refresh;
         if (!body) {
             return;
         }
         if (!window.VS || typeof VS.postForm !== 'function') {
-            setTimeout(load, 40);
+            setTimeout(function () { load(opts); }, 40);
             return;
         }
         if (listAbort) {
@@ -273,18 +275,25 @@
         }
         listAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
 
+        if (isRefresh) {
+            resetCursors();
+        }
+
         var seq = ++loadSeq;
         var pagesize = getPageSize();
         var beforeId = cursorStack[page - 1] || 0;
         setControlsDisabled(true);
         if (VS.setLoading) {
-            VS.setLoading(body, '正在加载日志');
+            VS.setLoading(body, isRefresh ? '正在刷新日志' : '正在加载日志');
         }
         var fd = new FormData();
         fd.append('action', 'list');
         fd.append('page', String(page));
         fd.append('pagesize', String(pagesize));
         fd.append('before_id', String(beforeId));
+        if (isRefresh) {
+            fd.append('refresh', '1');
+        }
         if (q) {
             fd.append('q', q);
         }
@@ -404,7 +413,7 @@
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
-            load();
+            load({ refresh: true });
         });
     }
 

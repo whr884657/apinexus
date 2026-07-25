@@ -335,6 +335,14 @@ class UserAuth
                 'INSERT INTO `' . $table . '` (`username`, `password`, `email`, `status`, `role`, `createtime`) VALUES (?, ?, ?, 1, ?, NOW())'
             );
             $stmt->execute(array($username, vs_password_hash($password), $email, $role));
+            $newId = (int) $pdo->lastInsertId();
+            if ($newId > 0 && class_exists('PointsManager')) {
+                try {
+                    PointsManager::giftOnRegister($newId);
+                } catch (Exception $e) {
+                    // 赠送失败不阻断注册
+                }
+            }
 
             return true;
         } catch (Exception $e) {

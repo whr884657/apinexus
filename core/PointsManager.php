@@ -428,11 +428,15 @@ class PointsManager
             ));
 
             $pdo->commit();
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateOrders();
+            }
             return array(
                 'ok'      => true,
                 'msg'     => 'ok',
                 'balance' => $newBal,
                 'orderno' => $orderno,
+                'amount'  => $amount,
             );
         } catch (Exception $e) {
             try {
@@ -443,5 +447,100 @@ class PointsManager
             }
             return array('ok' => false, 'msg' => '积分变动失败');
         }
+    }
+
+    /**
+     * 注册赠送积分（受系统设置开关控制；失败不抛）
+     *
+     * @param int $userId
+     * @return array{ok:bool,msg:string,amount?:float}
+     */
+    public static function giftOnRegister($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return array('ok' => false, 'msg' => '用户无效');
+        }
+        if (Config::get('register_gift_enabled', '0') !== '1') {
+            return array('ok' => false, 'msg' => '未开启注册赠送');
+        }
+        $amount = (int) Config::get('register_gift_points', '0');
+        if ($amount < 1) {
+            return array('ok' => false, 'msg' => '赠送积分为 0');
+        }
+        if ($amount > 1000000) {
+            $amount = 1000000;
+        }
+        return self::change(
+            $userId,
+            OrderManager::DIRECT_INC,
+            OrderManager::KIND_REGISTER,
+            (float) $amount,
+            array(
+                'remark'  => '注册赠送积分',
+                'status'  => OrderManager::STATUS_DONE,
+                'paytime' => date('Y-m-d H:i:s'),
+            )
+        );
+    }
+
+    /**
+     * 每日签到（随机区间积分；同用户同日仅一次）
+     *
+     * @param int $userId
+     * @return array{ok:bool,msg:string,amount?:float,balance?:float}
+     */
+    public static function checkin($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return array('ok' => false, 'msg' => '请先登录');
+        }
+        if (Config::get('checkin_enabled', '0') !== '1') {
+            return array('ok' => false, 'msg' => '签到功能未开启');
+        }
+        if (!class_exists('CheckinManager') || !CheckinManager::tableReady()) {
+            return array('ok' => false, 'msg' => '签到功能尚未就绪，请先完成系统升级');
+        }
+        $min = (int) Config::get('checkin_points_min', '10');
+        $max = (int) Config::get('checkin_points_max', '30');
+        if ($min < 1) {
+            $min = 1;
+        }
+        if ($max < $min) {
+            $max = $min;
+        }
+        if ($max > 1000000) {
+            $max = 1000000;
+        }
+
+        $amount = (float) (function_exists('random_int')
+            ? random_int($min, $max)
+            : mt_rand($min, $max));
+
+        // 先占位当日唯一记录，防止并发重复发放
+        $saved = CheckinManager::record($userId, $amount);
+        if ($saved !== true) {
+            return array('ok' => false, 'msg' => is_string($saved) ? $saved : '今日已签到');
+        }
+
+        $result = self::change(
+            $userId,
+            OrderManager::DIRECT_INC,
+            OrderManager::KIND_CHECKIN,
+            $amount,
+            array(
+                'remark'  => '每日签到奖励',
+                'status'  => OrderManager::STATUS_DONE,
+                'paytime' => date('Y-m-d H:i:s'),
+            )
+        );
+        if (empty($result['ok'])) {
+            CheckinManager::deleteToday($userId);
+            return $result;
+        }
+        $result['msg'] = '签到成功，获得 ' . PayConfig::fmtPoints($amount) . ' 积分';
+        $result['amount'] = $amount;
+        return $result;
     }
 }
