@@ -32,17 +32,12 @@ if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_s
         <?php endforeach; ?>
     </div>
     <div class="mt-auto sidebar-auth-slot">
-        <?php if (empty($userLoggedIn)): ?>
-        <a href="<?php echo vs_e(rtrim($vsBase, '/') . '/user/login'); ?>" class="btn-geek w-full text-center auth-entry-btn" onclick="closeSidebarNow()"><span>登录</span></a>
-        <a href="<?php echo vs_e(rtrim($vsBase, '/') . '/user/register'); ?>" class="btn-geek w-full text-center auth-entry-btn" style="margin-top:0.5rem;" onclick="closeSidebarNow()"><span>注册</span></a>
-        <?php else: ?>
-        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek w-full text-center auth-entry-btn<?php echo ($avatarUrl !== '') ? ' auth-entry-btn--user' : ''; ?>" onclick="closeSidebarNow()">
-            <?php if ($avatarUrl !== ''): ?>
+        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek w-full text-center auth-entry-btn<?php echo ($avatarUrl !== '' && !empty($userLoggedIn)) ? ' auth-entry-btn--user' : ''; ?>" onclick="closeSidebarNow()">
+            <?php if ($avatarUrl !== '' && !empty($userLoggedIn)): ?>
                 <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="" width="22" height="22" loading="lazy" referrerpolicy="no-referrer" decoding="async">
             <?php endif; ?>
             <span><?php echo vs_e($authBtnLabel); ?></span>
         </a>
-        <?php endif; ?>
     </div>
 </aside>
 <nav class="nav-bar">
@@ -62,21 +57,19 @@ if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_s
             <?php endforeach; ?>
         </div>
         <?php
-        // 未登录：电脑端顶栏显示「登录」「注册」（勿用 .hidden，feer-compat 的 .hidden 带 !important 会永久隐藏）
-        // 已登录：顶栏显示「用户中心」；手机端统一用汉堡进侧栏
-        $loginUrl = rtrim($vsBase, '/') . '/user/login';
-        $registerUrl = rtrim($vsBase, '/') . '/user/register';
+        // 未登录：电脑端单一按钮「登录 / 注册」，href 仅指向登录页（注册在登录页内链；勿拆成两钮）
+        // 勿用 .hidden + md:inline-flex（feer-compat .hidden 带 !important）
+        // 已登录：顶栏「用户中心」；手机端汉堡进侧栏
         ?>
         <?php if (empty($userLoggedIn)): ?>
-        <div class="nav-auth-desktop">
-            <a href="<?php echo vs_e($loginUrl); ?>" class="btn-geek text-xs py-2 px-4 auth-entry-btn auth-entry-btn--nav">登录</a>
-            <a href="<?php echo vs_e($registerUrl); ?>" class="btn-geek text-xs py-2 px-4 auth-entry-btn auth-entry-btn--nav auth-entry-btn--register">注册</a>
-        </div>
+        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek text-xs py-2 px-4 auth-entry-btn auth-entry-btn--nav">
+            <span><?php echo vs_e($authBtnLabel); ?></span>
+        </a>
         <button type="button" class="menu-btn nav-menu-mobile p-1" style="color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px;" onclick="toggleMobile()" aria-label="打开菜单">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <?php else: ?>
-        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek text-xs py-2 px-4 auth-entry-btn auth-entry-btn--nav auth-entry-btn--user-nav<?php echo ($avatarUrl !== '') ? ' auth-entry-btn--user' : ''; ?>">
+        <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek text-xs py-2 px-4 auth-entry-btn auth-entry-btn--nav<?php echo ($avatarUrl !== '') ? ' auth-entry-btn--user' : ''; ?>">
             <?php if ($avatarUrl !== ''): ?>
                 <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer" decoding="async">
             <?php endif; ?>

@@ -305,12 +305,7 @@ body.vs-body.feer-front #stats-section {
     }
 }
 
-/* 顶栏登录/注册：电脑端显示，手机端隐藏（禁止用 .hidden，其 !important 会压死 md: 工具类） */
-body.vs-body.feer-front .nav-auth-desktop {
-    display: none;
-    align-items: center;
-    gap: 0.5rem;
-}
+/* 顶栏认证钮「登录 / 注册」：电脑端显示，手机端隐藏（禁止用 .hidden，其 !important 会压死 md: 工具类） */
 body.vs-body.feer-front .nav-bar .auth-entry-btn--nav {
     display: none;
 }
@@ -318,9 +313,6 @@ body.vs-body.feer-front .nav-menu-mobile {
     display: inline-flex;
 }
 @media (min-width: 768px) {
-    body.vs-body.feer-front .nav-auth-desktop {
-        display: inline-flex;
-    }
     body.vs-body.feer-front .nav-bar .auth-entry-btn--nav {
         display: inline-flex !important;
     }

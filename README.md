@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.7.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.8.3-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -263,13 +263,22 @@ location / {
 
 ## 版本记录
 
+### v10.8.3（2026-07-26）
+
+**类型：** 小版本修复（顶栏认证钮形态）
+
+**变更说明：**
+
+- 默认主题顶栏恢复单个「登录 / 注册」按钮，只进登录页
+- 规范固化该形态（§10.6 / E118），禁止拆成两个按钮
+
 ### v10.8.2（2026-07-26）
 
 **类型：** 小版本修复（顶栏登录 + 双层 SEO + 外链按钮）
 
 **变更说明：**
 
-- 修复默认主题电脑端顶栏登录/注册不显示
+- 修复默认主题电脑端顶栏登录入口不显示
 - 根入口 + 主题双层 SEO（描述/图标/OG/JSON-LD）
 - 修复外链跳转「继续访问」对比度；规范 E117
 

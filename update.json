@@ -1,13 +1,11 @@
 {
-    "version": "10.8.2",
-    "title": "ApiNexus 10.8.2 顶栏登录、双层 SEO 与外链按钮",
+    "version": "10.8.3",
+    "title": "ApiNexus 10.8.3 恢复单一登录注册按钮",
     "release_date": "2026-07-26",
     "db_changes": false,
     "changes": [
-        "修复默认主题电脑端顶栏登录/注册不显示（.hidden !important 压死 md:inline-flex，且兼容层缺 md:inline-flex）",
-        "前台双层 SEO：根入口 vs_page_seo_pack + 主题微数据/JSON-LD，强化描述与分享图抓取",
-        "修复默认主题外链跳转「继续访问」黑底黑字对比度",
-        "规范：SEO §四双层、主题规范顶栏认证、E117"
+        "默认主题顶栏恢复单个「登录 / 注册」按钮，仅进入登录页（不再拆成两个按钮）",
+        "规范固化顶栏认证钮形态（主题规范 §10.6 / E118），禁止擅自改样式与链接"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
