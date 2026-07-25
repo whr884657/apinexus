@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.0.2-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.1.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.1.0（2026-07-25）
+
+**类型：** 中版本功能（文章评论）
+
+**变更说明：**
+
+- 默认主题文章详情对话式评论（引用回复 / 表情 / 邮箱必填）
+- 数据库迁移 `10.1.0.sql`（`parentid`、`website`）
 
 ### v10.0.2（2026-07-25）
 

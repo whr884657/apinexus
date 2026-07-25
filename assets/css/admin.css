@@ -8739,6 +8739,16 @@ select.vs-input.vs-select {
     font-size: 0.75rem;
     margin-right: 4px;
 }
+#adminCommentsPage .cmt-quote-preview {
+    font-size: 0.75rem;
+    color: #64748b;
+    background: #f1f5f9;
+    border-left: 3px solid #94a3b8;
+    padding: 4px 8px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    line-height: 1.4;
+}
 #adminCommentsPage .cmt-card__text {
     font-weight: 500;
     margin-bottom: 10px;

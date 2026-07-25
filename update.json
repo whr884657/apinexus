@@ -1,13 +1,13 @@
 {
-    "version": "10.0.2",
-    "title": "ApiNexus 10.0.2 关于页目录化与体验优化",
+    "version": "10.1.0",
+    "title": "ApiNexus 10.1.0 文章详情对话式评论",
     "release_date": "2026-07-25",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "关于页：尋鯨錄为开发·维护，含官网；仓库链接平等展示且不露 URL",
-        "开发维护/链接/技术栈由隐蔽 JSON 本地优先加载（无本地文件再拉云端）",
-        "本地官方图标与彩色技术徽章；运行环境改卡片网格并优化手机端与动效",
-        "文档去掉主仓库/镜像措辞，三仓并列"
+        "默认主题文章详情底部评论：文字+基础表情、引用回复",
+        "评论表单：邮箱必填，名称与个人网址选填；IP/邮箱限流",
+        "comment 表新增 parentid、website（migration 10.1.0.sql）",
+        "完善前台评论与主题规范；后台评论列表展示引用预览"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

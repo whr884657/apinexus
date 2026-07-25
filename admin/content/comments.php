@@ -170,6 +170,9 @@ function vs_render_cmt_desktop_row(array $ctx)
                 <?php if ((int) $ctx['ispinned'] === 1): ?>
                     <span class="cmt-pin-mark" title="置顶">[顶]</span>
                 <?php endif; ?>
+                <?php if (!empty($ctx['parent']) && is_array($ctx['parent'])): ?>
+                    <div class="cmt-quote-preview">引用 <?php echo vs_e($ctx['parent']['nickname']); ?>：<?php echo vs_e($ctx['parent']['excerpt']); ?></div>
+                <?php endif; ?>
                 <span data-field="body"><?php echo vs_e($ctx['body']); ?></span>
             </div>
         </td>
@@ -202,6 +205,9 @@ function vs_render_cmt_mobile_card(array $ctx)
     $prefix = ((int) $ctx['ispinned'] === 1) ? '[顶] ' : '';
     ?>
     <div class="cmt-card"<?php echo $attrs; ?>>
+        <?php if (!empty($ctx['parent']) && is_array($ctx['parent'])): ?>
+            <div class="cmt-quote-preview">引用 <?php echo vs_e($ctx['parent']['nickname']); ?>：<?php echo vs_e($ctx['parent']['excerpt']); ?></div>
+        <?php endif; ?>
         <div class="cmt-card__text" data-field="body"><?php echo vs_e($prefix . $ctx['body']); ?></div>
         <div class="cmt-card__meta">
             <span class="cmt-card__meta-item">关联：<span data-field="content_title"><?php echo vs_e($ctx['content_title'] !== '' ? $ctx['content_title'] : ('文章#' . $ctx['contentid'])); ?></span></span>

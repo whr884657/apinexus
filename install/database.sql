@@ -309,9 +309,11 @@ CREATE TABLE IF NOT EXISTS `{prefix}content` (
 CREATE TABLE IF NOT EXISTS `{prefix}comment` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `contentid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联文章ID',
+  `parentid` int unsigned NOT NULL DEFAULT 0 COMMENT '引用的父评论ID（0表示顶层）',
   `userid` int unsigned NOT NULL DEFAULT 0 COMMENT '登录用户ID（0表示访客）',
   `nickname` varchar(50) NOT NULL DEFAULT '' COMMENT '昵称',
   `email` varchar(100) NOT NULL COMMENT '评论者邮箱（必填）',
+  `website` varchar(255) NOT NULL DEFAULT '' COMMENT '个人网址（选填）',
   `body` text NOT NULL COMMENT '评论正文',
   `reply` text COMMENT '管理员回复',
   `ispinned` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '是否置顶：0否 1是',
@@ -320,6 +322,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}comment` (
   `updatetime` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_contentid` (`contentid`),
+  KEY `idx_parentid` (`parentid`),
   KEY `idx_userid` (`userid`),
   KEY `idx_status` (`status`),
   KEY `idx_ispinned` (`ispinned`)

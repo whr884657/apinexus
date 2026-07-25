@@ -1,4 +1,4 @@
--- 文章评论表（v10.0.0）
+-- 文章评论表（v10.0.0；字段以 database.sql / 10.1.0 迁移为准）
 CREATE TABLE IF NOT EXISTS `{prefix}comment` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `contentid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联文章ID',

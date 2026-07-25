@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/CommentManager.php
- * 作用：文章评论 CRUD（管理员处理；邮箱必填；头像按邮箱解析）
+ * 作用：文章评论 CRUD（管理员处理；邮箱必填；支持引用回复与个人网址）
  */
 
 class CommentManager
@@ -25,6 +25,30 @@ class CommentManager
     {
         try {
             return DatabaseMigrator::tableExists('comment');
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * @return bool
+     */
+    public static function hasParentColumn()
+    {
+        try {
+            return DatabaseMigrator::tableColumnExists('comment', 'parentid');
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * @return bool
+     */
+    public static function hasWebsiteColumn()
+    {
+        try {
+            return DatabaseMigrator::tableColumnExists('comment', 'website');
         } catch (Exception $e) {
             return false;
         }
@@ -69,16 +93,73 @@ class CommentManager
     }
 
     /**
+     * @param string $url
+     * @return string
+     */
+    public static function normalizeWebsite($url)
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = 'https://' . $url;
+        }
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            return '';
+        }
+        if (!preg_match('#^https?://#i', $url)) {
+            return '';
+        }
+        if (function_exists('mb_strlen') && mb_strlen($url, 'UTF-8') > 255) {
+            return '';
+        }
+        if (strlen($url) > 255) {
+            return '';
+        }
+        return $url;
+    }
+
+    /**
+     * @param string $body
+     * @param int    $max
+     * @return string
+     */
+    public static function excerptBody($body, $max = 80)
+    {
+        $body = trim(preg_replace('/\s+/u', ' ', (string) $body));
+        if ($body === '') {
+            return '';
+        }
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            if (mb_strlen($body, 'UTF-8') > $max) {
+                return mb_substr($body, 0, $max, 'UTF-8') . '…';
+            }
+            return $body;
+        }
+        if (strlen($body) > $max) {
+            return substr($body, 0, $max) . '…';
+        }
+        return $body;
+    }
+
+    /**
      * @param array|null $row
+     * @param array      $parentMap id => raw/format row
      * @return array|null
      */
-    public static function formatRow($row)
+    public static function formatRow($row, array $parentMap = array())
     {
         if (!is_array($row) || !isset($row['id'])) {
             return null;
         }
         $status = self::normalizeStatus(isset($row['status']) ? $row['status'] : self::STATUS_PENDING);
         $email = isset($row['email']) ? trim((string) $row['email']) : '';
+        if (function_exists('vs_normalize_email')) {
+            $email = vs_normalize_email($email);
+        } else {
+            $email = strtolower($email);
+        }
         $userid = isset($row['userid']) ? (int) $row['userid'] : 0;
         $nickname = isset($row['nickname']) ? trim((string) $row['nickname']) : '';
         if ($nickname === '') {
@@ -103,22 +184,52 @@ class CommentManager
             $timeShort = $time;
         }
 
+        $parentid = isset($row['parentid']) ? (int) $row['parentid'] : 0;
+        $website = isset($row['website']) ? trim((string) $row['website']) : '';
+        $parent = null;
+        if ($parentid > 0) {
+            if (isset($parentMap[$parentid]) && is_array($parentMap[$parentid])) {
+                $p = $parentMap[$parentid];
+                $pNick = isset($p['nickname']) ? trim((string) $p['nickname']) : '';
+                if ($pNick === '' && !empty($p['email'])) {
+                    $pNick = preg_replace('/@.*$/', '', (string) $p['email']);
+                }
+                if ($pNick === '') {
+                    $pNick = '用户';
+                }
+                $parent = array(
+                    'id'       => $parentid,
+                    'nickname' => $pNick,
+                    'excerpt'  => self::excerptBody(isset($p['body']) ? $p['body'] : ''),
+                );
+            } else {
+                $parent = array(
+                    'id'       => $parentid,
+                    'nickname' => '原评论',
+                    'excerpt'  => '原评论不可用',
+                );
+            }
+        }
+
         return array(
-            'id'            => (int) $row['id'],
-            'contentid'     => isset($row['contentid']) ? (int) $row['contentid'] : 0,
-            'content_title' => isset($row['content_title']) ? trim((string) $row['content_title']) : '',
-            'userid'        => $userid,
-            'nickname'      => $nickname,
-            'email'         => $email,
-            'body'          => isset($row['body']) ? (string) $row['body'] : '',
-            'reply'         => isset($row['reply']) ? (string) $row['reply'] : '',
-            'ispinned'      => self::normalizeFlag(isset($row['ispinned']) ? $row['ispinned'] : 0),
-            'status'        => $status,
-            'status_label'  => self::statusLabel($status),
-            'avatar_url'    => $avatar,
-            'createtime'    => $time,
+            'id'               => (int) $row['id'],
+            'contentid'        => isset($row['contentid']) ? (int) $row['contentid'] : 0,
+            'parentid'         => $parentid,
+            'parent'           => $parent,
+            'content_title'    => isset($row['content_title']) ? trim((string) $row['content_title']) : '',
+            'userid'           => $userid,
+            'nickname'         => $nickname,
+            'email'            => $email,
+            'website'          => $website,
+            'body'             => isset($row['body']) ? (string) $row['body'] : '',
+            'reply'            => isset($row['reply']) ? (string) $row['reply'] : '',
+            'ispinned'         => self::normalizeFlag(isset($row['ispinned']) ? $row['ispinned'] : 0),
+            'status'           => $status,
+            'status_label'     => self::statusLabel($status),
+            'avatar_url'       => $avatar,
+            'createtime'       => $time,
             'createtime_short' => $timeShort,
-            'updatetime'    => isset($row['updatetime']) ? (string) $row['updatetime'] : '',
+            'updatetime'       => isset($row['updatetime']) ? (string) $row['updatetime'] : '',
         );
     }
 
@@ -139,10 +250,16 @@ class CommentManager
                     LEFT JOIN `' . $content . '` ct ON ct.`id` = c.`contentid`
                     ORDER BY c.`ispinned` DESC, c.`id` DESC';
             $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+            $map = array();
+            if (is_array($rows)) {
+                foreach ($rows as $row) {
+                    $map[(int) $row['id']] = $row;
+                }
+            }
             $out = array();
             if (is_array($rows)) {
                 foreach ($rows as $row) {
-                    $fmt = self::formatRow($row);
+                    $fmt = self::formatRow($row, $map);
                     if ($fmt) {
                         $out[] = $fmt;
                     }
@@ -193,9 +310,18 @@ class CommentManager
         }
         $contentid = isset($payload['contentid']) ? (int) $payload['contentid'] : 0;
         $email = isset($payload['email']) ? trim((string) $payload['email']) : '';
+        if (function_exists('vs_normalize_email')) {
+            $email = vs_normalize_email($email);
+        } else {
+            $email = strtolower($email);
+        }
         $nickname = isset($payload['nickname']) ? trim((string) $payload['nickname']) : '';
         $body = isset($payload['body']) ? trim((string) $payload['body']) : '';
+        $body = strip_tags($body);
+        $body = trim($body);
         $userid = isset($payload['userid']) ? (int) $payload['userid'] : 0;
+        $parentid = isset($payload['parentid']) ? (int) $payload['parentid'] : 0;
+        $website = self::normalizeWebsite(isset($payload['website']) ? $payload['website'] : '');
         $status = isset($payload['status'])
             ? self::normalizeStatus($payload['status'])
             : self::STATUS_APPROVED;
@@ -205,6 +331,9 @@ class CommentManager
         }
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return '请填写有效的邮箱';
+        }
+        if (isset($payload['website']) && trim((string) $payload['website']) !== '' && $website === '') {
+            return '个人网址格式不正确';
         }
         if (function_exists('mb_strlen')) {
             if (mb_strlen($email, 'UTF-8') > 100) {
@@ -223,11 +352,11 @@ class CommentManager
             }
             $bodyLen = strlen($body);
         }
-        if ($bodyLen < 2) {
-            return '评论内容至少 2 个字';
+        if ($bodyLen < 1) {
+            return '请填写评论内容';
         }
-        if ($bodyLen > 2000) {
-            return '评论内容过长';
+        if ($bodyLen > 1000) {
+            return '评论内容过长（最多 1000 字）';
         }
 
         if (class_exists('ContentManager') && ContentManager::tableReady()) {
@@ -237,17 +366,54 @@ class CommentManager
             }
         }
 
+        if ($parentid > 0) {
+            if (!self::hasParentColumn()) {
+                $parentid = 0;
+            } else {
+                $parent = self::findById($parentid);
+                if (!$parent || (int) $parent['contentid'] !== $contentid) {
+                    return '引用的评论不存在';
+                }
+                if (self::normalizeStatus($parent['status']) !== self::STATUS_APPROVED) {
+                    return '只能引用已通过的评论';
+                }
+            }
+        }
+
+        if (!self::hasWebsiteColumn()) {
+            $website = '';
+        }
+        if (!self::hasParentColumn()) {
+            $parentid = 0;
+        }
+
         try {
             $pdo = Database::connect();
-            $stmt = $pdo->prepare(
-                'INSERT INTO `' . self::table() . '`
-                 (`contentid`, `userid`, `nickname`, `email`, `body`, `reply`, `ispinned`, `status`, `createtime`)
-                 VALUES (?, ?, ?, ?, ?, \'\', 0, ?, NOW())'
-            );
-            $stmt->execute(array($contentid, $userid, $nickname, $email, $body, $status));
+            if (self::hasParentColumn() && self::hasWebsiteColumn()) {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO `' . self::table() . '`
+                     (`contentid`, `parentid`, `userid`, `nickname`, `email`, `website`, `body`, `reply`, `ispinned`, `status`, `createtime`)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, \'\', 0, ?, NOW())'
+                );
+                $stmt->execute(array($contentid, $parentid, $userid, $nickname, $email, $website, $body, $status));
+            } else {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO `' . self::table() . '`
+                     (`contentid`, `userid`, `nickname`, `email`, `body`, `reply`, `ispinned`, `status`, `createtime`)
+                     VALUES (?, ?, ?, ?, ?, \'\', 0, ?, NOW())'
+                );
+                $stmt->execute(array($contentid, $userid, $nickname, $email, $body, $status));
+            }
             $id = (int) $pdo->lastInsertId();
             $row = self::findById($id);
-            $fmt = self::formatRow($row);
+            $parentMap = array();
+            if ($parentid > 0) {
+                $p = self::findById($parentid);
+                if ($p) {
+                    $parentMap[$parentid] = $p;
+                }
+            }
+            $fmt = self::formatRow($row, $parentMap);
             return $fmt ? $fmt : '创建失败';
         } catch (Exception $e) {
             return '创建评论失败';
@@ -352,7 +518,7 @@ class CommentManager
     }
 
     /**
-     * 某篇文章已通过评论（前台）
+     * 某篇文章已通过评论（前台，对话序：置顶优先，其余按时间升序）
      *
      * @param int $contentid
      * @return array
@@ -368,14 +534,20 @@ class CommentManager
             $stmt = $pdo->prepare(
                 'SELECT * FROM `' . self::table() . '`
                  WHERE `contentid` = ? AND `status` = ?
-                 ORDER BY `ispinned` DESC, `id` DESC'
+                 ORDER BY `ispinned` DESC, `id` ASC'
             );
             $stmt->execute(array($contentid, self::STATUS_APPROVED));
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $map = array();
+            if (is_array($rows)) {
+                foreach ($rows as $row) {
+                    $map[(int) $row['id']] = $row;
+                }
+            }
             $out = array();
             if (is_array($rows)) {
                 foreach ($rows as $row) {
-                    $fmt = self::formatRow($row);
+                    $fmt = self::formatRow($row, $map);
                     if ($fmt) {
                         $out[] = $fmt;
                     }
