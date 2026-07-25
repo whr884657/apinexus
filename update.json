@@ -1,12 +1,13 @@
 {
-    "version": "10.5.1",
-    "title": "ApiNexus 10.5.1 修复前台接口列表内存溢出",
+    "version": "10.6.0",
+    "title": "ApiNexus 10.6.0 列表 QPM 标签与积分大规模搜索",
     "release_date": "2026-07-26",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "修复 formatForTheme 嵌套 findProfile 导致默认主题内存耗尽",
-        "作者信息仅详情页轻量查询；列表不再拉作者",
-        "缓存 hasAuditColumn 探测结果"
+        "管理端/用户端接口列表卡片：qpm>0 显示 QPM N/MIN，为 0 不显示",
+        "积分变动搜索改为先解析用户/类型再精确过滤，避免大表 LIKE 超时",
+        "orders 增加 remark 前缀索引；迁移 install/migrations/10.6.0.sql",
+        "Redis 业务缓存：列出更多逻辑键、搜索放大镜对齐、去掉中文用途说明"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

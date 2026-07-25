@@ -105,7 +105,8 @@ function vs_redis_render_entry_row(array $entry)
     $cached = !empty($entry['cached']);
     $search = strtolower(
         (isset($entry['label']) ? $entry['label'] : '') . ' '
-        . (isset($entry['desc']) ? $entry['desc'] : '')
+        . (isset($entry['id']) ? $entry['id'] : '') . ' '
+        . (isset($entry['key']) ? $entry['key'] : '')
     );
     ?>
     <tr class="redis-entry-row"
@@ -149,7 +150,8 @@ function vs_redis_render_entry_card(array $entry)
     $cached = !empty($entry['cached']);
     $search = strtolower(
         (isset($entry['label']) ? $entry['label'] : '') . ' '
-        . (isset($entry['desc']) ? $entry['desc'] : '')
+        . (isset($entry['id']) ? $entry['id'] : '') . ' '
+        . (isset($entry['key']) ? $entry['key'] : '')
     );
     ?>
     <div class="redis-entry-card"

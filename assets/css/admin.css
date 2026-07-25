@@ -1016,8 +1016,35 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 #adminRedisPage .redis-entry-search { width: 100%; max-width: 360px; }
-#adminRedisPage .redis-entry-search .vs-search-bar__input-wrap { width: 100%; max-width: none; }
-#adminRedisPage .redis-entry-name { font-weight: 600; font-size: 0.875rem; }
+#adminRedisPage .redis-entry-search .vs-search-bar__input-wrap {
+    position: relative;
+    width: 100%;
+    max-width: none;
+}
+#adminRedisPage .redis-entry-search .vs-search-bar__input-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: #94a3b8;
+    pointer-events: none;
+    z-index: 1;
+}
+#adminRedisPage .redis-entry-search .vs-search-bar__input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding-left: 36px !important;
+    height: 36px;
+}
+#adminRedisPage .redis-entry-name {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    word-break: break-all;
+}
 #adminRedisPage .redis-entry-desc {
     margin-top: 2px;
     font-size: 0.75rem;
@@ -3875,6 +3902,7 @@ select.vs-input.vs-select {
 .vs-api-tag--cat { background: #e0f2fe; color: #0369a1; }
 .vs-api-tag--free { background: #dcfce7; color: #15803d; }
 .vs-api-tag--key { background: #e0f2fe; color: #0284c7; }
+.vs-api-tag--qpm { background: #f5f3ff; color: #6d28d9; }
 .vs-api-tag--proxy { background: #ede9fe; color: #6d28d9; }
 .vs-api-tag--local { background: #f1f5f9; color: #475569; }
 .vs-api-tag--status.is-normal { background: #dcfce7; color: #15803d; }
@@ -6907,6 +6935,19 @@ select.vs-input.vs-select {
 #apiListPage .key-badge--required { background: #fff0f0; color: #dc2626; }
 #apiListPage .key-badge--optional { background: #f0f6ff; color: #2563eb; }
 #apiListPage .key-badge--none { background: #f1f5f9; color: #64748b; }
+#apiListPage .qpm-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+#apiListPage .qpm-badge--limit { background: #f5f3ff; color: #6d28d9; }
+#apiListPage .api-card__tags .qpm-badge { margin-left: 0; }
 
 #apiListPage .type-badge {
     display: inline-flex;

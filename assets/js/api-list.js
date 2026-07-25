@@ -260,6 +260,15 @@
         return '<span class="charge-badge charge-badge--free" data-field="charge_tag">免费</span>';
     }
 
+    function qpmBadgeHtml(api) {
+        var n = parseInt(api && api.qpm, 10) || 0;
+        if (n <= 0) {
+            return '';
+        }
+        return '<span class="qpm-badge qpm-badge--limit" data-field="qpm_badge">QPM '
+            + escapeHtml(String(n) + '/MIN') + '</span>';
+    }
+
     function keyBadgeHtml(keyBadge) {
         var badge = keyBadge ? String(keyBadge).trim() : '';
         if (!badge) {
@@ -617,6 +626,7 @@
             + escapeHtml(typeBadge) + '</span>';
         html += chargeBadgeHtml(api);
         html += keyBadgeHtml(api.needkey_badge || '');
+        html += qpmBadgeHtml(api);
         return html;
     }
 
@@ -664,7 +674,7 @@
             + escapeHtml(typeBadge) + '</span></td>';
         html += '<td>' + methodBadgesHtml(api) + '</td>';
         html += '<td>' + chargeBadgeHtml(api) + '</td>';
-        html += '<td>' + keyBadgeHtml(api.needkey_badge || '') + '</td>';
+        html += '<td>' + keyBadgeHtml(api.needkey_badge || '') + qpmBadgeHtml(api) + '</td>';
         html += '<td><span class="vs-badge ' + statusBadgeClass(api.status) + '" data-field="status_label">'
             + escapeHtml(displayStatusLabel(api.status)) + '</span></td>';
         html += '<td class="vs-api-list-calls-cell"><span data-field="calls">' + formatCalls(api.calls) + '</span></td>';
@@ -1038,6 +1048,27 @@
             if (nextKey) {
                 keyEl.parentNode.replaceChild(nextKey, keyEl);
             }
+        }
+        var qpmEl = rowEl.querySelector('[data-field="qpm_badge"]');
+        var qpmHtml = qpmBadgeHtml(api);
+        if (qpmHtml) {
+            var tmpQpm = document.createElement('div');
+            tmpQpm.innerHTML = qpmHtml;
+            var nextQpm = tmpQpm.firstChild;
+            if (qpmEl && nextQpm) {
+                qpmEl.parentNode.replaceChild(nextQpm, qpmEl);
+            } else if (!qpmEl && nextQpm) {
+                var keyAnchor = rowEl.querySelector('[data-field="needkey_badge"]');
+                if (keyAnchor && keyAnchor.parentNode) {
+                    if (keyAnchor.nextSibling) {
+                        keyAnchor.parentNode.insertBefore(nextQpm, keyAnchor.nextSibling);
+                    } else {
+                        keyAnchor.parentNode.appendChild(nextQpm);
+                    }
+                }
+            }
+        } else if (qpmEl && qpmEl.parentNode) {
+            qpmEl.parentNode.removeChild(qpmEl);
         }
         var tagsEl = rowEl.querySelector('[data-field="tags"]');
         if (tagsEl && !isDesktop) {

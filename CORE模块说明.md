@@ -243,9 +243,9 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendPartner.php` | 前台已启用合作伙伴列表（**主题向**） |
 | `FrontendSponsor.php` | 前台赞助收款码 + 赞助名单（**主题向**） |
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
-| `RedisCache.php` | 业务数据缓存（**v5.1.0+ 仅 apilog 查询/统计**）；键空间自动维护 |
+| `RedisCache.php` | 业务数据缓存（前台/公开列表遗留键 + apilog + orders 窗总数等）；监控页展示逻辑键名（v10.6.0） |
 | `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`detailEnabled()` 控制是否写详细日志 |
-| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索 EXISTS + `kind_class` |
+| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0） |
 | `PointsManager.php` | 余额读写、扣费、充值完成/取消、`giftOnRegister` / `checkin`；列表走 OrderManager |
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（条数可配）、计划任务密钥 |
@@ -827,20 +827,20 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 **配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`apinexus:`）。
 
-**业务缓存项（`RedisCache`，v5.1.0+）：**
+**业务缓存项（`RedisCache`，监控列表 v10.6.0）：**
 
-| 逻辑键 | TTL | 写入入口 | 说明 |
-|--------|-----|----------|------|
-| `cache:apilog:query:{md5}` | 45s | `ApiLogManager::listPaged` | 日志查询结果（含 days/before_id） |
-| `cache:apilog:range_total:{days}` | 90s | `ApiLogManager::listPaged` | 时间窗内无筛选总数（避免每次进页 COUNT） |
-| `cache:apilog:today_count` | 30s | `ApiLogManager::countToday` | 今日调用次数汇总 |
-| `cache:orders:range_total:{md5}` | （遗留） | 历史键名；v5.9.1 起列表不再 COUNT，可忽略 |
+| 逻辑键 | TTL | 说明 |
+|--------|-----|------|
+| `cache:frontend:api_list` 等前台键 | 120～300s | 遗留/可选前台列表缓存；`invalidateFrontend` 清理 |
+| `cache:api:public_list` | 120s | 公开接口列表 |
+| `cache:apilog:query:*` | 45s | 日志查询结果 |
+| `cache:apilog:range_total:*` | 90s | 时间窗无筛选总数 |
+| `cache:apilog:today_count` | 30s | 今日调用次数 |
+| `cache:orders:range_total:*` | 90s | 订单/积分搜索总数缓存 |
 
-**不再缓存（直读 MySQL）：** 公开接口列表、前台格式化接口、分类标签、友链、合作伙伴等小数据量项。
+日志相关调用 `RedisCache::invalidateApiLog()`；前台相关 `invalidateFrontend()`（含 sponsor）。
 
-`RedisCache::invalidateFrontend()` 仅清理旧版遗留键。日志相关调用 `RedisCache::invalidateApiLog()`。
-
-监控页环形图「缓存了什么」按业务项分扇区；列表展示中文名称与用途说明，**禁止**对外展示「轻量」等实现向形容词。
+监控页业务列表展示**逻辑键名**，不写中文业务用途说明；搜索框放大镜须对齐。
 
 ---
 

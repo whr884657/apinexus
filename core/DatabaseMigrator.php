@@ -323,6 +323,11 @@ class DatabaseMigrator
             self::markApplied('10.5.0');
         }
 
+        // 新装已含 10.6.0 orders.remark 前缀索引时跳过
+        if (!in_array('10.6.0', $applied, true) && self::tableIndexExists('orders', 'idx_remark_prefix')) {
+            self::markApplied('10.6.0');
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
     }

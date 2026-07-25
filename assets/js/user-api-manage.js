@@ -483,6 +483,11 @@
         if (keyBadge) {
             html += '<span class="vs-api-tag vs-api-tag--key">' + escapeHtml(keyBadge) + '</span>';
         }
+        var qpmN = parseInt(api.qpm, 10) || 0;
+        if (qpmN > 0) {
+            html += '<span class="vs-api-tag vs-api-tag--qpm" data-field="qpm_badge">QPM '
+                + escapeHtml(String(qpmN) + '/MIN') + '</span>';
+        }
         if (!approved) {
             html += '<span class="vs-api-tag vs-api-tag--audit ' + auditClass(audit) + '" data-field="audit_label">'
                 + escapeHtml(api.audit_label || '') + '</span>';

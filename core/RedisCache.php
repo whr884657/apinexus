@@ -114,6 +114,7 @@ class RedisCache
         self::forget(self::KEY_FRONTEND_CATEGORY);
         self::forget(self::KEY_FRONTEND_LINK);
         self::forget(self::KEY_FRONTEND_PARTNER);
+        self::forget(self::KEY_FRONTEND_SPONSOR);
         self::forget(self::KEY_API_PUBLIC);
     }
 
@@ -346,7 +347,7 @@ class RedisCache
     }
 
     /**
-     * 后台监控：各业务缓存项状态
+     * 后台监控：各业务缓存项状态（展示逻辑键名，不写中文业务说明）
      *
      * @return array<int, array<string, mixed>>
      */
@@ -354,30 +355,87 @@ class RedisCache
     {
         $defs = array(
             array(
+                'id' => 'frontend_api',
+                'label' => self::KEY_FRONTEND_API,
+                'desc' => '',
+                'key' => self::KEY_FRONTEND_API,
+                'ttl_hint' => self::TTL_FRONTEND_API . 's',
+                'chart_color' => '#3b82f6',
+            ),
+            array(
+                'id' => 'frontend_category',
+                'label' => self::KEY_FRONTEND_CATEGORY,
+                'desc' => '',
+                'key' => self::KEY_FRONTEND_CATEGORY,
+                'ttl_hint' => self::TTL_FRONTEND_CATEGORY . 's',
+                'chart_color' => '#06b6d4',
+            ),
+            array(
+                'id' => 'frontend_link',
+                'label' => self::KEY_FRONTEND_LINK,
+                'desc' => '',
+                'key' => self::KEY_FRONTEND_LINK,
+                'ttl_hint' => self::TTL_FRONTEND_LINK . 's',
+                'chart_color' => '#14b8a6',
+            ),
+            array(
+                'id' => 'frontend_partner',
+                'label' => self::KEY_FRONTEND_PARTNER,
+                'desc' => '',
+                'key' => self::KEY_FRONTEND_PARTNER,
+                'ttl_hint' => self::TTL_FRONTEND_PARTNER . 's',
+                'chart_color' => '#10b981',
+            ),
+            array(
+                'id' => 'frontend_sponsor',
+                'label' => self::KEY_FRONTEND_SPONSOR,
+                'desc' => '',
+                'key' => self::KEY_FRONTEND_SPONSOR,
+                'ttl_hint' => self::TTL_FRONTEND_PARTNER . 's',
+                'chart_color' => '#84cc16',
+            ),
+            array(
+                'id' => 'api_public',
+                'label' => self::KEY_API_PUBLIC,
+                'desc' => '',
+                'key' => self::KEY_API_PUBLIC,
+                'ttl_hint' => self::TTL_API_PUBLIC . 's',
+                'chart_color' => '#22c55e',
+            ),
+            array(
                 'id' => 'apilog_query',
-                'label' => 'API 调用日志',
-                'desc' => '日志查询页、今日调用统计等读库结果（短时缓存）',
+                'label' => self::KEY_APILOG_PAGE_PREFIX . '*',
+                'desc' => '',
                 'key' => self::KEY_APILOG_PAGE_PREFIX,
-                'ttl_hint' => self::TTL_APILOG_PAGE . ' 秒',
+                'ttl_hint' => self::TTL_APILOG_PAGE . 's',
                 'pattern' => true,
                 'chart_color' => '#8b5cf6',
             ),
             array(
                 'id' => 'apilog_range_total',
-                'label' => '日志时间窗总数',
-                'desc' => '无筛选时近期日志条数（避免每次进页全表 COUNT）',
+                'label' => self::KEY_APILOG_RANGE_TOTAL_PREFIX . '*',
+                'desc' => '',
                 'key' => self::KEY_APILOG_RANGE_TOTAL_PREFIX,
-                'ttl_hint' => self::TTL_APILOG_RANGE_TOTAL . ' 秒',
+                'ttl_hint' => self::TTL_APILOG_RANGE_TOTAL . 's',
                 'pattern' => true,
                 'chart_color' => '#a78bfa',
             ),
             array(
                 'id' => 'apilog_today',
-                'label' => '今日调用次数',
-                'desc' => '首页等展示的「今日调用」汇总数字',
+                'label' => self::KEY_APILOG_TODAY,
+                'desc' => '',
                 'key' => self::KEY_APILOG_TODAY,
-                'ttl_hint' => self::TTL_APILOG_STATS . ' 秒',
+                'ttl_hint' => self::TTL_APILOG_STATS . 's',
                 'chart_color' => '#ec4899',
+            ),
+            array(
+                'id' => 'orders_range_total',
+                'label' => self::KEY_ORDERS_RANGE_TOTAL_PREFIX . '*',
+                'desc' => '',
+                'key' => self::KEY_ORDERS_RANGE_TOTAL_PREFIX,
+                'ttl_hint' => self::TTL_ORDERS_RANGE_TOTAL . 's',
+                'pattern' => true,
+                'chart_color' => '#f59e0b',
             ),
         );
 

@@ -422,7 +422,7 @@ class OrderManager
     }
 
     /**
-     * 构建搜索条件（EXISTS，避免 COUNT/列表 JOIN 不一致导致整页空结果）
+     * 构建搜索条件（先解析用户/类型，再精确过滤，避免全表 LIKE 拉爆）
      *
      * @param string $q
      * @param bool   $includeApiName
@@ -434,50 +434,222 @@ class OrderManager
         if ($q === '') {
             return array('sql' => '', 'bind' => array());
         }
-        $like = '%' . $q . '%';
+
+        $kinds = self::kindSearchPairs($q);
+        $kindPrimary = self::isPrimaryKindQuery($q, $kinds);
+        $userIds = $kindPrimary ? array() : self::resolveSearchUserIds($q);
+        $apiIds = ($includeApiName && !$kindPrimary) ? self::resolveSearchApiIds($q) : array();
+
         $or = array();
         $bind = array();
 
-        $or[] = 'o.`orderno` LIKE ?';
-        $bind[] = $like;
-        $or[] = 'o.`tradeno` LIKE ?';
-        $bind[] = $like;
-        $or[] = 'o.`remark` LIKE ?';
-        $bind[] = $like;
+        // 类型关键词：走 (direct,kind) 复合索引，禁止再叠全表 LIKE
+        if ($kinds !== array()) {
+            foreach ($kinds as $pair) {
+                $or[] = '(o.`direct` = ? AND o.`kind` = ?)';
+                $bind[] = (int) $pair[0];
+                $bind[] = (int) $pair[1];
+            }
+            if ($kindPrimary) {
+                return array(
+                    'sql'  => '(' . implode(' OR ', $or) . ')',
+                    'bind' => $bind,
+                );
+            }
+        }
 
-        $userTable = Database::table('user');
-        $or[] = 'EXISTS (
-            SELECT 1 FROM `' . $userTable . '` su
-            WHERE su.`id` = o.`userid`
-              AND (su.`username` LIKE ? OR su.`email` LIKE ?)
-        )';
-        $bind[] = $like;
-        $bind[] = $like;
-
-        if (ctype_digit($q)) {
+        if ($userIds !== array()) {
+            $ph = implode(',', array_fill(0, count($userIds), '?'));
+            $or[] = 'o.`userid` IN (' . $ph . ')';
+            foreach ($userIds as $uid) {
+                $bind[] = (int) $uid;
+            }
+        } elseif (ctype_digit($q)) {
             $or[] = 'o.`userid` = ?';
             $bind[] = (int) $q;
         }
 
-        if ($includeApiName) {
-            $apiTable = Database::table('api');
-            $or[] = 'EXISTS (
-                SELECT 1 FROM `' . $apiTable . '` sa
-                WHERE sa.`id` = o.`apiid` AND sa.`name` LIKE ?
-            )';
-            $bind[] = $like;
+        if ($apiIds !== array()) {
+            $ph = implode(',', array_fill(0, count($apiIds), '?'));
+            $or[] = 'o.`apiid` IN (' . $ph . ')';
+            foreach ($apiIds as $aid) {
+                $bind[] = (int) $aid;
+            }
         }
 
-        foreach (self::kindSearchPairs($q) as $pair) {
-            $or[] = '(o.`direct` = ? AND o.`kind` = ?)';
-            $bind[] = $pair[0];
-            $bind[] = $pair[1];
+        // 订单号 / 平台单号：等值 + 前缀（可用索引），禁止 '%xxx%'
+        if (preg_match('/^[A-Za-z0-9_-]{4,64}$/', $q)) {
+            $or[] = 'o.`orderno` = ?';
+            $bind[] = $q;
+            $or[] = 'o.`orderno` LIKE ?';
+            $bind[] = $q . '%';
+            $or[] = 'o.`tradeno` = ?';
+            $bind[] = $q;
+            $or[] = 'o.`tradeno` LIKE ?';
+            $bind[] = $q . '%';
+        }
+
+        // 说明：仅在未命中用户/类型/单号时作为兜底（短词），降低全表扫描概率
+        $qLen = function_exists('mb_strlen') ? mb_strlen($q, 'UTF-8') : strlen($q);
+        if ($or === array() && $qLen >= 2 && $qLen <= 32) {
+            $or[] = 'o.`remark` LIKE ?';
+            $bind[] = '%' . $q . '%';
+        } elseif ($userIds === array() && $kinds === array() && $apiIds === array() && $qLen >= 2 && $qLen <= 32) {
+            // 有单号形态但仍要覆盖备注中文（如只搜备注片段）
+            if (!preg_match('/^[A-Za-z0-9_-]{4,64}$/', $q)) {
+                $or[] = 'o.`remark` LIKE ?';
+                $bind[] = '%' . $q . '%';
+            }
+        }
+
+        if ($or === array()) {
+            return array('sql' => '0 = 1', 'bind' => array());
         }
 
         return array(
             'sql'  => '(' . implode(' OR ', $or) . ')',
             'bind' => $bind,
         );
+    }
+
+    /**
+     * 查询词是否主要为类型文案（如「注册赠送」「每日签到」）
+     *
+     * @param string $q
+     * @param array  $kinds
+     * @return bool
+     */
+    private static function isPrimaryKindQuery($q, array $kinds)
+    {
+        if ($kinds === array()) {
+            return false;
+        }
+        $q = trim((string) $q);
+        $labels = array(
+            '充值', '用户充值', '加款', '管理员加款', '注册', '赠送', '注册赠送', '注册赠送积分',
+            '签到', '每日签到', 'API调用', '接口调用', '调用接口', '扣款', '管理员扣款', 'AI调用',
+        );
+        foreach ($labels as $label) {
+            if ($q === $label) {
+                return true;
+            }
+        }
+        if (!function_exists('mb_strpos')) {
+            return false;
+        }
+        foreach (array('注册赠送', '每日签到', '管理员加款', '管理员扣款', '用户充值', 'API调用', 'AI调用', '接口调用') as $strong) {
+            if (mb_strpos($q, $strong) !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 先查用户表拿 ID（走唯一索引/前缀），再过滤 orders.userid
+     *
+     * @param string $q
+     * @return int[]
+     */
+    private static function resolveSearchUserIds($q)
+    {
+        $q = trim((string) $q);
+        if ($q === '' || ctype_digit($q)) {
+            return array();
+        }
+        static $memo = array();
+        if (isset($memo[$q])) {
+            return $memo[$q];
+        }
+        $ids = array();
+        try {
+            $pdo = Database::connect();
+            self::applyQueryTimeout($pdo);
+            $table = Database::table('user');
+            $stmt = $pdo->prepare(
+                'SELECT `id` FROM `' . $table . '` WHERE `username` = ? OR `email` = ? LIMIT 30'
+            );
+            $stmt->execute(array($q, $q));
+            foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
+                $ids[] = (int) $id;
+            }
+            if ($ids === array()) {
+                $prefix = $q . '%';
+                $stmt = $pdo->prepare(
+                    'SELECT `id` FROM `' . $table . '` WHERE `username` LIKE ? OR `email` LIKE ? ORDER BY `id` DESC LIMIT 50'
+                );
+                $stmt->execute(array($prefix, $prefix));
+                foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
+                    $ids[] = (int) $id;
+                }
+            }
+            if ($ids === array()) {
+                $qLen = function_exists('mb_strlen') ? mb_strlen($q, 'UTF-8') : strlen($q);
+                if ($qLen >= 2 && $qLen <= 64) {
+                    $fuzzy = '%' . $q . '%';
+                    $stmt = $pdo->prepare(
+                        'SELECT `id` FROM `' . $table . '` WHERE `username` LIKE ? OR `email` LIKE ? ORDER BY `id` DESC LIMIT 50'
+                    );
+                    $stmt->execute(array($fuzzy, $fuzzy));
+                    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
+                        $ids[] = (int) $id;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            $ids = array();
+        }
+        $ids = array_values(array_unique(array_filter($ids)));
+        return $memo[$q] = $ids;
+    }
+
+    /**
+     * 先查接口名拿 ID，再过滤 orders.apiid
+     *
+     * @param string $q
+     * @return int[]
+     */
+    private static function resolveSearchApiIds($q)
+    {
+        $q = trim((string) $q);
+        if ($q === '') {
+            return array();
+        }
+        static $memo = array();
+        if (isset($memo[$q])) {
+            return $memo[$q];
+        }
+        $ids = array();
+        try {
+            $pdo = Database::connect();
+            self::applyQueryTimeout($pdo);
+            $table = Database::table('api');
+            $prefix = $q . '%';
+            $stmt = $pdo->prepare(
+                'SELECT `id` FROM `' . $table . '` WHERE `name` = ? OR `name` LIKE ? ORDER BY `id` DESC LIMIT 50'
+            );
+            $stmt->execute(array($q, $prefix));
+            foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
+                $ids[] = (int) $id;
+            }
+            if ($ids === array()) {
+                $qLen = function_exists('mb_strlen') ? mb_strlen($q, 'UTF-8') : strlen($q);
+                if ($qLen >= 2 && $qLen <= 64) {
+                    $fuzzy = '%' . $q . '%';
+                    $stmt = $pdo->prepare(
+                        'SELECT `id` FROM `' . $table . '` WHERE `name` LIKE ? ORDER BY `id` DESC LIMIT 50'
+                    );
+                    $stmt->execute(array($fuzzy));
+                    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
+                        $ids[] = (int) $id;
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            $ids = array();
+        }
+        $ids = array_values(array_unique(array_filter($ids)));
+        return $memo[$q] = $ids;
     }
 
     /**
@@ -495,7 +667,7 @@ class OrderManager
         $map = array(
             array(self::DIRECT_INC, self::KIND_RECHARGE, array('充值', '用户充值')),
             array(self::DIRECT_INC, self::KIND_ADMIN_ADD, array('加款', '管理员加款')),
-            array(self::DIRECT_INC, self::KIND_REGISTER, array('注册', '赠送', '注册赠送')),
+            array(self::DIRECT_INC, self::KIND_REGISTER, array('注册', '赠送', '注册赠送', '注册赠送积分')),
             array(self::DIRECT_INC, self::KIND_CHECKIN, array('签到', '每日签到')),
             array(self::DIRECT_DEC, self::KIND_API, array('API调用', '接口调用', '调用接口')),
             array(self::DIRECT_DEC, self::KIND_ADMIN_SUB, array('扣款', '管理员扣款')),
@@ -520,7 +692,6 @@ class OrderManager
                     break;
                 }
             }
-            // 短英文单独精确匹配，避免邮箱里的 api 误伤
             if (!$hit && (strcasecmp($q, 'api') === 0 || strcasecmp($q, 'ai') === 0)) {
                 if ($row[1] === self::KIND_API && strcasecmp($q, 'api') === 0 && $row[0] === self::DIRECT_DEC) {
                     $hit = true;

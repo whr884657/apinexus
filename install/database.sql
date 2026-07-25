@@ -266,7 +266,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}orders` (
     KEY `idx_createtime_id` (`createtime`, `id`),
     KEY `idx_userid_status_id` (`userid`, `status`, `id`),
     KEY `idx_direct_kind_status_id` (`direct`, `kind`, `status`, `id`),
-    KEY `idx_status_id` (`status`, `id`)
+    KEY `idx_status_id` (`status`, `id`),
+    KEY `idx_remark_prefix` (`remark`(32))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='积分与支付订单';
 
 -- 用户每日签到

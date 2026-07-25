@@ -220,6 +220,21 @@ function vs_api_list_charge_badge_html($charge, $price)
 }
 
 /**
+ * QPM>0 时显示；0 不输出
+ *
+ * @param mixed $qpm
+ * @return string
+ */
+function vs_api_list_qpm_badge_html($qpm)
+{
+    $n = (int) $qpm;
+    if ($n <= 0) {
+        return '';
+    }
+    return '<span class="qpm-badge qpm-badge--limit" data-field="qpm_badge">QPM ' . vs_e($n . '/MIN') . '</span>';
+}
+
+/**
  * @param array $methods
  * @return string
  */
@@ -370,7 +385,7 @@ function vs_render_api_list_desktop_row(array $ctx)
         <td><span class="type-badge <?php echo vs_e($ctx['typeClass']); ?>" data-field="apitype_badge"><?php echo vs_e($ctx['typeBadge']); ?></span></td>
         <td><?php echo vs_api_list_method_badges_html($ctx['methods']); ?></td>
         <td><?php echo vs_api_list_charge_badge_html($ctx['charge'], $ctx['price']); ?></td>
-        <td><?php echo vs_api_list_key_badge_html($ctx['keyBadge']); ?></td>
+        <td><?php echo vs_api_list_key_badge_html($ctx['keyBadge']); ?><?php echo vs_api_list_qpm_badge_html(isset($ctx['api']['qpm']) ? $ctx['api']['qpm'] : 0); ?></td>
         <td><span class="vs-badge <?php echo vs_e($ctx['statusBadgeClass']); ?>" data-field="status_label"><?php echo vs_e($ctx['statusText']); ?></span></td>
         <td class="vs-api-list-calls-cell"><span data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></span></td>
         <td><?php echo vs_api_list_action_buttons_html($ctx['apiId'], $ctx['status']); ?></td>
@@ -412,6 +427,7 @@ function vs_render_api_list_mobile_card(array $ctx)
             <span class="type-badge <?php echo vs_e($ctx['typeClass']); ?>" data-field="apitype_badge"><?php echo vs_e($ctx['typeBadge']); ?></span>
             <?php echo vs_api_list_charge_badge_html($ctx['charge'], $ctx['price']); ?>
             <?php echo vs_api_list_key_badge_html($ctx['keyBadge']); ?>
+            <?php echo vs_api_list_qpm_badge_html(isset($ctx['api']['qpm']) ? $ctx['api']['qpm'] : 0); ?>
         </div>
         <div class="api-card__info">
             <span class="api-card__info-item"><span class="api-card__info-label">提交者</span> <span class="api-card__info-value" data-field="username"><?php echo vs_e($ctx['username']); ?></span></span>

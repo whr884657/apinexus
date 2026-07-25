@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.5.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.6.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,34 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.6.0（2026-07-26）
+
+**类型：** 中版本（列表 QPM + 积分大规模搜索 + Redis 业务缓存）
+
+**变更说明：**
+
+- 管理端 / 用户端接口列表：`qpm>0` 显示 `QPM N/MIN`，为 0 不显示
+- 积分变动搜索：先解析用户/类型再精确过滤，避免大表 `%LIKE%` 超时「搜不到」
+- `orders.remark` 前缀索引；迁移 `install/migrations/10.6.0.sql`
+- Redis 业务缓存列出更多逻辑键；搜索放大镜对齐；去掉中文用途说明
+
+### v10.5.1（2026-07-26）
+
+**类型：** 紧急修复（前台列表内存溢出）
+
+**变更说明：**
+
+- 修复 `formatForTheme` 嵌套 `findProfile` 导致默认主题内存耗尽
+- 作者信息仅详情页轻量查询；列表不再拉作者
+
+### v10.5.0（2026-07-26）
+
+**类型：** 中版本（积分搜索 + 接口 QPM）
+
+**变更说明：**
+
+- 积分搜索 EXISTS；类型标签配色；接口 QPM 限流；详情页作者
 
 ### v10.4.2（2026-07-26）
 

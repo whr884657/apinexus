@@ -234,6 +234,12 @@ function vs_render_user_api_item(array $row)
             <?php if ($keyBadge !== ''): ?>
                 <span class="vs-api-tag vs-api-tag--key"><?php echo vs_e($keyBadge); ?></span>
             <?php endif; ?>
+            <?php
+            $qpmShow = isset($api['qpm']) ? (int) $api['qpm'] : 0;
+            if ($qpmShow > 0):
+            ?>
+                <span class="vs-api-tag vs-api-tag--qpm" data-field="qpm_badge">QPM <?php echo vs_e($qpmShow . '/MIN'); ?></span>
+            <?php endif; ?>
             <?php if (!$approved): ?>
                 <span class="vs-api-tag vs-api-tag--audit <?php echo vs_e($api['audit_class']); ?>" data-field="audit_label"><?php echo vs_e($api['audit_label']); ?></span>
             <?php endif; ?>
