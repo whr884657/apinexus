@@ -8,14 +8,14 @@
 
 class Updater
 {
-    /** 默认清单 / 版本地址（Gitee 主源；实际拉取按 updateMirrors 顺序兜底） */
+    /** 默认清单 / 版本地址（Gitee；实际拉取按 updateMirrors 顺序兜底） */
     const MANIFEST_URL = 'https://gitee.com/xunjinlu/apinexus/raw/main/update.json';
     const VERSION_URL  = 'https://gitee.com/xunjinlu/apinexus/raw/main/core/version.php';
     const DEFAULT_REPO = 'xunjinlu/apinexus';
     const DEFAULT_BRANCH = 'main';
-    /** GitHub 镜像仓库（owner 与国内仓不同） */
+    /** GitHub 仓库（owner 与国内仓不同） */
     const GITHUB_REPO = 'whr884657/apinexus';
-    /** GitCode 镜像仓库 */
+    /** GitCode 仓库 */
     const GITCODE_REPO = 'xunjinlu/apinexus';
 
     /** 云端更新可信域名（直连 HTTPS，不依赖本地 CA 证书包） */
@@ -709,7 +709,7 @@ class Updater
     }
 
     /**
-     * 更新源镜像列表（顺序：Gitee → GitCode → GitHub）
+     * 更新源列表（顺序：Gitee → GitCode → GitHub，仅表示拉取兜底顺序，仓库本身无主次）
      *
      * @return array
      */

@@ -25,6 +25,7 @@ require_once VS_ROOT . '/core/RateLimitStore.php';
 require_once VS_ROOT . '/core/AuthSecurity.php';
 require_once VS_ROOT . '/core/AjaxResponse.php';
 require_once VS_ROOT . '/core/SystemInfo.php';
+require_once VS_ROOT . '/core/AboutCatalog.php';
 require_once VS_ROOT . '/core/Updater.php';
 require_once VS_ROOT . '/core/UpdateLog.php';
 require_once VS_ROOT . '/core/UserAvatar.php';

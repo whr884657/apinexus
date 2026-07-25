@@ -1,10 +1,13 @@
 {
-    "version": "10.0.1",
-    "title": "ApiNexus 10.0.1 后台关于页参照重设计",
+    "version": "10.0.2",
+    "title": "ApiNexus 10.0.2 关于页目录化与体验优化",
     "release_date": "2026-07-25",
     "db_changes": false,
     "changes": [
-        "管理员「关于」页按参考设计重做：Hero、运行环境表、链接与技术基础区块"
+        "关于页：单作者寻鲸录头像；仓库链接平等展示且不露 URL",
+        "开发维护/链接/技术栈改由隐蔽 JSON 云端优先加载（AboutCatalog）",
+        "本地官方图标与彩色技术徽章；运行环境改卡片网格并优化手机端与动效",
+        "文档去掉主仓库/镜像措辞，三仓并列"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

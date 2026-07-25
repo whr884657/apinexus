@@ -852,7 +852,7 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 **作用：** 检测新版本、下载 `apinexus{版本}.zip`、解压覆盖（保护 `config/`、`data/`），并按清单清理废弃文件。
 
-**更新源顺序（三重兜底）：** Gitee（默认）→ GitCode → GitHub。`update.json` / `version.php` / 更新包均按此顺序尝试；可信域名单含 gitee / gitcode / github 相关主机。
+**更新源顺序（三重兜底）：** Gitee → GitCode → GitHub（拉取兜底顺序，仓库无主次）。`update.json` / `version.php` / 更新包均按此顺序尝试；可信域名单含 gitee / gitcode / github 相关主机。
 
 | 方法 | 说明 |
 |------|------|

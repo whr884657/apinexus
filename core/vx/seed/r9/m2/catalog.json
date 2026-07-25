@@ -1,0 +1,59 @@
+{
+    "version": 1,
+    "team": [
+        {
+            "name": "尋鯨錄",
+            "role": "作者 · 基础维护",
+            "avatar": "https://q1.qlogo.cn/g?b=qq&nk=3202089153&s=640"
+        }
+    ],
+    "links": [
+        {
+            "name": "Gitee",
+            "href": "https://gitee.com/xunjinlu/apinexus",
+            "icon": "gitee"
+        },
+        {
+            "name": "GitCode",
+            "href": "https://gitcode.com/xunjinlu/apinexus",
+            "icon": "gitcode"
+        },
+        {
+            "name": "GitHub",
+            "href": "https://github.com/whr884657/apinexus",
+            "icon": "github"
+        },
+        {
+            "name": "发行版下载",
+            "href": "https://gitee.com/xunjinlu/apinexus/releases",
+            "icon": "gitee"
+        }
+    ],
+    "tech": [
+        {
+            "name": "PHP",
+            "href": "https://www.php.net",
+            "icon": "php",
+            "tone": "php"
+        },
+        {
+            "name": "MySQL",
+            "href": "https://www.mysql.com",
+            "icon": "MySQL",
+            "tone": "mysql"
+        },
+        {
+            "name": "Redis",
+            "href": "https://redis.io",
+            "icon": "Redis",
+            "tone": "redis"
+        },
+        {
+            "name": "Parsedown",
+            "href": "https://parsedown.org",
+            "icon": "",
+            "tone": "parsedown"
+        }
+    ],
+    "note": "本系统基于以上开源基础能力构建，感谢相关项目与贡献者。"
+}

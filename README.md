@@ -7,11 +7,11 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.0.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.0.2-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
-  <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-主仓库-red?logo=gitee&logoColor=white" alt="Gitee"></a>
-  <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-镜像-orange?logo=git&logoColor=white" alt="GitCode"></a>
-  <a href="https://github.com/whr884657/apinexus"><img src="https://img.shields.io/badge/GitHub-镜像-blue?logo=github&logoColor=white" alt="GitHub"></a>
+  <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
+  <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
+  <a href="https://github.com/whr884657/apinexus"><img src="https://img.shields.io/badge/GitHub-whr884657%2Fapinexus-blue?logo=github&logoColor=white" alt="GitHub"></a>
   <img src="https://img.shields.io/badge/PHP-7.4%20%7C%208.0%20%7C%208.2-purple?logo=php&logoColor=white" alt="PHP">
   <img src="https://img.shields.io/badge/MySQL-5.7%2B-blue?logo=mysql&logoColor=white" alt="MySQL">
 </p>
@@ -63,9 +63,9 @@
 
 | 平台 | 链接 | 说明 |
 |------|------|------|
-| **Gitee（主仓库 / 默认更新源）** | [xunjinlu/apinexus](https://gitee.com/xunjinlu/apinexus) | 国内主源；发版与在线更新优先 |
-| **GitCode（镜像）** | [xunjinlu/apinexus](https://gitcode.com/xunjinlu/apinexus) | Gitee 不可用时的第二更新源 |
-| **GitHub（镜像）** | [whr884657/apinexus](https://github.com/whr884657/apinexus) | 海外兜底更新源 |
+| **Gitee** | [xunjinlu/apinexus](https://gitee.com/xunjinlu/apinexus) | 国内常用仓库；在线更新优先尝试 |
+| **GitCode** | [xunjinlu/apinexus](https://gitcode.com/xunjinlu/apinexus) | 同步仓库；更新源自动兜底 |
+| **GitHub** | [whr884657/apinexus](https://github.com/whr884657/apinexus) | 同步仓库；更新源自动兜底 |
 | **发行版下载** | [Gitee Releases](https://gitee.com/xunjinlu/apinexus/releases) | 推荐手动下载入口 |
 
 压缩包命名：`apinexus{版本号}.zip`（如 `apinexus4.1.0.zip`）。各版本详细说明见 `发行说明/` 目录。
@@ -262,6 +262,14 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.0.2（2026-07-25）
+
+**类型：** 小版本优化（关于页）
+
+**变更说明：**
+
+- 关于页单作者、平等仓库链接、隐蔽 JSON 云端目录、图标与手机端体验
 
 ### v10.0.1（2026-07-25）
 
@@ -499,10 +507,10 @@ location / {
 
 ## 作者与仓库
 
-- Gitee（主）：[https://gitee.com/xunjinlu/apinexus](https://gitee.com/xunjinlu/apinexus)
+- Gitee：[https://gitee.com/xunjinlu/apinexus](https://gitee.com/xunjinlu/apinexus)
 - GitCode：[https://gitcode.com/xunjinlu/apinexus](https://gitcode.com/xunjinlu/apinexus)
 - GitHub：[https://github.com/whr884657/apinexus](https://github.com/whr884657/apinexus)
-- 问题反馈：优先通过 Gitee Issues 提交
+- 问题反馈：可通过任一仓库 Issues 提交
 
 ---
 

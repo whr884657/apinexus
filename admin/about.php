@@ -4,12 +4,14 @@
  * 作用：ApiNexus 后台关于页面（产品信息 / 运行环境 / 链接 / 致谢）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
+ *       开发维护 / 链接 / 技术栈由 AboutCatalog 云端优先加载。
  */
 
 require_once __DIR__ . '/init.php';
 
 $systemInfo = SystemInfo::collect();
 $updateCheck = Updater::checkForUpdate();
+$catalog = AboutCatalog::load();
 $infoMap = array();
 foreach ($systemInfo as $row) {
     if (isset($row['label'])) {
@@ -27,79 +29,51 @@ $logoLetter = function_exists('mb_substr')
     ? mb_substr($siteName, 0, 1, 'UTF-8')
     : substr($siteName, 0, 1);
 
-$envPairs = array(
-    array(
-        array('系统版本', 'version'),
-        array('PHP 版本', isset($infoMap['PHP 版本']) ? $infoMap['PHP 版本'] : PHP_VERSION),
-    ),
-    array(
-        array('数据库', isset($infoMap['MySQL 版本']) ? $infoMap['MySQL 版本'] : '—'),
-        array('Web 服务器', isset($infoMap['服务器软件']) ? $infoMap['服务器软件'] : '—'),
-    ),
-    array(
-        array('操作系统', isset($infoMap['操作系统']) ? $infoMap['操作系统'] : PHP_OS),
-        array('Redis', isset($infoMap['Redis 版本']) ? $infoMap['Redis 版本'] : '—'),
-    ),
-    array(
-        array('时区', isset($infoMap['时区']) ? $infoMap['时区'] : date_default_timezone_get()),
-        array('服务器时间', isset($infoMap['服务器时间']) ? $infoMap['服务器时间'] : date('Y-m-d H:i:s')),
-    ),
+$envItems = array(
+    array('label' => '系统版本', 'value' => 'version'),
+    array('label' => 'PHP 版本', 'value' => isset($infoMap['PHP 版本']) ? $infoMap['PHP 版本'] : PHP_VERSION),
+    array('label' => '数据库', 'value' => isset($infoMap['MySQL 版本']) ? $infoMap['MySQL 版本'] : '—'),
+    array('label' => 'Web 服务器', 'value' => isset($infoMap['服务器软件']) ? $infoMap['服务器软件'] : '—'),
+    array('label' => '操作系统', 'value' => isset($infoMap['操作系统']) ? $infoMap['操作系统'] : PHP_OS),
+    array('label' => 'Redis', 'value' => isset($infoMap['Redis 版本']) ? $infoMap['Redis 版本'] : '—'),
+    array('label' => '时区', 'value' => isset($infoMap['时区']) ? $infoMap['时区'] : date_default_timezone_get()),
+    array('label' => '服务器时间', 'value' => isset($infoMap['服务器时间']) ? $infoMap['服务器时间'] : date('Y-m-d H:i:s')),
 );
 
-$links = array(
-    array(
-        'label' => 'Gitee 主仓库',
-        'value' => 'gitee.com/xunjinlu/apinexus',
-        'href'  => 'https://gitee.com/xunjinlu/apinexus',
-        'icon'  => 'repo',
-    ),
-    array(
-        'label' => 'GitCode 镜像',
-        'value' => 'gitcode.com/xunjinlu/apinexus',
-        'href'  => 'https://gitcode.com/xunjinlu/apinexus',
-        'icon'  => 'repo',
-    ),
-    array(
-        'label' => 'GitHub 镜像',
-        'value' => 'github.com/whr884657/apinexus',
-        'href'  => 'https://github.com/whr884657/apinexus',
-        'icon'  => 'github',
-    ),
-    array(
-        'label' => '发行版下载',
-        'value' => 'Gitee Releases',
-        'href'  => 'https://gitee.com/xunjinlu/apinexus/releases',
-        'icon'  => 'download',
-    ),
-);
-
-$techList = array(
-    array('name' => 'PHP', 'href' => 'https://www.php.net'),
-    array('name' => 'MySQL', 'href' => 'https://www.mysql.com'),
-    array('name' => 'Redis', 'href' => 'https://redis.io'),
-    array('name' => 'Parsedown', 'href' => 'https://parsedown.org'),
-);
+$assetBase = rtrim(vs_base_url(), '/');
+$imgBase = $assetBase . '/assets/img';
 
 /**
- * @param string $type
+ * @param string $icon
  * @return string
  */
-function vs_about_link_icon_svg($type)
+function vs_about_icon_src($icon)
 {
-    if ($type === 'github') {
-        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>';
+    global $imgBase;
+    $map = array(
+        'gitee'   => 'gitee.svg',
+        'gitcode' => 'gitcode.svg',
+        'github'  => 'github.svg',
+        'php'     => 'php.svg',
+        'mysql'   => 'MySQL.svg',
+        'MySQL'   => 'MySQL.svg',
+        'redis'   => 'Redis.svg',
+        'Redis'   => 'Redis.svg',
+    );
+    if ($icon === '' || !isset($map[$icon])) {
+        if ($icon !== '' && preg_match('/^[A-Za-z0-9_-]+$/', $icon)) {
+            return $imgBase . '/' . $icon . '.svg';
+        }
+        return '';
     }
-    if ($type === 'download') {
-        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
-    }
-    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+    return $imgBase . '/' . $map[$icon];
 }
 
 vs_admin_layout_start('关于', 'about');
 ?>
 
 <div id="adminAboutPage">
-    <div class="vs-panel about-section about-hero-panel">
+    <div class="vs-panel about-section about-hero-panel about-reveal" style="--about-delay:0">
         <div class="about-hero">
             <?php if ($siteLogo !== ''): ?>
                 <img class="about-hero__logo-img" src="<?php echo vs_e($siteLogo); ?>" alt="" width="64" height="64" loading="lazy" referrerpolicy="no-referrer" decoding="async">
@@ -112,83 +86,79 @@ vs_admin_layout_start('关于', 'about');
         </div>
     </div>
 
-    <div class="vs-panel about-section about-env-panel">
+    <div class="vs-panel about-section about-env-panel about-reveal" style="--about-delay:1">
         <div class="about-panel-head">
             <span class="about-panel-head__title">运行环境</span>
             <span class="about-badge about-badge--ok">运行正常</span>
         </div>
-        <div class="about-env-wrap">
-            <div class="vs-table-responsive">
-                <table class="vs-table about-env-table">
-                    <thead>
-                        <tr>
-                            <th>项目</th>
-                            <th>信息</th>
-                            <th>项目</th>
-                            <th>信息</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($envPairs as $pair): ?>
-                            <tr>
-                                <td><span class="about-env-label"><?php echo vs_e($pair[0][0]); ?></span></td>
-                                <td>
-                                    <span class="about-env-value">
-                                        <?php
-                                        if ($pair[0][1] === 'version') {
-                                            echo vs_render_version_display($updateCheck);
-                                        } else {
-                                            echo vs_e($pair[0][1]);
-                                        }
-                                        ?>
-                                    </span>
-                                </td>
-                                <td><span class="about-env-label"><?php echo vs_e($pair[1][0]); ?></span></td>
-                                <td><span class="about-env-value"><?php echo vs_e($pair[1][1]); ?></span></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+        <div class="about-env-grid">
+            <?php foreach ($envItems as $i => $item): ?>
+                <div class="about-env-card" style="--env-i:<?php echo (int) $i; ?>">
+                    <div class="about-env-card__label"><?php echo vs_e($item['label']); ?></div>
+                    <div class="about-env-card__value">
+                        <?php
+                        if ($item['value'] === 'version') {
+                            echo vs_render_version_display($updateCheck);
+                        } else {
+                            echo vs_e($item['value']);
+                        }
+                        ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
     </div>
 
     <div class="about-dual about-section">
-        <div class="vs-panel">
+        <div class="vs-panel about-reveal" style="--about-delay:2">
             <div class="about-panel-head">
                 <span class="about-panel-head__title">开发与维护</span>
             </div>
             <div class="about-panel-body">
                 <div class="about-team-grid">
-                    <div class="about-team-item">
-                        <div class="about-team-avatar">尋</div>
-                        <div>
-                            <div class="about-team-name">尋鯨錄</div>
-                            <div class="about-team-role">项目作者 / 维护</div>
+                    <?php foreach ($catalog['team'] as $member): ?>
+                        <div class="about-team-item">
+                            <?php if (!empty($member['avatar'])): ?>
+                                <img class="about-team-avatar about-team-avatar--img" src="<?php echo vs_e($member['avatar']); ?>" alt="" width="44" height="44" loading="lazy" referrerpolicy="no-referrer" decoding="async">
+                            <?php else: ?>
+                                <div class="about-team-avatar"><?php
+                                    echo vs_e(function_exists('mb_substr')
+                                        ? mb_substr($member['name'], 0, 1, 'UTF-8')
+                                        : substr($member['name'], 0, 1));
+                                ?></div>
+                            <?php endif; ?>
+                            <div>
+                                <div class="about-team-name"><?php echo vs_e($member['name']); ?></div>
+                                <?php if ($member['role'] !== ''): ?>
+                                    <div class="about-team-role"><?php echo vs_e($member['role']); ?></div>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
-                    <div class="about-team-item">
-                        <div class="about-team-avatar about-team-avatar--alt">A</div>
-                        <div>
-                            <div class="about-team-name">ApiNexus</div>
-                            <div class="about-team-role">开放接口平台</div>
-                        </div>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
 
-        <div class="vs-panel">
+        <div class="vs-panel about-reveal" style="--about-delay:3">
             <div class="about-panel-head">
                 <span class="about-panel-head__title">相关链接</span>
             </div>
             <div class="about-panel-body">
                 <div class="about-link-list">
-                    <?php foreach ($links as $link): ?>
-                        <a class="about-link-item" href="<?php echo vs_e($link['href']); ?>" target="_blank" rel="noopener noreferrer">
-                            <span class="about-link-item__icon"><?php echo vs_about_link_icon_svg($link['icon']); ?></span>
-                            <span class="about-link-item__label"><?php echo vs_e($link['label']); ?></span>
-                            <span class="about-link-item__value"><?php echo vs_e($link['value']); ?></span>
+                    <?php foreach ($catalog['links'] as $link): ?>
+                        <?php $iconSrc = vs_about_icon_src($link['icon']); ?>
+                        <a class="about-link-item" href="<?php echo vs_e($link['href']); ?>" target="_blank" rel="noopener noreferrer" title="<?php echo vs_e($link['name']); ?>">
+                            <span class="about-link-item__icon<?php echo $iconSrc !== '' ? ' about-link-item__icon--brand' : ''; ?>">
+                                <?php if ($iconSrc !== ''): ?>
+                                    <img src="<?php echo vs_e($iconSrc); ?>" alt="" width="18" height="18" loading="lazy" decoding="async">
+                                <?php else: ?>
+                                    <span class="about-link-item__dot" aria-hidden="true"></span>
+                                <?php endif; ?>
+                            </span>
+                            <span class="about-link-item__label"><?php echo vs_e($link['name']); ?></span>
+                            <span class="about-link-item__arrow" aria-hidden="true">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>
+                            </span>
                         </a>
                     <?php endforeach; ?>
                 </div>
@@ -196,28 +166,43 @@ vs_admin_layout_start('关于', 'about');
         </div>
     </div>
 
-    <div class="vs-panel about-section">
+    <div class="vs-panel about-section about-reveal" style="--about-delay:4">
         <div class="about-panel-head">
             <span class="about-panel-head__title">技术基础</span>
-            <span class="about-badge about-badge--muted">开源组件</span>
+            <span class="about-badge about-badge--tech">开源组件</span>
         </div>
         <div class="about-panel-body">
             <div class="about-tech-list">
-                <?php foreach ($techList as $tech): ?>
-                    <a class="about-tech-badge" href="<?php echo vs_e($tech['href']); ?>" target="_blank" rel="noopener noreferrer">
-                        <span class="about-tech-badge__dot" aria-hidden="true"></span>
+                <?php foreach ($catalog['tech'] as $ti => $tech): ?>
+                    <?php
+                    $tone = preg_replace('/[^a-z0-9_-]/i', '', $tech['tone']);
+                    if ($tone === '') {
+                        $tone = 'default';
+                    }
+                    $iconSrc = vs_about_icon_src($tech['icon']);
+                    $tag = $tech['href'] !== '' ? 'a' : 'span';
+                    $hrefAttr = $tech['href'] !== ''
+                        ? ' href="' . vs_e($tech['href']) . '" target="_blank" rel="noopener noreferrer"'
+                        : '';
+                    ?>
+                    <<?php echo $tag; ?> class="about-tech-badge about-tech-badge--<?php echo vs_e($tone); ?>"<?php echo $hrefAttr; ?> style="--tech-i:<?php echo (int) $ti; ?>">
+                        <?php if ($iconSrc !== ''): ?>
+                            <img class="about-tech-badge__icon" src="<?php echo vs_e($iconSrc); ?>" alt="" width="16" height="16" loading="lazy" decoding="async">
+                        <?php else: ?>
+                            <span class="about-tech-badge__dot" aria-hidden="true"></span>
+                        <?php endif; ?>
                         <?php echo vs_e($tech['name']); ?>
-                    </a>
+                    </<?php echo $tag; ?>>
                 <?php endforeach; ?>
             </div>
-            <p class="about-tech-note">本系统基于以上开源基础能力构建，感谢相关项目与贡献者。</p>
+            <p class="about-tech-note"><?php echo vs_e($catalog['note']); ?></p>
         </div>
     </div>
 
-    <div class="about-copyright about-section">
+    <div class="about-copyright about-section about-reveal" style="--about-delay:5">
         <div class="about-copyright__main">&copy; <?php echo date('Y'); ?> ApiNexus · <?php echo vs_e($siteName); ?></div>
         <div class="about-copyright__license">采用 ApiNexus 开源许可协议 · v<?php echo vs_e(VS_VERSION); ?></div>
     </div>
 </div>
 
-<?php vs_admin_layout_end(); ?>
+<?php vs_admin_layout_end(array('admin-about.js')); ?>
