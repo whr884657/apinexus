@@ -302,35 +302,45 @@ class Updater
         }
         @mkdir($ctx['extractDir'], 0755, true);
 
-        if (!$zip->extractTo($ctx['extractDir'])) {
-            $zip->close();
-            return array('ok' => false, 'msg' => '解压更新包失败');
-        }
-
-        // 个别环境下 extractTo 可能漏文件：按条目兜底补齐
+        // 禁止 Zip Slip：不使用 extractTo；逐条校验路径后再写入 extractDir 内
+        $extractRoot = rtrim(str_replace('\\', '/', $ctx['extractDir']), '/');
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $entryName = $zip->getNameIndex($i);
-            if ($entryName === false || substr($entryName, -1) === '/') {
+            if ($entryName === false) {
                 continue;
             }
             $entryName = str_replace('\\', '/', $entryName);
-            $dest = rtrim(str_replace('\\', '/', $ctx['extractDir']), '/') . '/' . $entryName;
-            if (is_file($dest) && filesize($dest) > 0) {
+            if ($entryName === '' || substr($entryName, -1) === '/') {
                 continue;
+            }
+            if (!self::isSafeZipEntryName($entryName)) {
+                $zip->close();
+                return array('ok' => false, 'msg' => '更新包含非法路径，已拒绝解压');
+            }
+            $dest = $extractRoot . '/' . $entryName;
+            $realBase = realpath($extractRoot);
+            if ($realBase === false) {
+                $zip->close();
+                return array('ok' => false, 'msg' => '解压目录无效');
+            }
+            $destDir = dirname($dest);
+            if (!is_dir($destDir) && !@mkdir($destDir, 0755, true) && !is_dir($destDir)) {
+                $zip->close();
+                return array('ok' => false, 'msg' => '解压更新包失败：无法创建目录');
+            }
+            $realDir = realpath($destDir);
+            if ($realDir === false || strpos($realDir, $realBase) !== 0) {
+                $zip->close();
+                return array('ok' => false, 'msg' => '更新包含越界路径，已拒绝解压');
             }
             $data = $zip->getFromIndex($i);
             if ($data === false) {
                 $zip->close();
-                return array('ok' => false, 'msg' => '解压更新包失败：无法读取 ' . $entryName);
-            }
-            $dir = dirname($dest);
-            if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
-                $zip->close();
-                return array('ok' => false, 'msg' => '解压更新包失败：无法创建目录 ' . dirname($entryName));
+                return array('ok' => false, 'msg' => '解压更新包失败：无法读取条目');
             }
             if (@file_put_contents($dest, $data) === false) {
                 $zip->close();
-                return array('ok' => false, 'msg' => '解压更新包失败：无法写入 ' . $entryName);
+                return array('ok' => false, 'msg' => '解压更新包失败：无法写入文件');
             }
         }
         $zip->close();
@@ -1102,6 +1112,30 @@ class Updater
             );
         }
         return self::sanitizeObsoletePaths($list);
+    }
+
+    /**
+     * ZIP 条目名是否安全（防 Zip Slip）
+     *
+     * @param string $entryName
+     * @return bool
+     */
+    public static function isSafeZipEntryName($entryName)
+    {
+        $entryName = str_replace('\\', '/', (string) $entryName);
+        if ($entryName === '' || $entryName[0] === '/') {
+            return false;
+        }
+        if (strpos($entryName, "\0") !== false) {
+            return false;
+        }
+        if (preg_match('#(^|/)\.\.(/|$)#', $entryName)) {
+            return false;
+        }
+        if (preg_match('#^[A-Za-z]:#', $entryName)) {
+            return false;
+        }
+        return true;
     }
 
     /**

@@ -10,6 +10,7 @@ require_once __DIR__ . '/includes/layout.php';
 
 InstallChecker::requireInstalled();
 UserAuth::requireLogin();
+AuthSecurity::sendSecurityHeaders();
 
 $vsBase     = vs_base_url();
 $vsUser     = UserAuth::user();

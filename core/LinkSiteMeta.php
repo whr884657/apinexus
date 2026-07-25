@@ -36,6 +36,17 @@ class LinkSiteMeta
     }
 
     /**
+     * 是否允许服务端主动抓取（公网 http/https；防 SSRF）
+     *
+     * @param string $url
+     * @return bool
+     */
+    public static function isAllowedFetchUrl($url)
+    {
+        return self::isPublicHttpUrl($url);
+    }
+
+    /**
      * @param string $url
      * @return bool
      */

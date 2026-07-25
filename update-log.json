@@ -1,5 +1,17 @@
 {
     "versions": {
+        "10.8.0": {
+            "title": "ApiNexus 10.8.0 全盘复查与安全加固",
+            "date": "2026-07-26",
+            "db_changes": false,
+            "changes": [
+                "首次全盘复查（安全 > 防打爆 > 功能）：按模块波次覆盖入口与调用链",
+                "充值回调金额校验；更新包 Zip Slip 防护；update API 同源/CSRF/限流且不泄异常栈",
+                "PlaygroundRelay 拒收费履约、重定向逐跳校验与 TLS；QPM 失败路径仍计 IP 桶",
+                "apilog 密钥脱敏；ApiProxy 禁内网上游；用户端安全头；前台列表硬顶与分类缓存",
+                "规范新增 §2.25 全盘复查规范与 E115"
+            ]
+        },
         "10.7.0": {
             "title": "ApiNexus 10.7.0 控制台与数据大屏",
             "date": "2026-07-26",

@@ -229,9 +229,9 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
 | `CommentNotify.php` | 文章评论邮件通知（新评论通知管理员；被引用/管理员回复通知用户） |
-| `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前 `ApiStats::hitProxy` |
-| `PlaygroundRelay.php` | 可选中继（兼容旧主题）；**默认主题 v4.8.0+ 浏览器直连**；中继内禁止写 `apilog` |
-| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；`guardAccess`/`lightGate` 含密钥与 QPM；本地注入 ≤3 行向上查找或 `api/hit.php` |
+| `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前校验公网 `targeturl` + `ApiStats::hitProxy`（v10.8.0） |
+| `PlaygroundRelay.php` | 可选中继（兼容旧主题）；**默认主题 v4.8.0+ 浏览器直连**；中继内禁止写 `apilog`；收费接口拒中继；重定向逐跳校验（v10.8.0） |
+| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；`guardAccess`/`lightGate` 含密钥与 QPM（失败路径仍计 IP QPM）；日志密钥脱敏（v10.8.0） |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD（表 `apikey`；每用户最多 3 条；格式 `sk-`+32；含调用次数） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `LinkManager.php` | 友情链接 / 合作伙伴 / 赞助共用 CRUD（`kind` 0/1/2；友链审核；前台申请）（**后台向**） |
@@ -245,15 +245,15 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
 | `RedisCache.php` | 业务数据缓存（前台/公开列表遗留键 + apilog + orders 窗总数等）；监控页展示逻辑键名（v10.6.0） |
 | `DashboardStats.php` | 管理员控制台 / 数据大屏聚合：KPI、趋势、TOP、地理飞线、最近调用；分层 Redis TTL + live tick（v10.7.0） |
-| `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`detailEnabled()` 控制是否写详细日志；`httpcodeLabel`（v10.6.1） |
+| `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`detailEnabled()` 控制是否写详细日志；`httpcodeLabel`（v10.6.1）；`maskApikey` 展示/落库脱敏（v10.8.0） |
 | `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0）；业务时区东八区（v10.6.1） |
-| `PointsManager.php` | 余额读写、扣费、充值完成/取消、`giftOnRegister` / `checkin`；列表走 OrderManager |
+| `PointsManager.php` | 余额读写、扣费、充值完成/取消（回调金额须与订单一致）、`giftOnRegister` / `checkin`；列表走 OrderManager |
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（条数可配）、计划任务密钥 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染 |
 | `SystemInfo.php` | 关于页环境信息 |
-| `Updater.php` | 在线更新检测与安装；覆盖后按 `install/obsolete-files.json` 清理废弃文件 |
+| `Updater.php` | 在线更新检测与安装；Zip Slip 安全解压；覆盖后按 `install/obsolete-files.json` 清理废弃文件（v10.8.0） |
 | `UpdateLog.php` | 版本更新记录读取 |
 | `oauth/*` | QQ / Gitee 第三方登录 |
 
@@ -857,7 +857,7 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 ### 4.28 Updater.php
 
-**作用：** 检测新版本、下载 `apinexus{版本}.zip`、解压覆盖（保护 `config/`、`data/`），并按清单清理废弃文件。
+**作用：** 检测新版本、下载 `apinexus{版本}.zip`、安全解压覆盖（保护 `config/`、`data/`），并按清单清理废弃文件。
 
 **更新源顺序（三重兜底）：** Gitee → GitCode → GitHub（拉取兜底顺序，仓库无主次）。`update.json` / `version.php` / 更新包均按此顺序尝试；可信域名单含 gitee / gitcode / github 相关主机。
 
@@ -868,6 +868,7 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 | `checkForUpdate()` | 检测是否有新版本 |
 | `fetchRemoteManifest()` | 按镜像顺序拉取 `update.json`（失败再试 `version.php`） |
 | `buildUpdatePackageUrls()` | 构建下载链（Gitee 发行包 → GitCode 归档 → GitHub 发行/归档） |
+| `isSafeZipEntryName()` | Zip Slip：拒绝 `..` / 绝对路径等危险条目（v10.8.0） |
 | `copyFileSafe()` | 安全写入：chmod / 删旧 / copy / file_put_contents |
 | `isOptionalUpdatePath()` | 发行说明等非关键路径，写入失败可跳过 |
 | `downloadAndApply($version)` | 下载并应用更新包 |

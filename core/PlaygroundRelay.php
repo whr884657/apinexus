@@ -92,11 +92,23 @@ class PlaygroundRelay
             );
         }
 
+        // 收费接口须走公开 endpoint（ApiProxy/本地脚本）扣费记账；中继不履约扣费
+        if (ApiManager::hasChargeColumns()) {
+            $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
+            $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
+            if ($charge === ApiManager::CHARGE_PAID && $price > 0) {
+                return self::fail('收费接口请通过公开调用地址访问，中继不支持扣费', 402, $displayUrl);
+            }
+        }
+
         $apitype = ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0);
         if ($apitype === ApiManager::APITYPE_PROXY) {
             $target = trim((string) (isset($row['targeturl']) ? $row['targeturl'] : ''));
             if ($target === '' || !preg_match('#^https?://#i', $target)) {
                 return self::fail('上游地址无效', 500, $displayUrl);
+            }
+            if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($target)) {
+                return self::fail('上游地址不允许指向内网或非公网主机', 403, $displayUrl);
             }
             $upstreamParams = $params;
             unset($upstreamParams['key'], $upstreamParams['api_key'], $upstreamParams['apikey']);
@@ -134,6 +146,41 @@ class PlaygroundRelay
             'encoding'    => 'text',
             'displayUrl'  => (string) $displayUrl,
         );
+    }
+
+    /**
+     * 解析 Location 相对/绝对重定向为目标绝对 URL
+     *
+     * @param string $base
+     * @param string $location
+     * @return string
+     */
+    private static function resolveRedirectUrl($base, $location)
+    {
+        $location = trim((string) $location);
+        if ($location === '') {
+            return '';
+        }
+        if (preg_match('#^https?://#i', $location)) {
+            return $location;
+        }
+        $parts = parse_url($base);
+        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return '';
+        }
+        $origin = $parts['scheme'] . '://' . $parts['host'];
+        if (!empty($parts['port'])) {
+            $origin .= ':' . $parts['port'];
+        }
+        if (isset($location[0]) && $location[0] === '/') {
+            return $origin . $location;
+        }
+        $path = isset($parts['path']) ? (string) $parts['path'] : '/';
+        $dir = preg_replace('#/[^/]*$#', '/', $path);
+        if ($dir === null || $dir === '') {
+            $dir = '/';
+        }
+        return $origin . $dir . $location;
     }
 
     /**
@@ -212,12 +259,13 @@ class PlaygroundRelay
         curl_setopt_array($ch, array(
             CURLOPT_URL            => $url,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 5,
+            // 禁止自动跟随：重定向须二次校验主机，防 SSRF
+            CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT        => self::TIMEOUT,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_HEADER         => true,
         ));
@@ -231,6 +279,48 @@ class PlaygroundRelay
 
         if ($raw === false || $errno) {
             return self::fail($err !== '' ? ('请求失败：' . $err) : '请求失败');
+        }
+
+        // 手动跟随有限次重定向，每跳校验公网 URL
+        $redirLeft = 5;
+        while ($redirLeft > 0 && ($http === 301 || $http === 302 || $http === 303 || $http === 307 || $http === 308)) {
+            $headerBlob = substr($raw, 0, $headerSize);
+            $loc = '';
+            if (preg_match('/^Location:\s*(.+)$/mi', $headerBlob, $lm)) {
+                $loc = trim($lm[1]);
+            }
+            if ($loc === '') {
+                break;
+            }
+            $next = self::resolveRedirectUrl($url, $loc);
+            if ($next === '' || (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($next))) {
+                return self::fail('上游重定向目标不允许', 403);
+            }
+            $url = $next;
+            $redirLeft--;
+            $ch = curl_init();
+            curl_setopt_array($ch, array(
+                CURLOPT_URL            => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_TIMEOUT        => self::TIMEOUT,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                CURLOPT_HTTPHEADER     => $headers,
+                CURLOPT_HEADER         => true,
+                CURLOPT_HTTPGET        => true,
+            ));
+            $raw = curl_exec($ch);
+            $errno = curl_errno($ch);
+            $err = curl_error($ch);
+            $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+            curl_close($ch);
+            if ($raw === false || $errno) {
+                return self::fail($err !== '' ? ('请求失败：' . $err) : '请求失败');
+            }
         }
 
         $headerBlob = substr($raw, 0, $headerSize);

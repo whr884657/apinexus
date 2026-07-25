@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ));
             AjaxResponse::success('日志设置已保存');
         } catch (Exception $e) {
-            AjaxResponse::error('保存失败：' . $e->getMessage());
+            AjaxResponse::error('保存失败，请稍后重试');
         }
     }
 
@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'cron_url' => ApiLogArchive::cronUrl(),
             ));
         } catch (Exception $e) {
-            AjaxResponse::error('生成失败：' . $e->getMessage());
+            AjaxResponse::error('生成失败，请稍后重试');
         }
     }
 
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SiteContext::clearCache();
             AjaxResponse::success('站点设置已保存');
         } catch (Exception $e) {
-            AjaxResponse::error($e->getMessage());
+            AjaxResponse::error('操作失败，请稍后重试');
         }
     }
 
@@ -84,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ));
             AjaxResponse::success('注册设置已保存');
         } catch (Exception $e) {
-            AjaxResponse::error('保存失败：' . $e->getMessage());
+            AjaxResponse::error('保存失败，请稍后重试');
         }
     }
 
@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ));
             AjaxResponse::success('签到设置已保存');
         } catch (Exception $e) {
-            AjaxResponse::error('保存失败：' . $e->getMessage());
+            AjaxResponse::error('保存失败，请稍后重试');
         }
     }
 
@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
             AjaxResponse::success('OAuth 设置已保存');
         } catch (Exception $e) {
-            AjaxResponse::error('保存失败：' . $e->getMessage());
+            AjaxResponse::error('保存失败，请稍后重试');
         }
     }
 
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SiteContext::clearCache();
             AjaxResponse::success('站点扩展设置已保存');
         } catch (Exception $e) {
-            AjaxResponse::error($e->getMessage());
+            AjaxResponse::error('操作失败，请稍后重试');
         }
     }
 
@@ -181,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             AjaxResponse::success('邮箱设置已保存');
         } catch (Exception $e) {
-            AjaxResponse::error('保存失败：' . $e->getMessage());
+            AjaxResponse::error('保存失败，请稍后重试');
         }
     }
 
@@ -198,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
             AjaxResponse::success('测试邮件已发送，请查收');
         } catch (Exception $e) {
-            AjaxResponse::error('发送失败：' . $e->getMessage());
+            AjaxResponse::error('发送失败，请检查 SMTP 配置后重试');
         }
     }
 
@@ -730,3 +730,4 @@ vs_admin_accordion_start(
 <script>window.VS_SETTINGS_BASE = <?php echo json_encode($vsBase, JSON_UNESCAPED_UNICODE); ?>;</script>
 
 <?php vs_admin_layout_end(array('settings.js')); ?>
+

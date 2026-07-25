@@ -209,6 +209,13 @@ class ApiProxy
             echo json_encode(array('code' => 0, 'msg' => '上游地址无效'), JSON_UNESCAPED_UNICODE);
             exit;
         }
+        if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($target)) {
+            ApiStats::hitProxy($row, false, 403);
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array('code' => 0, 'msg' => '上游地址不允许指向内网或非公网主机'), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
 
         $params = $_GET;
         unset($params[self::REWRITE_SLUG_PARAM]);

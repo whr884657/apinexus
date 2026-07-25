@@ -207,9 +207,44 @@ class ApiStats
         }
         $keyOk = self::evaluateKey($row);
         if ($keyOk !== true) {
+            // 密钥失败仍按 IP 消耗 QPM，避免刷错误密钥绕过限流
+            $qpmFail = self::evaluateQpmIpOnly($row);
+            if ($qpmFail !== true) {
+                return $qpmFail;
+            }
             return $keyOk;
         }
         return self::evaluateQpm($row);
+    }
+
+    /**
+     * 仅按 IP 计 QPM（密钥校验失败路径使用）
+     *
+     * @param array $row
+     * @return true|array{http:int,msg:string}
+     */
+    private static function evaluateQpmIpOnly(array $row)
+    {
+        if (!class_exists('ApiManager') || !ApiManager::hasQpmColumn()) {
+            return true;
+        }
+        $qpm = ApiManager::normalizeQpm(isset($row['qpm']) ? $row['qpm'] : 0);
+        if ($qpm <= 0) {
+            return true;
+        }
+        if (!class_exists('RateLimitStore')) {
+            return true;
+        }
+        $apiId = (int) (isset($row['id']) ? $row['id'] : 0);
+        if ($apiId <= 0) {
+            return true;
+        }
+        $ip = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
+        $bucket = 'apiqpm:' . $apiId . ':ip:' . $ip;
+        if (!RateLimitStore::allow($bucket, 60, $qpm, true)) {
+            return array('http' => 429, 'msg' => '请求过于频繁，请稍后再试');
+        }
+        return true;
     }
 
     /**
@@ -474,9 +509,14 @@ class ApiStats
             $userid = (int) UserAuth::id();
         }
 
+        $apikeyStore = mb_substr($apikey, 0, 128, 'UTF-8');
+        if ($apikeyStore !== '' && class_exists('ApiLogManager')) {
+            $apikeyStore = ApiLogManager::maskApikey($apikeyStore);
+        }
+
         return array(
             'userid'  => $userid,
-            'apikey'  => mb_substr($apikey, 0, 128, 'UTF-8'),
+            'apikey'  => $apikeyStore,
             'method'  => mb_substr($method, 0, 16, 'UTF-8'),
             'ip'      => mb_substr($ip, 0, 45, 'UTF-8'),
             'iploc'   => '',

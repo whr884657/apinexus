@@ -326,7 +326,7 @@ class ApiLogArchive
             );
         } catch (Exception $e) {
             self::releaseLock();
-            $empty['msg'] = '归档失败：' . $e->getMessage();
+            $empty['msg'] = '归档失败，请稍后重试或查看服务器日志';
             return $empty;
         }
     }

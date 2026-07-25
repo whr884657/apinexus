@@ -110,6 +110,25 @@ class ApiLogManager
     }
 
     /**
+     * 日志展示用密钥脱敏（保留首尾，中间打码）
+     *
+     * @param string $apikey
+     * @return string
+     */
+    public static function maskApikey($apikey)
+    {
+        $apikey = trim((string) $apikey);
+        $len = strlen($apikey);
+        if ($len <= 0) {
+            return '';
+        }
+        if ($len <= 8) {
+            return str_repeat('*', $len);
+        }
+        return substr($apikey, 0, 2) . str_repeat('*', max(4, $len - 6)) . substr($apikey, -4);
+    }
+
+    /**
      * @param int $code
      * @return string
      */
@@ -212,7 +231,7 @@ class ApiLogManager
             'user_label'     => $userid > 0
                 ? ($username !== '' ? $username : ('用户 #' . $userid))
                 : '匿名',
-            'apikey'         => $apikey,
+            'apikey'         => self::maskApikey($apikey),
             'method'         => $method,
             'method_class'   => self::methodClass($method),
             'ip'             => isset($row['ip']) ? (string) $row['ip'] : '',

@@ -234,9 +234,11 @@ class ApiManager
      */
     public static function listPublic()
     {
+        // 前台列表硬顶，防止接口极多时一次加载打爆内存（主题卡片场景）
         return self::listFiltered(array(
             'status_in' => array(self::STATUS_NORMAL, self::STATUS_MAINTENANCE),
             'audit'     => self::AUDIT_APPROVED,
+            'limit'     => 500,
         ));
     }
 
@@ -482,6 +484,9 @@ class ApiManager
             }
 
             $sql .= ' ORDER BY a.`id` DESC';
+            if (isset($opts['limit']) && (int) $opts['limit'] > 0) {
+                $sql .= ' LIMIT ' . (int) $opts['limit'];
+            }
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

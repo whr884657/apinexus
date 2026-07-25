@@ -1034,20 +1034,29 @@ class DashboardStats
      */
     private static function sparkFromUsers($days)
     {
-        $out = array();
+        $days = max(1, min(31, (int) $days));
+        $map = array();
         try {
             $pdo = Database::connect();
-            for ($i = $days - 1; $i >= 0; $i--) {
-                $d = date('Y-m-d', strtotime('-' . $i . ' day'));
-                $stmt = $pdo->prepare(
-                    'SELECT COUNT(*) FROM `' . Database::table('user') . '`
-                     WHERE `createtime` >= ? AND `createtime` <= ?'
-                );
-                $stmt->execute(array($d . ' 00:00:00', $d . ' 23:59:59'));
-                $out[] = max(0, (int) $stmt->fetchColumn());
+            self::applyTimeout($pdo);
+            $start = date('Y-m-d 00:00:00', strtotime('-' . ($days - 1) . ' day'));
+            $stmt = $pdo->prepare(
+                'SELECT DATE(`createtime`) AS d, COUNT(*) AS c
+                 FROM `' . Database::table('user') . '`
+                 WHERE `createtime` >= ?
+                 GROUP BY DATE(`createtime`)'
+            );
+            $stmt->execute(array($start));
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $map[(string) $r['d']] = (int) $r['c'];
             }
         } catch (Exception $e) {
-            $out = array_fill(0, $days, 0);
+            $map = array();
+        }
+        $out = array();
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $d = date('Y-m-d', strtotime('-' . $i . ' day'));
+            $out[] = isset($map[$d]) ? (int) $map[$d] : 0;
         }
         return $out;
     }

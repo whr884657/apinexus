@@ -53,6 +53,10 @@ class FrontendCategory
      */
     private static function buildTags()
     {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
         $items = array();
         foreach (ApiCategoryManager::listEnabled() as $row) {
             $formatted = ApiCategoryManager::formatRow($row);
@@ -69,7 +73,8 @@ class FrontendCategory
                 'name' => $name,
             );
         }
-        return $items;
+        $cached = $items;
+        return $cached;
     }
 
     /**

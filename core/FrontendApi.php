@@ -257,6 +257,6 @@ class FrontendApi
      */
     public static function countForTheme()
     {
-        return count(self::listForTheme());
+        return ApiManager::countPublic();
     }
 }

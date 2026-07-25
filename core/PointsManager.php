@@ -290,6 +290,14 @@ class PointsManager
                 return false;
             }
 
+            // 回调金额必须与下单金额一致（允许 0.01 元误差），防止少付多充
+            $orderMoney = round((float) $order['money'], 2);
+            $paidMoney = $money !== '' ? round((float) $money, 2) : 0.0;
+            if ($orderMoney > 0 && ($paidMoney <= 0 || abs($paidMoney - $orderMoney) > 0.01)) {
+                $pdo->rollBack();
+                return false;
+            }
+
             $userId = (int) $order['userid'];
             $amount = (float) $order['amount'];
             $uStmt = $pdo->prepare(

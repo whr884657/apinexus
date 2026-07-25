@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             vs_auth_json_mail($mailPurpose, array('code' => 1, 'msg' => '验证码已发送，请查收邮箱（含垃圾箱）'));
         } catch (Exception $e) {
-            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '发送失败：' . $e->getMessage()));
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '发送失败，请稍后重试'));
         }
     }
 
@@ -166,3 +166,4 @@ ThemeManager::renderAuthPage('register', '用户注册', array(
     'mailEnabled' => $mailEnabled,
     'mailDisabledMsg' => $mailDisabledMsg,
 ));
+
