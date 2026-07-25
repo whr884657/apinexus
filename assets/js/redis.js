@@ -305,7 +305,12 @@
     }
 
     function entrySearchText(entry) {
-        return String((entry.label || '') + ' ' + (entry.desc || '')).toLowerCase();
+        return String(
+            (entry.label || '') + ' '
+            + (entry.id || '') + ' '
+            + (entry.key || '') + ' '
+            + (entry.desc || '')
+        ).toLowerCase();
     }
 
     function entryRowHtml(entry) {

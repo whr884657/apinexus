@@ -682,12 +682,13 @@ class OrderManager
                     $hit = true;
                     break;
                 }
+                // 仅允许「查询词包含完整类型文案」，禁止「用户」误匹配「用户充值」导致种类 OR 扫爆大表
                 if (function_exists('mb_strpos')) {
-                    if (mb_strpos($label, $q) !== false || mb_strpos($q, $label) !== false) {
+                    if ($label !== '' && mb_strpos($q, $label) !== false) {
                         $hit = true;
                         break;
                     }
-                } elseif (strpos($label, $q) !== false || strpos($q, $label) !== false) {
+                } elseif ($label !== '' && strpos($q, $label) !== false) {
                     $hit = true;
                     break;
                 }
