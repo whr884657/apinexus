@@ -38,6 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error($result);
         }
         $row = CommentManager::formatRow(CommentManager::findById($id));
+        if (is_array($row) && class_exists('CommentNotify') && trim($reply) !== '') {
+            try {
+                CommentNotify::notifyUserAdminReply($row);
+            } catch (Exception $e) {
+                // 邮件失败不阻断保存
+            }
+        }
         AjaxResponse::success('回复已保存', array('comment' => $row));
     }
 
@@ -130,6 +137,23 @@ function vs_admin_cmt_attrs(array $ctx)
  * @param array $ctx
  * @return string
  */
+function vs_admin_cmt_status_badge(array $ctx)
+{
+    $status = (int) $ctx['status'];
+    $class = 'cmt-status cmt-status--pending';
+    if ($status === CommentManager::STATUS_APPROVED) {
+        $class = 'cmt-status cmt-status--approved';
+    } elseif ($status === CommentManager::STATUS_REJECTED) {
+        $class = 'cmt-status cmt-status--rejected';
+    }
+    return '<span class="' . $class . '" data-field="status_label">'
+        . vs_e($ctx['status_label']) . '</span>';
+}
+
+/**
+ * @param array $ctx
+ * @return string
+ */
 function vs_admin_cmt_actions_html(array $ctx)
 {
     $id = (int) $ctx['id'];
@@ -157,30 +181,33 @@ function vs_admin_cmt_actions_html(array $ctx)
 function vs_render_cmt_desktop_row(array $ctx)
 {
     $attrs = vs_admin_cmt_attrs($ctx);
-    $statusClass = 'vs-badge--warning';
-    if ((int) $ctx['status'] === CommentManager::STATUS_APPROVED) {
-        $statusClass = 'vs-badge--success';
-    } elseif ((int) $ctx['status'] === CommentManager::STATUS_REJECTED) {
-        $statusClass = 'vs-badge--danger';
-    }
     ?>
     <tr<?php echo $attrs; ?>>
         <td>
             <div class="cmt-body-cell">
                 <?php if ((int) $ctx['ispinned'] === 1): ?>
-                    <span class="cmt-pin-mark" title="置顶">[顶]</span>
+                    <span class="cmt-pin-mark" title="置顶">置顶</span>
                 <?php endif; ?>
                 <?php if (!empty($ctx['parent']) && is_array($ctx['parent'])): ?>
                     <div class="cmt-quote-preview">引用 <?php echo vs_e($ctx['parent']['nickname']); ?>：<?php echo vs_e($ctx['parent']['excerpt']); ?></div>
                 <?php endif; ?>
                 <span data-field="body"><?php echo vs_e($ctx['body']); ?></span>
+                <?php if (trim((string) $ctx['reply']) !== ''): ?>
+                    <div class="cmt-admin-reply-preview" data-field="reply_preview">管回：<?php echo vs_e($ctx['reply']); ?></div>
+                <?php endif; ?>
             </div>
         </td>
         <td><span class="cmt-target-cell" data-field="content_title"><?php echo vs_e($ctx['content_title'] !== '' ? $ctx['content_title'] : ('文章#' . $ctx['contentid'])); ?></span></td>
         <td>
             <div class="cmt-author-cell">
                 <?php if ($ctx['avatar_url'] !== ''): ?>
-                    <img class="cmt-author-cell__avatar" src="<?php echo vs_e($ctx['avatar_url']); ?>" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" data-field="avatar_url">
+                    <img class="cmt-author-cell__avatar" src="<?php echo vs_e($ctx['avatar_url']); ?>" alt="" width="36" height="36" loading="lazy" referrerpolicy="no-referrer" data-field="avatar_url">
+                <?php else: ?>
+                    <span class="cmt-author-cell__fallback" data-field="avatar_fallback"><?php
+                        echo vs_e(function_exists('mb_substr')
+                            ? mb_substr($ctx['nickname'], 0, 1, 'UTF-8')
+                            : substr($ctx['nickname'], 0, 1));
+                    ?></span>
                 <?php endif; ?>
                 <div class="cmt-author-cell__meta">
                     <span class="cmt-author-cell__name" data-field="nickname"><?php echo vs_e($ctx['nickname']); ?></span>
@@ -189,7 +216,7 @@ function vs_render_cmt_desktop_row(array $ctx)
             </div>
         </td>
         <td><span data-field="createtime"><?php echo vs_e($ctx['createtime_short'] !== '' ? $ctx['createtime_short'] : '—'); ?></span></td>
-        <td><span class="vs-badge <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($ctx['status_label']); ?></span></td>
+        <td><?php echo vs_admin_cmt_status_badge($ctx); ?></td>
         <td class="vs-cmt-actions-cell" data-field="actions"><?php echo vs_admin_cmt_actions_html($ctx); ?></td>
     </tr>
     <?php
@@ -202,19 +229,44 @@ function vs_render_cmt_desktop_row(array $ctx)
 function vs_render_cmt_mobile_card(array $ctx)
 {
     $attrs = vs_admin_cmt_attrs($ctx);
-    $prefix = ((int) $ctx['ispinned'] === 1) ? '[顶] ' : '';
+    $title = $ctx['content_title'] !== '' ? $ctx['content_title'] : ('文章#' . $ctx['contentid']);
+    $initial = function_exists('mb_substr')
+        ? mb_substr($ctx['nickname'], 0, 1, 'UTF-8')
+        : substr($ctx['nickname'], 0, 1);
     ?>
     <div class="cmt-card"<?php echo $attrs; ?>>
+        <div class="cmt-card__top">
+            <div class="cmt-card__author">
+                <?php if ($ctx['avatar_url'] !== ''): ?>
+                    <img class="cmt-card__avatar" src="<?php echo vs_e($ctx['avatar_url']); ?>" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer" data-field="avatar_url">
+                <?php else: ?>
+                    <span class="cmt-card__avatar cmt-card__avatar--fallback" data-field="avatar_fallback"><?php echo vs_e($initial); ?></span>
+                <?php endif; ?>
+                <div class="cmt-card__author-meta">
+                    <div class="cmt-card__name-row">
+                        <span class="cmt-card__name" data-field="nickname"><?php echo vs_e($ctx['nickname']); ?></span>
+                        <?php if ((int) $ctx['ispinned'] === 1): ?>
+                            <span class="cmt-pin-mark">置顶</span>
+                        <?php endif; ?>
+                    </div>
+                    <span class="cmt-card__email" data-field="email"><?php echo vs_e($ctx['email']); ?></span>
+                </div>
+            </div>
+            <div class="cmt-card__top-right">
+                <?php echo vs_admin_cmt_status_badge($ctx); ?>
+                <span class="cmt-card__time" data-field="createtime"><?php echo vs_e($ctx['createtime_short'] !== '' ? $ctx['createtime_short'] : '—'); ?></span>
+            </div>
+        </div>
         <?php if (!empty($ctx['parent']) && is_array($ctx['parent'])): ?>
             <div class="cmt-quote-preview">引用 <?php echo vs_e($ctx['parent']['nickname']); ?>：<?php echo vs_e($ctx['parent']['excerpt']); ?></div>
         <?php endif; ?>
-        <div class="cmt-card__text" data-field="body"><?php echo vs_e($prefix . $ctx['body']); ?></div>
-        <div class="cmt-card__meta">
-            <span class="cmt-card__meta-item">关联：<span data-field="content_title"><?php echo vs_e($ctx['content_title'] !== '' ? $ctx['content_title'] : ('文章#' . $ctx['contentid'])); ?></span></span>
-            <span class="cmt-card__meta-item" data-field="nickname"><?php echo vs_e($ctx['nickname']); ?></span>
-            <span class="cmt-card__meta-item" data-field="email"><?php echo vs_e($ctx['email']); ?></span>
-            <span class="cmt-card__meta-item" data-field="createtime"><?php echo vs_e($ctx['createtime_short']); ?></span>
-            <span class="vs-badge vs-badge--default" data-field="status_label"><?php echo vs_e($ctx['status_label']); ?></span>
+        <div class="cmt-card__text" data-field="body"><?php echo vs_e($ctx['body']); ?></div>
+        <?php if (trim((string) $ctx['reply']) !== ''): ?>
+            <div class="cmt-admin-reply-preview" data-field="reply_preview">管回：<?php echo vs_e($ctx['reply']); ?></div>
+        <?php endif; ?>
+        <div class="cmt-card__article">
+            <span class="cmt-card__article-label">关联文章</span>
+            <span class="cmt-card__article-title" data-field="content_title"><?php echo vs_e($title); ?></span>
         </div>
         <div class="cmt-card__actions" data-field="actions"><?php echo vs_admin_cmt_actions_html($ctx); ?></div>
     </div>
@@ -310,7 +362,7 @@ vs_admin_layout_start('评论管理', 'comments', $headerActions);
 </div>
 
 <?php if ($tableReady): ?>
-<div class="vs-overlay vs-overlay--form" id="adminCmtReplyOverlay" hidden aria-hidden="true">
+<div class="vs-overlay vs-overlay--lg" id="adminCmtReplyOverlay" hidden aria-hidden="true">
     <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
     <div class="vs-overlay__panel" role="dialog" aria-modal="true" aria-labelledby="adminCmtReplyTitle">
         <div class="vs-overlay__handle" aria-hidden="true"></div>
@@ -318,19 +370,34 @@ vs_admin_layout_start('评论管理', 'comments', $headerActions);
             <h3 class="vs-overlay__title" id="adminCmtReplyTitle">回复评论</h3>
             <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
         </header>
-        <div class="vs-overlay__body">
+        <div class="vs-overlay__body cmt-reply-modal">
             <input type="hidden" id="adminCmtReplyId" value="0">
-            <div class="fb-modal__field">
-                <div class="fb-modal__label">评论内容</div>
-                <div class="fb-modal__content" id="adminCmtReplyBodyView">—</div>
+            <div class="cmt-reply-modal__meta">
+                <span class="cmt-status cmt-status--pending" id="adminCmtReplyStatus">待审核</span>
+                <span class="cmt-reply-modal__id" id="adminCmtReplyIdLabel">#0</span>
             </div>
-            <div class="fb-modal__field">
-                <div class="fb-modal__label">评论者邮箱</div>
-                <div class="fb-modal__value" id="adminCmtReplyEmailView">—</div>
+            <div class="cmt-reply-modal__author">
+                <img class="cmt-reply-modal__avatar" id="adminCmtReplyAvatar" src="" alt="" width="48" height="48" hidden>
+                <span class="cmt-reply-modal__avatar cmt-reply-modal__avatar--fallback" id="adminCmtReplyAvatarFallback" hidden>—</span>
+                <div class="cmt-reply-modal__author-meta">
+                    <div class="cmt-reply-modal__name" id="adminCmtReplyName">—</div>
+                    <a class="cmt-reply-modal__email" id="adminCmtReplyEmailView" href="#">—</a>
+                    <div class="cmt-reply-modal__time" id="adminCmtReplyTime">—</div>
+                </div>
             </div>
-            <div class="vs-field">
-                <label class="vs-label" for="adminCmtReplyText">管理员回复</label>
-                <textarea class="vs-input vs-textarea" id="adminCmtReplyText" rows="4" maxlength="2000" placeholder="填写回复内容..."></textarea>
+            <div class="cmt-reply-modal__grid">
+                <div class="fb-modal__field">
+                    <div class="fb-modal__label">关联文章</div>
+                    <div class="fb-modal__value" id="adminCmtReplyArticle">—</div>
+                </div>
+                <div class="fb-modal__field">
+                    <div class="fb-modal__label">评论内容</div>
+                    <div class="fb-modal__content" id="adminCmtReplyBodyView">—</div>
+                </div>
+                <div class="vs-field cmt-reply-modal__reply-field">
+                    <label class="vs-label" for="adminCmtReplyText">管理员回复</label>
+                    <textarea class="vs-input vs-textarea" id="adminCmtReplyText" rows="6" maxlength="2000" placeholder="填写回复内容，保存后将邮件通知评论者（若已开启）..."></textarea>
+                </div>
             </div>
         </div>
         <footer class="vs-overlay__foot">

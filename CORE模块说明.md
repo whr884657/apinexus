@@ -228,6 +228,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `UserAvatar.php` | 用户头像 URL 解析 |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
+| `CommentNotify.php` | 文章评论邮件通知（新评论通知管理员；被引用/管理员回复通知用户） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前 `ApiStats::hitProxy` |
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；**默认主题 v4.8.0+ 浏览器直连**；中继内禁止写 `apilog` |
 | `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；本地注入 ≤3 行向上查找或 `api/hit.php` |

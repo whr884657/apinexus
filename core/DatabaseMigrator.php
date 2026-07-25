@@ -302,6 +302,14 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 10.2.0 评论邮件开关时跳过
+        if (!in_array('10.2.0', $applied, true)) {
+            $allCfg3 = Config::all();
+            if (isset($allCfg3['mail_notify_comment_admin']) && isset($allCfg3['mail_notify_comment'])) {
+                self::markApplied('10.2.0');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
     }

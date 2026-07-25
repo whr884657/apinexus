@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.1.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.2.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.2.0（2026-07-25）
+
+**类型：** 中版本功能（评论通知 + 管理 UI）
+
+**变更说明：**
+
+- 评论邮件：新评论通知管理员；被引用 / 管理员回复通知评论者（可关）
+- 后台评论管理页手机卡片与回复大弹窗重做；状态胶囊优化
+- 默认主题引用块去掉左侧竖线；迁移 `10.2.0.sql`
 
 ### v10.1.1（2026-07-25）
 

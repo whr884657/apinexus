@@ -76,6 +76,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_link_pass', '1'),
 ('mail_notify_feedback', '1'),
 ('mail_notify_feedback_admin', '1'),
+('mail_notify_comment_admin', '1'),
+('mail_notify_comment', '1'),
 ('frontend_theme', 'default'),
 ('themesettings', '{}'),
 ('site_runtime_start', ''),

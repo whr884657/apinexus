@@ -179,7 +179,6 @@
     margin-bottom: 0.85rem;
     border-radius: 10px;
     background: var(--bg-secondary);
-    border-left: 3px solid var(--accent-primary);
 }
 .article-cmt-quote[hidden] { display: none !important; }
 .article-cmt-quote__body { flex: 1; min-width: 0; font-size: 0.8rem; color: var(--text-muted); line-height: 1.45; }
@@ -365,7 +364,6 @@ a.article-cmt-name:hover { color: var(--accent-secondary); }
     padding: 0.45rem 0.65rem;
     border-radius: 8px;
     background: var(--bg-secondary);
-    border-left: 3px solid var(--accent-primary);
     color: var(--text-muted);
     font-size: 0.78rem;
     line-height: 1.4;

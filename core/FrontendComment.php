@@ -96,6 +96,21 @@ class FrontendComment
             }
         }
 
+        if (is_array($result) && class_exists('CommentNotify')) {
+            try {
+                CommentNotify::notifyAdminsNew($result);
+                $parentid = isset($result['parentid']) ? (int) $result['parentid'] : 0;
+                if ($parentid > 0) {
+                    $parent = CommentManager::findById($parentid);
+                    if (is_array($parent)) {
+                        CommentNotify::notifyParentQuoted($result, $parent);
+                    }
+                }
+            } catch (Exception $e) {
+                // 邮件失败不阻断评论
+            }
+        }
+
         return $result;
     }
 }

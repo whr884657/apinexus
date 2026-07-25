@@ -8652,12 +8652,21 @@ select.vs-input.vs-select {
     color: #475569;
 }
 #contentPage .ann-card,
-#contentPage .art-card,
-#adminCommentsPage .cmt-card {
+#contentPage .art-card {
     background: #fff;
     border: 1px solid var(--vs-border, #e5e7eb);
     border-radius: 12px;
     padding: 14px;
+}
+#adminCommentsPage .cmt-card {
+    background: #fff;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 #contentPage .ann-card__header,
 #contentPage .art-card__header {
@@ -8696,6 +8705,8 @@ select.vs-input.vs-select {
     justify-content: flex-end;
     flex-wrap: wrap;
     gap: 6px;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
 }
 #contentPage .vs-content-actions-cell .action-btns,
 #adminCommentsPage .action-btns {
@@ -8709,11 +8720,22 @@ select.vs-input.vs-select {
     align-items: center;
     gap: 10px;
 }
-#adminCommentsPage .cmt-author-cell__avatar {
-    width: 32px;
-    height: 32px;
+#adminCommentsPage .cmt-author-cell__avatar,
+#adminCommentsPage .cmt-author-cell__fallback {
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     object-fit: cover;
+    flex-shrink: 0;
+}
+#adminCommentsPage .cmt-author-cell__fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+    color: #3730a3;
+    font-size: 0.875rem;
+    font-weight: 700;
 }
 #adminCommentsPage .cmt-author-cell__meta {
     display: flex;
@@ -8735,36 +8757,294 @@ select.vs-input.vs-select {
     word-break: break-word;
 }
 #adminCommentsPage .cmt-pin-mark {
-    color: #b45309;
-    font-size: 0.75rem;
-    margin-right: 4px;
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fdba74;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    margin-right: 6px;
+    vertical-align: middle;
 }
 #adminCommentsPage .cmt-quote-preview {
     font-size: 0.75rem;
     color: #64748b;
-    background: #f1f5f9;
-    border-left: 3px solid #94a3b8;
-    padding: 4px 8px;
+    background: #f8fafc;
+    padding: 6px 10px;
     margin-bottom: 6px;
-    border-radius: 4px;
+    border-radius: 8px;
     line-height: 1.4;
 }
-#adminCommentsPage .cmt-card__text {
-    font-weight: 500;
-    margin-bottom: 10px;
-    line-height: 1.55;
+#adminCommentsPage .cmt-admin-reply-preview {
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.06);
+    border: 1px solid rgba(37, 99, 235, 0.14);
+    border-radius: 8px;
+    padding: 6px 10px;
+    line-height: 1.45;
+    word-break: break-word;
 }
-#adminCommentsPage .cmt-card__meta {
+#adminCommentsPage .cmt-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+#adminCommentsPage .cmt-status--approved {
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+}
+#adminCommentsPage .cmt-status--pending {
+    color: #b45309;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+}
+#adminCommentsPage .cmt-status--rejected {
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+#adminCommentsPage .cmt-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+#adminCommentsPage .cmt-card__author {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+#adminCommentsPage .cmt-card__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+#adminCommentsPage .cmt-card__avatar--fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+    color: #3730a3;
+    font-weight: 700;
+    font-size: 0.9375rem;
+}
+#adminCommentsPage .cmt-card__author-meta {
+    min-width: 0;
+}
+#adminCommentsPage .cmt-card__name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+#adminCommentsPage .cmt-card__name {
+    font-weight: 700;
+    font-size: 0.9375rem;
+    color: var(--vs-text, #0f172a);
+}
+#adminCommentsPage .cmt-card__email {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--vs-text-secondary, #64748b);
+    word-break: break-all;
+    margin-top: 2px;
+}
+#adminCommentsPage .cmt-card__top-right {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+#adminCommentsPage .cmt-card__time {
+    font-size: 0.71875rem;
+    color: #94a3b8;
+}
+#adminCommentsPage .cmt-card__text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.6;
+    color: var(--vs-text, #0f172a);
+    word-break: break-word;
+}
+#adminCommentsPage .cmt-card__article {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+#adminCommentsPage .cmt-card__article-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+#adminCommentsPage .cmt-card__article-title {
     font-size: 0.8125rem;
-    color: var(--vs-text-secondary, #6b7280);
-    margin-bottom: 12px;
+    font-weight: 600;
+    color: #334155;
+    word-break: break-word;
 }
 #adminCommentsPage .adminCmtReplySaveBtn[hidden],
 #adminCmtReplyOverlay .vs-btn[hidden] {
     display: none !important;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 16px;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__id {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__author {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__avatar--fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+    color: #3730a3;
+    font-weight: 700;
+    font-size: 1.125rem;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__author-meta {
+    min-width: 0;
+    flex: 1;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__email {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 0.8125rem;
+    color: var(--vs-primary, #2563eb);
+    text-decoration: none;
+    word-break: break-all;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__email:hover {
+    text-decoration: underline;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__time {
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__grid {
+    display: grid;
+    gap: 16px;
+}
+#adminCmtReplyOverlay .fb-modal__field {
+    margin-bottom: 0;
+}
+#adminCmtReplyOverlay .fb-modal__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+#adminCmtReplyOverlay .fb-modal__value {
+    font-size: 0.875rem;
+    color: #0f172a;
+    line-height: 1.55;
+    font-weight: 600;
+}
+#adminCmtReplyOverlay .fb-modal__content {
+    padding: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    color: #0f172a;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 72px;
+}
+#adminCmtReplyOverlay .cmt-reply-modal__reply-field .vs-textarea {
+    min-height: 140px;
+}
+#adminCmtReplyOverlay .cmt-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+#adminCmtReplyOverlay .cmt-status--approved {
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+}
+#adminCmtReplyOverlay .cmt-status--pending {
+    color: #b45309;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+}
+#adminCmtReplyOverlay .cmt-status--rejected {
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+@media (min-width: 900px) {
+    #adminCmtReplyOverlay .cmt-reply-modal__grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    #adminCmtReplyOverlay .cmt-reply-modal__reply-field {
+        grid-column: 1 / -1;
+    }
+    #adminCmtReplyOverlay .fb-modal__field:first-child {
+        grid-column: 1 / -1;
+    }
 }
 .vs-link-row__desc {
     margin-top: 4px;

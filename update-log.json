@@ -1,5 +1,16 @@
 {
     "versions": {
+        "10.2.0": {
+            "title": "ApiNexus 10.2.0 评论邮件通知与管理端评论 UI",
+            "date": "2026-07-25",
+            "db_changes": true,
+            "changes": [
+                "评论邮件通知：新评论通知管理员；被引用/管理员回复通知评论者",
+                "系统设置增加 mail_notify_comment_admin / mail_notify_comment 开关",
+                "后台评论管理：手机卡片左右布局、状态胶囊、回复弹窗改 vs-overlay--lg",
+                "默认主题评论引用块去掉左侧强调竖线"
+            ]
+        },
         "10.1.1": {
             "title": "ApiNexus 10.1.1 流水页底栏与说明文案清理",
             "date": "2026-07-25",

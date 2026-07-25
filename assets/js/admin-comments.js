@@ -183,9 +183,14 @@
         }
 
         function statusClass(st) {
-            if (Number(st) === 1) return 'vs-badge--success';
-            if (Number(st) === 2) return 'vs-badge--danger';
-            return 'vs-badge--warning';
+            if (Number(st) === 1) return 'cmt-status cmt-status--approved';
+            if (Number(st) === 2) return 'cmt-status cmt-status--rejected';
+            return 'cmt-status cmt-status--pending';
+        }
+
+        function initialOf(name) {
+            var s = String(name || '').trim();
+            return s ? s.charAt(0) : '?';
         }
 
         function dataAttrs(c) {
@@ -205,24 +210,34 @@
                 + ' data-createtime="' + esc(c.createtime_short || c.createtime || '') + '"';
         }
 
+        function replyPreviewHtml(reply) {
+            var t = String(reply || '').trim();
+            if (!t) return '';
+            return '<div class="cmt-admin-reply-preview" data-field="reply_preview">管回：' + esc(t) + '</div>';
+        }
+
         function desktopHtml(c) {
             var title = c.content_title || ('文章#' + (c.contentid || ''));
             var time = c.createtime_short || c.createtime || '—';
             if (time.length >= 16) time = time.slice(0, 16);
             var html = '<tr' + dataAttrs(c) + '>';
             html += '<td><div class="cmt-body-cell">';
-            if (Number(c.ispinned) === 1) html += '<span class="cmt-pin-mark">[顶]</span> ';
-            html += '<span data-field="body">' + esc(c.body) + '</span></div></td>';
+            if (Number(c.ispinned) === 1) html += '<span class="cmt-pin-mark">置顶</span> ';
+            html += '<span data-field="body">' + esc(c.body) + '</span>';
+            html += replyPreviewHtml(c.reply);
+            html += '</div></td>';
             html += '<td><span data-field="content_title">' + esc(title) + '</span></td>';
             html += '<td><div class="cmt-author-cell">';
             if (c.avatar_url) {
-                html += '<img class="cmt-author-cell__avatar" src="' + esc(c.avatar_url) + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer">';
+                html += '<img class="cmt-author-cell__avatar" src="' + esc(c.avatar_url) + '" alt="" width="36" height="36" loading="lazy" referrerpolicy="no-referrer">';
+            } else {
+                html += '<span class="cmt-author-cell__fallback">' + esc(initialOf(c.nickname)) + '</span>';
             }
             html += '<div class="cmt-author-cell__meta"><span class="cmt-author-cell__name" data-field="nickname">'
                 + esc(c.nickname) + '</span><span class="cmt-author-cell__email" data-field="email">'
                 + esc(c.email) + '</span></div></div></td>';
             html += '<td><span data-field="createtime">' + esc(time) + '</span></td>';
-            html += '<td><span class="vs-badge ' + statusClass(c.status) + '" data-field="status_label">'
+            html += '<td><span class="' + statusClass(c.status) + '" data-field="status_label">'
                 + esc(c.status_label || '') + '</span></td>';
             html += '<td data-field="actions">' + actionsHtml(c) + '</td></tr>';
             return html;
@@ -230,18 +245,27 @@
 
         function mobileHtml(c) {
             var title = c.content_title || ('文章#' + (c.contentid || ''));
-            var time = c.createtime_short || c.createtime || '';
+            var time = c.createtime_short || c.createtime || '—';
             if (time.length >= 16) time = time.slice(0, 16);
-            var pin = Number(c.ispinned) === 1 ? '[顶] ' : '';
+            var avatar = c.avatar_url
+                ? '<img class="cmt-card__avatar" src="' + esc(c.avatar_url) + '" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer">'
+                : '<span class="cmt-card__avatar cmt-card__avatar--fallback">' + esc(initialOf(c.nickname)) + '</span>';
             return '<div class="cmt-card"' + dataAttrs(c) + '>'
-                + '<div class="cmt-card__text" data-field="body">' + esc(pin + c.body) + '</div>'
-                + '<div class="cmt-card__meta">'
-                + '<span class="cmt-card__meta-item">关联：<span data-field="content_title">' + esc(title) + '</span></span>'
-                + '<span class="cmt-card__meta-item" data-field="nickname">' + esc(c.nickname) + '</span>'
-                + '<span class="cmt-card__meta-item" data-field="email">' + esc(c.email) + '</span>'
-                + '<span class="cmt-card__meta-item" data-field="createtime">' + esc(time) + '</span>'
-                + '<span class="vs-badge ' + statusClass(c.status) + '" data-field="status_label">' + esc(c.status_label || '') + '</span>'
-                + '</div><div class="cmt-card__actions" data-field="actions">' + actionsHtml(c) + '</div></div>';
+                + '<div class="cmt-card__top">'
+                + '<div class="cmt-card__author">' + avatar
+                + '<div class="cmt-card__author-meta"><div class="cmt-card__name-row">'
+                + '<span class="cmt-card__name" data-field="nickname">' + esc(c.nickname) + '</span>'
+                + (Number(c.ispinned) === 1 ? '<span class="cmt-pin-mark">置顶</span>' : '')
+                + '</div><span class="cmt-card__email" data-field="email">' + esc(c.email) + '</span></div></div>'
+                + '<div class="cmt-card__top-right">'
+                + '<span class="' + statusClass(c.status) + '" data-field="status_label">' + esc(c.status_label || '') + '</span>'
+                + '<span class="cmt-card__time" data-field="createtime">' + esc(time) + '</span>'
+                + '</div></div>'
+                + '<div class="cmt-card__text" data-field="body">' + esc(c.body) + '</div>'
+                + replyPreviewHtml(c.reply)
+                + '<div class="cmt-card__article"><span class="cmt-card__article-label">关联文章</span>'
+                + '<span class="cmt-card__article-title" data-field="content_title">' + esc(title) + '</span></div>'
+                + '<div class="cmt-card__actions" data-field="actions">' + actionsHtml(c) + '</div></div>';
         }
 
         function upsert(c) {
@@ -345,8 +369,56 @@
             if (act === 'reply') {
                 document.getElementById('adminCmtReplyId').value = String(id);
                 document.getElementById('adminCmtReplyBodyView').textContent = data.body || '—';
-                document.getElementById('adminCmtReplyEmailView').textContent = data.email || '—';
                 document.getElementById('adminCmtReplyText').value = data.reply || '';
+
+                var statusEl = document.getElementById('adminCmtReplyStatus');
+                if (statusEl) {
+                    statusEl.className = statusClass(data.status);
+                    statusEl.textContent = data.status_label || '—';
+                }
+                var idLabel = document.getElementById('adminCmtReplyIdLabel');
+                if (idLabel) idLabel.textContent = '#' + id;
+
+                var nameEl = document.getElementById('adminCmtReplyName');
+                if (nameEl) nameEl.textContent = data.nickname || '—';
+
+                var emailEl = document.getElementById('adminCmtReplyEmailView');
+                if (emailEl) {
+                    var mail = data.email || '';
+                    emailEl.textContent = mail || '—';
+                    if (mail) {
+                        emailEl.href = 'mailto:' + mail;
+                        emailEl.removeAttribute('hidden');
+                    } else {
+                        emailEl.removeAttribute('href');
+                    }
+                }
+
+                var timeEl = document.getElementById('adminCmtReplyTime');
+                if (timeEl) timeEl.textContent = data.createtime_short || '—';
+
+                var artEl = document.getElementById('adminCmtReplyArticle');
+                if (artEl) {
+                    artEl.textContent = data.content_title || ('文章#' + (data.contentid || ''));
+                }
+
+                var av = document.getElementById('adminCmtReplyAvatar');
+                var avFb = document.getElementById('adminCmtReplyAvatarFallback');
+                if (data.avatar_url && av) {
+                    av.src = data.avatar_url;
+                    av.hidden = false;
+                    if (avFb) avFb.hidden = true;
+                } else {
+                    if (av) {
+                        av.hidden = true;
+                        av.removeAttribute('src');
+                    }
+                    if (avFb) {
+                        avFb.hidden = false;
+                        avFb.textContent = initialOf(data.nickname);
+                    }
+                }
+
                 openOv(replyOverlay);
                 return;
             }
