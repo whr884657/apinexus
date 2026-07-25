@@ -8792,3 +8792,259 @@ select.vs-input.vs-select {
     min-height: 32px;
     max-height: 32px;
 }
+/* ---- admin about page (v10.0.1) ---- */
+#adminAboutPage .about-section { margin-top: 20px; }
+#adminAboutPage .about-section:first-child { margin-top: 0; }
+#adminAboutPage .about-hero {
+    max-width: 640px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 28px 20px 24px;
+}
+#adminAboutPage .about-hero__logo,
+#adminAboutPage .about-hero__logo-img {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    margin: 0 auto 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    object-fit: cover;
+}
+#adminAboutPage .about-hero__logo {
+    background: #111;
+    color: #fff;
+    font-size: 28px;
+    font-weight: 700;
+}
+#adminAboutPage .about-hero__name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--vs-text, #111);
+    line-height: 1.25;
+}
+#adminAboutPage .about-hero__version {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 4px 12px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--vs-text, #111);
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+#adminAboutPage .about-hero__desc {
+    font-size: 0.875rem;
+    color: var(--vs-text-secondary, #6b7280);
+    line-height: 1.65;
+    max-width: 440px;
+    margin: 14px auto 0;
+}
+#adminAboutPage .about-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+#adminAboutPage .about-panel-head__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--vs-text, #111);
+}
+#adminAboutPage .about-panel-body { padding-top: 2px; }
+#adminAboutPage .about-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+#adminAboutPage .about-badge--ok {
+    background: #f0faf5;
+    color: #15803d;
+}
+#adminAboutPage .about-badge--muted {
+    background: #f1f5f9;
+    color: #64748b;
+}
+#adminAboutPage .about-env-wrap { margin: 0 -4px; }
+#adminAboutPage .about-env-table td { padding: 12px 14px; }
+#adminAboutPage .about-env-table tbody tr:hover td { background: transparent; }
+#adminAboutPage .about-env-table td:nth-child(odd) {
+    border-right: 1px solid var(--vs-border, #e5e7eb);
+}
+#adminAboutPage .about-env-label {
+    font-size: 0.75rem;
+    color: var(--vs-text-secondary, #6b7280);
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+#adminAboutPage .about-env-value {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--vs-text, #111);
+    word-break: break-word;
+}
+#adminAboutPage .about-dual {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+#adminAboutPage .about-team-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+#adminAboutPage .about-team-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--vs-content-bg, #f8fafc);
+    border-radius: 10px;
+}
+#adminAboutPage .about-team-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #111;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+#adminAboutPage .about-team-avatar--alt { background: #2563eb; }
+#adminAboutPage .about-team-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+#adminAboutPage .about-team-role {
+    font-size: 0.75rem;
+    color: var(--vs-text-secondary, #6b7280);
+    margin-top: 2px;
+}
+#adminAboutPage .about-link-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+#adminAboutPage .about-link-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--vs-content-bg, #f8fafc);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s ease;
+}
+#adminAboutPage .about-link-item:hover { background: #eef2f7; }
+#adminAboutPage .about-link-item__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #334155;
+    flex-shrink: 0;
+}
+#adminAboutPage .about-link-item__label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    min-width: 0;
+}
+#adminAboutPage .about-link-item__value {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--vs-text-secondary, #6b7280);
+    text-align: right;
+    word-break: break-all;
+}
+#adminAboutPage .about-tech-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+#adminAboutPage .about-tech-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    color: #334155;
+    text-decoration: none;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+#adminAboutPage .about-tech-badge:hover { background: #e2e8f0; }
+#adminAboutPage .about-tech-badge__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #111;
+}
+#adminAboutPage .about-tech-note {
+    margin: 14px 0 0;
+    font-size: 0.75rem;
+    color: var(--vs-text-secondary, #6b7280);
+    line-height: 1.65;
+}
+#adminAboutPage .about-copyright {
+    text-align: center;
+    padding: 8px 12px 4px;
+}
+#adminAboutPage .about-copyright__main {
+    font-size: 0.8125rem;
+    color: var(--vs-text, #111);
+    font-weight: 500;
+}
+#adminAboutPage .about-copyright__license {
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: var(--vs-text-secondary, #6b7280);
+}
+@media (max-width: 900px) {
+    #adminAboutPage .about-dual { grid-template-columns: 1fr; }
+    #adminAboutPage .about-env-table thead { display: none; }
+    #adminAboutPage .about-env-table,
+    #adminAboutPage .about-env-table tbody,
+    #adminAboutPage .about-env-table tr,
+    #adminAboutPage .about-env-table td {
+        display: block;
+        width: 100%;
+    }
+    #adminAboutPage .about-env-table tr {
+        padding: 8px 0;
+        border-bottom: 1px solid var(--vs-border, #e5e7eb);
+    }
+    #adminAboutPage .about-env-table td:nth-child(odd) {
+        border-right: none;
+        padding-bottom: 2px;
+    }
+    #adminAboutPage .about-env-table td:nth-child(even) {
+        padding-top: 2px;
+        padding-bottom: 10px;
+    }
+    #adminAboutPage .about-link-item {
+        flex-wrap: wrap;
+    }
+    #adminAboutPage .about-link-item__value {
+        margin-left: 42px;
+        width: calc(100% - 42px);
+        text-align: left;
+    }
+}
