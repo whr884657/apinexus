@@ -17,6 +17,7 @@
     var cursorStack = [0];
     var nextBeforeId = 0;
     var hasMore = false;
+    var totalCount = 0;
     var loadSeq = 0;
     var listAbort = null;
 
@@ -98,9 +99,7 @@
     function renderPager() {
         if (footer) footer.hidden = false;
         if (totalEl) {
-            totalEl.textContent = hasMore
-                ? ('本页 ' + getPageSize() + ' 条，还有更多')
-                : ('本页最多 ' + getPageSize() + ' 条');
+            totalEl.textContent = '共 ' + (totalCount || 0) + ' 条';
         }
         if (pagerNav) {
             pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
@@ -143,6 +142,7 @@
             }
             nextBeforeId = parseInt(data.next_before_id, 10) || 0;
             hasMore = !!data.has_more;
+            totalCount = parseInt(data.total, 10) || 0;
             if (cursorStack.length === page) {
                 cursorStack.push(nextBeforeId);
             } else {

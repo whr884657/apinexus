@@ -1,13 +1,12 @@
 {
-    "version": "10.1.0",
-    "title": "ApiNexus 10.1.0 文章详情对话式评论",
+    "version": "10.1.1",
+    "title": "ApiNexus 10.1.1 流水页底栏与说明文案清理",
     "release_date": "2026-07-25",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "默认主题文章详情底部评论：文字+基础表情、引用回复",
-        "评论表单：邮箱必填，名称与个人网址选填；IP/邮箱限流",
-        "comment 表新增 parentid、website（migration 10.1.0.sql）",
-        "完善前台评论与主题规范；后台评论列表展示引用预览"
+        "去掉订单/积分页 keyset 说明 tip",
+        "订单、积分、日志底栏改为「共 N 条」（筛选总数短 TTL 缓存）",
+        "同步列表分页与订单积分性能规范"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

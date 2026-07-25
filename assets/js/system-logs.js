@@ -226,7 +226,7 @@
             footer.hidden = false;
         }
         if (totalEl) {
-            totalEl.textContent = '每页 ' + pagesize + ' 条';
+            totalEl.textContent = '共 ' + (parseInt(total, 10) || 0) + ' 条';
         }
         if (pagerNav) {
             pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
@@ -255,7 +255,7 @@
     function applyListPayload(data, pagesize) {
         nextBeforeId = parseInt(data.next_before_id, 10) || 0;
         hasMore = !!data.has_more;
-        renderList(data.list || [], 0, pagesize);
+        renderList(data.list || [], parseInt(data.total, 10) || 0, pagesize);
     }
 
     function load() {

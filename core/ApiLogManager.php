@@ -253,7 +253,7 @@ class ApiLogManager
 
     /**
      * 分页列表：仅按底部「每页条数」+ before_id keyset 取最新记录。
-     * 禁止「近 N 天」时间窗、禁止全表 COUNT、禁止深页 OFFSET。
+     * 禁止「近 N 天」时间窗、禁止深页 OFFSET；筛选总数短 TTL 缓存后供底栏「共 N 条」。
      *
      * @param array $opts page, pagesize, q, ok(null|0|1), apiid, before_id
      * @return array{list:array,total:int,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool,total_approx:bool}
@@ -367,9 +367,11 @@ class ApiLogManager
                         $nextBefore = (int) $merged[count($merged) - 1]['id'];
                     }
 
+                    $total = self::countFilteredCached($q, $ok, $apiid);
+
                     return array(
                         'list'           => $merged,
-                        'total'          => 0,
+                        'total'          => $total,
                         'page'           => $page,
                         'pagesize'       => $pagesize,
                         'before_id'      => $beforeId,
@@ -395,6 +397,48 @@ class ApiLogManager
         } catch (Exception $e) {
             // MySQL 5.7 / MariaDB 等不支持则忽略
         }
+    }
+
+    /**
+     * 当前筛选条件下热库总数（短 TTL 缓存；不含 before_id）
+     *
+     * @param string $q
+     * @param mixed  $ok
+     * @param int    $apiid
+     * @return int
+     */
+    private static function countFilteredCached($q, $ok, $apiid)
+    {
+        $factory = function () use ($q, $ok, $apiid) {
+            try {
+                $pdo = Database::connect();
+                self::applyQueryTimeout($pdo);
+                $filters = self::buildFilters($q, $ok, $apiid, 0);
+                $from = '`' . self::table() . '` l';
+                if ($q !== '') {
+                    $from .= ' LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`';
+                }
+                $sql = 'SELECT COUNT(*) FROM ' . $from . ' WHERE ' . $filters['whereSql'];
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($filters['bind']);
+                return max(0, (int) $stmt->fetchColumn());
+            } catch (Exception $e) {
+                return 0;
+            }
+        };
+
+        if (class_exists('RedisCache')) {
+            return (int) RedisCache::remember(
+                RedisCache::apilogFilterTotalKey(array(
+                    'q'     => $q,
+                    'ok'    => $ok,
+                    'apiid' => $apiid,
+                )),
+                RedisCache::TTL_APILOG_RANGE_TOTAL,
+                $factory
+            );
+        }
+        return (int) call_user_func($factory);
     }
 
     /**

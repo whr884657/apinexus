@@ -148,7 +148,7 @@ class RedisCache
     }
 
     /**
-     * 订单/积分流水时间窗总数缓存键
+     * 订单/积分流水筛选总数缓存键（不含 before_id / 天数窗）
      *
      * @param array $opts
      * @return string
@@ -159,9 +159,24 @@ class RedisCache
             'scope'  => isset($opts['scope']) ? (string) $opts['scope'] : '',
             'userid' => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
             'status' => array_key_exists('status', $opts) ? $opts['status'] : null,
-            'days'   => (int) (isset($opts['days']) ? $opts['days'] : 30),
         );
         return self::KEY_ORDERS_RANGE_TOTAL_PREFIX . md5(json_encode($norm));
+    }
+
+    /**
+     * 日志筛选总数缓存键（不含 before_id）
+     *
+     * @param array $opts
+     * @return string
+     */
+    public static function apilogFilterTotalKey(array $opts)
+    {
+        $norm = array(
+            'q'     => isset($opts['q']) ? (string) $opts['q'] : '',
+            'ok'    => array_key_exists('ok', $opts) ? $opts['ok'] : null,
+            'apiid' => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
+        );
+        return self::KEY_APILOG_RANGE_TOTAL_PREFIX . 'f:' . md5(json_encode($norm));
     }
 
     /**

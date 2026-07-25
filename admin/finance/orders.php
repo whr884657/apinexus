@@ -52,7 +52,6 @@ vs_admin_layout_start('订单管理', 'orders', $headerActions);
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先完成系统升级以同步订单数据。', array('compact' => true)); ?>
 <?php else: ?>
-<?php vs_render_notice('tip', '', '每次只加载当前每页条数的最新订单，翻页继续向更早记录取数，避免一次拉太多拖慢后台。', array('compact' => true)); ?>
 <div class="vs-panel vs-finance-panel" id="ordersPage">
     <div class="vs-finance-table" id="ordersListBody">
         <?php vs_render_loading('正在加载订单'); ?>

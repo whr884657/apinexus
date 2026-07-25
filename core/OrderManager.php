@@ -223,10 +223,10 @@ class OrderManager
     }
 
     /**
-     * 分页列表：仅按每页条数 + keyset（before_id）取最新记录，禁止深页 OFFSET / 全表 COUNT
+     * 分页列表：每页条数 + keyset；附带筛选总数（短 TTL 缓存 COUNT，禁止深页 OFFSET）
      *
      * @param array $opts userid?, status?, scope(recharge|ledger)?, pagesize, before_id
-     * @return array{list:array,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool}
+     * @return array{list:array,total:int,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool}
      */
     public static function listPaged(array $opts = array())
     {
@@ -242,6 +242,7 @@ class OrderManager
 
         $empty = array(
             'list'           => array(),
+            'total'          => 0,
             'page'           => $page,
             'pagesize'       => $pagesize,
             'before_id'      => $beforeId,
@@ -275,6 +276,9 @@ class OrderManager
                 $where[] = 'o.`status` = ?';
                 $bind[] = (int) $status;
             }
+
+            $countWhere = $where;
+            $countBind = $bind;
             if ($beforeId > 0) {
                 $where[] = 'o.`id` < ?';
                 $bind[] = $beforeId;
@@ -329,8 +333,15 @@ class OrderManager
                 $nextBefore = isset($last['id']) ? (int) $last['id'] : 0;
             }
 
+            $total = self::countFilteredCached(array(
+                'scope'  => $scope,
+                'userid' => $userid,
+                'status' => $status,
+            ), $countWhere, $countBind);
+
             return array(
                 'list'           => $list,
+                'total'          => $total,
                 'page'           => $page,
                 'pagesize'       => $pagesize,
                 'before_id'      => $beforeId,
@@ -340,6 +351,39 @@ class OrderManager
         } catch (Exception $e) {
             return $empty;
         }
+    }
+
+    /**
+     * 当前筛选条件下总数（短 TTL 缓存；不含 before_id）
+     *
+     * @param array $cacheOpts
+     * @param array $where
+     * @param array $bind
+     * @return int
+     */
+    private static function countFilteredCached(array $cacheOpts, array $where, array $bind)
+    {
+        $factory = function () use ($where, $bind) {
+            try {
+                $pdo = Database::connect();
+                self::applyQueryTimeout($pdo);
+                $sql = 'SELECT COUNT(*) FROM `' . self::table() . '` o WHERE ' . implode(' AND ', $where);
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($bind);
+                return max(0, (int) $stmt->fetchColumn());
+            } catch (Exception $e) {
+                return 0;
+            }
+        };
+
+        if (class_exists('RedisCache')) {
+            return (int) RedisCache::remember(
+                RedisCache::ordersRangeTotalKey($cacheOpts),
+                RedisCache::TTL_ORDERS_RANGE_TOTAL,
+                $factory
+            );
+        }
+        return (int) call_user_func($factory);
     }
 
     /**
