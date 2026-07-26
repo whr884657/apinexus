@@ -26,7 +26,8 @@ class AiApiDoc
             . '必须包含：接口说明、调用地址、请求方式、请求参数表、参数说明、'
             . '成功响应示例、错误响应示例、响应字段说明，以及本平台常见 HTTP 状态：'
             . '401 未提供/错误密钥、402 积分不足、403 密钥禁用、429 请求过于频繁、503 维护或服务暂不可用。'
-            . '若接口有多种参数组合，用表格说明典型取值。';
+            . '若接口有多种参数组合，用表格说明典型取值。'
+            . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。';
 
         $user = "请根据下列接口资料撰写详细文档（Markdown）：\n\n" . self::contextMarkdown($safe);
         $out = AiClient::chat($system, $user);
@@ -62,7 +63,8 @@ class AiApiDoc
             . '代码必须可运行示意：使用对外调用地址与给定参数名；密钥用 YOUR_API_KEY 占位。'
             . '严禁出现上游真实地址、代理、密钥明文、内部实现。'
             . 'GET 用查询参数；POST 可用 form 或 JSON（与常见实践一致）。'
-            . 'browser 使用浏览器 fetch；typescript 使用 async/await fetch。';
+            . 'browser 使用浏览器 fetch；typescript 使用 async/await fetch。'
+            . 'PHP 块禁止输出 <?php 与 ?>；从变量赋值起写即可。';
 
         $user = "请为下列接口生成快速上手代码示例：\n\n" . self::contextMarkdown($safe);
         $out = AiClient::chat($system, $user);

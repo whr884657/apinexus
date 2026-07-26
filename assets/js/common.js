@@ -11,6 +11,52 @@
     global.VS.version = '2.0.0';
 
     /**
+     * 将可能含代码样例的字段编码为 VS64:Base64，规避 WAF 语义分析误拦
+     * 服务端用 vs_decode_transport_field 还原；空串不编码。
+     *
+     * @param {string} value
+     * @returns {string}
+     */
+    global.VS.encodeTransportField = function (value) {
+        if (value == null) {
+            return '';
+        }
+        var s = String(value);
+        if (s === '') {
+            return '';
+        }
+        if (s.indexOf('VS64:') === 0) {
+            return s;
+        }
+        try {
+            var b64 = btoa(unescape(encodeURIComponent(s)));
+            return 'VS64:' + b64;
+        } catch (e) {
+            return s;
+        }
+    };
+
+    /**
+     * 对 payload 中指定键做传输编码（原地修改并返回）
+     *
+     * @param {object} payload
+     * @param {string[]} [keys]
+     * @returns {object}
+     */
+    global.VS.encodeTransportFields = function (payload, keys) {
+        if (!payload || typeof payload !== 'object') {
+            return payload;
+        }
+        keys = keys || ['doc', 'aidoc', 'response', 'params', 'description', 'content', 'body'];
+        keys.forEach(function (key) {
+            if (Object.prototype.hasOwnProperty.call(payload, key) && payload[key] != null && payload[key] !== '') {
+                payload[key] = global.VS.encodeTransportField(payload[key]);
+            }
+        });
+        return payload;
+    };
+
+    /**
      * 为 FormData 自动附加 CSRF（若表单未含 csrf_token）
      *
      * @param {FormData} body

@@ -468,6 +468,12 @@
         }
 
         function post(fd) {
+            if (fd && typeof fd.get === 'function' && window.VS.encodeTransportField) {
+                var bodyVal = fd.get('body');
+                if (bodyVal != null && String(bodyVal) !== '') {
+                    fd.set('body', window.VS.encodeTransportField(String(bodyVal)));
+                }
+            }
             return window.VS.postForm(fd);
         }
 

@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'kind'        => $kind,
             'title'       => isset($_POST['title']) ? (string) $_POST['title'] : '',
             'summary'     => isset($_POST['summary']) ? (string) $_POST['summary'] : '',
-            'body'        => isset($_POST['body']) ? (string) $_POST['body'] : '',
+            'body'        => isset($_POST['body']) ? vs_decode_transport_field((string) $_POST['body']) : '',
             'cover'       => isset($_POST['cover']) ? (string) $_POST['cover'] : '',
             'coverlayout' => isset($_POST['coverlayout']) ? (int) $_POST['coverlayout'] : ContentManager::COVER_LEFT,
             'ispinned'    => 0,

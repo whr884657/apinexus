@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
 
     $payloadFromPost = function () {
-        return array(
+        $data = array(
             'name'        => isset($_POST['name']) ? (string) $_POST['name'] : '',
             'description' => isset($_POST['description']) ? (string) $_POST['description'] : '',
             'endpoint'    => isset($_POST['endpoint']) ? (string) $_POST['endpoint'] : '',
@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'icon'        => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'    => isset($_POST['category']) ? (string) $_POST['category'] : '',
         );
+        // doc / aidoc / response / params 可能含代码样例，经 VS64 传输规避 WAF 误拦
+        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params', 'description'));
     };
 
     if ($action === 'get') {

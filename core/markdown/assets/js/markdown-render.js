@@ -120,7 +120,9 @@
 
     function enhanceCodeBlocks(root) {
         root = root || document;
-        var list = root.querySelectorAll ? root.querySelectorAll('.vs-md-body pre, .vs-md-preview pre') : [];
+        var list = root.querySelectorAll
+            ? root.querySelectorAll('.vs-md-body pre, .vs-md-preview pre, .markdown-body pre, .detail-md pre')
+            : [];
         Array.prototype.forEach.call(list, function (pre) {
             if (!pre || pre.getAttribute('data-vs-md-copy') === '1') {
                 return;

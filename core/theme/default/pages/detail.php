@@ -275,7 +275,7 @@ if (!$notFound) {
         <div class="detail-fold__body" id="detailDocBody">
             <div class="detail-fold__inner">
                 <?php if (!empty($api['doc'])): ?>
-                <div class="markdown-body detail-md is-parsed"><?php echo Markdown::render((string) $api['doc']); ?></div>
+                <div class="markdown-body vs-md-body detail-md is-parsed"><?php echo Markdown::render((string) $api['doc']); ?></div>
                 <?php else: ?>
                 <p class="detail-empty-hint">暂无详细文档</p>
                 <?php endif; ?>

@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'kind'     => $kind,
             'title'    => isset($_POST['title']) ? (string) $_POST['title'] : '',
             'summary'  => '',
-            'body'     => isset($_POST['body']) ? (string) $_POST['body'] : '',
+            'body'     => isset($_POST['body']) ? vs_decode_transport_field((string) $_POST['body']) : '',
             'cover'    => '',
             'status'   => ContentManager::STATUS_PUBLISHED,
             'userid'   => $publishUid,

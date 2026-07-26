@@ -181,8 +181,15 @@
         var fd = new FormData();
         fd.append('action', action);
         if (payload) {
+            var encoded = {};
             Object.keys(payload).forEach(function (key) {
-                fd.append(key, payload[key]);
+                encoded[key] = payload[key];
+            });
+            if (window.VS.encodeTransportFields) {
+                window.VS.encodeTransportFields(encoded, ['doc', 'aidoc', 'response', 'params', 'description']);
+            }
+            Object.keys(encoded).forEach(function (key) {
+                fd.append(key, encoded[key]);
             });
         }
         return window.VS.postForm(fd);

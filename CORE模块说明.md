@@ -310,6 +310,7 @@ echo 'v' . VS_VERSION;     // v2.17.1
 | `vs_render_notice()` | 后台提示块 |
 | `vs_render_site_logo()` | 站点 Logo |
 | `vs_require_secure_post()` | 校验 POST + CSRF |
+| `vs_decode_transport_field()` / `vs_decode_transport_fields()` | 解码 `VS64:` Base64 表单字段（防 WAF 误拦，v10.15.3） |
 | `vs_password_hash()` | 密码哈希 |
 
 **主题开发常用：**

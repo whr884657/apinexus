@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$canLocal) {
             $apitype = ApiManager::APITYPE_PROXY;
         }
-        return array(
+        $data = array(
             'name'         => isset($_POST['name']) ? (string) $_POST['name'] : '',
             'description'  => isset($_POST['description']) ? (string) $_POST['description'] : '',
             'endpoint'     => isset($_POST['endpoint']) ? (string) $_POST['endpoint'] : '',
@@ -53,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'icon'         => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'     => isset($_POST['category']) ? (string) $_POST['category'] : '',
         );
+        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params', 'description'));
     };
 
     $assertOwner = function ($apiId) use ($userId) {

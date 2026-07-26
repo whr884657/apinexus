@@ -402,6 +402,51 @@ function vs_safe_login_redirect($candidate)
 }
 
 /**
+ * 解码表单传输字段（客户端 VS64: Base64，规避 WAF 对代码片段的误拦）
+ * 未带前缀则原样返回，兼容旧客户端。
+ *
+ * @param mixed $value
+ * @return string
+ */
+function vs_decode_transport_field($value)
+{
+    $value = (string) $value;
+    if ($value === '') {
+        return '';
+    }
+    if (strncmp($value, 'VS64:', 5) !== 0) {
+        return $value;
+    }
+    $b64 = substr($value, 5);
+    if ($b64 === '') {
+        return '';
+    }
+    $raw = base64_decode($b64, true);
+    if ($raw === false) {
+        return $value;
+    }
+    return $raw;
+}
+
+/**
+ * 批量解码关联数组中的传输字段
+ *
+ * @param array $data
+ * @param array $keys
+ * @return array
+ */
+function vs_decode_transport_fields(array $data, array $keys)
+{
+    foreach ($keys as $key) {
+        if (!array_key_exists($key, $data)) {
+            continue;
+        }
+        $data[$key] = vs_decode_transport_field($data[$key]);
+    }
+    return $data;
+}
+
+/**
  * 校验 POST 请求（同源 + CSRF），失败时返回 JSON 错误
  *
  * @return void

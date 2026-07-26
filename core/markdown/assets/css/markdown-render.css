@@ -178,14 +178,38 @@
 }
 .vs-md-body pre code { background: transparent; padding: 0; color: inherit; }
 /* 浅色 IDE token（VsSyntax / 后台文档共用） */
-.vs-md-body .vs-syn--keyword { color: #7c3aed; font-weight: 600; }
-.vs-md-body .vs-syn--string { color: #15803d; }
-.vs-md-body .vs-syn--number { color: #c2410c; }
-.vs-md-body .vs-syn--literal { color: #0369a1; }
-.vs-md-body .vs-syn--key { color: #a16207; }
-.vs-md-body .vs-syn--comment { color: #94a3b8; font-style: italic; }
-.vs-md-body .vs-syn--func { color: #2563eb; }
-.vs-md-body .vs-syn--attr { color: #0369a1; }
+.vs-md-body .vs-syn--keyword,
+.vs-md-preview .vs-syn--keyword,
+.markdown-body .vs-syn--keyword,
+.detail-md .vs-syn--keyword { color: #7c3aed; font-weight: 600; }
+.vs-md-body .vs-syn--string,
+.vs-md-preview .vs-syn--string,
+.markdown-body .vs-syn--string,
+.detail-md .vs-syn--string { color: #15803d; }
+.vs-md-body .vs-syn--number,
+.vs-md-preview .vs-syn--number,
+.markdown-body .vs-syn--number,
+.detail-md .vs-syn--number { color: #c2410c; }
+.vs-md-body .vs-syn--literal,
+.vs-md-preview .vs-syn--literal,
+.markdown-body .vs-syn--literal,
+.detail-md .vs-syn--literal { color: #0369a1; }
+.vs-md-body .vs-syn--key,
+.vs-md-preview .vs-syn--key,
+.markdown-body .vs-syn--key,
+.detail-md .vs-syn--key { color: #a16207; }
+.vs-md-body .vs-syn--comment,
+.vs-md-preview .vs-syn--comment,
+.markdown-body .vs-syn--comment,
+.detail-md .vs-syn--comment { color: #94a3b8; font-style: italic; }
+.vs-md-body .vs-syn--func,
+.vs-md-preview .vs-syn--func,
+.markdown-body .vs-syn--func,
+.detail-md .vs-syn--func { color: #2563eb; }
+.vs-md-body .vs-syn--attr,
+.vs-md-preview .vs-syn--attr,
+.markdown-body .vs-syn--attr,
+.detail-md .vs-syn--attr { color: #0369a1; }
 .vs-md-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
 .vs-md-body th, .vs-md-body td {
     border: 1px solid var(--border-color, rgba(0,0,0,.1));

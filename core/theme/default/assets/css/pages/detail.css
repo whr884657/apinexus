@@ -554,6 +554,15 @@
     color: inherit;
 }
 
+.detail-quickstart__code .vs-syn--keyword { color: #7c3aed; font-weight: 600; }
+.detail-quickstart__code .vs-syn--string { color: #15803d; }
+.detail-quickstart__code .vs-syn--number { color: #c2410c; }
+.detail-quickstart__code .vs-syn--literal { color: #0369a1; }
+.detail-quickstart__code .vs-syn--key { color: #a16207; }
+.detail-quickstart__code .vs-syn--comment { color: #94a3b8; font-style: italic; }
+.detail-quickstart__code .vs-syn--func { color: #2563eb; }
+.detail-quickstart__code .vs-syn--attr { color: #0369a1; }
+
 .playground-grid {
     display: grid;
     grid-template-columns: 1fr;
