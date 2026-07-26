@@ -186,12 +186,51 @@ class AiApiDoc
         if (strpos($out, '错误：') === 0) {
             return $out;
         }
-        $out = self::sanitizeOutput($out);
-        $normalized = ApiQuickstart::normalizeAidocBlocks($out);
-        if ($normalized === '') {
+        $one = self::extractRequestedQsBlock($out, $authWay, $lang, $requireAuthAttr);
+        if ($one === '') {
             return '错误：鉴权 ' . $authWay . ' / 语言 ' . $lang . ' 未能解析出有效代码块';
         }
-        return $normalized;
+        return $one;
+    }
+
+    /**
+     * 从模型输出中只取「当前鉴权 + 当前语言」一块，避免模型仍一次吐多语言被误合并
+     *
+     * @param string $raw
+     * @param string $authWay
+     * @param string $lang
+     * @param bool   $requireAuthAttr
+     * @return string 单个 :::qs 块或空串
+     */
+    private static function extractRequestedQsBlock($raw, $authWay, $lang, $requireAuthAttr)
+    {
+        $raw = self::sanitizeOutput((string) $raw);
+        $parsed = ApiQuickstart::parseQsBlocks($raw);
+        if ($parsed === array()) {
+            $normalized = ApiQuickstart::normalizeAidocBlocks($raw);
+            $parsed = ApiQuickstart::parseQsBlocks($normalized);
+        }
+        if ($parsed === array()) {
+            return '';
+        }
+
+        $authWay = strtolower((string) $authWay);
+        $lang = strtolower((string) $lang);
+        $code = '';
+        if (isset($parsed[$authWay][$lang])) {
+            $code = trim((string) $parsed[$authWay][$lang]);
+        } elseif (!$requireAuthAttr && isset($parsed[ApiQuickstart::AUTH_DEFAULT][$lang])) {
+            $code = trim((string) $parsed[ApiQuickstart::AUTH_DEFAULT][$lang]);
+        }
+        if ($code === '') {
+            return '';
+        }
+
+        $line = ':::qs lang=' . $lang;
+        if ($requireAuthAttr) {
+            $line .= ' auth=' . $authWay;
+        }
+        return $line . "\n" . $code . "\n:::";
     }
 
     /**

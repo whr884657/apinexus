@@ -7,7 +7,7 @@
     var STORAGE_KEY = 'login_page_bg';
     var DEFAULT_BG = '#ffffff';
 
-    /** 认证页禁止：四个小人色；后台内仅禁止紫/橙/黄，允许黑色（若在预设中） */
+    /** 认证页禁止：四个小人色；后台内仅禁止紫/橙/黄（固定 24 色中无纯黑） */
     var FORBIDDEN_AUTH = [
         { r: 108, g: 63, b: 245, name: '紫色小人' },
         { r: 45, g: 45, b: 45, name: '黑色小人' },
@@ -506,7 +506,8 @@
         }
     }
 
-    window.applyPageBackground = paintPage;
+    // 对外仅允许固定预设，避免绕过 24 色限制
+    window.applyPageBackground = applyBackground;
     window.readPageBackground = readSavedColor;
 
     init();

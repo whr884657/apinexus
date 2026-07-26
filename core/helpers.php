@@ -148,8 +148,18 @@ function vs_render_version_display($updateCheck = null)
  */
 function vs_theme_bg_preload_script()
 {
+    // 与 theme-picker.js PRESETS 对齐：预加载仅接受固定 24 色，禁止自定义色闪现
+    $presets = array(
+        'ffffff', 'f8fafc', 'f1f5f9', 'e2e8f0',
+        'fef2f2', 'fff7ed', 'fefce8', 'f0fdf4',
+        'eff6ff', 'f5f3ff', 'fdf4ff', 'ecfeff',
+        'e5e7eb', 'd1d8e3', 'bcc8d9', 'a8b8cc',
+        'f5caca', 'fdd5b0', 'f5e99e', 'b8ebd0',
+        'b3d4fc', 'd4c6fd', 'efcef5', 'a8eef5',
+    );
+    $allowJson = json_encode($presets);
     echo '<script>';
-    echo '(function(){try{var c=localStorage.getItem(\'login_page_bg\');if(c){var h=c.replace(\'#\',\'\').trim();if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];if(h.length===8)h=h.slice(0,6);if(h.length===6){var color=\'#\'+h.toLowerCase();document.documentElement.style.setProperty(\'--page-bg\',color);document.documentElement.style.backgroundColor=color;}}document.documentElement.classList.remove(\'vs-scheme-dark\');try{localStorage.removeItem(\'admin_color_scheme\');}catch(e2){}}catch(e){}})();';
+    echo '(function(){try{var allow=' . $allowJson . ';var c=localStorage.getItem(\'login_page_bg\');if(c){var h=c.replace(\'#\',\'\').trim().toLowerCase();if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];if(h.length===8)h=h.slice(0,6);if(h.length===6&&allow.indexOf(h)>=0){var color=\'#\'+h;document.documentElement.style.setProperty(\'--page-bg\',color);document.documentElement.style.backgroundColor=color;}}document.documentElement.classList.remove(\'vs-scheme-dark\');try{localStorage.removeItem(\'admin_color_scheme\');}catch(e2){}}catch(e){}})();';
     echo '</script>' . "\n";
 }
 

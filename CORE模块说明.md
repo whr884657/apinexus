@@ -709,7 +709,7 @@ VsPlaygroundResponse.directRequest({
 
 **AiApiDoc：** 管理员接口编辑「AI 生成详细文档 / 代码示例」；上下文剔除 `targeturl`/`upkey`；输出经 `sanitizeOutput` 剥离 HTML / `vs-syn` 标记。
 
-**代码示例生成（v11.1.0）：** 按「鉴权方式 × 语言」**逐次**请求模型，一次只输出一个 `:::qs` 块，再合并；部分失败带 `warning`。
+**代码示例生成（v11.1.0）：** 按「鉴权方式 × 语言」**逐次**请求模型；`extractRequestedQsBlock` 只保留本次 lang/auth，再合并；部分失败带 `warning`。
 
 **代码示例格式（aidoc）：**
 
