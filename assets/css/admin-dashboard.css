@@ -71,6 +71,32 @@
     color: #64748b;
 }
 #adminDashPage .dash-kpi__meta strong { color: #0f172a; }
+#adminDashPage .dash-kpi__meta-ok {
+    color: #15803d;
+    font-weight: 600;
+}
+#adminDashPage .dash-kpi__meta-ok strong { color: #15803d; }
+#adminDashPage .dash-kpi__meta-fail {
+    color: #dc2626;
+    font-weight: 600;
+}
+#adminDashPage .dash-kpi__meta-fail strong { color: #dc2626; }
+#adminDashPage .dash-kpi--loading {
+    min-height: 108px;
+}
+#adminDashPage .dash-kpi__skeleton {
+    border-radius: 6px;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: dashSkeleton 1.2s ease-in-out infinite;
+}
+#adminDashPage .dash-kpi__skeleton--label { width: 42%; height: 12px; margin-bottom: 10px; }
+#adminDashPage .dash-kpi__skeleton--value { width: 58%; height: 22px; margin-bottom: 12px; }
+#adminDashPage .dash-kpi__skeleton--chart { width: 100%; height: 28px; }
+@keyframes dashSkeleton {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
 
 #adminDashPage .dash-grid {
     display: grid;
@@ -258,7 +284,10 @@
     #adminDashPage .dash-grid-bars { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
-    #adminDashPage .dash-kpi-grid { grid-template-columns: 1fr; }
+    /* 手机端 KPI 田字格：一行两个，禁止单列拉满 */
+    #adminDashPage .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    #adminDashPage .dash-kpi { padding: 12px; }
+    #adminDashPage .dash-kpi__value { font-size: 1.25rem; }
     #adminDashPage .dash-sys { grid-template-columns: 1fr; }
     #adminDashPage .dash-bar {
         grid-template-columns: minmax(64px, 92px) 1fr auto;

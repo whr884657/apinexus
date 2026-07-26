@@ -6,11 +6,11 @@
 
 class DashboardStats
 {
-    const TTL_LIVE = 8;
-    const TTL_TODAY = 45;
-    const TTL_HOUR = 90;
-    const TTL_WEEK = 600;
-    const TTL_GEO = 300;
+    const TTL_LIVE = 5;
+    const TTL_TODAY = 20;
+    const TTL_HOUR = 60;
+    const TTL_WEEK = 120;
+    const TTL_GEO = 180;
 
     /** @var string|null */
     private static $epochCache = null;
@@ -30,7 +30,7 @@ class DashboardStats
         $max = 20;
         $window = 60;
         if ($action === 'live') {
-            $max = 24; // 约 5s 一轮，留余量
+            $max = 30; // 约 5s 一轮，留余量
             $window = 60;
         } elseif ($action === 'refresh') {
             $max = 10;
@@ -70,6 +70,26 @@ class DashboardStats
     }
 
     /**
+     * 控制台首屏壳（禁止同步扫大表；重数据走 AJAX snapshot）
+     *
+     * @return array
+     */
+    public static function consoleBootShell()
+    {
+        return array(
+            'server_time'  => date('Y-m-d H:i:s'),
+            'weekday'      => self::weekdayLabel(),
+            'kpi'          => array(),
+            'type_trend'   => array('labels' => array(), 'guest' => array(), 'key' => array(), 'points' => array()),
+            'rate_trend'   => array('labels' => array(), 'success' => array(), 'fail' => array()),
+            'top_apis'     => array(),
+            'sys_overview' => array(),
+            'recent'       => array(),
+            'boot_light'   => true,
+        );
+    }
+
+    /**
      * 控制台整页快照
      *
      * @param bool $refresh
@@ -79,6 +99,9 @@ class DashboardStats
     {
         if ($refresh) {
             self::bumpEpoch();
+            if (class_exists('RedisCache') && method_exists('RedisCache', 'invalidateApiLog')) {
+                RedisCache::invalidateApiLog();
+            }
         }
         return array(
             'server_time'   => date('Y-m-d H:i:s'),
@@ -89,6 +112,44 @@ class DashboardStats
             'top_apis'      => self::topApisToday(10),
             'sys_overview'  => self::sysOverview(),
             'recent'        => self::recentCalls(12),
+            'boot_light'    => false,
+        );
+    }
+
+    /**
+     * 控制台轻量轮询：时钟 + 今日 KPI + 最近调用（趋势/TOP 走 snapshot）
+     *
+     * @return array
+     */
+    public static function consoleLiveTick()
+    {
+        $of = self::remember('okfail_today_live', self::TTL_LIVE, function () {
+            return self::okFailToday();
+        });
+        $ok = (int) $of['ok'];
+        $fail = (int) $of['fail'];
+        $total = max(1, $ok + $fail);
+        $counts = self::remember('api_user_counts_live', self::TTL_TODAY, function () {
+            return array(
+                'api_total'  => self::countApis(),
+                'user_total' => self::countUsers(),
+                'user_delta' => self::countUsersCreatedSince(date('Y-m-d 00:00:00')),
+            );
+        });
+        return array(
+            'server_time' => date('Y-m-d H:i:s'),
+            'weekday'     => self::weekdayLabel(),
+            'kpi'         => array(
+                'api_total'     => (int) $counts['api_total'],
+                'user_total'    => (int) $counts['user_total'],
+                'user_delta'    => (int) $counts['user_delta'],
+                'today_calls'   => self::countTodayLive(),
+                'success_rate'  => round($ok * 100 / $total, 2),
+                'fail_rate'     => round($fail * 100 / $total, 2),
+                'success_count' => $ok,
+                'fail_count'    => $fail,
+            ),
+            'recent'      => self::recentCalls(12),
         );
     }
 
@@ -799,6 +860,18 @@ class DashboardStats
     private static function countTodayCached()
     {
         return ApiLogManager::countToday();
+    }
+
+    /**
+     * 控制台 live 专用今日调用数（短 TTL，避免 30s 全局统计缓存拖慢体感）
+     *
+     * @return int
+     */
+    private static function countTodayLive()
+    {
+        return (int) self::remember('today_count_live', self::TTL_LIVE, function () {
+            return self::countRange(date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59'));
+        });
     }
 
     /**

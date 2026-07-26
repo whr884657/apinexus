@@ -19,24 +19,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error('统计暂时不可用，请稍后重试');
         }
     }
+    if ($action === 'live') {
+        DashboardStats::assertAjaxRateLimit('live');
+        try {
+            AjaxResponse::success('ok', array(
+                'live' => DashboardStats::consoleLiveTick(),
+            ));
+        } catch (Exception $e) {
+            AjaxResponse::error('实时数据暂时不可用');
+        }
+    }
     AjaxResponse::error('未知操作');
 }
 
 $mailEnabled = Config::isMailEnabled();
-try {
-    $boot = DashboardStats::consoleSnapshot(false);
-} catch (Exception $e) {
-    $boot = array(
-        'server_time'  => date('Y-m-d H:i:s'),
-        'weekday'      => '',
-        'kpi'          => array(),
-        'type_trend'   => array('labels' => array(), 'guest' => array(), 'key' => array(), 'points' => array()),
-        'rate_trend'   => array('labels' => array(), 'success' => array(), 'fail' => array()),
-        'top_apis'     => array(),
-        'sys_overview' => array(),
-        'recent'       => array(),
-    );
-}
+// 首屏只出壳，重统计经 AJAX snapshot 拉取，避免首次进后台卡住
+$boot = DashboardStats::consoleBootShell();
 
 vs_admin_layout_start(
     '控制台',

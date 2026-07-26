@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/admin-dashboard.js
- * 作用：管理员控制台渲染（KPI / 趋势 / TOP10 / 概览 / 最近调用）
+ * 作用：管理员控制台渲染（KPI / 平滑趋势 / TOP10 / 概览 / 最近调用 + 实时轮询）
  */
 (function () {
     'use strict';
@@ -11,6 +11,9 @@
     var BAR_COLORS = ['#2563eb', '#06b6d4', '#8b5cf6', '#f59e0b', '#10b981', '#ec4899', '#3b82f6', '#14b8a6', '#a855f7', '#fb923c'];
     var filter = 'all';
     var boot = {};
+    var pollTimer = null;
+    var softTimer = null;
+    var loading = false;
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
@@ -30,12 +33,43 @@
     }
 
     function deltaHtml(v, suffix) {
+        if (v == null || v === '') {
+            return '<span class="dash-kpi__delta">—</span>';
+        }
         var n = parseFloat(v);
         if (isNaN(n)) n = 0;
         var up = n >= 0;
         var cls = up ? 'dash-kpi__delta--up' : 'dash-kpi__delta--down';
         var sign = up ? '+' : '';
         return '<span class="dash-kpi__delta ' + cls + '">' + sign + esc(String(n)) + esc(suffix || '') + '</span>';
+    }
+
+    /** Catmull-Rom → 三次贝塞尔，折线变平滑曲线 */
+    function smoothPath(pts) {
+        if (!pts.length) return '';
+        if (pts.length === 1) {
+            return 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1);
+        }
+        if (pts.length === 2) {
+            return 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1)
+                + ' L' + pts[1].x.toFixed(1) + ' ' + pts[1].y.toFixed(1);
+        }
+        var d = 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1);
+        var i;
+        for (i = 0; i < pts.length - 1; i++) {
+            var p0 = pts[i === 0 ? i : i - 1];
+            var p1 = pts[i];
+            var p2 = pts[i + 1];
+            var p3 = pts[i + 2] || p2;
+            var cp1x = p1.x + (p2.x - p0.x) / 6;
+            var cp1y = p1.y + (p2.y - p0.y) / 6;
+            var cp2x = p2.x - (p3.x - p1.x) / 6;
+            var cp2y = p2.y - (p3.y - p1.y) / 6;
+            d += ' C' + cp1x.toFixed(1) + ' ' + cp1y.toFixed(1)
+                + ',' + cp2x.toFixed(1) + ' ' + cp2y.toFixed(1)
+                + ',' + p2.x.toFixed(1) + ' ' + p2.y.toFixed(1);
+        }
+        return d;
     }
 
     function sparkSvg(values, color) {
@@ -48,12 +82,14 @@
         var pts = values.map(function (v, i) {
             var x = pad + (i * (w - pad * 2)) / Math.max(1, values.length - 1);
             var y = h - pad - ((v - min) / span) * (h - pad * 2);
-            return x.toFixed(1) + ',' + y.toFixed(1);
-        }).join(' ');
-        var area = pad + ',' + (h - pad) + ' ' + pts + ' ' + (w - pad) + ',' + (h - pad);
+            return { x: x, y: y };
+        });
+        var line = smoothPath(pts);
+        var area = line + ' L' + (w - pad).toFixed(1) + ' ' + (h - pad)
+            + ' L' + pad + ' ' + (h - pad) + ' Z';
         return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true">'
-            + '<polygon points="' + area + '" fill="' + color + '" opacity="0.12"></polygon>'
-            + '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.8"></polyline>'
+            + '<path d="' + area + '" fill="' + color + '" opacity="0.12"></path>'
+            + '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>'
             + '</svg>';
     }
 
@@ -63,6 +99,10 @@
         var w = 560, h = 220, L = 42, R = 12, T = 16, B = 28;
         var all = [];
         seriesList.forEach(function (s) { all = all.concat(s.data || []); });
+        if (!all.length) {
+            el.innerHTML = '<div class="dash-empty">暂无趋势数据</div>';
+            return;
+        }
         var max = Math.max.apply(null, all.concat([1]));
         var min = opts.min != null ? opts.min : Math.min.apply(null, all.concat([0]));
         if (opts.fixedMin != null) min = opts.fixedMin;
@@ -77,11 +117,12 @@
             grid += '<line x1="' + L + '" y1="' + gy + '" x2="' + (w - R) + '" y2="' + gy + '" stroke="#e5e7eb" stroke-width="1"/>';
         }
         var paths = seriesList.map(function (s) {
-            var d = (s.data || []).map(function (v, i) {
-                return (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(v).toFixed(1);
-            }).join(' ');
+            var pts = (s.data || []).map(function (v, i) {
+                return { x: xAt(i), y: yAt(v) };
+            });
+            var d = smoothPath(pts);
             var dash = s.dashed ? ' stroke-dasharray="5 4"' : '';
-            return '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="2"' + dash + '/>';
+            return '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"' + dash + '/>';
         }).join('');
         var xLabels = '';
         (labels || []).forEach(function (lb, i) {
@@ -91,10 +132,28 @@
         el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" role="img">' + grid + paths + xLabels + '</svg>';
     }
 
+    function showKpiLoading() {
+        var grid = document.getElementById('dashKpiGrid');
+        if (!grid) return;
+        var i, html = '';
+        for (i = 0; i < 4; i++) {
+            html += '<article class="dash-kpi dash-kpi--loading" aria-busy="true">'
+                + '<div class="dash-kpi__skeleton dash-kpi__skeleton--label"></div>'
+                + '<div class="dash-kpi__skeleton dash-kpi__skeleton--value"></div>'
+                + '<div class="dash-kpi__skeleton dash-kpi__skeleton--chart"></div>'
+                + '</article>';
+        }
+        grid.innerHTML = html;
+    }
+
     function renderKpi(kpi) {
         kpi = kpi || {};
         var grid = document.getElementById('dashKpiGrid');
         if (!grid) return;
+        if (!kpi || (kpi.api_total == null && kpi.today_calls == null && kpi.success_rate == null)) {
+            showKpiLoading();
+            return;
+        }
         var cards = [
             {
                 label: '接口总数',
@@ -122,8 +181,8 @@
                 value: (parseFloat(kpi.success_rate) || 0).toFixed(2) + '%',
                 delta: deltaHtml(kpi.success_delta, '% 较昨日'),
                 spark: '',
-                meta: '<span>成功 <strong>' + fmtNum(kpi.success_count) + '</strong></span>'
-                    + '<span>失败 <strong>' + fmtNum(kpi.fail_count) + '</strong></span>'
+                meta: '<span class="dash-kpi__meta-ok">成功 <strong>' + fmtNum(kpi.success_count) + '</strong></span>'
+                    + '<span class="dash-kpi__meta-fail">失败 <strong>' + fmtNum(kpi.fail_count) + '</strong></span>'
             }
         ];
         grid.innerHTML = cards.map(function (c) {
@@ -189,6 +248,10 @@
         var el = document.getElementById('dashSys');
         if (!el) return;
         list = Array.isArray(list) ? list : [];
+        if (!list.length) {
+            el.innerHTML = '<div class="dash-empty">暂无概览数据</div>';
+            return;
+        }
         el.innerHTML = list.map(function (row) {
             return '<div class="dash-sys-item">'
                 + '<span class="dash-sys-dot is-' + esc(row.tone || 'neutral') + '"></span>'
@@ -208,7 +271,7 @@
             return true;
         });
         if (!rows.length) {
-            el.innerHTML = '<div class="dash-empty">暂无匹配记录</div>';
+            el.innerHTML = '<div class="dash-empty">' + (list.length ? '暂无匹配记录' : '暂无调用记录') + '</div>';
             return;
         }
         var html = '<table class="dash-table"><thead><tr>'
@@ -228,17 +291,42 @@
         el.innerHTML = html;
     }
 
+    function updateClock(data) {
+        var dateEl = page.querySelector('[data-dash-date]');
+        if (!dateEl || !data) return;
+        dateEl.textContent = (data.server_time || '') + ' · ' + (data.weekday || '');
+    }
+
     function renderAll(data) {
         boot = data || boot;
-        var dateEl = page.querySelector('[data-dash-date]');
-        if (dateEl) {
-            dateEl.textContent = (boot.server_time || '') + ' · ' + (boot.weekday || '');
-        }
+        updateClock(boot);
         renderKpi(boot.kpi);
         renderTrends(boot);
         renderTop(boot.top_apis);
         renderSys(boot.sys_overview);
         renderRecent(boot.recent);
+    }
+
+    function mergeLive(live) {
+        if (!live) return;
+        updateClock(live);
+        if (live.kpi) {
+            var merged = {};
+            var prev = boot.kpi || {};
+            var k;
+            for (k in prev) {
+                if (Object.prototype.hasOwnProperty.call(prev, k)) merged[k] = prev[k];
+            }
+            for (k in live.kpi) {
+                if (Object.prototype.hasOwnProperty.call(live.kpi, k)) merged[k] = live.kpi[k];
+            }
+            boot.kpi = merged;
+            renderKpi(boot.kpi);
+        }
+        if (live.recent) {
+            boot.recent = live.recent;
+            renderRecent(boot.recent);
+        }
     }
 
     function post(action) {
@@ -247,22 +335,44 @@
         return window.VS.postForm(fd);
     }
 
+    function fetchSnapshot(forceRefresh) {
+        if (loading) return;
+        loading = true;
+        var action = forceRefresh ? 'refresh' : 'snapshot';
+        post(action).then(function (res) {
+            if (!res || res.code !== 1 || !res.snapshot) {
+                if (forceRefresh) {
+                    window.VS.showMessage((res && res.msg) || '刷新失败', 'error');
+                }
+                return;
+            }
+            renderAll(res.snapshot);
+            if (forceRefresh) {
+                window.VS.showMessage('已刷新', 'success');
+            }
+        }).catch(function () {
+            if (forceRefresh) {
+                window.VS.showMessage('网络异常', 'error');
+            }
+        }).then(function () {
+            loading = false;
+            var refreshBtn = document.getElementById('dashRefreshBtn');
+            if (refreshBtn) refreshBtn.disabled = false;
+        });
+    }
+
+    function pollLive() {
+        post('live').then(function (res) {
+            if (!res || res.code !== 1 || !res.live) return;
+            mergeLive(res.live);
+        }).catch(function () { /* 静默 */ });
+    }
+
     var refreshBtn = document.getElementById('dashRefreshBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
             refreshBtn.disabled = true;
-            post('refresh').then(function (res) {
-                if (!res || res.code !== 1 || !res.snapshot) {
-                    window.VS.showMessage((res && res.msg) || '刷新失败', 'error');
-                    return;
-                }
-                renderAll(res.snapshot);
-                window.VS.showMessage('已刷新', 'success');
-            }).catch(function () {
-                window.VS.showMessage('网络异常', 'error');
-            }).then(function () {
-                refreshBtn.disabled = false;
-            });
+            fetchSnapshot(true);
         });
     }
 
@@ -279,5 +389,19 @@
         });
     }
 
-    renderAll(boot);
+    // 首屏壳 → 立即拉全量；live 5s；软刷新 45s（趋势/TOP）
+    if (boot.boot_light) {
+        showKpiLoading();
+        updateClock(boot);
+        fetchSnapshot(false);
+    } else {
+        renderAll(boot);
+    }
+    pollTimer = setInterval(pollLive, 5000);
+    softTimer = setInterval(function () { fetchSnapshot(false); }, 45000);
+
+    window.addEventListener('beforeunload', function () {
+        if (pollTimer) clearInterval(pollTimer);
+        if (softTimer) clearInterval(softTimer);
+    });
 })();

@@ -187,6 +187,31 @@
         };
     }
 
+    function smoothLine(pts) {
+        if (!pts.length) return '';
+        if (pts.length < 3) {
+            return pts.map(function (p, i) {
+                return (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+            }).join(' ');
+        }
+        var d = 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1);
+        var i;
+        for (i = 0; i < pts.length - 1; i++) {
+            var p0 = pts[i === 0 ? i : i - 1];
+            var p1 = pts[i];
+            var p2 = pts[i + 1];
+            var p3 = pts[i + 2] || p2;
+            var cp1x = p1.x + (p2.x - p0.x) / 6;
+            var cp1y = p1.y + (p2.y - p0.y) / 6;
+            var cp2x = p2.x - (p3.x - p1.x) / 6;
+            var cp2y = p2.y - (p3.y - p1.y) / 6;
+            d += ' C' + cp1x.toFixed(1) + ' ' + cp1y.toFixed(1)
+                + ',' + cp2x.toFixed(1) + ' ' + cp2y.toFixed(1)
+                + ',' + p2.x.toFixed(1) + ' ' + p2.y.toFixed(1);
+        }
+        return d;
+    }
+
     function areaChart(el, labels, series) {
         if (!el) return;
         labels = labels || [];
@@ -196,10 +221,11 @@
         var n = Math.max(1, labels.length);
         function xAt(i) { return L + (i * (w - L - R)) / Math.max(1, n - 1); }
         function yAt(v) { return T + (1 - v / max) * (h - T - B); }
-        var line = series.map(function (v, i) {
-            return (i === 0 ? 'M' : 'L') + xAt(i).toFixed(1) + ' ' + yAt(v).toFixed(1);
-        }).join(' ');
-        var area = line + ' L' + xAt(n - 1).toFixed(1) + ' ' + (h - B) + ' L' + L + ' ' + (h - B) + ' Z';
+        var pts = series.map(function (v, i) {
+            return { x: xAt(i), y: yAt(v) };
+        });
+        var line = smoothLine(pts);
+        var area = line + ' L' + xAt(Math.max(0, n - 1)).toFixed(1) + ' ' + (h - B) + ' L' + L + ' ' + (h - B) + ' Z';
         var grid = '';
         for (var g = 0; g < 4; g++) {
             var gy = T + g * (h - T - B) / 3;
@@ -213,7 +239,7 @@
         el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '">'
             + grid
             + '<path d="' + area + '" fill="rgba(37,99,235,0.12)"/>'
-            + '<path d="' + line + '" fill="none" stroke="#2563eb" stroke-width="2"/>'
+            + '<path d="' + line + '" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
             + xLabels
             + '</svg>';
     }
