@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **11.0.0**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **11.1.0**）
 
 ---
 
@@ -709,6 +709,8 @@ VsPlaygroundResponse.directRequest({
 
 **AiApiDoc：** 管理员接口编辑「AI 生成详细文档 / 代码示例」；上下文剔除 `targeturl`/`upkey`；输出经 `sanitizeOutput` 剥离 HTML / `vs-syn` 标记。
 
+**代码示例生成（v11.1.0）：** 按「鉴权方式 × 语言」**逐次**请求模型，一次只输出一个 `:::qs` 块，再合并；部分失败带 `warning`。
+
 **代码示例格式（aidoc）：**
 
 ```
@@ -729,7 +731,9 @@ curl …
 
 **ApiQuickstart：** `samplesFromAidoc($aidoc, $keyways)` / `qsBundleFromAidoc` 解析短码；默认主题详情页横滑语言 Tab + 鉴权 Tab（`auth=…` 维度）。
 
-**详细文档要求（v11.0.0）：** 错误响应示例须含 `"errcode":11001` 等业务码；传输层 HTTP 固定 200。鉴权方式错误为 `11012`。禁止再写 `"http":401`。
+**后台编辑（v11.1.0）：** 接口列表详细文档 / 代码示例 textarea 使用 `data-vs-md="off"`，**无右侧实时预览**（仍保留工具栏）。
+
+**详细文档要求（v11.0.0+）：** 错误响应示例须含 `"errcode":11001` 等业务码；传输层 HTTP 固定 200。鉴权方式错误为 `11012`。禁止再写 `"http":401`。
 
 ---
 

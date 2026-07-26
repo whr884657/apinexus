@@ -149,7 +149,7 @@ function vs_render_version_display($updateCheck = null)
 function vs_theme_bg_preload_script()
 {
     echo '<script>';
-    echo '(function(){try{var c=localStorage.getItem(\'login_page_bg\');if(c){var h=c.replace(\'#\',\'\').trim();if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];if(h.length===8)h=h.slice(0,6);if(h.length===6){var color=\'#\'+h.toLowerCase();document.documentElement.style.setProperty(\'--page-bg\',color);document.documentElement.style.backgroundColor=color;}}var s=localStorage.getItem(\'admin_color_scheme\');if(s===\'dark\'){document.documentElement.classList.add(\'vs-scheme-dark\');}}catch(e){}})();';
+    echo '(function(){try{var c=localStorage.getItem(\'login_page_bg\');if(c){var h=c.replace(\'#\',\'\').trim();if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];if(h.length===8)h=h.slice(0,6);if(h.length===6){var color=\'#\'+h.toLowerCase();document.documentElement.style.setProperty(\'--page-bg\',color);document.documentElement.style.backgroundColor=color;}}document.documentElement.classList.remove(\'vs-scheme-dark\');try{localStorage.removeItem(\'admin_color_scheme\');}catch(e2){}}catch(e){}})();';
     echo '</script>' . "\n";
 }
 

@@ -1,14 +1,13 @@
 /**
- * 背景调色盘 - 实时预览 + localStorage 持久化
+ * 背景调色盘 - 仅固定预设色 + localStorage 持久化（无自定义色板、无昼夜模式）
  */
 (function () {
     'use strict';
 
     var STORAGE_KEY = 'login_page_bg';
-    var SCHEME_KEY = 'admin_color_scheme';
     var DEFAULT_BG = '#ffffff';
 
-    /** 认证页禁止：四个小人色；后台内仅禁止紫/橙/黄，允许黑色 */
+    /** 认证页禁止：四个小人色；后台内仅禁止紫/橙/黄，允许黑色（若在预设中） */
     var FORBIDDEN_AUTH = [
         { r: 108, g: 63, b: 245, name: '紫色小人' },
         { r: 45, g: 45, b: 45, name: '黑色小人' },
@@ -23,14 +22,12 @@
 
     var FORBIDDEN_THRESHOLD = 28;
     var pickerMode = 'auth';
-    var colorScheme = 'light';
 
+    /** 固定 24 色，不可自定义 */
     var PRESETS = [
-        /* 浅色 */
         '#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0',
         '#fef2f2', '#fff7ed', '#fefce8', '#f0fdf4',
         '#eff6ff', '#f5f3ff', '#fdf4ff', '#ecfeff',
-        /* 对应浅色加深版 */
         '#e5e7eb', '#d1d8e3', '#bcc8d9', '#a8b8cc',
         '#f5caca', '#fdd5b0', '#f5e99e', '#b8ebd0',
         '#b3d4fc', '#d4c6fd', '#efcef5', '#a8eef5'
@@ -104,45 +101,19 @@
         });
     }
 
-    function readScheme() {
-        try {
-            var s = localStorage.getItem(SCHEME_KEY);
-            if (s === 'dark' || s === 'light') {
-                return s;
-            }
-        } catch (e) {}
-        return 'light';
-    }
-
-    function applyScheme(scheme) {
-        colorScheme = scheme === 'dark' ? 'dark' : 'light';
-        var root = document.documentElement;
-        if (pickerMode !== 'admin') {
-            root.classList.remove('vs-scheme-dark');
-            if (document.body) {
-                document.body.classList.remove('vs-scheme-dark');
-            }
-            return;
+    function isAllowedPreset(hex) {
+        var normalized = normalizeHex(hex);
+        if (!normalized || isForbidden(normalized)) {
+            return false;
         }
-        if (colorScheme === 'dark') {
-            root.classList.add('vs-scheme-dark');
-            if (document.body) {
-                document.body.classList.add('vs-scheme-dark');
-            }
-        } else {
-            root.classList.remove('vs-scheme-dark');
-            if (document.body) {
-                document.body.classList.remove('vs-scheme-dark');
+        var presets = getSafePresets();
+        var lower = normalized.toLowerCase();
+        for (var i = 0; i < presets.length; i++) {
+            if (String(presets[i]).toLowerCase() === lower) {
+                return true;
             }
         }
-    }
-
-    function saveScheme(scheme) {
-        colorScheme = scheme === 'dark' ? 'dark' : 'light';
-        try {
-            localStorage.setItem(SCHEME_KEY, colorScheme);
-        } catch (e) {}
-        applyScheme(colorScheme);
+        return false;
     }
 
     function isThemePickerDisabled() {
@@ -159,10 +130,6 @@
         return document.body && document.body.classList.contains('vs-admin-body') && !isThemePickerDisabled();
     }
 
-    /**
-     * 由页面背景色派生「当前积分 / 余额」英雄条渐变（保留色相，压暗）
-     * 默认主题用户中心须跟随调色盘，禁止写死纯绿/纯蓝块。
-     */
     function heroGradientFromPageBg(hex) {
         var rgb = hexToRgb(hex);
         if (!rgb) {
@@ -203,7 +170,6 @@
         if (document.body) {
             document.body.style.backgroundColor = normalized;
         }
-        /* 主题二无调色盘，勿覆盖其青绿英雄条 */
         if (!isThemePickerDisabled()) {
             paintUcHero(normalized);
         }
@@ -211,8 +177,8 @@
     }
 
     function applyBackground(color) {
+        if (!isAllowedPreset(color)) return false;
         var normalized = normalizeHex(color);
-        if (!normalized || isForbidden(normalized)) return false;
         currentColor = normalized;
         paintPage(normalized);
         return true;
@@ -221,9 +187,8 @@
     function readSavedColor() {
         try {
             var saved = localStorage.getItem(STORAGE_KEY);
-            var normalized = normalizeHex(saved);
-            if (normalized && !isForbidden(normalized)) {
-                return normalized;
+            if (isAllowedPreset(saved)) {
+                return normalizeHex(saved);
             }
         } catch (e) {}
         return DEFAULT_BG;
@@ -237,8 +202,8 @@
     }
 
     function saveColor(color) {
+        if (!isAllowedPreset(color)) return false;
         var normalized = normalizeHex(color);
-        if (!normalized || isForbidden(normalized)) return false;
         try {
             localStorage.setItem(STORAGE_KEY, normalized);
             savedColor = normalized;
@@ -276,18 +241,6 @@
             '</svg>';
     }
 
-    function dayNightIconSvg(isDark) {
-        if (isDark) {
-            return '<svg class="theme-trigger-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-                '<path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z" stroke="#374151" stroke-width="1.5" fill="#fbbf24"/>' +
-                '</svg>';
-        }
-        return '<svg class="theme-trigger-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-            '<circle cx="12" cy="12" r="4" stroke="#374151" stroke-width="1.5" fill="#fbbf24"/>' +
-            '<path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="#374151" stroke-width="1.5" stroke-linecap="round"/>' +
-            '</svg>';
-    }
-
     function createUI(mode) {
         mode = mode || (isAdminPage() ? 'admin' : 'auth');
         pickerMode = mode;
@@ -297,29 +250,18 @@
         trigger.id = 'themeTrigger';
         trigger.setAttribute('aria-label', '打开背景调色盘');
 
-        var schemeBtn = null;
-
         if (mode === 'admin') {
             trigger.className = 'theme-trigger-circle-btn';
             trigger.innerHTML = paletteIconSvg();
-            schemeBtn = document.createElement('button');
-            schemeBtn.type = 'button';
-            schemeBtn.id = 'themeSchemeToggle';
-            schemeBtn.className = 'theme-trigger-circle-btn theme-scheme-btn';
-            schemeBtn.setAttribute('aria-label', '昼夜更替');
-            schemeBtn.title = '昼夜更替';
-            schemeBtn.innerHTML = dayNightIconSvg(colorScheme === 'dark');
 
             var mount = document.getElementById('vsThemePickerMount');
             if (mount) {
-                mount.classList.add('vs-topbar__theme--row');
+                mount.classList.remove('vs-topbar__theme--row');
                 mount.appendChild(trigger);
-                mount.appendChild(schemeBtn);
             } else {
                 var wrap = document.createElement('div');
                 wrap.className = 'theme-admin-float';
                 wrap.appendChild(trigger);
-                wrap.appendChild(schemeBtn);
                 document.body.appendChild(wrap);
             }
         } else {
@@ -350,17 +292,8 @@
                 '<button type="button" class="theme-panel-close" id="themePanelClose" aria-label="关闭">&times;</button>' +
             '</div>' +
             '<div class="theme-preview" id="themePreview"></div>' +
-            '<div class="theme-picker-row">' +
-                '<label for="themeColorInput">调色盘</label>' +
-                '<input type="color" id="themeColorInput" value="' + currentColor + '">' +
-                '<span class="theme-picker-value" id="themeColorValue">' + currentColor + '</span>' +
-            '</div>' +
             '<div class="theme-presets" id="themePresets"></div>' +
-            '<p class="theme-tip" id="themeTip">' +
-                (mode === 'admin'
-                    ? '后台可选用黑色背景；仍禁止紫 / 橙 / 黄小人色'
-                    : '禁止使用四个小人的颜色（紫、黑、橙、黄）') +
-            '</p>' +
+            '<p class="theme-tip" id="themeTip">仅可选择系统提供的固定颜色，不支持自定义取色</p>' +
             '<div class="theme-message" id="themeMessage"></div>' +
             '<div class="theme-actions">' +
                 '<button type="button" class="theme-btn theme-btn-reset" id="themeResetBtn">重置</button>' +
@@ -380,26 +313,12 @@
             btn.setAttribute('aria-label', '选择颜色 ' + color);
             presetsEl.appendChild(btn);
         });
-        // 后台允许黑色预设
-        if (mode === 'admin') {
-            var blackBtn = document.createElement('button');
-            blackBtn.type = 'button';
-            blackBtn.className = 'theme-preset';
-            blackBtn.style.backgroundColor = '#2d2d2d';
-            blackBtn.setAttribute('data-color', '#2d2d2d');
-            blackBtn.setAttribute('aria-label', '选择黑色背景');
-            blackBtn.title = '黑色';
-            presetsEl.appendChild(blackBtn);
-        }
 
         return {
             trigger: trigger,
-            schemeBtn: schemeBtn,
             overlay: overlay,
             panel: panel,
             preview: document.getElementById('themePreview'),
-            colorInput: document.getElementById('themeColorInput'),
-            colorValue: document.getElementById('themeColorValue'),
             message: document.getElementById('themeMessage'),
             saveBtn: document.getElementById('themeSaveBtn'),
             resetBtn: document.getElementById('themeResetBtn'),
@@ -426,8 +345,6 @@
 
     function updatePreview(ui) {
         ui.preview.style.backgroundColor = currentColor;
-        ui.colorInput.value = currentColor;
-        ui.colorValue.textContent = currentColor;
 
         var presets = ui.presetsEl.querySelectorAll('.theme-preset');
         for (var i = 0; i < presets.length; i++) {
@@ -440,7 +357,7 @@
             }
         }
 
-        ui.saveBtn.disabled = isForbidden(currentColor);
+        ui.saveBtn.disabled = !isAllowedPreset(currentColor);
     }
 
     function trySetColor(ui, color) {
@@ -454,7 +371,13 @@
         if (forbidden) {
             showMessage(ui.message, '不能使用' + forbidden.name + '的颜色', 'error');
             ui.saveBtn.disabled = true;
-            ui.colorInput.value = currentColor;
+            paintPage(currentColor);
+            updatePreview(ui);
+            return false;
+        }
+
+        if (!isAllowedPreset(normalized)) {
+            showMessage(ui.message, '只能选择系统提供的固定颜色', 'error');
             paintPage(currentColor);
             updatePreview(ui);
             return false;
@@ -494,17 +417,6 @@
             }
         });
 
-        if (ui.schemeBtn) {
-            ui.schemeBtn.addEventListener('click', function () {
-                var next = colorScheme === 'dark' ? 'light' : 'dark';
-                saveScheme(next);
-                ui.schemeBtn.innerHTML = dayNightIconSvg(next === 'dark');
-                if (window.VsToast) {
-                    VsToast.show(next === 'dark' ? '已开启夜间模式（文字反色）' : '已切换日间模式', 'success');
-                }
-            });
-        }
-
         ui.closeBtn.addEventListener('click', function () {
             closePanel(ui);
         });
@@ -517,13 +429,6 @@
             e.stopPropagation();
         });
 
-        function onColorPick() {
-            trySetColor(ui, ui.colorInput.value);
-        }
-
-        ui.colorInput.addEventListener('input', onColorPick);
-        ui.colorInput.addEventListener('change', onColorPick);
-
         ui.presetsEl.addEventListener('click', function (e) {
             var btn = e.target.closest('.theme-preset');
             if (!btn) return;
@@ -531,7 +436,7 @@
         });
 
         ui.saveBtn.addEventListener('click', function () {
-            if (isForbidden(currentColor)) {
+            if (!isAllowedPreset(currentColor)) {
                 showMessage(ui.message, '当前颜色不可保存', 'error');
                 return;
             }
@@ -566,25 +471,30 @@
             return;
         }
 
+        // 清除已废弃的昼夜模式残留 class / 存储，避免影响其它功能
+        try {
+            localStorage.removeItem('admin_color_scheme');
+        } catch (e) {}
+        document.documentElement.classList.remove('vs-scheme-dark');
+        if (document.body) {
+            document.body.classList.remove('vs-scheme-dark');
+        }
+
         pickerMode = isAdminPage() ? 'admin' : 'auth';
-        colorScheme = readScheme();
-        applyScheme(colorScheme);
 
         savedColor = readSavedColor();
-        // 认证页若曾保存禁用色，回退默认白
-        if (isForbidden(savedColor)) {
+        if (!isAllowedPreset(savedColor)) {
             savedColor = DEFAULT_BG;
-            currentColor = savedColor;
-            paintPage(DEFAULT_BG);
-        } else {
-            currentColor = savedColor;
-            paintPage(savedColor);
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+            } catch (e2) {}
         }
+        currentColor = savedColor;
+        paintPage(savedColor);
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function () {
                 pickerMode = isAdminPage() ? 'admin' : 'auth';
-                applyScheme(colorScheme);
                 var ui = createUI(pickerMode);
                 updatePreview(ui);
                 bindEvents(ui);

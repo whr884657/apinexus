@@ -183,28 +183,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         @ignore_user_abort(true);
         $data = $payloadFromPost();
         $data['id'] = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
-        // 按鉴权分片数抬高 PHP 时限（每片最多 300s + 缓冲）
-        $aiWays = 1;
-        if ($action === 'ai_gen_code') {
-            $kw = isset($data['keyways']) ? $data['keyways'] : '';
-            if (is_array($kw)) {
-                $aiWays = max(1, count($kw));
-            } elseif (is_string($kw) && trim($kw) !== '') {
-                $aiWays = max(1, count(array_filter(array_map('trim', explode(',', $kw)))));
-            }
-            if ((int) (isset($data['needkey']) ? $data['needkey'] : 0) === 0) {
-                $aiWays = 1;
-            }
-        }
+        // 代码示例：鉴权×9 语言逐次请求，单片内 set_time_limit；此处给整请求一个宽裕上限
         $aiCfg = AiConfig::get();
         $aiTimeout = (int) (isset($aiCfg['timeout']) ? $aiCfg['timeout'] : 60);
-        if ($aiTimeout < 120) {
-            $aiTimeout = 120;
+        if ($aiTimeout < 60) {
+            $aiTimeout = 60;
         }
         if ($aiTimeout > 300) {
             $aiTimeout = 300;
         }
-        @set_time_limit(($aiWays * $aiTimeout) + 60);
+        $aiPieces = 1;
+        if ($action === 'ai_gen_code') {
+            $kwCount = 1;
+            $kw = isset($data['keyways']) ? $data['keyways'] : '';
+            if (is_array($kw)) {
+                $kwCount = max(1, count($kw));
+            } elseif (is_string($kw) && trim($kw) !== '') {
+                $kwCount = max(1, count(array_filter(array_map('trim', explode(',', $kw)))));
+            }
+            if ((int) (isset($data['needkey']) ? $data['needkey'] : 0) === 0) {
+                $kwCount = 1;
+            }
+            $aiPieces = $kwCount * 9;
+        }
+        @set_time_limit(($aiPieces * $aiTimeout) + 120);
         // 已有接口时补全对外调用地址（代理不暴露上游）
         if ($data['id'] > 0) {
             $row = ApiManager::findById($data['id']);
@@ -898,7 +900,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                 title="根据已填接口资料生成">AI 生成详细文档</button>
                     </div>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocNormal" name="doc" rows="10"
-                              data-vs-md placeholder="面向调用方的详细说明…"></textarea>
+                              data-vs-md="off" placeholder="面向调用方的详细说明…"></textarea>
                     <p class="vs-form-hint">建议由 AI 生成后人工微调；勿写入上游地址或密钥。</p>
                     <details class="vs-ai-term" id="apiListAiTermDoc" data-ai-term="doc">
                         <summary class="vs-ai-term__summary">AI 编写进程（详细文档）</summary>
@@ -912,7 +914,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                 title="生成快速上手各语言示例">AI 生成代码示例</button>
                     </div>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="aidoc" rows="10"
-                              data-vs-md placeholder=":::qs lang=curl&#10;...&#10;:::&#10;&#10;:::qs lang=python&#10;...&#10;:::"></textarea>
+                              data-vs-md="off" placeholder=":::qs lang=curl&#10;...&#10;:::&#10;&#10;:::qs lang=python&#10;...&#10;:::"></textarea>
                     <p class="vs-form-hint">须使用 :::qs lang=语言标识 包裹，语言：curl / typescript / browser / python / go / java / php / cpp / rust。</p>
                     <details class="vs-ai-term" id="apiListAiTermCode" data-ai-term="code">
                         <summary class="vs-ai-term__summary">AI 编写进程（代码示例）</summary>

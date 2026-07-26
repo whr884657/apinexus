@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-11.0.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-11.1.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -30,7 +30,8 @@
 - **调用统计（v3.18+）**：本地脚本头 ≤3 行 `ApiStats::hit()`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`（含 `iploc` 预留）
 - **代理上游认证（v10.13.0）**：代理外链可配置无需认证 / API Key（URL 或头）/ Bearer Token；需密钥时服务端中继，密钥不暴露给调用方
 - **调用方密钥传递 keyways（v10.17.0 / v11.0.0）**：接口可多选 Query / Header(`X-API-Key`) / Bearer；守卫错误 JSON 含业务 `errcode`（非 HTTP 401/403）；站点名与系统名拆分；详情免责声明可主题开关
-- **后台昼夜更替（v11.0.0）**：顶栏调色盘旁昼夜按钮；夜间模式文字反色；认证页仍禁小人色，后台可选用黑色
+- **调色盘固定色（v11.1.0）**：登录/注册/忘记密码与后台仅可选系统 24 色；无自定义取色、无昼夜更替
+- **AI 代码示例（v11.1.0）**：按鉴权×语言逐次生成单个 `:::qs` 块，降低超时失败
 - **Markdown / 快速上手（v10.14.0+）**：精简居中与缩进；默认主题「快速上手」多语言与多鉴权示例；后台「详细文档 / 代码示例」；AI 生成加固
 - **用户令牌（v3.29+）**：表 `apikey`；用户中心与管理员后台均可管理；格式 `sk-`+32 位（小写前缀）；每账号最多 3 个；本地/代理调用已校验密钥并累计次数
 - **积分计费与充值（v3.33+ / v3.34）**：接口收费扣积分；用户充值中心扫码支付；订单管理与积分变动分栏；回调直访 `core/play/codeplay/notify.php`
@@ -269,13 +270,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v11.0.0（2026-07-27）
+### v11.1.0（2026-07-27）
 
-- 公开 API 业务错误改用 `errcode`（11001～11017），传输层 HTTP 固定 200；鉴权方式错误为 11012
-- AI 代码示例按鉴权方式分片生成，修复长时间无返回后网络错误；超时可调至 300 秒
-- 鉴权方式文案取消「全部支持」，选中几种就列出几种
-- 管理员后台调色盘旁新增昼夜更替；认证页仍禁小人色，后台可黑；夜间文字反色
-- 同版复查：Playground 识别 errcode、首页 keyways、AUTH_WAY 优先级、中继鉴权注入
+- 移除管理员后台昼夜更替；调色盘取消自定义取色，仅固定 24 色
+- AI 代码示例改为鉴权×语言逐次单块生成，降低超时与截断
+- 接口管理详细文档 / 代码示例关闭右侧在线预览
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

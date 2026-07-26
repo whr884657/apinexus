@@ -56,10 +56,10 @@ class AiApiDoc
     }
 
     /**
-     * 按鉴权方式分片请求模型，避免一次生成 9×3 块导致超时无数据
+     * 按「鉴权方式 × 语言」逐次请求模型：一次只输出一个 :::qs 块
      *
      * @param array $api
-     * @return string|array 成功 array{aidoc:string}；失败错误文案
+     * @return string|array 成功 array{aidoc:string,warning?:string}；失败错误文案
      */
     public static function generateCodeSamples(array $api)
     {
@@ -72,24 +72,29 @@ class AiApiDoc
             $keyways = array('query');
         }
 
+        $langs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
         $chunks = array();
         $lastErr = '';
-        $failedWays = array();
+        $failed = array();
+        $requireAuth = $needKey !== 0;
+
         foreach ($keyways as $way) {
             $way = strtolower(trim((string) $way));
-            if ($way === '') {
+            if ($way === '' || !in_array($way, array('query', 'header', 'bearer'), true)) {
                 continue;
             }
-            $part = self::generateCodeSamplesForAuth($safe, $way, $needKey !== 0);
-            if (is_string($part) && strpos($part, '错误：') === 0) {
-                $lastErr = $part;
-                $failedWays[] = $way;
-                continue;
-            }
-            if (is_string($part) && $part !== '') {
-                $chunks[] = $part;
-            } else {
-                $failedWays[] = $way;
+            foreach ($langs as $lang) {
+                $part = self::generateOneCodeSample($safe, $way, $lang, $requireAuth);
+                if (is_string($part) && strpos($part, '错误：') === 0) {
+                    $lastErr = $part;
+                    $failed[] = $way . '/' . $lang;
+                    continue;
+                }
+                if (is_string($part) && $part !== '') {
+                    $chunks[] = $part;
+                } else {
+                    $failed[] = $way . '/' . $lang;
+                }
             }
         }
 
@@ -102,27 +107,33 @@ class AiApiDoc
             return '错误：未能解析出有效的语言代码块，请重试';
         }
         $result = array('aidoc' => $merged);
-        if ($failedWays !== array()) {
-            $result['warning'] = '部分鉴权方式未生成成功：' . implode('、', $failedWays) . '。请加大超时后重试，或单独再生成。';
+        if ($failed !== array()) {
+            $show = array_slice($failed, 0, 12);
+            $more = count($failed) > 12 ? (' 等共 ' . count($failed) . ' 项') : '';
+            $result['warning'] = '部分示例未生成成功：' . implode('、', $show) . $more . '。请加大超时后重试。';
         }
         return $result;
     }
 
     /**
-     * 为单一鉴权方式生成 9 种语言示例
+     * 生成单一鉴权 + 单一语言的一个 :::qs 块
      *
      * @param array  $safe
      * @param string $authWay query|header|bearer
+     * @param string $lang
      * @param bool   $requireAuthAttr
      * @return string 规范化后的 :::qs 文本，或以「错误：」开头
      */
-    private static function generateCodeSamplesForAuth(array $safe, $authWay, $requireAuthAttr)
+    private static function generateOneCodeSample(array $safe, $authWay, $lang, $requireAuthAttr)
     {
-        $langs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
-        $langList = implode('、', $langs);
         $authWay = strtolower((string) $authWay);
         if (!in_array($authWay, array('query', 'header', 'bearer'), true)) {
             $authWay = 'query';
+        }
+        $lang = strtolower((string) $lang);
+        $allowedLangs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
+        if (!in_array($lang, $allowedLangs, true)) {
+            return '错误：不支持的语言 ' . $lang;
         }
 
         if ($authWay === 'query') {
@@ -134,30 +145,43 @@ class AiApiDoc
         }
 
         $authLine = $requireAuthAttr
-            ? ('本批只生成鉴权方式 auth=' . $authWay . '（' . $authHow . '）。'
-                . '每个块必须带 auth=' . $authWay . '，格式：:::qs lang=curl auth=' . $authWay . "\n代码\n:::")
-            : ('本接口无需密钥。格式：:::qs lang=curl' . "\n代码\n:::（可不写 auth）");
+            ? ('只输出恰好一个块：:::qs lang=' . $lang . ' auth=' . $authWay . "\n代码\n:::"
+                . '鉴权方式必须是 ' . $authWay . '（' . $authHow . '）。禁止输出其它语言或其它 auth。')
+            : ('本接口无需密钥。只输出恰好一个块：:::qs lang=' . $lang . "\n代码\n:::（可不写 auth）");
 
-        $system = '你是 API 多语言调用示例生成器。只输出指定短码，不要解释、不要 Markdown 标题。'
-            . '必须为下列每一种语言各输出恰好一个块（缺一不可）：' . $langList . '。'
+        $langHint = '';
+        if ($lang === 'browser') {
+            $langHint = '使用浏览器 fetch。';
+        } elseif ($lang === 'typescript') {
+            $langHint = '使用 async/await fetch。';
+        } elseif ($lang === 'php') {
+            $langHint = '禁止输出 <?php 与 ?>；从变量赋值起写即可。';
+        } elseif ($lang === 'python' || $lang === 'go' || $lang === 'java') {
+            $langHint = '含 try/except 或等价错误处理；检查 code/errcode。';
+        }
+
+        $system = '你是 API 调用示例生成器。只输出一个 :::qs 短码块，不要解释、不要 Markdown 标题、不要输出其它语言。'
             . $authLine
             . '代码必须可运行示意：使用对外调用地址与给定参数名；密钥用 YOUR_API_KEY 占位。'
-            . '每种示例须含基本错误处理：检查响应 JSON 的 code/errcode，或非成功响应；'
-            . 'Python/Go/Java 等用 try/except 或 if resp.status_code；TypeScript/Browser 用 if (!response.ok)。'
+            . '须含基本错误处理：检查响应 JSON 的 code/errcode，或非成功响应。'
+            . $langHint
             . '严禁出现 HTML/CSS class/高亮标记、上游真实地址、代理、密钥明文、内部实现、「全部支持」。'
-            . 'GET 用查询参数；POST 可用 form 或 JSON。'
-            . 'browser 使用浏览器 fetch；typescript 使用 async/await fetch。'
-            . 'PHP 块禁止输出 <?php 与 ?>；从变量赋值起写即可。';
+            . 'GET 用查询参数；POST 可用 form 或 JSON。';
 
-        $user = "请为下列接口生成「仅 " . $authWay . " 鉴权」的快速上手代码：\n\n" . self::contextMarkdown($safe);
+        $user = "请为下列接口生成「鉴权=" . $authWay . "，语言=" . $lang . "」的单个快速上手代码块：\n\n"
+            . self::contextMarkdown($safe);
+
         $cfg = AiConfig::get();
-        $cfg['timeout'] = max((int) $cfg['timeout'], 120);
+        $cfg['timeout'] = max((int) $cfg['timeout'], 60);
         if ($cfg['timeout'] > 300) {
             $cfg['timeout'] = 300;
         }
+        // 单块请求：每片重置 PHP 执行时限，避免长串排队被杀
+        @set_time_limit((int) $cfg['timeout'] + 30);
+
         $out = AiClient::chatWithConfig($cfg, $system, $user, array(
             'temperature' => 0.2,
-            'max_tokens'  => 8000,
+            'max_tokens'  => 1800,
         ));
         if (strpos($out, '错误：') === 0) {
             return $out;
@@ -165,7 +189,7 @@ class AiApiDoc
         $out = self::sanitizeOutput($out);
         $normalized = ApiQuickstart::normalizeAidocBlocks($out);
         if ($normalized === '') {
-            return '错误：鉴权 ' . $authWay . ' 未能解析出有效代码块';
+            return '错误：鉴权 ' . $authWay . ' / 语言 ' . $lang . ' 未能解析出有效代码块';
         }
         return $normalized;
     }
