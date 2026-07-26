@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **11.1.0**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **12.0.0**）
 
 ---
 
@@ -244,7 +244,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiError.php` | 公开 API 业务错误码常量与文案（v11.0.0，11001～11017） |
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
-| `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型） |
+| `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型/单片超时/代码调度模式与并发） |
 | `AiClient.php` | OpenAI 兼容 Chat Completions / Responses 客户端 |
 | `AiApiDoc.php` | 生成详细文档（`doc`）与代码示例（`aidoc`）；剥离上游敏感字段；禁止 HTML 泄漏 |
 | `IpLocator.php` | 外网 IP 归属地解析（设置可配 URL/认证/字段路径；异步回填 apilog.iploc，v10.16.0） |
@@ -709,7 +709,7 @@ VsPlaygroundResponse.directRequest({
 
 **AiApiDoc：** 管理员接口编辑「AI 生成详细文档 / 代码示例」；上下文剔除 `targeturl`/`upkey`；输出经 `sanitizeOutput` 剥离 HTML / `vs-syn` 标记。
 
-**代码示例生成（v11.1.0）：** 按「鉴权方式 × 语言」**逐次**请求模型；`extractRequestedQsBlock` 只保留本次 lang/auth，再合并；部分失败带 `warning`。
+**代码示例生成（v12.0.0）：** 前端按「鉴权 × 语言」**分片**调用 `generateCodeSamplePiece`（`ai_gen_code_piece`）；`AiConfig::codeMode` 为 `sequential`/`parallel`，并行并发 1～6；进程日志实时显示当前片。服务端 `extractRequestedQsBlock` 只保留本次 lang/auth。旧 `generateCodeSamples` 整包接口仅兼容保留。
 
 **代码示例格式（aidoc）：**
 

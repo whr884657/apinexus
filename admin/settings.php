@@ -113,15 +113,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($maxLen > 30000) {
                 $maxLen = 30000;
             }
+            $codeMode = strtolower(trim(isset($_POST['ai_code_mode']) ? (string) $_POST['ai_code_mode'] : 'sequential'));
+            if ($codeMode !== 'parallel') {
+                $codeMode = 'sequential';
+            }
+            $codeConc = isset($_POST['ai_code_concurrency']) ? (int) $_POST['ai_code_concurrency'] : 3;
+            if ($codeConc < 1) {
+                $codeConc = 1;
+            }
+            if ($codeConc > 6) {
+                $codeConc = 6;
+            }
             Config::setMany(array(
-                'ai_enabled'    => isset($_POST['ai_enabled']) ? '1' : '0',
-                'ai_provider'   => $provider,
-                'ai_baseurl'    => rtrim($baseurl, '/'),
-                'ai_apikey'     => trim(isset($_POST['ai_apikey']) ? (string) $_POST['ai_apikey'] : ''),
-                'ai_model'      => trim(isset($_POST['ai_model']) ? (string) $_POST['ai_model'] : ''),
-                'ai_timeout'    => (string) $timeout,
-                'ai_doc_maxlen' => (string) $maxLen,
-                'ai_api_mode'   => AiClient::normalizeApiMode(isset($_POST['ai_api_mode']) ? $_POST['ai_api_mode'] : 'auto'),
+                'ai_enabled'           => isset($_POST['ai_enabled']) ? '1' : '0',
+                'ai_provider'          => $provider,
+                'ai_baseurl'           => rtrim($baseurl, '/'),
+                'ai_apikey'            => trim(isset($_POST['ai_apikey']) ? (string) $_POST['ai_apikey'] : ''),
+                'ai_model'             => trim(isset($_POST['ai_model']) ? (string) $_POST['ai_model'] : ''),
+                'ai_timeout'           => (string) $timeout,
+                'ai_doc_maxlen'        => (string) $maxLen,
+                'ai_api_mode'          => AiClient::normalizeApiMode(isset($_POST['ai_api_mode']) ? $_POST['ai_api_mode'] : 'auto'),
+                'ai_code_mode'         => $codeMode,
+                'ai_code_concurrency'  => (string) $codeConc,
             ));
             AjaxResponse::success('AI 设置已保存');
         } catch (Exception $e) {
@@ -1101,15 +1114,31 @@ $aiPresets = AiConfig::providerPresets();
         </div>
         <div class="vs-form-row vs-form-row--inline">
             <div class="vs-form-col">
-                <label class="vs-label" for="aiTimeout">超时（秒）</label>
+                <label class="vs-label" for="aiTimeout">单片超时（秒）</label>
                 <input type="number" name="ai_timeout" id="aiTimeout" class="vs-input" min="10" max="300"
                        value="<?php echo (int) $aiCfg['timeout']; ?>">
-                <p class="vs-form-hint">代码示例生成建议 120～300 秒</p>
+                <p class="vs-form-hint">每片（一种鉴权×一种语言）请求上限，建议 60～180</p>
             </div>
             <div class="vs-form-col">
                 <label class="vs-label" for="aiDocMaxlen">详细文档字数上限</label>
                 <input type="number" name="ai_doc_maxlen" id="aiDocMaxlen" class="vs-input" min="1000" max="30000"
                        value="<?php echo (int) $aiCfg['doc_maxlen']; ?>">
+            </div>
+        </div>
+        <div class="vs-form-row vs-form-row--inline">
+            <div class="vs-form-col">
+                <label class="vs-label" for="aiCodeMode">代码示例调度</label>
+                <select class="vs-input" name="ai_code_mode" id="aiCodeMode">
+                    <option value="sequential" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : 'sequential') === 'sequential' ? 'selected' : ''; ?>>单线程（写完一片再写下一片）</option>
+                    <option value="parallel" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : '') === 'parallel' ? 'selected' : ''; ?>>多线程（浏览器并发多片）</option>
+                </select>
+                <p class="vs-form-hint">最多 3 鉴权 × 9 语言 = 27 片；多线程可加快，但更吃上游限流。</p>
+            </div>
+            <div class="vs-form-col">
+                <label class="vs-label" for="aiCodeConcurrency">并行并发数</label>
+                <input type="number" name="ai_code_concurrency" id="aiCodeConcurrency" class="vs-input" min="1" max="6"
+                       value="<?php echo (int) (isset($aiCfg['code_concurrency']) ? $aiCfg['code_concurrency'] : 3); ?>">
+                <p class="vs-form-hint">仅「多线程」生效，范围 1～6</p>
             </div>
         </div>
         <div class="vs-form-actions">

@@ -176,37 +176,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('已自动保存', array('api_id' => $id, 'silent' => 1));
     }
 
-    if ($action === 'ai_gen_doc' || $action === 'ai_gen_code') {
+    if ($action === 'ai_gen_doc' || $action === 'ai_gen_code' || $action === 'ai_gen_code_piece') {
         if (!AiConfig::isReady()) {
             AjaxResponse::error('请先在系统设置中启用并配置 AI');
         }
         @ignore_user_abort(true);
         $data = $payloadFromPost();
         $data['id'] = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
-        // 代码示例：鉴权×9 语言逐次请求，单片内 set_time_limit；此处给整请求一个宽裕上限
         $aiCfg = AiConfig::get();
         $aiTimeout = (int) (isset($aiCfg['timeout']) ? $aiCfg['timeout'] : 60);
-        if ($aiTimeout < 60) {
-            $aiTimeout = 60;
+        if ($aiTimeout < 30) {
+            $aiTimeout = 30;
         }
         if ($aiTimeout > 300) {
             $aiTimeout = 300;
         }
-        $aiPieces = 1;
-        if ($action === 'ai_gen_code') {
-            $kwCount = 1;
-            $kw = isset($data['keyways']) ? $data['keyways'] : '';
-            if (is_array($kw)) {
-                $kwCount = max(1, count($kw));
-            } elseif (is_string($kw) && trim($kw) !== '') {
-                $kwCount = max(1, count(array_filter(array_map('trim', explode(',', $kw)))));
-            }
-            if ((int) (isset($data['needkey']) ? $data['needkey'] : 0) === 0) {
-                $kwCount = 1;
-            }
-            $aiPieces = $kwCount * 9;
-        }
-        @set_time_limit(($aiPieces * $aiTimeout) + 120);
+        // 分片：单片只占一份超时；整包由前端多次请求，避免网关/PHP 一次拖死
+        @set_time_limit($aiTimeout + 60);
         // 已有接口时补全对外调用地址（代理不暴露上游）
         if ($data['id'] > 0) {
             $row = ApiManager::findById($data['id']);
@@ -235,6 +221,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::success('详细文档已生成', array('doc' => $gen['doc']));
         }
 
+        // v12.0.0：前端分片调用；单片 = 一种鉴权 × 一种语言
+        if ($action === 'ai_gen_code_piece') {
+            $auth = isset($_POST['auth']) ? (string) $_POST['auth'] : '';
+            $lang = isset($_POST['lang']) ? (string) $_POST['lang'] : '';
+            $gen = AiApiDoc::generateCodeSamplePiece($data, $auth, $lang);
+            if (!is_array($gen)) {
+                AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+            }
+            AjaxResponse::success('单片已生成', array(
+                'piece' => $gen['piece'],
+                'auth'  => $gen['auth'],
+                'lang'  => $gen['lang'],
+            ));
+        }
+
+        // 兼容旧客户端：仍可一次跑完，但易超时；推荐刷新页面使用分片
         $gen = AiApiDoc::generateCodeSamples($data);
         if (!is_array($gen)) {
             AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
@@ -933,5 +935,8 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 
 <?php
 echo Markdown::renderAssetsHtml();
+?>
+<script>window.VS_AI_CODE=<?php echo json_encode(AiConfig::codeClientOptions(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;</script>
+<?php
 vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'api-list.js'));
 ?>

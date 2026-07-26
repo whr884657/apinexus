@@ -1903,6 +1903,230 @@
         return (m > 0 ? (m + '分') : '') + s + '秒';
     }
 
+    function getAiCodeOpts() {
+        var o = window.VS_AI_CODE || {};
+        var mode = o.mode === 'parallel' ? 'parallel' : 'sequential';
+        var conc = parseInt(o.concurrency, 10);
+        if (isNaN(conc) || conc < 1) {
+            conc = 3;
+        }
+        if (conc > 6) {
+            conc = 6;
+        }
+        return { mode: mode, concurrency: mode === 'parallel' ? conc : 1 };
+    }
+
+    function authWayLabel(way) {
+        var w = String(way || '').toLowerCase();
+        if (w === 'header') {
+            return 'Header';
+        }
+        if (w === 'bearer') {
+            return 'Bearer';
+        }
+        return 'Query';
+    }
+
+    function buildCodeJobs(payload) {
+        var langs = ['curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust'];
+        var need = parseInt(payload.needkey, 10) || 0;
+        var ways = need === 0 ? ['query'] : getSelectedKeyways();
+        if (!ways.length) {
+            ways = ['query'];
+        }
+        var jobs = [];
+        ways.forEach(function (auth) {
+            langs.forEach(function (lang) {
+                jobs.push({ auth: auth, lang: lang });
+            });
+        });
+        return jobs;
+    }
+
+    function runAiCodePieces(payload, btn) {
+        var kind = 'code';
+        var title = '代码示例';
+        var jobs = buildCodeJobs(payload);
+        var opts = getAiCodeOpts();
+        var concurrency = opts.concurrency;
+        var pieces = new Array(jobs.length);
+        var failed = [];
+        var doneCount = 0;
+        var runningLabels = {};
+
+        switchFormTab('docs');
+        aiBusy = true;
+        aiStartedAt = Date.now();
+        aiStopTimers();
+        aiTermClear(kind);
+        aiTermOpen(kind, true);
+        aiTermAppend(kind, '开始分片生成「' + title + '」· 共 ' + jobs.length + ' 片 · '
+            + (opts.mode === 'parallel' ? ('并行×' + concurrency) : '单线程逐片'));
+        aiSetBanner('run', '代码示例 0/' + jobs.length);
+        if (aiBannerTime) {
+            aiBannerTime.textContent = '已用时 0秒';
+        }
+        if (aiDocBtn) {
+            aiDocBtn.disabled = true;
+        }
+        if (aiCodeBtn) {
+            aiCodeBtn.disabled = true;
+        }
+        if (btn) {
+            btn.disabled = true;
+        }
+
+        function refreshRunBanner() {
+            var running = Object.keys(runningLabels).map(function (k) {
+                return runningLabels[k];
+            });
+            var tip = '代码示例 ' + doneCount + '/' + jobs.length;
+            if (running.length) {
+                tip += ' · 进行中：' + running.slice(0, 3).join('、');
+                if (running.length > 3) {
+                    tip += ' 等';
+                }
+            }
+            tip += ' · ' + aiElapsedLabel();
+            aiSetBanner('run', tip);
+        }
+
+        aiTickTimer = setInterval(function () {
+            if (aiBannerTime) {
+                aiBannerTime.textContent = '已用时 ' + aiElapsedLabel();
+            }
+            if (aiBusy) {
+                refreshRunBanner();
+            }
+        }, 1000);
+
+        window.VS.showMessage('正在分片生成代码示例（' + jobs.length + ' 片），进程见文档页', 'info');
+
+        function finishAll() {
+            var okChunks = [];
+            pieces.forEach(function (p) {
+                if (p) {
+                    okChunks.push(p);
+                }
+            });
+            if (!okChunks.length) {
+                var failMsg = failed.length
+                    ? ('全部失败：' + failed.slice(0, 5).join('；') + (failed.length > 5 ? '…' : ''))
+                    : '未能生成任何代码块';
+                aiTermAppend(kind, failMsg);
+                aiTermStopRunning(kind);
+                aiSetBanner('error', failMsg);
+                window.VS.showMessage(failMsg, 'error');
+                return;
+            }
+            var merged = okChunks.join('\n\n');
+            draftSkip = true;
+            setTextareaValue(fields.docAi, merged);
+            draftSkip = false;
+            aiTermAppend(kind, '已写入代码示例（成功 ' + okChunks.length + '/' + jobs.length
+                + '，约 ' + merged.length + ' 字符）');
+            if (failed.length) {
+                var warn = '部分示例未成功：' + failed.slice(0, 12).join('、')
+                    + (failed.length > 12 ? (' 等共 ' + failed.length + ' 项') : '');
+                aiTermAppend(kind, '注意：' + warn);
+                window.VS.showMessage(warn, 'warning');
+            } else {
+                window.VS.showMessage('代码示例已全部生成', 'success');
+            }
+            aiTermAppend(kind, '完成，总用时 ' + aiElapsedLabel());
+            aiTermStopRunning(kind);
+            aiSetBanner('done', (failed.length ? '代码示例已部分生成' : '代码示例已生成')
+                + ' · 用时 ' + aiElapsedLabel());
+            scheduleDraftSave();
+        }
+
+        function runPool() {
+            return new Promise(function (resolve) {
+                var next = 0;
+                var active = 0;
+                var settled = 0;
+
+                function kick() {
+                    while (active < concurrency && next < jobs.length) {
+                        (function (jobIndex) {
+                            var job = jobs[jobIndex];
+                            var label = authWayLabel(job.auth) + ' · ' + job.lang;
+                            var key = String(jobIndex);
+                            next += 1;
+                            active += 1;
+                            runningLabels[key] = label;
+                            aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 开始编写 · ' + label);
+                            refreshRunBanner();
+
+                            var piecePayload = {};
+                            Object.keys(payload).forEach(function (k) {
+                                piecePayload[k] = payload[k];
+                            });
+                            piecePayload.auth = job.auth;
+                            piecePayload.lang = job.lang;
+
+                            postAction('ai_gen_code_piece', piecePayload)
+                                .then(function (data) {
+                                    if (!data || data.code !== 1 || !data.piece) {
+                                        var err = (data && data.msg) || '生成失败';
+                                        failed.push(label + '（' + err + '）');
+                                        aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：' + err);
+                                        return;
+                                    }
+                                    pieces[jobIndex] = String(data.piece);
+                                    aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 完成 · ' + label
+                                        + '（' + String(data.piece).length + ' 字符）');
+                                })
+                                .catch(function (err) {
+                                    var hint = '网络异常或网关超时';
+                                    if (err && err.message === 'invalid_json') {
+                                        hint = '响应不是有效 JSON（单片超时/网关切断）。可调大「单片超时」或改用单线程';
+                                    }
+                                    failed.push(label + '（' + hint + '）');
+                                    aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：' + hint);
+                                })
+                                .then(function () {
+                                    delete runningLabels[key];
+                                    active -= 1;
+                                    doneCount += 1;
+                                    settled += 1;
+                                    refreshRunBanner();
+                                    if (settled >= jobs.length) {
+                                        resolve();
+                                        return;
+                                    }
+                                    kick();
+                                });
+                        })(next);
+                    }
+                }
+
+                if (!jobs.length) {
+                    resolve();
+                    return;
+                }
+                kick();
+            });
+        }
+
+        runPool()
+            .then(finishAll)
+            .finally(function () {
+                aiBusy = false;
+                aiStopTimers();
+                if (aiBannerTime) {
+                    aiBannerTime.textContent = '总用时 ' + aiElapsedLabel();
+                }
+                if (aiDocBtn) {
+                    aiDocBtn.disabled = false;
+                }
+                if (aiCodeBtn) {
+                    aiCodeBtn.disabled = false;
+                }
+                aiHideBannerLater();
+            });
+    }
+
     function runAiGenerate(action, btn) {
         if (aiBusy) {
             window.VS.showMessage('已有生成任务进行中，请稍候', 'info');
@@ -1925,25 +2149,21 @@
             payload.api_id = formId.value || '';
         }
 
-        var kind = action === 'ai_gen_code' ? 'code' : 'doc';
-        var title = kind === 'code' ? '代码示例' : '详细文档';
-        var stages = kind === 'code'
-            ? [
-                '已提交生成请求',
-                '正在整理接口参数与调用地址…',
-                '正在请求大模型编写多语言示例…',
-                '模型正在输出 :::qs 代码块…',
-                '仍在生成中，请耐心等待…',
-                '接近完成，正在规范化语言块…'
-            ]
-            : [
-                '已提交生成请求',
-                '正在整理接口上下文…',
-                '正在请求大模型撰写详细文档…',
-                '模型正在编写参数表与响应说明…',
-                '仍在生成中，请耐心等待…',
-                '接近完成，正在整理 Markdown…'
-            ];
+        if (action === 'ai_gen_code') {
+            runAiCodePieces(payload, btn);
+            return;
+        }
+
+        var kind = 'doc';
+        var title = '详细文档';
+        var stages = [
+            '已提交生成请求',
+            '正在整理接口上下文…',
+            '正在请求大模型撰写详细文档…',
+            '模型正在编写参数表与响应说明…',
+            '仍在生成中，请耐心等待…',
+            '接近完成，正在整理 Markdown…'
+        ];
 
         switchFormTab('docs');
         aiBusy = true;
@@ -2006,13 +2226,9 @@
                     return;
                 }
                 draftSkip = true;
-                if (action === 'ai_gen_doc' && data.doc != null) {
+                if (data.doc != null) {
                     setTextareaValue(fields.docNormal, data.doc);
                     aiTermAppend(kind, '已写入详细文档（约 ' + String(data.doc).length + ' 字符）');
-                }
-                if (action === 'ai_gen_code' && data.aidoc != null) {
-                    setTextareaValue(fields.docAi, data.aidoc);
-                    aiTermAppend(kind, '已写入代码示例（约 ' + String(data.aidoc).length + ' 字符）');
                 }
                 if (data.warning) {
                     aiTermAppend(kind, '注意：' + String(data.warning));
@@ -2031,7 +2247,7 @@
             .catch(function (err) {
                 var hint = '网络异常或网关超时';
                 if (err && err.message === 'invalid_json') {
-                    hint = '响应不是有效 JSON（常见于网关/PHP 超时）。请到「系统设置 → AI 对接」将超时调到 120～300 秒后重试';
+                    hint = '响应不是有效 JSON（常见于网关/PHP 超时）。请到「系统设置 → AI 对接」将单片超时调到 60～180 秒后重试';
                 }
                 aiTermAppend(kind, hint);
                 aiTermStopRunning(kind);

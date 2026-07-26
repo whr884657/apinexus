@@ -3,6 +3,9 @@
  * 文件：core/AiApiDoc.php
  * 作用：根据接口资料生成详细文档（Markdown）与快速上手代码示例（:::qs 短码）
  *
+ * 代码示例（v12.0.0）：前端按「鉴权×语言」分片调用 generateCodeSamplePiece；
+ * 调度模式（单线程/并行）见 AiConfig::codeMode / codeConcurrency。
+ *
  * 安全：禁止在提示与输出中暴露代理上游 URL、上游密钥、内部实现细节。
  */
 
@@ -56,10 +59,57 @@ class AiApiDoc
     }
 
     /**
-     * 按「鉴权方式 × 语言」逐次请求模型：一次只输出一个 :::qs 块
+     * 生成单片代码示例（供前端分片 / 并行调度；一次只写一个鉴权×一种语言）
+     *
+     * @param array  $api
+     * @param string $authWay query|header|bearer
+     * @param string $lang
+     * @return string|array 成功 array{piece:string,auth:string,lang:string}；失败错误文案
+     */
+    public static function generateCodeSamplePiece(array $api, $authWay, $lang)
+    {
+        $safe = self::safeContext($api);
+        $needKey = (int) (isset($safe['needkey']) ? $safe['needkey'] : 0);
+        $keyways = isset($safe['keyways']) && is_array($safe['keyways']) ? $safe['keyways'] : array('query');
+        if ($needKey === 0) {
+            $keyways = array('query');
+        } elseif ($keyways === array()) {
+            $keyways = array('query');
+        }
+
+        $authWay = strtolower(trim((string) $authWay));
+        $lang = strtolower(trim((string) $lang));
+        $langs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
+        if (!in_array($lang, $langs, true)) {
+            return '错误：不支持的语言';
+        }
+        if ($needKey === 0) {
+            $authWay = 'query';
+        } elseif (!in_array($authWay, array('query', 'header', 'bearer'), true)) {
+            return '错误：不支持的鉴权方式';
+        } elseif (!in_array($authWay, $keyways, true)) {
+            return '错误：本接口未启用该鉴权方式';
+        }
+
+        $part = self::generateOneCodeSample($safe, $authWay, $lang, $needKey !== 0);
+        if (is_string($part) && strpos($part, '错误：') === 0) {
+            return $part;
+        }
+        if (!is_string($part) || $part === '') {
+            return '错误：未能解析出有效代码块';
+        }
+        return array(
+            'piece' => $part,
+            'auth'  => $authWay,
+            'lang'  => $lang,
+        );
+    }
+
+    /**
+     * @deprecated v12.0.0 起由前端分片调用 generateCodeSamplePiece；保留仅兼容旧客户端
      *
      * @param array $api
-     * @return string|array 成功 array{aidoc:string,warning?:string}；失败错误文案
+     * @return string|array
      */
     public static function generateCodeSamples(array $api)
     {
@@ -71,46 +121,35 @@ class AiApiDoc
         } elseif ($keyways === array()) {
             $keyways = array('query');
         }
-
         $langs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
         $chunks = array();
         $lastErr = '';
         $failed = array();
-        $requireAuth = $needKey !== 0;
-
         foreach ($keyways as $way) {
-            $way = strtolower(trim((string) $way));
-            if ($way === '' || !in_array($way, array('query', 'header', 'bearer'), true)) {
-                continue;
-            }
             foreach ($langs as $lang) {
-                $part = self::generateOneCodeSample($safe, $way, $lang, $requireAuth);
-                if (is_string($part) && strpos($part, '错误：') === 0) {
-                    $lastErr = $part;
+                $r = self::generateCodeSamplePiece($api, $way, $lang);
+                if (is_string($r) && strpos($r, '错误：') === 0) {
+                    $lastErr = $r;
                     $failed[] = $way . '/' . $lang;
                     continue;
                 }
-                if (is_string($part) && $part !== '') {
-                    $chunks[] = $part;
+                if (is_array($r) && !empty($r['piece'])) {
+                    $chunks[] = $r['piece'];
                 } else {
                     $failed[] = $way . '/' . $lang;
                 }
             }
         }
-
         if ($chunks === array()) {
             return $lastErr !== '' ? $lastErr : '错误：未能解析出有效的语言代码块，请重试或加大 AI 超时秒数';
         }
-
         $merged = ApiQuickstart::normalizeAidocBlocks(implode("\n\n", $chunks));
         if ($merged === '') {
             return '错误：未能解析出有效的语言代码块，请重试';
         }
         $result = array('aidoc' => $merged);
         if ($failed !== array()) {
-            $show = array_slice($failed, 0, 12);
-            $more = count($failed) > 12 ? (' 等共 ' . count($failed) . ' 项') : '';
-            $result['warning'] = '部分示例未生成成功：' . implode('、', $show) . $more . '。请加大超时后重试。';
+            $result['warning'] = '部分示例未生成成功：' . implode('、', array_slice($failed, 0, 12));
         }
         return $result;
     }
