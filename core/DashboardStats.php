@@ -6,11 +6,11 @@
 
 class DashboardStats
 {
-    const TTL_LIVE = 5;
-    const TTL_TODAY = 20;
-    const TTL_HOUR = 60;
-    const TTL_WEEK = 120;
-    const TTL_GEO = 180;
+    const TTL_LIVE = 8;
+    const TTL_TODAY = 60;
+    const TTL_HOUR = 120;
+    const TTL_WEEK = 300;
+    const TTL_GEO = 300;
 
     /** @var string|null */
     private static $epochCache = null;
@@ -111,18 +111,25 @@ class DashboardStats
                 RedisCache::invalidateApiLog();
             }
         }
-        return array(
-            'server_time'   => date('Y-m-d H:i:s'),
-            'weekday'       => self::weekdayLabel(),
-            'kpi'           => self::kpiBlock(),
-            'type_trend'    => self::typeTrend7d(),
-            'rate_trend'    => self::rateTrend7d(),
-            'top_apis'      => self::topApisToday(10),
-            'sys_overview'  => self::sysOverview(),
-            'recent'        => self::recentCallsCompact(),
-            'boot_light'    => false,
-            'live_interval' => self::liveIntervalSeconds(),
-        );
+        $cached = self::remember('console_full', self::TTL_TODAY, function () {
+            return array(
+                'kpi'          => self::kpiBlock(),
+                'type_trend'   => self::typeTrend7d(),
+                'rate_trend'   => self::rateTrend7d(),
+                'top_apis'     => self::topApisToday(10),
+                'sys_overview' => self::sysOverview(),
+            );
+        });
+        if (!is_array($cached)) {
+            $cached = array();
+        }
+        // 最近调用不进整页快照：避免 45s 软刷用旧列表覆盖 live 已刷新的数据
+        $cached['recent'] = self::recentCallsCompact();
+        $cached['server_time'] = date('Y-m-d H:i:s');
+        $cached['weekday'] = self::weekdayLabel();
+        $cached['boot_light'] = false;
+        $cached['live_interval'] = self::liveIntervalSeconds();
+        return $cached;
     }
 
     /**
@@ -242,7 +249,7 @@ class DashboardStats
     private static function kpiBlock()
     {
         return self::remember('kpi', self::TTL_TODAY, function () {
-            $today = self::countRange(date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59'));
+            $today = self::countTodayCached();
             $yesterday = self::countRange(
                 date('Y-m-d 00:00:00', strtotime('-1 day')),
                 date('Y-m-d 23:59:59', strtotime('-1 day'))
@@ -425,7 +432,7 @@ class DashboardStats
 
     /**
      * 控制台最近调用：与日志查询首页同一通道（listPaged 默认 20 + Redis 页缓存）
-     * 仅下发 id / apiname / ip / time
+     * 下发 id / apiname / ip / httpcode / time
      *
      * @return array
      */
@@ -452,10 +459,11 @@ class DashboardStats
                 $ct = isset($item['createtime']) ? (string) $item['createtime'] : '';
                 $ts = $ct !== '' ? strtotime($ct) : false;
                 $out[] = array(
-                    'id'      => (int) (isset($item['id']) ? $item['id'] : 0),
-                    'apiname' => (string) (isset($item['apiname']) ? $item['apiname'] : ''),
-                    'ip'      => (string) (isset($item['ip']) ? $item['ip'] : ''),
-                    'time'    => $ts ? date('H:i:s', $ts) : '',
+                    'id'       => (int) (isset($item['id']) ? $item['id'] : 0),
+                    'apiname'  => (string) (isset($item['apiname']) ? $item['apiname'] : ''),
+                    'ip'       => (string) (isset($item['ip']) ? $item['ip'] : ''),
+                    'httpcode' => (int) (isset($item['httpcode']) ? $item['httpcode'] : 0),
+                    'time'     => $ts ? date('H:i:s', $ts) : '',
                 );
             }
             return $out;
@@ -937,15 +945,13 @@ class DashboardStats
     }
 
     /**
-     * 控制台 live 专用今日调用数（短 TTL，避免 30s 全局统计缓存拖慢体感）
+     * 控制台 live 专用今日调用数：复用 ApiLogManager 今日缓存键（Redis 监控可见）
      *
      * @return int
      */
     private static function countTodayLive()
     {
-        return (int) self::remember('today_count_live', self::TTL_LIVE, function () {
-            return self::countRange(date('Y-m-d 00:00:00'), date('Y-m-d 23:59:59'));
-        });
+        return self::countTodayCached();
     }
 
     /**
@@ -1242,7 +1248,8 @@ class DashboardStats
      */
     private static function remember($suffix, $ttl, $factory)
     {
-        $key = 'cache:dashboard:' . self::epoch() . ':' . $suffix;
+        $key = (class_exists('RedisCache') ? RedisCache::KEY_DASHBOARD_PREFIX : 'cache:dashboard:')
+            . self::epoch() . ':' . $suffix;
         if (class_exists('RedisCache')) {
             return RedisCache::remember($key, (int) $ttl, $factory);
         }

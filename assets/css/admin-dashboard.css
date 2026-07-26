@@ -20,18 +20,21 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* 控制台刷新：图标按钮（标题行右侧） */
+/* 控制台刷新：紧凑图标按钮 */
 .vs-content__actions #dashRefreshBtn.vs-btn--icon {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
     padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    border-radius: 8px;
 }
 .vs-content__actions #dashRefreshBtn.vs-btn--icon svg {
     display: block;
+    width: 14px;
+    height: 14px;
 }
 
 #adminDashPage .dash-kpi-grid {
@@ -175,12 +178,54 @@
     min-width: 0;
     overflow: hidden;
 }
+#adminDashPage .dash-chart-canvas {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
 #adminDashPage .dash-chart-wrap svg {
     width: 100%;
     max-width: 100%;
     min-width: 0;
     height: 200px;
     display: block;
+    cursor: crosshair;
+}
+#adminDashPage .dash-chart-tip {
+    position: absolute;
+    z-index: 5;
+    min-width: 120px;
+    max-width: 220px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #f8fafc;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    pointer-events: none;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+}
+#adminDashPage .dash-chart-tip__title {
+    margin-bottom: 6px;
+    color: #cbd5e1;
+    font-weight: 600;
+}
+#adminDashPage .dash-chart-tip__row {
+    display: grid;
+    grid-template-columns: 8px 1fr auto;
+    gap: 6px;
+    align-items: center;
+    margin-top: 3px;
+}
+#adminDashPage .dash-chart-tip__row i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: block;
+}
+#adminDashPage .dash-chart-tip__row b {
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
 }
 
 #adminDashPage .dash-bars { display: flex; flex-direction: column; gap: 10px; }
@@ -288,7 +333,7 @@
 #adminDashPage .dash-status.is-ok { color: #15803d; font-weight: 600; }
 #adminDashPage .dash-status.is-fail { color: #dc2626; font-weight: 600; }
 
-/* 最近调用：紧凑列表（ID / 接口 / IP / 时间），禁止卡片式占位 */
+/* 最近调用：紧凑列表（ID / 接口 / IP / 状态 / 时间） */
 #adminDashPage .dash-recent-list {
     display: flex;
     flex-direction: column;
@@ -299,7 +344,7 @@
 }
 #adminDashPage .dash-recent-row {
     display: grid;
-    grid-template-columns: 64px minmax(0, 1.4fr) minmax(0, 1fr) 72px;
+    grid-template-columns: 56px minmax(0, 1.3fr) minmax(0, 1fr) 48px 64px;
     gap: 8px;
     align-items: center;
     padding: 8px 10px;
@@ -329,20 +374,29 @@
     color: #64748b;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+#adminDashPage .dash-recent-code {
+    text-align: center;
+    font-weight: 650;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+#adminDashPage .dash-recent-code.is-ok { color: #15803d; }
+#adminDashPage .dash-recent-code.is-fail { color: #dc2626; }
+#adminDashPage .dash-recent-code.is-warn { color: #b45309; }
 #adminDashPage .dash-recent-time { text-align: right; color: #64748b; }
 
 @media (max-width: 560px) {
     #adminDashPage .dash-recent-row {
-        grid-template-columns: 52px minmax(0, 1fr) 64px;
+        grid-template-columns: 48px minmax(0, 1fr) 44px 56px;
         grid-template-areas:
-            "id name time"
-            "id ip time";
+            "id name code time"
+            "id ip code time";
         row-gap: 2px;
     }
     #adminDashPage .dash-recent-row--head { display: none; }
     #adminDashPage .dash-recent-id { grid-area: id; }
     #adminDashPage .dash-recent-name { grid-area: name; }
     #adminDashPage .dash-recent-ip { grid-area: ip; font-size: 0.7rem; }
+    #adminDashPage .dash-recent-code { grid-area: code; align-self: center; }
     #adminDashPage .dash-recent-time { grid-area: time; align-self: center; }
 }
 

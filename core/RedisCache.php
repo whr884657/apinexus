@@ -18,6 +18,8 @@ class RedisCache
     const KEY_APILOG_TODAY = 'cache:apilog:today_count';
     /** 时间窗内无筛选时的总数缓存前缀 */
     const KEY_APILOG_RANGE_TOTAL_PREFIX = 'cache:apilog:range_total:';
+    /** 控制台 / 大屏统计（按 epoch 分代，前缀匹配） */
+    const KEY_DASHBOARD_PREFIX = 'cache:dashboard:';
     /** 订单/积分流水时间窗总数 */
     const KEY_ORDERS_RANGE_TOTAL_PREFIX = 'cache:orders:range_total:';
     const KEY_STAT_HITS = 'stats:cache_hits';
@@ -423,10 +425,19 @@ class RedisCache
             array(
                 'id' => 'apilog_today',
                 'label' => '今日调用次数',
-                'desc' => '首页等「今日调用」数字',
+                'desc' => '控制台 / 大屏「今日调用」数字',
                 'key' => self::KEY_APILOG_TODAY,
                 'ttl_hint' => self::TTL_APILOG_STATS . ' 秒',
                 'chart_color' => '#ec4899',
+            ),
+            array(
+                'id' => 'dashboard_stats',
+                'label' => '控制台统计',
+                'desc' => 'KPI、7 日趋势、TOP、系统概览、整页快照等',
+                'key' => self::KEY_DASHBOARD_PREFIX,
+                'ttl_hint' => '分层 8～300 秒',
+                'pattern' => true,
+                'chart_color' => '#6366f1',
             ),
             array(
                 'id' => 'orders_range_total',

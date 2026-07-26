@@ -92,17 +92,26 @@
         return '<span class="dash-kpi__delta ' + cls + '">' + sign + esc(String(n)) + esc(suffix || '') + '</span>';
     }
 
-    /** Catmull-Rom → 三次贝塞尔，折线变平滑曲线 */
-    function smoothPath(pts) {
+    /**
+     * Catmull-Rom → 三次贝塞尔；可选 y 钳制，避免平滑曲线穿出绘图区（含 X 轴下方）
+     * @param {{x:number,y:number}[]} pts
+     * @param {number|null} yMin
+     * @param {number|null} yMax
+     */
+    function smoothPath(pts, yMin, yMax) {
+        function clampY(y) {
+            if (yMin == null || yMax == null) return y;
+            return Math.max(yMin, Math.min(yMax, y));
+        }
         if (!pts.length) return '';
         if (pts.length === 1) {
-            return 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1);
+            return 'M' + pts[0].x.toFixed(1) + ' ' + clampY(pts[0].y).toFixed(1);
         }
         if (pts.length === 2) {
-            return 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1)
-                + ' L' + pts[1].x.toFixed(1) + ' ' + pts[1].y.toFixed(1);
+            return 'M' + pts[0].x.toFixed(1) + ' ' + clampY(pts[0].y).toFixed(1)
+                + ' L' + pts[1].x.toFixed(1) + ' ' + clampY(pts[1].y).toFixed(1);
         }
-        var d = 'M' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1);
+        var d = 'M' + pts[0].x.toFixed(1) + ' ' + clampY(pts[0].y).toFixed(1);
         var i;
         for (i = 0; i < pts.length - 1; i++) {
             var p0 = pts[i === 0 ? i : i - 1];
@@ -110,12 +119,12 @@
             var p2 = pts[i + 1];
             var p3 = pts[i + 2] || p2;
             var cp1x = p1.x + (p2.x - p0.x) / 6;
-            var cp1y = p1.y + (p2.y - p0.y) / 6;
+            var cp1y = clampY(p1.y + (p2.y - p0.y) / 6);
             var cp2x = p2.x - (p3.x - p1.x) / 6;
-            var cp2y = p2.y - (p3.y - p1.y) / 6;
+            var cp2y = clampY(p2.y - (p3.y - p1.y) / 6);
             d += ' C' + cp1x.toFixed(1) + ' ' + cp1y.toFixed(1)
                 + ',' + cp2x.toFixed(1) + ' ' + cp2y.toFixed(1)
-                + ',' + p2.x.toFixed(1) + ' ' + p2.y.toFixed(1);
+                + ',' + p2.x.toFixed(1) + ' ' + clampY(p2.y).toFixed(1);
         }
         return d;
     }
@@ -125,14 +134,17 @@
         if (!values.length) values = [0];
         var w = 120, h = 36, pad = 2;
         var max = Math.max.apply(null, values.concat([1]));
-        var min = Math.min.apply(null, values);
+        var min = Math.min.apply(null, values.concat([0]));
+        if (min > 0) min = 0;
         var span = Math.max(1, max - min);
+        var yLo = pad;
+        var yHi = h - pad;
         var pts = values.map(function (v, i) {
             var x = pad + (i * (w - pad * 2)) / Math.max(1, values.length - 1);
             var y = h - pad - ((v - min) / span) * (h - pad * 2);
             return { x: x, y: y };
         });
-        var line = smoothPath(pts);
+        var line = smoothPath(pts, yLo, yHi);
         var area = line + ' L' + (w - pad).toFixed(1) + ' ' + (h - pad)
             + ' L' + pad + ' ' + (h - pad) + ' Z';
         return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true">'
@@ -145,6 +157,8 @@
         if (!el) return;
         opts = opts || {};
         var w = 560, h = 200, L = 36, R = 10, T = 14, B = 26;
+        var plotTop = T;
+        var plotBottom = h - B;
         var all = [];
         seriesList.forEach(function (s) { all = all.concat(s.data || []); });
         if (!all.length) {
@@ -155,6 +169,8 @@
         var min = opts.min != null ? opts.min : Math.min.apply(null, all.concat([0]));
         if (opts.fixedMin != null) min = opts.fixedMin;
         if (opts.fixedMax != null) max = opts.fixedMax;
+        // 调用量 / 比率不得为负：保证 0 落在 X 轴，避免曲线视觉下穿
+        if (opts.allowNegative !== true && min < 0) min = 0;
         var span = Math.max(0.0001, max - min);
         var n = Math.max(1, (labels || []).length);
         function xAt(i) { return L + (i * (w - L - R)) / Math.max(1, n - 1); }
@@ -168,7 +184,7 @@
             var pts = (s.data || []).map(function (v, i) {
                 return { x: xAt(i), y: yAt(v) };
             });
-            var d = smoothPath(pts);
+            var d = smoothPath(pts, plotTop, plotBottom);
             var dash = s.dashed ? ' stroke-dasharray="5 4"' : '';
             return '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"' + dash + '/>';
         }).join('');
@@ -177,7 +193,96 @@
             if (n > 8 && i % 2 === 1 && i !== n - 1) return;
             xLabels += '<text x="' + xAt(i) + '" y="' + (h - 8) + '" text-anchor="middle" fill="#94a3b8" font-size="11">' + esc(lb) + '</text>';
         });
-        el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" role="img">' + grid + paths + xLabels + '</svg>';
+        var fmtTip = opts.formatValue || function (v) {
+            if (typeof v === 'number') {
+                return (Math.round(v * 100) / 100).toLocaleString('zh-CN');
+            }
+            return String(v);
+        };
+        el.innerHTML = '<div class="dash-chart-canvas">'
+            + '<svg viewBox="0 0 ' + w + ' ' + h + '" role="img">'
+            + grid + paths + xLabels
+            + '<line class="dash-chart-guide" x1="0" y1="' + plotTop + '" x2="0" y2="' + plotBottom + '" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3" opacity="0"></line>'
+            + '<g class="dash-chart-dots"></g>'
+            + '</svg>'
+            + '<div class="dash-chart-tip" hidden></div>'
+            + '</div>';
+
+        var svg = el.querySelector('svg');
+        var tip = el.querySelector('.dash-chart-tip');
+        var guide = el.querySelector('.dash-chart-guide');
+        var dotsG = el.querySelector('.dash-chart-dots');
+        if (!svg || !tip) return;
+
+        function nearestIndex(px) {
+            var best = 0;
+            var bestDist = Infinity;
+            var i;
+            for (i = 0; i < n; i++) {
+                var d = Math.abs(xAt(i) - px);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = i;
+                }
+            }
+            return best;
+        }
+
+        function hideTip() {
+            tip.hidden = true;
+            if (guide) guide.setAttribute('opacity', '0');
+            if (dotsG) dotsG.innerHTML = '';
+        }
+
+        function showAt(idx, clientX, clientY) {
+            var xi = xAt(idx);
+            if (guide) {
+                guide.setAttribute('x1', xi.toFixed(1));
+                guide.setAttribute('x2', xi.toFixed(1));
+                guide.setAttribute('opacity', '0.7');
+            }
+            var dotsHtml = '';
+            var rows = '';
+            seriesList.forEach(function (s) {
+                var raw = (s.data || [])[idx];
+                if (raw == null) raw = 0;
+                var yi = Math.max(plotTop, Math.min(plotBottom, yAt(raw)));
+                dotsHtml += '<circle cx="' + xi.toFixed(1) + '" cy="' + yi.toFixed(1) + '" r="3.5" fill="#fff" stroke="' + s.color + '" stroke-width="2"/>';
+                rows += '<div class="dash-chart-tip__row">'
+                    + '<i style="background:' + s.color + '"></i>'
+                    + '<span>' + esc(s.name || '') + '</span>'
+                    + '<b>' + esc(fmtTip(raw) + (opts.unit || '')) + '</b>'
+                    + '</div>';
+            });
+            if (dotsG) dotsG.innerHTML = dotsHtml;
+            tip.innerHTML = '<div class="dash-chart-tip__title">' + esc((labels || [])[idx] || '') + '</div>' + rows;
+            tip.hidden = false;
+            var canvas = el.querySelector('.dash-chart-canvas');
+            var box = canvas ? canvas.getBoundingClientRect() : el.getBoundingClientRect();
+            var left = clientX - box.left + 12;
+            var top = clientY - box.top - 8;
+            if (left + tip.offsetWidth > box.width - 4) {
+                left = clientX - box.left - tip.offsetWidth - 12;
+            }
+            if (top < 4) top = 4;
+            if (top + tip.offsetHeight > box.height - 4) {
+                top = Math.max(4, box.height - tip.offsetHeight - 4);
+            }
+            tip.style.left = left + 'px';
+            tip.style.top = top + 'px';
+        }
+
+        svg.addEventListener('mousemove', function (e) {
+            var rect = svg.getBoundingClientRect();
+            if (!rect.width) return;
+            var px = ((e.clientX - rect.left) / rect.width) * w;
+            if (px < L - 8 || px > w - R + 8) {
+                hideTip();
+                return;
+            }
+            showAt(nearestIndex(px), e.clientX, e.clientY);
+        });
+        svg.addEventListener('mouseleave', hideTip);
     }
 
     function showKpiLoading() {
@@ -263,14 +368,23 @@
             }).join('');
         }
         lineChart(document.getElementById('dashTypeChart'), type.labels || [], [
-            { data: type.guest || [], color: '#64748b' },
-            { data: type.key || [], color: '#2563eb' },
-            { data: type.points || [], color: '#f59e0b', dashed: true }
-        ]);
+            { name: '游客', data: type.guest || [], color: '#64748b' },
+            { name: '密钥', data: type.key || [], color: '#2563eb' },
+            { name: '积分', data: type.points || [], color: '#f59e0b', dashed: true }
+        ], { fixedMin: 0 });
         lineChart(document.getElementById('dashRateChart'), rate.labels || [], [
-            { data: rate.success || [], color: '#16a34a' },
-            { data: rate.fail || [], color: '#dc2626', dashed: true }
-        ], { fixedMin: 0, fixedMax: 100 });
+            { name: '成功率', data: rate.success || [], color: '#16a34a' },
+            { name: '失败率', data: rate.fail || [], color: '#dc2626', dashed: true }
+        ], {
+            fixedMin: 0,
+            fixedMax: 100,
+            unit: '%',
+            formatValue: function (v) {
+                var n = parseFloat(v);
+                if (isNaN(n)) n = 0;
+                return (Math.round(n * 100) / 100).toFixed(2);
+            }
+        });
     }
 
     function renderTop(list) {
@@ -309,6 +423,14 @@
         }).join('');
     }
 
+    function httpCodeClass(code) {
+        var n = parseInt(code, 10) || 0;
+        if (n >= 200 && n < 300) return 'is-ok';
+        if (n >= 400) return 'is-fail';
+        if (n > 0) return 'is-warn';
+        return '';
+    }
+
     function renderRecent(list) {
         var el = document.getElementById('dashRecentTable');
         if (!el) return;
@@ -322,13 +444,17 @@
             + '<span class="dash-recent-id">ID</span>'
             + '<span class="dash-recent-name">接口</span>'
             + '<span class="dash-recent-ip">IP</span>'
+            + '<span class="dash-recent-code">状态</span>'
             + '<span class="dash-recent-time">时间</span>'
             + '</div>';
         list.forEach(function (r) {
+            var code = parseInt(r.httpcode, 10) || 0;
+            var codeText = code > 0 ? String(code) : '—';
             html += '<div class="dash-recent-row" role="row">'
                 + '<span class="dash-recent-id">' + esc(r.id) + '</span>'
                 + '<span class="dash-recent-name" title="' + esc(r.apiname) + '">' + esc(r.apiname || '—') + '</span>'
                 + '<span class="dash-recent-ip" title="' + esc(r.ip) + '">' + esc(r.ip || '—') + '</span>'
+                + '<span class="dash-recent-code ' + httpCodeClass(code) + '">' + esc(codeText) + '</span>'
                 + '<span class="dash-recent-time">' + esc(r.time || '—') + '</span>'
                 + '</div>';
         });
@@ -406,8 +532,17 @@
                 return;
             }
             initialPending = false;
+            var wasReady = ready;
             ready = true;
+            // 软刷：保留 live 已刷新的最近调用，避免被 snapshot 慢路径覆盖
+            var keepRecent = (!forceRefresh && wasReady && Array.isArray(boot.recent) && boot.recent.length)
+                ? boot.recent
+                : null;
             renderAll(res.snapshot);
+            if (keepRecent) {
+                boot.recent = keepRecent;
+                renderRecent(keepRecent);
+            }
             if (forceRefresh) {
                 window.VS.showMessage('已刷新', 'success');
             }

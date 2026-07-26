@@ -1,15 +1,14 @@
 {
-    "version": "10.10.0",
-    "title": "ApiNexus 10.10.0 控制台紧凑列表、图表防溢出与可配置刷新",
+    "version": "10.10.1",
+    "title": "ApiNexus 10.10.1 控制台缓存可见、折线悬停与状态码列",
     "release_date": "2026-07-26",
     "db_changes": false,
     "changes": [
-        "修复手机端趋势图右侧溢出（去掉图表 min-width 撑破视口）",
-        "控制台刷新改为图标按钮；时钟本地每秒走动",
-        "最近调用改为 20 条紧凑列表（ID/接口/IP/时间），与日志查询页共用 listPaged 缓存",
-        "系统设置可配置控制台 live 间隔 1～5 秒",
-        "修复默认主题 detail.php IDE 空数组访问告警",
-        "规范 §2.23 / E119 同步"
+        "控制台整页快照 console_full 缓存；今日调用复用 cache:apilog:today_count（Redis 监控可见）",
+        "Redis 监控登记 cache:dashboard: 前缀；分层 TTL 加大（约 8～300 秒）",
+                "折线平滑控制点钳制，禁止穿出 X 轴下方；悬停显示当日数值",
+                "最近调用增加 HTTP 状态码列；刷新图标按钮再缩小；软刷不覆盖 live 最近列表",
+                "规范 §2.23 / E119 同步"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
