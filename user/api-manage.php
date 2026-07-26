@@ -34,6 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'apitype'      => $apitype,
             'targeturl'    => isset($_POST['targeturl']) ? (string) $_POST['targeturl'] : '',
             'proxyslug'    => isset($_POST['proxyslug']) ? (string) $_POST['proxyslug'] : '',
+            'upauth'       => isset($_POST['upauth']) ? (int) $_POST['upauth'] : 0,
+            'upkeyvia'     => isset($_POST['upkeyvia']) ? (int) $_POST['upkeyvia'] : 0,
+            'upkeyname'    => isset($_POST['upkeyname']) ? (string) $_POST['upkeyname'] : '',
+            'upkey'        => isset($_POST['upkey']) ? (string) $_POST['upkey'] : '',
             'method'       => isset($_POST['method']) ? $_POST['method'] : 'GET',
             'params'       => isset($_POST['params']) ? (string) $_POST['params'] : '',
             'response'     => isset($_POST['response']) ? (string) $_POST['response'] : '',
@@ -383,6 +387,38 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                        placeholder="例如 sjspks（3～64 位字母或数字）" pattern="[A-Za-z0-9]{3,64}"
                        autocomplete="off" <?php echo $canLocal ? '' : 'required'; ?>>
                 <p class="vs-form-hint">公开地址：<?php echo vs_e($iconBase); ?>/apis/短码</p>
+            </div>
+            <div id="userApiUpAuthBlock"<?php echo $canLocal ? ' hidden' : ''; ?>>
+                <div class="vs-form-row vs-form-row--2">
+                    <div>
+                        <label class="vs-label" for="userApiFormUpAuth">上游认证方式</label>
+                        <select class="vs-input vs-select" id="userApiFormUpAuth" name="upauth" data-vs-pick>
+                            <option value="0">无需认证</option>
+                            <option value="1">API Key</option>
+                            <option value="2">Bearer Token</option>
+                        </select>
+                    </div>
+                    <div id="userApiUpKeyViaWrap" hidden>
+                        <label class="vs-label" for="userApiFormUpKeyVia">密钥传递方式</label>
+                        <select class="vs-input vs-select" id="userApiFormUpKeyVia" name="upkeyvia" data-vs-pick>
+                            <option value="0">URL 参数</option>
+                            <option value="1">请求头</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="vs-form-row vs-form-row--2" id="userApiUpKeyFields" hidden>
+                    <div id="userApiUpKeyNameWrap">
+                        <label class="vs-label" for="userApiFormUpKeyName">参数名 / 头名称</label>
+                        <input type="text" class="vs-input" id="userApiFormUpKeyName" name="upkeyname" maxlength="64"
+                               placeholder="如 api_key 或 X-API-Key" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="vs-label" for="userApiFormUpKey">上游密钥 <span class="vs-req">*</span></label>
+                        <input type="password" class="vs-input" id="userApiFormUpKey" name="upkey" maxlength="500"
+                               placeholder="上游平台颁发的密钥或令牌" autocomplete="new-password">
+                    </div>
+                </div>
+                <p class="vs-form-hint">若上游需要密钥，请在此填写；本站调用时自动附加，不会展示给访客。</p>
             </div>
 
             <div class="vs-form-row vs-form-row--2">

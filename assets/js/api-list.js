@@ -46,6 +46,10 @@
         endpoint: document.getElementById('apiListFormEndpoint'),
         targeturl: document.getElementById('apiListFormTargetUrl'),
         proxyslug: document.getElementById('apiListFormProxySlug'),
+        upauth: document.getElementById('apiListFormUpAuth'),
+        upkeyvia: document.getElementById('apiListFormUpKeyVia'),
+        upkeyname: document.getElementById('apiListFormUpKeyName'),
+        upkey: document.getElementById('apiListFormUpKey'),
         category: document.getElementById('apiListFormCategory'),
         requireKey: document.getElementById('apiListFormRequireKey'),
         qpm: document.getElementById('apiListFormQpm'),
@@ -68,6 +72,44 @@
     var endpointRow = document.getElementById('apiListEndpointRow');
     var targetRow = document.getElementById('apiListTargetRow');
     var slugRow = document.getElementById('apiListSlugRow');
+    var upAuthBlock = document.getElementById('apiListUpAuthBlock');
+    var upKeyViaWrap = document.getElementById('apiListUpKeyViaWrap');
+    var upKeyFields = document.getElementById('apiListUpKeyFields');
+    var upKeyNameWrap = document.getElementById('apiListUpKeyNameWrap');
+
+    function syncUpAuthUi() {
+        var isProxy = fields.apitype && parseInt(fields.apitype.value, 10) === 1;
+        var mode = fields.upauth ? parseInt(fields.upauth.value, 10) || 0 : 0;
+        if (upAuthBlock) {
+            upAuthBlock.hidden = !isProxy;
+        }
+        if (!isProxy) {
+            return;
+        }
+        var needKey = mode === 1 || mode === 2;
+        if (upKeyViaWrap) {
+            upKeyViaWrap.hidden = mode !== 1;
+        }
+        if (upKeyFields) {
+            upKeyFields.hidden = !needKey;
+        }
+        if (upKeyNameWrap) {
+            upKeyNameWrap.hidden = mode !== 1;
+        }
+        if (fields.upkey) {
+            fields.upkey.required = needKey;
+        }
+        if (mode === 1 && fields.upkeyname && !fields.upkeyname.value.trim()) {
+            var via = fields.upkeyvia ? parseInt(fields.upkeyvia.value, 10) || 0 : 0;
+            fields.upkeyname.value = via === 1 ? 'X-API-Key' : 'api_key';
+        }
+        if (window.VSPick) {
+            ['apiListFormUpAuth', 'apiListFormUpKeyVia'].forEach(function (id) {
+                var s = document.getElementById(id);
+                if (s) { window.VSPick.refresh(s); }
+            });
+        }
+    }
 
     function setApiType(type) {
         var t = parseInt(type, 10) === 1 ? 1 : 0;
@@ -99,7 +141,7 @@
         }
         if (typeHint) {
             typeHint.textContent = t === 1
-                ? '外链接口：填写对方完整地址与短码，系统生成本站 /apis/短码；访问时跳转上游并附带查询参数。'
+                ? '外链接口：填写对方完整地址与短码；可配置上游认证（无需 / API Key / Bearer）。'
                 : '本地接口：只填本站路径，如 /api/img/index.php';
         }
         if (endpointLabel) {
@@ -107,6 +149,7 @@
                 ? '本地路径'
                 : '本地路径 <span class="vs-req">*</span>';
         }
+        syncUpAuthUi();
     }
 
     document.querySelectorAll('.vs-api-type-tab').forEach(function (btn) {
@@ -114,6 +157,22 @@
             setApiType(btn.getAttribute('data-apitype') || '0');
         });
     });
+
+    if (fields.upauth) {
+        fields.upauth.addEventListener('change', syncUpAuthUi);
+    }
+    if (fields.upkeyvia) {
+        fields.upkeyvia.addEventListener('change', function () {
+            if (fields.upauth && parseInt(fields.upauth.value, 10) === 1 && fields.upkeyname) {
+                var via = parseInt(fields.upkeyvia.value, 10) || 0;
+                var cur = fields.upkeyname.value.trim();
+                if (!cur || cur === 'api_key' || cur === 'X-API-Key') {
+                    fields.upkeyname.value = via === 1 ? 'X-API-Key' : 'api_key';
+                }
+            }
+            syncUpAuthUi();
+        });
+    }
 
     /** 接口状态：0正常 1禁用 2维护（兼容旧英文串） */
     function normalizeStatus(status) {
@@ -1146,6 +1205,18 @@
         if (fields.proxyslug) {
             fields.proxyslug.value = '';
         }
+        if (fields.upauth) {
+            fields.upauth.value = '0';
+        }
+        if (fields.upkeyvia) {
+            fields.upkeyvia.value = '0';
+        }
+        if (fields.upkeyname) {
+            fields.upkeyname.value = '';
+        }
+        if (fields.upkey) {
+            fields.upkey.value = '';
+        }
         if (fields.category) {
             fields.category.value = '';
         }
@@ -1184,7 +1255,7 @@
         setIconPickerSelection(defaultIcons.length ? defaultIcons[0] : '');
         switchFormTab('basic');
         if (window.VSPick) {
-            ['apiListFormStatus', 'apiListFormCategory', 'apiListFormRequireKey'].forEach(function (id) {
+            ['apiListFormStatus', 'apiListFormCategory', 'apiListFormRequireKey', 'apiListFormUpAuth', 'apiListFormUpKeyVia'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -1221,6 +1292,19 @@
         if (fields.proxyslug) {
             fields.proxyslug.value = api.proxyslug || '';
         }
+        if (fields.upauth) {
+            fields.upauth.value = String(parseInt(api.upauth, 10) || 0);
+        }
+        if (fields.upkeyvia) {
+            fields.upkeyvia.value = String(parseInt(api.upkeyvia, 10) === 1 ? 1 : 0);
+        }
+        if (fields.upkeyname) {
+            fields.upkeyname.value = api.upkeyname || '';
+        }
+        if (fields.upkey) {
+            fields.upkey.value = api.upkey || '';
+        }
+        syncUpAuthUi();
         if (fields.category) {
             fields.category.value = api.category || '';
         }
@@ -1260,7 +1344,7 @@
         setIconPickerSelection(api.icon || api.icon_raw || '');
         switchFormTab('basic');
         if (window.VSPick) {
-            ['apiListFormStatus','apiListFormCategory','apiListFormRequireKey','apiListFormCharge'].forEach(function (id) {
+            ['apiListFormStatus','apiListFormCategory','apiListFormRequireKey','apiListFormCharge','apiListFormUpAuth','apiListFormUpKeyVia'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -1326,6 +1410,10 @@
             endpoint: fields.endpoint ? fields.endpoint.value.trim() : '',
             targeturl: fields.targeturl ? fields.targeturl.value.trim() : '',
             proxyslug: fields.proxyslug ? fields.proxyslug.value.trim() : '',
+            upauth: fields.upauth ? String(parseInt(fields.upauth.value, 10) || 0) : '0',
+            upkeyvia: fields.upkeyvia ? String(parseInt(fields.upkeyvia.value, 10) === 1 ? 1 : 0) : '0',
+            upkeyname: fields.upkeyname ? fields.upkeyname.value.trim() : '',
+            upkey: fields.upkey ? fields.upkey.value.trim() : '',
             method: getSelectedMethods().join(','),
             params: paramsVal,
             response: fields.response ? fields.response.value : '',
@@ -1371,6 +1459,15 @@
                 switchFormTab('basic');
                 if (fields.proxyslug) {
                     fields.proxyslug.focus();
+                }
+                return;
+            }
+            var upMode = parseInt(payload.upauth, 10) || 0;
+            if ((upMode === 1 || upMode === 2) && !payload.upkey) {
+                window.VS.showMessage(upMode === 2 ? '请填写 Bearer Token' : '请填写上游 API Key', 'error');
+                switchFormTab('basic');
+                if (fields.upkey) {
+                    fields.upkey.focus();
                 }
                 return;
             }

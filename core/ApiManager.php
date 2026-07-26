@@ -5,7 +5,8 @@
  *
  * 接口状态 status：0 正常 / 1 禁用（前台不展示）/ 2 维护（前台可见但不可请求）
  * 审核状态 audit：0 待审核 / 1 通过 / 2 不通过（管理员发布默认通过；用户投稿为待审核）
- * 接口类型 apitype：0 本地路径 / 1 代理外链（302 至 targeturl）
+ * 接口类型 apitype：0 本地路径 / 1 代理外链（无上游认证时可 302；需密钥时服务端中继）
+ * 上游认证 upauth：0 无需 / 1 API Key / 2 Bearer Token
  */
 
 class ApiManager
@@ -28,6 +29,18 @@ class ApiManager
     const APITYPE_LOCAL = 0;
     /** 接口类型：代理外链 */
     const APITYPE_PROXY = 1;
+
+    /** 上游认证：无需 */
+    const UPAUTH_NONE = 0;
+    /** 上游认证：API Key */
+    const UPAUTH_APIKEY = 1;
+    /** 上游认证：Bearer Token */
+    const UPAUTH_BEARER = 2;
+
+    /** API Key 经 URL 参数传递 */
+    const UPKEYVIA_QUERY = 0;
+    /** API Key 经请求头传递 */
+    const UPKEYVIA_HEADER = 1;
 
     const METHOD_GET = 'GET';
     const METHOD_POST = 'POST';
@@ -165,6 +178,98 @@ class ApiManager
             $ok = false;
         }
         return $ok;
+    }
+
+    /**
+     * 是否已具备上游认证字段（迁移 10.13.0 后为 true）
+     *
+     * @return bool
+     */
+    public static function hasUpstreamAuthColumns()
+    {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
+        try {
+            $pdo = Database::connect();
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('upauth'));
+            $ok = $col && $col->fetchColumn();
+        } catch (Exception $e) {
+            $ok = false;
+        }
+        return $ok;
+    }
+
+    /**
+     * @param mixed $v
+     * @return int
+     */
+    public static function normalizeUpauth($v)
+    {
+        $n = (int) $v;
+        if ($n === self::UPAUTH_APIKEY || $n === self::UPAUTH_BEARER) {
+            return $n;
+        }
+        return self::UPAUTH_NONE;
+    }
+
+    /**
+     * @param mixed $v
+     * @return int
+     */
+    public static function normalizeUpkeyvia($v)
+    {
+        return ((int) $v === self::UPKEYVIA_HEADER) ? self::UPKEYVIA_HEADER : self::UPKEYVIA_QUERY;
+    }
+
+    /**
+     * @param mixed $v
+     * @return string
+     */
+    public static function normalizeUpkeyname($v)
+    {
+        $name = trim((string) $v);
+        if ($name === '') {
+            return '';
+        }
+        if (mb_strlen($name, 'UTF-8') > 64) {
+            $name = mb_substr($name, 0, 64, 'UTF-8');
+        }
+        // 仅允许常见头/参数名字符
+        if (!preg_match('/^[A-Za-z0-9_.\-]+$/', $name)) {
+            return '';
+        }
+        return $name;
+    }
+
+    /**
+     * @param mixed $v
+     * @return string
+     */
+    public static function normalizeUpkey($v)
+    {
+        $key = trim((string) $v);
+        if (mb_strlen($key, 'UTF-8') > 500) {
+            $key = mb_substr($key, 0, 500, 'UTF-8');
+        }
+        return $key;
+    }
+
+    /**
+     * @param mixed $v
+     * @return string
+     */
+    public static function upauthLabel($v)
+    {
+        $n = self::normalizeUpauth($v);
+        if ($n === self::UPAUTH_APIKEY) {
+            return 'API Key';
+        }
+        if ($n === self::UPAUTH_BEARER) {
+            return 'Bearer Token';
+        }
+        return '无需认证';
     }
 
     /**
@@ -660,6 +765,7 @@ class ApiManager
             $id = (int) $pdo->lastInsertId();
             self::applyChargeFields($id, $parsed);
             self::applyQpmField($id, $parsed);
+            self::applyUpstreamAuthFields($id, $parsed);
             RedisCache::invalidateFrontend();
             $row = self::findById($id);
             return self::formatRow($row);
@@ -838,6 +944,7 @@ class ApiManager
             }
             self::applyChargeFields($apiId, $parsed);
             self::applyQpmField($apiId, $parsed);
+            self::applyUpstreamAuthFields($apiId, $parsed);
             RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
@@ -1128,6 +1235,11 @@ class ApiManager
             'apitype_badge' => self::apiTypeBadge(isset($row['apitype']) ? $row['apitype'] : self::APITYPE_LOCAL),
             'targeturl'     => isset($row['targeturl']) ? (string) $row['targeturl'] : '',
             'proxyslug'     => isset($row['proxyslug']) ? (string) $row['proxyslug'] : '',
+            'upauth'        => self::normalizeUpauth(isset($row['upauth']) ? $row['upauth'] : self::UPAUTH_NONE),
+            'upauth_label'  => self::upauthLabel(isset($row['upauth']) ? $row['upauth'] : self::UPAUTH_NONE),
+            'upkeyvia'      => self::normalizeUpkeyvia(isset($row['upkeyvia']) ? $row['upkeyvia'] : self::UPKEYVIA_QUERY),
+            'upkeyname'     => isset($row['upkeyname']) ? (string) $row['upkeyname'] : '',
+            'upkey'         => isset($row['upkey']) ? (string) $row['upkey'] : '',
             'call_url'      => self::resolveCallUrl($row),
             'method'        => self::methodsToStorage(self::normalizeMethods(isset($row['method']) ? $row['method'] : self::METHOD_GET)),
             'methods'       => self::normalizeMethods(isset($row['method']) ? $row['method'] : self::METHOD_GET),
@@ -1337,6 +1449,11 @@ class ApiManager
             }
             $endpoint = ApiProxy::publicPath($proxyslug);
         } else {
+            // 本地接口清空上游认证
+            $data['upauth'] = self::UPAUTH_NONE;
+            $data['upkeyvia'] = self::UPKEYVIA_QUERY;
+            $data['upkeyname'] = '';
+            $data['upkey'] = '';
             if ($endpoint === '') {
                 return '请填写本地接口路径';
             }
@@ -1358,6 +1475,45 @@ class ApiManager
             }
             $targeturl = '';
             $proxyslug = '';
+        }
+
+        // 上游认证（仅代理类型有效）
+        $upauth = self::UPAUTH_NONE;
+        $upkeyvia = self::UPKEYVIA_QUERY;
+        $upkeyname = '';
+        $upkey = '';
+        if ($apitype === self::APITYPE_PROXY) {
+            $upauth = self::normalizeUpauth(isset($data['upauth']) ? $data['upauth'] : self::UPAUTH_NONE);
+            $upkeyvia = self::normalizeUpkeyvia(isset($data['upkeyvia']) ? $data['upkeyvia'] : self::UPKEYVIA_QUERY);
+            $upkeyname = self::normalizeUpkeyname(isset($data['upkeyname']) ? $data['upkeyname'] : '');
+            $upkey = self::normalizeUpkey(isset($data['upkey']) ? $data['upkey'] : '');
+            if ($upauth !== self::UPAUTH_NONE && !self::hasUpstreamAuthColumns()) {
+                return '上游认证功能尚未就绪，请先前往「系统升级」完成结构更新';
+            }
+            if ($upauth === self::UPAUTH_APIKEY) {
+                if ($upkey === '') {
+                    return '请填写上游 API Key';
+                }
+                if ($upkeyname === '') {
+                    $upkeyname = ($upkeyvia === self::UPKEYVIA_HEADER) ? 'X-API-Key' : 'api_key';
+                }
+                // 再校验默认填充后的名称
+                $upkeyname = self::normalizeUpkeyname($upkeyname);
+                if ($upkeyname === '') {
+                    return '请填写合法的参数名或头名称';
+                }
+            } elseif ($upauth === self::UPAUTH_BEARER) {
+                if ($upkey === '') {
+                    return '请填写 Bearer Token';
+                }
+                $upkeyvia = self::UPKEYVIA_HEADER;
+                $upkeyname = '';
+            } else {
+                $upauth = self::UPAUTH_NONE;
+                $upkeyvia = self::UPKEYVIA_QUERY;
+                $upkeyname = '';
+                $upkey = '';
+            }
         }
 
         $methodRaw = isset($data['method']) ? $data['method'] : self::METHOD_GET;
@@ -1452,6 +1608,10 @@ class ApiManager
             'apitype'     => $apitype,
             'targeturl'   => $targeturl,
             'proxyslug'   => $proxyslug,
+            'upauth'      => $upauth,
+            'upkeyvia'    => $upkeyvia,
+            'upkeyname'   => $upkeyname,
+            'upkey'       => $upkey,
             'method'      => $method,
             'params'      => $requestParams,
             'response'    => $responseExample,
@@ -1515,6 +1675,38 @@ class ApiManager
             );
             $stmt->execute(array(
                 self::normalizeQpm(isset($parsed['qpm']) ? $parsed['qpm'] : 0),
+                $apiId,
+            ));
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
+     * 写入上游认证字段（独立 UPDATE，兼容未迁移站点）
+     *
+     * @param int   $apiId
+     * @param array $parsed
+     * @return void
+     */
+    private static function applyUpstreamAuthFields($apiId, array $parsed)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId <= 0 || !self::hasUpstreamAuthColumns()) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '`
+                 SET `upauth` = ?, `upkeyvia` = ?, `upkeyname` = ?, `upkey` = ?
+                 WHERE `id` = ?'
+            );
+            $stmt->execute(array(
+                self::normalizeUpauth(isset($parsed['upauth']) ? $parsed['upauth'] : self::UPAUTH_NONE),
+                self::normalizeUpkeyvia(isset($parsed['upkeyvia']) ? $parsed['upkeyvia'] : self::UPKEYVIA_QUERY),
+                isset($parsed['upkeyname']) ? (string) $parsed['upkeyname'] : '',
+                isset($parsed['upkey']) ? (string) $parsed['upkey'] : '',
                 $apiId,
             ));
         } catch (Exception $e) {

@@ -19,6 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'apitype'     => isset($_POST['apitype']) ? (int) $_POST['apitype'] : ApiManager::APITYPE_LOCAL,
             'targeturl'   => isset($_POST['targeturl']) ? (string) $_POST['targeturl'] : '',
             'proxyslug'   => isset($_POST['proxyslug']) ? (string) $_POST['proxyslug'] : '',
+            'upauth'      => isset($_POST['upauth']) ? (int) $_POST['upauth'] : 0,
+            'upkeyvia'    => isset($_POST['upkeyvia']) ? (int) $_POST['upkeyvia'] : 0,
+            'upkeyname'   => isset($_POST['upkeyname']) ? (string) $_POST['upkeyname'] : '',
+            'upkey'       => isset($_POST['upkey']) ? (string) $_POST['upkey'] : '',
             'method'      => isset($_POST['method']) ? $_POST['method'] : 'GET',
             'params'      => isset($_POST['params']) ? (string) $_POST['params'] : '',
             'response'    => isset($_POST['response']) ? (string) $_POST['response'] : '',
@@ -651,13 +655,45 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <label class="vs-label" for="apiListFormTargetUrl">上游完整地址 <span class="vs-req">*</span></label>
                     <input type="url" class="vs-input" id="apiListFormTargetUrl" name="targeturl" maxlength="500"
                            placeholder="https://api.example.com/v1/demo">
-                    <p class="vs-form-hint">访问本站公开地址时，将跳转到该上游，并附带查询参数。</p>
+                    <p class="vs-form-hint">访问本站公开地址时，将转发到该上游（需密钥时由本站代为附加，不会暴露给调用方）。</p>
                 </div>
                 <div class="vs-form-row" id="apiListSlugRow" hidden>
                     <label class="vs-label" for="apiListFormProxySlug">接口短码 <span class="vs-req">*</span></label>
                     <input type="text" class="vs-input" id="apiListFormProxySlug" name="proxyslug" maxlength="64"
                            placeholder="例如 sjspks（3～64 位字母或数字）" pattern="[A-Za-z0-9]{3,64}" autocomplete="off">
                     <p class="vs-form-hint">公开地址形如 <?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/apis/短码</p>
+                </div>
+                <div id="apiListUpAuthBlock" hidden>
+                    <div class="vs-form-row vs-form-row--2">
+                        <div>
+                            <label class="vs-label" for="apiListFormUpAuth">上游认证方式</label>
+                            <select class="vs-input vs-select" id="apiListFormUpAuth" name="upauth" data-vs-pick>
+                                <option value="0">无需认证</option>
+                                <option value="1">API Key</option>
+                                <option value="2">Bearer Token</option>
+                            </select>
+                        </div>
+                        <div id="apiListUpKeyViaWrap" hidden>
+                            <label class="vs-label" for="apiListFormUpKeyVia">密钥传递方式</label>
+                            <select class="vs-input vs-select" id="apiListFormUpKeyVia" name="upkeyvia" data-vs-pick>
+                                <option value="0">URL 参数</option>
+                                <option value="1">请求头</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="vs-form-row vs-form-row--2" id="apiListUpKeyFields" hidden>
+                        <div id="apiListUpKeyNameWrap">
+                            <label class="vs-label" for="apiListFormUpKeyName">参数名 / 头名称</label>
+                            <input type="text" class="vs-input" id="apiListFormUpKeyName" name="upkeyname" maxlength="64"
+                                   placeholder="如 api_key 或 X-API-Key" autocomplete="off">
+                        </div>
+                        <div>
+                            <label class="vs-label" for="apiListFormUpKey">上游密钥 <span class="vs-req">*</span></label>
+                            <input type="password" class="vs-input" id="apiListFormUpKey" name="upkey" maxlength="500"
+                                   placeholder="上游平台颁发的密钥或令牌" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <p class="vs-form-hint">无需认证：直接转发。API Key：按 URL 参数或请求头附加。Bearer Token：以 Authorization 头传递。密钥仅保存在本站，调用方不可见。</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>

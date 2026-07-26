@@ -1,14 +1,13 @@
 {
-    "version": "10.12.0",
-    "title": "ApiNexus 10.12.0 控制台日聚合表 statday",
+    "version": "10.13.0",
+    "title": "ApiNexus 10.13.0 代理上游认证（API Key / Bearer）",
     "release_date": "2026-07-26",
     "db_changes": true,
     "changes": [
-        "新增 statday 按日聚合表，滚动固定 30 天",
-        "调用三写：api.calls + statday + apilog；上线回填近 30 天",
-        "控制台今日/趋势/TOP 优先读日表，减轻 apilog 全表扫描",
-        "KPI 五卡：累计调用 + 今日调用成功率；电脑一行五列；趋势轴改月日；最近调用内滚动",
-        "关于页主题变量 IDE 告警修复；规范 §2.23 / E121 / 日聚合专项"
+        "代理外链支持三种上游认证：无需认证、API Key（URL 参数/请求头）、Bearer Token",
+        "需密钥时服务端中继转发，密钥不暴露给调用方；无需认证仍 302",
+        "管理员接口列表与用户投稿表单均可配置上游认证",
+        "库表新增 upauth / upkeyvia / upkeyname / upkey；升级请执行数据库结构更新"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

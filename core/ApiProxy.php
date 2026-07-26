@@ -1,17 +1,19 @@
 <?php
 /**
  * 文件：core/ApiProxy.php
- * 作用：代理外链网关 —— 路径样式公开地址跳转上游（302）
+ * 作用：代理外链网关 —— 公开地址转发上游
  *
  * 出站（美观）：
  *   /apis/{proxyslug}?foo=1
  *
+ * 转发策略：
+ *   - 上游无需认证：302 跳转（附带客户端查询参数，剥离本站密钥）
+ *   - 上游需 API Key / Bearer：服务端中继（密钥不暴露给调用方）
+ *
  * 入站短码来源（按序）：
- *   1) $_GET['_vs_slug'] —— Nginx/Apache 伪静态内部参数（面板兼容，勿当对外契约）
+ *   1) $_GET['_vs_slug'] —— Nginx/Apache 伪静态内部参数
  *   2) PATH_INFO —— /apis.php/{短码}
  *   3) REQUEST_URI 形如 /apis/{短码} 且当前脚本为 apis.php
- *
- * 列表：/apis（无短码）
  */
 
 class ApiProxy
@@ -21,6 +23,12 @@ class ApiProxy
 
     /** 对外公开路径前缀（去 .php，美观） */
     const PUBLIC_PREFIX = '/apis';
+
+    /** 中继响应体上限（约 16MB） */
+    const RELAY_MAX_BODY = 16777216;
+
+    /** 中继超时秒数 */
+    const RELAY_TIMEOUT = 45;
 
     /**
      * 按短码查代理接口行（不过滤状态/审核，供网关返回明确错误文案）
@@ -79,9 +87,6 @@ class ApiProxy
     }
 
     /**
-     * 当前请求的 PATH_INFO（如 /sjspks）
-     * 部分环境未传 PATH_INFO 时，从 REQUEST_URI 相对 apis.php 还原
-     *
      * @return string
      */
     public static function requestPathInfo()
@@ -114,13 +119,10 @@ class ApiProxy
     }
 
     /**
-     * 解析代理短码：有合法短码才算网关，否则为空（列表页）
-     *
      * @return string
      */
     public static function resolveSlugFromRequest()
     {
-        // 1) 伪静态内部参数（rewrite → /apis.php?_vs_slug=xxx）—— 宝塔等仅匹配 *.php 结尾时必用
         if (isset($_GET[self::REWRITE_SLUG_PARAM])) {
             $slug = self::normalizeSlug((string) $_GET[self::REWRITE_SLUG_PARAM]);
             if ($slug !== '') {
@@ -128,7 +130,6 @@ class ApiProxy
             }
         }
 
-        // 2) PATH_INFO：/apis.php/短码
         $info = self::requestPathInfo();
         if ($info !== '' && $info !== '/') {
             $parts = explode('/', trim($info, '/'));
@@ -140,7 +141,6 @@ class ApiProxy
             }
         }
 
-        // 3) 当前已是 apis.php，URI 仍为美观路径 /apis/短码
         $script = isset($_SERVER['SCRIPT_NAME'])
             ? basename(str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']))
             : '';
@@ -169,7 +169,7 @@ class ApiProxy
     }
 
     /**
-     * 处理 HTTP 请求：302 至上游（查询串原样附带）
+     * 处理 HTTP 请求：无上游认证则 302；需密钥则服务端中继
      *
      * @param string|null $slug
      * @return void
@@ -219,20 +219,301 @@ class ApiProxy
 
         $params = $_GET;
         unset($params[self::REWRITE_SLUG_PARAM]);
-        // 本站密钥参数不转给上游
         unset($params['key'], $params['api_key'], $params['apikey']);
-        $url = self::mergeQuery($target, $params);
 
-        ApiStats::hitProxy($row, true, 302);
+        $upauth = ApiManager::hasUpstreamAuthColumns()
+            ? ApiManager::normalizeUpauth(isset($row['upauth']) ? $row['upauth'] : 0)
+            : ApiManager::UPAUTH_NONE;
 
+        if ($upauth === ApiManager::UPAUTH_NONE) {
+            $url = self::mergeQuery($target, $params);
+            ApiStats::hitProxy($row, true, 302);
+            header('Cache-Control: no-store');
+            header('Location: ' . $url, true, 302);
+            exit;
+        }
+
+        self::relayToUpstream($row, $target, $params);
+    }
+
+    /**
+     * 组装上游请求（URL + 额外头）
+     *
+     * @param string $targetUrl
+     * @param array  $row
+     * @param array  $clientParams
+     * @return array{url:string,headers:array}|string
+     */
+    public static function buildUpstreamRequest($targetUrl, array $row, array $clientParams)
+    {
+        $targetUrl = trim((string) $targetUrl);
+        if ($targetUrl === '' || !preg_match('#^https?://#i', $targetUrl)) {
+            return '上游地址无效';
+        }
+
+        $params = array();
+        foreach ($clientParams as $k => $v) {
+            if (is_array($v)) {
+                continue;
+            }
+            $key = (string) $k;
+            if ($key === '' || $key === 'key' || $key === 'api_key' || $key === 'apikey'
+                || $key === self::REWRITE_SLUG_PARAM) {
+                continue;
+            }
+            $params[$key] = $v;
+        }
+
+        $headers = array();
+        $upauth = ApiManager::hasUpstreamAuthColumns()
+            ? ApiManager::normalizeUpauth(isset($row['upauth']) ? $row['upauth'] : 0)
+            : ApiManager::UPAUTH_NONE;
+        $upkey = isset($row['upkey']) ? trim((string) $row['upkey']) : '';
+
+        if ($upauth === ApiManager::UPAUTH_APIKEY) {
+            if ($upkey === '') {
+                return '上游密钥未配置';
+            }
+            $via = ApiManager::normalizeUpkeyvia(isset($row['upkeyvia']) ? $row['upkeyvia'] : 0);
+            $name = ApiManager::normalizeUpkeyname(isset($row['upkeyname']) ? $row['upkeyname'] : '');
+            if ($name === '') {
+                $name = ($via === ApiManager::UPKEYVIA_HEADER) ? 'X-API-Key' : 'api_key';
+            }
+            if ($via === ApiManager::UPKEYVIA_HEADER) {
+                $headers[] = $name . ': ' . $upkey;
+            } else {
+                $params[$name] = $upkey;
+            }
+        } elseif ($upauth === ApiManager::UPAUTH_BEARER) {
+            if ($upkey === '') {
+                return '上游密钥未配置';
+            }
+            $headers[] = 'Authorization: Bearer ' . $upkey;
+        }
+
+        return array(
+            'url'     => self::mergeQuery($targetUrl, $params),
+            'headers' => $headers,
+        );
+    }
+
+    /**
+     * @param array  $row
+     * @param string $target
+     * @param array  $params
+     * @return void
+     */
+    private static function relayToUpstream(array $row, $target, array $params)
+    {
+        if (!function_exists('curl_init')) {
+            ApiStats::hitProxy($row, false, 500);
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array('code' => 0, 'msg' => '服务器未启用 curl，无法完成代理'), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $built = self::buildUpstreamRequest($target, $row, $params);
+        if (!is_array($built)) {
+            ApiStats::hitProxy($row, false, 500);
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array('code' => 0, 'msg' => (string) $built), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string) $_SERVER['REQUEST_METHOD']) : 'GET';
+        if ($method === '') {
+            $method = 'GET';
+        }
+
+        $body = '';
+        $contentType = isset($_SERVER['CONTENT_TYPE']) ? (string) $_SERVER['CONTENT_TYPE'] : '';
+        if ($method !== 'GET' && $method !== 'HEAD' && $method !== 'OPTIONS') {
+            $rawIn = file_get_contents('php://input');
+            $body = is_string($rawIn) ? $rawIn : '';
+            if ($body === '' && !empty($_POST)) {
+                $body = http_build_query($_POST);
+                if ($contentType === '') {
+                    $contentType = 'application/x-www-form-urlencoded';
+                }
+            }
+        }
+
+        $headers = array_merge(
+            array('Accept: */*', 'User-Agent: ApiNexus-Proxy/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
+            $built['headers']
+        );
+        if ($contentType !== '' && $method !== 'GET' && $method !== 'HEAD') {
+            $headers[] = 'Content-Type: ' . $contentType;
+        }
+
+        $url = $built['url'];
+        $ch = curl_init();
+        curl_setopt_array($ch, array(
+            CURLOPT_URL            => $url,
+            CURLOPT_CUSTOMREQUEST  => $method,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => self::RELAY_TIMEOUT,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_HEADER         => true,
+            CURLOPT_ENCODING       => '',
+        ));
+        if ($method === 'HEAD') {
+            curl_setopt($ch, CURLOPT_NOBODY, true);
+        } elseif ($body !== '' && $method !== 'GET' && $method !== 'OPTIONS') {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+
+        $raw = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        curl_close($ch);
+
+        if ($raw === false || $errno) {
+            ApiStats::hitProxy($row, false, 502);
+            http_response_code(502);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(array('code' => 0, 'msg' => '上游请求失败'), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $redirLeft = 5;
+        while ($redirLeft > 0 && ($http === 301 || $http === 302 || $http === 303 || $http === 307 || $http === 308)) {
+            $headerBlob = substr($raw, 0, $headerSize);
+            $loc = '';
+            if (preg_match('/^Location:\s*(.+)$/mi', $headerBlob, $lm)) {
+                $loc = trim($lm[1]);
+            }
+            if ($loc === '') {
+                break;
+            }
+            $next = self::resolveRedirectUrl($url, $loc);
+            if ($next === '' || (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($next))) {
+                ApiStats::hitProxy($row, false, 403);
+                http_response_code(403);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(array('code' => 0, 'msg' => '上游重定向目标不允许'), JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $url = $next;
+            $redirLeft--;
+            $ch = curl_init();
+            curl_setopt_array($ch, array(
+                CURLOPT_URL            => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_TIMEOUT        => self::RELAY_TIMEOUT,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                CURLOPT_HTTPHEADER     => $headers,
+                CURLOPT_HEADER         => true,
+                CURLOPT_ENCODING       => '',
+                CURLOPT_HTTPGET        => true,
+            ));
+            $raw = curl_exec($ch);
+            $errno = curl_errno($ch);
+            $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+            curl_close($ch);
+            if ($raw === false || $errno) {
+                ApiStats::hitProxy($row, false, 502);
+                http_response_code(502);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(array('code' => 0, 'msg' => '上游请求失败'), JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        $respHeaders = substr($raw, 0, $headerSize);
+        $respBody = substr($raw, $headerSize);
+        if (strlen($respBody) > self::RELAY_MAX_BODY) {
+            $respBody = substr($respBody, 0, self::RELAY_MAX_BODY);
+        }
+
+        $ok = ($http >= 200 && $http < 400);
+        ApiStats::hitProxy($row, $ok, $http > 0 ? $http : 502);
+
+        if ($http > 0) {
+            http_response_code($http);
+        }
         header('Cache-Control: no-store');
-        header('Location: ' . $url, true, 302);
+
+        $skip = array(
+            'transfer-encoding', 'connection', 'keep-alive', 'proxy-authenticate',
+            'proxy-authorization', 'te', 'trailer', 'upgrade', 'content-length',
+            'content-encoding',
+        );
+        $lines = preg_split('/\r\n|\n|\r/', (string) $respHeaders);
+        $sentCt = false;
+        if (is_array($lines)) {
+            foreach ($lines as $line) {
+                if ($line === '' || strpos($line, ':') === false) {
+                    continue;
+                }
+                if (stripos($line, 'HTTP/') === 0) {
+                    continue;
+                }
+                list($hk, $hv) = explode(':', $line, 2);
+                $hkTrim = strtolower(trim($hk));
+                if (in_array($hkTrim, $skip, true)) {
+                    continue;
+                }
+                if ($hkTrim === 'content-type') {
+                    $sentCt = true;
+                }
+                header(trim($hk) . ': ' . trim($hv), false);
+            }
+        }
+        if (!$sentCt) {
+            header('Content-Type: application/octet-stream');
+        }
+        echo $respBody;
         exit;
     }
 
     /**
-     * 公开访问路径（去 .php）
-     *
+     * @param string $base
+     * @param string $location
+     * @return string
+     */
+    private static function resolveRedirectUrl($base, $location)
+    {
+        $location = trim((string) $location);
+        if ($location === '') {
+            return '';
+        }
+        if (preg_match('#^https?://#i', $location)) {
+            return $location;
+        }
+        $parts = parse_url($base);
+        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return '';
+        }
+        $origin = $parts['scheme'] . '://' . $parts['host'];
+        if (!empty($parts['port'])) {
+            $origin .= ':' . $parts['port'];
+        }
+        if (isset($location[0]) && $location[0] === '/') {
+            return $origin . $location;
+        }
+        $path = isset($parts['path']) ? (string) $parts['path'] : '/';
+        $dir = preg_replace('#/[^/]*$#', '/', $path);
+        if ($dir === null || $dir === '') {
+            $dir = '/';
+        }
+        return $origin . $dir . $location;
+    }
+
+    /**
      * @param string $slug
      * @return string
      */
@@ -246,8 +527,6 @@ class ApiProxy
     }
 
     /**
-     * 完整公开 URL
-     *
      * @param string $slug
      * @return string
      */
@@ -333,7 +612,7 @@ class ApiProxy
      * @param array  $params
      * @return string
      */
-    private static function mergeQuery($url, array $params)
+    public static function mergeQuery($url, array $params)
     {
         if (count($params) === 0) {
             return $url;

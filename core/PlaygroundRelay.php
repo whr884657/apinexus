@@ -112,9 +112,12 @@ class PlaygroundRelay
             }
             $upstreamParams = $params;
             unset($upstreamParams['key'], $upstreamParams['api_key'], $upstreamParams['apikey']);
-            $fetchUrl = self::mergeQuery($target, $upstreamParams);
-            $result = self::httpRequest($fetchUrl, $method, $upstreamParams);
-            // 不在此 hitProxy：默认主题已改浏览器直连 /apis/{短码}，由 ApiProxy 记账
+            $built = ApiProxy::buildUpstreamRequest($target, $row, $upstreamParams);
+            if (!is_array($built)) {
+                return self::fail((string) $built, 500, $displayUrl);
+            }
+            // URL 已含客户端参数与上游 Query Key；headers 含 Bearer / Header Key
+            $result = self::httpRequest($built['url'], $method, $upstreamParams, $built['headers']);
             $result['displayUrl'] = $displayUrl;
             return $result;
         }
@@ -225,9 +228,10 @@ class PlaygroundRelay
      * @param string $url
      * @param string $method
      * @param array  $params
+     * @param array  $extraHeaders 额外请求头（如上游 Authorization）
      * @return array
      */
-    private static function httpRequest($url, $method, array $params)
+    private static function httpRequest($url, $method, array $params, array $extraHeaders = array())
     {
         $method = strtoupper($method);
         if (!function_exists('curl_init')) {
@@ -235,10 +239,20 @@ class PlaygroundRelay
         }
 
         // 一律把参数拼进 Query（含 POST），避免上游/本地脚本只读 $_GET['key'] 时报未填密钥
-        $url = self::mergeQuery($url, $params);
+        if ($params !== array()) {
+            $url = self::mergeQuery($url, $params);
+        }
 
         $ch = curl_init();
         $headers = array('Accept: */*', 'User-Agent: ApiNexus-Playground/' . VS_VERSION);
+        if (is_array($extraHeaders)) {
+            foreach ($extraHeaders as $h) {
+                $h = trim((string) $h);
+                if ($h !== '') {
+                    $headers[] = $h;
+                }
+            }
+        }
 
         if ($method === 'GET' || $method === 'HEAD' || $method === 'OPTIONS') {
             curl_setopt($ch, CURLOPT_HTTPGET, true);

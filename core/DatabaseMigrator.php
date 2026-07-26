@@ -354,6 +354,11 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 10.13.0 上游认证字段时跳过
+        if (!in_array('10.13.0', $applied, true) && self::tableColumnExists('api', 'upauth')) {
+            self::markApplied('10.13.0');
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
     }

@@ -29,6 +29,14 @@
     var endpointRow = document.getElementById('userApiEndpointRow');
     var targetRow = document.getElementById('userApiTargetRow');
     var slugRow = document.getElementById('userApiSlugRow');
+    var upAuthBlock = document.getElementById('userApiUpAuthBlock');
+    var upKeyViaWrap = document.getElementById('userApiUpKeyViaWrap');
+    var upKeyFields = document.getElementById('userApiUpKeyFields');
+    var upKeyNameWrap = document.getElementById('userApiUpKeyNameWrap');
+    var upAuthSelect = document.getElementById('userApiFormUpAuth');
+    var upKeyViaSelect = document.getElementById('userApiFormUpKeyVia');
+    var upKeyNameInput = document.getElementById('userApiFormUpKeyName');
+    var upKeyInput = document.getElementById('userApiFormUpKey');
     var typeHint = document.getElementById('userApiTypeHint');
     var endpointInput = document.getElementById('userApiFormEndpoint');
     var targetInput = document.getElementById('userApiFormTargetUrl');
@@ -69,6 +77,40 @@
         });
     }
 
+    function syncUserUpAuthUi() {
+        var isProxy = apiTypeInput && parseInt(apiTypeInput.value, 10) === 1;
+        var mode = upAuthSelect ? parseInt(upAuthSelect.value, 10) || 0 : 0;
+        if (upAuthBlock) {
+            upAuthBlock.hidden = !isProxy;
+        }
+        if (!isProxy) {
+            return;
+        }
+        var needKey = mode === 1 || mode === 2;
+        if (upKeyViaWrap) {
+            upKeyViaWrap.hidden = mode !== 1;
+        }
+        if (upKeyFields) {
+            upKeyFields.hidden = !needKey;
+        }
+        if (upKeyNameWrap) {
+            upKeyNameWrap.hidden = mode !== 1;
+        }
+        if (upKeyInput) {
+            upKeyInput.required = needKey;
+        }
+        if (mode === 1 && upKeyNameInput && !upKeyNameInput.value.trim()) {
+            var via = upKeyViaSelect ? parseInt(upKeyViaSelect.value, 10) || 0 : 0;
+            upKeyNameInput.value = via === 1 ? 'X-API-Key' : 'api_key';
+        }
+        if (window.VSPick) {
+            ['userApiFormUpAuth', 'userApiFormUpKeyVia'].forEach(function (id) {
+                var s = document.getElementById(id);
+                if (s) { window.VSPick.refresh(s); }
+            });
+        }
+    }
+
     function setApiType(type) {
         var t = canLocal ? (parseInt(type, 10) === 1 ? 1 : 0) : 1;
         if (apiTypeInput) {
@@ -99,9 +141,10 @@
         }
         if (typeHint) {
             typeHint.textContent = t === 1
-                ? '外链接口：填写对方完整地址与短码；系统生成本站 /apis/短码，访问时跳转上游并附带参数。'
+                ? '外链接口：填写对方完整地址与短码；可配置上游认证（无需 / API Key / Bearer）。'
                 : '本地接口：只填本站路径，如 /api/img/index.php';
         }
+        syncUserUpAuthUi();
     }
 
     document.querySelectorAll('.vs-user-api-type-tab').forEach(function (btn) {
@@ -109,6 +152,22 @@
             setApiType(btn.getAttribute('data-apitype') || '0');
         });
     });
+
+    if (upAuthSelect) {
+        upAuthSelect.addEventListener('change', syncUserUpAuthUi);
+    }
+    if (upKeyViaSelect) {
+        upKeyViaSelect.addEventListener('change', function () {
+            if (upAuthSelect && parseInt(upAuthSelect.value, 10) === 1 && upKeyNameInput) {
+                var via = parseInt(upKeyViaSelect.value, 10) || 0;
+                var cur = upKeyNameInput.value.trim();
+                if (!cur || cur === 'api_key' || cur === 'X-API-Key') {
+                    upKeyNameInput.value = via === 1 ? 'X-API-Key' : 'api_key';
+                }
+            }
+            syncUserUpAuthUi();
+        });
+    }
 
     function escapeHtml(text) {
         return String(text)
@@ -591,6 +650,10 @@
             userApiFormEndpoint: apiType === 0 ? (api.endpoint || '') : '',
             userApiFormTargetUrl: api.targeturl || '',
             userApiFormProxySlug: api.proxyslug || '',
+            userApiFormUpAuth: String(parseInt(api.upauth, 10) || 0),
+            userApiFormUpKeyVia: String(parseInt(api.upkeyvia, 10) === 1 ? 1 : 0),
+            userApiFormUpKeyName: api.upkeyname || '',
+            userApiFormUpKey: api.upkey || '',
             userApiFormCategory: api.category || '',
             userApiFormParams: api.params || '',
             userApiFormResponse: api.response || '',
@@ -603,6 +666,7 @@
                 el.value = map[id] != null ? map[id] : '';
             }
         });
+        syncUserUpAuthUi();
         syncUserChargeUi();
         if (window.VsParamsEditor && paramsEditor) {
             window.VsParamsEditor.setValue(paramsEditor, api.params || '');
@@ -657,6 +721,10 @@
             endpoint: endpointInput ? endpointInput.value : '',
             targeturl: targetInput ? targetInput.value : '',
             proxyslug: slugInput ? slugInput.value : '',
+            upauth: upAuthSelect ? String(parseInt(upAuthSelect.value, 10) || 0) : '0',
+            upkeyvia: upKeyViaSelect ? String(parseInt(upKeyViaSelect.value, 10) === 1 ? 1 : 0) : '0',
+            upkeyname: upKeyNameInput ? upKeyNameInput.value.trim() : '',
+            upkey: upKeyInput ? upKeyInput.value.trim() : '',
             method: getSelectedMethods().join(','),
             needkey: (document.getElementById('userApiFormNeedkey') || {}).value || '0',
             qpm: String(Math.max(0, parseInt((document.getElementById('userApiFormQpm') || {}).value, 10) || 0)),
@@ -788,6 +856,14 @@
                     window.VS.showMessage('请填写 3～64 位字母或数字短码', 'error');
                     if (slugInput) {
                         slugInput.focus();
+                    }
+                    return;
+                }
+                var upMode = parseInt(payload.upauth, 10) || 0;
+                if ((upMode === 1 || upMode === 2) && !payload.upkey) {
+                    window.VS.showMessage(upMode === 2 ? '请填写 Bearer Token' : '请填写上游 API Key', 'error');
+                    if (upKeyInput) {
+                        upKeyInput.focus();
                     }
                     return;
                 }

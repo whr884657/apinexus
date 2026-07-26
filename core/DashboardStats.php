@@ -1283,10 +1283,6 @@ class DashboardStats
     }
 
     /**
-     * @param int|null $ts
-     * @return string
-     */
-    /**
      * 趋势图横轴：月日（如 7月26日），禁止再用周一/周二
      *
      * @param int|null $ts
