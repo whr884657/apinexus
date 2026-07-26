@@ -115,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'ai_model'      => trim(isset($_POST['ai_model']) ? (string) $_POST['ai_model'] : ''),
                 'ai_timeout'    => (string) $timeout,
                 'ai_doc_maxlen' => (string) $maxLen,
+                'ai_api_mode'   => AiClient::normalizeApiMode(isset($_POST['ai_api_mode']) ? $_POST['ai_api_mode'] : 'auto'),
             ));
             AjaxResponse::success('AI 设置已保存');
         } catch (Exception $e) {
@@ -122,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if ($action === 'test_ai') {
+    if ($action === 'test_ai' || $action === 'list_ai_models') {
         $provider = strtolower(trim(isset($_POST['ai_provider']) ? (string) $_POST['ai_provider'] : 'openai'));
         $presets = AiConfig::providerPresets();
         if (!isset($presets[$provider])) {
@@ -133,22 +134,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $baseurl = $presets[$provider];
         }
         $apikey = trim(isset($_POST['ai_apikey']) ? (string) $_POST['ai_apikey'] : '');
-        // 表单未改密钥时可沿用已存密钥（避免测试时被空密码框误伤）
         if ($apikey === '') {
             $apikey = (string) Config::get('ai_apikey', '');
         }
         $model = trim(isset($_POST['ai_model']) ? (string) $_POST['ai_model'] : '');
         $timeout = isset($_POST['ai_timeout']) ? (int) $_POST['ai_timeout'] : 30;
-        $result = AiClient::testConnection(array(
-            'baseurl' => $baseurl,
-            'apikey'  => $apikey,
-            'model'   => $model,
-            'timeout' => $timeout,
-        ));
-        if (strpos($result, '错误：') === 0) {
-            AjaxResponse::error(preg_replace('/^错误：/', '', $result));
+        $apiMode = AiClient::normalizeApiMode(isset($_POST['ai_api_mode']) ? $_POST['ai_api_mode'] : 'auto');
+        $probeCfg = array(
+            'baseurl'  => $baseurl,
+            'apikey'   => $apikey,
+            'model'    => $model,
+            'timeout'  => $timeout,
+            'api_mode' => $apiMode,
+        );
+
+        if ($action === 'list_ai_models') {
+            $listed = AiClient::listModels($probeCfg);
+            if (empty($listed['ok'])) {
+                AjaxResponse::error(isset($listed['msg']) ? (string) $listed['msg'] : '拉取失败');
+            }
+            AjaxResponse::success(
+                isset($listed['msg']) ? (string) $listed['msg'] : 'ok',
+                array('models' => isset($listed['models']) ? $listed['models'] : array())
+            );
         }
-        AjaxResponse::success($result);
+
+        $result = AiClient::testConnection($probeCfg);
+        if (empty($result['ok'])) {
+            AjaxResponse::error(isset($result['msg']) ? (string) $result['msg'] : '连接失败');
+        }
+        AjaxResponse::success(
+            isset($result['msg']) ? (string) $result['msg'] : '连接成功',
+            array(
+                'via'   => isset($result['via']) ? $result['via'] : '',
+                'reply' => isset($result['reply']) ? $result['reply'] : '',
+            )
+        );
     }
 
     if ($action === 'save_register') {
@@ -868,16 +889,26 @@ $aiPresets = AiConfig::providerPresets();
                 <option value="deepseek" <?php echo $aiCfg['provider'] === 'deepseek' ? 'selected' : ''; ?>>DeepSeek</option>
                 <option value="zhipu" <?php echo $aiCfg['provider'] === 'zhipu' ? 'selected' : ''; ?>>智谱清言</option>
                 <option value="longcat" <?php echo $aiCfg['provider'] === 'longcat' ? 'selected' : ''; ?>>美团 LongCat</option>
-                <option value="custom" <?php echo $aiCfg['provider'] === 'custom' ? 'selected' : ''; ?>>自定义地址</option>
+                <option value="google" <?php echo $aiCfg['provider'] === 'google' ? 'selected' : ''; ?>>Google Gemini（OpenAI 兼容层）</option>
+                <option value="custom" <?php echo $aiCfg['provider'] === 'custom' ? 'selected' : ''; ?>>自定义（Claude / 中转 / 其它）</option>
             </select>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="aiApiMode">接口协议</label>
+            <select class="vs-input" name="ai_api_mode" id="aiApiMode">
+                <option value="auto" <?php echo $aiCfg['api_mode'] === 'auto' ? 'selected' : ''; ?>>自动（Chat Completions → Responses）</option>
+                <option value="chat" <?php echo $aiCfg['api_mode'] === 'chat' ? 'selected' : ''; ?>>仅 Chat Completions（/chat/completions）</option>
+                <option value="responses" <?php echo $aiCfg['api_mode'] === 'responses' ? 'selected' : ''; ?>>仅 Responses API（/responses）</option>
+            </select>
+            <p class="vs-form-hint">多数厂商用 Chat；新 OpenAI / 部分网关用 Responses。选「自动」会按序尝试。</p>
         </div>
         <div class="vs-form-row">
             <label class="vs-label" for="aiBaseurl">接口根地址</label>
             <input type="text" name="ai_baseurl" id="aiBaseurl" class="vs-input"
                    value="<?php echo vs_e($aiCfg['baseurl']); ?>"
-                   placeholder="例如 https://api.deepseek.com"
+                   placeholder="例如 https://api.deepseek.com/v1"
                    data-presets="<?php echo vs_e(json_encode($aiPresets, JSON_UNESCAPED_SLASHES)); ?>">
-            <p class="vs-form-hint">须指向 OpenAI 兼容的 /v1 或等价根路径（将请求 /chat/completions）。</p>
+            <p class="vs-form-hint">填到 /v1 或等价根路径即可（不要带 /chat/completions）。Claude 等请填其中转的 OpenAI 兼容根地址。</p>
         </div>
         <div class="vs-form-row">
             <label class="vs-label" for="aiApikey">API Key</label>
@@ -886,9 +917,18 @@ $aiPresets = AiConfig::providerPresets();
         </div>
         <div class="vs-form-row">
             <label class="vs-label" for="aiModel">模型名</label>
-            <input type="text" name="ai_model" id="aiModel" class="vs-input"
-                   value="<?php echo vs_e($aiCfg['model']); ?>"
-                   placeholder="例如 deepseek-chat / glm-4 / gpt-4o-mini">
+            <div class="vs-form-row--inline" style="gap:8px;align-items:stretch;">
+                <div class="vs-form-col vs-form-col--grow">
+                    <input type="text" name="ai_model" id="aiModel" class="vs-input" list="aiModelList"
+                           value="<?php echo vs_e($aiCfg['model']); ?>"
+                           placeholder="例如 deepseek-chat / glm-4 / gpt-4o-mini">
+                    <datalist id="aiModelList"></datalist>
+                </div>
+                <div class="vs-form-col vs-form-col--btn">
+                    <button type="button" class="vs-btn vs-btn--default" id="aiListModelsBtn">拉取模型</button>
+                </div>
+            </div>
+            <p class="vs-form-hint">填写根地址与密钥后，可点「拉取模型」自动识别可用模型并填入列表。</p>
         </div>
         <div class="vs-form-row vs-form-row--inline">
             <div class="vs-form-col">
@@ -906,7 +946,7 @@ $aiPresets = AiConfig::providerPresets();
             <button type="button" class="vs-btn vs-btn--default" id="aiTestBtn">测试连接</button>
             <button type="submit" class="vs-btn vs-btn--primary">保存 AI 设置</button>
         </div>
-        <p class="vs-form-hint" id="aiTestHint">填写根地址、密钥与模型后可先测试；测试不要求先点保存，也不强制勾选「启用」。</p>
+        <p class="vs-form-hint" id="aiTestHint">测试会向 AI 发一条探测消息；上游 HTTP 成功即判定连通（正文为空也算成功）。可不先保存、可不勾选启用。</p>
     </form>
 <?php vs_admin_accordion_end(); ?>
 

@@ -1,5 +1,16 @@
 {
     "versions": {
+        "10.15.1": {
+            "title": "ApiNexus 10.15.1 AI 连通测试与协议兼容",
+            "date": "2026-07-27",
+            "db_changes": false,
+            "changes": [
+                "AI 测试：上游 HTTP 成功即判定连通，不再因正文为空失败",
+                "兼容 Chat Completions 与 Responses API（auto/chat/responses）",
+                "支持拉取 /models 自动识别可用模型；新增 Gemini 预设与自定义中转",
+                "增强多厂商响应正文抽取（content parts / reasoning / output_text）"
+            ]
+        },
         "10.15.0": {
             "title": "ApiNexus 10.15.0 站点 AI 文档与 :::qs 代码示例",
             "date": "2026-07-27",

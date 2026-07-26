@@ -1,13 +1,13 @@
 {
-    "version": "10.15.0",
-    "title": "ApiNexus 10.15.0 站点 AI 文档与 :::qs 代码示例",
+    "version": "10.15.1",
+    "title": "ApiNexus 10.15.1 AI 连通测试与协议兼容",
     "release_date": "2026-07-27",
     "db_changes": false,
     "changes": [
-        "系统设置新增 AI 对接（OpenAI / DeepSeek / 智谱 / LongCat / 自定义）与测试连接",
-        "接口编辑：AI 生成详细文档与多语言代码示例；表单自动草稿（空字段回填）",
-        "快速上手仅解析 aidoc 的 :::qs lang=… 块；VsSyntax 多语言高亮",
-        "后台接口文档页对齐前端示例，并提供编辑入口"
+        "AI 测试：上游 HTTP 成功即判定连通，不再因正文为空失败",
+        "兼容 Chat Completions 与 Responses API（auto/chat/responses）",
+        "支持拉取 /models 自动识别可用模型；新增 Gemini 预设与自定义中转",
+        "增强多厂商响应正文抽取（content parts / reasoning / output_text）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

@@ -137,6 +137,11 @@
         }
     }
 
+    function collectAiFormData(form) {
+        var fd = new FormData(form);
+        return fd;
+    }
+
     function bindAiProvider() {
         var provider = document.getElementById('aiProvider');
         var baseurl = document.getElementById('aiBaseurl');
@@ -160,6 +165,57 @@
         });
     }
 
+    function fillModelDatalist(models) {
+        var list = document.getElementById('aiModelList');
+        var input = document.getElementById('aiModel');
+        if (!list) {
+            return;
+        }
+        list.innerHTML = '';
+        (models || []).forEach(function (id) {
+            var opt = document.createElement('option');
+            opt.value = id;
+            list.appendChild(opt);
+        });
+        if (input && models && models.length && !String(input.value || '').trim()) {
+            input.value = models[0];
+        }
+    }
+
+    function bindAiListModels() {
+        var btn = document.getElementById('aiListModelsBtn');
+        var form = document.getElementById('aiForm');
+        if (!btn || !form) {
+            return;
+        }
+        btn.addEventListener('click', function () {
+            var baseurl = document.getElementById('aiBaseurl');
+            if (!baseurl || !String(baseurl.value || '').trim()) {
+                showFlash('请填写接口根地址', 'error');
+                return;
+            }
+            btn.disabled = true;
+            showFlash('正在拉取模型列表…', 'info');
+            var fd = collectAiFormData(form);
+            fd.set('action', 'list_ai_models');
+            window.VS.postForm(fd, window.location.href)
+                .then(function (data) {
+                    if (data && data.code === 1) {
+                        fillModelDatalist(data.models || []);
+                        showFlash(data.msg || '已拉取模型', 'success');
+                    } else {
+                        showFlash((data && data.msg) || '拉取失败', 'error');
+                    }
+                })
+                .catch(function () {
+                    showFlash('网络异常，请稍后重试', 'error');
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                });
+        });
+    }
+
     function bindAiTest() {
         var btn = document.getElementById('aiTestBtn');
         var form = document.getElementById('aiForm');
@@ -168,22 +224,13 @@
         }
         btn.addEventListener('click', function () {
             var baseurl = document.getElementById('aiBaseurl');
-            var apikey = document.getElementById('aiApikey');
-            var model = document.getElementById('aiModel');
             if (!baseurl || !String(baseurl.value || '').trim()) {
                 showFlash('请填写接口根地址', 'error');
                 return;
             }
-            if (!model || !String(model.value || '').trim()) {
-                showFlash('请填写模型名', 'error');
-                return;
-            }
-            if (apikey && !String(apikey.value || '').trim()) {
-                // 允许空：后端可回退已存密钥；若库中也无会报错
-            }
             btn.disabled = true;
             showFlash('正在测试连接…', 'info');
-            var fd = new FormData(form);
+            var fd = collectAiFormData(form);
             fd.set('action', 'test_ai');
             window.VS.postForm(fd, window.location.href)
                 .then(function (data) {
@@ -210,6 +257,7 @@
         });
         bindApilogCron();
         bindAiProvider();
+        bindAiListModels();
         bindAiTest();
     });
 })();

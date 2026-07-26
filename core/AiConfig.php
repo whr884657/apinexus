@@ -3,8 +3,8 @@
  * 文件：core/AiConfig.php
  * 作用：站点 AI 对接配置（仅管理员后台使用）
  *
- * 配置键：ai_enabled / ai_provider / ai_baseurl / ai_apikey / ai_model / ai_timeout / ai_doc_maxlen
- * 提供商：openai / deepseek / zhipu / longcat / custom（均走 OpenAI 兼容 Chat Completions）
+ * 配置键：ai_enabled / ai_provider / ai_baseurl / ai_apikey / ai_model / ai_timeout / ai_doc_maxlen / ai_api_mode
+ * 协议：auto（先 Chat 再 Responses）/ chat / responses
  */
 
 class AiConfig
@@ -13,6 +13,7 @@ class AiConfig
     const PROVIDER_DEEPSEEK = 'deepseek';
     const PROVIDER_ZHIPU = 'zhipu';
     const PROVIDER_LONGCAT = 'longcat';
+    const PROVIDER_GOOGLE = 'google';
     const PROVIDER_CUSTOM = 'custom';
 
     /**
@@ -25,12 +26,14 @@ class AiConfig
             self::PROVIDER_DEEPSEEK => 'https://api.deepseek.com/v1',
             self::PROVIDER_ZHIPU    => 'https://open.bigmodel.cn/api/paas/v4',
             self::PROVIDER_LONGCAT  => 'https://api.longcat.chat/openai/v1',
+            // Gemini OpenAI 兼容层；Claude 等请用自定义根地址（OpenRouter / 中转等）
+            self::PROVIDER_GOOGLE   => 'https://generativelanguage.googleapis.com/v1beta/openai',
             self::PROVIDER_CUSTOM   => '',
         );
     }
 
     /**
-     * @return array{enabled:bool,provider:string,baseurl:string,apikey:string,model:string,timeout:int,doc_maxlen:int}
+     * @return array{enabled:bool,provider:string,baseurl:string,apikey:string,model:string,timeout:int,doc_maxlen:int,api_mode:string}
      */
     public static function get()
     {
@@ -65,7 +68,23 @@ class AiConfig
             'model'      => trim((string) Config::get('ai_model', '')),
             'timeout'    => $timeout,
             'doc_maxlen' => $maxLen,
+            'api_mode'   => self::apiMode(),
         );
+    }
+
+    /**
+     * @return string auto|chat|responses
+     */
+    public static function apiMode()
+    {
+        $mode = strtolower(trim((string) Config::get('ai_api_mode', 'auto')));
+        if ($mode === 'chat' || $mode === 'completions') {
+            return 'chat';
+        }
+        if ($mode === 'responses' || $mode === 'response') {
+            return 'responses';
+        }
+        return 'auto';
     }
 
     /**
@@ -78,8 +97,6 @@ class AiConfig
     }
 
     /**
-     * 编辑回填用（密钥脱敏可选）
-     *
      * @param bool $maskKey
      * @return array
      */
