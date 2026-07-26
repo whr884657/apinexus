@@ -14,12 +14,16 @@
     var pollTimer = null;
     var softTimer = null;
     var loading = false;
+    var pendingForceRefresh = false;
+    var ready = false; // 首屏 snapshot 成功后再开 live，避免半截 KPI
+    var initialPending = false;
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
     } catch (e) {
         boot = {};
     }
+    initialPending = !!boot.boot_light;
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -336,32 +340,45 @@
     }
 
     function fetchSnapshot(forceRefresh) {
-        if (loading) return;
+        // 加载中再点「刷新」：排队强制刷新，避免按钮永久 disabled / 请求被吞
+        if (loading) {
+            if (forceRefresh) {
+                pendingForceRefresh = true;
+            }
+            return;
+        }
         loading = true;
         var action = forceRefresh ? 'refresh' : 'snapshot';
         post(action).then(function (res) {
             if (!res || res.code !== 1 || !res.snapshot) {
-                if (forceRefresh) {
-                    window.VS.showMessage((res && res.msg) || '刷新失败', 'error');
+                if (forceRefresh || initialPending) {
+                    window.VS.showMessage((res && res.msg) || '统计加载失败', 'error');
                 }
                 return;
             }
+            initialPending = false;
+            ready = true;
             renderAll(res.snapshot);
             if (forceRefresh) {
                 window.VS.showMessage('已刷新', 'success');
             }
         }).catch(function () {
-            if (forceRefresh) {
+            if (forceRefresh || initialPending) {
                 window.VS.showMessage('网络异常', 'error');
             }
         }).then(function () {
             loading = false;
-            var refreshBtn = document.getElementById('dashRefreshBtn');
-            if (refreshBtn) refreshBtn.disabled = false;
+            var btn = document.getElementById('dashRefreshBtn');
+            if (btn) btn.disabled = false;
+            if (pendingForceRefresh) {
+                pendingForceRefresh = false;
+                fetchSnapshot(true);
+            }
         });
     }
 
     function pollLive() {
+        if (!ready || loading) return;
         post('live').then(function (res) {
             if (!res || res.code !== 1 || !res.live) return;
             mergeLive(res.live);
@@ -389,15 +406,17 @@
         });
     }
 
-    // 首屏壳 → 立即拉全量；live 5s；软刷新 45s（趋势/TOP）
+    // 首屏壳 → 立即拉全量；live 5s（需 ready）；软刷新 45s（趋势/TOP）
     if (boot.boot_light) {
         showKpiLoading();
         updateClock(boot);
         fetchSnapshot(false);
     } else {
+        ready = true;
         renderAll(boot);
     }
     pollTimer = setInterval(pollLive, 5000);
+    // 软刷不依赖 ready：首屏失败时仍可自动重试
     softTimer = setInterval(function () { fetchSnapshot(false); }, 45000);
 
     window.addEventListener('beforeunload', function () {
