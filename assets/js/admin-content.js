@@ -36,6 +36,8 @@
         var addBtn = document.getElementById('contentAddBtn');
         var saveBtn = document.getElementById('contentSaveBtn');
         var formTitle = document.getElementById('contentFormTitle');
+        var bindWrap = document.getElementById('contentBindPageWrap');
+        var bindSelect = document.getElementById('contentBindPage');
         var mode = page.getAttribute('data-mode') || 'article';
         var isAnnouncement = mode === 'announcement';
         var currentPage = 1;
@@ -57,6 +59,46 @@
 
         function msg(res, fallback) {
             return (res && res.msg) ? String(res.msg) : fallback;
+        }
+
+        function aboutBound() {
+            return page.getAttribute('data-about-bound') === '1';
+        }
+
+        function setAboutBound(flag) {
+            page.setAttribute('data-about-bound', flag ? '1' : '0');
+        }
+
+        function syncAboutBoundFromRes(res) {
+            if (res && res.about_bound != null) {
+                setAboutBound(Number(res.about_bound) === 1);
+            }
+        }
+
+        function statusBadgeClass(status) {
+            var n = Number(status);
+            if (n === 1) {
+                return 'vs-badge--success';
+            }
+            if (n === 2) {
+                return 'vs-badge--error';
+            }
+            return 'vs-badge--default';
+        }
+
+        function syncBindWrap(row) {
+            if (!bindWrap || isAnnouncement) {
+                return;
+            }
+            var boundSelf = row && Number(row.bindpage) === 1;
+            var show = boundSelf || !aboutBound();
+            bindWrap.hidden = !show;
+            if (bindSelect) {
+                bindSelect.value = boundSelf ? '1' : '0';
+                if (window.VSPick && VSPick.refresh) {
+                    VSPick.refresh(bindSelect);
+                }
+            }
         }
 
         function defaultPageSize() {
@@ -251,6 +293,7 @@
                     ? (isAnnouncement ? '编辑公告' : '编辑文章')
                     : (isAnnouncement ? '发布公告' : '发布文章');
             }
+            syncBindWrap(row);
             if (form.body && form.body.dispatchEvent) {
                 form.body.dispatchEvent(new Event('input', { bubbles: true }));
             }
@@ -266,6 +309,7 @@
                 coverlayout: parseInt(el.getAttribute('data-coverlayout'), 10) || 0,
                 status: parseInt(el.getAttribute('data-status'), 10) || 0,
                 status_label: el.getAttribute('data-status-label') || '已发布',
+                bindpage: parseInt(el.getAttribute('data-bindpage'), 10) || 0,
                 ispinned: parseInt(el.getAttribute('data-ispinned'), 10) || 0,
                 ispopup: parseInt(el.getAttribute('data-ispopup'), 10) || 0,
                 views: parseInt(el.getAttribute('data-views'), 10) || 0,
@@ -287,6 +331,7 @@
                 + ' data-coverlayout="' + (item.coverlayout != null ? item.coverlayout : 0) + '"'
                 + ' data-status="' + (item.status != null ? item.status : 1) + '"'
                 + ' data-status-label="' + esc(item.status_label || '已发布') + '"'
+                + ' data-bindpage="' + (item.bindpage != null ? item.bindpage : 0) + '"'
                 + ' data-ispinned="' + (item.ispinned || 0) + '"'
                 + ' data-ispopup="' + (item.ispopup || 0) + '"'
                 + ' data-views="' + (item.views || 0) + '"'
@@ -299,12 +344,25 @@
             var html = '<div class="action-btns">';
             html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-content-act" data-act="edit">编辑</button>';
             if (isAnnouncement) {
-                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-content-act" data-act="pin">'
+                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning vs-content-act" data-act="pin">'
                     + (Number(item.ispinned) === 1 ? '取消置顶' : '置顶') + '</button>';
                 html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-content-act" data-act="popup">'
                     + (Number(item.ispopup) === 1 ? '取消弹窗' : '设为弹窗') + '</button>';
+            } else if (Number(item.status) === 1) {
+                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-content-act" data-act="hide">隐藏</button>';
+            } else {
+                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success vs-content-act" data-act="show">显示</button>';
             }
             html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger vs-content-act" data-act="delete">删除</button>';
+            html += '</div>';
+            return html;
+        }
+
+        function titleHtml(item) {
+            var html = '<div class="content-title-cell" data-field="title">' + esc(item.title);
+            if (!isAnnouncement && Number(item.bindpage) === 1) {
+                html += ' <span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
+            }
             html += '</div>';
             return html;
         }
@@ -312,7 +370,7 @@
         function desktopHtml(item) {
             var time = item.createtime || '—';
             var html = '<tr' + dataAttrs(item) + '>';
-            html += '<td><div class="content-title-cell" data-field="title">' + esc(item.title) + '</div></td>';
+            html += '<td>' + titleHtml(item) + '</td>';
             if (isAnnouncement) {
                 html += '<td><span class="content-time-cell" data-field="createtime">' + esc(time) + '</span></td>';
                 html += '<td><span class="vs-badge ' + (Number(item.ispinned) === 1 ? 'vs-badge--warning' : 'vs-badge--default')
@@ -331,7 +389,7 @@
                 }
                 html += '<span class="content-author-cell__name" data-field="username">' + esc(uname) + '</span></div></td>';
                 html += '<td><span class="content-time-cell" data-field="createtime">' + esc(time) + '</span></td>';
-                html += '<td><span class="vs-badge ' + (Number(item.status) === 1 ? 'vs-badge--success' : 'vs-badge--default')
+                html += '<td><span class="vs-badge ' + statusBadgeClass(item.status)
                     + '" data-field="status_label">' + esc(item.status_label || '已发布') + '</span></td>';
             }
             html += '<td class="vs-content-actions-cell" data-field="actions">' + actionsHtml(item) + '</td></tr>';
@@ -343,7 +401,11 @@
             var time = item.createtime || '—';
             var html = '<div class="' + cls + '"' + dataAttrs(item) + '>';
             html += '<div class="' + cls + '__header">';
-            html += '<span class="' + cls + '__title" data-field="title">' + esc(item.title) + '</span>';
+            html += '<span class="' + cls + '__title" data-field="title">' + esc(item.title);
+            if (!isAnnouncement && Number(item.bindpage) === 1) {
+                html += ' <span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
+            }
+            html += '</span>';
             html += '<div class="' + cls + '__tags">';
             if (isAnnouncement) {
                 if (Number(item.ispinned) === 1) {
@@ -353,7 +415,7 @@
                     html += '<span class="vs-badge vs-badge--info" data-field="popup_label">弹窗</span>';
                 }
             } else {
-                html += '<span class="vs-badge ' + (Number(item.status) === 1 ? 'vs-badge--success' : 'vs-badge--default')
+                html += '<span class="vs-badge ' + statusBadgeClass(item.status)
                     + '" data-field="status_label">' + esc(item.status_label || '已发布') + '</span>';
             }
             html += '</div></div>';
@@ -436,6 +498,11 @@
                 var id = parseInt(form.content_id.value, 10) || 0;
                 var fd = new FormData(form);
                 fd.append('action', id > 0 ? 'update' : 'create');
+                if (!isAnnouncement && bindSelect && !bindWrap.hidden) {
+                    fd.set('bindpage', String(bindSelect.value || '0'));
+                } else if (!isAnnouncement) {
+                    fd.set('bindpage', '0');
+                }
                 saveBtn.disabled = true;
                 post(fd).then(function (res) {
                     if (!ok(res)) {
@@ -443,6 +510,7 @@
                     }
                     window.VS.showMessage(msg(res, '已保存'), 'success');
                     closeOverlay();
+                    syncAboutBoundFromRes(res);
                     if (res.item) {
                         upsertRow(res.item);
                     }
@@ -471,6 +539,30 @@
                 returnFocusEl = btn;
                 fillForm(data);
                 openOverlay();
+                return;
+            }
+
+            if (act === 'hide' || act === 'show') {
+                var nextStatus = act === 'hide' ? 2 : 1;
+                var fdStatus = new FormData();
+                fdStatus.append('action', 'set_status');
+                fdStatus.append('content_id', String(id));
+                fdStatus.append('status', String(nextStatus));
+                post(fdStatus).then(function (res) {
+                    if (!ok(res)) {
+                        throw new Error(msg(res, '操作失败'));
+                    }
+                    if (res.item) {
+                        upsertRow(res.item);
+                    } else {
+                        data.status = nextStatus;
+                        data.status_label = nextStatus === 1 ? '已发布' : '已隐藏';
+                        upsertRow(data);
+                    }
+                    window.VS.showMessage(msg(res, '已更新'), 'success');
+                }).catch(function (err) {
+                    window.VS.showMessage((err && err.message) ? err.message : '操作失败', 'error');
+                });
                 return;
             }
 
@@ -528,6 +620,7 @@
                             throw new Error(msg(res, '删除失败'));
                         }
                         removePair(id);
+                        syncAboutBoundFromRes(res);
                         window.VS.showMessage(msg(res, '已删除'), 'success');
                     }).catch(function (err) {
                         window.VS.showMessage((err && err.message) ? err.message : '删除失败', 'error');

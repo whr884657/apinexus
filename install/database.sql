@@ -314,7 +314,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}content` (
   `coverlayout` tinyint(1) NOT NULL DEFAULT 0 COMMENT '封面布局：0左侧 1右侧 2背景（仅文章）',
   `ispinned` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否置顶：0否 1是',
   `ispopup` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否弹窗：0否 1是（公告）',
-  `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态：0草稿 1已发布 2下架',
+  `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态：0草稿 1已发布 2隐藏',
+  `bindpage` tinyint(1) NOT NULL DEFAULT 0 COMMENT '绑定页面：0无 1关于页（仅文章；绑定后不进文章列表）',
   `userid` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '发布者用户ID',
   `views` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '阅读量',
   `sort` int(11) NOT NULL DEFAULT 0 COMMENT '排序权重（越小越前）',
@@ -323,7 +324,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}content` (
   PRIMARY KEY (`id`),
   KEY `idx_kind_status_id` (`kind`, `status`, `id`),
   KEY `idx_kind_pin_id` (`kind`, `ispinned`, `id`),
-  KEY `idx_kind_popup` (`kind`, `ispopup`, `status`)
+  KEY `idx_kind_popup` (`kind`, `ispopup`, `status`),
+  KEY `idx_kind_bindpage` (`kind`, `bindpage`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告与文章共用内容表';
 
 -- 文章评论

@@ -1,14 +1,15 @@
 {
-    "version": "10.10.1",
-    "title": "ApiNexus 10.10.1 控制台缓存可见、折线悬停与状态码列",
+    "version": "10.11.0",
+    "title": "ApiNexus 10.11.0 关于页文章绑定、内容运营与友链审核分栏",
     "release_date": "2026-07-26",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "控制台整页快照 console_full 缓存；今日调用复用 cache:apilog:today_count（Redis 监控可见）",
-        "Redis 监控登记 cache:dashboard: 前缀；分层 TTL 加大（约 8～300 秒）",
-                "折线平滑控制点钳制，禁止穿出 X 轴下方；悬停显示当日数值",
-                "最近调用增加 HTTP 状态码列；刷新图标按钮再缩小；软刷不覆盖 live 最近列表",
-                "规范 §2.23 / E119 同步"
+        "文章可绑定关于页：绑定后内容展示在关于页且不进文章列表；未绑定时才可选",
+        "前台关于页改由 FrontendAbout 驱动，修复主题页未定义变量 IDE 告警",
+        "文章管理：隐藏/显示、状态色标、按钮间距与语义色；公告标签/按钮配色与间距",
+        "友情链接：待审核/已通过/已禁用分栏；通过后不可再拒绝，仅禁用或删除",
+        "控制台刷新钮改为 26×26 正方形",
+        "迁移 content.bindpage；规范与 CORE 说明同步"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

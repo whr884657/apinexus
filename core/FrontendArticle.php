@@ -32,7 +32,12 @@ class FrontendArticle
 
         $kind = ContentManager::normalizeKind(isset($row['kind']) ? $row['kind'] : ContentManager::KIND_ARTICLE);
         $status = ContentManager::normalizeStatus(isset($row['status']) ? $row['status'] : ContentManager::STATUS_DRAFT);
+        $bindpage = ContentManager::normalizeBindPage(isset($row['bindpage']) ? $row['bindpage'] : ContentManager::BIND_NONE);
         if ($kind !== ContentManager::KIND_ARTICLE || $status !== ContentManager::STATUS_PUBLISHED) {
+            return null;
+        }
+        // 绑定关于页的文章不进文章列表/详情
+        if ($bindpage !== ContentManager::BIND_NONE) {
             return null;
         }
 
@@ -82,13 +87,14 @@ class FrontendArticle
         try {
             $pdo = Database::connect();
             $sql = 'SELECT * FROM `' . ContentManager::table() . '`
-                WHERE `kind` = ? AND `status` = ?
+                WHERE `kind` = ? AND `status` = ? AND `bindpage` = ?
                 ORDER BY `sort` ASC, `id` DESC
                 LIMIT ' . (int) $limit;
             $stmt = $pdo->prepare($sql);
             $stmt->execute(array(
                 ContentManager::KIND_ARTICLE,
                 ContentManager::STATUS_PUBLISHED,
+                ContentManager::BIND_NONE,
             ));
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $out = array();
@@ -121,11 +127,12 @@ class FrontendArticle
     {
         $pageSize = max(1, min(50, (int) $pageSize));
         $data = ContentManager::listPaged(array(
-            'kind'       => ContentManager::KIND_ARTICLE,
-            'status'     => ContentManager::STATUS_PUBLISHED,
-            'page'       => max(1, (int) $page),
-            'pagesize'   => $pageSize,
-            'before_id'  => (int) $beforeId,
+            'kind'          => ContentManager::KIND_ARTICLE,
+            'status'        => ContentManager::STATUS_PUBLISHED,
+            'exclude_bound' => true,
+            'page'          => max(1, (int) $page),
+            'pagesize'      => $pageSize,
+            'before_id'     => (int) $beforeId,
         ));
 
         $list = array();

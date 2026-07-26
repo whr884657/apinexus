@@ -70,6 +70,7 @@ require_once VS_ROOT . '/core/CheckinManager.php';
 require_once VS_ROOT . '/core/markdown/Markdown.php';
 require_once VS_ROOT . '/core/FrontendAnnouncement.php';
 require_once VS_ROOT . '/core/FrontendArticle.php';
+require_once VS_ROOT . '/core/FrontendAbout.php';
 require_once VS_ROOT . '/core/PlaygroundRelay.php';
 require_once VS_ROOT . '/core/ThemeManager.php';
 require_once VS_ROOT . '/core/oauth/HttpClient.php';

@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/content/links.php
- * 作用：友情链接管理（审核 / 启禁 / 增删改）
+ * 作用：友情链接管理（审核 / 启禁 / 增删改；Tab：待审核 / 已通过 / 已禁用）
  */
 
 require_once dirname(__DIR__) . '/init.php';
@@ -129,6 +129,41 @@ $tableReady = LinkManager::tableReady();
 $links = $tableReady ? LinkManager::listAll(null, LinkManager::KIND_FRIEND) : array();
 
 /**
+ * pending | approved | disabled
+ *
+ * @param int $status
+ * @param int $enabled
+ * @return string
+ */
+function vs_link_tab_key($status, $enabled)
+{
+    $status = (int) $status;
+    $enabled = (int) $enabled;
+    if ($status === LinkManager::STATUS_PENDING) {
+        return 'pending';
+    }
+    if ($status === LinkManager::STATUS_APPROVED && $enabled === LinkManager::ENABLED_ON) {
+        return 'approved';
+    }
+    return 'disabled';
+}
+
+$counts = array(
+    'pending'  => 0,
+    'approved' => 0,
+    'disabled' => 0,
+);
+foreach ($links as $countRow) {
+    $tab = vs_link_tab_key(
+        isset($countRow['status']) ? $countRow['status'] : 0,
+        isset($countRow['enabled']) ? $countRow['enabled'] : 1
+    );
+    if (isset($counts[$tab])) {
+        $counts[$tab] += 1;
+    }
+}
+
+/**
  * @param array $row
  * @return void
  */
@@ -137,6 +172,7 @@ function vs_render_link_item(array $row)
     $id = (int) $row['id'];
     $status = (int) $row['status'];
     $enabled = (int) $row['enabled'];
+    $tab = vs_link_tab_key($status, $enabled);
     $icon = !empty($row['icon_url']) ? (string) $row['icon_url'] : '';
     $name = (string) $row['name'];
     $siteurl = (string) $row['siteurl'];
@@ -155,6 +191,7 @@ function vs_render_link_item(array $row)
     ?>
     <div class="vs-link-row"
          data-link-row="<?php echo $id; ?>"
+         data-link-tab="<?php echo vs_e($tab); ?>"
          data-link-status="<?php echo $status; ?>"
          data-link-enabled="<?php echo $enabled; ?>"
          data-name="<?php echo vs_e($name); ?>"
@@ -183,18 +220,15 @@ function vs_render_link_item(array $row)
         </div>
         <div class="vs-link-row__actions">
             <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="edit" data-link-id="<?php echo $id; ?>">编辑</button>
-            <?php if ($status !== LinkManager::STATUS_APPROVED): ?>
+            <?php if ($status === LinkManager::STATUS_PENDING): ?>
                 <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="approve" data-link-id="<?php echo $id; ?>">通过</button>
-            <?php endif; ?>
-            <?php if ($status !== LinkManager::STATUS_REJECTED): ?>
                 <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="reject" data-link-id="<?php echo $id; ?>">拒绝</button>
-            <?php endif; ?>
-            <?php if ($status === LinkManager::STATUS_APPROVED): ?>
-                <?php if ($enabled === LinkManager::ENABLED_ON): ?>
-                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="disable" data-link-id="<?php echo $id; ?>">禁用</button>
-                <?php else: ?>
-                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="enable" data-link-id="<?php echo $id; ?>">启用</button>
-                <?php endif; ?>
+            <?php elseif ($status === LinkManager::STATUS_APPROVED && $enabled === LinkManager::ENABLED_ON): ?>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="disable" data-link-id="<?php echo $id; ?>">禁用</button>
+            <?php elseif ($status === LinkManager::STATUS_APPROVED && $enabled === LinkManager::ENABLED_OFF): ?>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="enable" data-link-id="<?php echo $id; ?>">启用</button>
+            <?php else: ?>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="approve" data-link-id="<?php echo $id; ?>">通过</button>
             <?php endif; ?>
             <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger" data-link-action="delete" data-link-id="<?php echo $id; ?>">删除</button>
         </div>
@@ -214,12 +248,24 @@ if ($tableReady) {
 vs_admin_layout_start('友情链接', 'links', $headerActions);
 ?>
 
-<div class="vs-panel vs-link-panel" id="adminLinksPage">
+<div class="vs-panel vs-link-panel" id="adminLinksPage" data-active-tab="pending">
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '友情链接功能尚未就绪，请前往「系统管理 → 系统升级」完成数据库结构更新。', array('compact' => true)); ?>
     <?php else: ?>
-        <div class="vs-link-empty" id="linkEmpty"<?php echo count($links) > 0 ? ' hidden' : ''; ?>>
-            <?php vs_render_notice('info', '', '暂无友链。可手动添加，或等待访客在前台「申请友链」提交。禁用后前台不再展示，可随时重新启用。', array('compact' => true)); ?>
+        <div class="vs-tabs vs-api-review-tabs" id="linkFilters" role="tablist" aria-label="友链筛选">
+            <button type="button" class="vs-tabs__btn vs-link-filter is-active" data-filter="pending" role="tab" aria-selected="true">
+                待审核<span class="vs-badge vs-badge--warning vs-api-review-tabs__badge" data-count="pending"><?php echo (int) $counts['pending']; ?></span>
+            </button>
+            <button type="button" class="vs-tabs__btn vs-link-filter" data-filter="approved" role="tab" aria-selected="false">
+                已通过<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="approved"><?php echo (int) $counts['approved']; ?></span>
+            </button>
+            <button type="button" class="vs-tabs__btn vs-link-filter" data-filter="disabled" role="tab" aria-selected="false">
+                已禁用<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="disabled"><?php echo (int) $counts['disabled']; ?></span>
+            </button>
+        </div>
+
+        <div class="vs-link-empty" id="linkEmpty"<?php echo $counts['pending'] > 0 ? ' hidden' : ''; ?>>
+            <?php vs_render_notice('info', '', '当前 Tab 暂无友链。可手动添加，或等待访客在前台「申请友链」提交。', array('compact' => true)); ?>
         </div>
         <div class="vs-link-list" id="linkList"<?php echo count($links) === 0 ? ' hidden' : ''; ?>>
             <?php foreach ($links as $row): ?>

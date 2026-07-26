@@ -13,6 +13,10 @@ class ContentManager
     const STATUS_PUBLISHED = 1;
     const STATUS_OFF = 2;
 
+    /** 绑定前台页面：0 无；1 关于页（独占，且不进文章列表） */
+    const BIND_NONE = 0;
+    const BIND_ABOUT = 1;
+
     const COVER_LEFT = 0;
     const COVER_RIGHT = 1;
     const COVER_BG = 2;
@@ -34,8 +38,20 @@ class ContentManager
             if (!DatabaseMigrator::tableExists('content')) {
                 return false;
             }
-            // 7.1.0+ 需要 coverlayout
-            return DatabaseMigrator::tableColumnExists('content', 'coverlayout');
+            // 10.11.0+ 需要 bindpage
+            return DatabaseMigrator::tableColumnExists('content', 'bindpage');
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * @return bool
+     */
+    public static function hasBindPageColumn()
+    {
+        try {
+            return DatabaseMigrator::tableColumnExists('content', 'bindpage');
         } catch (Exception $e) {
             return false;
         }
@@ -96,9 +112,34 @@ class ContentManager
             return '已发布';
         }
         if ($n === self::STATUS_OFF) {
-            return '已下架';
+            return '已隐藏';
         }
         return '草稿';
+    }
+
+    /**
+     * @param mixed $bind
+     * @return int
+     */
+    public static function normalizeBindPage($bind)
+    {
+        $n = (int) $bind;
+        if ($n === self::BIND_ABOUT) {
+            return self::BIND_ABOUT;
+        }
+        return self::BIND_NONE;
+    }
+
+    /**
+     * @param mixed $bind
+     * @return string
+     */
+    public static function bindPageLabel($bind)
+    {
+        if (self::normalizeBindPage($bind) === self::BIND_ABOUT) {
+            return '关于页';
+        }
+        return '无';
     }
 
     /**
@@ -197,6 +238,8 @@ class ContentManager
             'ispopup'       => self::normalizeFlag(isset($row['ispopup']) ? $row['ispopup'] : 0),
             'status'        => $status,
             'status_label'  => self::statusLabel($status),
+            'bindpage'      => self::normalizeBindPage(isset($row['bindpage']) ? $row['bindpage'] : self::BIND_NONE),
+            'bindpage_label'=> self::bindPageLabel(isset($row['bindpage']) ? $row['bindpage'] : self::BIND_NONE),
             'userid'        => $userid,
             'username'      => $username,
             'author_avatar' => $authorAvatar,
@@ -317,6 +360,10 @@ class ContentManager
                 $where[] = '`status` = ?';
                 $bind[] = self::normalizeStatus($opts['status']);
             }
+            if (!empty($opts['exclude_bound'])) {
+                $where[] = '`bindpage` = ?';
+                $bind[] = self::BIND_NONE;
+            }
             if ($beforeId > 0) {
                 $where[] = '`id` < ?';
                 $bind[] = $beforeId;
@@ -382,22 +429,32 @@ class ContentManager
         $status = self::normalizeStatus(isset($data['status']) ? $data['status'] : self::STATUS_DRAFT);
         $userid = isset($data['userid']) ? (int) $data['userid'] : 0;
         $sort = isset($data['sort']) ? (int) $data['sort'] : 0;
+        $bindpage = self::normalizeBindPage(isset($data['bindpage']) ? $data['bindpage'] : self::BIND_NONE);
+        if ($kind !== self::KIND_ARTICLE) {
+            $bindpage = self::BIND_NONE;
+        }
 
         $err = self::validateFields($title, $summary, $body, $cover);
         if ($err !== true) {
             return $err;
+        }
+        if ($bindpage === self::BIND_ABOUT) {
+            $occupied = self::findBoundAboutId();
+            if ($occupied > 0) {
+                return '关于页已被其他文章绑定';
+            }
         }
 
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
                 'INSERT INTO `' . self::table() . '`
-                (`kind`, `title`, `summary`, `body`, `cover`, `coverlayout`, `ispinned`, `ispopup`, `status`, `userid`, `sort`, `createtime`)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+                (`kind`, `title`, `summary`, `body`, `cover`, `coverlayout`, `ispinned`, `ispopup`, `status`, `bindpage`, `userid`, `sort`, `createtime`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())'
             );
             $stmt->execute(array(
                 $kind, $title, $summary, $body, $cover, $coverlayout,
-                $ispinned, $ispopup, $status, $userid, $sort,
+                $ispinned, $ispopup, $status, $bindpage, $userid, $sort,
             ));
             $id = (int) $pdo->lastInsertId();
             $row = self::findById($id);
@@ -451,10 +508,22 @@ class ContentManager
         $sort = isset($data['sort'])
             ? (int) $data['sort']
             : (int) (isset($existing['sort']) ? $existing['sort'] : 0);
+        $bindpage = array_key_exists('bindpage', $data)
+            ? self::normalizeBindPage($data['bindpage'])
+            : self::normalizeBindPage(isset($existing['bindpage']) ? $existing['bindpage'] : self::BIND_NONE);
+        if ($kind !== self::KIND_ARTICLE) {
+            $bindpage = self::BIND_NONE;
+        }
 
         $err = self::validateFields($title, $summary, $body, $cover);
         if ($err !== true) {
             return $err;
+        }
+        if ($bindpage === self::BIND_ABOUT) {
+            $occupied = self::findBoundAboutId();
+            if ($occupied > 0 && $occupied !== $id) {
+                return '关于页已被其他文章绑定';
+            }
         }
 
         try {
@@ -462,13 +531,13 @@ class ContentManager
             $stmt = $pdo->prepare(
                 'UPDATE `' . self::table() . '` SET
                 `kind` = ?, `title` = ?, `summary` = ?, `body` = ?, `cover` = ?, `coverlayout` = ?,
-                `ispinned` = ?, `ispopup` = ?, `status` = ?, `userid` = ?, `sort` = ?,
+                `ispinned` = ?, `ispopup` = ?, `status` = ?, `bindpage` = ?, `userid` = ?, `sort` = ?,
                 `updatetime` = NOW()
                 WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array(
                 $kind, $title, $summary, $body, $cover, $coverlayout,
-                $ispinned, $ispopup, $status, $userid, $sort, $id,
+                $ispinned, $ispopup, $status, $bindpage, $userid, $sort, $id,
             ));
             return true;
         } catch (Exception $e) {
@@ -494,6 +563,69 @@ class ContentManager
         } catch (Exception $e) {
             return '删除失败';
         }
+    }
+
+    /**
+     * 当前绑定关于页的文章 ID（0=未绑定）
+     *
+     * @param bool $publishedOnly 前台取内容时仅已发布；占用检测含隐藏稿
+     * @return int
+     */
+    public static function findBoundAboutId($publishedOnly = false)
+    {
+        if (!self::tableReady()) {
+            return 0;
+        }
+        try {
+            $pdo = Database::connect();
+            $sql = 'SELECT `id` FROM `' . self::table() . '`
+                 WHERE `kind` = ? AND `bindpage` = ?';
+            $params = array(self::KIND_ARTICLE, self::BIND_ABOUT);
+            if ($publishedOnly) {
+                $sql .= ' AND `status` = ?';
+                $params[] = self::STATUS_PUBLISHED;
+            }
+            $sql .= ' ORDER BY `id` DESC LIMIT 1';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $id = (int) $stmt->fetchColumn();
+            return $id > 0 ? $id : 0;
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 关于页是否已被占用（可排除当前编辑文章）
+     *
+     * @param int $exceptId
+     * @return bool
+     */
+    public static function isAboutBound($exceptId = 0)
+    {
+        $id = self::findBoundAboutId(false);
+        if ($id <= 0) {
+            return false;
+        }
+        $exceptId = (int) $exceptId;
+        if ($exceptId > 0 && $id === $exceptId) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 绑定关于页的已发布文章行（前台）
+     *
+     * @return array|null
+     */
+    public static function findBoundAboutRow()
+    {
+        $id = self::findBoundAboutId(true);
+        if ($id <= 0) {
+            return null;
+        }
+        return self::findById($id);
     }
 
     /**

@@ -20,12 +20,18 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* 控制台刷新：紧凑图标按钮 */
+/* 控制台刷新：正方形 26×26，禁止被拉伸成竖长方形 */
 .vs-content__actions #dashRefreshBtn.vs-btn--icon {
-    width: 28px;
-    min-width: 28px;
-    height: 28px;
+    width: 26px;
+    min-width: 26px;
+    max-width: 26px;
+    height: 26px;
+    min-height: 26px;
+    max-height: 26px;
+    aspect-ratio: 1;
     padding: 0;
+    flex: 0 0 26px;
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;

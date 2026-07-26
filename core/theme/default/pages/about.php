@@ -1,24 +1,17 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
+<?php
+$siteName = isset($siteName) ? $siteName : (class_exists('SiteContext') ? SiteContext::siteName() : '本站');
+$themeId = isset($themeId) ? $themeId : '';
+$aboutArticle = isset($aboutArticle) && is_array($aboutArticle) ? $aboutArticle : null;
+?>
 <main class="content-wrapper" style="padding-top:88px;">
-    <h1 class="page-title">关于我们</h1>
+    <h1 class="page-title"><?php echo vs_e($aboutArticle ? $aboutArticle['title'] : '关于我们'); ?></h1>
     <div class="page-content markdown-body" id="page-content" data-type="html">
-        <h2>关于 <?php echo vs_e($siteName); ?></h2>
-        <p><strong><?php echo vs_e($siteName); ?></strong> 是基于 ApiNexus 构建的 API 接口展示与管理平台。</p>
-        <h3>我们的使命</h3>
-        <ul>
-            <li>提供免费、稳定、易用的 API 接口展示能力</li>
-            <li>降低开发者接入与站点部署成本</li>
-            <li>构建开放的开发者社区</li>
-        </ul>
-        <h3>系统信息</h3>
-        <ul>
-            <li>系统版本：v<?php echo vs_e(VS_VERSION); ?></li>
-            <li>当前主题：<?php echo vs_e($themeId); ?></li>
-            <li>开源仓库：
-                <a href="https://gitee.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer">Gitee</a>
-                · <a href="https://gitcode.com/xunjinlu/apinexus" target="_blank" rel="noopener noreferrer">GitCode</a>
-                · <a href="https://github.com/whr884657/apinexus" target="_blank" rel="noopener noreferrer">GitHub</a>
-            </li>
-        </ul>
+        <?php if ($aboutArticle && !empty($aboutArticle['body_html'])): ?>
+            <?php echo $aboutArticle['body_html']; ?>
+        <?php else: ?>
+            <p>关于页内容尚未配置。请在后台「文章管理」发布文章时选择绑定关于页。</p>
+            <p>当前站点：<strong><?php echo vs_e($siteName); ?></strong><?php if ($themeId !== ''): ?> · 主题 <?php echo vs_e($themeId); ?><?php endif; ?></p>
+        <?php endif; ?>
     </div>
 </main>

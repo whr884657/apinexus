@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.10.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.11.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.11.0（2026-07-26）
+
+**类型：** 中版本（关于页绑定 + 内容运营 / 友链 UI）
+
+**变更说明：**
+
+- 文章可绑定关于页；关于页由 FrontendAbout 驱动
+- 文章隐藏/显示与色标按钮；公告标签配色；友链三栏审核；刷新钮正方形
+- 数据库：`content.bindpage`
 
 ### v10.10.1（2026-07-26）
 

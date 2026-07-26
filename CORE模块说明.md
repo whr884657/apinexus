@@ -119,7 +119,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
 | 第三方登录 | `oauth/*` | `OAuthService` | 系统设置 | ✅ 是 | **已完成** |
-| 文章 | `ContentManager`（kind=1） | `FrontendArticle` | `admin/content/articles.php`、`articles.php` | ✅ 是 | **已完成**（与公告共用 `content` 表；Markdown；封面） |
+| 文章 | `ContentManager`（kind=1） | `FrontendArticle` / `FrontendAbout` | `admin/content/articles.php`、`articles.php`、`about.php` | ✅ 是 | **已完成**（封面；可绑定关于页；隐藏态） |
 | 友情链接 | `LinkManager` / `LinkSiteMeta` / `LinkNotify` | `FrontendLink` | `admin/content/links.php`、`links.php`、`applylink.php`、`core/theme/default/api/sitemeta.php` | ✅ 是 | **已完成**（表 `link`；`kind=0`；审核 + 启禁；一键 TDK；邮件通知） |
 | 合作伙伴 | `LinkManager`（共用） | `FrontendPartner` | `admin/content/partners.php`、默认主题首页 | ✅ 是 | **已完成**（表 `link`；`kind=1`；无审核；仅编辑/启禁） |
 | 赞助 | `LinkManager`（共用） | `FrontendSponsor` | `admin/finance/sponsor.php`、`sponsor.php`、默认主题赞助页、系统设置收款码 | ✅ 是 | **已完成**（表 `link`；`kind=2`；简介=赞助说明；收款码配置） |
@@ -159,8 +159,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | 1 | `install/migrations/x.y.z.sql` | 文章表结构（若尚无） |
 | 2 | `core/ArticleManager.php` | 后台：发布、下架、分类、CRUD |
 | 3 | `admin/content/articles.php` | 后台管理界面 |
-| 4 | `core/FrontendArticle.php` | 前台：`listForTheme()`、`findById()`、`listPaged()` |
-| 5 | `bootstrap.php` | `require_once .../FrontendArticle.php` |
+| 4 | `core/FrontendArticle.php` | 前台：`listForTheme()`、`findById()`、`listPaged()`（排除绑定关于的文章） |
+| 4b | `core/FrontendAbout.php` | 前台关于：`getBoundArticle()` |
+| 5 | `bootstrap.php` | `require_once` FrontendArticle / FrontendAbout |
 | 6 | `core/theme/*/pages/articles.php` | 各主题调用 `FrontendArticle::listForTheme()` |
 
 **`FrontendArticle` 预期方法（规划，尚未实现）：**

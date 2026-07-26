@@ -9960,3 +9960,103 @@ select.vs-input.vs-select {
         transition: none;
     }
 }
+/* ---- content page badges / actions (bindpage + status) ---- */
+#contentPage .vs-badge--success { background: #f0faf5; color: #15803d; }
+#contentPage .vs-badge--warning { background: #fff7e8; color: #e37318; }
+#contentPage .vs-badge--error { background: #fff0f0; color: #dc2626; }
+#contentPage .vs-badge--info { background: #eff6ff; color: #2563eb; }
+#contentPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+
+#contentPage .vs-content-actions-cell .action-btns,
+#contentPage .ann-card__actions .action-btns,
+#contentPage .art-card__actions .action-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+#contentPage .vs-btn--outline-success {
+    border-color: #b8e6cc;
+    background: transparent;
+    color: #15803d;
+}
+#contentPage .vs-btn--outline-success:hover {
+    background: #f0faf5;
+    border-color: #15803d;
+}
+#contentPage .vs-btn--outline-danger {
+    border-color: #fecaca;
+    background: transparent;
+    color: #dc2626;
+}
+#contentPage .vs-btn--outline-danger:hover {
+    background: #fff0f0;
+    border-color: #dc2626;
+}
+#contentPage .vs-btn--outline-warning {
+    border-color: #f5d9a8;
+    background: transparent;
+    color: #e37318;
+}
+#contentPage .vs-btn--outline-warning:hover {
+    background: #fff7e8;
+    border-color: #e37318;
+}
+
+#contentPage .ann-card__actions,
+#contentPage .art-card__actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+#contentPage .content-title-cell .vs-badge,
+#contentPage .ann-card__title .vs-badge,
+#contentPage .art-card__title .vs-badge {
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* ---- admin links tabs ---- */
+#adminLinksPage .vs-tabs.vs-api-review-tabs {
+    margin-bottom: 14px;
+}
+#adminLinksPage .vs-link-row[hidden] {
+    display: none !important;
+}
+#adminLinksPage[data-active-tab="pending"] .vs-link-row[data-link-tab]:not([data-link-tab="pending"]),
+#adminLinksPage[data-active-tab="approved"] .vs-link-row[data-link-tab]:not([data-link-tab="approved"]),
+#adminLinksPage[data-active-tab="disabled"] .vs-link-row[data-link-tab]:not([data-link-tab="disabled"]) {
+    display: none !important;
+}
+#adminLinksPage .vs-badge--warning { background: #fff7e8; color: #e37318; }
+#adminLinksPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+#adminLinksPage .vs-api-review-tabs__badge {
+    margin-left: 6px;
+}
+#adminLinksPage .vs-tabs__btn.is-active .vs-api-review-tabs__badge.vs-badge--default {
+    background: #e2e8f0;
+    color: #334155;
+}
+#adminLinksPage .vs-btn--outline-success {
+    border-color: #b8e6cc;
+    background: transparent;
+    color: #15803d;
+}
+#adminLinksPage .vs-btn--outline-success:hover {
+    background: #f0faf5;
+    border-color: #15803d;
+}
+#adminLinksPage .vs-btn--outline-danger {
+    border-color: #fecaca;
+    background: transparent;
+    color: #dc2626;
+}
+#adminLinksPage .vs-btn--outline-danger:hover {
+    background: #fff0f0;
+    border-color: #dc2626;
+}

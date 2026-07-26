@@ -1,5 +1,5 @@
 /**
- * 后台 · 友情链接管理（AJAX + 局部 DOM，禁止整页刷新）
+ * 后台 · 友情链接管理（AJAX + Tab 筛选 + 局部 DOM）
  */
 (function () {
     'use strict';
@@ -13,6 +13,8 @@
     var form = document.getElementById('linkForm');
     var list = document.getElementById('linkList');
     var empty = document.getElementById('linkEmpty');
+    var filters = document.getElementById('linkFilters');
+    var activeTab = page.getAttribute('data-active-tab') || 'pending';
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -22,16 +24,76 @@
             .replace(/"/g, '&quot;');
     }
 
-    function syncEmpty() {
-        var has = list && list.querySelector('[data-link-row]');
-        if (list) list.hidden = !has;
-        if (empty) empty.hidden = !!has;
+    function tabKey(status, enabled) {
+        status = parseInt(status, 10) || 0;
+        enabled = parseInt(enabled, 10);
+        if (enabled !== 0) {
+            enabled = 1;
+        }
+        if (status === 0) {
+            return 'pending';
+        }
+        if (status === 1 && enabled === 1) {
+            return 'approved';
+        }
+        return 'disabled';
+    }
+
+    function refreshCounts() {
+        if (!filters || !list) {
+            return;
+        }
+        var counts = { pending: 0, approved: 0, disabled: 0 };
+        Array.prototype.slice.call(list.querySelectorAll('[data-link-row]')).forEach(function (row) {
+            var key = row.getAttribute('data-link-tab') || tabKey(
+                row.getAttribute('data-link-status'),
+                row.getAttribute('data-link-enabled')
+            );
+            if (counts[key] != null) {
+                counts[key] += 1;
+            }
+        });
+        Object.keys(counts).forEach(function (key) {
+            var badge = filters.querySelector('[data-count="' + key + '"]');
+            if (badge) {
+                badge.textContent = String(counts[key]);
+            }
+        });
+    }
+
+    function applyTabFilter() {
+        if (!list) {
+            return;
+        }
+        page.setAttribute('data-active-tab', activeTab);
+        var visible = 0;
+        Array.prototype.slice.call(list.querySelectorAll('[data-link-row]')).forEach(function (row) {
+            var key = row.getAttribute('data-link-tab') || tabKey(
+                row.getAttribute('data-link-status'),
+                row.getAttribute('data-link-enabled')
+            );
+            var show = key === activeTab;
+            row.hidden = !show;
+            if (show) {
+                visible += 1;
+            }
+        });
+        var hasAny = !!list.querySelector('[data-link-row]');
+        if (list) {
+            list.hidden = !hasAny || visible === 0;
+        }
+        if (empty) {
+            empty.hidden = visible > 0;
+        }
+        refreshCounts();
     }
 
     function statusDisplay(link) {
         var status = parseInt(link.status, 10) || 0;
         var enabled = parseInt(link.enabled, 10);
-        if (enabled !== 0) enabled = 1;
+        if (enabled !== 0) {
+            enabled = 1;
+        }
         if (status === 1 && enabled === 0) {
             return { label: '已禁用', cls: 'is-off' };
         }
@@ -48,20 +110,19 @@
         var id = parseInt(link.id, 10) || 0;
         var status = parseInt(link.status, 10) || 0;
         var enabled = parseInt(link.enabled, 10);
-        if (enabled !== 0) enabled = 1;
+        if (enabled !== 0) {
+            enabled = 1;
+        }
         var html = '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="edit" data-link-id="' + id + '">编辑</button>';
-        if (status !== 1) {
+        if (status === 0) {
             html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="approve" data-link-id="' + id + '">通过</button>';
-        }
-        if (status !== 2) {
             html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="reject" data-link-id="' + id + '">拒绝</button>';
-        }
-        if (status === 1) {
-            if (enabled === 1) {
-                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="disable" data-link-id="' + id + '">禁用</button>';
-            } else {
-                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="enable" data-link-id="' + id + '">启用</button>';
-            }
+        } else if (status === 1 && enabled === 1) {
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="disable" data-link-id="' + id + '">禁用</button>';
+        } else if (status === 1 && enabled === 0) {
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="enable" data-link-id="' + id + '">启用</button>';
+        } else {
+            html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="approve" data-link-id="' + id + '">通过</button>';
         }
         html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger" data-link-action="delete" data-link-id="' + id + '">删除</button>';
         return html;
@@ -81,13 +142,16 @@
         var id = parseInt(link.id, 10) || 0;
         var status = parseInt(link.status, 10) || 0;
         var enabled = parseInt(link.enabled, 10);
-        if (enabled !== 0) enabled = 1;
+        if (enabled !== 0) {
+            enabled = 1;
+        }
         var name = link.name || '';
         var siteurl = link.siteurl || '';
         var desc = link.description || '';
         var icon = link.icon || '';
         var contact = link.contact || '';
         var sort = link.sort != null ? link.sort : 0;
+        var tab = tabKey(status, enabled);
         var st = statusDisplay(link);
         var descBlock = desc
             ? '<div class="vs-link-row__desc" data-field="description">' + esc(desc) + '</div>'
@@ -95,6 +159,7 @@
         return (
             '<div class="vs-link-row"' +
             ' data-link-row="' + id + '"' +
+            ' data-link-tab="' + tab + '"' +
             ' data-link-status="' + status + '"' +
             ' data-link-enabled="' + enabled + '"' +
             ' data-name="' + esc(name) + '"' +
@@ -119,7 +184,9 @@
     }
 
     function upsertRow(link) {
-        if (!link || !list) return;
+        if (!link || !list) {
+            return;
+        }
         var id = parseInt(link.id, 10) || 0;
         var html = rowHtml(link);
         var existing = list.querySelector('[data-link-row="' + id + '"]');
@@ -128,11 +195,13 @@
         } else {
             list.insertAdjacentHTML('afterbegin', html);
         }
-        syncEmpty();
+        applyTabFilter();
     }
 
     function openOverlay() {
-        if (!overlay) return;
+        if (!overlay) {
+            return;
+        }
         overlay.hidden = false;
         overlay.classList.add('is-open');
         overlay.setAttribute('aria-hidden', 'false');
@@ -143,7 +212,9 @@
     }
 
     function closeOverlay() {
-        if (!overlay) return;
+        if (!overlay) {
+            return;
+        }
         overlay.hidden = true;
         overlay.classList.remove('is-open');
         overlay.setAttribute('aria-hidden', 'true');
@@ -179,6 +250,26 @@
         });
     }
 
+    if (filters) {
+        filters.addEventListener('click', function (e) {
+            var btn = e.target.closest('.vs-link-filter');
+            if (!btn) {
+                return;
+            }
+            var next = btn.getAttribute('data-filter') || 'pending';
+            if (next === activeTab) {
+                return;
+            }
+            activeTab = next;
+            Array.prototype.slice.call(filters.querySelectorAll('.vs-link-filter')).forEach(function (el) {
+                var on = el === btn;
+                el.classList.toggle('is-active', on);
+                el.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            applyTabFilter();
+        });
+    }
+
     var addBtn = document.getElementById('linkOpenAddBtn');
     if (addBtn) {
         addBtn.addEventListener('click', function () {
@@ -202,7 +293,9 @@
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             var submitBtn = document.getElementById('linkFormSubmit');
-            if (submitBtn) submitBtn.disabled = true;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
             var fd = new FormData(form);
             postAction(fd).then(function (data) {
                 VS.showMessage(data.msg || '已保存', 'success');
@@ -213,14 +306,18 @@
             }).catch(function (err) {
                 VS.showMessage(err.message || '保存失败', 'error');
             }).then(function () {
-                if (submitBtn) submitBtn.disabled = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                }
             });
         });
     }
 
     page.addEventListener('click', function (e) {
         var btn = e.target.closest('[data-link-action]');
-        if (!btn) return;
+        if (!btn) {
+            return;
+        }
         var action = btn.getAttribute('data-link-action');
         var id = parseInt(btn.getAttribute('data-link-id') || '0', 10);
         var row = btn.closest('[data-link-row]');
@@ -244,13 +341,21 @@
         }
 
         if (action === 'approve' || action === 'reject') {
+            if (action === 'reject' && row) {
+                var curStatus = parseInt(row.getAttribute('data-link-status') || '0', 10);
+                if (curStatus !== 0) {
+                    return;
+                }
+            }
             var fd = new FormData();
             fd.append('action', 'set_status');
             fd.append('link_id', String(id));
             fd.append('status', action === 'approve' ? '1' : '2');
             postAction(fd).then(function (data) {
                 VS.showMessage(data.msg || '已更新', 'success');
-                if (!row) return;
+                if (!row) {
+                    return;
+                }
                 var enabled = parseInt(row.getAttribute('data-link-enabled') || '1', 10);
                 upsertRow({
                     id: id,
@@ -277,7 +382,9 @@
             en.append('enabled', action === 'enable' ? '1' : '0');
             postAction(en).then(function (data) {
                 VS.showMessage(data.msg || '已更新', 'success');
-                if (!row) return;
+                if (!row) {
+                    return;
+                }
                 upsertRow({
                     id: id,
                     name: row.getAttribute('data-name') || '',
@@ -301,18 +408,24 @@
                 ? window.VsModal.confirm('删除后不可恢复，确定删除该友链？', '删除友链')
                 : Promise.resolve(window.confirm('确定删除该友链？'));
             ask.then(function (ok) {
-                if (!ok) return;
+                if (!ok) {
+                    return;
+                }
                 var del = new FormData();
                 del.append('action', 'delete');
                 del.append('link_id', String(id));
                 postAction(del).then(function (data) {
                     VS.showMessage(data.msg || '已删除', 'success');
-                    if (row) row.remove();
-                    syncEmpty();
+                    if (row) {
+                        row.remove();
+                    }
+                    applyTabFilter();
                 }).catch(function (err) {
                     VS.showMessage(err.message || '删除失败', 'error');
                 });
             });
         }
     });
+
+    applyTabFilter();
 })();

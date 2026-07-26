@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/content/articles.php
- * 作用：文章管理（桌面表格 + 手机卡片；发布 / 编辑 / 删除）
+ * 作用：文章管理（桌面表格 + 手机卡片；发布 / 编辑 / 隐藏 / 删除）
  */
 
 require_once dirname(__DIR__) . '/init.php';
@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'ispinned'    => 0,
             'ispopup'     => 0,
             'status'      => ContentManager::STATUS_PUBLISHED,
+            'bindpage'    => isset($_POST['bindpage']) ? (int) $_POST['bindpage'] : ContentManager::BIND_NONE,
             'userid'      => $publishUid,
             'sort'        => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
         );
@@ -36,7 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!is_array($result)) {
                 AjaxResponse::error($result);
             }
-            AjaxResponse::success('文章已保存', array('item' => $result));
+            AjaxResponse::success('文章已保存', array(
+                'item'         => $result,
+                'about_bound'  => ContentManager::isAboutBound() ? 1 : 0,
+            ));
         }
         $id = isset($_POST['content_id']) ? (int) $_POST['content_id'] : 0;
         $rowCheck = ContentManager::findById($id);
@@ -49,8 +53,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $row = ContentManager::findById($id);
         AjaxResponse::success('文章已保存', array(
-            'item' => is_array($row) ? ContentManager::formatRow($row) : null,
+            'item'        => is_array($row) ? ContentManager::formatRow($row) : null,
+            'about_bound' => ContentManager::isAboutBound() ? 1 : 0,
         ));
+    }
+
+    if ($action === 'set_status') {
+        $id = isset($_POST['content_id']) ? (int) $_POST['content_id'] : 0;
+        $status = isset($_POST['status']) ? (int) $_POST['status'] : -1;
+        if (!in_array($status, array(
+            ContentManager::STATUS_DRAFT,
+            ContentManager::STATUS_PUBLISHED,
+            ContentManager::STATUS_OFF,
+        ), true)) {
+            AjaxResponse::error('无效状态');
+        }
+        $row = ContentManager::findById($id);
+        if (!$row || ContentManager::normalizeKind($row['kind']) !== $kind) {
+            AjaxResponse::error('文章不存在');
+        }
+        $result = ContentManager::setStatus($id, $status);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        $row = ContentManager::findById($id);
+        AjaxResponse::success(
+            ContentManager::statusLabel($status),
+            array(
+                'item' => is_array($row) ? ContentManager::formatRow($row) : null,
+            )
+        );
     }
 
     if ($action === 'delete') {
@@ -63,7 +95,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result !== true) {
             AjaxResponse::error($result);
         }
-        AjaxResponse::success('文章已删除', array('content_id' => $id));
+        AjaxResponse::success('文章已删除', array(
+            'content_id'  => $id,
+            'about_bound' => ContentManager::isAboutBound() ? 1 : 0,
+        ));
     }
 
     AjaxResponse::error('无效操作', 400);
@@ -72,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tableReady = ContentManager::tableReady();
 $items = $tableReady ? ContentManager::listAll($kind) : array();
 $hasItems = count($items) > 0;
+$aboutBound = $tableReady && ContentManager::isAboutBound();
 
 $headerActions = '';
 if ($tableReady) {
@@ -94,7 +130,11 @@ echo Markdown::renderAssetsHtml();
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先在系统升级中执行数据库结构更新。', array('compact' => true)); ?>
 <?php else: ?>
-<div id="contentPage" data-kind="<?php echo (int) $kind; ?>" data-mode="article" data-content-total="<?php echo (int) count($items); ?>">
+<div id="contentPage"
+     data-kind="<?php echo (int) $kind; ?>"
+     data-mode="article"
+     data-about-bound="<?php echo $aboutBound ? '1' : '0'; ?>"
+     data-content-total="<?php echo (int) count($items); ?>">
     <div class="vs-api-list-empty vs-api-list-empty--hero" id="contentEmpty"<?php echo $hasItems ? ' hidden' : ''; ?>>
         <div class="vs-api-list-empty__card">
             <h3 class="vs-api-list-empty__title">暂无文章</h3>
@@ -189,6 +229,14 @@ echo Markdown::renderAssetsHtml();
             <div class="vs-field">
                 <label class="vs-label" for="contentBody">正文（Markdown）</label>
                 <textarea class="vs-input vs-textarea" name="body" id="contentBody" data-vs-md="desktop" rows="14"></textarea>
+            </div>
+            <div class="vs-field" id="contentBindPageWrap" hidden>
+                <label class="vs-label" for="contentBindPage">绑定页面</label>
+                <select class="vs-input vs-select" name="bindpage" id="contentBindPage" data-vs-pick>
+                    <option value="0">无</option>
+                    <option value="1">关于页</option>
+                </select>
+                <p class="vs-form-hint">绑定关于页后，该文将作为前台「关于」内容展示（全站仅可绑定一篇）。</p>
             </div>
         </form>
         <footer class="vs-overlay__foot">
