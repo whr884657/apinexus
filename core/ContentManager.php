@@ -743,6 +743,10 @@ class ContentManager
         if (mb_strlen($cover, 'UTF-8') > 500) {
             return '封面链接不超过 500 字';
         }
+        // 与接口文档上限同量级，防止超大正文拖垮渲染/内存
+        if (strlen($body) > 200000) {
+            return '正文过长（请控制在约 20 万字符以内）';
+        }
         return true;
     }
 }

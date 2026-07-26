@@ -402,8 +402,85 @@ function vs_safe_login_redirect($candidate)
 }
 
 /**
- * 解码表单传输字段（客户端 VS64: Base64，规避 WAF 对代码片段的误拦）
- * 未带前缀则原样返回，兼容旧客户端。
+ * 传输编码前缀（客户端写入；服务端识别后解码）
+ * 兼容首版 VS64: 与加固版 VS64B:
+ */
+if (!defined('VS_TRANSPORT_PREFIX_LEGACY')) {
+    define('VS_TRANSPORT_PREFIX_LEGACY', 'VS64:');
+}
+if (!defined('VS_TRANSPORT_PREFIX')) {
+    define('VS_TRANSPORT_PREFIX', 'VS64B:');
+}
+/** 传输包装最大字节（约覆盖 200KB 明文 Base64 开销），超限不解码 */
+if (!defined('VS_TRANSPORT_MAX_BYTES')) {
+    define('VS_TRANSPORT_MAX_BYTES', 300000);
+}
+
+/**
+ * 外链是否允许写入 href/src（仅 http/https 或站内 / 相对路径）
+ * 禁止 javascript: / data: / vbscript: 等，防 Markdown 短码 XSS
+ *
+ * @param string $url
+ * @return bool
+ */
+function vs_is_safe_embed_url($url)
+{
+    $url = trim((string) $url);
+    if ($url === '' || $url === '#') {
+        return false;
+    }
+    $lower = strtolower($url);
+    if (strpos($lower, 'javascript:') === 0
+        || strpos($lower, 'data:') === 0
+        || strpos($lower, 'vbscript:') === 0
+        || strpos($lower, 'file:') === 0
+    ) {
+        return false;
+    }
+    return vs_is_allowed_http_url($url);
+}
+
+/**
+ * 安全外链：不合规则回落为 #
+ *
+ * @param string $url
+ * @return string
+ */
+function vs_safe_embed_url($url)
+{
+    $url = trim((string) $url);
+    if ($url === '#' || vs_is_safe_embed_url($url)) {
+        return $url === '' ? '#' : $url;
+    }
+    return '#';
+}
+
+/**
+ * 按钮背景色：仅允许 #hex 或纯字母色名，防 style 注入
+ *
+ * @param string $color
+ * @return string
+ */
+function vs_safe_css_color($color)
+{
+    $color = trim((string) $color);
+    if ($color === '') {
+        return '';
+    }
+    if (preg_match('/^#[0-9A-Fa-f]{3,8}$/', $color)) {
+        return $color;
+    }
+    if (preg_match('/^[a-zA-Z]{1,20}$/', $color)) {
+        return $color;
+    }
+    return '';
+}
+
+/**
+ * 解码表单传输字段（客户端 VS64B:/VS64: Base64，规避 WAF 对代码片段的误拦）
+ * 未带前缀则原样返回。
+ * 前缀后非 Base64 字符集 → 视为普通正文（原样返回，避免误伤）。
+ * 前缀后像 Base64 但解码失败 / 超长 → 空串（禁止包装原文入库）。
  *
  * @param mixed $value
  * @return string
@@ -414,16 +491,36 @@ function vs_decode_transport_field($value)
     if ($value === '') {
         return '';
     }
-    if (strncmp($value, 'VS64:', 5) !== 0) {
+
+    $prefix = '';
+    if (strncmp($value, VS_TRANSPORT_PREFIX, strlen(VS_TRANSPORT_PREFIX)) === 0) {
+        $prefix = VS_TRANSPORT_PREFIX;
+    } elseif (strncmp($value, VS_TRANSPORT_PREFIX_LEGACY, strlen(VS_TRANSPORT_PREFIX_LEGACY)) === 0) {
+        $prefix = VS_TRANSPORT_PREFIX_LEGACY;
+    } else {
         return $value;
     }
-    $b64 = substr($value, 5);
+
+    if (strlen($value) > VS_TRANSPORT_MAX_BYTES) {
+        return '';
+    }
+
+    $b64 = substr($value, strlen($prefix));
     if ($b64 === '') {
         return '';
     }
+    // 仅允许标准 Base64 字符，避免把「碰巧以 VS64: 开头的正文」误当传输包装
+    if (!preg_match('/^[A-Za-z0-9+\/\r\n]+=*$/', $b64)) {
+        return $value;
+    }
+
     $raw = base64_decode($b64, true);
     if ($raw === false) {
-        return $value;
+        return '';
+    }
+    // 文本字段禁止 NUL，降低异常二进制入库风险
+    if (strpos($raw, "\0") !== false) {
+        $raw = str_replace("\0", '', $raw);
     }
     return $raw;
 }

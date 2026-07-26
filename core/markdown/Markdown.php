@@ -148,7 +148,7 @@ class Markdown
     {
         switch ($type) {
             case 'card':
-                $color = isset($attrs['color']) ? trim((string) $attrs['color']) : '';
+                $color = vs_safe_css_color(isset($attrs['color']) ? $attrs['color'] : '');
                 $title = isset($attrs['title']) ? $attrs['title'] : '';
                 $style = $color !== '' ? 'border-color:' . vs_e($color) . ';' : '';
                 $titleStyle = $color !== '' ? ' style="color:' . vs_e($color) . ';"' : '';
@@ -171,9 +171,9 @@ class Markdown
                     . self::parseMarkdown($body) . '</div></details>';
 
             case 'button':
-                $color = isset($attrs['color']) ? trim((string) $attrs['color']) : '';
+                $color = vs_safe_css_color(isset($attrs['color']) ? $attrs['color'] : '');
                 $text = isset($attrs['text']) ? $attrs['text'] : '按钮';
-                $url = isset($attrs['url']) ? $attrs['url'] : (isset($attrs['text_url']) ? $attrs['text_url'] : '#');
+                $url = vs_safe_embed_url(isset($attrs['url']) ? $attrs['url'] : (isset($attrs['text_url']) ? $attrs['text_url'] : '#'));
                 $btnStyle = $color !== '' ? ' style="background:' . vs_e($color) . ';"' : '';
                 return '<p class="vs-md-btn-wrap"><a class="vs-md-btn" href="' . vs_e($url) . '"'
                     . $btnStyle . ' target="_blank" rel="noopener noreferrer">'
@@ -197,11 +197,12 @@ class Markdown
                 return '<ul class="vs-md-timeline">' . $lis . '</ul>';
 
             case 'music':
-                $url = isset($attrs['url']) ? $attrs['url'] : '';
+                $urlRaw = isset($attrs['url']) ? $attrs['url'] : '';
                 $title = isset($attrs['title']) ? $attrs['title'] : '音频';
-                if ($url === '') {
+                if ($urlRaw === '' || !vs_is_safe_embed_url($urlRaw)) {
                     return '';
                 }
+                $url = $urlRaw;
                 return '<div class="vs-md-music"><div class="vs-md-music__title">' . vs_e($title)
                     . '</div><audio controls preload="none" src="' . vs_e($url) . '"></audio></div>';
 

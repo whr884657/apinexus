@@ -10,8 +10,13 @@
     global.VS = global.VS || {};
     global.VS.version = '2.0.0';
 
+    /** 与 PHP VS_TRANSPORT_PREFIX 对齐；服务端仍兼容旧 VS64: */
+    var VS_TRANSPORT_PREFIX = 'VS64B:';
+    var VS_TRANSPORT_PREFIX_LEGACY = 'VS64:';
+    var VS_TRANSPORT_MAX_BYTES = 300000;
+
     /**
-     * 将可能含代码样例的字段编码为 VS64:Base64，规避 WAF 语义分析误拦
+     * 将可能含代码样例的字段编码为 VS64B:Base64，规避 WAF 语义分析误拦
      * 服务端用 vs_decode_transport_field 还原；空串不编码。
      *
      * @param {string} value
@@ -25,12 +30,16 @@
         if (s === '') {
             return '';
         }
-        if (s.indexOf('VS64:') === 0) {
+        if (s.indexOf(VS_TRANSPORT_PREFIX) === 0 || s.indexOf(VS_TRANSPORT_PREFIX_LEGACY) === 0) {
             return s;
         }
         try {
             var b64 = btoa(unescape(encodeURIComponent(s)));
-            return 'VS64:' + b64;
+            var out = VS_TRANSPORT_PREFIX + b64;
+            if (out.length > VS_TRANSPORT_MAX_BYTES) {
+                return s;
+            }
+            return out;
         } catch (e) {
             return s;
         }

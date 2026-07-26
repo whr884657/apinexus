@@ -11,6 +11,44 @@
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    function isSafeEmbedUrl(url) {
+        url = String(url || '').trim();
+        if (!url || url === '#') {
+            return false;
+        }
+        var lower = url.toLowerCase();
+        if (lower.indexOf('javascript:') === 0 || lower.indexOf('data:') === 0
+            || lower.indexOf('vbscript:') === 0 || lower.indexOf('file:') === 0) {
+            return false;
+        }
+        if (/^https?:\/\//i.test(url)) {
+            return true;
+        }
+        if (url.charAt(0) === '/' && url.indexOf('//') !== 0 && url.indexOf('\\') < 0) {
+            return url.length <= 500;
+        }
+        return false;
+    }
+
+    function safeEmbedUrl(url) {
+        url = String(url || '').trim();
+        if (url === '#') {
+            return '#';
+        }
+        return isSafeEmbedUrl(url) ? url : '#';
+    }
+
+    function safeCssColor(color) {
+        color = String(color || '').trim();
+        if (/^#[0-9A-Fa-f]{3,8}$/.test(color)) {
+            return color;
+        }
+        if (/^[a-zA-Z]{1,20}$/.test(color)) {
+            return color;
+        }
+        return '';
+    }
+
     function parseAttrs(raw) {
         var attrs = {};
         String(raw || '').replace(/(\w+)=([^\s]+)/g, function (_, k, v) {
@@ -34,7 +72,7 @@
         var color, title, url, text;
         switch (type) {
             case 'card':
-                color = attrs.color || '';
+                color = safeCssColor(attrs.color || '');
                 title = attrs.title || '';
                 return '<div class="vs-md-card"' + (color ? ' style="border-color:' + esc(color) + ';"' : '') + '>'
                     + (title ? '<div class="vs-md-card__title"' + (color ? ' style="color:' + esc(color) + ';"' : '') + '>' + esc(title) + '</div>' : '')
@@ -49,9 +87,9 @@
                 return '<details class="vs-md-collapse"><summary>' + esc(title)
                     + '</summary><div class="vs-md-collapse__body">' + mdInline(body) + '</div></details>';
             case 'button':
-                color = attrs.color || '';
+                color = safeCssColor(attrs.color || '');
                 text = attrs.text || '按钮';
-                url = attrs.url || attrs.text_url || '#';
+                url = safeEmbedUrl(attrs.url || attrs.text_url || '#');
                 return '<p class="vs-md-btn-wrap"><a class="vs-md-btn" href="' + esc(url) + '"'
                     + (color ? ' style="background:' + esc(color) + ';"' : '')
                     + ' target="_blank" rel="noopener noreferrer">' + esc(text) + '</a></p>';
@@ -67,7 +105,7 @@
             case 'music':
                 url = attrs.url || '';
                 title = attrs.title || '音频';
-                if (!url) return '';
+                if (!url || !isSafeEmbedUrl(url)) return '';
                 return '<div class="vs-md-music"><div class="vs-md-music__title">' + esc(title)
                     + '</div><audio controls preload="none" src="' + esc(url) + '"></audio></div>';
             default:
