@@ -850,9 +850,9 @@ class ThemeManager
             ),
             'apis'         => array('assets/js/pages/apis-page.js'),
             'detail'       => array(
-                'https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js',
                 'assets/js/playground-response.js',
                 'assets/js/pages/detail.js',
+                'assets/js/pages/detail-quickstart.js',
             ),
             'articles'     => array('assets/js/pages/articles-page.js'),
             'about'        => array('assets/js/pages/about-page.js'),

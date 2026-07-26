@@ -7,6 +7,52 @@
     --vs-md-accent-soft: color-mix(in srgb, var(--vs-md-accent) 12%, transparent);
     line-height: 1.75;
     word-break: break-word;
+    color: var(--text-muted, #64748b);
+}
+.vs-md-body h1,
+.vs-md-body h2,
+.vs-md-body h3,
+.vs-md-body h4,
+.vs-md-body h5,
+.vs-md-body h6,
+.vs-md-preview h1,
+.vs-md-preview h2,
+.vs-md-preview h3,
+.vs-md-preview h4,
+.vs-md-preview h5,
+.vs-md-preview h6 {
+    color: var(--text-main, #111111);
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 1.15em 0 0.5em;
+}
+.vs-md-body h1, .vs-md-preview h1 { font-size: 1.55em; }
+.vs-md-body h2, .vs-md-preview h2 {
+    font-size: 1.28em;
+    padding-bottom: 0.35em;
+    border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+.vs-md-body h3, .vs-md-preview h3 { font-size: 1.12em; }
+.vs-md-body h4, .vs-md-preview h4 { font-size: 1.02em; }
+.vs-md-body p, .vs-md-preview p { margin: 0.65em 0; }
+.vs-md-body strong, .vs-md-preview strong { color: var(--text-main, #111111); font-weight: 700; }
+.vs-md-body ul,
+.vs-md-body ol,
+.vs-md-preview ul,
+.vs-md-preview ol {
+    margin: 0.65em 0;
+    padding-left: 1.6em;
+    list-style-position: outside;
+}
+.vs-md-body ul, .vs-md-preview ul { list-style-type: disc; }
+.vs-md-body ol, .vs-md-preview ol { list-style-type: decimal; }
+.vs-md-body ul ul, .vs-md-preview ul ul { list-style-type: circle; }
+.vs-md-body li, .vs-md-preview li {
+    margin: 0.28em 0;
+    display: list-item;
+}
+.vs-md-body li > p, .vs-md-preview li > p {
+    margin: 0.2em 0;
 }
 .vs-md-body img,
 .vs-md-body video {
@@ -67,7 +113,7 @@
     margin: 1rem 0;
     border-left: 2px solid var(--vs-md-accent);
 }
-.vs-md-timeline li { padding: 0.35rem 0 0.35rem 1rem; position: relative; }
+.vs-md-timeline li { padding: 0.35rem 0 0.35rem 1rem; position: relative; list-style: none; }
 .vs-md-timeline li::before {
     content: '';
     width: 8px; height: 8px; border-radius: 50%;
@@ -82,15 +128,46 @@
     margin: 1rem 0;
 }
 .vs-md-music audio { width: 100%; margin-top: 0.4rem; }
-.vs-md-indent { text-indent: 2em; }
-.vs-md-body pre {
+.vs-md-body pre,
+.vs-md-preview pre {
+    position: relative;
     border-radius: 10px;
     overflow-x: auto;
-    padding: 0.85rem 1rem;
+    padding: 2.1rem 1rem 0.85rem;
     background: #ffffff;
     color: #1e293b;
     border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    margin: 0.85rem 0;
+}
+.vs-md-body pre::before,
+.vs-md-preview pre::before {
+    content: none !important;
+    display: none !important;
+}
+.vs-md-copy-btn {
+    position: absolute;
+    top: 0.45rem;
+    right: 0.45rem;
+    z-index: 2;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    border-radius: 6px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+    background: #f8fafc;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    font-family: inherit;
+}
+.vs-md-copy-btn:hover {
+    color: var(--text-main, #111111);
+    border-color: var(--vs-md-accent, #111111);
+}
+.vs-md-copy-btn.is-copied {
+    color: #15803d;
+    border-color: #86efac;
+    background: #f0fdf4;
 }
 .vs-md-body code {
     border-radius: 6px;
@@ -119,37 +196,42 @@
     color: var(--text-main, #111111);
     font-weight: 600;
 }
+/* 引用：无背景；引号贴文字四角 */
 .vs-md-body blockquote {
     position: relative;
-    margin: 1.25rem 0;
-    padding: 1rem 1.4rem 1rem 1.55rem;
+    margin: 1.15rem 0;
+    padding: 0.55rem 1.65rem 0.55rem 1.65rem;
     border: 0;
     border-left: 0;
     color: var(--text-main, #111111);
-    background: var(--vs-md-accent-soft);
-    border-radius: 10px;
+    background: transparent;
+    border-radius: 0;
     font-style: normal;
     line-height: 1.8;
 }
 .vs-md-body blockquote::before {
     content: '“';
     position: absolute;
-    left: 0.55rem;
-    top: 0.1rem;
-    font-size: 1.75rem;
+    left: 0;
+    top: 0;
+    font-size: 1.5rem;
     line-height: 1;
     color: var(--vs-md-accent);
-    opacity: 0.45;
-    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', serif;
+    opacity: 0.5;
+    font-family: Georgia, 'Noto Serif SC', 'Songti SC', serif;
+    pointer-events: none;
 }
 .vs-md-body blockquote::after {
     content: '”';
     position: absolute;
-    right: 0.55rem;
-    bottom: 0;
-    font-size: 1.75rem;
+    right: 0;
+    bottom: -0.15rem;
+    font-size: 1.5rem;
     line-height: 1;
     color: var(--vs-md-accent);
-    opacity: 0.45;
-    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', serif;
+    opacity: 0.5;
+    font-family: Georgia, 'Noto Serif SC', 'Songti SC', serif;
+    pointer-events: none;
 }
+.vs-md-body blockquote > :first-child { margin-top: 0; }
+.vs-md-body blockquote > :last-child { margin-bottom: 0; }

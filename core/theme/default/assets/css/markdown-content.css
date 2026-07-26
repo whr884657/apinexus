@@ -223,19 +223,19 @@ html[data-theme="light"] .feer-md-parse-error {
     color: var(--accent-primary);
 }
 
-/* 引用块：中文引号样式（「」感），非绿色竖线 */
+/* 引用块：无背景；引号贴文字角（与 markdown-render.css 对齐） */
 .article-content blockquote,
 .page-content blockquote,
 .markdown-content blockquote,
 .markdown-body blockquote {
     position: relative;
-    margin: 1.25rem 0;
-    padding: 1rem 1.35rem 1rem 1.5rem;
+    margin: 1.15rem 0;
+    padding: 0.55rem 1.65rem;
     border: 0;
     border-left: 0;
     color: var(--text-main, #111111);
-    background: rgba(17, 17, 17, 0.03);
-    border-radius: 10px;
+    background: transparent;
+    border-radius: 0;
     font-style: normal;
     line-height: 1.8;
 }
@@ -245,13 +245,14 @@ html[data-theme="light"] .feer-md-parse-error {
 .markdown-body blockquote::before {
     content: '“';
     position: absolute;
-    left: 0.55rem;
-    top: 0.15rem;
-    font-size: 1.75rem;
+    left: 0;
+    top: 0;
+    font-size: 1.5rem;
     line-height: 1;
     color: var(--accent-primary, #111111);
-    opacity: 0.45;
-    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', serif;
+    opacity: 0.5;
+    font-family: Georgia, 'Noto Serif SC', 'Songti SC', serif;
+    pointer-events: none;
 }
 .article-content blockquote::after,
 .page-content blockquote::after,
@@ -259,11 +260,59 @@ html[data-theme="light"] .feer-md-parse-error {
 .markdown-body blockquote::after {
     content: '”';
     position: absolute;
-    right: 0.55rem;
-    bottom: 0.05rem;
-    font-size: 1.75rem;
+    right: 0;
+    bottom: -0.15rem;
+    font-size: 1.5rem;
     line-height: 1;
     color: var(--accent-primary, #111111);
-    opacity: 0.45;
-    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', serif;
+    opacity: 0.5;
+    font-family: Georgia, 'Noto Serif SC', 'Songti SC', serif;
+    pointer-events: none;
 }
+
+/* 列表在主题页正常显示 */
+.article-content ul,
+.page-content ul,
+.markdown-content ul,
+.markdown-body ul {
+    list-style-type: disc;
+    padding-left: 1.6em;
+    margin: 0.65em 0;
+}
+.article-content ol,
+.page-content ol,
+.markdown-content ol,
+.markdown-body ol {
+    list-style-type: decimal;
+    padding-left: 1.6em;
+    margin: 0.65em 0;
+}
+.article-content li,
+.page-content li,
+.markdown-content li,
+.markdown-body li {
+    display: list-item;
+    margin: 0.28em 0;
+}
+
+/* 标题加粗加黑 */
+.article-content h1,
+.article-content h2,
+.article-content h3,
+.page-content h1,
+.page-content h2,
+.page-content h3,
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+    color: var(--text-main, #111111);
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 1.1em 0 0.45em;
+}
+.article-content h1, .page-content h1, .markdown-content h1, .markdown-body h1 { font-size: 1.55em; }
+.article-content h2, .page-content h2, .markdown-content h2, .markdown-body h2 { font-size: 1.28em; }
+.article-content h3, .page-content h3, .markdown-content h3, .markdown-body h3 { font-size: 1.12em; }

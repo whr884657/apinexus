@@ -109,31 +109,15 @@
     }
     highlightJsonBlocks();
 
-    /* ---- Markdown ---- */
-    function decodeEntities(html) {
-        var ta = document.createElement('textarea');
-        ta.innerHTML = html;
-        return ta.value;
-    }
-
-    function looksLikeMarkdown(text) {
-        return /(^|\n)\s{0,3}#{1,6}\s|(^|\n)\s*[-*+]\s|```|\*\*[^*]+\*\*/.test(text);
-    }
-
-    document.querySelectorAll('[data-detail-md]').forEach(function (el) {
-        var raw = decodeEntities(el.innerHTML || '');
-        if (!raw.trim()) return;
-        if (typeof marked !== 'undefined' && looksLikeMarkdown(raw)) {
-            try {
-                el.innerHTML = marked.parse(raw);
-                el.classList.add('is-parsed');
-            } catch (e) {
-                el.textContent = raw;
-            }
-        } else {
-            el.textContent = raw;
+    /* ---- Markdown 代码块复制 / 高亮 ---- */
+    function enhanceMarkdown() {
+        if (window.VsMarkdown && typeof window.VsMarkdown.enhance === 'function') {
+            window.VsMarkdown.enhance(page);
+        } else if (window.VsSyntax && typeof window.VsSyntax.highlightAll === 'function') {
+            window.VsSyntax.highlightAll(page);
         }
-    });
+    }
+    setTimeout(enhanceMarkdown, 0);
 
     /* ---- Playground ---- */
     var api = window.detailApiData;

@@ -482,11 +482,11 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 <p class="vs-form-hint">返回示例保持 JSON 文本填写即可。</p>
             </div>
             <div class="vs-form-row">
-                <label class="vs-label" for="userApiFormDoc">普通文档（Markdown）</label>
+                <label class="vs-label" for="userApiFormDoc">详细文档（Markdown）</label>
                 <textarea class="vs-input vs-textarea" id="userApiFormDoc" name="doc" rows="5" data-vs-md></textarea>
             </div>
             <div class="vs-form-row">
-                <label class="vs-label" for="userApiFormAidoc">AI 文档（Markdown）</label>
+                <label class="vs-label" for="userApiFormAidoc">代码示例（Markdown）</label>
                 <textarea class="vs-input vs-textarea" id="userApiFormAidoc" name="aidoc" rows="5" data-vs-md></textarea>
             </div>
             <div class="vs-form-row">

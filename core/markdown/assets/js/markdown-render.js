@@ -1,6 +1,6 @@
 /**
  * 文件：core/markdown/assets/js/markdown-render.js
- * 作用：浏览器端 Markdown + 短码预览（与 PHP Markdown::render 对齐）
+ * 作用：浏览器端 Markdown + 短码预览（与 PHP Markdown::render 对齐）；代码块复制增强
  */
 (function (global) {
     'use strict';
@@ -70,8 +70,6 @@
                 if (!url) return '';
                 return '<div class="vs-md-music"><div class="vs-md-music__title">' + esc(title)
                     + '</div><audio controls preload="none" src="' + esc(url) + '"></audio></div>';
-            case 'indent':
-                return '<p class="vs-md-indent">' + esc(body).replace(/\n/g, '<br>') + '</p>';
             default:
                 return '';
         }
@@ -80,7 +78,7 @@
     function render(src) {
         var text = String(src || '').replace(/\r\n?/g, '\n');
         var slots = [];
-        text = text.replace(/^:::(card|tip|warning|success|danger|collapse|button|timeline|music|indent)([^\n]*)\n([\s\S]*?)^:::\s*$/gm, function (_, type, attrRaw, body) {
+        text = text.replace(/^:::(card|tip|warning|success|danger|collapse|button|timeline|music)([^\n]*)\n([\s\S]*?)^:::\s*$/gm, function (_, type, attrRaw, body) {
             var key = '<!--MDSLOT' + slots.length + '-->';
             slots.push(renderBlock(type, parseAttrs(attrRaw), String(body || '').trim()));
             return '\n\n' + key + '\n\n';
@@ -92,12 +90,87 @@
             return '\n\n' + key + '\n\n';
         });
         var html = mdInline(text);
-        // DOMPurify 可能剥掉 video：插槽在消毒后再注入受控 HTML
         slots.forEach(function (frag, i) {
             html = html.split('<!--MDSLOT' + i + '-->').join(frag);
         });
         return '<div class="vs-md-body markdown-body">' + html + '</div>';
     }
 
-    global.VsMarkdown = { render: render };
+    function copyPlain(text) {
+        text = String(text || '');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        }
+        return new Promise(function (resolve, reject) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.cssText = 'position:fixed;left:-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                resolve();
+            } catch (e) {
+                reject(e);
+            }
+            document.body.removeChild(ta);
+        });
+    }
+
+    function enhanceCodeBlocks(root) {
+        root = root || document;
+        var list = root.querySelectorAll ? root.querySelectorAll('.vs-md-body pre, .vs-md-preview pre') : [];
+        Array.prototype.forEach.call(list, function (pre) {
+            if (!pre || pre.getAttribute('data-vs-md-copy') === '1') {
+                return;
+            }
+            pre.setAttribute('data-vs-md-copy', '1');
+            pre.classList.add('vs-md-pre');
+            if (window.getComputedStyle(pre).position === 'static') {
+                pre.style.position = 'relative';
+            }
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'vs-md-copy-btn';
+            btn.setAttribute('aria-label', '复制代码');
+            btn.textContent = '复制';
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var code = pre.querySelector('code');
+                var plain = code ? code.textContent : pre.textContent;
+                copyPlain(plain).then(function () {
+                    btn.textContent = '已复制';
+                    btn.classList.add('is-copied');
+                    setTimeout(function () {
+                        btn.textContent = '复制';
+                        btn.classList.remove('is-copied');
+                    }, 1600);
+                }).catch(function () {});
+            });
+            pre.appendChild(btn);
+            if (global.VsSyntax && typeof global.VsSyntax.highlightElement === 'function') {
+                var codeEl = pre.querySelector('code');
+                if (codeEl) {
+                    global.VsSyntax.highlightElement(codeEl);
+                }
+            }
+        });
+    }
+
+    function bootEnhance() {
+        enhanceCodeBlocks(document);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootEnhance);
+    } else {
+        bootEnhance();
+    }
+
+    global.VsMarkdown = {
+        render: render,
+        enhance: enhanceCodeBlocks
+    };
 })(window);

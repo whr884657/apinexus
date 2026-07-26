@@ -761,14 +761,14 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 
             <div class="vs-api-list-form-pane" data-api-form-pane="docs" hidden>
                 <div class="vs-form-row">
-                    <label class="vs-label" for="apiListFormDocNormal">普通文档（Markdown）</label>
+                    <label class="vs-label" for="apiListFormDocNormal">详细文档（Markdown）</label>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocNormal" name="doc" rows="10"
-                              data-vs-md placeholder="面向普通用户的接口说明…"></textarea>
+                              data-vs-md placeholder="面向调用方的详细说明…"></textarea>
                 </div>
                 <div class="vs-form-row">
-                    <label class="vs-label" for="apiListFormDocAi">AI 文档（Markdown）</label>
+                    <label class="vs-label" for="apiListFormDocAi">代码示例（Markdown）</label>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="aidoc" rows="10"
-                              data-vs-md placeholder="面向 AI / Agent 的结构化说明…"></textarea>
+                              data-vs-md placeholder="可写各语言调用示例，后续将用于代码示例展示…"></textarea>
                 </div>
             </div>
         </form>

@@ -1,13 +1,13 @@
 {
-    "version": "10.13.0",
-    "title": "ApiNexus 10.13.0 代理上游认证（API Key / Bearer）",
+    "version": "10.14.0",
+    "title": "ApiNexus 10.14.0 Markdown 精简与快速上手",
     "release_date": "2026-07-26",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "代理外链支持三种上游认证：无需认证、API Key（URL 参数/请求头）、Bearer Token",
-        "需密钥时服务端中继转发，密钥不暴露给调用方；无需认证仍 302",
-        "管理员接口列表与用户投稿表单均可配置上游认证",
-        "库表新增 upauth / upkeyvia / upkeyname / upkey；升级请执行数据库结构更新"
+        "Markdown：移除居中与首行缩进；引用去背景、引号贴角；修复标题加粗与有序/无序列表",
+        "代码块右上角一键复制；浅色底 + 本地 VsSyntax；详情页去掉 CDN marked",
+        "默认主题详情：详细文档标题渲染修复；AI 文档改为快速上手（多语言横滑示例+复制）",
+        "后台文案：普通文档→详细文档，AI 文档→代码示例"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

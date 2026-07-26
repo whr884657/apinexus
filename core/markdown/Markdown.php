@@ -14,7 +14,6 @@
  * - 2024 | 节点说明
  * :::
  * :::music url=https://... title=歌名
- * :::indent 首行缩进段落
  * 视频：@[video](https://...mp4)
  *
  * 强调色跟随主题 CSS 变量（--accent-primary / --vs-primary / --st-accent），短码 color 仅作可选覆盖。
@@ -94,7 +93,7 @@ class Markdown
     private static function extractBlocks($text, array &$slots)
     {
         $n = 0;
-        $pattern = '/^:::(card|tip|warning|success|danger|collapse|button|timeline|music|indent)([^\n]*)\n(.*?)^:::\s*$/ms';
+        $pattern = '/^:::(card|tip|warning|success|danger|collapse|button|timeline|music)([^\n]*)\n(.*?)^:::\s*$/ms';
         return preg_replace_callback($pattern, function ($m) use (&$slots, &$n) {
             $type = $m[1];
             $attrs = self::parseAttrs(trim($m[2]));
@@ -205,9 +204,6 @@ class Markdown
                 }
                 return '<div class="vs-md-music"><div class="vs-md-music__title">' . vs_e($title)
                     . '</div><audio controls preload="none" src="' . vs_e($url) . '"></audio></div>';
-
-            case 'indent':
-                return '<p class="vs-md-indent">' . nl2br(vs_e($body)) . '</p>';
 
             default:
                 return '';

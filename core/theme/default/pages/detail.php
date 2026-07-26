@@ -280,12 +280,18 @@ if (!$notFound) {
         </div>
     </section>
 
-    <section class="detail-card" id="detailAiDocCard">
-        <h2 class="detail-section-title">AI 文档</h2>
-        <?php if (!empty($api['aidoc'])): ?>
-        <div class="markdown-body detail-md is-parsed"><?php echo Markdown::render((string) $api['aidoc']); ?></div>
+    <section class="detail-card" id="detailQuickstartCard">
+        <h2 class="detail-section-title">快速上手</h2>
+        <?php if ($notFound || empty($api['endpoint'])): ?>
+        <p class="detail-empty-hint">暂无调用地址，无法生成示例。</p>
         <?php else: ?>
-        <p class="detail-empty-hint">暂无 AI 文档</p>
+        <div class="detail-quickstart" id="detailQuickstart">
+            <div class="detail-quickstart__tabs" id="detailQsTabs" role="tablist" aria-label="示例语言"></div>
+            <div class="detail-quickstart__panel">
+                <button type="button" class="detail-quickstart__copy" id="detailQsCopy">复制</button>
+                <pre class="detail-quickstart__code font-mono" id="detailQsCode"><code></code></pre>
+            </div>
+        </div>
         <?php endif; ?>
     </section>
 
@@ -397,3 +403,5 @@ window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (str
 window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(rtrim($vsBase, '/')); ?>;
 </script>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
+<script src="<?php echo vs_e($vsBase); ?>/assets/js/vs-syntax.js?v=<?php echo vs_e(VS_VERSION); ?>"></script>
+<script src="<?php echo vs_e($vsBase); ?>/core/markdown/assets/js/markdown-render.js?v=<?php echo vs_e(VS_VERSION); ?>"></script>

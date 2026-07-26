@@ -162,6 +162,8 @@ if ($articleId > 0) {
     </section>
 </main>
 <link rel="stylesheet" href="<?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
+<script src="<?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/assets/js/vs-syntax.js?v=<?php echo vs_e(VS_VERSION); ?>"></script>
+<script src="<?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/core/markdown/assets/js/markdown-render.js?v=<?php echo vs_e(VS_VERSION); ?>"></script>
 <script>
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE); ?>;
 window.VS_ARTICLE_COMMENT = {

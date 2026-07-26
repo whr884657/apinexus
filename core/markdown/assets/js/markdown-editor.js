@@ -32,9 +32,7 @@
         { label: '警告', snip: ':::warning\n警告内容\n:::\n' },
         { label: '折叠', snip: ':::collapse title=点击展开\n隐藏内容\n:::\n' },
         { label: '按钮', snip: ':::button text=立即前往 url=https://\n:::\n' },
-        { label: '时间轴', snip: ':::timeline\n- 2024.01 | 节点说明\n- 2024.06 | 节点说明\n:::\n' },
-        { label: '缩进', snip: ':::indent\n首行缩进段落\n:::\n' },
-        { label: '居中', snip: '<p style="text-align:center">居中文字</p>\n' }
+        { label: '时间轴', snip: ':::timeline\n- 2024.01 | 节点说明\n- 2024.06 | 节点说明\n:::\n' }
     ];
 
     function insertAtCursor(ta, text) {
@@ -115,6 +113,9 @@
             }
             if (global.VsMarkdown && typeof global.VsMarkdown.render === 'function') {
                 preview.innerHTML = global.VsMarkdown.render(textarea.value || '');
+                if (typeof global.VsMarkdown.enhance === 'function') {
+                    global.VsMarkdown.enhance(preview);
+                }
             } else {
                 preview.textContent = textarea.value || '';
             }
