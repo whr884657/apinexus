@@ -363,25 +363,25 @@ if (!$notFound) {
             </div>
         </div>
         <script>
-        window.detailQsSamples = <?php echo json_encode(array_map(function ($row) {
+        <?php
+        $qsRowToJs = function ($row) {
             return array(
-                'id' => $row['id'],
-                'code' => $row['code'],
-                'syn' => isset($row['syn']) ? $row['syn'] : 'javascript',
+                'id'          => isset($row['id']) ? $row['id'] : '',
+                'label'       => isset($row['label']) ? $row['label'] : (isset($row['id']) ? $row['id'] : ''),
+                'code'        => isset($row['code']) ? $row['code'] : '',
+                'syn'         => isset($row['syn']) ? $row['syn'] : 'javascript',
+                'icon_gray'   => isset($row['icon_gray']) ? $row['icon_gray'] : '',
+                'icon_color'  => isset($row['icon_color']) ? $row['icon_color'] : '',
+                'single_icon' => !empty($row['single_icon']) ? 1 : 0,
             );
-        }, $qsSamples), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
+        };
+        ?>
+        window.detailQsSamples = <?php echo json_encode(array_map($qsRowToJs, $qsSamples), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
         window.detailQsBundle = <?php echo json_encode(array(
             'auths' => isset($qsBundle['auths']) ? $qsBundle['auths'] : array(),
             'authLabels' => isset($qsBundle['authLabels']) ? $qsBundle['authLabels'] : array(),
-            'byAuth' => isset($qsBundle['byAuth']) ? array_map(function ($rows) {
-                return array_map(function ($row) {
-                    return array(
-                        'id' => $row['id'],
-                        'label' => isset($row['label']) ? $row['label'] : $row['id'],
-                        'code' => $row['code'],
-                        'syn' => isset($row['syn']) ? $row['syn'] : 'javascript',
-                    );
-                }, is_array($rows) ? $rows : array());
+            'byAuth' => isset($qsBundle['byAuth']) ? array_map(function ($rows) use ($qsRowToJs) {
+                return array_map($qsRowToJs, is_array($rows) ? $rows : array());
             }, $qsBundle['byAuth']) : array(),
         ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
         </script>

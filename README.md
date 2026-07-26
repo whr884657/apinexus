@@ -277,6 +277,7 @@ location / {
 - AI 编写进程实时显示鉴权与语言进度，不再使用固定假阶段文案
 - 新增 `ai_gen_code_piece`；列表页注入 `VS_AI_CODE` 供前端调度
 - 同版复查：释放 Session 锁以真正并行；单片不传 doc/aidoc；部分失败用 info Toast
+- 同版复查2：AI 解析容错/中文注释/禁 emoji；默认主题快速上手语言图标修复
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

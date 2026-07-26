@@ -1,6 +1,7 @@
 /**
  * 默认主题 · API 详情「快速上手」：切换鉴权 / 语言示例 + IDE 级高亮 + 复制
  * 示例内容来自 aidoc 的 :::qs 短码（AI / 人工），禁止写死填充
+ * 语言 Tab 必须渲染灰/彩图标（icon_gray / icon_color）
  */
 (function () {
     'use strict';
@@ -35,6 +36,33 @@
         return samples;
     }
 
+    function escapeHtml(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function escapeAttr(s) {
+        return escapeHtml(s).replace(/"/g, '&quot;');
+    }
+
+    function iconHtml(item) {
+        var gray = item && item.icon_gray ? String(item.icon_gray) : '';
+        var color = item && item.icon_color ? String(item.icon_color) : '';
+        var single = !!(item && (item.single_icon === 1 || item.single_icon === true || item.id === 'curl'));
+        if (!gray && !color) {
+            return '';
+        }
+        if (!gray) {
+            gray = color;
+        }
+        var html = '<span class="detail-quickstart__icon' + (single ? ' is-single' : '') + '" aria-hidden="true">';
+        html += '<img class="detail-quickstart__icon-img is-gray" src="' + escapeAttr(gray) + '" alt="" width="16" height="16" loading="lazy">';
+        if (!single && color) {
+            html += '<img class="detail-quickstart__icon-img is-color" src="' + escapeAttr(color) + '" alt="" width="16" height="16" loading="lazy">';
+        }
+        html += '</span>';
+        return html;
+    }
+
     function renderLangTabs(list) {
         if (!list || !list.length) {
             return;
@@ -48,6 +76,7 @@
                 + ' data-qs-idx="' + idx + '"'
                 + ' data-qs-id="' + escapeAttr(item.id || '') + '"'
                 + ' data-qs-syn="' + escapeAttr(item.syn || 'javascript') + '">';
+            html += iconHtml(item);
             html += '<span class="detail-quickstart__label">' + escapeHtml(item.label || item.id || '') + '</span>';
             html += '</button>';
         });
@@ -55,14 +84,6 @@
         langButtons = tabsEl.querySelectorAll('.detail-quickstart__tab');
         bindLangTabs();
         setActive(0, list);
-    }
-
-    function escapeHtml(s) {
-        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    function escapeAttr(s) {
-        return escapeHtml(s).replace(/"/g, '&quot;');
     }
 
     function setActive(idx, listOverride) {
@@ -118,8 +139,8 @@
         });
     }
 
-    bindLangTabs();
-    setActive(0);
+    // 用带图标的数据重绘首屏 Tab，避免切换鉴权后图标丢失、且保证首屏与数据一致
+    renderLangTabs(currentSamples());
 
     if (copyBtn) {
         copyBtn.addEventListener('click', function () {

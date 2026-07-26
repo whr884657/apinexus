@@ -195,9 +195,12 @@ class ApiQuickstart
     public static function parseQsBlocks($text)
     {
         $text = str_replace(array("\r\n", "\r"), "\n", (string) $text);
+        // 去掉包住短码的 markdown 围栏，避免 AI 输出 ```:::qs ...:::``` 解析失败
+        $text = preg_replace('/^```(?:text|markdown|md|qs)?\s*\n(?=:::)/im', '', $text);
+        $text = preg_replace('/(^:::[\s\S]*?^:::)\s*\n```\s*$/m', '$1', $text);
         $map = array();
         if (!preg_match_all(
-            '/^:::qs\s+([^\n]+)\n([\s\S]*?)^:::\s*$/m',
+            '/^:::\s*qs\s+([^\n]+)\n([\s\S]*?)^:::\s*$/im',
             $text,
             $matches,
             PREG_SET_ORDER
@@ -432,6 +435,26 @@ class ApiQuickstart
         }
         $code = preg_replace('/\sclass\s*=\s*["\'][^"\']*vs-syn[^"\']*["\']/i', '', $code);
         $code = preg_replace('/\sdata-vs-syn(?:-done)?\s*=\s*["\'][^"\']*["\']/i', '', $code);
+        // 示例代码禁止 emoji / 变体选择符 / 零宽连接
+        $code = self::stripEmoji($code);
         return trim($code);
+    }
+
+    /**
+     * 去掉 emoji 与装饰符号（示例代码仅供参考，禁止花哨符号）
+     *
+     * @param string $text
+     * @return string
+     */
+    public static function stripEmoji($text)
+    {
+        $text = (string) $text;
+        if ($text === '') {
+            return '';
+        }
+        $text = preg_replace('/[\x{1F000}-\x{1FFFF}]/u', '', $text);
+        $text = preg_replace('/[\x{2600}-\x{27BF}]/u', '', $text);
+        $text = preg_replace('/[\x{FE00}-\x{FE0F}\x{200D}\x{20E3}\x{2300}-\x{23FF}]/u', '', $text);
+        return $text;
     }
 }

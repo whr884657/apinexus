@@ -194,21 +194,29 @@ class AiApiDoc
         } elseif ($lang === 'typescript') {
             $langHint = '使用 async/await fetch。';
         } elseif ($lang === 'php') {
-            $langHint = '禁止输出 <?php 与 ?>；从变量赋值起写即可。';
-        } elseif ($lang === 'python' || $lang === 'go' || $lang === 'java') {
+            $langHint = '禁止输出 <?php 与 ?>；从变量赋值起写即可。lang 必须写 php（不要写其它别名）。';
+        } elseif ($lang === 'cpp') {
+            $langHint = '使用 libcurl 或等价示意；lang 必须写 cpp（不要写 c++）。';
+        } elseif ($lang === 'python' || $lang === 'go' || $lang === 'java' || $lang === 'rust') {
             $langHint = '含 try/except 或等价错误处理；检查 code/errcode。';
         }
 
-        $system = '你是 API 调用示例生成器。只输出一个 :::qs 短码块，不要解释、不要 Markdown 标题、不要输出其它语言。'
+        $system = '你是 API 调用示例生成器。只输出一个 :::qs 短码块，不要解释、不要 Markdown 标题、不要用 ``` 包裹、不要输出其它语言。'
             . $authLine
             . '代码必须可运行示意：使用对外调用地址与给定参数名；密钥用 YOUR_API_KEY 占位。'
             . '须含基本错误处理：检查响应 JSON 的 code/errcode，或非成功响应。'
+            . '关键步骤必须有简洁中文注释（// 或 # 或语言等价注释）。'
+            . '严禁 emoji、颜文字、图标符号、装饰性特殊字符；代码里只能是普通文本。'
             . $langHint
             . '严禁出现 HTML/CSS class/高亮标记、上游真实地址、代理、密钥明文、内部实现、「全部支持」。'
             . 'GET 用查询参数；POST 可用 form 或 JSON。';
 
         $user = "请为下列接口生成「鉴权=" . $authWay . "，语言=" . $lang . "」的单个快速上手代码块：\n\n"
-            . self::contextMarkdown($safe);
+            . self::contextMarkdown($safe)
+            . "\n\n输出格式必须严格为（不要前后多余文字）：\n"
+            . ($requireAuthAttr
+                ? (":::qs lang=" . $lang . " auth=" . $authWay . "\n// 中文注释…\n代码\n:::")
+                : (":::qs lang=" . $lang . "\n// 中文注释…\n代码\n:::"));
 
         $cfg = AiConfig::get();
         $cfg['timeout'] = max((int) $cfg['timeout'], 60);
@@ -220,12 +228,28 @@ class AiApiDoc
 
         $out = AiClient::chatWithConfig($cfg, $system, $user, array(
             'temperature' => 0.2,
-            'max_tokens'  => 1800,
+            'max_tokens'  => 2200,
         ));
         if (strpos($out, '错误：') === 0) {
             return $out;
         }
         $one = self::extractRequestedQsBlock($out, $authWay, $lang, $requireAuthAttr);
+        // 解析失败再试一次（更严格式提醒），降低 php/cpp 等偶发失败
+        if ($one === '') {
+            @set_time_limit((int) $cfg['timeout'] + 30);
+            $retryUser = $user . "\n\n上次输出无法解析。请再次只输出一个合法短码块，第一行必须是 "
+                . ($requireAuthAttr
+                    ? (':::qs lang=' . $lang . ' auth=' . $authWay)
+                    : (':::qs lang=' . $lang))
+                . " ，最后一行必须是 ::: ，中间是带中文注释的纯代码，禁止 emoji 与 ```。";
+            $out2 = AiClient::chatWithConfig($cfg, $system, $retryUser, array(
+                'temperature' => 0.1,
+                'max_tokens'  => 2200,
+            ));
+            if (strpos($out2, '错误：') !== 0) {
+                $one = self::extractRequestedQsBlock($out2, $authWay, $lang, $requireAuthAttr);
+            }
+        }
         if ($one === '') {
             return '错误：鉴权 ' . $authWay . ' / 语言 ' . $lang . ' 未能解析出有效代码块';
         }
@@ -244,13 +268,14 @@ class AiApiDoc
     private static function extractRequestedQsBlock($raw, $authWay, $lang, $requireAuthAttr)
     {
         $raw = self::sanitizeOutput((string) $raw);
+        $raw = ApiQuickstart::stripEmoji($raw);
         $parsed = ApiQuickstart::parseQsBlocks($raw);
         if ($parsed === array()) {
             $normalized = ApiQuickstart::normalizeAidocBlocks($raw);
             $parsed = ApiQuickstart::parseQsBlocks($normalized);
         }
         if ($parsed === array()) {
-            return '';
+            $parsed = ApiQuickstart::parseFenceBlocksAsQs($raw);
         }
 
         $authWay = strtolower((string) $authWay);
@@ -258,9 +283,23 @@ class AiApiDoc
         $code = '';
         if (isset($parsed[$authWay][$lang])) {
             $code = trim((string) $parsed[$authWay][$lang]);
-        } elseif (!$requireAuthAttr && isset($parsed[ApiQuickstart::AUTH_DEFAULT][$lang])) {
+        }
+        // 模型常漏写 auth= 或写成其它 auth：只要语言匹配就收回并改写成目标 auth
+        if ($code === '') {
+            foreach ($parsed as $authKey => $langs) {
+                if (is_array($langs) && isset($langs[$lang]) && trim((string) $langs[$lang]) !== '') {
+                    $code = trim((string) $langs[$lang]);
+                    break;
+                }
+            }
+        }
+        if ($code === '' && !$requireAuthAttr && isset($parsed[ApiQuickstart::AUTH_DEFAULT][$lang])) {
             $code = trim((string) $parsed[ApiQuickstart::AUTH_DEFAULT][$lang]);
         }
+        if ($code === '') {
+            return '';
+        }
+        $code = ApiQuickstart::stripEmoji($code);
         if ($code === '') {
             return '';
         }
@@ -376,6 +415,9 @@ class AiApiDoc
             if ($w !== '' && stripos($text, $w) !== false) {
                 $text = str_ireplace($w, '***', $text);
             }
+        }
+        if (class_exists('ApiQuickstart')) {
+            $text = ApiQuickstart::stripEmoji($text);
         }
         return trim($text);
     }

@@ -26,6 +26,15 @@
 | Toast | 部分失败改用 `info`（`VS.showMessage` 无 warning） |
 | 任务过滤 | `buildCodeJobs` 仅接受 query/header/bearer |
 
+## 同版复查2 修复
+
+| 项 | 说明 |
+|----|------|
+| AI 解析 | 漏写 auth / 包 markdown 围栏 / 语言落在其它 auth 下时可收回改写；失败重试 1 次 |
+| 提示词 | 强制中文注释；禁止 emoji 与 ``` 包裹；php/cpp 明确 lang 字面值 |
+| stripEmoji | 入库前清除表情与装饰符号 |
+| 快速上手图标 | `detailQsBundle` 带 icon 字段；`detail-quickstart.js` 重绘 Tab 时渲染灰/彩图标 |
+
 ## 升级注意
 
 1. **无数据库结构变更**（`db_changes: false`）。配置项 `ai_code_mode` / `ai_code_concurrency` 首次使用时按默认写入。
