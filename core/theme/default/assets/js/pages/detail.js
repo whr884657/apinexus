@@ -298,19 +298,34 @@
         });
     }
 
-    /* —— 详细文档折叠（默认收起） —— */
+    /* —— 详细文档半折叠预览（默认收起但可见毛玻璃） —— */
     (function initDocFold() {
         var card = document.getElementById('detailDocCard');
         var btn = document.getElementById('detailDocToggle');
         var body = document.getElementById('detailDocBody');
+        var hint = document.getElementById('detailDocHint');
         if (!card || !btn || !body) {
             return;
         }
-        btn.addEventListener('click', function () {
-            var open = card.classList.toggle('is-open');
+        function setOpen(open) {
+            card.classList.toggle('is-open', open);
             card.classList.toggle('is-collapsed', !open);
-            body.hidden = !open;
+            body.hidden = false;
             btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (hint) {
+                hint.textContent = open ? '点击收起' : '预览 · 点击展开';
+                hint.hidden = false;
+            }
+        }
+        setOpen(false);
+        btn.addEventListener('click', function () {
+            setOpen(!card.classList.contains('is-open'));
+        });
+        body.addEventListener('click', function (e) {
+            if (card.classList.contains('is-collapsed')) {
+                e.preventDefault();
+                setOpen(true);
+            }
         });
     })();
 

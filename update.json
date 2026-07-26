@@ -1,13 +1,12 @@
 {
-    "version": "10.15.1",
-    "title": "ApiNexus 10.15.1 AI 连通测试与协议兼容",
+    "version": "10.15.2",
+    "title": "ApiNexus 10.15.2 AI 生成可视化与文档半折叠预览",
     "release_date": "2026-07-27",
     "db_changes": false,
     "changes": [
-        "AI 测试：上游 HTTP 成功即判定连通，不再因正文为空失败",
-        "兼容 Chat Completions 与 Responses API（auto/chat/responses）",
-        "支持拉取 /models 自动识别可用模型；新增 Gemini 预设与自定义中转",
-        "增强多厂商响应正文抽取（content parts / reasoning / output_text）"
+        "接口编辑 AI 生成：顶部进度横幅 + 折叠终端进程，生成中持续反馈",
+        "拉取模型：单个自动填入，多个显示可点选列表",
+        "默认主题详细文档：半折叠可见首段，底部毛玻璃渐隐引导展开"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

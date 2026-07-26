@@ -928,7 +928,11 @@ $aiPresets = AiConfig::providerPresets();
                     <button type="button" class="vs-btn vs-btn--default" id="aiListModelsBtn">拉取模型</button>
                 </div>
             </div>
-            <p class="vs-form-hint">填写根地址与密钥后，可点「拉取模型」自动识别可用模型并填入列表。</p>
+            <div class="vs-ai-model-picker" id="aiModelPicker" hidden>
+                <p class="vs-ai-model-picker__title" id="aiModelPickerTitle">可用模型</p>
+                <div class="vs-ai-model-picker__list" id="aiModelPickerList"></div>
+            </div>
+            <p class="vs-form-hint">填写根地址与密钥后可「拉取模型」：仅 1 个会自动填入；多个则显示下方列表供点选。</p>
         </div>
         <div class="vs-form-row vs-form-row--inline">
             <div class="vs-form-col">

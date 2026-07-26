@@ -10142,3 +10142,130 @@ select.vs-input.vs-select {
     font-size: 12px;
     color: var(--vs-text-secondary, #6b7280);
 }
+
+/* AI 生成可视化（10.15.2） */
+.vs-ai-gen-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #bfdbfe;
+    background: linear-gradient(90deg, #eff6ff, #f8fafc 60%);
+    color: #1e3a8a;
+    font-size: 13px;
+    font-weight: 600;
+}
+.vs-ai-gen-banner[hidden] { display: none !important; }
+.vs-ai-gen-banner.is-done {
+    border-color: #bbf7d0;
+    background: linear-gradient(90deg, #f0fdf4, #f8fafc 60%);
+    color: #166534;
+}
+.vs-ai-gen-banner.is-error {
+    border-color: #fecaca;
+    background: linear-gradient(90deg, #fef2f2, #f8fafc 60%);
+    color: #991b1b;
+}
+.vs-ai-gen-banner__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3b82f6;
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+    animation: vs-ai-pulse 1.2s ease-out infinite;
+    flex: 0 0 auto;
+}
+.vs-ai-gen-banner.is-done .vs-ai-gen-banner__dot { background: #22c55e; animation: none; }
+.vs-ai-gen-banner.is-error .vs-ai-gen-banner__dot { background: #ef4444; animation: none; }
+@keyframes vs-ai-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45); }
+    70% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+.vs-ai-gen-banner__text { flex: 1 1 auto; min-width: 0; }
+.vs-ai-gen-banner__time {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    color: #64748b;
+    font-weight: 500;
+    font-size: 12px;
+}
+.vs-ai-term {
+    margin-top: 10px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 10px;
+    background: #0b1220;
+    color: #e2e8f0;
+    overflow: hidden;
+}
+.vs-ai-term__summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #93c5fd;
+    background: #111827;
+    user-select: none;
+}
+.vs-ai-term__summary::-webkit-details-marker { display: none; }
+.vs-ai-term[open] .vs-ai-term__summary { border-bottom: 1px solid #1f2937; }
+.vs-ai-term__log {
+    margin: 0;
+    padding: 10px 12px 12px;
+    max-height: 180px;
+    overflow: auto;
+    font-size: 12px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #cbd5e1;
+}
+.vs-ai-term.is-running .vs-ai-term__summary::after {
+    content: ' · 进行中';
+    color: #fbbf24;
+}
+.vs-ai-model-picker {
+    margin-top: 10px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #f8fafc;
+}
+.vs-ai-model-picker[hidden] { display: none !important; }
+.vs-ai-model-picker__title {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    font-weight: 600;
+}
+.vs-ai-model-picker__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 160px;
+    overflow: auto;
+}
+.vs-ai-model-pick {
+    appearance: none;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    background: #fff;
+    color: var(--vs-text, #111);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.vs-ai-model-pick:hover { border-color: #93c5fd; }
+.vs-ai-model-pick.is-active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+}

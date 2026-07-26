@@ -168,18 +168,76 @@
     function fillModelDatalist(models) {
         var list = document.getElementById('aiModelList');
         var input = document.getElementById('aiModel');
-        if (!list) {
+        var picker = document.getElementById('aiModelPicker');
+        var pickerList = document.getElementById('aiModelPickerList');
+        var pickerTitle = document.getElementById('aiModelPickerTitle');
+        models = Array.isArray(models) ? models.filter(function (id) { return !!String(id || '').trim(); }) : [];
+
+        if (list) {
+            list.innerHTML = '';
+            models.forEach(function (id) {
+                var opt = document.createElement('option');
+                opt.value = id;
+                list.appendChild(opt);
+            });
+        }
+
+        if (models.length === 0) {
+            if (picker) {
+                picker.hidden = true;
+            }
+            if (pickerList) {
+                pickerList.innerHTML = '';
+            }
+            showFlash('未获取到可用模型', 'error');
             return;
         }
-        list.innerHTML = '';
-        (models || []).forEach(function (id) {
-            var opt = document.createElement('option');
-            opt.value = id;
-            list.appendChild(opt);
-        });
-        if (input && models && models.length && !String(input.value || '').trim()) {
+
+        if (models.length === 1) {
+            if (input) {
+                input.value = models[0];
+            }
+            if (picker) {
+                picker.hidden = true;
+            }
+            if (pickerList) {
+                pickerList.innerHTML = '';
+            }
+            showFlash('已自动填入唯一模型：' + models[0], 'success');
+            return;
+        }
+
+        if (input && !String(input.value || '').trim()) {
             input.value = models[0];
         }
+        if (pickerTitle) {
+            pickerTitle.textContent = '可用模型（共 ' + models.length + ' 个，点击选择）';
+        }
+        if (pickerList) {
+            pickerList.innerHTML = '';
+            var current = input ? String(input.value || '').trim() : '';
+            models.forEach(function (id) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'vs-ai-model-pick' + (id === current ? ' is-active' : '');
+                btn.textContent = id;
+                btn.title = id;
+                btn.addEventListener('click', function () {
+                    if (input) {
+                        input.value = id;
+                    }
+                    pickerList.querySelectorAll('.vs-ai-model-pick').forEach(function (el) {
+                        el.classList.toggle('is-active', el === btn);
+                    });
+                    showFlash('已选择模型：' + id, 'success');
+                });
+                pickerList.appendChild(btn);
+            });
+        }
+        if (picker) {
+            picker.hidden = false;
+        }
+        showFlash('已拉取 ' + models.length + ' 个模型，请在列表中选择', 'success');
     }
 
     function bindAiListModels() {
@@ -202,7 +260,6 @@
                 .then(function (data) {
                     if (data && data.code === 1) {
                         fillModelDatalist(data.models || []);
-                        showFlash(data.msg || '已拉取模型', 'success');
                     } else {
                         showFlash((data && data.msg) || '拉取失败', 'error');
                     }

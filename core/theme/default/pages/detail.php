@@ -267,16 +267,20 @@ if (!$notFound) {
     <section class="detail-card detail-fold is-collapsed" id="detailDocCard">
         <button type="button" class="detail-fold__toggle" id="detailDocToggle" aria-expanded="false" aria-controls="detailDocBody">
             <span class="detail-section-title detail-fold__title">详细文档</span>
+            <span class="detail-fold__hint" id="detailDocHint">预览 · 点击展开</span>
             <span class="detail-fold__chevron" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </span>
         </button>
-        <div class="detail-fold__body" id="detailDocBody" hidden>
-            <?php if (!empty($api['doc'])): ?>
-            <div class="markdown-body detail-md is-parsed"><?php echo Markdown::render((string) $api['doc']); ?></div>
-            <?php else: ?>
-            <p class="detail-empty-hint">暂无详细文档</p>
-            <?php endif; ?>
+        <div class="detail-fold__body" id="detailDocBody">
+            <div class="detail-fold__inner">
+                <?php if (!empty($api['doc'])): ?>
+                <div class="markdown-body detail-md is-parsed"><?php echo Markdown::render((string) $api['doc']); ?></div>
+                <?php else: ?>
+                <p class="detail-empty-hint">暂无详细文档</p>
+                <?php endif; ?>
+            </div>
+            <div class="detail-fold__fade" id="detailDocFade" aria-hidden="true"></div>
         </div>
     </section>
 

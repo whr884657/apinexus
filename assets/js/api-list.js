@@ -1714,7 +1714,117 @@
         refreshMdField(el);
     }
 
+    var aiBanner = document.getElementById('apiListAiBanner');
+    var aiBannerText = document.getElementById('apiListAiBannerText');
+    var aiBannerTime = document.getElementById('apiListAiBannerTime');
+    var aiDocBtn = document.getElementById('apiListAiDocBtn');
+    var aiCodeBtn = document.getElementById('apiListAiCodeBtn');
+    var aiBusy = false;
+    var aiTickTimer = null;
+    var aiStageTimer = null;
+    var aiStartedAt = 0;
+
+    function aiNow() {
+        var d = new Date();
+        function pad(n) { return n < 10 ? '0' + n : String(n); }
+        return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+
+    function aiTermEls(kind) {
+        if (kind === 'code') {
+            return {
+                details: document.getElementById('apiListAiTermCode'),
+                log: document.getElementById('apiListAiTermCodeLog')
+            };
+        }
+        return {
+            details: document.getElementById('apiListAiTermDoc'),
+            log: document.getElementById('apiListAiTermDocLog')
+        };
+    }
+
+    function aiTermClear(kind) {
+        var els = aiTermEls(kind);
+        if (els.log) {
+            els.log.textContent = '';
+        }
+    }
+
+    function aiTermAppend(kind, line) {
+        var els = aiTermEls(kind);
+        if (!els.log) {
+            return;
+        }
+        var prev = els.log.textContent || '';
+        if (prev === '尚未开始生成。') {
+            prev = '';
+        }
+        els.log.textContent = prev + '[' + aiNow() + '] ' + line + '\n';
+        els.log.scrollTop = els.log.scrollHeight;
+    }
+
+    function aiTermOpen(kind, running) {
+        var els = aiTermEls(kind);
+        if (els.details) {
+            els.details.open = true;
+            els.details.classList.toggle('is-running', !!running);
+        }
+    }
+
+    function aiTermStopRunning(kind) {
+        var els = aiTermEls(kind);
+        if (els.details) {
+            els.details.classList.remove('is-running');
+        }
+    }
+
+    function aiStopTimers() {
+        if (aiTickTimer) {
+            clearInterval(aiTickTimer);
+            aiTickTimer = null;
+        }
+        if (aiStageTimer) {
+            clearInterval(aiStageTimer);
+            aiStageTimer = null;
+        }
+    }
+
+    function aiSetBanner(state, text) {
+        if (!aiBanner) {
+            return;
+        }
+        aiBanner.hidden = false;
+        aiBanner.classList.remove('is-done', 'is-error');
+        if (state === 'done') {
+            aiBanner.classList.add('is-done');
+        } else if (state === 'error') {
+            aiBanner.classList.add('is-error');
+        }
+        if (aiBannerText) {
+            aiBannerText.textContent = text || '';
+        }
+    }
+
+    function aiHideBannerLater() {
+        setTimeout(function () {
+            if (!aiBusy && aiBanner) {
+                aiBanner.hidden = true;
+            }
+        }, 5000);
+    }
+
+    function aiElapsedLabel() {
+        var sec = Math.max(0, Math.floor((Date.now() - aiStartedAt) / 1000));
+        var m = Math.floor(sec / 60);
+        var s = sec % 60;
+        return (m > 0 ? (m + '分') : '') + s + '秒';
+    }
+
     function runAiGenerate(action, btn) {
+        if (aiBusy) {
+            window.VS.showMessage('已有生成任务进行中，请稍候', 'info');
+            return;
+        }
         var payload = collectPayload();
         if (payload.__error) {
             window.VS.showMessage(payload.__error, 'error');
@@ -1726,47 +1836,130 @@
             switchFormTab('basic');
             return;
         }
-        // 不把上游密钥交给 AI 接口
         delete payload.upkey;
         delete payload.targeturl;
         if (formMode === 'edit' && formId) {
             payload.api_id = formId.value || '';
         }
+
+        var kind = action === 'ai_gen_code' ? 'code' : 'doc';
+        var title = kind === 'code' ? '代码示例' : '详细文档';
+        var stages = kind === 'code'
+            ? [
+                '已提交生成请求',
+                '正在整理接口参数与调用地址…',
+                '正在请求大模型编写多语言示例…',
+                '模型正在输出 :::qs 代码块…',
+                '仍在生成中，请耐心等待…',
+                '接近完成，正在规范化语言块…'
+            ]
+            : [
+                '已提交生成请求',
+                '正在整理接口上下文…',
+                '正在请求大模型撰写详细文档…',
+                '模型正在编写参数表与响应说明…',
+                '仍在生成中，请耐心等待…',
+                '接近完成，正在整理 Markdown…'
+            ];
+
+        switchFormTab('docs');
+        aiBusy = true;
+        aiStartedAt = Date.now();
+        aiStopTimers();
+        aiTermClear(kind);
+        aiTermOpen(kind, true);
+        aiTermAppend(kind, '开始生成「' + title + '」');
+        aiSetBanner('run', '正在生成' + title + '…');
+        if (aiBannerTime) {
+            aiBannerTime.textContent = '已用时 0秒';
+        }
+        if (aiDocBtn) {
+            aiDocBtn.disabled = true;
+        }
+        if (aiCodeBtn) {
+            aiCodeBtn.disabled = true;
+        }
         if (btn) {
             btn.disabled = true;
         }
-        window.VS.showMessage('正在生成，请稍候…', 'info');
+
+        var stageIdx = 0;
+        var longWaitHinted = false;
+        aiTermAppend(kind, stages[0]);
+        aiTickTimer = setInterval(function () {
+            if (aiBannerTime) {
+                aiBannerTime.textContent = '已用时 ' + aiElapsedLabel();
+            }
+            if (aiBannerText && !aiBanner.classList.contains('is-done') && !aiBanner.classList.contains('is-error')) {
+                aiBannerText.textContent = '正在生成' + title + '…（' + aiElapsedLabel() + '）';
+            }
+        }, 1000);
+        aiStageTimer = setInterval(function () {
+            stageIdx += 1;
+            var elapsed = Math.floor((Date.now() - aiStartedAt) / 1000);
+            if (!longWaitHinted && elapsed >= 55) {
+                longWaitHinted = true;
+                aiTermAppend(kind, '已等待较久。若仍无结果，请到「系统设置 → AI 对接」检查超时秒数与模型是否可用');
+            }
+            if (stageIdx >= stages.length) {
+                aiTermAppend(kind, '仍在等待上游响应（已 ' + aiElapsedLabel() + '）…');
+                return;
+            }
+            aiTermAppend(kind, stages[stageIdx]);
+            if (aiBannerText && !aiBanner.classList.contains('is-done') && !aiBanner.classList.contains('is-error')) {
+                aiSetBanner('run', stages[stageIdx]);
+            }
+        }, 4500);
+
+        window.VS.showMessage('正在生成' + title + '，可在文档页查看进程', 'info');
         postAction(action, payload)
             .then(function (data) {
                 if (!data || data.code !== 1) {
-                    window.VS.showMessage((data && data.msg) || '生成失败', 'error');
+                    var err = (data && data.msg) || '生成失败';
+                    aiTermAppend(kind, '失败：' + err);
+                    aiTermStopRunning(kind);
+                    aiSetBanner('error', '生成失败：' + err);
+                    window.VS.showMessage(err, 'error');
                     return;
                 }
                 draftSkip = true;
                 if (action === 'ai_gen_doc' && data.doc != null) {
                     setTextareaValue(fields.docNormal, data.doc);
-                    switchFormTab('docs');
+                    aiTermAppend(kind, '已写入详细文档（约 ' + String(data.doc).length + ' 字符）');
                 }
                 if (action === 'ai_gen_code' && data.aidoc != null) {
                     setTextareaValue(fields.docAi, data.aidoc);
-                    switchFormTab('docs');
+                    aiTermAppend(kind, '已写入代码示例（约 ' + String(data.aidoc).length + ' 字符）');
                 }
                 draftSkip = false;
+                aiTermAppend(kind, '完成，总用时 ' + aiElapsedLabel());
+                aiTermStopRunning(kind);
+                aiSetBanner('done', (data.msg || (title + '已生成')) + ' · 用时 ' + aiElapsedLabel());
                 window.VS.showMessage(data.msg || '生成完成', 'success');
                 scheduleDraftSave();
             })
             .catch(function () {
+                aiTermAppend(kind, '网络异常或请求中断');
+                aiTermStopRunning(kind);
+                aiSetBanner('error', '网络异常，请稍后重试');
                 window.VS.showMessage('网络异常，请稍后重试', 'error');
             })
             .finally(function () {
-                if (btn) {
-                    btn.disabled = false;
+                aiBusy = false;
+                aiStopTimers();
+                if (aiBannerTime) {
+                    aiBannerTime.textContent = '总用时 ' + aiElapsedLabel();
                 }
+                if (aiDocBtn) {
+                    aiDocBtn.disabled = false;
+                }
+                if (aiCodeBtn) {
+                    aiCodeBtn.disabled = false;
+                }
+                aiHideBannerLater();
             });
     }
 
-    var aiDocBtn = document.getElementById('apiListAiDocBtn');
-    var aiCodeBtn = document.getElementById('apiListAiCodeBtn');
     if (aiDocBtn) {
         aiDocBtn.addEventListener('click', function () {
             runAiGenerate('ai_gen_doc', aiDocBtn);

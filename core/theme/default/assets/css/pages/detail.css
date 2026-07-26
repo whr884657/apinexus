@@ -928,7 +928,7 @@
     }
 }
 
-/* —— 详细文档折叠 —— */
+/* —— 详细文档折叠（半折叠 + 毛玻璃预览） —— */
 .detail-fold__toggle {
     display: flex;
     align-items: center;
@@ -948,6 +948,15 @@
     margin: 0;
     flex: 1 1 auto;
 }
+.detail-fold__hint {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted, #64748b);
+}
+.detail-fold.is-open .detail-fold__hint {
+    display: none;
+}
 .detail-fold__chevron {
     flex: 0 0 auto;
     display: inline-flex;
@@ -959,7 +968,65 @@
 }
 .detail-fold__body {
     margin-top: 0.85rem;
+    position: relative;
+}
+.detail-fold__inner {
+    position: relative;
+    z-index: 0;
 }
 .detail-fold.is-collapsed .detail-fold__body {
+    display: block;
+    max-height: 8.5rem;
+    overflow: hidden;
+    cursor: pointer;
+}
+.detail-fold.is-open .detail-fold__body {
+    max-height: none;
+    overflow: visible;
+    cursor: default;
+}
+.detail-fold__fade {
     display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 5.25rem;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in srgb, var(--bg-panel, #f8fafc) 45%, transparent) 40%,
+        color-mix(in srgb, var(--bg-panel, #f8fafc) 92%, transparent) 100%
+    );
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+}
+.detail-fold.is-collapsed .detail-fold__fade {
+    display: block;
+}
+.detail-fold.is-collapsed .detail-fold__inner {
+    filter: none;
+}
+.detail-fold.is-collapsed .detail-fold__inner::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4.75rem;
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        color-mix(in srgb, var(--bg-panel, #f8fafc) 30%, transparent) 45%,
+        color-mix(in srgb, var(--bg-panel, #f8fafc) 88%, transparent) 100%
+    );
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+.detail-fold.is-open .detail-fold__fade,
+.detail-fold.is-open .detail-fold__inner::after {
+    display: none !important;
 }

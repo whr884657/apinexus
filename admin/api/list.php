@@ -842,6 +842,11 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
             </div>
 
             <div class="vs-api-list-form-pane" data-api-form-pane="docs" hidden>
+                <div class="vs-ai-gen-banner" id="apiListAiBanner" hidden>
+                    <span class="vs-ai-gen-banner__dot" aria-hidden="true"></span>
+                    <span class="vs-ai-gen-banner__text" id="apiListAiBannerText">正在生成…</span>
+                    <span class="vs-ai-gen-banner__time" id="apiListAiBannerTime"></span>
+                </div>
                 <div class="vs-form-row">
                     <div class="vs-api-doc-head">
                         <label class="vs-label" for="apiListFormDocNormal">详细文档（Markdown）</label>
@@ -851,6 +856,10 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocNormal" name="doc" rows="10"
                               data-vs-md placeholder="面向调用方的详细说明…"></textarea>
                     <p class="vs-form-hint">建议由 AI 生成后人工微调；勿写入上游地址或密钥。</p>
+                    <details class="vs-ai-term" id="apiListAiTermDoc" data-ai-term="doc">
+                        <summary class="vs-ai-term__summary">AI 编写进程（详细文档）</summary>
+                        <pre class="vs-ai-term__log font-mono" id="apiListAiTermDocLog">尚未开始生成。</pre>
+                    </details>
                 </div>
                 <div class="vs-form-row">
                     <div class="vs-api-doc-head">
@@ -861,6 +870,10 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="aidoc" rows="10"
                               data-vs-md placeholder=":::qs lang=curl&#10;...&#10;:::&#10;&#10;:::qs lang=python&#10;...&#10;:::"></textarea>
                     <p class="vs-form-hint">须使用 :::qs lang=语言标识 包裹，语言：curl / typescript / browser / python / go / java / php / cpp / rust。</p>
+                    <details class="vs-ai-term" id="apiListAiTermCode" data-ai-term="code">
+                        <summary class="vs-ai-term__summary">AI 编写进程（代码示例）</summary>
+                        <pre class="vs-ai-term__log font-mono" id="apiListAiTermCodeLog">尚未开始生成。</pre>
+                    </details>
                 </div>
             </div>
         </form>
