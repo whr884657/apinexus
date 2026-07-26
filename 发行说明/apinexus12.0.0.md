@@ -17,6 +17,15 @@
 | 实时进程 | 终端日志显示 `[n/27] 开始/完成 · Bearer · python` 等真实进度 |
 | 接口 | 新增 `ai_gen_code_piece`；页面注入 `window.VS_AI_CODE` |
 
+## 同版复查修复
+
+| 项 | 说明 |
+|----|------|
+| Session 锁 | `ai_gen_*` 在 CSRF 通过后 `session_write_close()`，并行分片不再被会话文件串行 |
+| 单片载荷 | 分片请求不再附带 `doc`/`aidoc`，降低并行流量 |
+| Toast | 部分失败改用 `info`（`VS.showMessage` 无 warning） |
+| 任务过滤 | `buildCodeJobs` 仅接受 query/header/bearer |
+
 ## 升级注意
 
 1. **无数据库结构变更**（`db_changes: false`）。配置项 `ai_code_mode` / `ai_code_concurrency` 首次使用时按默认写入。

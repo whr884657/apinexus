@@ -1931,6 +1931,9 @@
         var langs = ['curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust'];
         var need = parseInt(payload.needkey, 10) || 0;
         var ways = need === 0 ? ['query'] : getSelectedKeyways();
+        ways = ways.filter(function (w) {
+            return w === 'query' || w === 'header' || w === 'bearer';
+        });
         if (!ways.length) {
             ways = ['query'];
         }
@@ -2029,7 +2032,8 @@
                 var warn = '部分示例未成功：' + failed.slice(0, 12).join('、')
                     + (failed.length > 12 ? (' 等共 ' + failed.length + ' 项') : '');
                 aiTermAppend(kind, '注意：' + warn);
-                window.VS.showMessage(warn, 'warning');
+                // VS.showMessage 无 warning；用 info 避免被映射成 success 绿提示
+                window.VS.showMessage(warn, 'info');
             } else {
                 window.VS.showMessage('代码示例已全部生成', 'success');
             }
@@ -2062,6 +2066,9 @@
                             Object.keys(payload).forEach(function (k) {
                                 piecePayload[k] = payload[k];
                             });
+                            // 生成不读 doc/aidoc，去掉以免 VS64 大字段拖垮并行请求体积
+                            delete piecePayload.doc;
+                            delete piecePayload.aidoc;
                             piecePayload.auth = job.auth;
                             piecePayload.lang = job.lang;
 
@@ -2238,7 +2245,7 @@
                 aiTermStopRunning(kind);
                 aiSetBanner('done', (data.msg || (title + '已生成')) + ' · 用时 ' + aiElapsedLabel());
                 if (data.warning) {
-                    window.VS.showMessage(String(data.warning), 'warning');
+                    window.VS.showMessage(String(data.warning), 'info');
                 } else {
                     window.VS.showMessage(data.msg || '生成完成', 'success');
                 }

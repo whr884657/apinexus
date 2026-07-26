@@ -181,6 +181,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error('请先在系统设置中启用并配置 AI');
         }
         @ignore_user_abort(true);
+        // 认证/CSRF 已完成：立刻释放 Session 锁，否则并行分片会被 PHP 会话文件串行卡住
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
         $data = $payloadFromPost();
         $data['id'] = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
         $aiCfg = AiConfig::get();
