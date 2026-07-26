@@ -137,6 +137,36 @@
     }
 
     /**
+     * 根据 HTTP 状态 + 业务 errcode 判定 Playground 徽章文案（v11：业务失败也常为 HTTP 200）
+     * @param {Response} response
+     * @returns {Promise<{ok:boolean,label:string,http:number,errcode:number}>}
+     */
+    function inspectFetchStatus(response) {
+        var http = (response && response.status) ? response.status : 0;
+        var ok = http >= 200 && http < 400;
+        var label = (http ? String(http) : '') + (ok ? ' OK' : ' Error');
+        if (!response || typeof response.clone !== 'function') {
+            return Promise.resolve({ ok: ok, label: label, http: http, errcode: 0 });
+        }
+        return response.clone().text().then(function (text) {
+            var errcode = 0;
+            try {
+                var j = JSON.parse(text || '');
+                if (j && typeof j === 'object') {
+                    errcode = parseInt(j.errcode, 10) || 0;
+                    if (Number(j.code) === 0 && errcode >= 11001) {
+                        ok = false;
+                        label = String(errcode) + ' Error';
+                    }
+                }
+            } catch (e) { /* 非 JSON 仍按 HTTP */ }
+            return { ok: ok, label: label, http: http, errcode: errcode };
+        }).catch(function () {
+            return { ok: ok, label: label, http: http, errcode: 0 };
+        });
+    }
+
+    /**
      * @param {Response} response
      * @param {HTMLElement} outputEl
      * @returns {Promise<void>}
@@ -489,9 +519,11 @@
 
     global.VsPlaygroundResponse = {
         renderFetchResponse: renderFetchResponse,
+        inspectFetchStatus: inspectFetchStatus,
         renderDirectMedia: renderDirectMedia,
         renderRelayPayload: renderRelayPayload,
         directRequest: directRequest,
+        applyKeywayAuth: applyKeywayAuth,
         buildUrlWithParams: buildUrlWithParams,
         relayRequest: relayRequest,
         syntaxHighlight: syntaxHighlight,

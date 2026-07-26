@@ -2014,11 +2014,18 @@
                     setTextareaValue(fields.docAi, data.aidoc);
                     aiTermAppend(kind, '已写入代码示例（约 ' + String(data.aidoc).length + ' 字符）');
                 }
+                if (data.warning) {
+                    aiTermAppend(kind, '注意：' + String(data.warning));
+                }
                 draftSkip = false;
                 aiTermAppend(kind, '完成，总用时 ' + aiElapsedLabel());
                 aiTermStopRunning(kind);
                 aiSetBanner('done', (data.msg || (title + '已生成')) + ' · 用时 ' + aiElapsedLabel());
-                window.VS.showMessage(data.msg || '生成完成', 'success');
+                if (data.warning) {
+                    window.VS.showMessage(String(data.warning), 'warning');
+                } else {
+                    window.VS.showMessage(data.msg || '生成完成', 'success');
+                }
                 scheduleDraftSave();
             })
             .catch(function (err) {

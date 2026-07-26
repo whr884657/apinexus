@@ -394,6 +394,10 @@ class ApiStats
         if ($sawDisabled) {
             return array('errcode' => ApiError::KEY_DISABLED, 'msg' => '密钥已禁用');
         }
+        // 允许通道无一有效密钥，但未允许通道出现了密钥 → 优先报鉴权方式错误
+        if (self::hasKeyOutsideAllowedWays($row)) {
+            return array('errcode' => ApiError::AUTH_WAY, 'msg' => '鉴权方式错误，请按本接口支持的方式传递密钥');
+        }
         return array('errcode' => ApiError::BAD_KEY, 'msg' => '密钥错误');
     }
 

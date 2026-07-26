@@ -729,7 +729,7 @@ curl …
 
 **ApiQuickstart：** `samplesFromAidoc($aidoc, $keyways)` / `qsBundleFromAidoc` 解析短码；默认主题详情页横滑语言 Tab + 鉴权 Tab（`auth=…` 维度）。
 
-**详细文档要求：** 错误响应示例须含 `"http":401` 等字段；平台 HTTP：401/402/403/429/503。
+**详细文档要求（v11.0.0）：** 错误响应示例须含 `"errcode":11001` 等业务码；传输层 HTTP 固定 200。鉴权方式错误为 `11012`。禁止再写 `"http":401`。
 
 ---
 

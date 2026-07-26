@@ -289,13 +289,19 @@
                 authWay: authWay || 'query',
                 keyways: keyways
             }).then(function (res) {
-                var http = res.status || 0;
-                var ok = http >= 200 && http < 400;
-                setStatus((http ? String(http) : '') + (ok ? ' OK' : ' Error'), ok ? 'ok' : 'err');
                 if (urlPreview) {
                     urlPreview.textContent = String(api.endpoint || page.getAttribute('data-endpoint') || '');
                 }
-                return VsPR.renderFetchResponse(res, responseEl);
+                var statusFn = VsPR.inspectFetchStatus
+                    ? VsPR.inspectFetchStatus(res)
+                    : Promise.resolve({
+                        ok: (res.status || 0) >= 200 && (res.status || 0) < 400,
+                        label: String(res.status || '') + (((res.status || 0) >= 200 && (res.status || 0) < 400) ? ' OK' : ' Error')
+                    });
+                return statusFn.then(function (info) {
+                    setStatus(info.label || 'Error', info.ok ? 'ok' : 'err');
+                    return VsPR.renderFetchResponse(res, responseEl);
+                });
             }).catch(function (err) {
                 setStatus('Error', 'err');
                 var raw = err && err.message ? String(err.message) : 'network error';

@@ -180,10 +180,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!AiConfig::isReady()) {
             AjaxResponse::error('请先在系统设置中启用并配置 AI');
         }
-        @set_time_limit(360);
         @ignore_user_abort(true);
         $data = $payloadFromPost();
         $data['id'] = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
+        // 按鉴权分片数抬高 PHP 时限（每片最多 300s + 缓冲）
+        $aiWays = 1;
+        if ($action === 'ai_gen_code') {
+            $kw = isset($data['keyways']) ? $data['keyways'] : '';
+            if (is_array($kw)) {
+                $aiWays = max(1, count($kw));
+            } elseif (is_string($kw) && trim($kw) !== '') {
+                $aiWays = max(1, count(array_filter(array_map('trim', explode(',', $kw)))));
+            }
+            if ((int) (isset($data['needkey']) ? $data['needkey'] : 0) === 0) {
+                $aiWays = 1;
+            }
+        }
+        $aiCfg = AiConfig::get();
+        $aiTimeout = (int) (isset($aiCfg['timeout']) ? $aiCfg['timeout'] : 60);
+        if ($aiTimeout < 120) {
+            $aiTimeout = 120;
+        }
+        if ($aiTimeout > 300) {
+            $aiTimeout = 300;
+        }
+        @set_time_limit(($aiWays * $aiTimeout) + 60);
         // 已有接口时补全对外调用地址（代理不暴露上游）
         if ($data['id'] > 0) {
             $row = ApiManager::findById($data['id']);
@@ -216,7 +237,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_array($gen)) {
             AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
         }
-        AjaxResponse::success('代码示例已生成', array('aidoc' => $gen['aidoc']));
+        $payload = array('aidoc' => $gen['aidoc']);
+        if (!empty($gen['warning'])) {
+            $payload['warning'] = (string) $gen['warning'];
+        }
+        $okMsg = !empty($gen['warning']) ? '代码示例已部分生成' : '代码示例已生成';
+        AjaxResponse::success($okMsg, $payload);
     }
 
     AjaxResponse::error('无效操作', 400);

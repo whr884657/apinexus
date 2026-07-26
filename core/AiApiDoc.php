@@ -34,7 +34,14 @@ class AiApiDoc
             . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。';
 
         $user = "请根据下列接口资料撰写详细文档（Markdown）：\n\n" . self::contextMarkdown($safe);
-        $out = AiClient::chat($system, $user);
+        $cfg['timeout'] = max((int) $cfg['timeout'], 120);
+        if ($cfg['timeout'] > 300) {
+            $cfg['timeout'] = 300;
+        }
+        $out = AiClient::chatWithConfig($cfg, $system, $user, array(
+            'temperature' => 0.3,
+            'max_tokens'  => 8000,
+        ));
         if (strpos($out, '错误：') === 0) {
             return $out;
         }
@@ -67,6 +74,7 @@ class AiApiDoc
 
         $chunks = array();
         $lastErr = '';
+        $failedWays = array();
         foreach ($keyways as $way) {
             $way = strtolower(trim((string) $way));
             if ($way === '') {
@@ -75,10 +83,13 @@ class AiApiDoc
             $part = self::generateCodeSamplesForAuth($safe, $way, $needKey !== 0);
             if (is_string($part) && strpos($part, '错误：') === 0) {
                 $lastErr = $part;
+                $failedWays[] = $way;
                 continue;
             }
             if (is_string($part) && $part !== '') {
                 $chunks[] = $part;
+            } else {
+                $failedWays[] = $way;
             }
         }
 
@@ -90,7 +101,11 @@ class AiApiDoc
         if ($merged === '') {
             return '错误：未能解析出有效的语言代码块，请重试';
         }
-        return array('aidoc' => $merged);
+        $result = array('aidoc' => $merged);
+        if ($failedWays !== array()) {
+            $result['warning'] = '部分鉴权方式未生成成功：' . implode('、', $failedWays) . '。请加大超时后重试，或单独再生成。';
+        }
+        return $result;
     }
 
     /**

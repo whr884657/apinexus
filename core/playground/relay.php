@@ -69,6 +69,7 @@ AjaxResponse::json(array(
     'code'        => !empty($result['ok']) ? 1 : 0,
     'msg'         => isset($result['msg']) ? (string) $result['msg'] : '',
     'http'        => isset($result['http']) ? (int) $result['http'] : 0,
+    'errcode'     => isset($result['errcode']) ? (int) $result['errcode'] : 0,
     'contentType' => isset($result['contentType']) ? (string) $result['contentType'] : '',
     'body'        => isset($result['body']) ? (string) $result['body'] : '',
     'encoding'    => isset($result['encoding']) ? (string) $result['encoding'] : 'text',

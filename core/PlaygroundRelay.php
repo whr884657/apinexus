@@ -51,7 +51,7 @@ class PlaygroundRelay
             return array(
                 'ok'          => false,
                 'msg'         => '该接口维护中',
-                'http'        => $errcode,
+                'http'        => 200,
                 'errcode'     => $errcode,
                 'contentType' => 'application/json; charset=utf-8',
                 'body'        => json_encode(array('code' => 0, 'msg' => '该接口维护中', 'errcode' => $errcode), JSON_UNESCAPED_UNICODE),
@@ -60,10 +60,13 @@ class PlaygroundRelay
             );
         }
 
-        // 将参数注入超全局，供 guardAccess 读取密钥
+        // 将参数注入超全局，供 guardAccess 读取密钥（按接口 keyways 注入对应通道）
         $savedGet = $_GET;
         $savedPost = $_POST;
         $savedMethod = isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET';
+        $savedAuth = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : null;
+        $savedRedirAuth = isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) ? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] : null;
+        $savedXApiKey = isset($_SERVER['HTTP_X_API_KEY']) ? $_SERVER['HTTP_X_API_KEY'] : null;
         foreach ($params as $k => $v) {
             $key = (string) $k;
             if ($key === '') {
@@ -73,11 +76,27 @@ class PlaygroundRelay
             $_POST[$key] = $v;
         }
         $_SERVER['REQUEST_METHOD'] = $method;
+        self::injectKeywaysForGuard($row, $params);
 
         $guard = ApiStats::guardAccess($row);
         $_GET = $savedGet;
         $_POST = $savedPost;
         $_SERVER['REQUEST_METHOD'] = $savedMethod;
+        if ($savedAuth === null) {
+            unset($_SERVER['HTTP_AUTHORIZATION']);
+        } else {
+            $_SERVER['HTTP_AUTHORIZATION'] = $savedAuth;
+        }
+        if ($savedRedirAuth === null) {
+            unset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+        } else {
+            $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] = $savedRedirAuth;
+        }
+        if ($savedXApiKey === null) {
+            unset($_SERVER['HTTP_X_API_KEY']);
+        } else {
+            $_SERVER['HTTP_X_API_KEY'] = $savedXApiKey;
+        }
 
         if ($guard !== true) {
             $msg = (is_array($guard) && isset($guard['msg'])) ? (string) $guard['msg'] : '无法调用';
@@ -85,10 +104,11 @@ class PlaygroundRelay
                 ? (int) $guard['errcode']
                 : ApiError::UNAVAILABLE;
             // 中继禁止写 apilog：REQUEST_URI 是 relay.php，会污染 path（见 E57）
+            // http=传输层语义固定 200；业务看 errcode
             return array(
                 'ok'          => false,
                 'msg'         => $msg,
-                'http'        => $code,
+                'http'        => 200,
                 'errcode'     => $code,
                 'contentType' => 'application/json; charset=utf-8',
                 'body'        => json_encode(array('code' => 0, 'msg' => $msg, 'errcode' => $code), JSON_UNESCAPED_UNICODE),
@@ -147,12 +167,12 @@ class PlaygroundRelay
     {
         $errcode = (int) $errcode;
         if ($errcode > 0 && $errcode < 1000) {
-            // 旧调用误传 HTTP 风格数字时映射
+            // 与 vs_api_error_exit 对齐；上游拦截请显式传 ApiError::UPSTREAM_BLOCKED
             $legacy = array(
-                400 => ApiError::UNAVAILABLE,
                 401 => ApiError::NO_KEY,
                 402 => ApiError::NO_POINTS,
-                403 => ApiError::UPSTREAM_BLOCKED,
+                403 => ApiError::DISABLED,
+                429 => ApiError::QPM,
                 500 => ApiError::SERVER,
                 502 => ApiError::UPSTREAM_FAIL,
                 503 => ApiError::MAINTENANCE,
@@ -165,7 +185,7 @@ class PlaygroundRelay
         return array(
             'ok'          => false,
             'msg'         => (string) $msg,
-            'http'        => $errcode,
+            'http'        => 200,
             'errcode'     => $errcode,
             'contentType' => 'application/json; charset=utf-8',
             'body'        => json_encode(array(
@@ -176,6 +196,47 @@ class PlaygroundRelay
             'encoding'    => 'text',
             'displayUrl'  => (string) $displayUrl,
         );
+    }
+
+    /**
+     * 中继守卫：按接口允许的 keyways 注入密钥，避免仅塞 query 导致 header/bearer 接口误报 11012
+     *
+     * @param array $row
+     * @param array $params
+     * @return void
+     */
+    private static function injectKeywaysForGuard(array $row, array $params)
+    {
+        $secret = '';
+        foreach ($params as $k => $v) {
+            $n = strtolower((string) $k);
+            if ($n === 'key' || $n === 'api_key' || $n === 'apikey') {
+                $val = trim((string) $v);
+                if ($val !== '') {
+                    $secret = $val;
+                    break;
+                }
+            }
+        }
+        $allowed = ApiManager::normalizeKeyways(isset($row['keyways']) ? $row['keyways'] : 'query');
+        if (!in_array('query', $allowed, true)) {
+            foreach (array('key', 'api_key', 'apikey', 'API_KEY', 'ApiKey') as $nk) {
+                unset($_GET[$nk], $_POST[$nk]);
+            }
+        }
+        if ($secret === '') {
+            return;
+        }
+        if (in_array('query', $allowed, true)) {
+            $_GET['key'] = $secret;
+            $_POST['key'] = $secret;
+        }
+        if (in_array('header', $allowed, true)) {
+            $_SERVER['HTTP_X_API_KEY'] = $secret;
+        }
+        if (in_array('bearer', $allowed, true)) {
+            $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $secret;
+        }
     }
 
     /**

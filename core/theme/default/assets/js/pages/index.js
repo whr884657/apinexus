@@ -945,15 +945,26 @@ async function sendRequest() {
         if (!window.VsPlaygroundResponse || !window.VsPlaygroundResponse.directRequest) {
             throw new Error('测试模块未加载');
         }
+        const keyways = Array.isArray(api.keyways) ? api.keyways : [];
+        let authWay = keyways.length ? String(keyways[0] || 'query').toLowerCase() : 'query';
+        if (authWay !== 'header' && authWay !== 'bearer' && authWay !== 'query') {
+            authWay = 'query';
+        }
         const res = await window.VsPlaygroundResponse.directRequest({
             endpoint: endpoint,
             method: currentMethod,
-            params: params
+            params: params,
+            authWay: authWay,
+            keyways: keyways
         });
         const elapsed = Math.round(performance.now() - startTime);
-        const http = res.status || 0;
-        const ok = http >= 200 && http < 400;
-        status.textContent = (http ? (http + (ok ? ' OK' : ' Error')) : (ok ? 'OK' : 'Error')) + ' ' + elapsed + 'ms';
+        let info = { ok: (res.status || 0) >= 200 && (res.status || 0) < 400, label: String(res.status || 0) };
+        if (window.VsPlaygroundResponse.inspectFetchStatus) {
+            info = await window.VsPlaygroundResponse.inspectFetchStatus(res);
+        }
+        const ok = !!info.ok;
+        const label = info.label || (ok ? 'OK' : 'Error');
+        status.textContent = label + ' ' + elapsed + 'ms';
         status.className = 'text-xs px-2 py-1 rounded font-mono ' + (ok ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400');
         await window.VsPlaygroundResponse.renderFetchResponse(res, output);
     } catch (error) {

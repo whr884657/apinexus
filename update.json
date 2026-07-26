@@ -8,7 +8,8 @@
         "AI 代码示例按鉴权方式分片生成，加长超时与 PHP 执行时限，修复长时间无数据后网络错误",
         "鉴权方式文案取消「全部支持」，选中几种就列出几种；AI 文档提示词同步",
         "管理员后台调色盘旁新增昼夜更替；认证页仍禁小人色，后台内允许黑色；夜间模式文字反色",
-        "快速上手继续按接口 keyways 显示鉴权 Tab，AI 为每种鉴权各写一套 :::qs 示例"
+        "快速上手继续按接口 keyways 显示鉴权 Tab，AI 为每种鉴权各写一套 :::qs 示例",
+        "同版复查修复：Playground 按 errcode 显示失败；首页补 keyways；AUTH_WAY 优先于 BAD_KEY；中继注入 Header/Bearer；AI 动态时限与部分失败 warning"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
