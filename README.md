@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-12.0.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-12.0.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -32,6 +32,7 @@
 - **调用方密钥传递 keyways（v10.17.0 / v11.0.0）**：接口可多选 Query / Header(`X-API-Key`) / Bearer；守卫错误 JSON 含业务 `errcode`（非 HTTP 401/403）；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色（v11.1.0）**：登录/注册/忘记密码与后台仅可选系统 24 色；无自定义取色、无昼夜更替
 - **AI 代码示例（v12.0.0）**：前端按鉴权×语言分片请求（最多 27 片）；系统设置可开单线程/并行；进程实时显示当前任务
+- **快速上手语言图标（v12.0.1）**：默认主题切换鉴权方式后九种语言图标不再丢失（`detailQsLangIcons` 兜底）
 - **Markdown / 快速上手（v10.14.0+）**：精简居中与缩进；默认主题「快速上手」多语言与多鉴权示例；后台「详细文档 / 代码示例」；AI 生成加固
 - **用户令牌（v3.29+）**：表 `apikey`；用户中心与管理员后台均可管理；格式 `sk-`+32 位（小写前缀）；每账号最多 3 个；本地/代理调用已校验密钥并累计次数
 - **积分计费与充值（v3.33+ / v3.34）**：接口收费扣积分；用户充值中心扫码支付；订单管理与积分变动分栏；回调直访 `core/play/codeplay/notify.php`
@@ -270,15 +271,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v12.0.0（2026-07-27）
+### v12.0.1（2026-07-27）
 
-- AI 代码示例改为前端分片：每片一种鉴权×一种语言，避免整包超时与无效 JSON
-- 系统设置可切换单线程 / 多线程（并发 1～6），单片超时独立配置
-- AI 编写进程实时显示鉴权与语言进度，不再使用固定假阶段文案
-- 新增 `ai_gen_code_piece`；列表页注入 `VS_AI_CODE` 供前端调度
-- 同版复查：释放 Session 锁以真正并行；单片不传 doc/aidoc；部分失败用 info Toast
-- 同版复查2：AI 解析容错/中文注释/禁 emoji；默认主题快速上手语言图标修复
-- 同版复查3：系统升级三按钮同高；后台关于/登录/忘记密码用系统名称
+- 默认主题 API 详情「快速上手」：切换 Header / Bearer 后九种语言图标丢失，切回 Query 仍丢失 —— 已修复
+- 新增 `ApiQuickstart::langIconMap` 与 `window.detailQsLangIcons`；重绘 Tab 时按语言 id 补齐灰/彩图标
+- 首屏已有 PHP 图标时不再无谓重绘；升版 `?v=` 破除旧 JS 缓存
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

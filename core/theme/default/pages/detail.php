@@ -375,15 +375,21 @@ if (!$notFound) {
                 'single_icon' => !empty($row['single_icon']) ? 1 : 0,
             );
         };
+        $qsByAuthJs = array();
+        if (!empty($qsBundle['byAuth']) && is_array($qsBundle['byAuth'])) {
+            foreach ($qsBundle['byAuth'] as $authKey => $rows) {
+                $qsByAuthJs[(string) $authKey] = array_map($qsRowToJs, is_array($rows) ? $rows : array());
+            }
+        }
+        $qsJsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS;
         ?>
-        window.detailQsSamples = <?php echo json_encode(array_map($qsRowToJs, $qsSamples), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
+        window.detailQsLangIcons = <?php echo json_encode(ApiQuickstart::langIconMap(), $qsJsonFlags); ?>;
+        window.detailQsSamples = <?php echo json_encode(array_map($qsRowToJs, $qsSamples), $qsJsonFlags); ?>;
         window.detailQsBundle = <?php echo json_encode(array(
             'auths' => isset($qsBundle['auths']) ? $qsBundle['auths'] : array(),
             'authLabels' => isset($qsBundle['authLabels']) ? $qsBundle['authLabels'] : array(),
-            'byAuth' => isset($qsBundle['byAuth']) ? array_map(function ($rows) use ($qsRowToJs) {
-                return array_map($qsRowToJs, is_array($rows) ? $rows : array());
-            }, $qsBundle['byAuth']) : array(),
-        ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
+            'byAuth' => $qsByAuthJs,
+        ), $qsJsonFlags); ?>;
         </script>
         <?php endif; ?>
     </section>

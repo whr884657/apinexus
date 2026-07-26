@@ -88,6 +88,28 @@ class ApiQuickstart
     }
 
     /**
+     * 语言 → 图标 URL（供详情页 JS 兜底，切换鉴权时不得依赖样本字段是否带齐图标）
+     *
+     * @return array<string,array{label:string,icon_gray:string,icon_color:string,single_icon:int,syn:string}>
+     */
+    public static function langIconMap()
+    {
+        $map = array();
+        foreach (self::langMeta() as $meta) {
+            $id = $meta['id'];
+            $icon = $meta['icon'];
+            $map[$id] = array(
+                'label'       => $meta['label'],
+                'icon_gray'   => self::iconUrl($icon, false),
+                'icon_color'  => self::iconUrl($icon, true),
+                'single_icon' => ($icon === 'curl') ? 1 : 0,
+                'syn'         => self::syntaxLang($id),
+            );
+        }
+        return $map;
+    }
+
+    /**
      * 从 aidoc 解析各语言代码（不写死示例）
      *
      * @param string     $aidoc

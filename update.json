@@ -1,17 +1,13 @@
 {
-    "version": "12.0.0",
-    "title": "ApiNexus 12.0.0 AI代码示例前端分片·单并行调度·实时进程",
+    "version": "12.0.1",
+    "title": "ApiNexus 12.0.1 默认主题快速上手切换鉴权语言图标修复",
     "release_date": "2026-07-27",
     "db_changes": false,
     "changes": [
-        "AI 代码示例改为前端分片请求：每片一种鉴权×一种语言（最多 27 片），避免一次长请求超时与无效 JSON",
-        "系统设置新增代码示例调度：单线程逐片 / 多线程并发（1～6），单片超时独立配置",
-        "AI 编写进程改为实时显示当前鉴权与语言进度，不再使用固定假阶段文案",
-        "新增 ai_gen_code_piece 接口；列表页注入 VS_AI_CODE 供前端调度",
-        "专项规范：AI 代码示例生成机制；易错点 E135",
-        "同版复查：AI 分片前 session_write_close 释放会话锁，修复并行被串行；单片不传 doc/aidoc；部分失败 Toast 用 info（E136）",
-        "同版复查2：AI 解析容错/重试、强制中文注释、stripEmoji；默认主题快速上手切换鉴权后语言图标丢失修复（E137）",
-        "同版复查3：系统升级三按钮同高；后台关于/登录/忘记密码展示系统名称（E138）"
+        "默认主题 API 详情「快速上手」：切换 Header / Bearer 后九种语言图标丢失，切回 Query 仍丢失 —— 已修复",
+        "新增 ApiQuickstart::langIconMap 与 window.detailQsLangIcons 兜底；重绘 Tab 时按语言 id 补齐灰/彩图标",
+        "首屏已有 PHP 图标时不再无谓重绘；升版 ?v= 破除旧 JS 缓存",
+        "专项规范与易错点 E139：快速上手图标不得依赖 byAuth 样本字段是否带齐"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

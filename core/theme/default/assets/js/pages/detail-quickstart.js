@@ -1,7 +1,9 @@
 /**
  * 默认主题 · API 详情「快速上手」：切换鉴权 / 语言示例 + IDE 级高亮 + 复制
  * 示例内容来自 aidoc 的 :::qs 短码（AI / 人工），禁止写死填充
- * 语言 Tab 必须渲染灰/彩图标（icon_gray / icon_color）
+ *
+ * 图标：优先样本字段 icon_gray/icon_color；缺失时用 window.detailQsLangIcons 兜底
+ * （避免切换鉴权重绘 Tab 后图标丢失）
  */
 (function () {
     'use strict';
@@ -11,16 +13,23 @@
     var tabsEl = document.getElementById('detailQsTabs');
     var codeWrap = document.getElementById('detailQsCode');
     var copyBtn = document.getElementById('detailQsCopy');
-    var bundle = window.detailQsBundle || { auths: [], authLabels: {}, byAuth: {} };
+    // 每次读取 window，避免闭包拿到空对象
+    function getBundle() {
+        return window.detailQsBundle || { auths: [], authLabels: {}, byAuth: {} };
+    }
+    function getLangIcons() {
+        return window.detailQsLangIcons || {};
+    }
     var samples = window.detailQsSamples;
     if (!root || !tabsEl || !codeWrap || !Array.isArray(samples) || samples.length === 0) {
         return;
     }
 
+    var bundle0 = getBundle();
     var multiAuth = root.getAttribute('data-qs-multi-auth') === '1'
-        && bundle.auths && bundle.auths.length > 1;
-    var activeAuth = multiAuth ? String(bundle.auths[0] || 'query') : String(
-        (bundle.auths && bundle.auths[0]) || 'query'
+        && bundle0.auths && bundle0.auths.length > 1;
+    var activeAuth = multiAuth ? String(bundle0.auths[0] || 'query') : String(
+        (bundle0.auths && bundle0.auths[0]) || 'query'
     );
     window.detailQsActiveAuth = activeAuth;
 
@@ -30,6 +39,7 @@
     var authButtons = authTabsEl ? authTabsEl.querySelectorAll('.detail-quickstart__auth-tab') : [];
 
     function currentSamples() {
+        var bundle = getBundle();
         if (multiAuth && bundle.byAuth && bundle.byAuth[activeAuth]) {
             return bundle.byAuth[activeAuth];
         }
@@ -44,10 +54,27 @@
         return escapeHtml(s).replace(/"/g, '&quot;');
     }
 
+    function enrichItem(item) {
+        var row = item && typeof item === 'object' ? item : {};
+        var id = String(row.id || '').toLowerCase();
+        var meta = getLangIcons()[id] || {};
+        return {
+            id: id,
+            label: row.label || meta.label || id,
+            code: row.code || '',
+            syn: row.syn || meta.syn || 'javascript',
+            icon_gray: row.icon_gray || meta.icon_gray || '',
+            icon_color: row.icon_color || meta.icon_color || '',
+            single_icon: (row.single_icon === 1 || row.single_icon === true || id === 'curl'
+                || meta.single_icon === 1) ? 1 : 0
+        };
+    }
+
     function iconHtml(item) {
-        var gray = item && item.icon_gray ? String(item.icon_gray) : '';
-        var color = item && item.icon_color ? String(item.icon_color) : '';
-        var single = !!(item && (item.single_icon === 1 || item.single_icon === true || item.id === 'curl'));
+        var row = enrichItem(item);
+        var gray = row.icon_gray;
+        var color = row.icon_color;
+        var single = !!row.single_icon;
         if (!gray && !color) {
             return '';
         }
@@ -55,9 +82,11 @@
             gray = color;
         }
         var html = '<span class="detail-quickstart__icon' + (single ? ' is-single' : '') + '" aria-hidden="true">';
-        html += '<img class="detail-quickstart__icon-img is-gray" src="' + escapeAttr(gray) + '" alt="" width="16" height="16" loading="lazy">';
+        html += '<img class="detail-quickstart__icon-img is-gray" src="' + escapeAttr(gray)
+            + '" alt="" width="16" height="16" decoding="async">';
         if (!single && color) {
-            html += '<img class="detail-quickstart__icon-img is-color" src="' + escapeAttr(color) + '" alt="" width="16" height="16" loading="lazy">';
+            html += '<img class="detail-quickstart__icon-img is-color" src="' + escapeAttr(color)
+                + '" alt="" width="16" height="16" decoding="async">';
         }
         html += '</span>';
         return html;
@@ -68,7 +97,8 @@
             return;
         }
         var html = '';
-        list.forEach(function (item, idx) {
+        list.forEach(function (raw, idx) {
+            var item = enrichItem(raw);
             html += '<button type="button"'
                 + ' class="detail-quickstart__tab' + (idx === 0 ? ' is-active' : '') + '"'
                 + ' role="tab"'
@@ -92,9 +122,9 @@
             return;
         }
         active = idx;
-        var item = list[active];
-        var syn = (item && item.syn) ? String(item.syn) : 'javascript';
-        codeNode.textContent = item && item.code ? item.code : '';
+        var item = enrichItem(list[active]);
+        var syn = item.syn || 'javascript';
+        codeNode.textContent = item.code || '';
         codeNode.className = 'language-' + syn;
         codeNode.setAttribute('data-vs-syn', syn);
         codeNode.removeAttribute('data-vs-syn-done');
@@ -110,13 +140,13 @@
 
     function bindLangTabs() {
         Array.prototype.forEach.call(langButtons, function (btn) {
-            btn.addEventListener('click', function () {
+            btn.onclick = function () {
                 var idx = parseInt(btn.getAttribute('data-qs-idx'), 10);
                 if (isNaN(idx)) {
                     idx = 0;
                 }
                 setActive(idx);
-            });
+            };
         });
     }
 
@@ -124,6 +154,7 @@
         Array.prototype.forEach.call(authButtons, function (btn) {
             btn.addEventListener('click', function () {
                 var auth = String(btn.getAttribute('data-qs-auth') || 'query');
+                var bundle = getBundle();
                 if (!bundle.byAuth || !bundle.byAuth[auth]) {
                     return;
                 }
@@ -139,8 +170,14 @@
         });
     }
 
-    // 用带图标的数据重绘首屏 Tab，避免切换鉴权后图标丢失、且保证首屏与数据一致
-    renderLangTabs(currentSamples());
+    // 首屏：若已有 PHP 渲染的图标则只绑定事件；缺图标时用数据重绘
+    var hasPhpIcons = !!tabsEl.querySelector('.detail-quickstart__icon-img');
+    if (hasPhpIcons) {
+        bindLangTabs();
+        setActive(0);
+    } else {
+        renderLangTabs(currentSamples());
+    }
 
     if (copyBtn) {
         copyBtn.addEventListener('click', function () {

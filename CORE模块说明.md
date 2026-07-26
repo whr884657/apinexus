@@ -711,7 +711,7 @@ VsPlaygroundResponse.directRequest({
 
 **代码示例生成（v12.0.0）：** 前端按「鉴权 × 语言」**分片**调用 `generateCodeSamplePiece`（`ai_gen_code_piece`）；`AiConfig::codeMode` 为 `sequential`/`parallel`，并行并发 1～6；进程日志实时显示当前片。服务端 `extractRequestedQsBlock` 按语言容错收回并改写 auth，禁 emoji、要求中文注释，失败可重试 1 次。旧 `generateCodeSamples` 整包接口仅兼容保留。
 
-**默认主题快速上手图标：** `assets/img/lang/*.svg`；`detailQsBundle` 须带 `icon_gray`/`icon_color`；`detail-quickstart.js` 切换鉴权时重绘 Tab 不得丢图标。
+**默认主题快速上手图标（v12.0.1）：** `assets/img/lang/*.svg`；`detailQsBundle.byAuth[*]` 宜带 `icon_gray`/`icon_color`；另须注入 `window.detailQsLangIcons`（`ApiQuickstart::langIconMap`）。`detail-quickstart.js` 重绘 Tab 时按语言 id 兜底补图标；首屏已有 PHP 图标则勿无谓重绘。切换 Query/Header/Bearer **不得**丢九种语言图标。
 
 **代码示例格式（aidoc）：**
 

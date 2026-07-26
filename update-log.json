@@ -1,5 +1,16 @@
 {
     "versions": {
+        "12.0.1": {
+            "title": "ApiNexus 12.0.1 默认主题快速上手切换鉴权语言图标修复",
+            "date": "2026-07-27",
+            "db_changes": false,
+            "changes": [
+                "默认主题 API 详情「快速上手」：切换 Header / Bearer 后九种语言图标丢失，切回 Query 仍丢失 —— 已修复",
+                "新增 ApiQuickstart::langIconMap 与 window.detailQsLangIcons 兜底；重绘 Tab 时按语言 id 补齐灰/彩图标",
+                "首屏已有 PHP 图标时不再无谓重绘；升版 ?v= 破除旧 JS 缓存",
+                "专项规范与易错点 E139：快速上手图标不得依赖 byAuth 样本字段是否带齐"
+            ]
+        },
         "12.0.0": {
             "title": "ApiNexus 12.0.0 AI代码示例前端分片·单并行调度·实时进程",
             "date": "2026-07-27",
