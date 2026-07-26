@@ -5,16 +5,25 @@
     'use strict';
 
     var STORAGE_KEY = 'login_page_bg';
+    var SCHEME_KEY = 'admin_color_scheme';
     var DEFAULT_BG = '#ffffff';
 
-    var FORBIDDEN = [
+    /** 认证页禁止：四个小人色；后台内仅禁止紫/橙/黄，允许黑色 */
+    var FORBIDDEN_AUTH = [
         { r: 108, g: 63, b: 245, name: '紫色小人' },
         { r: 45, g: 45, b: 45, name: '黑色小人' },
         { r: 255, g: 155, b: 107, name: '橙色小人' },
         { r: 232, g: 215, b: 84, name: '黄色小人' }
     ];
+    var FORBIDDEN_ADMIN = [
+        { r: 108, g: 63, b: 245, name: '紫色小人' },
+        { r: 255, g: 155, b: 107, name: '橙色小人' },
+        { r: 232, g: 215, b: 84, name: '黄色小人' }
+    ];
 
     var FORBIDDEN_THRESHOLD = 28;
+    var pickerMode = 'auth';
+    var colorScheme = 'light';
 
     var PRESETS = [
         /* 浅色 */
@@ -69,12 +78,17 @@
         );
     }
 
+    function forbiddenList() {
+        return pickerMode === 'admin' ? FORBIDDEN_ADMIN : FORBIDDEN_AUTH;
+    }
+
     function getForbiddenMatch(hex) {
         var rgb = hexToRgb(hex);
         if (!rgb) return null;
-        for (var i = 0; i < FORBIDDEN.length; i++) {
-            if (colorDistance(rgb, FORBIDDEN[i]) < FORBIDDEN_THRESHOLD) {
-                return FORBIDDEN[i];
+        var list = forbiddenList();
+        for (var i = 0; i < list.length; i++) {
+            if (colorDistance(rgb, list[i]) < FORBIDDEN_THRESHOLD) {
+                return list[i];
             }
         }
         return null;
@@ -88,6 +102,47 @@
         return PRESETS.filter(function (color) {
             return !isForbidden(color);
         });
+    }
+
+    function readScheme() {
+        try {
+            var s = localStorage.getItem(SCHEME_KEY);
+            if (s === 'dark' || s === 'light') {
+                return s;
+            }
+        } catch (e) {}
+        return 'light';
+    }
+
+    function applyScheme(scheme) {
+        colorScheme = scheme === 'dark' ? 'dark' : 'light';
+        var root = document.documentElement;
+        if (pickerMode !== 'admin') {
+            root.classList.remove('vs-scheme-dark');
+            if (document.body) {
+                document.body.classList.remove('vs-scheme-dark');
+            }
+            return;
+        }
+        if (colorScheme === 'dark') {
+            root.classList.add('vs-scheme-dark');
+            if (document.body) {
+                document.body.classList.add('vs-scheme-dark');
+            }
+        } else {
+            root.classList.remove('vs-scheme-dark');
+            if (document.body) {
+                document.body.classList.remove('vs-scheme-dark');
+            }
+        }
+    }
+
+    function saveScheme(scheme) {
+        colorScheme = scheme === 'dark' ? 'dark' : 'light';
+        try {
+            localStorage.setItem(SCHEME_KEY, colorScheme);
+        } catch (e) {}
+        applyScheme(colorScheme);
     }
 
     function isThemePickerDisabled() {
@@ -221,24 +276,51 @@
             '</svg>';
     }
 
+    function dayNightIconSvg(isDark) {
+        if (isDark) {
+            return '<svg class="theme-trigger-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+                '<path d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z" stroke="#374151" stroke-width="1.5" fill="#fbbf24"/>' +
+                '</svg>';
+        }
+        return '<svg class="theme-trigger-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+            '<circle cx="12" cy="12" r="4" stroke="#374151" stroke-width="1.5" fill="#fbbf24"/>' +
+            '<path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="#374151" stroke-width="1.5" stroke-linecap="round"/>' +
+            '</svg>';
+    }
+
     function createUI(mode) {
         mode = mode || (isAdminPage() ? 'admin' : 'auth');
+        pickerMode = mode;
 
         var trigger = document.createElement('button');
         trigger.type = 'button';
         trigger.id = 'themeTrigger';
         trigger.setAttribute('aria-label', '打开背景调色盘');
 
+        var schemeBtn = null;
+
         if (mode === 'admin') {
             trigger.className = 'theme-trigger-circle-btn';
             trigger.innerHTML = paletteIconSvg();
+            schemeBtn = document.createElement('button');
+            schemeBtn.type = 'button';
+            schemeBtn.id = 'themeSchemeToggle';
+            schemeBtn.className = 'theme-trigger-circle-btn theme-scheme-btn';
+            schemeBtn.setAttribute('aria-label', '昼夜更替');
+            schemeBtn.title = '昼夜更替';
+            schemeBtn.innerHTML = dayNightIconSvg(colorScheme === 'dark');
+
             var mount = document.getElementById('vsThemePickerMount');
             if (mount) {
+                mount.classList.add('vs-topbar__theme--row');
                 mount.appendChild(trigger);
+                mount.appendChild(schemeBtn);
             } else {
-                trigger.className = 'theme-trigger-wrap theme-trigger-wrap--admin-fallback';
-                trigger.innerHTML = '<span class="theme-trigger-circle">' + paletteIconSvg() + '</span>';
-                document.body.appendChild(trigger);
+                var wrap = document.createElement('div');
+                wrap.className = 'theme-admin-float';
+                wrap.appendChild(trigger);
+                wrap.appendChild(schemeBtn);
+                document.body.appendChild(wrap);
             }
         } else {
             trigger.className = 'theme-trigger-wrap';
@@ -274,7 +356,11 @@
                 '<span class="theme-picker-value" id="themeColorValue">' + currentColor + '</span>' +
             '</div>' +
             '<div class="theme-presets" id="themePresets"></div>' +
-            '<p class="theme-tip">禁止使用四个小人的颜色（紫、黑、橙、黄）</p>' +
+            '<p class="theme-tip" id="themeTip">' +
+                (mode === 'admin'
+                    ? '后台可选用黑色背景；仍禁止紫 / 橙 / 黄小人色'
+                    : '禁止使用四个小人的颜色（紫、黑、橙、黄）') +
+            '</p>' +
             '<div class="theme-message" id="themeMessage"></div>' +
             '<div class="theme-actions">' +
                 '<button type="button" class="theme-btn theme-btn-reset" id="themeResetBtn">重置</button>' +
@@ -294,9 +380,21 @@
             btn.setAttribute('aria-label', '选择颜色 ' + color);
             presetsEl.appendChild(btn);
         });
+        // 后台允许黑色预设
+        if (mode === 'admin') {
+            var blackBtn = document.createElement('button');
+            blackBtn.type = 'button';
+            blackBtn.className = 'theme-preset';
+            blackBtn.style.backgroundColor = '#2d2d2d';
+            blackBtn.setAttribute('data-color', '#2d2d2d');
+            blackBtn.setAttribute('aria-label', '选择黑色背景');
+            blackBtn.title = '黑色';
+            presetsEl.appendChild(blackBtn);
+        }
 
         return {
             trigger: trigger,
+            schemeBtn: schemeBtn,
             overlay: overlay,
             panel: panel,
             preview: document.getElementById('themePreview'),
@@ -396,6 +494,17 @@
             }
         });
 
+        if (ui.schemeBtn) {
+            ui.schemeBtn.addEventListener('click', function () {
+                var next = colorScheme === 'dark' ? 'light' : 'dark';
+                saveScheme(next);
+                ui.schemeBtn.innerHTML = dayNightIconSvg(next === 'dark');
+                if (window.VsToast) {
+                    VsToast.show(next === 'dark' ? '已开启夜间模式（文字反色）' : '已切换日间模式', 'success');
+                }
+            });
+        }
+
         ui.closeBtn.addEventListener('click', function () {
             closePanel(ui);
         });
@@ -457,18 +566,31 @@
             return;
         }
 
+        pickerMode = isAdminPage() ? 'admin' : 'auth';
+        colorScheme = readScheme();
+        applyScheme(colorScheme);
+
         savedColor = readSavedColor();
-        currentColor = savedColor;
-        paintPage(savedColor);
+        // 认证页若曾保存禁用色，回退默认白
+        if (isForbidden(savedColor)) {
+            savedColor = DEFAULT_BG;
+            currentColor = savedColor;
+            paintPage(DEFAULT_BG);
+        } else {
+            currentColor = savedColor;
+            paintPage(savedColor);
+        }
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function () {
-                var ui = createUI();
+                pickerMode = isAdminPage() ? 'admin' : 'auth';
+                applyScheme(colorScheme);
+                var ui = createUI(pickerMode);
                 updatePreview(ui);
                 bindEvents(ui);
             });
         } else {
-            var ui = createUI();
+            var ui = createUI(pickerMode);
             updatePreview(ui);
             bindEvents(ui);
         }

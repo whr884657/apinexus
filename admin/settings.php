@@ -99,12 +99,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($baseurl === '' && $provider !== 'custom') {
                 $baseurl = $presets[$provider];
             }
-            $timeout = isset($_POST['ai_timeout']) ? (int) $_POST['ai_timeout'] : 60;
+            $timeout = isset($_POST['ai_timeout']) ? (int) $_POST['ai_timeout'] : 120;
             if ($timeout < 10) {
                 $timeout = 10;
             }
-            if ($timeout > 180) {
-                $timeout = 180;
+            if ($timeout > 300) {
+                $timeout = 300;
             }
             $maxLen = isset($_POST['ai_doc_maxlen']) ? (int) $_POST['ai_doc_maxlen'] : 8000;
             if ($maxLen < 1000) {
@@ -1102,8 +1102,9 @@ $aiPresets = AiConfig::providerPresets();
         <div class="vs-form-row vs-form-row--inline">
             <div class="vs-form-col">
                 <label class="vs-label" for="aiTimeout">超时（秒）</label>
-                <input type="number" name="ai_timeout" id="aiTimeout" class="vs-input" min="10" max="180"
+                <input type="number" name="ai_timeout" id="aiTimeout" class="vs-input" min="10" max="300"
                        value="<?php echo (int) $aiCfg['timeout']; ?>">
+                <p class="vs-form-hint">代码示例生成建议 120～300 秒</p>
             </div>
             <div class="vs-form-col">
                 <label class="vs-label" for="aiDocMaxlen">详细文档字数上限</label>

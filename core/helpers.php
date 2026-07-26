@@ -18,24 +18,35 @@ function vs_e($value)
 }
 
 /**
- * 公开 API 错误 JSON（HTTP 状态码写入响应头，同时写入 body.http）
+ * 公开 API 业务错误 JSON
  *
- * @param int    $http
+ * 传输层 HTTP 固定 200，避免与网关/浏览器常见 401/403/503 混淆。
+ * 业务错误看 body.errcode（见 ApiError 常量，如 11001 未提供密钥、11012 鉴权方式错误）。
+ *
+ * @param int    $errcode 业务错误码（ApiError::*）
  * @param string $msg
  * @return void
  */
-function vs_api_error_exit($http, $msg)
+function vs_api_error_exit($errcode, $msg)
 {
-    $http = (int) $http;
-    if ($http < 100 || $http > 599) {
-        $http = 400;
+    $errcode = (int) $errcode;
+    if ($errcode < 1000) {
+        // 兼容误传入旧 HTTP 风格数字时，仍尽量落成业务码
+        $legacy = array(
+            401 => 11001,
+            402 => 11004,
+            403 => 11007,
+            429 => 11005,
+            503 => 11006,
+        );
+        $errcode = isset($legacy[$errcode]) ? $legacy[$errcode] : 11008;
     }
-    http_response_code($http);
+    http_response_code(200);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(array(
-        'code' => 0,
-        'msg'  => (string) $msg,
-        'http' => $http,
+        'code'    => 0,
+        'msg'     => (string) $msg,
+        'errcode' => $errcode,
     ), JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -138,7 +149,7 @@ function vs_render_version_display($updateCheck = null)
 function vs_theme_bg_preload_script()
 {
     echo '<script>';
-    echo '(function(){try{var c=localStorage.getItem(\'login_page_bg\');if(!c)return;var h=c.replace(\'#\',\'\').trim();if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];if(h.length===8)h=h.slice(0,6);if(h.length!==6)return;var color=\'#\'+h.toLowerCase();document.documentElement.style.setProperty(\'--page-bg\',color);document.documentElement.style.backgroundColor=color;}catch(e){}})();';
+    echo '(function(){try{var c=localStorage.getItem(\'login_page_bg\');if(c){var h=c.replace(\'#\',\'\').trim();if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];if(h.length===8)h=h.slice(0,6);if(h.length===6){var color=\'#\'+h.toLowerCase();document.documentElement.style.setProperty(\'--page-bg\',color);document.documentElement.style.backgroundColor=color;}}var s=localStorage.getItem(\'admin_color_scheme\');if(s===\'dark\'){document.documentElement.classList.add(\'vs-scheme-dark\');}}catch(e){}})();';
     echo '</script>' . "\n";
 }
 

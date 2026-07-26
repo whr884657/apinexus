@@ -243,12 +243,12 @@ class AiClient
         $base = self::normalizeBaseUrl(isset($cfg['baseurl']) ? $cfg['baseurl'] : '');
         $key = trim((string) (isset($cfg['apikey']) ? $cfg['apikey'] : ''));
         $model = trim((string) (isset($cfg['model']) ? $cfg['model'] : ''));
-        $timeout = isset($cfg['timeout']) ? (int) $cfg['timeout'] : 60;
+        $timeout = isset($cfg['timeout']) ? (int) $cfg['timeout'] : 120;
         if ($timeout < 10) {
             $timeout = 10;
         }
-        if ($timeout > 180) {
-            $timeout = 180;
+        if ($timeout > 300) {
+            $timeout = 300;
         }
         $mode = self::normalizeApiMode(isset($cfg['api_mode']) ? $cfg['api_mode'] : AiConfig::apiMode());
         $probe = !empty($opts['probe']);

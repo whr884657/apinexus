@@ -386,9 +386,6 @@ class ApiManager
     public static function keywaysLabel($value)
     {
         $ways = self::normalizeKeyways($value);
-        if (count($ways) === 3) {
-            return '全部支持';
-        }
         $map = array(
             self::KEYWAY_QUERY  => 'Query 参数',
             self::KEYWAY_HEADER => 'Header(X-API-Key)',
@@ -400,7 +397,8 @@ class ApiManager
                 $labels[] = $map[$way];
             }
         }
-        return implode('、', $labels);
+        // 仅有三种鉴权方式；选中几种就列出几种，禁止写「全部支持」
+        return $labels !== array() ? implode('、', $labels) : $map[self::KEYWAY_QUERY];
     }
 
     /**

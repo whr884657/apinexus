@@ -46,12 +46,13 @@ class AiConfig
         if ($base === '' && $provider !== self::PROVIDER_CUSTOM) {
             $base = $presets[$provider];
         }
-        $timeout = (int) Config::get('ai_timeout', '60');
+        $timeout = (int) Config::get('ai_timeout', '120');
         if ($timeout < 10) {
             $timeout = 10;
         }
-        if ($timeout > 180) {
-            $timeout = 180;
+        // 代码示例分片生成可能较久，允许到 300 秒
+        if ($timeout > 300) {
+            $timeout = 300;
         }
         $maxLen = (int) Config::get('ai_doc_maxlen', '8000');
         if ($maxLen < 1000) {

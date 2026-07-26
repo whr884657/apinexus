@@ -47,12 +47,14 @@ class PlaygroundRelay
 
         $displayUrl = isset($theme['endpoint']) ? (string) $theme['endpoint'] : '';
         if (!empty($theme['maintenance'])) {
+            $errcode = ApiError::MAINTENANCE;
             return array(
                 'ok'          => false,
                 'msg'         => '该接口维护中',
-                'http'        => 503,
-                'contentType' => 'text/plain; charset=utf-8',
-                'body'        => '维护中',
+                'http'        => $errcode,
+                'errcode'     => $errcode,
+                'contentType' => 'application/json; charset=utf-8',
+                'body'        => json_encode(array('code' => 0, 'msg' => '该接口维护中', 'errcode' => $errcode), JSON_UNESCAPED_UNICODE),
                 'encoding'    => 'text',
                 'displayUrl'  => $displayUrl,
             );
@@ -79,14 +81,17 @@ class PlaygroundRelay
 
         if ($guard !== true) {
             $msg = (is_array($guard) && isset($guard['msg'])) ? (string) $guard['msg'] : '无法调用';
-            $code = (is_array($guard) && isset($guard['http'])) ? (int) $guard['http'] : 403;
+            $code = (is_array($guard) && isset($guard['errcode']))
+                ? (int) $guard['errcode']
+                : ApiError::UNAVAILABLE;
             // 中继禁止写 apilog：REQUEST_URI 是 relay.php，会污染 path（见 E57）
             return array(
                 'ok'          => false,
                 'msg'         => $msg,
                 'http'        => $code,
+                'errcode'     => $code,
                 'contentType' => 'application/json; charset=utf-8',
-                'body'        => json_encode(array('code' => 0, 'msg' => $msg, 'http' => $code), JSON_UNESCAPED_UNICODE),
+                'body'        => json_encode(array('code' => 0, 'msg' => $msg, 'errcode' => $code), JSON_UNESCAPED_UNICODE),
                 'encoding'    => 'text',
                 'displayUrl'  => $displayUrl,
             );
@@ -97,7 +102,7 @@ class PlaygroundRelay
             $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
             $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
             if ($charge === ApiManager::CHARGE_PAID && $price > 0) {
-                return self::fail('收费接口请通过公开调用地址访问，中继不支持扣费', 402, $displayUrl);
+                return self::fail('收费接口请通过公开调用地址访问，中继不支持扣费', ApiError::CHARGE_NEED_KEY, $displayUrl);
             }
         }
 
@@ -105,16 +110,16 @@ class PlaygroundRelay
         if ($apitype === ApiManager::APITYPE_PROXY) {
             $target = trim((string) (isset($row['targeturl']) ? $row['targeturl'] : ''));
             if ($target === '' || !preg_match('#^https?://#i', $target)) {
-                return self::fail('上游地址无效', 500, $displayUrl);
+                return self::fail('上游地址无效', ApiError::UPSTREAM_BAD, $displayUrl);
             }
             if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($target)) {
-                return self::fail('上游地址不允许指向内网或非公网主机', 403, $displayUrl);
+                return self::fail('上游地址不允许指向内网或非公网主机', ApiError::UPSTREAM_BLOCKED, $displayUrl);
             }
             $upstreamParams = $params;
             unset($upstreamParams['key'], $upstreamParams['api_key'], $upstreamParams['apikey']);
             $built = ApiProxy::buildUpstreamRequest($target, $row, $upstreamParams);
             if (!is_array($built)) {
-                return self::fail((string) $built, 500, $displayUrl);
+                return self::fail((string) $built, ApiError::UPSTREAM_BAD, $displayUrl);
             }
             // URL 已含客户端参数与上游 Query Key；headers 含 Bearer / Header Key
             $result = self::httpRequest($built['url'], $method, $upstreamParams, $built['headers']);
@@ -124,7 +129,7 @@ class PlaygroundRelay
 
         $fetchUrl = ApiManager::resolveCallUrl($row);
         if ($fetchUrl === '') {
-            return self::fail('未配置调用地址', 400, $displayUrl);
+            return self::fail('未配置调用地址', ApiError::UPSTREAM_BAD, $displayUrl);
         }
         // 本站密钥需带给本地接口
         $result = self::httpRequest($fetchUrl, $method, $params);
@@ -134,18 +139,40 @@ class PlaygroundRelay
 
     /**
      * @param string $msg
-     * @param int    $http
+     * @param int    $errcode 业务错误码（ApiError::*）
      * @param string $displayUrl
      * @return array
      */
-    private static function fail($msg, $http = 400, $displayUrl = '')
+    private static function fail($msg, $errcode = 0, $displayUrl = '')
     {
+        $errcode = (int) $errcode;
+        if ($errcode > 0 && $errcode < 1000) {
+            // 旧调用误传 HTTP 风格数字时映射
+            $legacy = array(
+                400 => ApiError::UNAVAILABLE,
+                401 => ApiError::NO_KEY,
+                402 => ApiError::NO_POINTS,
+                403 => ApiError::UPSTREAM_BLOCKED,
+                500 => ApiError::SERVER,
+                502 => ApiError::UPSTREAM_FAIL,
+                503 => ApiError::MAINTENANCE,
+            );
+            $errcode = isset($legacy[$errcode]) ? $legacy[$errcode] : ApiError::UNAVAILABLE;
+        }
+        if ($errcode <= 0) {
+            $errcode = ApiError::UNAVAILABLE;
+        }
         return array(
             'ok'          => false,
             'msg'         => (string) $msg,
-            'http'        => (int) $http,
-            'contentType' => 'text/plain; charset=utf-8',
-            'body'        => (string) $msg,
+            'http'        => $errcode,
+            'errcode'     => $errcode,
+            'contentType' => 'application/json; charset=utf-8',
+            'body'        => json_encode(array(
+                'code'    => 0,
+                'msg'     => (string) $msg,
+                'errcode' => $errcode,
+            ), JSON_UNESCAPED_UNICODE),
             'encoding'    => 'text',
             'displayUrl'  => (string) $displayUrl,
         );
@@ -308,7 +335,7 @@ class PlaygroundRelay
             }
             $next = self::resolveRedirectUrl($url, $loc);
             if ($next === '' || (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($next))) {
-                return self::fail('上游重定向目标不允许', 403);
+                return self::fail('上游重定向目标不允许', ApiError::UPSTREAM_BLOCKED);
             }
             $url = $next;
             $redirLeft--;

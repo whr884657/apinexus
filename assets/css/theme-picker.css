@@ -6,6 +6,93 @@
     flex-shrink: 0;
 }
 
+.vs-topbar__theme--row {
+    gap: 8px;
+}
+
+.theme-admin-float {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-scheme-btn .theme-trigger-icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* 管理员后台夜间模式：反色文字/边框，保证深色底可读 */
+html.vs-scheme-dark body.vs-admin-body,
+body.vs-admin-body.vs-scheme-dark {
+    --vs-text: #f3f4f6;
+    --vs-text-secondary: #d1d5db;
+    --vs-border: #374151;
+    --vs-primary: #f9fafb;
+    --vs-md-accent: #f9fafb;
+    color: var(--vs-text);
+}
+
+body.vs-admin-body.vs-scheme-dark .vs-sidebar,
+body.vs-admin-body.vs-scheme-dark .vs-topbar,
+body.vs-admin-body.vs-scheme-dark .vs-panel,
+body.vs-admin-body.vs-scheme-dark .vs-content__title,
+body.vs-admin-body.vs-scheme-dark .vs-table,
+body.vs-admin-body.vs-scheme-dark .vs-label,
+body.vs-admin-body.vs-scheme-dark .vs-form-hint {
+    color: var(--vs-text);
+}
+
+body.vs-admin-body.vs-scheme-dark .vs-sidebar {
+    border-right-color: var(--vs-border);
+}
+
+body.vs-admin-body.vs-scheme-dark .vs-topbar {
+    border-bottom-color: var(--vs-border);
+}
+
+body.vs-admin-body.vs-scheme-dark .vs-panel,
+body.vs-admin-body.vs-scheme-dark .vs-api-list-table-card,
+body.vs-admin-body.vs-scheme-dark .vs-table th,
+body.vs-admin-body.vs-scheme-dark .vs-table td {
+    background: rgba(15, 23, 42, 0.55);
+    border-color: var(--vs-border);
+    color: var(--vs-text);
+}
+
+body.vs-admin-body.vs-scheme-dark .vs-input,
+body.vs-admin-body.vs-scheme-dark .vs-select,
+body.vs-admin-body.vs-scheme-dark textarea.vs-input {
+    background: rgba(15, 23, 42, 0.72);
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+body.vs-admin-body.vs-scheme-dark .vs-btn--default {
+    background: #1f2937;
+    border-color: #4b5563;
+    color: #f3f4f6;
+}
+
+body.vs-admin-body.vs-scheme-dark .vs-sidebar a,
+body.vs-admin-body.vs-scheme-dark .vs-sidebar__link,
+body.vs-admin-body.vs-scheme-dark .vs-menu-item {
+    color: #e5e7eb;
+}
+
+body.vs-admin-body.vs-scheme-dark .theme-trigger-circle-btn {
+    background: rgba(31, 41, 55, 0.96);
+    border-color: #4b5563;
+}
+
+body.vs-admin-body.vs-scheme-dark .theme-trigger-icon path,
+body.vs-admin-body.vs-scheme-dark .theme-trigger-icon circle {
+    stroke: #e5e7eb;
+}
+
 .theme-trigger-circle-btn {
     display: inline-flex;
     align-items: center;

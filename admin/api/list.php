@@ -180,6 +180,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!AiConfig::isReady()) {
             AjaxResponse::error('请先在系统设置中启用并配置 AI');
         }
+        @set_time_limit(360);
+        @ignore_user_abort(true);
         $data = $payloadFromPost();
         $data['id'] = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
         // 已有接口时补全对外调用地址（代理不暴露上游）
@@ -810,7 +812,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                         <button type="button" class="vs-method-toggle" data-api-keyway="header" aria-pressed="false">Header</button>
                         <button type="button" class="vs-method-toggle" data-api-keyway="bearer" aria-pressed="false">Bearer</button>
                     </div>
-                    <p class="vs-form-hint">可同时勾选多种方式；默认 Query。三者全选时前台显示「全部支持」。</p>
+                    <p class="vs-form-hint">可同时勾选多种方式；默认 Query。选中几种前台就列出几种（Query / Header / Bearer），不会显示「全部支持」。</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>

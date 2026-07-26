@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **10.17.0**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **11.0.0**）
 
 ---
 
@@ -242,6 +242,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `UserManager.php` | 后台用户列表/封禁/删除/身份转换 |
 | `UserAvatar.php` | 用户头像 URL 解析 |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
+| `ApiError.php` | 公开 API 业务错误码常量与文案（v11.0.0，11001～11017） |
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型） |
 | `AiClient.php` | OpenAI 兼容 Chat Completions / Responses 客户端 |
@@ -329,7 +330,7 @@ echo 'v' . VS_VERSION;     // v2.17.1
 | `vs_render_site_logo()` | 站点 Logo |
 | `vs_require_secure_post()` | 校验 POST + CSRF |
 | `vs_decode_transport_field()` / `vs_decode_transport_fields()` | 解码 `VS64B:`/`VS64:` Base64 表单字段（防 WAF 误拦，v10.15.3） |
-| `vs_api_error_exit($http, $msg)` | 守卫/代理统一错误 JSON：`{ code:0, msg, http }` 并 exit（v10.17.0） |
+| `vs_api_error_exit($errcode, $msg)` | 守卫/代理统一错误 JSON：`{ code:0, msg, errcode }`，传输 HTTP 固定 200（v11.0.0；见 `ApiError`） |
 | `vs_safe_embed_url()` / `vs_safe_css_color()` | Markdown 短码外链/色值白名单（防 XSS，v10.15.3 复查） |
 | `vs_password_hash()` | 密码哈希 |
 
@@ -678,15 +679,15 @@ VsPlaygroundResponse.directRequest({
 
 `row` 为 null 时三种皆可（兼容旧调用）。
 
-**错误 JSON（v10.17.0）：** 守卫失败经 `jsonExit` → `vs_api_error_exit`，固定：
+**错误 JSON（v11.0.0）：** 守卫失败经 `jsonExit` → `vs_api_error_exit`，固定：
 
 ```json
-{ "code": 0, "msg": "请提供调用密钥", "http": 401 }
+{"code":0,"msg":"请提供调用密钥","errcode":11001}
 ```
 
-HTTP 状态码与 JSON 内 `http` 字段一致。
+传输层 HTTP 固定 **200**；业务看 `errcode`（`ApiError`：11001 未提供密钥 … 11012 鉴权方式错误 … 11017）。旧版 `http:401/403` 已废弃。
 
-**日志：** 成功/失败写 `api.calls`、`StatDayManager::recordHit`；详细日志开时写 `apilog`（含异步 `IpLocator` 回填 `iploc`）。
+**日志：** 成功/失败写 `api.calls`、`StatDayManager::recordHit`；详细日志开时写 `apilog`（`httpcode` 列存业务 errcode 或上游透传码；含异步 `IpLocator` 回填 `iploc`）。
 
 ---
 

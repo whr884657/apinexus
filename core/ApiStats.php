@@ -53,9 +53,10 @@ class ApiStats
 
             $gate = self::guardAccess($row);
             if ($gate !== true) {
-                self::write($row, false, (int) $gate['http']);
+                $err = (int) (isset($gate['errcode']) ? $gate['errcode'] : ApiError::UNAVAILABLE);
+                self::write($row, false, $err);
                 self::$done[$id] = true;
-                self::jsonExit($gate['http'], $gate['msg']);
+                self::jsonExit($err, $gate['msg']);
             }
 
             self::write($row, true, 200);
@@ -94,7 +95,7 @@ class ApiStats
      * 代理/本地共用：状态 + 审核 + 密钥守卫
      *
      * @param array $row
-     * @return true|array{http:int,msg:string}
+     * @return true|array{errcode:int,msg:string}
      */
     public static function guardAccess(array $row)
     {
@@ -188,21 +189,21 @@ class ApiStats
      * 轻量可调用检查（状态 + 审核 + 密钥）
      *
      * @param array $row
-     * @return true|array{http:int,msg:string}
+     * @return true|array{errcode:int,msg:string}
      */
     private static function lightGate(array $row)
     {
         $status = ApiManager::normalizeStatus(isset($row['status']) ? $row['status'] : 0);
         if ($status === ApiManager::STATUS_DISABLED) {
-            return array('http' => 403, 'msg' => '该接口已经被禁用');
+            return array('errcode' => ApiError::DISABLED, 'msg' => '该接口已经被禁用');
         }
         if ($status === ApiManager::STATUS_MAINTENANCE) {
-            return array('http' => 503, 'msg' => '该接口维护中');
+            return array('errcode' => ApiError::MAINTENANCE, 'msg' => '该接口维护中');
         }
         if (ApiManager::hasAuditColumn()) {
             $audit = ApiManager::normalizeAuditStatus(isset($row['audit']) ? $row['audit'] : 1);
             if ($audit !== ApiManager::AUDIT_APPROVED) {
-                return array('http' => 403, 'msg' => '该接口不可用');
+                return array('errcode' => ApiError::UNAVAILABLE, 'msg' => '该接口不可用');
             }
         }
         $keyOk = self::evaluateKey($row);
@@ -221,7 +222,7 @@ class ApiStats
      * 仅按 IP 计 QPM（密钥校验失败路径使用）
      *
      * @param array $row
-     * @return true|array{http:int,msg:string}
+     * @return true|array{errcode:int,msg:string}
      */
     private static function evaluateQpmIpOnly(array $row)
     {
@@ -242,7 +243,7 @@ class ApiStats
         $ip = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
         $bucket = 'apiqpm:' . $apiId . ':ip:' . $ip;
         if (!RateLimitStore::allow($bucket, 60, $qpm, true)) {
-            return array('http' => 429, 'msg' => '请求过于频繁，请稍后再试');
+            return array('errcode' => ApiError::QPM, 'msg' => '请求过于频繁，请稍后再试');
         }
         return true;
     }
@@ -252,7 +253,7 @@ class ApiStats
      * needkey=必须 → IP+密钥；无需/可选 → 仅 IP。
      *
      * @param array $row
-     * @return true|array{http:int,msg:string}
+     * @return true|array{errcode:int,msg:string}
      */
     private static function evaluateQpm(array $row)
     {
@@ -282,14 +283,14 @@ class ApiStats
         if ($need === ApiManager::KEY_REQUIRED) {
             $keyId = !empty(self::$keyCtx['valid']) ? (int) self::$keyCtx['keyid'] : 0;
             if ($keyId <= 0) {
-                return array('http' => 401, 'msg' => '请提供调用密钥');
+                return array('errcode' => ApiError::NO_KEY, 'msg' => '请提供调用密钥');
             }
             $bucket = 'apiqpm:' . $apiId . ':ip:' . $ip . ':key:' . $keyId;
         } else {
             $bucket = 'apiqpm:' . $apiId . ':ip:' . $ip;
         }
         if (!RateLimitStore::allow($bucket, 60, $qpm, true)) {
-            return array('http' => 429, 'msg' => '请求过于频繁，请稍后再试');
+            return array('errcode' => ApiError::QPM, 'msg' => '请求过于频繁，请稍后再试');
         }
         return true;
     }
@@ -298,7 +299,7 @@ class ApiStats
      * 收费接口：须有效密钥且余额足够
      *
      * @param array $row
-     * @return true|array{http:int,msg:string}
+     * @return true|array{errcode:int,msg:string}
      */
     private static function evaluateBilling(array $row)
     {
@@ -311,14 +312,14 @@ class ApiStats
             return true;
         }
         if (empty(self::$keyCtx['valid']) || empty(self::$keyCtx['userid'])) {
-            return array('http' => 401, 'msg' => '收费接口须提供有效密钥');
+            return array('errcode' => ApiError::CHARGE_NEED_KEY, 'msg' => '收费接口须提供有效密钥');
         }
         if (!PointsManager::hasPointsColumn()) {
-            return array('http' => 503, 'msg' => '积分系统暂不可用');
+            return array('errcode' => ApiError::POINTS_SYSTEM, 'msg' => '积分系统暂不可用');
         }
         $bal = PointsManager::balance((int) self::$keyCtx['userid']);
         if ($bal + 0.0000001 < $price) {
-            return array('http' => 402, 'msg' => '积分余额不足');
+            return array('errcode' => ApiError::NO_POINTS, 'msg' => '积分余额不足');
         }
         return true;
     }
@@ -327,7 +328,7 @@ class ApiStats
      * 按接口 needkey 识别并校验请求中的密钥
      *
      * @param array $row
-     * @return true|array{http:int,msg:string}
+     * @return true|array{errcode:int,msg:string}
      */
     private static function evaluateKey(array $row)
     {
@@ -350,20 +351,24 @@ class ApiStats
             }
         }
 
-        // 无需密钥：忽略形似 key 的业务参数，避免误 401
+        // 无需密钥：忽略形似 key 的业务参数，避免误拦
         if ($need === ApiManager::KEY_NONE) {
             return self::evaluateBilling($row);
         }
 
         if ($candidates === array()) {
             if ($need === ApiManager::KEY_REQUIRED) {
-                return array('http' => 401, 'msg' => '请提供调用密钥');
+                // 支持通道无密钥，但其它通道有形似密钥 → 鉴权方式错误
+                if (self::hasKeyOutsideAllowedWays($row)) {
+                    return array('errcode' => ApiError::AUTH_WAY, 'msg' => '鉴权方式错误，请按本接口支持的方式传递密钥');
+                }
+                return array('errcode' => ApiError::NO_KEY, 'msg' => '请提供调用密钥');
             }
             return self::evaluateBilling($row);
         }
 
         if (!ApiKeyManager::tableReady()) {
-            return array('http' => 503, 'msg' => '密钥校验暂不可用');
+            return array('errcode' => ApiError::KEY_SYSTEM, 'msg' => '密钥校验暂不可用');
         }
 
         // 多 keyways：任一通道的有效密钥即可（错误 query 不阻断正确 header/bearer）
@@ -387,9 +392,34 @@ class ApiStats
         }
 
         if ($sawDisabled) {
-            return array('http' => 403, 'msg' => '密钥已禁用');
+            return array('errcode' => ApiError::KEY_DISABLED, 'msg' => '密钥已禁用');
         }
-        return array('http' => 401, 'msg' => '密钥错误');
+        return array('errcode' => ApiError::BAD_KEY, 'msg' => '密钥错误');
+    }
+
+    /**
+     * 是否在「未允许的通道」里看到了密钥（用于报鉴权方式错误）
+     *
+     * @param array $row
+     * @return bool
+     */
+    private static function hasKeyOutsideAllowedWays(array $row)
+    {
+        $allowed = ApiManager::normalizeKeyways(isset($row['keyways']) ? $row['keyways'] : 'query');
+        $all = array('query', 'header', 'bearer');
+        $outside = array();
+        foreach ($all as $way) {
+            if (!in_array($way, $allowed, true)) {
+                $outside[] = $way;
+            }
+        }
+        if ($outside === array()) {
+            return false;
+        }
+        // 临时用仅 outside 通道的候选检测
+        $fake = $row;
+        $fake['keyways'] = implode(',', $outside);
+        return self::collectKeyCandidates($fake) !== array();
     }
 
     /**
@@ -420,7 +450,7 @@ class ApiStats
                     '调用接口：' . (isset($row['name']) ? (string) $row['name'] : ('#' . $id))
                 );
                 if (!$deduct['ok']) {
-                    self::jsonExit(402, isset($deduct['msg']) ? $deduct['msg'] : '积分余额不足');
+                    self::jsonExit(ApiError::NO_POINTS, isset($deduct['msg']) ? $deduct['msg'] : '积分余额不足');
                 }
                 $charged = 1;
                 $cost = $price;
@@ -656,21 +686,21 @@ class ApiStats
     }
 
     /**
-     * @param int    $http
+     * @param int    $errcode
      * @param string $msg
      * @return void
      */
-    private static function jsonExit($http, $msg)
+    private static function jsonExit($errcode, $msg)
     {
         if (function_exists('vs_api_error_exit')) {
-            vs_api_error_exit($http, $msg);
+            vs_api_error_exit($errcode, $msg);
         }
-        http_response_code((int) $http);
+        http_response_code(200);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(array(
-            'code' => 0,
-            'msg'  => (string) $msg,
-            'http' => (int) $http,
+            'code'    => 0,
+            'msg'     => (string) $msg,
+            'errcode' => (int) $errcode,
         ), JSON_UNESCAPED_UNICODE);
         exit;
     }

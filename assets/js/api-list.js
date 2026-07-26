@@ -2021,11 +2021,15 @@
                 window.VS.showMessage(data.msg || '生成完成', 'success');
                 scheduleDraftSave();
             })
-            .catch(function () {
-                aiTermAppend(kind, '网络异常或请求中断');
+            .catch(function (err) {
+                var hint = '网络异常或网关超时';
+                if (err && err.message === 'invalid_json') {
+                    hint = '响应不是有效 JSON（常见于网关/PHP 超时）。请到「系统设置 → AI 对接」将超时调到 120～300 秒后重试';
+                }
+                aiTermAppend(kind, hint);
                 aiTermStopRunning(kind);
-                aiSetBanner('error', '网络异常，请稍后重试');
-                window.VS.showMessage('网络异常，请稍后重试', 'error');
+                aiSetBanner('error', hint);
+                window.VS.showMessage(hint, 'error');
             })
             .finally(function () {
                 aiBusy = false;
