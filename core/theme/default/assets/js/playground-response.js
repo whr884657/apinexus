@@ -229,8 +229,46 @@
     }
 
     /**
+     * 从 params 抽出密钥字段，并按 keyways / authWay 决定 query / header / bearer
+     * @param {object} params
+     * @param {string} authWay query|header|bearer
+     * @returns {{params:object,headers:object}}
+     */
+    function applyKeywayAuth(params, authWay) {
+        var next = {};
+        var secret = '';
+        var keyName = '';
+        Object.keys(params || {}).forEach(function (k) {
+            var n = String(k).toLowerCase();
+            if (n === 'key' || n === 'api_key' || n === 'apikey') {
+                if (!secret && params[k] != null && String(params[k]) !== '') {
+                    secret = String(params[k]);
+                    keyName = k;
+                }
+                return;
+            }
+            next[k] = params[k];
+        });
+        var way = String(authWay || 'query').toLowerCase();
+        if (way !== 'header' && way !== 'bearer') {
+            way = 'query';
+        }
+        var headers = {};
+        if (secret) {
+            if (way === 'header') {
+                headers['X-API-Key'] = secret;
+            } else if (way === 'bearer') {
+                headers['Authorization'] = 'Bearer ' + secret;
+            } else {
+                next[keyName || 'key'] = secret;
+            }
+        }
+        return { params: next, headers: headers };
+    }
+
+    /**
      * 浏览器直连公开 endpoint（统计记真实 path，不经中继）
-     * @param {{endpoint:string,method?:string,params?:object}} opts
+     * @param {{endpoint:string,method?:string,params?:object,authWay?:string,keyways?:string[]}} opts
      * @returns {Promise<Response>}
      */
     function directRequest(opts, attempt) {
@@ -242,16 +280,34 @@
         }
         var method = String(opts && opts.method ? opts.method : 'GET').toUpperCase();
         if (!method) method = 'GET';
-        var params = (opts && opts.params && typeof opts.params === 'object') ? opts.params : {};
-        var url = buildUrlWithParams(endpoint, params);
+        var rawParams = (opts && opts.params && typeof opts.params === 'object') ? opts.params : {};
+        var authWay = String(opts && opts.authWay ? opts.authWay : '').toLowerCase();
+        if (!authWay) {
+            var ways = (opts && Array.isArray(opts.keyways)) ? opts.keyways : [];
+            authWay = ways.length ? String(ways[0]).toLowerCase() : 'query';
+        }
+        if (authWay !== 'header' && authWay !== 'bearer' && authWay !== 'query') {
+            authWay = 'query';
+        }
+        var applied = applyKeywayAuth(rawParams, authWay);
+        var params = applied.params;
+        var authHeaders = applied.headers || {};
+        // GET：业务+query 鉴权进 URL；POST：参数进 body，header/bearer 只走 Header
+        var url = (method === 'GET' || method === 'HEAD')
+            ? buildUrlWithParams(endpoint, params)
+            : endpoint;
         var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
         var timeoutId = null;
         var init = {
             method: method,
             credentials: 'same-origin',
             redirect: 'follow',
-            cache: 'no-store'
+            cache: 'no-store',
+            headers: {}
         };
+        Object.keys(authHeaders).forEach(function (hk) {
+            init.headers[hk] = authHeaders[hk];
+        });
         if (controller) {
             init.signal = controller.signal;
             timeoutId = setTimeout(function () {
@@ -263,7 +319,7 @@
             Object.keys(params).forEach(function (k) {
                 body.append(k, params[k] == null ? '' : String(params[k]));
             });
-            init.headers = { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' };
+            init.headers['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
             init.body = body.toString();
         }
         return fetch(url, init).then(function (res) {

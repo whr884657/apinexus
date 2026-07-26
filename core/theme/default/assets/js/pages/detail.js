@@ -275,10 +275,19 @@
                 return;
             }
 
+            var authWay = (typeof window.detailQsActiveAuth === 'string' && window.detailQsActiveAuth)
+                ? String(window.detailQsActiveAuth).toLowerCase()
+                : '';
+            var keyways = Array.isArray(api.keyways) ? api.keyways : [];
+            if (!authWay && keyways.length) {
+                authWay = String(keyways[0] || 'query').toLowerCase();
+            }
             VsPR.directRequest({
                 endpoint: endpoint,
                 method: method,
-                params: params
+                params: params,
+                authWay: authWay || 'query',
+                keyways: keyways
             }).then(function (res) {
                 var http = res.status || 0;
                 var ok = http >= 200 && http < 400;

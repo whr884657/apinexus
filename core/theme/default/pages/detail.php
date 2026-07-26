@@ -389,8 +389,12 @@ if (!$notFound) {
     </section>
 
     <?php
-    $disclaimerOn = class_exists('ThemeManager') && ThemeManager::themeSettingBool('show_api_disclaimer', true);
-    $disclaimerBody = $disclaimerOn ? trim((string) Config::get('api_disclaimer', '')) : '';
+    // 内容：系统设置启用 + 非空正文；展示：默认主题 show_api_disclaimer
+    $disclaimerEnabled = class_exists('Config') && Config::get('api_disclaimer_on', '0') === '1';
+    $disclaimerThemeOn = class_exists('ThemeManager') && ThemeManager::themeSettingBool('show_api_disclaimer', true);
+    $disclaimerBody = ($disclaimerEnabled && $disclaimerThemeOn)
+        ? trim((string) Config::get('api_disclaimer', ''))
+        : '';
     if ($disclaimerBody !== ''):
     ?>
     <section class="detail-card detail-disclaimer" id="detailDisclaimer">
@@ -494,6 +498,7 @@ window.detailApiData = <?php echo json_encode($jsApi === null ? null : array(
     'method' => $primaryMethod,
     'maintenance' => !empty($jsApi['maintenance']) ? 1 : 0,
     'needkey' => isset($jsApi['needkey']) ? (int) $jsApi['needkey'] : 0,
+    'keyways' => $keywaysList,
     'params_list' => $paramsList,
 ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 window.playgroundUserApiKey = <?php echo json_encode(isset($playground['apiKey']) ? (string) $playground['apiKey'] : ''); ?>;

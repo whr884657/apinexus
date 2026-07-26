@@ -189,11 +189,15 @@ class AiApiDoc
     private static function sanitizeOutput($text)
     {
         $text = (string) $text;
+        // 先清高亮泄漏碎片（可不含完整 HTML 标签）
+        $text = preg_replace('/-?syn\s+vs-syn--[\w-]*"\s*>?/i', '', $text);
+        $text = preg_replace('/\bvs-syn--[\w-]+/i', '', $text);
         if (strpos($text, '<') !== false) {
-            $text = strip_tags($text);
+            $text = preg_replace('/<span[^>]*class\s*=\s*["\'][^"\']*vs-syn[^"\']*["\'][^>]*>(.*?)<\/span>/is', '$1', $text);
+            // 仅去掉明显 HTML 标签，保留 Markdown 内可能出现的比较符语境由模型避免
+            $text = preg_replace('/<\/?[a-zA-Z][^>]*>/', '', $text);
         }
         $text = preg_replace('/\sclass\s*=\s*["\'][^"\']*vs-syn[^"\']*["\']/i', '', $text);
-        $text = preg_replace('/<span[^>]*class\s*=\s*["\'][^"\']*vs-syn[^"\']*["\'][^>]*>(.*?)<\/span>/is', '$1', $text);
         $text = preg_replace('/\sdata-vs-syn(?:-done)?\s*=\s*["\'][^"\']*["\']/i', '', $text);
         // 粗过滤：常见泄密词
         $banned = array(

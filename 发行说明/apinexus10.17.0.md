@@ -12,9 +12,10 @@
 | 模块 | 说明 |
 |------|------|
 | 守卫错误 | `ApiStats` / `ApiProxy` 经 `vs_api_error_exit` 输出 `{ code:0, msg, http }` |
-| keyways | 表 `api.keyways`：query / header / bearer 逗号多选；校验与快速上手示例对齐 |
+| keyways | 表 `api.keyways`：query / header / bearer 逗号多选；多通道并存时任一有效密钥即可 |
 | 站点名 | `site_name` 前台展示；`system_name` 后台侧栏/用户中心（缺省=站点名） |
-| 免责声明 | 系统设置配置正文 + 开关；默认主题 `show_api_disclaimer` 控制详情页展示 |
+| 免责声明 | 系统启用开关 + 正文；默认主题 `show_api_disclaimer` 控制是否展示（两者同时满足） |
+| 在线测试 | 详情页 Playground 按鉴权方式传 Query / `X-API-Key` / Bearer |
 | AI | 禁止 HTML / vs-syn 泄漏；代码示例 `:::qs lang=… auth=…` 必填 auth |
 | 用户管理 | 角色 Tab、OAuth 徽章、积分调整、桌面表格 + 移动卡片 |
 | IP 归属地 | 设置页认证方式选项文案与提示对齐 |

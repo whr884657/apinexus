@@ -1390,7 +1390,7 @@
             fields.requireKey.value = String(parseInt(api.needkey, 10) || 0);
         }
         if (fields.keywayChecks && fields.keywayChecks.length) {
-            setSelectedKeyways(api.keyways || api.keyways_label || 'query');
+            setSelectedKeyways(api.keyways || 'query');
         }
         syncKeywaysUi();
         if (fields.qpm) {

@@ -332,11 +332,10 @@ class ApiStats
     private static function evaluateKey(array $row)
     {
         $need = ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : ApiManager::KEY_NONE);
-        $raw = self::readKey($row);
-        $provided = ($raw !== '');
+        $candidates = self::collectKeyCandidates($row);
 
         self::$keyCtx = array(
-            'raw'    => $raw,
+            'raw'    => '',
             'keyid'  => 0,
             'userid' => 0,
             'valid'  => false,
@@ -351,7 +350,12 @@ class ApiStats
             }
         }
 
-        if (!$provided) {
+        // 无需密钥：忽略形似 key 的业务参数，避免误 401
+        if ($need === ApiManager::KEY_NONE) {
+            return self::evaluateBilling($row);
+        }
+
+        if ($candidates === array()) {
             if ($need === ApiManager::KEY_REQUIRED) {
                 return array('http' => 401, 'msg' => '请提供调用密钥');
             }
@@ -362,21 +366,30 @@ class ApiStats
             return array('http' => 503, 'msg' => '密钥校验暂不可用');
         }
 
-        $keyRow = ApiKeyManager::findBySecret($raw);
-        if (!$keyRow) {
-            return array('http' => 401, 'msg' => '密钥错误');
-        }
-        if ((int) $keyRow['status'] !== ApiKeyManager::STATUS_ENABLED) {
-            return array('http' => 403, 'msg' => '密钥已禁用');
+        // 多 keyways：任一通道的有效密钥即可（错误 query 不阻断正确 header/bearer）
+        $sawDisabled = false;
+        foreach ($candidates as $raw) {
+            $keyRow = ApiKeyManager::findBySecret($raw);
+            if (!$keyRow) {
+                continue;
+            }
+            if ((int) $keyRow['status'] !== ApiKeyManager::STATUS_ENABLED) {
+                $sawDisabled = true;
+                continue;
+            }
+            self::$keyCtx = array(
+                'raw'    => $raw,
+                'keyid'  => (int) $keyRow['id'],
+                'userid' => (int) $keyRow['userid'],
+                'valid'  => true,
+            );
+            return self::evaluateBilling($row);
         }
 
-        self::$keyCtx = array(
-            'raw'    => $raw,
-            'keyid'  => (int) $keyRow['id'],
-            'userid' => (int) $keyRow['userid'],
-            'valid'  => true,
-        );
-        return self::evaluateBilling($row);
+        if ($sawDisabled) {
+            return array('http' => 403, 'msg' => '密钥已禁用');
+        }
+        return array('http' => 401, 'msg' => '密钥错误');
     }
 
     /**
@@ -561,12 +574,12 @@ class ApiStats
     }
 
     /**
-     * 读取请求中的密钥（按接口允许的 keyways：query / header / bearer）
+     * 收集请求中的密钥候选（按接口允许的 keyways；多通道并存时全部返回去重）
      *
      * @param array|null $row 接口行（含 keyways）；null 时默认三种皆可读（兼容旧调用）
-     * @return string
+     * @return array<int,string>
      */
-    private static function readKey($row = null)
+    private static function collectKeyCandidates($row = null)
     {
         $ways = array('query', 'header', 'bearer');
         if (is_array($row) && class_exists('ApiManager')) {
@@ -576,33 +589,56 @@ class ApiStats
             }
         }
 
+        $out = array();
+        $seen = array();
+        $push = function ($val) use (&$out, &$seen) {
+            $val = trim((string) $val);
+            if ($val === '' || isset($seen[$val])) {
+                return;
+            }
+            $seen[$val] = true;
+            $out[] = $val;
+        };
+
         if (in_array('query', $ways, true)) {
             foreach (array('key', 'api_key', 'apikey') as $k) {
                 if (isset($_GET[$k]) && (string) $_GET[$k] !== '') {
-                    return trim((string) $_GET[$k]);
+                    $push($_GET[$k]);
                 }
                 if (isset($_POST[$k]) && (string) $_POST[$k] !== '') {
-                    return trim((string) $_POST[$k]);
+                    $push($_POST[$k]);
                 }
             }
         }
         if (in_array('header', $ways, true) && !empty($_SERVER['HTTP_X_API_KEY'])) {
-            return trim((string) $_SERVER['HTTP_X_API_KEY']);
+            $push($_SERVER['HTTP_X_API_KEY']);
         }
         if (in_array('bearer', $ways, true) && !empty($_SERVER['HTTP_AUTHORIZATION'])) {
             $auth = trim((string) $_SERVER['HTTP_AUTHORIZATION']);
             if (preg_match('/^Bearer\s+(\S+)/i', $auth, $m)) {
-                return trim($m[1]);
+                $push($m[1]);
             }
         }
         // 部分环境把 Authorization 放到 REDIRECT_HTTP_AUTHORIZATION
         if (in_array('bearer', $ways, true) && !empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
             $auth = trim((string) $_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
             if (preg_match('/^Bearer\s+(\S+)/i', $auth, $m)) {
-                return trim($m[1]);
+                $push($m[1]);
             }
         }
-        return '';
+        return $out;
+    }
+
+    /**
+     * 读取请求中的密钥（兼容：返回第一个候选）
+     *
+     * @param array|null $row
+     * @return string
+     */
+    private static function readKey($row = null)
+    {
+        $list = self::collectKeyCandidates($row);
+        return isset($list[0]) ? $list[0] : '';
     }
 
     /**

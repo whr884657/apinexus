@@ -86,7 +86,7 @@ class PlaygroundRelay
                 'msg'         => $msg,
                 'http'        => $code,
                 'contentType' => 'application/json; charset=utf-8',
-                'body'        => json_encode(array('code' => 0, 'msg' => $msg), JSON_UNESCAPED_UNICODE),
+                'body'        => json_encode(array('code' => 0, 'msg' => $msg, 'http' => $code), JSON_UNESCAPED_UNICODE),
                 'encoding'    => 'text',
                 'displayUrl'  => $displayUrl,
             );

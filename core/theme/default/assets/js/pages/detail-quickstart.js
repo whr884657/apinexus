@@ -18,7 +18,10 @@
 
     var multiAuth = root.getAttribute('data-qs-multi-auth') === '1'
         && bundle.auths && bundle.auths.length > 1;
-    var activeAuth = multiAuth ? String(bundle.auths[0] || 'query') : 'query';
+    var activeAuth = multiAuth ? String(bundle.auths[0] || 'query') : String(
+        (bundle.auths && bundle.auths[0]) || 'query'
+    );
+    window.detailQsActiveAuth = activeAuth;
 
     var codeNode = codeWrap.querySelector('code') || codeWrap;
     var active = 0;
@@ -104,6 +107,7 @@
                     return;
                 }
                 activeAuth = auth;
+                window.detailQsActiveAuth = auth;
                 Array.prototype.forEach.call(authButtons, function (b) {
                     var on = b === btn;
                     b.classList.toggle('is-active', on);

@@ -5,10 +5,10 @@
     "db_changes": true,
     "changes": [
         "守卫/代理错误 JSON 统一含 http 字段（code:0, msg, http），与 vs_api_error_exit 一致",
-        "接口表新增 keyways：Query / Header(X-API-Key) / Bearer 可多选；ApiStats::readKey 按 keyways 识别",
+        "接口表新增 keyways：Query / Header(X-API-Key) / Bearer 可多选；多通道并存时任一有效密钥即可",
         "站点名称与系统名称拆分：前台 site_name、后台/用户中心 system_name（缺省回落站点名）",
-        "免责声明改为默认主题 theme.json 开关 show_api_disclaimer；系统设置仍配置正文",
-        "AI 生成详细文档/代码示例加固：禁止 HTML 与高亮标记泄漏；:::qs 须带 auth=query|header|bearer",
+        "免责声明：系统启用开关 + 正文；默认主题 show_api_disclaimer 控制展示（二者同时满足）",
+        "详情页在线测试按鉴权方式传 Query / X-API-Key / Bearer；AI 示例禁 HTML/vs-syn 泄漏并须 auth=",
         "用户管理 UI：角色 Tab 筛选、OAuth 绑定徽章、积分调整、双端卡片布局",
         "IP 归属地设置页认证方式文案对齐（Bearer / Header / Query 说明）"
     ],

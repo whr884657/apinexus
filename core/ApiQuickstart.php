@@ -378,11 +378,9 @@ class ApiQuickstart
     private static function codeForAuthLang(array $parsed, $auth, $lang)
     {
         $auth = self::normalizeAuthId($auth);
+        // 禁止用 query 示例填充 header/bearer Tab，避免鉴权方式错位
         if (isset($parsed[$auth][$lang])) {
             return trim((string) $parsed[$auth][$lang]);
-        }
-        if ($auth !== self::AUTH_DEFAULT && isset($parsed[self::AUTH_DEFAULT][$lang])) {
-            return trim((string) $parsed[self::AUTH_DEFAULT][$lang]);
         }
         return '';
     }
@@ -425,12 +423,15 @@ class ApiQuickstart
     private static function cleanCodeBlock($code)
     {
         $code = (string) $code;
+        // 高亮泄漏常见碎片：-syn vs-syn--keyword"> 或残缺属性
+        $code = preg_replace('/-?syn\s+vs-syn--[\w-]*"\s*>?/i', '', $code);
+        $code = preg_replace('/\bvs-syn--[\w-]+/i', '', $code);
         if (strpos($code, '<') !== false) {
+            $code = preg_replace('/<span[^>]*class\s*=\s*["\'][^"\']*vs-syn[^"\']*["\'][^>]*>(.*?)<\/span>/is', '$1', $code);
             $code = strip_tags($code);
         }
         $code = preg_replace('/\sclass\s*=\s*["\'][^"\']*vs-syn[^"\']*["\']/i', '', $code);
         $code = preg_replace('/\sdata-vs-syn(?:-done)?\s*=\s*["\'][^"\']*["\']/i', '', $code);
-        $code = preg_replace('/<span[^>]*class\s*=\s*["\'][^"\']*vs-syn[^"\']*["\'][^>]*>(.*?)<\/span>/is', '$1', $code);
         return trim($code);
     }
 }
