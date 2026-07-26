@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.11.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.12.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,15 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.12.0（2026-07-26）
+
+**类型：** 中版本（控制台日聚合）
+
+**变更说明：**
+
+- 新增 `statday` 滚动 30 天日表；调用三写；控制台趋势/TOP/今日优先读日表
+- 上线回填近 30 天；关于页 IDE 变量收口
 
 ### v10.11.1（2026-07-26）
 

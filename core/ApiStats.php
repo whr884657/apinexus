@@ -421,6 +421,12 @@ class ApiStats
             ApiKeyManager::incrementCalls((int) self::$keyCtx['keyid']);
         }
 
+        // 日聚合：与 api.calls 同步写入（不依赖调用详情开关）
+        if (class_exists('StatDayManager')) {
+            $hasKey = trim((string) $ctx['apikey']) !== '';
+            StatDayManager::recordHit($id, (bool) $ok, (int) $charged, $hasKey);
+        }
+
         if (!class_exists('ApiLogManager') || !ApiLogManager::detailEnabled()) {
             return;
         }

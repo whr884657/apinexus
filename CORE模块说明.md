@@ -125,7 +125,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 赞助 | `LinkManager`（共用） | `FrontendSponsor` | `admin/finance/sponsor.php`、`sponsor.php`、默认主题赞助页、系统设置收款码 | ✅ 是 | **已完成**（表 `link`；`kind=2`；简介=赞助说明；收款码配置） |
 | 公告 | `ContentManager`（kind=0） | `FrontendAnnouncement` | `admin/content/announcements.php`、首页弹窗/跑马灯 | ✅ 是 | **已完成**（置顶/弹窗；Markdown；与文章共用表） |
 | Markdown | `Markdown`（`core/markdown/`） | 编辑器 + 渲染 | 公告/文章/API 文档编辑 | ✅ 是 | **已完成**（本地 marked/purify/Parsedown；短码扩展） |
-| Redis 缓存 | — | `RedisService` / `RedisCache` / `DashboardStats` | `admin/system/redis.php`、`admin/index.php`、`admin/screen.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 今日调用 / 控制台 `cache:dashboard:*` 分层 TTL + `console_full`） |
+| Redis 缓存 | — | `RedisService` / `RedisCache` / `DashboardStats` / `StatDayManager` | `admin/system/redis.php`、`admin/index.php`、`admin/screen.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 今日调用←statday / 控制台 `cache:dashboard:*` + `statday` 日聚合） |
 | 贡献者 | `FrontendContributor` | `FrontendContributor` | `contributors.php`、`profile.php`、`core/ping.php` | ✅ 是 | **已完成**（开发者卡片、公开主页、加入时间、壁纸、延迟检测） |
 
 > 上表「待开发」项：须先完成 `XxxManager` + `FrontendXxx` 并注册 bootstrap，主题才能接入；在此之前主题页仅能做静态占位。
@@ -232,7 +232,9 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `CommentNotify.php` | 文章评论邮件通知（新评论通知管理员；被引用/管理员回复通知用户） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前校验公网 `targeturl` + `ApiStats::hitProxy`（v10.8.0） |
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；**默认主题 v4.8.0+ 浏览器直连**；中继内禁止写 `apilog`；收费接口拒中继；重定向逐跳校验（v10.8.0） |
-| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + 写 `apilog`；`guardAccess`/`lightGate` 含密钥与 QPM（失败路径仍计 IP QPM）；日志密钥脱敏（v10.8.0） |
+| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + `StatDayManager::recordHit` + 写 `apilog`（详情开时）；`guardAccess`/`lightGate` 含密钥与 QPM |
+| `StatDayManager.php` | 控制台日聚合表 `statday`：滚动 30 天、三写增量、TOP `topjson`、上线回填（v10.12.0） |
+| `DashboardStats.php` | 管理员控制台 / 数据大屏：KPI/趋势/TOP **优先读 statday**；最近调用仍走 apilog；`console_full` + 分层 Redis TTL + live tick |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD（表 `apikey`；每用户最多 3 条；格式 `sk-`+32；含调用次数） |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `LinkManager.php` | 友情链接 / 合作伙伴 / 赞助共用 CRUD（`kind` 0/1/2；友链审核；前台申请）（**后台向**） |
@@ -244,9 +246,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `FrontendPartner.php` | 前台已启用合作伙伴列表（**主题向**） |
 | `FrontendSponsor.php` | 前台赞助收款码 + 赞助名单（**主题向**） |
 | `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
-| `RedisCache.php` | 业务数据缓存（前台/公开列表 + apilog + orders + **控制台 dashboard 前缀**）；监控页展示逻辑键名（v10.6.0 / v10.10.1） |
-| `DashboardStats.php` | 管理员控制台 / 数据大屏聚合：KPI、趋势、TOP、地理飞线、最近调用（含 httpcode）；`console_full` + 分层 Redis TTL + live tick（v10.7.0 / v10.10.1） |
-| `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`detailEnabled()` 控制是否写详细日志；`httpcodeLabel`（v10.6.1）；`maskApikey` 展示/落库脱敏（v10.8.0） |
+| `RedisCache.php` | 业务数据缓存（前台/公开列表 + apilog + orders + **控制台 dashboard 前缀** + statday topmap）；监控页展示逻辑键名（v10.6.0 / v10.12.0） |
+| `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`countToday` 优先读 `statday`；`detailEnabled()` 控制是否写详细日志；`httpcodeLabel`（v10.6.1）；`maskApikey` 展示/落库脱敏（v10.8.0） |
 | `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0）；业务时区东八区（v10.6.1） |
 | `PointsManager.php` | 余额读写、扣费、充值完成/取消（回调不比对金额，见支付规范 §2.6）、`giftOnRegister` / `checkin`；列表走 OrderManager |
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |

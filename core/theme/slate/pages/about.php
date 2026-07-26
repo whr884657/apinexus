@@ -4,19 +4,33 @@ $siteName = isset($siteName) ? $siteName : (class_exists('SiteContext') ? SiteCo
 $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
 $aboutArticle = isset($aboutArticle) && is_array($aboutArticle) ? $aboutArticle : null;
 $hasAbout = is_array($aboutArticle);
+$aboutTitle = '关于';
+$aboutSummary = '';
+$aboutBodyHtml = '';
+if ($hasAbout) {
+    if (isset($aboutArticle['title']) && (string) $aboutArticle['title'] !== '') {
+        $aboutTitle = (string) $aboutArticle['title'];
+    }
+    if (!empty($aboutArticle['summary'])) {
+        $aboutSummary = (string) $aboutArticle['summary'];
+    }
+    if (isset($aboutArticle['body_html'])) {
+        $aboutBodyHtml = (string) $aboutArticle['body_html'];
+    }
+}
 ?>
 <main class="st-main"><div class="st-wrap">
 <section class="st-section">
-    <h1 class="st-page-title"><?php echo vs_e($hasAbout ? $aboutArticle['title'] : '关于'); ?></h1>
-    <?php if ($hasAbout && !empty($aboutArticle['summary'])): ?>
-        <p class="st-page-desc"><?php echo vs_e($aboutArticle['summary']); ?></p>
+    <h1 class="st-page-title"><?php echo vs_e($aboutTitle); ?></h1>
+    <?php if ($hasAbout && $aboutSummary !== ''): ?>
+        <p class="st-page-desc"><?php echo vs_e($aboutSummary); ?></p>
     <?php elseif (!$hasAbout): ?>
         <p class="st-page-desc">了解 <?php echo vs_e($siteName); ?></p>
     <?php endif; ?>
 
     <?php if ($hasAbout): ?>
         <div class="st-card markdown-body vs-md-body" style="padding:18px;line-height:1.75;">
-            <?php echo isset($aboutArticle['body_html']) ? $aboutArticle['body_html'] : ''; ?>
+            <?php echo $aboutBodyHtml; ?>
         </div>
     <?php else: ?>
         <div class="st-card">

@@ -302,6 +302,15 @@ class ApiLogManager
      */
     public static function countToday()
     {
+        if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
+            return (int) RedisCache::remember(
+                RedisCache::KEY_APILOG_TODAY,
+                RedisCache::TTL_APILOG_STATS,
+                function () {
+                    return StatDayManager::todayCalls();
+                }
+            );
+        }
         if (!self::tableReady()) {
             return 0;
         }

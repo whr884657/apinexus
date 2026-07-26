@@ -1,12 +1,13 @@
 {
-    "version": "10.11.1",
-    "title": "ApiNexus 10.11.1 内容管理标签边框与长标题布局",
+    "version": "10.12.0",
+    "title": "ApiNexus 10.12.0 控制台日聚合表 statday",
     "release_date": "2026-07-26",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "公告/文章管理色标补齐边框与规范内边距，禁止只涂底色",
-        "标题与标签分栏：长标题省略，标签不再挤变形",
-        "手机卡片标签独立一行，避免与标题横挤"
+        "新增 statday 按日聚合表，滚动固定 30 天",
+        "调用三写：api.calls + statday + apilog；上线回填近 30 天",
+        "控制台今日/趋势/TOP 优先读日表，减轻 apilog 全表扫描",
+        "关于页主题变量 IDE 告警修复；规范 §2.23 / E121 / 日聚合专项"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

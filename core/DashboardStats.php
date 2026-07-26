@@ -111,6 +111,9 @@ class DashboardStats
                 RedisCache::invalidateApiLog();
             }
         }
+        if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
+            StatDayManager::ensureDay(date('Y-m-d'));
+        }
         $cached = self::remember('console_full', self::TTL_TODAY, function () {
             return array(
                 'kpi'          => self::kpiBlock(),
@@ -367,6 +370,11 @@ class DashboardStats
     {
         $limit = max(1, min(20, (int) $limit));
         return self::remember('top_apis_' . $limit, self::TTL_TODAY, function () use ($limit) {
+            if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
+                $row = StatDayManager::todayRow();
+                $json = $row && isset($row['topjson']) ? (string) $row['topjson'] : '[]';
+                return StatDayManager::topListFromJson($json, $limit);
+            }
             if (!ApiLogManager::tableReady()) {
                 return array();
             }
@@ -804,6 +812,18 @@ class DashboardStats
     private static function typeCountsLastDays($days)
     {
         $days = max(1, min(31, (int) $days));
+        if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
+            $map = StatDayManager::mapLastDays($days);
+            $out = array();
+            foreach ($map as $d => $row) {
+                $out[$d] = array(
+                    'guest'  => (int) $row['guestcalls'],
+                    'key'    => (int) $row['keycalls'],
+                    'points' => (int) $row['pointscalls'],
+                );
+            }
+            return $out;
+        }
         $out = array();
         if (!ApiLogManager::tableReady()) {
             return $out;
@@ -843,6 +863,17 @@ class DashboardStats
     private static function okFailLastDays($days)
     {
         $days = max(1, min(31, (int) $days));
+        if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
+            $map = StatDayManager::mapLastDays($days);
+            $out = array();
+            foreach ($map as $d => $row) {
+                $out[$d] = array(
+                    'ok'   => (int) $row['okcount'],
+                    'fail' => (int) $row['failcount'],
+                );
+            }
+            return $out;
+        }
         $out = array();
         if (!ApiLogManager::tableReady()) {
             return $out;
@@ -880,6 +911,11 @@ class DashboardStats
      */
     private static function countRange($start, $end)
     {
+        if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
+            $startDay = substr((string) $start, 0, 10);
+            $endDay = substr((string) $end, 0, 10);
+            return StatDayManager::sumCallsBetween($startDay, $endDay);
+        }
         if (!ApiLogManager::tableReady()) {
             return 0;
         }
@@ -912,6 +948,17 @@ class DashboardStats
     private static function okFailDay($day)
     {
         $empty = array('ok' => 0, 'fail' => 0);
+        $day = substr((string) $day, 0, 10);
+        if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
+            $row = StatDayManager::getDay($day);
+            if (!$row) {
+                return $empty;
+            }
+            return array(
+                'ok'   => (int) $row['okcount'],
+                'fail' => (int) $row['failcount'],
+            );
+        }
         if (!ApiLogManager::tableReady()) {
             return $empty;
         }
@@ -1154,7 +1201,11 @@ class DashboardStats
     {
         $days = max(1, min(31, (int) $days));
         $map = array();
-        if (ApiLogManager::tableReady()) {
+        if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
+            foreach (StatDayManager::mapLastDays($days) as $d => $row) {
+                $map[$d] = (int) $row['calls'];
+            }
+        } elseif (ApiLogManager::tableReady()) {
             try {
                 $pdo = Database::connect();
                 self::applyTimeout($pdo);

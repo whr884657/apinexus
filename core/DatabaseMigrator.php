@@ -120,6 +120,10 @@ class DatabaseMigrator
                 }
                 self::markApplied($version);
                 $applied[] = $version;
+                if ($version === '10.12.0' && class_exists('StatDayManager')) {
+                    StatDayManager::resetReadyCache();
+                    StatDayManager::backfillLastDays(30);
+                }
             }
         } catch (Exception $e) {
             return array(
@@ -326,6 +330,28 @@ class DatabaseMigrator
         // 新装已含 10.6.0 orders.remark 前缀索引时跳过
         if (!in_array('10.6.0', $applied, true) && self::tableIndexExists('orders', 'idx_remark_prefix')) {
             self::markApplied('10.6.0');
+        }
+
+        // 新装已含 10.11.0 content.bindpage 时跳过
+        if (!in_array('10.11.0', $applied, true) && self::tableColumnExists('content', 'bindpage')) {
+            self::markApplied('10.11.0');
+        }
+
+        // 新装已含 10.12.0 statday 时跳过；空表则回填近 30 天
+        if (!in_array('10.12.0', $applied, true) && self::tableExists('statday')) {
+            self::markApplied('10.12.0');
+            if (class_exists('StatDayManager')) {
+                StatDayManager::resetReadyCache();
+                try {
+                    $pdo = Database::connect();
+                    $n = (int) $pdo->query('SELECT COUNT(*) FROM `' . Database::table('statday') . '`')->fetchColumn();
+                    if ($n === 0) {
+                        StatDayManager::backfillLastDays(30);
+                    }
+                } catch (Exception $e) {
+                    // 下次控制台访问再补
+                }
+            }
         }
 
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
@@ -719,7 +745,7 @@ class DatabaseMigrator
     public static function hasSchemaProbe($version)
     {
         $version = trim((string) $version);
-        return ($version === '7.0.0' || $version === '7.1.0');
+        return ($version === '7.0.0' || $version === '7.1.0' || $version === '10.12.0');
     }
 
     /**
@@ -1056,6 +1082,9 @@ class DatabaseMigrator
     public static function versionSchemaReady($version)
     {
         $version = trim((string) $version);
+        if ($version === '10.12.0') {
+            return self::tableExists('statday');
+        }
         if ($version === '7.1.0') {
             return self::tableExists('content') && self::tableColumnExists('content', 'coverlayout');
         }
@@ -1100,6 +1129,11 @@ class DatabaseMigrator
         self::executeFile($pdo, $file, $prefix);
         self::markApplied($version);
         Config::clearCache();
+
+        if ($version === '10.12.0' && class_exists('StatDayManager')) {
+            StatDayManager::resetReadyCache();
+            StatDayManager::backfillLastDays(30);
+        }
 
         if (!self::versionSchemaReady($version)) {
             throw new Exception('版本 v' . $version . ' 结构更新后校验失败，请手动执行数据库结构更新');
