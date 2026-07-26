@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **10.17.0**）
 
 ---
 
@@ -37,18 +37,43 @@ require_once VS_ROOT . '/core/bootstrap.php';
 | 在 `bootstrap.php` 注册 | **禁止**直接 `Database::connect()` / 写表名 |
 | 全主题共用的数据格式约定 | 各主题独立的视觉与交互 |
 
+**默认主题 UI 改动边界（v10.17.0）：** 详情免责声明开关、快速上手鉴权 Tab、Hero 文案等**仅改** `core/theme/default/`；其它主题须自行对齐 `theme.json` settings，core 不提供跨主题样式回退。
+
 **一句话：** core 负责「数据从哪来、规则是什么」；主题负责「数据怎么展示」。
 
 ---
 
+## 1.1 bootstrap 加载顺序（与 `core/bootstrap.php` 一致）
+
 ```
-version.php → helpers.php → InstallChecker → Database → DatabaseInstaller
-→ DatabaseMigrator → SiteContext → RegisterPolicy → Config
-→ Mailer → Auth → UserAuth → RateLimitStore → AuthSecurity → AjaxResponse
-→ SystemInfo → Updater → UpdateLog → UserAvatar → UserManager
-→ AdminUserBinding → ApiManager → ApiCategoryManager
-→ ApiStats → ApiKeyManager → FrontendCategory → FrontendApi → ThemeManager
-→ oauth/* → Session 启动
+version.php
+→ helpers.php
+→ InstallChecker → Database → DatabaseInstaller → DatabaseMigrator
+→ SiteContext → RegisterPolicy → Config
+→ Mailer → RedisService → RedisCache
+→ Auth → UserRole → UserAuth → FrontendUser
+→ RateLimitStore → AuthSecurity → AjaxResponse
+→ SystemInfo → AboutCatalog → Updater → UpdateLog
+→ UserAvatar → UserManager → AdminUserBinding
+→ ApiManager → ApiQuickstart
+→ AiConfig → AiClient → AiApiDoc
+→ ApiNotify → ApiProxy → ApiStats → IpLocator
+→ StatDayManager → ApiLogManager → ApiLogArchive → ApiKeyManager
+→ ApiFeedbackManager → FrontendFeedback → FeedbackNotify
+→ ApiCategoryManager
+→ PayConfig → OrderManager → PointsManager
+→ CodePayClient（core/play/codeplay/）
+→ FrontendCategory → FrontendApi → FrontendStats → DashboardStats
+→ LinkManager → LinkSiteMeta → LinkNotify
+→ FrontendLink → FrontendPartner → FrontendSponsor → FrontendContributor
+→ ContentManager → CommentManager → CommentNotify → FrontendComment
+→ CheckinManager
+→ Markdown（core/markdown/）
+→ FrontendAnnouncement → FrontendArticle → FrontendAbout
+→ PlaygroundRelay → ThemeManager
+→ oauth/*（HttpClient → OAuthConfig → OAuthState → OAuthService → QQ/Gitee）
+→ Session 启动 + CSRF
+→（已安装时）DatabaseMigrator::pruneAppliedAboveCodeVersion
 ```
 
 ---
@@ -112,7 +137,7 @@ version.php → helpers.php → InstallChecker → Database → DatabaseInstalle
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 `/detail/{id}`、多选方法、审核三态、统计、在线测试浏览器直连、双端 UI） |
+| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 `/detail/{id}`、多选 method、**keyways**、needkey/qpm/charge、审核三态、统计、在线测试浏览器直连、双端 UI） |
 | 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号最多 3 个；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
 | 积分与支付 | `PointsManager` / `OrderManager` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；v10.4.0 注册赠送 / 每日签到；表 `orders` + `checkin`） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
@@ -150,29 +175,18 @@ foreach (FrontendCategory::listTags() as $tag) {
 
 **主题不需要知道：** 表名 `vs_category`、字段 `sort_order` / `status`、图标解析逻辑。
 
-### 2.6 后续扩展示例：文章模块（规划）
+### 2.6 文章模块（已完成，v5.x / v7.x）
 
-当需要开发「文章列表/详情」时，建议按下列文件规划（**先 core，后主题**）：
+文章/公告/关于页已由 `ContentManager` + `FrontendArticle` / `FrontendAnnouncement` / `FrontendAbout` 落地；新主题直接调用 `Frontend*` 类，勿再按下方「规划」重复造轮子。
 
 | 步骤 | 文件 | 说明 |
 |------|------|------|
-| 1 | `install/migrations/x.y.z.sql` | 文章表结构（若尚无） |
-| 2 | `core/ArticleManager.php` | 后台：发布、下架、分类、CRUD |
-| 3 | `admin/content/articles.php` | 后台管理界面 |
-| 4 | `core/FrontendArticle.php` | 前台：`listForTheme()`、`findById()`、`listPaged()`（排除绑定关于的文章） |
-| 4b | `core/FrontendAbout.php` | 前台关于：`getBoundArticle()` |
-| 5 | `bootstrap.php` | `require_once` FrontendArticle / FrontendAbout |
+| 1 | `install/migrations/*.sql` | 内容表（若升级自极旧版） |
+| 2 | `core/ContentManager.php` | 后台：发布、下架、分类、CRUD（kind 区分公告/文章） |
+| 3 | `admin/content/*.php` | 后台管理界面 |
+| 4 | `core/FrontendArticle.php` 等 | 前台：`listForTheme()`、`findById()`、`listPaged()` |
+| 5 | `bootstrap.php` | 已注册 |
 | 6 | `core/theme/*/pages/articles.php` | 各主题调用 `FrontendArticle::listForTheme()` |
-
-**`FrontendArticle` 预期方法（规划，尚未实现）：**
-
-```php
-FrontendArticle::listForTheme($limit = 10);   // 首页摘要
-FrontendArticle::listPaged($page, $pageSize); // 列表页分页
-FrontendArticle::findBySlug($slug);           // 详情页
-```
-
-主题只负责排版；摘要用多少字、是否只显示已发布，由 `FrontendArticle` 内部决定。
 
 ### 2.7 新增 core 类检查清单
 
@@ -192,7 +206,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 
 1. **读分类** → `FrontendCategory`  
 2. **读公开接口** → `FrontendApi`  
-3. **读站点名/描述** → `SiteContext`（或模板注入的 `$siteName`）  
+3. **读站点名/描述** → `SiteContext::siteName()`（前台）；后台/用户中心壳层用 `SiteContext::systemName()`（或模板 `$systemName`）  
 4. **当前登录用户** → `FrontendUser::current()`（推荐）或 `UserAuth::user()`  
 5. **是否开发者** → `UserRole::currentCanPublishApi()`
 5. **读文章** → `FrontendArticle::listForTheme()` / `findById()`  
@@ -213,7 +227,7 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `DatabaseInstaller.php` | 安装向导执行 `database.sql` |
 | `DatabaseMigrator.php` | 版本迁移 SQL（含清理旧系统残留） |
 | `Config.php` | 系统配置读写（`vs_config` 表） |
-| `SiteContext.php` | 站点名称、描述、Logo 等展示信息 |
+| `SiteContext.php` | 站点名称（前台）、系统名称（后台壳层）、描述、Logo 等展示信息 |
 | `RegisterPolicy.php` | 注册邮箱后缀策略 |
 | `Mailer.php` | SMTP 发信 |
 | `Auth.php` | **管理员**登录与会话 |
@@ -228,20 +242,22 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `UserManager.php` | 后台用户列表/封禁/删除/身份转换 |
 | `UserAvatar.php` | 用户头像 URL 解析 |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
-| `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs` 多语言快速上手示例（v10.15.0） |
+| `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型） |
-| `AiClient.php` | OpenAI 兼容 Chat Completions 客户端 |
-| `AiApiDoc.php` | 生成详细文档（`doc`）与代码示例（`aidoc`）；剥离上游敏感字段 |
-| `IpLocator.php` | 外网 IP 归属地解析（设置可配 URL/认证/字段路径，v10.16.0） |
-| `ApiStats.php` | 调用计数与详细日志（含 iploc） |
-| `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
-| `CommentNotify.php` | 文章评论邮件通知（新评论通知管理员；被引用/管理员回复通知用户） |
-| `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前校验公网 `targeturl` + `ApiStats::hitProxy`（v10.8.0） |
-| `PlaygroundRelay.php` | 可选中继（兼容旧主题）；**默认主题 v4.8.0+ 浏览器直连**；中继内禁止写 `apilog`；收费接口拒中继；重定向逐跳校验（v10.8.0） |
-| `ApiStats.php` | 本地/代理调用统计：`api.calls++` + `StatDayManager::recordHit` + 写 `apilog`（详情开时）；`guardAccess`/`lightGate` 含密钥与 QPM |
-| `StatDayManager.php` | 控制台日聚合表 `statday`：滚动 30 天、三写增量、TOP `topjson`、上线回填（v10.12.0） |
-| `DashboardStats.php` | 管理员控制台 / 数据大屏：KPI/趋势/TOP **优先读 statday**；最近调用仍走 apilog；`console_full` + 分层 Redis TTL + live tick |
-| `ApiKeyManager.php` | 用户 API 调用密钥 CRUD（表 `apikey`；每用户最多 3 条；格式 `sk-`+32；含调用次数） |
+| `AiClient.php` | OpenAI 兼容 Chat Completions / Responses 客户端 |
+| `AiApiDoc.php` | 生成详细文档（`doc`）与代码示例（`aidoc`）；剥离上游敏感字段；禁止 HTML 泄漏 |
+| `IpLocator.php` | 外网 IP 归属地解析（设置可配 URL/认证/字段路径；异步回填 apilog.iploc，v10.16.0） |
+| `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
+| `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；守卫错误经 `vs_api_error_exit`（含 `http`） |
+| `PlaygroundRelay.php` | 可选中继（兼容旧主题）；默认主题浏览器直连 |
+| `ApiStats.php` | 本地/代理调用统计、守卫（needkey/keyways/qpm/charge）、错误 JSON `{code:0,msg,http}` |
+| `StatDayManager.php` | 控制台日聚合表 `statday` |
+| `DashboardStats.php` | 管理员控制台 / 数据大屏 KPI/趋势/TOP + live tick |
+| `ApiKeyManager.php` | 用户 API 调用密钥 CRUD |
+| `ApiLogManager.php` | 调用日志分页、今日计数、脱敏 |
+| `ApiLogArchive.php` | 调用日志冷热归档 |
+| `ContentManager.php` | 文章/公告内容 CRUD（kind 区分） |
+| `CommentManager.php` / `FrontendComment.php` | 文章评论后台与前台 |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
 | `LinkManager.php` | 友情链接 / 合作伙伴 / 赞助共用 CRUD（`kind` 0/1/2；友链审核；前台申请）（**后台向**） |
 | `LinkSiteMeta.php` | 抓取外站 HTML 解析 title/description/favicon（友链一键填充；防 SSRF） |
@@ -313,8 +329,8 @@ echo 'v' . VS_VERSION;     // v2.17.1
 | `vs_render_site_logo()` | 站点 Logo |
 | `vs_require_secure_post()` | 校验 POST + CSRF |
 | `vs_decode_transport_field()` / `vs_decode_transport_fields()` | 解码 `VS64B:`/`VS64:` Base64 表单字段（防 WAF 误拦，v10.15.3） |
+| `vs_api_error_exit($http, $msg)` | 守卫/代理统一错误 JSON：`{ code:0, msg, http }` 并 exit（v10.17.0） |
 | `vs_safe_embed_url()` / `vs_safe_css_color()` | Markdown 短码外链/色值白名单（防 XSS，v10.15.3 复查） |
-| `IpLocator` | 外网 IP 归属地解析（设置可配，v10.16.0） |
 | `vs_password_hash()` | 密码哈希 |
 
 **主题开发常用：**
@@ -407,11 +423,17 @@ Config::set('site_name', '我的 API 站');
 > **说明：** 旧版多域名类 `Domain.php` 已于 v1.2.0 移除；站点信息一律由本类从单站 `config` 读取。结构更新时 `DatabaseMigrator::purgeLegacyArtifacts()` 会清理残留的 `domain` 表与 `bound_domains` 等配置键。
 
 
-**作用：** 前台展示用的站点信息（名称、描述、关键词、Logo、备案号、运行时间、页脚扩展等），从 Config 读取并缓存。
+**作用：** 前台展示用的站点信息，从 Config 读取并缓存。
+
+| 概念 | 配置键 | 方法 | 用途 |
+|------|--------|------|------|
+| **站点名称** | `site_name` | `siteName()` | 前台标题、SEO、Hero 默认文案 |
+| **系统名称** | `system_name` | `systemName()` | 后台侧栏/顶栏、用户中心壳层；缺省回落 `site_name` |
 
 | 方法 | 说明 |
 |------|------|
-| `siteName()` | 站点名称 |
+| `siteName()` | 站点名称（前台） |
+| `systemName()` | 系统/产品名称（后台与用户中心） |
 | `siteDescription()` | 站点描述 |
 | `siteKeywords()` | SEO 关键词 |
 | `siteLogo()` | Logo 路径 |
@@ -585,17 +607,23 @@ AuthSecurity::requireAuthPost();
 **接口状态 `status`（数字）：** `0` 正常 / `1` 禁用 / `2` 维护  
 **审核 `audit`（数字）：** `0` 待审核 / `1` 通过 / `2` 不通过（管理员发布默认通过；用户投稿为待审核）  
 **拒绝原因 `rejectreason`：** 不通过时可填，邮件与用户 API 管理页可见  
+**请求方式 `method`：** 存库逗号分隔；`methods` 数组 + `method_label`（如 `GET,POST`）  
 **密钥 `needkey`（数字）：** `0` 不需要 / `1` 必须 / `2` 可选  
-**QPM `qpm`（v10.5.0）：** `0` 不限制 / `>0` 每分钟最大请求次数（无需/可选按 IP，必须按 IP+密钥）
+**密钥传递 `keyways`（v10.17.0）：** 逗号存储；`normalizeKeyways` 归一为 `query` / `header` / `bearer` 有序数组；可多选  
+**QPM `qpm`（v10.5.0）：** `0` 不限制 / `>0` 每分钟最大请求次数（无需/可选按 IP，必须按 IP+密钥）  
+**计费 `charge` / `price`：** `0` 免费 / `1` 收费；配合 `PointsManager` 扣积分
 
 | 方法 | 说明 |
 |------|------|
 | `listPublic()` | 前台可见：审核通过且非禁用（含维护中） |
 | `listAll` / `listByAudit` / `listByUser` / `listFiltered` | 列表筛选（支持 userid） |
 | `create` / `update` / `delete` / `setStatus` / `setAuditStatus` | 写操作（`setAuditStatus` 可带拒绝原因） |
-| `formatRow` | 格式化（含 `rejectreason` / `audit_class` / `qpm` / `qpm_label`） |
+| `formatRow` | 格式化（含 `rejectreason` / `audit_class` / `method_label` / `keyways_label` / `qpm` / `charge`） |
+| `normalizeMethods` / `methodsLabel` / `methodsToStorage` | 多 HTTP 方法归一与展示 |
 | `normalizeRequireKey` / `requireKeyLabel` 等 | 数字归一与中文标签 |
+| `normalizeKeyways` / `keywaysLabel` / `keywaysToStorage` / `hasKeywaysColumn` | keyways 归一、展示、存库、列探测 |
 | `normalizeQpm` / `qpmLabel` / `hasQpmColumn` | QPM 归一、展示文案、列探测 |
+| `normalizeCharge` / `chargeLabel` / `hasChargeColumn` | 计费归一与标签 |
 | `apiTypeBadge` / `requireKeyBadge` | 列表短标签：代理/本地；KEY可选/必填 |
 | `countPendingReview()` | 待审核投稿数（侧边栏红点） |
 
@@ -631,6 +659,76 @@ VsPlaygroundResponse.directRequest({
 **媒体：** Content-Type + 文件魔数；**禁止**未知默认 `image`。
 
 **放置原则：** 多主题共用能力放 `core/`；主题 UI 放主题包；根目录不新增内部入口。
+
+---
+
+### 4.21.3 ApiStats.php（调用统计与守卫）
+
+**作用：** 本地脚本 `ApiStats::hit()` 与代理 `ApiProxy→hitProxy` 的统一记账、访问守卫与错误输出。
+
+**守卫链 `guardAccess`：** 状态/审核 → QPM（`RateLimitStore`）→ 密钥（`needkey` + `readKey` 按 **keyways**）→ 收费扣积分。
+
+**密钥读取 `readKey($row)`（v10.17.0）：** 按接口 `keyways` 依次尝试：
+
+| keyway | 读取位置 |
+|--------|----------|
+| `query` | `$_GET['key']` / `$_POST['key']` |
+| `header` | 请求头 `X-API-Key` |
+| `bearer` | `Authorization: Bearer …` |
+
+`row` 为 null 时三种皆可（兼容旧调用）。
+
+**错误 JSON（v10.17.0）：** 守卫失败经 `jsonExit` → `vs_api_error_exit`，固定：
+
+```json
+{ "code": 0, "msg": "请提供调用密钥", "http": 401 }
+```
+
+HTTP 状态码与 JSON 内 `http` 字段一致。
+
+**日志：** 成功/失败写 `api.calls`、`StatDayManager::recordHit`；详细日志开时写 `apilog`（含异步 `IpLocator` 回填 `iploc`）。
+
+---
+
+### 4.21.4 IpLocator.php（IP 归属地，v10.16.0）
+
+**作用：** 按系统设置调用外网 GET API，从 JSON 响应提取字段写入 `apilog.iploc`。
+
+| 要点 | 说明 |
+|------|------|
+| 开关 | `ip_loc_enabled`；仅详细日志开启时触发 |
+| 认证 | 无 / Bearer / Header / Query（设置页可选） |
+| 安全 | 公网 URL 校验；禁止跟随跳转；失败负缓存 300s |
+| 性能 | **shutdown 异步回填**，不阻塞接口响应 |
+| 缓存 | Redis `cache:iploc:{md5(ip)}`，TTL 86400s |
+
+---
+
+### 4.21.5 AiApiDoc.php / ApiQuickstart.php（AI 文档与快速上手）
+
+**AiApiDoc：** 管理员接口编辑「AI 生成详细文档 / 代码示例」；上下文剔除 `targeturl`/`upkey`；输出经 `sanitizeOutput` 剥离 HTML / `vs-syn` 标记。
+
+**代码示例格式（aidoc）：**
+
+```
+:::qs lang=curl auth=query
+curl …
+:::
+
+:::qs lang=python auth=header
+…
+:::
+```
+
+| 属性 | 说明 |
+|------|------|
+| `lang` | curl / typescript / browser / python / go / java / php / cpp / rust |
+| `auth` | **必填**（v10.17.0）：`query` / `header` / `bearer`；缺省按 query |
+| 多鉴权 | 接口 `keyways` 多种时，每种 auth 各一套语言块 |
+
+**ApiQuickstart：** `samplesFromAidoc($aidoc, $keyways)` / `qsBundleFromAidoc` 解析短码；默认主题详情页横滑语言 Tab + 鉴权 Tab（`auth=…` 维度）。
+
+**详细文档要求：** 错误响应示例须含 `"http":401` 等字段；平台 HTTP：401/402/403/429/503。
 
 ---
 
@@ -715,6 +813,7 @@ VsPlaygroundResponse.directRequest({
 | `params_list` | 解析后的参数表（name/type/required/description/example） |
 | `maintenance` | 1=维护中 |
 | `needkey` / `needkey_label` | 密钥要求（文案：`无需 KEY` / `KEY 必填` / `KEY 可选`） |
+| `keyways` / `keyways_label` | 密钥传递方式数组与中文标签（v10.17.0） |
 | `qpm` / `qpm_label` | 每分钟上限；文案「不限制」或「N/MIN」 |
 | `charge` / `charge_label` / `points` / `billing_label` | 计费；`billing_label` 为「免费」或「N积分/次」 |
 | `author` | 开发者作者卡（无则 null）；含 `profile_url` |
@@ -839,19 +938,23 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 **配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`apinexus:`）。
 
-**业务缓存项（`RedisCache`，监控列表 v10.6.0）：**
+**业务缓存项（`RedisCache`，监控列表 v10.6.0 / 扩充 v10.16.0）：**
 
 | 逻辑键 | TTL | 说明 |
 |--------|-----|------|
-| `cache:frontend:api_list` 等前台键 | 120～300s | 遗留/可选前台列表缓存；`invalidateFrontend` 清理 |
 | `cache:api:public_list` | 120s | 公开接口列表 |
+| `cache:frontend:*` | 120～300s | 接口/分类/友链/伙伴/赞助/文章/公告/贡献者等前台 remember |
+| `cache:frontend:misc:*` | 可变 | 其它前台数据（监控标签「其他前台数据」） |
+| `cache:iploc:*` | 86400s | IP 归属地 |
 | `cache:apilog:query:*` | 45s | 日志查询结果 |
 | `cache:apilog:range_total:*` | 90s | 时间窗无筛选总数 |
-| `cache:apilog:today_count` | 30s | 今日调用次数（控制台 / 大屏 KPI） |
-| `cache:dashboard:*` | 8～300s | 控制台/大屏分层统计与 `console_full` 整页快照 |
-| `cache:orders:range_total:*` | 90s | 订单/积分搜索总数缓存 |
+| `cache:apilog:today_count` | 30s | 今日调用次数 |
+| `cache:dashboard:*` | 8～300s | 控制台/大屏分层统计 |
+| `cache:orders:range_total:*` | 90s | 订单/积分搜索总数 |
 
-日志相关调用 `RedisCache::invalidateApiLog()`；前台相关 `invalidateFrontend()`（含 sponsor）。
+**热路径禁止：** `incrementCallCount` 不得调用 `invalidateFrontend()`（v10.16.0 复查）；今日计数仅 `forget(KEY_APILOG_TODAY)`。
+
+日志相关调用 `RedisCache::invalidateApiLog()`；内容变更可 `invalidateFrontend()`（勿在每次 API 命中时调用）。
 
 监控页业务列表展示**逻辑键名**，不写中文业务用途说明；搜索框放大镜须对齐。
 
@@ -975,7 +1078,7 @@ MySQL
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | ✅ 可调用 |
 | 接口审核/上下线 | `ApiManager` | `FrontendApi` | ✅ 可调用 |
 | 用户管理 | `UserManager` | `UserAuth`（当前用户） | ✅ 可调用 |
-| 站点配置 | 后台设置页 → `Config` | `SiteContext` / `ThemeManager::themeSetting()` | ✅ 可调用 |
+| 站点配置 | 后台设置页 → `Config` | `SiteContext::siteName()` / `systemName()` / `ThemeManager::themeSetting()` | ✅ 可调用 |
 | 文章 | `ContentManager`（kind=1） | `FrontendArticle` | ✅ 已完成 |
 | 友链 | `LinkManager` | `FrontendLink` | ✅ 可调用（已通过且启用） |
 | 合作伙伴 | `LinkManager` | `FrontendPartner` | ✅ 可调用（已启用） |

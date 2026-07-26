@@ -44,6 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'doc'          => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
             'aidoc'        => isset($_POST['aidoc']) ? (string) $_POST['aidoc'] : '',
             'needkey'      => isset($_POST['needkey']) ? (int) $_POST['needkey'] : 0,
+            'keyways'      => (function () {
+                $raw = isset($_POST['keyways']) ? $_POST['keyways'] : 'query';
+                return is_array($raw) ? implode(',', $raw) : (string) $raw;
+            })(),
             'qpm'          => isset($_POST['qpm']) ? (int) $_POST['qpm'] : 0,
             'charge'       => isset($_POST['charge']) ? (int) $_POST['charge'] : 0,
             'price'        => isset($_POST['price']) ? $_POST['price'] : 0,
@@ -440,6 +444,15 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                     </select>
                     <p class="vs-form-hint">「无需 KEY」与「KEY 可选」调用规则相同；选「无需 KEY」时前台通常不展示密钥填写框。</p>
                 </div>
+            </div>
+            <div class="vs-form-row" id="userApiKeywaysRow">
+                <label class="vs-label">鉴权传递方式</label>
+                <div class="vs-method-toggles" id="userApiFormKeywayChecks" role="group" aria-label="鉴权传递方式">
+                    <button type="button" class="vs-method-toggle is-on" data-api-keyway="query" aria-pressed="true">Query 参数</button>
+                    <button type="button" class="vs-method-toggle" data-api-keyway="header" aria-pressed="false">Header</button>
+                    <button type="button" class="vs-method-toggle" data-api-keyway="bearer" aria-pressed="false">Bearer</button>
+                </div>
+                <p class="vs-form-hint">可同时勾选多种方式；默认 Query。</p>
             </div>
             <div class="vs-form-row vs-form-row--2">
                 <div>

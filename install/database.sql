@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}config` (
 -- 初始系统配置
 INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('site_name', 'ApiNexus'),
+('system_name', 'ApiNexus'),
 ('site_description', '基于 PHP + MySQL 的轻量级 Web 管理系统'),
 ('site_keywords', 'ApiNexus,PHP,MySQL,管理系统'),
 ('site_favicon', ''),
@@ -142,6 +143,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}api` (
     `aidoc` mediumtext COMMENT '代码示例（Markdown）',
     `calls` bigint unsigned NOT NULL DEFAULT 0 COMMENT '累计请求次数',
     `needkey` tinyint(1) NOT NULL DEFAULT 0 COMMENT '密钥要求：0不需要 1必须 2可选',
+    `keyways` varchar(64) NOT NULL DEFAULT 'query' COMMENT '调用密钥传递方式：query/header/bearer 逗号分隔',
     `qpm` int unsigned NOT NULL DEFAULT 0 COMMENT '每分钟请求上限：0不限制；大于0为每分钟最大次数',
     `charge` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否收费：0免费 1收费',
     `price` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '每次调用扣除积分（收费时有效）',

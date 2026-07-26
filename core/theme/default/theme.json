@@ -75,6 +75,12 @@
             "label": "显示页脚二维码",
             "type": "checkbox",
             "default": true
+        },
+        {
+            "key": "show_api_disclaimer",
+            "label": "显示 API 详情免责声明",
+            "type": "checkbox",
+            "default": true
         }
     ]
 }

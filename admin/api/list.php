@@ -12,6 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
 
     $payloadFromPost = function () {
+        $keywaysRaw = isset($_POST['keyways']) ? $_POST['keyways'] : 'query';
+        if (is_array($keywaysRaw)) {
+            $keywaysRaw = implode(',', $keywaysRaw);
+        }
         $data = array(
             'name'        => isset($_POST['name']) ? (string) $_POST['name'] : '',
             'description' => isset($_POST['description']) ? (string) $_POST['description'] : '',
@@ -29,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'doc'         => isset($_POST['doc']) ? (string) $_POST['doc'] : '',
             'aidoc'       => isset($_POST['aidoc']) ? (string) $_POST['aidoc'] : '',
             'needkey'     => isset($_POST['needkey']) ? (int) $_POST['needkey'] : 0,
+            'keyways'     => $keywaysRaw,
             'qpm'         => isset($_POST['qpm']) ? (int) $_POST['qpm'] : 0,
             'charge'      => isset($_POST['charge']) ? (int) $_POST['charge'] : 0,
             'price'       => isset($_POST['price']) ? $_POST['price'] : 0,
@@ -797,6 +802,15 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             <option value="2">KEY 可选</option>
                         </select>
                     </div>
+                </div>
+                <div class="vs-form-row" id="apiListKeywaysRow">
+                    <label class="vs-label">鉴权传递方式</label>
+                    <div class="vs-method-toggles" id="apiListFormKeywayChecks" role="group" aria-label="鉴权传递方式">
+                        <button type="button" class="vs-method-toggle is-on" data-api-keyway="query" aria-pressed="true">Query 参数</button>
+                        <button type="button" class="vs-method-toggle" data-api-keyway="header" aria-pressed="false">Header</button>
+                        <button type="button" class="vs-method-toggle" data-api-keyway="bearer" aria-pressed="false">Bearer</button>
+                    </div>
+                    <p class="vs-form-hint">可同时勾选多种方式；默认 Query。三者全选时前台显示「全部支持」。</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>

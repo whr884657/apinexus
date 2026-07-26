@@ -410,6 +410,38 @@
 .detail-md li { display: list-item; margin: 0.28em 0; }
 
 /* —— 快速上手 —— */
+.detail-quickstart__auth-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+}
+
+.detail-quickstart__auth-tab {
+    flex: 0 0 auto;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    cursor: pointer;
+    line-height: 1.3;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.detail-quickstart__auth-tab:hover {
+    color: var(--text-main);
+    border-color: var(--accent-primary);
+}
+
+.detail-quickstart__auth-tab.is-active {
+    color: var(--text-main, #111111);
+    background: rgba(17, 17, 17, 0.06);
+    border-color: var(--accent-primary, #111111);
+    font-weight: 600;
+}
+
 .detail-quickstart__tabs {
     display: flex;
     gap: 0.35rem;

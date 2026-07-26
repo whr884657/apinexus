@@ -66,8 +66,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_site') {
         try {
+            $siteName = trim(isset($_POST['site_name']) ? $_POST['site_name'] : '');
+            $systemName = trim(isset($_POST['system_name']) ? $_POST['system_name'] : '');
+            if ($systemName === '') {
+                $systemName = $siteName;
+            }
             Config::setMany(array(
-                'site_name'        => trim(isset($_POST['site_name']) ? $_POST['site_name'] : ''),
+                'site_name'        => $siteName,
+                'system_name'      => $systemName,
                 'site_description' => trim(isset($_POST['site_description']) ? $_POST['site_description'] : ''),
                 'site_keywords'    => trim(isset($_POST['site_keywords']) ? $_POST['site_keywords'] : ''),
                 'site_favicon'     => trim(isset($_POST['site_favicon']) ? $_POST['site_favicon'] : ''),
@@ -376,15 +382,23 @@ vs_admin_layout_start('系统设置', 'settings');
 vs_admin_accordion_start(
     'settings-site',
     '站点信息',
-    '配置系统名称、图标、描述与备案信息'
+    '配置站点名称、系统名称、图标、描述与备案信息'
 );
 ?>
     <form method="post" action="" class="vs-form" id="siteForm" data-ajax="1">
         <input type="hidden" name="action" value="save_site">
         <div class="vs-form-row">
-            <label class="vs-label">系统名称</label>
+            <label class="vs-label">站点名称</label>
             <input type="text" name="site_name" class="vs-input" required maxlength="50"
                    value="<?php echo vs_e(Config::get('site_name', '')); ?>">
+            <?php vs_render_notice('tip', '', '用于 SEO、前台顶栏品牌、浏览器标题与搜索引擎展示。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">系统名称</label>
+            <input type="text" name="system_name" class="vs-input" maxlength="50"
+                   value="<?php echo vs_e(Config::get('system_name', '')); ?>"
+                   placeholder="留空则与站点名称相同">
+            <?php vs_render_notice('tip', '', '用于管理后台侧栏、用户中心侧栏、关于页等产品名展示。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-grid">
             <div class="vs-form-row">
@@ -710,7 +724,7 @@ vs_admin_accordion_start(
         <div class="vs-form-row">
             <label class="vs-checkbox">
                 <input type="checkbox" name="api_disclaimer_on" value="1" <?php echo Config::get('api_disclaimer_on', '0') === '1' ? 'checked' : ''; ?>>
-                <span>在默认主题 API 详情页展示免责声明</span>
+                <span>启用免责声明内容（主题设置里可关闭展示）</span>
             </label>
         </div>
         <div class="vs-form-row">
@@ -758,11 +772,12 @@ vs_admin_accordion_start(
         <div class="vs-form-row">
             <label class="vs-label" for="ipLocAuth">认证方式</label>
             <select class="vs-input" name="ip_loc_auth" id="ipLocAuth" data-vs-pick>
-                <option value="0"<?php echo $ipLocAuth === 0 ? ' selected' : ''; ?>>无需密钥</option>
-                <option value="1"<?php echo $ipLocAuth === 1 ? ' selected' : ''; ?>>Bearer Token</option>
-                <option value="2"<?php echo $ipLocAuth === 2 ? ' selected' : ''; ?>>Header API Key</option>
-                <option value="3"<?php echo $ipLocAuth === 3 ? ' selected' : ''; ?>>Query API Key</option>
+                <option value="0"<?php echo $ipLocAuth === 0 ? ' selected' : ''; ?>>0 无需密钥</option>
+                <option value="1"<?php echo $ipLocAuth === 1 ? ' selected' : ''; ?>>1 Bearer Token（Authorization: Bearer …）</option>
+                <option value="2"<?php echo $ipLocAuth === 2 ? ' selected' : ''; ?>>2 Header API Key（自定义请求头，如 X-API-Key）</option>
+                <option value="3"<?php echo $ipLocAuth === 3 ? ' selected' : ''; ?>>3 Query API Key（URL 查询参数携带密钥）</option>
             </select>
+            <p class="vs-form-hint">按上游 API 文档选择认证方式；选 0 时无需填写下方密钥字段。</p>
         </div>
         <div class="vs-form-row" id="ipLocAuthNameRow">
             <label class="vs-label" for="ipLocAuthName">密钥参数名 / Header 名</label>

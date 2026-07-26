@@ -383,6 +383,68 @@
             }
         });
     })();
+
+    function getSelectedKeyways() {
+        var list = [];
+        var nodes = document.querySelectorAll('#userApiFormKeywayChecks [data-api-keyway]');
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i].classList.contains('is-on') || nodes[i].checked) {
+                list.push(String(nodes[i].getAttribute('data-api-keyway') || '').toLowerCase());
+            }
+        }
+        return list;
+    }
+
+    function setSelectedKeyways(value) {
+        var set = {};
+        var raw = Array.isArray(value) ? value : String(value || 'query').split(/[\s,|\/]+/);
+        for (var i = 0; i < raw.length; i++) {
+            var k = String(raw[i] || '').toLowerCase();
+            if (k === 'query' || k === 'header' || k === 'bearer') {
+                set[k] = true;
+            }
+        }
+        if (!set.query && !set.header && !set.bearer) {
+            set.query = true;
+        }
+        var nodes = document.querySelectorAll('#userApiFormKeywayChecks [data-api-keyway]');
+        for (var j = 0; j < nodes.length; j++) {
+            var key = String(nodes[j].getAttribute('data-api-keyway') || '').toLowerCase();
+            var on = !!set[key];
+            nodes[j].classList.toggle('is-on', on);
+            nodes[j].setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+    }
+
+    function syncUserKeywaysUi() {
+        var row = document.getElementById('userApiKeywaysRow');
+        var needEl = document.getElementById('userApiFormNeedkey');
+        if (row && needEl) {
+            row.hidden = (parseInt(needEl.value, 10) || 0) === 0;
+        }
+    }
+
+    (function bindUserKeywayToggles() {
+        var wrap = document.getElementById('userApiFormKeywayChecks');
+        if (!wrap) {
+            return;
+        }
+        wrap.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-api-keyway]');
+            if (!btn || !wrap.contains(btn)) {
+                return;
+            }
+            e.preventDefault();
+            var on = !btn.classList.contains('is-on');
+            btn.classList.toggle('is-on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            if (getSelectedKeyways().length === 0) {
+                btn.classList.add('is-on');
+                btn.setAttribute('aria-pressed', 'true');
+            }
+        });
+    })();
+
     function methodSlug(method) {
         var m = String(method || 'GET').toLowerCase().replace(/[^a-z0-9]+/g, '');
         return m || 'get';
@@ -495,7 +557,11 @@
     }
     var needkeyEl = document.getElementById('userApiFormNeedkey');
     if (needkeyEl) {
-        needkeyEl.addEventListener('change', syncUserKeyParam);
+        needkeyEl.addEventListener('change', function () {
+            syncUserKeyParam();
+            syncUserKeywaysUi();
+        });
+        syncUserKeywaysUi();
     }
 
     function buildStatusButtons(api) {
@@ -608,6 +674,7 @@
 
     function resetForm() {
         setSelectedMethods('GET');
+        setSelectedKeyways('query');
         formMode = 'create';
         if (formId) {
             formId.value = '';
@@ -632,6 +699,7 @@
             window.VsParamsEditor.setValue(paramsEditor, '');
         }
         syncUserChargeUi();
+        syncUserKeywaysUi();
     }
 
     function fillForm(api) {
@@ -680,6 +748,8 @@
         }
         syncUserKeyParam();
         setSelectedMethods(api.methods || api.method || 'GET');
+        setSelectedKeyways(api.keyways || 'query');
+        syncUserKeywaysUi();
         if (window.VSPick) {
             ['userApiFormNeedkey', 'userApiFormCategory', 'userApiFormCharge'].forEach(function (id) {
                 var s = document.getElementById(id);
@@ -734,6 +804,7 @@
             upkey: upKeyInput ? upKeyInput.value.trim() : '',
             method: getSelectedMethods().join(','),
             needkey: (document.getElementById('userApiFormNeedkey') || {}).value || '0',
+            keyways: getSelectedKeyways().join(','),
             qpm: String(Math.max(0, parseInt((document.getElementById('userApiFormQpm') || {}).value, 10) || 0)),
             charge: (document.getElementById('userApiFormCharge') || {}).value || '0',
             price: (document.getElementById('userApiFormPrice') || {}).value || '',

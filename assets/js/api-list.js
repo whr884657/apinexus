@@ -41,6 +41,8 @@
         name: document.getElementById('apiListFormName'),
         description: document.getElementById('apiListFormDesc'),
         methodChecks: document.querySelectorAll('#apiListFormMethodChecks [data-api-method]'),
+        keywayChecks: document.querySelectorAll('#apiListFormKeywayChecks [data-api-keyway]'),
+        keywaysRow: document.getElementById('apiListKeywaysRow'),
         status: document.getElementById('apiListFormStatus'),
         apitype: document.getElementById('apiListFormApiType'),
         endpoint: document.getElementById('apiListFormEndpoint'),
@@ -561,6 +563,45 @@
         }
     }
 
+    function getSelectedKeyways() {
+        var list = [];
+        var nodes = fields.keywayChecks || [];
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i].classList.contains('is-on') || nodes[i].checked) {
+                list.push(String(nodes[i].getAttribute('data-api-keyway') || '').toLowerCase());
+            }
+        }
+        return list;
+    }
+
+    function setSelectedKeyways(value) {
+        var set = {};
+        var raw = Array.isArray(value) ? value : String(value || 'query').split(/[\s,|\/]+/);
+        for (var i = 0; i < raw.length; i++) {
+            var k = String(raw[i] || '').toLowerCase();
+            if (k === 'query' || k === 'header' || k === 'bearer') {
+                set[k] = true;
+            }
+        }
+        if (!set.query && !set.header && !set.bearer) {
+            set.query = true;
+        }
+        var nodes = fields.keywayChecks || [];
+        for (var j = 0; j < nodes.length; j++) {
+            var key = String(nodes[j].getAttribute('data-api-keyway') || '').toLowerCase();
+            var on = !!set[key];
+            nodes[j].classList.toggle('is-on', on);
+            nodes[j].setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+    }
+
+    function syncKeywaysUi() {
+        if (fields.keywaysRow && fields.requireKey) {
+            var need = parseInt(fields.requireKey.value, 10) || 0;
+            fields.keywaysRow.hidden = need === 0;
+        }
+    }
+
     (function bindMethodToggles() {
         var wrap = document.getElementById('apiListFormMethodChecks');
         if (!wrap) {
@@ -576,6 +617,27 @@
             btn.classList.toggle('is-on', on);
             btn.setAttribute('aria-pressed', on ? 'true' : 'false');
             if (getSelectedMethods().length === 0) {
+                btn.classList.add('is-on');
+                btn.setAttribute('aria-pressed', 'true');
+            }
+        });
+    })();
+
+    (function bindKeywayToggles() {
+        var wrap = document.getElementById('apiListFormKeywayChecks');
+        if (!wrap) {
+            return;
+        }
+        wrap.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-api-keyway]');
+            if (!btn || !wrap.contains(btn)) {
+                return;
+            }
+            e.preventDefault();
+            var on = !btn.classList.contains('is-on');
+            btn.classList.toggle('is-on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            if (getSelectedKeyways().length === 0) {
                 btn.classList.add('is-on');
                 btn.setAttribute('aria-pressed', 'true');
             }
@@ -658,6 +720,7 @@
             }
         }
         syncKeyParam();
+        syncKeywaysUi();
     }
 
     if (fields.charge) {
@@ -665,7 +728,11 @@
         syncChargeUi();
     }
     if (fields.requireKey) {
-        fields.requireKey.addEventListener('change', syncKeyParam);
+        fields.requireKey.addEventListener('change', function () {
+            syncKeyParam();
+            syncKeywaysUi();
+        });
+        syncKeywaysUi();
     }
 
     function callUrlOf(api) {
@@ -1200,6 +1267,9 @@
         if (fields.methodChecks && fields.methodChecks.length) {
             setSelectedMethods('GET');
         }
+        if (fields.keywayChecks && fields.keywayChecks.length) {
+            setSelectedKeyways('query');
+        }
         if (fields.status) {
             fields.status.value = '0';
         }
@@ -1261,6 +1331,7 @@
         setApiType(0);
         setIconPickerSelection(defaultIcons.length ? defaultIcons[0] : '');
         switchFormTab('basic');
+        syncKeywaysUi();
         if (window.VSPick) {
             ['apiListFormStatus', 'apiListFormCategory', 'apiListFormRequireKey', 'apiListFormUpAuth', 'apiListFormUpKeyVia'].forEach(function (id) {
                 var s = document.getElementById(id);
@@ -1318,6 +1389,10 @@
         if (fields.requireKey) {
             fields.requireKey.value = String(parseInt(api.needkey, 10) || 0);
         }
+        if (fields.keywayChecks && fields.keywayChecks.length) {
+            setSelectedKeyways(api.keyways || api.keyways_label || 'query');
+        }
+        syncKeywaysUi();
         if (fields.qpm) {
             var qpmVal = parseInt(api.qpm, 10);
             fields.qpm.value = String(isNaN(qpmVal) || qpmVal < 0 ? 0 : qpmVal);
@@ -1427,6 +1502,7 @@
             doc: fields.docNormal ? fields.docNormal.value : '',
             aidoc: fields.docAi ? fields.docAi.value : '',
             needkey: fields.requireKey ? String(fields.requireKey.value || '0') : '0',
+            keyways: getSelectedKeyways().join(','),
             qpm: fields.qpm ? String(Math.max(0, parseInt(fields.qpm.value, 10) || 0)) : '0',
             charge: fields.charge ? String(parseInt(fields.charge.value, 10) === 1 ? 1 : 0) : '0',
             price: fields.price ? String(fields.price.value || '') : '',

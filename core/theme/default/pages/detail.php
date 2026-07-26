@@ -33,6 +33,21 @@ $paramsRaw = (!$notFound && isset($api['params'])) ? (string) $api['params'] : '
 $paramsPretty = $paramsRaw !== '' ? FrontendApi::prettyParamsJson($paramsRaw) : '';
 $hasParamsTable = count($paramsList) > 0;
 $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey_label'] : '无需 KEY';
+$authWayLabel = '无需密钥';
+if (!$notFound) {
+    $needKeyVal = isset($api['needkey']) ? (int) $api['needkey'] : 0;
+    if ($needKeyVal !== 0) {
+        $authWayLabel = !empty($api['keyways_label'])
+            ? (string) $api['keyways_label']
+            : ApiManager::keywaysLabel(ApiManager::KEYWAY_QUERY);
+    }
+}
+$keywaysList = (!$notFound && isset($api['keyways']) && is_array($api['keyways']))
+    ? $api['keyways']
+    : array(ApiManager::KEYWAY_QUERY);
+$showQsAuthSwitch = !$notFound
+    && (int) (isset($api['needkey']) ? $api['needkey'] : 0) !== 0
+    && count($keywaysList) > 1;
 
 $recommendApi = null;
 $pageApiSnapshot = (!$notFound && $api !== array()) ? $api : null;
@@ -121,7 +136,7 @@ if (!$notFound) {
         <?php if (!empty($api['endpoint'])): ?>
         <div class="endpoint-box">
             <div class="endpoint-box__text font-mono">
-                <span class="endpoint-box__method"><?php echo vs_e(strtoupper($primaryMethod)); ?></span>
+                <span class="endpoint-box__method"><?php echo vs_e(isset($api['method_label']) ? $api['method_label'] : strtoupper($primaryMethod)); ?></span>
                 <span id="detailEndpoint"><?php echo vs_e($api['endpoint']); ?></span>
             </div>
             <button type="button" class="btn-copy" data-copy="<?php echo vs_e($api['endpoint']); ?>">复制</button>
@@ -154,6 +169,10 @@ if (!$notFound) {
                 <div class="info-value info-value--qpm"><?php echo vs_e(isset($api['qpm_label']) ? $api['qpm_label'] : '不限制'); ?></div>
             </div>
             <div class="info-item">
+                <div class="info-label">鉴权方式</div>
+                <div class="info-value info-value--auth"><?php echo vs_e($authWayLabel); ?></div>
+            </div>
+            <div class="info-item">
                 <div class="info-label">作者</div>
                 <div class="info-value info-value--author">
                     <?php if (!empty($api['author']) && is_array($api['author']) && !empty($api['author']['profile_url'])): ?>
@@ -168,12 +187,6 @@ if (!$notFound) {
                     <?php endif; ?>
                 </div>
             </div>
-            <?php if (!empty($api['createtime'])): ?>
-            <div class="info-item">
-                <div class="info-label">提交时间</div>
-                <div class="info-value info-value--time"><?php echo vs_e($api['createtime']); ?></div>
-            </div>
-            <?php endif; ?>
         </div>
 
         <?php if (!empty($api['maintenance'])): ?>
@@ -287,16 +300,44 @@ if (!$notFound) {
     <section class="detail-card" id="detailQuickstartCard">
         <h2 class="detail-section-title">快速上手</h2>
         <?php
+        $qsBundle = array('auths' => array(), 'authLabels' => array(), 'byAuth' => array());
         $qsSamples = array();
         if (!$notFound) {
-            $qsSamples = ApiQuickstart::samplesFromAidoc(isset($api['aidoc']) ? (string) $api['aidoc'] : '');
+            $qsBundle = ApiQuickstart::qsBundleFromAidoc(
+                isset($api['aidoc']) ? (string) $api['aidoc'] : '',
+                $keywaysList
+            );
+            $qsAuths = isset($qsBundle['auths']) && is_array($qsBundle['auths']) ? $qsBundle['auths'] : array();
+            if (!empty($qsAuths)) {
+                $firstAuth = $qsAuths[0];
+                $byAuth = isset($qsBundle['byAuth']) && is_array($qsBundle['byAuth']) ? $qsBundle['byAuth'] : array();
+                $qsSamples = isset($byAuth[$firstAuth]) && is_array($byAuth[$firstAuth]) ? $byAuth[$firstAuth] : array();
+            }
         }
+        $qsShowAuthTabs = $showQsAuthSwitch && count($qsBundle['auths']) > 1;
         ?>
         <?php if ($qsSamples === array()): ?>
         <p class="detail-empty-hint">暂无代码示例。管理员可在后台用 AI 生成或手动编写。</p>
         <?php else: ?>
+        <?php if ($qsShowAuthTabs): ?>
+        <div class="detail-quickstart__auth-tabs" id="detailQsAuthTabs" role="tablist" aria-label="鉴权方式">
+            <?php foreach ($qsBundle['auths'] as $ai => $authId): ?>
+            <?php
+            $authLbl = isset($qsBundle['authLabels'][$authId])
+                ? (string) $qsBundle['authLabels'][$authId]
+                : ApiQuickstart::authLabel($authId);
+            ?>
+            <button type="button"
+                    class="detail-quickstart__auth-tab<?php echo $ai === 0 ? ' is-active' : ''; ?>"
+                    role="tab"
+                    aria-selected="<?php echo $ai === 0 ? 'true' : 'false'; ?>"
+                    data-qs-auth="<?php echo vs_e($authId); ?>"><?php echo vs_e($authLbl); ?></button>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
         <div class="detail-quickstart" id="detailQuickstart"
-             data-qs-count="<?php echo count($qsSamples); ?>">
+             data-qs-count="<?php echo count($qsSamples); ?>"
+             data-qs-multi-auth="<?php echo $qsShowAuthTabs ? '1' : '0'; ?>">
             <div class="detail-quickstart__tabs" id="detailQsTabs" role="tablist" aria-label="示例语言">
                 <?php foreach ($qsSamples as $qi => $qs): ?>
                 <button type="button"
@@ -329,12 +370,26 @@ if (!$notFound) {
                 'syn' => isset($row['syn']) ? $row['syn'] : 'javascript',
             );
         }, $qsSamples), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
+        window.detailQsBundle = <?php echo json_encode(array(
+            'auths' => isset($qsBundle['auths']) ? $qsBundle['auths'] : array(),
+            'authLabels' => isset($qsBundle['authLabels']) ? $qsBundle['authLabels'] : array(),
+            'byAuth' => isset($qsBundle['byAuth']) ? array_map(function ($rows) {
+                return array_map(function ($row) {
+                    return array(
+                        'id' => $row['id'],
+                        'label' => isset($row['label']) ? $row['label'] : $row['id'],
+                        'code' => $row['code'],
+                        'syn' => isset($row['syn']) ? $row['syn'] : 'javascript',
+                    );
+                }, is_array($rows) ? $rows : array());
+            }, $qsBundle['byAuth']) : array(),
+        ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
         </script>
         <?php endif; ?>
     </section>
 
     <?php
-    $disclaimerOn = class_exists('Config') && Config::get('api_disclaimer_on', '0') === '1';
+    $disclaimerOn = class_exists('ThemeManager') && ThemeManager::themeSettingBool('show_api_disclaimer', true);
     $disclaimerBody = $disclaimerOn ? trim((string) Config::get('api_disclaimer', '')) : '';
     if ($disclaimerBody !== ''):
     ?>

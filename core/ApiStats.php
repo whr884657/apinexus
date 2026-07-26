@@ -10,8 +10,8 @@
  *
  * 代理：ApiProxy 网关内自动调用，勿在上游文件注入。
  *
- * 密钥：识别 key / api_key / apikey / X-API-Key；校验 apikey 表；归属 userid；成功调用累加密钥 calls。
- */
+     * 密钥：按接口 keyways 识别 Query / Header(X-API-Key) / Bearer；校验 apikey 表。
+     */
 
 class ApiStats
 {
@@ -332,7 +332,7 @@ class ApiStats
     private static function evaluateKey(array $row)
     {
         $need = ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : ApiManager::KEY_NONE);
-        $raw = self::readKey();
+        $raw = self::readKey($row);
         $provided = ($raw !== '');
 
         self::$keyCtx = array(
@@ -561,22 +561,46 @@ class ApiStats
     }
 
     /**
-     * 读取请求中的密钥（Query / POST / Header）
+     * 读取请求中的密钥（按接口允许的 keyways：query / header / bearer）
      *
+     * @param array|null $row 接口行（含 keyways）；null 时默认三种皆可读（兼容旧调用）
      * @return string
      */
-    private static function readKey()
+    private static function readKey($row = null)
     {
-        foreach (array('key', 'api_key', 'apikey') as $k) {
-            if (isset($_GET[$k]) && (string) $_GET[$k] !== '') {
-                return trim((string) $_GET[$k]);
-            }
-            if (isset($_POST[$k]) && (string) $_POST[$k] !== '') {
-                return trim((string) $_POST[$k]);
+        $ways = array('query', 'header', 'bearer');
+        if (is_array($row) && class_exists('ApiManager')) {
+            $ways = ApiManager::normalizeKeyways(isset($row['keyways']) ? $row['keyways'] : 'query');
+            if ($ways === array()) {
+                $ways = array('query');
             }
         }
-        if (!empty($_SERVER['HTTP_X_API_KEY'])) {
+
+        if (in_array('query', $ways, true)) {
+            foreach (array('key', 'api_key', 'apikey') as $k) {
+                if (isset($_GET[$k]) && (string) $_GET[$k] !== '') {
+                    return trim((string) $_GET[$k]);
+                }
+                if (isset($_POST[$k]) && (string) $_POST[$k] !== '') {
+                    return trim((string) $_POST[$k]);
+                }
+            }
+        }
+        if (in_array('header', $ways, true) && !empty($_SERVER['HTTP_X_API_KEY'])) {
             return trim((string) $_SERVER['HTTP_X_API_KEY']);
+        }
+        if (in_array('bearer', $ways, true) && !empty($_SERVER['HTTP_AUTHORIZATION'])) {
+            $auth = trim((string) $_SERVER['HTTP_AUTHORIZATION']);
+            if (preg_match('/^Bearer\s+(\S+)/i', $auth, $m)) {
+                return trim($m[1]);
+            }
+        }
+        // 部分环境把 Authorization 放到 REDIRECT_HTTP_AUTHORIZATION
+        if (in_array('bearer', $ways, true) && !empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $auth = trim((string) $_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+            if (preg_match('/^Bearer\s+(\S+)/i', $auth, $m)) {
+                return trim($m[1]);
+            }
         }
         return '';
     }
@@ -602,11 +626,15 @@ class ApiStats
      */
     private static function jsonExit($http, $msg)
     {
+        if (function_exists('vs_api_error_exit')) {
+            vs_api_error_exit($http, $msg);
+        }
         http_response_code((int) $http);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(array(
             'code' => 0,
             'msg'  => (string) $msg,
+            'http' => (int) $http,
         ), JSON_UNESCAPED_UNICODE);
         exit;
     }

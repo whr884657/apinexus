@@ -1,6 +1,7 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
 <?php
 $siteName = isset($siteName) ? $siteName : (class_exists('SiteContext') ? SiteContext::siteName() : '本站');
+$systemName = isset($systemName) ? $systemName : (class_exists('SiteContext') ? SiteContext::systemName() : $siteName);
 $themeId = isset($themeId) ? $themeId : '';
 $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
 $aboutArticle = isset($aboutArticle) && is_array($aboutArticle) ? $aboutArticle : null;
@@ -23,7 +24,7 @@ if ($hasAbout) {
             <?php echo $aboutBodyHtml; ?>
         <?php else: ?>
             <p>关于页内容尚未配置。请在后台「文章管理」发布文章时选择绑定关于页。</p>
-            <p>当前站点：<strong><?php echo vs_e($siteName); ?></strong><?php if ($themeId !== ''): ?> · 主题 <?php echo vs_e($themeId); ?><?php endif; ?></p>
+            <p>当前系统：<strong><?php echo vs_e($systemName); ?></strong><?php if ($themeId !== ''): ?> · 主题 <?php echo vs_e($themeId); ?><?php endif; ?></p>
         <?php endif; ?>
     </div>
 </main>

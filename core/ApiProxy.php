@@ -184,10 +184,7 @@ class ApiProxy
 
         $row = self::findBySlug($slug);
         if (!$row) {
-            http_response_code(404);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(array('code' => 0, 'msg' => '接口不存在'), JSON_UNESCAPED_UNICODE);
-            exit;
+            vs_api_error_exit(404, '接口不存在');
         }
 
         $gate = ApiStats::guardAccess($row);
@@ -195,26 +192,17 @@ class ApiProxy
             $http = isset($gate['http']) ? (int) $gate['http'] : 403;
             $msg = isset($gate['msg']) ? (string) $gate['msg'] : '接口不可用';
             ApiStats::hitProxy($row, false, $http);
-            http_response_code($http);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(array('code' => 0, 'msg' => $msg), JSON_UNESCAPED_UNICODE);
-            exit;
+            vs_api_error_exit($http, $msg);
         }
 
         $target = trim((string) (isset($row['targeturl']) ? $row['targeturl'] : ''));
         if ($target === '' || !preg_match('#^https?://#i', $target)) {
             ApiStats::hitProxy($row, false, 500);
-            http_response_code(500);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(array('code' => 0, 'msg' => '上游地址无效'), JSON_UNESCAPED_UNICODE);
-            exit;
+            vs_api_error_exit(500, '上游地址无效');
         }
         if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($target)) {
             ApiStats::hitProxy($row, false, 403);
-            http_response_code(403);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(array('code' => 0, 'msg' => '上游地址不允许指向内网或非公网主机'), JSON_UNESCAPED_UNICODE);
-            exit;
+            vs_api_error_exit(403, '上游地址不允许指向内网或非公网主机');
         }
 
         $params = $_GET;
@@ -307,19 +295,13 @@ class ApiProxy
     {
         if (!function_exists('curl_init')) {
             ApiStats::hitProxy($row, false, 500);
-            http_response_code(500);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(array('code' => 0, 'msg' => '服务器未启用 curl，无法完成代理'), JSON_UNESCAPED_UNICODE);
-            exit;
+            vs_api_error_exit(500, '服务器未启用 curl，无法完成代理');
         }
 
         $built = self::buildUpstreamRequest($target, $row, $params);
         if (!is_array($built)) {
             ApiStats::hitProxy($row, false, 500);
-            http_response_code(500);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(array('code' => 0, 'msg' => (string) $built), JSON_UNESCAPED_UNICODE);
-            exit;
+            vs_api_error_exit(500, (string) $built);
         }
 
         $method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string) $_SERVER['REQUEST_METHOD']) : 'GET';
@@ -378,10 +360,7 @@ class ApiProxy
 
         if ($raw === false || $errno) {
             ApiStats::hitProxy($row, false, 502);
-            http_response_code(502);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(array('code' => 0, 'msg' => '上游请求失败'), JSON_UNESCAPED_UNICODE);
-            exit;
+            vs_api_error_exit(502, '上游请求失败');
         }
 
         $redirLeft = 5;
@@ -397,10 +376,7 @@ class ApiProxy
             $next = self::resolveRedirectUrl($url, $loc);
             if ($next === '' || (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($next))) {
                 ApiStats::hitProxy($row, false, 403);
-                http_response_code(403);
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(array('code' => 0, 'msg' => '上游重定向目标不允许'), JSON_UNESCAPED_UNICODE);
-                exit;
+                vs_api_error_exit(403, '上游重定向目标不允许');
             }
             $url = $next;
             $redirLeft--;
@@ -426,10 +402,7 @@ class ApiProxy
             curl_close($ch);
             if ($raw === false || $errno) {
                 ApiStats::hitProxy($row, false, 502);
-                http_response_code(502);
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(array('code' => 0, 'msg' => '上游请求失败'), JSON_UNESCAPED_UNICODE);
-                exit;
+                vs_api_error_exit(502, '上游请求失败');
             }
         }
 

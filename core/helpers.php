@@ -18,6 +18,29 @@ function vs_e($value)
 }
 
 /**
+ * 公开 API 错误 JSON（HTTP 状态码写入响应头，同时写入 body.http）
+ *
+ * @param int    $http
+ * @param string $msg
+ * @return void
+ */
+function vs_api_error_exit($http, $msg)
+{
+    $http = (int) $http;
+    if ($http < 100 || $http > 599) {
+        $http = 400;
+    }
+    http_response_code($http);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array(
+        'code' => 0,
+        'msg'  => (string) $msg,
+        'http' => $http,
+    ), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
  * 渲染统一界面提示块（info / warning / tip / success / danger）
  *
  * @param string $type

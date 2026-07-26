@@ -15,4 +15,5 @@ AuthSecurity::sendSecurityHeaders();
 $vsBase     = vs_base_url();
 $vsUser     = UserAuth::user();
 $vsUserProfile = FrontendUser::current();
-$vsSiteName = SiteContext::siteName();
+$vsSiteName   = SiteContext::siteName();
+$vsSystemName = SiteContext::systemName();

@@ -14,10 +14,11 @@ if (!defined('VS_THEME_RENDER') && !function_exists('vs_theme_user_layout_start'
  */
 function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions = '')
 {
-    global $vsBase, $vsUser, $vsUserProfile, $vsSiteName;
+    global $vsBase, $vsUser, $vsUserProfile, $vsSiteName, $vsSystemName;
 
     $base = $vsBase;
     $siteName = $vsSiteName;
+    $systemName = isset($vsSystemName) ? $vsSystemName : SiteContext::systemName();
     $user = $vsUser;
     $userProfile = is_array($vsUserProfile) ? $vsUserProfile : FrontendUser::current();
     $favicon = SiteContext::siteFavicon();
@@ -53,7 +54,7 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     echo '<aside class="vs-sidebar" id="vsSidebar">' . "\n";
     echo '<div class="vs-sidebar__head">' . "\n";
     vs_render_site_logo('vs-sidebar__logo');
-    echo '<span class="vs-sidebar__name">' . vs_e($siteName) . '</span>' . "\n";
+    echo '<span class="vs-sidebar__name">' . vs_e($systemName) . '</span>' . "\n";
     echo '</div>' . "\n";
     echo '<nav class="vs-sidebar__nav">' . "\n";
 
@@ -83,7 +84,7 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     echo '<button type="button" class="vs-topbar__toggle" id="vsSidebarToggle" aria-label="展开或收缩菜单">';
     echo '<i class="vs-icon vs-icon--menu"></i>';
     echo '</button>' . "\n";
-    echo '<span class="vs-topbar__title">' . vs_e($siteName) . ' · 用户中心</span>' . "\n";
+    echo '<span class="vs-topbar__title">' . vs_e($systemName) . ' · 用户中心</span>' . "\n";
     echo '</div>' . "\n";
     echo '<div class="vs-topbar__right">' . "\n";
     echo '<div class="vs-topbar__theme" id="vsThemePickerMount"></div>' . "\n";

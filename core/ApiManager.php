@@ -58,6 +58,13 @@ class ApiManager
     /** 是否收费：收费 */
     const CHARGE_PAID = 1;
 
+    /** 调用密钥传递：Query 参数 */
+    const KEYWAY_QUERY = 'query';
+    /** 调用密钥传递：Header(X-API-Key) */
+    const KEYWAY_HEADER = 'header';
+    /** 调用密钥传递：Bearer Token */
+    const KEYWAY_BEARER = 'bearer';
+
     /**
      * @return string
      */
@@ -174,6 +181,27 @@ class ApiManager
         try {
             $pdo = Database::connect();
             $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('qpm'));
+            $ok = $col && $col->fetchColumn();
+        } catch (Exception $e) {
+            $ok = false;
+        }
+        return $ok;
+    }
+
+    /**
+     * 是否已具备 keyways 字段（迁移 10.17.0 后为 true）
+     *
+     * @return bool
+     */
+    public static function hasKeywaysColumn()
+    {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
+        try {
+            $pdo = Database::connect();
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('keyways'));
             $ok = $col && $col->fetchColumn();
         } catch (Exception $e) {
             $ok = false;
@@ -302,6 +330,77 @@ class ApiManager
             return '不限制';
         }
         return $n . '/MIN';
+    }
+
+    /**
+     * 归一鉴权传递方式（有序：query / header / bearer）
+     *
+     * @param mixed $value 字符串（逗号分隔）或数组
+     * @return array
+     */
+    public static function normalizeKeyways($value)
+    {
+        if (is_array($value)) {
+            $parts = $value;
+        } else {
+            $parts = preg_split('/[\s,|\/]+/', (string) $value);
+        }
+        $set = array();
+        if (is_array($parts)) {
+            foreach ($parts as $part) {
+                $k = strtolower(trim((string) $part));
+                if ($k === self::KEYWAY_QUERY || $k === self::KEYWAY_HEADER || $k === self::KEYWAY_BEARER) {
+                    $set[$k] = $k;
+                }
+            }
+        }
+        $ordered = array();
+        foreach (array(self::KEYWAY_QUERY, self::KEYWAY_HEADER, self::KEYWAY_BEARER) as $way) {
+            if (isset($set[$way])) {
+                $ordered[] = $way;
+            }
+        }
+        if (empty($ordered)) {
+            $ordered[] = self::KEYWAY_QUERY;
+        }
+        return $ordered;
+    }
+
+    /**
+     * 存库用逗号串
+     *
+     * @param mixed $value
+     * @return string
+     */
+    public static function keywaysToStorage($value)
+    {
+        return implode(',', self::normalizeKeyways($value));
+    }
+
+    /**
+     * 前台/后台展示文案
+     *
+     * @param mixed $value
+     * @return string
+     */
+    public static function keywaysLabel($value)
+    {
+        $ways = self::normalizeKeyways($value);
+        if (count($ways) === 3) {
+            return '全部支持';
+        }
+        $map = array(
+            self::KEYWAY_QUERY  => 'Query 参数',
+            self::KEYWAY_HEADER => 'Header(X-API-Key)',
+            self::KEYWAY_BEARER => 'Bearer Token',
+        );
+        $labels = array();
+        foreach ($ways as $way) {
+            if (isset($map[$way])) {
+                $labels[] = $map[$way];
+            }
+        }
+        return implode('、', $labels);
     }
 
     /**
@@ -766,6 +865,7 @@ class ApiManager
             $id = (int) $pdo->lastInsertId();
             self::applyChargeFields($id, $parsed);
             self::applyQpmField($id, $parsed);
+            self::applyKeywaysField($id, $parsed);
             self::applyUpstreamAuthFields($id, $parsed);
             RedisCache::invalidateFrontend();
             $row = self::findById($id);
@@ -945,6 +1045,7 @@ class ApiManager
             }
             self::applyChargeFields($apiId, $parsed);
             self::applyQpmField($apiId, $parsed);
+            self::applyKeywaysField($apiId, $parsed);
             self::applyUpstreamAuthFields($apiId, $parsed);
             RedisCache::invalidateFrontend();
             return true;
@@ -1253,6 +1354,8 @@ class ApiManager
             'needkey'       => self::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_label' => self::requireKeyLabel(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_badge' => self::requireKeyBadge(isset($row['needkey']) ? $row['needkey'] : 0),
+            'keyways'       => self::normalizeKeyways(isset($row['keyways']) ? $row['keyways'] : self::KEYWAY_QUERY),
+            'keyways_label' => self::keywaysLabel(isset($row['keyways']) ? $row['keyways'] : self::KEYWAY_QUERY),
             'qpm'           => self::normalizeQpm(isset($row['qpm']) ? $row['qpm'] : 0),
             'qpm_label'     => self::qpmLabel(isset($row['qpm']) ? $row['qpm'] : 0),
             'charge'        => self::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0),
@@ -1308,6 +1411,8 @@ class ApiManager
             'needkey'        => $full['needkey'],
             'needkey_label'  => $full['needkey_label'],
             'needkey_badge'  => $full['needkey_badge'],
+            'keyways'        => $full['keyways'],
+            'keyways_label'  => $full['keyways_label'],
             'qpm'            => $full['qpm'],
             'qpm_label'      => $full['qpm_label'],
             'charge'         => $full['charge'],
@@ -1619,6 +1724,7 @@ class ApiManager
             'doc'         => $docDetail,
             'aidoc'       => $docCode,
             'needkey'     => $requireKey,
+            'keyways'     => self::normalizeKeyways(isset($data['keyways']) ? $data['keyways'] : self::KEYWAY_QUERY),
             'qpm'         => self::normalizeQpm(isset($data['qpm']) ? $data['qpm'] : 0),
             'charge'      => $charge,
             'price'       => $price,
@@ -1676,6 +1782,33 @@ class ApiManager
             );
             $stmt->execute(array(
                 self::normalizeQpm(isset($parsed['qpm']) ? $parsed['qpm'] : 0),
+                $apiId,
+            ));
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
+     * 写入 keyways 字段（独立 UPDATE，兼容未迁移站点）
+     *
+     * @param int   $apiId
+     * @param array $parsed
+     * @return void
+     */
+    private static function applyKeywaysField($apiId, array $parsed)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId <= 0 || !self::hasKeywaysColumn()) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '` SET `keyways` = ? WHERE `id` = ?'
+            );
+            $stmt->execute(array(
+                self::keywaysToStorage(isset($parsed['keyways']) ? $parsed['keyways'] : self::KEYWAY_QUERY),
                 $apiId,
             ));
         } catch (Exception $e) {

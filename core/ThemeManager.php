@@ -771,8 +771,9 @@ class ThemeManager
 
         $ctx = array_merge(
             array(
-                'vsBase'    => vs_base_url(),
-                'siteName'  => SiteContext::siteName(),
+                'vsBase'     => vs_base_url(),
+                'siteName'   => SiteContext::siteName(),
+                'systemName' => SiteContext::systemName(),
                 'pageTitle' => $pageTitle,
                 'pageKey'   => $pageKey,
                 'themeId'   => self::activeId(),
@@ -962,6 +963,7 @@ class ThemeManager
             array(
                 'vsBase'         => $base,
                 'siteName'       => SiteContext::siteName(),
+                'systemName'     => SiteContext::systemName(),
                 'siteDesc'       => SiteContext::siteDescription(),
                 'pageKey'        => $pageKey,
                 'pageTitle'      => $pageTitle,

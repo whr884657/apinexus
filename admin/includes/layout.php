@@ -113,10 +113,11 @@ function vs_admin_group_is_active(array $group, $activeMenu)
  */
 function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = '', $titleSuffix = '')
 {
-    global $vsBase, $vsAdmin, $vsSiteName;
+    global $vsBase, $vsAdmin, $vsSiteName, $vsSystemName;
 
     $base = $vsBase;
     $siteName = $vsSiteName;
+    $systemName = isset($vsSystemName) ? $vsSystemName : SiteContext::systemName();
     $admin = $vsAdmin;
     $favicon = SiteContext::siteFavicon();
     $menuGroups = vs_admin_menu_groups();
@@ -162,7 +163,7 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     echo '<aside class="vs-sidebar" id="vsSidebar">' . "\n";
     echo '<div class="vs-sidebar__head">' . "\n";
     vs_render_site_logo('vs-sidebar__logo');
-    echo '<span class="vs-sidebar__name">' . vs_e($siteName) . '</span>' . "\n";
+    echo '<span class="vs-sidebar__name">' . vs_e($systemName) . '</span>' . "\n";
     echo '</div>' . "\n";
     echo '<nav class="vs-sidebar__nav">' . "\n";
 
@@ -245,7 +246,7 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     echo '<button type="button" class="vs-topbar__toggle" id="vsSidebarToggle" aria-label="展开或收缩菜单">';
     echo '<i class="vs-icon vs-icon--menu"></i>';
     echo '</button>' . "\n";
-    echo '<span class="vs-topbar__title">' . vs_e($siteName) . '</span>' . "\n";
+    echo '<span class="vs-topbar__title">' . vs_e($systemName) . '</span>' . "\n";
     echo '</div>' . "\n";
     echo '<div class="vs-topbar__right">' . "\n";
     echo '<div class="vs-topbar__theme" id="vsThemePickerMount"></div>' . "\n";

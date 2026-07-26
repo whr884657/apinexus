@@ -2319,6 +2319,49 @@ select.vs-input.vs-select {
     }
 }
 
+/* ---- 用户管理页（Tab + 搜索 + 分页，v10.17.0） ---- */
+#usersPage .vs-api-list-table-wrap[hidden],
+#usersPage .vs-users-mobile[hidden],
+#usersPage .vs-api-list-footer[hidden],
+#usersPage .vs-api-list-empty[hidden] {
+    display: none !important;
+}
+
+#usersPage .vs-api-review-tabs {
+    margin-bottom: 12px;
+}
+
+#usersPage .vs-users-mobile {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+@media (max-width: 768px) {
+    #usersPage .vs-api-list-table-wrap {
+        display: none !important;
+    }
+
+    #usersPage .vs-users-mobile {
+        display: flex;
+    }
+
+    #usersPage .vs-api-list-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+}
+
+#usersPage .vs-api-list-footer .vs-api-list-pagesize__select,
+#usersPage .vs-api-list-footer .vs-api-pager .vs-pick__btn,
+#usersPage .vs-api-list-footer .vs-api-pager__nav,
+#usersPage .vs-api-list-footer .vs-api-pager__num {
+    height: 32px !important;
+    min-height: 32px;
+    max-height: 32px;
+}
+
 /* ── 管理员发布身份绑定 ── */
 .vs-admin-bind-section {
     margin-top: 0;
@@ -9162,13 +9205,16 @@ select.vs-input.vs-select {
 #contentPage .ann-card__header,
 #contentPage .art-card__header {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
     gap: 8px;
     margin-bottom: 8px;
+    min-width: 0;
 }
 #contentPage .ann-card__title,
 #contentPage .art-card__title {
+    flex: 1 1 auto;
     font-weight: 600;
     line-height: 1.45;
     min-width: 0;
@@ -9185,7 +9231,9 @@ select.vs-input.vs-select {
     gap: 6px;
     flex-wrap: wrap;
     flex-shrink: 0;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: flex-end;
+    max-width: 50%;
 }
 #contentPage .ann-card__time,
 #contentPage .art-card__info {
@@ -9195,8 +9243,16 @@ select.vs-input.vs-select {
 }
 #contentPage .art-card__info {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+}
+#contentPage .art-card__info-item {
+    display: inline-flex;
+    align-items: center;
     gap: 4px;
+    min-width: 0;
 }
 #contentPage .ann-card__actions,
 #contentPage .art-card__actions,

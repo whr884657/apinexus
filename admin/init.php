@@ -16,5 +16,6 @@ AuthSecurity::sendSecurityHeaders();
 
 $vsBase     = vs_base_url();
 $vsAdmin    = Auth::user();
-$vsSiteName = SiteContext::siteName();
+$vsSiteName   = SiteContext::siteName();
+$vsSystemName = SiteContext::systemName();
 $vsCfg      = Config::all();

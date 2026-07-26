@@ -62,9 +62,16 @@ class SiteContext
             return self::$cache;
         }
 
+        $siteName = trim((string) Config::get('site_name', 'ApiNexus'));
+        $systemName = trim((string) Config::get('system_name', ''));
+        if ($systemName === '') {
+            $systemName = $siteName;
+        }
+
         self::$cache = array(
             'host'               => self::currentHost(),
-            'site_name'          => trim((string) Config::get('site_name', 'ApiNexus')),
+            'site_name'          => $siteName,
+            'system_name'        => $systemName,
             'site_description'   => trim((string) Config::get('site_description', '')),
             'site_keywords'      => trim((string) Config::get('site_keywords', '')),
             'site_favicon'       => trim((string) Config::get('site_favicon', '')),
@@ -94,6 +101,22 @@ class SiteContext
         $ctx = self::resolve();
         $name = trim($ctx['site_name']);
         return $name !== '' ? $name : 'ApiNexus';
+    }
+
+    /**
+     * 系统/产品名称（后台侧栏、用户中心等；缺省回落 site_name）
+     *
+     * @return string
+     */
+    public static function systemName()
+    {
+        $ctx = self::resolve();
+        $name = trim($ctx['system_name']);
+        if ($name !== '') {
+            return $name;
+        }
+        $fallback = trim($ctx['site_name']);
+        return $fallback !== '' ? $fallback : 'ApiNexus';
     }
 
     /**

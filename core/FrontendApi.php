@@ -68,6 +68,8 @@ class FrontendApi
             'maintenance' => $status === ApiManager::STATUS_MAINTENANCE ? 1 : 0,
             'needkey'     => ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_label' => ApiManager::requireKeyLabel(isset($row['needkey']) ? $row['needkey'] : 0),
+            'keyways'     => ApiManager::normalizeKeyways(isset($row['keyways']) ? $row['keyways'] : ApiManager::KEYWAY_QUERY),
+            'keyways_label' => ApiManager::keywaysLabel(isset($row['keyways']) ? $row['keyways'] : ApiManager::KEYWAY_QUERY),
             'qpm'         => ApiManager::normalizeQpm(isset($row['qpm']) ? $row['qpm'] : 0),
             'qpm_label'   => ApiManager::qpmLabel(isset($row['qpm']) ? $row['qpm'] : 0),
             'calls'       => isset($row['calls']) ? (int) $row['calls'] : 0,

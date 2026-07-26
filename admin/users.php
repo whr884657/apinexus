@@ -76,6 +76,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $users = UserManager::all();
 $userCount = count($users);
 
+$counts = array(
+    'all'       => $userCount,
+    'developer' => 0,
+    'user'      => 0,
+    'banned'    => 0,
+);
+foreach ($users as $countRow) {
+    $countRole = UserRole::normalize(isset($countRow['role']) ? $countRow['role'] : UserRole::ROLE_USER);
+    if ((int) $countRow['status'] !== 1) {
+        $counts['banned']++;
+    }
+    if ($countRole === UserRole::ROLE_DEVELOPER) {
+        $counts['developer']++;
+    } else {
+        $counts['user']++;
+    }
+}
+
+$headerActions = '';
+if ($userCount > 0) {
+    ob_start();
+    ?>
+    <div class="vs-search-bar vs-api-list-toolbar">
+        <div class="vs-search-bar__input-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" class="vs-input vs-search-bar__input" id="usersSearchInput"
+                   placeholder="搜索用户名、邮箱或 ID..." autocomplete="off">
+        </div>
+    </div>
+    <?php
+    $headerActions = ob_get_clean();
+}
+
 /**
  * @param array $row
  * @return string
@@ -211,48 +244,55 @@ function vs_users_search_blob(array $row)
     return strtolower(implode(' ', $parts));
 }
 
-vs_admin_layout_start('用户管理', 'users');
+vs_admin_layout_start('用户管理', 'users', $headerActions);
 ?>
 
-<div class="vs-panel">
-    <div class="vs-panel__header vs-users-list-head">
-        <div class="vs-users-list-head__text">
-            <h2 class="vs-panel__title">用户列表</h2>
-            <p class="vs-panel__desc" id="usersCountDesc" data-total="<?php echo (int) $userCount; ?>">共 <?php echo (int) $userCount; ?> 位用户</p>
-        </div>
-        <div class="vs-users-search" id="usersSearch">
-            <button type="button" class="vs-users-search__toggle" id="usersSearchToggle" aria-label="展开搜索" aria-expanded="false">
-                <i class="vs-icon vs-icon--search" aria-hidden="true"></i>
-            </button>
-            <input type="search" class="vs-users-search__input" id="usersSearchInput"
-                   placeholder="搜索用户名、邮箱或 ID" autocomplete="off" enterkeyhint="search">
-        </div>
-    </div>
-
-    <div id="usersSearchEmpty" class="vs-users-search-empty" hidden>
-        <?php vs_render_notice('info', '', '未找到匹配的用户', array('compact' => true)); ?>
-    </div>
-
+<div id="usersPage" data-user-total="<?php echo (int) $userCount; ?>">
     <?php if ($userCount === 0): ?>
-        <?php vs_render_notice('info', '', '暂无注册用户', array('compact' => true)); ?>
+        <div class="vs-panel">
+            <?php vs_render_notice('info', '', '暂无注册用户', array('compact' => true)); ?>
+        </div>
     <?php else: ?>
-        <div class="vs-users-desktop vs-table-wrap">
-            <table class="vs-table vs-users-table">
-                <thead>
-                    <tr>
-                        <th>用户</th>
-                        <th>邮箱</th>
-                        <th>身份</th>
-                        <?php if (PointsManager::hasPointsColumn()): ?>
-                        <th>积分</th>
-                        <?php endif; ?>
-                        <th>第三方绑定</th>
-                        <th>注册时间</th>
-                        <th>最后登录</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="vs-tabs vs-api-review-tabs" id="usersFilters" role="tablist" aria-label="用户筛选">
+            <button type="button" class="vs-tabs__btn vs-users-filter is-active" data-filter="all" role="tab" aria-selected="true">
+                全部用户<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="all"><?php echo (int) $counts['all']; ?></span>
+            </button>
+            <button type="button" class="vs-tabs__btn vs-users-filter" data-filter="developer" role="tab" aria-selected="false">
+                开发者<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="developer"><?php echo (int) $counts['developer']; ?></span>
+            </button>
+            <button type="button" class="vs-tabs__btn vs-users-filter" data-filter="user" role="tab" aria-selected="false">
+                普通用户<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="user"><?php echo (int) $counts['user']; ?></span>
+            </button>
+            <button type="button" class="vs-tabs__btn vs-users-filter" data-filter="banned" role="tab" aria-selected="false">
+                已封禁<span class="vs-badge vs-badge--warning vs-api-review-tabs__badge" data-count="banned"><?php echo (int) $counts['banned']; ?></span>
+            </button>
+        </div>
+
+        <div class="vs-api-list-empty vs-api-list-empty--hero" id="usersFilterEmpty" hidden>
+            <div class="vs-api-list-empty__card">
+                <h3 class="vs-api-list-empty__title">暂无匹配项</h3>
+                <p class="vs-api-list-empty__desc">当前 Tab 或搜索条件下没有用户，可切换上方筛选或清空搜索。</p>
+            </div>
+        </div>
+
+        <div class="vs-users-desktop vs-table-wrap vs-api-list-table-wrap" id="usersTableWrap">
+            <div class="vs-table-responsive">
+                <table class="vs-table vs-users-table">
+                    <thead>
+                        <tr>
+                            <th>用户</th>
+                            <th>邮箱</th>
+                            <th>身份</th>
+                            <?php if (PointsManager::hasPointsColumn()): ?>
+                            <th>积分</th>
+                            <?php endif; ?>
+                            <th>第三方绑定</th>
+                            <th>注册时间</th>
+                            <th>最后登录</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersBody">
                     <?php foreach ($users as $row): ?>
                         <?php
                         $avatar = UserAvatar::resolve($row);
@@ -262,7 +302,8 @@ vs_admin_layout_start('用户管理', 'users');
                         ?>
                         <tr class="<?php echo $active ? '' : 'vs-users-row--banned'; ?>" data-user-row="<?php echo $uid; ?>"
                             data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>"
-                            data-user-role="<?php echo vs_e($userRole); ?>">
+                            data-user-role="<?php echo vs_e($userRole); ?>"
+                            data-user-status="<?php echo $active ? '1' : '0'; ?>">
                             <td>
                                 <div class="vs-users-cell-user">
                                     <img src="<?php echo vs_e($avatar); ?>" alt="" class="vs-users-avatar">
@@ -290,11 +331,12 @@ vs_admin_layout_start('用户管理', 'users');
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <div class="vs-users-mobile">
+        <div class="vs-users-mobile" id="usersMobile">
             <?php foreach ($users as $row): ?>
                 <?php
                 $avatar = UserAvatar::resolve($row);
@@ -304,7 +346,8 @@ vs_admin_layout_start('用户管理', 'users');
                 ?>
                 <article class="vs-user-card<?php echo $active ? '' : ' vs-user-card--banned'; ?>" data-user-row="<?php echo $uid; ?>"
                          data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>"
-                         data-user-role="<?php echo vs_e($userRole); ?>">
+                         data-user-role="<?php echo vs_e($userRole); ?>"
+                         data-user-status="<?php echo $active ? '1' : '0'; ?>">
                     <div class="vs-user-card__head">
                         <img src="<?php echo vs_e($avatar); ?>" alt="" class="vs-users-avatar">
                         <div class="vs-user-card__main">
@@ -352,6 +395,24 @@ vs_admin_layout_start('用户管理', 'users');
                     </div>
                 </article>
             <?php endforeach; ?>
+        </div>
+
+        <div class="vs-api-list-footer" id="usersFooter">
+            <div class="vs-api-pager" id="usersPager">
+                <label class="vs-api-list-pagesize" for="usersPageSize">
+                    <span class="vs-api-list-pagesize__label">每页</span>
+                    <select class="vs-input vs-select vs-api-list-pagesize__select" id="usersPageSize" data-vs-pick="sheet">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                    </select>
+                </label>
+                <button type="button" class="vs-api-pager__nav" id="usersPrevBtn" aria-label="上一页">上一页</button>
+                <div class="vs-api-pager__nums" id="usersPagerNums" role="navigation" aria-label="页码"></div>
+                <button type="button" class="vs-api-pager__nav" id="usersNextBtn" aria-label="下一页">下一页</button>
+            </div>
+            <p class="vs-api-list-stats" id="usersStats">共 <?php echo (int) $userCount; ?> 条</p>
         </div>
     <?php endif; ?>
 </div>
