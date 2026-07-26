@@ -1,5 +1,16 @@
 {
     "versions": {
+        "10.15.0": {
+            "title": "ApiNexus 10.15.0 站点 AI 文档与 :::qs 代码示例",
+            "date": "2026-07-27",
+            "db_changes": false,
+            "changes": [
+                "系统设置新增 AI 对接（OpenAI / DeepSeek / 智谱 / LongCat / 自定义）",
+                "接口编辑：AI 生成详细文档与多语言代码示例；表单自动草稿",
+                "快速上手仅解析 aidoc 的 :::qs lang=… 块；VsSyntax 多语言高亮",
+                "后台接口文档页对齐前端示例，并提供编辑入口"
+            ]
+        },
         "10.14.1": {
             "title": "ApiNexus 10.14.1 快速上手语言 Tab 与图标",
             "date": "2026-07-27",

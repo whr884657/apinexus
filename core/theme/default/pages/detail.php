@@ -284,17 +284,12 @@ if (!$notFound) {
         <h2 class="detail-section-title">快速上手</h2>
         <?php
         $qsSamples = array();
-        if (!$notFound && !empty($api['endpoint'])) {
-            $qsSamples = ApiQuickstart::buildSamples(
-                (string) $api['endpoint'],
-                $primaryMethod,
-                $paramsList,
-                isset($api['needkey']) ? (int) $api['needkey'] : 0
-            );
+        if (!$notFound) {
+            $qsSamples = ApiQuickstart::samplesFromAidoc(isset($api['aidoc']) ? (string) $api['aidoc'] : '');
         }
         ?>
         <?php if ($qsSamples === array()): ?>
-        <p class="detail-empty-hint">暂无调用地址，无法生成示例。</p>
+        <p class="detail-empty-hint">暂无代码示例。管理员可在后台用 AI 生成或手动编写。</p>
         <?php else: ?>
         <div class="detail-quickstart" id="detailQuickstart"
              data-qs-count="<?php echo count($qsSamples); ?>">
@@ -305,7 +300,8 @@ if (!$notFound) {
                         role="tab"
                         aria-selected="<?php echo $qi === 0 ? 'true' : 'false'; ?>"
                         data-qs-idx="<?php echo (int) $qi; ?>"
-                        data-qs-id="<?php echo vs_e($qs['id']); ?>">
+                        data-qs-id="<?php echo vs_e($qs['id']); ?>"
+                        data-qs-syn="<?php echo vs_e(isset($qs['syn']) ? $qs['syn'] : 'javascript'); ?>">
                     <span class="detail-quickstart__icon<?php echo !empty($qs['single_icon']) ? ' is-single' : ''; ?>" aria-hidden="true">
                         <img class="detail-quickstart__icon-img is-gray" src="<?php echo vs_e($qs['icon_gray']); ?>" alt="" width="16" height="16" loading="lazy">
                         <?php if (empty($qs['single_icon'])): ?>
@@ -318,12 +314,16 @@ if (!$notFound) {
             </div>
             <div class="detail-quickstart__panel">
                 <button type="button" class="detail-quickstart__copy" id="detailQsCopy">复制</button>
-                <pre class="detail-quickstart__code font-mono" id="detailQsCode"><code><?php echo vs_e($qsSamples[0]['code']); ?></code></pre>
+                <pre class="detail-quickstart__code font-mono" id="detailQsCode"><code class="language-<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>" data-vs-syn="<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>"><?php echo vs_e($qsSamples[0]['code']); ?></code></pre>
             </div>
         </div>
         <script>
         window.detailQsSamples = <?php echo json_encode(array_map(function ($row) {
-            return array('id' => $row['id'], 'code' => $row['code']);
+            return array(
+                'id' => $row['id'],
+                'code' => $row['code'],
+                'syn' => isset($row['syn']) ? $row['syn'] : 'javascript',
+            );
         }, $qsSamples), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
         </script>
         <?php endif; ?>

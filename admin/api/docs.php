@@ -138,12 +138,10 @@ function vs_api_docs_ctx(array $row)
     $responsePretty = vs_api_docs_pretty_response(isset($row['response']) ? (string) $row['response'] : '');
     $docRaw = trim((string) (isset($row['doc']) ? $row['doc'] : ''));
     $aidocRaw = trim((string) (isset($row['aidoc']) ? $row['aidoc'] : ''));
-    $docHtml = '';
-    if ($docRaw !== '') {
-        $docHtml = vs_api_docs_render_md($docRaw);
-    } elseif ($aidocRaw !== '') {
-        $docHtml = vs_api_docs_render_md($aidocRaw);
-    }
+    $docHtml = $docRaw !== '' ? vs_api_docs_render_md($docRaw) : '';
+    $qsSamples = class_exists('ApiQuickstart')
+        ? ApiQuickstart::samplesFromAidoc($aidocRaw)
+        : array();
     $examples = vs_api_docs_request_examples($endpoint, $methods, $paramsList);
     $search = mb_strtolower($name . ' ' . $desc . ' ' . $cat . ' ' . $endpoint, 'UTF-8');
 
@@ -159,6 +157,7 @@ function vs_api_docs_ctx(array $row)
         'params_list'     => $paramsList,
         'response_pretty' => $responsePretty,
         'doc_html'        => $docHtml,
+        'qs_samples'      => $qsSamples,
         'examples'        => $examples,
         'search'          => $search,
     );
@@ -314,9 +313,13 @@ vs_admin_layout_start('接口文档', 'api-docs');
                     <div class="doc-panel" data-docs-panel="<?php echo (int) $item['id']; ?>"
                         <?php echo ((int) $item['id'] === $firstId) ? '' : ' hidden'; ?>>
                         <div class="doc-panel__head">
-                            <div class="doc-panel__title">
-                                <?php echo vs_api_docs_method_badges_html($item['methods'], 'method-badge'); ?>
-                                <span class="doc-panel__name"><?php echo vs_e($item['name']); ?></span>
+                            <div class="doc-panel__title-row">
+                                <div class="doc-panel__title">
+                                    <?php echo vs_api_docs_method_badges_html($item['methods'], 'method-badge'); ?>
+                                    <span class="doc-panel__name"><?php echo vs_e($item['name']); ?></span>
+                                </div>
+                                <a class="vs-btn vs-btn--default vs-btn--sm"
+                                   href="<?php echo vs_e(rtrim(vs_base_url(), '/') . '/admin/api/list.php?edit=' . (int) $item['id']); ?>">编辑</a>
                             </div>
                             <?php if ($item['desc'] !== ''): ?>
                                 <div class="doc-panel__desc"><?php echo vs_e($item['desc']); ?></div>
@@ -389,18 +392,30 @@ vs_admin_layout_start('接口文档', 'api-docs');
 
                             <div class="doc-tab-pane" data-docs-pane="request" hidden>
                                 <div class="doc-section">
-                                    <div class="code-block">
-                                        <div class="code-block__head">
-                                            <span class="code-block__lang">cURL</span>
+                                    <?php if (!empty($item['qs_samples'])): ?>
+                                        <?php foreach ($item['qs_samples'] as $qs): ?>
+                                            <div class="code-block">
+                                                <div class="code-block__head">
+                                                    <span class="code-block__lang"><?php echo vs_e($qs['label']); ?></span>
+                                                </div>
+                                                <pre class="code-block__pre"><code class="language-<?php echo vs_e($qs['syn']); ?>" data-vs-syn="<?php echo vs_e($qs['syn']); ?>"><?php echo vs_e($qs['code']); ?></code></pre>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <p class="doc-empty-hint">暂无 :::qs 代码示例，以下为根据参数自动生成的简易示例。可在接口编辑中用「AI 生成代码示例」写入。</p>
+                                        <div class="code-block">
+                                            <div class="code-block__head">
+                                                <span class="code-block__lang">cURL</span>
+                                            </div>
+                                            <pre class="code-block__pre"><code class="language-bash" data-vs-syn="bash"><?php echo vs_e($item['examples']['curl']); ?></code></pre>
                                         </div>
-                                        <pre class="code-block__pre"><code class="language-bash" data-vs-syn="bash"><?php echo vs_e($item['examples']['curl']); ?></code></pre>
-                                    </div>
-                                    <div class="code-block">
-                                        <div class="code-block__head">
-                                            <span class="code-block__lang">JavaScript</span>
+                                        <div class="code-block">
+                                            <div class="code-block__head">
+                                                <span class="code-block__lang">JavaScript</span>
+                                            </div>
+                                            <pre class="code-block__pre"><code class="language-javascript" data-vs-syn="javascript"><?php echo vs_e($item['examples']['js']); ?></code></pre>
                                         </div>
-                                        <pre class="code-block__pre"><code class="language-javascript" data-vs-syn="javascript"><?php echo vs_e($item['examples']['js']); ?></code></pre>
-                                    </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 

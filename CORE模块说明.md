@@ -228,6 +228,10 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `UserManager.php` | 后台用户列表/封禁/删除/身份转换 |
 | `UserAvatar.php` | 用户头像 URL 解析 |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
+| `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs` 多语言快速上手示例（v10.15.0） |
+| `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型） |
+| `AiClient.php` | OpenAI 兼容 Chat Completions 客户端 |
+| `AiApiDoc.php` | 生成详细文档（`doc`）与代码示例（`aidoc`）；剥离上游敏感字段 |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
 | `CommentNotify.php` | 文章评论邮件通知（新评论通知管理员；被引用/管理员回复通知用户） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前校验公网 `targeturl` + `ApiStats::hitProxy`（v10.8.0） |

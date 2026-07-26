@@ -1,5 +1,6 @@
 /**
- * 默认主题 · API 详情「快速上手」：切换语言示例 + 复制（Tab 由 PHP 渲染）
+ * 默认主题 · API 详情「快速上手」：切换语言示例 + IDE 级高亮 + 复制
+ * 示例内容来自 aidoc 的 :::qs 短码（AI / 人工），禁止写死填充
  */
 (function () {
     'use strict';
@@ -23,9 +24,12 @@
         }
         active = idx;
         var item = samples[active];
+        var syn = (item && item.syn) ? String(item.syn) : 'javascript';
         codeNode.textContent = item && item.code ? item.code : '';
+        codeNode.className = 'language-' + syn;
+        codeNode.setAttribute('data-vs-syn', syn);
+        codeNode.removeAttribute('data-vs-syn-done');
         if (window.VsSyntax && typeof window.VsSyntax.highlightElement === 'function') {
-            codeNode.removeAttribute('data-vs-syn-done');
             window.VsSyntax.highlightElement(codeNode);
         }
         Array.prototype.forEach.call(buttons, function (btn, i) {

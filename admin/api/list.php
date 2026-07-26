@@ -128,6 +128,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('接口已删除', array('api_id' => $id));
     }
 
+    if ($action === 'draft_save') {
+        $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
+        if ($id <= 0) {
+            AjaxResponse::success('草稿已记在本地', array('local_only' => 1));
+        }
+        $data = $payloadFromPost();
+        $data['audit'] = ApiManager::AUDIT_APPROVED;
+        $result = ApiManager::update($id, $data);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        AjaxResponse::success('已自动保存', array('api_id' => $id, 'silent' => 1));
+    }
+
+    if ($action === 'ai_gen_doc' || $action === 'ai_gen_code') {
+        if (!AiConfig::isReady()) {
+            AjaxResponse::error('请先在系统设置中启用并配置 AI');
+        }
+        $data = $payloadFromPost();
+        $data['id'] = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
+        // 已有接口时补全对外调用地址（代理不暴露上游）
+        if ($data['id'] > 0) {
+            $row = ApiManager::findById($data['id']);
+            if (is_array($row)) {
+                $call = ApiManager::resolveCallUrl($row);
+                if ($call !== '') {
+                    $data['endpoint'] = $call;
+                    $data['callurl'] = $call;
+                }
+                if (empty($data['proxyslug']) && isset($row['proxyslug'])) {
+                    $data['proxyslug'] = $row['proxyslug'];
+                }
+                if (!isset($data['apitype'])) {
+                    $data['apitype'] = isset($row['apitype']) ? (int) $row['apitype'] : 0;
+                }
+            }
+        }
+        // 绝不把上游密钥交给生成逻辑
+        unset($data['upkey'], $data['targeturl']);
+
+        if ($action === 'ai_gen_doc') {
+            $gen = AiApiDoc::generateDetailDoc($data);
+            if (!is_array($gen)) {
+                AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+            }
+            AjaxResponse::success('详细文档已生成', array('doc' => $gen['doc']));
+        }
+
+        $gen = AiApiDoc::generateCodeSamples($data);
+        if (!is_array($gen)) {
+            AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+        }
+        AjaxResponse::success('代码示例已生成', array('aidoc' => $gen['aidoc']));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
@@ -761,18 +816,29 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 
             <div class="vs-api-list-form-pane" data-api-form-pane="docs" hidden>
                 <div class="vs-form-row">
-                    <label class="vs-label" for="apiListFormDocNormal">详细文档（Markdown）</label>
+                    <div class="vs-api-doc-head">
+                        <label class="vs-label" for="apiListFormDocNormal">详细文档（Markdown）</label>
+                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiDocBtn"
+                                title="根据已填接口资料生成">AI 生成详细文档</button>
+                    </div>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocNormal" name="doc" rows="10"
                               data-vs-md placeholder="面向调用方的详细说明…"></textarea>
+                    <p class="vs-form-hint">建议由 AI 生成后人工微调；勿写入上游地址或密钥。</p>
                 </div>
                 <div class="vs-form-row">
-                    <label class="vs-label" for="apiListFormDocAi">代码示例（Markdown）</label>
+                    <div class="vs-api-doc-head">
+                        <label class="vs-label" for="apiListFormDocAi">代码示例（:::qs 多语言）</label>
+                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiCodeBtn"
+                                title="生成快速上手各语言示例">AI 生成代码示例</button>
+                    </div>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="aidoc" rows="10"
-                              data-vs-md placeholder="可写各语言调用示例，后续将用于代码示例展示…"></textarea>
+                              data-vs-md placeholder=":::qs lang=curl&#10;...&#10;:::&#10;&#10;:::qs lang=python&#10;...&#10;:::"></textarea>
+                    <p class="vs-form-hint">须使用 :::qs lang=语言标识 包裹，语言：curl / typescript / browser / python / go / java / php / cpp / rust。</p>
                 </div>
             </div>
         </form>
         <footer class="vs-overlay__foot">
+            <span class="vs-api-draft-hint" id="apiListDraftHint" hidden>已自动保存</span>
             <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">取消</button>
             <button type="submit" form="apiListForm" class="vs-btn vs-btn--primary" id="apiListFormSubmitBtn">保存</button>
         </footer>

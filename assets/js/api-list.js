@@ -1513,6 +1513,10 @@
                 }
                 window.VS.showMessage(data.msg || '操作成功', 'success');
                 closeFormOverlay();
+                setDraftHint('');
+                if (formMode !== 'edit') {
+                    clearLocalDraft();
+                }
                 var summary = data.api_summary || data.api || {};
                 if (formMode === 'edit') {
                     updateItem(summary.id, summary);
@@ -1580,12 +1584,213 @@
         });
     }
 
+    var draftHint = document.getElementById('apiListDraftHint');
+    var draftTimer = null;
+    var draftBusy = false;
+    var draftSkip = false;
+    var LOCAL_DRAFT_KEY = 'vs_api_form_draft_v1';
+
+    function setDraftHint(text) {
+        if (!draftHint) {
+            return;
+        }
+        if (!text) {
+            draftHint.hidden = true;
+            draftHint.textContent = '';
+            return;
+        }
+        draftHint.hidden = false;
+        draftHint.textContent = text;
+    }
+
+    function refreshMdField(el) {
+        if (!el) {
+            return;
+        }
+        try {
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch (err) {
+            var ev = document.createEvent('Event');
+            ev.initEvent('input', true, true);
+            el.dispatchEvent(ev);
+        }
+    }
+
+    function saveLocalDraft(payload) {
+        try {
+            localStorage.setItem(LOCAL_DRAFT_KEY, JSON.stringify({
+                saved_at: Date.now(),
+                payload: payload
+            }));
+            setDraftHint('已保存到本地草稿');
+        } catch (e) {
+            setDraftHint('');
+        }
+    }
+
+    function loadLocalDraft() {
+        try {
+            var raw = localStorage.getItem(LOCAL_DRAFT_KEY);
+            if (!raw) {
+                return null;
+            }
+            var obj = JSON.parse(raw);
+            return obj && obj.payload ? obj.payload : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function clearLocalDraft() {
+        try {
+            localStorage.removeItem(LOCAL_DRAFT_KEY);
+        } catch (e) {}
+    }
+
+    function scheduleDraftSave() {
+        if (!formOverlay || !formOverlay.classList.contains('is-open') || draftSkip) {
+            return;
+        }
+        if (draftTimer) {
+            clearTimeout(draftTimer);
+        }
+        draftTimer = setTimeout(function () {
+            draftTimer = null;
+            runDraftSave();
+        }, 1800);
+    }
+
+    function runDraftSave() {
+        if (draftBusy || !formOverlay || !formOverlay.classList.contains('is-open')) {
+            return;
+        }
+        var payload = collectPayload();
+        if (payload.__error) {
+            return;
+        }
+        if (!payload.name && !payload.doc && !payload.aidoc) {
+            return;
+        }
+        if (formMode !== 'edit') {
+            saveLocalDraft(payload);
+            return;
+        }
+        var id = formId ? String(formId.value || '') : '';
+        if (!id) {
+            saveLocalDraft(payload);
+            return;
+        }
+        draftBusy = true;
+        payload.api_id = id;
+        postAction('draft_save', payload)
+            .then(function (data) {
+                if (data && data.code === 1) {
+                    if (data.local_only) {
+                        saveLocalDraft(payload);
+                    } else {
+                        setDraftHint(data.msg || '已自动保存');
+                    }
+                }
+            })
+            .catch(function () {})
+            .finally(function () {
+                draftBusy = false;
+            });
+    }
+
+    function bindDraftAutoSave() {
+        if (!formEl) {
+            return;
+        }
+        formEl.addEventListener('input', scheduleDraftSave);
+        formEl.addEventListener('change', scheduleDraftSave);
+    }
+
+    function setTextareaValue(el, text) {
+        if (!el) {
+            return;
+        }
+        el.value = text == null ? '' : String(text);
+        refreshMdField(el);
+    }
+
+    function runAiGenerate(action, btn) {
+        var payload = collectPayload();
+        if (payload.__error) {
+            window.VS.showMessage(payload.__error, 'error');
+            switchFormTab('params');
+            return;
+        }
+        if (!payload.name) {
+            window.VS.showMessage('请先填写接口名称', 'error');
+            switchFormTab('basic');
+            return;
+        }
+        // 不把上游密钥交给 AI 接口
+        delete payload.upkey;
+        delete payload.targeturl;
+        if (formMode === 'edit' && formId) {
+            payload.api_id = formId.value || '';
+        }
+        if (btn) {
+            btn.disabled = true;
+        }
+        window.VS.showMessage('正在生成，请稍候…', 'info');
+        postAction(action, payload)
+            .then(function (data) {
+                if (!data || data.code !== 1) {
+                    window.VS.showMessage((data && data.msg) || '生成失败', 'error');
+                    return;
+                }
+                draftSkip = true;
+                if (action === 'ai_gen_doc' && data.doc != null) {
+                    setTextareaValue(fields.docNormal, data.doc);
+                    switchFormTab('docs');
+                }
+                if (action === 'ai_gen_code' && data.aidoc != null) {
+                    setTextareaValue(fields.docAi, data.aidoc);
+                    switchFormTab('docs');
+                }
+                draftSkip = false;
+                window.VS.showMessage(data.msg || '生成完成', 'success');
+                scheduleDraftSave();
+            })
+            .catch(function () {
+                window.VS.showMessage('网络异常，请稍后重试', 'error');
+            })
+            .finally(function () {
+                if (btn) {
+                    btn.disabled = false;
+                }
+            });
+    }
+
+    var aiDocBtn = document.getElementById('apiListAiDocBtn');
+    var aiCodeBtn = document.getElementById('apiListAiCodeBtn');
+    if (aiDocBtn) {
+        aiDocBtn.addEventListener('click', function () {
+            runAiGenerate('ai_gen_doc', aiDocBtn);
+        });
+    }
+    if (aiCodeBtn) {
+        aiCodeBtn.addEventListener('click', function () {
+            runAiGenerate('ai_gen_code', aiCodeBtn);
+        });
+    }
+    bindDraftAutoSave();
+
     if (openAddBtn) {
         openAddBtn.addEventListener('click', function () {
             openFormOverlay('create');
+            var local = loadLocalDraft();
+            if (local && window.confirm('检测到未提交的本地草稿，是否恢复？')) {
+                draftSkip = true;
+                fillForm(Object.assign({ id: 0, status: 0, apitype: 0, needkey: 0, charge: 0, qpm: 0 }, local));
+                draftSkip = false;
+                setDraftHint('已恢复本地草稿');
+            }
         });
     }
-
 
     if (searchInput) {
         searchInput.addEventListener('input', applySearchFilter);

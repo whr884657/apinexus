@@ -137,12 +137,36 @@
         }
     }
 
+    function bindAiProvider() {
+        var provider = document.getElementById('aiProvider');
+        var baseurl = document.getElementById('aiBaseurl');
+        if (!provider || !baseurl) {
+            return;
+        }
+        var presets = {};
+        try {
+            presets = JSON.parse(baseurl.getAttribute('data-presets') || '{}') || {};
+        } catch (e) {
+            presets = {};
+        }
+        provider.addEventListener('change', function () {
+            var key = String(provider.value || '');
+            if (key === 'custom') {
+                return;
+            }
+            if (presets[key]) {
+                baseurl.value = presets[key];
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
-        ['siteForm', 'registerForm', 'checkinForm', 'oauthForm', 'siteExtraForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm'].forEach(function (id) {
+        ['siteForm', 'registerForm', 'checkinForm', 'oauthForm', 'siteExtraForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm', 'aiForm'].forEach(function (id) {
             bindAjaxForm(document.getElementById(id));
         });
         bindApilogCron();
+        bindAiProvider();
     });
 })();

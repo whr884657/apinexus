@@ -1,9 +1,14 @@
 <?php
 /**
  * 文件：core/ApiQuickstart.php
- * 作用：默认主题 API 详情「快速上手」多语言调用示例（文案与图标）
+ * 作用：默认主题 API 详情「快速上手」——从 aidoc 的 :::qs 短码解析多语言示例
  *
- * 图标目录：assets/img/lang/（灰版 *.svg + 彩版 *-color.svg；cURL 仅一份）
+ * 存储格式（AI 生成 / 人工编辑统一）：
+ * :::qs lang=curl
+ * ...
+ * :::
+ *
+ * 图标：assets/img/lang/（灰版 *.svg + 彩版 *-color.svg；curl 仅一份）
  */
 
 class ApiQuickstart
@@ -27,7 +32,19 @@ class ApiQuickstart
     }
 
     /**
-     * @param string $icon 如 curl / python
+     * @return array<string,string> id => label
+     */
+    public static function langMap()
+    {
+        $map = array();
+        foreach (self::langMeta() as $row) {
+            $map[$row['id']] = $row['label'];
+        }
+        return $map;
+    }
+
+    /**
+     * @param string $icon
      * @param bool   $color
      * @return string
      */
@@ -45,267 +62,154 @@ class ApiQuickstart
     }
 
     /**
-     * @param string               $endpoint
-     * @param string               $method
-     * @param array<int,array>     $paramsList
-     * @param int                  $needkey
-     * @return array<int,array{id:string,label:string,icon:string,code:string,icon_gray:string,icon_color:string}>
+     * 从 aidoc 解析各语言代码（不写死示例）
+     *
+     * @param string $aidoc
+     * @return array<int,array{id:string,label:string,icon:string,code:string,icon_gray:string,icon_color:string,single_icon:int}>
      */
-    public static function buildSamples($endpoint, $method, array $paramsList, $needkey = 0)
+    public static function samplesFromAidoc($aidoc)
     {
-        $endpoint = trim((string) $endpoint);
-        $method = strtoupper(trim((string) $method));
-        if ($method === '') {
-            $method = 'GET';
-        }
-        $needkey = (int) $needkey;
-        $isGet = ($method === 'GET' || $method === 'HEAD');
-
-        $pairs = array();
-        foreach ($paramsList as $p) {
-            if (!is_array($p) || empty($p['name'])) {
-                continue;
-            }
-            if (strtolower((string) (isset($p['type']) ? $p['type'] : '')) === 'file') {
-                continue;
-            }
-            $pairs[] = array(
-                'name'  => (string) $p['name'],
-                'value' => self::sampleVal($p, $needkey),
-            );
-        }
-        $hasKey = false;
-        foreach ($pairs as $row) {
-            if (preg_match('/^(key|api_key|apikey)$/i', $row['name'])) {
-                $hasKey = true;
-                break;
-            }
-        }
-        if ($needkey > 0 && !$hasKey) {
-            $pairs[] = array('name' => 'key', 'value' => 'YOUR_API_KEY');
-        }
-
-        $fullUrl = $isGet ? self::urlWithQuery($endpoint, $pairs) : $endpoint;
-        $obj = array();
-        foreach ($pairs as $row) {
-            $obj[$row['name']] = $row['value'];
-        }
-        $query = self::queryOf($pairs);
-        $phpArr = self::phpArrayLiteral($obj);
-        $rustForm = self::rustFormLiteral($pairs);
-        $curlData = array();
-        foreach ($pairs as $row) {
-            $curlData[] = '  --data-urlencode ' . json_encode($row['name'] . '=' . $row['value'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        }
-        $curlDataStr = $curlData !== array() ? implode(" \\\n", $curlData) : '  --data ""';
-        $jsonBody = json_encode($obj, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $jsonPretty = json_encode($obj, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-
-        $codes = array(
-            'curl' => $isGet
-                ? 'curl -X ' . $method . ' ' . json_encode($fullUrl, JSON_UNESCAPED_SLASHES)
-                : 'curl -X ' . $method . ' ' . json_encode($endpoint, JSON_UNESCAPED_SLASHES) . " \\\n"
-                    . '  -H "Content-Type: application/x-www-form-urlencoded" \\\n'
-                    . $curlDataStr,
-            'typescript' => $isGet
-                ? "const res = await fetch('" . self::sq($fullUrl) . "', {\n  method: '" . $method . "'\n});\n"
-                    . "const data = await res.json();\nconsole.log(data);"
-                : "const body = new URLSearchParams(" . ($jsonPretty !== false ? $jsonPretty : '{}') . ");\n"
-                    . "const res = await fetch('" . self::sq($endpoint) . "', {\n"
-                    . "  method: '" . $method . "',\n"
-                    . "  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n"
-                    . "  body\n});\nconst data = await res.json();\nconsole.log(data);",
-            'browser' => $isGet
-                ? "fetch('" . self::sq($fullUrl) . "')\n  .then(r => r.json())\n  .then(console.log)\n  .catch(console.error);"
-                : "fetch('" . self::sq($endpoint) . "', {\n"
-                    . "  method: '" . $method . "',\n"
-                    . "  headers: { 'Content-Type': 'application/json' },\n"
-                    . "  body: JSON.stringify(" . ($jsonBody !== false ? $jsonBody : '{}') . ")\n"
-                    . "})\n  .then(r => r.json())\n  .then(console.log)\n  .catch(console.error);",
-            'python' => $isGet
-                ? "import requests\n\nresp = requests." . strtolower($method) . "('" . self::sq($fullUrl) . "')\nprint(resp.json())"
-                : "import requests\n\nresp = requests." . strtolower($method) . "(\n"
-                    . "    '" . self::sq($endpoint) . "',\n"
-                    . "    data=" . ($jsonPretty !== false ? $jsonPretty : '{}') . "\n)\nprint(resp.json())",
-            'go' => $isGet
-                ? "package main\n\nimport (\n\t\"fmt\"\n\t\"io\"\n\t\"net/http\"\n)\n\n"
-                    . "func main() {\n\tres, err := http.Get(\"" . self::dq($fullUrl) . "\")\n"
-                    . "\tif err != nil { panic(err) }\n\tdefer res.Body.Close()\n"
-                    . "\tb, _ := io.ReadAll(res.Body)\n\tfmt.Println(string(b))\n}"
-                : "package main\n\nimport (\n\t\"fmt\"\n\t\"io\"\n\t\"net/http\"\n\t\"net/url\"\n\t\"strings\"\n)\n\n"
-                    . "func main() {\n\tform := url.Values{}\n"
-                    . self::goFormSets($pairs)
-                    . "\treq, _ := http.NewRequest(\"" . $method . "\", \"" . self::dq($endpoint) . "\", strings.NewReader(form.Encode()))\n"
-                    . "\treq.Header.Set(\"Content-Type\", \"application/x-www-form-urlencoded\")\n"
-                    . "\tres, err := http.DefaultClient.Do(req)\n\tif err != nil { panic(err) }\n"
-                    . "\tdefer res.Body.Close()\n\tb, _ := io.ReadAll(res.Body)\n\tfmt.Println(string(b))\n}",
-            'java' => "import java.net.URI;\nimport java.net.http.*;\n\n"
-                . "HttpClient client = HttpClient.newHttpClient();\n"
-                . ($isGet
-                    ? "HttpRequest request = HttpRequest.newBuilder()\n"
-                        . "    .uri(URI.create(\"" . self::dq($fullUrl) . "\"))\n    .GET()\n    .build();\n"
-                    : "HttpRequest request = HttpRequest.newBuilder()\n"
-                        . "    .uri(URI.create(\"" . self::dq($endpoint) . "\"))\n"
-                        . "    .header(\"Content-Type\", \"application/json\")\n"
-                        . "    .method(\"" . $method . "\", HttpRequest.BodyPublishers.ofString("
-                        . json_encode($jsonBody !== false ? $jsonBody : '{}', JSON_UNESCAPED_SLASHES)
-                        . "))\n    .build();\n")
-                . "HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());\n"
-                . "System.out.println(response.body());",
-            'php' => $isGet
-                ? "<?php\n\$ch = curl_init('" . self::sq($fullUrl) . "');\n"
-                    . "curl_setopt(\$ch, CURLOPT_RETURNTRANSFER, true);\n"
-                    . "\$res = curl_exec(\$ch);\ncurl_close(\$ch);\necho \$res;"
-                : "<?php\n\$ch = curl_init('" . self::sq($endpoint) . "');\n"
-                    . "curl_setopt_array(\$ch, [\n"
-                    . "    CURLOPT_RETURNTRANSFER => true,\n"
-                    . "    CURLOPT_CUSTOMREQUEST => '" . $method . "',\n"
-                    . "    CURLOPT_POSTFIELDS => http_build_query(" . $phpArr . "),\n"
-                    . "]);\n\$res = curl_exec(\$ch);\ncurl_close(\$ch);\necho \$res;",
-            'cpp' => "// 需链接 libcurl\n#include <curl/curl.h>\n#include <iostream>\n\n"
-                . "int main() {\n  CURL *curl = curl_easy_init();\n  if (!curl) return 1;\n"
-                . "  curl_easy_setopt(curl, CURLOPT_URL, \"" . self::dq($isGet ? $fullUrl : $endpoint) . "\");\n"
-                . ($isGet ? '' : "  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, \"" . $method . "\");\n"
-                    . "  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, \"" . self::dq($query) . "\");\n")
-                . "  CURLcode res = curl_easy_perform(curl);\n"
-                . "  if (res != CURLE_OK) std::cerr << curl_easy_strerror(res);\n"
-                . "  curl_easy_cleanup(curl);\n  return 0;\n}",
-            'rust' => $isGet
-                ? "// Cargo: reqwest = { version = \"0.12\", features = [\"blocking\"] }\n"
-                    . "fn main() -> Result<(), Box<dyn std::error::Error>> {\n"
-                    . "    let body = reqwest::blocking::get(\"" . self::dq($fullUrl) . "\")?.text()?;\n"
-                    . "    println!(\"{}\", body);\n    Ok(())\n}"
-                : "// Cargo: reqwest = { version = \"0.12\", features = [\"blocking\"] }\n"
-                    . "fn main() -> Result<(), Box<dyn std::error::Error>> {\n"
-                    . "    let client = reqwest::blocking::Client::new();\n"
-                    . "    let res = client\n"
-                    . "        .request(reqwest::Method::from_bytes(b\"" . $method . "\")?, \"" . self::dq($endpoint) . "\")\n"
-                    . "        .form(&" . $rustForm . ")\n        .send()?;\n"
-                    . "    println!(\"{}\", res.text()?);\n    Ok(())\n}",
-        );
-
+        $parsed = self::parseQsBlocks((string) $aidoc);
         $out = array();
         foreach (self::langMeta() as $meta) {
             $id = $meta['id'];
+            $code = isset($parsed[$id]) ? trim((string) $parsed[$id]) : '';
+            if ($code === '') {
+                continue;
+            }
             $icon = $meta['icon'];
             $out[] = array(
-                'id'         => $id,
-                'label'      => $meta['label'],
-                'icon'       => $icon,
-                'code'       => isset($codes[$id]) ? $codes[$id] : '',
-                'icon_gray'  => self::iconUrl($icon, false),
-                'icon_color' => self::iconUrl($icon, true),
-                'single_icon'=> ($icon === 'curl') ? 1 : 0,
+                'id'          => $id,
+                'label'       => $meta['label'],
+                'icon'        => $icon,
+                'code'        => $code,
+                'icon_gray'   => self::iconUrl($icon, false),
+                'icon_color'  => self::iconUrl($icon, true),
+                'single_icon' => ($icon === 'curl') ? 1 : 0,
+                'syn'         => self::syntaxLang($id),
             );
         }
         return $out;
     }
 
     /**
-     * @param array $p
-     * @param int   $needkey
+     * 规范化 AI 输出：提取 :::qs 块并按固定顺序重排；兼容 ```lang 围栏
+     *
+     * @param string $raw
      * @return string
      */
-    private static function sampleVal(array $p, $needkey)
+    public static function normalizeAidocBlocks($raw)
     {
-        if (!empty($p['example'])) {
-            return (string) $p['example'];
+        $parsed = self::parseQsBlocks((string) $raw);
+        if ($parsed === array()) {
+            $parsed = self::parseFenceBlocks((string) $raw);
         }
-        $t = strtolower((string) (isset($p['type']) ? $p['type'] : ''));
-        if ($t === 'number' || $t === 'int' || $t === 'integer' || $t === 'float') {
-            return '1';
+        if ($parsed === array()) {
+            return '';
         }
-        if ($t === 'boolean' || $t === 'bool') {
-            return 'true';
+        $chunks = array();
+        foreach (self::langMeta() as $meta) {
+            $id = $meta['id'];
+            if (empty($parsed[$id])) {
+                continue;
+            }
+            $code = rtrim((string) $parsed[$id]);
+            $chunks[] = ':::qs lang=' . $id . "\n" . $code . "\n:::";
         }
-        $name = (string) (isset($p['name']) ? $p['name'] : '');
-        if ($needkey > 0 && preg_match('/^(key|api_key|apikey)$/i', $name)) {
-            return 'YOUR_API_KEY';
-        }
-        return $name !== '' ? $name : 'value';
+        return implode("\n\n", $chunks);
     }
 
     /**
-     * @param array<int,array{name:string,value:string}> $pairs
-     * @return string
+     * @param string $text
+     * @return array<string,string>
      */
-    private static function queryOf(array $pairs)
+    public static function parseQsBlocks($text)
     {
-        $parts = array();
-        foreach ($pairs as $row) {
-            $parts[] = rawurlencode($row['name']) . '=' . rawurlencode($row['value']);
+        $text = str_replace(array("\r\n", "\r"), "\n", (string) $text);
+        $map = array();
+        if (preg_match_all(
+            '/^:::qs\s+(?:lang=)?([a-zA-Z0-9_+-]+)\s*\n([\s\S]*?)^:::\s*$/m',
+            $text,
+            $matches,
+            PREG_SET_ORDER
+        )) {
+            foreach ($matches as $m) {
+                $id = self::normalizeLangId($m[1]);
+                if ($id === '') {
+                    continue;
+                }
+                $map[$id] = trim($m[2]);
+            }
         }
-        return implode('&', $parts);
+        return $map;
     }
 
     /**
-     * @param string $endpoint
-     * @param array  $pairs
-     * @return string
+     * @param string $text
+     * @return array<string,string>
      */
-    private static function urlWithQuery($endpoint, array $pairs)
+    public static function parseFenceBlocks($text)
     {
-        $q = self::queryOf($pairs);
-        if ($q === '') {
-            return $endpoint;
+        $text = str_replace(array("\r\n", "\r"), "\n", (string) $text);
+        $map = array();
+        if (preg_match_all(
+            '/^```([a-zA-Z0-9_+-]*)\s*\n([\s\S]*?)^```\s*$/m',
+            $text,
+            $matches,
+            PREG_SET_ORDER
+        )) {
+            foreach ($matches as $m) {
+                $id = self::normalizeLangId($m[1]);
+                if ($id === '') {
+                    continue;
+                }
+                $map[$id] = trim($m[2]);
+            }
         }
-        return $endpoint . (strpos($endpoint, '?') !== false ? '&' : '?') . $q;
+        return $map;
     }
 
     /**
-     * @param array<string,string> $obj
+     * @param string $raw
      * @return string
      */
-    private static function phpArrayLiteral(array $obj)
+    public static function normalizeLangId($raw)
     {
-        $parts = array();
-        foreach ($obj as $k => $v) {
-            $parts[] = "'" . self::sq((string) $k) . "' => '" . self::sq((string) $v) . "'";
-        }
-        return '[' . implode(', ', $parts) . ']';
+        $raw = strtolower(trim((string) $raw));
+        $aliases = array(
+            'curl' => 'curl', 'bash' => 'curl', 'shell' => 'curl', 'sh' => 'curl',
+            'typescript' => 'typescript', 'ts' => 'typescript',
+            'browser' => 'browser', 'javascript' => 'browser', 'js' => 'browser', 'fetch' => 'browser',
+            'python' => 'python', 'py' => 'python',
+            'go' => 'go', 'golang' => 'go',
+            'java' => 'java',
+            'php' => 'php',
+            'cpp' => 'cpp', 'c++' => 'cpp', 'cplusplus' => 'cpp',
+            'rust' => 'rust', 'rs' => 'rust',
+        );
+        return isset($aliases[$raw]) ? $aliases[$raw] : '';
     }
 
     /**
-     * @param array<int,array{name:string,value:string}> $pairs
+     * VsSyntax 语言标记
+     *
+     * @param string $id
      * @return string
      */
-    private static function rustFormLiteral(array $pairs)
+    public static function syntaxLang($id)
     {
-        $parts = array();
-        foreach ($pairs as $row) {
-            $parts[] = '("' . self::dq($row['name']) . '", "' . self::dq($row['value']) . '")';
-        }
-        return '[' . implode(', ', $parts) . ']';
-    }
-
-    /**
-     * @param array<int,array{name:string,value:string}> $pairs
-     * @return string
-     */
-    private static function goFormSets(array $pairs)
-    {
-        $s = '';
-        foreach ($pairs as $row) {
-            $s .= "\tform.Set(\"" . self::dq($row['name']) . "\", \"" . self::dq($row['value']) . "\")\n";
-        }
-        return $s;
-    }
-
-    /**
-     * @param string $s
-     * @return string
-     */
-    private static function sq($s)
-    {
-        return str_replace(array('\\', "'"), array('\\\\', "\\'"), (string) $s);
-    }
-
-    /**
-     * @param string $s
-     * @return string
-     */
-    private static function dq($s)
-    {
-        return str_replace(array('\\', '"'), array('\\\\', '\\"'), (string) $s);
+        $id = self::normalizeLangId($id) !== '' ? self::normalizeLangId($id) : strtolower($id);
+        $map = array(
+            'curl' => 'bash',
+            'typescript' => 'typescript',
+            'browser' => 'javascript',
+            'python' => 'python',
+            'go' => 'go',
+            'java' => 'java',
+            'php' => 'php',
+            'cpp' => 'cpp',
+            'rust' => 'rust',
+        );
+        return isset($map[$id]) ? $map[$id] : 'javascript';
     }
 }

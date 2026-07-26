@@ -82,6 +82,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'save_ai') {
+        try {
+            $provider = strtolower(trim(isset($_POST['ai_provider']) ? (string) $_POST['ai_provider'] : 'openai'));
+            $presets = AiConfig::providerPresets();
+            if (!isset($presets[$provider])) {
+                $provider = 'openai';
+            }
+            $baseurl = trim(isset($_POST['ai_baseurl']) ? (string) $_POST['ai_baseurl'] : '');
+            if ($baseurl === '' && $provider !== 'custom') {
+                $baseurl = $presets[$provider];
+            }
+            $timeout = isset($_POST['ai_timeout']) ? (int) $_POST['ai_timeout'] : 60;
+            if ($timeout < 10) {
+                $timeout = 10;
+            }
+            if ($timeout > 180) {
+                $timeout = 180;
+            }
+            $maxLen = isset($_POST['ai_doc_maxlen']) ? (int) $_POST['ai_doc_maxlen'] : 8000;
+            if ($maxLen < 1000) {
+                $maxLen = 1000;
+            }
+            if ($maxLen > 30000) {
+                $maxLen = 30000;
+            }
+            Config::setMany(array(
+                'ai_enabled'    => isset($_POST['ai_enabled']) ? '1' : '0',
+                'ai_provider'   => $provider,
+                'ai_baseurl'    => rtrim($baseurl, '/'),
+                'ai_apikey'     => trim(isset($_POST['ai_apikey']) ? (string) $_POST['ai_apikey'] : ''),
+                'ai_model'      => trim(isset($_POST['ai_model']) ? (string) $_POST['ai_model'] : ''),
+                'ai_timeout'    => (string) $timeout,
+                'ai_doc_maxlen' => (string) $maxLen,
+            ));
+            AjaxResponse::success('AI 设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
     if ($action === 'save_register') {
         try {
             $input = isset($_POST['register_email_suffixes']) ? $_POST['register_email_suffixes'] : '';
@@ -770,6 +810,71 @@ vs_admin_accordion_start(
         <div class="vs-form-row vs-form-row--test-mail">
             <input type="email" name="test_email" class="vs-input" placeholder="测试邮箱地址" required>
             <button type="submit" class="vs-btn vs-btn--default">发送测试</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-ai',
+    'AI 对接',
+    '配置大模型以生成接口详细文档与多语言代码示例（仅管理员后台）'
+);
+$aiCfg = AiConfig::forAdminForm(false);
+$aiPresets = AiConfig::providerPresets();
+?>
+    <form method="post" action="" class="vs-form" id="aiForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_ai">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="ai_enabled" value="1" <?php echo !empty($aiCfg['enabled']) ? 'checked' : ''; ?>>
+                <span>启用 AI 生成</span>
+            </label>
+            <p class="vs-form-hint">关闭后，接口列表中的 AI 生成按钮将不可用。</p>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="aiProvider">服务商</label>
+            <select class="vs-input" name="ai_provider" id="aiProvider">
+                <option value="openai" <?php echo $aiCfg['provider'] === 'openai' ? 'selected' : ''; ?>>OpenAI 兼容</option>
+                <option value="deepseek" <?php echo $aiCfg['provider'] === 'deepseek' ? 'selected' : ''; ?>>DeepSeek</option>
+                <option value="zhipu" <?php echo $aiCfg['provider'] === 'zhipu' ? 'selected' : ''; ?>>智谱清言</option>
+                <option value="longcat" <?php echo $aiCfg['provider'] === 'longcat' ? 'selected' : ''; ?>>美团 LongCat</option>
+                <option value="custom" <?php echo $aiCfg['provider'] === 'custom' ? 'selected' : ''; ?>>自定义地址</option>
+            </select>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="aiBaseurl">接口根地址</label>
+            <input type="text" name="ai_baseurl" id="aiBaseurl" class="vs-input"
+                   value="<?php echo vs_e($aiCfg['baseurl']); ?>"
+                   placeholder="例如 https://api.deepseek.com"
+                   data-presets="<?php echo vs_e(json_encode($aiPresets, JSON_UNESCAPED_SLASHES)); ?>">
+            <p class="vs-form-hint">须指向 OpenAI 兼容的 /v1 或等价根路径（将请求 /chat/completions）。</p>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="aiApikey">API Key</label>
+            <input type="password" name="ai_apikey" id="aiApikey" class="vs-input" autocomplete="off"
+                   value="<?php echo vs_e($aiCfg['apikey']); ?>" placeholder="Bearer 密钥">
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="aiModel">模型名</label>
+            <input type="text" name="ai_model" id="aiModel" class="vs-input"
+                   value="<?php echo vs_e($aiCfg['model']); ?>"
+                   placeholder="例如 deepseek-chat / glm-4 / gpt-4o-mini">
+        </div>
+        <div class="vs-form-row vs-form-row--inline">
+            <div class="vs-form-col">
+                <label class="vs-label" for="aiTimeout">超时（秒）</label>
+                <input type="number" name="ai_timeout" id="aiTimeout" class="vs-input" min="10" max="180"
+                       value="<?php echo (int) $aiCfg['timeout']; ?>">
+            </div>
+            <div class="vs-form-col">
+                <label class="vs-label" for="aiDocMaxlen">详细文档字数上限</label>
+                <input type="number" name="ai_doc_maxlen" id="aiDocMaxlen" class="vs-input" min="1000" max="30000"
+                       value="<?php echo (int) $aiCfg['doc_maxlen']; ?>">
+            </div>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存 AI 设置</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>
