@@ -7,6 +7,7 @@
  * 审核状态 audit：0 待审核 / 1 通过 / 2 不通过（管理员发布默认通过；用户投稿为待审核）
  * 接口类型 apitype：0 本地路径 / 1 代理外链（无上游认证时可 302；需密钥时服务端中继）
  * 上游认证 upauth：0 无需 / 1 API Key / 2 Bearer Token
+ * 文档字段：doc=详细文档（Markdown）；aidoc=代码示例（Markdown）
  */
 
 class ApiManager
@@ -1557,9 +1558,9 @@ class ApiManager
         }
 
         $responseExample = (string) (isset($data['response']) ? $data['response'] : '');
-        $docNormal = (string) (isset($data['doc']) ? $data['doc'] : '');
-        $docAi = (string) (isset($data['aidoc']) ? $data['aidoc'] : '');
-        if (strlen($responseExample) > 200000 || strlen($docNormal) > 200000 || strlen($docAi) > 200000) {
+        $docDetail = (string) (isset($data['doc']) ? $data['doc'] : '');
+        $docCode = (string) (isset($data['aidoc']) ? $data['aidoc'] : '');
+        if (strlen($responseExample) > 200000 || strlen($docDetail) > 200000 || strlen($docCode) > 200000) {
             return '文档或返回示例过长';
         }
 
@@ -1615,8 +1616,8 @@ class ApiManager
             'method'      => $method,
             'params'      => $requestParams,
             'response'    => $responseExample,
-            'doc'         => $docNormal,
-            'aidoc'       => $docAi,
+            'doc'         => $docDetail,
+            'aidoc'       => $docCode,
             'needkey'     => $requireKey,
             'qpm'         => self::normalizeQpm(isset($data['qpm']) ? $data['qpm'] : 0),
             'charge'      => $charge,

@@ -37,6 +37,7 @@ require_once VS_ROOT . '/core/UserAvatar.php';
 require_once VS_ROOT . '/core/UserManager.php';
 require_once VS_ROOT . '/core/AdminUserBinding.php';
 require_once VS_ROOT . '/core/ApiManager.php';
+require_once VS_ROOT . '/core/ApiQuickstart.php';
 require_once VS_ROOT . '/core/ApiNotify.php';
 require_once VS_ROOT . '/core/ApiProxy.php';
 require_once VS_ROOT . '/core/ApiStats.php';

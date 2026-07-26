@@ -702,7 +702,7 @@ VsPlaygroundResponse.directRequest({
 | `category` / `category_name` | 分类 id / 原始分类名 |
 | `method` / `methods` / `method_label` | 请求方式 |
 | `endpoint` | 调用地址 |
-| `params` / `response` / `doc` / `aidoc` | 参数原文、返回、文档 |
+| `params` / `response` / `doc` / `aidoc` | 参数原文、返回、详细文档、代码示例 |
 | `params_list` | 解析后的参数表（name/type/required/description/example） |
 | `maintenance` | 1=维护中 |
 | `needkey` / `needkey_label` | 密钥要求（文案：`无需 KEY` / `KEY 必填` / `KEY 可选`） |

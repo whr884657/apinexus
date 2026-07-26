@@ -423,26 +423,81 @@
 
 .detail-quickstart__tab {
     flex: 0 0 auto;
-    padding: 0.35rem 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 8px;
     background: transparent;
     color: var(--text-muted);
     font-size: 0.72rem;
     font-family: 'JetBrains Mono', monospace;
     cursor: pointer;
     white-space: nowrap;
+    line-height: 1.2;
 }
 
 .detail-quickstart__tab:hover {
-    color: var(--accent-primary);
+    color: var(--text-main);
     border-color: var(--accent-primary);
 }
 
 .detail-quickstart__tab.is-active {
-    color: #fff;
-    background: var(--accent-primary, #111111);
+    color: var(--text-main, #111111);
+    background: rgba(17, 17, 17, 0.04);
     border-color: var(--accent-primary, #111111);
+}
+
+.detail-quickstart__icon {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    display: inline-block;
+}
+
+.detail-quickstart__icon-img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+.detail-quickstart__icon .is-gray {
+    opacity: 1;
+}
+
+.detail-quickstart__icon .is-color {
+    opacity: 0;
+}
+
+.detail-quickstart__tab.is-active .detail-quickstart__icon:not(.is-single) .is-gray {
+    opacity: 0;
+}
+
+.detail-quickstart__tab.is-active .detail-quickstart__icon:not(.is-single) .is-color {
+    opacity: 1;
+}
+
+/* cURL 仅一份图标：未选中偏灰，选中还原色彩 */
+.detail-quickstart__icon.is-single .is-gray {
+    filter: grayscale(1);
+    opacity: 0.72;
+}
+
+.detail-quickstart__tab.is-active .detail-quickstart__icon.is-single .is-gray {
+    filter: none;
+    opacity: 1;
+}
+
+.detail-quickstart__label {
+    display: inline-block;
 }
 
 .detail-quickstart__panel {

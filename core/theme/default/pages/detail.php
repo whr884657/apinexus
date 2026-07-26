@@ -282,16 +282,50 @@ if (!$notFound) {
 
     <section class="detail-card" id="detailQuickstartCard">
         <h2 class="detail-section-title">快速上手</h2>
-        <?php if ($notFound || empty($api['endpoint'])): ?>
+        <?php
+        $qsSamples = array();
+        if (!$notFound && !empty($api['endpoint'])) {
+            $qsSamples = ApiQuickstart::buildSamples(
+                (string) $api['endpoint'],
+                $primaryMethod,
+                $paramsList,
+                isset($api['needkey']) ? (int) $api['needkey'] : 0
+            );
+        }
+        ?>
+        <?php if ($qsSamples === array()): ?>
         <p class="detail-empty-hint">暂无调用地址，无法生成示例。</p>
         <?php else: ?>
-        <div class="detail-quickstart" id="detailQuickstart">
-            <div class="detail-quickstart__tabs" id="detailQsTabs" role="tablist" aria-label="示例语言"></div>
+        <div class="detail-quickstart" id="detailQuickstart"
+             data-qs-count="<?php echo count($qsSamples); ?>">
+            <div class="detail-quickstart__tabs" id="detailQsTabs" role="tablist" aria-label="示例语言">
+                <?php foreach ($qsSamples as $qi => $qs): ?>
+                <button type="button"
+                        class="detail-quickstart__tab<?php echo $qi === 0 ? ' is-active' : ''; ?>"
+                        role="tab"
+                        aria-selected="<?php echo $qi === 0 ? 'true' : 'false'; ?>"
+                        data-qs-idx="<?php echo (int) $qi; ?>"
+                        data-qs-id="<?php echo vs_e($qs['id']); ?>">
+                    <span class="detail-quickstart__icon<?php echo !empty($qs['single_icon']) ? ' is-single' : ''; ?>" aria-hidden="true">
+                        <img class="detail-quickstart__icon-img is-gray" src="<?php echo vs_e($qs['icon_gray']); ?>" alt="" width="16" height="16" loading="lazy">
+                        <?php if (empty($qs['single_icon'])): ?>
+                        <img class="detail-quickstart__icon-img is-color" src="<?php echo vs_e($qs['icon_color']); ?>" alt="" width="16" height="16" loading="lazy">
+                        <?php endif; ?>
+                    </span>
+                    <span class="detail-quickstart__label"><?php echo vs_e($qs['label']); ?></span>
+                </button>
+                <?php endforeach; ?>
+            </div>
             <div class="detail-quickstart__panel">
                 <button type="button" class="detail-quickstart__copy" id="detailQsCopy">复制</button>
-                <pre class="detail-quickstart__code font-mono" id="detailQsCode"><code></code></pre>
+                <pre class="detail-quickstart__code font-mono" id="detailQsCode"><code><?php echo vs_e($qsSamples[0]['code']); ?></code></pre>
             </div>
         </div>
+        <script>
+        window.detailQsSamples = <?php echo json_encode(array_map(function ($row) {
+            return array('id' => $row['id'], 'code' => $row['code']);
+        }, $qsSamples), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        </script>
         <?php endif; ?>
     </section>
 
