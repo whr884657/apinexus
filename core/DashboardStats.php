@@ -465,7 +465,7 @@ class DashboardStats
     }
 
     /**
-     * 控制台最近调用：与日志查询首页同一通道（listPaged 默认 20 + Redis 页缓存）
+     * 控制台最近调用：按 live 间隔短缓存，listPaged skip_cache 避免页缓存拖慢
      * 下发 id / apiname / ip / httpcode / time
      *
      * @return array
@@ -475,35 +475,39 @@ class DashboardStats
         if (!class_exists('ApiLogManager') || !ApiLogManager::tableReady()) {
             return array();
         }
-        try {
-            $paged = ApiLogManager::listPaged(array(
-                'page'      => 1,
-                'pagesize'  => 20,
-                'q'         => '',
-                'ok'        => null,
-                'apiid'     => 0,
-                'before_id' => 0,
-            ));
-            $list = isset($paged['list']) && is_array($paged['list']) ? $paged['list'] : array();
-            $out = array();
-            foreach ($list as $item) {
-                if (!is_array($item)) {
-                    continue;
+        $ttl = max(1, self::liveIntervalSeconds());
+        return self::remember('recent_compact_live', $ttl, function () {
+            try {
+                $paged = ApiLogManager::listPaged(array(
+                    'page'       => 1,
+                    'pagesize'   => 20,
+                    'q'          => '',
+                    'ok'         => null,
+                    'apiid'      => 0,
+                    'before_id'  => 0,
+                    'skip_cache' => true,
+                ));
+                $list = isset($paged['list']) && is_array($paged['list']) ? $paged['list'] : array();
+                $out = array();
+                foreach ($list as $item) {
+                    if (!is_array($item)) {
+                        continue;
+                    }
+                    $ct = isset($item['createtime']) ? (string) $item['createtime'] : '';
+                    $ts = $ct !== '' ? strtotime($ct) : false;
+                    $out[] = array(
+                        'id'       => (int) (isset($item['id']) ? $item['id'] : 0),
+                        'apiname'  => (string) (isset($item['apiname']) ? $item['apiname'] : ''),
+                        'ip'       => (string) (isset($item['ip']) ? $item['ip'] : ''),
+                        'httpcode' => (int) (isset($item['httpcode']) ? $item['httpcode'] : 0),
+                        'time'     => $ts ? date('H:i:s', $ts) : '',
+                    );
                 }
-                $ct = isset($item['createtime']) ? (string) $item['createtime'] : '';
-                $ts = $ct !== '' ? strtotime($ct) : false;
-                $out[] = array(
-                    'id'       => (int) (isset($item['id']) ? $item['id'] : 0),
-                    'apiname'  => (string) (isset($item['apiname']) ? $item['apiname'] : ''),
-                    'ip'       => (string) (isset($item['ip']) ? $item['ip'] : ''),
-                    'httpcode' => (int) (isset($item['httpcode']) ? $item['httpcode'] : 0),
-                    'time'     => $ts ? date('H:i:s', $ts) : '',
-                );
+                return $out;
+            } catch (Exception $e) {
+                return array();
             }
-            return $out;
-        } catch (Exception $e) {
-            return array();
-        }
+        });
     }
 
     /**

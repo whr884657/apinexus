@@ -276,9 +276,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $extrasRaw = isset($_POST['ip_loc_extras']) ? (string) $_POST['ip_loc_extras'] : '[]';
             $extras = IpLocator::parseExtras($extrasRaw);
+            $url = trim(isset($_POST['ip_loc_url']) ? $_POST['ip_loc_url'] : '');
+            $enabled = isset($_POST['ip_loc_enabled']) ? '1' : '0';
+            if ($enabled === '1' && $url !== '' && !IpLocator::assertPublicHttpUrl($url)) {
+                AjaxResponse::error('IP 解析 API 地址无效或指向内网，请使用公网 http(s) 地址');
+            }
             Config::setMany(array(
-                'ip_loc_enabled'   => isset($_POST['ip_loc_enabled']) ? '1' : '0',
-                'ip_loc_url'       => trim(isset($_POST['ip_loc_url']) ? $_POST['ip_loc_url'] : ''),
+                'ip_loc_enabled'   => $enabled,
+                'ip_loc_url'       => $url,
                 'ip_loc_ip_param'  => trim(isset($_POST['ip_loc_ip_param']) ? $_POST['ip_loc_ip_param'] : 'ip'),
                 'ip_loc_auth'      => (string) $auth,
                 'ip_loc_auth_name' => trim(isset($_POST['ip_loc_auth_name']) ? $_POST['ip_loc_auth_name'] : ''),

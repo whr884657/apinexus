@@ -480,7 +480,8 @@ function vs_safe_css_color($color)
  * 解码表单传输字段（客户端 VS64B:/VS64: Base64，规避 WAF 对代码片段的误拦）
  * 未带前缀则原样返回。
  * 前缀后非 Base64 字符集 → 视为普通正文（原样返回，避免误伤）。
- * 前缀后像 Base64 但解码失败 / 超长 → 空串（禁止包装原文入库）。
+ * 短串无 padding → 多半正文碰巧撞前缀，原样返回。
+ * 长包装解码失败 / 超长 → 空串（禁止包装原文入库）；短包装解码失败 → 原样保留。
  *
  * @param mixed $value
  * @return string
@@ -509,14 +510,26 @@ function vs_decode_transport_field($value)
     if ($b64 === '') {
         return '';
     }
+    $b64Clean = preg_replace('/\s+/', '', $b64);
+    if ($b64Clean === '') {
+        return '';
+    }
     // 仅允许标准 Base64 字符，避免把「碰巧以 VS64: 开头的正文」误当传输包装
-    if (!preg_match('/^[A-Za-z0-9+\/\r\n]+=*$/', $b64)) {
+    if (!preg_match('/^[A-Za-z0-9+\/]+=*$/', $b64Clean)) {
+        return $value;
+    }
+    if (strlen($b64Clean) % 4 !== 0) {
+        return $value;
+    }
+    // 客户端 btoa 总带 padding；短串无 = 多半是正文撞前缀
+    if (strlen($b64Clean) < 48 && !preg_match('/=+$/', $b64Clean)) {
         return $value;
     }
 
-    $raw = base64_decode($b64, true);
+    $raw = base64_decode($b64Clean, true);
     if ($raw === false) {
-        return '';
+        // 短串：保留原文防误伤；长包装：禁止入库包装串
+        return strlen($b64Clean) >= 48 ? '' : $value;
     }
     // 文本字段禁止 NUL，降低异常二进制入库风险
     if (strpos($raw, "\0") !== false) {

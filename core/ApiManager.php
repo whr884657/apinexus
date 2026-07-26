@@ -1094,7 +1094,7 @@ class ApiManager
                  WHERE `id` = ?'
             );
             $stmt->execute(array($delta, $apiId));
-            RedisCache::invalidateFrontend();
+            // 调用次数变更不刷前台列表/文章等全量缓存（避免每次命中 SCAN+DEL）
             return true;
         } catch (Exception $e) {
             return false;

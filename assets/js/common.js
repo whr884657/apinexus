@@ -37,11 +37,14 @@
             var b64 = btoa(unescape(encodeURIComponent(s)));
             var out = VS_TRANSPORT_PREFIX + b64;
             if (out.length > VS_TRANSPORT_MAX_BYTES) {
-                return s;
+                throw new Error('字段内容过大（超过传输上限），请缩短后再保存');
             }
             return out;
         } catch (e) {
-            return s;
+            if (e && e.message && e.message.indexOf('超过传输上限') >= 0) {
+                throw e;
+            }
+            throw new Error('字段无法编码，请检查内容后重试');
         }
     };
 

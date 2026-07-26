@@ -12,6 +12,9 @@ class IpLocator
     const AUTH_QUERY = 3;
 
     const CACHE_TTL = 86400;
+    /** 解析失败负缓存，避免热路径反复打外网 */
+    const MISS_TTL = 300;
+    const MISS_SENTINEL = '__IPLOC_MISS__';
     const TIMEOUT = 1;
 
     /**
@@ -48,13 +51,17 @@ class IpLocator
         $cacheKey = RedisCache::KEY_IPLOC_PREFIX . md5($ip);
         if (class_exists('RedisCache') && RedisCache::enabled()) {
             $cached = RedisCache::get($cacheKey);
+            if (is_string($cached) && $cached === self::MISS_SENTINEL) {
+                return '';
+            }
             if (is_string($cached) && $cached !== '') {
                 return mb_substr($cached, 0, 120, 'UTF-8');
             }
         }
 
         $url = trim((string) Config::get('ip_loc_url', ''));
-        if ($url === '' || !preg_match('#^https?://#i', $url)) {
+        if ($url === '' || !self::assertPublicHttpUrl($url)) {
+            self::cacheMiss($cacheKey);
             return '';
         }
 
@@ -98,15 +105,18 @@ class IpLocator
 
         $body = self::httpGet($fullUrl, $headers);
         if ($body === '') {
+            self::cacheMiss($cacheKey);
             return '';
         }
         $json = json_decode($body, true);
         if (!is_array($json)) {
+            self::cacheMiss($cacheKey);
             return '';
         }
         $text = self::extractField($json, $fieldPath);
         $text = trim(preg_replace('/\s+/u', ' ', (string) $text));
         if ($text === '') {
+            self::cacheMiss($cacheKey);
             return '';
         }
         $text = mb_substr($text, 0, 120, 'UTF-8');
@@ -118,37 +128,75 @@ class IpLocator
     }
 
     /**
+     * @param string $cacheKey
+     * @return void
+     */
+    private static function cacheMiss($cacheKey)
+    {
+        if (class_exists('RedisCache') && RedisCache::enabled()) {
+            RedisCache::put($cacheKey, self::MISS_SENTINEL, self::MISS_TTL);
+        }
+    }
+
+    /**
+     * 仅允许公网 http(s) 主机，防 SSRF（禁止私网/环回/未解析主机）
+     *
+     * @param string $url
+     * @return bool
+     */
+    public static function assertPublicHttpUrl($url)
+    {
+        $url = trim((string) $url);
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return false;
+        }
+        $scheme = strtolower((string) $parts['scheme']);
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            return false;
+        }
+        if (!empty($parts['user']) || !empty($parts['pass'])) {
+            return false;
+        }
+        $host = strtolower((string) $parts['host']);
+        if ($host === 'localhost' || $host === '0' || $host === '::1'
+            || substr($host, -6) === '.local' || substr($host, -4) === '.lan'
+            || substr($host, -6) === '.onion'
+        ) {
+            return false;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ip = $host;
+        } else {
+            $ip = gethostbyname($host);
+            if ($ip === $host || !filter_var($ip, FILTER_VALIDATE_IP)) {
+                return false;
+            }
+        }
+        return (bool) filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        );
+    }
+
+    /**
      * @param string $raw
-     * @return array<int, array{name:string,value:string,via:string}>
+     * @return array
      */
     public static function parseExtras($raw)
     {
-        $raw = trim((string) $raw);
-        if ($raw === '') {
-            return array();
-        }
-        $data = json_decode($raw, true);
-        if (!is_array($data)) {
+        $decoded = json_decode((string) $raw, true);
+        if (!is_array($decoded)) {
             return array();
         }
         $out = array();
-        foreach ($data as $row) {
+        foreach ($decoded as $row) {
             if (!is_array($row)) {
                 continue;
             }
-            $name = isset($row['name']) ? trim((string) $row['name']) : '';
-            if ($name === '') {
-                continue;
-            }
-            $via = isset($row['via']) ? strtolower(trim((string) $row['via'])) : 'query';
-            if ($via !== 'header') {
-                $via = 'query';
-            }
-            $out[] = array(
-                'name'  => mb_substr($name, 0, 64, 'UTF-8'),
-                'value' => isset($row['value']) ? (string) $row['value'] : '',
-                'via'   => $via,
-            );
+            $out[] = $row;
             if (count($out) >= 20) {
                 break;
             }
@@ -157,46 +205,31 @@ class IpLocator
     }
 
     /**
-     * @param array  $data
-     * @param string $path 点分路径，如 data.city 或 result.ad_info.city
+     * @param array  $json
+     * @param string $path
      * @return string
      */
-    public static function extractField(array $data, $path)
+    private static function extractField(array $json, $path)
     {
         $path = trim((string) $path);
         if ($path === '') {
-            // 常见兜底字段
-            foreach (array('addr', 'address', 'location', 'region', 'city', 'data', 'result') as $k) {
-                if (!isset($data[$k])) {
-                    continue;
-                }
-                if (is_string($data[$k]) && $data[$k] !== '') {
-                    return $data[$k];
-                }
-                if (is_array($data[$k])) {
-                    $nested = self::extractField($data[$k], '');
-                    if ($nested !== '') {
-                        return $nested;
-                    }
-                }
-            }
             return '';
         }
-        $cur = $data;
-        foreach (explode('.', $path) as $seg) {
-            $seg = trim($seg);
-            if ($seg === '' || !is_array($cur) || !array_key_exists($seg, $cur)) {
+        $parts = explode('.', $path);
+        $cur = $json;
+        foreach ($parts as $p) {
+            $p = trim($p);
+            if ($p === '' || !is_array($cur) || !array_key_exists($p, $cur)) {
                 return '';
             }
-            $cur = $cur[$seg];
+            $cur = $cur[$p];
         }
         if (is_scalar($cur)) {
             return (string) $cur;
         }
         if (is_array($cur)) {
-            // 数组则尝试拼常见子字段
             $parts = array();
-            foreach (array('country', 'province', 'city', 'district', 'isp') as $k) {
+            foreach (array('country', 'region', 'city', 'isp', 'org') as $k) {
                 if (!empty($cur[$k]) && is_scalar($cur[$k])) {
                     $parts[] = (string) $cur[$k];
                 }
@@ -213,11 +246,15 @@ class IpLocator
      */
     private static function httpGet($url, array $headers)
     {
+        if (!self::assertPublicHttpUrl($url)) {
+            return '';
+        }
         if (function_exists('curl_init')) {
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
+            // 禁止跟随跳转，避免 SSRF 经 302 打到内网
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 0);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::TIMEOUT);
             curl_setopt($ch, CURLOPT_TIMEOUT, self::TIMEOUT);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -237,9 +274,11 @@ class IpLocator
         }
         $ctx = stream_context_create(array(
             'http' => array(
-                'method'  => 'GET',
-                'header'  => $hdr,
-                'timeout' => self::TIMEOUT,
+                'method'        => 'GET',
+                'header'        => $hdr,
+                'timeout'       => self::TIMEOUT,
+                'follow_location' => 0,
+                'max_redirects' => 0,
             ),
         ));
         $body = @file_get_contents($url, false, $ctx);

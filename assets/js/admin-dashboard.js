@@ -14,6 +14,7 @@
     var softTimer = null;
     var clockTimer = null;
     var loading = false;
+    var softLoading = false;
     var pendingForceRefresh = false;
     var ready = false;
     var initialPending = false;
@@ -479,6 +480,7 @@
             if (next !== liveIntervalMs) {
                 liveIntervalMs = next;
                 restartLivePoll();
+                restartSoftPoll();
             }
         }
     }
@@ -533,7 +535,14 @@
             }
             return;
         }
-        loading = true;
+        if (!forceRefresh && softLoading) {
+            return;
+        }
+        if (forceRefresh) {
+            loading = true;
+        } else {
+            softLoading = true;
+        }
         var action = forceRefresh ? 'refresh' : 'snapshot';
         post(action).then(function (res) {
             if (!res || res.code !== 1 || !res.snapshot) {
@@ -545,14 +554,26 @@
             initialPending = false;
             var wasReady = ready;
             ready = true;
-            // 软刷：保留 live 已刷新的最近调用，避免被 snapshot 慢路径覆盖
+            // 软刷：保留 live 已刷新的最近调用 / 系统概览 / KPI，避免被 snapshot 慢路径覆盖
             var keepRecent = (!forceRefresh && wasReady && Array.isArray(boot.recent) && boot.recent.length)
                 ? boot.recent
                 : null;
+            var keepSys = (!forceRefresh && wasReady && boot.sys_overview)
+                ? boot.sys_overview
+                : null;
+            var keepKpi = (!forceRefresh && wasReady && boot.kpi) ? boot.kpi : null;
             renderAll(res.snapshot);
             if (keepRecent) {
                 boot.recent = keepRecent;
                 renderRecent(keepRecent);
+            }
+            if (keepSys) {
+                boot.sys_overview = keepSys;
+                renderSys(keepSys);
+            }
+            if (keepKpi) {
+                boot.kpi = keepKpi;
+                renderKpi(keepKpi);
             }
             if (forceRefresh) {
                 window.VS.showMessage('已刷新', 'success');
@@ -563,6 +584,7 @@
             }
         }).then(function () {
             loading = false;
+            softLoading = false;
             var btn = document.getElementById('dashRefreshBtn');
             if (btn) btn.disabled = false;
             if (pendingForceRefresh) {
@@ -588,6 +610,15 @@
         pollTimer = setInterval(pollLive, liveIntervalMs);
     }
 
+    function restartSoftPoll() {
+        if (softTimer) {
+            clearInterval(softTimer);
+            softTimer = null;
+        }
+        var softMs = Math.max(liveIntervalMs * 6, 10000);
+        softTimer = setInterval(function () { fetchSnapshot(false); }, softMs);
+    }
+
     var refreshBtn = document.getElementById('dashRefreshBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
@@ -596,7 +627,7 @@
         });
     }
 
-    // 首屏壳 → 立即拉全量；live 可配置；软刷新 45s；时钟每秒走
+    // 首屏壳 → 立即拉全量；live 可配置；软刷新与间隔对齐；时钟每秒走
     if (boot.boot_light) {
         showKpiLoading();
         if (boot.server_time) syncClock(boot.server_time);
@@ -607,9 +638,7 @@
     }
     clockTimer = setInterval(tickClock, 1000);
     restartLivePoll();
-    // 软刷与实时间隔对齐（约 6 个 live 周期），趋势/TOP 等同频更新
-    var softMs = Math.max(liveIntervalMs * 6, 10000);
-    softTimer = setInterval(function () { fetchSnapshot(false); }, softMs);
+    restartSoftPoll();
 
     window.addEventListener('beforeunload', function () {
         if (pollTimer) clearInterval(pollTimer);

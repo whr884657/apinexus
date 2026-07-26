@@ -435,9 +435,8 @@ class ApiStats
             return;
         }
 
-        if (class_exists('IpLocator') && $ctx['iploc'] === '') {
-            $ctx['iploc'] = IpLocator::lookup($ctx['ip']);
-        }
+        // iploc 异步回填，避免外网解析阻塞接口响应
+        $ctx['iploc'] = '';
 
         $apitype = ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0);
         $name = isset($row['name']) ? (string) $row['name'] : '';
@@ -477,6 +476,32 @@ class ApiStats
             $charged,
             $cost,
         ));
+        $logId = (int) $pdo->lastInsertId();
+        // 仅清今日计数键；禁止热路径 SCAN 刷整页日志缓存
+        if (class_exists('RedisCache')) {
+            RedisCache::forget(RedisCache::KEY_APILOG_TODAY);
+        }
+        if ($logId > 0 && class_exists('IpLocator') && IpLocator::enabled()) {
+            $ipForLoc = (string) $ctx['ip'];
+            register_shutdown_function(function () use ($logId, $ipForLoc) {
+                try {
+                    $loc = IpLocator::lookup($ipForLoc);
+                    if ($loc === '') {
+                        return;
+                    }
+                    $pdo = Database::connect();
+                    $stmt = $pdo->prepare(
+                        'UPDATE `' . Database::table('apilog') . '`
+                         SET `iploc` = ?
+                         WHERE `id` = ? AND (`iploc` = \'\' OR `iploc` IS NULL)
+                         LIMIT 1'
+                    );
+                    $stmt->execute(array(mb_substr($loc, 0, 120, 'UTF-8'), $logId));
+                } catch (Exception $e) {
+                    // 忽略回填失败
+                }
+            });
+        }
     }
 
     /**

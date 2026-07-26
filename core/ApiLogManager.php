@@ -366,6 +366,7 @@ class ApiLogManager
             return $empty;
         }
 
+        $skipCache = !empty($opts['skip_cache']);
         $cacheKey = RedisCache::apilogPageKey(array(
             'page'      => $page,
             'pagesize'  => $pagesize,
@@ -375,10 +376,7 @@ class ApiLogManager
             'before_id' => $beforeId,
         ));
 
-        return RedisCache::remember(
-            $cacheKey,
-            RedisCache::TTL_APILOG_PAGE,
-            function () use ($page, $pagesize, $q, $ok, $apiid, $beforeId, $empty) {
+        $loader = function () use ($page, $pagesize, $q, $ok, $apiid, $beforeId, $empty) {
                 try {
                     $pdo = Database::connect();
                     self::applyQueryTimeout($pdo);
@@ -464,7 +462,14 @@ class ApiLogManager
                 } catch (Exception $e) {
                     return $empty;
                 }
-            }
+            };
+        if ($skipCache) {
+            return $loader();
+        }
+        return RedisCache::remember(
+            $cacheKey,
+            RedisCache::TTL_APILOG_PAGE,
+            $loader
         );
     }
 
