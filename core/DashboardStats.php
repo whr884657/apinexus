@@ -172,9 +172,10 @@ class DashboardStats
         $total = max(1, $ok + $fail);
         $counts = self::remember('api_user_counts_live', self::TTL_TODAY, function () {
             return array(
-                'api_total'  => self::countApis(),
-                'user_total' => self::countUsers(),
-                'user_delta' => self::countUsersCreatedSince(date('Y-m-d 00:00:00')),
+                'api_total'   => self::countApis(),
+                'user_total'  => self::countUsers(),
+                'user_delta'  => self::countUsersCreatedSince(date('Y-m-d 00:00:00')),
+                'total_calls' => self::sumApiCalls(),
             );
         });
         return array(
@@ -186,6 +187,7 @@ class DashboardStats
                 'user_total'    => (int) $counts['user_total'],
                 'user_delta'    => (int) $counts['user_delta'],
                 'today_calls'   => self::countTodayLive(),
+                'total_calls'   => (int) $counts['total_calls'],
                 'success_rate'  => round($ok * 100 / $total, 2),
                 'fail_rate'     => round($fail * 100 / $total, 2),
                 'success_count' => $ok,
@@ -319,7 +321,7 @@ class DashboardStats
             $byDay = self::typeCountsLastDays(7);
             for ($i = 6; $i >= 0; $i--) {
                 $day = date('Y-m-d', strtotime('-' . $i . ' day'));
-                $labels[] = self::weekdayLabel(strtotime($day));
+                $labels[] = self::dayShortLabel(strtotime($day));
                 $row = isset($byDay[$day]) ? $byDay[$day] : array('guest' => 0, 'key' => 0, 'points' => 0);
                 $guest[] = (int) $row['guest'];
                 $key[] = (int) $row['key'];
@@ -348,7 +350,7 @@ class DashboardStats
             $byDay = self::okFailLastDays(7);
             for ($i = 6; $i >= 0; $i--) {
                 $day = date('Y-m-d', strtotime('-' . $i . ' day'));
-                $labels[] = self::weekdayLabel(strtotime($day));
+                $labels[] = self::dayShortLabel(strtotime($day));
                 $of = isset($byDay[$day]) ? $byDay[$day] : array('ok' => 0, 'fail' => 0);
                 $t = max(1, (int) $of['ok'] + (int) $of['fail']);
                 $success[] = round(((int) $of['ok']) * 100 / $t, 2);
@@ -1278,6 +1280,21 @@ class DashboardStats
             return $cur > 0 ? 100.0 : 0.0;
         }
         return round(($cur - $prev) * 100 / $prev, 1);
+    }
+
+    /**
+     * @param int|null $ts
+     * @return string
+     */
+    /**
+     * 趋势图横轴：月日（如 7月26日），禁止再用周一/周二
+     *
+     * @param int|null $ts
+     * @return string
+     */
+    private static function dayShortLabel($ts = null)
+    {
+        return date('n月j日', $ts === null ? time() : (int) $ts);
     }
 
     /**

@@ -289,7 +289,7 @@
         var grid = document.getElementById('dashKpiGrid');
         if (!grid) return;
         var i, html = '';
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i < 5; i++) {
             html += '<article class="dash-kpi dash-kpi--loading" aria-busy="true">'
                 + '<div class="dash-kpi__skeleton dash-kpi__skeleton--label"></div>'
                 + '<div class="dash-kpi__skeleton dash-kpi__skeleton--value"></div>'
@@ -330,7 +330,14 @@
                 meta: ''
             },
             {
-                label: '调用成功率',
+                label: '累计调用',
+                value: fmtNum(kpi.total_calls),
+                delta: deltaHtml(kpi.total_delta, '% 较上周'),
+                spark: sparkSvg(kpi.today_spark, '#0d9488'),
+                meta: ''
+            },
+            {
+                label: '今日调用成功率',
                 value: (parseFloat(kpi.success_rate) || 0).toFixed(2) + '%',
                 delta: deltaHtml(kpi.success_delta, '% 较昨日'),
                 spark: '',

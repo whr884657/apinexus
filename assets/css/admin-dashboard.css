@@ -45,8 +45,8 @@
 
 #adminDashPage .dash-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
     margin-bottom: 16px;
 }
 #adminDashPage .dash-kpi {
@@ -339,14 +339,23 @@
 #adminDashPage .dash-status.is-ok { color: #15803d; font-weight: 600; }
 #adminDashPage .dash-status.is-fail { color: #dc2626; font-weight: 600; }
 
-/* 最近调用：紧凑列表（ID / 接口 / IP / 状态 / 时间） */
+/* 最近调用：固定高度小板块，内部滚动 */
+#adminDashPage .dash-recent-wrap {
+    max-height: 280px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+}
 #adminDashPage .dash-recent-list {
     display: flex;
     flex-direction: column;
     gap: 0;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
 }
 #adminDashPage .dash-recent-row {
     display: grid;
@@ -361,6 +370,9 @@
 }
 #adminDashPage .dash-recent-row:last-child { border-bottom: 0; }
 #adminDashPage .dash-recent-row--head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     background: #f8fafc;
     color: #94a3b8;
     font-weight: 600;
@@ -414,15 +426,18 @@
 }
 
 @media (max-width: 1100px) {
+    /* 平板/手机：2 列；5 卡自然排成 3 行（末行仅成功率） */
     #adminDashPage .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #adminDashPage .dash-grid-trend,
     #adminDashPage .dash-grid-bars { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
-    /* 手机端 KPI 田字格：一行两个，禁止单列拉满 */
+    /* 手机端 KPI：一行两个，禁止单列拉满；5 卡 → 3 行 */
     #adminDashPage .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     #adminDashPage .dash-kpi { padding: 12px; }
     #adminDashPage .dash-kpi__value { font-size: 1.25rem; }
+    #adminDashPage .dash-kpi__label { font-size: 0.7rem; }
+    #adminDashPage .dash-recent-wrap { max-height: 240px; }
     #adminDashPage .dash-sys { grid-template-columns: 1fr; }
     #adminDashPage .dash-bar {
         grid-template-columns: minmax(64px, 92px) 1fr auto;
