@@ -411,7 +411,7 @@ vs_admin_accordion_start(
             <input type="text" name="system_name" class="vs-input" maxlength="50"
                    value="<?php echo vs_e(Config::get('system_name', '')); ?>"
                    placeholder="留空则与站点名称相同">
-            <?php vs_render_notice('tip', '', '用于管理后台侧栏、用户中心侧栏、关于页等产品名展示。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '用于管理后台侧栏/顶栏、关于页首行名称、管理员登录与忘记密码页标题等产品名展示。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-grid">
             <div class="vs-form-row">

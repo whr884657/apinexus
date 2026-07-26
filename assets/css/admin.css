@@ -1855,8 +1855,21 @@ select.vs-input.vs-select {
 .vs-upgrade-actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 12px;
     margin-bottom: 12px;
+}
+
+/* 与「检测更新 / 安装更新」同高同规格；禁止用列表小号 vs-btn--outline */
+.vs-upgrade-actions .vs-btn {
+    box-sizing: border-box;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: var(--vs-btn-radius, 10px);
+    line-height: 1;
 }
 
 .vs-upgrade-log {

@@ -104,7 +104,7 @@ class SiteContext
     }
 
     /**
-     * 系统/产品名称（后台侧栏、用户中心等；缺省回落 site_name）
+     * 系统/产品名称（后台侧栏/顶栏、关于页、管理员登录与忘记密码等；缺省回落 site_name）
      *
      * @return string
      */

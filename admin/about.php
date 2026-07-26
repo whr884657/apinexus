@@ -19,15 +19,15 @@ foreach ($systemInfo as $row) {
     }
 }
 
-$siteName = SiteContext::siteName();
+$systemName = SiteContext::systemName();
 $siteDesc = trim(SiteContext::siteDescription());
 if ($siteDesc === '') {
     $siteDesc = '可自部署的开放 API 接口平台：接口目录与调试、审核与分类、令牌与积分、双主题前台与云端在线更新。';
 }
 $siteLogo = trim(SiteContext::siteLogo());
 $logoLetter = function_exists('mb_substr')
-    ? mb_substr($siteName, 0, 1, 'UTF-8')
-    : substr($siteName, 0, 1);
+    ? mb_substr($systemName, 0, 1, 'UTF-8')
+    : substr($systemName, 0, 1);
 
 $envItems = array(
     array('label' => '系统版本', 'value' => 'version'),
@@ -80,7 +80,7 @@ vs_admin_layout_start('关于', 'about');
             <?php else: ?>
                 <div class="about-hero__logo"><?php echo vs_e($logoLetter); ?></div>
             <?php endif; ?>
-            <div class="about-hero__name"><?php echo vs_e($siteName); ?></div>
+            <div class="about-hero__name"><?php echo vs_e($systemName); ?></div>
             <div class="about-hero__version"><?php echo vs_render_version_display($updateCheck); ?></div>
             <p class="about-hero__desc"><?php echo vs_e($siteDesc); ?></p>
         </div>
@@ -212,7 +212,7 @@ vs_admin_layout_start('关于', 'about');
     </div>
 
     <div class="about-copyright about-section about-reveal" style="--about-delay:5">
-        <div class="about-copyright__main">&copy; <?php echo date('Y'); ?> ApiNexus · <?php echo vs_e($siteName); ?></div>
+        <div class="about-copyright__main">&copy; <?php echo date('Y'); ?> ApiNexus · <?php echo vs_e($systemName); ?></div>
         <div class="about-copyright__license">采用 ApiNexus 开源许可协议 · v<?php echo vs_e(VS_VERSION); ?></div>
     </div>
 </div>

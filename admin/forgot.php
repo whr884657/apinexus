@@ -14,7 +14,7 @@ InstallChecker::requireInstalled();
 Auth::redirectIfLoggedIn();
 
 $base = vs_base_url();
-$siteName = SiteContext::siteName();
+$systemName = SiteContext::systemName();
 $mailEnabled = Config::isMailEnabled();
 $codeTtl = 300;
 
@@ -77,12 +77,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             $body = '<div style="font-family:sans-serif;line-height:1.8;">';
             $body .= '<p>您好，' . htmlspecialchars($admin['username']) . '：</p>';
-            $body .= '<p>您正在申请重置 ' . htmlspecialchars($siteName) . ' 管理员密码，验证码为：</p>';
+            $body .= '<p>您正在申请重置 ' . htmlspecialchars($systemName) . ' 管理员密码，验证码为：</p>';
             $body .= '<p style="font-size:24px;font-weight:bold;margin:16px 0;">' . htmlspecialchars($code) . '</p>';
             $body .= '<p>验证码 ' . (int) ($codeTtl / 60) . ' 分钟内有效，请勿泄露给他人。</p>';
             $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
 
-            Mailer::send($emailCanonical, $siteName . ' 密码重置验证码', $body);
+            Mailer::send($emailCanonical, $systemName . ' 密码重置验证码', $body);
 
             vs_auth_json_mail($mailPurpose, array(
                 'code' => 1,

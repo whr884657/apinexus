@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/includes/auth_layout.php
- * 作用：后台认证页统一布局（登录/注册/忘记密码）
+ * 作用：后台认证页统一布局（登录 / 忘记密码；展示名用系统名称）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */
@@ -118,7 +118,7 @@ function vs_auth_head($title)
     AuthSecurity::sendSecurityHeaders();
 
     $base = vs_base_url();
-    $siteName = SiteContext::siteName();
+    $systemName = SiteContext::systemName();
     $favicon = SiteContext::siteFavicon();
 
     echo '<!DOCTYPE html>' . "\n";
@@ -126,12 +126,12 @@ function vs_auth_head($title)
     echo '<head>' . "\n";
     echo '<meta charset="utf-8">' . "\n";
     vs_render_seo_meta(vs_seo_defaults(array(
-        'title'       => vs_page_title($title, $siteName),
-        'description' => vs_seo_site_description($siteName . ' 登录'),
+        'title'       => vs_page_title($title, $systemName),
+        'description' => vs_seo_site_description($systemName . ' 管理后台'),
         'robots'      => 'noindex,nofollow',
-        'site_name'   => $siteName,
+        'site_name'   => $systemName,
     )));
-    echo '<title>' . vs_e(vs_page_title($title, $siteName)) . '</title>' . "\n";
+    echo '<title>' . vs_e(vs_page_title($title, $systemName)) . '</title>' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">' . "\n";
     vs_render_site_icons($favicon, vs_seo_share_image());
     vs_auth_bg_script();

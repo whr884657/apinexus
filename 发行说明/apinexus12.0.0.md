@@ -35,6 +35,13 @@
 | stripEmoji | 入库前清除表情与装饰符号 |
 | 快速上手图标 | `detailQsBundle` 带 icon 字段；`detail-quickstart.js` 重绘 Tab 时渲染灰/彩图标 |
 
+## 同版复查3 修复
+
+| 项 | 说明 |
+|----|------|
+| 升级页按钮 | 「执行数据库结构更新」改为标准 `.vs-btn--default`，与另两键同高 44px |
+| 系统名称 | 后台关于首行、管理员登录标题、忘记密码邮件文案用 `systemName()` |
+
 ## 升级注意
 
 1. **无数据库结构变更**（`db_changes: false`）。配置项 `ai_code_mode` / `ai_code_concurrency` 首次使用时按默认写入。

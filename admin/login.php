@@ -21,7 +21,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'logout') {
 
 Auth::redirectIfLoggedIn();
 
-$siteName = SiteContext::siteName();
+$systemName = SiteContext::systemName();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'login') {
     vs_auth_require_post();
@@ -65,7 +65,7 @@ vs_auth_head('登录');
     <div class="right">
         <div class="form-box">
             <div class="header header-desktop">
-                <h1><?php echo vs_e($siteName); ?></h1>
+                <h1><?php echo vs_e($systemName); ?></h1>
             </div>
 
             <div id="formMessage" class="form-message" role="alert" hidden></div>
