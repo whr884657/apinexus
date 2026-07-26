@@ -164,13 +164,14 @@ class DashboardStats
      */
     public static function consoleLiveTick()
     {
-        $of = self::remember('okfail_today_live', self::TTL_LIVE, function () {
+        $ttl = max(1, self::liveIntervalSeconds());
+        $of = self::remember('okfail_today_live', $ttl, function () {
             return self::okFailToday();
         });
         $ok = (int) $of['ok'];
         $fail = (int) $of['fail'];
         $total = max(1, $ok + $fail);
-        $counts = self::remember('api_user_counts_live', self::TTL_TODAY, function () {
+        $counts = self::remember('api_user_counts_live', $ttl, function () {
             return array(
                 'api_total'   => self::countApis(),
                 'user_total'  => self::countUsers(),
@@ -194,6 +195,7 @@ class DashboardStats
                 'fail_count'    => $fail,
             ),
             'recent'        => self::recentCallsCompact(),
+            'sys_overview'  => self::sysOverviewLive($ttl),
         );
     }
 
@@ -423,21 +425,43 @@ class DashboardStats
     private static function sysOverview()
     {
         return self::remember('sys_overview', self::TTL_TODAY, function () {
-            $pending = class_exists('ApiManager') ? (int) ApiManager::countPendingReview() : 0;
-            $disabled = self::countApisByStatus(ApiManager::STATUS_DISABLED);
-            $maint = self::countApisByStatus(ApiManager::STATUS_MAINTENANCE);
-            $orders = self::countTodayOrders();
-            $income = self::sumTodayRecharge();
-            $feedback = self::countPendingFeedback();
-            return array(
-                array('key' => 'pending', 'name' => '待审核接口', 'value' => $pending, 'tone' => 'warn'),
-                array('key' => 'disabled', 'name' => '已禁用接口', 'value' => $disabled, 'tone' => 'danger'),
-                array('key' => 'maint', 'name' => '维护中接口', 'value' => $maint, 'tone' => 'info'),
-                array('key' => 'orders', 'name' => '今日订单', 'value' => $orders, 'tone' => 'neutral'),
-                array('key' => 'income', 'name' => '今日收入', 'value' => '¥' . number_format($income, 2), 'tone' => 'success'),
-                array('key' => 'feedback', 'name' => '待处理反馈', 'value' => $feedback, 'tone' => 'warn'),
-            );
+            return self::sysOverviewData();
         });
+    }
+
+    /**
+     * 控制台 live：系统概览与刷新间隔对齐的短缓存
+     *
+     * @param int $ttl
+     * @return array
+     */
+    private static function sysOverviewLive($ttl)
+    {
+        $ttl = max(1, (int) $ttl);
+        return self::remember('sys_overview_live', $ttl, function () {
+            return self::sysOverviewData();
+        });
+    }
+
+    /**
+     * @return array
+     */
+    private static function sysOverviewData()
+    {
+        $pending = class_exists('ApiManager') ? (int) ApiManager::countPendingReview() : 0;
+        $disabled = self::countApisByStatus(ApiManager::STATUS_DISABLED);
+        $maint = self::countApisByStatus(ApiManager::STATUS_MAINTENANCE);
+        $orders = self::countTodayOrders();
+        $income = self::sumTodayRecharge();
+        $feedback = self::countPendingFeedback();
+        return array(
+            array('key' => 'pending', 'name' => '待审核接口', 'value' => $pending, 'tone' => 'warn'),
+            array('key' => 'disabled', 'name' => '已禁用接口', 'value' => $disabled, 'tone' => 'danger'),
+            array('key' => 'maint', 'name' => '维护中接口', 'value' => $maint, 'tone' => 'info'),
+            array('key' => 'orders', 'name' => '今日订单', 'value' => $orders, 'tone' => 'neutral'),
+            array('key' => 'income', 'name' => '今日收入', 'value' => '¥' . number_format($income, 2), 'tone' => 'success'),
+            array('key' => 'feedback', 'name' => '待处理反馈', 'value' => $feedback, 'tone' => 'warn'),
+        );
     }
 
     /**

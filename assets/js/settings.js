@@ -39,7 +39,11 @@
             postForm(form)
                 .then(function (data) {
                     if (data.code === 1) {
-                        showFlash(data.msg || '操作成功', 'success');
+                        var msg = data.msg || '操作成功';
+                        if (data.iploc) {
+                            msg += '：' + data.iploc;
+                        }
+                        showFlash(msg, 'success');
                     } else {
                         showFlash(data.msg || '操作失败', 'error');
                     }
@@ -306,15 +310,129 @@
         });
     }
 
+    function bindIplocExtras() {
+        var list = document.getElementById('ipLocExtraList');
+        var hidden = document.getElementById('ipLocExtrasJson');
+        var addBtn = document.getElementById('ipLocExtraAdd');
+        var form = document.getElementById('iplocForm');
+        if (!list || !hidden || !addBtn || !form) {
+            return;
+        }
+
+        function readRows() {
+            try {
+                var raw = JSON.parse(hidden.value || '[]');
+                return Array.isArray(raw) ? raw : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function writeRows(rows) {
+            hidden.value = JSON.stringify(rows);
+        }
+
+        function render() {
+            var rows = readRows();
+            list.innerHTML = '';
+            rows.forEach(function (row, idx) {
+                var wrap = document.createElement('div');
+                wrap.className = 'vs-form-row vs-iploc-extra-row';
+                wrap.innerHTML = ''
+                    + '<div class="vs-iploc-extra-grid">'
+                    + '<input type="text" class="vs-input" data-k="name" placeholder="参数名" value="">'
+                    + '<input type="text" class="vs-input" data-k="value" placeholder="参数值" value="">'
+                    + '<select class="vs-input" data-k="via"><option value="query">Query</option><option value="header">Header</option></select>'
+                    + '<button type="button" class="vs-btn vs-btn--ghost" data-del="' + idx + '">删除</button>'
+                    + '</div>';
+                var nameEl = wrap.querySelector('[data-k="name"]');
+                var valEl = wrap.querySelector('[data-k="value"]');
+                var viaEl = wrap.querySelector('[data-k="via"]');
+                if (nameEl) nameEl.value = row.name || '';
+                if (valEl) valEl.value = row.value || '';
+                if (viaEl) viaEl.value = row.via === 'header' ? 'header' : 'query';
+                list.appendChild(wrap);
+            });
+        }
+
+        function syncFromDom() {
+            var rows = [];
+            list.querySelectorAll('.vs-iploc-extra-row').forEach(function (wrap) {
+                var name = (wrap.querySelector('[data-k="name"]') || {}).value || '';
+                var value = (wrap.querySelector('[data-k="value"]') || {}).value || '';
+                var via = (wrap.querySelector('[data-k="via"]') || {}).value || 'query';
+                name = String(name).trim();
+                if (!name) return;
+                rows.push({ name: name, value: String(value), via: via === 'header' ? 'header' : 'query' });
+            });
+            writeRows(rows);
+        }
+
+        addBtn.addEventListener('click', function () {
+            syncFromDom();
+            var rows = readRows();
+            rows.push({ name: '', value: '', via: 'query' });
+            writeRows(rows);
+            render();
+        });
+
+        list.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-del]');
+            if (!btn) return;
+            syncFromDom();
+            var idx = parseInt(btn.getAttribute('data-del'), 10);
+            var rows = readRows();
+            if (!isNaN(idx)) {
+                rows.splice(idx, 1);
+                writeRows(rows);
+                render();
+            }
+        });
+
+        form.addEventListener('submit', function () {
+            syncFromDom();
+        }, true);
+
+        render();
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
-        ['siteForm', 'registerForm', 'checkinForm', 'oauthForm', 'siteExtraForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm', 'aiForm'].forEach(function (id) {
+        ['siteForm', 'registerForm', 'checkinForm', 'oauthForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm', 'aiForm', 'iplocForm', 'iplocTestForm'].forEach(function (id) {
             bindAjaxForm(document.getElementById(id));
         });
         bindApilogCron();
         bindAiProvider();
         bindAiListModels();
         bindAiTest();
+        bindIplocExtras();
+
+        var siteExtra = document.getElementById('siteExtraForm');
+        if (siteExtra) {
+            siteExtra.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var fd = new FormData(siteExtra);
+                if (window.VS && window.VS.encodeTransportField && fd.has('api_disclaimer')) {
+                    fd.set('api_disclaimer', window.VS.encodeTransportField(String(fd.get('api_disclaimer') || '')));
+                }
+                var submitBtn = siteExtra.querySelector('[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
+                window.VS.postForm(fd)
+                    .then(function (data) {
+                        if (data && data.code === 1) {
+                            showFlash(data.msg || '操作成功', 'success');
+                        } else {
+                            showFlash((data && data.msg) || '操作失败', 'error');
+                        }
+                    })
+                    .catch(function () {
+                        showFlash('网络异常，请稍后重试', 'error');
+                    })
+                    .finally(function () {
+                        if (submitBtn) submitBtn.disabled = false;
+                    });
+            });
+        }
     });
 })();

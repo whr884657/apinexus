@@ -333,6 +333,19 @@ if (!$notFound) {
         <?php endif; ?>
     </section>
 
+    <?php
+    $disclaimerOn = class_exists('Config') && Config::get('api_disclaimer_on', '0') === '1';
+    $disclaimerBody = $disclaimerOn ? trim((string) Config::get('api_disclaimer', '')) : '';
+    if ($disclaimerBody !== ''):
+    ?>
+    <section class="detail-card detail-disclaimer" id="detailDisclaimer">
+        <h2 class="detail-section-title">免责声明</h2>
+        <div class="markdown-body vs-md-body detail-md is-parsed detail-disclaimer__body">
+            <?php echo Markdown::render($disclaimerBody); ?>
+        </div>
+    </section>
+    <?php endif; ?>
+
     <section class="detail-card" id="detailPlayground">
         <h2 class="detail-section-title">在线测试</h2>
         <?php if (!empty($api['maintenance'])): ?>

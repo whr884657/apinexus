@@ -513,6 +513,10 @@
             boot.recent = live.recent;
             renderRecent(boot.recent);
         }
+        if (live.sys_overview) {
+            boot.sys_overview = live.sys_overview;
+            renderSys(boot.sys_overview);
+        }
     }
 
     function post(action) {
@@ -603,7 +607,9 @@
     }
     clockTimer = setInterval(tickClock, 1000);
     restartLivePoll();
-    softTimer = setInterval(function () { fetchSnapshot(false); }, 45000);
+    // 软刷与实时间隔对齐（约 6 个 live 周期），趋势/TOP 等同频更新
+    var softMs = Math.max(liveIntervalMs * 6, 10000);
+    softTimer = setInterval(function () { fetchSnapshot(false); }, softMs);
 
     window.addEventListener('beforeunload', function () {
         if (pollTimer) clearInterval(pollTimer);

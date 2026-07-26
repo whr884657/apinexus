@@ -61,14 +61,20 @@ class FrontendLink
      */
     public static function listForTheme()
     {
-        $out = array();
-        foreach (LinkManager::listApproved() as $row) {
-            $item = self::formatForTheme($row);
-            if ($item !== null) {
-                $out[] = $item;
+        $factory = function () {
+            $out = array();
+            foreach (LinkManager::listApproved() as $row) {
+                $item = self::formatForTheme($row);
+                if ($item !== null) {
+                    $out[] = $item;
+                }
             }
+            return $out;
+        };
+        if (class_exists('RedisCache')) {
+            return RedisCache::remember(RedisCache::KEY_FRONTEND_LINK, RedisCache::TTL_FRONTEND_LINK, $factory);
         }
-        return $out;
+        return $factory();
     }
 
     /**

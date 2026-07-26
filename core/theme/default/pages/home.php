@@ -177,9 +177,7 @@ if (count($announcePopup) > 0) {
             </div>
         </div>
         <div class="card-container" id="api-list"></div>
-        <?php if ($apiCount > 8): ?>
-        <a href="<?php echo vs_e($vsBase); ?>/apis" class="view-more-link font-mono text-sm"><span>点击查看更多接口</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></a>
-        <?php endif; ?>
+        <a href="<?php echo vs_e($vsBase); ?>/apis" class="view-more-link font-mono text-sm"><span>查看全部接口</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></a>
     </section>
     <section id="playground" class="py-24 border-t" style="border-color: var(--border-color);">
         <h2 class="section-title">在线调试终端</h2>

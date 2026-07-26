@@ -458,6 +458,9 @@ class ContentManager
             ));
             $id = (int) $pdo->lastInsertId();
             $row = self::findById($id);
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateFrontend();
+            }
             return is_array($row) ? self::formatRow($row) : '保存失败';
         } catch (Exception $e) {
             return '保存失败，请稍后重试';
@@ -539,6 +542,9 @@ class ContentManager
                 $kind, $title, $summary, $body, $cover, $coverlayout,
                 $ispinned, $ispopup, $status, $bindpage, $userid, $sort, $id,
             ));
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateFrontend();
+            }
             return true;
         } catch (Exception $e) {
             return '保存失败，请稍后重试';
@@ -559,6 +565,9 @@ class ContentManager
             $pdo = Database::connect();
             $stmt = $pdo->prepare('DELETE FROM `' . self::table() . '` WHERE `id` = ? LIMIT 1');
             $stmt->execute(array($id));
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateFrontend();
+            }
             return true;
         } catch (Exception $e) {
             return '删除失败';

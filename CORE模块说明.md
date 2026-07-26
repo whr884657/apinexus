@@ -232,6 +232,8 @@ FrontendArticle::findBySlug($slug);           // 详情页
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型） |
 | `AiClient.php` | OpenAI 兼容 Chat Completions 客户端 |
 | `AiApiDoc.php` | 生成详细文档（`doc`）与代码示例（`aidoc`）；剥离上游敏感字段 |
+| `IpLocator.php` | 外网 IP 归属地解析（设置可配 URL/认证/字段路径，v10.16.0） |
+| `ApiStats.php` | 调用计数与详细日志（含 iploc） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知（受 mail_notify_* 开关控制） |
 | `CommentNotify.php` | 文章评论邮件通知（新评论通知管理员；被引用/管理员回复通知用户） |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；入站优先 `_vs_slug`（伪静态）/ PATH_INFO；跳转前校验公网 `targeturl` + `ApiStats::hitProxy`（v10.8.0） |
@@ -312,6 +314,7 @@ echo 'v' . VS_VERSION;     // v2.17.1
 | `vs_require_secure_post()` | 校验 POST + CSRF |
 | `vs_decode_transport_field()` / `vs_decode_transport_fields()` | 解码 `VS64B:`/`VS64:` Base64 表单字段（防 WAF 误拦，v10.15.3） |
 | `vs_safe_embed_url()` / `vs_safe_css_color()` | Markdown 短码外链/色值白名单（防 XSS，v10.15.3 复查） |
+| `IpLocator` | 外网 IP 归属地解析（设置可配，v10.16.0） |
 | `vs_password_hash()` | 密码哈希 |
 
 **主题开发常用：**

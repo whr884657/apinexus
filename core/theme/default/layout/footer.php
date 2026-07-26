@@ -7,12 +7,14 @@ $beian = SiteContext::beianInfo();
 $showRuntime = ThemeManager::themeSettingBool('show_runtime', true);
 $hasRuntime = vs_site_has_runtime();
 $runtimeStart = vs_site_runtime_start();
-$footerLinks = class_exists('FrontendLink') ? FrontendLink::listForTheme() : array();
+$showFriendLinks = Config::get('home_footer_links', '1') !== '0';
+$footerLinks = ($showFriendLinks && class_exists('FrontendLink')) ? FrontendLink::listForTheme() : array();
 $applyUrl = rtrim($vsBase, '/') . '/applylink';
 $isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
 ?>
 <footer class="mt-12 feer-footer">
     <div class="container mx-auto px-6">
+        <?php if ($showFriendLinks): ?>
         <div class="py-8 border-b" style="border-color: var(--border-color);">
             <div class="flex flex-col md:flex-row gap-6 md:items-start md:justify-between">
                 <div class="flex-1" style="min-width: 0;">
@@ -37,6 +39,13 @@ $isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
                 </div>
             </div>
         </div>
+        <?php else: ?>
+        <div class="py-6 border-b" style="border-color: var(--border-color);">
+            <div class="vs-foot-qr-wrap" style="justify-content:center;">
+                <?php vs_render_footer_qrs(); ?>
+            </div>
+        </div>
+        <?php endif; ?>
         <div class="py-6 flex flex-col gap-4 text-xs" style="color: var(--text-muted);">
             <?php vs_render_footer_custom_bar(); ?>
             <?php if ($showRuntime && $hasRuntime): ?>

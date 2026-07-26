@@ -45,18 +45,20 @@ class FrontendCategory
      */
     public static function listTags()
     {
-        return self::buildTags();
+        $factory = function () {
+            return self::buildTagsFresh();
+        };
+        if (class_exists('RedisCache')) {
+            return RedisCache::remember(RedisCache::KEY_FRONTEND_CATEGORY, RedisCache::TTL_FRONTEND_CATEGORY, $factory);
+        }
+        return $factory();
     }
 
     /**
      * @return array<int, array{id: string, name: string}>
      */
-    private static function buildTags()
+    private static function buildTagsFresh()
     {
-        static $cached = null;
-        if ($cached !== null) {
-            return $cached;
-        }
         $items = array();
         foreach (ApiCategoryManager::listEnabled() as $row) {
             $formatted = ApiCategoryManager::formatRow($row);
@@ -73,10 +75,8 @@ class FrontendCategory
                 'name' => $name,
             );
         }
-        $cached = $items;
-        return $cached;
+        return $items;
     }
-
     /**
      * id => 名称映射（含 all => 全部，供 JS categoryNames 等）
      *

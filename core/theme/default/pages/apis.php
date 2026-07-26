@@ -2,6 +2,9 @@
 
 $categoryNames = FrontendCategory::nameMap();
 $apiData = FrontendApi::listForTheme();
+if (is_array($apiData) && count($apiData) > 1) {
+    shuffle($apiData);
+}
 $apiCount = count($apiData);
 $visibleLimit = FrontendCategory::tagVisibleLimit();
 $catIndex = 0;

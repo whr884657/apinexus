@@ -435,6 +435,10 @@ class ApiStats
             return;
         }
 
+        if (class_exists('IpLocator') && $ctx['iploc'] === '') {
+            $ctx['iploc'] = IpLocator::lookup($ctx['ip']);
+        }
+
         $apitype = ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0);
         $name = isset($row['name']) ? (string) $row['name'] : '';
 

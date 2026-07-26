@@ -16,30 +16,40 @@ class FrontendContributor
      */
     public static function listForTheme()
     {
-        try {
-            $pdo = Database::connect();
-            $userTable = Database::table('user');
-            $apiTable = Database::table('api');
-            $statusNormal = (int) ApiManager::STATUS_NORMAL;
-            $statusMaint = (int) ApiManager::STATUS_MAINTENANCE;
-            $auditOk = (int) ApiManager::AUDIT_APPROVED;
-            $roleDev = UserRole::ROLE_DEVELOPER;
+        $factory = function () {
+            try {
+                $pdo = Database::connect();
+                $userTable = Database::table('user');
+                $apiTable = Database::table('api');
+                $statusNormal = (int) ApiManager::STATUS_NORMAL;
+                $statusMaint = (int) ApiManager::STATUS_MAINTENANCE;
+                $auditOk = (int) ApiManager::AUDIT_APPROVED;
+                $roleDev = UserRole::ROLE_DEVELOPER;
 
-            $sql = self::listSql($userTable, $apiTable, $statusNormal, $statusMaint, $auditOk);
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute(array($roleDev));
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $list = array();
-            foreach ($rows as $row) {
-                $item = self::formatCard($row);
-                if ($item !== null) {
-                    $list[] = $item;
+                $sql = self::listSql($userTable, $apiTable, $statusNormal, $statusMaint, $auditOk);
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(array($roleDev));
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $list = array();
+                foreach ($rows as $row) {
+                    $item = self::formatCard($row);
+                    if ($item !== null) {
+                        $list[] = $item;
+                    }
                 }
+                return $list;
+            } catch (Exception $e) {
+                return array();
             }
-            return $list;
-        } catch (Exception $e) {
-            return array();
+        };
+        if (class_exists('RedisCache')) {
+            return RedisCache::remember(
+                RedisCache::KEY_FRONTEND_MISC_PREFIX . 'contributors',
+                RedisCache::TTL_FRONTEND_MISC,
+                $factory
+            );
         }
+        return $factory();
     }
 
     /**

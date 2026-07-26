@@ -255,12 +255,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'sponsor_qr_alipay'  => trim(isset($_POST['sponsor_qr_alipay']) ? $_POST['sponsor_qr_alipay'] : ''),
                 'sponsor_qr_wechat'  => trim(isset($_POST['sponsor_qr_wechat']) ? $_POST['sponsor_qr_wechat'] : ''),
                 'sponsor_qr_qq'      => trim(isset($_POST['sponsor_qr_qq']) ? $_POST['sponsor_qr_qq'] : ''),
+                'home_footer_links'  => isset($_POST['home_footer_links']) ? '1' : '0',
+                'api_disclaimer_on'  => isset($_POST['api_disclaimer_on']) ? '1' : '0',
+                'api_disclaimer'     => isset($_POST['api_disclaimer'])
+                    ? vs_decode_transport_field((string) $_POST['api_disclaimer'])
+                    : '',
             ));
             SiteContext::clearCache();
             AjaxResponse::success('站点扩展设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('操作失败，请稍后重试');
         }
+    }
+
+    if ($action === 'save_iploc') {
+        try {
+            $auth = isset($_POST['ip_loc_auth']) ? (int) $_POST['ip_loc_auth'] : 0;
+            if ($auth < 0 || $auth > 3) {
+                $auth = 0;
+            }
+            $extrasRaw = isset($_POST['ip_loc_extras']) ? (string) $_POST['ip_loc_extras'] : '[]';
+            $extras = IpLocator::parseExtras($extrasRaw);
+            Config::setMany(array(
+                'ip_loc_enabled'   => isset($_POST['ip_loc_enabled']) ? '1' : '0',
+                'ip_loc_url'       => trim(isset($_POST['ip_loc_url']) ? $_POST['ip_loc_url'] : ''),
+                'ip_loc_ip_param'  => trim(isset($_POST['ip_loc_ip_param']) ? $_POST['ip_loc_ip_param'] : 'ip'),
+                'ip_loc_auth'      => (string) $auth,
+                'ip_loc_auth_name' => trim(isset($_POST['ip_loc_auth_name']) ? $_POST['ip_loc_auth_name'] : ''),
+                'ip_loc_auth_value'=> trim(isset($_POST['ip_loc_auth_value']) ? $_POST['ip_loc_auth_value'] : ''),
+                'ip_loc_field'     => trim(isset($_POST['ip_loc_field']) ? $_POST['ip_loc_field'] : ''),
+                'ip_loc_extras'    => json_encode($extras, JSON_UNESCAPED_UNICODE),
+            ));
+            AjaxResponse::success('IP 归属地设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'test_iploc') {
+        $ip = trim(isset($_POST['test_ip']) ? $_POST['test_ip'] : '');
+        if ($ip === '') {
+            $ip = AuthSecurity::clientIp();
+        }
+        if (!IpLocator::enabled()) {
+            AjaxResponse::error('请先启用并保存 IP 归属地解析');
+        }
+        $loc = IpLocator::lookup($ip);
+        if ($loc === '') {
+            AjaxResponse::error('解析失败或未提取到字段（IP：' . $ip . '）');
+        }
+        AjaxResponse::success('解析成功', array('ip' => $ip, 'iploc' => $loc));
     }
 
     if ($action === 'save_mail') {
@@ -645,8 +689,111 @@ vs_admin_accordion_start(
                    placeholder="/upload/qq.png 或 https://…">
         </div>
 
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">默认主题 · 首页页脚</h4>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="home_footer_links" value="1" <?php echo Config::get('home_footer_links', '1') !== '0' ? 'checked' : ''; ?>>
+                <span>显示友情链接板块（默认开启；关闭后仍可在侧栏进入友链页）</span>
+            </label>
+        </div>
+
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">接口详情 · 免声明</h4>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="api_disclaimer_on" value="1" <?php echo Config::get('api_disclaimer_on', '0') === '1' ? 'checked' : ''; ?>>
+                <span>在默认主题 API 详情页展示免责声明</span>
+            </label>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="apiDisclaimer">免责声明正文（支持 Markdown）</label>
+            <textarea class="vs-input vs-textarea" name="api_disclaimer" id="apiDisclaimer" rows="5" data-vs-md="off"
+                      placeholder="本站接口由第三方或平台用户提供，调用后果由调用方自行承担……"><?php echo vs_e(Config::get('api_disclaimer', '')); ?></textarea>
+        </div>
+
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存站点扩展</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+$ipLocExtras = IpLocator::parseExtras(Config::get('ip_loc_extras', '[]'));
+$ipLocAuth = (int) Config::get('ip_loc_auth', '0');
+vs_admin_accordion_start(
+    'settings-iploc',
+    'IP 归属地',
+    '调用日志 IP 解析为中文归属地（外网 API）'
+);
+?>
+    <form method="post" action="" class="vs-form" id="iplocForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_iploc">
+        <input type="hidden" name="ip_loc_extras" id="ipLocExtrasJson" value="<?php echo vs_e(json_encode($ipLocExtras, JSON_UNESCAPED_UNICODE)); ?>">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="ip_loc_enabled" value="1" <?php echo Config::get('ip_loc_enabled', '0') === '1' ? 'checked' : ''; ?>>
+                <span>启用 IP 归属地解析（写入调用日志）</span>
+            </label>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="ipLocUrl">查询接口 URL</label>
+            <input type="url" class="vs-input" name="ip_loc_url" id="ipLocUrl"
+                   value="<?php echo vs_e(Config::get('ip_loc_url', '')); ?>"
+                   placeholder="https://example.com/ip/query">
+            <?php vs_render_notice('tip', '', '使用 GET 请求；IP 与其它参数会自动拼到查询串。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="ipLocIpParam">IP 参数名</label>
+            <input type="text" class="vs-input" name="ip_loc_ip_param" id="ipLocIpParam"
+                   value="<?php echo vs_e(Config::get('ip_loc_ip_param', 'ip')); ?>" placeholder="ip">
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="ipLocAuth">认证方式</label>
+            <select class="vs-input" name="ip_loc_auth" id="ipLocAuth" data-vs-pick>
+                <option value="0"<?php echo $ipLocAuth === 0 ? ' selected' : ''; ?>>无需密钥</option>
+                <option value="1"<?php echo $ipLocAuth === 1 ? ' selected' : ''; ?>>Bearer Token</option>
+                <option value="2"<?php echo $ipLocAuth === 2 ? ' selected' : ''; ?>>Header API Key</option>
+                <option value="3"<?php echo $ipLocAuth === 3 ? ' selected' : ''; ?>>Query API Key</option>
+            </select>
+        </div>
+        <div class="vs-form-row" id="ipLocAuthNameRow">
+            <label class="vs-label" for="ipLocAuthName">密钥参数名 / Header 名</label>
+            <input type="text" class="vs-input" name="ip_loc_auth_name" id="ipLocAuthName"
+                   value="<?php echo vs_e(Config::get('ip_loc_auth_name', '')); ?>" placeholder="如 X-API-Key 或 key">
+        </div>
+        <div class="vs-form-row" id="ipLocAuthValueRow">
+            <label class="vs-label" for="ipLocAuthValue">密钥内容</label>
+            <input type="text" class="vs-input" name="ip_loc_auth_value" id="ipLocAuthValue"
+                   value="<?php echo vs_e(Config::get('ip_loc_auth_value', '')); ?>" placeholder="Token 或 Key">
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">额外参数</label>
+            <div id="ipLocExtraList" class="vs-iploc-extras"></div>
+            <button type="button" class="vs-btn vs-btn--ghost" id="ipLocExtraAdd">添加额外参数</button>
+            <?php vs_render_notice('tip', '', '除 IP 与认证外，还可附加查询串或请求头参数。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="ipLocField">归属地提取字段（JSON 路径）</label>
+            <input type="text" class="vs-input" name="ip_loc_field" id="ipLocField"
+                   value="<?php echo vs_e(Config::get('ip_loc_field', '')); ?>"
+                   placeholder="如 data.city 或 result.ad_info.city">
+            <?php vs_render_notice('tip', '', '按点分路径取字符串；留空则尝试常见字段名。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存 IP 归属地设置</button>
+        </div>
+    </form>
+    <form method="post" action="" class="vs-form" id="iplocTestForm" data-ajax="1" style="margin-top:1rem;">
+        <input type="hidden" name="action" value="test_iploc">
+        <div class="vs-form-row">
+            <label class="vs-label" for="iplocTestIp">测试 IP</label>
+            <input type="text" class="vs-input" name="test_ip" id="iplocTestIp" placeholder="留空则用当前访问 IP">
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn">测试解析</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>
@@ -674,7 +821,7 @@ if ($dashLive > 5) {
                     <option value="<?php echo $i; ?>"<?php echo $dashLive === $i ? ' selected' : ''; ?>><?php echo $i; ?> 秒</option>
                 <?php endfor; ?>
             </select>
-            <?php vs_render_notice('tip', '', '控制台时钟、今日指标与最近调用的自动刷新频率。间隔越短请求越频繁。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '控制台时钟、今日/累计调用、系统概览与最近调用按此间隔刷新；趋势与 TOP 约按 6 倍间隔软刷。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存控制台设置</button>
@@ -688,8 +835,6 @@ vs_admin_accordion_start(
     'API 日志',
     '详细日志、冷热归档与计划任务'
 );
-?>
-    <?php
     $cfgHotDays = isset($vsCfg['apilog_hot_days']) ? (int) $vsCfg['apilog_hot_days'] : ApiLogArchive::DEFAULT_HOT_DAYS;
     if ($cfgHotDays < 1) {
         $cfgHotDays = ApiLogArchive::DEFAULT_HOT_DAYS;

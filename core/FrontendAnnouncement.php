@@ -63,36 +63,42 @@ class FrontendAnnouncement
      */
     public static function listForTheme()
     {
-        if (!ContentManager::tableReady()) {
-            return array();
-        }
-        try {
-            $pdo = Database::connect();
-            $sql = 'SELECT * FROM `' . ContentManager::table() . '`
+        $factory = function () {
+            if (!ContentManager::tableReady()) {
+                return array();
+            }
+            try {
+                $pdo = Database::connect();
+                $sql = 'SELECT * FROM `' . ContentManager::table() . '`
                 WHERE `kind` = ? AND `status` = ?
                 ORDER BY `ispinned` DESC, `id` DESC';
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute(array(
-                ContentManager::KIND_ANNOUNCEMENT,
-                ContentManager::STATUS_PUBLISHED,
-            ));
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $out = array();
-            if (is_array($rows)) {
-                foreach ($rows as $row) {
-                    if (!is_array($row)) {
-                        continue;
-                    }
-                    $item = self::formatForTheme($row);
-                    if ($item !== null) {
-                        $out[] = $item;
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(array(
+                    ContentManager::KIND_ANNOUNCEMENT,
+                    ContentManager::STATUS_PUBLISHED,
+                ));
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $out = array();
+                if (is_array($rows)) {
+                    foreach ($rows as $row) {
+                        if (!is_array($row)) {
+                            continue;
+                        }
+                        $item = self::formatForTheme($row);
+                        if ($item !== null) {
+                            $out[] = $item;
+                        }
                     }
                 }
+                return $out;
+            } catch (Exception $e) {
+                return array();
             }
-            return $out;
-        } catch (Exception $e) {
-            return array();
+        };
+        if (class_exists('RedisCache')) {
+            return RedisCache::remember(RedisCache::KEY_FRONTEND_ANNOUNCE, RedisCache::TTL_FRONTEND_ANNOUNCE, $factory);
         }
+        return $factory();
     }
 
     /**

@@ -255,7 +255,6 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
         echo '<img src="' . vs_e($avatarUrl) . '" alt="" class="vs-topbar__avatar" width="32" height="32">' . "\n";
         echo '</a>' . "\n";
     }
-    echo '<a href="' . vs_e($base) . '/admin/login?action=logout" class="vs-topbar__logout">退出</a>' . "\n";
     echo '</div>' . "\n";
     echo '</header>' . "\n";
 

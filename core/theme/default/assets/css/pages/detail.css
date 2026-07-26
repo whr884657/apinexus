@@ -563,6 +563,12 @@
 .detail-quickstart__code .vs-syn--func { color: #2563eb; }
 .detail-quickstart__code .vs-syn--attr { color: #0369a1; }
 
+.detail-disclaimer__body {
+    font-size: 0.875rem;
+    color: var(--text-muted, #64748b);
+    line-height: 1.65;
+}
+
 .playground-grid {
     display: grid;
     grid-template-columns: 1fr;

@@ -11,6 +11,10 @@ class RedisCache
     const KEY_FRONTEND_LINK = 'cache:frontend:link_list';
     const KEY_FRONTEND_PARTNER = 'cache:frontend:partner_list';
     const KEY_FRONTEND_SPONSOR = 'cache:frontend:sponsor_list';
+    const KEY_FRONTEND_ARTICLE = 'cache:frontend:article_list';
+    const KEY_FRONTEND_ANNOUNCE = 'cache:frontend:announce_list';
+    const KEY_FRONTEND_MISC_PREFIX = 'cache:frontend:misc:';
+    const KEY_IPLOC_PREFIX = 'cache:iploc:';
     const KEY_API_PUBLIC = 'cache:api:public_list';
     /** 日志查询结果缓存键前缀（后台列表 / 后续图表等凡读 apilog 均可复用） */
     const KEY_APILOG_PAGE_PREFIX = 'cache:apilog:query:';
@@ -29,6 +33,9 @@ class RedisCache
     const TTL_FRONTEND_CATEGORY = 300;
     const TTL_FRONTEND_LINK = 300;
     const TTL_FRONTEND_PARTNER = 300;
+    const TTL_FRONTEND_ARTICLE = 120;
+    const TTL_FRONTEND_ANNOUNCE = 60;
+    const TTL_FRONTEND_MISC = 120;
     const TTL_API_PUBLIC = 120;
     /** 日志查询/列表短 TTL，降低大表反复扫库 */
     const TTL_APILOG_PAGE = 45;
@@ -87,6 +94,60 @@ class RedisCache
     }
 
     /**
+     * 读取已序列化缓存；未命中返回 null
+     *
+     * @param string $logicalKey
+     * @return mixed|null
+     */
+    public static function get($logicalKey)
+    {
+        if (!self::enabled()) {
+            return null;
+        }
+        try {
+            return RedisService::withClient(function (Redis $redis) use ($logicalKey) {
+                $raw = $redis->get(RedisService::buildKey($logicalKey));
+                if ($raw === false || $raw === '') {
+                    return null;
+                }
+                $value = @unserialize($raw);
+                if ($value === false && $raw !== 'b:0;') {
+                    return null;
+                }
+                return $value;
+            });
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * 写入序列化缓存
+     *
+     * @param string $logicalKey
+     * @param mixed  $value
+     * @param int    $ttl
+     * @return void
+     */
+    public static function put($logicalKey, $value, $ttl)
+    {
+        if (!self::enabled()) {
+            return;
+        }
+        try {
+            RedisService::withClient(function (Redis $redis) use ($logicalKey, $value, $ttl) {
+                $redis->setex(
+                    RedisService::buildKey($logicalKey),
+                    max(1, (int) $ttl),
+                    serialize($value)
+                );
+            });
+        } catch (Exception $e) {
+            // 忽略
+        }
+    }
+
+    /**
      * @param string $logicalKey
      * @return void
      */
@@ -117,7 +178,29 @@ class RedisCache
         self::forget(self::KEY_FRONTEND_LINK);
         self::forget(self::KEY_FRONTEND_PARTNER);
         self::forget(self::KEY_FRONTEND_SPONSOR);
+        self::forget(self::KEY_FRONTEND_ARTICLE);
+        self::forget(self::KEY_FRONTEND_ANNOUNCE);
         self::forget(self::KEY_API_PUBLIC);
+        // 杂项前台缓存（公告弹窗、关于页摘要等）
+        if (self::enabled()) {
+            try {
+                RedisService::withClient(function (Redis $redis) {
+                    $pattern = RedisService::buildKey(self::KEY_FRONTEND_MISC_PREFIX) . '*';
+                    $it = null;
+                    do {
+                        $keys = $redis->scan($it, $pattern, 80);
+                        if ($keys === false) {
+                            break;
+                        }
+                        if (!empty($keys)) {
+                            $redis->del($keys);
+                        }
+                    } while ($it !== 0 && $it !== null);
+                });
+            } catch (Exception $e) {
+                // 忽略
+            }
+        }
     }
 
     /**
@@ -395,6 +478,40 @@ class RedisCache
                 'key' => self::KEY_FRONTEND_SPONSOR,
                 'ttl_hint' => self::TTL_FRONTEND_PARTNER . ' 秒',
                 'chart_color' => '#84cc16',
+            ),
+            array(
+                'id' => 'frontend_article',
+                'label' => '文章列表',
+                'desc' => '前台文章列表短时缓存',
+                'key' => self::KEY_FRONTEND_ARTICLE,
+                'ttl_hint' => self::TTL_FRONTEND_ARTICLE . ' 秒',
+                'chart_color' => '#0ea5e9',
+            ),
+            array(
+                'id' => 'frontend_announce',
+                'label' => '公告列表',
+                'desc' => '前台公告与弹窗数据',
+                'key' => self::KEY_FRONTEND_ANNOUNCE,
+                'ttl_hint' => self::TTL_FRONTEND_ANNOUNCE . ' 秒',
+                'chart_color' => '#f97316',
+            ),
+            array(
+                'id' => 'frontend_misc',
+                'label' => '其他前台数据',
+                'desc' => '杂项短时缓存（关于页、贡献者等不便单列的项）',
+                'key' => self::KEY_FRONTEND_MISC_PREFIX,
+                'ttl_hint' => self::TTL_FRONTEND_MISC . ' 秒',
+                'pattern' => true,
+                'chart_color' => '#64748b',
+            ),
+            array(
+                'id' => 'iploc_cache',
+                'label' => 'IP 归属地',
+                'desc' => '按 IP 缓存的外网解析结果',
+                'key' => self::KEY_IPLOC_PREFIX,
+                'ttl_hint' => '约 1 天',
+                'pattern' => true,
+                'chart_color' => '#e11d48',
             ),
             array(
                 'id' => 'api_public',

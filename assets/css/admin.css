@@ -10269,3 +10269,16 @@ select.vs-input.vs-select {
     color: #1d4ed8;
     font-weight: 600;
 }
+
+.vs-iploc-extra-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr minmax(6rem, 7rem) auto;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+@media (max-width: 720px) {
+    .vs-iploc-extra-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -81,38 +81,47 @@ class FrontendArticle
     public static function listForTheme($limit = 10)
     {
         $limit = max(1, min(50, (int) $limit));
-        if (!ContentManager::tableReady()) {
-            return array();
-        }
-        try {
-            $pdo = Database::connect();
-            $sql = 'SELECT * FROM `' . ContentManager::table() . '`
+        $factory = function () use ($limit) {
+            if (!ContentManager::tableReady()) {
+                return array();
+            }
+            try {
+                $pdo = Database::connect();
+                $sql = 'SELECT * FROM `' . ContentManager::table() . '`
                 WHERE `kind` = ? AND `status` = ? AND `bindpage` = ?
                 ORDER BY `sort` ASC, `id` DESC
                 LIMIT ' . (int) $limit;
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute(array(
-                ContentManager::KIND_ARTICLE,
-                ContentManager::STATUS_PUBLISHED,
-                ContentManager::BIND_NONE,
-            ));
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $out = array();
-            if (is_array($rows)) {
-                foreach ($rows as $row) {
-                    if (!is_array($row)) {
-                        continue;
-                    }
-                    $item = self::formatForTheme($row, false);
-                    if ($item !== null) {
-                        $out[] = $item;
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute(array(
+                    ContentManager::KIND_ARTICLE,
+                    ContentManager::STATUS_PUBLISHED,
+                    ContentManager::BIND_NONE,
+                ));
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $out = array();
+                if (is_array($rows)) {
+                    foreach ($rows as $row) {
+                        if (!is_array($row)) {
+                            continue;
+                        }
+                        $item = self::formatForTheme($row, false);
+                        if ($item !== null) {
+                            $out[] = $item;
+                        }
                     }
                 }
+                return $out;
+            } catch (Exception $e) {
+                return array();
             }
-            return $out;
-        } catch (Exception $e) {
-            return array();
+        };
+        if (class_exists('RedisCache')) {
+            $key = ($limit === 10)
+                ? RedisCache::KEY_FRONTEND_ARTICLE
+                : RedisCache::KEY_FRONTEND_MISC_PREFIX . 'articles:' . $limit;
+            return RedisCache::remember($key, RedisCache::TTL_FRONTEND_ARTICLE, $factory);
         }
+        return $factory();
     }
 
     /**

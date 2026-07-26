@@ -44,6 +44,7 @@ require_once VS_ROOT . '/core/AiApiDoc.php';
 require_once VS_ROOT . '/core/ApiNotify.php';
 require_once VS_ROOT . '/core/ApiProxy.php';
 require_once VS_ROOT . '/core/ApiStats.php';
+require_once VS_ROOT . '/core/IpLocator.php';
 require_once VS_ROOT . '/core/StatDayManager.php';
 require_once VS_ROOT . '/core/ApiLogManager.php';
 require_once VS_ROOT . '/core/ApiLogArchive.php';

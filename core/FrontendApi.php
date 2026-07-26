@@ -220,17 +220,23 @@ class FrontendApi
      */
     public static function listForTheme()
     {
-        $apiData = array();
-        foreach (ApiManager::listPublic() as $row) {
-            if (!is_array($row)) {
-                continue;
+        $factory = function () {
+            $apiData = array();
+            foreach (ApiManager::listPublic() as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $item = self::formatForTheme($row);
+                if ($item !== null) {
+                    $apiData[] = $item;
+                }
             }
-            $item = self::formatForTheme($row);
-            if ($item !== null) {
-                $apiData[] = $item;
-            }
+            return $apiData;
+        };
+        if (class_exists('RedisCache')) {
+            return RedisCache::remember(RedisCache::KEY_FRONTEND_API, RedisCache::TTL_FRONTEND_API, $factory);
         }
-        return $apiData;
+        return $factory();
     }
 
     /**
