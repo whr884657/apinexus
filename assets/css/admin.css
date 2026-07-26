@@ -9091,9 +9091,28 @@ select.vs-input.vs-select {
     display: none !important;
 }
 #contentPage .content-title-cell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 6px 8px;
+    min-width: 0;
     font-weight: 600;
     line-height: 1.45;
+}
+#contentPage .content-title-cell__text {
+    flex: 1 1 10rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     word-break: break-word;
+}
+#contentPage .content-title-cell .vs-badge {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-top: 1px;
 }
 #contentPage .content-author-cell {
     display: flex;
@@ -9136,21 +9155,30 @@ select.vs-input.vs-select {
 #contentPage .ann-card__header,
 #contentPage .art-card__header {
     display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
     margin-bottom: 8px;
 }
 #contentPage .ann-card__title,
 #contentPage .art-card__title {
     font-weight: 600;
     line-height: 1.45;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
 }
 #contentPage .ann-card__tags,
 #contentPage .art-card__tags {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    flex-shrink: 0;
+    align-items: center;
 }
 #contentPage .ann-card__time,
 #contentPage .art-card__info {
@@ -9960,12 +9988,48 @@ select.vs-input.vs-select {
         transition: none;
     }
 }
-/* ---- content page badges / actions (bindpage + status) ---- */
-#contentPage .vs-badge--success { background: #f0faf5; color: #15803d; }
-#contentPage .vs-badge--warning { background: #fff7e8; color: #e37318; }
-#contentPage .vs-badge--error { background: #fff0f0; color: #dc2626; }
-#contentPage .vs-badge--info { background: #eff6ff; color: #2563eb; }
-#contentPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+/* ---- content page badges / actions（色标须边框，禁止只涂底色） ---- */
+#contentPage .vs-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    max-width: none;
+    vertical-align: middle;
+}
+#contentPage .vs-badge--success {
+    background: #f0faf5;
+    color: #15803d;
+    border-color: #86efac;
+}
+#contentPage .vs-badge--warning {
+    background: #fff7e8;
+    color: #c2410c;
+    border-color: #fdba74;
+}
+#contentPage .vs-badge--error {
+    background: #fff1f2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+#contentPage .vs-badge--info {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+}
+#contentPage .vs-badge--default {
+    background: #f8fafc;
+    color: #64748b;
+    border-color: #cbd5e1;
+}
 
 #contentPage .vs-content-actions-cell .action-btns,
 #contentPage .ann-card__actions .action-btns,
@@ -10012,13 +10076,6 @@ select.vs-input.vs-select {
     gap: 8px;
     padding-top: 10px;
     border-top: 1px dashed #e2e8f0;
-}
-
-#contentPage .content-title-cell .vs-badge,
-#contentPage .ann-card__title .vs-badge,
-#contentPage .art-card__title .vs-badge {
-    margin-left: 6px;
-    vertical-align: middle;
 }
 
 /* ---- admin links tabs ---- */

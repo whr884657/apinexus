@@ -100,7 +100,7 @@ function vs_content_data_attrs(array $ctx)
 }
 
 /**
- * 标题单元格（文章绑定关于页时旁挂徽章）
+ * 标题单元格（文章绑定关于页时旁挂徽章；标题与标签分栏防挤变形）
  *
  * @param array $ctx
  * @param bool  $announcement
@@ -108,9 +108,10 @@ function vs_content_data_attrs(array $ctx)
  */
 function vs_content_title_html(array $ctx, $announcement = true)
 {
-    $html = '<div class="content-title-cell" data-field="title">' . vs_e($ctx['title']);
+    $html = '<div class="content-title-cell">';
+    $html .= '<span class="content-title-cell__text" data-field="title">' . vs_e($ctx['title']) . '</span>';
     if (!$announcement && (int) $ctx['bindpage'] === ContentManager::BIND_ABOUT) {
-        $html .= ' <span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
+        $html .= '<span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
     }
     $html .= '</div>';
     return $html;
@@ -204,13 +205,11 @@ function vs_render_content_mobile_card(array $ctx, $announcement = true)
     ?>
     <div class="<?php echo $cardClass; ?>"<?php echo $attrs; ?>>
         <div class="<?php echo $cardClass; ?>__header">
-            <span class="<?php echo $cardClass; ?>__title" data-field="title">
-                <?php echo vs_e($ctx['title']); ?>
+            <span class="<?php echo $cardClass; ?>__title" data-field="title"><?php echo vs_e($ctx['title']); ?></span>
+            <div class="<?php echo $cardClass; ?>__tags">
                 <?php if (!$announcement && (int) $ctx['bindpage'] === ContentManager::BIND_ABOUT): ?>
                     <span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>
                 <?php endif; ?>
-            </span>
-            <div class="<?php echo $cardClass; ?>__tags">
                 <?php if ($announcement): ?>
                     <?php if ((int) $ctx['ispinned'] === 1): ?>
                         <span class="vs-badge vs-badge--warning" data-field="pin_label">置顶</span>

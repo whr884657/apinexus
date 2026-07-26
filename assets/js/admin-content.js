@@ -359,9 +359,10 @@
         }
 
         function titleHtml(item) {
-            var html = '<div class="content-title-cell" data-field="title">' + esc(item.title);
+            var html = '<div class="content-title-cell">';
+            html += '<span class="content-title-cell__text" data-field="title">' + esc(item.title) + '</span>';
             if (!isAnnouncement && Number(item.bindpage) === 1) {
-                html += ' <span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
+                html += '<span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
             }
             html += '</div>';
             return html;
@@ -401,12 +402,11 @@
             var time = item.createtime || '—';
             var html = '<div class="' + cls + '"' + dataAttrs(item) + '>';
             html += '<div class="' + cls + '__header">';
-            html += '<span class="' + cls + '__title" data-field="title">' + esc(item.title);
-            if (!isAnnouncement && Number(item.bindpage) === 1) {
-                html += ' <span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
-            }
-            html += '</span>';
+            html += '<span class="' + cls + '__title" data-field="title">' + esc(item.title) + '</span>';
             html += '<div class="' + cls + '__tags">';
+            if (!isAnnouncement && Number(item.bindpage) === 1) {
+                html += '<span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
+            }
             if (isAnnouncement) {
                 if (Number(item.ispinned) === 1) {
                     html += '<span class="vs-badge vs-badge--warning" data-field="pin_label">置顶</span>';
