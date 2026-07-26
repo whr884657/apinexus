@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-10.9.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-10.10.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -262,6 +262,16 @@ location / {
 ---
 
 ## 版本记录
+
+### v10.10.0（2026-07-26）
+
+**类型：** 中版本（控制台布局与可配置刷新）
+
+**变更说明：**
+
+- 手机端趋势图防溢出；刷新改图标；时钟每秒走动
+- 最近调用 20 条紧凑列表（ID/接口/IP/时间），与日志页缓存对齐
+- 设置可配 live 间隔 1～5 秒；detail.php IDE 告警修复
 
 ### v10.9.1（2026-07-26）
 

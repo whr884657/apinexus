@@ -33,21 +33,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $mailEnabled = Config::isMailEnabled();
-// 首屏只出壳，重统计经 AJAX snapshot 拉取，避免首次进后台卡住
 $boot = DashboardStats::consoleBootShell();
+$liveInterval = DashboardStats::liveIntervalSeconds();
 
-vs_admin_layout_start(
-    '控制台',
-    'dashboard',
-    '<button type="button" class="vs-btn vs-btn--primary" id="dashRefreshBtn">刷新</button>'
-);
+$refreshBtn = '<button type="button" class="vs-btn vs-btn--outline vs-btn--icon" id="dashRefreshBtn" title="刷新" aria-label="刷新">'
+    . '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    . '<polyline points="23 4 23 10 17 10"></polyline>'
+    . '<polyline points="1 20 1 14 7 14"></polyline>'
+    . '<path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>'
+    . '</svg></button>';
+
+vs_admin_layout_start('控制台', 'dashboard', $refreshBtn);
 ?>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/assets/css/admin-dashboard.css?v=<?php echo vs_e(VS_VERSION); ?>">
 
 <div id="adminDashPage"
      class="admin-dash-page"
      data-boot="<?php echo DashboardStats::bootAttrJson($boot); ?>"
-     data-logs-url="<?php echo vs_e($vsBase); ?>/admin/system/logs">
+     data-live-interval="<?php echo (int) $liveInterval; ?>">
 
     <?php if (!$mailEnabled): ?>
         <?php
@@ -109,19 +112,11 @@ vs_admin_layout_start(
     </section>
 
     <section class="vs-panel dash-panel">
-        <div class="vs-panel__header dash-panel__head dash-panel__head--stack">
-            <div class="dash-records-head">
-                <h2 class="vs-panel__title">最近调用记录</h2>
-                <div class="dash-records-filters" id="dashRecentFilters">
-                    <button type="button" class="dash-records-filter is-active" data-filter="all">全部</button>
-                    <button type="button" class="dash-records-filter" data-filter="success">成功</button>
-                    <button type="button" class="dash-records-filter" data-filter="error">调用错误</button>
-                </div>
-            </div>
-            <a class="dash-panel-link" href="<?php echo vs_e($vsBase); ?>/admin/system/logs">查看全部日志</a>
+        <div class="vs-panel__header">
+            <h2 class="vs-panel__title">最近调用记录</h2>
         </div>
         <div class="vs-panel__body">
-            <div class="dash-table-wrap" id="dashRecentTable"></div>
+            <div class="dash-recent-wrap" id="dashRecentTable"></div>
         </div>
     </section>
 </div>

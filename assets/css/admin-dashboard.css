@@ -20,6 +20,20 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* 控制台刷新：图标按钮（标题行右侧） */
+.vs-content__actions #dashRefreshBtn.vs-btn--icon {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.vs-content__actions #dashRefreshBtn.vs-btn--icon svg {
+    display: block;
+}
+
 #adminDashPage .dash-kpi-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -157,13 +171,15 @@
 
 #adminDashPage .dash-chart-wrap {
     width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 #adminDashPage .dash-chart-wrap svg {
     width: 100%;
-    min-width: 420px;
-    height: 220px;
+    max-width: 100%;
+    min-width: 0;
+    height: 200px;
     display: block;
 }
 
@@ -271,6 +287,65 @@
 }
 #adminDashPage .dash-status.is-ok { color: #15803d; font-weight: 600; }
 #adminDashPage .dash-status.is-fail { color: #dc2626; font-weight: 600; }
+
+/* 最近调用：紧凑列表（ID / 接口 / IP / 时间），禁止卡片式占位 */
+#adminDashPage .dash-recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+#adminDashPage .dash-recent-row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1.4fr) minmax(0, 1fr) 72px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.75rem;
+    color: #334155;
+    font-variant-numeric: tabular-nums;
+}
+#adminDashPage .dash-recent-row:last-child { border-bottom: 0; }
+#adminDashPage .dash-recent-row--head {
+    background: #f8fafc;
+    color: #94a3b8;
+    font-weight: 600;
+}
+#adminDashPage .dash-recent-id { color: #64748b; }
+#adminDashPage .dash-recent-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+#adminDashPage .dash-recent-ip {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    color: #64748b;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+#adminDashPage .dash-recent-time { text-align: right; color: #64748b; }
+
+@media (max-width: 560px) {
+    #adminDashPage .dash-recent-row {
+        grid-template-columns: 52px minmax(0, 1fr) 64px;
+        grid-template-areas:
+            "id name time"
+            "id ip time";
+        row-gap: 2px;
+    }
+    #adminDashPage .dash-recent-row--head { display: none; }
+    #adminDashPage .dash-recent-id { grid-area: id; }
+    #adminDashPage .dash-recent-name { grid-area: name; }
+    #adminDashPage .dash-recent-ip { grid-area: ip; font-size: 0.7rem; }
+    #adminDashPage .dash-recent-time { grid-area: time; align-self: center; }
+}
+
 #adminDashPage .dash-empty {
     padding: 24px;
     text-align: center;
@@ -466,11 +541,14 @@
 
 #adminScreenPage .ds-chart-line {
     width: 100%;
-    overflow-x: auto;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
 }
 #adminScreenPage .ds-chart-line svg {
     width: 100%;
-    min-width: 480px;
+    max-width: 100%;
+    min-width: 0;
     height: 200px;
     display: block;
 }

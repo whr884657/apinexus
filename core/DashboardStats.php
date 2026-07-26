@@ -30,7 +30,14 @@ class DashboardStats
         $max = 20;
         $window = 60;
         if ($action === 'live') {
-            $max = 30; // 约 5s 一轮，留余量
+            $interval = self::liveIntervalSeconds();
+            $max = (int) ceil(60 / max(1, $interval)) + 8;
+            if ($max < 20) {
+                $max = 20;
+            }
+            if ($max > 80) {
+                $max = 80;
+            }
             $window = 60;
         } elseif ($action === 'refresh') {
             $max = 10;
@@ -86,6 +93,7 @@ class DashboardStats
             'sys_overview' => array(),
             'recent'       => array(),
             'boot_light'   => true,
+            'live_interval'=> self::liveIntervalSeconds(),
         );
     }
 
@@ -111,9 +119,32 @@ class DashboardStats
             'rate_trend'    => self::rateTrend7d(),
             'top_apis'      => self::topApisToday(10),
             'sys_overview'  => self::sysOverview(),
-            'recent'        => self::recentCalls(12),
+            'recent'        => self::recentCallsCompact(),
             'boot_light'    => false,
+            'live_interval' => self::liveIntervalSeconds(),
         );
+    }
+
+    /**
+     * 控制台 live 轮询间隔（秒），设置项 1～5，默认 5
+     *
+     * @return int
+     */
+    public static function liveIntervalSeconds()
+    {
+        $n = 5;
+        try {
+            $n = (int) Config::get('dashboard_live_interval', '5');
+        } catch (Exception $e) {
+            $n = 5;
+        }
+        if ($n < 1) {
+            $n = 1;
+        }
+        if ($n > 5) {
+            $n = 5;
+        }
+        return $n;
     }
 
     /**
@@ -137,9 +168,10 @@ class DashboardStats
             );
         });
         return array(
-            'server_time' => date('Y-m-d H:i:s'),
-            'weekday'     => self::weekdayLabel(),
-            'kpi'         => array(
+            'server_time'   => date('Y-m-d H:i:s'),
+            'weekday'       => self::weekdayLabel(),
+            'live_interval' => self::liveIntervalSeconds(),
+            'kpi'           => array(
                 'api_total'     => (int) $counts['api_total'],
                 'user_total'    => (int) $counts['user_total'],
                 'user_delta'    => (int) $counts['user_delta'],
@@ -149,7 +181,7 @@ class DashboardStats
                 'success_count' => $ok,
                 'fail_count'    => $fail,
             ),
-            'recent'      => self::recentCalls(12),
+            'recent'        => self::recentCallsCompact(),
         );
     }
 
@@ -392,6 +424,49 @@ class DashboardStats
     }
 
     /**
+     * 控制台最近调用：与日志查询首页同一通道（listPaged 默认 20 + Redis 页缓存）
+     * 仅下发 id / apiname / ip / time
+     *
+     * @return array
+     */
+    private static function recentCallsCompact()
+    {
+        if (!class_exists('ApiLogManager') || !ApiLogManager::tableReady()) {
+            return array();
+        }
+        try {
+            $paged = ApiLogManager::listPaged(array(
+                'page'      => 1,
+                'pagesize'  => 20,
+                'q'         => '',
+                'ok'        => null,
+                'apiid'     => 0,
+                'before_id' => 0,
+            ));
+            $list = isset($paged['list']) && is_array($paged['list']) ? $paged['list'] : array();
+            $out = array();
+            foreach ($list as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $ct = isset($item['createtime']) ? (string) $item['createtime'] : '';
+                $ts = $ct !== '' ? strtotime($ct) : false;
+                $out[] = array(
+                    'id'      => (int) (isset($item['id']) ? $item['id'] : 0),
+                    'apiname' => (string) (isset($item['apiname']) ? $item['apiname'] : ''),
+                    'ip'      => (string) (isset($item['ip']) ? $item['ip'] : ''),
+                    'time'    => $ts ? date('H:i:s', $ts) : '',
+                );
+            }
+            return $out;
+        } catch (Exception $e) {
+            return array();
+        }
+    }
+
+    /**
+     * 大屏最近调用（含状态/调用者等字段）
+     *
      * @param int $limit
      * @return array
      */
@@ -435,7 +510,6 @@ class DashboardStats
                             : '';
                         $codeLabel = $label !== '' ? ($code . ' · ' . $label) : (string) $code;
                     }
-                    // 仪表盘最小化字段：不下发 path/method/apikey，降低 XSS 面与敏感路径泄露
                     $out[] = array(
                         'id'         => (int) $r['id'],
                         'time'       => date('H:i:s', strtotime((string) $r['createtime'])),

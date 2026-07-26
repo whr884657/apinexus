@@ -9,14 +9,17 @@
     if (!page || !window.VS) return;
 
     var BAR_COLORS = ['#2563eb', '#06b6d4', '#8b5cf6', '#f59e0b', '#10b981', '#ec4899', '#3b82f6', '#14b8a6', '#a855f7', '#fb923c'];
-    var filter = 'all';
     var boot = {};
     var pollTimer = null;
     var softTimer = null;
+    var clockTimer = null;
     var loading = false;
     var pendingForceRefresh = false;
-    var ready = false; // 首屏 snapshot 成功后再开 live，避免半截 KPI
+    var ready = false;
     var initialPending = false;
+    var clockBaseMs = 0;
+    var clockOffset = 0;
+    var liveIntervalMs = 5000;
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
@@ -24,6 +27,47 @@
         boot = {};
     }
     initialPending = !!boot.boot_light;
+    liveIntervalMs = readLiveIntervalMs(boot.live_interval || page.getAttribute('data-live-interval'));
+
+    function readLiveIntervalMs(v) {
+        var n = parseInt(v, 10);
+        if (isNaN(n) || n < 1) n = 5;
+        if (n > 5) n = 5;
+        return n * 1000;
+    }
+
+    function weekdayLabel(ts) {
+        var map = ['日', '一', '二', '三', '四', '五', '六'];
+        return '周' + map[(new Date(ts)).getDay()];
+    }
+
+    function pad2(n) {
+        return n < 10 ? '0' + n : String(n);
+    }
+
+    function formatClock(ts) {
+        var d = new Date(ts);
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
+            + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds())
+            + ' · ' + weekdayLabel(ts);
+    }
+
+    function syncClock(serverTime) {
+        var parsed = Date.parse(String(serverTime || '').replace(/-/g, '/'));
+        if (isNaN(parsed)) {
+            parsed = Date.now();
+        }
+        clockBaseMs = parsed;
+        clockOffset = Date.now();
+        tickClock();
+    }
+
+    function tickClock() {
+        var dateEl = page.querySelector('[data-dash-date]');
+        if (!dateEl || !clockBaseMs) return;
+        var now = clockBaseMs + (Date.now() - clockOffset);
+        dateEl.textContent = formatClock(now);
+    }
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -100,7 +144,7 @@
     function lineChart(el, labels, seriesList, opts) {
         if (!el) return;
         opts = opts || {};
-        var w = 560, h = 220, L = 42, R = 12, T = 16, B = 28;
+        var w = 560, h = 200, L = 36, R = 10, T = 14, B = 26;
         var all = [];
         seriesList.forEach(function (s) { all = all.concat(s.data || []); });
         if (!all.length) {
@@ -269,36 +313,41 @@
         var el = document.getElementById('dashRecentTable');
         if (!el) return;
         list = Array.isArray(list) ? list : [];
-        var rows = list.filter(function (r) {
-            if (filter === 'success') return r.status === 'success';
-            if (filter === 'error') return r.status === 'error';
-            return true;
-        });
-        if (!rows.length) {
-            el.innerHTML = '<div class="dash-empty">' + (list.length ? '暂无匹配记录' : '暂无调用记录') + '</div>';
+        if (!list.length) {
+            el.innerHTML = '<div class="dash-empty">暂无调用记录</div>';
             return;
         }
-        var html = '<table class="dash-table"><thead><tr>'
-            + '<th>时间</th><th>接口名称</th><th>调用者</th><th>状态</th><th>错误码</th>'
-            + '</tr></thead><tbody>';
-        rows.forEach(function (r) {
-            var ok = r.status === 'success';
-            html += '<tr>'
-                + '<td data-label="时间">' + esc(r.time) + '</td>'
-                + '<td data-label="接口">' + esc(r.apiname) + '</td>'
-                + '<td data-label="调用者"><span class="dash-caller"><span class="dash-caller__avatar">' + esc(r.initial || '访') + '</span>' + esc(r.caller) + '</span></td>'
-                + '<td data-label="状态"><span class="dash-status ' + (ok ? 'is-ok' : 'is-fail') + '">' + (ok ? '成功' : '失败') + '</span></td>'
-                + '<td data-label="错误码">' + esc(ok ? '—' : (r.code_label || r.httpcode || '—')) + '</td>'
-                + '</tr>';
+        var html = '<div class="dash-recent-list" role="table" aria-label="最近调用记录">'
+            + '<div class="dash-recent-row dash-recent-row--head" role="row">'
+            + '<span class="dash-recent-id">ID</span>'
+            + '<span class="dash-recent-name">接口</span>'
+            + '<span class="dash-recent-ip">IP</span>'
+            + '<span class="dash-recent-time">时间</span>'
+            + '</div>';
+        list.forEach(function (r) {
+            html += '<div class="dash-recent-row" role="row">'
+                + '<span class="dash-recent-id">' + esc(r.id) + '</span>'
+                + '<span class="dash-recent-name" title="' + esc(r.apiname) + '">' + esc(r.apiname || '—') + '</span>'
+                + '<span class="dash-recent-ip" title="' + esc(r.ip) + '">' + esc(r.ip || '—') + '</span>'
+                + '<span class="dash-recent-time">' + esc(r.time || '—') + '</span>'
+                + '</div>';
         });
-        html += '</tbody></table>';
+        html += '</div>';
         el.innerHTML = html;
     }
 
     function updateClock(data) {
-        var dateEl = page.querySelector('[data-dash-date]');
-        if (!dateEl || !data) return;
-        dateEl.textContent = (data.server_time || '') + ' · ' + (data.weekday || '');
+        if (!data) return;
+        if (data.server_time) {
+            syncClock(data.server_time);
+        }
+        if (data.live_interval != null) {
+            var next = readLiveIntervalMs(data.live_interval);
+            if (next !== liveIntervalMs) {
+                liveIntervalMs = next;
+                restartLivePoll();
+            }
+        }
     }
 
     function renderAll(data) {
@@ -385,6 +434,14 @@
         }).catch(function () { /* 静默 */ });
     }
 
+    function restartLivePoll() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+        pollTimer = setInterval(pollLive, liveIntervalMs);
+    }
+
     var refreshBtn = document.getElementById('dashRefreshBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
@@ -393,34 +450,22 @@
         });
     }
 
-    var filters = document.getElementById('dashRecentFilters');
-    if (filters) {
-        filters.addEventListener('click', function (e) {
-            var btn = e.target.closest('[data-filter]');
-            if (!btn) return;
-            filter = btn.getAttribute('data-filter') || 'all';
-            Array.prototype.forEach.call(filters.querySelectorAll('[data-filter]'), function (b) {
-                b.classList.toggle('is-active', b === btn);
-            });
-            renderRecent(boot.recent);
-        });
-    }
-
-    // 首屏壳 → 立即拉全量；live 5s（需 ready）；软刷新 45s（趋势/TOP）
+    // 首屏壳 → 立即拉全量；live 可配置；软刷新 45s；时钟每秒走
     if (boot.boot_light) {
         showKpiLoading();
-        updateClock(boot);
+        if (boot.server_time) syncClock(boot.server_time);
         fetchSnapshot(false);
     } else {
         ready = true;
         renderAll(boot);
     }
-    pollTimer = setInterval(pollLive, 5000);
-    // 软刷不依赖 ready：首屏失败时仍可自动重试
+    clockTimer = setInterval(tickClock, 1000);
+    restartLivePoll();
     softTimer = setInterval(function () { fetchSnapshot(false); }, 45000);
 
     window.addEventListener('beforeunload', function () {
         if (pollTimer) clearInterval(pollTimer);
         if (softTimer) clearInterval(softTimer);
+        if (clockTimer) clearInterval(clockTimer);
     });
 })();

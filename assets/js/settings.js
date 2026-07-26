@@ -140,7 +140,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
-        ['siteForm', 'registerForm', 'checkinForm', 'oauthForm', 'siteExtraForm', 'mailForm', 'testMailForm', 'apilogForm'].forEach(function (id) {
+        ['siteForm', 'registerForm', 'checkinForm', 'oauthForm', 'siteExtraForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm'].forEach(function (id) {
             bindAjaxForm(document.getElementById(id));
         });
         bindApilogCron();

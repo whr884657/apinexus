@@ -35,6 +35,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'save_dashboard') {
+        try {
+            $interval = isset($_POST['dashboard_live_interval']) ? (int) $_POST['dashboard_live_interval'] : 5;
+            if ($interval < 1) {
+                $interval = 1;
+            }
+            if ($interval > 5) {
+                $interval = 5;
+            }
+            Config::set('dashboard_live_interval', (string) $interval);
+            AjaxResponse::success('控制台设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
     if ($action === 'generate_apilog_cron_key') {
         try {
             $key = ApiLogArchive::generateCronKey();
@@ -541,6 +557,37 @@ vs_admin_accordion_start(
 
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存站点扩展</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-dashboard',
+    '控制台',
+    '实时刷新间隔'
+);
+$dashLive = isset($vsCfg['dashboard_live_interval']) ? (int) $vsCfg['dashboard_live_interval'] : 5;
+if ($dashLive < 1) {
+    $dashLive = 1;
+}
+if ($dashLive > 5) {
+    $dashLive = 5;
+}
+?>
+    <form method="post" action="" class="vs-form" id="dashboardForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_dashboard">
+        <div class="vs-form-row">
+            <label class="vs-label" for="dashboard_live_interval">实时刷新间隔（秒）</label>
+            <select class="vs-input" id="dashboard_live_interval" name="dashboard_live_interval" data-vs-pick>
+                <?php for ($i = 1; $i <= 5; $i++): ?>
+                    <option value="<?php echo $i; ?>"<?php echo $dashLive === $i ? ' selected' : ''; ?>><?php echo $i; ?> 秒</option>
+                <?php endfor; ?>
+            </select>
+            <?php vs_render_notice('tip', '', '控制台时钟、今日指标与最近调用的自动刷新频率。间隔越短请求越频繁。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存控制台设置</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>

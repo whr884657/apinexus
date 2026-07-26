@@ -1,7 +1,9 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-$api = isset($api) && is_array($api) ? $api : null;
-$notFound = !empty($notFound) || $api === null;
+$apiRaw = (isset($api) && is_array($api)) ? $api : null;
+$notFound = !empty($notFound) || $apiRaw === null;
+/** @var array $api 始终为数组，避免 IDE 在分支内误判 null */
+$api = $apiRaw !== null ? $apiRaw : array();
 $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
 $playground = isset($playground) && is_array($playground) ? $playground : array(
     'loggedIn' => false,
@@ -33,7 +35,7 @@ $hasParamsTable = count($paramsList) > 0;
 $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey_label'] : '无需 KEY';
 
 $recommendApi = null;
-$pageApiSnapshot = (!$notFound && is_array($api)) ? $api : null;
+$pageApiSnapshot = (!$notFound && $api !== array()) ? $api : null;
 if (!$notFound) {
     $pool = FrontendApi::listForTheme();
     $candidates = array();
