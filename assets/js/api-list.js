@@ -1785,7 +1785,13 @@
             var local = loadLocalDraft();
             if (local && window.confirm('检测到未提交的本地草稿，是否恢复？')) {
                 draftSkip = true;
-                fillForm(Object.assign({ id: 0, status: 0, apitype: 0, needkey: 0, charge: 0, qpm: 0 }, local));
+                var merged = {
+                    id: 0, status: 0, apitype: 0, needkey: 0, charge: 0, qpm: 0
+                };
+                Object.keys(local).forEach(function (k) {
+                    merged[k] = local[k];
+                });
+                fillForm(merged);
                 draftSkip = false;
                 setDraftHint('已恢复本地草稿');
             }

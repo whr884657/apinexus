@@ -160,6 +160,48 @@
         });
     }
 
+    function bindAiTest() {
+        var btn = document.getElementById('aiTestBtn');
+        var form = document.getElementById('aiForm');
+        if (!btn || !form) {
+            return;
+        }
+        btn.addEventListener('click', function () {
+            var baseurl = document.getElementById('aiBaseurl');
+            var apikey = document.getElementById('aiApikey');
+            var model = document.getElementById('aiModel');
+            if (!baseurl || !String(baseurl.value || '').trim()) {
+                showFlash('请填写接口根地址', 'error');
+                return;
+            }
+            if (!model || !String(model.value || '').trim()) {
+                showFlash('请填写模型名', 'error');
+                return;
+            }
+            if (apikey && !String(apikey.value || '').trim()) {
+                // 允许空：后端可回退已存密钥；若库中也无会报错
+            }
+            btn.disabled = true;
+            showFlash('正在测试连接…', 'info');
+            var fd = new FormData(form);
+            fd.set('action', 'test_ai');
+            window.VS.postForm(fd, window.location.href)
+                .then(function (data) {
+                    if (data && data.code === 1) {
+                        showFlash(data.msg || '连接成功', 'success');
+                    } else {
+                        showFlash((data && data.msg) || '连接失败', 'error');
+                    }
+                })
+                .catch(function () {
+                    showFlash('网络异常，请稍后重试', 'error');
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                });
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
@@ -168,5 +210,6 @@
         });
         bindApilogCron();
         bindAiProvider();
+        bindAiTest();
     });
 })();

@@ -184,7 +184,7 @@ class ApiQuickstart
             'go' => 'go', 'golang' => 'go',
             'java' => 'java',
             'php' => 'php',
-            'cpp' => 'cpp', 'c++' => 'cpp', 'cplusplus' => 'cpp',
+            'cpp' => 'cpp', 'c++' => 'cpp', 'cplusplus' => 'cpp', 'c' => 'cpp',
             'rust' => 'rust', 'rs' => 'rust',
         );
         return isset($aliases[$raw]) ? $aliases[$raw] : '';

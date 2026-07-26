@@ -134,6 +134,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::success('草稿已记在本地', array('local_only' => 1));
         }
         $data = $payloadFromPost();
+        // 自动草稿：表单半填时用库中字段补齐空值，避免校验失败导致静默丢草稿
+        $row = ApiManager::findById($id);
+        if (is_array($row)) {
+            $fillKeys = array(
+                'name', 'description', 'endpoint', 'targeturl', 'proxyslug',
+                'method', 'params', 'response', 'doc', 'aidoc', 'category',
+                'icon', 'upkeyname', 'upkey',
+            );
+            foreach ($fillKeys as $k) {
+                $cur = isset($data[$k]) ? trim((string) $data[$k]) : '';
+                if ($cur === '' && isset($row[$k]) && (string) $row[$k] !== '') {
+                    $data[$k] = $row[$k];
+                }
+            }
+            // 代理接口：表单若未带 apitype=1 但库中是代理，且本地 endpoint 仍空，按代理补齐
+            if ((int) (isset($row['apitype']) ? $row['apitype'] : 0) === 1
+                && (int) $data['apitype'] !== 1
+                && trim((string) $data['endpoint']) === '') {
+                $data['apitype'] = 1;
+                if (trim((string) $data['targeturl']) === '' && !empty($row['targeturl'])) {
+                    $data['targeturl'] = $row['targeturl'];
+                }
+                if (trim((string) $data['proxyslug']) === '' && !empty($row['proxyslug'])) {
+                    $data['proxyslug'] = $row['proxyslug'];
+                }
+            }
+        }
         $data['audit'] = ApiManager::AUDIT_APPROVED;
         $result = ApiManager::update($id, $data);
         if ($result !== true) {

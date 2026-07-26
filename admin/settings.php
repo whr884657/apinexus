@@ -122,6 +122,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'test_ai') {
+        $provider = strtolower(trim(isset($_POST['ai_provider']) ? (string) $_POST['ai_provider'] : 'openai'));
+        $presets = AiConfig::providerPresets();
+        if (!isset($presets[$provider])) {
+            $provider = 'openai';
+        }
+        $baseurl = trim(isset($_POST['ai_baseurl']) ? (string) $_POST['ai_baseurl'] : '');
+        if ($baseurl === '' && $provider !== 'custom') {
+            $baseurl = $presets[$provider];
+        }
+        $apikey = trim(isset($_POST['ai_apikey']) ? (string) $_POST['ai_apikey'] : '');
+        // 表单未改密钥时可沿用已存密钥（避免测试时被空密码框误伤）
+        if ($apikey === '') {
+            $apikey = (string) Config::get('ai_apikey', '');
+        }
+        $model = trim(isset($_POST['ai_model']) ? (string) $_POST['ai_model'] : '');
+        $timeout = isset($_POST['ai_timeout']) ? (int) $_POST['ai_timeout'] : 30;
+        $result = AiClient::testConnection(array(
+            'baseurl' => $baseurl,
+            'apikey'  => $apikey,
+            'model'   => $model,
+            'timeout' => $timeout,
+        ));
+        if (strpos($result, '错误：') === 0) {
+            AjaxResponse::error(preg_replace('/^错误：/', '', $result));
+        }
+        AjaxResponse::success($result);
+    }
+
     if ($action === 'save_register') {
         try {
             $input = isset($_POST['register_email_suffixes']) ? $_POST['register_email_suffixes'] : '';
@@ -874,8 +903,10 @@ $aiPresets = AiConfig::providerPresets();
             </div>
         </div>
         <div class="vs-form-actions">
+            <button type="button" class="vs-btn vs-btn--default" id="aiTestBtn">测试连接</button>
             <button type="submit" class="vs-btn vs-btn--primary">保存 AI 设置</button>
         </div>
+        <p class="vs-form-hint" id="aiTestHint">填写根地址、密钥与模型后可先测试；测试不要求先点保存，也不强制勾选「启用」。</p>
     </form>
 <?php vs_admin_accordion_end(); ?>
 

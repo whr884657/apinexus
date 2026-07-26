@@ -9,42 +9,107 @@ class AiClient
     /**
      * @param string $system
      * @param string $user
-     * @return string|array 成功返回助手文本；失败返回错误文案字符串（以「错误：」开头）由上层识别
+     * @return string 成功返回助手文本；失败返回以「错误：」开头的文案
      */
     public static function chat($system, $user)
     {
         if (!AiConfig::isReady()) {
             return '错误：请先在系统设置中启用并配置 AI';
         }
-        $cfg = AiConfig::get();
+        return self::chatWithConfig(AiConfig::get(), $system, $user, array('temperature' => 0.3));
+    }
+
+    /**
+     * 用指定配置探测连通性（可不要求已启用；用于设置页「测试连接」）
+     *
+     * @param array $cfg 须含 baseurl / apikey / model；timeout 可选
+     * @return string 成功返回「连接成功」类文案；失败「错误：…」
+     */
+    public static function testConnection(array $cfg)
+    {
+        $base = rtrim(trim((string) (isset($cfg['baseurl']) ? $cfg['baseurl'] : '')), '/');
+        $key = trim((string) (isset($cfg['apikey']) ? $cfg['apikey'] : ''));
+        $model = trim((string) (isset($cfg['model']) ? $cfg['model'] : ''));
+        if ($base === '' || $key === '' || $model === '') {
+            return '错误：请填写接口根地址、API Key 与模型名';
+        }
+        if (!preg_match('#^https?://#i', $base)) {
+            return '错误：接口根地址须以 http:// 或 https:// 开头';
+        }
+        $timeout = isset($cfg['timeout']) ? (int) $cfg['timeout'] : 30;
+        if ($timeout < 10) {
+            $timeout = 10;
+        }
+        if ($timeout > 60) {
+            $timeout = 60;
+        }
+        $probe = array(
+            'baseurl' => $base,
+            'apikey'  => $key,
+            'model'   => $model,
+            'timeout' => $timeout,
+        );
+        $out = self::chatWithConfig(
+            $probe,
+            'You are a connectivity probe. Reply with exactly: ok',
+            'ping',
+            array('max_tokens' => 32, 'temperature' => 0)
+        );
+        if (strpos($out, '错误：') === 0) {
+            return $out;
+        }
+        return '连接成功';
+    }
+
+    /**
+     * @param array  $cfg
+     * @param string $system
+     * @param string $user
+     * @param array  $opts max_tokens / temperature 可选
+     * @return string
+     */
+    public static function chatWithConfig(array $cfg, $system, $user, array $opts = array())
+    {
+        $base = rtrim(trim((string) (isset($cfg['baseurl']) ? $cfg['baseurl'] : '')), '/');
+        $key = trim((string) (isset($cfg['apikey']) ? $cfg['apikey'] : ''));
+        $model = trim((string) (isset($cfg['model']) ? $cfg['model'] : ''));
+        $timeout = isset($cfg['timeout']) ? (int) $cfg['timeout'] : 60;
+        if ($timeout < 10) {
+            $timeout = 10;
+        }
+        if ($timeout > 180) {
+            $timeout = 180;
+        }
+        if ($base === '' || $key === '' || $model === '') {
+            return '错误：AI 配置不完整';
+        }
 
         $adminId = class_exists('Auth') ? (int) Auth::id() : 0;
         $bucket = 'ai:chat:' . ($adminId > 0 ? $adminId : '0');
-        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 8, true)) {
+        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 10, true)) {
             return '错误：请求过于频繁，请稍后再试';
         }
 
-        $url = rtrim($cfg['baseurl'], '/') . '/chat/completions';
-        // LongCat OpenAI 兼容根须含 /v1
-        if (stripos($cfg['baseurl'], 'longcat.chat/openai') !== false
-            && !preg_match('#/v\d+$#i', rtrim($cfg['baseurl'], '/'))) {
-            $url = rtrim($cfg['baseurl'], '/') . '/v1/chat/completions';
-        }
+        $url = self::completionsUrl($base);
+        $temperature = isset($opts['temperature']) ? (float) $opts['temperature'] : 0.3;
         $payload = array(
-            'model'       => $cfg['model'],
-            'temperature' => 0.3,
+            'model'       => $model,
+            'temperature' => $temperature,
             'messages'    => array(
                 array('role' => 'system', 'content' => (string) $system),
                 array('role' => 'user', 'content' => (string) $user),
             ),
         );
+        if (isset($opts['max_tokens']) && (int) $opts['max_tokens'] > 0) {
+            $payload['max_tokens'] = (int) $opts['max_tokens'];
+        }
 
         $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if ($body === false) {
             return '错误：请求编码失败';
         }
 
-        $raw = self::httpPostJson($url, $body, $cfg['apikey'], $cfg['timeout']);
+        $raw = self::httpPostJson($url, $body, $key, $timeout);
         if (!is_array($raw)) {
             return '错误：' . (string) $raw;
         }
@@ -64,11 +129,29 @@ class AiClient
             return '错误：' . ($msg !== '' ? $msg : '模型未返回内容');
         }
 
-        // 去掉常见 markdown 外层代码围栏
         if (preg_match('/^```(?:markdown|md)?\s*\n([\s\S]*?)\n```\s*$/u', $content, $m)) {
             $content = trim($m[1]);
         }
         return $content;
+    }
+
+    /**
+     * @param string $baseurl
+     * @return string
+     */
+    public static function completionsUrl($baseurl)
+    {
+        $base = rtrim((string) $baseurl, '/');
+        // 用户误填到完整 completions 路径时不再追加
+        if (preg_match('#/chat/completions$#i', $base)) {
+            return $base;
+        }
+        // LongCat OpenAI 兼容根须含 /v1
+        if (stripos($base, 'longcat.chat/openai') !== false
+            && !preg_match('#/v\d+$#i', $base)) {
+            return $base . '/v1/chat/completions';
+        }
+        return $base . '/chat/completions';
     }
 
     /**

@@ -22,7 +22,7 @@ class AiConfig
     {
         return array(
             self::PROVIDER_OPENAI   => 'https://api.openai.com/v1',
-            self::PROVIDER_DEEPSEEK => 'https://api.deepseek.com',
+            self::PROVIDER_DEEPSEEK => 'https://api.deepseek.com/v1',
             self::PROVIDER_ZHIPU    => 'https://open.bigmodel.cn/api/paas/v4',
             self::PROVIDER_LONGCAT  => 'https://api.longcat.chat/openai/v1',
             self::PROVIDER_CUSTOM   => '',

@@ -324,7 +324,7 @@ if (!$notFound) {
                 'code' => $row['code'],
                 'syn' => isset($row['syn']) ? $row['syn'] : 'javascript',
             );
-        }, $qsSamples), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+        }, $qsSamples), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
         </script>
         <?php endif; ?>
     </section>
