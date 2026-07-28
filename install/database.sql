@@ -114,6 +114,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('apilog_shard_rows', '5000'),
 ('apilog_cron_key', ''),
 ('captcha_mode', 'local'),
+('captcha_mode_admin', 'local'),
+('captcha_mode_user', 'local'),
 ('gt3_id', ''),
 ('gt3_key', ''),
 ('gt4_id', ''),

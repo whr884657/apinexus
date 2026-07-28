@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/Captcha.php
- * 作用：系统级验证码门面（本地图 / 极验3 / 极验4，仅启用其一）
+ * 作用：系统级验证码门面（本地图 / 极验3 / 极验4；管理员与用户可分别选方式）
  */
 
 require_once VS_ROOT . '/core/captcha/gt3/GeetestLib.php';
@@ -104,15 +104,29 @@ class Captcha
     }
 
     /**
+     * @param string $raw
      * @return string local|gt3|gt4
      */
-    public static function mode()
+    public static function normalizeMode($raw)
     {
-        $m = strtolower(trim((string) Config::get('captcha_mode', self::MODE_LOCAL)));
+        $m = strtolower(trim((string) $raw));
         if ($m === self::MODE_GT3 || $m === self::MODE_GT4 || $m === self::MODE_LOCAL) {
             return $m;
         }
-        // 旧键兼容读一次后仍归一到合法值
+        return self::MODE_LOCAL;
+    }
+
+    /**
+     * 旧版单一 captcha_mode 回退值
+     *
+     * @return string
+     */
+    private static function legacySharedMode()
+    {
+        $m = self::normalizeMode(Config::get('captcha_mode', self::MODE_LOCAL));
+        if ($m !== self::MODE_LOCAL) {
+            return $m;
+        }
         $legacy = trim((string) Config::get('geetest_version', ''));
         if ($legacy === '3') {
             return self::MODE_GT3;
@@ -124,13 +138,73 @@ class Captcha
     }
 
     /**
-     * 当前模式凭证是否齐全（本地无需凭证）
-     *
+     * @return string local|gt3|gt4
+     */
+    public static function modeAdmin()
+    {
+        $v = trim((string) Config::get('captcha_mode_admin', ''));
+        if ($v !== '') {
+            return self::normalizeMode($v);
+        }
+        return self::legacySharedMode();
+    }
+
+    /**
+     * @return string local|gt3|gt4
+     */
+    public static function modeUser()
+    {
+        $v = trim((string) Config::get('captcha_mode_user', ''));
+        if ($v !== '') {
+            return self::normalizeMode($v);
+        }
+        return self::legacySharedMode();
+    }
+
+    /**
+     * @param string $scene
      * @return bool
      */
-    public static function credentialsReady()
+    public static function isAdminScene($scene)
     {
-        $mode = self::mode();
+        return strpos((string) $scene, 'admin_') === 0;
+    }
+
+    /**
+     * 按场景取验证方式（管理员 / 用户分配置）
+     *
+     * @param string|null $scene Captcha::SCENE_*；空则回退用户侧
+     * @return string local|gt3|gt4
+     */
+    public static function mode($scene = null)
+    {
+        if ($scene !== null && $scene !== '') {
+            return self::isAdminScene($scene) ? self::modeAdmin() : self::modeUser();
+        }
+        return self::modeUser();
+    }
+
+    /**
+     * 任一侧是否启用指定方式
+     *
+     * @param string $mode
+     * @return bool
+     */
+    public static function sideUsesMode($mode)
+    {
+        $mode = self::normalizeMode($mode);
+        return self::modeAdmin() === $mode || self::modeUser() === $mode;
+    }
+
+    /**
+     * 指定方式凭证是否齐全（本地无需凭证）
+     *
+     * @param string $mode
+     * @return bool
+     */
+    public static function credentialsReadyForMode($mode)
+    {
+        $mode = self::normalizeMode($mode);
         if ($mode === self::MODE_LOCAL) {
             return function_exists('imagecreatetruecolor');
         }
@@ -141,13 +215,22 @@ class Captcha
     }
 
     /**
+     * @param string|null $scene
+     * @return bool
+     */
+    public static function credentialsReady($scene = null)
+    {
+        return self::credentialsReadyForMode(self::mode($scene));
+    }
+
+    /**
      * @param string $scene
      * @return bool
      */
     public static function sceneEnabled($scene)
     {
         $scene = preg_replace('/[^a-z_]/', '', (string) $scene);
-        if ($scene === '' || !self::credentialsReady()) {
+        if ($scene === '' || !self::credentialsReady($scene)) {
             return false;
         }
         return Config::get('captcha_on_' . $scene, Config::get('geetest_on_' . $scene, '0')) === '1';
@@ -218,7 +301,7 @@ class Captcha
     public static function publicBoot($scene)
     {
         $enabled = self::sceneEnabled($scene);
-        $mode = self::mode();
+        $mode = self::mode($scene);
         $base = function_exists('vs_base_url') ? rtrim(vs_base_url(), '/') : '';
         $out = array(
             'enabled'   => $enabled ? 1 : 0,
@@ -252,7 +335,7 @@ class Captcha
      */
     public static function registerGt3()
     {
-        if (self::mode() !== self::MODE_GT3 || !self::credentialsReady()) {
+        if (!self::sideUsesMode(self::MODE_GT3) || !self::credentialsReadyForMode(self::MODE_GT3)) {
             return json_encode(array(
                 'success'     => 0,
                 'gt'          => '',
@@ -297,7 +380,7 @@ class Captcha
         if (!self::sceneEnabled($scene)) {
             return true;
         }
-        $mode = self::mode();
+        $mode = self::mode($scene);
         if ($mode === self::MODE_LOCAL) {
             $code = self::postStr($post, 'captcha_code');
             if (!CaptchaLocal::verify($code, $scene)) {
@@ -415,11 +498,12 @@ class Captcha
     public static function forAdminForm()
     {
         return array(
-            'mode'          => self::mode(),
+            'mode_admin'    => self::modeAdmin(),
+            'mode_user'     => self::modeUser(),
             'gt3_id'        => self::gt3Id(),
-            'gt3_has_key'   => self::gt3Key() !== '',
+            'gt3_key'       => self::gt3Key(),
             'gt4_id'        => self::gt4Id(),
-            'gt4_has_key'   => self::gt4Key() !== '',
+            'gt4_key'       => self::gt4Key(),
             'gt4_api'       => self::gt4Api(),
             'admin_login'   => Config::get('captcha_on_admin_login', Config::get('geetest_on_admin_login', '0')) === '1',
             'admin_forgot'  => Config::get('captcha_on_admin_forgot', Config::get('geetest_on_admin_forgot', '0')) === '1',

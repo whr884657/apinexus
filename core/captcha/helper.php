@@ -16,7 +16,7 @@ function vs_captcha_field($scene, $only = null)
     if (!class_exists('Captcha') || !Captcha::sceneEnabled($scene)) {
         return;
     }
-    $mode = Captcha::mode();
+    $mode = Captcha::mode($scene);
     if ($only === 'local' && $mode !== Captcha::MODE_LOCAL) {
         return;
     }

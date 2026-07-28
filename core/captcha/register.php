@@ -12,7 +12,7 @@ InstallChecker::requireInstalled();
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store');
 
-if (!class_exists('Captcha') || Captcha::mode() !== Captcha::MODE_GT3 || !Captcha::credentialsReady()) {
+if (!class_exists('Captcha') || !Captcha::sideUsesMode(Captcha::MODE_GT3) || !Captcha::credentialsReadyForMode(Captcha::MODE_GT3)) {
     echo json_encode(array(
         'success'     => 0,
         'gt'          => '',

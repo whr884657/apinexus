@@ -1,13 +1,13 @@
 {
-    "version": "13.6.1",
-    "title": "ApiNexus 13.6.1 验证码布局与安全加固",
+    "version": "13.7.0",
+    "title": "ApiNexus 13.7.0 验证码管理员/用户分端与极验样式修复",
     "release_date": "2026-07-29",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "登录：验证码在账号密码下方，记住/忘记密码在验证码下方",
-        "注册/忘记：本地图在邮箱验证码上方；极验在邮箱验证码下方；去掉「验证码」标签；极验条撑满",
-        "安全：四代 fail-closed、三代禁宕机任意放行、场景绑定、票据一次性、图/register 限流、API 白名单 HTTPS",
-        "易错点 E159–E161"
+        "管理员与用户可分别选择本站图形 / 行为验证三代 / 四代，避免第三方异常时管理员无法登录",
+        "修复极验控件被 CSS 强制 width:100% 导致 logo 变形",
+        "系统设置中三代/四代密钥明文回显可编辑",
+        "迁移写入 captcha_mode_admin / captcha_mode_user；E162"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

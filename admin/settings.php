@@ -351,12 +351,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_captcha') {
         try {
-            $mode = strtolower(trim(isset($_POST['captcha_mode']) ? (string) $_POST['captcha_mode'] : 'local'));
-            if ($mode !== 'gt3' && $mode !== 'gt4') {
-                $mode = 'local';
-            }
-            $gt3KeyIn = trim(isset($_POST['gt3_key']) ? (string) $_POST['gt3_key'] : '');
-            $gt4KeyIn = trim(isset($_POST['gt4_key']) ? (string) $_POST['gt4_key'] : '');
+            $modeAdmin = Captcha::normalizeMode(isset($_POST['captcha_mode_admin']) ? (string) $_POST['captcha_mode_admin'] : 'local');
+            $modeUser = Captcha::normalizeMode(isset($_POST['captcha_mode_user']) ? (string) $_POST['captcha_mode_user'] : 'local');
             $gt4ApiIn = trim(isset($_POST['gt4_api']) ? (string) $_POST['gt4_api'] : '');
             if ($gt4ApiIn !== '') {
                 $gt4ApiNorm = Geetest4Login::normalizeApiServer($gt4ApiIn);
@@ -366,9 +362,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $gt4ApiIn = $gt4ApiNorm;
             }
             $payload = array(
-                'captcha_mode'              => $mode,
+                'captcha_mode_admin'        => $modeAdmin,
+                'captcha_mode_user'         => $modeUser,
+                'captcha_mode'              => $modeUser,
                 'gt3_id'                    => trim(isset($_POST['gt3_id']) ? (string) $_POST['gt3_id'] : ''),
+                'gt3_key'                   => trim(isset($_POST['gt3_key']) ? (string) $_POST['gt3_key'] : ''),
                 'gt4_id'                    => trim(isset($_POST['gt4_id']) ? (string) $_POST['gt4_id'] : ''),
+                'gt4_key'                   => trim(isset($_POST['gt4_key']) ? (string) $_POST['gt4_key'] : ''),
                 'gt4_api'                   => $gt4ApiIn,
                 'captcha_on_admin_login'    => isset($_POST['captcha_on_admin_login']) ? '1' : '0',
                 'captcha_on_admin_forgot'   => isset($_POST['captcha_on_admin_forgot']) ? '1' : '0',
@@ -376,12 +376,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'captcha_on_user_register'  => isset($_POST['captcha_on_user_register']) ? '1' : '0',
                 'captcha_on_user_forgot'    => isset($_POST['captcha_on_user_forgot']) ? '1' : '0',
             );
-            if ($gt3KeyIn !== '') {
-                $payload['gt3_key'] = $gt3KeyIn;
-            }
-            if ($gt4KeyIn !== '') {
-                $payload['gt4_key'] = $gt4KeyIn;
-            }
             Config::setMany($payload);
             AjaxResponse::success('验证码设置已保存');
         } catch (Exception $e) {
@@ -562,7 +556,7 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-captcha',
     '验证码',
-    '本地图形或极验三/四代（三选一启用）；可分别开关登录、注册、忘记密码场景'
+    '管理员与用户可分别选择本站图形 / 行为验证三代 / 四代；凭证共用，场景可单独开关'
 );
 ?>
     <form method="post" action="" class="vs-form" id="captchaForm" data-ajax="1">
@@ -571,18 +565,27 @@ vs_admin_accordion_start(
         vs_render_notice(
             'info',
             '配置说明',
-            '<p>可同时保存三代与四代的验证 ID / 密钥；下方「当前方式」只启用其中一种，也可改用本站图形验证码（无需第三方）。</p><p>登录在提交时校验；注册与忘记密码在发送邮箱验证码时校验。</p>',
+            '<p>管理员后台与用户端可各自选择验证方式。例如用户侧用行为验证，管理员改用本站图形，可避免第三方服务异常时管理员无法登录。</p><p>三代与四代的验证 ID / 密钥可同时保存；登录在提交时校验，注册与忘记密码在发送邮箱验证码时校验。</p>',
             array('allow_html' => true, 'compact' => true)
         );
         ?>
         <div class="vs-form-row">
-            <label class="vs-label">当前验证方式</label>
-            <select name="captcha_mode" class="vs-input">
-                <option value="local" <?php echo $captchaCfg['mode'] === 'local' ? 'selected' : ''; ?>>本站图形验证码</option>
-                <option value="gt4" <?php echo $captchaCfg['mode'] === 'gt4' ? 'selected' : ''; ?>>行为验证第四代</option>
-                <option value="gt3" <?php echo $captchaCfg['mode'] === 'gt3' ? 'selected' : ''; ?>>行为验证第三代</option>
+            <label class="vs-label">管理员验证方式</label>
+            <select name="captcha_mode_admin" class="vs-input">
+                <option value="local" <?php echo $captchaCfg['mode_admin'] === 'local' ? 'selected' : ''; ?>>本站图形验证码</option>
+                <option value="gt4" <?php echo $captchaCfg['mode_admin'] === 'gt4' ? 'selected' : ''; ?>>行为验证第四代</option>
+                <option value="gt3" <?php echo $captchaCfg['mode_admin'] === 'gt3' ? 'selected' : ''; ?>>行为验证第三代</option>
             </select>
-            <p class="vs-form-hint">同时只能启用一种；切换后请确保对应凭证已填写（本站图形无需凭证）。</p>
+            <p class="vs-form-hint">作用于管理员登录、管理员忘记密码。</p>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">用户验证方式</label>
+            <select name="captcha_mode_user" class="vs-input">
+                <option value="local" <?php echo $captchaCfg['mode_user'] === 'local' ? 'selected' : ''; ?>>本站图形验证码</option>
+                <option value="gt4" <?php echo $captchaCfg['mode_user'] === 'gt4' ? 'selected' : ''; ?>>行为验证第四代</option>
+                <option value="gt3" <?php echo $captchaCfg['mode_user'] === 'gt3' ? 'selected' : ''; ?>>行为验证第三代</option>
+            </select>
+            <p class="vs-form-hint">作用于用户登录、注册、忘记密码。</p>
         </div>
         <div class="vs-form-row">
             <label class="vs-label">第三代 · 验证 ID</label>
@@ -591,8 +594,8 @@ vs_admin_accordion_start(
         </div>
         <div class="vs-form-row">
             <label class="vs-label">第三代 · 验证密钥</label>
-            <input type="password" name="gt3_key" class="vs-input" autocomplete="new-password"
-                   value="" placeholder="<?php echo $captchaCfg['gt3_has_key'] ? '已配置，留空则不修改' : '第三代私钥'; ?>">
+            <input type="text" name="gt3_key" class="vs-input" autocomplete="off"
+                   value="<?php echo vs_e($captchaCfg['gt3_key']); ?>" placeholder="第三代私钥">
         </div>
         <div class="vs-form-row">
             <label class="vs-label">第四代 · 验证 ID</label>
@@ -601,15 +604,15 @@ vs_admin_accordion_start(
         </div>
         <div class="vs-form-row">
             <label class="vs-label">第四代 · 验证密钥</label>
-            <input type="password" name="gt4_key" class="vs-input" autocomplete="new-password"
-                   value="" placeholder="<?php echo $captchaCfg['gt4_has_key'] ? '已配置，留空则不修改' : '第四代私钥'; ?>">
+            <input type="text" name="gt4_key" class="vs-input" autocomplete="off"
+                   value="<?php echo vs_e($captchaCfg['gt4_key']); ?>" placeholder="第四代私钥">
         </div>
         <div class="vs-form-row">
             <label class="vs-label">第四代 · 二次校验地址（可选）</label>
             <input type="text" name="gt4_api" class="vs-input"
                    value="<?php echo vs_e($captchaCfg['gt4_api']); ?>"
                    placeholder="默认 https://gcaptcha4.geetest.com（仅官方域名）">
-            <p class="vs-form-hint">一般无需填写；仅允许官方域名且强制 HTTPS。密钥仅存服务端。</p>
+            <p class="vs-form-hint">一般无需填写；仅允许官方域名且强制 HTTPS。</p>
         </div>
         <div class="vs-form-row">
             <label class="vs-label">启用场景</label>

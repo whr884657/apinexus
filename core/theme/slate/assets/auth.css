@@ -476,25 +476,46 @@
     opacity: 0.55;
 }
 
-/* 验证码挂载区：与表单同宽 */
+/* 验证码挂载区：外层同宽；禁止强制拉伸极验内部 logo/图标 */
 .vs-captcha-field {
     width: 100%;
     min-height: 44px;
     box-sizing: border-box;
 }
 
-.vs-captcha-field--gt,
-.vs-captcha-field--gt > div,
-.vs-captcha-field .geetest_holder,
-.vs-captcha-field .geetest_btn,
-.vs-captcha-field .geetest_wind,
-.vs-captcha-field .geetest_box,
-.vs-captcha-field iframe,
-.vs-captcha-field [class^="geetest_"],
-.vs-captcha-field [class*=" geetest_"] {
+.vs-captcha-field--gt {
+    width: 100%;
+    overflow: visible;
+}
+
+.vs-captcha-field--gt > div {
     width: 100% !important;
-    max-width: 100% !important;
+    max-width: 100%;
     box-sizing: border-box;
+}
+
+.vs-captcha-field--gt .geetest_holder,
+.vs-captcha-field--gt .geetest_wind,
+.vs-captcha-field--gt .geetest_btn,
+.vs-captcha-field--gt .geetest_box {
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.vs-captcha-field--gt img,
+.vs-captcha-field--gt svg,
+.vs-captcha-field--gt canvas,
+.vs-captcha-field--gt .geetest_logo,
+.vs-captcha-field--gt [class*="logo"],
+.vs-captcha-field--gt [class*="Logo"],
+.vs-captcha-field--gt [class*="icon"],
+.vs-captcha-field--gt [class*="Icon"] {
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    object-fit: contain !important;
+    transform: none !important;
 }
 
 .vs-captcha-local {

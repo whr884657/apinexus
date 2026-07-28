@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.6.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.7.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -31,7 +31,7 @@
 - **代理网关（v13.4.0）**：一律服务端中继（取消对调用方 302）；上游认证 Query / Header API Key / Bearer；可配置出站 User-Agent（内置约 20 套 / 自定义 / 轮询）与 Referer；密钥不暴露给调用方
 - **调用方密钥传递 keyways（v10.17.0 / v11.0.0）**：接口可多选 Query / Header(`X-API-Key`) / Bearer；守卫错误 JSON 含业务 `errcode`（非 HTTP 401/403）；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色（v11.1.0）**：登录/注册/忘记密码与后台仅可选系统 24 色；无自定义取色、无昼夜更替
-- **行为验证（v13.6.0）**：系统设置可选本站图形 / 极验三代 / 极验四代（三选一）；三代与四代凭证分存；SDK 在 `core/captcha/`
+- **行为验证（v13.6.0 / v13.7.0）**：系统设置可选本站图形 / 极验三代 / 极验四代；**管理员与用户可分端选择**；三代与四代凭证分存；SDK 在 `core/captcha/`
 - **AI 代码示例（v12.0.0）**：前端按鉴权×语言分片请求（最多 27 片）；系统设置可开单线程/并行；进程实时显示当前任务
 - **快速上手语言图标（v12.0.1）**：默认主题切换鉴权方式后九种语言图标不再丢失（`detailQsLangIcons` 兜底）
 - **实时数据监控中心（v12.1.0）**：ECharts 中国/世界地图飞线、四角玻璃面板（今日/累计/成功率/失败率 + TOP + 趋势 + 实时调用日志）、太阳/月亮深浅色、双端自适应
@@ -274,11 +274,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.6.1（2026-07-29）
+### v13.7.0（2026-07-29）
 
-- 登录页：验证码紧挨账号/密码下方；「记住账号 / 忘记密码」移到验证码下方
-- 注册/忘记：本地图在邮箱验证码上方；极验在邮箱验证码下方；去掉「验证码」标签；极验条撑满
-- 验证码安全加固：fail-closed、场景绑定、票据一次性、限流、API 白名单；E159–E161
+- 管理员 / 用户验证方式分端配置（本站图形 / 行为验证三代 / 四代）
+- 修复极验控件 CSS 拉伸导致 logo 变形；设置页密钥明文回显
+- 迁移 `captcha_mode_admin` / `captcha_mode_user`；E162
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
