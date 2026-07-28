@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.3.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.3.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -272,10 +272,9 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.3.0（2026-07-28）
+### v13.3.1（2026-07-29）
 
-- 大屏飞线：绿=密钥成功、黄=游客成功、红=失败；同城可多色；粒子对齐参考 UI
-- 本地统计：仅 `dirname` + `ApiStats::hit(接口ID)`；须填后台接口 ID
+- 大屏实时调用日志：游客与密钥一律显示成功/失败，不再出现「信息」
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

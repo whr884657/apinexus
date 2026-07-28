@@ -647,9 +647,17 @@
             return;
         }
         el.innerHTML = list.map(function (r) {
-            var level = r.level || (r.status === 'success' ? 'success' : 'error');
-            var levelText = level === 'success' ? '成功'
-                : (level === 'warning' ? '警告' : (level === 'info' ? '信息' : '失败'));
+            // 一律成功/失败：优先看 ok；游客与密钥相同。旧缓存 level=info（如代理 302）仍算成功
+            var ok;
+            if (r.ok != null && r.ok !== '') {
+                ok = parseInt(r.ok, 10) === 1;
+            } else if (r.status) {
+                ok = r.status === 'success';
+            } else {
+                ok = r.level === 'success' || r.level === 'info';
+            }
+            var level = ok ? 'success' : 'error';
+            var levelText = ok ? '成功' : '失败';
             return '<div class="ds-log-row">'
                 + '<span class="ds-log-time">' + esc(r.time) + '</span>'
                 + '<span class="ds-log-level ds-log-level--' + esc(level) + '">' + esc(levelText) + '</span>'

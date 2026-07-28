@@ -542,7 +542,7 @@ class DashboardStats
     private static function recentCalls($limit = 12)
     {
         $limit = max(1, min(30, (int) $limit));
-        return self::remember('recent_' . $limit, self::TTL_LIVE, function () use ($limit) {
+        return self::remember('recent_sf_' . $limit, self::TTL_LIVE, function () use ($limit) {
             if (!ApiLogManager::tableReady()) {
                 return array();
             }
@@ -589,7 +589,8 @@ class DashboardStats
                         'code_label' => $codeLabel,
                         'caller'     => $caller,
                         'initial'    => $initial !== '' ? $initial : '访',
-                        'level'      => $ok ? ($code >= 200 && $code < 300 ? 'success' : 'info') : 'error',
+                        // 仅成功/失败：游客与密钥一视同仁，勿因 httpcode=302 等标成「信息」
+                        'level'      => $ok ? 'success' : 'error',
                     );
                 }
                 return $out;

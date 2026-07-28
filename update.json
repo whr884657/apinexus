@@ -1,12 +1,11 @@
 {
-    "version": "13.3.0",
-    "title": "ApiNexus 13.3.0 飞线身份三色与本地统计必填接口 ID",
-    "release_date": "2026-07-28",
+    "version": "13.3.1",
+    "title": "ApiNexus 13.3.1 大屏实时日志游客成功勿标「信息」",
+    "release_date": "2026-07-29",
     "db_changes": false,
     "changes": [
-        "数据大屏飞线按调用身份着色：绿=密钥成功、黄=游客成功、红=失败；同城可并存；粒子样式对齐参考 UI",
-        "本地统计统一为 dirname + ApiStats::hit(接口ID)；废除路径猜 endpoint 与 hit.php 记账",
-        "同步站长说明、本地统计规范、易错点 E147"
+        "实时调用日志状态只看 ok：成功/失败；游客与密钥一视同仁",
+        "修复代理成功 httpcode=302 等被标成「信息」的问题；易错点 E148"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
