@@ -1,5 +1,17 @@
 {
     "versions": {
+        "12.1.0": {
+            "title": "ApiNexus 12.1.0 实时数据监控中心 ECharts 大屏重制",
+            "date": "2026-07-28",
+            "db_changes": false,
+            "changes": [
+                "管理员「实时数据监控中心」按参考 UI 重制：四角玻璃面板 + 中心 ECharts 中国/世界地图飞线",
+                "地图数据源采用 ECharts 官方 china/world geoJSON（5.4.3 jsdelivr 主源）；本地 vendor 引入 echarts.min.js",
+                "左上角核心指标：今日调用 / 累计调用 / 成功率 / 失败率（statday 聚合）；右下角实时调用日志",
+                "飞线按 iploc 实时调用量动态生成；深浅色切换改为太阳/月亮 SVG；电脑/手机双端自适应",
+                "去掉参考页底部「数据源/多源回退/主题版本」等调试条；禁止参考 UI 目录进 Git/ZIP"
+            ]
+        },
         "12.0.1": {
             "title": "ApiNexus 12.0.1 默认主题快速上手切换鉴权语言图标修复",
             "date": "2026-07-27",

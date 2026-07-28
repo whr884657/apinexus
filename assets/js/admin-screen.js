@@ -1,24 +1,48 @@
 /**
  * 文件：assets/js/admin-screen.js
- * 作用：数据大屏渲染（KPI / 时序 / TOP / 飞线地图 / 实时日志 / 轻量轮询）
+ * 作用：数据大屏（ECharts 地图飞线 / KPI / TOP / 趋势 / 实时日志）
  */
 (function () {
     'use strict';
 
     var page = document.getElementById('adminScreenPage');
-    if (!page || !window.VS) return;
+    if (!page || !window.VS || !window.echarts) return;
 
     var BAR_COLORS = ['#2563eb', '#06b6d4', '#8b5cf6', '#f59e0b', '#10b981', '#ec4899', '#3b82f6', '#14b8a6', '#a855f7', '#fb923c'];
+    var ICON_SUN = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
+        + '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>'
+        + '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">'
+        + '<path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>'
+        + '</g></svg>';
+    var ICON_MOON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
+        + '<path fill="currentColor" d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"/>'
+        + '</svg>';
+
     var boot = {};
     var mapMode = 'china';
     var theme = page.classList.contains('vs-datascreen--dark') ? 'dark' : 'light';
+    var mapChart = null;
+    var mapRegistered = { china: false, world: false };
     var pollTimer = null;
     var softTimer = null;
+    var clockTimer = null;
+    var clockBaseMs = 0;
+    var clockOffset = 0;
+    var liveIntervalMs = 5000;
+    var softIntervalMs = 45000;
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
     } catch (e) {
         boot = {};
+    }
+    liveIntervalMs = readLiveIntervalMs(boot.live_interval);
+
+    function readLiveIntervalMs(v) {
+        var n = parseInt(v, 10);
+        if (isNaN(n) || n < 1) n = 5;
+        if (n > 5) n = 5;
+        return n * 1000;
     }
 
     function esc(s) {
@@ -49,142 +73,281 @@
         return window.VS.postForm(fd);
     }
 
-    function cityIndex(cities) {
-        var map = {};
-        (cities || []).forEach(function (c) {
-            if (c && c.name) map[c.name] = c;
-        });
-        return map;
+    function cssVar(name, fallback) {
+        var v = '';
+        try {
+            v = getComputedStyle(page).getPropertyValue(name).trim();
+        } catch (e) { /* ignore */ }
+        return v || fallback;
     }
 
-    function curvePath(a, b) {
-        var mx = (a.x + b.x) / 2;
-        var my = Math.min(a.y, b.y) - Math.max(18, Math.abs(a.x - b.x) * 0.22);
-        return 'M' + a.x + ',' + a.y + ' Q' + mx + ',' + my + ' ' + b.x + ',' + b.y;
+    function mapPalette() {
+        var dark = theme === 'dark';
+        return {
+            areaColor: dark ? 'rgba(37,99,235,0.18)' : 'rgba(37,99,235,0.08)',
+            borderColor: dark ? '#3b82f6' : '#93c5fd',
+            labelColor: cssVar('--ds-muted', dark ? '#94a3b8' : '#64748b'),
+            scatter: '#38bdf8',
+            hub: '#f87171',
+            line: 'rgba(251,191,36,0.4)',
+            trail: '#fbbf24',
+            accent: cssVar('--ds-accent', '#2563eb'),
+            text: cssVar('--ds-text', dark ? '#e5e7eb' : '#0f172a'),
+            muted: cssVar('--ds-muted', dark ? '#94a3b8' : '#64748b'),
+            grid: dark ? 'rgba(148,163,184,0.18)' : 'rgba(148,163,184,0.25)'
+        };
     }
 
-    function chinaOutline() {
-        return 'M95,55 L145,42 L195,38 L245,48 L285,55 L320,78 L345,110 L355,150 '
-            + 'L348,190 L325,225 L290,250 L250,265 L210,268 L170,255 L135,230 '
-            + 'L110,195 L98,155 L92,115 L95,80 Z';
+    function pad2(n) {
+        return n < 10 ? '0' + n : String(n);
     }
 
-    function worldOutline() {
-        return 'M40,90 L90,70 L140,75 L190,62 L240,78 L290,70 L340,88 '
-            + 'L365,120 L350,165 L300,185 L250,190 L200,182 L145,175 L95,160 L55,130 Z';
+    function formatClock(ts) {
+        var d = new Date(ts);
+        return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
+            + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
     }
 
-    function ensureSvg(host) {
-        var svg = host.querySelector('svg');
-        if (!svg) {
-            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            host.insertBefore(svg, host.firstChild);
+    function syncClock(serverTime) {
+        var parsed = Date.parse(String(serverTime || '').replace(/-/g, '/'));
+        if (isNaN(parsed)) parsed = Date.now();
+        clockBaseMs = parsed;
+        clockOffset = Date.now();
+        tickClock();
+    }
+
+    function tickClock() {
+        var el = document.getElementById('dsClock');
+        if (!el || !clockBaseMs) return;
+        el.textContent = formatClock(clockBaseMs + (Date.now() - clockOffset));
+    }
+
+    function setMapStatus(text, isError) {
+        var el = document.getElementById('dsMapStatus');
+        if (!el) return;
+        if (!text) {
+            el.hidden = true;
+            el.textContent = '';
+            return;
         }
-        svg.setAttribute('viewBox', '0 0 400 300');
-        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        return svg;
+        el.hidden = false;
+        el.textContent = text;
+        el.setAttribute('data-state', isError ? 'error' : 'loading');
     }
 
-    function renderMap(geo) {
-        var host = document.getElementById('dsMap');
-        if (!host) return;
-        var tip = document.getElementById('dsMapTip');
-        geo = geo || {};
-        var pack = mapMode === 'world' ? (geo.world || {}) : (geo.china || {});
+    function mapUrl(mode) {
+        var attr = mode === 'world' ? 'data-map-world' : 'data-map-china';
+        return page.getAttribute(attr) || '';
+    }
+
+    function ensureMapChart() {
+        var el = document.getElementById('dsMapChart');
+        if (!el) return null;
+        if (!mapChart) {
+            mapChart = window.echarts.init(el);
+        }
+        return mapChart;
+    }
+
+    function buildMapOption(geo) {
+        var colors = mapPalette();
+        var pack = ((geo || {})[mapMode]) || {};
         var cities = Array.isArray(pack.cities) ? pack.cities : [];
         var flows = Array.isArray(pack.flows) ? pack.flows : [];
-        var idx = cityIndex(cities);
-        var svg = ensureSvg(host);
-        var ns = 'http://www.w3.org/2000/svg';
+        var hub = pack.hub || {};
+        var isChina = mapMode === 'china';
+        var isDesktop = window.innerWidth >= 1200;
 
-        while (svg.firstChild) svg.removeChild(svg.firstChild);
+        var choropleth = cities
+            .filter(function (c) { return c && c.name && (parseInt(c.count, 10) || 0) > 0; })
+            .map(function (c) {
+                return { name: c.name, value: parseInt(c.count, 10) || 0 };
+            });
 
-        var land = document.createElementNS(ns, 'path');
-        land.setAttribute('class', 'ds-map-outline');
-        land.setAttribute('d', mapMode === 'world' ? worldOutline() : chinaOutline());
-        svg.appendChild(land);
+        var scatter = cities
+            .filter(function (c) {
+                return c && (parseInt(c.count, 10) || 0) > 0
+                    && Array.isArray(c.coord) && c.coord.length >= 2;
+            })
+            .map(function (c) {
+                return {
+                    name: c.name,
+                    value: [Number(c.coord[0]), Number(c.coord[1]), parseInt(c.count, 10) || 0]
+                };
+            });
 
-        flows.forEach(function (f) {
-            var from = idx[f.from];
-            var to = idx[f.to];
-            if (!from || !to) return;
-            var a = { x: Number(from.x), y: Number(from.y) };
-            var b = { x: Number(to.x), y: Number(to.y) };
-            var path = document.createElementNS(ns, 'path');
-            path.setAttribute('class', 'ds-flow-line');
-            path.setAttribute('d', curvePath(a, b));
-            path.setAttribute('data-tip', (f.from || '') + ' → ' + (f.to || '')
-                + (f.count ? (' · ' + f.count + ' 次') : ''));
-            svg.appendChild(path);
-        });
+        var linesData = flows
+            .filter(function (f) {
+                return f && Array.isArray(f.coords) && f.coords.length >= 2
+                    && Array.isArray(f.coords[0]) && Array.isArray(f.coords[1]);
+            })
+            .map(function (f) {
+                return {
+                    fromName: f.from || '',
+                    toName: f.to || '',
+                    coords: [
+                        [Number(f.coords[0][0]), Number(f.coords[0][1])],
+                        [Number(f.coords[1][0]), Number(f.coords[1][1])]
+                    ]
+                };
+            });
 
-        var shown = 0;
-        cities.forEach(function (c) {
-            var x = Number(c.x);
-            var y = Number(c.y);
-            var count = parseInt(c.count, 10) || 0;
-            if (!count && cities.some(function (z) { return (z.count || 0) > 0; })) {
-                // 有真实数据时只画有量的点，避免满屏空点
-                return;
-            }
-            shown++;
-            var g = document.createElementNS(ns, 'g');
-            g.setAttribute('data-tip', (c.name || '') + ' · ' + fmtNum(count) + ' 次 · ' + (c.status || ''));
+        var hubCoord = (hub && Array.isArray(hub.coord) && hub.coord.length >= 2)
+            ? [Number(hub.coord[0]), Number(hub.coord[1])]
+            : (isChina ? [104.0, 35.0] : [104.0, 35.0]);
+        var hubName = (hub && hub.name) ? String(hub.name) : (isChina ? '数据中心' : '中国');
 
-            var pulse = document.createElementNS(ns, 'circle');
-            pulse.setAttribute('class', 'ds-city-pulse');
-            pulse.setAttribute('cx', String(x));
-            pulse.setAttribute('cy', String(y));
-            pulse.setAttribute('r', '6');
-            g.appendChild(pulse);
+        return {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'item',
+                formatter: function (p) {
+                    if (!p) return '';
+                    if (p.seriesName === '调用量') {
+                        return esc(p.name) + '<br/>调用量: ' + fmtNum(p.value || 0);
+                    }
+                    if (p.seriesName === '调用城市') {
+                        var v = (p.value && p.value[2] != null) ? p.value[2] : 0;
+                        return esc(p.name) + '<br/>调用: ' + fmtNum(v) + ' 次';
+                    }
+                    if (p.seriesName === '调用飞线') {
+                        var d = p.data || {};
+                        return esc(d.fromName || '') + ' → ' + esc(d.toName || '');
+                    }
+                    if (p.seriesName === '枢纽') {
+                        return esc(p.name || hubName);
+                    }
+                    return esc(p.name || '');
+                }
+            },
+            geo: {
+                map: mapMode,
+                roam: true,
+                zoom: isChina ? 1.1 : 1.2,
+                center: isChina ? [105, 32] : [10, 25],
+                layoutCenter: ['50%', '50%'],
+                layoutSize: isDesktop ? (isChina ? '115%' : '120%') : (isChina ? '100%' : '105%'),
+                label: {
+                    show: isChina,
+                    color: colors.labelColor,
+                    fontSize: 9
+                },
+                emphasis: { disabled: true },
+                itemStyle: {
+                    areaColor: colors.areaColor,
+                    borderColor: colors.borderColor,
+                    borderWidth: 1
+                },
+                select: { disabled: true }
+            },
+            series: [
+                {
+                    name: '调用量',
+                    type: 'map',
+                    geoIndex: 0,
+                    data: choropleth,
+                    select: { disabled: true },
+                    itemStyle: {
+                        areaColor: colors.areaColor,
+                        borderColor: colors.borderColor
+                    },
+                    emphasis: { disabled: true }
+                },
+                {
+                    name: '调用飞线',
+                    type: 'lines',
+                    zlevel: 2,
+                    coordinateSystem: 'geo',
+                    effect: {
+                        show: true,
+                        period: 4,
+                        trailLength: 0.3,
+                        symbol: 'arrow',
+                        symbolSize: 6,
+                        color: colors.trail
+                    },
+                    lineStyle: {
+                        color: colors.line,
+                        width: 1,
+                        curveness: 0.3
+                    },
+                    data: linesData
+                },
+                {
+                    name: '调用城市',
+                    type: 'effectScatter',
+                    zlevel: 3,
+                    coordinateSystem: 'geo',
+                    rippleEffect: {
+                        period: 4,
+                        brushType: 'stroke',
+                        scale: 4
+                    },
+                    symbolSize: function (val) {
+                        var c = (val && val[2]) ? val[2] : 1;
+                        return Math.max(6, Math.min(20, 4 + Math.sqrt(c) * 0.9));
+                    },
+                    itemStyle: {
+                        color: colors.scatter,
+                        shadowBlur: 10,
+                        shadowColor: colors.scatter
+                    },
+                    data: scatter
+                },
+                {
+                    name: '枢纽',
+                    type: 'effectScatter',
+                    zlevel: 4,
+                    coordinateSystem: 'geo',
+                    rippleEffect: { period: 3, brushType: 'stroke', scale: 6 },
+                    symbolSize: 12,
+                    itemStyle: {
+                        color: colors.hub,
+                        shadowBlur: 15,
+                        shadowColor: colors.hub
+                    },
+                    data: [{ name: hubName, value: [hubCoord[0], hubCoord[1], 0] }]
+                }
+            ]
+        };
+    }
 
-            var dot = document.createElementNS(ns, 'circle');
-            dot.setAttribute('class', 'ds-city-dot');
-            dot.setAttribute('cx', String(x));
-            dot.setAttribute('cy', String(y));
-            dot.setAttribute('r', String(Math.max(3, Math.min(8, 3 + Math.sqrt(count) * 0.45))));
-            g.appendChild(dot);
+    function applyMapOption() {
+        var chart = ensureMapChart();
+        if (!chart || !mapRegistered[mapMode]) return;
+        chart.setOption(buildMapOption(boot.geo), true);
+        chart.resize();
+    }
 
-            if (count > 0 || mapMode === 'world') {
-                var label = document.createElementNS(ns, 'text');
-                label.setAttribute('class', 'ds-city-label');
-                label.setAttribute('x', String(x + 8));
-                label.setAttribute('y', String(y + 3));
-                label.textContent = c.name || '';
-                g.appendChild(label);
-            }
-            svg.appendChild(g);
-        });
-
-        if (!shown && !flows.length) {
-            var empty = document.createElementNS(ns, 'text');
-            empty.setAttribute('x', '200');
-            empty.setAttribute('y', '150');
-            empty.setAttribute('text-anchor', 'middle');
-            empty.setAttribute('fill', '#94a3b8');
-            empty.setAttribute('font-size', '13');
-            empty.textContent = '暂无地域调用数据';
-            svg.appendChild(empty);
+    function loadMap(mode) {
+        mode = mode === 'world' ? 'world' : 'china';
+        if (mapRegistered[mode]) {
+            mapMode = mode;
+            setMapStatus('');
+            applyMapOption();
+            return Promise.resolve();
         }
-
-        svg.onmousemove = function (e) {
-            if (!tip) return;
-            var el = e.target;
-            if (el && el.nodeType === 3) el = el.parentElement;
-            var t = (el && typeof el.closest === 'function') ? el.closest('[data-tip]') : null;
-            if (!t) {
-                tip.hidden = true;
-                return;
-            }
-            tip.textContent = t.getAttribute('data-tip') || '';
-            tip.hidden = false;
-            var rect = host.getBoundingClientRect();
-            tip.style.left = (e.clientX - rect.left) + 'px';
-            tip.style.top = (e.clientY - rect.top) + 'px';
-        };
-        svg.onmouseleave = function () {
-            if (tip) tip.hidden = true;
-        };
+        var url = mapUrl(mode);
+        if (!url) {
+            setMapStatus('地图资源暂不可用', true);
+            return Promise.reject(new Error('missing url'));
+        }
+        mapMode = mode;
+        setMapStatus('地图加载中…', false);
+        return fetch(url, { credentials: 'omit', cache: 'force-cache' })
+            .then(function (res) {
+                if (!res.ok) throw new Error('bad status');
+                return res.json();
+            })
+            .then(function (json) {
+                window.echarts.registerMap(mode, json);
+                mapRegistered[mode] = true;
+                setMapStatus('');
+                if (mapMode === mode) applyMapOption();
+            })
+            .catch(function () {
+                if (mapMode === mode) setMapStatus('地图加载失败，请稍后重试', true);
+            });
     }
 
     function smoothLine(pts) {
@@ -216,6 +379,7 @@
         if (!el) return;
         labels = labels || [];
         series = series || [];
+        var colors = mapPalette();
         var w = 640, h = 220, L = 36, R = 10, T = 14, B = 28;
         var max = Math.max.apply(null, series.concat([1]));
         var n = Math.max(1, labels.length);
@@ -229,17 +393,20 @@
         var grid = '';
         for (var g = 0; g < 4; g++) {
             var gy = T + g * (h - T - B) / 3;
-            grid += '<line x1="' + L + '" y1="' + gy + '" x2="' + (w - R) + '" y2="' + gy + '" stroke="rgba(148,163,184,0.25)"/>';
+            grid += '<line x1="' + L + '" y1="' + gy + '" x2="' + (w - R) + '" y2="' + gy
+                + '" stroke="' + colors.grid + '"/>';
         }
         var xLabels = '';
         labels.forEach(function (lb, i) {
             if (n > 12 && i % 3 !== 0 && i !== n - 1) return;
-            xLabels += '<text x="' + xAt(i) + '" y="' + (h - 8) + '" text-anchor="middle" fill="#94a3b8" font-size="10">' + esc(lb) + '</text>';
+            xLabels += '<text x="' + xAt(i) + '" y="' + (h - 8) + '" text-anchor="middle" fill="'
+                + colors.muted + '" font-size="10">' + esc(lb) + '</text>';
         });
         el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '">'
             + grid
             + '<path d="' + area + '" fill="rgba(37,99,235,0.12)"/>'
-            + '<path d="' + line + '" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+            + '<path d="' + line + '" fill="none" stroke="' + colors.accent
+            + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
             + xLabels
             + '</svg>';
     }
@@ -323,7 +490,8 @@
         }
         el.innerHTML = list.map(function (r) {
             var level = r.level || (r.status === 'success' ? 'success' : 'error');
-            var levelText = level === 'success' ? '成功' : (level === 'warning' ? '警告' : (level === 'info' ? '信息' : '失败'));
+            var levelText = level === 'success' ? '成功'
+                : (level === 'warning' ? '警告' : (level === 'info' ? '信息' : '失败'));
             return '<div class="ds-log-row">'
                 + '<span class="ds-log-time">' + esc(r.time) + '</span>'
                 + '<span class="ds-log-level ds-log-level--' + esc(level) + '">' + esc(levelText) + '</span>'
@@ -334,19 +502,59 @@
         }).join('');
     }
 
-    function renderClock(t) {
-        var el = document.getElementById('dsClock');
-        if (el) el.textContent = t || boot.server_time || '';
-    }
-
     function renderAll(data) {
         boot = data || boot;
-        renderClock(boot.server_time);
+        if (boot.live_interval != null) {
+            var next = readLiveIntervalMs(boot.live_interval);
+            if (next !== liveIntervalMs) {
+                liveIntervalMs = next;
+                restartLivePoll();
+            }
+        }
+        if (boot.server_time) syncClock(boot.server_time);
         renderKpi(boot.kpi, boot.current_rpm);
         areaChart(document.getElementById('dsHourlyChart'), (boot.hourly || {}).labels, (boot.hourly || {}).series);
         renderTop(boot.top_apis);
-        renderMap(boot.geo);
         renderRecent(boot.recent);
+        if (mapRegistered[mapMode]) {
+            applyMapOption();
+        } else {
+            loadMap(mapMode);
+        }
+    }
+
+    function mergeLive(live) {
+        if (!live) return;
+        if (live.server_time) syncClock(live.server_time);
+        if (live.live_interval != null) {
+            var next = readLiveIntervalMs(live.live_interval);
+            if (next !== liveIntervalMs) {
+                liveIntervalMs = next;
+                restartLivePoll();
+            }
+        }
+        if (live.kpi) {
+            var merged = {};
+            var prev = boot.kpi || {};
+            var k;
+            for (k in prev) {
+                if (Object.prototype.hasOwnProperty.call(prev, k)) merged[k] = prev[k];
+            }
+            for (k in live.kpi) {
+                if (Object.prototype.hasOwnProperty.call(live.kpi, k)) merged[k] = live.kpi[k];
+            }
+            boot.kpi = merged;
+        }
+        if (live.current_rpm != null) boot.current_rpm = live.current_rpm;
+        renderKpi(boot.kpi, boot.current_rpm);
+        if (live.recent) {
+            boot.recent = live.recent;
+            renderRecent(boot.recent);
+        }
+        if (live.geo) {
+            boot.geo = live.geo;
+            if (mapRegistered[mapMode]) applyMapOption();
+        }
     }
 
     function applyTheme(next) {
@@ -354,7 +562,13 @@
         page.classList.toggle('vs-datascreen--dark', theme === 'dark');
         page.classList.toggle('vs-datascreen--light', theme === 'light');
         var btn = document.getElementById('dsThemeBtn');
-        if (btn) btn.textContent = theme === 'dark' ? '浅色' : '深色';
+        if (btn) {
+            btn.innerHTML = theme === 'dark' ? ICON_SUN : ICON_MOON;
+            btn.title = theme === 'dark' ? '切换浅色' : '切换深色';
+            btn.setAttribute('aria-label', btn.title);
+        }
+        areaChart(document.getElementById('dsHourlyChart'), (boot.hourly || {}).labels, (boot.hourly || {}).series);
+        if (mapRegistered[mapMode]) applyMapOption();
     }
 
     function toggleFullscreen() {
@@ -367,6 +581,72 @@
         } else if (!on && document.fullscreenElement && document.exitFullscreen) {
             try { document.exitFullscreen(); } catch (e) { /* ignore */ }
         }
+        setTimeout(function () {
+            if (mapChart) mapChart.resize();
+        }, 80);
+    }
+
+    function pollLive() {
+        post('live').then(function (res) {
+            if (!res || res.code !== 1 || !res.live) return;
+            mergeLive(res.live);
+        }).catch(function () { /* 静默 */ });
+    }
+
+    function softSnapshot() {
+        post('snapshot').then(function (res) {
+            if (!res || res.code !== 1 || !res.snapshot) return;
+            var snap = res.snapshot;
+            var liveKpi = boot.kpi || {};
+            // 软刷不得覆盖 live 已更新的 KPI / 最近日志 / RPM（E129）
+            boot.hourly = snap.hourly || boot.hourly;
+            boot.top_apis = snap.top_apis || boot.top_apis;
+            boot.geo = snap.geo || boot.geo;
+            if (snap.server_time) syncClock(snap.server_time);
+            if (snap.live_interval != null) {
+                var next = readLiveIntervalMs(snap.live_interval);
+                if (next !== liveIntervalMs) {
+                    liveIntervalMs = next;
+                    restartLivePoll();
+                }
+            }
+            // 仅补齐 live 未带的 delta 等字段
+            if (snap.kpi) {
+                var merged = {};
+                var k;
+                for (k in snap.kpi) {
+                    if (Object.prototype.hasOwnProperty.call(snap.kpi, k)) merged[k] = snap.kpi[k];
+                }
+                for (k in liveKpi) {
+                    if (Object.prototype.hasOwnProperty.call(liveKpi, k)
+                        && (k === 'today_calls' || k === 'total_calls' || k === 'success_rate' || k === 'fail_rate')) {
+                        merged[k] = liveKpi[k];
+                    }
+                }
+                boot.kpi = merged;
+            }
+            areaChart(document.getElementById('dsHourlyChart'), (boot.hourly || {}).labels, (boot.hourly || {}).series);
+            renderTop(boot.top_apis);
+            renderKpi(boot.kpi, boot.current_rpm);
+            if (mapRegistered[mapMode]) applyMapOption();
+            else loadMap(mapMode);
+        }).catch(function () { /* 静默 */ });
+    }
+
+    function restartLivePoll() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+        pollTimer = setInterval(pollLive, liveIntervalMs);
+    }
+
+    function restartSoftPoll() {
+        if (softTimer) {
+            clearInterval(softTimer);
+            softTimer = null;
+        }
+        softTimer = setInterval(softSnapshot, softIntervalMs);
     }
 
     document.addEventListener('fullscreenchange', function () {
@@ -375,6 +655,7 @@
             var btn = document.getElementById('dsFullscreenBtn');
             if (btn) btn.textContent = '全屏';
         }
+        if (mapChart) mapChart.resize();
     });
 
     var mapBtns = document.getElementById('dsMapToggle');
@@ -382,11 +663,11 @@
         mapBtns.addEventListener('click', function (e) {
             var btn = e.target.closest('[data-map]');
             if (!btn) return;
-            mapMode = btn.getAttribute('data-map') === 'world' ? 'world' : 'china';
+            var next = btn.getAttribute('data-map') === 'world' ? 'world' : 'china';
             Array.prototype.forEach.call(mapBtns.querySelectorAll('[data-map]'), function (b) {
                 b.classList.toggle('is-active', b === btn);
             });
-            renderMap(boot.geo);
+            loadMap(next);
         });
     }
 
@@ -421,46 +702,32 @@
         });
     }
 
-    function pollLive() {
-        post('live').then(function (res) {
-            if (!res || res.code !== 1 || !res.live) return;
-            var live = res.live;
-            renderClock(live.server_time);
-            if (live.kpi) {
-                var merged = {};
-                var prev = boot.kpi || {};
-                var k;
-                for (k in prev) {
-                    if (Object.prototype.hasOwnProperty.call(prev, k)) merged[k] = prev[k];
-                }
-                for (k in live.kpi) {
-                    if (Object.prototype.hasOwnProperty.call(live.kpi, k)) merged[k] = live.kpi[k];
-                }
-                boot.kpi = merged;
-            }
-            if (live.current_rpm != null) boot.current_rpm = live.current_rpm;
-            renderKpi(boot.kpi, boot.current_rpm);
-            if (live.recent) {
-                boot.recent = live.recent;
-                renderRecent(boot.recent);
-            }
-        }).catch(function () { /* 静默 */ });
-    }
+    window.addEventListener('resize', function () {
+        if (mapChart) mapChart.resize();
+    });
 
-    function softSnapshot() {
-        post('snapshot').then(function (res) {
-            if (!res || res.code !== 1 || !res.snapshot) return;
-            renderAll(res.snapshot);
-        }).catch(function () { /* 静默 */ });
+    var mapHost = document.getElementById('dsMapChart');
+    if (mapHost && typeof ResizeObserver === 'function') {
+        var ro = new ResizeObserver(function () {
+            if (mapChart) mapChart.resize();
+        });
+        ro.observe(mapHost);
     }
 
     applyTheme(theme);
+    ensureMapChart();
     renderAll(boot);
-    pollTimer = setInterval(pollLive, 5000);
-    softTimer = setInterval(softSnapshot, 60000);
+    clockTimer = setInterval(tickClock, 1000);
+    restartLivePoll();
+    restartSoftPoll();
 
     window.addEventListener('beforeunload', function () {
         if (pollTimer) clearInterval(pollTimer);
         if (softTimer) clearInterval(softTimer);
+        if (clockTimer) clearInterval(clockTimer);
+        if (mapChart) {
+            try { mapChart.dispose(); } catch (e) { /* ignore */ }
+            mapChart = null;
+        }
     });
 })();

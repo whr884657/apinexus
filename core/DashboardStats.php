@@ -10,7 +10,7 @@ class DashboardStats
     const TTL_TODAY = 60;
     const TTL_HOUR = 120;
     const TTL_WEEK = 300;
-    const TTL_GEO = 300;
+    const TTL_GEO = 60;
 
     /** @var string|null */
     private static $epochCache = null;
@@ -213,6 +213,7 @@ class DashboardStats
         $kpi = self::kpiBlock();
         return array(
             'server_time'    => date('Y-m-d H:i:s'),
+            'live_interval'  => self::liveIntervalSeconds(),
             'kpi'            => array(
                 'today_calls'   => $kpi['today_calls'],
                 'today_delta'   => $kpi['today_delta'],
@@ -226,27 +227,31 @@ class DashboardStats
             'hourly'         => self::hourly24h(),
             'top_apis'       => self::topApisToday(8),
             'geo'            => self::geoDistribution(),
-            'recent'         => self::recentCalls(10),
+            'recent'         => self::recentCalls(12),
             'current_rpm'    => self::currentRpm(),
         );
     }
 
     /**
-     * 大屏轻量轮询（最新日志 + 当前 RPM + 今日 KPI 数字）
+     * 大屏轻量轮询（最新日志 + RPM + 今日 KPI + 地理飞线）
      *
      * @return array
      */
     public static function screenLiveTick()
     {
+        $ttl = max(1, self::liveIntervalSeconds());
         return array(
-            'server_time' => date('Y-m-d H:i:s'),
-            'current_rpm' => self::currentRpm(),
-            'kpi'         => array(
+            'server_time'   => date('Y-m-d H:i:s'),
+            'live_interval' => self::liveIntervalSeconds(),
+            'current_rpm'   => self::currentRpm(),
+            'kpi'           => array(
                 'today_calls'  => self::countTodayCached(),
+                'total_calls'  => self::sumApiCallsCached($ttl),
                 'success_rate' => self::todaySuccessRateCached(),
                 'fail_rate'    => self::todayFailRateCached(),
             ),
-            'recent'      => self::recentCalls(8),
+            'geo'           => self::geoDistribution(),
+            'recent'        => self::recentCalls(12),
         );
     }
 
@@ -653,65 +658,89 @@ class DashboardStats
     private static function geoDistribution()
     {
         return self::remember('geo_dist', self::TTL_GEO, function () {
-            $chinaCities = self::chinaCityCoords();
-            $worldCities = self::worldCityCoords();
+            $chinaCoords = self::chinaCityCoords();
+            $worldCoords = self::worldCityCoords();
             $counts = self::iplocCityCounts();
-            $china = array();
-            $world = array();
-            foreach ($chinaCities as $name => $xy) {
-                $c = isset($counts[$name]) ? (int) $counts[$name] : 0;
-                if ($c <= 0 && empty($counts)) {
-                    // 无 iploc 数据时给示意零值点，避免地图空白
-                    $c = 0;
-                }
-                $china[] = array(
-                    'name'   => $name,
-                    'x'      => $xy[0],
-                    'y'      => $xy[1],
-                    'count'  => $c,
-                    'status' => $c > 0 ? '正常' : '暂无数据',
-                    'level'  => 'normal',
-                );
-            }
-            // 把有数据但不在预设表的城市挂到最近预设点（略）：仅展示预设城市
-            usort($china, function ($a, $b) {
-                return $b['count'] - $a['count'];
-            });
-            foreach ($worldCities as $name => $xy) {
-                $c = isset($counts[$name]) ? (int) $counts[$name] : 0;
-                $world[] = array(
-                    'name'   => $name,
-                    'x'      => $xy[0],
-                    'y'      => $xy[1],
-                    'count'  => $c,
-                    'status' => $c > 0 ? '正常' : '暂无数据',
-                    'level'  => 'normal',
-                );
-            }
-            $flowsChina = self::buildFlows(
-                array(
-                    array('北京', '上海'),
-                    array('上海', '广州'),
-                    array('北京', '成都'),
-                    array('广州', '深圳'),
-                    array('武汉', '杭州'),
-                ),
-                $counts
-            );
-            $flowsWorld = self::buildFlows(
-                array(
-                    array('北京', '新加坡'),
-                    array('纽约', '伦敦'),
-                    array('伦敦', '新加坡'),
-                    array('北京', '悉尼'),
-                ),
-                $counts
-            );
+            $chinaHub = array('name' => '数据中心', 'coord' => array(104.0, 35.0));
+            $worldHub = array('name' => '中国', 'coord' => array(104.0, 35.0));
+            $china = self::buildGeoCities($chinaCoords, $counts);
+            $world = self::buildGeoCities($worldCoords, $counts);
             return array(
-                'china' => array('cities' => $china, 'flows' => $flowsChina),
-                'world' => array('cities' => $world, 'flows' => $flowsWorld),
+                'china' => array(
+                    'cities' => $china,
+                    'flows'  => self::buildDynamicFlows($china, $chinaHub, 8),
+                    'hub'    => $chinaHub,
+                ),
+                'world' => array(
+                    'cities' => $world,
+                    'flows'  => self::buildDynamicFlows($world, $worldHub, 8),
+                    'hub'    => $worldHub,
+                ),
             );
         });
+    }
+
+    /**
+     * @param array<string,array{0:float,1:float}> $coords
+     * @param array<string,int> $counts
+     * @return array
+     */
+    private static function buildGeoCities($coords, $counts)
+    {
+        $out = array();
+        foreach ($coords as $name => $ll) {
+            $c = isset($counts[$name]) ? (int) $counts[$name] : 0;
+            $out[] = array(
+                'name'   => $name,
+                'coord'  => array((float) $ll[0], (float) $ll[1]),
+                'count'  => $c,
+                'status' => $c > 0 ? '有调用' : '暂无数据',
+                'level'  => $c > 0 ? 'active' : 'normal',
+            );
+        }
+        usort($out, function ($a, $b) {
+            return $b['count'] - $a['count'];
+        });
+        return $out;
+    }
+
+    /**
+     * 按实时调用量：有量城市 → 中心枢纽飞线
+     *
+     * @param array $cities
+     * @param array $hub
+     * @param int $limit
+     * @return array
+     */
+    private static function buildDynamicFlows($cities, $hub, $limit = 8)
+    {
+        $limit = max(1, min(12, (int) $limit));
+        $hubCoord = isset($hub['coord']) && is_array($hub['coord']) ? $hub['coord'] : array(104.0, 35.0);
+        $hubName = isset($hub['name']) ? (string) $hub['name'] : '中心';
+        $out = array();
+        foreach ($cities as $city) {
+            $c = isset($city['count']) ? (int) $city['count'] : 0;
+            if ($c <= 0) {
+                continue;
+            }
+            $coord = isset($city['coord']) && is_array($city['coord']) ? $city['coord'] : null;
+            if ($coord === null || count($coord) < 2) {
+                continue;
+            }
+            $out[] = array(
+                'from'   => (string) $city['name'],
+                'to'     => $hubName,
+                'count'  => $c,
+                'coords' => array(
+                    array((float) $coord[0], (float) $coord[1]),
+                    array((float) $hubCoord[0], (float) $hubCoord[1]),
+                ),
+            );
+            if (count($out) >= $limit) {
+                break;
+            }
+        }
+        return $out;
     }
 
     /**
@@ -790,7 +819,6 @@ class DashboardStats
                 return $city;
             }
         }
-        // 中国-北京 / 北京市
         if (preg_match('/([\x{4e00}-\x{9fa5}]{2,8}?)(?:市|省|自治区)?$/u', $iploc, $m)) {
             $c = $m[1];
             if (mb_strlen($c, 'UTF-8') >= 2) {
@@ -801,44 +829,48 @@ class DashboardStats
     }
 
     /**
-     * 视图坐标（viewBox 0 0 400 300）
+     * 中国城市经纬度（ECharts geo）
      *
      * @return array<string,array{0:float,1:float}>
      */
     private static function chinaCityCoords()
     {
         return array(
-            '北京' => array(268, 88),
-            '上海' => array(318, 168),
-            '广州' => array(278, 248),
-            '深圳' => array(288, 258),
-            '成都' => array(198, 178),
-            '武汉' => array(268, 178),
-            '西安' => array(228, 148),
-            '重庆' => array(218, 198),
-            '杭州' => array(308, 188),
+            '北京' => array(116.4074, 39.9042),
+            '上海' => array(121.4737, 31.2304),
+            '广州' => array(113.2644, 23.1291),
+            '深圳' => array(114.0579, 22.5431),
+            '成都' => array(104.0665, 30.5728),
+            '武汉' => array(114.3055, 30.5928),
+            '西安' => array(108.9398, 34.3416),
+            '重庆' => array(106.5516, 29.5630),
+            '杭州' => array(120.1551, 30.2741),
+            '南京' => array(118.7969, 32.0603),
+            '天津' => array(117.2008, 39.0842),
+            '苏州' => array(120.6196, 31.2990),
         );
     }
 
     /**
+     * 世界城市经纬度（ECharts geo）
+     *
      * @return array<string,array{0:float,1:float}>
      */
     private static function worldCityCoords()
     {
         return array(
-            '北京'   => array(300, 110),
-            '纽约'   => array(95, 105),
-            '伦敦'   => array(185, 85),
-            '新加坡' => array(295, 195),
-            '圣保罗' => array(125, 220),
-            '悉尼'   => array(345, 240),
+            '北京'   => array(116.4074, 39.9042),
+            '上海'   => array(121.4737, 31.2304),
+            '纽约'   => array(-74.0060, 40.7128),
+            '伦敦'   => array(-0.1276, 51.5074),
+            '新加坡' => array(103.8198, 1.3521),
+            '圣保罗' => array(-46.6333, -23.5505),
+            '悉尼'   => array(151.2093, -33.8688),
+            '东京'   => array(139.6917, 35.6895),
+            '洛杉矶' => array(-118.2437, 34.0522),
+            '迪拜'   => array(55.2708, 25.2048),
         );
     }
-
-    /**
-     * @param int $days
-     * @return array<string,array{guest:int,key:int,points:int}>
-     */
     private static function typeCountsLastDays($days)
     {
         $days = max(1, min(31, (int) $days));
@@ -1070,6 +1102,18 @@ class DashboardStats
         } catch (Exception $e) {
             return 0;
         }
+    }
+
+    /**
+     * @param int $ttl
+     * @return int
+     */
+    private static function sumApiCallsCached($ttl = 8)
+    {
+        $ttl = max(1, (int) $ttl);
+        return (int) self::remember('sum_api_calls_live', $ttl, function () {
+            return self::sumApiCalls();
+        });
     }
 
     /**

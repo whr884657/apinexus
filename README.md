@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-12.0.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-12.1.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -33,6 +33,7 @@
 - **调色盘固定色（v11.1.0）**：登录/注册/忘记密码与后台仅可选系统 24 色；无自定义取色、无昼夜更替
 - **AI 代码示例（v12.0.0）**：前端按鉴权×语言分片请求（最多 27 片）；系统设置可开单线程/并行；进程实时显示当前任务
 - **快速上手语言图标（v12.0.1）**：默认主题切换鉴权方式后九种语言图标不再丢失（`detailQsLangIcons` 兜底）
+- **实时数据监控中心（v12.1.0）**：ECharts 中国/世界地图飞线、四角玻璃面板（今日/累计/成功率/失败率 + TOP + 趋势 + 实时调用日志）、太阳/月亮深浅色、双端自适应
 - **Markdown / 快速上手（v10.14.0+）**：精简居中与缩进；默认主题「快速上手」多语言与多鉴权示例；后台「详细文档 / 代码示例」；AI 生成加固
 - **用户令牌（v3.29+）**：表 `apikey`；用户中心与管理员后台均可管理；格式 `sk-`+32 位（小写前缀）；每账号最多 3 个；本地/代理调用已校验密钥并累计次数
 - **积分计费与充值（v3.33+ / v3.34）**：接口收费扣积分；用户充值中心扫码支付；订单管理与积分变动分栏；回调直访 `core/play/codeplay/notify.php`
@@ -40,7 +41,7 @@
 - **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**；首页「累计调用」可在主题设置中选完整数字或单位转换（v5.7.0+）
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - **友情链接 / 合作伙伴（v5.0+）**：共用表 `link`；友链可审核与禁用；合作伙伴管理员直加（编辑/启禁）；默认主题首页合作伙伴区读库展示
-- 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）；控制台 / 大屏含 KPI·平滑趋势·飞线地图与实时轮询（v10.7.0 / v10.9.0）
+- 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）；控制台含 KPI·平滑趋势；数据大屏为 ECharts 飞线地图 + 四角实时面板（v12.1.0）
 - 用户中心侧边栏：控制台、API 管理（仅开发者，可投稿）、**令牌管理**（创建/重置/禁用，每账号最多 3 个）、积分变动、接口列表、账号设置（部分为占位页）
 - **用户角色**：普通用户（调用全站接口、管理令牌）/ 开发者（可进入 API 管理提交接口待审）；注册页横条分段选择身份，管理员可转换身份
 - 用户管理：列表查看、搜索、封禁/解封/删除、身份转换（AJAX 无整页刷新）
@@ -76,7 +77,7 @@
 
 压缩包命名：`apinexus{版本号}.zip`（如 `apinexus4.1.0.zip`）。各版本详细说明见 `发行说明/` 目录。
 
-**禁止打进仓库 / 发行 ZIP：** `默认主题参考UI（主题一）/`、其它根目录「参考*」对照目录、`开发规范/`、`修改流程记录/`、`tools/`、`pack-release.ps1`。发行包须用 **PHP ZipArchive**（临时脚本，用完即删），禁止 `Compress-Archive`。
+**禁止打进仓库 / 发行 ZIP：** `默认主题参考UI（主题一）/`、`管理员后台数据大屏参考UI/`、`管理员后台参考设计/`、其它根目录「参考*」对照目录、`开发规范/`、`修改流程记录/`、`tools/`、`pack-release.ps1`。发行包须用 **PHP ZipArchive**（临时脚本，用完即删），禁止 `Compress-Archive`。
 
 完整版本历史见 **[更新记录.md](更新记录.md)**。
 
@@ -141,7 +142,7 @@ ApiNexus/
 │   ├── finance/                # 交易财务（支付配置/订单/积分）
 │   ├── system/                 # 系统管理扩展（日志等）
 │   ├── index.php               # 控制台（KPI / 趋势 / TOP）
-│   ├── screen.php              # 数据大屏（飞线地图 / 实时日志）
+│   ├── screen.php              # 数据大屏（ECharts 飞线地图 / 四角实时面板）
 │   ├── users.php               # 用户管理
 │   ├── login.php / forgot.php
 │   ├── account.php             # 账号设置
@@ -271,11 +272,12 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v12.0.1（2026-07-27）
+### v12.1.0（2026-07-28）
 
-- 默认主题 API 详情「快速上手」：切换 Header / Bearer 后九种语言图标丢失，切回 Query 仍丢失 —— 已修复
-- 新增 `ApiQuickstart::langIconMap` 与 `window.detailQsLangIcons`；重绘 Tab 时按语言 id 补齐灰/彩图标
-- 首屏已有 PHP 图标时不再无谓重绘；升版 `?v=` 破除旧 JS 缓存
+- 实时数据监控中心按参考 UI 重制：四角玻璃面板 + 中心 ECharts 中国/世界地图飞线
+- 地图采用 ECharts 官方 geoJSON 主源；本地引入 `assets/vendor/echarts/echarts.min.js`
+- 左上角：今日调用 / 累计调用 / 成功率 / 失败率；右下角：实时调用日志；飞线按实时调用量动态生成
+- 深浅色切换改为太阳/月亮 SVG；电脑/手机双端自适应；去掉参考页调试底栏
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
