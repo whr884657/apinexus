@@ -297,11 +297,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $extras = IpLocator::parseExtras($extrasRaw);
             $url = trim(isset($_POST['ip_loc_url']) ? $_POST['ip_loc_url'] : '');
             $enabled = isset($_POST['ip_loc_enabled']) ? '1' : '0';
-            if ($enabled === '1' && $url !== '' && !IpLocator::assertPublicHttpUrl($url)) {
-                AjaxResponse::error('IP 解析 API 地址无效或指向内网，请使用公网 http(s) 地址');
+            $mode = isset($_POST['ip_loc_mode']) ? trim((string) $_POST['ip_loc_mode']) : 'builtin';
+            if ($mode !== 'custom') {
+                $mode = 'builtin';
+            }
+            // 内置模式只改开关与模式，保留已填自定义参数，避免切回时配置被清空
+            if ($mode === 'builtin') {
+                Config::setMany(array(
+                    'ip_loc_enabled' => $enabled,
+                    'ip_loc_mode'    => 'builtin',
+                ));
+                AjaxResponse::success('IP 归属地设置已保存');
+            }
+            if ($enabled === '1') {
+                if ($url === '') {
+                    AjaxResponse::error('自定义模式下请填写查询接口地址');
+                }
+                if (!IpLocator::assertPublicHttpUrl($url)) {
+                    AjaxResponse::error('IP 解析 API 地址无效或指向内网，请使用公网 http(s) 地址');
+                }
             }
             Config::setMany(array(
                 'ip_loc_enabled'   => $enabled,
+                'ip_loc_mode'      => 'custom',
                 'ip_loc_url'       => $url,
                 'ip_loc_ip_param'  => trim(isset($_POST['ip_loc_ip_param']) ? $_POST['ip_loc_ip_param'] : 'ip'),
                 'ip_loc_auth'      => (string) $auth,
@@ -755,15 +773,17 @@ vs_admin_accordion_start(
 <?php
 $ipLocExtras = IpLocator::parseExtras(Config::get('ip_loc_extras', '[]'));
 $ipLocAuth = (int) Config::get('ip_loc_auth', '0');
+$ipLocMode = IpLocator::provider();
 vs_admin_accordion_start(
     'settings-iploc',
     'IP 归属地',
-    '调用日志 IP 解析为中文归属地（外网 API）'
+    '写入调用日志，供数据大屏飞线使用'
 );
 ?>
     <form method="post" action="" class="vs-form" id="iplocForm" data-ajax="1">
         <input type="hidden" name="action" value="save_iploc">
         <input type="hidden" name="ip_loc_extras" id="ipLocExtrasJson" value="<?php echo vs_e(json_encode($ipLocExtras, JSON_UNESCAPED_UNICODE)); ?>">
+        <?php vs_render_notice('tip', '', '可选用系统内置归属地解析，也可自行配置第三方查询接口。启用后写入调用日志，数据大屏飞线依赖此归属地。选择「自定义」时将只走你填写的接口，不再使用内置解析。', array('field' => true)); ?>
         <div class="vs-form-row">
             <label class="vs-checkbox">
                 <input type="checkbox" name="ip_loc_enabled" value="1" <?php echo Config::get('ip_loc_enabled', '0') === '1' ? 'checked' : ''; ?>>
@@ -771,11 +791,20 @@ vs_admin_accordion_start(
             </label>
         </div>
         <div class="vs-form-row">
+            <label class="vs-label" for="ipLocMode">解析方式</label>
+            <select class="vs-input" name="ip_loc_mode" id="ipLocMode" data-vs-pick>
+                <option value="builtin"<?php echo $ipLocMode === 'builtin' ? ' selected' : ''; ?>>系统内置（推荐，无需填写下方接口）</option>
+                <option value="custom"<?php echo $ipLocMode === 'custom' ? ' selected' : ''; ?>>自定义接口</option>
+            </select>
+            <?php vs_render_notice('tip', '', '内置方式开箱即用；若你已有稳定的归属地 API，可选自定义并填写下方参数。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div id="ipLocCustomFields">
+        <div class="vs-form-row">
             <label class="vs-label" for="ipLocUrl">查询接口 URL</label>
             <input type="url" class="vs-input" name="ip_loc_url" id="ipLocUrl"
                    value="<?php echo vs_e(Config::get('ip_loc_url', '')); ?>"
                    placeholder="https://example.com/ip/query">
-            <?php vs_render_notice('tip', '', '使用 GET 请求；IP 与其它参数会自动拼到查询串。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '仅自定义模式需要。使用 GET 请求；IP 与其它参数会自动拼到查询串。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row">
             <label class="vs-label" for="ipLocIpParam">IP 参数名</label>
@@ -815,6 +844,7 @@ vs_admin_accordion_start(
                    placeholder="如 data.city 或 result.ad_info.city">
             <?php vs_render_notice('tip', '', '按点分路径取字符串；留空则尝试常见字段名。', array('field' => true, 'compact' => true)); ?>
         </div>
+        </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存 IP 归属地设置</button>
         </div>
@@ -829,6 +859,21 @@ vs_admin_accordion_start(
             <button type="submit" class="vs-btn">测试解析</button>
         </div>
     </form>
+<script>
+(function () {
+    var modeEl = document.getElementById('ipLocMode');
+    var box = document.getElementById('ipLocCustomFields');
+    function sync() {
+        if (!modeEl || !box) return;
+        // 仅显隐，勿 disabled：避免切回自定义时丢失未提交字段；内置保存也不覆盖这些配置
+        box.style.display = modeEl.value === 'custom' ? '' : 'none';
+    }
+    if (modeEl) {
+        modeEl.addEventListener('change', sync);
+        sync();
+    }
+})();
+</script>
 <?php vs_admin_accordion_end(); ?>
 
 <?php

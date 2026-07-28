@@ -493,9 +493,31 @@ class GeoCityCoords
             return '';
         }
         $norm = str_replace(array('|', '/', '\\', '·', ',', '，', '-', '_'), ' ', $iploc);
+        // 去掉运营商等尾缀，便于「湖北省襄阳市 电信」匹配襄阳
+        $norm = preg_replace('/\s*(电信|移动|联通|广电|铁通|教育网|鹏博士|方正宽带).*$/u', '', $norm);
+        $norm = trim((string) $norm);
         $lower = function_exists('mb_strtolower') ? mb_strtolower($norm, 'UTF-8') : strtolower($norm);
+
+        // 优先从「XX市 / XX州 / XX地区 / XX盟」提取地级名，避免只落到省会
+        if (preg_match_all('/([\x{4e00}-\x{9fa5}]{2,12})(?:市|州|地区|盟)/u', $norm, $mm)) {
+            $names = $mm[1];
+            usort($names, function ($a, $b) {
+                return mb_strlen($b, 'UTF-8') - mb_strlen($a, 'UTF-8');
+            });
+            foreach ($names as $c) {
+                if (isset(self::china()[$c]) || isset(self::world()[$c])) {
+                    return $c;
+                }
+                // 去掉民族自治等后缀残留（如 文山壮族苗族 → 文山）
+                foreach (self::matchNamesSorted() as $city) {
+                    if ($city !== '' && mb_strpos($c, $city) === 0) {
+                        return $city;
+                    }
+                }
+            }
+        }
+
         $aliases = self::aliases();
-        // 长别名优先
         $aliasKeys = array_keys($aliases);
         usort($aliasKeys, function ($a, $b) {
             return strlen($b) - strlen($a);
@@ -504,7 +526,6 @@ class GeoCityCoords
             if ($ak === '') {
                 continue;
             }
-            // 短 ASCII 别名（如 uk）须整词匹配，避免误伤 ukraine 等
             $isAscii = (bool) preg_match('/^[a-z0-9 .\'-]+$/i', $ak);
             if ($isAscii && strlen($ak) <= 3) {
                 if (!preg_match('/\b' . preg_quote($ak, '/') . '\b/i', $lower)) {
@@ -519,12 +540,6 @@ class GeoCityCoords
         foreach (self::matchNamesSorted() as $city) {
             if ($city !== '' && mb_strpos($norm, $city) !== false) {
                 return $city;
-            }
-        }
-        if (preg_match('/([\x{4e00}-\x{9fa5}]{2,10})市/u', $norm, $m)) {
-            $c = $m[1];
-            if (isset(self::china()[$c]) || isset(self::world()[$c])) {
-                return $c;
             }
         }
         return '';

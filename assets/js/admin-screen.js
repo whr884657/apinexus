@@ -107,8 +107,8 @@
             labelColor: cssVar('--ds-muted', dark ? '#94a3b8' : '#64748b'),
             scatter: '#38bdf8',
             hub: '#f87171',
-            line: 'rgba(251,191,36,0.4)',
-            trail: '#fbbf24',
+            line: 'rgba(251,191,36,0.35)',
+            trail: '#fde68a',
             accent: cssVar('--ds-accent', '#2563eb'),
             text: cssVar('--ds-text', dark ? '#e5e7eb' : '#0f172a'),
             muted: cssVar('--ds-muted', dark ? '#94a3b8' : '#64748b'),
@@ -201,19 +201,40 @@
                 };
             });
 
+        // 流星雨：头亮尾淡；按调用量 tone 着色（绿/黄/红）
+        var toneTrail = {
+            green: '#86efac',
+            yellow: '#fde68a',
+            red: '#fca5a5'
+        };
+        var toneLine = {
+            green: 'rgba(74,222,128,0.28)',
+            yellow: 'rgba(251,191,36,0.32)',
+            red: 'rgba(248,113,113,0.35)'
+        };
         var linesData = flows
             .filter(function (f) {
                 return f && Array.isArray(f.coords) && f.coords.length >= 2
                     && Array.isArray(f.coords[0]) && Array.isArray(f.coords[1]);
             })
             .map(function (f) {
+                var tone = (f.tone === 'yellow' || f.tone === 'red') ? f.tone : 'green';
                 return {
                     fromName: f.from || '',
                     toName: f.to || '',
                     coords: [
                         [Number(f.coords[0][0]), Number(f.coords[0][1])],
                         [Number(f.coords[1][0]), Number(f.coords[1][1])]
-                    ]
+                    ],
+                    lineStyle: {
+                        color: toneLine[tone],
+                        width: 1.1,
+                        curveness: 0.26,
+                        opacity: 0.5
+                    },
+                    effect: {
+                        color: toneTrail[tone]
+                    }
                 };
             });
 
@@ -283,18 +304,20 @@
                     type: 'lines',
                     zlevel: 2,
                     coordinateSystem: 'geo',
+                    // 流星：亮圆头 + 长尾迹（头大尾细由 trailLength 近似）
                     effect: {
                         show: true,
-                        period: 4,
-                        trailLength: 0.3,
-                        symbol: 'arrow',
-                        symbolSize: 6,
+                        period: 2.2,
+                        trailLength: 0.92,
+                        symbol: 'circle',
+                        symbolSize: 9,
                         color: colors.trail
                     },
                     lineStyle: {
                         color: colors.line,
-                        width: 1,
-                        curveness: 0.3
+                        width: 0.9,
+                        curveness: 0.26,
+                        opacity: 0.35
                     },
                     data: linesData
                 },

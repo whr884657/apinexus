@@ -247,14 +247,14 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型/单片超时/代码调度模式与并发） |
 | `AiClient.php` | OpenAI 兼容 Chat Completions / Responses 客户端 |
 | `AiApiDoc.php` | 生成详细文档（`doc`）与代码示例（`aidoc`）；剥离上游敏感字段；禁止 HTML 泄漏 |
-| `IpLocator.php` | 外网 IP 归属地解析（设置可配 URL/认证/字段路径；异步回填 apilog.iploc，v10.16.0） |
+| `IpLocator.php` | IP 归属地：系统内置或自定义接口；异步回填 `apilog.iploc`（v10.16.0 / **v13.2.0**） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；守卫错误经 `vs_api_error_exit`（含 `http`） |
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；默认主题浏览器直连 |
 | `ApiStats.php` | 本地/代理调用统计、守卫（needkey/keyways/qpm/charge）、错误 JSON `{code:0,msg,http}` |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
-| `DashboardStats.php` | 管理员控制台 / 数据大屏 KPI/趋势/TOP + live tick；`screen_full` Redis；geo 今日/实时双模（v13.0～**v13.1.1**） |
-| `GeoCityCoords.php` | 大屏飞线全量城市坐标库：国内地级市约 370+、全球约 290+、中英别名；`resolveCityName`（**v13.0.0**） |
+| `DashboardStats.php` | 管理员控制台 / 数据大屏 KPI/趋势/TOP + live tick；`screen_full` Redis；geo 今日/实时双模；市区级飞线（至 **v13.2.0**） |
+| `GeoCityCoords.php` | 大屏飞线全量城市坐标库；`resolveCityName` 地级优先 + 剥离运营商尾缀（v13.0.0 / **v13.2.0**） |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD |
 | `ApiLogManager.php` | 调用日志分页、今日计数、脱敏 |
 | `ApiLogArchive.php` | 调用日志冷热归档 |
@@ -692,17 +692,19 @@ VsPlaygroundResponse.directRequest({
 
 ---
 
-### 4.21.4 IpLocator.php（IP 归属地，v10.16.0）
+### 4.21.4 IpLocator.php（IP 归属地，v10.16.0 / **v13.2.0**）
 
-**作用：** 按系统设置调用外网 GET API，从 JSON 响应提取字段写入 `apilog.iploc`。
+**作用：** 解析调用方 IP 归属地文案，异步写入 `apilog.iploc`，供数据大屏飞线使用。
 
 | 要点 | 说明 |
 |------|------|
 | 开关 | `ip_loc_enabled`；仅详细日志开启时触发 |
-| 认证 | 无 / Bearer / Header / Query（设置页可选） |
-| 安全 | 公网 URL 校验；禁止跟随跳转；失败负缓存 300s |
+| 模式 | `ip_loc_mode`=`builtin`（系统内置，无需填 URL）或 `custom`（仅走自定义接口）；界面勿写明上游厂商 |
+| 认证 | 自定义模式：无 / Bearer / Header / Query |
+| 安全 | 自定义 URL 公网校验；禁止跟随跳转；失败负缓存 300s；源码端点按片段拼接，禁明文厂商标识 |
 | 性能 | **shutdown 异步回填**，不阻塞接口响应 |
 | 缓存 | Redis `cache:iploc:{md5(ip)}`，TTL 86400s |
+| 设置 | 切内置保存时保留已填自定义参数，勿清空 |
 
 ---
 
