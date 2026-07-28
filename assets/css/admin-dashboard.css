@@ -127,8 +127,60 @@
     margin-bottom: 16px;
 }
 #adminDashPage .dash-grid-trend { grid-template-columns: 1.2fr 1fr; }
-#adminDashPage .dash-grid-bars { grid-template-columns: 1.2fr 1fr; }
+#adminDashPage .dash-grid-bars { grid-template-columns: 1.2fr 1fr; align-items: stretch; }
 #adminDashPage .dash-panel { margin: 0; }
+/* TOP / 系统概览：等高固定，避免条目增多把整行撑高 */
+#adminDashPage .dash-panel--fixed {
+    display: flex;
+    flex-direction: column;
+    min-height: 280px;
+    max-height: 280px;
+}
+#adminDashPage .dash-panel--fixed > .vs-panel__header { flex-shrink: 0; }
+#adminDashPage .dash-panel__body--scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+#adminDashPage .dash-bars-viewport {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 196px;
+    max-height: 196px;
+    overflow: hidden;
+    position: relative;
+}
+#adminDashPage .dash-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    will-change: transform;
+}
+#adminDashPage .dash-bar {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: 1.4rem minmax(56px, 1fr) 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+#adminDashPage .dash-bar__rank {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 4px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+}
+#adminDashPage .dash-bar__rank.is-1 { background: #dc2626; }
+#adminDashPage .dash-bar__rank.is-2 { background: #ea580c; }
+#adminDashPage .dash-bar__rank.is-3 { background: #ca8a04; }
 #adminDashPage .dash-panel__head {
     display: flex;
     align-items: center;
@@ -234,13 +286,6 @@
     font-weight: 650;
 }
 
-#adminDashPage .dash-bars { display: flex; flex-direction: column; gap: 10px; }
-#adminDashPage .dash-bar {
-    display: grid;
-    grid-template-columns: minmax(72px, 120px) 1fr auto;
-    gap: 10px;
-    align-items: center;
-}
 #adminDashPage .dash-bar__name {
     font-size: 0.8125rem;
     color: #334155;
@@ -430,6 +475,10 @@
     #adminDashPage .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #adminDashPage .dash-grid-trend,
     #adminDashPage .dash-grid-bars { grid-template-columns: 1fr; }
+    #adminDashPage .dash-panel--fixed {
+        min-height: 260px;
+        max-height: 260px;
+    }
 }
 @media (max-width: 560px) {
     /* 手机端 KPI：一行两个，禁止单列拉满；5 卡 → 3 行 */

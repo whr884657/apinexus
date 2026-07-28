@@ -21,6 +21,9 @@
     var clockBaseMs = 0;
     var clockOffset = 0;
     var liveIntervalMs = 5000;
+    var topMarqueeRaf = null;
+    var topMarqueeY = 0;
+    var topMarqueePaused = false;
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
@@ -395,23 +398,66 @@
         });
     }
 
+    function stopTopMarquee() {
+        if (topMarqueeRaf) {
+            cancelAnimationFrame(topMarqueeRaf);
+            topMarqueeRaf = null;
+        }
+        topMarqueeY = 0;
+        topMarqueePaused = false;
+    }
+
+    function startTopMarquee(el, halfHeight) {
+        stopTopMarquee();
+        if (!el || halfHeight <= 0) return;
+        var speed = 0.32;
+        function tick() {
+            if (!topMarqueePaused) {
+                topMarqueeY += speed;
+                if (topMarqueeY >= halfHeight) {
+                    topMarqueeY -= halfHeight;
+                }
+                el.style.transform = 'translateY(' + (-topMarqueeY) + 'px)';
+            }
+            topMarqueeRaf = requestAnimationFrame(tick);
+        }
+        topMarqueeRaf = requestAnimationFrame(tick);
+    }
+
     function renderTop(list) {
         var el = document.getElementById('dashTopBars');
+        var viewport = document.getElementById('dashTopViewport');
         if (!el) return;
         list = Array.isArray(list) ? list : [];
+        stopTopMarquee();
+        el.classList.remove('is-marquee');
+        el.style.transform = '';
         if (!list.length) {
             el.innerHTML = '<div class="dash-empty">今日暂无调用排行</div>';
             return;
         }
-        el.innerHTML = list.map(function (row, i) {
+        var rowsHtml = list.map(function (row, i) {
             var pct = Math.max(2, parseFloat(row.pct) || 0);
             var color = BAR_COLORS[i % BAR_COLORS.length];
+            var rank = i + 1;
+            var rankCls = rank <= 3 ? (' is-' + rank) : '';
             return '<div class="dash-bar">'
+                + '<span class="dash-bar__rank' + rankCls + '">' + rank + '</span>'
                 + '<div class="dash-bar__name" title="' + esc(row.name) + '">' + esc(row.name) + '</div>'
                 + '<div class="dash-bar__track"><div class="dash-bar__fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
                 + '<div class="dash-bar__count">' + fmtNum(row.count) + '</div>'
                 + '</div>';
         }).join('');
+        el.innerHTML = rowsHtml;
+        // 超过可视区约 5 条才无限循环滚动；少则静止
+        if (list.length > 5 && viewport) {
+            el.innerHTML = rowsHtml + rowsHtml;
+            el.classList.add('is-marquee');
+            requestAnimationFrame(function () {
+                var half = el.scrollHeight / 2;
+                if (half > 8) startTopMarquee(el, half);
+            });
+        }
     }
 
     function renderSys(list) {
@@ -519,6 +565,10 @@
             boot.sys_overview = live.sys_overview;
             renderSys(boot.sys_overview);
         }
+        if (live.top_apis) {
+            boot.top_apis = live.top_apis;
+            renderTop(boot.top_apis);
+        }
     }
 
     function post(action) {
@@ -554,7 +604,7 @@
             initialPending = false;
             var wasReady = ready;
             ready = true;
-            // 软刷：保留 live 已刷新的最近调用 / 系统概览 / KPI，避免被 snapshot 慢路径覆盖
+            // 软刷：保留 live 已刷新的最近调用 / 系统概览 / KPI / TOP，避免被 snapshot 慢路径覆盖
             var keepRecent = (!forceRefresh && wasReady && Array.isArray(boot.recent) && boot.recent.length)
                 ? boot.recent
                 : null;
@@ -562,6 +612,9 @@
                 ? boot.sys_overview
                 : null;
             var keepKpi = (!forceRefresh && wasReady && boot.kpi) ? boot.kpi : null;
+            var keepTop = (!forceRefresh && wasReady && Array.isArray(boot.top_apis) && boot.top_apis.length)
+                ? boot.top_apis
+                : null;
             renderAll(res.snapshot);
             if (keepRecent) {
                 boot.recent = keepRecent;
@@ -574,6 +627,10 @@
             if (keepKpi) {
                 boot.kpi = keepKpi;
                 renderKpi(keepKpi);
+            }
+            if (keepTop) {
+                boot.top_apis = keepTop;
+                renderTop(keepTop);
             }
             if (forceRefresh) {
                 window.VS.showMessage('已刷新', 'success');

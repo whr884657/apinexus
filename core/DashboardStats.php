@@ -196,6 +196,9 @@ class DashboardStats
             ),
             'recent'        => self::recentCallsCompact(),
             'sys_overview'  => self::sysOverviewLive($ttl),
+            'top_apis'      => self::remember('top_apis_live_10', $ttl, function () {
+                return self::topApisToday(10);
+            }),
         );
     }
 
@@ -270,6 +273,10 @@ class DashboardStats
             'geo_today'     => $geoToday,
             'geo'           => $geoLive,
             'recent'        => self::recentCalls(12),
+            // live 必须带 TOP，否则大屏排行只靠 soft 才刷新（易错点 E150）
+            'top_apis'      => self::remember('top_apis_live_12', $ttl, function () {
+                return self::topApisToday(12);
+            }),
         );
     }
 

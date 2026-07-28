@@ -52,6 +52,11 @@
         upkeyvia: document.getElementById('apiListFormUpKeyVia'),
         upkeyname: document.getElementById('apiListFormUpKeyName'),
         upkey: document.getElementById('apiListFormUpKey'),
+        upuamode: document.getElementById('apiListFormUpUaMode'),
+        upuapreset: document.getElementById('apiListFormUpUaPreset'),
+        upua: document.getElementById('apiListFormUpUa'),
+        upreferermode: document.getElementById('apiListFormUpRefererMode'),
+        upreferer: document.getElementById('apiListFormUpReferer'),
         category: document.getElementById('apiListFormCategory'),
         requireKey: document.getElementById('apiListFormRequireKey'),
         qpm: document.getElementById('apiListFormQpm'),
@@ -78,35 +83,72 @@
     var upKeyViaWrap = document.getElementById('apiListUpKeyViaWrap');
     var upKeyFields = document.getElementById('apiListUpKeyFields');
     var upKeyNameWrap = document.getElementById('apiListUpKeyNameWrap');
+    var upUaPresetWrap = document.getElementById('apiListUpUaPresetWrap');
+    var upUaCustomWrap = document.getElementById('apiListUpUaCustomWrap');
+    var upRefererWrap = document.getElementById('apiListUpRefererWrap');
+
+    /** 界面值：0无需 1Query 3Header 2Bearer → 落库 upauth + upkeyvia */
+    function encodeUpAuthUi(upauth, upkeyvia) {
+        var a = parseInt(upauth, 10) || 0;
+        var v = parseInt(upkeyvia, 10) === 1 ? 1 : 0;
+        if (a === 1 && v === 1) return '3';
+        if (a === 1) return '1';
+        if (a === 2) return '2';
+        return '0';
+    }
+
+    function decodeUpAuthUi(uiVal) {
+        var n = parseInt(uiVal, 10) || 0;
+        if (n === 3) return { upauth: 1, upkeyvia: 1 };
+        if (n === 1) return { upauth: 1, upkeyvia: 0 };
+        if (n === 2) return { upauth: 2, upkeyvia: 1 };
+        return { upauth: 0, upkeyvia: 0 };
+    }
 
     function syncUpAuthUi() {
         var isProxy = fields.apitype && parseInt(fields.apitype.value, 10) === 1;
-        var mode = fields.upauth ? parseInt(fields.upauth.value, 10) || 0 : 0;
+        var uiMode = fields.upauth ? parseInt(fields.upauth.value, 10) || 0 : 0;
+        var decoded = decodeUpAuthUi(uiMode);
+        if (fields.upkeyvia) {
+            fields.upkeyvia.value = String(decoded.upkeyvia);
+        }
         if (upAuthBlock) {
             upAuthBlock.hidden = !isProxy;
         }
         if (!isProxy) {
             return;
         }
-        var needKey = mode === 1 || mode === 2;
+        var needKey = decoded.upauth === 1 || decoded.upauth === 2;
         if (upKeyViaWrap) {
-            upKeyViaWrap.hidden = mode !== 1;
+            upKeyViaWrap.hidden = true;
         }
         if (upKeyFields) {
             upKeyFields.hidden = !needKey;
         }
         if (upKeyNameWrap) {
-            upKeyNameWrap.hidden = mode !== 1;
+            upKeyNameWrap.hidden = decoded.upauth !== 1;
         }
         if (fields.upkey) {
             fields.upkey.required = needKey;
         }
-        if (mode === 1 && fields.upkeyname && !fields.upkeyname.value.trim()) {
-            var via = fields.upkeyvia ? parseInt(fields.upkeyvia.value, 10) || 0 : 0;
-            fields.upkeyname.value = via === 1 ? 'X-API-Key' : 'api_key';
+        if (decoded.upauth === 1 && fields.upkeyname && !fields.upkeyname.value.trim()) {
+            fields.upkeyname.value = decoded.upkeyvia === 1 ? 'X-API-Key' : 'api_key';
         }
+
+        var uaMode = fields.upuamode ? parseInt(fields.upuamode.value, 10) || 0 : 0;
+        if (upUaPresetWrap) {
+            upUaPresetWrap.hidden = uaMode !== 1;
+        }
+        if (upUaCustomWrap) {
+            upUaCustomWrap.hidden = uaMode !== 2;
+        }
+        var refMode = fields.upreferermode ? parseInt(fields.upreferermode.value, 10) || 0 : 0;
+        if (upRefererWrap) {
+            upRefererWrap.hidden = refMode !== 1;
+        }
+
         if (window.VSPick) {
-            ['apiListFormUpAuth', 'apiListFormUpKeyVia'].forEach(function (id) {
+            ['apiListFormUpAuth', 'apiListFormUpUaMode', 'apiListFormUpUaPreset', 'apiListFormUpRefererMode'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -143,7 +185,7 @@
         }
         if (typeHint) {
             typeHint.textContent = t === 1
-                ? '外链接口：填写对方完整地址与短码；可配置上游认证（无需 / API Key / Bearer）。'
+                ? '外链接口：填写对方完整地址与短码；一律本站中继；可配置上游认证与出站身份。'
                 : '本地接口：只填本站路径，如 /api/img/index.php';
         }
         if (endpointLabel) {
@@ -163,17 +205,11 @@
     if (fields.upauth) {
         fields.upauth.addEventListener('change', syncUpAuthUi);
     }
-    if (fields.upkeyvia) {
-        fields.upkeyvia.addEventListener('change', function () {
-            if (fields.upauth && parseInt(fields.upauth.value, 10) === 1 && fields.upkeyname) {
-                var via = parseInt(fields.upkeyvia.value, 10) || 0;
-                var cur = fields.upkeyname.value.trim();
-                if (!cur || cur === 'api_key' || cur === 'X-API-Key') {
-                    fields.upkeyname.value = via === 1 ? 'X-API-Key' : 'api_key';
-                }
-            }
-            syncUpAuthUi();
-        });
+    if (fields.upuamode) {
+        fields.upuamode.addEventListener('change', syncUpAuthUi);
+    }
+    if (fields.upreferermode) {
+        fields.upreferermode.addEventListener('change', syncUpAuthUi);
     }
 
     /** 接口状态：0正常 1禁用 2维护（兼容旧英文串） */
@@ -1294,6 +1330,21 @@
         if (fields.upkey) {
             fields.upkey.value = '';
         }
+        if (fields.upuamode) {
+            fields.upuamode.value = '0';
+        }
+        if (fields.upuapreset) {
+            fields.upuapreset.value = '';
+        }
+        if (fields.upua) {
+            fields.upua.value = '';
+        }
+        if (fields.upreferermode) {
+            fields.upreferermode.value = '0';
+        }
+        if (fields.upreferer) {
+            fields.upreferer.value = '';
+        }
         if (fields.category) {
             fields.category.value = '';
         }
@@ -1333,7 +1384,7 @@
         switchFormTab('basic');
         syncKeywaysUi();
         if (window.VSPick) {
-            ['apiListFormStatus', 'apiListFormCategory', 'apiListFormRequireKey', 'apiListFormUpAuth', 'apiListFormUpKeyVia'].forEach(function (id) {
+            ['apiListFormStatus', 'apiListFormCategory', 'apiListFormRequireKey', 'apiListFormUpAuth', 'apiListFormUpUaMode', 'apiListFormUpUaPreset', 'apiListFormUpRefererMode'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -1371,7 +1422,7 @@
             fields.proxyslug.value = api.proxyslug || '';
         }
         if (fields.upauth) {
-            fields.upauth.value = String(parseInt(api.upauth, 10) || 0);
+            fields.upauth.value = encodeUpAuthUi(api.upauth, api.upkeyvia);
         }
         if (fields.upkeyvia) {
             fields.upkeyvia.value = String(parseInt(api.upkeyvia, 10) === 1 ? 1 : 0);
@@ -1381,6 +1432,21 @@
         }
         if (fields.upkey) {
             fields.upkey.value = api.upkey || '';
+        }
+        if (fields.upuamode) {
+            fields.upuamode.value = String(parseInt(api.upuamode, 10) || 0);
+        }
+        if (fields.upuapreset) {
+            fields.upuapreset.value = api.upuapreset || '';
+        }
+        if (fields.upua) {
+            fields.upua.value = api.upua || '';
+        }
+        if (fields.upreferermode) {
+            fields.upreferermode.value = String(parseInt(api.upreferermode, 10) || 0);
+        }
+        if (fields.upreferer) {
+            fields.upreferer.value = api.upreferer || '';
         }
         syncUpAuthUi();
         if (fields.category) {
@@ -1426,7 +1492,7 @@
         setIconPickerSelection(api.icon || api.icon_raw || '');
         switchFormTab('basic');
         if (window.VSPick) {
-            ['apiListFormStatus','apiListFormCategory','apiListFormRequireKey','apiListFormCharge','apiListFormUpAuth','apiListFormUpKeyVia'].forEach(function (id) {
+            ['apiListFormStatus','apiListFormCategory','apiListFormRequireKey','apiListFormCharge','apiListFormUpAuth','apiListFormUpUaMode','apiListFormUpUaPreset','apiListFormUpRefererMode'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -1492,10 +1558,21 @@
             endpoint: fields.endpoint ? fields.endpoint.value.trim() : '',
             targeturl: fields.targeturl ? fields.targeturl.value.trim() : '',
             proxyslug: fields.proxyslug ? fields.proxyslug.value.trim() : '',
-            upauth: fields.upauth ? String(parseInt(fields.upauth.value, 10) || 0) : '0',
-            upkeyvia: fields.upkeyvia ? String(parseInt(fields.upkeyvia.value, 10) === 1 ? 1 : 0) : '0',
+            upauth: (function () {
+                var d = decodeUpAuthUi(fields.upauth ? fields.upauth.value : '0');
+                return String(d.upauth);
+            })(),
+            upkeyvia: (function () {
+                var d = decodeUpAuthUi(fields.upauth ? fields.upauth.value : '0');
+                return String(d.upkeyvia);
+            })(),
             upkeyname: fields.upkeyname ? fields.upkeyname.value.trim() : '',
             upkey: fields.upkey ? fields.upkey.value.trim() : '',
+            upuamode: fields.upuamode ? String(parseInt(fields.upuamode.value, 10) || 0) : '0',
+            upuapreset: fields.upuapreset ? fields.upuapreset.value : '',
+            upua: fields.upua ? fields.upua.value.trim() : '',
+            upreferermode: fields.upreferermode ? String(parseInt(fields.upreferermode.value, 10) || 0) : '0',
+            upreferer: fields.upreferer ? fields.upreferer.value.trim() : '',
             method: getSelectedMethods().join(','),
             params: paramsVal,
             response: fields.response ? fields.response.value : '',
@@ -1546,13 +1623,32 @@
                 return;
             }
             var upMode = parseInt(payload.upauth, 10) || 0;
-            if ((upMode === 1 || upMode === 2) && !payload.upkey) {
+            var isEdit = !!(formId && formId.value);
+            if ((upMode === 1 || upMode === 2) && !payload.upkey && !isEdit) {
                 window.VS.showMessage(upMode === 2 ? '请填写 Bearer Token' : '请填写上游 API Key', 'error');
                 switchFormTab('basic');
                 if (fields.upkey) {
                     fields.upkey.focus();
                 }
                 return;
+            }
+            var uaMode = parseInt(payload.upuamode, 10) || 0;
+            if (uaMode === 1 && !payload.upuapreset) {
+                window.VS.showMessage('请选择内置 User-Agent 预设', 'error');
+                switchFormTab('basic');
+                return;
+            }
+            if (uaMode === 2 && !payload.upua) {
+                window.VS.showMessage('请填写自定义 User-Agent', 'error');
+                switchFormTab('basic');
+                return;
+            }
+            if ((parseInt(payload.upreferermode, 10) || 0) === 1) {
+                if (!payload.upreferer || !/^https?:\/\//i.test(payload.upreferer)) {
+                    window.VS.showMessage('请填写合法的 Referer（以 http:// 或 https:// 开头）', 'error');
+                    switchFormTab('basic');
+                    return;
+                }
             }
         } else if (!payload.endpoint) {
             window.VS.showMessage('请填写本地接口路径', 'error');

@@ -6,9 +6,9 @@
  * 出站（美观）：
  *   /apis/{proxyslug}?foo=1
  *
- * 转发策略：
- *   - 上游无需认证：302 跳转（附带客户端查询参数，剥离本站密钥）
- *   - 上游需 API Key / Bearer：服务端中继（密钥不暴露给调用方）
+ * 转发策略（v13.4.0+）：
+ *   - 全部走服务端中继（无论上游是否需要密钥），不再对调用方 302
+ *   - 可配置上游认证、出站 User-Agent / Referer（见 ProxyClientProfile）
  *
  * 入站短码来源（按序）：
  *   1) $_GET['_vs_slug'] —— Nginx/Apache 伪静态内部参数
@@ -169,7 +169,7 @@ class ApiProxy
     }
 
     /**
-     * 处理 HTTP 请求：无上游认证则 302；需密钥则服务端中继
+     * 处理 HTTP 请求：一律服务端中继（v13.4.0 起不再对调用方 302）
      *
      * @param string|null $slug
      * @return void
@@ -208,18 +208,6 @@ class ApiProxy
         $params = $_GET;
         unset($params[self::REWRITE_SLUG_PARAM]);
         unset($params['key'], $params['api_key'], $params['apikey']);
-
-        $upauth = ApiManager::hasUpstreamAuthColumns()
-            ? ApiManager::normalizeUpauth(isset($row['upauth']) ? $row['upauth'] : 0)
-            : ApiManager::UPAUTH_NONE;
-
-        if ($upauth === ApiManager::UPAUTH_NONE) {
-            $url = self::mergeQuery($target, $params);
-            ApiStats::hitProxy($row, true, 302);
-            header('Cache-Control: no-store');
-            header('Location: ' . $url, true, 302);
-            exit;
-        }
 
         self::relayToUpstream($row, $target, $params);
     }
@@ -322,10 +310,10 @@ class ApiProxy
             }
         }
 
-        $headers = array_merge(
-            array('Accept: */*', 'User-Agent: ApiNexus-Proxy/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
-            $built['headers']
-        );
+        $clientHeaders = class_exists('ProxyClientProfile')
+            ? ProxyClientProfile::buildClientHeaders($row)
+            : array('Accept: */*', 'User-Agent: ApiNexus-Proxy/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
+        $headers = array_merge($clientHeaders, $built['headers']);
         if ($contentType !== '' && $method !== 'GET' && $method !== 'HEAD') {
             $headers[] = 'Content-Type: ' . $contentType;
         }
@@ -380,9 +368,17 @@ class ApiProxy
             }
             $url = $next;
             $redirLeft--;
+            // 307/308 保留原方法与体；301/302/303 按常见浏览器行为改 GET
+            $redirMethod = $method;
+            $redirBody = $body;
+            if ($http === 301 || $http === 302 || $http === 303) {
+                $redirMethod = 'GET';
+                $redirBody = '';
+            }
             $ch = curl_init();
-            curl_setopt_array($ch, array(
+            $opts = array(
                 CURLOPT_URL            => $url,
+                CURLOPT_CUSTOMREQUEST  => $redirMethod,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_FOLLOWLOCATION => false,
                 CURLOPT_CONNECTTIMEOUT => 10,
@@ -393,8 +389,13 @@ class ApiProxy
                 CURLOPT_HTTPHEADER     => $headers,
                 CURLOPT_HEADER         => true,
                 CURLOPT_ENCODING       => '',
-                CURLOPT_HTTPGET        => true,
-            ));
+            );
+            if ($redirMethod === 'HEAD') {
+                $opts[CURLOPT_NOBODY] = true;
+            } elseif ($redirBody !== '' && $redirMethod !== 'GET' && $redirMethod !== 'OPTIONS') {
+                $opts[CURLOPT_POSTFIELDS] = $redirBody;
+            }
+            curl_setopt_array($ch, $opts);
             $raw = curl_exec($ch);
             $errno = curl_errno($ch);
             $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -423,7 +424,7 @@ class ApiProxy
         $skip = array(
             'transfer-encoding', 'connection', 'keep-alive', 'proxy-authenticate',
             'proxy-authorization', 'te', 'trailer', 'upgrade', 'content-length',
-            'content-encoding',
+            'content-encoding', 'location', 'set-cookie', 'set-cookie2',
         );
         $lines = preg_split('/\r\n|\n|\r/', (string) $respHeaders);
         $sentCt = false;

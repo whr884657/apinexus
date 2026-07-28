@@ -37,6 +37,14 @@
     var upKeyViaSelect = document.getElementById('userApiFormUpKeyVia');
     var upKeyNameInput = document.getElementById('userApiFormUpKeyName');
     var upKeyInput = document.getElementById('userApiFormUpKey');
+    var upUaModeSelect = document.getElementById('userApiFormUpUaMode');
+    var upUaPresetSelect = document.getElementById('userApiFormUpUaPreset');
+    var upUaInput = document.getElementById('userApiFormUpUa');
+    var upRefererModeSelect = document.getElementById('userApiFormUpRefererMode');
+    var upRefererInput = document.getElementById('userApiFormUpReferer');
+    var upUaPresetWrap = document.getElementById('userApiUpUaPresetWrap');
+    var upUaCustomWrap = document.getElementById('userApiUpUaCustomWrap');
+    var upRefererWrap = document.getElementById('userApiUpRefererWrap');
     var typeHint = document.getElementById('userApiTypeHint');
     var endpointInput = document.getElementById('userApiFormEndpoint');
     var targetInput = document.getElementById('userApiFormTargetUrl');
@@ -77,34 +85,65 @@
         });
     }
 
+    function encodeUpAuthUi(upauth, upkeyvia) {
+        var a = parseInt(upauth, 10) || 0;
+        var v = parseInt(upkeyvia, 10) === 1 ? 1 : 0;
+        if (a === 1 && v === 1) return '3';
+        if (a === 1) return '1';
+        if (a === 2) return '2';
+        return '0';
+    }
+
+    function decodeUpAuthUi(uiVal) {
+        var n = parseInt(uiVal, 10) || 0;
+        if (n === 3) return { upauth: 1, upkeyvia: 1 };
+        if (n === 1) return { upauth: 1, upkeyvia: 0 };
+        if (n === 2) return { upauth: 2, upkeyvia: 1 };
+        return { upauth: 0, upkeyvia: 0 };
+    }
+
     function syncUserUpAuthUi() {
         var isProxy = apiTypeInput && parseInt(apiTypeInput.value, 10) === 1;
-        var mode = upAuthSelect ? parseInt(upAuthSelect.value, 10) || 0 : 0;
+        var uiMode = upAuthSelect ? parseInt(upAuthSelect.value, 10) || 0 : 0;
+        var decoded = decodeUpAuthUi(uiMode);
+        if (upKeyViaSelect) {
+            upKeyViaSelect.value = String(decoded.upkeyvia);
+        }
         if (upAuthBlock) {
             upAuthBlock.hidden = !isProxy;
         }
         if (!isProxy) {
             return;
         }
-        var needKey = mode === 1 || mode === 2;
+        var needKey = decoded.upauth === 1 || decoded.upauth === 2;
         if (upKeyViaWrap) {
-            upKeyViaWrap.hidden = mode !== 1;
+            upKeyViaWrap.hidden = true;
         }
         if (upKeyFields) {
             upKeyFields.hidden = !needKey;
         }
         if (upKeyNameWrap) {
-            upKeyNameWrap.hidden = mode !== 1;
+            upKeyNameWrap.hidden = decoded.upauth !== 1;
         }
         if (upKeyInput) {
             upKeyInput.required = needKey;
         }
-        if (mode === 1 && upKeyNameInput && !upKeyNameInput.value.trim()) {
-            var via = upKeyViaSelect ? parseInt(upKeyViaSelect.value, 10) || 0 : 0;
-            upKeyNameInput.value = via === 1 ? 'X-API-Key' : 'api_key';
+        if (decoded.upauth === 1 && upKeyNameInput && !upKeyNameInput.value.trim()) {
+            upKeyNameInput.value = decoded.upkeyvia === 1 ? 'X-API-Key' : 'api_key';
+        }
+        var uaMode = upUaModeSelect ? parseInt(upUaModeSelect.value, 10) || 0 : 0;
+        if (upUaPresetWrap) {
+            upUaPresetWrap.hidden = uaMode !== 1;
+        }
+        if (upUaCustomWrap) {
+            upUaCustomWrap.hidden = uaMode !== 2;
+        }
+        var refMode = upRefererModeSelect ? parseInt(upRefererModeSelect.value, 10) || 0 : 0;
+        if (upRefererWrap) {
+            upRefererWrap.hidden = refMode !== 1;
         }
         if (window.VSPick) {
-            ['userApiFormUpAuth', 'userApiFormUpKeyVia'].forEach(function (id) {
+            ['userApiFormUpAuth', 'userApiFormUpUaMode', 'userApiFormUpUaPreset', 'userApiFormUpRefererMode'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -141,7 +180,7 @@
         }
         if (typeHint) {
             typeHint.textContent = t === 1
-                ? '外链接口：填写对方完整地址与短码；可配置上游认证（无需 / API Key / Bearer）。'
+                ? '外链接口：填写对方完整地址与短码；一律本站中继；可配置上游认证与出站身份。'
                 : '本地接口：只填本站路径，如 /api/img/index.php';
         }
         syncUserUpAuthUi();
@@ -156,17 +195,11 @@
     if (upAuthSelect) {
         upAuthSelect.addEventListener('change', syncUserUpAuthUi);
     }
-    if (upKeyViaSelect) {
-        upKeyViaSelect.addEventListener('change', function () {
-            if (upAuthSelect && parseInt(upAuthSelect.value, 10) === 1 && upKeyNameInput) {
-                var via = parseInt(upKeyViaSelect.value, 10) || 0;
-                var cur = upKeyNameInput.value.trim();
-                if (!cur || cur === 'api_key' || cur === 'X-API-Key') {
-                    upKeyNameInput.value = via === 1 ? 'X-API-Key' : 'api_key';
-                }
-            }
-            syncUserUpAuthUi();
-        });
+    if (upUaModeSelect) {
+        upUaModeSelect.addEventListener('change', syncUserUpAuthUi);
+    }
+    if (upRefererModeSelect) {
+        upRefererModeSelect.addEventListener('change', syncUserUpAuthUi);
     }
 
     function escapeHtml(text) {
@@ -700,6 +733,7 @@
         }
         syncUserChargeUi();
         syncUserKeywaysUi();
+        syncUserUpAuthUi();
     }
 
     function fillForm(api) {
@@ -725,10 +759,15 @@
             userApiFormEndpoint: apiType === 0 ? (api.endpoint || '') : '',
             userApiFormTargetUrl: api.targeturl || '',
             userApiFormProxySlug: api.proxyslug || '',
-            userApiFormUpAuth: String(parseInt(api.upauth, 10) || 0),
+            userApiFormUpAuth: encodeUpAuthUi(api.upauth, api.upkeyvia),
             userApiFormUpKeyVia: String(parseInt(api.upkeyvia, 10) === 1 ? 1 : 0),
             userApiFormUpKeyName: api.upkeyname || '',
             userApiFormUpKey: api.upkey || '',
+            userApiFormUpUaMode: String(parseInt(api.upuamode, 10) || 0),
+            userApiFormUpUaPreset: api.upuapreset || '',
+            userApiFormUpUa: api.upua || '',
+            userApiFormUpRefererMode: String(parseInt(api.upreferermode, 10) || 0),
+            userApiFormUpReferer: api.upreferer || '',
             userApiFormCategory: api.category || '',
             userApiFormParams: api.params || '',
             userApiFormResponse: api.response || '',
@@ -798,10 +837,21 @@
             endpoint: endpointInput ? endpointInput.value : '',
             targeturl: targetInput ? targetInput.value : '',
             proxyslug: slugInput ? slugInput.value : '',
-            upauth: upAuthSelect ? String(parseInt(upAuthSelect.value, 10) || 0) : '0',
-            upkeyvia: upKeyViaSelect ? String(parseInt(upKeyViaSelect.value, 10) === 1 ? 1 : 0) : '0',
+            upauth: (function () {
+                var d = decodeUpAuthUi(upAuthSelect ? upAuthSelect.value : '0');
+                return String(d.upauth);
+            })(),
+            upkeyvia: (function () {
+                var d = decodeUpAuthUi(upAuthSelect ? upAuthSelect.value : '0');
+                return String(d.upkeyvia);
+            })(),
             upkeyname: upKeyNameInput ? upKeyNameInput.value.trim() : '',
             upkey: upKeyInput ? upKeyInput.value.trim() : '',
+            upuamode: upUaModeSelect ? String(parseInt(upUaModeSelect.value, 10) || 0) : '0',
+            upuapreset: upUaPresetSelect ? upUaPresetSelect.value : '',
+            upua: upUaInput ? upUaInput.value.trim() : '',
+            upreferermode: upRefererModeSelect ? String(parseInt(upRefererModeSelect.value, 10) || 0) : '0',
+            upreferer: upRefererInput ? upRefererInput.value.trim() : '',
             method: getSelectedMethods().join(','),
             needkey: (document.getElementById('userApiFormNeedkey') || {}).value || '0',
             keyways: getSelectedKeyways().join(','),
@@ -938,12 +988,28 @@
                     return;
                 }
                 var upMode = parseInt(payload.upauth, 10) || 0;
-                if ((upMode === 1 || upMode === 2) && !payload.upkey) {
+                var isEdit = !!(formId && formId.value);
+                if ((upMode === 1 || upMode === 2) && !payload.upkey && !isEdit) {
                     window.VS.showMessage(upMode === 2 ? '请填写 Bearer Token' : '请填写上游 API Key', 'error');
                     if (upKeyInput) {
                         upKeyInput.focus();
                     }
                     return;
+                }
+                var uaMode = parseInt(payload.upuamode, 10) || 0;
+                if (uaMode === 1 && !payload.upuapreset) {
+                    window.VS.showMessage('请选择内置 User-Agent 预设', 'error');
+                    return;
+                }
+                if (uaMode === 2 && !payload.upua) {
+                    window.VS.showMessage('请填写自定义 User-Agent', 'error');
+                    return;
+                }
+                if ((parseInt(payload.upreferermode, 10) || 0) === 1) {
+                    if (!payload.upreferer || !/^https?:\/\//i.test(payload.upreferer)) {
+                        window.VS.showMessage('请填写合法的 Referer（以 http:// 或 https:// 开头）', 'error');
+                        return;
+                    }
                 }
             } else if (!payload.endpoint) {
                 window.VS.showMessage('请填写本地接口路径', 'error');

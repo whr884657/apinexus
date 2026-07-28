@@ -43,6 +43,7 @@ require_once VS_ROOT . '/core/AiConfig.php';
 require_once VS_ROOT . '/core/AiClient.php';
 require_once VS_ROOT . '/core/AiApiDoc.php';
 require_once VS_ROOT . '/core/ApiNotify.php';
+require_once VS_ROOT . '/core/ProxyClientProfile.php';
 require_once VS_ROOT . '/core/ApiProxy.php';
 require_once VS_ROOT . '/core/ApiStats.php';
 require_once VS_ROOT . '/core/IpLocator.php';

@@ -772,6 +772,10 @@
         if (live.geo_live || live.geo_today || live.geo) {
             if (mapRegistered[mapMode]) applyMapOption();
         }
+        if (live.top_apis) {
+            boot.top_apis = live.top_apis;
+            renderTop(boot.top_apis);
+        }
     }
 
     function applyTheme(next) {

@@ -72,14 +72,14 @@ class ApiStats
     }
 
     /**
-     * 代理网关记账（上游跳转前调用）
+     * 代理网关记账（中继完成后调用）
      *
      * @param array $row    接口行
      * @param bool  $ok     是否成功放行
-     * @param int   $http   HTTP 状态码
+     * @param int   $http   HTTP 状态码（中继透传上游码；失败为业务码）
      * @return void
      */
-    public static function hitProxy(array $row, $ok = true, $http = 302)
+    public static function hitProxy(array $row, $ok = true, $http = 200)
     {
         try {
             if (!InstallChecker::isInstalled() || !ApiManager::tableReady()) {

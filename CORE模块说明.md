@@ -57,7 +57,7 @@ version.php
 → UserAvatar → UserManager → AdminUserBinding
 → ApiManager → ApiQuickstart
 → AiConfig → AiClient → AiApiDoc
-→ ApiNotify → ApiProxy → ApiStats → IpLocator
+→ ApiNotify → ProxyClientProfile → ApiProxy → ApiStats → IpLocator
 → StatDayManager → ApiLogManager → ApiLogArchive → ApiKeyManager
 → ApiFeedbackManager → FrontendFeedback → FeedbackNotify
 → ApiCategoryManager
@@ -249,11 +249,12 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `AiApiDoc.php` | 生成详细文档（`doc`）与代码示例（`aidoc`）；剥离上游敏感字段；禁止 HTML 泄漏 |
 | `IpLocator.php` | IP 归属地：系统内置或自定义接口；异步回填 `apilog.iploc`（v10.16.0 / **v13.2.0**） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
-| `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；守卫错误经 `vs_api_error_exit`（含 `http`） |
+| `ProxyClientProfile.php` | 代理出站 UA/Referer 内置预设与解析（**v13.4.0**） |
+| `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；**一律服务端中继**（v13.4.0+）；守卫错误经 `vs_api_error_exit` |
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；默认主题浏览器直连 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`（**v13.3.0**） |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
-| `DashboardStats.php` | 控制台/大屏 KPI·趋势·TOP·live；geo 飞线按密钥/游客/失败三色（至 **v13.3.0**） |
+| `DashboardStats.php` | 控制台/大屏 KPI·趋势·TOP·live（含 TOP live，**v13.4.0**）；geo 飞线三色 |
 | `GeoCityCoords.php` | 大屏飞线全量城市坐标库；`resolveCityName` 地级优先 + 剥离运营商尾缀（v13.0.0 / **v13.2.0**） |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD |
 | `ApiLogManager.php` | 调用日志分页、今日计数、脱敏 |

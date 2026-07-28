@@ -5,8 +5,9 @@
  *
  * 接口状态 status：0 正常 / 1 禁用（前台不展示）/ 2 维护（前台可见但不可请求）
  * 审核状态 audit：0 待审核 / 1 通过 / 2 不通过（管理员发布默认通过；用户投稿为待审核）
- * 接口类型 apitype：0 本地路径 / 1 代理外链（无上游认证时可 302；需密钥时服务端中继）
- * 上游认证 upauth：0 无需 / 1 API Key / 2 Bearer Token
+ * 接口类型 apitype：0 本地路径 / 1 代理外链（一律服务端中继，v13.4.0+）
+ * 上游认证 upauth：0 无需 / 1 API Key（配合 upkeyvia：0 Query / 1 Header）/ 2 Bearer Token
+ * 出站身份：upuamode / upuapreset / upua / upreferermode / upreferer（见 ProxyClientProfile）
  * 文档字段：doc=详细文档（Markdown）；aidoc=代码示例（Markdown）
  */
 
@@ -231,6 +232,27 @@ class ApiManager
     }
 
     /**
+     * 是否已具备代理出站身份字段（迁移 13.4.0 后为 true）
+     *
+     * @return bool
+     */
+    public static function hasProxyClientColumns()
+    {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
+        try {
+            $pdo = Database::connect();
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('upuamode'));
+            $ok = $col && $col->fetchColumn();
+        } catch (Exception $e) {
+            $ok = false;
+        }
+        return $ok;
+    }
+
+    /**
      * @param mixed $v
      * @return int
      */
@@ -279,6 +301,11 @@ class ApiManager
     public static function normalizeUpkey($v)
     {
         $key = trim((string) $v);
+        // 禁止换行，避免拼进上游请求头时头注入
+        $key = preg_replace('/[\r\n]+/', '', $key);
+        if (!is_string($key)) {
+            $key = '';
+        }
         if (mb_strlen($key, 'UTF-8') > 500) {
             $key = mb_substr($key, 0, 500, 'UTF-8');
         }
@@ -286,13 +313,20 @@ class ApiManager
     }
 
     /**
-     * @param mixed $v
+     * @param mixed $auth
+     * @param mixed $via
      * @return string
      */
-    public static function upauthLabel($v)
+    public static function upauthLabel($auth, $via = null)
     {
-        $n = self::normalizeUpauth($v);
+        $n = self::normalizeUpauth($auth);
         if ($n === self::UPAUTH_APIKEY) {
+            if ($via !== null && self::normalizeUpkeyvia($via) === self::UPKEYVIA_HEADER) {
+                return 'Header API Key';
+            }
+            if ($via !== null) {
+                return 'Query API Key';
+            }
             return 'API Key';
         }
         if ($n === self::UPAUTH_BEARER) {
@@ -865,6 +899,7 @@ class ApiManager
             self::applyQpmField($id, $parsed);
             self::applyKeywaysField($id, $parsed);
             self::applyUpstreamAuthFields($id, $parsed);
+            self::applyProxyClientFields($id, $parsed);
             RedisCache::invalidateFrontend();
             $row = self::findById($id);
             return self::formatRow($row);
@@ -1045,6 +1080,7 @@ class ApiManager
             self::applyQpmField($apiId, $parsed);
             self::applyKeywaysField($apiId, $parsed);
             self::applyUpstreamAuthFields($apiId, $parsed);
+            self::applyProxyClientFields($apiId, $parsed);
             RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
@@ -1336,10 +1372,28 @@ class ApiManager
             'targeturl'     => isset($row['targeturl']) ? (string) $row['targeturl'] : '',
             'proxyslug'     => isset($row['proxyslug']) ? (string) $row['proxyslug'] : '',
             'upauth'        => self::normalizeUpauth(isset($row['upauth']) ? $row['upauth'] : self::UPAUTH_NONE),
-            'upauth_label'  => self::upauthLabel(isset($row['upauth']) ? $row['upauth'] : self::UPAUTH_NONE),
+            'upauth_label'  => self::upauthLabel(
+                isset($row['upauth']) ? $row['upauth'] : self::UPAUTH_NONE,
+                isset($row['upkeyvia']) ? $row['upkeyvia'] : self::UPKEYVIA_QUERY
+            ),
             'upkeyvia'      => self::normalizeUpkeyvia(isset($row['upkeyvia']) ? $row['upkeyvia'] : self::UPKEYVIA_QUERY),
             'upkeyname'     => isset($row['upkeyname']) ? (string) $row['upkeyname'] : '',
             'upkey'         => isset($row['upkey']) ? (string) $row['upkey'] : '',
+            'upuamode'      => class_exists('ProxyClientProfile')
+                ? ProxyClientProfile::normalizeUaMode(isset($row['upuamode']) ? $row['upuamode'] : 0)
+                : 0,
+            'upuapreset'    => class_exists('ProxyClientProfile')
+                ? ProxyClientProfile::normalizePresetKey(isset($row['upuapreset']) ? $row['upuapreset'] : '')
+                : '',
+            'upua'          => class_exists('ProxyClientProfile')
+                ? ProxyClientProfile::normalizeUa(isset($row['upua']) ? $row['upua'] : '')
+                : '',
+            'upreferermode' => class_exists('ProxyClientProfile')
+                ? ProxyClientProfile::normalizeRefererMode(isset($row['upreferermode']) ? $row['upreferermode'] : 0)
+                : 0,
+            'upreferer'     => class_exists('ProxyClientProfile')
+                ? ProxyClientProfile::normalizeReferer(isset($row['upreferer']) ? $row['upreferer'] : '')
+                : '',
             'call_url'      => self::resolveCallUrl($row),
             'method'        => self::methodsToStorage(self::normalizeMethods(isset($row['method']) ? $row['method'] : self::METHOD_GET)),
             'methods'       => self::normalizeMethods(isset($row['method']) ? $row['method'] : self::METHOD_GET),
@@ -1553,11 +1607,16 @@ class ApiManager
             }
             $endpoint = ApiProxy::publicPath($proxyslug);
         } else {
-            // 本地接口清空上游认证
+            // 本地接口清空上游认证与出站身份
             $data['upauth'] = self::UPAUTH_NONE;
             $data['upkeyvia'] = self::UPKEYVIA_QUERY;
             $data['upkeyname'] = '';
             $data['upkey'] = '';
+            $data['upuamode'] = 0;
+            $data['upuapreset'] = '';
+            $data['upua'] = '';
+            $data['upreferermode'] = 0;
+            $data['upreferer'] = '';
             if ($endpoint === '') {
                 return '请填写本地接口路径';
             }
@@ -1586,6 +1645,11 @@ class ApiManager
         $upkeyvia = self::UPKEYVIA_QUERY;
         $upkeyname = '';
         $upkey = '';
+        $upuamode = 0;
+        $upuapreset = '';
+        $upua = '';
+        $upreferermode = 0;
+        $upreferer = '';
         if ($apitype === self::APITYPE_PROXY) {
             $upauth = self::normalizeUpauth(isset($data['upauth']) ? $data['upauth'] : self::UPAUTH_NONE);
             $upkeyvia = self::normalizeUpkeyvia(isset($data['upkeyvia']) ? $data['upkeyvia'] : self::UPKEYVIA_QUERY);
@@ -1596,7 +1660,17 @@ class ApiManager
             }
             if ($upauth === self::UPAUTH_APIKEY) {
                 if ($upkey === '') {
-                    return '请填写上游 API Key';
+                    if ($excludeId > 0) {
+                        $prev = self::findById($excludeId);
+                        $prevKey = ($prev && isset($prev['upkey'])) ? self::normalizeUpkey($prev['upkey']) : '';
+                        if ($prevKey !== '') {
+                            $upkey = $prevKey;
+                        } else {
+                            return '请填写上游 API Key';
+                        }
+                    } else {
+                        return '请填写上游 API Key';
+                    }
                 }
                 if ($upkeyname === '') {
                     $upkeyname = ($upkeyvia === self::UPKEYVIA_HEADER) ? 'X-API-Key' : 'api_key';
@@ -1608,7 +1682,17 @@ class ApiManager
                 }
             } elseif ($upauth === self::UPAUTH_BEARER) {
                 if ($upkey === '') {
-                    return '请填写 Bearer Token';
+                    if ($excludeId > 0) {
+                        $prev = self::findById($excludeId);
+                        $prevKey = ($prev && isset($prev['upkey'])) ? self::normalizeUpkey($prev['upkey']) : '';
+                        if ($prevKey !== '') {
+                            $upkey = $prevKey;
+                        } else {
+                            return '请填写 Bearer Token';
+                        }
+                    } else {
+                        return '请填写 Bearer Token';
+                    }
                 }
                 $upkeyvia = self::UPKEYVIA_HEADER;
                 $upkeyname = '';
@@ -1618,7 +1702,49 @@ class ApiManager
                 $upkeyname = '';
                 $upkey = '';
             }
+
+            if (class_exists('ProxyClientProfile')) {
+                $upuamode = ProxyClientProfile::normalizeUaMode(isset($data['upuamode']) ? $data['upuamode'] : 0);
+                $upuapreset = ProxyClientProfile::normalizePresetKey(isset($data['upuapreset']) ? $data['upuapreset'] : '');
+                $upua = ProxyClientProfile::normalizeUa(isset($data['upua']) ? $data['upua'] : '');
+                $upreferermode = ProxyClientProfile::normalizeRefererMode(isset($data['upreferermode']) ? $data['upreferermode'] : 0);
+                $upreferer = ProxyClientProfile::normalizeReferer(isset($data['upreferer']) ? $data['upreferer'] : '');
+                if ($upuamode === ProxyClientProfile::UAMODE_PRESET && $upuapreset === '') {
+                    return '请选择内置 User-Agent 预设';
+                }
+                if ($upuamode === ProxyClientProfile::UAMODE_CUSTOM && $upua === '') {
+                    return '请填写自定义 User-Agent';
+                }
+                if ($upuamode !== ProxyClientProfile::UAMODE_PRESET) {
+                    $upuapreset = '';
+                }
+                if ($upuamode !== ProxyClientProfile::UAMODE_CUSTOM) {
+                    $upua = '';
+                }
+                if ($upreferermode === ProxyClientProfile::REFMODE_CUSTOM) {
+                    if ($upreferer === '') {
+                        return '请填写合法的 Referer（以 http:// 或 https:// 开头）';
+                    }
+                } else {
+                    $upreferer = '';
+                }
+                if (($upuamode !== ProxyClientProfile::UAMODE_DEFAULT || $upreferermode !== ProxyClientProfile::REFMODE_NONE)
+                    && !self::hasProxyClientColumns()) {
+                    return '代理出站身份功能尚未就绪，请先前往「系统升级」完成结构更新';
+                }
+            }
         }
+
+        // 写回规范化结果供后续 INSERT/UPDATE 使用
+        $data['upauth'] = $upauth;
+        $data['upkeyvia'] = $upkeyvia;
+        $data['upkeyname'] = $upkeyname;
+        $data['upkey'] = $upkey;
+        $data['upuamode'] = $upuamode;
+        $data['upuapreset'] = $upuapreset;
+        $data['upua'] = $upua;
+        $data['upreferermode'] = $upreferermode;
+        $data['upreferer'] = $upreferer;
 
         $methodRaw = isset($data['method']) ? $data['method'] : self::METHOD_GET;
         if (is_array($methodRaw)) {
@@ -1706,29 +1832,34 @@ class ApiManager
         }
 
         return array(
-            'name'        => $name,
-            'description' => $description,
-            'endpoint'    => $endpoint,
-            'apitype'     => $apitype,
-            'targeturl'   => $targeturl,
-            'proxyslug'   => $proxyslug,
-            'upauth'      => $upauth,
-            'upkeyvia'    => $upkeyvia,
-            'upkeyname'   => $upkeyname,
-            'upkey'       => $upkey,
-            'method'      => $method,
-            'params'      => $requestParams,
-            'response'    => $responseExample,
-            'doc'         => $docDetail,
-            'aidoc'       => $docCode,
-            'needkey'     => $requireKey,
-            'keyways'     => self::normalizeKeyways(isset($data['keyways']) ? $data['keyways'] : self::KEYWAY_QUERY),
-            'qpm'         => self::normalizeQpm(isset($data['qpm']) ? $data['qpm'] : 0),
-            'charge'      => $charge,
-            'price'       => $price,
-            'status'      => $status,
-            'icon'        => $icon,
-            'category'    => $category,
+            'name'          => $name,
+            'description'   => $description,
+            'endpoint'      => $endpoint,
+            'apitype'       => $apitype,
+            'targeturl'     => $targeturl,
+            'proxyslug'     => $proxyslug,
+            'upauth'        => $upauth,
+            'upkeyvia'      => $upkeyvia,
+            'upkeyname'     => $upkeyname,
+            'upkey'         => $upkey,
+            'upuamode'      => $upuamode,
+            'upuapreset'    => $upuapreset,
+            'upua'          => $upua,
+            'upreferermode' => $upreferermode,
+            'upreferer'     => $upreferer,
+            'method'        => $method,
+            'params'        => $requestParams,
+            'response'      => $responseExample,
+            'doc'           => $docDetail,
+            'aidoc'         => $docCode,
+            'needkey'       => $requireKey,
+            'keyways'       => self::normalizeKeyways(isset($data['keyways']) ? $data['keyways'] : self::KEYWAY_QUERY),
+            'qpm'           => self::normalizeQpm(isset($data['qpm']) ? $data['qpm'] : 0),
+            'charge'        => $charge,
+            'price'         => $price,
+            'status'        => $status,
+            'icon'          => $icon,
+            'category'      => $category,
         );
     }
 
@@ -1839,6 +1970,39 @@ class ApiManager
                 self::normalizeUpkeyvia(isset($parsed['upkeyvia']) ? $parsed['upkeyvia'] : self::UPKEYVIA_QUERY),
                 isset($parsed['upkeyname']) ? (string) $parsed['upkeyname'] : '',
                 isset($parsed['upkey']) ? (string) $parsed['upkey'] : '',
+                $apiId,
+            ));
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
+     * 写入代理出站身份字段（独立 UPDATE，兼容未迁移站点）
+     *
+     * @param int   $apiId
+     * @param array $parsed
+     * @return void
+     */
+    private static function applyProxyClientFields($apiId, array $parsed)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId <= 0 || !self::hasProxyClientColumns() || !class_exists('ProxyClientProfile')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '`
+                 SET `upuamode` = ?, `upuapreset` = ?, `upua` = ?, `upreferermode` = ?, `upreferer` = ?
+                 WHERE `id` = ?'
+            );
+            $stmt->execute(array(
+                ProxyClientProfile::normalizeUaMode(isset($parsed['upuamode']) ? $parsed['upuamode'] : 0),
+                ProxyClientProfile::normalizePresetKey(isset($parsed['upuapreset']) ? $parsed['upuapreset'] : ''),
+                ProxyClientProfile::normalizeUa(isset($parsed['upua']) ? $parsed['upua'] : ''),
+                ProxyClientProfile::normalizeRefererMode(isset($parsed['upreferermode']) ? $parsed['upreferermode'] : 0),
+                ProxyClientProfile::normalizeReferer(isset($parsed['upreferer']) ? $parsed['upreferer'] : ''),
                 $apiId,
             ));
         } catch (Exception $e) {

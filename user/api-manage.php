@@ -38,6 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'upkeyvia'     => isset($_POST['upkeyvia']) ? (int) $_POST['upkeyvia'] : 0,
             'upkeyname'    => isset($_POST['upkeyname']) ? (string) $_POST['upkeyname'] : '',
             'upkey'        => isset($_POST['upkey']) ? (string) $_POST['upkey'] : '',
+            'upuamode'     => isset($_POST['upuamode']) ? (int) $_POST['upuamode'] : 0,
+            'upuapreset'   => isset($_POST['upuapreset']) ? (string) $_POST['upuapreset'] : '',
+            'upua'         => isset($_POST['upua']) ? (string) $_POST['upua'] : '',
+            'upreferermode'=> isset($_POST['upreferermode']) ? (int) $_POST['upreferermode'] : 0,
+            'upreferer'    => isset($_POST['upreferer']) ? (string) $_POST['upreferer'] : '',
             'method'       => isset($_POST['method']) ? $_POST['method'] : 'GET',
             'params'       => isset($_POST['params']) ? (string) $_POST['params'] : '',
             'response'     => isset($_POST['response']) ? (string) $_POST['response'] : '',
@@ -399,16 +404,13 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                         <label class="vs-label" for="userApiFormUpAuth">上游认证方式</label>
                         <select class="vs-input vs-select" id="userApiFormUpAuth" name="upauth" data-vs-pick>
                             <option value="0">无需认证</option>
-                            <option value="1">API Key</option>
+                            <option value="1">Query API Key</option>
+                            <option value="3">Header API Key</option>
                             <option value="2">Bearer Token</option>
                         </select>
                     </div>
                     <div id="userApiUpKeyViaWrap" hidden>
-                        <label class="vs-label" for="userApiFormUpKeyVia">密钥传递方式</label>
-                        <select class="vs-input vs-select" id="userApiFormUpKeyVia" name="upkeyvia" data-vs-pick>
-                            <option value="0">URL 参数</option>
-                            <option value="1">请求头</option>
-                        </select>
+                        <input type="hidden" id="userApiFormUpKeyVia" name="upkeyvia" value="0">
                     </div>
                 </div>
                 <div class="vs-form-row vs-form-row--2" id="userApiUpKeyFields" hidden>
@@ -423,7 +425,47 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                                placeholder="上游平台颁发的密钥或令牌" autocomplete="new-password">
                     </div>
                 </div>
-                <p class="vs-form-hint">若上游需要密钥，请在此填写；本站调用时自动附加，不会展示给访客。</p>
+                <div class="vs-form-row vs-form-row--2">
+                    <div>
+                        <label class="vs-label" for="userApiFormUpUaMode">出站 User-Agent</label>
+                        <select class="vs-input vs-select" id="userApiFormUpUaMode" name="upuamode" data-vs-pick>
+                            <option value="0">系统默认</option>
+                            <option value="1">内置设备 / 浏览器</option>
+                            <option value="2">自定义</option>
+                            <option value="3">轮询内置（按分钟）</option>
+                        </select>
+                    </div>
+                    <div id="userApiUpUaPresetWrap" hidden>
+                        <label class="vs-label" for="userApiFormUpUaPreset">内置预设</label>
+                        <select class="vs-input vs-select" id="userApiFormUpUaPreset" name="upuapreset" data-vs-pick>
+                            <option value="">请选择</option>
+                            <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
+                                <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="vs-form-row" id="userApiUpUaCustomWrap" hidden>
+                    <label class="vs-label" for="userApiFormUpUa">自定义 User-Agent</label>
+                    <input type="text" class="vs-input" id="userApiFormUpUa" name="upua" maxlength="512"
+                           placeholder="完整浏览器 User-Agent 字符串" autocomplete="off">
+                </div>
+                <div class="vs-form-row vs-form-row--2">
+                    <div>
+                        <label class="vs-label" for="userApiFormUpRefererMode">出站 Referer</label>
+                        <select class="vs-input vs-select" id="userApiFormUpRefererMode" name="upreferermode" data-vs-pick>
+                            <option value="0">不发送</option>
+                            <option value="1">自定义</option>
+                            <option value="2">转发客户端</option>
+                        </select>
+                    </div>
+                    <div id="userApiUpRefererWrap" hidden>
+                        <label class="vs-label" for="userApiFormUpReferer">自定义 Referer</label>
+                        <input type="url" class="vs-input" id="userApiFormUpReferer" name="upreferer" maxlength="500"
+                               placeholder="https://example.com/" autocomplete="off">
+                    </div>
+                </div>
+                <p class="vs-form-hint">全部经本站服务器中继。若上游需要密钥请在此填写；可调整 User-Agent / Referer 以适配仅认浏览器的上游。</p>
             </div>
 
             <div class="vs-form-row vs-form-row--2">

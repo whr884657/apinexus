@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.3.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.4.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -28,7 +28,7 @@
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
 - **API 管理（已实现）**：后台接口列表（v8.0）/ 审核（v8.1）/ 分类（v8.2～8.3）/ 令牌（v9.0 表格卡片）/ 文档（v9.0 树+面板）/ 反馈（v9.0 列表+处理）；用户中心开发者投稿与邮件通知
 - **调用统计（v3.18+ / v13.3.0）：** 本地脚本头 2 行 `bootstrap` + `ApiStats::hit(接口ID)`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`
-- **代理上游认证（v10.13.0）**：代理外链可配置无需认证 / API Key（URL 或头）/ Bearer Token；需密钥时服务端中继，密钥不暴露给调用方
+- **代理网关（v13.4.0）**：一律服务端中继（取消对调用方 302）；上游认证 Query / Header API Key / Bearer；可配置出站 User-Agent（内置约 20 套 / 自定义 / 轮询）与 Referer；密钥不暴露给调用方
 - **调用方密钥传递 keyways（v10.17.0 / v11.0.0）**：接口可多选 Query / Header(`X-API-Key`) / Bearer；守卫错误 JSON 含业务 `errcode`（非 HTTP 401/403）；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色（v11.1.0）**：登录/注册/忘记密码与后台仅可选系统 24 色；无自定义取色、无昼夜更替
 - **AI 代码示例（v12.0.0）**：前端按鉴权×语言分片请求（最多 27 片）；系统设置可开单线程/并行；进程实时显示当前任务
@@ -173,7 +173,8 @@ ApiNexus/
 │   ├── ThemeManager.php        # 前台主题加载与切换
 │   ├── ApiManager.php          # 接口列表 CRUD 与状态
 │   ├── ApiStats.php            # 本地/代理调用统计（apilog）
-│   ├── ApiProxy.php            # 代理网关 /apis/{短码}
+│   ├── ApiProxy.php            # 代理网关 /apis/{短码}（一律中继）
+│   ├── ProxyClientProfile.php  # 代理出站 UA/Referer 预设
 │   ├── PlaygroundRelay.php     # 可选中继（兼容旧主题；默认主题已浏览器直连）
 │   ├── playground/relay.php    # 中继入口（非默认路径）
 │   ├── ApiCategoryManager.php  # 接口分类（后台 CRUD）
@@ -272,10 +273,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.3.1（2026-07-29）
+### v13.4.0（2026-07-29）
 
-- 大屏实时调用日志：游客与密钥一律显示成功/失败，不再出现「信息」
-- 同版复查：地图放大后轮询刷新不再自动缩回
+- 代理一律服务端中继；Query / Header API Key / Bearer；出站 UA/Referer（含约 20 套内置）
+- 大屏与控制台 TOP 实时刷新；控制台 TOP/系统概览固定高度、排名与滚动
+- 含数据库迁移，升级后请执行「系统升级」
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

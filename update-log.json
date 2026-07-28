@@ -1,5 +1,15 @@
 {
     "versions": {
+        "13.4.0": {
+            "title": "ApiNexus 13.4.0 代理全中继 · 出站身份 · TOP 实时",
+            "date": "2026-07-29",
+            "db_changes": true,
+            "changes": [
+                "代理一律服务端中继，取消对调用方 302；认证选项：无需 / Query API Key / Header API Key / Bearer",
+                "出站 UA/Referer：内置约20套设备与浏览器、自定义、按分钟轮询；迁移 install/migrations/13.4.0.sql",
+                "大屏与控制台 TOP 进 live；控制台 TOP/系统概览固定高度、排名与自动滚动；易错点 E150–E151"
+            ]
+        },
         "13.3.1": {
             "title": "ApiNexus 13.3.1 大屏日志状态与地图缩放保留",
             "date": "2026-07-29",

@@ -27,6 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'upkeyvia'    => isset($_POST['upkeyvia']) ? (int) $_POST['upkeyvia'] : 0,
             'upkeyname'   => isset($_POST['upkeyname']) ? (string) $_POST['upkeyname'] : '',
             'upkey'       => isset($_POST['upkey']) ? (string) $_POST['upkey'] : '',
+            'upuamode'    => isset($_POST['upuamode']) ? (int) $_POST['upuamode'] : 0,
+            'upuapreset'  => isset($_POST['upuapreset']) ? (string) $_POST['upuapreset'] : '',
+            'upua'        => isset($_POST['upua']) ? (string) $_POST['upua'] : '',
+            'upreferermode' => isset($_POST['upreferermode']) ? (int) $_POST['upreferermode'] : 0,
+            'upreferer'   => isset($_POST['upreferer']) ? (string) $_POST['upreferer'] : '',
             'method'      => isset($_POST['method']) ? $_POST['method'] : 'GET',
             'params'      => isset($_POST['params']) ? (string) $_POST['params'] : '',
             'response'    => isset($_POST['response']) ? (string) $_POST['response'] : '',
@@ -794,16 +799,13 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             <label class="vs-label" for="apiListFormUpAuth">上游认证方式</label>
                             <select class="vs-input vs-select" id="apiListFormUpAuth" name="upauth" data-vs-pick>
                                 <option value="0">无需认证</option>
-                                <option value="1">API Key</option>
+                                <option value="1">Query API Key</option>
+                                <option value="3">Header API Key</option>
                                 <option value="2">Bearer Token</option>
                             </select>
                         </div>
                         <div id="apiListUpKeyViaWrap" hidden>
-                            <label class="vs-label" for="apiListFormUpKeyVia">密钥传递方式</label>
-                            <select class="vs-input vs-select" id="apiListFormUpKeyVia" name="upkeyvia" data-vs-pick>
-                                <option value="0">URL 参数</option>
-                                <option value="1">请求头</option>
-                            </select>
+                            <input type="hidden" id="apiListFormUpKeyVia" name="upkeyvia" value="0">
                         </div>
                     </div>
                     <div class="vs-form-row vs-form-row--2" id="apiListUpKeyFields" hidden>
@@ -818,7 +820,47 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                    placeholder="上游平台颁发的密钥或令牌" autocomplete="new-password">
                         </div>
                     </div>
-                    <p class="vs-form-hint">无需认证：直接转发。API Key：按 URL 参数或请求头附加。Bearer Token：以 Authorization 头传递。密钥仅保存在本站，调用方不可见。</p>
+                    <div class="vs-form-row vs-form-row--2">
+                        <div>
+                            <label class="vs-label" for="apiListFormUpUaMode">出站 User-Agent</label>
+                            <select class="vs-input vs-select" id="apiListFormUpUaMode" name="upuamode" data-vs-pick>
+                                <option value="0">系统默认</option>
+                                <option value="1">内置设备 / 浏览器</option>
+                                <option value="2">自定义</option>
+                                <option value="3">轮询内置（按分钟）</option>
+                            </select>
+                        </div>
+                        <div id="apiListUpUaPresetWrap" hidden>
+                            <label class="vs-label" for="apiListFormUpUaPreset">内置预设</label>
+                            <select class="vs-input vs-select" id="apiListFormUpUaPreset" name="upuapreset" data-vs-pick>
+                                <option value="">请选择</option>
+                                <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
+                                    <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="vs-form-row" id="apiListUpUaCustomWrap" hidden>
+                        <label class="vs-label" for="apiListFormUpUa">自定义 User-Agent</label>
+                        <input type="text" class="vs-input" id="apiListFormUpUa" name="upua" maxlength="512"
+                               placeholder="完整浏览器 User-Agent 字符串" autocomplete="off">
+                    </div>
+                    <div class="vs-form-row vs-form-row--2">
+                        <div>
+                            <label class="vs-label" for="apiListFormUpRefererMode">出站 Referer</label>
+                            <select class="vs-input vs-select" id="apiListFormUpRefererMode" name="upreferermode" data-vs-pick>
+                                <option value="0">不发送</option>
+                                <option value="1">自定义</option>
+                                <option value="2">转发客户端</option>
+                            </select>
+                        </div>
+                        <div id="apiListUpRefererWrap" hidden>
+                            <label class="vs-label" for="apiListFormUpReferer">自定义 Referer</label>
+                            <input type="url" class="vs-input" id="apiListFormUpReferer" name="upreferer" maxlength="500"
+                                   placeholder="https://example.com/" autocomplete="off">
+                        </div>
+                    </div>
+                    <p class="vs-form-hint">全部经本站服务器中继请求上游。Query / Header API Key 与 Bearer 仅服务端附加。部分上游只认手机浏览器时可改 User-Agent 或 Referer。</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>
