@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-12.1.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.0.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -272,11 +272,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v12.1.1（2026-07-28）
+### v13.0.0（2026-07-28）
 
-- 数据大屏四角对调：左下实时调用日志、右下调用量趋势；TOP 固定高度轮循滚动
-- KPI 百分比移至右上角并缩小核心指标区；去掉布局双标题，全屏 SVG 旁置昼夜按钮
-- 飞线枢纽改为服务器归属城市（禁最高调用城回退）；国内匹配增强；刷新率与控制台设置绑定
+- 史诗级增强数据大屏飞线城市库：国内地级市约 370+（含曲靖等）、全球主要城市约 290+、中英别名约 180+
+- 新增 `core/GeoCityCoords.php`；live 仅下发有调用城市；枢纽合并国内外坐标
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

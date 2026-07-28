@@ -704,12 +704,12 @@ class DashboardStats
         return array(
             'china' => array(
                 'cities' => $china,
-                'flows'  => self::buildDynamicFlows($china, $chinaHub, 10),
+                'flows'  => self::buildDynamicFlows($china, $chinaHub, 14),
                 'hub'    => $chinaHub,
             ),
             'world' => array(
                 'cities' => $world,
-                'flows'  => self::buildDynamicFlows($world, $worldHub, 10),
+                'flows'  => self::buildDynamicFlows($world, $worldHub, 14),
                 'hub'    => $worldHub,
             ),
         );
@@ -723,7 +723,7 @@ class DashboardStats
     private static function serverHubPoint()
     {
         return self::remember('server_hub_point', 86400, function () {
-            $coords = self::chinaCityCoords();
+            $coords = array_merge(self::worldCityCoords(), self::chinaCityCoords());
             $ip = self::guessServerPublicIp();
             $loc = '';
             if ($ip !== '' && class_exists('IpLocator') && IpLocator::enabled()) {
@@ -809,12 +809,16 @@ class DashboardStats
         $out = array();
         foreach ($coords as $name => $ll) {
             $c = isset($counts[$name]) ? (int) $counts[$name] : 0;
+            // 全量坐标库很大：payload 只下发有调用的城市，减轻 live 体积
+            if ($c <= 0) {
+                continue;
+            }
             $out[] = array(
                 'name'   => $name,
                 'coord'  => array((float) $ll[0], (float) $ll[1]),
                 'count'  => $c,
-                'status' => $c > 0 ? '有调用' : '暂无数据',
-                'level'  => $c > 0 ? 'active' : 'normal',
+                'status' => '有调用',
+                'level'  => 'active',
             );
         }
         usort($out, function ($a, $b) {
@@ -833,7 +837,7 @@ class DashboardStats
      */
     private static function buildDynamicFlows($cities, $hub, $limit = 8)
     {
-        $limit = max(1, min(12, (int) $limit));
+        $limit = max(1, min(16, (int) $limit));
         $hubCoord = isset($hub['coord']) && is_array($hub['coord']) ? $hub['coord'] : array(116.4074, 39.9042);
         $hubName = isset($hub['name']) ? (string) $hub['name'] : '本站';
         $out = array();
@@ -919,7 +923,7 @@ class DashboardStats
                   AND `iploc` <> \'\'
                 GROUP BY `iploc`
                 ORDER BY c DESC
-                LIMIT 120';
+                LIMIT 240';
             $out = array();
             foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $city = self::parseCityFromIploc((string) $r['iploc']);
@@ -961,7 +965,7 @@ class DashboardStats
                   AND `iploc` <> \'\'
                 GROUP BY `iploc`
                 ORDER BY c DESC
-                LIMIT 80';
+                LIMIT 160';
             $out = array();
             foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $city = self::parseCityFromIploc((string) $r['iploc']);
@@ -988,27 +992,8 @@ class DashboardStats
      */
     private static function parseCityFromIploc($iploc)
     {
-        $iploc = trim((string) $iploc);
-        if ($iploc === '' || $iploc === '内网' || $iploc === '局域网' || $iploc === '本地') {
-            return '';
-        }
-        // 统一分隔符，兼容「中国|广东|深圳|」「中国 广东省 深圳市」等
-        $norm = str_replace(array('|', '/', '\\', '·', ',', '，', '-', '_'), ' ', $iploc);
-        $known = array_merge(array_keys(self::chinaCityCoords()), array_keys(self::worldCityCoords()));
-        // 长名优先，避免「吉林」误伤「吉林市」等
-        usort($known, function ($a, $b) {
-            return mb_strlen($b, 'UTF-8') - mb_strlen($a, 'UTF-8');
-        });
-        foreach ($known as $city) {
-            if (mb_strpos($norm, $city) !== false) {
-                return $city;
-            }
-        }
-        if (preg_match('/([\x{4e00}-\x{9fa5}]{2,8})市/u', $norm, $m)) {
-            $c = $m[1];
-            if (isset(self::chinaCityCoords()[$c]) || isset(self::worldCityCoords()[$c])) {
-                return $c;
-            }
+        if (class_exists('GeoCityCoords')) {
+            return GeoCityCoords::resolveCityName($iploc);
         }
         return '';
     }
@@ -1025,6 +1010,10 @@ class DashboardStats
         if ($iploc === '') {
             return '';
         }
+        // 已能解析到具体城市时，勿再被省名覆盖（如「云南省曲靖市」应保留曲靖）
+        if (self::parseCityFromIploc($iploc) !== '') {
+            return '';
+        }
         $map = array(
             '北京' => '北京', '上海' => '上海', '天津' => '天津', '重庆' => '重庆',
             '广东' => '广州', '浙江' => '杭州', '江苏' => '南京', '四川' => '成都',
@@ -1034,119 +1023,41 @@ class DashboardStats
             '黑龙江' => '哈尔滨', '云南' => '昆明', '贵州' => '贵阳', '广西' => '南宁',
             '海南' => '海口', '甘肃' => '兰州', '青海' => '西宁', '宁夏' => '银川',
             '新疆' => '乌鲁木齐', '西藏' => '拉萨', '内蒙古' => '呼和浩特',
+            '香港' => '香港', '澳门' => '澳门', '台湾' => '台北',
         );
-        foreach ($map as $prov => $capital) {
+        // 长省名优先（黑龙江 > 吉林）
+        $keys = array_keys($map);
+        usort($keys, function ($a, $b) {
+            return mb_strlen($b, 'UTF-8') - mb_strlen($a, 'UTF-8');
+        });
+        foreach ($keys as $prov) {
             if (mb_strpos($iploc, $prov) !== false) {
-                return $capital;
+                return $map[$prov];
             }
         }
         return '';
     }
 
     /**
-     * 中国城市经纬度（ECharts geo）
+     * 中国城市经纬度（委托全量库）
      *
      * @return array<string,array{0:float,1:float}>
      */
     private static function chinaCityCoords()
     {
-        return array(
-            '北京' => array(116.4074, 39.9042),
-            '上海' => array(121.4737, 31.2304),
-            '广州' => array(113.2644, 23.1291),
-            '深圳' => array(114.0579, 22.5431),
-            '成都' => array(104.0665, 30.5728),
-            '武汉' => array(114.3055, 30.5928),
-            '西安' => array(108.9398, 34.3416),
-            '重庆' => array(106.5516, 29.5630),
-            '杭州' => array(120.1551, 30.2741),
-            '南京' => array(118.7969, 32.0603),
-            '天津' => array(117.2008, 39.0842),
-            '苏州' => array(120.6196, 31.2990),
-            '东莞' => array(113.7518, 23.0207),
-            '佛山' => array(113.1220, 23.0288),
-            '青岛' => array(120.3826, 36.0671),
-            '大连' => array(121.6147, 38.9140),
-            '厦门' => array(118.0894, 24.4798),
-            '长沙' => array(112.9388, 28.2282),
-            '郑州' => array(113.6254, 34.7466),
-            '合肥' => array(117.2272, 31.8206),
-            '福州' => array(119.2965, 26.0745),
-            '济南' => array(117.1205, 36.6512),
-            '石家庄' => array(114.5149, 38.0428),
-            '哈尔滨' => array(126.5350, 45.8025),
-            '长春' => array(125.3235, 43.8171),
-            '沈阳' => array(123.4315, 41.8057),
-            '昆明' => array(102.8329, 24.8801),
-            '南宁' => array(108.3669, 22.8170),
-            '贵阳' => array(106.6302, 26.6477),
-            '海口' => array(110.3312, 20.0311),
-            '兰州' => array(103.8343, 36.0611),
-            '银川' => array(106.2309, 38.4872),
-            '西宁' => array(101.7782, 36.6171),
-            '呼和浩特' => array(111.7492, 40.8424),
-            '乌鲁木齐' => array(87.6168, 43.8256),
-            '拉萨' => array(91.1409, 29.6456),
-            '太原' => array(112.5489, 37.8706),
-            '南昌' => array(115.8581, 28.6832),
-            '宁波' => array(121.5440, 29.8683),
-            '无锡' => array(120.3119, 31.4912),
-            '温州' => array(120.6994, 27.9949),
-            '泉州' => array(118.6757, 24.8741),
-            '珠海' => array(113.5767, 22.2707),
-            '中山' => array(113.3928, 22.5170),
-            '惠州' => array(114.4161, 23.1115),
-            '常州' => array(119.9740, 31.8112),
-            '徐州' => array(117.2841, 34.2058),
-            '南通' => array(120.8646, 32.0162),
-            '嘉兴' => array(120.7555, 30.7461),
-            '金华' => array(119.6474, 29.0791),
-            '绍兴' => array(120.5821, 30.0515),
-            '台州' => array(121.4208, 28.6564),
-            '烟台' => array(121.4479, 37.4638),
-            '潍坊' => array(119.1619, 36.7069),
-            '临沂' => array(118.3564, 35.1041),
-            '洛阳' => array(112.4540, 34.6197),
-            '保定' => array(115.4646, 38.8744),
-            '唐山' => array(118.1802, 39.6309),
-            '桂林' => array(110.2900, 25.2736),
-            '汕头' => array(116.6822, 23.3541),
-            '江门' => array(113.0815, 22.5787),
-            '湛江' => array(110.3594, 21.2707),
-            '绵阳' => array(104.6791, 31.4678),
-            '宜昌' => array(111.2864, 30.6919),
-        );
+        return class_exists('GeoCityCoords') ? GeoCityCoords::china() : array();
     }
 
     /**
-     * 世界城市经纬度（ECharts geo）
+     * 世界城市经纬度（委托全量库）
      *
      * @return array<string,array{0:float,1:float}>
      */
     private static function worldCityCoords()
     {
-        return array(
-            '北京'   => array(116.4074, 39.9042),
-            '上海'   => array(121.4737, 31.2304),
-            '广州'   => array(113.2644, 23.1291),
-            '深圳'   => array(114.0579, 22.5431),
-            '香港'   => array(114.1694, 22.3193),
-            '台北'   => array(121.5654, 25.0330),
-            '纽约'   => array(-74.0060, 40.7128),
-            '伦敦'   => array(-0.1276, 51.5074),
-            '新加坡' => array(103.8198, 1.3521),
-            '圣保罗' => array(-46.6333, -23.5505),
-            '悉尼'   => array(151.2093, -33.8688),
-            '东京'   => array(139.6917, 35.6895),
-            '洛杉矶' => array(-118.2437, 34.0522),
-            '迪拜'   => array(55.2708, 25.2048),
-            '首尔'   => array(126.9780, 37.5665),
-            '曼谷'   => array(100.5018, 13.7563),
-            '莫斯科' => array(37.6173, 55.7558),
-            '巴黎'   => array(2.3522, 48.8566),
-            '柏林'   => array(13.4050, 52.5200),
-        );
+        return class_exists('GeoCityCoords') ? GeoCityCoords::world() : array();
     }
+
     private static function typeCountsLastDays($days)
     {
         $days = max(1, min(31, (int) $days));
