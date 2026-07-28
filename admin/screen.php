@@ -45,6 +45,14 @@ try {
             'china' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
             'world' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
         ),
+        'geo_live'      => array(
+            'china' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
+            'world' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
+        ),
+        'geo_today'     => array(
+            'china' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
+            'world' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
+        ),
         'recent'        => array(),
         'current_rpm'   => 0,
     );
@@ -79,12 +87,18 @@ vs_admin_layout_start('实时数据监控中心', 'screen', '');
         <div class="ds-map-panel">
             <div class="ds-map-float-head">
                 <h3 class="ds-card__title">地理调用分布</h3>
+            </div>
+            <div class="ds-map-chart" id="dsMapChart" role="img" aria-label="调用飞线地图"></div>
+            <div class="ds-map-dock" aria-label="地图与数据范围">
                 <div class="ds-map-toggle" id="dsMapToggle" role="group" aria-label="地图切换">
                     <button type="button" class="ds-map-toggle__btn is-active" data-map="china">中国地图</button>
                     <button type="button" class="ds-map-toggle__btn" data-map="world">世界地图</button>
                 </div>
+                <div class="ds-map-toggle" id="dsGeoScopeToggle" role="group" aria-label="飞线数据范围">
+                    <button type="button" class="ds-map-toggle__btn is-active" data-scope="live">实时数据</button>
+                    <button type="button" class="ds-map-toggle__btn" data-scope="today">今日数据</button>
+                </div>
             </div>
-            <div class="ds-map-chart" id="dsMapChart" role="img" aria-label="调用飞线地图"></div>
             <div class="ds-map-status" id="dsMapStatus" hidden>地图加载中…</div>
         </div>
 

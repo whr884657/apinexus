@@ -200,7 +200,7 @@ class DashboardStats
     }
 
     /**
-     * 数据大屏整页快照
+     * 数据大屏整页快照（Redis：screen_full；地理分今日/实时双缓存）
      *
      * @param bool $refresh
      * @return array
@@ -210,36 +210,52 @@ class DashboardStats
         if ($refresh) {
             self::bumpEpoch();
         }
-        $kpi = self::kpiBlock();
+        $pack = self::remember('screen_full', self::TTL_TODAY, function () {
+            $kpi = self::kpiBlock();
+            return array(
+                'kpi' => array(
+                    'today_calls'   => $kpi['today_calls'],
+                    'today_delta'   => $kpi['today_delta'],
+                    'total_calls'   => $kpi['total_calls'],
+                    'total_delta'   => $kpi['total_delta'],
+                    'success_rate'  => $kpi['success_rate'],
+                    'success_delta' => $kpi['success_delta'],
+                    'fail_rate'     => $kpi['fail_rate'],
+                    'fail_delta'    => $kpi['fail_delta'],
+                ),
+                'hourly'      => self::hourly24h(),
+                'top_apis'    => self::topApisToday(12),
+                'geo_today'   => self::geoDistributionToday(),
+                'recent'      => self::recentCalls(12),
+                'current_rpm' => self::currentRpm(),
+            );
+        });
+        $geoLive = self::geoDistributionLive();
+        $geoToday = isset($pack['geo_today']) ? $pack['geo_today'] : self::geoDistributionToday();
         return array(
-            'server_time'    => date('Y-m-d H:i:s'),
-            'live_interval'  => self::liveIntervalSeconds(),
-            'kpi'            => array(
-                'today_calls'   => $kpi['today_calls'],
-                'today_delta'   => $kpi['today_delta'],
-                'total_calls'   => $kpi['total_calls'],
-                'total_delta'   => $kpi['total_delta'],
-                'success_rate'  => $kpi['success_rate'],
-                'success_delta' => $kpi['success_delta'],
-                'fail_rate'     => $kpi['fail_rate'],
-                'fail_delta'    => $kpi['fail_delta'],
-            ),
-            'hourly'         => self::hourly24h(),
-            'top_apis'       => self::topApisToday(8),
-            'geo'            => self::geoDistribution(),
-            'recent'         => self::recentCalls(12),
-            'current_rpm'    => self::currentRpm(),
+            'server_time'   => date('Y-m-d H:i:s'),
+            'live_interval' => self::liveIntervalSeconds(),
+            'kpi'           => isset($pack['kpi']) ? $pack['kpi'] : array(),
+            'hourly'        => isset($pack['hourly']) ? $pack['hourly'] : array('labels' => array(), 'series' => array()),
+            'top_apis'      => isset($pack['top_apis']) ? $pack['top_apis'] : array(),
+            'geo_live'      => $geoLive,
+            'geo_today'     => $geoToday,
+            'geo'           => $geoLive,
+            'recent'        => isset($pack['recent']) ? $pack['recent'] : array(),
+            'current_rpm'   => isset($pack['current_rpm']) ? (int) $pack['current_rpm'] : 0,
         );
     }
 
     /**
-     * 大屏轻量轮询（最新日志 + RPM + 今日 KPI + 地理飞线）
+     * 大屏轻量轮询（最新日志 + RPM + 今日 KPI + 地理飞线双模）
      *
      * @return array
      */
     public static function screenLiveTick()
     {
         $ttl = max(1, self::liveIntervalSeconds());
+        $geoLive = self::geoDistributionLive();
+        $geoToday = self::geoDistributionToday();
         return array(
             'server_time'   => date('Y-m-d H:i:s'),
             'live_interval' => self::liveIntervalSeconds(),
@@ -250,7 +266,9 @@ class DashboardStats
                 'success_rate' => self::todaySuccessRateCached(),
                 'fail_rate'    => self::todayFailRateCached(),
             ),
-            'geo'           => self::geoDistributionLive(),
+            'geo_live'      => $geoLive,
+            'geo_today'     => $geoToday,
+            'geo'           => $geoLive,
             'recent'        => self::recentCalls(12),
         );
     }
@@ -651,19 +669,19 @@ class DashboardStats
     }
 
     /**
-     * 地理分布（基于 iploc 聚合；无归属地时回落空列表）
+     * 地理分布 · 今日（Redis geo_dist_today）
      *
      * @return array
      */
-    private static function geoDistribution()
+    private static function geoDistributionToday()
     {
-        return self::remember('geo_dist', self::TTL_GEO, function () {
-            return self::buildGeoPayload(false);
+        return self::remember('geo_dist_today', self::TTL_GEO, function () {
+            return self::buildGeoPayload('today');
         });
     }
 
     /**
-     * 大屏 live 地理（短 TTL，贴近实时飞线）
+     * 地理分布 · 近窗实时（Redis geo_dist_live，短 TTL）
      *
      * @return array
      */
@@ -671,27 +689,34 @@ class DashboardStats
     {
         $ttl = max(1, self::liveIntervalSeconds());
         return self::remember('geo_dist_live', $ttl, function () {
-            return self::buildGeoPayload(true);
+            return self::buildGeoPayload('live');
         });
     }
 
     /**
-     * @param bool $liveMode 是否叠加近窗实时权重
+     * @deprecated 兼容旧调用，等同今日
      * @return array
      */
-    private static function buildGeoPayload($liveMode)
+    private static function geoDistribution()
     {
+        return self::geoDistributionToday();
+    }
+
+    /**
+     * @param string $mode live|today
+     * @return array
+     */
+    private static function buildGeoPayload($mode)
+    {
+        $mode = ($mode === 'live') ? 'live' : 'today';
         $chinaCoords = self::chinaCityCoords();
         $worldCoords = self::worldCityCoords();
-        $counts = self::iplocCityCounts($liveMode ? 1 : 7);
-        if ($liveMode) {
-            $recent = self::iplocCityCountsRecentMinutes(45);
-            foreach ($recent as $city => $c) {
-                if (!isset($counts[$city])) {
-                    $counts[$city] = 0;
-                }
-                $counts[$city] += (int) $c * 3;
-            }
+        if ($mode === 'live') {
+            $counts = self::iplocCityCountsRecentMinutes(45);
+            $flowLimit = 12;
+        } else {
+            $counts = self::iplocCityCounts(1);
+            $flowLimit = 20;
         }
         $hub = self::serverHubPoint();
         $china = self::buildGeoCities($chinaCoords, $counts);
@@ -702,14 +727,15 @@ class DashboardStats
             'coord' => isset($hub['coord']) ? $hub['coord'] : array(116.4074, 39.9042),
         );
         return array(
+            'mode'  => $mode,
             'china' => array(
                 'cities' => $china,
-                'flows'  => self::buildDynamicFlows($china, $chinaHub, 14),
+                'flows'  => self::buildDynamicFlows($china, $chinaHub, $flowLimit),
                 'hub'    => $chinaHub,
             ),
             'world' => array(
                 'cities' => $world,
-                'flows'  => self::buildDynamicFlows($world, $worldHub, 14),
+                'flows'  => self::buildDynamicFlows($world, $worldHub, $flowLimit),
                 'hub'    => $worldHub,
             ),
         );
@@ -837,9 +863,16 @@ class DashboardStats
      */
     private static function buildDynamicFlows($cities, $hub, $limit = 8)
     {
-        $limit = max(1, min(16, (int) $limit));
+        $limit = max(1, min(24, (int) $limit));
         $hubCoord = isset($hub['coord']) && is_array($hub['coord']) ? $hub['coord'] : array(116.4074, 39.9042);
         $hubName = isset($hub['name']) ? (string) $hub['name'] : '本站';
+        $maxCount = 0;
+        foreach ($cities as $city) {
+            $c = isset($city['count']) ? (int) $city['count'] : 0;
+            if ($c > $maxCount) {
+                $maxCount = $c;
+            }
+        }
         $out = array();
         foreach ($cities as $city) {
             $c = isset($city['count']) ? (int) $city['count'] : 0;
@@ -863,10 +896,12 @@ class DashboardStats
                 $fromLng -= 1.15;
                 $fromLat += 0.85;
             }
+            $tone = self::flowTone($c, $maxCount);
             $out[] = array(
                 'from'   => $name,
                 'to'     => $hubName,
                 'count'  => $c,
+                'tone'   => $tone,
                 'coords' => array(
                     array($fromLng, $fromLat),
                     array((float) $hubCoord[0], (float) $hubCoord[1]),
@@ -877,6 +912,26 @@ class DashboardStats
             }
         }
         return $out;
+    }
+
+    /**
+     * 飞线色调：多数绿色，中等黄，热点红
+     *
+     * @param int $count
+     * @param int $max
+     * @return string green|yellow|red
+     */
+    private static function flowTone($count, $max)
+    {
+        $max = max(1, (int) $max);
+        $r = (int) $count / $max;
+        if ($r >= 0.66) {
+            return 'red';
+        }
+        if ($r >= 0.33) {
+            return 'yellow';
+        }
+        return 'green';
     }
 
     /**

@@ -28,6 +28,7 @@
 
     var boot = {};
     var mapMode = 'china';
+    var geoScope = 'live';
     var theme = page.classList.contains('vs-datascreen--dark') ? 'dark' : 'light';
     var mapChart = null;
     var mapRegistered = { china: false, world: false };
@@ -38,6 +39,11 @@
     var clockOffset = 0;
     var liveIntervalMs = 5000;
     var softIntervalMs = 45000;
+    var FLOW_TONES = {
+        green:  { line: 'rgba(34,197,94,0.28)',  trail: '#4ade80' },
+        yellow: { line: 'rgba(234,179,8,0.32)',  trail: '#facc15' },
+        red:    { line: 'rgba(239,68,68,0.35)',  trail: '#f87171' }
+    };
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
@@ -98,18 +104,24 @@
     function mapPalette() {
         var dark = theme === 'dark';
         return {
-            areaColor: dark ? 'rgba(37,99,235,0.18)' : 'rgba(37,99,235,0.08)',
-            borderColor: dark ? '#3b82f6' : '#93c5fd',
+            areaColor: dark ? 'rgba(30,64,175,0.22)' : 'rgba(37,99,235,0.10)',
+            borderColor: dark ? '#60a5fa' : '#2563eb',
+            borderColorSoft: dark ? '#1d4ed8' : '#93c5fd',
             labelColor: cssVar('--ds-muted', dark ? '#94a3b8' : '#64748b'),
             scatter: '#38bdf8',
             hub: '#f87171',
-            line: 'rgba(251,191,36,0.4)',
-            trail: '#fbbf24',
             accent: cssVar('--ds-accent', '#2563eb'),
             text: cssVar('--ds-text', dark ? '#e5e7eb' : '#0f172a'),
             muted: cssVar('--ds-muted', dark ? '#94a3b8' : '#64748b'),
             grid: dark ? 'rgba(148,163,184,0.18)' : 'rgba(148,163,184,0.25)'
         };
+    }
+
+    function activeGeoPack() {
+        var pack = geoScope === 'today'
+            ? (boot.geo_today || boot.geo)
+            : (boot.geo_live || boot.geo);
+        return pack || {};
     }
 
     function pad2(n) {
@@ -163,14 +175,15 @@
         return mapChart;
     }
 
-    function buildMapOption(geo) {
+    function buildMapOption(geoRoot) {
         var colors = mapPalette();
-        var pack = ((geo || {})[mapMode]) || {};
+        var pack = ((geoRoot || {})[mapMode]) || {};
         var cities = Array.isArray(pack.cities) ? pack.cities : [];
         var flows = Array.isArray(pack.flows) ? pack.flows : [];
         var hub = pack.hub || {};
         var isChina = mapMode === 'china';
         var isDesktop = window.innerWidth >= 1200;
+        var borderW = isChina ? 1.8 : 1.35;
 
         var choropleth = cities
             .filter(function (c) { return c && c.name && (parseInt(c.count, 10) || 0) > 0; })
@@ -196,13 +209,25 @@
                     && Array.isArray(f.coords[0]) && Array.isArray(f.coords[1]);
             })
             .map(function (f) {
+                var tone = (f.tone && FLOW_TONES[f.tone]) ? f.tone : 'green';
+                var tc = FLOW_TONES[tone];
                 return {
                     fromName: f.from || '',
                     toName: f.to || '',
+                    tone: tone,
                     coords: [
                         [Number(f.coords[0][0]), Number(f.coords[0][1])],
                         [Number(f.coords[1][0]), Number(f.coords[1][1])]
-                    ]
+                    ],
+                    lineStyle: {
+                        color: tc.line,
+                        width: 0.7,
+                        opacity: 0.55,
+                        curveness: 0.28
+                    },
+                    effect: {
+                        color: tc.trail
+                    }
                 };
             });
 
@@ -250,7 +275,9 @@
                 itemStyle: {
                     areaColor: colors.areaColor,
                     borderColor: colors.borderColor,
-                    borderWidth: 1
+                    borderWidth: borderW,
+                    shadowColor: colors.borderColorSoft,
+                    shadowBlur: 2
                 },
                 select: { disabled: true }
             },
@@ -263,7 +290,8 @@
                     select: { disabled: true },
                     itemStyle: {
                         areaColor: colors.areaColor,
-                        borderColor: colors.borderColor
+                        borderColor: colors.borderColor,
+                        borderWidth: borderW
                     },
                     emphasis: { disabled: true }
                 },
@@ -272,18 +300,19 @@
                     type: 'lines',
                     zlevel: 2,
                     coordinateSystem: 'geo',
+                    polyline: false,
                     effect: {
                         show: true,
-                        period: 4,
-                        trailLength: 0.3,
-                        symbol: 'arrow',
-                        symbolSize: 6,
-                        color: colors.trail
+                        period: 2.4,
+                        trailLength: 0.72,
+                        symbol: 'circle',
+                        symbolSize: 2.8,
+                        color: FLOW_TONES.green.trail
                     },
                     lineStyle: {
-                        color: colors.line,
-                        width: 1,
-                        curveness: 0.3
+                        width: 0.6,
+                        opacity: 0.35,
+                        curveness: 0.28
                     },
                     data: linesData
                 },
@@ -299,7 +328,7 @@
                     },
                     symbolSize: function (val) {
                         var c = (val && val[2]) ? val[2] : 1;
-                        return Math.max(6, Math.min(20, 4 + Math.sqrt(c) * 0.9));
+                        return Math.max(5, Math.min(16, 3.5 + Math.sqrt(c) * 0.75));
                     },
                     itemStyle: {
                         color: colors.scatter,
@@ -329,7 +358,7 @@
     function applyMapOption() {
         var chart = ensureMapChart();
         if (!chart || !mapRegistered[mapMode]) return;
-        chart.setOption(buildMapOption(boot.geo), true);
+        chart.setOption(buildMapOption(activeGeoPack()), true);
         chart.resize();
     }
 
@@ -577,8 +606,10 @@
             boot.recent = live.recent;
             renderRecent(boot.recent);
         }
-        if (live.geo) {
-            boot.geo = live.geo;
+        if (live.geo_live) boot.geo_live = live.geo_live;
+        if (live.geo_today) boot.geo_today = live.geo_today;
+        if (live.geo) boot.geo = live.geo;
+        if (live.geo_live || live.geo_today || live.geo) {
             if (mapRegistered[mapMode]) applyMapOption();
         }
     }
@@ -638,7 +669,11 @@
             // 软刷不得覆盖 live 已更新的 KPI / 最近日志 / RPM（E129）
             boot.hourly = snap.hourly || boot.hourly;
             boot.top_apis = snap.top_apis || boot.top_apis;
-            boot.geo = snap.geo || boot.geo;
+            if (snap.geo_today) boot.geo_today = snap.geo_today;
+            if (snap.geo_live) boot.geo_live = snap.geo_live;
+            if (snap.geo) boot.geo = snap.geo;
+            // 软刷：今日地理可更新；实时地理以 live 为准（已有则不强制覆盖）
+            if (!boot.geo_live && snap.geo_live) boot.geo_live = snap.geo_live;
             if (snap.server_time) syncClock(snap.server_time);
             if (snap.live_interval != null) {
                 var next = readLiveIntervalMs(snap.live_interval);
@@ -704,6 +739,21 @@
                 b.classList.toggle('is-active', b === btn);
             });
             loadMap(next);
+        });
+    }
+
+    var scopeBtns = document.getElementById('dsGeoScopeToggle');
+    if (scopeBtns) {
+        scopeBtns.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-scope]');
+            if (!btn) return;
+            var next = btn.getAttribute('data-scope') === 'today' ? 'today' : 'live';
+            geoScope = next;
+            Array.prototype.forEach.call(scopeBtns.querySelectorAll('[data-scope]'), function (b) {
+                b.classList.toggle('is-active', b === btn);
+            });
+            if (mapRegistered[mapMode]) applyMapOption();
+            else loadMap(mapMode);
         });
     }
 
