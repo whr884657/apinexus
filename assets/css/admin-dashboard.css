@@ -640,7 +640,7 @@
     white-space: nowrap;
 }
 
-/* 正下方：中国/世界 + 实时/今日 */
+/* 正下方横排：中国 / 世界 / 实时 / 今日 */
 #adminScreenPage .ds-map-dock {
     position: absolute;
     z-index: 5;
@@ -648,9 +648,11 @@
     bottom: 14px;
     transform: translateX(-50%);
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
     padding: 8px 10px;
     border-radius: 14px;
     border: 1px solid var(--ds-border);
@@ -661,8 +663,11 @@
     max-width: calc(100% - 40px);
 }
 #adminScreenPage .ds-map-dock .ds-map-toggle {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     justify-content: center;
-    flex-wrap: wrap;
+    gap: 6px;
 }
 
 /* Map toggle: rounded rectangle (admin style), NOT capsule */
@@ -726,8 +731,8 @@ body.vs-screen-solo .vs-content__body {
     top: 12px;
     right: 12px;
     width: 280px;
-    height: 148px;
-    max-height: 148px;
+    height: 156px;
+    max-height: 156px;
 }
 #adminScreenPage .ds-corner--bl {
     bottom: 12px;
@@ -792,12 +797,12 @@ body.vs-screen-solo .vs-content__body {
 #adminScreenPage .ds-stat-strip__delta--up { color: var(--ds-ok); }
 #adminScreenPage .ds-stat-strip__delta--down { color: var(--ds-danger); }
 
-/* TOP：默认约 3 行可视，超出无缝轮循 */
+/* TOP：默认约 3 行可视；>3 条 JS 无限循环滚动 */
 #adminScreenPage .ds-bar-viewport {
     flex: 1 1 auto;
     min-height: 0;
-    height: 102px;
-    max-height: 102px;
+    height: 108px;
+    max-height: 108px;
     overflow: hidden;
     position: relative;
 }
@@ -805,22 +810,43 @@ body.vs-screen-solo .vs-content__body {
     display: flex;
     flex-direction: column;
     gap: 6px;
-}
-#adminScreenPage .ds-bar-list.is-marquee {
-    animation: dsTopMarquee 16s linear infinite;
-}
-#adminScreenPage .ds-bar-viewport:hover .ds-bar-list.is-marquee {
-    animation-play-state: paused;
-}
-@keyframes dsTopMarquee {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-50%); }
+    will-change: transform;
 }
 #adminScreenPage .ds-bar-row {
     flex-shrink: 0;
 }
 #adminScreenPage .ds-bar-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 0.75rem;
+    min-width: 0;
+}
+#adminScreenPage .ds-bar-rank {
+    flex-shrink: 0;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 4px;
+    background: var(--ds-accent);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+#adminScreenPage .ds-bar-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#adminScreenPage .ds-bar-val {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--ds-muted);
 }
 
 
@@ -1074,12 +1100,12 @@ body.is-ds-fullscreen #adminScreenPage .ds-corner--bl .ds-log-stream {
         height: 180px !important;
     }
     #adminScreenPage .ds-corner--tr {
-        height: 148px;
-        max-height: 148px;
+        height: 156px;
+        max-height: 156px;
     }
     #adminScreenPage .ds-bar-viewport {
-        height: 102px;
-        max-height: 102px;
+        height: 108px;
+        max-height: 108px;
     }
     #adminScreenPage .ds-log-stream {
         max-height: 200px;

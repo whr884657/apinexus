@@ -253,7 +253,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；默认主题浏览器直连 |
 | `ApiStats.php` | 本地/代理调用统计、守卫（needkey/keyways/qpm/charge）、错误 JSON `{code:0,msg,http}` |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
-| `DashboardStats.php` | 管理员控制台 / 数据大屏 KPI/趋势/TOP + live tick；`screen_full` Redis；geo 今日/实时双模与雨点飞线（v12.1.x / v13.0.0 / **v13.1.0**） |
+| `DashboardStats.php` | 管理员控制台 / 数据大屏 KPI/趋势/TOP + live tick；`screen_full` Redis；geo 今日/实时双模（v13.0～**v13.1.1**） |
 | `GeoCityCoords.php` | 大屏飞线全量城市坐标库：国内地级市约 370+、全球约 290+、中英别名；`resolveCityName`（**v13.0.0**） |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD |
 | `ApiLogManager.php` | 调用日志分页、今日计数、脱敏 |

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.1.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.1.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -272,10 +272,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.1.0（2026-07-28）
+### v13.1.1（2026-07-28）
 
-- 数据大屏 Redis 分层缓存（screen_full / 今日·实时 geo）；底栏中国/世界与实时/今日切换
-- 雨点飞线绿黄红着色；地图描边加强；TOP 三行可视轮循
+- 地图描边/飞线恢复原先样式；删除「地理调用分布」标题；底栏横排四按钮
+- TOP 超 3 条才无限循环滚动并显示排名；修复滚到底部即停
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

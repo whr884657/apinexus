@@ -85,9 +85,6 @@ vs_admin_layout_start('实时数据监控中心', 'screen', '');
 
     <div class="ds-stage">
         <div class="ds-map-panel">
-            <div class="ds-map-float-head">
-                <h3 class="ds-card__title">地理调用分布</h3>
-            </div>
             <div class="ds-map-chart" id="dsMapChart" role="img" aria-label="调用飞线地图"></div>
             <div class="ds-map-dock" aria-label="地图与数据范围">
                 <div class="ds-map-toggle" id="dsMapToggle" role="group" aria-label="地图切换">

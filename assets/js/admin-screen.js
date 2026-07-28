@@ -39,11 +39,9 @@
     var clockOffset = 0;
     var liveIntervalMs = 5000;
     var softIntervalMs = 45000;
-    var FLOW_TONES = {
-        green:  { line: 'rgba(34,197,94,0.28)',  trail: '#4ade80' },
-        yellow: { line: 'rgba(234,179,8,0.32)',  trail: '#facc15' },
-        red:    { line: 'rgba(239,68,68,0.35)',  trail: '#f87171' }
-    };
+    var topMarqueeRaf = null;
+    var topMarqueeY = 0;
+    var topMarqueePaused = false;
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
@@ -104,12 +102,13 @@
     function mapPalette() {
         var dark = theme === 'dark';
         return {
-            areaColor: dark ? 'rgba(30,64,175,0.22)' : 'rgba(37,99,235,0.10)',
-            borderColor: dark ? '#60a5fa' : '#2563eb',
-            borderColorSoft: dark ? '#1d4ed8' : '#93c5fd',
+            areaColor: dark ? 'rgba(37,99,235,0.18)' : 'rgba(37,99,235,0.08)',
+            borderColor: dark ? '#3b82f6' : '#93c5fd',
             labelColor: cssVar('--ds-muted', dark ? '#94a3b8' : '#64748b'),
             scatter: '#38bdf8',
             hub: '#f87171',
+            line: 'rgba(251,191,36,0.4)',
+            trail: '#fbbf24',
             accent: cssVar('--ds-accent', '#2563eb'),
             text: cssVar('--ds-text', dark ? '#e5e7eb' : '#0f172a'),
             muted: cssVar('--ds-muted', dark ? '#94a3b8' : '#64748b'),
@@ -183,7 +182,6 @@
         var hub = pack.hub || {};
         var isChina = mapMode === 'china';
         var isDesktop = window.innerWidth >= 1200;
-        var borderW = isChina ? 1.8 : 1.35;
 
         var choropleth = cities
             .filter(function (c) { return c && c.name && (parseInt(c.count, 10) || 0) > 0; })
@@ -209,25 +207,13 @@
                     && Array.isArray(f.coords[0]) && Array.isArray(f.coords[1]);
             })
             .map(function (f) {
-                var tone = (f.tone && FLOW_TONES[f.tone]) ? f.tone : 'green';
-                var tc = FLOW_TONES[tone];
                 return {
                     fromName: f.from || '',
                     toName: f.to || '',
-                    tone: tone,
                     coords: [
                         [Number(f.coords[0][0]), Number(f.coords[0][1])],
                         [Number(f.coords[1][0]), Number(f.coords[1][1])]
-                    ],
-                    lineStyle: {
-                        color: tc.line,
-                        width: 0.7,
-                        opacity: 0.55,
-                        curveness: 0.28
-                    },
-                    effect: {
-                        color: tc.trail
-                    }
+                    ]
                 };
             });
 
@@ -275,9 +261,7 @@
                 itemStyle: {
                     areaColor: colors.areaColor,
                     borderColor: colors.borderColor,
-                    borderWidth: borderW,
-                    shadowColor: colors.borderColorSoft,
-                    shadowBlur: 2
+                    borderWidth: 1
                 },
                 select: { disabled: true }
             },
@@ -290,8 +274,7 @@
                     select: { disabled: true },
                     itemStyle: {
                         areaColor: colors.areaColor,
-                        borderColor: colors.borderColor,
-                        borderWidth: borderW
+                        borderColor: colors.borderColor
                     },
                     emphasis: { disabled: true }
                 },
@@ -300,19 +283,18 @@
                     type: 'lines',
                     zlevel: 2,
                     coordinateSystem: 'geo',
-                    polyline: false,
                     effect: {
                         show: true,
-                        period: 2.4,
-                        trailLength: 0.72,
-                        symbol: 'circle',
-                        symbolSize: 2.8,
-                        color: FLOW_TONES.green.trail
+                        period: 4,
+                        trailLength: 0.3,
+                        symbol: 'arrow',
+                        symbolSize: 6,
+                        color: colors.trail
                     },
                     lineStyle: {
-                        width: 0.6,
-                        opacity: 0.35,
-                        curveness: 0.28
+                        color: colors.line,
+                        width: 1,
+                        curveness: 0.3
                     },
                     data: linesData
                 },
@@ -328,7 +310,7 @@
                     },
                     symbolSize: function (val) {
                         var c = (val && val[2]) ? val[2] : 1;
-                        return Math.max(5, Math.min(16, 3.5 + Math.sqrt(c) * 0.75));
+                        return Math.max(6, Math.min(20, 4 + Math.sqrt(c) * 0.9));
                     },
                     itemStyle: {
                         color: colors.scatter,
@@ -504,12 +486,40 @@
         }
     }
 
+    function stopTopMarquee() {
+        if (topMarqueeRaf) {
+            cancelAnimationFrame(topMarqueeRaf);
+            topMarqueeRaf = null;
+        }
+        topMarqueeY = 0;
+        topMarqueePaused = false;
+    }
+
+    function startTopMarquee(el, halfHeight) {
+        stopTopMarquee();
+        if (!el || halfHeight <= 0) return;
+        var speed = 0.35;
+        function tick() {
+            if (!topMarqueePaused) {
+                topMarqueeY += speed;
+                if (topMarqueeY >= halfHeight) {
+                    topMarqueeY -= halfHeight;
+                }
+                el.style.transform = 'translateY(' + (-topMarqueeY) + 'px)';
+            }
+            topMarqueeRaf = requestAnimationFrame(tick);
+        }
+        topMarqueeRaf = requestAnimationFrame(tick);
+    }
+
     function renderTop(list) {
         var el = document.getElementById('dsTopBars');
         var viewport = document.getElementById('dsTopViewport');
         if (!el) return;
         list = Array.isArray(list) ? list : [];
+        stopTopMarquee();
         el.classList.remove('is-marquee');
+        el.style.transform = '';
         if (!list.length) {
             el.innerHTML = '<div class="dash-empty">暂无排行</div>';
             return;
@@ -517,19 +527,26 @@
         var rowsHtml = list.map(function (row, i) {
             var pct = Math.max(4, parseFloat(row.pct) || 0);
             var color = BAR_COLORS[i % BAR_COLORS.length];
+            var rank = i + 1;
             return '<div class="ds-bar-row">'
                 + '<div class="ds-bar-meta">'
-                + '<span>' + esc(row.name) + '</span>'
+                + '<span class="ds-bar-rank">' + rank + '</span>'
+                + '<span class="ds-bar-name">' + esc(row.name) + '</span>'
                 + '<span class="ds-bar-val">' + fmtNum(row.count) + '</span>'
                 + '</div>'
                 + '<div class="ds-bar-track"><div class="ds-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
                 + '</div>';
         }).join('');
-        // 内容超过视口时复制一份做无缝轮循滚动
         el.innerHTML = rowsHtml;
-        if (viewport && el.scrollHeight > viewport.clientHeight + 8) {
+        // 超过 3 条才无限循环滚动；≤3 条静止展示
+        if (list.length > 3 && viewport) {
             el.innerHTML = rowsHtml + rowsHtml;
             el.classList.add('is-marquee');
+            // 等布局后再量半高，保证无缝循环
+            requestAnimationFrame(function () {
+                var half = el.scrollHeight / 2;
+                if (half > 8) startTopMarquee(el, half);
+            });
         }
     }
 
@@ -808,7 +825,14 @@
     restartLivePoll();
     restartSoftPoll();
 
+    var topViewport = document.getElementById('dsTopViewport');
+    if (topViewport) {
+        topViewport.addEventListener('mouseenter', function () { topMarqueePaused = true; });
+        topViewport.addEventListener('mouseleave', function () { topMarqueePaused = false; });
+    }
+
     window.addEventListener('beforeunload', function () {
+        stopTopMarquee();
         if (pollTimer) clearInterval(pollTimer);
         if (softTimer) clearInterval(softTimer);
         if (clockTimer) clearInterval(clockTimer);
