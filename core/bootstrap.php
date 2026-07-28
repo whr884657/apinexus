@@ -28,6 +28,7 @@ require_once VS_ROOT . '/core/UserAuth.php';
 require_once VS_ROOT . '/core/FrontendUser.php';
 require_once VS_ROOT . '/core/RateLimitStore.php';
 require_once VS_ROOT . '/core/AuthSecurity.php';
+require_once VS_ROOT . '/core/Captcha.php';
 require_once VS_ROOT . '/core/AjaxResponse.php';
 require_once VS_ROOT . '/core/SystemInfo.php';
 require_once VS_ROOT . '/core/AboutCatalog.php';

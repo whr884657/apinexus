@@ -38,6 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         vs_auth_json(array('code' => 0, 'msg' => $loginBlocked));
     }
 
+    $captchaErr = Captcha::requireValid(Captcha::SCENE_ADMIN_LOGIN, $_POST);
+    if ($captchaErr !== true) {
+        vs_auth_json(array('code' => 0, 'msg' => $captchaErr));
+    }
+
     if (Auth::login($username, $password)) {
         vs_auth_json(array(
             'code' => 1,
@@ -88,6 +93,8 @@ vs_auth_head('登录');
                     </label>
                     <a href="<?php echo vs_e($base); ?>/admin/forgot">忘记密码？</a>
                 </div>
+
+                <?php vs_auth_captcha_field(Captcha::SCENE_ADMIN_LOGIN); ?>
 
                 <?php echo vs_auth_submit_btn('登 录', 'loginBtn', 'login-btn'); ?>
             </form>
@@ -189,6 +196,7 @@ vs_auth_head('登录');
 
         if (loginBtn) loginBtn.disabled = true;
 
+        var runLogin = function () {
         var post = (window.VsAuthCsrf && VsAuthCsrf.postForm)
             ? VsAuthCsrf.postForm(form, { action: 'login' })
             : fetch(form.action || window.location.href, {
@@ -234,6 +242,9 @@ vs_auth_head('登录');
                     }
                 } else {
                     showMessage(data.msg || '登录失败', 'error');
+                    if (window.VsCaptcha && typeof window.VsCaptcha.reset === 'function') {
+                        window.VsCaptcha.reset(form);
+                    }
                 }
             })
             .catch(function () {
@@ -242,6 +253,16 @@ vs_auth_head('登录');
             .finally(function () {
                 if (loginBtn) loginBtn.disabled = false;
             });
+        };
+
+        if (window.VsCaptcha && window.VsCaptcha.enabled && typeof window.VsCaptcha.ensure === 'function') {
+            window.VsCaptcha.ensure(form).then(runLogin).catch(function (err) {
+                showMessage((err && err.message) ? err.message : '请先完成行为验证', 'error');
+                if (loginBtn) loginBtn.disabled = false;
+            });
+        } else {
+            runLogin();
+        }
     });
 
     document.addEventListener('keydown', function (e) {

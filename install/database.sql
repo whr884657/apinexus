@@ -112,7 +112,16 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('apilog_hot_days', '30'),
 ('apilog_archive_enabled', '1'),
 ('apilog_shard_rows', '5000'),
-('apilog_cron_key', '');
+('apilog_cron_key', ''),
+('geetest_version', '4'),
+('geetest_id', ''),
+('geetest_key', ''),
+('geetest_api_server', ''),
+('geetest_on_admin_login', '0'),
+('geetest_on_admin_forgot', '0'),
+('geetest_on_user_login', '0'),
+('geetest_on_user_register', '0'),
+('geetest_on_user_forgot', '0');
 
 -- 邮箱验证码发信频率限制记录
 CREATE TABLE IF NOT EXISTS `{prefix}mailrate` (

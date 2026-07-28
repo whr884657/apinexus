@@ -36,7 +36,8 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
         <label><input type="checkbox" id="rememberCredentials" value="1"> 记住账号</label>
         <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
     </div>
-    <button type="submit" class="st-auth__submit" id="loginBtn">登 录</button>
+    <?php vs_auth_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
+                <button type="submit" class="st-auth__submit" id="loginBtn">登 录</button>
 
     <?php if (!empty($oauthProviders['qq']) || !empty($oauthProviders['gitee'])): ?>
     <div class="st-auth__oauth">
@@ -107,6 +108,7 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
         var password = form.password.value;
         if (!username || !password) { showMessage('请完整填写账号和密码', 'error'); return; }
         if (window.stAuthSetLoading) window.stAuthSetLoading(loginBtn, true);
+        var runLogin = function () {
         var post = (window.VsAuthCsrf && VsAuthCsrf.postForm)
             ? VsAuthCsrf.postForm(form, { action: 'login' })
             : fetch(form.action || window.location.href, {
@@ -128,10 +130,20 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
                     saveCredentials(username, password, rememberEl && rememberEl.checked);
                     showMessage(data.msg || '登录成功', 'success');
                     if (data.url) setTimeout(function () { window.location.href = data.url; }, 800);
-                } else showMessage(data.msg || '登录失败', 'error');
+                } else {
+                    showMessage(data.msg || '登录失败', 'error');
+                    if (window.VsCaptcha && window.VsCaptcha.reset) window.VsCaptcha.reset(form);
+                }
             })
             .catch(function () { showMessage('网络异常或会话已过期，请刷新页面后重试', 'error'); })
             .finally(function () { if (window.stAuthSetLoading) window.stAuthSetLoading(loginBtn, false); });
+        };
+        if (window.VsCaptcha && window.VsCaptcha.enabled && window.VsCaptcha.ensure) {
+            window.VsCaptcha.ensure(form).then(runLogin).catch(function (err) {
+                showMessage((err && err.message) || '请先完成行为验证', 'error');
+                if (window.stAuthSetLoading) window.stAuthSetLoading(loginBtn, false);
+            });
+        } else { runLogin(); }
     });
 })();
 </script>

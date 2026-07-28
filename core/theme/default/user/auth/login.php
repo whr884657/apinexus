@@ -51,6 +51,8 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                     <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
                 </div>
 
+                <?php vs_auth_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
+
                 <?php echo vs_auth_submit_btn('登 录', 'loginBtn', 'login-btn'); ?>
 
                 <?php if (!empty($oauthProviders['qq']) || !empty($oauthProviders['gitee'])): ?>
@@ -127,6 +129,7 @@ ThemeManager::renderThemeAuthHead($pageTitle);
         if (!username) { showMessage('请输入用户名或邮箱', 'error'); form.username.focus(); return; }
         if (!password) { showMessage('请输入密码', 'error'); form.password.focus(); return; }
         if (loginBtn) loginBtn.disabled = true;
+        var runLogin = function () {
         var post = (window.VsAuthCsrf && VsAuthCsrf.postForm)
             ? VsAuthCsrf.postForm(form, { action: 'login' })
             : fetch(form.action || window.location.href, {
@@ -148,10 +151,20 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                     saveCredentials(username, password, rememberEl && rememberEl.checked);
                     showMessage(data.msg || '登录成功', 'success');
                     if (data.url) setTimeout(function () { window.location.href = data.url; }, 800);
-                } else showMessage(data.msg || '登录失败', 'error');
+                } else {
+                    showMessage(data.msg || '登录失败', 'error');
+                    if (window.VsCaptcha && window.VsCaptcha.reset) window.VsCaptcha.reset(form);
+                }
             })
             .catch(function () { showMessage('网络异常或会话已过期，请刷新页面后重试', 'error'); })
             .finally(function () { if (loginBtn) loginBtn.disabled = false; });
+        };
+        if (window.VsCaptcha && window.VsCaptcha.enabled && window.VsCaptcha.ensure) {
+            window.VsCaptcha.ensure(form).then(runLogin).catch(function (err) {
+                showMessage((err && err.message) || '请先完成行为验证', 'error');
+                if (loginBtn) loginBtn.disabled = false;
+            });
+        } else { runLogin(); }
     });
 })();
 </script>

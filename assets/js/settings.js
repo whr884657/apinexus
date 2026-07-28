@@ -399,7 +399,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
-        ['siteForm', 'registerForm', 'checkinForm', 'oauthForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm', 'aiForm', 'iplocForm', 'iplocTestForm'].forEach(function (id) {
+        ['siteForm', 'registerForm', 'geetestForm', 'checkinForm', 'oauthForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm', 'aiForm', 'iplocForm', 'iplocTestForm'].forEach(function (id) {
             bindAjaxForm(document.getElementById(id));
         });
         bindApilogCron();

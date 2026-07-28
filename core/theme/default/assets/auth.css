@@ -592,3 +592,14 @@ body {
     cursor: not-allowed;
     opacity: 0.55;
 }
+
+/* 行为验证挂载区（系统级极验） */
+.vs-captcha-field {
+    min-height: 44px;
+}
+
+.vs-captcha-field .geetest_holder,
+.vs-captcha-field .geetest_btn,
+.vs-captcha-field iframe {
+    max-width: 100%;
+}

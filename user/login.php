@@ -42,6 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         vs_auth_json(array('code' => 0, 'msg' => $loginBlocked));
     }
 
+    $captchaErr = Captcha::requireValid(Captcha::SCENE_USER_LOGIN, $_POST);
+    if ($captchaErr !== true) {
+        vs_auth_json(array('code' => 0, 'msg' => $captchaErr));
+    }
+
     if (UserAuth::login($username, $password)) {
         $go = $loginRedirect !== '' ? $loginRedirect : ($base . '/user/index');
         vs_auth_json(array(

@@ -35,6 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请求无效，请刷新页面后重试'));
         }
 
+        $captchaErr = Captcha::requireValid(Captcha::SCENE_ADMIN_FORGOT, $_POST);
+        if ($captchaErr !== true) {
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => $captchaErr));
+        }
+
         $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
 
         if ($email === '') {
@@ -180,6 +185,7 @@ vs_auth_head('忘记密码');
             <form id="forgotForm" method="post" action="" novalidate>
                 <?php vs_auth_csrf_field(); ?>
                 <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_ADMIN_FORGOT); ?>
+                <?php vs_auth_captcha_field(Captcha::SCENE_ADMIN_FORGOT); ?>
                 <div class="field"><input id="email" name="email" type="email" placeholder="请输入注册邮箱" autocomplete="email" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
@@ -317,11 +323,15 @@ vs_auth_head('忘记密码');
                 body.append('mail_ticket', mailTicketEl.value);
             }
 
-            fetch(window.location.href, {
-                method: 'POST',
-                body: body,
-                credentials: 'same-origin'
-            })
+            var doSendCaptcha = function () {
+                if (window.VsCaptcha && window.VsCaptcha.appendToFormData) {
+                    window.VsCaptcha.appendToFormData(body);
+                }
+                return fetch(window.location.href, {
+                    method: 'POST',
+                    body: body,
+                    credentials: 'same-origin'
+                })
                 .then(parseResponse)
                 .then(function (data) {
                     applyMailTicket(data);
@@ -342,6 +352,15 @@ vs_auth_head('忘记密码');
                     showMessage('网络异常，请稍后重试', 'error');
                     sendCodeBtn.disabled = false;
                 });
+            };
+            if (window.VsCaptcha && window.VsCaptcha.enabled && window.VsCaptcha.ensure) {
+                window.VsCaptcha.ensure(form).then(doSendCaptcha).catch(function (err) {
+                    showMessage((err && err.message) || '请先完成行为验证', 'error');
+                    resetSendCodeBtn();
+                });
+            } else {
+                doSendCaptcha();
+            }
         });
     }
 

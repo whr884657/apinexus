@@ -48,6 +48,7 @@ ThemeManager::renderThemeAuthHead('忘记密码');
                     <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入新密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
+                <?php vs_auth_captcha_field(Captcha::SCENE_USER_FORGOT); ?>
                 <?php echo vs_auth_submit_btn('确认重置', 'submitBtn'); ?>
 
                 <div class="divider">
@@ -164,11 +165,15 @@ ThemeManager::renderThemeAuthHead('忘记密码');
                 body.append('mail_ticket', mailTicketEl.value);
             }
 
-            fetch(window.location.href, {
-                method: 'POST',
-                body: body,
-                credentials: 'same-origin'
-            })
+            var doSendCaptcha = function () {
+                if (window.VsCaptcha && window.VsCaptcha.appendToFormData) {
+                    window.VsCaptcha.appendToFormData(body);
+                }
+                return fetch(window.location.href, {
+                    method: 'POST',
+                    body: body,
+                    credentials: 'same-origin'
+                })
                 .then(parseResponse)
                 .then(function (data) {
                     applyMailTicket(data);
@@ -189,6 +194,15 @@ ThemeManager::renderThemeAuthHead('忘记密码');
                     showMessage('网络异常，请稍后重试', 'error');
                     sendCodeBtn.disabled = false;
                 });
+            };
+            if (window.VsCaptcha && window.VsCaptcha.enabled && window.VsCaptcha.ensure) {
+                window.VsCaptcha.ensure(form).then(doSendCaptcha).catch(function (err) {
+                    showMessage((err && err.message) || '请先完成行为验证', 'error');
+                    resetSendCodeBtn();
+                });
+            } else {
+                doSendCaptcha();
+            }
         });
     }
 

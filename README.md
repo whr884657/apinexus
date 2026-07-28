@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.5.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.6.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -31,6 +31,7 @@
 - **代理网关（v13.4.0）**：一律服务端中继（取消对调用方 302）；上游认证 Query / Header API Key / Bearer；可配置出站 User-Agent（内置约 20 套 / 自定义 / 轮询）与 Referer；密钥不暴露给调用方
 - **调用方密钥传递 keyways（v10.17.0 / v11.0.0）**：接口可多选 Query / Header(`X-API-Key`) / Bearer；守卫错误 JSON 含业务 `errcode`（非 HTTP 401/403）；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色（v11.1.0）**：登录/注册/忘记密码与后台仅可选系统 24 色；无自定义取色、无昼夜更替
+- **行为验证（v13.6.0）**：系统设置按场景开关极验 3/4；管理员与用户登录/注册/忘记密码；SDK 内置 `core/captcha/`
 - **AI 代码示例（v12.0.0）**：前端按鉴权×语言分片请求（最多 27 片）；系统设置可开单线程/并行；进程实时显示当前任务
 - **快速上手语言图标（v12.0.1）**：默认主题切换鉴权方式后九种语言图标不再丢失（`detailQsLangIcons` 兜底）
 - **实时数据监控中心（v12.1.0）**：ECharts 中国/世界地图飞线、四角玻璃面板（今日/累计/成功率/失败率 + TOP + 趋势 + 实时调用日志）、太阳/月亮深浅色、双端自适应
@@ -273,11 +274,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.5.0（2026-07-29）
+### v13.6.0（2026-07-29）
 
-- 接口文档页：分类默认折叠、目录标题带选中名、搜索图标内嵌、GET/POST 斜线双色
-- 徽章与 Tab 顺序（参数→响应→请求示例→文档）；请求示例绑定 aidoc，文档绑定 doc
-- 本页文档编辑弹窗（仅四字段）；易错点 E155–E157
+- 系统级行为验证（极验 3/4）：`core/captcha` + 认证页挂载；系统设置分场景开关
+- 登录验提交；注册/忘记密码验发送邮箱验证码；密钥不下发前端
+- 易错点 E158；专项《极验验证码规范》
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

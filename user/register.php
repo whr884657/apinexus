@@ -34,6 +34,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '请求无效，请刷新页面后重试'));
         }
 
+        $captchaErr = Captcha::requireValid(Captcha::SCENE_USER_REGISTER, $_POST);
+        if ($captchaErr !== true) {
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => $captchaErr));
+        }
+
         $username = trim(isset($_POST['username']) ? $_POST['username'] : '');
         $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
 

@@ -349,6 +349,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('解析成功', array('ip' => $ip, 'iploc' => $loc));
     }
 
+    if ($action === 'save_geetest') {
+        try {
+            $gtVer = trim(isset($_POST['geetest_version']) ? (string) $_POST['geetest_version'] : '4');
+            if ($gtVer !== '3') {
+                $gtVer = '4';
+            }
+            $gtKeyIn = trim(isset($_POST['geetest_key']) ? (string) $_POST['geetest_key'] : '');
+            $gtPayload = array(
+                'geetest_version'           => $gtVer,
+                'geetest_id'                => trim(isset($_POST['geetest_id']) ? (string) $_POST['geetest_id'] : ''),
+                'geetest_api_server'        => trim(isset($_POST['geetest_api_server']) ? (string) $_POST['geetest_api_server'] : ''),
+                'geetest_on_admin_login'    => isset($_POST['geetest_on_admin_login']) ? '1' : '0',
+                'geetest_on_admin_forgot'   => isset($_POST['geetest_on_admin_forgot']) ? '1' : '0',
+                'geetest_on_user_login'     => isset($_POST['geetest_on_user_login']) ? '1' : '0',
+                'geetest_on_user_register'  => isset($_POST['geetest_on_user_register']) ? '1' : '0',
+                'geetest_on_user_forgot'    => isset($_POST['geetest_on_user_forgot']) ? '1' : '0',
+            );
+            if ($gtKeyIn !== '') {
+                $gtPayload['geetest_key'] = $gtKeyIn;
+            }
+            Config::setMany($gtPayload);
+            AjaxResponse::success('行为验证设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
     if ($action === 'save_mail') {
         try {
             Config::setMany(array(
@@ -403,6 +430,7 @@ $registerSuffixes = RegisterPolicy::formatSuffixInput(RegisterPolicy::getPolicy(
 $oauthCfg = OAuthConfig::getAll();
 $oauthQqCallback = OAuthConfig::callbackUrl('qq');
 $oauthGiteeCallback = OAuthConfig::callbackUrl('gitee');
+$geetestCfg = Captcha::forAdminForm();
 
 vs_admin_layout_start('系统设置', 'settings');
 ?>
@@ -513,6 +541,79 @@ vs_admin_accordion_start(
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存注册设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-geetest',
+    '行为验证',
+    '系统级人机验证：可分别开启管理员与用户的登录、注册、忘记密码场景'
+);
+?>
+    <form method="post" action="" class="vs-form" id="geetestForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_geetest">
+        <?php
+        vs_render_notice(
+            'info',
+            '配置说明',
+            '<p>在极验控制台获取验证 ID 与密钥后填写。未填写完整凭证时，下方场景开关不会生效。</p><p>登录页在提交时校验；注册与忘记密码在发送邮箱验证码时校验。</p>',
+            array('allow_html' => true, 'compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label">验证产品版本</label>
+            <select name="geetest_version" class="vs-input">
+                <option value="4" <?php echo $geetestCfg['version'] === '4' ? 'selected' : ''; ?>>行为验证第四代</option>
+                <option value="3" <?php echo $geetestCfg['version'] === '3' ? 'selected' : ''; ?>>行为验证第三代</option>
+            </select>
+            <p class="vs-form-hint">第三代与第四代凭证不可混用，请与控制台产品一致。</p>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">验证 ID</label>
+            <input type="text" name="geetest_id" class="vs-input" autocomplete="off"
+                   value="<?php echo vs_e($geetestCfg['id']); ?>" placeholder="captcha_id / gt">
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">验证密钥</label>
+            <input type="password" name="geetest_key" class="vs-input" autocomplete="new-password"
+                   value="" placeholder="<?php echo $geetestCfg['key'] !== '' ? '已配置，留空则不修改' : 'captcha_key / 私钥'; ?>">
+            <p class="vs-form-hint">密钥仅存于服务端，不会下发到浏览器。</p>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">二次校验服务地址（可选）</label>
+            <input type="text" name="geetest_api_server" class="vs-input"
+                   value="<?php echo vs_e($geetestCfg['api_server']); ?>"
+                   placeholder="默认 http://gcaptcha4.geetest.com（仅第四代）">
+            <p class="vs-form-hint">一般无需填写；仅当官方要求自定义 API 域名时使用。</p>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">启用场景</label>
+            <p class="vs-form-hint" style="margin-top:0;">可单开、多开或全开；关闭的场景不展示验证控件。</p>
+            <label class="vs-checkbox">
+                <input type="checkbox" name="geetest_on_admin_login" value="1" <?php echo $geetestCfg['admin_login'] ? 'checked' : ''; ?>>
+                <span>管理员登录</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="geetest_on_admin_forgot" value="1" <?php echo $geetestCfg['admin_forgot'] ? 'checked' : ''; ?>>
+                <span>管理员忘记密码（发送邮箱验证码时）</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="geetest_on_user_login" value="1" <?php echo $geetestCfg['user_login'] ? 'checked' : ''; ?>>
+                <span>用户登录</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="geetest_on_user_register" value="1" <?php echo $geetestCfg['user_register'] ? 'checked' : ''; ?>>
+                <span>用户注册（发送邮箱验证码时）</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="geetest_on_user_forgot" value="1" <?php echo $geetestCfg['user_forgot'] ? 'checked' : ''; ?>>
+                <span>用户忘记密码（发送邮箱验证码时）</span>
+            </label>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存行为验证设置</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>
