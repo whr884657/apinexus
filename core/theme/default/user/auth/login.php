@@ -51,7 +51,7 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                     <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
                 </div>
 
-                <?php vs_auth_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
+                <?php vs_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
 
                 <?php echo vs_auth_submit_btn('登 录', 'loginBtn', 'login-btn'); ?>
 

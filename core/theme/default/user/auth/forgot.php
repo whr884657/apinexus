@@ -48,7 +48,7 @@ ThemeManager::renderThemeAuthHead('忘记密码');
                     <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入新密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
-                <?php vs_auth_captcha_field(Captcha::SCENE_USER_FORGOT); ?>
+                <?php vs_captcha_field(Captcha::SCENE_USER_FORGOT); ?>
                 <?php echo vs_auth_submit_btn('确认重置', 'submitBtn'); ?>
 
                 <div class="divider">

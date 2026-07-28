@@ -36,7 +36,7 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
         <label><input type="checkbox" id="rememberCredentials" value="1"> 记住账号</label>
         <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
     </div>
-    <?php vs_auth_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
+    <?php vs_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
                 <button type="submit" class="st-auth__submit" id="loginBtn">登 录</button>
 
     <?php if (!empty($oauthProviders['qq']) || !empty($oauthProviders['gitee'])): ?>

@@ -33,7 +33,7 @@ vs_slate_auth_shell_start('重置密码', '输入注册邮箱获取验证码，�
     <div class="st-auth__field">
         <input class="st-auth__input" id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入新密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
     </div>
-    <?php vs_auth_captcha_field(Captcha::SCENE_USER_FORGOT); ?>
+    <?php vs_captcha_field(Captcha::SCENE_USER_FORGOT); ?>
                 <button type="submit" class="st-auth__submit" id="submitBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>确认重置</button>
     <div class="st-auth__foot">想起密码了？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
 </form>

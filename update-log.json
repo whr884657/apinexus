@@ -1,14 +1,14 @@
 {
     "versions": {
         "13.6.0": {
-            "title": "ApiNexus 13.6.0 系统级行为验证（极验 3/4）",
+            "title": "ApiNexus 13.6.0 验证码：本地图 + 极验3/4 分凭证",
             "date": "2026-07-29",
             "db_changes": false,
             "changes": [
-                "系统级极验 3/4：core/captcha + Captcha 门面；认证页 VsCaptcha",
-                "系统设置分场景开关：管理员登录/忘记、用户登录/注册/忘记",
-                "登录验提交；注册/忘记密码验 send_code；密钥不下发前端",
-                "database.sql 种子；易错点 E158；专项规范《极验验证码规范》"
+                "验证码三选一：本站图形 / 极验三代 / 极验四代；三代与四代 ID·密钥分存",
+                "官方 SDK 落地 core/captcha/gt3|gt4；接口仅在 core（删除根目录 captcha/）",
+                "系统设置分场景开关；登录验提交；注册/忘记验 send_code",
+                "前端 assets/js/captcha.js；易错点 E158；专项《验证码规范》"
             ]
         },
         "13.5.0": {

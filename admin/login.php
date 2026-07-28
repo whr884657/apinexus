@@ -94,7 +94,7 @@ vs_auth_head('登录');
                     <a href="<?php echo vs_e($base); ?>/admin/forgot">忘记密码？</a>
                 </div>
 
-                <?php vs_auth_captcha_field(Captcha::SCENE_ADMIN_LOGIN); ?>
+                <?php vs_captcha_field(Captcha::SCENE_ADMIN_LOGIN); ?>
 
                 <?php echo vs_auth_submit_btn('登 录', 'loginBtn', 'login-btn'); ?>
             </form>

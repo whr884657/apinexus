@@ -17,45 +17,6 @@ function vs_auth_csrf_field()
 }
 
 /**
- * 行为验证挂载点（系统级极验；场景关闭时不输出）
- *
- * @param string $scene Captcha::SCENE_*
- * @return void
- */
-function vs_auth_captcha_field($scene)
-{
-    if (!class_exists('Captcha') || !Captcha::sceneEnabled($scene)) {
-        return;
-    }
-    $GLOBALS['vs_auth_captcha_scene'] = (string) $scene;
-    echo '<div class="field vs-captcha-field" id="vsCaptchaBox" data-captcha-scene="'
-        . vs_e($scene) . '" aria-label="行为验证"></div>' . "\n";
-}
-
-/**
- * 输出行为验证 boot + 脚本（须在表单之后、页面底部调用）
- *
- * @param string|null $scene 缺省用挂载时记录的场景
- * @return void
- */
-function vs_auth_captcha_scripts($scene = null)
-{
-    if ($scene === null && isset($GLOBALS['vs_auth_captcha_scene'])) {
-        $scene = (string) $GLOBALS['vs_auth_captcha_scene'];
-    }
-    $scene = (string) $scene;
-    if ($scene === '' || !class_exists('Captcha') || !Captcha::sceneEnabled($scene)) {
-        return;
-    }
-    $boot = Captcha::publicBoot($scene);
-    $base = vs_base_url();
-    echo '<script>window.VS_CAPTCHA_BOOT='
-        . json_encode($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-        . ';</script>' . "\n";
-    echo '<script src="' . vs_e($base) . '/assets/js/geetest-auth.js?v=' . VS_VERSION . '"></script>' . "\n";
-}
-
-/**
  * 发信一次性票据隐藏字段（send_code 必传，防抓包重放）
  *
  * @param string $purpose AuthSecurity::MAIL_PURPOSE_*
@@ -212,7 +173,9 @@ function vs_auth_foot($characterOptionsJs = '')
     echo '<script src="' . vs_e($base) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($base) . '/assets/js/theme-picker.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($base) . '/assets/js/auth-characters.js?v=' . VS_VERSION . '"></script>' . "\n";
-    vs_auth_captcha_scripts(null);
+    if (function_exists('vs_captcha_js')) {
+        vs_captcha_js(null);
+    }
     echo '</body></html>';
 }
 

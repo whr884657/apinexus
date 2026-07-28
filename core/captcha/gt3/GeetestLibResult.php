@@ -1,14 +1,26 @@
 <?php
-/**
- * 文件：core/captcha/geetest3/GeetestLibResult.php
- * 作用：极验 3 代 SDK 返回结果（自官方 demo 精简，无框架依赖）
- */
 
+/**
+ * sdk lib包的返回结果信息。
+ *
+ * @author liuquan@geetest.com
+ */
 class GeetestLibResult
 {
+    /**
+     * 成功失败的标识码，1表示成功，0表示失败
+     */
     private $status = 0;
-    private $data = '';
-    private $msg = '';
+
+    /**
+     * 返回数据，json格式
+     */
+    private $data = "";
+
+    /**
+     * 备注信息，如异常信息等
+     */
+    private $msg = "";
 
     public function getStatus()
     {
@@ -46,4 +58,11 @@ class GeetestLibResult
         $this->setData($data);
         $this->setMsg($msg);
     }
+
+    public function __toString()
+    {
+        return sprintf("GeetestLibResult{status=%s, data=%s, msg=%s}", $this->status, $this->data, $this->msg);
+    }
+
 }
+

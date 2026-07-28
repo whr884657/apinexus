@@ -46,7 +46,7 @@ vs_slate_auth_shell_start('注册账号', '使用邮箱验证注册，完成验�
     <div class="st-auth__field">
         <input class="st-auth__input" id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
     </div>
-    <?php vs_auth_captcha_field(Captcha::SCENE_USER_REGISTER); ?>
+    <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER); ?>
                 <button type="submit" class="st-auth__submit" id="submitBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>立即注册</button>
     <div class="st-auth__foot">已有账号？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
 </form>

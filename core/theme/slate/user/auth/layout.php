@@ -94,8 +94,8 @@ function vs_theme_auth_foot($inlineJs = '')
     if ($authJs !== '') {
         echo '<script src="' . vs_e($authJs) . '"></script>' . "\n";
     }
-    if (function_exists('vs_auth_captcha_scripts')) {
-        vs_auth_captcha_scripts(null);
+    if (function_exists('vs_captcha_js')) {
+        vs_captcha_js(null);
     }
     echo '</body></html>';
 }

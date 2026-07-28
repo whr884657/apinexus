@@ -61,7 +61,7 @@ ThemeManager::renderThemeAuthHead('用户注册');
                     <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
-                <?php vs_auth_captcha_field(Captcha::SCENE_USER_REGISTER); ?>
+                <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER); ?>
                 <?php echo vs_auth_submit_btn('立即注册', 'submitBtn'); ?>
 
                 <div class="divider">

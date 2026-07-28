@@ -476,7 +476,7 @@
     opacity: 0.55;
 }
 
-/* 行为验证挂载区（系统级极验） */
+/* 验证码挂载区 */
 .vs-captcha-field {
     min-height: 44px;
 }
@@ -485,4 +485,40 @@
 .vs-captcha-field .geetest_btn,
 .vs-captcha-field iframe {
     max-width: 100%;
+}
+
+.vs-captcha-local {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.vs-captcha-local__input {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--st-auth-line, #d1d5db);
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    background: var(--st-auth-card, #fff);
+    color: var(--st-auth-fg, #111);
+}
+
+.vs-captcha-local__refresh {
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid var(--st-auth-line, #d1d5db);
+    border-radius: 10px;
+    background: var(--st-auth-wash, #f3f4f6);
+    cursor: pointer;
+    overflow: hidden;
+    line-height: 0;
+}
+
+.vs-captcha-local__refresh img {
+    display: block;
+    width: 120px;
+    height: 40px;
 }

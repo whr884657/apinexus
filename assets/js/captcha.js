@@ -1,8 +1,8 @@
 /**
- * 文件：assets/js/geetest-auth.js
- * 作用：认证页行为验证（极验 3/4）挂载与提交附加字段
+ * 文件：assets/js/captcha.js
+ * 作用：认证页验证码（本地图 / 极验3 / 极验4）
  *
- * 依赖：window.VS_CAPTCHA_BOOT = {enabled,version,captchaId,register,product,scene}
+ * 依赖：window.VS_CAPTCHA_BOOT
  */
 (function (global) {
     'use strict';
@@ -11,7 +11,7 @@
     var state = {
         ready: false,
         loading: false,
-        version: String(boot.version || '4'),
+        mode: String(boot.mode || 'local'),
         result: null,
         captchaObj: null
     };
@@ -52,11 +52,11 @@
             return;
         }
         var r = state.result;
-        if (state.version === '3') {
+        if (state.mode === 'gt3') {
             ensureHidden(form, 'geetest_challenge', r.geetest_challenge || '');
             ensureHidden(form, 'geetest_validate', r.geetest_validate || '');
             ensureHidden(form, 'geetest_seccode', r.geetest_seccode || '');
-        } else {
+        } else if (state.mode === 'gt4') {
             ensureHidden(form, 'lot_number', r.lot_number || '');
             ensureHidden(form, 'captcha_output', r.captcha_output || '');
             ensureHidden(form, 'pass_token', r.pass_token || '');
@@ -98,15 +98,11 @@
                     captcha.onSuccess(function () {
                         state.result = captcha.getValidate() || {};
                         state.ready = true;
-                        var form = box.closest('form') || document.querySelector('form');
-                        applyResultToForm(form);
+                        applyResultToForm(box.closest('form') || document.querySelector('form'));
                     });
                     captcha.onError(function () {
                         state.ready = false;
                         state.result = null;
-                    });
-                    captcha.onClose(function () {
-                        // keep last success
                     });
                     resolve();
                 });
@@ -122,7 +118,6 @@
                     reject(new Error('验证组件不可用'));
                     return;
                 }
-                // 带时间戳避免 old challenge 缓存
                 var url = registerUrl + (registerUrl.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
                 fetch(url, { credentials: 'same-origin', cache: 'no-store' })
                     .then(function (res) { return res.json(); })
@@ -140,8 +135,7 @@
                             captcha.onSuccess(function () {
                                 state.result = captcha.getValidate() || {};
                                 state.ready = true;
-                                var form = box.closest('form') || document.querySelector('form');
-                                applyResultToForm(form);
+                                applyResultToForm(box.closest('form') || document.querySelector('form'));
                             });
                             captcha.onError(function () {
                                 state.ready = false;
@@ -157,9 +151,38 @@
         });
     }
 
+    function refreshLocal() {
+        var img = $('vsCaptchaImg');
+        if (!img || !boot.image) {
+            return;
+        }
+        img.src = String(boot.image) + (boot.image.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
+        var input = $('captchaCode');
+        if (input) {
+            input.value = '';
+        }
+        state.ready = false;
+    }
+
+    function mountLocal() {
+        var btn = $('vsCaptchaRefresh');
+        if (btn && !btn.getAttribute('data-bound')) {
+            btn.setAttribute('data-bound', '1');
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                refreshLocal();
+            });
+        }
+        state.ready = true;
+        return Promise.resolve();
+    }
+
     function mount() {
         if (!boot.enabled) {
             return Promise.resolve();
+        }
+        if (state.mode === 'local') {
+            return mountLocal();
         }
         var box = $('vsCaptchaBox');
         if (!box) {
@@ -169,7 +192,7 @@
             return Promise.resolve();
         }
         state.loading = true;
-        var p = state.version === '3' ? mountGt3(box) : mountGt4(box);
+        var p = state.mode === 'gt3' ? mountGt3(box) : mountGt4(box);
         return p.then(function () {
             state.loading = false;
         }).catch(function (err) {
@@ -179,11 +202,16 @@
         });
     }
 
-    /**
-     * 提交前确认已通过；返回 Promise
-     */
     function ensure(form) {
         if (!boot.enabled) {
+            return Promise.resolve(true);
+        }
+        if (state.mode === 'local') {
+            var input = form ? form.querySelector('[name="captcha_code"]') : $('captchaCode');
+            var val = input ? String(input.value || '').trim() : '';
+            if (!val) {
+                return Promise.reject(new Error('请输入验证码'));
+            }
             return Promise.resolve(true);
         }
         return mount().then(function () {
@@ -196,6 +224,10 @@
     }
 
     function reset(form) {
+        if (state.mode === 'local') {
+            refreshLocal();
+            return;
+        }
         state.ready = false;
         state.result = null;
         clearFields(form);
@@ -209,11 +241,21 @@
     }
 
     function appendToFormData(fd) {
-        if (!boot.enabled || !state.result) {
+        if (!boot.enabled) {
+            return fd;
+        }
+        if (state.mode === 'local') {
+            var input = $('captchaCode');
+            if (input && input.value) {
+                fd.append('captcha_code', String(input.value).trim());
+            }
+            return fd;
+        }
+        if (!state.result) {
             return fd;
         }
         var r = state.result;
-        if (state.version === '3') {
+        if (state.mode === 'gt3') {
             fd.append('geetest_challenge', r.geetest_challenge || '');
             fd.append('geetest_validate', r.geetest_validate || '');
             fd.append('geetest_seccode', r.geetest_seccode || '');
@@ -226,13 +268,6 @@
         return fd;
     }
 
-    /**
-     * 发信 / 自定义 FormData：先确保验证通过再附加字段
-     *
-     * @param {HTMLFormElement} form
-     * @param {FormData} body
-     * @returns {Promise<FormData>}
-     */
     function withPayload(form, body) {
         if (!boot.enabled) {
             return Promise.resolve(body);
@@ -245,9 +280,11 @@
 
     global.VsCaptcha = {
         enabled: !!boot.enabled,
+        mode: state.mode,
         mount: mount,
         ensure: ensure,
         reset: reset,
+        refresh: refreshLocal,
         appendToFormData: appendToFormData,
         applyToForm: applyResultToForm,
         withPayload: withPayload

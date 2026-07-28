@@ -602,7 +602,7 @@ body {
     opacity: 0.55;
 }
 
-/* 行为验证挂载区（系统级极验） */
+/* 行为验证挂载区 */
 .vs-captcha-field {
     min-height: 44px;
 }
@@ -611,4 +611,43 @@ body {
 .vs-captcha-field .geetest_btn,
 .vs-captcha-field iframe {
     max-width: 100%;
+}
+
+.vs-captcha-local {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.vs-captcha-local__input {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    padding: 0 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    background: #fff;
+}
+
+.vs-captcha-local__input:focus {
+    border-color: #111;
+}
+
+.vs-captcha-local__refresh {
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    cursor: pointer;
+    overflow: hidden;
+    line-height: 0;
+}
+
+.vs-captcha-local__refresh img {
+    display: block;
+    width: 120px;
+    height: 40px;
 }

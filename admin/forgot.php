@@ -185,7 +185,7 @@ vs_auth_head('忘记密码');
             <form id="forgotForm" method="post" action="" novalidate>
                 <?php vs_auth_csrf_field(); ?>
                 <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_ADMIN_FORGOT); ?>
-                <?php vs_auth_captcha_field(Captcha::SCENE_ADMIN_FORGOT); ?>
+                <?php vs_captcha_field(Captcha::SCENE_ADMIN_FORGOT); ?>
                 <div class="field"><input id="email" name="email" type="email" placeholder="请输入注册邮箱" autocomplete="email" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
