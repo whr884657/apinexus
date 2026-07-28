@@ -602,21 +602,33 @@ body {
     opacity: 0.55;
 }
 
-/* 行为验证挂载区 */
+/* 验证码挂载区：与表单同宽 */
 .vs-captcha-field {
+    width: 100%;
     min-height: 44px;
+    box-sizing: border-box;
 }
 
+.vs-captcha-field--gt,
+.vs-captcha-field--gt > div,
 .vs-captcha-field .geetest_holder,
 .vs-captcha-field .geetest_btn,
-.vs-captcha-field iframe {
-    max-width: 100%;
+.vs-captcha-field .geetest_wind,
+.vs-captcha-field .geetest_logo,
+.vs-captcha-field .geetest_box,
+.vs-captcha-field iframe,
+.vs-captcha-field [class^="geetest_"],
+.vs-captcha-field [class*=" geetest_"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
 }
 
 .vs-captcha-local {
     display: flex;
     align-items: stretch;
     gap: 10px;
+    width: 100%;
 }
 
 .vs-captcha-local__input {

@@ -71,9 +71,11 @@
                 resolve();
                 return;
             }
+            // 官方 CDN 无固定 SRI（脚本常变）；属第三方脚本信任残留风险，见二次审计 BUG-S06
             var s = document.createElement('script');
             s.src = src;
             s.async = true;
+            s.referrerPolicy = 'no-referrer';
             s.setAttribute('data-vs-gt-src', src);
             s.onload = function () { resolve(); };
             s.onerror = function () { reject(new Error('验证脚本加载失败')); };
@@ -91,7 +93,10 @@
                 global.initGeetest4({
                     captchaId: String(boot.captchaId || ''),
                     product: boot.product || 'float',
-                    language: 'zho'
+                    language: 'zho',
+                    nativeButton: {
+                        width: '100%'
+                    }
                 }, function (captcha) {
                     state.captchaObj = captcha;
                     captcha.appendTo(box);

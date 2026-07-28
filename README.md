@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.6.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.6.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -274,11 +274,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.6.0（2026-07-29）
+### v13.6.1（2026-07-29）
 
-- 验证码三选一：本站图形 / 极验三代 / 极验四代；三代与四代 ID·密钥分字段保存
-- 官方 SDK 落地 `core/captcha/gt3|gt4`；接口在 `core/captcha/`（无根目录入口）
-- 登录验提交；注册/忘记验发信；分场景开关；E158
+- 登录页：验证码紧挨账号/密码下方；「记住账号 / 忘记密码」移到验证码下方
+- 注册/忘记：本地图在邮箱验证码上方；极验在邮箱验证码下方；去掉「验证码」标签；极验条撑满
+- 验证码安全加固：fail-closed、场景绑定、票据一次性、限流、API 白名单；E159–E161
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

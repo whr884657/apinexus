@@ -185,15 +185,18 @@ vs_auth_head('忘记密码');
             <form id="forgotForm" method="post" action="" novalidate>
                 <?php vs_auth_csrf_field(); ?>
                 <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_ADMIN_FORGOT); ?>
-                <?php vs_captcha_field(Captcha::SCENE_ADMIN_FORGOT); ?>
                 <div class="field"><input id="email" name="email" type="email" placeholder="请输入注册邮箱" autocomplete="email" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
+                <?php vs_captcha_field(Captcha::SCENE_ADMIN_FORGOT, 'local'); ?>
+
                 <div class="field"><div class="input-group">
-                        <input id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                        <input id="code" name="code" type="text" placeholder="请输入邮箱验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                         <button type="button" class="code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
                     </div>
                 </div>
+
+                <?php vs_captcha_field(Captcha::SCENE_ADMIN_FORGOT, 'gt'); ?>
 
                 <div class="field"><div class="input-wrap">
                         <input id="password" name="password" type="password" placeholder="请输入新密码（至少6位）" autocomplete="new-password" maxlength="64" required <?php echo $mailEnabled ? '' : 'disabled'; ?>>

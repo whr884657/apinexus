@@ -31,12 +31,14 @@ vs_slate_auth_shell_start('注册账号', '使用邮箱验证注册，完成验�
     <div class="st-auth__field">
         <input class="st-auth__input" id="email" name="email" type="email" placeholder="请输入邮箱" autocomplete="email" maxlength="64" required aria-label="邮箱" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
     </div>
+    <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER, 'local'); ?>
     <div class="st-auth__field">
         <div class="st-auth__group">
-            <input class="st-auth__input" id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="验证码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+            <input class="st-auth__input" id="code" name="code" type="text" placeholder="请输入邮箱验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="邮箱验证码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
             <button type="button" class="st-auth__code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
         </div>
     </div>
+    <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER, 'gt'); ?>
     <div class="st-auth__field">
         <div class="st-auth__pw-wrap">
             <input class="st-auth__input" id="password" name="password" type="password" placeholder="请设置密码（至少6位）" autocomplete="new-password" maxlength="64" required aria-label="密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
@@ -46,7 +48,6 @@ vs_slate_auth_shell_start('注册账号', '使用邮箱验证注册，完成验�
     <div class="st-auth__field">
         <input class="st-auth__input" id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
     </div>
-    <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER); ?>
                 <button type="submit" class="st-auth__submit" id="submitBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>立即注册</button>
     <div class="st-auth__foot">已有账号？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
 </form>

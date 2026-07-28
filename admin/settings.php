@@ -357,11 +357,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $gt3KeyIn = trim(isset($_POST['gt3_key']) ? (string) $_POST['gt3_key'] : '');
             $gt4KeyIn = trim(isset($_POST['gt4_key']) ? (string) $_POST['gt4_key'] : '');
+            $gt4ApiIn = trim(isset($_POST['gt4_api']) ? (string) $_POST['gt4_api'] : '');
+            if ($gt4ApiIn !== '') {
+                $gt4ApiNorm = Geetest4Login::normalizeApiServer($gt4ApiIn);
+                if ($gt4ApiNorm === '') {
+                    AjaxResponse::error('第四代二次校验地址无效，仅允许官方域名且须 HTTPS');
+                }
+                $gt4ApiIn = $gt4ApiNorm;
+            }
             $payload = array(
                 'captcha_mode'              => $mode,
                 'gt3_id'                    => trim(isset($_POST['gt3_id']) ? (string) $_POST['gt3_id'] : ''),
                 'gt4_id'                    => trim(isset($_POST['gt4_id']) ? (string) $_POST['gt4_id'] : ''),
-                'gt4_api'                   => trim(isset($_POST['gt4_api']) ? (string) $_POST['gt4_api'] : ''),
+                'gt4_api'                   => $gt4ApiIn,
                 'captcha_on_admin_login'    => isset($_POST['captcha_on_admin_login']) ? '1' : '0',
                 'captcha_on_admin_forgot'   => isset($_POST['captcha_on_admin_forgot']) ? '1' : '0',
                 'captcha_on_user_login'     => isset($_POST['captcha_on_user_login']) ? '1' : '0',
@@ -600,8 +608,8 @@ vs_admin_accordion_start(
             <label class="vs-label">第四代 · 二次校验地址（可选）</label>
             <input type="text" name="gt4_api" class="vs-input"
                    value="<?php echo vs_e($captchaCfg['gt4_api']); ?>"
-                   placeholder="默认 http://gcaptcha4.geetest.com">
-            <p class="vs-form-hint">一般无需填写；密钥仅存服务端，不会下发浏览器。</p>
+                   placeholder="默认 https://gcaptcha4.geetest.com（仅官方域名）">
+            <p class="vs-form-hint">一般无需填写；仅允许官方域名且强制 HTTPS。密钥仅存服务端。</p>
         </div>
         <div class="vs-form-row">
             <label class="vs-label">启用场景</label>

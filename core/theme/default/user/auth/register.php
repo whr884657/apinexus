@@ -43,12 +43,16 @@ ThemeManager::renderThemeAuthHead('用户注册');
                     <input id="email" name="email" type="email" placeholder="请输入邮箱" autocomplete="email" maxlength="64" required aria-label="邮箱" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
+                <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER, 'local'); ?>
+
                 <div class="field">
                     <div class="input-group">
-                        <input id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="验证码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+                        <input id="code" name="code" type="text" placeholder="请输入邮箱验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="邮箱验证码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                         <button type="button" class="code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
                     </div>
                 </div>
+
+                <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER, 'gt'); ?>
 
                 <div class="field">
                     <div class="input-wrap">
@@ -61,7 +65,6 @@ ThemeManager::renderThemeAuthHead('用户注册');
                     <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
                 </div>
 
-                <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER); ?>
                 <?php echo vs_auth_submit_btn('立即注册', 'submitBtn'); ?>
 
                 <div class="divider">

@@ -23,6 +23,85 @@ class Captcha
     const SCENE_USER_FORGOT = 'user_forgot';
 
     const SESSION_GT3_SERVER = 'vs_gt3_server';
+    const SESSION_GT3_CHALLENGE = 'vs_gt3_challenge';
+    const SESSION_USED = 'vs_captcha_used';
+
+    /**
+     * 仅接受标量字符串（防数组污染）
+     *
+     * @param array  $post
+     * @param string $key
+     * @return string
+     */
+    private static function postStr(array $post, $key)
+    {
+        if (!isset($post[$key])) {
+            return '';
+        }
+        $v = $post[$key];
+        if (is_array($v) || is_object($v)) {
+            return '';
+        }
+        return trim((string) $v);
+    }
+
+    /**
+     * @param string $kind
+     * @param string $scene
+     * @param string $token
+     * @return string
+     */
+    private static function usedKey($kind, $scene, $token)
+    {
+        $scene = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $scene));
+        return $kind . ':' . $scene . ':' . hash('sha256', (string) $token);
+    }
+
+    /**
+     * 标记票据已使用（防本站重放；绑定场景）
+     *
+     * @param string $kind
+     * @param string $scene
+     * @param string $token
+     * @return bool false=已用过
+     */
+    private static function consumeToken($kind, $scene, $token)
+    {
+        $token = trim((string) $token);
+        if ($token === '' || session_status() !== PHP_SESSION_ACTIVE) {
+            return false;
+        }
+        if (!isset($_SESSION[self::SESSION_USED]) || !is_array($_SESSION[self::SESSION_USED])) {
+            $_SESSION[self::SESSION_USED] = array();
+        }
+        $now = time();
+        foreach ($_SESSION[self::SESSION_USED] as $k => $exp) {
+            if ((int) $exp < $now) {
+                unset($_SESSION[self::SESSION_USED][$k]);
+            }
+        }
+        $key = self::usedKey($kind, $scene, $token);
+        if (isset($_SESSION[self::SESSION_USED][$key])) {
+            return false;
+        }
+        $_SESSION[self::SESSION_USED][$key] = $now + 600;
+        return true;
+    }
+
+    /**
+     * @param string $kind
+     * @param string $scene
+     * @param string $token
+     * @return void
+     */
+    private static function releaseToken($kind, $scene, $token)
+    {
+        if ($token === '' || session_status() !== PHP_SESSION_ACTIVE || !isset($_SESSION[self::SESSION_USED])) {
+            return;
+        }
+        $key = self::usedKey($kind, $scene, $token);
+        unset($_SESSION[self::SESSION_USED][$key]);
+    }
 
     /**
      * @return string local|gt3|gt4
@@ -154,7 +233,7 @@ class Captcha
             return $out;
         }
         if ($mode === self::MODE_LOCAL) {
-            $out['image'] = $base . '/core/captcha/image.php';
+            $out['image'] = $base . '/core/captcha/image.php?scene=' . rawurlencode((string) $scene);
             return $out;
         }
         if ($mode === self::MODE_GT3) {
@@ -198,6 +277,12 @@ class Captcha
         }
         if (session_status() === PHP_SESSION_ACTIVE) {
             $_SESSION[self::SESSION_GT3_SERVER] = ((int) $result->getStatus() === 1) ? 1 : 0;
+            $payload = json_decode((string) $result->getData(), true);
+            if (is_array($payload) && isset($payload['challenge']) && is_string($payload['challenge']) && $payload['challenge'] !== '') {
+                $_SESSION[self::SESSION_GT3_CHALLENGE] = $payload['challenge'];
+            } else {
+                unset($_SESSION[self::SESSION_GT3_CHALLENGE]);
+            }
         }
         return (string) $result->getData();
     }
@@ -214,69 +299,112 @@ class Captcha
         }
         $mode = self::mode();
         if ($mode === self::MODE_LOCAL) {
-            $code = isset($post['captcha_code']) ? $post['captcha_code'] : '';
-            if (!CaptchaLocal::verify($code)) {
+            $code = self::postStr($post, 'captcha_code');
+            if (!CaptchaLocal::verify($code, $scene)) {
                 return '验证码错误或已过期';
             }
             return true;
         }
         if ($mode === self::MODE_GT3) {
-            return self::validateGt3($post);
+            return self::validateGt3($scene, $post);
         }
-        return self::validateGt4($post);
+        return self::validateGt4($scene, $post);
     }
 
     /**
-     * @param array $post
+     * @param string $scene
+     * @param array  $post
      * @return true|string
      */
-    private static function validateGt4(array $post)
+    private static function validateGt4($scene, array $post)
     {
+        $lot = self::postStr($post, 'lot_number');
+        if ($lot !== '' && !self::consumeToken('gt4', $scene, $lot)) {
+            return '行为验证已失效，请重新完成验证';
+        }
         $obj = Geetest4Login::validate(
             self::gt4Id(),
             self::gt4Key(),
             array(
-                'lot_number'     => isset($post['lot_number']) ? $post['lot_number'] : '',
-                'captcha_output' => isset($post['captcha_output']) ? $post['captcha_output'] : '',
-                'pass_token'     => isset($post['pass_token']) ? $post['pass_token'] : '',
-                'gen_time'       => isset($post['gen_time']) ? $post['gen_time'] : '',
+                'lot_number'     => $lot,
+                'captcha_output' => self::postStr($post, 'captcha_output'),
+                'pass_token'     => self::postStr($post, 'pass_token'),
+                'gen_time'       => self::postStr($post, 'gen_time'),
             ),
             self::gt4Api()
         );
         if (isset($obj['result']) && $obj['result'] === 'success') {
             return true;
         }
-        $reason = isset($obj['reason']) ? trim((string) $obj['reason']) : '';
-        return $reason !== '' ? $reason : '行为验证未通过';
+        // 校验失败时退回一次性标记，允许用户刷新后用新票
+        if ($lot !== '') {
+            self::releaseToken('gt4', $scene, $lot);
+        }
+        return '行为验证未通过';
     }
 
     /**
-     * @param array $post
+     * @param string $scene
+     * @param array  $post
      * @return true|string
      */
-    private static function validateGt3(array $post)
+    private static function validateGt3($scene, array $post)
     {
-        $challenge = isset($post[GeetestLib::GEETEST_CHALLENGE]) ? trim((string) $post[GeetestLib::GEETEST_CHALLENGE]) : '';
-        $validate = isset($post[GeetestLib::GEETEST_VALIDATE]) ? trim((string) $post[GeetestLib::GEETEST_VALIDATE]) : '';
-        $seccode = isset($post[GeetestLib::GEETEST_SECCODE]) ? trim((string) $post[GeetestLib::GEETEST_SECCODE]) : '';
+        $challenge = self::postStr($post, GeetestLib::GEETEST_CHALLENGE);
+        $validate = self::postStr($post, GeetestLib::GEETEST_VALIDATE);
+        $seccode = self::postStr($post, GeetestLib::GEETEST_SECCODE);
         if ($challenge === '' || $validate === '' || $seccode === '') {
             return '请完成行为验证';
         }
-        $gtLib = new GeetestLib(self::gt3Id(), self::gt3Key());
         $serverOk = 0;
-        if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION[self::SESSION_GT3_SERVER])) {
-            $serverOk = (int) $_SESSION[self::SESSION_GT3_SERVER];
+        $expectChallenge = '';
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            if (isset($_SESSION[self::SESSION_GT3_SERVER])) {
+                $serverOk = (int) $_SESSION[self::SESSION_GT3_SERVER];
+            }
+            if (isset($_SESSION[self::SESSION_GT3_CHALLENGE])) {
+                $expectChallenge = (string) $_SESSION[self::SESSION_GT3_CHALLENGE];
+            }
         }
-        if ($serverOk === 1) {
-            $result = $gtLib->successValidate($challenge, $validate, $seccode, null);
-        } else {
-            $result = $gtLib->failValidate($challenge, $validate, $seccode);
+        // 安全加固：禁止宕机模式「任意非空即过」；必须本会话成功 register
+        if ($serverOk !== 1) {
+            return '行为验证未初始化或服务异常，请刷新页面后重试';
         }
+        if ($expectChallenge === '' || !(function_exists('hash_equals')
+                ? hash_equals($expectChallenge, $challenge)
+                : $expectChallenge === $challenge)
+        ) {
+            return '行为验证已失效，请重新完成验证';
+        }
+        if (!self::consumeToken('gt3', $scene, $challenge)) {
+            return '行为验证已失效，请重新完成验证';
+        }
+        $gtLib = new GeetestLib(self::gt3Id(), self::gt3Key());
+        $result = $gtLib->successValidate($challenge, $validate, $seccode, null);
         if ((int) $result->getStatus() === 1) {
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                unset($_SESSION[self::SESSION_GT3_SERVER], $_SESSION[self::SESSION_GT3_CHALLENGE]);
+            }
             return true;
         }
-        $msg = trim((string) $result->getMsg());
-        return $msg !== '' ? $msg : '行为验证未通过';
+        self::releaseToken('gt3', $scene, $challenge);
+        return '行为验证未通过';
+    }
+
+    /**
+     * 合法场景列表（供 image.php 等入口校验）
+     *
+     * @return array
+     */
+    public static function scenes()
+    {
+        return array(
+            self::SCENE_ADMIN_LOGIN,
+            self::SCENE_ADMIN_FORGOT,
+            self::SCENE_USER_LOGIN,
+            self::SCENE_USER_REGISTER,
+            self::SCENE_USER_FORGOT,
+        );
     }
 
     /**

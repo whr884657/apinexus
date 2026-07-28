@@ -18,12 +18,14 @@ vs_slate_auth_shell_start('重置密码', '输入注册邮箱获取验证码，�
     <div class="st-auth__field">
         <input class="st-auth__input" id="email" name="email" type="email" placeholder="请输入注册邮箱" autocomplete="email" maxlength="64" required aria-label="邮箱" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
     </div>
+    <?php vs_captcha_field(Captcha::SCENE_USER_FORGOT, 'local'); ?>
     <div class="st-auth__field">
         <div class="st-auth__group">
-            <input class="st-auth__input" id="code" name="code" type="text" placeholder="请输入验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="验证码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
+            <input class="st-auth__input" id="code" name="code" type="text" placeholder="请输入邮箱验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="邮箱验证码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
             <button type="button" class="st-auth__code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
         </div>
     </div>
+    <?php vs_captcha_field(Captcha::SCENE_USER_FORGOT, 'gt'); ?>
     <div class="st-auth__field">
         <div class="st-auth__pw-wrap">
             <input class="st-auth__input" id="password" name="password" type="password" placeholder="请输入新密码（至少6位）" autocomplete="new-password" maxlength="64" required aria-label="新密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
@@ -33,7 +35,6 @@ vs_slate_auth_shell_start('重置密码', '输入注册邮箱获取验证码，�
     <div class="st-auth__field">
         <input class="st-auth__input" id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入新密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
     </div>
-    <?php vs_captcha_field(Captcha::SCENE_USER_FORGOT); ?>
                 <button type="submit" class="st-auth__submit" id="submitBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>确认重置</button>
     <div class="st-auth__foot">想起密码了？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
 </form>

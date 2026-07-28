@@ -86,6 +86,8 @@ vs_auth_head('登录');
                     </div>
                 </div>
 
+                <?php vs_captcha_field(Captcha::SCENE_ADMIN_LOGIN); ?>
+
                 <div class="row">
                     <label class="remember">
                         <input type="checkbox" id="rememberCredentials" value="1">
@@ -93,8 +95,6 @@ vs_auth_head('登录');
                     </label>
                     <a href="<?php echo vs_e($base); ?>/admin/forgot">忘记密码？</a>
                 </div>
-
-                <?php vs_captcha_field(Captcha::SCENE_ADMIN_LOGIN); ?>
 
                 <?php echo vs_auth_submit_btn('登 录', 'loginBtn', 'login-btn'); ?>
             </form>

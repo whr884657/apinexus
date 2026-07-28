@@ -1,42 +1,82 @@
 <?php
 /**
  * 文件：core/captcha/local.php
- * 作用：本地图形验证码（GD 画布：字母数字 + 噪点线条）
+ * 作用：本地图形验证码（GD；session 存场景绑定哈希；含基础强度）
  */
 
 class CaptchaLocal
 {
-    const SESSION_CODE = 'vs_captcha_local';
+    const SESSION_HASH = 'vs_captcha_local_h';
     const SESSION_TIME = 'vs_captcha_local_t';
+    const SESSION_SCENE = 'vs_captcha_local_s';
     const TTL = 300;
-    const LEN = 4;
-    const WIDTH = 120;
-    const HEIGHT = 40;
+    const LEN = 5;
+    const WIDTH = 140;
+    const HEIGHT = 44;
 
     /**
      * @return string
      */
-    public static function makeCode()
+    private static function serverPepper()
     {
+        $parts = array(defined('VS_ROOT') ? (string) VS_ROOT : __DIR__);
+        if (class_exists('Config')) {
+            $parts[] = (string) Config::get('gt4_key', '');
+            $parts[] = (string) Config::get('gt3_key', '');
+            $parts[] = (string) Config::get('mail_smtp_pass', '');
+        }
+        return hash('sha256', implode('|', $parts) . '|vs_local_captcha_v1');
+    }
+
+    /**
+     * @param string $scene
+     * @return string 明文（仅用于绘图，不回传客户端业务接口）
+     */
+    public static function makeCode($scene = '')
+    {
+        $scene = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $scene));
         $pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         $code = '';
         $max = strlen($pool) - 1;
         for ($i = 0; $i < self::LEN; $i++) {
-            $code .= $pool[mt_rand(0, $max)];
+            if (function_exists('random_int')) {
+                $code .= $pool[random_int(0, $max)];
+            } else {
+                $code .= $pool[mt_rand(0, $max)];
+            }
         }
         if (session_status() === PHP_SESSION_ACTIVE) {
-            $_SESSION[self::SESSION_CODE] = strtoupper($code);
+            $_SESSION[self::SESSION_HASH] = self::hashCode($code, $scene);
             $_SESSION[self::SESSION_TIME] = time();
+            $_SESSION[self::SESSION_SCENE] = $scene;
         }
         return $code;
     }
 
     /**
-     * 输出 PNG 并 exit
-     *
+     * @param string $code
+     * @param string $scene
+     * @return string
+     */
+    private static function hashCode($code, $scene = '')
+    {
+        $salt = '';
+        if (session_status() === PHP_SESSION_ACTIVE && session_id() !== '') {
+            $salt = session_id();
+        }
+        $scene = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $scene));
+        return hash_hmac(
+            'sha256',
+            strtoupper(trim((string) $code)) . '|' . $salt . '|' . $scene,
+            self::serverPepper()
+        );
+    }
+
+    /**
+     * @param string $scene
      * @return void
      */
-    public static function outputPng()
+    public static function outputPng($scene = '')
     {
         if (!function_exists('imagecreatetruecolor')) {
             header('HTTP/1.1 500 Internal Server Error');
@@ -44,28 +84,32 @@ class CaptchaLocal
             echo 'GD unavailable';
             exit;
         }
-        $code = self::makeCode();
+        $code = self::makeCode($scene);
         $w = self::WIDTH;
         $h = self::HEIGHT;
         $im = imagecreatetruecolor($w, $h);
-        $bg = imagecolorallocate($im, mt_rand(230, 255), mt_rand(230, 255), mt_rand(230, 255));
+        if ($im === false) {
+            header('HTTP/1.1 500 Internal Server Error');
+            exit;
+        }
+        $bg = imagecolorallocate($im, self::randInt(225, 245), self::randInt(225, 245), self::randInt(225, 245));
         imagefilledrectangle($im, 0, 0, $w, $h, $bg);
 
-        for ($i = 0; $i < 6; $i++) {
-            $lc = imagecolorallocate($im, mt_rand(100, 200), mt_rand(100, 200), mt_rand(100, 200));
-            imageline($im, mt_rand(0, $w), mt_rand(0, $h), mt_rand(0, $w), mt_rand(0, $h), $lc);
+        for ($i = 0; $i < 8; $i++) {
+            $lc = imagecolorallocate($im, self::randInt(120, 200), self::randInt(120, 200), self::randInt(120, 200));
+            imageline($im, self::randInt(0, $w), self::randInt(0, $h), self::randInt(0, $w), self::randInt(0, $h), $lc);
         }
-        for ($i = 0; $i < 80; $i++) {
-            $dc = imagecolorallocate($im, mt_rand(120, 220), mt_rand(120, 220), mt_rand(120, 220));
-            imagesetpixel($im, mt_rand(0, $w - 1), mt_rand(0, $h - 1), $dc);
+        for ($i = 0; $i < 120; $i++) {
+            $dc = imagecolorallocate($im, self::randInt(100, 210), self::randInt(100, 210), self::randInt(100, 210));
+            imagesetpixel($im, self::randInt(0, $w - 1), self::randInt(0, $h - 1), $dc);
         }
 
         $len = strlen($code);
         $slot = (int) ($w / ($len + 1));
         for ($i = 0; $i < $len; $i++) {
-            $tc = imagecolorallocate($im, mt_rand(20, 90), mt_rand(20, 90), mt_rand(20, 90));
-            $x = $slot * ($i + 1) - 6 + mt_rand(-3, 3);
-            $y = mt_rand(8, 16);
+            $tc = imagecolorallocate($im, self::randInt(10, 80), self::randInt(10, 80), self::randInt(10, 80));
+            $x = $slot * ($i + 1) - 8 + self::randInt(-4, 4);
+            $y = self::randInt(10, 18);
             imagestring($im, 5, $x, $y, $code[$i], $tc);
         }
 
@@ -78,27 +122,50 @@ class CaptchaLocal
     }
 
     /**
+     * @param int $min
+     * @param int $max
+     * @return int
+     */
+    private static function randInt($min, $max)
+    {
+        if (function_exists('random_int')) {
+            return random_int($min, $max);
+        }
+        return mt_rand($min, $max);
+    }
+
+    /**
      * @param string $input
+     * @param string $scene
      * @return bool
      */
-    public static function verify($input)
+    public static function verify($input, $scene = '')
     {
-        $input = strtoupper(trim((string) $input));
-        if ($input === '' || session_status() !== PHP_SESSION_ACTIVE) {
+        if (!is_string($input) && !is_numeric($input)) {
             return false;
         }
-        if (!isset($_SESSION[self::SESSION_CODE], $_SESSION[self::SESSION_TIME])) {
+        $input = strtoupper(trim((string) $input));
+        $scene = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $scene));
+        if ($input === '' || $scene === '' || session_status() !== PHP_SESSION_ACTIVE) {
+            return false;
+        }
+        if (!isset($_SESSION[self::SESSION_HASH], $_SESSION[self::SESSION_TIME], $_SESSION[self::SESSION_SCENE])) {
+            return false;
+        }
+        if ((string) $_SESSION[self::SESSION_SCENE] !== $scene) {
+            unset($_SESSION[self::SESSION_HASH], $_SESSION[self::SESSION_TIME], $_SESSION[self::SESSION_SCENE]);
             return false;
         }
         if ((time() - (int) $_SESSION[self::SESSION_TIME]) > self::TTL) {
-            unset($_SESSION[self::SESSION_CODE], $_SESSION[self::SESSION_TIME]);
+            unset($_SESSION[self::SESSION_HASH], $_SESSION[self::SESSION_TIME], $_SESSION[self::SESSION_SCENE]);
             return false;
         }
-        $expect = (string) $_SESSION[self::SESSION_CODE];
-        unset($_SESSION[self::SESSION_CODE], $_SESSION[self::SESSION_TIME]);
+        $expect = (string) $_SESSION[self::SESSION_HASH];
+        unset($_SESSION[self::SESSION_HASH], $_SESSION[self::SESSION_TIME], $_SESSION[self::SESSION_SCENE]);
+        $got = self::hashCode($input, $scene);
         if (function_exists('hash_equals')) {
-            return hash_equals($expect, $input);
+            return hash_equals($expect, $got);
         }
-        return $expect === $input;
+        return $expect === $got;
     }
 }
