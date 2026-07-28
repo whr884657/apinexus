@@ -251,9 +251,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；守卫错误经 `vs_api_error_exit`（含 `http`） |
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；默认主题浏览器直连 |
-| `ApiStats.php` | 本地/代理调用统计、守卫（needkey/keyways/qpm/charge）、错误 JSON `{code:0,msg,http}` |
+| `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`（**v13.3.0**） |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
-| `DashboardStats.php` | 管理员控制台 / 数据大屏 KPI/趋势/TOP + live tick；`screen_full` Redis；geo 今日/实时双模；市区级飞线（至 **v13.2.0**） |
+| `DashboardStats.php` | 控制台/大屏 KPI·趋势·TOP·live；geo 飞线按密钥/游客/失败三色（至 **v13.3.0**） |
 | `GeoCityCoords.php` | 大屏飞线全量城市坐标库；`resolveCityName` 地级优先 + 剥离运营商尾缀（v13.0.0 / **v13.2.0**） |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD |
 | `ApiLogManager.php` | 调用日志分页、今日计数、脱敏 |
@@ -664,9 +664,11 @@ VsPlaygroundResponse.directRequest({
 
 ---
 
-### 4.21.3 ApiStats.php（调用统计与守卫）
+### 4.21.3 ApiStats.php（调用统计与守卫，**v13.3.0**）
 
-**作用：** 本地脚本 `ApiStats::hit()` 与代理 `ApiProxy→hitProxy` 的统一记账、访问守卫与错误输出。
+**作用：** 本地脚本 `ApiStats::hit(接口ID)` 与代理 `ApiProxy→hitProxy` 的统一记账、访问守卫与错误输出。
+
+**本地认人（强制）：** 必须传后台接口数字 ID；`0`/省略不记账；**不再**按脚本路径匹配 `endpoint`。站长说明见 `api/统计代码使用说明.md`。
 
 **守卫链 `guardAccess`：** 状态/审核 → QPM（`RateLimitStore`）→ 密钥（`needkey` + `readKey` 按 **keyways**）→ 收费扣积分。
 
@@ -688,7 +690,7 @@ VsPlaygroundResponse.directRequest({
 
 传输层 HTTP 固定 **200**；业务看 `errcode`（`ApiError`：11001 未提供密钥 … 11012 鉴权方式错误 … 11017）。旧版 `http:401/403` 已废弃。
 
-**日志：** 成功/失败写 `api.calls`、`StatDayManager::recordHit`；详细日志开时写 `apilog`（`httpcode` 列存业务 errcode 或上游透传码；含异步 `IpLocator` 回填 `iploc`）。
+**日志：** 成功/失败写 `api.calls`、`StatDayManager::recordHit`；详细日志开时写 `apilog`（`ok` / `apikey` / `httpcode`；含异步 `IpLocator` 回填 `iploc`）。大屏飞线按 `ok`+`apikey` 拆绿/黄/红。
 
 ---
 

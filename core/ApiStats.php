@@ -3,15 +3,14 @@
  * 文件：core/ApiStats.php
  * 作用：本地/代理接口调用统计（次数 + 调用日志）
  *
- * 本地注入（最短）：
+ * 本地注入（唯一写法，须填接口 ID）：
  *   require_once dirname(__DIR__, N) . '/core/bootstrap.php';
- *   ApiStats::hit();           // 按脚本路径自动匹配 endpoint
- *   ApiStats::hit(14);         // 或显式传接口 ID
+ *   ApiStats::hit(14);   // 括号内为本接口在后台的数字 ID
  *
  * 代理：ApiProxy 网关内自动调用，勿在上游文件注入。
  *
-     * 密钥：按接口 keyways 识别 Query / Header(X-API-Key) / Bearer；校验 apikey 表。
-     */
+ * 密钥：按接口 keyways 识别 Query / Header(X-API-Key) / Bearer；校验 apikey 表。
+ */
 
 class ApiStats
 {
@@ -27,10 +26,10 @@ class ApiStats
     /**
      * 本地接口入口：守卫（含密钥）+ 记账
      *
-     * @param int|null $apiId 接口主键；null/0 则按当前脚本路径匹配 endpoint
+     * @param int $apiId 接口主键（必填；须与后台接口 ID 一致）
      * @return void
      */
-    public static function hit($apiId = null)
+    public static function hit($apiId = 0)
     {
         if (isset($_SERVER['REQUEST_METHOD']) && strtoupper((string) $_SERVER['REQUEST_METHOD']) === 'OPTIONS') {
             return;
@@ -38,6 +37,12 @@ class ApiStats
 
         try {
             if (!InstallChecker::isInstalled() || !ApiManager::tableReady()) {
+                return;
+            }
+
+            $apiId = (int) $apiId;
+            if ($apiId <= 0) {
+                // 必须显式传接口 ID，不再按脚本路径猜 endpoint
                 return;
             }
 
@@ -123,66 +128,18 @@ class ApiStats
     }
 
     /**
-     * @param int|null $apiId
+     * 按接口 ID 取行（本地统计唯一认人方式）
+     *
+     * @param int $apiId
      * @return array|null
      */
     private static function resolveApiRow($apiId)
     {
         $apiId = (int) $apiId;
-        if ($apiId > 0) {
-            return ApiManager::findById($apiId);
-        }
-
-        $path = self::currentScriptPath();
-        if ($path === '') {
+        if ($apiId <= 0) {
             return null;
         }
-
-        $candidates = array($path, ltrim($path, '/'));
-        if (substr($path, -4) === '.php') {
-            $candidates[] = substr($path, 0, -4);
-            $candidates[] = ltrim(substr($path, 0, -4), '/');
-        }
-
-        try {
-            $pdo = Database::connect();
-            $table = ApiManager::table();
-            foreach ($candidates as $ep) {
-                $stmt = $pdo->prepare(
-                    'SELECT * FROM `' . $table . '` WHERE `endpoint` = ? AND `apitype` = ? LIMIT 1'
-                );
-                $stmt->execute(array($ep, ApiManager::APITYPE_LOCAL));
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($row) {
-                    return $row;
-                }
-            }
-        } catch (Exception $e) {
-            return null;
-        }
-
-        return null;
-    }
-
-    /**
-     * 当前业务脚本相对站点根的路径，如 /api/yiyan/v1.php
-     *
-     * @return string
-     */
-    private static function currentScriptPath()
-    {
-        $file = isset($_SERVER['SCRIPT_FILENAME']) ? (string) $_SERVER['SCRIPT_FILENAME'] : '';
-        if ($file === '' || !defined('VS_ROOT')) {
-            return '';
-        }
-        $root = str_replace('\\', '/', realpath(VS_ROOT));
-        $file = str_replace('\\', '/', realpath($file) ?: $file);
-        if ($root === '' || $file === '' || strpos($file, $root) !== 0) {
-            return '';
-        }
-        $rel = substr($file, strlen($root));
-        $rel = '/' . ltrim(str_replace('\\', '/', $rel), '/');
-        return $rel;
+        return ApiManager::findById($apiId);
     }
 
     /**

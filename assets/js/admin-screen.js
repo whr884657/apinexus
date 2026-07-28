@@ -201,42 +201,102 @@
                 };
             });
 
-        // 流星雨：头亮尾淡；按调用量 tone 着色（绿/黄/红）
-        var toneTrail = {
-            green: '#86efac',
-            yellow: '#fde68a',
-            red: '#fca5a5'
+        // 飞线样式对齐参考 UI：隐形轨迹 + 小圆粒子拖尾；色=身份（绿密钥/黄游客/红失败）
+        var toneColor = {
+            green: '#22c55e',
+            yellow: '#eab308',
+            red: '#ef4444'
         };
-        var toneLine = {
-            green: 'rgba(74,222,128,0.28)',
-            yellow: 'rgba(251,191,36,0.32)',
-            red: 'rgba(248,113,113,0.35)'
+        var kindLabel = {
+            green: '密钥成功',
+            yellow: '游客成功',
+            red: '失败'
         };
-        var linesData = flows
-            .filter(function (f) {
-                return f && Array.isArray(f.coords) && f.coords.length >= 2
-                    && Array.isArray(f.coords[0]) && Array.isArray(f.coords[1]);
-            })
-            .map(function (f) {
-                var tone = (f.tone === 'yellow' || f.tone === 'red') ? f.tone : 'green';
-                return {
-                    fromName: f.from || '',
-                    toName: f.to || '',
-                    coords: [
-                        [Number(f.coords[0][0]), Number(f.coords[0][1])],
-                        [Number(f.coords[1][0]), Number(f.coords[1][1])]
-                    ],
+
+        function simpleHash(str) {
+            var hash = 0;
+            var s = String(str || '');
+            for (var i = 0; i < s.length; i++) {
+                hash = ((hash << 5) - hash) + s.charCodeAt(i);
+                hash |= 0;
+            }
+            return hash;
+        }
+        function seededRandom(seed) {
+            var x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+        function particleCountFor(n) {
+            n = parseInt(n, 10) || 0;
+            if (n <= 1) return 1;
+            if (n <= 3) return 2;
+            if (n <= 8) return 3;
+            if (n <= 20) return 4;
+            if (n <= 50) return 5;
+            if (n <= 100) return 6;
+            if (n <= 300) return 8;
+            if (n <= 1000) return 10;
+            return 12;
+        }
+        function particleSizeFor(n) {
+            n = parseInt(n, 10) || 0;
+            if (n <= 3) return 1.5;
+            if (n <= 20) return 2;
+            if (n <= 100) return 2.5;
+            if (n <= 500) return 3;
+            return 3.5;
+        }
+        function particlePeriodFor(n) {
+            n = parseInt(n, 10) || 0;
+            if (n <= 3) return 12;
+            if (n <= 20) return 10;
+            if (n <= 100) return 8;
+            if (n <= 500) return 6;
+            return 5;
+        }
+
+        var linesData = [];
+        flows.forEach(function (f) {
+            if (!f || !Array.isArray(f.coords) || f.coords.length < 2
+                || !Array.isArray(f.coords[0]) || !Array.isArray(f.coords[1])) {
+                return;
+            }
+            var tone = (f.tone === 'yellow' || f.tone === 'red') ? f.tone : 'green';
+            var color = toneColor[tone];
+            var count = parseInt(f.count, 10) || 1;
+            var parts = particleCountFor(count);
+            var size = particleSizeFor(count);
+            var speed = particlePeriodFor(count);
+            var fromName = f.from || '';
+            var toName = f.to || '';
+            var kind = f.kind || '';
+            var c0 = [Number(f.coords[0][0]), Number(f.coords[0][1])];
+            var c1 = [Number(f.coords[1][0]), Number(f.coords[1][1])];
+            for (var i = 0; i < parts; i++) {
+                var seed = simpleHash(fromName + ':' + tone + ':' + i);
+                var curveness = 0.1 + seededRandom(seed) * 0.3;
+                var period = Math.max(2, speed * (0.6 + seededRandom(seed + 1) * 0.8));
+                linesData.push({
+                    fromName: fromName,
+                    toName: toName,
+                    kind: kind,
+                    tone: tone,
+                    count: count,
+                    coords: [c0, c1],
                     lineStyle: {
-                        color: toneLine[tone],
-                        width: 1.1,
-                        curveness: 0.26,
-                        opacity: 0.5
+                        color: 'rgba(0,0,0,0)',
+                        width: 0,
+                        opacity: 0,
+                        curveness: curveness
                     },
                     effect: {
-                        color: toneTrail[tone]
+                        color: color,
+                        symbolSize: size,
+                        period: period
                     }
-                };
-            });
+                });
+            }
+        });
 
         var hubCoord = (hub && Array.isArray(hub.coord) && hub.coord.length >= 2)
             ? [Number(hub.coord[0]), Number(hub.coord[1])]
@@ -258,7 +318,10 @@
                     }
                     if (p.seriesName === '调用飞线') {
                         var d = p.data || {};
-                        return esc(d.fromName || '') + ' → ' + esc(d.toName || '');
+                        var lab = kindLabel[d.tone] || '';
+                        return esc(d.fromName || '') + ' → ' + esc(d.toName || '')
+                            + (lab ? ('<br/>' + lab) : '')
+                            + (d.count ? (' · ' + fmtNum(d.count) + ' 次') : '');
                     }
                     if (p.seriesName === '枢纽') {
                         return esc(p.name || hubName);
@@ -304,20 +367,22 @@
                     type: 'lines',
                     zlevel: 2,
                     coordinateSystem: 'geo',
-                    // 流星：亮圆头 + 长尾迹（头大尾细由 trailLength 近似）
+                    polyline: false,
+                    tooltip: { show: true },
+                    // 参考样式：隐形线体 + 小圆粒子 + 短拖尾
                     effect: {
                         show: true,
-                        period: 2.2,
-                        trailLength: 0.92,
+                        period: 8,
+                        trailLength: 0.2,
                         symbol: 'circle',
-                        symbolSize: 9,
+                        symbolSize: 2,
                         color: colors.trail
                     },
                     lineStyle: {
-                        color: colors.line,
-                        width: 0.9,
-                        curveness: 0.26,
-                        opacity: 0.35
+                        color: 'rgba(0,0,0,0)',
+                        width: 0,
+                        opacity: 0,
+                        curveness: 0.1
                     },
                     data: linesData
                 },

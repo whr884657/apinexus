@@ -5,10 +5,10 @@
  * 官方文档: https://developer.hitokoto.cn/sentence/
  */
 
-// —— 调用统计（3 行；任意深度；详见 api/统计代码使用说明.md）——
-for ($d = __DIR__; !is_file($d . '/core/bootstrap.php') && $d !== dirname($d); $d = dirname($d)) {}
-require_once $d . '/core/bootstrap.php';
-ApiStats::hit();
+// —— 调用统计（须填本接口在后台的数字 ID；详见 api/统计代码使用说明.md）——
+require_once dirname(__DIR__, 2) . '/core/bootstrap.php';
+ApiStats::hit(1); // ← 改成后台「接口管理」里本接口的真实 ID
+
 
 // 禁用错误显示
 error_reporting(0);

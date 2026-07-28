@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.2.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.3.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -27,7 +27,7 @@
 - Web 五步安装向导，自动创建数据表与初始配置
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
 - **API 管理（已实现）**：后台接口列表（v8.0）/ 审核（v8.1）/ 分类（v8.2～8.3）/ 令牌（v9.0 表格卡片）/ 文档（v9.0 树+面板）/ 反馈（v9.0 列表+处理）；用户中心开发者投稿与邮件通知
-- **调用统计（v3.18+）**：本地脚本头 ≤3 行 `ApiStats::hit()`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`（含 `iploc` 预留）
+- **调用统计（v3.18+ / v13.3.0）：** 本地脚本头 2 行 `bootstrap` + `ApiStats::hit(接口ID)`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`
 - **代理上游认证（v10.13.0）**：代理外链可配置无需认证 / API Key（URL 或头）/ Bearer Token；需密钥时服务端中继，密钥不暴露给调用方
 - **调用方密钥传递 keyways（v10.17.0 / v11.0.0）**：接口可多选 Query / Header(`X-API-Key`) / Bearer；守卫错误 JSON 含业务 `errcode`（非 HTTP 401/403）；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色（v11.1.0）**：登录/注册/忘记密码与后台仅可选系统 24 色；无自定义取色、无昼夜更替
@@ -121,7 +121,7 @@ ApiNexus/
 ├── apis.php                    # 全部接口列表 + 代理网关（对外 /apis/{短码}，内记统计）
 ├── detail.php                  # 接口详情（对外 /detail/{id}，伪静态 → ?id=）
 ├── profile.php                 # 开发者公开主页（对外 /profile/{id}）
-├── api/                        # 本地业务接口脚本（头部注入 ApiStats::hit）+ 统计代码使用说明.md
+├── api/                        # 本地业务接口（头部 ApiStats::hit(接口ID)）+ 统计代码使用说明.md
 │   └── yiyan/                  # 示例：随机一言
 ├── articles.php                # 前台 · 文章
 ├── links.php                   # 前台 · 友情链接
@@ -272,10 +272,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.2.0（2026-07-28）
+### v13.3.0（2026-07-28）
 
-- IP 归属：系统内置 / 自定义双模式；内置无需填接口，界面不暴露上游厂商
-- 飞线按市区精确出发；流星雨亮头长尾迹（绿/黄/红）；版本号改为三段式规范
+- 大屏飞线：绿=密钥成功、黄=游客成功、红=失败；同城可多色；粒子对齐参考 UI
+- 本地统计：仅 `dirname` + `ApiStats::hit(接口ID)`；须填后台接口 ID
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

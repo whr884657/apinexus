@@ -712,11 +712,15 @@ class DashboardStats
         $chinaCoords = self::chinaCityCoords();
         $worldCoords = self::worldCityCoords();
         if ($mode === 'live') {
-            $counts = self::iplocCityCountsRecentMinutes(45);
-            $flowLimit = 12;
+            $kindCounts = self::iplocCityKindCountsRecentMinutes(45);
+            $flowLimit = 36;
         } else {
-            $counts = self::iplocCityCounts(1);
-            $flowLimit = 20;
+            $kindCounts = self::iplocCityKindCounts(1);
+            $flowLimit = 48;
+        }
+        $counts = array();
+        foreach ($kindCounts as $city => $kinds) {
+            $counts[$city] = (int) (isset($kinds['total']) ? $kinds['total'] : 0);
         }
         $hub = self::serverHubPoint();
         $china = self::buildGeoCities($chinaCoords, $counts);
@@ -730,12 +734,12 @@ class DashboardStats
             'mode'  => $mode,
             'china' => array(
                 'cities' => $china,
-                'flows'  => self::buildDynamicFlows($china, $chinaHub, $flowLimit),
+                'flows'  => self::buildKindFlows($chinaCoords, $kindCounts, $chinaHub, $flowLimit),
                 'hub'    => $chinaHub,
             ),
             'world' => array(
                 'cities' => $world,
-                'flows'  => self::buildDynamicFlows($world, $worldHub, $flowLimit),
+                'flows'  => self::buildKindFlows($worldCoords, $kindCounts, $worldHub, $flowLimit),
                 'hub'    => $worldHub,
             ),
         );
@@ -854,7 +858,83 @@ class DashboardStats
     }
 
     /**
-     * 按调用量：有量城市 → 服务器枢纽飞线（跳过与枢纽同城）
+     * 按调用身份生成飞线：同城可同时有绿(密钥)/黄(游客)/红(失败)
+     *
+     * @param array<string,array{0:float,1:float}> $coords
+     * @param array<string,array{key:int,guest:int,fail:int,total:int}> $kindCounts
+     * @param array $hub
+     * @param int $limit 城市×种类条目上限（前端再按 count 拆粒子）
+     * @return array
+     */
+    private static function buildKindFlows($coords, $kindCounts, $hub, $limit = 36)
+    {
+        $limit = max(1, min(96, (int) $limit));
+        $hubCoord = isset($hub['coord']) && is_array($hub['coord']) ? $hub['coord'] : array(116.4074, 39.9042);
+        $hubName = isset($hub['name']) ? (string) $hub['name'] : '本站';
+        // 总量高的城市优先
+        $ranked = array();
+        foreach ($kindCounts as $name => $kinds) {
+            if (!isset($coords[$name])) {
+                continue;
+            }
+            $total = (int) (isset($kinds['total']) ? $kinds['total'] : 0);
+            if ($total <= 0) {
+                continue;
+            }
+            $ranked[] = array('name' => $name, 'kinds' => $kinds, 'total' => $total);
+        }
+        usort($ranked, function ($a, $b) {
+            return $b['total'] - $a['total'];
+        });
+
+        $toneOrder = array('key' => 'green', 'guest' => 'yellow', 'fail' => 'red');
+        // 同城三种身份微偏，避免完全重叠
+        $offsets = array(
+            'key'   => array(0.0, 0.0),
+            'guest' => array(0.18, -0.12),
+            'fail'  => array(-0.16, 0.14),
+        );
+        $out = array();
+        foreach ($ranked as $row) {
+            $name = $row['name'];
+            $ll = $coords[$name];
+            $baseLng = (float) $ll[0];
+            $baseLat = (float) $ll[1];
+            $sameHub = ($name === $hubName)
+                || (abs($baseLng - (float) $hubCoord[0]) < 0.05 && abs($baseLat - (float) $hubCoord[1]) < 0.05);
+            foreach ($toneOrder as $kind => $tone) {
+                $c = (int) (isset($row['kinds'][$kind]) ? $row['kinds'][$kind] : 0);
+                if ($c <= 0) {
+                    continue;
+                }
+                $off = $offsets[$kind];
+                $fromLng = $baseLng + $off[0];
+                $fromLat = $baseLat + $off[1];
+                if ($sameHub) {
+                    $fromLng -= 1.15;
+                    $fromLat += 0.85;
+                }
+                $out[] = array(
+                    'from'   => $name,
+                    'to'     => $hubName,
+                    'count'  => $c,
+                    'kind'   => $kind,
+                    'tone'   => $tone,
+                    'coords' => array(
+                        array($fromLng, $fromLat),
+                        array((float) $hubCoord[0], (float) $hubCoord[1]),
+                    ),
+                );
+                if (count($out) >= $limit) {
+                    return $out;
+                }
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * 按调用量：有量城市 → 服务器枢纽飞线（兼容旧逻辑，供内部/回退）
      *
      * @param array $cities
      * @param array $hub
@@ -866,13 +946,6 @@ class DashboardStats
         $limit = max(1, min(24, (int) $limit));
         $hubCoord = isset($hub['coord']) && is_array($hub['coord']) ? $hub['coord'] : array(116.4074, 39.9042);
         $hubName = isset($hub['name']) ? (string) $hub['name'] : '本站';
-        $maxCount = 0;
-        foreach ($cities as $city) {
-            $c = isset($city['count']) ? (int) $city['count'] : 0;
-            if ($c > $maxCount) {
-                $maxCount = $c;
-            }
-        }
         $out = array();
         foreach ($cities as $city) {
             $c = isset($city['count']) ? (int) $city['count'] : 0;
@@ -889,19 +962,18 @@ class DashboardStats
             }
             $fromLng = (float) $coord[0];
             $fromLat = (float) $coord[1];
-            // 同城（调用源=枢纽）：微偏起点，避免零长度飞线被 ECharts 丢掉
             if ($name === $hubName
                 || (abs($fromLng - (float) $hubCoord[0]) < 0.05 && abs($fromLat - (float) $hubCoord[1]) < 0.05)
             ) {
                 $fromLng -= 1.15;
                 $fromLat += 0.85;
             }
-            $tone = self::flowTone($c, $maxCount);
             $out[] = array(
                 'from'   => $name,
                 'to'     => $hubName,
                 'count'  => $c,
-                'tone'   => $tone,
+                'kind'   => 'key',
+                'tone'   => 'green',
                 'coords' => array(
                     array($fromLng, $fromLat),
                     array((float) $hubCoord[0], (float) $hubCoord[1]),
@@ -915,22 +987,13 @@ class DashboardStats
     }
 
     /**
-     * 飞线色调：多数绿色，中等黄，热点红
-     *
+     * @deprecated 飞线色改由 kind 决定，保留空实现防旧调用
      * @param int $count
      * @param int $max
-     * @return string green|yellow|red
+     * @return string
      */
     private static function flowTone($count, $max)
     {
-        $max = max(1, (int) $max);
-        $r = (int) $count / $max;
-        if ($r >= 0.66) {
-            return 'red';
-        }
-        if ($r >= 0.33) {
-            return 'yellow';
-        }
         return 'green';
     }
 
@@ -960,25 +1023,61 @@ class DashboardStats
     }
 
     /**
+     * 近 N 天：按城市拆分密钥成功 / 游客成功 / 失败
+     *
      * @param int $days
-     * @return array<string,int>
+     * @return array<string,array{key:int,guest:int,fail:int,total:int}>
      */
-    private static function iplocCityCounts($days = 7)
+    private static function iplocCityKindCounts($days = 7)
     {
         $days = max(1, min(30, (int) $days));
+        return self::aggregateIplocKinds(
+            'createtime >= DATE_SUB(NOW(), INTERVAL ' . (int) $days . ' DAY)',
+            240
+        );
+    }
+
+    /**
+     * 近 N 分钟：按城市拆分密钥成功 / 游客成功 / 失败
+     *
+     * @param int $minutes
+     * @return array<string,array{key:int,guest:int,fail:int,total:int}>
+     */
+    private static function iplocCityKindCountsRecentMinutes($minutes = 45)
+    {
+        $minutes = max(5, min(180, (int) $minutes));
+        return self::aggregateIplocKinds(
+            'createtime >= DATE_SUB(NOW(), INTERVAL ' . (int) $minutes . ' MINUTE)',
+            160
+        );
+    }
+
+    /**
+     * @param string $whereTime SQL 时间条件（已内嵌安全整型）
+     * @param int $limit
+     * @return array<string,array{key:int,guest:int,fail:int,total:int}>
+     */
+    private static function aggregateIplocKinds($whereTime, $limit = 200)
+    {
+        $limit = max(20, min(400, (int) $limit));
         if (!ApiLogManager::tableReady()) {
             return array();
         }
         try {
             $pdo = Database::connect();
             self::applyTimeout($pdo);
-            $sql = 'SELECT `iploc`, COUNT(*) AS c
+            // ok=0 → 失败；ok=1 且有密钥 → 密钥成功；ok=1 无密钥 → 游客
+            $sql = 'SELECT `iploc`,
+                    SUM(CASE WHEN `ok` = 0 THEN 1 ELSE 0 END) AS fail_c,
+                    SUM(CASE WHEN `ok` = 1 AND `apikey` <> \'\' THEN 1 ELSE 0 END) AS key_c,
+                    SUM(CASE WHEN `ok` = 1 AND (`apikey` = \'\' OR `apikey` IS NULL) THEN 1 ELSE 0 END) AS guest_c,
+                    COUNT(*) AS total_c
                 FROM `' . Database::table('apilog') . '`
-                WHERE `createtime` >= DATE_SUB(NOW(), INTERVAL ' . (int) $days . ' DAY)
+                WHERE ' . $whereTime . '
                   AND `iploc` <> \'\'
                 GROUP BY `iploc`
-                ORDER BY c DESC
-                LIMIT 240';
+                ORDER BY total_c DESC
+                LIMIT ' . (int) $limit;
             $out = array();
             foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $r) {
                 $city = self::parseCityFromIploc((string) $r['iploc']);
@@ -989,14 +1088,30 @@ class DashboardStats
                     continue;
                 }
                 if (!isset($out[$city])) {
-                    $out[$city] = 0;
+                    $out[$city] = array('key' => 0, 'guest' => 0, 'fail' => 0, 'total' => 0);
                 }
-                $out[$city] += (int) $r['c'];
+                $out[$city]['key'] += (int) $r['key_c'];
+                $out[$city]['guest'] += (int) $r['guest_c'];
+                $out[$city]['fail'] += (int) $r['fail_c'];
+                $out[$city]['total'] += (int) $r['total_c'];
             }
             return $out;
         } catch (Exception $e) {
             return array();
         }
+    }
+
+    /**
+     * @param int $days
+     * @return array<string,int>
+     */
+    private static function iplocCityCounts($days = 7)
+    {
+        $out = array();
+        foreach (self::iplocCityKindCounts($days) as $city => $kinds) {
+            $out[$city] = (int) $kinds['total'];
+        }
+        return $out;
     }
 
     /**
@@ -1007,38 +1122,11 @@ class DashboardStats
      */
     private static function iplocCityCountsRecentMinutes($minutes = 45)
     {
-        $minutes = max(5, min(180, (int) $minutes));
-        if (!ApiLogManager::tableReady()) {
-            return array();
+        $out = array();
+        foreach (self::iplocCityKindCountsRecentMinutes($minutes) as $city => $kinds) {
+            $out[$city] = (int) $kinds['total'];
         }
-        try {
-            $pdo = Database::connect();
-            self::applyTimeout($pdo);
-            $sql = 'SELECT `iploc`, COUNT(*) AS c
-                FROM `' . Database::table('apilog') . '`
-                WHERE `createtime` >= DATE_SUB(NOW(), INTERVAL ' . (int) $minutes . ' MINUTE)
-                  AND `iploc` <> \'\'
-                GROUP BY `iploc`
-                ORDER BY c DESC
-                LIMIT 160';
-            $out = array();
-            foreach ($pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                $city = self::parseCityFromIploc((string) $r['iploc']);
-                if ($city === '') {
-                    $city = self::parseProvinceCapital((string) $r['iploc']);
-                }
-                if ($city === '') {
-                    continue;
-                }
-                if (!isset($out[$city])) {
-                    $out[$city] = 0;
-                }
-                $out[$city] += (int) $r['c'];
-            }
-            return $out;
-        } catch (Exception $e) {
-            return array();
-        }
+        return $out;
     }
 
     /**
