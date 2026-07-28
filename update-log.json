@@ -1,5 +1,15 @@
 {
     "versions": {
+        "13.4.1": {
+            "title": "ApiNexus 13.4.1 代理跳转透传 · TOP 手机适配 · 表单与描述修复",
+            "date": "2026-07-29",
+            "db_changes": false,
+            "changes": [
+                "上游 3xx 跳转原样透传 Location，禁止跟随拉取视频等大文件；JSON/TXT 仍原样回传",
+                "控制台 TOP 手机端改为 meta+进度条两行布局；无需认证隐藏密钥；UA 选项增加说明",
+                "接口描述不再 VS64 编码；AI 生成剥离 UA/Referer；易错点 E152–E154 / E127 修订"
+            ]
+        },
         "13.4.0": {
             "title": "ApiNexus 13.4.0 代理全中继 · 出站身份 · TOP 实时",
             "date": "2026-07-29",

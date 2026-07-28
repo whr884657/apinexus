@@ -159,10 +159,16 @@
 }
 #adminDashPage .dash-bar {
     flex-shrink: 0;
-    display: grid;
-    grid-template-columns: 1.4rem minmax(56px, 1fr) 1fr auto;
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+#adminDashPage .dash-bar__meta {
+    display: flex;
     align-items: center;
+    gap: 8px;
+    min-width: 0;
 }
 #adminDashPage .dash-bar__rank {
     width: 1.25rem;
@@ -181,6 +187,34 @@
 #adminDashPage .dash-bar__rank.is-1 { background: #dc2626; }
 #adminDashPage .dash-bar__rank.is-2 { background: #ea580c; }
 #adminDashPage .dash-bar__rank.is-3 { background: #ca8a04; }
+#adminDashPage .dash-bar__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.8125rem;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#adminDashPage .dash-bar__count {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+#adminDashPage .dash-bar__track {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    overflow: hidden;
+}
+#adminDashPage .dash-bar__fill {
+    height: 100%;
+    border-radius: 999px;
+    min-width: 2px;
+}
 #adminDashPage .dash-panel__head {
     display: flex;
     align-items: center;
@@ -284,32 +318,6 @@
 #adminDashPage .dash-chart-tip__row b {
     font-variant-numeric: tabular-nums;
     font-weight: 650;
-}
-
-#adminDashPage .dash-bar__name {
-    font-size: 0.8125rem;
-    color: #334155;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-#adminDashPage .dash-bar__track {
-    height: 8px;
-    border-radius: 999px;
-    background: #f1f5f9;
-    overflow: hidden;
-}
-#adminDashPage .dash-bar__fill {
-    height: 100%;
-    border-radius: 999px;
-    min-width: 2px;
-}
-#adminDashPage .dash-bar__count {
-    font-size: 0.75rem;
-    color: #64748b;
-    font-variant-numeric: tabular-nums;
-    min-width: 52px;
-    text-align: right;
 }
 
 #adminDashPage .dash-sys {

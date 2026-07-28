@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.4.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.4.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -273,11 +273,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.4.0（2026-07-29）
+### v13.4.1（2026-07-29）
 
-- 代理一律服务端中继；Query / Header API Key / Bearer；出站 UA/Referer（含约 20 套内置）
-- 大屏与控制台 TOP 实时刷新；控制台 TOP/系统概览固定高度、排名与滚动
-- 含数据库迁移，升级后请执行「系统升级」
+- 上游跳转类接口（如随机视频）透传 Location，不再经 PHP 拉视频文件
+- 控制台 TOP 手机端布局修复；无需认证隐藏密钥；接口描述不再 VS64
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

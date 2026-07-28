@@ -250,7 +250,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `IpLocator.php` | IP 归属地：系统内置或自定义接口；异步回填 `apilog.iploc`（v10.16.0 / **v13.2.0**） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ProxyClientProfile.php` | 代理出站 UA/Referer 内置预设与解析（**v13.4.0**） |
-| `ApiProxy.php` | 外链网关：出站 `/apis/{短码}`；**一律服务端中继**（v13.4.0+）；守卫错误经 `vs_api_error_exit` |
+| `ApiProxy.php` | 外链网关：先 curl 上游再原样回传；上游 3xx 透传 Location（**v13.4.1**） |
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；默认主题浏览器直连 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`（**v13.3.0**） |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |

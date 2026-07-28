@@ -111,8 +111,15 @@
         }
         if (upAuthBlock) {
             upAuthBlock.hidden = !isProxy;
+            upAuthBlock.setAttribute('aria-hidden', isProxy ? 'false' : 'true');
         }
         if (!isProxy) {
+            if (upKeyFields) {
+                upKeyFields.hidden = true;
+            }
+            if (upKeyInput) {
+                upKeyInput.required = false;
+            }
             return;
         }
         var needKey = decoded.upauth === 1 || decoded.upauth === 2;
@@ -127,6 +134,12 @@
         }
         if (upKeyInput) {
             upKeyInput.required = needKey;
+            if (!needKey) {
+                upKeyInput.value = '';
+            }
+        }
+        if (decoded.upauth === 0 && upKeyNameInput) {
+            upKeyNameInput.value = '';
         }
         if (decoded.upauth === 1 && upKeyNameInput && !upKeyNameInput.value.trim()) {
             upKeyNameInput.value = decoded.upkeyvia === 1 ? 'X-API-Key' : 'api_key';
@@ -219,7 +232,7 @@
                 encoded[key] = payload[key];
             });
             if (window.VS.encodeTransportFields) {
-                window.VS.encodeTransportFields(encoded, ['doc', 'aidoc', 'response', 'params', 'description']);
+                window.VS.encodeTransportFields(encoded, ['doc', 'aidoc', 'response', 'params']);
             }
             Object.keys(encoded).forEach(function (key) {
                 fd.append(key, encoded[key]);

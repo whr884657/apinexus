@@ -442,10 +442,12 @@
             var rank = i + 1;
             var rankCls = rank <= 3 ? (' is-' + rank) : '';
             return '<div class="dash-bar">'
+                + '<div class="dash-bar__meta">'
                 + '<span class="dash-bar__rank' + rankCls + '">' + rank + '</span>'
                 + '<div class="dash-bar__name" title="' + esc(row.name) + '">' + esc(row.name) + '</div>'
-                + '<div class="dash-bar__track"><div class="dash-bar__fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
                 + '<div class="dash-bar__count">' + fmtNum(row.count) + '</div>'
+                + '</div>'
+                + '<div class="dash-bar__track"><div class="dash-bar__fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
                 + '</div>';
         }).join('');
         el.innerHTML = rowsHtml;

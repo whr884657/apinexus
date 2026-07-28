@@ -59,7 +59,7 @@
         if (!payload || typeof payload !== 'object') {
             return payload;
         }
-        keys = keys || ['doc', 'aidoc', 'response', 'params', 'description', 'content', 'body'];
+        keys = keys || ['doc', 'aidoc', 'response', 'params', 'content', 'body'];
         keys.forEach(function (key) {
             if (Object.prototype.hasOwnProperty.call(payload, key) && payload[key] != null && payload[key] !== '') {
                 payload[key] = global.VS.encodeTransportField(payload[key]);

@@ -7,7 +7,10 @@
  *   /apis/{proxyslug}?foo=1
  *
  * 转发策略（v13.4.0+）：
- *   - 全部走服务端中继（无论上游是否需要密钥），不再对调用方 302
+ *   - 一律先由本站 curl 请求上游（无论上游是否需要密钥），不对「上游接口 URL」本身做网关 302
+ *   - 上游响应为 JSON/TXT/二进制等：原样透传状态码、Content-Type 与正文
+ *   - 上游响应为 3xx + Location（如随机视频跳转）：校验公网后原样把跳转还给调用方（v13.4.1）
+ *     禁止服务端跟随跳转去拉最终大文件（视频等）
  *   - 可配置上游认证、出站 User-Agent / Referer（见 ProxyClientProfile）
  *
  * 入站短码来源（按序）：
@@ -351,59 +354,24 @@ class ApiProxy
             vs_api_error_exit(ApiError::UPSTREAM_FAIL, '上游请求失败');
         }
 
-        $redirLeft = 5;
-        while ($redirLeft > 0 && ($http === 301 || $http === 302 || $http === 303 || $http === 307 || $http === 308)) {
+        // 上游若返回跳转（如随机视频 302），透传 Location；禁止跟随拉取最终大文件
+        if ($http === 301 || $http === 302 || $http === 303 || $http === 307 || $http === 308) {
             $headerBlob = substr($raw, 0, $headerSize);
             $loc = '';
             if (preg_match('/^Location:\s*(.+)$/mi', $headerBlob, $lm)) {
                 $loc = trim($lm[1]);
             }
-            if ($loc === '') {
-                break;
-            }
-            $next = self::resolveRedirectUrl($url, $loc);
-            if ($next === '' || (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($next))) {
-                ApiStats::hitProxy($row, false, ApiError::UPSTREAM_BLOCKED);
-                vs_api_error_exit(ApiError::UPSTREAM_BLOCKED, '上游重定向目标不允许');
-            }
-            $url = $next;
-            $redirLeft--;
-            // 307/308 保留原方法与体；301/302/303 按常见浏览器行为改 GET
-            $redirMethod = $method;
-            $redirBody = $body;
-            if ($http === 301 || $http === 302 || $http === 303) {
-                $redirMethod = 'GET';
-                $redirBody = '';
-            }
-            $ch = curl_init();
-            $opts = array(
-                CURLOPT_URL            => $url,
-                CURLOPT_CUSTOMREQUEST  => $redirMethod,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_CONNECTTIMEOUT => 10,
-                CURLOPT_TIMEOUT        => self::RELAY_TIMEOUT,
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-                CURLOPT_HTTPHEADER     => $headers,
-                CURLOPT_HEADER         => true,
-                CURLOPT_ENCODING       => '',
-            );
-            if ($redirMethod === 'HEAD') {
-                $opts[CURLOPT_NOBODY] = true;
-            } elseif ($redirBody !== '' && $redirMethod !== 'GET' && $redirMethod !== 'OPTIONS') {
-                $opts[CURLOPT_POSTFIELDS] = $redirBody;
-            }
-            curl_setopt_array($ch, $opts);
-            $raw = curl_exec($ch);
-            $errno = curl_errno($ch);
-            $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-            curl_close($ch);
-            if ($raw === false || $errno) {
-                ApiStats::hitProxy($row, false, ApiError::UPSTREAM_FAIL);
-                vs_api_error_exit(ApiError::UPSTREAM_FAIL, '上游请求失败');
+            if ($loc !== '') {
+                $next = self::resolveRedirectUrl($url, $loc);
+                if ($next === '' || (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($next))) {
+                    ApiStats::hitProxy($row, false, ApiError::UPSTREAM_BLOCKED);
+                    vs_api_error_exit(ApiError::UPSTREAM_BLOCKED, '上游重定向目标不允许');
+                }
+                ApiStats::hitProxy($row, true, $http);
+                header('Cache-Control: no-store');
+                http_response_code($http);
+                header('Location: ' . $next, true, $http);
+                exit;
             }
         }
 

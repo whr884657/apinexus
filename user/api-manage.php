@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'icon'         => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'     => isset($_POST['category']) ? (string) $_POST['category'] : '',
         );
-        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params', 'description'));
+        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params'));
     };
 
     $assertOwner = function ($apiId) use ($userId) {
@@ -434,6 +434,7 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                             <option value="2">自定义</option>
                             <option value="3">轮询内置（按分钟）</option>
                         </select>
+                        <p class="vs-form-hint">系统默认：本站中继标识。内置：选手机/平板/电脑或轻量浏览器预设。自定义：自填 UA。轮询：按分钟轮换内置 UA。</p>
                     </div>
                     <div id="userApiUpUaPresetWrap" hidden>
                         <label class="vs-label" for="userApiFormUpUaPreset">内置预设</label>
@@ -465,7 +466,7 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                                placeholder="https://example.com/" autocomplete="off">
                     </div>
                 </div>
-                <p class="vs-form-hint">全部经本站服务器中继。若上游需要密钥请在此填写；可调整 User-Agent / Referer 以适配仅认浏览器的上游。</p>
+                <p class="vs-form-hint">本站请求上游后原样回传（含上游跳转目标）。密钥与出站 UA/Referer 仅服务端使用，不会展示给访客。</p>
             </div>
 
             <div class="vs-form-row vs-form-row--2">

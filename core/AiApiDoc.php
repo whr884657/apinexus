@@ -25,7 +25,7 @@ class AiApiDoc
             . '必须使用 Markdown：标题、列表、表格、代码块。'
             . '篇幅控制在约 ' . $maxLen . ' 字以内，结构清晰、面向调用方。'
             . '严禁输出任何 HTML 标签、CSS class、语法高亮标记（如 vs-syn、span class）。'
-            . '严禁提及：代理、上游、中继、源站地址、上游密钥、Authorization 上游头、内部表名、枚举数字含义、后台路径。'
+            . '严禁提及：代理、上游、中继、源站地址、上游密钥、Authorization 上游头、User-Agent、Referer、出站身份、内部表名、枚举数字含义、后台路径。'
             . '只能描述本站对外提供的调用地址、参数与行为。'
             . '必须包含：接口说明、调用地址、请求方式、请求参数表、参数说明、'
             . '成功响应示例、错误响应示例、响应字段说明，以及本平台业务错误码（errcode，不是 HTTP 状态码）：'
@@ -208,7 +208,7 @@ class AiApiDoc
             . '关键步骤必须有简洁中文注释（// 或 # 或语言等价注释）。'
             . '严禁 emoji、颜文字、图标符号、装饰性特殊字符；代码里只能是普通文本。'
             . $langHint
-            . '严禁出现 HTML/CSS class/高亮标记、上游真实地址、代理、密钥明文、内部实现、「全部支持」。'
+            . '严禁出现 HTML/CSS class/高亮标记、上游真实地址、代理、密钥明文、User-Agent、Referer、出站指纹、内部实现、「全部支持」。'
             . 'GET 用查询参数；POST 可用 form 或 JSON。';
 
         $user = "请为下列接口生成「鉴权=" . $authWay . "，语言=" . $lang . "」的单个快速上手代码块：\n\n"
@@ -409,7 +409,8 @@ class AiApiDoc
         $text = preg_replace('/\sdata-vs-syn(?:-done)?\s*=\s*["\'][^"\']*["\']/i', '', $text);
         // 粗过滤：常见泄密词
         $banned = array(
-            'targeturl', 'upkey', 'upauth', '上游', '源站', '中继转发', '代理外链真实地址',
+            'targeturl', 'upkey', 'upauth', 'upuamode', 'upuapreset', 'upua', 'upreferer', 'upreferermode',
+            '上游', '源站', '中继转发', '代理外链真实地址', 'User-Agent', 'Referer',
         );
         foreach ($banned as $w) {
             if ($w !== '' && stripos($text, $w) !== false) {

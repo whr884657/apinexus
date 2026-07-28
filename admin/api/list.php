@@ -46,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'icon'        => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'    => isset($_POST['category']) ? (string) $_POST['category'] : '',
         );
-        // doc / aidoc / response / params 可能含代码样例，经 VS64 传输规避 WAF 误拦
-        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params', 'description'));
+        // doc / aidoc / response / params 可能含代码样例，经 VS64 传输规避 WAF 误拦（接口描述保持明文，勿编码）
+        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params'));
     };
 
     if ($action === 'get') {
@@ -219,8 +219,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
-        // 绝不把上游密钥交给生成逻辑
-        unset($data['upkey'], $data['targeturl']);
+        // 绝不把上游密钥 / 出站指纹交给生成逻辑
+        unset(
+            $data['upkey'],
+            $data['targeturl'],
+            $data['upuamode'],
+            $data['upuapreset'],
+            $data['upua'],
+            $data['upreferermode'],
+            $data['upreferer'],
+            $data['upkeyvia'],
+            $data['upkeyname'],
+            $data['upauth']
+        );
 
         if ($action === 'ai_gen_doc') {
             $gen = AiApiDoc::generateDetailDoc($data);
@@ -829,6 +840,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                 <option value="2">自定义</option>
                                 <option value="3">轮询内置（按分钟）</option>
                             </select>
+                            <p class="vs-form-hint">系统默认：使用本站中继标识（ApiNexus-Proxy）。内置：从手机/平板/电脑或 VIA、X、Chrome 等预设中选一条。自定义：自行填写完整 UA。轮询：按分钟在内置列表中轮换，减轻固定指纹被拦。</p>
                         </div>
                         <div id="apiListUpUaPresetWrap" hidden>
                             <label class="vs-label" for="apiListFormUpUaPreset">内置预设</label>
@@ -860,7 +872,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                    placeholder="https://example.com/" autocomplete="off">
                         </div>
                     </div>
-                    <p class="vs-form-hint">全部经本站服务器中继请求上游。Query / Header API Key 与 Bearer 仅服务端附加。部分上游只认手机浏览器时可改 User-Agent 或 Referer。</p>
+                    <p class="vs-form-hint">本站先请求上游接口，再把上游返回的内容原样交给调用方（JSON/TXT 等保持原样）。若上游本身是跳转到视频地址，则把跳转目标透传给调用方，不会在服务器上拉取视频文件。出站 UA/Referer 仅影响本站访问上游时的身份，不会写入对外文档。</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>
