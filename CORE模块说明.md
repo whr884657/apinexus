@@ -253,7 +253,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；默认主题浏览器直连 |
 | `ApiStats.php` | 本地/代理调用统计、守卫（needkey/keyways/qpm/charge）、错误 JSON `{code:0,msg,http}` |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
-| `DashboardStats.php` | 管理员控制台 / 数据大屏 KPI/趋势/TOP + live tick；大屏 geo 经纬度与动态飞线（v12.1.0） |
+| `DashboardStats.php` | 管理员控制台 / 数据大屏 KPI/趋势/TOP + live tick；大屏 geo 经纬度、服务器枢纽与动态飞线（v12.1.0 / v12.1.1） |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD |
 | `ApiLogManager.php` | 调用日志分页、今日计数、脱敏 |
 | `ApiLogArchive.php` | 调用日志冷热归档 |

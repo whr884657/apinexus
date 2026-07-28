@@ -684,27 +684,113 @@
     flex-direction: column;
     gap: 8px;
 }
+/* 隐藏布局标题行（数据大屏 + 全屏/刷新），只保留页内监控中心标题 */
+body.vs-screen-solo .vs-content__head {
+    display: none !important;
+}
+body.vs-screen-solo .vs-content__body {
+    padding-top: 8px;
+}
+
 #adminScreenPage .ds-corner--tl {
     top: 12px;
     left: 12px;
-    width: 300px;
+    width: 260px;
 }
 #adminScreenPage .ds-corner--tr {
     top: 12px;
     right: 12px;
     width: 300px;
+    height: 280px;
+    max-height: 280px;
 }
 #adminScreenPage .ds-corner--bl {
     bottom: 12px;
     left: 12px;
     width: 360px;
+    max-height: calc(100% - 24px);
 }
 #adminScreenPage .ds-corner--br {
     bottom: 12px;
     right: 12px;
     width: 360px;
-    max-height: calc(100% - 24px);
 }
+
+/* KPI：百分比在右上角，单行更紧凑 */
+#adminScreenPage .ds-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    min-width: 0;
+}
+#adminScreenPage .ds-kpi-grid .ds-stat-strip__item,
+#adminScreenPage .ds-stat-strip__item {
+    position: relative;
+    background: var(--ds-glass-strong);
+    border: 1px solid var(--ds-border);
+    border-radius: 10px;
+    padding: 6px 8px;
+    min-width: 0;
+}
+#adminScreenPage .ds-stat-strip__row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+}
+#adminScreenPage .ds-stat-strip__label {
+    font-size: 0.68rem;
+    color: var(--ds-muted);
+    font-weight: 600;
+    min-width: 0;
+}
+#adminScreenPage .ds-stat-strip__value {
+    margin-top: 2px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ds-text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#adminScreenPage .ds-stat-strip__value.is-ok { color: var(--ds-ok); }
+#adminScreenPage .ds-stat-strip__value.is-fail { color: var(--ds-danger); }
+#adminScreenPage .ds-stat-strip__delta {
+    margin-top: 0;
+    font-size: 0.65rem;
+    font-weight: 650;
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+#adminScreenPage .ds-stat-strip__delta--up { color: var(--ds-ok); }
+#adminScreenPage .ds-stat-strip__delta--down { color: var(--ds-danger); }
+
+/* TOP 固定视口 + 无缝轮循 */
+#adminScreenPage .ds-bar-viewport {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 210px;
+    overflow: hidden;
+    position: relative;
+}
+#adminScreenPage .ds-bar-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+#adminScreenPage .ds-bar-list.is-marquee {
+    animation: dsTopMarquee 22s linear infinite;
+}
+#adminScreenPage .ds-bar-viewport:hover .ds-bar-list.is-marquee {
+    animation-play-state: paused;
+}
+@keyframes dsTopMarquee {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+}
+
 
 #adminScreenPage .ds-card__head {
     display: flex;
@@ -775,45 +861,13 @@
     100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
 }
 
-/* KPI 2×2（今日/累计/成功/失败）— JS 仍用 ds-stat-strip__* 类名 */
+/* KPI 2×2 — 紧凑样式见上方 .ds-corner 段后补丁；此处仅保留网格兜底 */
 #adminScreenPage .ds-kpi-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
 }
-#adminScreenPage .ds-kpi-grid .ds-stat-strip__item,
-#adminScreenPage .ds-stat-strip__item {
-    background: var(--ds-glass-strong);
-    border: 1px solid var(--ds-border);
-    border-radius: 10px;
-    padding: 8px 10px;
-    min-width: 0;
-}
-#adminScreenPage .ds-stat-strip__label {
-    font-size: 0.7rem;
-    color: var(--ds-muted);
-    font-weight: 600;
-}
-#adminScreenPage .ds-stat-strip__value {
-    margin-top: 2px;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--ds-text);
-    font-variant-numeric: tabular-nums;
-    line-height: 1.25;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-#adminScreenPage .ds-stat-strip__value.is-ok { color: var(--ds-ok); }
-#adminScreenPage .ds-stat-strip__value.is-fail { color: var(--ds-danger); }
-#adminScreenPage .ds-stat-strip__delta {
-    margin-top: 2px;
-    font-size: 0.68rem;
-    font-weight: 600;
-}
-#adminScreenPage .ds-stat-strip__delta--up { color: var(--ds-ok); }
-#adminScreenPage .ds-stat-strip__delta--down { color: var(--ds-danger); }
 
 /* Charts — prevent overflow */
 #adminScreenPage .ds-chart-line {
@@ -930,7 +984,7 @@ body.is-ds-fullscreen #adminScreenPage.vs-datascreen {
 body.is-ds-fullscreen #adminScreenPage .ds-stage {
     min-height: calc(100vh - 72px);
 }
-body.is-ds-fullscreen #adminScreenPage .ds-corner--br .ds-log-stream {
+body.is-ds-fullscreen #adminScreenPage .ds-corner--bl .ds-log-stream {
     max-height: min(280px, 32vh);
 }
 
@@ -979,6 +1033,13 @@ body.is-ds-fullscreen #adminScreenPage .ds-corner--br .ds-log-stream {
     #adminScreenPage .ds-chart-line svg,
     #adminScreenPage .ds-chart-line > div {
         height: 180px !important;
+    }
+    #adminScreenPage .ds-corner--tr {
+        height: 280px;
+        max-height: 280px;
+    }
+    #adminScreenPage .ds-bar-viewport {
+        height: 210px;
     }
     #adminScreenPage .ds-log-stream {
         max-height: 200px;

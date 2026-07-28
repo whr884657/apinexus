@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-12.1.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-12.1.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -272,12 +272,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v12.1.0（2026-07-28）
+### v12.1.1（2026-07-28）
 
-- 实时数据监控中心按参考 UI 重制：四角玻璃面板 + 中心 ECharts 中国/世界地图飞线
-- 地图采用 ECharts 官方 geoJSON 主源；本地引入 `assets/vendor/echarts/echarts.min.js`
-- 左上角：今日调用 / 累计调用 / 成功率 / 失败率；右下角：实时调用日志；飞线按实时调用量动态生成
-- 深浅色切换改为太阳/月亮 SVG；电脑/手机双端自适应；去掉参考页调试底栏
+- 数据大屏四角对调：左下实时调用日志、右下调用量趋势；TOP 固定高度轮循滚动
+- KPI 百分比移至右上角并缩小核心指标区；去掉布局双标题，全屏 SVG 旁置昼夜按钮
+- 飞线枢纽改为服务器归属城市（禁最高调用城回退）；国内匹配增强；刷新率与控制台设置绑定
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

@@ -17,6 +17,14 @@
     var ICON_MOON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
         + '<path fill="currentColor" d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"/>'
         + '</svg>';
+    var ICON_FS = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
+        + '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
+        + ' d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/>'
+        + '</svg>';
+    var ICON_FS_EXIT = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
+        + '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
+        + ' d="M9 3v5H4M15 3v5h5M9 21v-5H4M15 21v-5h5"/>'
+        + '</svg>';
 
     var boot = {};
     var mapMode = 'china';
@@ -37,6 +45,12 @@
         boot = {};
     }
     liveIntervalMs = readLiveIntervalMs(boot.live_interval);
+    softIntervalMs = Math.max(15000, liveIntervalMs * 6);
+
+    function syncSoftIntervalFromLive() {
+        softIntervalMs = Math.max(15000, liveIntervalMs * 6);
+        restartSoftPoll();
+    }
 
     function readLiveIntervalMs(v) {
         var n = parseInt(v, 10);
@@ -194,8 +208,8 @@
 
         var hubCoord = (hub && Array.isArray(hub.coord) && hub.coord.length >= 2)
             ? [Number(hub.coord[0]), Number(hub.coord[1])]
-            : (isChina ? [104.0, 35.0] : [104.0, 35.0]);
-        var hubName = (hub && hub.name) ? String(hub.name) : (isChina ? '数据中心' : '中国');
+            : [116.4074, 39.9042];
+        var hubName = (hub && hub.name) ? String(hub.name) : '本站';
 
         return {
             backgroundColor: 'transparent',
@@ -447,9 +461,11 @@
         ];
         el.innerHTML = items.map(function (it) {
             return '<div class="ds-stat-strip__item">'
-                + '<div class="ds-stat-strip__label">' + esc(it.label) + '</div>'
+                + '<div class="ds-stat-strip__row">'
+                + '<span class="ds-stat-strip__label">' + esc(it.label) + '</span>'
+                + '<span class="ds-stat-strip__delta ' + it.dcls + '">' + esc(it.delta) + '</span>'
+                + '</div>'
                 + '<div class="ds-stat-strip__value ' + it.vcls + '">' + esc(it.value) + '</div>'
-                + '<div class="ds-stat-strip__delta ' + it.dcls + '">' + esc(it.delta) + '</div>'
                 + '</div>';
         }).join('');
 
@@ -461,13 +477,15 @@
 
     function renderTop(list) {
         var el = document.getElementById('dsTopBars');
+        var viewport = document.getElementById('dsTopViewport');
         if (!el) return;
         list = Array.isArray(list) ? list : [];
+        el.classList.remove('is-marquee');
         if (!list.length) {
             el.innerHTML = '<div class="dash-empty">暂无排行</div>';
             return;
         }
-        el.innerHTML = list.map(function (row, i) {
+        var rowsHtml = list.map(function (row, i) {
             var pct = Math.max(4, parseFloat(row.pct) || 0);
             var color = BAR_COLORS[i % BAR_COLORS.length];
             return '<div class="ds-bar-row">'
@@ -478,6 +496,12 @@
                 + '<div class="ds-bar-track"><div class="ds-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
                 + '</div>';
         }).join('');
+        // 内容超过视口时复制一份做无缝轮循滚动
+        el.innerHTML = rowsHtml;
+        if (viewport && el.scrollHeight > viewport.clientHeight + 8) {
+            el.innerHTML = rowsHtml + rowsHtml;
+            el.classList.add('is-marquee');
+        }
     }
 
     function renderRecent(list) {
@@ -509,6 +533,7 @@
             if (next !== liveIntervalMs) {
                 liveIntervalMs = next;
                 restartLivePoll();
+                syncSoftIntervalFromLive();
             }
         }
         if (boot.server_time) syncClock(boot.server_time);
@@ -531,6 +556,7 @@
             if (next !== liveIntervalMs) {
                 liveIntervalMs = next;
                 restartLivePoll();
+                syncSoftIntervalFromLive();
             }
         }
         if (live.kpi) {
@@ -567,15 +593,26 @@
             btn.title = theme === 'dark' ? '切换浅色' : '切换深色';
             btn.setAttribute('aria-label', btn.title);
         }
+        var fsBtn = document.getElementById('dsFullscreenBtn');
+        if (fsBtn && !fsBtn.innerHTML) {
+            fsBtn.innerHTML = ICON_FS;
+        }
         areaChart(document.getElementById('dsHourlyChart'), (boot.hourly || {}).labels, (boot.hourly || {}).series);
         if (mapRegistered[mapMode]) applyMapOption();
+    }
+
+    function setFullscreenIcon(on) {
+        var btn = document.getElementById('dsFullscreenBtn');
+        if (!btn) return;
+        btn.innerHTML = on ? ICON_FS_EXIT : ICON_FS;
+        btn.title = on ? '退出全屏' : '全屏';
+        btn.setAttribute('aria-label', btn.title);
     }
 
     function toggleFullscreen() {
         var on = !document.body.classList.contains('is-ds-fullscreen');
         document.body.classList.toggle('is-ds-fullscreen', on);
-        var btn = document.getElementById('dsFullscreenBtn');
-        if (btn) btn.textContent = on ? '退出全屏' : '全屏';
+        setFullscreenIcon(on);
         if (on && page.requestFullscreen) {
             try { page.requestFullscreen(); } catch (e) { /* ignore */ }
         } else if (!on && document.fullscreenElement && document.exitFullscreen) {
@@ -652,8 +689,7 @@
     document.addEventListener('fullscreenchange', function () {
         if (!document.fullscreenElement) {
             document.body.classList.remove('is-ds-fullscreen');
-            var btn = document.getElementById('dsFullscreenBtn');
-            if (btn) btn.textContent = '全屏';
+            setFullscreenIcon(false);
         }
         if (mapChart) mapChart.resize();
     });
@@ -715,6 +751,7 @@
     }
 
     applyTheme(theme);
+    setFullscreenIcon(false);
     ensureMapChart();
     renderAll(boot);
     clockTimer = setInterval(tickClock, 1000);

@@ -854,7 +854,7 @@ if ($dashLive > 5) {
                     <option value="<?php echo $i; ?>"<?php echo $dashLive === $i ? ' selected' : ''; ?>><?php echo $i; ?> 秒</option>
                 <?php endfor; ?>
             </select>
-            <?php vs_render_notice('tip', '', '控制台时钟、今日/累计调用、系统概览与最近调用按此间隔刷新；趋势与 TOP 约按 6 倍间隔软刷。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '控制台与「实时数据监控中心」共用此间隔：时钟、今日/累计调用、系统概览、最近调用与大屏飞线按此刷新；趋势与 TOP 约按 6 倍间隔软刷。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存控制台设置</button>

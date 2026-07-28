@@ -1,14 +1,14 @@
 {
-    "version": "12.1.0",
-    "title": "ApiNexus 12.1.0 实时数据监控中心 ECharts 大屏重制",
+    "version": "12.1.1",
+    "title": "ApiNexus 12.1.1 数据大屏四角对调与飞线枢纽优化",
     "release_date": "2026-07-28",
     "db_changes": false,
     "changes": [
-        "管理员「实时数据监控中心」按参考 UI 重制：四角玻璃面板 + 中心 ECharts 中国/世界地图飞线",
-        "地图数据源采用 ECharts 官方 china/world geoJSON（5.4.3 jsdelivr 主源）；本地 vendor 引入 echarts.min.js",
-        "左上角核心指标：今日调用 / 累计调用 / 成功率 / 失败率（statday 聚合）；右下角实时调用日志",
-        "飞线按 iploc 实时调用量动态生成；深浅色切换改为太阳/月亮 SVG；电脑/手机双端自适应",
-        "去掉参考页底部「数据源/多源回退/主题版本」等调试条；禁止参考 UI 目录进 Git/ZIP"
+        "数据大屏：左下/右下对调为「实时调用日志」与「调用量趋势」",
+        "右上 TOP 固定高度，列表无缝轮循滚动；左上 KPI 百分比移至右上角并缩小卡片",
+        "飞线枢纽改为服务器归属城市；禁止用最高调用城作枢纽回退；扩大匹配/同城微偏；live 近窗加权",
+        "删除布局「数据大屏」标题行与刷新钮，全屏 SVG 移至昼夜按钮旁",
+        "刷新间隔与系统设置（控制台）dashboard_live_interval 绑定"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
