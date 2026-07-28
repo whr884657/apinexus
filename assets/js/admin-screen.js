@@ -31,6 +31,9 @@
     var geoScope = 'live';
     var theme = page.classList.contains('vs-datascreen--dark') ? 'dark' : 'light';
     var mapChart = null;
+    /** 各地图模式用户缩放/中心（live 刷新不得冲掉） */
+    var mapViewByMode = { china: null, world: null };
+    var mapRoamBound = false;
     var mapRegistered = { china: false, world: false };
     var pollTimer = null;
     var softTimer = null;
@@ -170,8 +173,59 @@
         if (!el) return null;
         if (!mapChart) {
             mapChart = window.echarts.init(el);
+            mapRoamBound = false;
+        }
+        if (!mapRoamBound && mapChart) {
+            mapRoamBound = true;
+            mapChart.on('georoam', function () {
+                captureMapView();
+            });
         }
         return mapChart;
+    }
+
+    /**
+     * 读取当前 geo 视口，供轮询刷新后还原
+     */
+    function captureMapView() {
+        if (!mapChart) return;
+        try {
+            var opt = mapChart.getOption();
+            if (!opt || !opt.geo || !opt.geo[0]) return;
+            var g = opt.geo[0];
+            var zoom = g.zoom;
+            var center = g.center;
+            if (Array.isArray(zoom)) zoom = zoom[0];
+            if (Array.isArray(center) && Array.isArray(center[0])) center = center[0];
+            if (typeof zoom !== 'number' || !isFinite(zoom) || zoom <= 0) return;
+            if (!Array.isArray(center) || center.length < 2) return;
+            var lng = Number(center[0]);
+            var lat = Number(center[1]);
+            if (!isFinite(lng) || !isFinite(lat)) return;
+            mapViewByMode[mapMode] = { zoom: zoom, center: [lng, lat] };
+        } catch (e) { /* ignore */ }
+    }
+
+    /**
+     * @param {{resetView?: boolean}} opts resetView=true 时恢复默认缩放（切换地图后首次可用）
+     */
+    function applyMapOption(opts) {
+        opts = opts || {};
+        var resetView = !!opts.resetView;
+        var chart = ensureMapChart();
+        if (!chart || !mapRegistered[mapMode]) return;
+        if (!resetView) {
+            captureMapView();
+        } else {
+            mapViewByMode[mapMode] = null;
+        }
+        var option = buildMapOption(activeGeoPack());
+        var saved = mapViewByMode[mapMode];
+        if (saved && saved.zoom != null && Array.isArray(saved.center)) {
+            option.geo.zoom = saved.zoom;
+            option.geo.center = saved.center.slice(0, 2);
+        }
+        chart.setOption(option, true);
     }
 
     function buildMapOption(geoRoot) {
@@ -423,13 +477,6 @@
                 }
             ]
         };
-    }
-
-    function applyMapOption() {
-        var chart = ensureMapChart();
-        if (!chart || !mapRegistered[mapMode]) return;
-        chart.setOption(buildMapOption(activeGeoPack()), true);
-        chart.resize();
     }
 
     function loadMap(mode) {
