@@ -1,12 +1,13 @@
 {
-    "version": "13.4.1",
-    "title": "ApiNexus 13.4.1 代理跳转透传 · TOP 手机适配 · 表单与描述修复",
+    "version": "13.5.0",
+    "title": "ApiNexus 13.5.0 接口文档页整模块优化",
     "release_date": "2026-07-29",
     "db_changes": false,
     "changes": [
-        "上游 3xx 跳转原样透传 Location，禁止跟随拉取视频等大文件；JSON/TXT 仍原样回传",
-        "控制台 TOP 手机端改为 meta+进度条两行布局；无需认证隐藏密钥；UA 选项增加说明",
-        "接口描述不再 VS64 编码；AI 生成剥离 UA/Referer 等出站字段；易错点 E152–E154"
+        "接口文档：分类默认折叠；目录标题「接口目录 — 名称」；搜索图标内嵌",
+        "方法 GET/POST 斜线双色合并；名称前去方法徽章；状态/类型/KEY/收费/QPM 等徽章",
+        "Tab 顺序：参数 → 响应 → 请求示例（aidoc qsBundle）→ 文档（doc）",
+        "本页编辑弹窗仅改 params/response/aidoc/doc；updateDocsContent；E155–E157"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

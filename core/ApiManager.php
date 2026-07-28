@@ -1089,6 +1089,61 @@ class ApiManager
     }
 
     /**
+     * 仅更新文档相关字段（参数说明 / 响应示例 / 详细文档 / 代码示例）
+     *
+     * @param int   $apiId
+     * @param array $data keys: params, response, doc, aidoc
+     * @return true|string
+     */
+    public static function updateDocsContent($apiId, array $data)
+    {
+        $apiId = (int) $apiId;
+        $row = self::findById($apiId);
+        if (!$row) {
+            return '接口不存在';
+        }
+
+        $requestParams = trim((string) (isset($data['params']) ? $data['params'] : ''));
+        if ($requestParams !== '') {
+            $decoded = json_decode($requestParams, true);
+            if (!is_array($decoded)) {
+                return '请求参数须为合法 JSON 数组，例如 [{"name":"q","type":"string","required":true}]';
+            }
+            $requestParams = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($requestParams === false) {
+                return '请求参数编码失败';
+            }
+        }
+
+        $responseExample = (string) (isset($data['response']) ? $data['response'] : '');
+        $docDetail = (string) (isset($data['doc']) ? $data['doc'] : '');
+        $docCode = (string) (isset($data['aidoc']) ? $data['aidoc'] : '');
+        if (strlen($responseExample) > 200000 || strlen($docDetail) > 200000 || strlen($docCode) > 200000) {
+            return '文档或返回示例过长';
+        }
+        if (class_exists('ApiQuickstart') && $docCode !== '') {
+            $normalized = ApiQuickstart::normalizeAidocBlocks($docCode);
+            if ($normalized !== '') {
+                $docCode = $normalized;
+            }
+        }
+
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '`
+                 SET `params` = ?, `response` = ?, `doc` = ?, `aidoc` = ?, `updatetime` = NOW()
+                 WHERE `id` = ?'
+            );
+            $stmt->execute(array($requestParams, $responseExample, $docDetail, $docCode, $apiId));
+            RedisCache::invalidateFrontend();
+            return true;
+        } catch (Exception $e) {
+            return '保存失败，请稍后重试';
+        }
+    }
+
+    /**
      * @param int          $apiId
      * @param int|string   $status
      * @return true|string

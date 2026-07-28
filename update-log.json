@@ -1,5 +1,16 @@
 {
     "versions": {
+        "13.5.0": {
+            "title": "ApiNexus 13.5.0 接口文档页整模块优化",
+            "date": "2026-07-29",
+            "db_changes": false,
+            "changes": [
+                "接口文档：分类默认折叠；目录标题「接口目录 — 名称」；搜索图标内嵌",
+                "方法 GET/POST 斜线双色合并；名称前去方法徽章；状态/类型/KEY/收费/QPM 等徽章",
+                "Tab 顺序：参数 → 响应 → 请求示例（aidoc qsBundle）→ 文档（doc）",
+                "本页编辑弹窗仅改 params/response/aidoc/doc；updateDocsContent；E155–E157"
+            ]
+        },
         "13.4.1": {
             "title": "ApiNexus 13.4.1 代理跳转透传 · TOP 手机适配 · 表单与描述修复",
             "date": "2026-07-29",

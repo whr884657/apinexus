@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.4.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.5.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -273,10 +273,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.4.1（2026-07-29）
+### v13.5.0（2026-07-29）
 
-- 上游跳转类接口（如随机视频）透传 Location，不再经 PHP 拉视频文件
-- 控制台 TOP 手机端布局修复；无需认证隐藏密钥；接口描述不再 VS64
+- 接口文档页：分类默认折叠、目录标题带选中名、搜索图标内嵌、GET/POST 斜线双色
+- 徽章与 Tab 顺序（参数→响应→请求示例→文档）；请求示例绑定 aidoc，文档绑定 doc
+- 本页文档编辑弹窗（仅四字段）；易错点 E155–E157
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
