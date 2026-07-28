@@ -558,10 +558,10 @@ class RedisCache
             ),
             array(
                 'id' => 'dashboard_stats',
-                'label' => '控制台统计',
-                'desc' => 'KPI、趋势、TOP、系统概览、整页快照等（趋势/今日优先读 statday）',
+                'label' => '控制台/大屏统计',
+                'desc' => '控制台 KPI/趋势；大屏 screen_full、geo_dist_today/live、iploc 城市计数等',
                 'key' => self::KEY_DASHBOARD_PREFIX,
-                'ttl_hint' => '分层 8～300 秒',
+                'ttl_hint' => '分层 8～300 秒（screen_full≈60；geo_live≈轮询间隔）',
                 'pattern' => true,
                 'chart_color' => '#6366f1',
             ),
