@@ -96,6 +96,70 @@
         return out;
     }
 
+    /**
+     * Bash / cURL：必须在「纯文本」上分词高亮，禁止对已插入的 HTML 再做 replace。
+     * 旧实现在 span class="vs-syn--keyword" 上二次匹配 --keyword，DOM 破碎后
+     * textContent 变成 `-syn vs-syn--keyword">curl`（E177）。
+     */
+    function highlightBashLine(line) {
+        var out = '';
+        var i = 0;
+        var s = String(line);
+        while (i < s.length) {
+            if (s[i] === "'" || s[i] === '"') {
+                var q = s[i];
+                var j = i + 1;
+                while (j < s.length) {
+                    if (s[j] === '\\') {
+                        j += 2;
+                        continue;
+                    }
+                    if (s[j] === q) {
+                        j += 1;
+                        break;
+                    }
+                    j += 1;
+                }
+                out += span('string', esc(s.slice(i, j)));
+                i = j;
+                continue;
+            }
+            // 仅空白/= 后的 -s / --header，绝不匹配 class 里的 --keyword
+            if (s[i] === '-' && (i === 0 || /[\s=$(]/.test(s[i - 1]))) {
+                var a = i + 1;
+                if (a < s.length && s[a] === '-') {
+                    a += 1;
+                }
+                if (a < s.length && /[A-Za-z0-9]/.test(s[a])) {
+                    while (a < s.length && /[\w-]/.test(s[a])) {
+                        a += 1;
+                    }
+                    out += span('attr', esc(s.slice(i, a)));
+                    i = a;
+                    continue;
+                }
+            }
+            if (/[A-Za-z_]/.test(s[i])) {
+                var w = i;
+                while (w < s.length && /[\w]/.test(s[w])) {
+                    w += 1;
+                }
+                var word = s.slice(i, w);
+                // 勿高亮 http/https：会破坏 URL 字符串观感，且旧版在 HTML 二次 replace 时易炸
+                if (/^(curl|wget)$/i.test(word)) {
+                    out += span('keyword', esc(word));
+                } else {
+                    out += esc(word);
+                }
+                i = w;
+                continue;
+            }
+            out += esc(s[i]);
+            i += 1;
+        }
+        return out;
+    }
+
     function highlightBash(src) {
         var lines = String(src).split('\n');
         return lines.map(function (line) {
@@ -103,17 +167,28 @@
             if (m) {
                 return esc(m[1]) + span('comment', esc(m[2]));
             }
-            return esc(line)
-                .replace(/\b(curl|wget|http|https)\b/g, function (t) {
-                    return span('keyword', t);
-                })
-                .replace(/(-{1,2}[A-Za-z0-9][\w-]*)/g, function (t) {
-                    return span('attr', t);
-                })
-                .replace(/(&quot;(?:\\.|[^&])*?&quot;|'(?:\\.|[^'])*?')/g, function (t) {
-                    return span('string', t);
-                });
+            return highlightBashLine(line);
         }).join('\n');
+    }
+
+    /** 剥离高亮泄漏碎片（可与 PHP ApiQuickstart::scrubHighlightLeak 对齐） */
+    function scrubHighlightLeak(text) {
+        text = String(text == null ? '' : text);
+        var i;
+        for (i = 0; i < 6; i += 1) {
+            var next = text.replace(/<span[^>]*class\s*=\s*["'][^"']*vs-syn[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi, '$1');
+            if (next === text) {
+                break;
+            }
+            text = next;
+        }
+        text = text.replace(/<\/?[a-zA-Z][^>]*>/g, '');
+        text = text.replace(/-?syn\s+vs-syn--[\w-]*"\s*>?/gi, '');
+        text = text.replace(/vs-syn--[\w-]*"\s*>?/gi, '');
+        text = text.replace(/\bvs-syn--[\w-]+/gi, '');
+        text = text.replace(/\sclass\s*=\s*["'][^"']*["']/gi, '');
+        text = text.replace(/\sdata-vs-syn(?:-done)?\s*=\s*["'][^"']*["']/gi, '');
+        return text;
     }
 
     function detectLang(el) {
@@ -269,10 +344,28 @@
             return;
         }
         var lang = detectLang(el);
-        var raw = el.textContent || '';
+        // 优先 data-vs-plain（展示前写入的纯源码）；禁止用已高亮 DOM 的 textContent 当源
+        var raw = el.getAttribute('data-vs-plain');
+        if (raw == null || raw === '') {
+            raw = el.textContent || '';
+        }
+        raw = scrubHighlightLeak(raw);
+        el.setAttribute('data-vs-plain', raw);
         el.innerHTML = highlight(raw, lang);
         el.setAttribute('data-vs-syn-done', '1');
         el.classList.add('vs-syn-ready');
+    }
+
+    /** 复制/导出必须用纯文本，禁止读高亮后 textContent */
+    function plainText(el) {
+        if (!el) {
+            return '';
+        }
+        var plain = el.getAttribute('data-vs-plain');
+        if (plain != null && plain !== '') {
+            return scrubHighlightLeak(plain);
+        }
+        return scrubHighlightLeak(el.textContent || '');
     }
 
     function highlightAll(root) {
@@ -283,6 +376,8 @@
     global.VsSyntax = {
         highlight: highlight,
         highlightElement: highlightElement,
-        highlightAll: highlightAll
+        highlightAll: highlightAll,
+        scrubHighlightLeak: scrubHighlightLeak,
+        plainText: plainText
     };
 })(typeof window !== 'undefined' ? window : this);

@@ -1352,6 +1352,9 @@
                 return;
             }
             var merged = okChunks.join('\n\n');
+            if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
+                merged = window.VsSyntax.scrubHighlightLeak(merged);
+            }
             setTextareaValue(aidocEl, merged);
             aiTermAppend(kind, '已写入代码示例（成功 ' + okChunks.length + '/' + jobs.length
                 + '，约 ' + merged.length + ' 字符）');
@@ -1405,6 +1408,9 @@
                                         return;
                                     }
                                     pieces[jobIndex] = String(data.piece);
+                                    if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
+                                        pieces[jobIndex] = window.VsSyntax.scrubHighlightLeak(pieces[jobIndex]);
+                                    }
                                     aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 完成 · ' + label
                                         + '（' + String(data.piece).length + ' 字符）');
                                 })

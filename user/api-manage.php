@@ -704,4 +704,4 @@ echo Markdown::renderAssetsHtml();
 if ($tableReady && !empty($aiReady)) {
     echo '<script>window.VS_AI_CODE=' . json_encode($aiCodeOpts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
 }
-vs_user_layout_end($tableReady ? array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'user-api-manage.js') : array());
+vs_user_layout_end($tableReady ? array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'vs-syntax.js', 'user-api-manage.js') : array());

@@ -713,7 +713,8 @@ VsPlaygroundResponse.directRequest({
 
 ### 4.21.5 AiApiDoc.php / ApiQuickstart.php（AI 文档与快速上手）
 
-**AiApiDoc：** 管理员接口编辑「AI 生成详细文档 / 代码示例」；上下文剔除 `targeturl`/`upkey`；输出经 `sanitizeOutput` 剥离 HTML / `vs-syn` 标记。
+**AiApiDoc：** 管理员/用户接口编辑「AI 生成详细文档 / 代码示例」；上下文剔除 `targeturl`/`upkey`；输出经 `ApiQuickstart::scrubHighlightLeak` 剥离 HTML / `vs-syn` 碎片（E177：勿对已高亮 HTML 二次正则）。
+**展示：** `VsSyntax` bash 纯文本分词；复制用 `data-vs-plain` / `plainText`。
 
 **代码示例生成（v12.0.0）：** 前端按「鉴权 × 语言」**分片**调用 `generateCodeSamplePiece`（`ai_gen_code_piece`）；`AiConfig::codeMode` 为 `sequential`/`parallel`，并行并发 1～6；进程日志实时显示当前片。服务端 `extractRequestedQsBlock` 按语言容错收回并改写 auth，禁 emoji、要求中文注释，失败可重试 1 次。旧 `generateCodeSamples` 整包接口仅兼容保留。
 

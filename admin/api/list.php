@@ -996,5 +996,5 @@ echo Markdown::renderAssetsHtml();
 ?>
 <script>window.VS_AI_CODE=<?php echo json_encode(AiConfig::codeClientOptions(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;</script>
 <?php
-vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'api-list.js'));
+vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'vs-syntax.js', 'api-list.js'));
 ?>

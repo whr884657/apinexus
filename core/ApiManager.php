@@ -1122,6 +1122,7 @@ class ApiManager
             return '文档或返回示例过长';
         }
         if (class_exists('ApiQuickstart') && $docCode !== '') {
+            $docCode = ApiQuickstart::scrubHighlightLeak($docCode);
             $normalized = ApiQuickstart::normalizeAidocBlocks($docCode);
             if ($normalized !== '') {
                 $docCode = $normalized;
@@ -1862,6 +1863,13 @@ class ApiManager
         $docCode = (string) (isset($data['aidoc']) ? $data['aidoc'] : '');
         if (strlen($responseExample) > 200000 || strlen($docDetail) > 200000 || strlen($docCode) > 200000) {
             return '文档或返回示例过长';
+        }
+        if (class_exists('ApiQuickstart') && $docCode !== '') {
+            $docCode = ApiQuickstart::scrubHighlightLeak($docCode);
+            $normalized = ApiQuickstart::normalizeAidocBlocks($docCode);
+            if ($normalized !== '') {
+                $docCode = $normalized;
+            }
         }
 
         $requireKey = self::normalizeRequireKey(isset($data['needkey']) ? $data['needkey'] : self::KEY_NONE);

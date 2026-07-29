@@ -432,7 +432,7 @@ if (!$notFound) {
             </div>
             <div class="detail-quickstart__panel">
                 <button type="button" class="detail-quickstart__copy" id="detailQsCopy">复制</button>
-                <pre class="detail-quickstart__code font-mono" id="detailQsCode"><code class="language-<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>" data-vs-syn="<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>"><?php echo vs_e($qsSamples[0]['code']); ?></code></pre>
+                <pre class="detail-quickstart__code font-mono" id="detailQsCode"><code class="language-<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>" data-vs-syn="<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>" data-vs-plain="<?php echo vs_e(isset($qsSamples[0]['code']) ? $qsSamples[0]['code'] : ''); ?>"><?php echo vs_e(isset($qsSamples[0]['code']) ? $qsSamples[0]['code'] : ''); ?></code></pre>
             </div>
         </div>
         <script>

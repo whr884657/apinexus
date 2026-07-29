@@ -1,11 +1,11 @@
 {
-    "version": "13.10.1",
-    "title": "ApiNexus 13.10.1 更新弹窗固定尺寸",
+    "version": "13.11.0",
+    "title": "ApiNexus 13.11.0 修复示例代码 vs-syn 高亮泄漏",
     "release_date": "2026-07-29",
     "db_changes": false,
     "changes": [
-        "系统更新弹窗电脑/手机固定尺寸，changelog 与进度仅在正文区滚动，避免抽屉忽大忽小（E176）",
-        "VsModal 新增 size=update；弹窗开发规范强化固定高度反模式"
+        "修复 bash 语法高亮二次正则拆坏 vs-syn--keyword，导致示例出现 -syn vs-syn--keyword\">（E177）",
+        "复制/入库/AI 出站统一 scrubHighlightLeak；data-vs-plain 存纯源码；aidoc 保存自动洗净"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

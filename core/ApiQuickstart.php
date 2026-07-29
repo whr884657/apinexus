@@ -440,26 +440,49 @@ class ApiQuickstart
     }
 
     /**
-     * 剥离 HTML 标签与高亮 class 泄漏
+     * 剥离 HTML / vs-syn 高亮泄漏（展示、入库、AI 输出共用）
      *
+     * @param string $code
+     * @return string
+     */
+    public static function scrubHighlightLeak($code)
+    {
+        $code = (string) $code;
+        if ($code === '') {
+            return '';
+        }
+        // 完整 span 解包（可嵌套残缺）
+        for ($n = 0; $n < 6; $n++) {
+            $next = preg_replace(
+                '/<span[^>]*class\s*=\s*["\'][^"\']*vs-syn[^"\']*["\'][^>]*>(.*?)<\/span>/is',
+                '$1',
+                $code
+            );
+            if ($next === null || $next === $code) {
+                break;
+            }
+            $code = $next;
+        }
+        if (strpos($code, '<') !== false) {
+            $code = strip_tags($code);
+        }
+        // 高亮泄漏碎片：-syn vs-syn--keyword"> / vs-syn--attr">
+        $code = preg_replace('/-?syn\s+vs-syn--[\w-]*"\s*>?/i', '', $code);
+        $code = preg_replace('/vs-syn--[\w-]*"\s*>?/i', '', $code);
+        $code = preg_replace('/\bvs-syn--[\w-]+/i', '', $code);
+        $code = preg_replace('/\sclass\s*=\s*["\'][^"\']*["\']/i', '', $code);
+        $code = preg_replace('/\sdata-vs-syn(?:-done)?\s*=\s*["\'][^"\']*["\']/i', '', $code);
+        $code = self::stripEmoji($code);
+        return trim($code);
+    }
+
+    /**
      * @param string $code
      * @return string
      */
     private static function cleanCodeBlock($code)
     {
-        $code = (string) $code;
-        // 高亮泄漏常见碎片：-syn vs-syn--keyword"> 或残缺属性
-        $code = preg_replace('/-?syn\s+vs-syn--[\w-]*"\s*>?/i', '', $code);
-        $code = preg_replace('/\bvs-syn--[\w-]+/i', '', $code);
-        if (strpos($code, '<') !== false) {
-            $code = preg_replace('/<span[^>]*class\s*=\s*["\'][^"\']*vs-syn[^"\']*["\'][^>]*>(.*?)<\/span>/is', '$1', $code);
-            $code = strip_tags($code);
-        }
-        $code = preg_replace('/\sclass\s*=\s*["\'][^"\']*vs-syn[^"\']*["\']/i', '', $code);
-        $code = preg_replace('/\sdata-vs-syn(?:-done)?\s*=\s*["\'][^"\']*["\']/i', '', $code);
-        // 示例代码禁止 emoji / 变体选择符 / 零宽连接
-        $code = self::stripEmoji($code);
-        return trim($code);
+        return self::scrubHighlightLeak($code);
     }
 
     /**

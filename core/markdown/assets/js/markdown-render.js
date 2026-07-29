@@ -179,7 +179,14 @@
                 e.preventDefault();
                 e.stopPropagation();
                 var code = pre.querySelector('code');
-                var plain = code ? code.textContent : pre.textContent;
+                var plain = '';
+                if (code && global.VsSyntax && typeof global.VsSyntax.plainText === 'function') {
+                    plain = global.VsSyntax.plainText(code);
+                } else if (code) {
+                    plain = code.getAttribute('data-vs-plain') || code.textContent || '';
+                } else {
+                    plain = pre.textContent || '';
+                }
                 copyPlain(plain).then(function () {
                     btn.textContent = '已复制';
                     btn.classList.add('is-copied');
@@ -193,6 +200,9 @@
             if (global.VsSyntax && typeof global.VsSyntax.highlightElement === 'function') {
                 var codeEl = pre.querySelector('code');
                 if (codeEl) {
+                    if (!codeEl.getAttribute('data-vs-plain')) {
+                        codeEl.setAttribute('data-vs-plain', codeEl.textContent || '');
+                    }
                     global.VsSyntax.highlightElement(codeEl);
                 }
             }

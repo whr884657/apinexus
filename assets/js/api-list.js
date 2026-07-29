@@ -2132,6 +2132,9 @@
                 return;
             }
             var merged = okChunks.join('\n\n');
+            if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
+                merged = window.VsSyntax.scrubHighlightLeak(merged);
+            }
             draftSkip = true;
             setTextareaValue(fields.docAi, merged);
             draftSkip = false;
@@ -2190,6 +2193,9 @@
                                         return;
                                     }
                                     pieces[jobIndex] = String(data.piece);
+                                    if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
+                                        pieces[jobIndex] = window.VsSyntax.scrubHighlightLeak(pieces[jobIndex]);
+                                    }
                                     aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 完成 · ' + label
                                         + '（' + String(data.piece).length + ' 字符）');
                                 })

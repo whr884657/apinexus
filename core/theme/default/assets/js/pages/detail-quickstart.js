@@ -124,7 +124,12 @@
         active = idx;
         var item = enrichItem(list[active]);
         var syn = item.syn || 'javascript';
-        codeNode.textContent = item.code || '';
+        var plain = item.code || '';
+        if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
+            plain = window.VsSyntax.scrubHighlightLeak(plain);
+        }
+        codeNode.setAttribute('data-vs-plain', plain);
+        codeNode.textContent = plain;
         codeNode.className = 'language-' + syn;
         codeNode.setAttribute('data-vs-syn', syn);
         codeNode.removeAttribute('data-vs-syn-done');
@@ -181,7 +186,12 @@
 
     if (copyBtn) {
         copyBtn.addEventListener('click', function () {
-            var text = codeNode.textContent || '';
+            var text = '';
+            if (window.VsSyntax && typeof window.VsSyntax.plainText === 'function') {
+                text = window.VsSyntax.plainText(codeNode);
+            } else {
+                text = codeNode.getAttribute('data-vs-plain') || codeNode.textContent || '';
+            }
             var done = function () {
                 copyBtn.textContent = '已复制';
                 copyBtn.classList.add('is-copied');
