@@ -1,13 +1,13 @@
 {
-    "version": "13.17.3",
-    "title": "ApiNexus 13.17.3 面板类型误判与反馈页 UI",
+    "version": "13.18.0",
+    "title": "ApiNexus 13.18.0 面板监控实测对接",
     "release_date": "2026-07-30",
     "db_changes": false,
     "changes": [
-        "修复配置已有面板类型仍提示请选择：异常回落补全 Config、规范化去 BOM、禁止脏值覆盖（E192）",
-        "接口反馈页对齐审核页：描边 Tab、API 图标、接口名称优先、反馈内容下沉",
-        "本地数据库导出目录加入 .gitignore，禁止进仓库",
-        "安全加固：拦截云元数据/链路本地面板地址；测试连接按管理员限流（E193）"
+        "按宝塔/1Panel 真实 API 重写对接：宝塔 GetSystemTotal+GetNetWorkApi，1Panel 优先 base/all/all（含 currentInfo）",
+        "1Panel：MD5 优先、仅鉴权失败再试 HMAC；仪表盘只用 GET；禁止把累计流量字节当 KB/s",
+        "修正负载/核数/运行时长/系统名/面板版本字段解析；连接超时与请求超时对齐，减少 3 秒内空转",
+        "专项规范与易错点 E194 同步；本地探测脚本发版前清理"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

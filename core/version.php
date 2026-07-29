@@ -6,5 +6,5 @@
  */
 
 if (!defined('VS_VERSION')) {
-    define('VS_VERSION', '13.17.3');
+    define('VS_VERSION', '13.18.0');
 }

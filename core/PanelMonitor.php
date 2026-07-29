@@ -395,6 +395,7 @@ class PanelMonitor
 
     /**
      * 宝塔：优先轻量 GetSystemTotal + GetNetWorkApi（避免 GetAllInfo 过重拖垮控制台）
+     * 实测（面板 v11.6）：GetSystemTotal 含 CPU/内存/版本/系统/运行；GetNetWorkApi 含 load/up/down。
      * @see https://docs.bt.cn/api/system/GetSystemTotal
      * @see https://docs.bt.cn/api/system/GetNetWork
      *
@@ -411,8 +412,12 @@ class PanelMonitor
         if (!is_array($total)) {
             throw new Exception('invalid response');
         }
-        if (isset($total['status']) && $total['status'] === false) {
+        if (isset($total['status']) && ($total['status'] === false || $total['status'] === 'false')) {
             throw new Exception('api rejected');
+        }
+        // 部分版本失败体：{"msg":"...","status":false}
+        if (isset($total['msg']) && !isset($total['memTotal']) && !isset($total['cpuRealUsed'])) {
+            throw new Exception('api msg');
         }
 
         if (isset($total['version'])) {
@@ -420,6 +425,8 @@ class PanelMonitor
         }
         if (isset($total['system'])) {
             $snap['system'] = self::safeStr($total['system']);
+        } elseif (isset($total['simple_system'])) {
+            $snap['system'] = self::safeStr($total['simple_system']);
         }
         if (isset($total['time'])) {
             $snap['uptime'] = self::safeStr($total['time']);
@@ -441,15 +448,29 @@ class PanelMonitor
         }
 
         try {
-            $net = self::baotaPost($baseUrl, $apiKey, 'GetNetWorkApi');
-            if (!is_array($net)) {
-                $net = self::baotaPost($baseUrl, $apiKey, 'GetNetWork');
+            $net = null;
+            try {
+                $net = self::baotaPost($baseUrl, $apiKey, 'GetNetWorkApi');
+            } catch (Exception $e) {
+                $net = null;
+            }
+            if (!is_array($net) || (!isset($net['up']) && !isset($net['load']) && !isset($net['cpu']))) {
+                try {
+                    $net = self::baotaPost($baseUrl, $apiKey, 'GetNetWork');
+                } catch (Exception $e) {
+                    $net = null;
+                }
             }
             if (is_array($net)) {
                 self::mergeBaotaRuntime($snap, $net);
             }
         } catch (Exception $e) {
             // 系统总量已够；网络/负载可选
+        }
+
+        // 至少要有一项核心指标，否则视为失败（避免「连接成功但全空」）
+        if ($snap['cpu'] === null && $snap['memtotal'] === null && $snap['panelversion'] === '') {
+            throw new Exception('empty metrics');
         }
 
         return $snap;
@@ -549,7 +570,7 @@ class PanelMonitor
      */
     private static function baotaPost($baseUrl, $apiKey, $action)
     {
-        $endpoint = rtrim(self::normalizeBaseUrl($baseUrl), '/') . '/system';
+        $root = rtrim(self::normalizeBaseUrl($baseUrl), '/');
         $requestTime = (string) time();
         $requestToken = md5($requestTime . '' . md5($apiKey));
         $body = http_build_query(array(
@@ -557,18 +578,31 @@ class PanelMonitor
             'request_token' => $requestToken,
             'action'        => $action,
         ));
-        $raw = self::httpRequest('POST', $endpoint, $body, array(
-            'Content-Type: application/x-www-form-urlencoded',
-        ));
-        $json = json_decode($raw, true);
-        if (!is_array($json)) {
-            throw new Exception('bad json');
+        $headers = array('Content-Type: application/x-www-form-urlencoded');
+        // 官方文档：POST /system + action；兼容部分版本要求 query 带 action
+        $endpoints = array(
+            $root . '/system',
+            $root . '/system?action=' . rawurlencode($action),
+        );
+        $last = null;
+        foreach ($endpoints as $endpoint) {
+            try {
+                $raw = self::httpRequest('POST', $endpoint, $body, $headers);
+                $json = json_decode($raw, true);
+                if (!is_array($json)) {
+                    throw new Exception('bad json');
+                }
+                return $json;
+            } catch (Exception $e) {
+                $last = $e;
+            }
         }
-        return $json;
+        throw ($last instanceof Exception) ? $last : new Exception('baota post failed');
     }
 
     /**
-     * 1Panel：MD5 / HMAC 双鉴权；多路径回退
+     * 1Panel：实测 v2.2.x —— GET /api/v2/dashboard/base/all/all 一次含 currentInfo + 系统信息；
+     * 仪表盘接口仅 GET；MD5 鉴权可用，HMAC 在部分版本会 401（先 MD5，仅鉴权失败再试 HMAC）。
      * @see https://1panel.cn/docs/v2/dev_manual/api_manual/
      *
      * @param string $baseUrl
@@ -577,88 +611,100 @@ class PanelMonitor
      */
     private static function fetchOnePanel($baseUrl, $apiKey)
     {
-        $pathsCurrent = array(
-            '/api/v2/dashboard/current/all/all',
-            '/api/v2/dashboard/current/all/all/',
-        );
-        $pathsBase = array(
-            '/api/v2/dashboard/base/all/all',
-            '/api/v2/dashboard/base/os',
-            '/api/v2/toolbox/device/base',
-        );
-
-        $current = null;
         $lastErr = null;
-        foreach ($pathsCurrent as $path) {
+        $pack = null;
+        // 优先 base/all/all（内含 currentInfo，一次请求即可）；再回退 current
+        $tries = array(
+            array('GET', '/api/v2/dashboard/base/all/all'),
+            array('GET', '/api/v2/dashboard/current/all/all'),
+            array('GET', '/api/v2/dashboard/base/os'),
+        );
+        foreach ($tries as $item) {
             try {
-                $current = self::onePanelRequest($baseUrl, $apiKey, 'GET', $path);
-                break;
+                $resp = self::onePanelRequest($baseUrl, $apiKey, $item[0], $item[1]);
+                $data = self::unwrapOnePanelData($resp);
+                if (is_array($data) && $data !== array()) {
+                    $pack = $data;
+                    break;
+                }
             } catch (Exception $e) {
                 $lastErr = $e;
+            }
+        }
+        if (!is_array($pack) || $pack === array()) {
+            throw ($lastErr instanceof Exception) ? $lastErr : new Exception('onepanel fetch failed');
+        }
+
+        $snap = self::buildOnePanelSnapshot($pack);
+
+        // 版本号：settings 接口（可选，失败不影响主指标）
+        if ($snap['panelversion'] === '') {
+            foreach (array(
+                array('POST', '/api/v2/core/settings/search'),
+                array('POST', '/api/v2/settings/search'),
+            ) as $item) {
                 try {
-                    $current = self::onePanelRequest($baseUrl, $apiKey, 'POST', $path);
-                    break;
-                } catch (Exception $e2) {
-                    $lastErr = $e2;
+                    $resp = self::onePanelRequest($baseUrl, $apiKey, $item[0], $item[1], '{}');
+                    $set = self::unwrapOnePanelData($resp);
+                    if (isset($set['systemVersion']) && (string) $set['systemVersion'] !== '') {
+                        $snap['panelversion'] = self::safeStr($set['systemVersion']);
+                        break;
+                    }
+                } catch (Exception $e) {
+                    // ignore
                 }
             }
         }
-        if (!is_array($current)) {
-            throw ($lastErr instanceof Exception) ? $lastErr : new Exception('onepanel current failed');
-        }
 
-        $baseInfo = array();
-        foreach ($pathsBase as $path) {
-            try {
-                $baseInfo = self::onePanelRequest($baseUrl, $apiKey, 'GET', $path);
-                break;
-            } catch (Exception $e) {
-                try {
-                    $baseInfo = self::onePanelRequest($baseUrl, $apiKey, 'POST', $path);
-                    break;
-                } catch (Exception $e2) {
-                    $baseInfo = array();
-                }
-            }
+        if ($snap['cpu'] === null && $snap['memtotal'] === null && $snap['system'] === '') {
+            throw new Exception('empty metrics');
         }
+        return $snap;
+    }
 
-        $cur = self::unwrapOnePanelData($current);
-        $base = self::unwrapOnePanelData($baseInfo);
-        if (!is_array($cur) || $cur === array()) {
-            throw new Exception('empty current');
+    /**
+     * 将 1Panel dashboard 响应解析为控制台快照
+     *
+     * @param array $pack unwrap 后的 data
+     * @return array
+     */
+    private static function buildOnePanelSnapshot(array $pack)
+    {
+        $base = $pack;
+        $cur = $pack;
+        if (isset($pack['currentInfo']) && is_array($pack['currentInfo']) && $pack['currentInfo'] !== array()) {
+            $cur = $pack['currentInfo'];
         }
 
         $snap = self::emptySnapshot();
         $snap['ok'] = true;
 
-        foreach (array('version', 'panelVersion', 'panel_version', 'appVersion') as $vk) {
-            if ($snap['panelversion'] === '' && isset($base[$vk]) && (string) $base[$vk] !== '') {
-                $snap['panelversion'] = self::safeStr($base[$vk]);
+        // 系统信息：优先 prettyDistro
+        if (isset($base['prettyDistro']) && (string) $base['prettyDistro'] !== '') {
+            $snap['system'] = self::safeStr($base['prettyDistro']);
+        } else {
+            $platform = '';
+            foreach (array('platform', 'os', 'platformName', 'distro') as $pk) {
+                if ($platform === '' && isset($base[$pk])) {
+                    $platform = self::safeStr($base[$pk]);
+                }
             }
-            if ($snap['panelversion'] === '' && isset($cur[$vk]) && (string) $cur[$vk] !== '') {
-                $snap['panelversion'] = self::safeStr($cur[$vk]);
+            $kernel = '';
+            foreach (array('kernelVersion', 'kernel', 'platformVersion') as $kk) {
+                if ($kernel === '' && isset($base[$kk])) {
+                    $kernel = self::safeStr($base[$kk]);
+                }
             }
+            $arch = isset($base['kernelArch']) ? self::safeStr($base['kernelArch']) : (isset($base['arch']) ? self::safeStr($base['arch']) : '');
+            $snap['system'] = implode(' ', array_filter(array($platform, $kernel, $arch)));
         }
 
-        $platform = '';
-        foreach (array('platform', 'os', 'platformName', 'distro') as $pk) {
-            if ($platform === '' && isset($base[$pk])) {
-                $platform = self::safeStr($base[$pk]);
-            }
-        }
-        $kernel = '';
-        foreach (array('kernel', 'kernelVersion', 'platformVersion') as $kk) {
-            if ($kernel === '' && isset($base[$kk])) {
-                $kernel = self::safeStr($base[$kk]);
-            }
-        }
-        $arch = isset($base['kernelArch']) ? self::safeStr($base['kernelArch']) : (isset($base['arch']) ? self::safeStr($base['arch']) : '');
-        $sysParts = array_filter(array($platform, $kernel, $arch));
-        $snap['system'] = implode(' ', $sysParts);
-
-        if (isset($base['timeSinceUptime'])) {
-            $snap['uptime'] = self::safeStr($base['timeSinceUptime']);
-        } elseif (isset($base['uptime'])) {
+        // 运行时长：runningTime 对象 / 秒级 uptime（禁止把开机时间字符串当「已运行」）
+        if (isset($cur['runningTime']) && is_array($cur['runningTime'])) {
+            $snap['uptime'] = self::formatRunningTime($cur['runningTime']);
+        } elseif (isset($cur['uptime']) && is_numeric($cur['uptime'])) {
+            $snap['uptime'] = self::formatUptime($cur['uptime']);
+        } elseif (isset($base['uptime']) && is_numeric($base['uptime'])) {
             $snap['uptime'] = self::formatUptime($base['uptime']);
         }
 
@@ -666,33 +712,49 @@ class PanelMonitor
             $snap['cpu'] = self::safeFloat($cur['cpuUsedPercent'], 1);
         } elseif (isset($cur['cpu']) && is_array($cur['cpu']) && isset($cur['cpu']['usedPercent'])) {
             $snap['cpu'] = self::safeFloat($cur['cpu']['usedPercent'], 1);
-        } elseif (isset($cur['cpuTotal']) && is_array($cur['cpuTotal']) && isset($cur['cpuTotal'][0])) {
-            $snap['cpu'] = self::safeFloat($cur['cpuTotal'][0], 1);
-        }
-        if (isset($cur['cpuCount'])) {
-            $snap['cpucores'] = (int) $cur['cpuCount'];
-        } elseif (isset($base['cpuCores'])) {
-            $snap['cpucores'] = (int) $base['cpuCores'];
-        } elseif (isset($cur['cpu']) && is_array($cur['cpu']) && isset($cur['cpu']['cores'])) {
-            $snap['cpucores'] = (int) $cur['cpu']['cores'];
+        } elseif (isset($cur['cpuPercent']) && is_array($cur['cpuPercent']) && isset($cur['cpuPercent'][0])) {
+            $sum = 0.0;
+            $n = 0;
+            foreach ($cur['cpuPercent'] as $p) {
+                $sum += (float) $p;
+                $n++;
+            }
+            if ($n > 0) {
+                $snap['cpu'] = self::safeFloat($sum / $n, 1);
+            }
         }
 
-        $load = null;
-        if (isset($cur['loadUsage']) && is_array($cur['loadUsage'])) {
-            $load = $cur['loadUsage'];
-        } elseif (isset($cur['load']) && is_array($cur['load'])) {
-            $load = $cur['load'];
+        // 实测：cpuTotal 为逻辑核数（整数）；cpuCores / cpuLogicalCores 在 base 层
+        if (isset($base['cpuLogicalCores'])) {
+            $snap['cpucores'] = (int) $base['cpuLogicalCores'];
+        } elseif (isset($base['cpuCores'])) {
+            $snap['cpucores'] = (int) $base['cpuCores'];
+        } elseif (isset($cur['cpuTotal']) && is_numeric($cur['cpuTotal']) && !is_array($cur['cpuTotal'])) {
+            $snap['cpucores'] = (int) $cur['cpuTotal'];
+        } elseif (isset($cur['cpuCount'])) {
+            $snap['cpucores'] = (int) $cur['cpuCount'];
         }
-        if (is_array($load)) {
-            foreach (array(
-                array('load1', array('Load1', 'load1', 'one')),
-                array('load5', array('Load5', 'load5', 'five')),
-                array('load15', array('Load15', 'load15', 'fifteen')),
-            ) as $pair) {
-                $field = $pair[0];
-                foreach ($pair[1] as $k) {
-                    if (isset($load[$k])) {
-                        $snap[$field] = self::safeFloat($load[$k], 2);
+
+        // 负载：实测在顶层 load1/load5/load15（可为 0）
+        foreach (array('load1' => array('load1', 'Load1', 'one'), 'load5' => array('load5', 'Load5', 'five'), 'load15' => array('load15', 'Load15', 'fifteen')) as $field => $keys) {
+            foreach ($keys as $k) {
+                if (array_key_exists($k, $cur) && $cur[$k] !== null && $cur[$k] !== '') {
+                    $snap[$field] = self::safeFloat($cur[$k], 2);
+                    break;
+                }
+            }
+            if ($snap[$field] === null && isset($cur['loadUsage']) && is_array($cur['loadUsage'])) {
+                foreach ($keys as $k) {
+                    if (array_key_exists($k, $cur['loadUsage'])) {
+                        $snap[$field] = self::safeFloat($cur['loadUsage'][$k], 2);
+                        break;
+                    }
+                }
+            }
+            if ($snap[$field] === null && isset($cur['load']) && is_array($cur['load'])) {
+                foreach ($keys as $k) {
+                    if (array_key_exists($k, $cur['load'])) {
+                        $snap[$field] = self::safeFloat($cur['load'][$k], 2);
                         break;
                     }
                 }
@@ -730,51 +792,52 @@ class PanelMonitor
             $snap['mempercent'] = self::safeFloat($snap['memused'] * 100 / $snap['memtotal'], 1);
         }
 
-        $up = null;
-        $down = null;
-        if (isset($cur['netBytesSent'])) {
-            $up = (float) $cur['netBytesSent'];
-        } elseif (isset($cur['shotNet']) && is_array($cur['shotNet']) && isset($cur['shotNet']['up'])) {
-            $up = (float) $cur['shotNet']['up'];
+        // 网速：仅接受明确的速率字段。netBytesSent/Recv 是累计字节，禁止当成 KB/s
+        if (isset($cur['shotNet']) && is_array($cur['shotNet'])) {
+            if (isset($cur['shotNet']['up'])) {
+                $snap['netup'] = self::safeFloat($cur['shotNet']['up'], 1);
+            }
+            if (isset($cur['shotNet']['down'])) {
+                $snap['netdown'] = self::safeFloat($cur['shotNet']['down'], 1);
+            }
         } elseif (isset($cur['net']) && is_array($cur['net'])) {
-            if (isset($cur['net']['up'])) {
-                $up = (float) $cur['net']['up'];
-            } elseif (isset($cur['net']['bytesSent'])) {
-                $up = (float) $cur['net']['bytesSent'];
+            if (isset($cur['net']['up']) && (!isset($cur['net']['bytesSent']) || (float) $cur['net']['up'] < 1024 * 1024)) {
+                $snap['netup'] = self::safeFloat($cur['net']['up'], 1);
+            }
+            if (isset($cur['net']['down']) && (!isset($cur['net']['bytesRecv']) || (float) $cur['net']['down'] < 1024 * 1024)) {
+                $snap['netdown'] = self::safeFloat($cur['net']['down'], 1);
             }
         }
-        if (isset($cur['netBytesRecv'])) {
-            $down = (float) $cur['netBytesRecv'];
-        } elseif (isset($cur['shotNet']) && is_array($cur['shotNet']) && isset($cur['shotNet']['down'])) {
-            $down = (float) $cur['shotNet']['down'];
-        } elseif (isset($cur['net']) && is_array($cur['net'])) {
-            if (isset($cur['net']['down'])) {
-                $down = (float) $cur['net']['down'];
-            } elseif (isset($cur['net']['bytesRecv'])) {
-                $down = (float) $cur['net']['bytesRecv'];
+
+        foreach (array('version', 'panelVersion', 'panel_version', 'appVersion', 'systemVersion') as $vk) {
+            if ($snap['panelversion'] === '' && isset($base[$vk]) && (string) $base[$vk] !== '') {
+                $snap['panelversion'] = self::safeStr($base[$vk]);
             }
-        }
-        if ($up !== null) {
-            $snap['netup'] = self::safeFloat(self::toKbps($up), 1);
-        }
-        if ($down !== null) {
-            $snap['netdown'] = self::safeFloat(self::toKbps($down), 1);
         }
 
         return $snap;
     }
 
     /**
-     * @param mixed $bytesOrKb
-     * @return float
+     * @param array $rt days/hours/minutes/seconds
+     * @return string
      */
-    private static function toKbps($bytesOrKb)
+    private static function formatRunningTime(array $rt)
     {
-        $n = (float) $bytesOrKb;
-        if ($n > 1024 * 50) {
-            return $n / 1024.0;
+        $days = isset($rt['days']) ? (int) $rt['days'] : 0;
+        $hours = isset($rt['hours']) ? (int) $rt['hours'] : 0;
+        $minutes = isset($rt['minutes']) ? (int) $rt['minutes'] : 0;
+        if ($days > 0) {
+            return $days . '天' . ($hours > 0 ? $hours . '小时' : '');
         }
-        return $n;
+        if ($hours > 0) {
+            return $hours . '小时' . ($minutes > 0 ? $minutes . '分钟' : '');
+        }
+        if ($minutes > 0) {
+            return $minutes . '分钟';
+        }
+        $seconds = isset($rt['seconds']) ? (int) $rt['seconds'] : 0;
+        return $seconds . '秒';
     }
 
     /**
@@ -791,9 +854,13 @@ class PanelMonitor
             return (int) floor($s / 60) . '分钟';
         }
         if ($s < 86400) {
-            return (int) floor($s / 3600) . '小时';
+            $h = (int) floor($s / 3600);
+            $m = (int) floor(($s % 3600) / 60);
+            return $h . '小时' . ($m > 0 ? $m . '分钟' : '');
         }
-        return (int) floor($s / 86400) . '天';
+        $d = (int) floor($s / 86400);
+        $h = (int) floor(($s % 86400) / 3600);
+        return $d . '天' . ($h > 0 ? $h . '小时' : '');
     }
 
     /**
@@ -812,40 +879,58 @@ class PanelMonitor
     }
 
     /**
-     * 先 MD5（兼容面广），再 HMAC-SHA256
+     * 1Panel 请求：先 MD5；仅当业务码为鉴权失败时再试 HMAC（避免无谓耗尽 3s 超时）
      *
      * @param string $baseUrl
      * @param string $apiKey
      * @param string $method
      * @param string $path
+     * @param string $body
      * @return array
      */
-    private static function onePanelRequest($baseUrl, $apiKey, $method, $path)
+    private static function onePanelRequest($baseUrl, $apiKey, $method, $path, $body = '')
     {
         $endpoint = rtrim(self::normalizeBaseUrl($baseUrl), '/') . $path;
         $ts = (string) time();
-        $tokens = array(
-            md5('1panel' . $apiKey . $ts),
-        );
+        $tokens = array(md5('1panel' . $apiKey . $ts));
         if (function_exists('hash_hmac')) {
             $tokens[] = hash_hmac('sha256', '1panel:' . $ts, $apiKey);
         }
 
         $last = null;
-        foreach ($tokens as $token) {
+        $authFailed = false;
+        foreach ($tokens as $idx => $token) {
+            // HMAC 仅在 MD5 明确鉴权失败后再试
+            if ($idx > 0 && !$authFailed) {
+                break;
+            }
             try {
-                $raw = self::httpRequest($method, $endpoint, '', array(
+                $headers = array(
                     '1Panel-Token: ' . $token,
                     '1Panel-Timestamp: ' . $ts,
                     'Accept: application/json',
-                    'Content-Type: application/json',
-                ));
+                );
+                if (strtoupper($method) === 'POST' || $body !== '') {
+                    $headers[] = 'Content-Type: application/json';
+                    if ($body === '' && strtoupper($method) === 'POST') {
+                        $body = '{}';
+                    }
+                }
+                $raw = self::httpRequest($method, $endpoint, $body, $headers);
+                $trim = ltrim((string) $raw);
+                if ($trim === '' || $trim[0] === '<' || stripos($trim, '<!DOCTYPE') === 0) {
+                    throw new Exception('non-json');
+                }
                 $json = json_decode($raw, true);
                 if (!is_array($json)) {
                     throw new Exception('bad json');
                 }
                 if (isset($json['code'])) {
                     $code = (int) $json['code'];
+                    if ($code === 401 || $code === 403) {
+                        $authFailed = true;
+                        throw new Exception('auth ' . $code);
+                    }
                     // 成功常见 200；部分封装用 0/1
                     if ($code !== 200 && $code !== 0 && $code !== 1) {
                         if (!isset($json['data']) || !is_array($json['data'])) {
@@ -856,6 +941,14 @@ class PanelMonitor
                 return $json;
             } catch (Exception $e) {
                 $last = $e;
+                $msg = $e->getMessage();
+                if (strpos($msg, 'auth ') === 0 || strpos($msg, 'http 401') !== false || strpos($msg, 'http 403') !== false) {
+                    $authFailed = true;
+                }
+                // HTTP 404：换鉴权也无意义，直接失败给上层换路径
+                if (strpos($msg, 'http 404') !== false) {
+                    break;
+                }
             }
         }
         throw ($last instanceof Exception) ? $last : new Exception('auth failed');
@@ -1051,7 +1144,7 @@ class PanelMonitor
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
             if (defined('CURLPROTO_HTTP') && defined('CURLPROTO_HTTPS')) {

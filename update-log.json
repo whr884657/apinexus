@@ -1,5 +1,16 @@
 {
     "versions": {
+        "13.18.0": {
+            "title": "ApiNexus 13.18.0 面板监控实测对接",
+            "date": "2026-07-30",
+            "db_changes": false,
+            "changes": [
+                "按宝塔/1Panel 真实 API 重写对接：宝塔 GetSystemTotal+GetNetWorkApi，1Panel 优先 base/all/all（含 currentInfo）",
+                "1Panel：MD5 优先、仅鉴权失败再试 HMAC；仪表盘只用 GET；禁止把累计流量字节当 KB/s",
+                "修正负载/核数/运行时长/系统名/面板版本字段解析；连接超时与请求超时对齐",
+                "专项规范与易错点 E194 同步"
+            ]
+        },
         "13.17.3": {
             "title": "ApiNexus 13.17.3 面板类型误判与反馈页 UI",
             "date": "2026-07-30",
