@@ -42,7 +42,7 @@ function vs_admin_menu_groups()
         array(
             'id'       => 'qqbot',
             'title'    => 'QQ BOT',
-            'icon'     => 'share',
+            'icon'     => 'bot',
             'children' => array(
                 array('id' => 'qqbot-home', 'title' => '概览', 'url' => '/admin/qqbot/index'),
             ),

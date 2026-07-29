@@ -409,6 +409,71 @@ a:hover {
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.06);
     font-size: 0.92em;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+/* 可复制长链接行：输入框 + 复制按钮，防溢出 */
+.vs-copy-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+}
+
+.vs-copy-row .vs-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+
+.vs-copy-row .vs-btn {
+    flex: 0 0 auto;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 16px;
+}
+
+/* 开关行：与上下提示/字段间距均衡 */
+.vs-form-row--check,
+.vs-form-row:has(> .vs-checkbox) {
+    margin-top: 12px;
+    margin-bottom: 16px;
+    padding: 2px 0;
+}
+
+.vs-form-row--check .vs-checkbox,
+.vs-form-row:has(> .vs-checkbox) .vs-checkbox {
+    min-height: 24px;
+    line-height: 1.4;
+}
+
+/* 系统设置：同行动作按钮统一高度 */
+.vs-settings-form .vs-form-actions .vs-btn,
+.vs-form.vs-settings-form .vs-form-actions .vs-btn {
+    height: 44px;
+    min-height: 44px;
+}
+
+.vs-form-subtitle {
+    margin-top: 4px;
+    margin-bottom: 12px;
+}
+
+.vs-divider + .vs-form-subtitle {
+    margin-top: 0;
+}
+
+.vs-form .vs-notice--compact + .vs-form-row--check,
+.vs-form .vs-notice--field + .vs-form-row--check {
+    margin-top: 14px;
+}
+
+.vs-form-row--check + .vs-form-row {
+    margin-top: 4px;
 }
 
 .vs-link {

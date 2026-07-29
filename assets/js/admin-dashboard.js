@@ -638,6 +638,9 @@
             if (!s.enabled) {
                 badge.textContent = '未启用';
                 badge.className = 'vs-badge vs-badge--default';
+            } else if (!s.provider) {
+                badge.textContent = '未选择';
+                badge.className = 'vs-badge vs-badge--warning';
             } else if (!s.configured) {
                 badge.textContent = '未配置';
                 badge.className = 'vs-badge vs-badge--warning';
@@ -651,11 +654,15 @@
         }
 
         if (!s.enabled) {
-            el.innerHTML = '<div class="dash-empty">服务器监控未启用。<br>请到系统设置 → 控制台中开启并填写面板接口。</div>';
+            el.innerHTML = '<div class="dash-empty">服务器监控未启用。<br>请到系统设置 → 控制台与监控中开启，或使用「测试连接」自动保存并启用。</div>';
+            return;
+        }
+        if (!s.provider) {
+            el.innerHTML = '<div class="dash-empty">请选择面板类型（宝塔或 1Panel）并保存。</div>';
             return;
         }
         if (!s.configured) {
-            el.innerHTML = '<div class="dash-empty">请填写面板地址与接口密钥。</div>';
+            el.innerHTML = '<div class="dash-empty">请填写面板地址与接口密钥，并保存或测试连接。</div>';
             return;
         }
         if (!s.ok) {
@@ -810,6 +817,14 @@
             var keepTop = (!forceRefresh && wasReady && Array.isArray(boot.top_apis) && boot.top_apis.length)
                 ? boot.top_apis
                 : null;
+            // 若新快照已配置成功，不要被软刷保留的旧「未配置」状态盖住
+            if (keepServer && res.snapshot && res.snapshot.server) {
+                var ns = res.snapshot.server;
+                var os = keepServer;
+                if ((ns.configured && !os.configured) || (ns.ok && !os.ok) || (ns.enabled && !os.enabled)) {
+                    keepServer = null;
+                }
+            }
             renderAll(res.snapshot);
             if (keepRecent) {
                 boot.recent = keepRecent;

@@ -49,6 +49,90 @@ class PanelMonitor
     }
 
     /**
+     * 清除面板监控缓存（保存/测试成功后调用）
+     *
+     * @return void
+     */
+    public static function clearCache()
+    {
+        if (!class_exists('RedisCache')) {
+            return;
+        }
+        $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
+        $url = trim((string) Config::get('panelmonitor_baseurl', ''));
+        if ($provider !== self::PROVIDER_NONE && $url !== '') {
+            RedisCache::forget(self::cacheKey($provider, $url));
+        }
+        $prev = RedisCache::get('panel_monitor_last_key');
+        if (is_string($prev) && $prev !== '') {
+            RedisCache::forget($prev);
+            RedisCache::forget('panel_monitor_last_key');
+        }
+    }
+
+    /**
+     * @param string $provider
+     * @param string $url
+     * @return string
+     */
+    private static function cacheKey($provider, $url)
+    {
+        return 'panel_monitor_snap_' . md5($provider . '|' . $url);
+    }
+
+    /**
+     * 持久化面板监控配置（保存 / 测试成功后写入）
+     *
+     * @param string      $provider
+     * @param string      $baseUrl
+     * @param string      $apiKey      空串表示保留原密钥
+     * @param bool        $enabled
+     * @param int|null    $liveInterval 1～5；null 不改刷新间隔
+     * @return true|string 成功返回 true，失败返回业务错误文案
+     */
+    public static function persistConfig($provider, $baseUrl, $apiKey, $enabled, $liveInterval = null)
+    {
+        $provider = self::normalizeProvider($provider);
+        $baseUrl = trim((string) $baseUrl);
+        if ($baseUrl !== '') {
+            $urlOk = self::assertSafePanelUrl($baseUrl);
+            if ($urlOk !== true) {
+                return $urlOk;
+            }
+            $baseUrl = rtrim($baseUrl, '/');
+            if (!preg_match('#^https?://#i', $baseUrl)) {
+                $baseUrl = 'https://' . $baseUrl;
+            }
+        }
+        $apiKey = trim((string) $apiKey);
+        if ($apiKey === '') {
+            $apiKey = (string) Config::get('panelmonitor_apikey', '');
+        }
+
+        $items = array(
+            'panelmonitor_enabled'  => $enabled ? '1' : '0',
+            'panelmonitor_provider' => $provider,
+            'panelmonitor_baseurl'  => $baseUrl,
+            'panelmonitor_apikey'   => $apiKey,
+        );
+        if ($liveInterval !== null) {
+            $interval = (int) $liveInterval;
+            if ($interval < 1) {
+                $interval = 1;
+            }
+            if ($interval > 5) {
+                $interval = 5;
+            }
+            $items['dashboard_live_interval'] = (string) $interval;
+        }
+        // 先清旧缓存键，再写入，再清一次（地址变更时避免旧快照残留）
+        self::clearCache();
+        Config::setMany($items);
+        self::clearCache();
+        return true;
+    }
+
+    /**
      * 控制台用快照（短缓存；失败不抛出）
      *
      * @param bool $refresh
@@ -60,24 +144,28 @@ class PanelMonitor
         try {
             $enabled = Config::get('panelmonitor_enabled', '0') === '1';
             $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
+            $url = trim((string) Config::get('panelmonitor_baseurl', ''));
+            $key = trim((string) Config::get('panelmonitor_apikey', ''));
             $base['enabled'] = $enabled;
             $base['provider'] = $provider;
             $base['providerlabel'] = self::providerLabel($provider);
+            $base['configured'] = ($url !== '' && $key !== '' && $provider !== self::PROVIDER_NONE);
 
-            if (!$enabled || $provider === self::PROVIDER_NONE) {
+            if (!$enabled) {
                 $base['error'] = '未启用服务器监控';
                 return $base;
             }
-
-            $url = trim((string) Config::get('panelmonitor_baseurl', ''));
-            $key = trim((string) Config::get('panelmonitor_apikey', ''));
-            $base['configured'] = ($url !== '' && $key !== '');
-            if (!$base['configured']) {
-                $base['error'] = '请先在系统设置中填写面板地址与接口密钥';
+            if ($provider === self::PROVIDER_NONE) {
+                $base['error'] = '请选择面板类型';
+                return $base;
+            }
+            if ($url === '' || $key === '') {
+                $base['configured'] = false;
+                $base['error'] = '请先在系统设置中填写面板地址与接口密钥，并点击保存';
                 return $base;
             }
 
-            $cacheKey = 'panel_monitor_snap_' . md5($provider . '|' . $url);
+            $cacheKey = self::cacheKey($provider, $url);
             if (!$refresh && class_exists('RedisCache')) {
                 $hit = RedisCache::get($cacheKey);
                 if (is_array($hit) && isset($hit['ok'])) {
@@ -98,6 +186,7 @@ class PanelMonitor
             $snap = self::sanitizeSnapshot($snap);
             if (class_exists('RedisCache')) {
                 RedisCache::set($cacheKey, $snap, self::CACHE_TTL);
+                RedisCache::set('panel_monitor_last_key', $cacheKey, self::CACHE_TTL + 30);
             }
             return $snap;
         } catch (Exception $e) {
@@ -117,11 +206,18 @@ class PanelMonitor
         $base['ok'] = false;
         $base['error'] = $msg;
         $base['fetchedat'] = date('Y-m-d H:i:s');
+        // 失败快照仍标明已配置，避免控制台误显示「请填写密钥」
+        if (!empty($base['provider']) && $base['provider'] !== self::PROVIDER_NONE) {
+            $url = trim((string) Config::get('panelmonitor_baseurl', ''));
+            $key = trim((string) Config::get('panelmonitor_apikey', ''));
+            $base['configured'] = ($url !== '' && $key !== '');
+        }
         $url = trim((string) Config::get('panelmonitor_baseurl', ''));
         $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
         if ($url !== '' && $provider !== self::PROVIDER_NONE && class_exists('RedisCache')) {
-            $cacheKey = 'panel_monitor_snap_' . md5($provider . '|' . $url);
+            $cacheKey = self::cacheKey($provider, $url);
             RedisCache::set($cacheKey, $base, self::CACHE_FAIL_TTL);
+            RedisCache::set('panel_monitor_last_key', $cacheKey, self::CACHE_FAIL_TTL + 30);
         }
         return $base;
     }

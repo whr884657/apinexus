@@ -38,37 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save_dashboard') {
         try {
             $interval = isset($_POST['dashboard_live_interval']) ? (int) $_POST['dashboard_live_interval'] : 5;
-            if ($interval < 1) {
-                $interval = 1;
+            $provider = isset($_POST['panelmonitor_provider']) ? $_POST['panelmonitor_provider'] : '';
+            $baseUrl = isset($_POST['panelmonitor_baseurl']) ? (string) $_POST['panelmonitor_baseurl'] : '';
+            $apiKey = isset($_POST['panelmonitor_apikey']) ? (string) $_POST['panelmonitor_apikey'] : '';
+            $enabled = isset($_POST['panelmonitor_enabled']);
+            $saved = PanelMonitor::persistConfig($provider, $baseUrl, $apiKey, $enabled, $interval);
+            if ($saved !== true) {
+                AjaxResponse::error(is_string($saved) ? $saved : '保存失败');
             }
-            if ($interval > 5) {
-                $interval = 5;
-            }
-            $provider = PanelMonitor::normalizeProvider(
-                isset($_POST['panelmonitor_provider']) ? $_POST['panelmonitor_provider'] : ''
-            );
-            $baseUrl = trim(isset($_POST['panelmonitor_baseurl']) ? (string) $_POST['panelmonitor_baseurl'] : '');
-            if ($baseUrl !== '') {
-                $urlOk = PanelMonitor::assertSafePanelUrl($baseUrl);
-                if ($urlOk !== true) {
-                    AjaxResponse::error($urlOk);
-                }
-                $baseUrl = rtrim($baseUrl, '/');
-                if (!preg_match('#^https?://#i', $baseUrl)) {
-                    $baseUrl = 'https://' . $baseUrl;
-                }
-            }
-            $apiKey = trim(isset($_POST['panelmonitor_apikey']) ? (string) $_POST['panelmonitor_apikey'] : '');
-            if ($apiKey === '') {
-                $apiKey = (string) Config::get('panelmonitor_apikey', '');
-            }
-            Config::setMany(array(
-                'dashboard_live_interval'   => (string) $interval,
-                'panelmonitor_enabled'      => isset($_POST['panelmonitor_enabled']) ? '1' : '0',
-                'panelmonitor_provider'     => $provider,
-                'panelmonitor_baseurl'      => $baseUrl,
-                'panelmonitor_apikey'       => $apiKey,
-            ));
             AjaxResponse::success('控制台设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败，请稍后重试');
@@ -96,6 +73,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = PanelMonitor::testConnection($provider, $baseUrl, $apiKey);
         if (empty($result['ok'])) {
             AjaxResponse::error(isset($result['msg']) ? (string) $result['msg'] : '连接失败');
+        }
+        // 测试成功后写入配置，避免「测通但未保存 / 密码框被清空」导致控制台误判未配置
+        $persist = !isset($_POST['persist']) || (string) $_POST['persist'] !== '0';
+        if ($persist) {
+            $interval = isset($_POST['dashboard_live_interval']) ? (int) $_POST['dashboard_live_interval'] : null;
+            // 测试成功即写入并启用，避免「测通未保存」或密码框被浏览器清空导致控制台误判
+            $saved = PanelMonitor::persistConfig($provider, $baseUrl, $apiKey, true, $interval);
+            if ($saved !== true) {
+                AjaxResponse::error(is_string($saved) ? $saved : '连接成功但保存失败');
+            }
+            $msg = isset($result['msg']) ? (string) $result['msg'] : '连接成功';
+            AjaxResponse::success($msg . '（已保存并启用）');
         }
         AjaxResponse::success(isset($result['msg']) ? (string) $result['msg'] : '连接成功');
     }
@@ -787,20 +776,36 @@ vs_admin_accordion_start(
     'QQ / Gitee 聚合登录（仅用户端）'
 );
 ?>
-    <form method="post" action="" class="vs-form" id="oauthForm" data-ajax="1">
+    <form method="post" action="" class="vs-form vs-settings-form" id="oauthForm" data-ajax="1">
         <input type="hidden" name="action" value="save_oauth">
         <?php
         vs_render_notice(
             'info',
             '使用说明',
-            '<p>用户须先完成邮箱注册，首次使用第三方登录时需验证已有账号密码完成绑定。</p>'
-            . '<p>QQ 回调：<code>' . vs_e($oauthQqCallback) . '</code></p>'
-            . '<p>Gitee 回调：<code>' . vs_e($oauthGiteeCallback) . '</code></p>',
-            array('allow_html' => true, 'compact' => true)
+            '用户须先完成邮箱注册，首次使用第三方登录时需验证已有账号密码完成绑定。请将下方回调地址原样填入 QQ 互联 / Gitee 应用配置。',
+            array('compact' => true)
         );
         ?>
-        <h4 class="vs-form-subtitle">QQ 互联</h4>
         <div class="vs-form-row">
+            <label class="vs-label" for="oauthQqCallback">QQ 回调地址</label>
+            <div class="vs-copy-row">
+                <input type="text" class="vs-input" id="oauthQqCallback" readonly
+                       value="<?php echo vs_e($oauthQqCallback); ?>">
+                <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthQqCallback">复制</button>
+            </div>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="oauthGiteeCallback">Gitee 回调地址</label>
+            <div class="vs-copy-row">
+                <input type="text" class="vs-input" id="oauthGiteeCallback" readonly
+                       value="<?php echo vs_e($oauthGiteeCallback); ?>">
+                <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthGiteeCallback">复制</button>
+            </div>
+        </div>
+
+        <hr class="vs-divider">
+        <h4 class="vs-form-subtitle">QQ 互联</h4>
+        <div class="vs-form-row vs-form-row--check">
             <label class="vs-checkbox">
                 <input type="checkbox" name="qq_enabled" value="1" <?php echo !empty($oauthCfg['qq']['enabled']) ? 'checked' : ''; ?>>
                 <span>启用 QQ 登录</span>
@@ -820,7 +825,7 @@ vs_admin_accordion_start(
         <hr class="vs-divider">
 
         <h4 class="vs-form-subtitle">Gitee OAuth</h4>
-        <div class="vs-form-row">
+        <div class="vs-form-row vs-form-row--check">
             <label class="vs-checkbox">
                 <input type="checkbox" name="gitee_enabled" value="1" <?php echo !empty($oauthCfg['gitee']['enabled']) ? 'checked' : ''; ?>>
                 <span>启用 Gitee 登录</span>
@@ -1124,8 +1129,9 @@ $pmProvider = PanelMonitor::normalizeProvider(
 );
 $pmBaseUrl = isset($vsCfg['panelmonitor_baseurl']) ? (string) $vsCfg['panelmonitor_baseurl'] : '';
 $pmApiKey = isset($vsCfg['panelmonitor_apikey']) ? (string) $vsCfg['panelmonitor_apikey'] : '';
+$pmHasKey = $pmApiKey !== '';
 ?>
-    <form method="post" action="" class="vs-form" id="dashboardForm" data-ajax="1">
+    <form method="post" action="" class="vs-form vs-settings-form" id="dashboardForm" data-ajax="1">
         <input type="hidden" name="action" value="save_dashboard">
         <div class="vs-form-row">
             <label class="vs-label" for="dashboard_live_interval">实时刷新间隔（秒）</label>
@@ -1139,8 +1145,8 @@ $pmApiKey = isset($vsCfg['panelmonitor_apikey']) ? (string) $vsCfg['panelmonitor
 
         <hr class="vs-divider">
         <h4 class="vs-form-subtitle">服务器监控</h4>
-        <?php vs_render_notice('tip', '', '对接宝塔或 1Panel 面板接口，在控制台右侧展示 CPU、负载、内存、网络与面板版本。面板地址一般为本机或内网面板入口；请在面板侧开启 API 并放行本站服务器 IP。', array('field' => true, 'compact' => true)); ?>
-        <div class="vs-form-row">
+        <?php vs_render_notice('tip', '', '对接宝塔或 1Panel 面板接口，在控制台右侧展示 CPU、负载、内存、网络与面板版本。面板地址一般为本机或内网面板入口；请在面板侧开启 API 并放行本站服务器 IP。测试连接成功后会自动保存并启用。', array('field' => true, 'compact' => true)); ?>
+        <div class="vs-form-row vs-form-row--check">
             <label class="vs-checkbox">
                 <input type="checkbox" name="panelmonitor_enabled" value="1" <?php echo $pmEnabled ? 'checked' : ''; ?>>
                 <span>启用服务器监控</span>
@@ -1165,10 +1171,16 @@ $pmApiKey = isset($vsCfg['panelmonitor_apikey']) ? (string) $vsCfg['panelmonitor
         <div class="vs-form-row">
             <label class="vs-label" for="panelmonitor_apikey">接口密钥</label>
             <input type="password" class="vs-input" id="panelmonitor_apikey" name="panelmonitor_apikey"
-                   value="<?php echo vs_e($pmApiKey); ?>"
-                   placeholder="宝塔 API 密钥 / 1Panel API Key"
-                   autocomplete="off">
-            <?php vs_render_notice('tip', '', '留空并保存时将保留原密钥；更换时请填写新密钥。', array('field' => true, 'compact' => true)); ?>
+                   value=""
+                   placeholder="<?php echo $pmHasKey ? '已保存，留空则保持不变' : '宝塔 API 密钥 / 1Panel API Key'; ?>"
+                   autocomplete="new-password">
+            <?php
+            if ($pmHasKey) {
+                vs_render_notice('success', '', '接口密钥已保存。更换时请填写新密钥后保存或重新测试连接。', array('field' => true, 'compact' => true));
+            } else {
+                vs_render_notice('tip', '', '填写后可点「测试连接」：成功将自动保存并启用监控。', array('field' => true, 'compact' => true));
+            }
+            ?>
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存控制台设置</button>
@@ -1242,7 +1254,7 @@ vs_admin_accordion_start(
             <input type="text" class="vs-input" id="apilogCronKey" readonly value="<?php echo vs_e($cronKey); ?>" placeholder="尚未生成">
         </div>
         <div class="vs-form-actions">
-            <button type="button" class="vs-btn vs-btn--outline" id="apilogGenCronKeyBtn">生成 / 重置密钥</button>
+            <button type="button" class="vs-btn vs-btn--default" id="apilogGenCronKeyBtn">生成 / 重置密钥</button>
             <button type="button" class="vs-btn vs-btn--default" id="apilogCopyCronUrlBtn">复制任务链接</button>
         </div>
     </div>

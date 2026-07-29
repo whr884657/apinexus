@@ -405,6 +405,7 @@
         btn.addEventListener('click', function () {
             var provider = document.getElementById('panelmonitor_provider');
             var baseurl = document.getElementById('panelmonitor_baseurl');
+            var apikey = document.getElementById('panelmonitor_apikey');
             if (!provider || !String(provider.value || '').trim()) {
                 showFlash('请选择面板类型', 'error');
                 return;
@@ -413,14 +414,30 @@
                 showFlash('请填写面板地址', 'error');
                 return;
             }
+            // 首次配置必须填写密钥；已保存时可留空由服务端沿用
+            var keyTyped = apikey && String(apikey.value || '').trim();
+            var ph = apikey ? String(apikey.getAttribute('placeholder') || '') : '';
+            if (!keyTyped && ph.indexOf('已保存') < 0) {
+                showFlash('请填写接口密钥', 'error');
+                return;
+            }
             btn.disabled = true;
             showFlash('正在测试面板连接…', 'info');
             var fd = new FormData(form);
             fd.set('action', 'test_panelmonitor');
+            fd.set('persist', '1');
+            var enabled = form.querySelector('input[name="panelmonitor_enabled"]');
+            if (enabled) {
+                enabled.checked = true;
+            }
             window.VS.postForm(fd, window.location.href)
                 .then(function (data) {
                     if (data && data.code === 1) {
-                        showFlash(data.msg || '连接成功', 'success');
+                        showFlash(data.msg || '连接成功（已保存并启用）', 'success');
+                        if (apikey) {
+                            apikey.value = '';
+                            apikey.setAttribute('placeholder', '已保存，留空则保持不变');
+                        }
                     } else {
                         showFlash((data && data.msg) || '连接失败', 'error');
                     }
@@ -431,6 +448,46 @@
                 .finally(function () {
                     btn.disabled = false;
                 });
+        });
+    }
+
+    function bindCopyButtons() {
+        document.querySelectorAll('[data-copy-from]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var id = btn.getAttribute('data-copy-from') || '';
+                var input = id ? document.getElementById(id) : null;
+                var text = input ? String(input.value || '').trim() : '';
+                if (!text) {
+                    showFlash('没有可复制的内容', 'error');
+                    return;
+                }
+                function ok() {
+                    showFlash('已复制到剪贴板', 'success');
+                }
+                function fail() {
+                    if (input) {
+                        input.focus();
+                        input.select();
+                    }
+                    showFlash('复制失败，请手动选中复制', 'error');
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(ok).catch(fail);
+                } else if (input) {
+                    input.select();
+                    try {
+                        if (document.execCommand('copy')) {
+                            ok();
+                        } else {
+                            fail();
+                        }
+                    } catch (e) {
+                        fail();
+                    }
+                } else {
+                    fail();
+                }
+            });
         });
     }
 
@@ -446,6 +503,7 @@
         bindAiTest();
         bindIplocExtras();
         bindPanelMonitorTest();
+        bindCopyButtons();
 
         var siteExtra = document.getElementById('siteExtraForm');
         if (siteExtra) {
