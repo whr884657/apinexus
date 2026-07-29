@@ -54,6 +54,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'test_panelmonitor') {
+        // E193：测试连接限流，降低管理员会话被滥用时的内网探测频率
+        $admin = Auth::user();
+        $aid = ($admin && isset($admin['id'])) ? (int) $admin['id'] : 0;
+        if (class_exists('RateLimitStore')
+            && !RateLimitStore::allow('admin:panelmonitor:test:' . $aid, 60, 8, true)
+        ) {
+            AjaxResponse::error('操作过于频繁，请稍后再试');
+        }
         $provider = PanelMonitor::normalizeProvider(
             isset($_POST['panelmonitor_provider']) ? $_POST['panelmonitor_provider'] : ''
         );

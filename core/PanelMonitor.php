@@ -886,7 +886,133 @@ class PanelMonitor
         if ($host === '' || strpos($host, '/') !== false) {
             return '面板地址主机名无效';
         }
+        // 允许本机/内网面板（E186）；禁止云元数据与链路本地地址（E193）
+        if (self::isBlockedPanelHost($host)) {
+            return '面板地址不可用，请更换为面板入口地址';
+        }
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            if (self::isBlockedPanelIp($host)) {
+                return '面板地址不可用，请更换为面板入口地址';
+            }
+            return true;
+        }
+        // 解析域名，拦截解析到链路本地/元数据网段的情况
+        $ips = self::resolveHostIps($host);
+        if ($ips === array()) {
+            // 解析失败留给后续连接报错，避免误伤离线配置保存
+            return true;
+        }
+        foreach ($ips as $ip) {
+            if (self::isBlockedPanelIp($ip)) {
+                return '面板地址不可用，请更换为面板入口地址';
+            }
+        }
         return true;
+    }
+
+    /**
+     * 禁止的面板主机名（云元数据等）
+     *
+     * @param string $host
+     * @return bool
+     */
+    private static function isBlockedPanelHost($host)
+    {
+        $host = strtolower(trim((string) $host));
+        if ($host === '') {
+            return true;
+        }
+        $blocked = array(
+            'metadata.google.internal',
+            'metadata.goog',
+            'metadata',
+            'instance-data',
+            'kubernetes.default',
+            'kubernetes.default.svc',
+        );
+        if (in_array($host, $blocked, true)) {
+            return true;
+        }
+        if (strpos($host, 'metadata.') === 0) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 禁止的目标 IP：链路本地 / 云元数据段（仍允许 127/8、RFC1918）
+     *
+     * @param string $ip
+     * @return bool
+     */
+    private static function isBlockedPanelIp($ip)
+    {
+        $ip = trim((string) $ip);
+        if ($ip === '') {
+            return true;
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            // 169.254.0.0/16 link-local / 云元数据
+            if (strpos($ip, '169.254.') === 0) {
+                return true;
+            }
+            return false;
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            $bin = @inet_pton($ip);
+            if ($bin === false || strlen($bin) < 2) {
+                return true;
+            }
+            $b0 = ord($bin[0]);
+            $b1 = ord($bin[1]);
+            // fe80::/10 link-local
+            if ($b0 === 0xfe && ($b1 & 0xc0) === 0x80) {
+                return true;
+            }
+            // fc00::/7 unique local — 允许（内网面板可能用 ULA）
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @param string $host
+     * @return string[]
+     */
+    private static function resolveHostIps($host)
+    {
+        $host = trim((string) $host);
+        $out = array();
+        if ($host === '') {
+            return $out;
+        }
+        if (function_exists('dns_get_record')) {
+            $a = @dns_get_record($host, DNS_A);
+            if (is_array($a)) {
+                foreach ($a as $row) {
+                    if (!empty($row['ip'])) {
+                        $out[] = (string) $row['ip'];
+                    }
+                }
+            }
+            $aaaa = @dns_get_record($host, DNS_AAAA);
+            if (is_array($aaaa)) {
+                foreach ($aaaa as $row) {
+                    if (!empty($row['ipv6'])) {
+                        $out[] = (string) $row['ipv6'];
+                    }
+                }
+            }
+        }
+        if ($out === array() && function_exists('gethostbynamel')) {
+            $list = @gethostbynamel($host);
+            if (is_array($list)) {
+                foreach ($list as $ip) {
+                    $out[] = (string) $ip;
+                }
+            }
+        }
+        return array_values(array_unique($out));
     }
 
     /**
