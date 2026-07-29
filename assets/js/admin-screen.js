@@ -45,6 +45,7 @@
     var topMarqueeRaf = null;
     var topMarqueeY = 0;
     var topMarqueePaused = false;
+    var topMarqueeFp = '';
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
@@ -621,49 +622,57 @@
         }
     }
 
-    function stopTopMarquee() {
+    function stopTopMarquee(resetY) {
         if (topMarqueeRaf) {
             cancelAnimationFrame(topMarqueeRaf);
             topMarqueeRaf = null;
         }
-        topMarqueeY = 0;
+        if (resetY !== false) {
+            topMarqueeY = 0;
+        }
         topMarqueePaused = false;
     }
 
     function startTopMarquee(el, halfHeight) {
-        stopTopMarquee();
-        if (!el || halfHeight <= 0) return;
-        var speed = 0.35;
+        stopTopMarquee(false);
+        if (!el || halfHeight <= 0) {
+            return;
+        }
+        if (topMarqueeY >= halfHeight) {
+            topMarqueeY = topMarqueeY % halfHeight;
+        }
+        var speed = 0.28;
         function tick() {
             if (!topMarqueePaused) {
                 topMarqueeY += speed;
                 if (topMarqueeY >= halfHeight) {
                     topMarqueeY -= halfHeight;
                 }
-                el.style.transform = 'translateY(' + (-topMarqueeY) + 'px)';
+                el.style.transform = 'translate3d(0,' + (-topMarqueeY) + 'px,0)';
             }
             topMarqueeRaf = requestAnimationFrame(tick);
         }
         topMarqueeRaf = requestAnimationFrame(tick);
     }
 
-    function renderTop(list) {
-        var el = document.getElementById('dsTopBars');
-        var viewport = document.getElementById('dsTopViewport');
-        if (!el) return;
-        list = Array.isArray(list) ? list : [];
-        stopTopMarquee();
-        el.classList.remove('is-marquee');
-        el.style.transform = '';
-        if (!list.length) {
-            el.innerHTML = '<div class="dash-empty">暂无排行</div>';
-            return;
-        }
-        var rowsHtml = list.map(function (row, i) {
+    function topStructureFp(list) {
+        return list.map(function (row, i) {
+            return String(row.id != null ? row.id : i) + ':' + String(row.name || '');
+        }).join('|');
+    }
+
+    function topValueFp(list) {
+        return list.map(function (row) {
+            return String(row.count || 0) + ':' + String(row.pct || 0);
+        }).join('|');
+    }
+
+    function buildTopRowsHtml(list) {
+        return list.map(function (row, i) {
             var pct = Math.max(4, parseFloat(row.pct) || 0);
             var color = BAR_COLORS[i % BAR_COLORS.length];
             var rank = i + 1;
-            return '<div class="ds-bar-row">'
+            return '<div class="ds-bar-row" data-top-i="' + i + '">'
                 + '<div class="ds-bar-meta">'
                 + '<span class="ds-bar-rank">' + rank + '</span>'
                 + '<span class="ds-bar-name">' + esc(row.name) + '</span>'
@@ -672,17 +681,71 @@
                 + '<div class="ds-bar-track"><div class="ds-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
                 + '</div>';
         }).join('');
-        el.innerHTML = rowsHtml;
-        // 超过 3 条才无限循环滚动；≤3 条静止展示
-        if (list.length > 3 && viewport) {
-            el.innerHTML = rowsHtml + rowsHtml;
-            el.classList.add('is-marquee');
-            // 等布局后再量半高，保证无缝循环
-            requestAnimationFrame(function () {
-                var half = el.scrollHeight / 2;
-                if (half > 8) startTopMarquee(el, half);
+    }
+
+    function patchTopValues(el, list) {
+        list.forEach(function (row, i) {
+            var pct = Math.max(4, parseFloat(row.pct) || 0);
+            var color = BAR_COLORS[i % BAR_COLORS.length];
+            el.querySelectorAll('.ds-bar-row[data-top-i="' + i + '"]').forEach(function (bar) {
+                var countEl = bar.querySelector('.ds-bar-val');
+                var fill = bar.querySelector('.ds-bar-fill');
+                if (countEl) {
+                    countEl.textContent = fmtNum(row.count);
+                }
+                if (fill) {
+                    fill.style.width = pct + '%';
+                    fill.style.background = color;
+                }
             });
+        });
+    }
+
+    function renderTop(list) {
+        var el = document.getElementById('dsTopBars');
+        var viewport = document.getElementById('dsTopViewport');
+        if (!el) return;
+        list = Array.isArray(list) ? list : [];
+        var structFp = topStructureFp(list);
+        var valueFp = topValueFp(list);
+        if (structFp === topMarqueeFp && el.querySelector('.ds-bar-set, .ds-bar-row')) {
+            if (el.getAttribute('data-top-values') !== valueFp) {
+                patchTopValues(el, list);
+                el.setAttribute('data-top-values', valueFp);
+            }
+            return;
         }
+        topMarqueeFp = structFp;
+        stopTopMarquee(true);
+        el.classList.remove('is-marquee');
+        el.style.transform = '';
+        if (!list.length) {
+            el.innerHTML = '<div class="dash-empty">暂无排行</div>';
+            el.removeAttribute('data-top-values');
+            return;
+        }
+        var rowsHtml = buildTopRowsHtml(list);
+        if (list.length > 3 && viewport) {
+            el.innerHTML = '<div class="ds-bar-set">' + rowsHtml + '</div>'
+                + '<div class="ds-bar-set" aria-hidden="true">' + rowsHtml + '</div>';
+            el.classList.add('is-marquee');
+            el.setAttribute('data-top-values', valueFp);
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    var first = el.querySelector('.ds-bar-set');
+                    if (!first) {
+                        return;
+                    }
+                    var half = first.offsetHeight + 6;
+                    if (half > 8) {
+                        startTopMarquee(el, half);
+                    }
+                });
+            });
+            return;
+        }
+        el.innerHTML = '<div class="ds-bar-set">' + rowsHtml + '</div>';
+        el.setAttribute('data-top-values', valueFp);
     }
 
     function renderRecent(list) {

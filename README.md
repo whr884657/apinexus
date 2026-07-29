@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.8.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.9.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -274,10 +274,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.8.0（2026-07-29）
+### v13.9.0（2026-07-29）
 
-- 管理员接口文档页元信息徽章彩色对齐列表；用户 API 显示本地/代理；开发者 AI 写文档/代码示例
-- 用户控制台仪表盘（积分/接口/令牌）；default / slate 双主题；E163–E166
+- 修复管理员控制台系统概览与最近调用重叠；TOP 无缝环形滚动
+- 用户控制台 KPI+概览重构（无快捷入口）；侧栏移除接口列表；E167–E169
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

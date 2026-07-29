@@ -129,12 +129,15 @@
 #adminDashPage .dash-grid-trend { grid-template-columns: 1.2fr 1fr; }
 #adminDashPage .dash-grid-bars { grid-template-columns: 1.2fr 1fr; align-items: stretch; }
 #adminDashPage .dash-panel { margin: 0; }
-/* TOP / 系统概览：等高固定，避免条目增多把整行撑高 */
+/* TOP / 系统概览：等高固定，避免条目增多把整行撑高；溢出必须裁切，否则压住下方「最近调用」 */
 #adminDashPage .dash-panel--fixed {
     display: flex;
     flex-direction: column;
     min-height: 280px;
     max-height: 280px;
+    overflow: hidden;
+    position: relative;
+    z-index: 0;
 }
 #adminDashPage .dash-panel--fixed > .vs-panel__header { flex-shrink: 0; }
 #adminDashPage .dash-panel__body--scroll {
@@ -142,6 +145,9 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 #adminDashPage .dash-bars-viewport {
     flex: 1 1 auto;
@@ -154,8 +160,18 @@
 #adminDashPage .dash-bars {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0;
     will-change: transform;
+    backface-visibility: hidden;
+}
+#adminDashPage .dash-bars__set {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+}
+#adminDashPage .dash-bars__set + .dash-bars__set {
+    margin-top: 10px;
 }
 #adminDashPage .dash-bar {
     flex-shrink: 0;
@@ -392,7 +408,14 @@
 #adminDashPage .dash-status.is-ok { color: #15803d; font-weight: 600; }
 #adminDashPage .dash-status.is-fail { color: #dc2626; font-weight: 600; }
 
-/* 最近调用：固定高度小板块，内部滚动 */
+/* 最近调用：独立板块，禁止被上方固定面板溢出叠盖 */
+#adminDashPage .dash-panel--recent {
+    position: relative;
+    z-index: 1;
+    margin-top: 0;
+    clear: both;
+    isolation: isolate;
+}
 #adminDashPage .dash-recent-wrap {
     max-height: 280px;
     overflow-x: hidden;
@@ -486,6 +509,7 @@
     #adminDashPage .dash-panel--fixed {
         min-height: 260px;
         max-height: 260px;
+        overflow: hidden;
     }
 }
 @media (max-width: 560px) {
@@ -866,8 +890,18 @@ body.vs-screen-solo .vs-content__body {
 #adminScreenPage .ds-bar-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 0;
     will-change: transform;
+    backface-visibility: hidden;
+}
+#adminScreenPage .ds-bar-set {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+#adminScreenPage .ds-bar-set + .ds-bar-set {
+    margin-top: 6px;
 }
 #adminScreenPage .ds-bar-row {
     flex-shrink: 0;
@@ -1001,27 +1035,24 @@ body.vs-screen-solo .vs-content__body {
     display: block;
 }
 
-/* TOP bars */
+/* TOP bars — 与上方 .ds-bar-set 结构对齐；勿再写 gap 覆盖套间距 */
 #adminScreenPage .ds-bar-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
     min-width: 0;
 }
 #adminScreenPage .ds-bar-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 4px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     min-width: 0;
 }
 #adminScreenPage .ds-bar-meta {
     display: flex;
+    align-items: center;
     justify-content: space-between;
     gap: 8px;
     font-size: 0.78rem;
     color: var(--ds-text);
     min-width: 0;
-    grid-column: 1 / -1;
 }
 #adminScreenPage .ds-bar-meta > span:first-child {
     overflow: hidden;

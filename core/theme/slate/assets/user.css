@@ -767,93 +767,102 @@ body.st-uc-menu-open {
     font-weight: 800;
     line-height: 1.15;
 }
-.st-uc-body .uc-dash__points-link {
-    margin-top: 4px;
-    font-size: 0.8125rem;
-    color: inherit;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-}
-.st-uc-body .uc-dash__stats {
+.st-uc-body .uc-dash__kpi {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
 }
-.st-uc-body .uc-dash__stat {
+.st-uc-body .uc-dash__kpi-card {
     padding: 14px 16px;
     border-radius: var(--st-uc-radius, 6px);
     border: 1px solid var(--st-uc-border);
     background: var(--st-uc-surface);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
-.st-uc-body .uc-dash__stat-label {
+.st-uc-body .uc-dash__kpi-label {
     font-size: 0.75rem;
     color: var(--st-uc-text2);
     font-weight: 600;
 }
-.st-uc-body .uc-dash__stat-value {
-    font-size: 1.45rem;
+.st-uc-body .uc-dash__kpi-value {
+    font-size: 1.4rem;
     font-weight: 800;
     color: var(--st-uc-text);
+    font-variant-numeric: tabular-nums;
 }
-.st-uc-body .uc-dash__stat-value--sm { font-size: 0.95rem; font-weight: 700; }
-.st-uc-body .uc-dash__stat-hint {
+.st-uc-body .uc-dash__kpi-meta {
     font-size: 0.75rem;
     color: var(--st-uc-text2);
     line-height: 1.4;
 }
-.st-uc-body .uc-dash__grid {
+.st-uc-body .uc-dash__row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
-.st-uc-body .uc-dash__card {
-    padding: 16px 18px;
-    border-radius: var(--st-uc-radius, 6px);
+.st-uc-body .uc-dash__panel {
+    margin: 0;
     border: 1px solid var(--st-uc-border);
-    background: var(--st-uc-surface);
+    box-shadow: 0 2px 12px rgba(36, 166, 106, 0.06);
 }
-.st-uc-body .uc-dash__card-title {
-    margin: 0 0 12px;
-    font-size: 0.9375rem;
+.st-uc-body .uc-dash__sys {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.st-uc-body .uc-dash__sys-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--st-uc-border);
+    border-radius: var(--st-uc-radius, 6px);
+    background: #fff;
+    min-width: 0;
+}
+.st-uc-body .uc-dash__sys-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.st-uc-body .uc-dash__sys-dot.is-warn { background: #e37318; }
+.st-uc-body .uc-dash__sys-dot.is-danger { background: #c0392b; }
+.st-uc-body .uc-dash__sys-dot.is-info { background: #168855; }
+.st-uc-body .uc-dash__sys-dot.is-neutral { background: #5a6072; }
+.st-uc-body .uc-dash__sys-dot.is-success { background: #0f7a45; }
+.st-uc-body .uc-dash__sys-name {
+    flex: 0 0 auto;
+    font-size: 0.8125rem;
+    color: var(--st-uc-text2);
+    font-weight: 600;
+}
+.st-uc-body .uc-dash__sys-num {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
     font-weight: 700;
     color: var(--st-uc-text);
 }
-.st-uc-body .uc-dash__links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-.st-uc-body .uc-dash__link {
-    display: inline-flex;
-    padding: 8px 12px;
-    border-radius: var(--st-uc-radius, 6px);
-    border: 1px solid var(--st-uc-border);
-    background: #fff;
-    color: var(--st-uc-text);
-    text-decoration: none;
-    font-size: 0.8125rem;
+.st-uc-body .uc-dash__sys-num--text {
     font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-.st-uc-body .uc-dash__link:hover {
-    background: rgba(36, 166, 106, 0.08);
-    border-color: rgba(36, 166, 106, 0.35);
-    color: var(--st-uc-accent-h);
-}
-.st-uc-body .uc-dash__meta {
+.st-uc-body .uc-dash__tips {
     margin: 0;
-    padding-left: 1.1em;
+    padding-left: 1.15em;
     color: var(--st-uc-text2);
     font-size: 0.875rem;
-    line-height: 1.65;
+    line-height: 1.7;
 }
 @media (max-width: 960px) {
-    .st-uc-body .uc-dash__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .st-uc-body .uc-dash__kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .st-uc-body .uc-dash__row { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
     .st-uc-body .uc-dash__hero-points { align-items: flex-start; width: 100%; }
-    .st-uc-body .uc-dash__stats,
-    .st-uc-body .uc-dash__grid { grid-template-columns: 1fr; }
 }

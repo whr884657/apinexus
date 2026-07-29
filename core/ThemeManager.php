@@ -556,7 +556,6 @@ class ThemeManager
             array('id' => 'keys', 'title' => '令牌管理', 'icon' => 'share', 'url' => $base . '/user/keys'),
             array('id' => 'recharge', 'title' => '充值中心', 'icon' => 'archive', 'url' => $base . '/user/recharge'),
             array('id' => 'points', 'title' => '积分变动', 'icon' => 'archive', 'url' => $base . '/user/points'),
-            array('id' => 'api-list', 'title' => '接口列表', 'icon' => 'folder', 'url' => $base . '/user/apis'),
             array('id' => 'account', 'title' => '账号设置', 'icon' => 'user', 'url' => $base . '/user/account'),
         );
 

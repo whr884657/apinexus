@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/index.php
- * 作用：管理员控制台（KPI / 趋势 / TOP10 / 系统概览 / 最近调用）
+ * 作用：管理员控制台（KPI / 趋势 / TOP / 系统概览 / 最近调用）
  */
 
 require_once __DIR__ . '/init.php';
@@ -94,7 +94,7 @@ vs_admin_layout_start('控制台', 'dashboard', $refreshBtn);
     <section class="dash-grid dash-grid-bars" aria-label="排行与概览">
         <div class="vs-panel dash-panel dash-panel--fixed">
             <div class="vs-panel__header dash-panel__head">
-                <h2 class="vs-panel__title">接口调用 TOP 10</h2>
+                <h2 class="vs-panel__title">接口调用 TOP</h2>
                 <span class="vs-badge vs-badge--info">今日</span>
             </div>
             <div class="vs-panel__body dash-panel__body--scroll">
@@ -113,7 +113,7 @@ vs_admin_layout_start('控制台', 'dashboard', $refreshBtn);
         </div>
     </section>
 
-    <section class="vs-panel dash-panel">
+    <section class="vs-panel dash-panel dash-panel--recent">
         <div class="vs-panel__header">
             <h2 class="vs-panel__title">最近调用记录</h2>
         </div>

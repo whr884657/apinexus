@@ -1,7 +1,9 @@
 <?php
 /**
  * 文件：user/index.php
- * 作用：用户中心首页（控制台）；默认主题支持每日签到横幅
+ * 作用：用户中心控制台（仪表盘）；默认主题支持每日签到横幅
+ *
+ * 无快捷入口；浏览公开接口请走前台首页 / 全部接口页。
  */
 
 require_once __DIR__ . '/init.php';
@@ -35,6 +37,9 @@ $checkinBanner = ($isDefaultTheme && class_exists('FrontendUser'))
 $dash = FrontendUser::dashboardStats();
 $base = rtrim(vs_base_url(), '/');
 $displayName = $vsUser ? (string) $vsUser['username'] : '用户';
+$email = $vsUser && !empty($vsUser['email']) ? (string) $vsUser['email'] : '-';
+$created = $vsUser && !empty($vsUser['createtime']) ? (string) $vsUser['createtime'] : '-';
+$lastLogin = $vsUser && !empty($vsUser['lastlogin']) ? (string) $vsUser['lastlogin'] : '暂无记录';
 
 vs_user_layout_start('控制台', 'dashboard');
 ?>
@@ -66,63 +71,86 @@ vs_user_layout_start('控制台', 'dashboard');
         <div class="uc-dash__hero-points">
             <span class="uc-dash__points-label">积分余额</span>
             <strong class="uc-dash__points-value" data-field="points"><?php echo vs_e($dash['points']); ?></strong>
-            <a class="uc-dash__points-link" href="<?php echo vs_e($base . '/user/recharge'); ?>">去充值</a>
         </div>
     </header>
 
-    <div class="uc-dash__stats">
-        <div class="uc-dash__stat">
-            <span class="uc-dash__stat-label">接口总数</span>
-            <strong class="uc-dash__stat-value" data-field="api_total"><?php echo (int) $dash['api_total']; ?></strong>
-            <span class="uc-dash__stat-hint">已通过 <?php echo (int) $dash['api_approved']; ?> · 待审 <?php echo (int) $dash['api_pending']; ?></span>
+    <div class="uc-dash__kpi" aria-label="关键指标">
+        <div class="uc-dash__kpi-card">
+            <span class="uc-dash__kpi-label">接口总数</span>
+            <strong class="uc-dash__kpi-value" data-field="api_total"><?php echo (int) $dash['api_total']; ?></strong>
+            <span class="uc-dash__kpi-meta">已通过 <?php echo (int) $dash['api_approved']; ?> · 待审 <?php echo (int) $dash['api_pending']; ?></span>
         </div>
-        <div class="uc-dash__stat">
-            <span class="uc-dash__stat-label">接口调用</span>
-            <strong class="uc-dash__stat-value" data-field="api_calls"><?php echo (int) $dash['api_calls']; ?></strong>
-            <span class="uc-dash__stat-hint">各接口累计请求次数</span>
+        <div class="uc-dash__kpi-card">
+            <span class="uc-dash__kpi-label">接口调用</span>
+            <strong class="uc-dash__kpi-value" data-field="api_calls"><?php echo (int) $dash['api_calls']; ?></strong>
+            <span class="uc-dash__kpi-meta">各接口累计请求</span>
         </div>
-        <div class="uc-dash__stat">
-            <span class="uc-dash__stat-label">API 令牌</span>
-            <strong class="uc-dash__stat-value" data-field="key_total"><?php echo (int) $dash['key_total']; ?></strong>
-            <span class="uc-dash__stat-hint">令牌累计调用 <?php echo (int) $dash['key_calls']; ?></span>
+        <div class="uc-dash__kpi-card">
+            <span class="uc-dash__kpi-label">API 令牌</span>
+            <strong class="uc-dash__kpi-value" data-field="key_total"><?php echo (int) $dash['key_total']; ?></strong>
+            <span class="uc-dash__kpi-meta">累计调用 <?php echo (int) $dash['key_calls']; ?></span>
         </div>
-        <div class="uc-dash__stat">
-            <span class="uc-dash__stat-label">账号</span>
-            <strong class="uc-dash__stat-value uc-dash__stat-value--sm"><?php echo vs_e($vsUser && !empty($vsUser['email']) ? $vsUser['email'] : '-'); ?></strong>
-            <span class="uc-dash__stat-hint">注册于 <?php echo vs_e($vsUser && !empty($vsUser['createtime']) ? $vsUser['createtime'] : '-'); ?></span>
+        <div class="uc-dash__kpi-card">
+            <span class="uc-dash__kpi-label">积分</span>
+            <strong class="uc-dash__kpi-value" data-field="points_kpi"><?php echo vs_e($dash['points']); ?></strong>
+            <span class="uc-dash__kpi-meta">当前可用余额</span>
         </div>
     </div>
 
-    <div class="uc-dash__grid">
-        <div class="uc-dash__card">
-            <h3 class="uc-dash__card-title">快捷入口</h3>
-            <div class="uc-dash__links">
-                <a class="uc-dash__link" href="<?php echo vs_e($base . '/user/account'); ?>">账号设置</a>
-                <a class="uc-dash__link" href="<?php echo vs_e($base . '/user/points'); ?>">积分明细</a>
-                <a class="uc-dash__link" href="<?php echo vs_e($base . '/user/keys'); ?>">令牌管理</a>
-                <?php if (!empty($dash['can_publish_api'])): ?>
-                    <a class="uc-dash__link" href="<?php echo vs_e($base . '/user/api-manage'); ?>">API 管理</a>
-                <?php endif; ?>
-                <a class="uc-dash__link" href="<?php echo vs_e($base . '/user/apis'); ?>">接口广场</a>
+    <div class="uc-dash__row">
+        <div class="vs-panel uc-dash__panel">
+            <div class="vs-panel__header">
+                <h2 class="vs-panel__title">账户概览</h2>
+            </div>
+            <div class="vs-panel__body">
+                <div class="uc-dash__sys" role="list">
+                    <div class="uc-dash__sys-item" role="listitem">
+                        <span class="uc-dash__sys-dot is-info"></span>
+                        <span class="uc-dash__sys-name">邮箱</span>
+                        <span class="uc-dash__sys-num uc-dash__sys-num--text"><?php echo vs_e($email); ?></span>
+                    </div>
+                    <div class="uc-dash__sys-item" role="listitem">
+                        <span class="uc-dash__sys-dot is-neutral"></span>
+                        <span class="uc-dash__sys-name">注册时间</span>
+                        <span class="uc-dash__sys-num uc-dash__sys-num--text"><?php echo vs_e($created); ?></span>
+                    </div>
+                    <div class="uc-dash__sys-item" role="listitem">
+                        <span class="uc-dash__sys-dot is-success"></span>
+                        <span class="uc-dash__sys-name">最后登录</span>
+                        <span class="uc-dash__sys-num uc-dash__sys-num--text"><?php echo vs_e($lastLogin); ?></span>
+                    </div>
+                    <?php if (!empty($dash['checkin_enabled'])): ?>
+                    <div class="uc-dash__sys-item" role="listitem">
+                        <span class="uc-dash__sys-dot <?php echo !empty($dash['checked_today']) ? 'is-success' : 'is-warn'; ?>"></span>
+                        <span class="uc-dash__sys-name">今日签到</span>
+                        <span class="uc-dash__sys-num"><?php echo !empty($dash['checked_today']) ? '已签到' : '未签到'; ?></span>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
-        <div class="uc-dash__card">
-            <h3 class="uc-dash__card-title">最近动态</h3>
-            <ul class="uc-dash__meta">
-                <li>最后登录：<?php echo vs_e($vsUser && !empty($vsUser['lastlogin']) ? $vsUser['lastlogin'] : '暂无记录'); ?></li>
-                <?php if (!empty($dash['checkin_enabled'])): ?>
-                    <li>今日签到：<?php echo !empty($dash['checked_today']) ? '已签到' : '未签到'; ?></li>
-                <?php endif; ?>
-                <?php if ((int) $dash['api_rejected'] > 0): ?>
-                    <li>有 <?php echo (int) $dash['api_rejected']; ?> 个接口未通过审核，可在 API 管理中查看原因。</li>
-                <?php elseif ((int) $dash['api_pending'] > 0): ?>
-                    <li>有 <?php echo (int) $dash['api_pending']; ?> 个接口等待管理员审核。</li>
-                <?php elseif (!empty($dash['can_publish_api'])): ?>
-                    <li>接口投稿状态正常，可继续维护文档与代码示例。</li>
-                <?php else: ?>
-                    <li>当前身份不可投稿接口；可使用令牌调用已开放的 API。</li>
-                <?php endif; ?>
-            </ul>
+
+        <div class="vs-panel uc-dash__panel">
+            <div class="vs-panel__header">
+                <h2 class="vs-panel__title">状态提示</h2>
+            </div>
+            <div class="vs-panel__body">
+                <ul class="uc-dash__tips">
+                    <?php if ((int) $dash['api_rejected'] > 0): ?>
+                        <li>有 <?php echo (int) $dash['api_rejected']; ?> 个接口未通过审核，请到「API 管理」查看原因。</li>
+                    <?php elseif ((int) $dash['api_pending'] > 0): ?>
+                        <li>有 <?php echo (int) $dash['api_pending']; ?> 个接口等待管理员审核。</li>
+                    <?php elseif (!empty($dash['can_publish_api'])): ?>
+                        <li>接口投稿状态正常，可在「API 管理」维护文档与代码示例。</li>
+                    <?php else: ?>
+                        <li>当前身份不可投稿接口；可使用令牌调用已开放的 API。</li>
+                    <?php endif; ?>
+                    <?php if (!empty($dash['bound_admin'])): ?>
+                        <li>本账号已与管理员绑定同权，可提交本地或代理接口。</li>
+                    <?php endif; ?>
+                    <li>浏览公开接口请访问站点首页或「全部接口」页面。</li>
+                </ul>
+            </div>
         </div>
     </div>
 </section>

@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/admin-dashboard.js
- * 作用：管理员控制台渲染（KPI / 平滑趋势 / TOP10 / 概览 / 最近调用 + 实时轮询）
+ * 作用：管理员控制台渲染（KPI / 平滑趋势 / TOP / 概览 / 最近调用 + 实时轮询）
  */
 (function () {
     'use strict';
@@ -24,6 +24,8 @@
     var topMarqueeRaf = null;
     var topMarqueeY = 0;
     var topMarqueePaused = false;
+    var topMarqueeFp = '';
+    var topMarqueeBound = false;
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
@@ -398,50 +400,69 @@
         });
     }
 
-    function stopTopMarquee() {
+    function stopTopMarquee(resetY) {
         if (topMarqueeRaf) {
             cancelAnimationFrame(topMarqueeRaf);
             topMarqueeRaf = null;
         }
-        topMarqueeY = 0;
+        if (resetY !== false) {
+            topMarqueeY = 0;
+        }
         topMarqueePaused = false;
     }
 
+    function bindTopMarqueePause(viewport) {
+        if (!viewport || topMarqueeBound) {
+            return;
+        }
+        topMarqueeBound = true;
+        viewport.addEventListener('mouseenter', function () { topMarqueePaused = true; });
+        viewport.addEventListener('mouseleave', function () { topMarqueePaused = false; });
+        viewport.addEventListener('touchstart', function () { topMarqueePaused = true; }, { passive: true });
+        viewport.addEventListener('touchend', function () { topMarqueePaused = false; }, { passive: true });
+    }
+
     function startTopMarquee(el, halfHeight) {
-        stopTopMarquee();
-        if (!el || halfHeight <= 0) return;
-        var speed = 0.32;
+        stopTopMarquee(false);
+        if (!el || halfHeight <= 0) {
+            return;
+        }
+        if (topMarqueeY >= halfHeight) {
+            topMarqueeY = topMarqueeY % halfHeight;
+        }
+        var speed = 0.28;
         function tick() {
             if (!topMarqueePaused) {
                 topMarqueeY += speed;
                 if (topMarqueeY >= halfHeight) {
                     topMarqueeY -= halfHeight;
                 }
-                el.style.transform = 'translateY(' + (-topMarqueeY) + 'px)';
+                el.style.transform = 'translate3d(0,' + (-topMarqueeY) + 'px,0)';
             }
             topMarqueeRaf = requestAnimationFrame(tick);
         }
         topMarqueeRaf = requestAnimationFrame(tick);
     }
 
-    function renderTop(list) {
-        var el = document.getElementById('dashTopBars');
-        var viewport = document.getElementById('dashTopViewport');
-        if (!el) return;
-        list = Array.isArray(list) ? list : [];
-        stopTopMarquee();
-        el.classList.remove('is-marquee');
-        el.style.transform = '';
-        if (!list.length) {
-            el.innerHTML = '<div class="dash-empty">今日暂无调用排行</div>';
-            return;
-        }
-        var rowsHtml = list.map(function (row, i) {
+    function topStructureFp(list) {
+        return list.map(function (row, i) {
+            return String(row.id != null ? row.id : i) + ':' + String(row.name || '');
+        }).join('|');
+    }
+
+    function topValueFp(list) {
+        return list.map(function (row) {
+            return String(row.count || 0) + ':' + String(row.pct || 0);
+        }).join('|');
+    }
+
+    function buildTopRowsHtml(list) {
+        return list.map(function (row, i) {
             var pct = Math.max(2, parseFloat(row.pct) || 0);
             var color = BAR_COLORS[i % BAR_COLORS.length];
             var rank = i + 1;
             var rankCls = rank <= 3 ? (' is-' + rank) : '';
-            return '<div class="dash-bar">'
+            return '<div class="dash-bar" data-top-i="' + i + '">'
                 + '<div class="dash-bar__meta">'
                 + '<span class="dash-bar__rank' + rankCls + '">' + rank + '</span>'
                 + '<div class="dash-bar__name" title="' + esc(row.name) + '">' + esc(row.name) + '</div>'
@@ -450,16 +471,73 @@
                 + '<div class="dash-bar__track"><div class="dash-bar__fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
                 + '</div>';
         }).join('');
-        el.innerHTML = rowsHtml;
-        // 超过可视区约 5 条才无限循环滚动；少则静止
-        if (list.length > 5 && viewport) {
-            el.innerHTML = rowsHtml + rowsHtml;
-            el.classList.add('is-marquee');
-            requestAnimationFrame(function () {
-                var half = el.scrollHeight / 2;
-                if (half > 8) startTopMarquee(el, half);
+    }
+
+    function patchTopValues(el, list) {
+        list.forEach(function (row, i) {
+            var pct = Math.max(2, parseFloat(row.pct) || 0);
+            var color = BAR_COLORS[i % BAR_COLORS.length];
+            el.querySelectorAll('.dash-bar[data-top-i="' + i + '"]').forEach(function (bar) {
+                var countEl = bar.querySelector('.dash-bar__count');
+                var fill = bar.querySelector('.dash-bar__fill');
+                if (countEl) {
+                    countEl.textContent = fmtNum(row.count);
+                }
+                if (fill) {
+                    fill.style.width = pct + '%';
+                    fill.style.background = color;
+                }
             });
+        });
+    }
+
+    function renderTop(list) {
+        var el = document.getElementById('dashTopBars');
+        var viewport = document.getElementById('dashTopViewport');
+        if (!el) return;
+        list = Array.isArray(list) ? list : [];
+        var structFp = topStructureFp(list);
+        var valueFp = topValueFp(list);
+        // 结构未变：只改数值，滚筒不中断
+        if (structFp === topMarqueeFp && el.querySelector('.dash-bars__set, .dash-bar')) {
+            if (el.getAttribute('data-top-values') !== valueFp) {
+                patchTopValues(el, list);
+                el.setAttribute('data-top-values', valueFp);
+            }
+            return;
         }
+        topMarqueeFp = structFp;
+        stopTopMarquee(true);
+        el.classList.remove('is-marquee');
+        el.style.transform = '';
+        if (!list.length) {
+            el.innerHTML = '<div class="dash-empty">今日暂无调用排行</div>';
+            el.removeAttribute('data-top-values');
+            return;
+        }
+        var rowsHtml = buildTopRowsHtml(list);
+        if (list.length > 5 && viewport) {
+            el.innerHTML = '<div class="dash-bars__set">' + rowsHtml + '</div>'
+                + '<div class="dash-bars__set" aria-hidden="true">' + rowsHtml + '</div>';
+            el.classList.add('is-marquee');
+            el.setAttribute('data-top-values', valueFp);
+            bindTopMarqueePause(viewport);
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    var first = el.querySelector('.dash-bars__set');
+                    if (!first) {
+                        return;
+                    }
+                    var half = first.offsetHeight + 10;
+                    if (half > 8) {
+                        startTopMarquee(el, half);
+                    }
+                });
+            });
+            return;
+        }
+        el.innerHTML = '<div class="dash-bars__set">' + rowsHtml + '</div>';
+        el.setAttribute('data-top-values', valueFp);
     }
 
     function renderSys(list) {
