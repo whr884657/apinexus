@@ -219,13 +219,31 @@ class DashboardStats
         try {
             return PanelMonitor::snapshot($refresh);
         } catch (Exception $e) {
+            return self::fallbackPanelSnapshot('面板暂时不可用');
+        } catch (Throwable $e) {
+            return self::fallbackPanelSnapshot('面板暂时不可用');
+        }
+    }
+
+    /**
+     * 面板快照异常回落：必须带上 Config 中的类型/地址状态，禁止只写 enabled 导致「请选择面板类型」误判（E192）
+     *
+     * @param string $msg
+     * @return array
+     */
+    private static function fallbackPanelSnapshot($msg)
+    {
+        if (!class_exists('PanelMonitor')) {
+            return array();
+        }
+        try {
+            return PanelMonitor::configOnlySnapshot($msg);
+        } catch (Exception $e) {
             $s = PanelMonitor::emptySnapshot();
-            $s['enabled'] = PanelMonitor::isEnabled();
             $s['error'] = '面板暂时不可用';
             return $s;
         } catch (Throwable $e) {
             $s = PanelMonitor::emptySnapshot();
-            $s['enabled'] = PanelMonitor::isEnabled();
             $s['error'] = '面板暂时不可用';
             return $s;
         }

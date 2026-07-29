@@ -126,9 +126,12 @@ class PanelMonitor
     {
         $rawProvider = trim((string) $provider);
         $provider = self::normalizeProvider($rawProvider);
-        // 空提交时保留原面板类型，避免 vs-pick / 表单漏传把已保存类型覆盖成空
-        if ($provider === self::PROVIDER_NONE && $rawProvider === '') {
-            $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
+        // 空或无法识别时保留原面板类型，禁止用空串/脏值覆盖（E190 / E192）
+        if ($provider === self::PROVIDER_NONE) {
+            $prev = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
+            if ($prev !== self::PROVIDER_NONE) {
+                $provider = $prev;
+            }
         }
         $baseUrl = trim((string) $baseUrl);
         if ($baseUrl === '') {
@@ -263,18 +266,23 @@ class PanelMonitor
         $base['ok'] = false;
         $base['error'] = $msg;
         $base['fetchedat'] = date('Y-m-d H:i:s');
-        // 失败快照仍标明已配置，避免控制台误显示「请填写密钥」
-        if (!empty($base['provider']) && $base['provider'] !== self::PROVIDER_NONE) {
+        try {
+            $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
             $url = trim((string) Config::get('panelmonitor_baseurl', ''));
             $key = trim((string) Config::get('panelmonitor_apikey', ''));
-            $base['configured'] = ($url !== '' && $key !== '');
-        }
-        $url = trim((string) Config::get('panelmonitor_baseurl', ''));
-        $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
-        if ($url !== '' && $provider !== self::PROVIDER_NONE && class_exists('RedisCache')) {
-            $cacheKey = self::cacheKey($provider, $url);
-            RedisCache::set($cacheKey, $base, self::CACHE_FAIL_TTL);
-            RedisCache::set('panel_monitor_last_key', $cacheKey, self::CACHE_FAIL_TTL + 30);
+            $enabled = self::isEnabled();
+            $base = self::applyConfigFlags($base, $enabled, $provider, $url, $key);
+            $base['ok'] = false;
+            $base['error'] = $msg;
+            if ($url !== '' && $provider !== self::PROVIDER_NONE && class_exists('RedisCache')) {
+                $cacheKey = self::cacheKey($provider, $url);
+                RedisCache::set($cacheKey, $base, self::CACHE_FAIL_TTL);
+                RedisCache::set('panel_monitor_last_key', $cacheKey, self::CACHE_FAIL_TTL + 30);
+            }
+        } catch (Exception $e) {
+            // 回落路径禁止再抛
+        } catch (Throwable $e) {
+            // 回落路径禁止再抛
         }
         return $base;
     }
@@ -322,16 +330,49 @@ class PanelMonitor
     }
 
     /**
+     * 仅根据 Config 组装快照（异常回落用；不发起面板 HTTP）
+     *
+     * @param string $errorMsg
+     * @return array
+     */
+    public static function configOnlySnapshot($errorMsg = '')
+    {
+        $enabled = self::isEnabled();
+        $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
+        $url = trim((string) Config::get('panelmonitor_baseurl', ''));
+        $key = trim((string) Config::get('panelmonitor_apikey', ''));
+        $snap = self::applyConfigFlags(self::emptySnapshot(), $enabled, $provider, $url, $key);
+        $snap['ok'] = false;
+        if ($errorMsg !== '') {
+            $snap['error'] = (string) $errorMsg;
+        } elseif (!$enabled) {
+            $snap['error'] = '未启用服务器监控';
+        } elseif ($provider === self::PROVIDER_NONE) {
+            $snap['error'] = '请选择面板类型';
+        } elseif ($url === '' || $key === '') {
+            $snap['error'] = '请先在系统设置中填写面板地址与接口密钥，并点击保存';
+        }
+        $snap['fetchedat'] = date('Y-m-d H:i:s');
+        return $snap;
+    }
+
+    /**
      * @param string $raw
      * @return string
      */
     public static function normalizeProvider($raw)
     {
-        $raw = strtolower(trim((string) $raw));
+        $raw = (string) $raw;
+        // 去掉 BOM / 零宽字符，避免库内看似 onepanel 却匹配失败（E192）
+        $raw = preg_replace('/^\xEF\xBB\xBF/u', '', $raw);
+        $raw = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $raw);
+        $raw = strtolower(trim($raw));
+        $raw = preg_replace('/\s+/', '', $raw);
         if ($raw === 'baota' || $raw === 'bt') {
             return self::PROVIDER_BAOTA;
         }
-        if ($raw === 'onepanel' || $raw === '1panel' || $raw === 'one' || $raw === 'ep') {
+        if ($raw === 'onepanel' || $raw === '1panel' || $raw === 'one' || $raw === 'ep'
+            || $raw === '1p' || $raw === 'ipanel') {
             return self::PROVIDER_ONEPANEL;
         }
         return self::PROVIDER_NONE;

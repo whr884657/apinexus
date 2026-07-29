@@ -2761,8 +2761,9 @@ select.vs-input.vs-select {
     font-weight: 500;
 }
 
-/* 接口审核 Tab（旧按钮式已废弃，统一底部描边 Tab） */
-.vs-tabs.vs-api-review-tabs {
+/* 接口审核 / 接口反馈 Tab（底部描边，禁止按钮框样式） */
+.vs-tabs.vs-api-review-tabs,
+.vs-tabs.vs-api-fb-tabs {
     display: flex;
     gap: 2px;
     border-bottom: 1px solid var(--vs-border, #e5e7eb);
@@ -2773,7 +2774,8 @@ select.vs-input.vs-select {
     -webkit-overflow-scrolling: touch;
 }
 
-.vs-tabs.vs-api-review-tabs .vs-tabs__btn {
+.vs-tabs.vs-api-review-tabs .vs-tabs__btn,
+.vs-tabs.vs-api-fb-tabs .vs-tabs__btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -2789,11 +2791,13 @@ select.vs-input.vs-select {
     transition: color 0.15s, border-color 0.15s;
 }
 
-.vs-tabs.vs-api-review-tabs .vs-tabs__btn:hover {
+.vs-tabs.vs-api-review-tabs .vs-tabs__btn:hover,
+.vs-tabs.vs-api-fb-tabs .vs-tabs__btn:hover {
     color: var(--vs-text, #111);
 }
 
-.vs-tabs.vs-api-review-tabs .vs-tabs__btn.is-active {
+.vs-tabs.vs-api-review-tabs .vs-tabs__btn.is-active,
+.vs-tabs.vs-api-fb-tabs .vs-tabs__btn.is-active {
     color: var(--vs-text, #111);
     border-bottom-color: #111;
 }
@@ -9105,18 +9109,15 @@ select.vs-input.vs-select {
     gap: 10px;
     min-width: 0;
 }
-#apiFeedbackPage .fb-user-avatar,
-#apiFeedbackPage .feedback-card__avatar {
+#apiFeedbackPage .fb-api-icon {
     width: 32px;
     height: 32px;
     border-radius: 8px;
     background: #f1f5f9;
     color: var(--vs-text, #111);
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 600;
     flex-shrink: 0;
 }
 #apiFeedbackPage .fb-name-meta {
@@ -9125,10 +9126,19 @@ select.vs-input.vs-select {
     gap: 2px;
     min-width: 0;
 }
-#apiFeedbackPage .fb-content-preview {
-    font-weight: 500;
+#apiFeedbackPage .fb-api-title {
+    font-weight: 600;
     font-size: 14px;
     color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 420px;
+}
+#apiFeedbackPage .fb-content-preview {
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -9279,6 +9289,27 @@ select.vs-input.vs-select {
 #apiFeedbackPage .feedback-card__info-value {
     color: var(--vs-text, #111);
     font-weight: 500;
+}
+#apiFeedbackPage .feedback-card__content {
+    margin-top: 2px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    min-width: 0;
+}
+#apiFeedbackPage .feedback-card__content-label {
+    display: block;
+    font-size: 11px;
+    color: var(--vs-text-secondary, #6b7280);
+    margin-bottom: 4px;
+}
+#apiFeedbackPage .feedback-card__content-body {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--vs-text, #111);
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 #apiFeedbackPage .feedback-card__actions {
     display: flex;

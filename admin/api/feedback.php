@@ -66,7 +66,6 @@ function vs_admin_fb_row_ctx(array $row)
     $id = (int) $fb['id'];
     $pending = (int) $fb['status'] === ApiFeedbackManager::STATUS_PENDING;
     $username = $fb['username'] !== '' ? $fb['username'] : ('用户#' . $fb['userid']);
-    $avatar = mb_substr($username, 0, 1, 'UTF-8');
     $email = isset($fb['email']) ? trim((string) $fb['email']) : '';
     $apiName = $fb['api_name'] !== '' ? $fb['api_name'] : ($fb['apiid'] > 0 ? ('接口#' . $fb['apiid']) : '—');
     $time = $fb['createtime'];
@@ -85,10 +84,24 @@ function vs_admin_fb_row_ctx(array $row)
         'api_name' => $apiName,
         'username' => $username,
         'email'    => $email,
-        'avatar'   => $avatar,
         'time'     => $time,
         'search'   => $search,
     );
+}
+
+/**
+ * 反馈列表用 API 图标（非用户头像、非外链图）
+ *
+ * @return string
+ */
+function vs_admin_fb_api_icon_html()
+{
+    return '<span class="fb-api-icon" aria-hidden="true">'
+        . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+        . 'stroke-linecap="round" stroke-linejoin="round">'
+        . '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>'
+        . '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'
+        . '</svg></span>';
 }
 
 /**
@@ -131,10 +144,10 @@ function vs_render_admin_fb_desktop_row(array $ctx)
     <tr class="vs-api-fb-row"<?php echo $attrs; ?>>
         <td>
             <div class="fb-name-cell">
-                <div class="fb-user-avatar" aria-hidden="true" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></div>
+                <?php echo vs_admin_fb_api_icon_html(); ?>
                 <div class="fb-name-meta">
-                    <span class="fb-content-preview" data-field="content"><?php echo vs_e($ctx['content']); ?></span>
-                    <span class="fb-api-line" data-field="api_name" title="<?php echo vs_e($ctx['api_name']); ?>"><?php echo vs_e($ctx['api_name']); ?></span>
+                    <span class="fb-api-title" data-field="api_name" title="<?php echo vs_e($ctx['api_name']); ?>"><?php echo vs_e($ctx['api_name']); ?></span>
+                    <span class="fb-content-preview" data-field="content" title="<?php echo vs_e($ctx['content']); ?>"><?php echo vs_e($ctx['content']); ?></span>
                 </div>
             </div>
         </td>
@@ -179,8 +192,8 @@ function vs_render_admin_fb_mobile_card(array $ctx)
         <div class="feedback-card__header">
             <div class="feedback-card__header-left">
                 <span class="fb-id">#<?php echo (int) $ctx['id']; ?></span>
-                <div class="feedback-card__avatar" aria-hidden="true" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></div>
-                <span class="feedback-card__name" data-field="content" title="<?php echo vs_e($ctx['content']); ?>"><?php echo vs_e($ctx['content']); ?></span>
+                <?php echo vs_admin_fb_api_icon_html(); ?>
+                <span class="feedback-card__name" data-field="api_name" title="<?php echo vs_e($ctx['api_name']); ?>"><?php echo vs_e($ctx['api_name']); ?></span>
             </div>
             <div class="feedback-card__tags">
                 <span class="vs-badge <?php echo $ctx['pending'] ? 'vs-badge--warning' : 'vs-badge--success'; ?>" data-field="status_label">
@@ -190,10 +203,6 @@ function vs_render_admin_fb_mobile_card(array $ctx)
         </div>
         <div class="feedback-card__info">
             <span class="feedback-card__info-item">
-                <span class="feedback-card__info-label">接口</span>
-                <span class="feedback-card__info-value" data-field="api_name"><?php echo vs_e($ctx['api_name']); ?></span>
-            </span>
-            <span class="feedback-card__info-item">
                 <span class="feedback-card__info-label">用户</span>
                 <span class="feedback-card__info-value" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
             </span>
@@ -201,6 +210,10 @@ function vs_render_admin_fb_mobile_card(array $ctx)
                 <span class="feedback-card__info-label">时间</span>
                 <span class="feedback-card__info-value" data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span>
             </span>
+        </div>
+        <div class="feedback-card__content">
+            <span class="feedback-card__content-label">反馈内容</span>
+            <p class="feedback-card__content-body" data-field="content"><?php echo vs_e($ctx['content']); ?></p>
         </div>
         <div class="feedback-card__actions" data-field="actions">
             <?php echo vs_admin_fb_actions_html($ctx); ?>
@@ -245,7 +258,7 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
             <?php vs_render_notice('info', '', '用户提交的接口反馈在此处理。标记已处理后可填写回复（选填），系统将邮件通知提交用户。', array('compact' => true)); ?>
         </div>
 
-        <div class="vs-tabs vs-api-fb-tabs" id="adminFbFilters" role="tablist" aria-label="反馈筛选">
+        <div class="vs-tabs vs-api-review-tabs vs-api-fb-tabs" id="adminFbFilters" role="tablist" aria-label="反馈筛选">
             <button type="button" class="vs-tabs__btn vs-api-fb-filter is-active" data-filter="0" role="tab" aria-selected="true">
                 待处理<span class="vs-badge vs-badge--warning vs-api-fb-tabs__badge" data-count="0"><?php echo (int) $fbCounts['0']; ?></span>
             </button>
@@ -272,7 +285,7 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
                 <table class="vs-table vs-api-fb-table">
                     <thead>
                         <tr>
-                            <th>反馈内容</th>
+                            <th>接口名称</th>
                             <th>提交用户</th>
                             <th>提交时间</th>
                             <th>状态</th>

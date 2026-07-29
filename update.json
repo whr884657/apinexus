@@ -1,12 +1,12 @@
 {
-    "version": "13.17.2",
-    "title": "ApiNexus 13.17.2 面板启用状态与配置键可见",
+    "version": "13.17.3",
+    "title": "ApiNexus 13.17.3 面板类型误判与反馈页 UI",
     "release_date": "2026-07-30",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "修复已启用仍显示未启用：缓存叠加 Config、写后回读、软刷状态等级（E191）",
-        "启用开关 hidden+checkbox；测试连接强制写入 enabled=1",
-        "迁移预置 panelmonitor_* 键值行（非新字段），便于库内可见"
+        "修复配置已有面板类型仍提示请选择：异常回落补全 Config、规范化去 BOM、禁止脏值覆盖（E192）",
+        "接口反馈页对齐审核页：描边 Tab、API 图标、接口名称优先、反馈内容下沉",
+        "本地数据库导出目录加入 .gitignore，禁止进仓库"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
