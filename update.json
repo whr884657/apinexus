@@ -1,12 +1,12 @@
 {
     "version": "13.10.0",
-    "title": "ApiNexus 13.10.0 详情问问豆包 · 整页 Markdown",
+    "title": "ApiNexus 13.10.0 详情问问豆包 · 大屏默认今日",
     "release_date": "2026-07-29",
     "db_changes": false,
     "changes": [
-        "默认主题详情：操作移至接口标题同行，避免被顶栏遮挡（E172）",
-        "「问问豆包」胶囊分栏：主区跳转豆包深链，下拉可复制整页 Markdown 或问豆包",
-        "整页 Markdown 由 PHP 组装（信息/参数/返回/详细文档）；图标用主题包 doubao.svg / fuzhi.svg"
+        "默认主题详情：操作移至接口标题同行；问问豆包胶囊 + 整页 Markdown 复制/深链（E172）",
+        "数据大屏默认中国地图「今日数据」飞线，可自行切回实时（E173）",
+        "发版：发行说明/ 不再进仓库与 ZIP（E174）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

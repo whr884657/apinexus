@@ -92,8 +92,8 @@ vs_admin_layout_start('实时数据监控中心', 'screen', '');
                     <button type="button" class="ds-map-toggle__btn" data-map="world">世界地图</button>
                 </div>
                 <div class="ds-map-toggle" id="dsGeoScopeToggle" role="group" aria-label="飞线数据范围">
-                    <button type="button" class="ds-map-toggle__btn is-active" data-scope="live">实时数据</button>
-                    <button type="button" class="ds-map-toggle__btn" data-scope="today">今日数据</button>
+                    <button type="button" class="ds-map-toggle__btn" data-scope="live">实时数据</button>
+                    <button type="button" class="ds-map-toggle__btn is-active" data-scope="today">今日数据</button>
                 </div>
             </div>
             <div class="ds-map-status" id="dsMapStatus" hidden>地图加载中…</div>

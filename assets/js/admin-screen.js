@@ -28,7 +28,7 @@
 
     var boot = {};
     var mapMode = 'china';
-    var geoScope = 'live';
+    var geoScope = 'today';
     var theme = page.classList.contains('vs-datascreen--dark') ? 'dark' : 'light';
     var mapChart = null;
     /** 各地图模式用户缩放/中心（live 刷新不得冲掉） */
