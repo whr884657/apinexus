@@ -1,11 +1,11 @@
 {
-    "version": "13.11.2",
-    "title": "ApiNexus 13.11.2 本地验证码大小写与数字",
+    "version": "13.11.3",
+    "title": "ApiNexus 13.11.3 AI 示例代码极简化",
     "release_date": "2026-07-29",
     "db_changes": false,
     "changes": [
-        "本地图形验证码字符含大写、小写、数字（每张至少各一类）；校验区分大小写（E179）",
-        "输入框关闭自动大写；占位提示「区分大小写」"
+        "AI 代码示例改为极简能用即可（约 ≤500 字）；降低 max_tokens；过长自动压缩重试（E180）",
+        "含 v13.11.2：本地验证码大写/小写/数字且区分大小写（E179）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

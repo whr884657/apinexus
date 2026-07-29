@@ -190,33 +190,35 @@ class AiApiDoc
 
         $langHint = '';
         if ($lang === 'browser') {
-            $langHint = '使用浏览器 fetch。';
+            $langHint = '用浏览器 fetch，几行即可。';
         } elseif ($lang === 'typescript') {
-            $langHint = '使用 async/await fetch。';
+            $langHint = '用 async/await fetch，几行即可。';
         } elseif ($lang === 'php') {
-            $langHint = '禁止输出 <?php 与 ?>；从变量赋值起写即可。lang 必须写 php（不要写其它别名）。';
+            $langHint = '禁止输出 <?php 与 ?>；从变量赋值起写；lang 必须写 php。';
         } elseif ($lang === 'cpp') {
-            $langHint = '使用 libcurl 或等价示意；lang 必须写 cpp（不要写 c++）。';
-        } elseif ($lang === 'python' || $lang === 'go' || $lang === 'java' || $lang === 'rust') {
-            $langHint = '含 try/except 或等价错误处理；检查 code/errcode。';
+            $langHint = '用 libcurl 或最短示意；lang 必须写 cpp（不要写 c++）。';
+        } elseif ($lang === 'python') {
+            $langHint = '用 requests 或 urllib，最短脚本即可。';
+        } elseif ($lang === 'go' || $lang === 'java' || $lang === 'rust') {
+            $langHint = '最短可运行示意即可，勿写完整工程脚手架。';
         }
 
         $system = '你是 API 调用示例生成器。只输出一个 :::qs 短码块，不要解释、不要 Markdown 标题、不要用 ``` 包裹、不要输出其它语言。'
             . $authLine
-            . '代码必须可运行示意：使用对外调用地址与给定参数名；密钥用 YOUR_API_KEY 占位。'
-            . '须含基本错误处理：检查响应 JSON 的 code/errcode，或非成功响应。'
-            . '关键步骤必须有简洁中文注释（// 或 # 或语言等价注释）。'
-            . '严禁 emoji、颜文字、图标符号、装饰性特殊字符；代码里只能是普通文本。'
+            . '【极简强制】代码只要能演示一次调用即可，禁止完整 SDK、多函数、大段错误处理、日志框架、CLI 参数解析、多余 import。'
+            . '正文目标：约 8～20 行、不超过约 500 字符（含注释）；最多 2～3 行简短中文注释。'
+            . '密钥用 YOUR_API_KEY；使用对外调用地址与给定参数名。'
+            . '错误处理最多一行（如判断 code!=1 则打印）；不要 try/catch 长链、不要打印完整响应字段说明。'
+            . '严禁 emoji、颜文字、图标、HTML/CSS/vs-syn、上游地址、代理、密钥明文、User-Agent、Referer、「全部支持」。'
             . $langHint
-            . '严禁出现 HTML/CSS class/高亮标记、上游真实地址、代理、密钥明文、User-Agent、Referer、出站指纹、内部实现、「全部支持」。'
             . 'GET 用查询参数；POST 可用 form 或 JSON。';
 
-        $user = "请为下列接口生成「鉴权=" . $authWay . "，语言=" . $lang . "」的单个快速上手代码块：\n\n"
+        $user = "请为下列接口生成「鉴权=" . $authWay . "，语言=" . $lang . "」的极简快速上手代码（能用即可，越短越好）：\n\n"
             . self::contextMarkdown($safe)
             . "\n\n输出格式必须严格为（不要前后多余文字）：\n"
             . ($requireAuthAttr
-                ? (":::qs lang=" . $lang . " auth=" . $authWay . "\n// 中文注释…\n代码\n:::")
-                : (":::qs lang=" . $lang . "\n// 中文注释…\n代码\n:::"));
+                ? (":::qs lang=" . $lang . " auth=" . $authWay . "\n// 注释\n短代码\n:::")
+                : (":::qs lang=" . $lang . "\n// 注释\n短代码\n:::"));
 
         $cfg = AiConfig::get();
         $cfg['timeout'] = max((int) $cfg['timeout'], 60);
@@ -226,34 +228,66 @@ class AiApiDoc
         // 单块请求：每片重置 PHP 执行时限，避免长串排队被杀
         @set_time_limit((int) $cfg['timeout'] + 30);
 
-        $out = AiClient::chatWithConfig($cfg, $system, $user, array(
+        $chatOpts = array(
             'temperature' => 0.2,
-            'max_tokens'  => 2200,
-        ));
+            'max_tokens'  => 700,
+        );
+        $out = AiClient::chatWithConfig($cfg, $system, $user, $chatOpts);
         if (strpos($out, '错误：') === 0) {
             return $out;
         }
         $one = self::extractRequestedQsBlock($out, $authWay, $lang, $requireAuthAttr);
-        // 解析失败再试一次（更严格式提醒），降低 php/cpp 等偶发失败
-        if ($one === '') {
+        // 解析失败或过长：再试一次，强调压缩
+        $needRetry = ($one === '');
+        if (!$needRetry && is_string($one)) {
+            $bodyLen = self::qsBodyLength($one);
+            if ($bodyLen > 700) {
+                $needRetry = true;
+            }
+        }
+        if ($needRetry) {
             @set_time_limit((int) $cfg['timeout'] + 30);
-            $retryUser = $user . "\n\n上次输出无法解析。请再次只输出一个合法短码块，第一行必须是 "
+            $retryUser = $user . "\n\n上次输出无效或过长。请再次只输出一个合法短码块，第一行必须是 "
                 . ($requireAuthAttr
                     ? (':::qs lang=' . $lang . ' auth=' . $authWay)
                     : (':::qs lang=' . $lang))
-                . " ，最后一行必须是 ::: ，中间是带中文注释的纯代码，禁止 emoji 与 ```。";
+                . " ，最后一行必须是 ::: ，中间纯代码正文务必 ≤400 字符、≤15 行，禁止 emoji 与 ```。";
             $out2 = AiClient::chatWithConfig($cfg, $system, $retryUser, array(
                 'temperature' => 0.1,
-                'max_tokens'  => 2200,
+                'max_tokens'  => 500,
             ));
             if (strpos($out2, '错误：') !== 0) {
-                $one = self::extractRequestedQsBlock($out2, $authWay, $lang, $requireAuthAttr);
+                $retryOne = self::extractRequestedQsBlock($out2, $authWay, $lang, $requireAuthAttr);
+                if ($retryOne !== '') {
+                    $one = $retryOne;
+                }
             }
         }
         if ($one === '') {
             return '错误：鉴权 ' . $authWay . ' / 语言 ' . $lang . ' 未能解析出有效代码块';
         }
         return $one;
+    }
+
+    /**
+     * :::qs 块内代码正文长度（不含首尾行）
+     *
+     * @param string $qsBlock
+     * @return int
+     */
+    private static function qsBodyLength($qsBlock)
+    {
+        $qsBlock = trim((string) $qsBlock);
+        $lines = preg_split("/\r\n|\n|\r/", $qsBlock);
+        if (!is_array($lines) || count($lines) < 2) {
+            return strlen($qsBlock);
+        }
+        // 去掉首行 :::qs … 与末行 :::
+        array_shift($lines);
+        if (count($lines) > 0 && trim((string) $lines[count($lines) - 1]) === ':::') {
+            array_pop($lines);
+        }
+        return strlen(implode("\n", $lines));
     }
 
     /**
