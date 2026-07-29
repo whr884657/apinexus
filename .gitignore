@@ -13,12 +13,16 @@ data/*
 !data/playground/.htaccess
 !data/playground/.gitkeep
 
-# IDE
+# IDE / 编辑器（本地）
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 *~
+
+# 本地 Git 钩子（仅维护者本机；禁止进仓库与发行 ZIP）
+.githooks/
 
 # 系统文件
 .DS_Store

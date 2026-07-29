@@ -6,7 +6,7 @@
     "changes": [
         "安全审计修复：密码仅 password_hash（废除双 MD5，升级作废旧密码须重置）、SSRF/Session 拆分/OTP/默认本地验证码、代理先扣后调、AI baseurl 拦内网等",
         "开源许可改为标准 MIT；中文部署条款 LICENSE.zh-CN.md；安装向导强制阅读同意后方可继续",
-        "迁移 13.9.1.sql（密码列扩容、作废旧密码、默认开启各场景本地验证码）；须后台系统升级"
+        "迁移 13.9.1.sql（config 用 key/value；作废旧密码；默认开验证码）；发行包不含 .cursor/.githooks（E170/E171）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

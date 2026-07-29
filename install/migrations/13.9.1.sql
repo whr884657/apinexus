@@ -7,7 +7,8 @@ UPDATE `{prefix}admin` SET `password` = '!';
 UPDATE `{prefix}user` SET `password` = '!';
 
 -- 默认开启本地验证码（管理端 + 用户端各场景）
-INSERT INTO `{prefix}config` (`k`, `v`) VALUES
+-- 配置表字段为 key / value（非 k / v）
+INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('captcha_mode', 'local'),
 ('captcha_mode_admin', 'local'),
 ('captcha_mode_user', 'local'),
@@ -16,4 +17,4 @@ INSERT INTO `{prefix}config` (`k`, `v`) VALUES
 ('captcha_on_user_login', '1'),
 ('captcha_on_user_register', '1'),
 ('captcha_on_user_forgot', '1')
-ON DUPLICATE KEY UPDATE `v` = VALUES(`v`);
+ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
