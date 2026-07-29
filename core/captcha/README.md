@@ -8,7 +8,7 @@
 | `gt3/GeetestLibResult.php` | 官方 SDK 返回体 |
 | `gt3/CheckGeetestStatus.php` | bypass 云状态（session 缓存） |
 | `gt4/LoginController.php` | 官方四代二次校验逻辑 |
-| `local.php` | 本站 GD 图形验证码 |
+| `local.php` | 本站 GD 图形验证码（大写+小写+数字，区分大小写校验；排除 0/O/o、1/I/l） |
 | `register.php` | 三代初始化入口 |
 | `image.php` | 本地验证码图 |
 | `helper.php` | `vs_captcha_field` / `vs_captcha_js` |

@@ -1,11 +1,11 @@
 {
-    "version": "13.11.1",
-    "title": "ApiNexus 13.11.1 更新弹窗恢复自适应高度",
+    "version": "13.11.2",
+    "title": "ApiNexus 13.11.2 本地验证码大小写与数字",
     "release_date": "2026-07-29",
     "db_changes": false,
     "changes": [
-        "系统更新弹窗恢复 13.10.0 内容自适应（取消半屏固定抽屉，避免短文案下方大片空白，E178）",
-        "移除 size=update / .vs-modal--update；弹窗规范注明更新弹窗为例外"
+        "本地图形验证码字符含大写、小写、数字（每张至少各一类）；校验区分大小写（E179）",
+        "输入框关闭自动大写；占位提示「区分大小写」"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

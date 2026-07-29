@@ -25,7 +25,26 @@ class CaptchaLocal
             $parts[] = (string) Config::get('gt3_key', '');
             $parts[] = (string) Config::get('mail_smtp_pass', '');
         }
-        return hash('sha256', implode('|', $parts) . '|vs_local_captcha_v1');
+        return hash('sha256', implode('|', $parts) . '|vs_local_captcha_v2');
+    }
+
+    /**
+     * 从字符池随机取 1 个字符
+     *
+     * @param string $pool
+     * @return string
+     */
+    private static function pickChar($pool)
+    {
+        $pool = (string) $pool;
+        $max = strlen($pool) - 1;
+        if ($max < 0) {
+            return '';
+        }
+        if (function_exists('random_int')) {
+            return $pool[random_int(0, $max)];
+        }
+        return $pool[mt_rand(0, $max)];
     }
 
     /**
@@ -35,16 +54,30 @@ class CaptchaLocal
     public static function makeCode($scene = '')
     {
         $scene = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $scene));
-        $pool = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        $code = '';
-        $max = strlen($pool) - 1;
-        for ($i = 0; $i < self::LEN; $i++) {
-            if (function_exists('random_int')) {
-                $code .= $pool[random_int(0, $max)];
-            } else {
-                $code .= $pool[mt_rand(0, $max)];
-            }
+        // 排除易混：0/O/o、1/I/l；含大写、小写、数字
+        $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $lower = 'abcdefghjkmnpqrstuvwxyz';
+        $digit = '23456789';
+        $pool = $upper . $lower . $digit;
+
+        $chars = array();
+        // 至少各一类，再补满长度后打乱（LEN≥3）
+        if (self::LEN >= 3) {
+            $chars[] = self::pickChar($upper);
+            $chars[] = self::pickChar($lower);
+            $chars[] = self::pickChar($digit);
         }
+        while (count($chars) < self::LEN) {
+            $chars[] = self::pickChar($pool);
+        }
+        for ($i = count($chars) - 1; $i > 0; $i--) {
+            $j = self::randInt(0, $i);
+            $tmp = $chars[$i];
+            $chars[$i] = $chars[$j];
+            $chars[$j] = $tmp;
+        }
+        $code = implode('', $chars);
+
         if (session_status() === PHP_SESSION_ACTIVE) {
             $_SESSION[self::SESSION_HASH] = self::hashCode($code, $scene);
             $_SESSION[self::SESSION_TIME] = time();
@@ -65,9 +98,10 @@ class CaptchaLocal
             $salt = session_id();
         }
         $scene = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $scene));
+        // 区分大小写：勿再 strtoupper
         return hash_hmac(
             'sha256',
-            strtoupper(trim((string) $code)) . '|' . $salt . '|' . $scene,
+            trim((string) $code) . '|' . $salt . '|' . $scene,
             self::serverPepper()
         );
     }
@@ -144,7 +178,7 @@ class CaptchaLocal
         if (!is_string($input) && !is_numeric($input)) {
             return false;
         }
-        $input = strtoupper(trim((string) $input));
+        $input = trim((string) $input);
         $scene = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $scene));
         if ($input === '' || $scene === '' || session_status() !== PHP_SESSION_ACTIVE) {
             return false;

@@ -536,6 +536,8 @@
     outline: none;
     background: var(--st-auth-card, #fff);
     color: var(--st-auth-fg, #111);
+    text-transform: none;
+    font-variant: normal;
 }
 
 .vs-captcha-local__refresh {

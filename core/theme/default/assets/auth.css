@@ -652,6 +652,8 @@ body {
     font-size: 15px;
     outline: none;
     background: #fff;
+    text-transform: none;
+    font-variant: normal;
 }
 
 .vs-captcha-local__refresh {
