@@ -57,19 +57,107 @@
         }).catch(function () {});
     });
 
-    var copyAll = document.getElementById('detailCopyAllBtn');
-    if (copyAll) {
-        copyAll.addEventListener('click', function () {
-            var title = page.querySelector('.detail-title');
-            var desc = page.querySelector('.detail-desc');
-            var endpoint = page.getAttribute('data-endpoint') || '';
-            var parts = [];
-            if (title) parts.push(title.textContent.trim());
-            if (desc) parts.push(desc.textContent.trim());
-            if (endpoint) parts.push(endpoint);
-            copyText(parts.join('\n')).then(function () {
-                showToast('已复制全部');
-            }).catch(function () {});
+    /* ---- 标题行：问问豆包 / 复制整页 Markdown ---- */
+    var aiSplit = document.getElementById('detailAiSplit');
+    var aiMenuBtn = document.getElementById('detailAiMenuBtn');
+    var aiMenu = document.getElementById('detailAiMenu');
+    var askDoubaoBtn = document.getElementById('detailAskDoubaoBtn');
+
+    function pageMarkdown() {
+        return String(window.detailPageMarkdown || '').trim();
+    }
+
+    function buildDoubaoUrl(md) {
+        var meta = window.detailAiMeta || {};
+        var siteName = String(meta.siteName || 'ApiNexus');
+        var host = String(meta.host || '');
+        var apiBase = String(meta.apiBase || ((window.VS_BASE_URL || '') + '/api/v1'));
+        var siteLabel = host ? (siteName + '（' + host + '）') : siteName;
+        var prefix = '下面是 ' + siteLabel + ' 平台某个 API 接口的完整文档。请你先完整阅读一遍，然后用一句话确认我具体想要了解或实现的内容，等我回复后再继续为我解答。回答时，请以这份文档作为唯一依据；如果某项信息在文档中并未提及，请直接说明文档未涵盖，而不要根据既有印象进行推测。\n\n'
+            + '如需实际调用，有几点请留意，以免出现常见的地址拼接错误。接口地址请直接采用文档中标注的「完整 API 地址」（基址统一为 `' + apiBase + '`，完整形式形如 `' + apiBase + '/...`），整条照用即可，既不要只取相对路径再自行拼接，也不要省略其中的版本前缀；另外需要提醒的是，文档页地址并非真正的调用地址。鉴权方面，请将密钥放在请求头中（格式以本站文档为准，请勿把密钥放进 URL）。作答与举例时请始终以这份文档为准，不要引用第三方资料，也不要凭既有印象补全。\n\n---\n\n';
+        var action = {
+            pluginId: 'Send_Message',
+            payload: { text: prefix + String(md || '') }
+        };
+        return 'https://www.doubao.com/chat/url-action?action=' + encodeURIComponent(JSON.stringify(action));
+    }
+
+    function openDoubao() {
+        var md = pageMarkdown();
+        if (!md) {
+            showToast('暂无可发送的文档');
+            return;
+        }
+        var url = buildDoubaoUrl(md);
+        if (url.length > 1800000) {
+            showToast('文档过长，请先复制 Markdown');
+            return;
+        }
+        var win = window.open(url, '_blank', 'noopener,noreferrer');
+        if (!win) {
+            showToast('请允许弹窗后重试');
+        }
+    }
+
+    function copyPageMarkdown() {
+        var md = pageMarkdown();
+        if (!md) {
+            showToast('暂无可复制内容');
+            return;
+        }
+        copyText(md).then(function () {
+            showToast('已复制整页 Markdown');
+        }).catch(function () {
+            showToast('复制失败');
+        });
+    }
+
+    function setAiMenuOpen(open) {
+        if (!aiSplit || !aiMenu || !aiMenuBtn) return;
+        if (open) {
+            aiSplit.classList.add('is-open');
+            aiMenu.hidden = false;
+            aiMenuBtn.setAttribute('aria-expanded', 'true');
+        } else {
+            aiSplit.classList.remove('is-open');
+            aiMenu.hidden = true;
+            aiMenuBtn.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    if (askDoubaoBtn) {
+        askDoubaoBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            setAiMenuOpen(false);
+            openDoubao();
+        });
+    }
+
+    if (aiMenuBtn && aiMenu) {
+        aiMenuBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            setAiMenuOpen(aiMenu.hidden);
+        });
+        aiMenu.addEventListener('click', function (e) {
+            var item = e.target.closest('[data-ai-action]');
+            if (!item || !aiMenu.contains(item)) return;
+            e.preventDefault();
+            var action = item.getAttribute('data-ai-action') || '';
+            setAiMenuOpen(false);
+            if (action === 'copy-md') {
+                copyPageMarkdown();
+            } else if (action === 'ask-doubao') {
+                openDoubao();
+            }
+        });
+        document.addEventListener('click', function (e) {
+            if (!aiSplit || aiMenu.hidden) return;
+            if (aiSplit.contains(e.target)) return;
+            setAiMenuOpen(false);
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') setAiMenuOpen(false);
         });
     }
 

@@ -1,5 +1,15 @@
 {
     "versions": {
+        "13.10.0": {
+            "title": "ApiNexus 13.10.0 详情问问豆包 · 整页 Markdown",
+            "date": "2026-07-29",
+            "db_changes": false,
+            "changes": [
+                "默认主题详情：操作移至接口标题同行，避免被顶栏遮挡（E172）",
+                "「问问豆包」胶囊分栏：主区跳转豆包深链，下拉可复制整页 Markdown 或问豆包",
+                "整页 Markdown 由 PHP 组装；主题包 doubao.svg / fuzhi.svg；规范 §2.27"
+            ]
+        },
         "13.9.1": {
             "title": "ApiNexus 13.9.1 安全加固 · MIT 许可 · 安装确认",
             "date": "2026-07-29",

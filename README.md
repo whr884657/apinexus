@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.9.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.10.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -274,11 +274,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.9.1（2026-07-29）
+### v13.10.0（2026-07-29）
 
-- 安全加固：现代密码哈希（废除双 MD5）、SSRF / Session 拆分 / 默认本地验证码 / 代理先扣后调 / AI 拦内网等
-- 开源许可改为标准 MIT；安装向导强制阅读中文部署条款
-- 迁移 `13.9.1.sql`（作废旧密码、默认开验证码）；须系统升级
+- 默认主题详情：操作移至接口标题同行，避免被顶栏遮挡
+- 「问问豆包」胶囊分栏：主区跳转豆包；下拉可复制整页 Markdown 或问豆包
+- 整页 Markdown 由服务端组装；E172
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

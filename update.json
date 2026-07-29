@@ -1,12 +1,12 @@
 {
-    "version": "13.9.1",
-    "title": "ApiNexus 13.9.1 安全加固 · MIT 许可 · 安装确认",
+    "version": "13.10.0",
+    "title": "ApiNexus 13.10.0 详情问问豆包 · 整页 Markdown",
     "release_date": "2026-07-29",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "安全审计修复：密码仅 password_hash（废除双 MD5，升级作废旧密码须重置）、SSRF/Session 拆分/OTP/默认本地验证码、代理先扣后调、AI baseurl 拦内网等",
-        "开源许可改为标准 MIT；中文部署条款 LICENSE.zh-CN.md；安装向导强制阅读同意后方可继续",
-        "迁移 13.9.1.sql（config 用 key/value；作废旧密码；默认开验证码）；发行包不含 .cursor/.githooks（E170/E171）"
+        "默认主题详情：操作移至接口标题同行，避免被顶栏遮挡（E172）",
+        "「问问豆包」胶囊分栏：主区跳转豆包深链，下拉可复制整页 Markdown 或问豆包",
+        "整页 Markdown 由 PHP 组装（信息/参数/返回/详细文档）；图标用主题包 doubao.svg / fuzhi.svg"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

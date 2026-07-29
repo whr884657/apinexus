@@ -107,6 +107,55 @@ if (!$notFound) {
     </section>
     <?php else: ?>
 
+    <?php
+    $detailImgBase = rtrim(ThemeManager::assetUrl(ThemeManager::activeId(), 'assets/img'), '/') . '/';
+    $detailSiteName = class_exists('SiteContext') ? SiteContext::siteName() : 'ApiNexus';
+    $detailHost = parse_url($vsBase, PHP_URL_HOST);
+    if (!is_string($detailHost) || $detailHost === '') {
+        $detailHost = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
+    }
+    $detailApiBase = rtrim($vsBase, '/') . '/api/v1';
+    $detailDocRaw = isset($api['doc']) ? trim((string) $api['doc']) : '';
+    $detailMdParts = array();
+    $detailMdParts[] = '# ' . (isset($api['name']) ? (string) $api['name'] : '接口文档');
+    if (!empty($api['category_name'])) {
+        $detailMdParts[] = '**分类：** ' . (string) $api['category_name'];
+    }
+    if (!empty($api['desc'])) {
+        $detailMdParts[] = trim((string) $api['desc']);
+    }
+    $detailMdParts[] = "## 接口信息\n\n"
+        . '**方法：** ' . (isset($api['method_label']) ? (string) $api['method_label'] : strtoupper($primaryMethod)) . "\n"
+        . '**路径 / 完整地址：** ' . (isset($api['endpoint']) ? (string) $api['endpoint'] : '') . "\n"
+        . '**计费：** ' . $chargeDetailLabel . "\n"
+        . '**KEY：** ' . $keyLabel . "\n"
+        . '**鉴权方式：** ' . $authWayLabel . "\n"
+        . '**QPM：** ' . (isset($api['qpm_label']) ? (string) $api['qpm_label'] : '不限制') . "\n"
+        . '**文档页：** ' . (function_exists('vs_api_detail_url') ? vs_api_detail_url((int) $api['id']) : (rtrim($vsBase, '/') . '/detail/' . (int) $api['id']));
+    if ($hasParamsTable) {
+        $tbl = "## 请求参数\n\n| 参数名 | 类型 | 必填 | 说明 | 示例 |\n| --- | --- | --- | --- | --- |";
+        foreach ($paramsList as $p) {
+            if (!is_array($p)) {
+                continue;
+            }
+            $tbl .= "\n| `" . str_replace('|', '\\|', (string) (isset($p['name']) ? $p['name'] : '')) . '` | '
+                . str_replace('|', '\\|', (string) (isset($p['type']) ? $p['type'] : '')) . ' | '
+                . (!empty($p['required']) ? '是' : '否') . ' | '
+                . str_replace('|', '\\|', (string) (isset($p['description']) ? $p['description'] : '')) . ' | '
+                . '`' . str_replace(array('|', '`'), array('\\|', ''), (string) (isset($p['example']) ? $p['example'] : '')) . '` |';
+        }
+        $detailMdParts[] = $tbl;
+    } elseif ($paramsRaw !== '') {
+        $detailMdParts[] = "## 请求参数\n\n```json\n" . ($paramsPretty !== '' ? $paramsPretty : $paramsRaw) . "\n```";
+    }
+    if (!empty($api['response'])) {
+        $detailMdParts[] = "## 返回示例\n\n```json\n" . trim((string) $api['response']) . "\n```";
+    }
+    if ($detailDocRaw !== '') {
+        $detailMdParts[] = "## 详细文档\n\n" . $detailDocRaw;
+    }
+    $detailPageMarkdown = implode("\n\n", $detailMdParts);
+    ?>
     <header class="detail-header">
         <div class="detail-header__top">
             <div class="detail-meta">
@@ -123,9 +172,33 @@ if (!$notFound) {
                     <span class="api-chip"><?php echo vs_e($api['category_name']); ?></span>
                 <?php endif; ?>
             </div>
-            <button type="button" class="btn-copy" id="detailCopyAllBtn" title="复制本页关键信息">复制全部</button>
         </div>
-        <h1 class="detail-title"><?php echo vs_e($api['name']); ?></h1>
+        <div class="detail-title-row">
+            <h1 class="detail-title"><?php echo vs_e($api['name']); ?></h1>
+            <div class="detail-ai-split" id="detailAiSplit">
+                <button type="button" class="detail-ai-split__main" id="detailAskDoubaoBtn" title="问问豆包">
+                    <span class="detail-ai-split__ask">问问</span>
+                    <img class="detail-ai-split__avatar" src="<?php echo vs_e($detailImgBase . 'doubao.svg'); ?>" alt="" width="22" height="22" decoding="async">
+                    <span class="detail-ai-split__name">豆包</span>
+                </button>
+                <span class="detail-ai-split__divider" aria-hidden="true"></span>
+                <button type="button" class="detail-ai-split__chevron" id="detailAiMenuBtn"
+                        aria-expanded="false" aria-haspopup="true" aria-controls="detailAiMenu" title="更多操作">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="detail-ai-split__menu" id="detailAiMenu" role="menu" hidden>
+                    <button type="button" class="detail-ai-split__item" role="menuitem" data-ai-action="copy-md">
+                        <img class="detail-ai-split__item-icon" src="<?php echo vs_e($detailImgBase . 'fuzhi.svg'); ?>" alt="" width="16" height="16" decoding="async">
+                        <span>复制整页为 Markdown</span>
+                    </button>
+                    <button type="button" class="detail-ai-split__item" role="menuitem" data-ai-action="ask-doubao">
+                        <img class="detail-ai-split__item-icon detail-ai-split__item-icon--round" src="<?php echo vs_e($detailImgBase . 'doubao.svg'); ?>" alt="" width="16" height="16" decoding="async">
+                        <span>问问豆包</span>
+                        <svg class="detail-ai-split__ext" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
         <?php if (!empty($api['desc'])): ?>
         <p class="detail-desc"><?php echo vs_e($api['desc']); ?></p>
         <?php endif; ?>
@@ -518,6 +591,12 @@ window.playgroundKeyContext = <?php echo json_encode(array(
 window.VS_CSRF_TOKEN = <?php echo json_encode(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
 window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/core/playground/relay.php')); ?>;
 window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(rtrim($vsBase, '/')); ?>;
+window.detailPageMarkdown = <?php echo json_encode(isset($detailPageMarkdown) ? (string) $detailPageMarkdown : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+window.detailAiMeta = <?php echo json_encode(array(
+    'siteName' => isset($detailSiteName) ? (string) $detailSiteName : 'ApiNexus',
+    'host' => isset($detailHost) ? (string) $detailHost : '',
+    'apiBase' => isset($detailApiBase) ? (string) $detailApiBase : (rtrim($vsBase, '/') . '/api/v1'),
+), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
 <script src="<?php echo vs_e($vsBase); ?>/assets/js/vs-syntax.js?v=<?php echo vs_e(VS_VERSION); ?>"></script>
