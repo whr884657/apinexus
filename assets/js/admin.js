@@ -104,30 +104,26 @@
 
     function refreshReviewBadgePlacement() {
         var groupBadge = document.getElementById('vsReviewBadgeGroup');
-        var itemBadge = document.getElementById('vsReviewBadgeItem');
+        var reviewItem = document.getElementById('vsReviewBadgeItem');
+        var feedbackItem = document.getElementById('vsFeedbackBadgeItem');
         var apiGroup = document.querySelector('.vs-sidebar__group[data-group="api"]');
-        if (!groupBadge || !itemBadge) {
+        if (!groupBadge) {
             return;
         }
-        if (groupBadge.getAttribute('data-active') !== '1') {
-            groupBadge.hidden = true;
-            itemBadge.hidden = true;
-            return;
+        var groupActive = groupBadge.getAttribute('data-active') === '1';
+        var reviewActive = reviewItem && reviewItem.getAttribute('data-active') === '1';
+        var feedbackActive = feedbackItem && feedbackItem.getAttribute('data-active') === '1';
+        var isOpen = !!(apiGroup && apiGroup.classList.contains('is-open'));
+        groupBadge.hidden = !(groupActive && !isOpen);
+        if (reviewItem) {
+            reviewItem.hidden = !(reviewActive && isOpen);
         }
-        var isOpen = apiGroup && apiGroup.classList.contains('is-open');
-        groupBadge.hidden = !!isOpen;
-        itemBadge.hidden = !isOpen;
+        if (feedbackItem) {
+            feedbackItem.hidden = !(feedbackActive && isOpen);
+        }
     }
 
     function bootReviewBadges() {
-        var groupBadge = document.getElementById('vsReviewBadgeGroup');
-        var itemBadge = document.getElementById('vsReviewBadgeItem');
-        if (!groupBadge || !itemBadge) {
-            return;
-        }
-        var active = !groupBadge.hidden || !itemBadge.hidden;
-        groupBadge.setAttribute('data-active', active ? '1' : '0');
-        itemBadge.setAttribute('data-active', active ? '1' : '0');
         refreshReviewBadgePlacement();
     }
 

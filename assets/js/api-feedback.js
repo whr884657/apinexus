@@ -25,7 +25,20 @@
         var emptyEl = document.getElementById('adminFbEmpty');
         var searchEmptyEl = document.getElementById('adminFbSearchEmpty');
         var searchInput = document.getElementById('adminFbSearchInput');
-        var statusFilter = document.getElementById('adminFbStatusFilter');
+        var statusFilter = null;
+        var statusFilterValue = '0';
+        var filterBtns = page.querySelectorAll('.vs-api-fb-filter');
+        function getStatusFilter() {
+            return statusFilterValue;
+        }
+        function setStatusFilter(v) {
+            statusFilterValue = String(v == null ? '0' : v);
+            filterBtns.forEach(function (btn) {
+                var on = btn.getAttribute('data-filter') === statusFilterValue;
+                btn.classList.toggle('is-active', on);
+                btn.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+        }
         var pageSizeEl = document.getElementById('adminFbPageSize');
         var footerEl = document.getElementById('adminFbFooter');
         var pagerNumsEl = document.getElementById('adminFbPagerNums');
@@ -115,7 +128,7 @@
 
         function matchedRows() {
             var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-            var st = statusFilter ? String(statusFilter.value || '') : '';
+            var st = getStatusFilter();
             var all = allDesktopRows();
             var filtered = all.filter(function (row) {
                 if (st !== '' && row.getAttribute('data-feedback-status') !== st) {
@@ -189,7 +202,7 @@
             var hasAny = totalAll > 0;
             var hasVisible = matched.length > 0;
             var q = searchInput ? String(searchInput.value || '').trim() : '';
-            var st = statusFilter ? String(statusFilter.value || '') : '';
+            var st = getStatusFilter();
             var filtered = q !== '' || st !== '';
 
             if (emptyEl) {
@@ -511,12 +524,14 @@
                 applyView();
             });
         }
-        if (statusFilter) {
-            statusFilter.addEventListener('change', function () {
+        filterBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                setStatusFilter(btn.getAttribute('data-filter') || '0');
                 currentPage = 1;
                 applyView();
             });
-        }
+        });
+        setStatusFilter('0');
         if (pageSizeEl) {
             pageSizeEl.addEventListener('change', function () {
                 currentPage = 1;

@@ -33,6 +33,27 @@ class ApiFeedbackManager
     }
 
     /**
+     * 待处理反馈数量（侧边栏红点）
+     *
+     * @return int
+     */
+    public static function countPending()
+    {
+        if (!self::tableReady()) {
+            return 0;
+        }
+        try {
+            $stmt = Database::connect()->prepare(
+                'SELECT COUNT(*) FROM `' . Database::table('feedback') . '` WHERE `status` = ?'
+            );
+            $stmt->execute(array(self::STATUS_PENDING));
+            return max(0, (int) $stmt->fetchColumn());
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
      * 管理员列表：含用户名与接口名
      *
      * @return array

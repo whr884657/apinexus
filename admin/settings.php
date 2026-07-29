@@ -1140,7 +1140,7 @@ $pmHasKey = $pmApiKey !== '';
                     <option value="<?php echo $i; ?>"<?php echo $dashLive === $i ? ' selected' : ''; ?>><?php echo $i; ?> 秒</option>
                 <?php endfor; ?>
             </select>
-            <?php vs_render_notice('tip', '', '控制台与「实时数据监控中心」共用此间隔：时钟、今日/累计调用、系统概览、最近调用、服务器监控与大屏飞线按此刷新；趋势与 TOP 约按 6 倍间隔软刷。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '控制台与「实时数据监控中心」共用此间隔：时钟、今日/累计调用、运营速览、最近调用、服务器监控与大屏飞线按此刷新；趋势与 TOP 约按 6 倍间隔软刷。', array('field' => true, 'compact' => true)); ?>
         </div>
 
         <hr class="vs-divider">
@@ -1154,7 +1154,10 @@ $pmHasKey = $pmApiKey !== '';
         </div>
         <div class="vs-form-row">
             <label class="vs-label" for="panelmonitor_provider">面板类型</label>
-            <select class="vs-input" id="panelmonitor_provider" name="panelmonitor_provider" data-vs-pick>
+            <input type="hidden" name="panelmonitor_provider" id="panelmonitor_provider_hidden"
+                   value="<?php echo vs_e($pmProvider); ?>">
+            <select class="vs-input" id="panelmonitor_provider" data-vs-pick
+                    aria-label="面板类型">
                 <option value=""<?php echo $pmProvider === '' ? ' selected' : ''; ?>>请选择</option>
                 <option value="baota"<?php echo $pmProvider === 'baota' ? ' selected' : ''; ?>>宝塔面板</option>
                 <option value="onepanel"<?php echo $pmProvider === 'onepanel' ? ' selected' : ''; ?>>1Panel</option>

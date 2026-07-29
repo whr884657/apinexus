@@ -127,44 +127,39 @@
     margin-bottom: 16px;
 }
 #adminDashPage .dash-grid-trend { grid-template-columns: 1.2fr 1fr; }
-#adminDashPage .dash-grid-bars { grid-template-columns: 1.2fr 1fr; align-items: start; }
+#adminDashPage .dash-grid-bars { grid-template-columns: 1.2fr 1fr; align-items: stretch; }
 #adminDashPage .dash-grid-bottom { grid-template-columns: 1.2fr 1fr; align-items: stretch; }
 #adminDashPage .dash-panel { margin: 0; }
-/* TOP：固定可视高度，内部滚筒；系统概览：按条目撑开，禁止滚动条 */
-#adminDashPage .dash-panel--top {
+/* TOP 与运营速览：同行等高；TOP 内部滚筒，速览随内容撑开后顶齐 */
+#adminDashPage .dash-panel--top,
+#adminDashPage .dash-panel--sys {
     display: flex;
     flex-direction: column;
-    min-height: 280px;
-    max-height: 280px;
+    height: 100%;
+    min-height: 300px;
+    max-height: none;
     overflow: hidden;
     position: relative;
     z-index: 0;
 }
-#adminDashPage .dash-panel--top > .vs-panel__header { flex-shrink: 0; }
-#adminDashPage .dash-panel__body--top {
+#adminDashPage .dash-panel--top > .vs-panel__header,
+#adminDashPage .dash-panel--sys > .vs-panel__header { flex-shrink: 0; }
+#adminDashPage .dash-panel__body--top,
+#adminDashPage .dash-panel--sys > .vs-panel__body {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
-#adminDashPage .dash-panel--sys {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    max-height: none;
-    overflow: visible;
-    position: relative;
-    z-index: 0;
-}
 #adminDashPage .dash-panel--sys > .vs-panel__body {
-    overflow: visible;
+    overflow: auto;
 }
 #adminDashPage .dash-bars-viewport {
     flex: 1 1 auto;
     min-height: 0;
-    height: 196px;
-    max-height: 196px;
+    height: auto;
+    max-height: none;
     overflow: hidden;
     position: relative;
 }
@@ -661,14 +656,12 @@
     #adminDashPage .dash-grid-trend,
     #adminDashPage .dash-grid-bars,
     #adminDashPage .dash-grid-bottom { grid-template-columns: 1fr; }
-    #adminDashPage .dash-panel--top {
-        min-height: 260px;
-        max-height: 260px;
-        overflow: hidden;
-    }
+    #adminDashPage .dash-panel--top,
     #adminDashPage .dash-panel--sys {
+        min-height: 260px;
         max-height: none;
-        overflow: visible;
+        height: auto;
+        overflow: hidden;
     }
 }
 @media (max-width: 560px) {
@@ -678,7 +671,7 @@
     #adminDashPage .dash-kpi__value { font-size: 1.25rem; }
     #adminDashPage .dash-kpi__label { font-size: 0.7rem; }
     #adminDashPage .dash-recent-wrap { max-height: 240px; }
-    /* 手机端系统概览：左右两列网格，6 条 → 3 行，不滚动 */
+    /* 手机端运营速览：左右两列网格，6 条 → 3 行，不滚动 */
     #adminDashPage .dash-sys {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;

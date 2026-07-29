@@ -396,17 +396,39 @@
         render();
     }
 
+    function syncPanelProviderHidden() {
+        var sel = document.getElementById('panelmonitor_provider');
+        var hidden = document.getElementById('panelmonitor_provider_hidden');
+        if (sel && hidden) {
+            hidden.value = String(sel.value || '');
+        }
+    }
+
     function bindPanelMonitorTest() {
         var btn = document.getElementById('panelMonitorTestBtn');
         var form = document.getElementById('dashboardForm');
+        var providerSel = document.getElementById('panelmonitor_provider');
+        if (providerSel) {
+            providerSel.addEventListener('change', syncPanelProviderHidden);
+            syncPanelProviderHidden();
+        }
+        if (form) {
+            form.addEventListener('submit', function () {
+                syncPanelProviderHidden();
+            }, true);
+        }
         if (!btn || !form || !window.VS || !window.VS.postForm) {
             return;
         }
         btn.addEventListener('click', function () {
+            syncPanelProviderHidden();
             var provider = document.getElementById('panelmonitor_provider');
             var baseurl = document.getElementById('panelmonitor_baseurl');
             var apikey = document.getElementById('panelmonitor_apikey');
-            if (!provider || !String(provider.value || '').trim()) {
+            var hidden = document.getElementById('panelmonitor_provider_hidden');
+            var providerVal = hidden ? String(hidden.value || '').trim()
+                : (provider ? String(provider.value || '').trim() : '');
+            if (!providerVal) {
                 showFlash('请选择面板类型', 'error');
                 return;
             }
@@ -414,7 +436,6 @@
                 showFlash('请填写面板地址', 'error');
                 return;
             }
-            // 首次配置必须填写密钥；已保存时可留空由服务端沿用
             var keyTyped = apikey && String(apikey.value || '').trim();
             var ph = apikey ? String(apikey.getAttribute('placeholder') || '') : '';
             if (!keyTyped && ph.indexOf('已保存') < 0) {
@@ -426,6 +447,7 @@
             var fd = new FormData(form);
             fd.set('action', 'test_panelmonitor');
             fd.set('persist', '1');
+            fd.set('panelmonitor_provider', providerVal);
             var enabled = form.querySelector('input[name="panelmonitor_enabled"]');
             if (enabled) {
                 enabled.checked = true;
@@ -437,6 +459,9 @@
                         if (apikey) {
                             apikey.value = '';
                             apikey.setAttribute('placeholder', '已保存，留空则保持不变');
+                        }
+                        if (enabled) {
+                            enabled.checked = true;
                         }
                     } else {
                         showFlash((data && data.msg) || '连接失败', 'error');

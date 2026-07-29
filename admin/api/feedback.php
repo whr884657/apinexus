@@ -128,16 +128,18 @@ function vs_render_admin_fb_desktop_row(array $ctx)
         . ' data-email="' . vs_e($ctx['email']) . '"'
         . ' data-time="' . vs_e($ctx['time']) . '"';
     ?>
-    <tr<?php echo $attrs; ?>>
+    <tr class="vs-api-fb-row"<?php echo $attrs; ?>>
         <td>
-            <div class="fb-content-cell">
-                <div class="fb-content-cell__text" data-field="content"><?php echo vs_e($ctx['content']); ?></div>
+            <div class="fb-name-cell">
+                <div class="fb-user-avatar" aria-hidden="true" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></div>
+                <div class="fb-name-meta">
+                    <span class="fb-content-preview" data-field="content"><?php echo vs_e($ctx['content']); ?></span>
+                    <span class="fb-api-line" data-field="api_name" title="<?php echo vs_e($ctx['api_name']); ?>"><?php echo vs_e($ctx['api_name']); ?></span>
+                </div>
             </div>
         </td>
-        <td><span class="fb-api-cell" data-field="api_name"><?php echo vs_e($ctx['api_name']); ?></span></td>
         <td>
             <div class="fb-user-cell">
-                <div class="fb-user-cell__avatar" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></div>
                 <span class="fb-user-cell__name" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
             </div>
         </td>
@@ -173,25 +175,31 @@ function vs_render_admin_fb_mobile_card(array $ctx)
         . ' data-email="' . vs_e($ctx['email']) . '"'
         . ' data-time="' . vs_e($ctx['time']) . '"';
     ?>
-    <div class="feedback-card"<?php echo $attrs; ?>>
-        <div class="feedback-card__content" data-field="content"><?php echo vs_e($ctx['content']); ?></div>
-        <div class="feedback-card__meta">
-            <span class="feedback-card__meta-item">
-                <span class="feedback-card__meta-label">关联接口</span>
-                <span class="feedback-card__meta-value" data-field="api_name"><?php echo vs_e($ctx['api_name']); ?></span>
-            </span>
-            <span class="feedback-card__meta-item">
-                <span class="feedback-card__meta-label">反馈用户</span>
-                <span class="feedback-card__meta-value" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
-            </span>
-            <span class="feedback-card__meta-item">
-                <span class="feedback-card__meta-label">提交时间</span>
-                <span class="feedback-card__meta-value" data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span>
-            </span>
-            <span class="feedback-card__meta-item">
+    <div class="feedback-card vs-api-fb-row"<?php echo $attrs; ?>>
+        <div class="feedback-card__header">
+            <div class="feedback-card__header-left">
+                <span class="fb-id">#<?php echo (int) $ctx['id']; ?></span>
+                <div class="feedback-card__avatar" aria-hidden="true" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></div>
+                <span class="feedback-card__name" data-field="content" title="<?php echo vs_e($ctx['content']); ?>"><?php echo vs_e($ctx['content']); ?></span>
+            </div>
+            <div class="feedback-card__tags">
                 <span class="vs-badge <?php echo $ctx['pending'] ? 'vs-badge--warning' : 'vs-badge--success'; ?>" data-field="status_label">
                     <?php echo $ctx['pending'] ? '待处理' : '已处理'; ?>
                 </span>
+            </div>
+        </div>
+        <div class="feedback-card__info">
+            <span class="feedback-card__info-item">
+                <span class="feedback-card__info-label">接口</span>
+                <span class="feedback-card__info-value" data-field="api_name"><?php echo vs_e($ctx['api_name']); ?></span>
+            </span>
+            <span class="feedback-card__info-item">
+                <span class="feedback-card__info-label">用户</span>
+                <span class="feedback-card__info-value" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
+            </span>
+            <span class="feedback-card__info-item">
+                <span class="feedback-card__info-label">时间</span>
+                <span class="feedback-card__info-value" data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span>
             </span>
         </div>
         <div class="feedback-card__actions" data-field="actions">
@@ -211,14 +219,17 @@ if ($tableReady) {
             <input type="search" class="vs-input vs-search-bar__input" id="adminFbSearchInput"
                    placeholder="搜索反馈内容、接口名或用户..." autocomplete="off">
         </div>
-        <select class="vs-input vs-select vs-toolbar-filter" id="adminFbStatusFilter" data-vs-pick aria-label="状态筛选">
-            <option value="">全部</option>
-            <option value="0">待处理</option>
-            <option value="1">已处理</option>
-        </select>
     </div>
     <?php
     $headerActions = ob_get_clean();
+}
+
+$fbCounts = array('0' => 0, '1' => 0);
+foreach ($rows as $row) {
+    $st = isset($row['status']) ? (string) (int) $row['status'] : '0';
+    if (isset($fbCounts[$st])) {
+        $fbCounts[$st] += 1;
+    }
 }
 
 vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
@@ -230,6 +241,19 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
             <?php vs_render_notice('warning', '', '请先在「系统升级」中执行数据库结构更新，以创建反馈表。', array('compact' => true)); ?>
         </div>
     <?php else: ?>
+        <div class="vs-api-list-tip">
+            <?php vs_render_notice('info', '', '用户提交的接口反馈在此处理。标记已处理后可填写回复（选填），系统将邮件通知提交用户。', array('compact' => true)); ?>
+        </div>
+
+        <div class="vs-tabs vs-api-fb-tabs" id="adminFbFilters" role="tablist" aria-label="反馈筛选">
+            <button type="button" class="vs-tabs__btn vs-api-fb-filter is-active" data-filter="0" role="tab" aria-selected="true">
+                待处理<span class="vs-badge vs-badge--warning vs-api-fb-tabs__badge" data-count="0"><?php echo (int) $fbCounts['0']; ?></span>
+            </button>
+            <button type="button" class="vs-tabs__btn vs-api-fb-filter" data-filter="1" role="tab" aria-selected="false">
+                已处理<span class="vs-badge vs-badge--default vs-api-fb-tabs__badge" data-count="1"><?php echo (int) $fbCounts['1']; ?></span>
+            </button>
+        </div>
+
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="adminFbEmpty"<?php echo count($rows) > 0 ? ' hidden' : ''; ?>>
             <div class="vs-api-list-empty__card">
                 <h3 class="vs-api-list-empty__title">暂无反馈</h3>
@@ -239,7 +263,7 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="adminFbSearchEmpty" hidden>
             <div class="vs-api-list-empty__card">
                 <h3 class="vs-api-list-empty__title">暂无匹配项</h3>
-                <p class="vs-api-list-empty__desc">当前搜索或状态下没有反馈，可清空条件重试。</p>
+                <p class="vs-api-list-empty__desc">当前筛选或搜索下没有反馈，可切换状态或清空关键词。</p>
             </div>
         </div>
 
@@ -249,8 +273,7 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
                     <thead>
                         <tr>
                             <th>反馈内容</th>
-                            <th>关联接口</th>
-                            <th>反馈用户</th>
+                            <th>提交用户</th>
                             <th>提交时间</th>
                             <th>状态</th>
                             <th>操作</th>

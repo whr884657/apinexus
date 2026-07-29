@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.17.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.17.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -275,11 +275,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.17.0（2026-07-30）
+### v13.17.1（2026-07-30）
 
-- 修复面板「测试连接成功」但控制台仍提示未配置：测试成功自动保存并启用、密钥不回显、清缓存（E189）
-- 系统设置：QQ/Gitee 回调地址可复制且不再溢出；开关行与主按钮间距/高度统一
-- QQ BOT 侧栏改为机器人图标；新增《系统设置页布局规范》
+- 修复面板监控已保存仍提示「请选择面板类型」：面板类型用隐藏域提交，空提交保留原类型（E190）
+- 接口反馈页按审核页改版；待处理反馈红点；Redis 菜单精简；TOP 与运营速览等高
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

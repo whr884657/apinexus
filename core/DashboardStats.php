@@ -1620,18 +1620,10 @@ class DashboardStats
      */
     private static function countPendingFeedback()
     {
-        if (!class_exists('ApiFeedbackManager') || !ApiFeedbackManager::tableReady()) {
+        if (!class_exists('ApiFeedbackManager')) {
             return 0;
         }
-        try {
-            $stmt = Database::connect()->prepare(
-                'SELECT COUNT(*) FROM `' . Database::table('feedback') . '` WHERE `status` = ?'
-            );
-            $stmt->execute(array(ApiFeedbackManager::STATUS_PENDING));
-            return max(0, (int) $stmt->fetchColumn());
-        } catch (Exception $e) {
-            return 0;
-        }
+        return (int) ApiFeedbackManager::countPending();
     }
 
     /**

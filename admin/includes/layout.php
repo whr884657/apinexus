@@ -80,7 +80,7 @@ function vs_admin_menu_groups()
                 array('id' => 'settings', 'title' => '系统设置', 'url' => '/admin/settings'),
                 array('id' => 'theme', 'title' => '主题设置', 'url' => '/admin/system/theme'),
                 array('id' => 'logs', 'title' => '日志查询', 'url' => '/admin/system/logs'),
-                array('id' => 'redis', 'title' => 'Redis 管理', 'url' => '/admin/system/redis'),
+                array('id' => 'redis', 'title' => 'Redis', 'url' => '/admin/system/redis'),
                 array('id' => 'upgrade', 'title' => '系统升级', 'url' => '/admin/upgrade'),
                 array('id' => 'about', 'title' => '关于', 'url' => '/admin/about'),
             ),
@@ -140,9 +140,16 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
         }
     }
     $showReviewSidebarBadge = false;
-    if (InstallChecker::isInstalled() && class_exists('ApiManager')) {
-        $showReviewSidebarBadge = ApiManager::countPendingReview() > 0;
+    $showFeedbackSidebarBadge = false;
+    if (InstallChecker::isInstalled()) {
+        if (class_exists('ApiManager')) {
+            $showReviewSidebarBadge = ApiManager::countPendingReview() > 0;
+        }
+        if (class_exists('ApiFeedbackManager')) {
+            $showFeedbackSidebarBadge = ApiFeedbackManager::countPending() > 0;
+        }
     }
+    $showApiSidebarBadge = $showReviewSidebarBadge || $showFeedbackSidebarBadge;
 
     echo '<!DOCTYPE html>' . "\n";
     echo '<html lang="zh-CN">' . "\n";
@@ -185,7 +192,7 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
             if ($group['id'] === 'sysmgmt' && $showUpdateSidebarBadge && !$isOpen) {
                 $badgeOnGroup = true;
             }
-            if ($group['id'] === 'api' && $showReviewSidebarBadge && !$isOpen) {
+            if ($group['id'] === 'api' && $showApiSidebarBadge && !$isOpen) {
                 $badgeOnGroup = true;
             }
             echo '<div class="vs-sidebar__group' . ($isOpen ? ' is-open' : '') . '" data-group="' . vs_e($group['id']) . '">' . "\n";
@@ -199,8 +206,9 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
                 echo '</span>';
             }
             if ($group['id'] === 'api') {
-                echo '<span class="vs-sidebar__badge" id="vsReviewBadgeGroup" aria-hidden="true"';
-                echo ($showReviewSidebarBadge && !$isOpen) ? '>' : ' hidden>';
+                echo '<span class="vs-sidebar__badge" id="vsReviewBadgeGroup" aria-hidden="true"'
+                    . ' data-active="' . ($showApiSidebarBadge ? '1' : '0') . '"';
+                echo ($showApiSidebarBadge && !$isOpen) ? '>' : ' hidden>';
                 echo '</span>';
             }
             echo '</span>';
@@ -217,8 +225,15 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
                     echo '</span>';
                 }
                 if ($group['id'] === 'api' && $child['id'] === 'api-review') {
-                    echo '<span class="vs-sidebar__badge" id="vsReviewBadgeItem" aria-hidden="true"';
+                    echo '<span class="vs-sidebar__badge" id="vsReviewBadgeItem" aria-hidden="true"'
+                        . ' data-active="' . ($showReviewSidebarBadge ? '1' : '0') . '"';
                     echo ($showReviewSidebarBadge && $isOpen) ? '>' : ' hidden>';
+                    echo '</span>';
+                }
+                if ($group['id'] === 'api' && $child['id'] === 'api-feedback') {
+                    echo '<span class="vs-sidebar__badge" id="vsFeedbackBadgeItem" aria-hidden="true"'
+                        . ' data-active="' . ($showFeedbackSidebarBadge ? '1' : '0') . '"';
+                    echo ($showFeedbackSidebarBadge && $isOpen) ? '>' : ' hidden>';
                     echo '</span>';
                 }
                 echo '</a>' . "\n";

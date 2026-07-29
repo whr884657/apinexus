@@ -638,7 +638,7 @@
             if (!s.enabled) {
                 badge.textContent = '未启用';
                 badge.className = 'vs-badge vs-badge--default';
-            } else if (!s.provider) {
+            } else if (!String(s.provider || '').trim()) {
                 badge.textContent = '未选择';
                 badge.className = 'vs-badge vs-badge--warning';
             } else if (!s.configured) {
@@ -657,7 +657,8 @@
             el.innerHTML = '<div class="dash-empty">服务器监控未启用。<br>请到系统设置 → 控制台与监控中开启，或使用「测试连接」自动保存并启用。</div>';
             return;
         }
-        if (!s.provider) {
+        var provider = String(s.provider || '').trim();
+        if (!provider) {
             el.innerHTML = '<div class="dash-empty">请选择面板类型（宝塔或 1Panel）并保存。</div>';
             return;
         }

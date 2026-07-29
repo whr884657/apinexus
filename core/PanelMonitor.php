@@ -92,8 +92,16 @@ class PanelMonitor
      */
     public static function persistConfig($provider, $baseUrl, $apiKey, $enabled, $liveInterval = null)
     {
-        $provider = self::normalizeProvider($provider);
+        $rawProvider = trim((string) $provider);
+        $provider = self::normalizeProvider($rawProvider);
+        // 空提交时保留原面板类型，避免 vs-pick / 表单漏传把已保存类型覆盖成空
+        if ($provider === self::PROVIDER_NONE && $rawProvider === '') {
+            $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
+        }
         $baseUrl = trim((string) $baseUrl);
+        if ($baseUrl === '') {
+            $baseUrl = trim((string) Config::get('panelmonitor_baseurl', ''));
+        }
         if ($baseUrl !== '') {
             $urlOk = self::assertSafePanelUrl($baseUrl);
             if ($urlOk !== true) {
@@ -107,6 +115,12 @@ class PanelMonitor
         $apiKey = trim((string) $apiKey);
         if ($apiKey === '') {
             $apiKey = (string) Config::get('panelmonitor_apikey', '');
+        }
+        if ($enabled && $provider === self::PROVIDER_NONE) {
+            return '请选择面板类型';
+        }
+        if ($enabled && ($baseUrl === '' || $apiKey === '')) {
+            return '请填写面板地址与接口密钥';
         }
 
         $items = array(
@@ -125,7 +139,6 @@ class PanelMonitor
             }
             $items['dashboard_live_interval'] = (string) $interval;
         }
-        // 先清旧缓存键，再写入，再清一次（地址变更时避免旧快照残留）
         self::clearCache();
         Config::setMany($items);
         self::clearCache();
