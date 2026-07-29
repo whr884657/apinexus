@@ -127,10 +127,10 @@
     margin-bottom: 16px;
 }
 #adminDashPage .dash-grid-trend { grid-template-columns: 1.2fr 1fr; }
-#adminDashPage .dash-grid-bars { grid-template-columns: 1.2fr 1fr; align-items: stretch; }
+#adminDashPage .dash-grid-bars { grid-template-columns: 1.2fr 1fr; align-items: start; }
 #adminDashPage .dash-panel { margin: 0; }
-/* TOP / 系统概览：等高固定，避免条目增多把整行撑高；溢出必须裁切，否则压住下方「最近调用」 */
-#adminDashPage .dash-panel--fixed {
+/* TOP：固定可视高度，内部滚筒；系统概览：按条目撑开，禁止滚动条 */
+#adminDashPage .dash-panel--top {
     display: flex;
     flex-direction: column;
     min-height: 280px;
@@ -139,15 +139,25 @@
     position: relative;
     z-index: 0;
 }
-#adminDashPage .dash-panel--fixed > .vs-panel__header { flex-shrink: 0; }
-#adminDashPage .dash-panel__body--scroll {
+#adminDashPage .dash-panel--top > .vs-panel__header { flex-shrink: 0; }
+#adminDashPage .dash-panel__body--top {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
+}
+#adminDashPage .dash-panel--sys {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+    position: relative;
+    z-index: 0;
+}
+#adminDashPage .dash-panel--sys > .vs-panel__body {
+    overflow: visible;
 }
 #adminDashPage .dash-bars-viewport {
     flex: 1 1 auto;
@@ -349,6 +359,7 @@
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     background: #f8fafc;
+    min-width: 0;
 }
 #adminDashPage .dash-sys-dot {
     width: 8px;
@@ -361,8 +372,21 @@
 #adminDashPage .dash-sys-dot.is-info { background: #2563eb; }
 #adminDashPage .dash-sys-dot.is-neutral { background: #64748b; }
 #adminDashPage .dash-sys-dot.is-success { background: #15803d; }
-#adminDashPage .dash-sys-name { flex: 1; font-size: 0.8125rem; color: #475569; }
-#adminDashPage .dash-sys-num { font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+#adminDashPage .dash-sys-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.8125rem;
+    color: #475569;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#adminDashPage .dash-sys-num {
+    flex-shrink: 0;
+    font-weight: 700;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
 
 #adminDashPage .dash-records-filters { display: flex; gap: 6px; flex-wrap: wrap; }
 #adminDashPage .dash-records-filter {
@@ -506,10 +530,14 @@
     #adminDashPage .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #adminDashPage .dash-grid-trend,
     #adminDashPage .dash-grid-bars { grid-template-columns: 1fr; }
-    #adminDashPage .dash-panel--fixed {
+    #adminDashPage .dash-panel--top {
         min-height: 260px;
         max-height: 260px;
         overflow: hidden;
+    }
+    #adminDashPage .dash-panel--sys {
+        max-height: none;
+        overflow: visible;
     }
 }
 @media (max-width: 560px) {
@@ -519,7 +547,17 @@
     #adminDashPage .dash-kpi__value { font-size: 1.25rem; }
     #adminDashPage .dash-kpi__label { font-size: 0.7rem; }
     #adminDashPage .dash-recent-wrap { max-height: 240px; }
-    #adminDashPage .dash-sys { grid-template-columns: 1fr; }
+    /* 手机端系统概览：左右两列网格，6 条 → 3 行，不滚动 */
+    #adminDashPage .dash-sys {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    #adminDashPage .dash-sys-item {
+        padding: 8px 10px;
+    }
+    #adminDashPage .dash-sys-name {
+        font-size: 0.75rem;
+    }
     #adminDashPage .dash-bar {
         grid-template-columns: minmax(64px, 92px) 1fr auto;
     }
