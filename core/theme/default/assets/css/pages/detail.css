@@ -1,9 +1,12 @@
 /**
  * 接口详情页（默认主题 · 白色色板）
+ *
+ * 顶距须盖过 feer-compat「.main-wrapper.container { padding-top:0 }」（E175）
  */
 
+body.vs-body.feer-front .main-wrapper.container.detail-page,
 .detail-page {
-    --detail-pad-top: 88px;
+    --detail-pad-top: 100px;
     padding-top: var(--detail-pad-top);
     padding-bottom: 2.5rem;
     max-width: 920px;
@@ -61,14 +64,14 @@
 
 .detail-title-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 0.75rem 1rem;
+    gap: 0.55rem 0.75rem;
     margin: 0 0 0.5rem;
 }
 
 .detail-title {
-    font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+    font-size: clamp(1.15rem, 2.4vw, 1.55rem);
     font-weight: 800;
     margin: 0;
     color: var(--text-main);
@@ -78,13 +81,14 @@
     min-width: 0;
 }
 
-/* 标题行「问问豆包」分栏胶囊（前台主题例外允许胶囊形） */
+/* 标题行「问问豆包」分栏胶囊（前台主题例外允许胶囊形；紧凑尺寸） */
 .detail-ai-split {
     position: relative;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: stretch;
     max-width: 100%;
+    height: 30px;
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 999px;
@@ -109,9 +113,9 @@
 .detail-ai-split__main {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.38rem 0.7rem 0.38rem 0.85rem;
-    font-size: 0.82rem;
+    gap: 0.25rem;
+    padding: 0 0.55rem 0 0.65rem;
+    font-size: 0.72rem;
     font-weight: 600;
     white-space: nowrap;
     border-radius: 999px 0 0 999px;
@@ -130,8 +134,8 @@
 }
 
 .detail-ai-split__avatar {
-    width: 22px;
-    height: 22px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
@@ -143,14 +147,14 @@
     align-self: stretch;
     background: #e5e7eb;
     flex: 0 0 1px;
-    margin: 0.35rem 0;
+    margin: 0.28rem 0;
 }
 
 .detail-ai-split__chevron {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.1rem;
+    width: 1.65rem;
     color: #9ca3af;
     border-radius: 0 999px 999px 0;
 }
@@ -166,6 +170,8 @@
 }
 
 .detail-ai-split__chevron svg {
+    width: 12px;
+    height: 12px;
     transition: transform 0.18s ease;
 }
 
@@ -173,11 +179,11 @@
     position: absolute;
     top: calc(100% + 0.4rem);
     right: 0;
-    min-width: 13.5rem;
-    padding: 0.35rem;
+    min-width: 12.5rem;
+    padding: 0.3rem;
     background: #fff;
     border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    border-radius: 10px;
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
     z-index: 50;
 }
@@ -186,7 +192,7 @@
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.45rem;
     appearance: none;
     -webkit-appearance: none;
     border: 0;
@@ -194,11 +200,11 @@
     color: #1f2937;
     cursor: pointer;
     font: inherit;
-    font-size: 0.84rem;
+    font-size: 0.78rem;
     font-weight: 500;
     text-align: left;
-    padding: 0.55rem 0.65rem;
-    border-radius: 8px;
+    padding: 0.45rem 0.55rem;
+    border-radius: 7px;
     white-space: nowrap;
 }
 
@@ -209,8 +215,8 @@
 }
 
 .detail-ai-split__item-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     object-fit: contain;
 }
@@ -228,10 +234,11 @@
 
 @media (max-width: 560px) {
     .detail-title-row {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        align-items: flex-start;
     }
     .detail-ai-split {
-        margin-left: auto;
+        margin-top: 0.1rem;
     }
 }
 
@@ -1065,8 +1072,9 @@
 }
 
 @media (max-width: 640px) {
+    body.vs-body.feer-front .main-wrapper.container.detail-page,
     .detail-page {
-        --detail-pad-top: 80px;
+        --detail-pad-top: 96px;
         padding-bottom: 2rem;
     }
 

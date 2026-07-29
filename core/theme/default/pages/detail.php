@@ -178,7 +178,7 @@ if (!$notFound) {
             <div class="detail-ai-split" id="detailAiSplit">
                 <button type="button" class="detail-ai-split__main" id="detailAskDoubaoBtn" title="问问豆包">
                     <span class="detail-ai-split__ask">问问</span>
-                    <img class="detail-ai-split__avatar" src="<?php echo vs_e($detailImgBase . 'doubao.svg'); ?>" alt="" width="22" height="22" decoding="async">
+                    <img class="detail-ai-split__avatar" src="<?php echo vs_e($detailImgBase . 'doubao.svg'); ?>" alt="" width="16" height="16" decoding="async">
                     <span class="detail-ai-split__name">豆包</span>
                 </button>
                 <span class="detail-ai-split__divider" aria-hidden="true"></span>
