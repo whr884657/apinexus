@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}api` (
     `upua` varchar(512) NOT NULL DEFAULT '' COMMENT '自定义User-Agent',
     `upreferermode` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Referer模式：0不发送 1自定义 2转发客户端',
     `upreferer` varchar(500) NOT NULL DEFAULT '' COMMENT '自定义Referer地址',
+    `jsonrewrite` mediumtext NULL COMMENT '代理JSON改写规则（仅代理类型；空表示不改写）',
     `method` varchar(10) NOT NULL DEFAULT 'GET' COMMENT '请求方式：GET或POST',
     `params` mediumtext COMMENT '请求参数（JSON数组）',
     `response` mediumtext COMMENT '返回参数示例',

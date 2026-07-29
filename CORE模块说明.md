@@ -57,7 +57,7 @@ version.php
 → UserAvatar → UserManager → AdminUserBinding
 → ApiManager → ApiQuickstart
 → AiConfig → AiClient → AiApiDoc
-→ ApiNotify → ProxyClientProfile → ApiProxy → ApiStats → IpLocator
+→ ApiNotify → ProxyClientProfile → ProxyJsonRewrite → ApiProxy → ApiStats → IpLocator
 → StatDayManager → ApiLogManager → ApiLogArchive → ApiKeyManager
 → ApiFeedbackManager → FrontendFeedback → FeedbackNotify
 → ApiCategoryManager
@@ -250,7 +250,8 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `IpLocator.php` | IP 归属地：系统内置或自定义接口；异步回填 `apilog.iploc`（v10.16.0 / **v13.2.0**） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ProxyClientProfile.php` | 代理出站 UA/Referer 内置预设与解析（**v13.4.0**） |
-| `ApiProxy.php` | 外链网关：先 curl 上游再原样回传；上游 3xx 透传 Location（**v13.4.1**） |
+| `ProxyJsonRewrite.php` | 代理响应 JSON 字段改写（set/del；仅 JSON；**v13.12.0**） |
+| `ApiProxy.php` | 外链网关：先 curl 上游再回传；可选 JSON 改写；上游 3xx 透传 Location（**v13.4.1 / v13.12.0**） |
 | `PlaygroundRelay.php` | 可选中继（兼容旧主题）；默认主题浏览器直连 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`（**v13.3.0**） |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
@@ -1146,6 +1147,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 | 界面勿泄露实现细节 | `开发规范/界面勿泄露实现细节.md`（禁止把库枚举写到页面） |
 | 查询串转路径样式 | `开发规范/查询串转路径样式规范.md`（**一条通用伪静态** `/{页}/{数字ID}`→`/{页}.php?id=`；代理 `/apis/{短码}` 另置顶） |
 | 本地/代理调用统计 | `开发规范/本地与代理接口统计机制.md`（`ApiStats` + `apilog`） |
+| 代理 JSON 字段改写 | `开发规范/代理JSON字段改写规范.md`（`ProxyJsonRewrite` + `jsonrewrite`） |
 | 主题资源隔离 | `开发规范/主题资源隔离规范.md` |
 | 开发易错点 | `开发规范/开发易错点备忘.md` |
 | 版本记录 | `update-log.json`、`发行说明/` |

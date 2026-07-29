@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'upua'         => isset($_POST['upua']) ? (string) $_POST['upua'] : '',
             'upreferermode'=> isset($_POST['upreferermode']) ? (int) $_POST['upreferermode'] : 0,
             'upreferer'    => isset($_POST['upreferer']) ? (string) $_POST['upreferer'] : '',
+            'jsonrewrite'  => isset($_POST['jsonrewrite']) ? (string) $_POST['jsonrewrite'] : '',
             'method'       => isset($_POST['method']) ? $_POST['method'] : 'GET',
             'params'       => isset($_POST['params']) ? (string) $_POST['params'] : '',
             'response'     => isset($_POST['response']) ? (string) $_POST['response'] : '',
@@ -62,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'icon'         => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'     => isset($_POST['category']) ? (string) $_POST['category'] : '',
         );
-        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params'));
+        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params', 'jsonrewrite'));
     };
 
     $assertOwner = function ($apiId) use ($userId) {
@@ -557,7 +558,26 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                                placeholder="https://example.com/" autocomplete="off">
                     </div>
                 </div>
-                <p class="vs-form-hint">本站请求上游后原样回传（含上游跳转目标）。密钥与出站 UA/Referer 仅服务端使用，不会展示给访客。</p>
+                <div class="vs-form-row" id="userApiJsonRewriteBlock">
+                    <label class="vs-label">JSON 字段改写</label>
+                    <label class="vs-check" for="userApiFormJsonRewriteOn">
+                        <input type="checkbox" id="userApiFormJsonRewriteOn" value="1">
+                        <span>启用（仅处理上游返回的 JSON；其它类型不改）</span>
+                    </label>
+                    <input type="hidden" id="userApiFormJsonRewrite" name="jsonrewrite" value="">
+                    <div class="vs-json-rewrite" id="userApiJsonRewriteEditor" hidden>
+                        <div class="vs-json-rewrite__head">
+                            <span>字段路径</span>
+                            <span>操作</span>
+                            <span>值（设置时填写）</span>
+                            <span></span>
+                        </div>
+                        <div class="vs-json-rewrite__rows" id="userApiJsonRewriteRows"></div>
+                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiJsonRewriteAdd">添加规则</button>
+                    </div>
+                    <p class="vs-form-hint">路径如 <code>api_info.blog</code>。「设置」新增/覆盖，「删除」去掉字段。用于替换上游署名或补齐本站信息。</p>
+                </div>
+                <p class="vs-form-hint">本站请求上游后回传调用方。启用 JSON 改写时仅改合法 JSON 字段；跳转目标与二进制仍原样透传。密钥与出站 UA/Referer 仅服务端使用。</p>
             </div>
 
             <div class="vs-form-row vs-form-row--2">

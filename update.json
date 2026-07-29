@@ -1,11 +1,12 @@
 {
-    "version": "13.11.3",
-    "title": "ApiNexus 13.11.3 AI 示例代码极简化",
+    "version": "13.12.0",
+    "title": "ApiNexus 13.12.0 代理 JSON 字段改写",
     "release_date": "2026-07-29",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "AI 代码示例改为极简能用即可（约 ≤500 字）；降低 max_tokens；过长自动压缩重试（E180）",
-        "含 v13.11.2：本地验证码大写/小写/数字且区分大小写（E179）"
+        "代理接口可配置 JSON 字段改写：设置/删除/覆盖上游返回字段（仅 JSON；TXT/二进制/跳转不改）",
+        "新增字段 jsonrewrite 与迁移 13.12.0.sql；核心 ProxyJsonRewrite；管理端/用户端规则编辑器",
+        "安全：路径白名单、禁原型污染、体积/条数上限、fail-open；须后台系统升级执行结构更新"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

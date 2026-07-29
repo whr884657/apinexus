@@ -53,6 +53,206 @@
     var formMode = 'create';
     var canLocal = page.getAttribute('data-can-local') === '1';
 
+    var jsonRewriteHidden = document.getElementById('userApiFormJsonRewrite');
+    var jsonRewriteOn = document.getElementById('userApiFormJsonRewriteOn');
+    var jsonRewriteRows = document.getElementById('userApiJsonRewriteRows');
+    var jsonRewriteEditor = document.getElementById('userApiJsonRewriteEditor');
+    var jsonRewriteAddBtn = document.getElementById('userApiJsonRewriteAdd');
+
+    function parseJsonRewriteValue(raw) {
+        var s = String(raw == null ? '' : raw).trim();
+        if (s === '') {
+            return '';
+        }
+        if ((s.charAt(0) === '{' && s.charAt(s.length - 1) === '}')
+            || (s.charAt(0) === '[' && s.charAt(s.length - 1) === ']')
+            || s === 'true' || s === 'false' || s === 'null'
+            || /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(s)) {
+            try {
+                return JSON.parse(s);
+            } catch (e) {
+                return s;
+            }
+        }
+        return s;
+    }
+
+    function formatJsonRewriteValue(val) {
+        if (val === null) {
+            return 'null';
+        }
+        if (typeof val === 'object') {
+            try {
+                return JSON.stringify(val);
+            } catch (e) {
+                return '';
+            }
+        }
+        if (typeof val === 'boolean' || typeof val === 'number') {
+            return String(val);
+        }
+        return String(val == null ? '' : val);
+    }
+
+    function addJsonRewriteRow(op, path, valueText) {
+        if (!jsonRewriteRows) {
+            return;
+        }
+        if (jsonRewriteRows.children.length >= 40) {
+            window.VS.showMessage('最多添加 40 条改写规则', 'error');
+            return;
+        }
+        var row = document.createElement('div');
+        row.className = 'vs-json-rewrite__row';
+        var pathInput = document.createElement('input');
+        pathInput.type = 'text';
+        pathInput.className = 'vs-input';
+        pathInput.placeholder = '如 api_info.developer';
+        pathInput.maxLength = 256;
+        pathInput.value = path || '';
+        var opSelect = document.createElement('select');
+        opSelect.className = 'vs-input vs-select';
+        opSelect.innerHTML = '<option value="set">设置</option><option value="del">删除</option>';
+        opSelect.value = (op === 'del') ? 'del' : 'set';
+        var valInput = document.createElement('textarea');
+        valInput.className = 'vs-input';
+        valInput.rows = 1;
+        valInput.placeholder = '字符串或 JSON';
+        valInput.value = valueText || '';
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'vs-btn vs-btn--default vs-btn--sm vs-json-rewrite__del';
+        delBtn.setAttribute('aria-label', '删除规则');
+        delBtn.textContent = '删';
+        function syncValVis() {
+            valInput.disabled = opSelect.value === 'del';
+            valInput.style.opacity = opSelect.value === 'del' ? '0.45' : '1';
+        }
+        opSelect.addEventListener('change', syncValVis);
+        delBtn.addEventListener('click', function () {
+            if (row.parentNode) {
+                row.parentNode.removeChild(row);
+            }
+            syncJsonRewriteHidden();
+        });
+        pathInput.addEventListener('input', syncJsonRewriteHidden);
+        opSelect.addEventListener('change', syncJsonRewriteHidden);
+        valInput.addEventListener('input', syncJsonRewriteHidden);
+        syncValVis();
+        row.appendChild(pathInput);
+        row.appendChild(opSelect);
+        row.appendChild(valInput);
+        row.appendChild(delBtn);
+        jsonRewriteRows.appendChild(row);
+    }
+
+    function clearJsonRewriteRows() {
+        if (jsonRewriteRows) {
+            jsonRewriteRows.innerHTML = '';
+        }
+    }
+
+    function setJsonRewriteFromConfig(raw) {
+        clearJsonRewriteRows();
+        var on = false;
+        var ops = [];
+        var s = String(raw || '').trim();
+        if (s) {
+            try {
+                var data = JSON.parse(s);
+                if (data && typeof data === 'object') {
+                    on = parseInt(data.on, 10) === 1 || parseInt(data.enabled, 10) === 1;
+                    if (Array.isArray(data.ops)) {
+                        ops = data.ops;
+                    }
+                }
+            } catch (e) {
+                on = false;
+                ops = [];
+            }
+        }
+        if (jsonRewriteOn) {
+            jsonRewriteOn.checked = on;
+        }
+        if (jsonRewriteEditor) {
+            jsonRewriteEditor.hidden = !on;
+        }
+        if (on) {
+            if (!ops.length) {
+                addJsonRewriteRow('set', '', '');
+            } else {
+                ops.forEach(function (item) {
+                    if (!item || typeof item !== 'object') {
+                        return;
+                    }
+                    var op = String(item.op || 'set').toLowerCase();
+                    if (op === 'remove' || op === 'delete' || op === 'unset') {
+                        op = 'del';
+                    }
+                    if (op !== 'del') {
+                        op = 'set';
+                    }
+                    addJsonRewriteRow(op, item.path || item.key || '', formatJsonRewriteValue(item.value));
+                });
+            }
+        }
+        syncJsonRewriteHidden();
+    }
+
+    function syncJsonRewriteHidden() {
+        if (!jsonRewriteHidden) {
+            return;
+        }
+        var enabled = !!(jsonRewriteOn && jsonRewriteOn.checked);
+        if (jsonRewriteEditor) {
+            jsonRewriteEditor.hidden = !enabled;
+        }
+        if (!enabled) {
+            jsonRewriteHidden.value = '';
+            return;
+        }
+        var ops = [];
+        if (jsonRewriteRows) {
+            Array.prototype.forEach.call(jsonRewriteRows.children, function (row) {
+                var inputs = row.querySelectorAll('input, select, textarea');
+                if (inputs.length < 3) {
+                    return;
+                }
+                var path = String(inputs[0].value || '').trim();
+                var op = String(inputs[1].value || 'set');
+                var rawVal = String(inputs[2].value || '');
+                if (!path) {
+                    return;
+                }
+                if (op === 'del') {
+                    ops.push({ op: 'del', path: path });
+                } else {
+                    ops.push({ op: 'set', path: path, value: parseJsonRewriteValue(rawVal) });
+                }
+            });
+        }
+        if (!ops.length) {
+            jsonRewriteHidden.value = '';
+            return;
+        }
+        jsonRewriteHidden.value = JSON.stringify({ on: 1, ops: ops });
+    }
+
+    if (jsonRewriteOn) {
+        jsonRewriteOn.addEventListener('change', function () {
+            if (jsonRewriteOn.checked && jsonRewriteRows && !jsonRewriteRows.children.length) {
+                addJsonRewriteRow('set', '', '');
+            }
+            syncJsonRewriteHidden();
+        });
+    }
+    if (jsonRewriteAddBtn) {
+        jsonRewriteAddBtn.addEventListener('click', function () {
+            addJsonRewriteRow('set', '', '');
+            syncJsonRewriteHidden();
+        });
+    }
+
     var iconBase = (page.getAttribute('data-icon-base') || '').replace(/\/$/, '');
     var defaultIcons = [];
     try {
@@ -232,7 +432,7 @@
                 encoded[key] = payload[key];
             });
             if (window.VS.encodeTransportFields) {
-                window.VS.encodeTransportFields(encoded, ['doc', 'aidoc', 'response', 'params']);
+                window.VS.encodeTransportFields(encoded, ['doc', 'aidoc', 'response', 'params', 'jsonrewrite']);
             }
             Object.keys(encoded).forEach(function (key) {
                 fd.append(key, encoded[key]);
@@ -754,6 +954,7 @@
         syncUserChargeUi();
         syncUserKeywaysUi();
         syncUserUpAuthUi();
+        setJsonRewriteFromConfig('');
     }
 
     function fillForm(api) {
@@ -801,6 +1002,7 @@
             }
         });
         syncUserUpAuthUi();
+        setJsonRewriteFromConfig(api.jsonrewrite || '');
         syncUserChargeUi();
         if (window.VsParamsEditor && paramsEditor) {
             window.VsParamsEditor.setValue(paramsEditor, api.params || '');
@@ -872,6 +1074,10 @@
             upua: upUaInput ? upUaInput.value.trim() : '',
             upreferermode: upRefererModeSelect ? String(parseInt(upRefererModeSelect.value, 10) || 0) : '0',
             upreferer: upRefererInput ? upRefererInput.value.trim() : '',
+            jsonrewrite: (function () {
+                syncJsonRewriteHidden();
+                return jsonRewriteHidden ? jsonRewriteHidden.value : '';
+            })(),
             method: getSelectedMethods().join(','),
             needkey: (document.getElementById('userApiFormNeedkey') || {}).value || '0',
             keyways: getSelectedKeyways().join(','),

@@ -900,6 +900,7 @@ class ApiManager
             self::applyKeywaysField($id, $parsed);
             self::applyUpstreamAuthFields($id, $parsed);
             self::applyProxyClientFields($id, $parsed);
+            self::applyJsonRewriteField($id, $parsed);
             RedisCache::invalidateFrontend();
             $row = self::findById($id);
             return self::formatRow($row);
@@ -1081,6 +1082,7 @@ class ApiManager
             self::applyKeywaysField($apiId, $parsed);
             self::applyUpstreamAuthFields($apiId, $parsed);
             self::applyProxyClientFields($apiId, $parsed);
+            self::applyJsonRewriteField($apiId, $parsed);
             RedisCache::invalidateFrontend();
             return true;
         } catch (Exception $e) {
@@ -1456,6 +1458,9 @@ class ApiManager
             'upreferer'     => class_exists('ProxyClientProfile')
                 ? ProxyClientProfile::normalizeReferer(isset($row['upreferer']) ? $row['upreferer'] : '')
                 : '',
+            'jsonrewrite'   => (class_exists('ProxyJsonRewrite') && ProxyJsonRewrite::hasColumn())
+                ? (isset($row['jsonrewrite']) ? (string) $row['jsonrewrite'] : '')
+                : '',
             'call_url'      => self::resolveCallUrl($row),
             'method'        => self::methodsToStorage(self::normalizeMethods(isset($row['method']) ? $row['method'] : self::METHOD_GET)),
             'methods'       => self::normalizeMethods(isset($row['method']) ? $row['method'] : self::METHOD_GET),
@@ -1818,6 +1823,25 @@ class ApiManager
         $data['upreferermode'] = $upreferermode;
         $data['upreferer'] = $upreferer;
 
+        // 代理 JSON 改写（仅代理类型；本地强制清空）
+        $jsonrewrite = '';
+        if ($apitype === self::APITYPE_PROXY) {
+            if (array_key_exists('jsonrewrite', $data)) {
+                if (class_exists('ProxyJsonRewrite')) {
+                    if (!ProxyJsonRewrite::hasColumn() && trim((string) $data['jsonrewrite']) !== '') {
+                        return '代理 JSON 改写功能尚未就绪，请先前往「系统升级」完成结构更新';
+                    }
+                    $jsonrewrite = ProxyJsonRewrite::normalizeConfig($data['jsonrewrite']);
+                }
+            } elseif ($excludeId > 0 && class_exists('ProxyJsonRewrite') && ProxyJsonRewrite::hasColumn()) {
+                $existRow = self::findById($excludeId);
+                if (is_array($existRow) && isset($existRow['jsonrewrite'])) {
+                    $jsonrewrite = ProxyJsonRewrite::normalizeConfig($existRow['jsonrewrite']);
+                }
+            }
+        }
+        $data['jsonrewrite'] = $jsonrewrite;
+
         $methodRaw = isset($data['method']) ? $data['method'] : self::METHOD_GET;
         if (is_array($methodRaw)) {
             $methodParts = $methodRaw;
@@ -1926,6 +1950,7 @@ class ApiManager
             'upua'          => $upua,
             'upreferermode' => $upreferermode,
             'upreferer'     => $upreferer,
+            'jsonrewrite'   => $jsonrewrite,
             'method'        => $method,
             'params'        => $requestParams,
             'response'      => $responseExample,
@@ -2084,6 +2109,32 @@ class ApiManager
                 ProxyClientProfile::normalizeReferer(isset($parsed['upreferer']) ? $parsed['upreferer'] : ''),
                 $apiId,
             ));
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
+     * 写入代理 JSON 改写规则（独立 UPDATE，兼容未迁移站点）
+     *
+     * @param int   $apiId
+     * @param array $parsed
+     * @return void
+     */
+    private static function applyJsonRewriteField($apiId, array $parsed)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId <= 0 || !class_exists('ProxyJsonRewrite') || !ProxyJsonRewrite::hasColumn()) {
+            return;
+        }
+        try {
+            $cfg = isset($parsed['jsonrewrite']) ? (string) $parsed['jsonrewrite'] : '';
+            $cfg = ProxyJsonRewrite::normalizeConfig($cfg);
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '` SET `jsonrewrite` = ? WHERE `id` = ?'
+            );
+            $stmt->execute(array($cfg === '' ? null : $cfg, $apiId));
         } catch (Exception $e) {
             // ignore
         }

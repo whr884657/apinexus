@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.11.3-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.12.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -28,7 +28,7 @@
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
 - **API 管理（已实现）**：后台接口列表（v8.0）/ 审核（v8.1）/ 分类（v8.2～8.3）/ 令牌（v9.0 表格卡片）/ 文档（v9.0 树+面板）/ 反馈（v9.0 列表+处理）；用户中心开发者投稿与邮件通知
 - **调用统计（v3.18+ / v13.3.0）：** 本地脚本头 2 行 `bootstrap` + `ApiStats::hit(接口ID)`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`
-- **代理网关（v13.4.0）**：一律服务端中继（取消对调用方 302）；上游认证 Query / Header API Key / Bearer；可配置出站 User-Agent（内置约 20 套 / 自定义 / 轮询）与 Referer；密钥不暴露给调用方
+- **代理网关（v13.4.0 / v13.12.0）**：一律服务端中继（取消对调用方 302）；上游认证 Query / Header API Key / Bearer；可配置出站 User-Agent（内置约 20 套 / 自定义 / 轮询）与 Referer；**可配置 JSON 字段改写**（仅改合法 JSON 正文，用于替换上游署名等）；密钥不暴露给调用方
 - **调用方密钥传递 keyways（v10.17.0 / v11.0.0）**：接口可多选 Query / Header(`X-API-Key`) / Bearer；守卫错误 JSON 含业务 `errcode`（非 HTTP 401/403）；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色（v11.1.0）**：登录/注册/忘记密码与后台仅可选系统 24 色；无自定义取色、无昼夜更替
 - **行为验证（v13.6.0 / v13.7.0）**：系统设置可选本站图形 / 极验三代 / 极验四代；**管理员与用户可分端选择**；三代与四代凭证分存；SDK 在 `core/captcha/`
@@ -274,9 +274,9 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.11.3（2026-07-29）
+### v13.12.0（2026-07-29）
 
-- AI 代码示例极简化（约 ≤500 字能用即可）；过长自动压缩重试（E180）
+- 代理接口 JSON 字段改写（设置/删除/覆盖）；迁移 `13.12.0.sql`；须系统升级（E181）
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

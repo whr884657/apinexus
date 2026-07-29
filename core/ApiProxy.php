@@ -8,7 +8,8 @@
  *
  * 转发策略（v13.4.0+）：
  *   - 一律先由本站 curl 请求上游（无论上游是否需要密钥），不对「上游接口 URL」本身做网关 302
- *   - 上游响应为 JSON/TXT/二进制等：原样透传状态码、Content-Type 与正文
+ *   - 上游响应为 JSON/TXT/二进制等：透传状态码、Content-Type 与正文
+ *   - 若配置了 jsonrewrite：仅对合法 JSON 正文做字段级 set/del（见 ProxyJsonRewrite；TXT/二进制不改）
  *   - 上游响应为 3xx + Location（如随机视频跳转）：校验公网后原样把跳转还给调用方（v13.4.1）
  *     禁止服务端跟随跳转去拉最终大文件（视频等）
  *   - 可配置上游认证、出站 User-Agent / Referer（见 ProxyClientProfile）
@@ -394,6 +395,28 @@ class ApiProxy
             $respBody = substr($respBody, 0, self::RELAY_MAX_BODY);
         }
 
+        // 提取上游 Content-Type，供 JSON 改写判定
+        $upstreamCt = '';
+        if (preg_match('/^Content-Type:\s*(.+)$/mi', (string) $respHeaders, $ctm)) {
+            $upstreamCt = trim($ctm[1]);
+        }
+
+        // 代理 JSON 字段改写（仅 JSON；失败则原样透传）
+        $jsonRewritten = false;
+        if (class_exists('ProxyJsonRewrite') && ProxyJsonRewrite::hasColumn()) {
+            $rewriteCfg = isset($row['jsonrewrite']) ? (string) $row['jsonrewrite'] : '';
+            if ($rewriteCfg !== '') {
+                $rewritten = ProxyJsonRewrite::apply($respBody, $upstreamCt, $rewriteCfg);
+                if (!empty($rewritten['changed']) && isset($rewritten['body'])) {
+                    $respBody = (string) $rewritten['body'];
+                    if (isset($rewritten['contentType']) && (string) $rewritten['contentType'] !== '') {
+                        $upstreamCt = (string) $rewritten['contentType'];
+                    }
+                    $jsonRewritten = true;
+                }
+            }
+        }
+
         $ok = ($http >= 200 && $http < 400);
         ApiStats::hitProxy($row, $ok, $http > 0 ? $http : 502);
 
@@ -407,6 +430,10 @@ class ApiProxy
             'proxy-authorization', 'te', 'trailer', 'upgrade', 'content-length',
             'content-encoding', 'location', 'set-cookie', 'set-cookie2',
         );
+        // 改写后强制覆盖 Content-Type，避免上游旧类型残留
+        if ($jsonRewritten) {
+            $skip[] = 'content-type';
+        }
         $lines = preg_split('/\r\n|\n|\r/', (string) $respHeaders);
         $sentCt = false;
         if (is_array($lines)) {
@@ -427,6 +454,10 @@ class ApiProxy
                 }
                 header(trim($hk) . ': ' . trim($hv), false);
             }
+        }
+        if ($jsonRewritten) {
+            header('Content-Type: ' . ($upstreamCt !== '' ? $upstreamCt : 'application/json; charset=utf-8'));
+            $sentCt = true;
         }
         if (!$sentCt) {
             header('Content-Type: application/octet-stream');

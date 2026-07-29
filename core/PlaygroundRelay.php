@@ -143,6 +143,23 @@ class PlaygroundRelay
             }
             // URL 已含客户端参数与上游 Query Key；headers 含 Bearer / Header Key
             $result = self::httpRequest($built['url'], $method, $upstreamParams, $built['headers']);
+            // 与正式网关一致：对代理 JSON 应用字段改写（无论上游业务成功与否）
+            if (is_array($result)
+                && class_exists('ProxyJsonRewrite') && ProxyJsonRewrite::hasColumn()) {
+                $rewriteCfg = isset($row['jsonrewrite']) ? (string) $row['jsonrewrite'] : '';
+                if ($rewriteCfg !== '' && isset($result['body'], $result['contentType'])) {
+                    $rewritten = ProxyJsonRewrite::apply(
+                        (string) $result['body'],
+                        (string) $result['contentType'],
+                        $rewriteCfg
+                    );
+                    if (!empty($rewritten['changed'])) {
+                        $result['body'] = (string) $rewritten['body'];
+                        $result['contentType'] = (string) $rewritten['contentType'];
+                        $result['encoding'] = 'text';
+                    }
+                }
+            }
             $result['displayUrl'] = $displayUrl;
             return $result;
         }

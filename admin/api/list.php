@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'upua'        => isset($_POST['upua']) ? (string) $_POST['upua'] : '',
             'upreferermode' => isset($_POST['upreferermode']) ? (int) $_POST['upreferermode'] : 0,
             'upreferer'   => isset($_POST['upreferer']) ? (string) $_POST['upreferer'] : '',
+            'jsonrewrite' => isset($_POST['jsonrewrite']) ? (string) $_POST['jsonrewrite'] : '',
             'method'      => isset($_POST['method']) ? $_POST['method'] : 'GET',
             'params'      => isset($_POST['params']) ? (string) $_POST['params'] : '',
             'response'    => isset($_POST['response']) ? (string) $_POST['response'] : '',
@@ -46,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'icon'        => isset($_POST['icon']) ? (string) $_POST['icon'] : '',
             'category'    => isset($_POST['category']) ? (string) $_POST['category'] : '',
         );
-        // doc / aidoc / response / params 可能含代码样例，经 VS64 传输规避 WAF 误拦（接口描述保持明文，勿编码）
-        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params'));
+        // doc / aidoc / response / params / jsonrewrite 可能含代码样例，经 VS64 传输规避 WAF 误拦（接口描述保持明文，勿编码）
+        return vs_decode_transport_fields($data, array('doc', 'aidoc', 'response', 'params', 'jsonrewrite'));
     };
 
     if ($action === 'get') {
@@ -230,7 +231,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['upreferer'],
             $data['upkeyvia'],
             $data['upkeyname'],
-            $data['upauth']
+            $data['upauth'],
+            $data['jsonrewrite']
         );
 
         if ($action === 'ai_gen_doc') {
@@ -872,7 +874,26 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                    placeholder="https://example.com/" autocomplete="off">
                         </div>
                     </div>
-                    <p class="vs-form-hint">本站先请求上游接口，再把上游返回的内容原样交给调用方（JSON/TXT 等保持原样）。若上游本身是跳转到视频地址，则把跳转目标透传给调用方，不会在服务器上拉取视频文件。出站 UA/Referer 仅影响本站访问上游时的身份，不会写入对外文档。</p>
+                    <div class="vs-form-row" id="apiListJsonRewriteBlock">
+                        <label class="vs-label">JSON 字段改写</label>
+                        <label class="vs-check" for="apiListFormJsonRewriteOn">
+                            <input type="checkbox" id="apiListFormJsonRewriteOn" value="1">
+                            <span>启用（仅处理上游返回的 JSON；TXT / 图片 / 视频等不改）</span>
+                        </label>
+                        <input type="hidden" id="apiListFormJsonRewrite" name="jsonrewrite" value="">
+                        <div class="vs-json-rewrite" id="apiListJsonRewriteEditor" hidden>
+                            <div class="vs-json-rewrite__head">
+                                <span>字段路径</span>
+                                <span>操作</span>
+                                <span>值（设置时填写；可为 JSON）</span>
+                                <span></span>
+                            </div>
+                            <div class="vs-json-rewrite__rows" id="apiListJsonRewriteRows"></div>
+                            <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListJsonRewriteAdd">添加规则</button>
+                        </div>
+                        <p class="vs-form-hint">点分路径，如 <code>api_info.developer</code> 或 <code>data.0.name</code>。「设置」会新增或覆盖；「删除」去掉该字段。用于替换上游站点信息、补齐固定字段等。最多 40 条。</p>
+                    </div>
+                    <p class="vs-form-hint">本站先请求上游接口，再把上游返回的内容交给调用方。若启用了上方 JSON 改写，则仅在正文为合法 JSON 时按规则改写字段；TXT / 二进制 / 跳转仍按原策略透传。出站 UA/Referer 仅影响本站访问上游时的身份，不会写入对外文档。</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>
