@@ -49,6 +49,17 @@ class PanelMonitor
     }
 
     /**
+     * 配置开关是否启用（容忍空白/大小写）
+     *
+     * @return bool
+     */
+    public static function isEnabled()
+    {
+        $v = strtolower(trim((string) Config::get('panelmonitor_enabled', '0')));
+        return $v === '1' || $v === 'true' || $v === 'yes' || $v === 'on';
+    }
+
+    /**
      * 清除面板监控缓存（保存/测试成功后调用）
      *
      * @return void
@@ -62,6 +73,8 @@ class PanelMonitor
         $url = trim((string) Config::get('panelmonitor_baseurl', ''));
         if ($provider !== self::PROVIDER_NONE && $url !== '') {
             RedisCache::forget(self::cacheKey($provider, $url));
+            // 兼容历史未规范化 URL 的缓存键
+            RedisCache::forget(self::cacheKey($provider, rtrim($url, '/')));
         }
         $prev = RedisCache::get('panel_monitor_last_key');
         if (is_string($prev) && $prev !== '') {
@@ -78,6 +91,25 @@ class PanelMonitor
     private static function cacheKey($provider, $url)
     {
         return 'panel_monitor_snap_' . md5($provider . '|' . $url);
+    }
+
+    /**
+     * 用当前 Config 覆盖快照中的启用/类型/已配置标记（禁止 Redis 旧值误导控制台）
+     *
+     * @param array  $snap
+     * @param bool   $enabled
+     * @param string $provider
+     * @param string $url
+     * @param string $key
+     * @return array
+     */
+    private static function applyConfigFlags(array $snap, $enabled, $provider, $url, $key)
+    {
+        $snap['enabled'] = (bool) $enabled;
+        $snap['provider'] = $provider;
+        $snap['providerlabel'] = self::providerLabel($provider);
+        $snap['configured'] = ($url !== '' && $key !== '' && $provider !== self::PROVIDER_NONE);
+        return $snap;
     }
 
     /**
@@ -116,6 +148,7 @@ class PanelMonitor
         if ($apiKey === '') {
             $apiKey = (string) Config::get('panelmonitor_apikey', '');
         }
+        $enabled = (bool) $enabled;
         if ($enabled && $provider === self::PROVIDER_NONE) {
             return '请选择面板类型';
         }
@@ -141,6 +174,21 @@ class PanelMonitor
         }
         self::clearCache();
         Config::setMany($items);
+        Config::clearCache();
+        // 写后回读，避免静默写失败导致控制台长期「未启用」
+        if (self::isEnabled() !== $enabled) {
+            Config::set('panelmonitor_enabled', $enabled ? '1' : '0');
+            Config::clearCache();
+        }
+        if ($enabled && self::normalizeProvider(Config::get('panelmonitor_provider', '')) === self::PROVIDER_NONE) {
+            return '面板类型未能保存，请重新选择后保存';
+        }
+        if ($enabled && trim((string) Config::get('panelmonitor_baseurl', '')) === '') {
+            return '面板地址未能保存，请重新填写后保存';
+        }
+        if ($enabled && trim((string) Config::get('panelmonitor_apikey', '')) === '') {
+            return '接口密钥未能保存，请重新填写后保存';
+        }
         self::clearCache();
         return true;
     }
@@ -155,14 +203,11 @@ class PanelMonitor
     {
         $base = self::emptySnapshot();
         try {
-            $enabled = Config::get('panelmonitor_enabled', '0') === '1';
+            $enabled = self::isEnabled();
             $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
             $url = trim((string) Config::get('panelmonitor_baseurl', ''));
             $key = trim((string) Config::get('panelmonitor_apikey', ''));
-            $base['enabled'] = $enabled;
-            $base['provider'] = $provider;
-            $base['providerlabel'] = self::providerLabel($provider);
-            $base['configured'] = ($url !== '' && $key !== '' && $provider !== self::PROVIDER_NONE);
+            $base = self::applyConfigFlags($base, $enabled, $provider, $url, $key);
 
             if (!$enabled) {
                 $base['error'] = '未启用服务器监控';
@@ -182,7 +227,9 @@ class PanelMonitor
             if (!$refresh && class_exists('RedisCache')) {
                 $hit = RedisCache::get($cacheKey);
                 if (is_array($hit) && isset($hit['ok'])) {
-                    return self::sanitizeSnapshot($hit);
+                    // E191：缓存命中也必须叠加当前 Config，禁止旧 enabled=false 误显示「未启用」
+                    $hit = self::sanitizeSnapshot($hit);
+                    return self::applyConfigFlags($hit, true, $provider, $url, $key);
                 }
             }
 
@@ -191,10 +238,7 @@ class PanelMonitor
             } else {
                 $snap = self::fetchOnePanel($url, $key);
             }
-            $snap['enabled'] = true;
-            $snap['configured'] = true;
-            $snap['provider'] = $provider;
-            $snap['providerlabel'] = self::providerLabel($provider);
+            $snap = self::applyConfigFlags($snap, true, $provider, $url, $key);
             $snap['fetchedat'] = date('Y-m-d H:i:s');
             $snap = self::sanitizeSnapshot($snap);
             if (class_exists('RedisCache')) {

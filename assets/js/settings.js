@@ -448,7 +448,8 @@
             fd.set('action', 'test_panelmonitor');
             fd.set('persist', '1');
             fd.set('panelmonitor_provider', providerVal);
-            var enabled = form.querySelector('input[name="panelmonitor_enabled"]');
+            fd.set('panelmonitor_enabled', '1');
+            var enabled = form.querySelector('input[type="checkbox"][name="panelmonitor_enabled"]');
             if (enabled) {
                 enabled.checked = true;
             }
@@ -462,6 +463,10 @@
                         }
                         if (enabled) {
                             enabled.checked = true;
+                        }
+                        var enHidden = form.querySelector('input[type="hidden"][name="panelmonitor_enabled"]');
+                        if (enHidden) {
+                            enHidden.value = '0';
                         }
                     } else {
                         showFlash((data && data.msg) || '连接失败', 'error');

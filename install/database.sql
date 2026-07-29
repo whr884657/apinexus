@@ -128,7 +128,12 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('captcha_on_admin_forgot', '1'),
 ('captcha_on_user_login', '1'),
 ('captcha_on_user_register', '1'),
-('captcha_on_user_forgot', '1');
+('captcha_on_user_forgot', '1'),
+('dashboard_live_interval', '5'),
+('panelmonitor_enabled', '0'),
+('panelmonitor_provider', ''),
+('panelmonitor_baseurl', ''),
+('panelmonitor_apikey', '');
 
 -- 邮箱验证码发信频率限制记录
 CREATE TABLE IF NOT EXISTS `{prefix}mailrate` (

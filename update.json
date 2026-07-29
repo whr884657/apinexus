@@ -1,12 +1,12 @@
 {
-    "version": "13.17.1",
-    "title": "ApiNexus 13.17.1 面板类型持久化与反馈页改版",
+    "version": "13.17.2",
+    "title": "ApiNexus 13.17.2 面板启用状态与配置键可见",
     "release_date": "2026-07-30",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "修复面板类型保存丢失：隐藏域同步 + 空提交保留原类型（E190）",
-        "接口反馈页按审核页改版（待处理/已处理 Tab、手机卡片）；API 管理反馈红点",
-        "Redis 菜单精简；控制台 TOP 与运营速览等高；系统概览更名为运营速览"
+        "修复已启用仍显示未启用：缓存叠加 Config、写后回读、软刷状态等级（E191）",
+        "启用开关 hidden+checkbox；测试连接强制写入 enabled=1",
+        "迁移预置 panelmonitor_* 键值行（非新字段），便于库内可见"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

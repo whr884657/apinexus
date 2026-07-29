@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.17.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.17.2-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -275,10 +275,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.17.1（2026-07-30）
+### v13.17.2（2026-07-30）
 
-- 修复面板监控已保存仍提示「请选择面板类型」：面板类型用隐藏域提交，空提交保留原类型（E190）
-- 接口反馈页按审核页改版；待处理反馈红点；Redis 菜单精简；TOP 与运营速览等高
+- 修复面板监控「已保存并启用」但控制台仍显示未启用：Redis 快照叠加 Config、写后回读、软刷按状态等级取舍（E191）
+- 启用开关改为 hidden+checkbox；测试连接强制 `enabled=1`；迁移预置 `panelmonitor_*` 键值行（存在 config 表行里，不是新字段）
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

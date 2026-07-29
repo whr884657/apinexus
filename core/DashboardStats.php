@@ -220,12 +220,12 @@ class DashboardStats
             return PanelMonitor::snapshot($refresh);
         } catch (Exception $e) {
             $s = PanelMonitor::emptySnapshot();
-            $s['enabled'] = Config::get('panelmonitor_enabled', '0') === '1';
+            $s['enabled'] = PanelMonitor::isEnabled();
             $s['error'] = '面板暂时不可用';
             return $s;
         } catch (Throwable $e) {
             $s = PanelMonitor::emptySnapshot();
-            $s['enabled'] = Config::get('panelmonitor_enabled', '0') === '1';
+            $s['enabled'] = PanelMonitor::isEnabled();
             $s['error'] = '面板暂时不可用';
             return $s;
         }

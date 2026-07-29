@@ -621,6 +621,16 @@
         return 'is-ok';
     }
 
+    /** 服务器卡片状态优劣：越高越好（用于软刷取舍） */
+    function serverStatusRank(s) {
+        if (!s || !Object.prototype.hasOwnProperty.call(s, 'enabled')) return -1;
+        if (!s.enabled) return 0;
+        if (!String(s.provider || '').trim()) return 1;
+        if (!s.configured) return 2;
+        if (!s.ok) return 3;
+        return 4;
+    }
+
     function renderServer(s) {
         var el = document.getElementById('dashServer');
         var badge = document.getElementById('dashServerBadge');
@@ -811,18 +821,18 @@
             var keepSys = (!forceRefresh && wasReady && boot.sys_overview)
                 ? boot.sys_overview
                 : null;
-            var keepServer = (!forceRefresh && wasReady && boot.server)
+            var keepServer = (!forceRefresh && wasReady && boot.server
+                && Object.prototype.hasOwnProperty.call(boot.server, 'enabled'))
                 ? boot.server
                 : null;
             var keepKpi = (!forceRefresh && wasReady && boot.kpi) ? boot.kpi : null;
             var keepTop = (!forceRefresh && wasReady && Array.isArray(boot.top_apis) && boot.top_apis.length)
                 ? boot.top_apis
                 : null;
-            // 若新快照已配置成功，不要被软刷保留的旧「未配置」状态盖住
-            if (keepServer && res.snapshot && res.snapshot.server) {
-                var ns = res.snapshot.server;
-                var os = keepServer;
-                if ((ns.configured && !os.configured) || (ns.ok && !os.ok) || (ns.enabled && !os.enabled)) {
+            // E191：软刷不得用旧「未启用/未配置」盖住新快照；新快照状态不低于旧值时一律采用新快照
+            if (keepServer && res.snapshot && res.snapshot.server
+                && Object.prototype.hasOwnProperty.call(res.snapshot.server, 'enabled')) {
+                if (serverStatusRank(res.snapshot.server) >= serverStatusRank(keepServer)) {
                     keepServer = null;
                 }
             }

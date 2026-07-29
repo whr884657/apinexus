@@ -41,7 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $provider = isset($_POST['panelmonitor_provider']) ? $_POST['panelmonitor_provider'] : '';
             $baseUrl = isset($_POST['panelmonitor_baseurl']) ? (string) $_POST['panelmonitor_baseurl'] : '';
             $apiKey = isset($_POST['panelmonitor_apikey']) ? (string) $_POST['panelmonitor_apikey'] : '';
-            $enabled = isset($_POST['panelmonitor_enabled']);
+            $enabledRaw = isset($_POST['panelmonitor_enabled']) ? strtolower(trim((string) $_POST['panelmonitor_enabled'])) : '';
+            $enabled = ($enabledRaw === '1' || $enabledRaw === 'on' || $enabledRaw === 'true' || $enabledRaw === 'yes');
             $saved = PanelMonitor::persistConfig($provider, $baseUrl, $apiKey, $enabled, $interval);
             if ($saved !== true) {
                 AjaxResponse::error(is_string($saved) ? $saved : '保存失败');
@@ -1123,7 +1124,7 @@ if ($dashLive < 1) {
 if ($dashLive > 5) {
     $dashLive = 5;
 }
-$pmEnabled = isset($vsCfg['panelmonitor_enabled']) && $vsCfg['panelmonitor_enabled'] === '1';
+$pmEnabled = PanelMonitor::isEnabled();
 $pmProvider = PanelMonitor::normalizeProvider(
     isset($vsCfg['panelmonitor_provider']) ? $vsCfg['panelmonitor_provider'] : ''
 );
@@ -1148,6 +1149,7 @@ $pmHasKey = $pmApiKey !== '';
         <?php vs_render_notice('tip', '', '对接宝塔或 1Panel 面板接口，在控制台右侧展示 CPU、负载、内存、网络与面板版本。面板地址一般为本机或内网面板入口；请在面板侧开启 API 并放行本站服务器 IP。测试连接成功后会自动保存并启用。', array('field' => true, 'compact' => true)); ?>
         <div class="vs-form-row vs-form-row--check">
             <label class="vs-checkbox">
+                <input type="hidden" name="panelmonitor_enabled" value="0">
                 <input type="checkbox" name="panelmonitor_enabled" value="1" <?php echo $pmEnabled ? 'checked' : ''; ?>>
                 <span>启用服务器监控</span>
             </label>
