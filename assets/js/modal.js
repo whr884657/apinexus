@@ -50,6 +50,10 @@
         if (modalEl) {
             modalEl.classList.remove('vs-modal--lg');
             modalEl.classList.remove('vs-modal--license');
+            modalEl.classList.remove('vs-modal--update');
+        }
+        if (footEl) {
+            footEl.hidden = false;
         }
         if (resolveFn) {
             var fn = resolveFn;
@@ -81,11 +85,13 @@
         if (modalEl) {
             modalEl.classList.toggle('vs-modal--lg', options.size === 'lg' || options.size === 'license');
             modalEl.classList.toggle('vs-modal--license', options.size === 'license');
+            modalEl.classList.toggle('vs-modal--update', options.size === 'update');
         }
 
         titleEl.textContent = title || '提示';
         setBodyContent(message, options.html || '');
         footEl.innerHTML = '';
+        footEl.hidden = !(buttons && buttons.length);
 
         (buttons || []).forEach(function (btn) {
             var el = document.createElement('button');

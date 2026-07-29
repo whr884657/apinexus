@@ -133,6 +133,7 @@
         VsModal.open({
             title: '正在更新…',
             html: buildProgressHtml(hasDb),
+            size: 'update',
             closeOnOverlay: false,
             closeOnEscape: false,
             buttons: [],
@@ -175,6 +176,7 @@
                 VsModal.open({
                     title: '更新完成',
                     message: res.msg || '更新已完成，请刷新页面以加载新版本',
+                    size: 'update',
                     buttons: [{
                         text: '刷新页面',
                         primary: true,
@@ -210,6 +212,7 @@
             VsModal.open({
                 title: '备份确认（二次确认）',
                 html: html,
+                size: 'update',
                 closeOnOverlay: false,
                 buttons: [
                     {
@@ -270,6 +273,7 @@
         VsModal.open({
             title: '发现新版本 v' + data.remote_version,
             html: buildUpdateHtml(data),
+            size: 'update',
             closeOnOverlay: false,
             buttons: buttons,
         });

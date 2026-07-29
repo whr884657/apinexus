@@ -1,12 +1,11 @@
 {
-    "version": "13.10.0",
-    "title": "ApiNexus 13.10.0 详情问问豆包 · 大屏默认今日",
+    "version": "13.10.1",
+    "title": "ApiNexus 13.10.1 更新弹窗固定尺寸",
     "release_date": "2026-07-29",
     "db_changes": false,
     "changes": [
-        "默认主题详情：问问豆包胶囊 + 整页 Markdown；顶距盖过 feer-compat、按钮紧凑（E172/E175）",
-        "数据大屏默认中国地图「今日数据」飞线，可自行切回实时（E173）",
-        "发版：发行说明/ 不再进仓库与 ZIP（E174）"
+        "系统更新弹窗电脑/手机固定尺寸，changelog 与进度仅在正文区滚动，避免抽屉忽大忽小（E176）",
+        "VsModal 新增 size=update；弹窗开发规范强化固定高度反模式"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
