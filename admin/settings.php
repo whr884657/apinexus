@@ -527,7 +527,7 @@ vs_admin_layout_start('系统设置', 'settings');
 vs_admin_accordion_start(
     'settings-site',
     '站点信息',
-    '系统名称、浏览器标题、顶栏名称、版权与备案'
+    '系统名称、浏览器标题、顶栏、版权、图标与备案'
 );
 ?>
     <form method="post" action="" class="vs-form" id="siteForm" data-ajax="1">
@@ -657,8 +657,8 @@ vs_admin_accordion_start(
 <?php
 vs_admin_accordion_start(
     'settings-captcha',
-    '验证码',
-    '管理员与用户可分别选择本站图形 / 行为验证三代 / 四代；凭证共用，场景可单独开关'
+    '登录验证',
+    '管理员与用户可分端选择本站图形或行为验证（三代 / 四代）'
 );
 ?>
     <form method="post" action="" class="vs-form" id="captchaForm" data-ajax="1">
@@ -784,7 +784,7 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-oauth',
     '第三方登录',
-    '配置 QQ / Gitee OAuth，仅用于用户登录页聚合登录'
+    'QQ / Gitee 聚合登录（仅用户端）'
 );
 ?>
     <form method="post" action="" class="vs-form" id="oauthForm" data-ajax="1">
@@ -846,8 +846,8 @@ vs_admin_accordion_start(
 <?php
 vs_admin_accordion_start(
     'settings-site-extra',
-    '站点扩展',
-    '网站运行时间、个人主页默认背景、页脚自定义栏与二维码'
+    '页脚与展示',
+    '运行时间、页脚自定义栏、二维码、赞助收款码与免责声明'
 );
 ?>
     <form method="post" action="" class="vs-form" id="siteExtraForm" data-ajax="1">
@@ -1006,7 +1006,7 @@ $ipLocMode = IpLocator::provider();
 vs_admin_accordion_start(
     'settings-iploc',
     'IP 归属地',
-    '写入调用日志，供数据大屏飞线使用'
+    '解析访客归属地，供调用日志与数据大屏飞线使用'
 );
 ?>
     <form method="post" action="" class="vs-form" id="iplocForm" data-ajax="1">
@@ -1108,8 +1108,8 @@ vs_admin_accordion_start(
 <?php
 vs_admin_accordion_start(
     'settings-dashboard',
-    '控制台',
-    '实时刷新与服务器监控'
+    '控制台与监控',
+    '实时刷新间隔，以及宝塔 / 1Panel 服务器监控'
 );
 $dashLive = isset($vsCfg['dashboard_live_interval']) ? (int) $vsCfg['dashboard_live_interval'] : 5;
 if ($dashLive < 1) {
@@ -1180,8 +1180,8 @@ $pmApiKey = isset($vsCfg['panelmonitor_apikey']) ? (string) $vsCfg['panelmonitor
 <?php
 vs_admin_accordion_start(
     'settings-apilog',
-    'API 日志',
-    '详细日志、冷热归档与计划任务'
+    '调用日志',
+    '详细记录、冷热归档与计划任务'
 );
     $cfgHotDays = isset($vsCfg['apilog_hot_days']) ? (int) $vsCfg['apilog_hot_days'] : ApiLogArchive::DEFAULT_HOT_DAYS;
     if ($cfgHotDays < 1) {
@@ -1360,8 +1360,8 @@ vs_admin_accordion_start(
 <?php
 vs_admin_accordion_start(
     'settings-ai',
-    'AI 对接',
-    '配置大模型以生成接口详细文档与多语言代码示例（仅管理员后台）'
+    'AI 助手',
+    '对接大模型，生成接口文档与多语言代码示例'
 );
 $aiCfg = AiConfig::forAdminForm(false);
 $aiPresets = AiConfig::providerPresets();

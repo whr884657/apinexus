@@ -18,6 +18,7 @@
     var pendingForceRefresh = false;
     var ready = false;
     var initialPending = false;
+    var snapshotRetryLeft = 1;
     var clockBaseMs = 0;
     var clockOffset = 0;
     var liveIntervalMs = 5000;
@@ -792,6 +793,7 @@
                 return;
             }
             initialPending = false;
+            snapshotRetryLeft = 1;
             var wasReady = ready;
             ready = true;
             // 软刷：保留 live 已刷新的最近调用 / 系统概览 / KPI / TOP，避免被 snapshot 慢路径覆盖
@@ -834,6 +836,11 @@
             }
         }).catch(function () {
             if (forceRefresh || initialPending) {
+                if (initialPending && !forceRefresh && snapshotRetryLeft > 0) {
+                    snapshotRetryLeft -= 1;
+                    setTimeout(function () { loadSnapshot(false); }, 1200);
+                    return;
+                }
                 window.VS.showMessage('网络异常', 'error');
             }
         }).then(function () {

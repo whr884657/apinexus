@@ -8,6 +8,10 @@ require_once __DIR__ . '/init.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
+    // 面板 HTTP 可能较慢：尽早释放会话锁，避免 live/snapshot 互相堵死导致整页空白
+    if (function_exists('session_write_close')) {
+        @session_write_close();
+    }
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
     if ($action === 'refresh' || $action === 'snapshot') {
         DashboardStats::assertAjaxRateLimit($action);
@@ -16,6 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'snapshot' => DashboardStats::consoleSnapshot($action === 'refresh'),
             ));
         } catch (Exception $e) {
+            AjaxResponse::error('统计暂时不可用，请稍后重试');
+        } catch (Throwable $e) {
             AjaxResponse::error('统计暂时不可用，请稍后重试');
         }
     }
@@ -26,6 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'live' => DashboardStats::consoleLiveTick(),
             ));
         } catch (Exception $e) {
+            AjaxResponse::error('实时数据暂时不可用');
+        } catch (Throwable $e) {
             AjaxResponse::error('实时数据暂时不可用');
         }
     }

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.16.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.16.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -275,9 +275,9 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.16.0（2026-07-30）
+### v13.16.1（2026-07-30）
 
-- 控制台服务器监控（宝塔 / 1Panel）；站点三名称与自定义版权；文章编辑网格与 Markdown 安全 HTML；QQ BOT 占位
+- 修复宝塔服务器监控导致控制台整页空白；1Panel 双鉴权；设置板块文案对齐（E188）
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

@@ -129,9 +129,7 @@ class DashboardStats
         }
         // 最近调用不进整页快照：避免 45s 软刷用旧列表覆盖 live 已刷新的数据
         $cached['recent'] = self::recentCallsCompact();
-        $cached['server'] = class_exists('PanelMonitor')
-            ? PanelMonitor::snapshot($refresh)
-            : array();
+        $cached['server'] = self::safePanelSnapshot($refresh);
         $cached['server_time'] = date('Y-m-d H:i:s');
         $cached['weekday'] = self::weekdayLabel();
         $cached['boot_light'] = false;
@@ -200,13 +198,37 @@ class DashboardStats
             ),
             'recent'        => self::recentCallsCompact(),
             'sys_overview'  => self::sysOverviewLive($ttl),
-            'server'        => class_exists('PanelMonitor')
-                ? PanelMonitor::snapshot(false)
-                : array(),
+            'server'        => self::safePanelSnapshot(false),
             'top_apis'      => self::remember('top_apis_live_10', $ttl, function () {
                 return self::topApisToday(10);
             }),
         );
+    }
+
+    /**
+     * 面板监控失败不得影响控制台 KPI / 最近调用
+     *
+     * @param bool $refresh
+     * @return array
+     */
+    private static function safePanelSnapshot($refresh = false)
+    {
+        if (!class_exists('PanelMonitor')) {
+            return array();
+        }
+        try {
+            return PanelMonitor::snapshot($refresh);
+        } catch (Exception $e) {
+            $s = PanelMonitor::emptySnapshot();
+            $s['enabled'] = Config::get('panelmonitor_enabled', '0') === '1';
+            $s['error'] = '面板暂时不可用';
+            return $s;
+        } catch (Throwable $e) {
+            $s = PanelMonitor::emptySnapshot();
+            $s['enabled'] = Config::get('panelmonitor_enabled', '0') === '1';
+            $s['error'] = '面板暂时不可用';
+            return $s;
+        }
     }
 
     /**
