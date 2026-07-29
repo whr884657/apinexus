@@ -92,6 +92,7 @@ class DashboardStats
             'top_apis'     => array(),
             'sys_overview' => array(),
             'recent'       => array(),
+            'server'       => array(),
             'boot_light'   => true,
             'live_interval'=> self::liveIntervalSeconds(),
         );
@@ -128,6 +129,9 @@ class DashboardStats
         }
         // 最近调用不进整页快照：避免 45s 软刷用旧列表覆盖 live 已刷新的数据
         $cached['recent'] = self::recentCallsCompact();
+        $cached['server'] = class_exists('PanelMonitor')
+            ? PanelMonitor::snapshot($refresh)
+            : array();
         $cached['server_time'] = date('Y-m-d H:i:s');
         $cached['weekday'] = self::weekdayLabel();
         $cached['boot_light'] = false;
@@ -196,6 +200,9 @@ class DashboardStats
             ),
             'recent'        => self::recentCallsCompact(),
             'sys_overview'  => self::sysOverviewLive($ttl),
+            'server'        => class_exists('PanelMonitor')
+                ? PanelMonitor::snapshot(false)
+                : array(),
             'top_apis'      => self::remember('top_apis_live_10', $ttl, function () {
                 return self::topApisToday(10);
             }),

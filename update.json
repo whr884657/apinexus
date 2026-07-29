@@ -1,11 +1,12 @@
 {
-    "version": "13.15.1",
-    "title": "ApiNexus 13.15.1 恢复默认主题详情页布局",
-    "release_date": "2026-07-29",
+    "version": "13.16.0",
+    "title": "ApiNexus 13.16.0 控制台服务器监控",
+    "release_date": "2026-07-30",
     "db_changes": false,
     "changes": [
-        "默认主题 API 详情页恢复为 13.14 单栏窄版样式（撤销 13.15.0 电脑端双栏改版）",
-        "保留 13.15.0：各主题独立 auth-captcha.css 验证码样式隔离"
+        "控制台底部改为「最近调用」与「服务器」左右并排",
+        "系统设置可对接宝塔 / 1Panel，展示 CPU、负载、内存、网络与面板版本",
+        "支持测试连接与 HTTPS 证书校验开关（E186）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

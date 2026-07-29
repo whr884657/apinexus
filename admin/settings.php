@@ -44,11 +44,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($interval > 5) {
                 $interval = 5;
             }
-            Config::set('dashboard_live_interval', (string) $interval);
+            $provider = PanelMonitor::normalizeProvider(
+                isset($_POST['panelmonitor_provider']) ? $_POST['panelmonitor_provider'] : ''
+            );
+            $baseUrl = trim(isset($_POST['panelmonitor_baseurl']) ? (string) $_POST['panelmonitor_baseurl'] : '');
+            if ($baseUrl !== '') {
+                $urlOk = PanelMonitor::assertSafePanelUrl($baseUrl);
+                if ($urlOk !== true) {
+                    AjaxResponse::error($urlOk);
+                }
+                $baseUrl = rtrim($baseUrl, '/');
+                if (!preg_match('#^https?://#i', $baseUrl)) {
+                    $baseUrl = 'https://' . $baseUrl;
+                }
+            }
+            $apiKey = trim(isset($_POST['panelmonitor_apikey']) ? (string) $_POST['panelmonitor_apikey'] : '');
+            if ($apiKey === '') {
+                $apiKey = (string) Config::get('panelmonitor_apikey', '');
+            }
+            Config::setMany(array(
+                'dashboard_live_interval'   => (string) $interval,
+                'panelmonitor_enabled'      => isset($_POST['panelmonitor_enabled']) ? '1' : '0',
+                'panelmonitor_provider'     => $provider,
+                'panelmonitor_baseurl'      => $baseUrl,
+                'panelmonitor_apikey'       => $apiKey,
+                'panelmonitor_sslverify'    => isset($_POST['panelmonitor_sslverify']) ? '1' : '0',
+            ));
             AjaxResponse::success('控制台设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败，请稍后重试');
         }
+    }
+
+    if ($action === 'test_panelmonitor') {
+        $provider = PanelMonitor::normalizeProvider(
+            isset($_POST['panelmonitor_provider']) ? $_POST['panelmonitor_provider'] : ''
+        );
+        $baseUrl = trim(isset($_POST['panelmonitor_baseurl']) ? (string) $_POST['panelmonitor_baseurl'] : '');
+        if ($baseUrl === '') {
+            $baseUrl = (string) Config::get('panelmonitor_baseurl', '');
+        }
+        $apiKey = trim(isset($_POST['panelmonitor_apikey']) ? (string) $_POST['panelmonitor_apikey'] : '');
+        if ($apiKey === '') {
+            $apiKey = (string) Config::get('panelmonitor_apikey', '');
+        }
+        if ($baseUrl !== '') {
+            $urlOk = PanelMonitor::assertSafePanelUrl($baseUrl);
+            if ($urlOk !== true) {
+                AjaxResponse::error($urlOk);
+            }
+        }
+        $result = PanelMonitor::testConnection($provider, $baseUrl, $apiKey);
+        if (empty($result['ok'])) {
+            AjaxResponse::error(isset($result['msg']) ? (string) $result['msg'] : '连接失败');
+        }
+        AjaxResponse::success(isset($result['msg']) ? (string) $result['msg'] : '连接成功');
     }
 
     if ($action === 'generate_apilog_cron_key') {
@@ -1019,7 +1069,7 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-dashboard',
     '控制台',
-    '实时刷新间隔'
+    '实时刷新与服务器监控'
 );
 $dashLive = isset($vsCfg['dashboard_live_interval']) ? (int) $vsCfg['dashboard_live_interval'] : 5;
 if ($dashLive < 1) {
@@ -1028,6 +1078,13 @@ if ($dashLive < 1) {
 if ($dashLive > 5) {
     $dashLive = 5;
 }
+$pmEnabled = isset($vsCfg['panelmonitor_enabled']) && $vsCfg['panelmonitor_enabled'] === '1';
+$pmProvider = PanelMonitor::normalizeProvider(
+    isset($vsCfg['panelmonitor_provider']) ? $vsCfg['panelmonitor_provider'] : ''
+);
+$pmBaseUrl = isset($vsCfg['panelmonitor_baseurl']) ? (string) $vsCfg['panelmonitor_baseurl'] : '';
+$pmApiKey = isset($vsCfg['panelmonitor_apikey']) ? (string) $vsCfg['panelmonitor_apikey'] : '';
+$pmSsl = !isset($vsCfg['panelmonitor_sslverify']) || $vsCfg['panelmonitor_sslverify'] !== '0';
 ?>
     <form method="post" action="" class="vs-form" id="dashboardForm" data-ajax="1">
         <input type="hidden" name="action" value="save_dashboard">
@@ -1038,10 +1095,51 @@ if ($dashLive > 5) {
                     <option value="<?php echo $i; ?>"<?php echo $dashLive === $i ? ' selected' : ''; ?>><?php echo $i; ?> 秒</option>
                 <?php endfor; ?>
             </select>
-            <?php vs_render_notice('tip', '', '控制台与「实时数据监控中心」共用此间隔：时钟、今日/累计调用、系统概览、最近调用与大屏飞线按此刷新；趋势与 TOP 约按 6 倍间隔软刷。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '控制台与「实时数据监控中心」共用此间隔：时钟、今日/累计调用、系统概览、最近调用、服务器监控与大屏飞线按此刷新；趋势与 TOP 约按 6 倍间隔软刷。', array('field' => true, 'compact' => true)); ?>
+        </div>
+
+        <hr class="vs-divider">
+        <h4 class="vs-form-subtitle">服务器监控</h4>
+        <?php vs_render_notice('tip', '', '对接宝塔或 1Panel 面板接口，在控制台右侧展示 CPU、负载、内存、网络与面板版本。面板地址一般为本机或内网面板入口；请在面板侧开启 API 并放行本站服务器 IP。', array('field' => true, 'compact' => true)); ?>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="panelmonitor_enabled" value="1" <?php echo $pmEnabled ? 'checked' : ''; ?>>
+                <span>启用服务器监控</span>
+            </label>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="panelmonitor_provider">面板类型</label>
+            <select class="vs-input" id="panelmonitor_provider" name="panelmonitor_provider" data-vs-pick>
+                <option value=""<?php echo $pmProvider === '' ? ' selected' : ''; ?>>请选择</option>
+                <option value="baota"<?php echo $pmProvider === 'baota' ? ' selected' : ''; ?>>宝塔面板</option>
+                <option value="onepanel"<?php echo $pmProvider === 'onepanel' ? ' selected' : ''; ?>>1Panel</option>
+            </select>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="panelmonitor_baseurl">面板地址</label>
+            <input type="text" class="vs-input" id="panelmonitor_baseurl" name="panelmonitor_baseurl"
+                   value="<?php echo vs_e($pmBaseUrl); ?>"
+                   placeholder="例如 https://127.0.0.1:8888 或 https://面板域名:端口"
+                   autocomplete="off">
+            <?php vs_render_notice('tip', '', '填写面板根地址（含协议与端口），不要带具体接口路径。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="panelmonitor_apikey">接口密钥</label>
+            <input type="password" class="vs-input" id="panelmonitor_apikey" name="panelmonitor_apikey"
+                   value="<?php echo vs_e($pmApiKey); ?>"
+                   placeholder="宝塔 API 密钥 / 1Panel API Key"
+                   autocomplete="off">
+            <?php vs_render_notice('tip', '', '留空并保存时将保留原密钥；更换时请填写新密钥。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="panelmonitor_sslverify" value="1" <?php echo $pmSsl ? 'checked' : ''; ?>>
+                <span>校验 HTTPS 证书（自签证书可关闭）</span>
+            </label>
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存控制台设置</button>
+            <button type="button" class="vs-btn vs-btn--default" id="panelMonitorTestBtn">测试连接</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>

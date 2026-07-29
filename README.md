@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.15.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.16.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -35,6 +35,7 @@
 - **AI 代码示例（v12.0.0）**：前端按鉴权×语言分片请求（最多 27 片）；系统设置可开单线程/并行；进程实时显示当前任务
 - **快速上手语言图标（v12.0.1）**：默认主题切换鉴权方式后九种语言图标不再丢失（`detailQsLangIcons` 兜底）
 - **实时数据监控中心（v12.1.0）**：ECharts 中国/世界地图飞线、四角玻璃面板（今日/累计/成功率/失败率 + TOP + 趋势 + 实时调用日志）、太阳/月亮深浅色、双端自适应
+- **控制台服务器监控（v13.16.0）**：对接宝塔 / 1Panel，展示 CPU、负载、内存、网络与面板版本；与「最近调用」左右并排
 - **Markdown / 快速上手（v10.14.0+）**：精简居中与缩进；默认主题「快速上手」多语言与多鉴权示例；后台「详细文档 / 代码示例」；AI 生成加固
 - **用户令牌（v3.29+）**：表 `apikey`；用户中心与管理员后台均可管理；格式 `sk-`+32 位（小写前缀）；每账号最多 3 个；本地/代理调用已校验密钥并累计次数
 - **积分计费与充值（v3.33+ / v3.34）**：接口收费扣积分；用户充值中心扫码支付；订单管理与积分变动分栏；回调直访 `core/play/codeplay/notify.php`
@@ -274,9 +275,9 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.15.1（2026-07-29）
+### v13.16.0（2026-07-30）
 
-- 默认主题 API 详情页恢复 13.14 单栏样式（撤销 13.15.0 电脑端双栏改版）；验证码主题隔离保留
+- 控制台底部「最近调用」与「服务器」左右并排；系统设置可对接宝塔 / 1Panel 展示 CPU、负载、内存、网络与面板版本
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

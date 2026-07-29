@@ -396,6 +396,44 @@
         render();
     }
 
+    function bindPanelMonitorTest() {
+        var btn = document.getElementById('panelMonitorTestBtn');
+        var form = document.getElementById('dashboardForm');
+        if (!btn || !form || !window.VS || !window.VS.postForm) {
+            return;
+        }
+        btn.addEventListener('click', function () {
+            var provider = document.getElementById('panelmonitor_provider');
+            var baseurl = document.getElementById('panelmonitor_baseurl');
+            if (!provider || !String(provider.value || '').trim()) {
+                showFlash('请选择面板类型', 'error');
+                return;
+            }
+            if (!baseurl || !String(baseurl.value || '').trim()) {
+                showFlash('请填写面板地址', 'error');
+                return;
+            }
+            btn.disabled = true;
+            showFlash('正在测试面板连接…', 'info');
+            var fd = new FormData(form);
+            fd.set('action', 'test_panelmonitor');
+            window.VS.postForm(fd, window.location.href)
+                .then(function (data) {
+                    if (data && data.code === 1) {
+                        showFlash(data.msg || '连接成功', 'success');
+                    } else {
+                        showFlash((data && data.msg) || '连接失败', 'error');
+                    }
+                })
+                .catch(function () {
+                    showFlash('网络异常，请稍后重试', 'error');
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                });
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
@@ -407,6 +445,7 @@
         bindAiListModels();
         bindAiTest();
         bindIplocExtras();
+        bindPanelMonitorTest();
 
         var siteExtra = document.getElementById('siteExtraForm');
         if (siteExtra) {

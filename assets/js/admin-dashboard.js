@@ -596,6 +596,111 @@
         el.innerHTML = html;
     }
 
+    function fmtNum(v, digits) {
+        if (v === null || v === undefined || v === '') return '—';
+        var n = Number(v);
+        if (isNaN(n)) return '—';
+        if (digits == null) return String(n);
+        return n.toFixed(digits);
+    }
+
+    function fmtRate(kb) {
+        if (kb === null || kb === undefined || kb === '') return '—';
+        var n = Number(kb);
+        if (isNaN(n)) return '—';
+        if (n >= 1024) return (n / 1024).toFixed(2) + ' MB/s';
+        return n.toFixed(1) + ' KB/s';
+    }
+
+    function meterClass(pct) {
+        var n = Number(pct);
+        if (isNaN(n)) return '';
+        if (n >= 90) return 'is-danger';
+        if (n >= 70) return 'is-warn';
+        return 'is-ok';
+    }
+
+    function renderServer(s) {
+        var el = document.getElementById('dashServer');
+        var badge = document.getElementById('dashServerBadge');
+        if (!el) return;
+        s = s || {};
+        if (!Object.prototype.hasOwnProperty.call(s, 'enabled')) {
+            if (badge) {
+                badge.textContent = '加载中';
+                badge.className = 'vs-badge vs-badge--info';
+            }
+            el.innerHTML = '<div class="dash-empty">正在获取服务器状态…</div>';
+            return;
+        }
+        if (badge) {
+            if (!s.enabled) {
+                badge.textContent = '未启用';
+                badge.className = 'vs-badge vs-badge--default';
+            } else if (!s.configured) {
+                badge.textContent = '未配置';
+                badge.className = 'vs-badge vs-badge--warning';
+            } else if (s.ok) {
+                badge.textContent = s.providerlabel || '在线';
+                badge.className = 'vs-badge vs-badge--success';
+            } else {
+                badge.textContent = '异常';
+                badge.className = 'vs-badge vs-badge--error';
+            }
+        }
+
+        if (!s.enabled) {
+            el.innerHTML = '<div class="dash-empty">服务器监控未启用。<br>请到系统设置 → 控制台中开启并填写面板接口。</div>';
+            return;
+        }
+        if (!s.configured) {
+            el.innerHTML = '<div class="dash-empty">请填写面板地址与接口密钥。</div>';
+            return;
+        }
+        if (!s.ok) {
+            el.innerHTML = '<div class="dash-empty">' + esc(s.error || '暂时无法获取服务器数据') + '</div>';
+            return;
+        }
+
+        var cpu = s.cpu;
+        var mem = s.mempercent;
+        var html = '';
+        html += '<div class="dash-server__meta">';
+        html += '<div class="dash-server__chip"><span class="dash-server__chip-k">面板</span><span class="dash-server__chip-v">'
+            + esc(s.providerlabel || '—') + (s.panelversion ? ' · ' + esc(s.panelversion) : '') + '</span></div>';
+        html += '<div class="dash-server__chip"><span class="dash-server__chip-k">系统</span><span class="dash-server__chip-v" title="'
+            + esc(s.system || '') + '">' + esc(s.system || '—') + '</span></div>';
+        if (s.uptime) {
+            html += '<div class="dash-server__chip"><span class="dash-server__chip-k">运行</span><span class="dash-server__chip-v">'
+                + esc(s.uptime) + '</span></div>';
+        }
+        html += '</div>';
+
+        html += '<div class="dash-server__meters">';
+        html += '<div class="dash-server__meter">'
+            + '<div class="dash-server__meter-top"><span>CPU</span><strong>' + esc(fmtNum(cpu, 1)) + '%</strong></div>'
+            + '<div class="dash-server__bar"><i class="' + meterClass(cpu) + '" style="width:' + Math.min(100, Math.max(0, Number(cpu) || 0)) + '%"></i></div>'
+            + (s.cpucores ? '<div class="dash-server__hint">' + esc(String(s.cpucores)) + ' 核</div>' : '')
+            + '</div>';
+        html += '<div class="dash-server__meter">'
+            + '<div class="dash-server__meter-top"><span>内存</span><strong>' + esc(fmtNum(mem, 1)) + '%</strong></div>'
+            + '<div class="dash-server__bar"><i class="' + meterClass(mem) + '" style="width:' + Math.min(100, Math.max(0, Number(mem) || 0)) + '%"></i></div>'
+            + '<div class="dash-server__hint">' + (s.memused != null && s.memtotal != null
+                ? esc(String(s.memused) + ' / ' + String(s.memtotal) + ' MB') : '—') + '</div>'
+            + '</div>';
+        html += '</div>';
+
+        html += '<div class="dash-server__grid">';
+        html += '<div class="dash-server__stat"><span>负载 1/5/15</span><strong>'
+            + esc(fmtNum(s.load1, 2) + ' / ' + fmtNum(s.load5, 2) + ' / ' + fmtNum(s.load15, 2))
+            + '</strong></div>';
+        html += '<div class="dash-server__stat"><span>上行</span><strong>' + esc(fmtRate(s.netup)) + '</strong></div>';
+        html += '<div class="dash-server__stat"><span>下行</span><strong>' + esc(fmtRate(s.netdown)) + '</strong></div>';
+        html += '</div>';
+
+        el.innerHTML = html;
+    }
+
     function updateClock(data) {
         if (!data) return;
         if (data.server_time) {
@@ -619,6 +724,7 @@
         renderTop(boot.top_apis);
         renderSys(boot.sys_overview);
         renderRecent(boot.recent);
+        renderServer(boot.server);
     }
 
     function mergeLive(live) {
@@ -644,6 +750,10 @@
         if (live.sys_overview) {
             boot.sys_overview = live.sys_overview;
             renderSys(boot.sys_overview);
+        }
+        if (live.server) {
+            boot.server = live.server;
+            renderServer(boot.server);
         }
         if (live.top_apis) {
             boot.top_apis = live.top_apis;
@@ -691,6 +801,9 @@
             var keepSys = (!forceRefresh && wasReady && boot.sys_overview)
                 ? boot.sys_overview
                 : null;
+            var keepServer = (!forceRefresh && wasReady && boot.server)
+                ? boot.server
+                : null;
             var keepKpi = (!forceRefresh && wasReady && boot.kpi) ? boot.kpi : null;
             var keepTop = (!forceRefresh && wasReady && Array.isArray(boot.top_apis) && boot.top_apis.length)
                 ? boot.top_apis
@@ -703,6 +816,10 @@
             if (keepSys) {
                 boot.sys_overview = keepSys;
                 renderSys(keepSys);
+            }
+            if (keepServer) {
+                boot.server = keepServer;
+                renderServer(keepServer);
             }
             if (keepKpi) {
                 boot.kpi = keepKpi;

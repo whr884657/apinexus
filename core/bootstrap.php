@@ -66,6 +66,7 @@ require_once VS_ROOT . '/core/FrontendApi.php';
 require_once VS_ROOT . '/core/FrontendStats.php';
 require_once VS_ROOT . '/core/GeoCityCoords.php';
 require_once VS_ROOT . '/core/DashboardStats.php';
+require_once VS_ROOT . '/core/PanelMonitor.php';
 require_once VS_ROOT . '/core/LinkManager.php';
 require_once VS_ROOT . '/core/LinkSiteMeta.php';
 require_once VS_ROOT . '/core/LinkNotify.php';

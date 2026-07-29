@@ -113,12 +113,23 @@ vs_admin_layout_start('控制台', 'dashboard', $refreshBtn);
         </div>
     </section>
 
-    <section class="vs-panel dash-panel dash-panel--recent">
-        <div class="vs-panel__header">
-            <h2 class="vs-panel__title">最近调用记录</h2>
+    <section class="dash-grid dash-grid-bottom" aria-label="最近调用与服务器">
+        <div class="vs-panel dash-panel dash-panel--recent">
+            <div class="vs-panel__header">
+                <h2 class="vs-panel__title">最近调用记录</h2>
+            </div>
+            <div class="vs-panel__body">
+                <div class="dash-recent-wrap" id="dashRecentTable"></div>
+            </div>
         </div>
-        <div class="vs-panel__body">
-            <div class="dash-recent-wrap" id="dashRecentTable"></div>
+        <div class="vs-panel dash-panel dash-panel--server">
+            <div class="vs-panel__header dash-panel__head">
+                <h2 class="vs-panel__title">服务器</h2>
+                <span class="vs-badge vs-badge--info" id="dashServerBadge">未配置</span>
+            </div>
+            <div class="vs-panel__body">
+                <div class="dash-server" id="dashServer"></div>
+            </div>
         </div>
     </section>
 </div>

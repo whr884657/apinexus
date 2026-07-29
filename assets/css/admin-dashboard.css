@@ -128,6 +128,7 @@
 }
 #adminDashPage .dash-grid-trend { grid-template-columns: 1.2fr 1fr; }
 #adminDashPage .dash-grid-bars { grid-template-columns: 1.2fr 1fr; align-items: start; }
+#adminDashPage .dash-grid-bottom { grid-template-columns: 1.2fr 1fr; align-items: stretch; }
 #adminDashPage .dash-panel { margin: 0; }
 /* TOP：固定可视高度，内部滚筒；系统概览：按条目撑开，禁止滚动条 */
 #adminDashPage .dash-panel--top {
@@ -248,6 +249,21 @@
     gap: 10px;
     flex-wrap: wrap;
 }
+#adminDashPage .dash-panel__head .vs-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+#adminDashPage .dash-panel__head .vs-badge--info { background: #eff6ff; color: #1d4ed8; }
+#adminDashPage .dash-panel__head .vs-badge--success { background: #f0faf5; color: #15803d; }
+#adminDashPage .dash-panel__head .vs-badge--warning { background: #fff7e8; color: #e37318; }
+#adminDashPage .dash-panel__head .vs-badge--error { background: #fff0f0; color: #dc2626; }
+#adminDashPage .dash-panel__head .vs-badge--default { background: #f1f5f9; color: #6b7280; }
 #adminDashPage .dash-panel__head--stack {
     flex-direction: column;
     align-items: stretch;
@@ -432,22 +448,136 @@
 #adminDashPage .dash-status.is-ok { color: #15803d; font-weight: 600; }
 #adminDashPage .dash-status.is-fail { color: #dc2626; font-weight: 600; }
 
-/* 最近调用：独立板块，禁止被上方固定面板溢出叠盖 */
+/* 最近调用 + 服务器：左右并排 */
 #adminDashPage .dash-panel--recent {
     position: relative;
     z-index: 1;
     margin-top: 0;
-    clear: both;
     isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+#adminDashPage .dash-panel--recent .vs-panel__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+#adminDashPage .dash-panel--server {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+#adminDashPage .dash-panel--server .vs-panel__body {
+    flex: 1 1 auto;
 }
 #adminDashPage .dash-recent-wrap {
-    max-height: 280px;
+    max-height: 320px;
+    flex: 1 1 auto;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     background: #fff;
+}
+
+#adminDashPage .dash-server {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+#adminDashPage .dash-server__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+#adminDashPage .dash-server__chip {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    font-size: 0.78rem;
+}
+#adminDashPage .dash-server__chip-k {
+    flex: 0 0 36px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+#adminDashPage .dash-server__chip-v {
+    min-width: 0;
+    color: #0f172a;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#adminDashPage .dash-server__meters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+#adminDashPage .dash-server__meter-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+#adminDashPage .dash-server__meter-top strong {
+    color: #0f172a;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+}
+#adminDashPage .dash-server__bar {
+    height: 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+#adminDashPage .dash-server__bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #3b82f6;
+}
+#adminDashPage .dash-server__bar i.is-ok { background: #16a34a; }
+#adminDashPage .dash-server__bar i.is-warn { background: #f59e0b; }
+#adminDashPage .dash-server__bar i.is-danger { background: #dc2626; }
+#adminDashPage .dash-server__hint {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-variant-numeric: tabular-nums;
+}
+#adminDashPage .dash-server__grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 8px;
+}
+#adminDashPage .dash-server__stat {
+    padding: 8px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f8fafc;
+    min-width: 0;
+}
+#adminDashPage .dash-server__stat span {
+    display: block;
+    font-size: 0.68rem;
+    color: #94a3b8;
+    margin-bottom: 4px;
+}
+#adminDashPage .dash-server__stat strong {
+    display: block;
+    font-size: 0.8rem;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 #adminDashPage .dash-recent-list {
     display: flex;
@@ -529,7 +659,8 @@
     /* 平板/手机：2 列；5 卡自然排成 3 行（末行仅成功率） */
     #adminDashPage .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #adminDashPage .dash-grid-trend,
-    #adminDashPage .dash-grid-bars { grid-template-columns: 1fr; }
+    #adminDashPage .dash-grid-bars,
+    #adminDashPage .dash-grid-bottom { grid-template-columns: 1fr; }
     #adminDashPage .dash-panel--top {
         min-height: 260px;
         max-height: 260px;
