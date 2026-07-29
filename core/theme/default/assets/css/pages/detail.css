@@ -2,7 +2,6 @@
  * 接口详情页（默认主题 · 白色色板）
  *
  * 顶距须盖过 feer-compat「.main-wrapper.container { padding-top:0 }」（E175）
- * 电脑端：宽容器 + 主栏/侧栏 + 参数与返回并排（E184）
  */
 
 body.vs-body.feer-front .main-wrapper.container.detail-page,
@@ -10,92 +9,9 @@ body.vs-body.feer-front .main-wrapper.container.detail-page,
     --detail-pad-top: 100px;
     padding-top: var(--detail-pad-top);
     padding-bottom: 2.5rem;
-    max-width: 1200px;
+    max-width: 920px;
     position: relative;
     z-index: 10;
-}
-
-/* 电脑端主栏 + 快速上手侧栏 */
-.detail-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.detail-layout__main,
-.detail-layout__aside {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    min-width: 0;
-}
-
-.detail-layout .detail-card {
-    margin-bottom: 0;
-}
-
-.detail-duo {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    min-width: 0;
-}
-
-.detail-duo > .detail-card {
-    margin: 0;
-}
-
-@media (min-width: 1024px) {
-    body.vs-body.feer-front .main-wrapper.container.detail-page,
-    .detail-page {
-        --detail-pad-top: 88px;
-        padding-bottom: 3rem;
-    }
-
-    .detail-title {
-        font-size: 1.75rem;
-    }
-
-    .detail-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-        gap: 1.25rem 1.5rem;
-        align-items: start;
-    }
-
-    .detail-layout__aside {
-        position: sticky;
-        top: calc(72px + env(safe-area-inset-top, 0px));
-        max-height: calc(100vh - 88px);
-        overflow: auto;
-        padding-bottom: 0.25rem;
-    }
-
-    .detail-layout__aside .detail-card {
-        margin-bottom: 0;
-    }
-
-    .detail-duo {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.25rem;
-        align-items: stretch;
-    }
-
-    .detail-duo > .detail-card {
-        height: 100%;
-    }
-
-    .info-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 0.85rem;
-    }
-
-    .playground-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 1.25rem;
-        align-items: stretch;
-    }
 }
 
 .detail-crumb {
@@ -863,6 +779,13 @@ body.vs-body.feer-front .main-wrapper.container.detail-page,
     display: grid;
     grid-template-columns: 1fr;
     gap: 1rem;
+}
+
+@media (min-width: 860px) {
+    .playground-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+    }
 }
 
 .playground-pane {
