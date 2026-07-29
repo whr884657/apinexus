@@ -807,7 +807,10 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <p class="vs-form-hint">公开地址形如 <?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/apis/短码</p>
                 </div>
                 <div id="apiListUpAuthBlock" hidden>
-                    <div class="vs-form-row vs-form-row--2">
+                    <div id="apiListUpKeyViaWrap" hidden>
+                        <input type="hidden" id="apiListFormUpKeyVia" name="upkeyvia" value="0">
+                    </div>
+                    <div class="vs-form-row vs-form-row--3">
                         <div>
                             <label class="vs-label" for="apiListFormUpAuth">上游认证方式</label>
                             <select class="vs-input vs-select" id="apiListFormUpAuth" name="upauth" data-vs-pick>
@@ -817,10 +820,25 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                 <option value="2">Bearer Token</option>
                             </select>
                         </div>
-                        <div id="apiListUpKeyViaWrap" hidden>
-                            <input type="hidden" id="apiListFormUpKeyVia" name="upkeyvia" value="0">
+                        <div>
+                            <label class="vs-label" for="apiListFormUpUaMode">出站 User-Agent</label>
+                            <select class="vs-input vs-select" id="apiListFormUpUaMode" name="upuamode" data-vs-pick>
+                                <option value="0">系统默认</option>
+                                <option value="1">内置设备 / 浏览器</option>
+                                <option value="2">自定义</option>
+                                <option value="3">轮询内置（按分钟）</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="vs-label" for="apiListFormUpRefererMode">出站 Referer</label>
+                            <select class="vs-input vs-select" id="apiListFormUpRefererMode" name="upreferermode" data-vs-pick>
+                                <option value="0">不发送</option>
+                                <option value="1">自定义</option>
+                                <option value="2">转发客户端</option>
+                            </select>
                         </div>
                     </div>
+                    <p class="vs-form-hint">UA：系统默认=本站中继标识；内置=选预设；自定义=自填；轮询=按分钟轮换内置。Referer：不发送 / 自定义地址 / 转发调用方带来的 Referer。</p>
                     <div class="vs-form-row vs-form-row--2" id="apiListUpKeyFields" hidden>
                         <div id="apiListUpKeyNameWrap">
                             <label class="vs-label" for="apiListFormUpKeyName">参数名 / 头名称</label>
@@ -833,67 +851,54 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                    placeholder="上游平台颁发的密钥或令牌" autocomplete="new-password">
                         </div>
                     </div>
-                    <div class="vs-form-row vs-form-row--2">
-                        <div>
-                            <label class="vs-label" for="apiListFormUpUaMode">出站 User-Agent</label>
-                            <select class="vs-input vs-select" id="apiListFormUpUaMode" name="upuamode" data-vs-pick>
-                                <option value="0">系统默认</option>
-                                <option value="1">内置设备 / 浏览器</option>
-                                <option value="2">自定义</option>
-                                <option value="3">轮询内置（按分钟）</option>
-                            </select>
-                            <p class="vs-form-hint">系统默认：使用本站中继标识（ApiNexus-Proxy）。内置：从手机/平板/电脑或 VIA、X、Chrome 等预设中选一条。自定义：自行填写完整 UA。轮询：按分钟在内置列表中轮换，减轻固定指纹被拦。</p>
-                        </div>
-                        <div id="apiListUpUaPresetWrap" hidden>
-                            <label class="vs-label" for="apiListFormUpUaPreset">内置预设</label>
-                            <select class="vs-input vs-select" id="apiListFormUpUaPreset" name="upuapreset" data-vs-pick>
-                                <option value="">请选择</option>
-                                <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
-                                    <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
+                    <div class="vs-form-row" id="apiListUpUaPresetWrap" hidden>
+                        <label class="vs-label" for="apiListFormUpUaPreset">内置 UA 预设</label>
+                        <select class="vs-input vs-select" id="apiListFormUpUaPreset" name="upuapreset" data-vs-pick>
+                            <option value="">请选择</option>
+                            <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
+                                <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="vs-form-row" id="apiListUpUaCustomWrap" hidden>
                         <label class="vs-label" for="apiListFormUpUa">自定义 User-Agent</label>
                         <input type="text" class="vs-input" id="apiListFormUpUa" name="upua" maxlength="512"
                                placeholder="完整浏览器 User-Agent 字符串" autocomplete="off">
                     </div>
-                    <div class="vs-form-row vs-form-row--2">
-                        <div>
-                            <label class="vs-label" for="apiListFormUpRefererMode">出站 Referer</label>
-                            <select class="vs-input vs-select" id="apiListFormUpRefererMode" name="upreferermode" data-vs-pick>
-                                <option value="0">不发送</option>
-                                <option value="1">自定义</option>
-                                <option value="2">转发客户端</option>
-                            </select>
-                        </div>
-                        <div id="apiListUpRefererWrap" hidden>
-                            <label class="vs-label" for="apiListFormUpReferer">自定义 Referer</label>
-                            <input type="url" class="vs-input" id="apiListFormUpReferer" name="upreferer" maxlength="500"
-                                   placeholder="https://example.com/" autocomplete="off">
-                        </div>
+                    <div class="vs-form-row" id="apiListUpRefererWrap" hidden>
+                        <label class="vs-label" for="apiListFormUpReferer">自定义 Referer</label>
+                        <input type="url" class="vs-input" id="apiListFormUpReferer" name="upreferer" maxlength="500"
+                               placeholder="https://example.com/" autocomplete="off">
                     </div>
                     <div class="vs-form-row" id="apiListJsonRewriteBlock">
                         <label class="vs-label">JSON 字段改写</label>
                         <label class="vs-check" for="apiListFormJsonRewriteOn">
                             <input type="checkbox" id="apiListFormJsonRewriteOn" value="1">
-                            <span>启用（仅处理上游返回的 JSON；TXT / 图片 / 视频等不改）</span>
+                            <span>启用（只改上游返回的 JSON；TXT / 图片 / 视频 / 跳转不改）</span>
                         </label>
+                        <div class="vs-json-rewrite-help">
+                            <strong>怎么填「要改的字段」？</strong>
+                            <ol>
+                                <li>打开上游返回的 JSON，找到要改的那一层字段名。</li>
+                                <li>用英文句点 <code>.</code> 把层层字段名串起来，例如要改 <code>api_info</code> 里面的 <code>developer</code>，就填 <code>api_info.developer</code>。</li>
+                                <li>选「设置」= 改成你填的值（没有就新建）；选「删除」= 去掉这个字段。最多 40 条。</li>
+                            </ol>
+                            <div class="vs-json-rewrite-help__eg">示例：上游 {"api_info":{"developer":"别人"}}
+要改成你的名字 → 字段填 api_info.developer，操作选「设置」，值填 尋鯨錄</div>
+                        </div>
                         <input type="hidden" id="apiListFormJsonRewrite" name="jsonrewrite" value="">
                         <div class="vs-json-rewrite" id="apiListJsonRewriteEditor" hidden>
                             <div class="vs-json-rewrite__head">
-                                <span>字段路径</span>
+                                <span>要改的字段</span>
                                 <span>操作</span>
-                                <span>值（设置时填写；可为 JSON）</span>
+                                <span>新值（设置时填；可写普通文字或 JSON）</span>
                                 <span></span>
                             </div>
                             <div class="vs-json-rewrite__rows" id="apiListJsonRewriteRows"></div>
                             <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListJsonRewriteAdd">添加规则</button>
                         </div>
-                        <p class="vs-form-hint">点分路径，如 <code>api_info.developer</code> 或 <code>data.0.name</code>。「设置」会新增或覆盖；「删除」去掉该字段。用于替换上游站点信息、补齐固定字段等。最多 40 条。</p>
                     </div>
-                    <p class="vs-form-hint">本站先请求上游接口，再把上游返回的内容交给调用方。若启用了上方 JSON 改写，则仅在正文为合法 JSON 时按规则改写字段；TXT / 二进制 / 跳转仍按原策略透传。出站 UA/Referer 仅影响本站访问上游时的身份，不会写入对外文档。</p>
+                    <p class="vs-form-hint">本站先请求上游，再把结果交给调用方。出站 UA / Referer 只影响本站访问上游，不会写进对外文档。</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>
@@ -950,7 +955,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <label class="vs-label vs-api-cat-icon-url-label" for="apiListIconUrl">或填写图标链接</label>
                     <input type="url" class="vs-input" id="apiListIconUrl" name="icon"
                            placeholder="https://example.com/icon.png" maxlength="255">
-                    <p class="vs-form-hint">点选下方图标，或填写图片链接地址。</p>
+                    <p class="vs-form-hint">点选下方图标，或填写图片链接地址。自定义本地图标：把 <code>.svg</code> 文件放到站点目录 <code>assets/img/category-icons/</code>（建议用数字文件名，如 <code>99.svg</code>），刷新本页后会自动出现在可选列表中。</p>
                 </div>
             </div>
 

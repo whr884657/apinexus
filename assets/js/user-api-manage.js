@@ -107,7 +107,7 @@
         var pathInput = document.createElement('input');
         pathInput.type = 'text';
         pathInput.className = 'vs-input';
-        pathInput.placeholder = '如 api_info.developer';
+        pathInput.placeholder = '例如 api_info.developer';
         pathInput.maxLength = 256;
         pathInput.value = path || '';
         var opSelect = document.createElement('select');
@@ -451,7 +451,24 @@
         return defaultIcons.length ? defaultIcons[0] : '';
     }
 
+    function switchFormTab(tab) {
+        if (!formOverlay) {
+            return;
+        }
+        formOverlay.querySelectorAll('.vs-api-list-form-tab').forEach(function (btn) {
+            var on = btn.getAttribute('data-api-form-tab') === tab;
+            btn.classList.toggle('is-active', on);
+            btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        formOverlay.querySelectorAll('.vs-api-list-form-pane').forEach(function (pane) {
+            var on = pane.getAttribute('data-api-form-pane') === tab;
+            pane.classList.toggle('is-active', on);
+            pane.hidden = !on;
+        });
+    }
+
     function openOverlay() {
+        switchFormTab('basic');
         if (!formOverlay) {
             return;
         }
@@ -1183,6 +1200,7 @@
             var payload = collectPayload();
             if (payload.__error) {
                 window.VS.showMessage(payload.__error, 'error');
+                switchFormTab('params');
                 return;
             }
             payload.name = String(payload.name || '').trim();
@@ -1191,6 +1209,7 @@
             payload.proxyslug = String(payload.proxyslug || '').trim();
             if (!payload.name) {
                 window.VS.showMessage('请填写接口名称', 'error');
+                switchFormTab('basic');
                 var nameEl = document.getElementById('userApiFormName');
                 if (nameEl) {
                     nameEl.focus();
@@ -1201,6 +1220,7 @@
             if (isProxy) {
                 if (!payload.targeturl || !/^https?:\/\//i.test(payload.targeturl)) {
                     window.VS.showMessage('请填写完整的上游地址（以 http:// 或 https:// 开头）', 'error');
+                    switchFormTab('basic');
                     if (targetInput) {
                         targetInput.focus();
                     }
@@ -1208,6 +1228,7 @@
                 }
                 if (!/^[a-zA-Z0-9]{3,64}$/.test(payload.proxyslug)) {
                     window.VS.showMessage('请填写 3～64 位字母或数字短码', 'error');
+                    switchFormTab('basic');
                     if (slugInput) {
                         slugInput.focus();
                     }
@@ -1217,6 +1238,7 @@
                 var isEdit = !!(formId && formId.value);
                 if ((upMode === 1 || upMode === 2) && !payload.upkey && !isEdit) {
                     window.VS.showMessage(upMode === 2 ? '请填写 Bearer Token' : '请填写上游 API Key', 'error');
+                    switchFormTab('basic');
                     if (upKeyInput) {
                         upKeyInput.focus();
                     }
@@ -1225,20 +1247,24 @@
                 var uaMode = parseInt(payload.upuamode, 10) || 0;
                 if (uaMode === 1 && !payload.upuapreset) {
                     window.VS.showMessage('请选择内置 User-Agent 预设', 'error');
+                    switchFormTab('basic');
                     return;
                 }
                 if (uaMode === 2 && !payload.upua) {
                     window.VS.showMessage('请填写自定义 User-Agent', 'error');
+                    switchFormTab('basic');
                     return;
                 }
                 if ((parseInt(payload.upreferermode, 10) || 0) === 1) {
                     if (!payload.upreferer || !/^https?:\/\//i.test(payload.upreferer)) {
                         window.VS.showMessage('请填写合法的 Referer（以 http:// 或 https:// 开头）', 'error');
+                        switchFormTab('basic');
                         return;
                     }
                 }
             } else if (!payload.endpoint) {
                 window.VS.showMessage('请填写本地接口路径', 'error');
+                switchFormTab('basic');
                 if (endpointInput) {
                     endpointInput.focus();
                 }
@@ -1576,6 +1602,7 @@
             aiTermStopRunning(kind);
             aiSetBanner('done', (failed.length ? '代码示例已部分生成' : '代码示例已生成')
                 + ' · 用时 ' + aiElapsedLabel());
+            switchFormTab('docs');
         }
 
         function runPool() {
@@ -1755,6 +1782,7 @@
                 aiTermAppend(kind, '完成，总用时 ' + aiElapsedLabel());
                 aiTermStopRunning(kind);
                 aiSetBanner('done', '详细文档已生成 · 用时 ' + aiElapsedLabel());
+                switchFormTab('docs');
                 window.VS.showMessage(data.msg || '详细文档已生成', 'success');
             })
             .catch(function () {
@@ -1776,6 +1804,15 @@
     if (aiCodeBtn) {
         aiCodeBtn.addEventListener('click', function () {
             runAiGenerate('ai_gen_code', aiCodeBtn);
+        });
+    }
+
+    if (formOverlay) {
+        formOverlay.querySelectorAll('.vs-api-list-form-tab').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var tab = btn.getAttribute('data-api-form-tab') || 'basic';
+                switchFormTab(tab);
+            });
         });
     }
 

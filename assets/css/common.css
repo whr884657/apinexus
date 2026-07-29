@@ -714,6 +714,47 @@ a:hover {
     }
 }
 
+/* JSON 改写说明卡片 */
+.vs-json-rewrite-help {
+    margin: 0.45rem 0 0.65rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    background: #f8fafc;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--vs-text-secondary, #64748b);
+}
+.vs-json-rewrite-help strong {
+    color: var(--vs-text, #0f172a);
+    font-weight: 600;
+}
+.vs-json-rewrite-help code {
+    font-size: 12px;
+    padding: 0.05em 0.35em;
+    border-radius: 4px;
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.vs-json-rewrite-help ol {
+    margin: 0.35rem 0 0;
+    padding-left: 1.2rem;
+}
+.vs-json-rewrite-help li + li {
+    margin-top: 0.2rem;
+}
+.vs-json-rewrite-help__eg {
+    margin-top: 0.45rem;
+    padding: 0.45rem 0.55rem;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px dashed #cbd5e1;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    white-space: pre-wrap;
+    color: #334155;
+}
+
 /* 代理 JSON 字段改写规则编辑器 */
 .vs-json-rewrite {
     margin-top: 0.6rem;

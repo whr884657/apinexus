@@ -449,6 +449,13 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
             <input type="hidden" id="userApiFormId" name="api_id" value="">
             <input type="hidden" id="userApiFormApiType" name="apitype" value="<?php echo $canLocal ? '0' : '1'; ?>">
 
+            <div class="vs-api-list-form-tabs" role="tablist">
+                <button type="button" class="vs-api-list-form-tab is-active" data-api-form-tab="basic" role="tab" aria-selected="true">基础</button>
+                <button type="button" class="vs-api-list-form-tab" data-api-form-tab="params" role="tab" aria-selected="false">参数</button>
+                <button type="button" class="vs-api-list-form-tab" data-api-form-tab="docs" role="tab" aria-selected="false">文档</button>
+            </div>
+
+            <div class="vs-api-list-form-pane is-active" data-api-form-pane="basic">
             <div class="vs-form-row">
                 <label class="vs-label" for="userApiFormName">接口名称 <span class="vs-req">*</span></label>
                 <input type="text" class="vs-input" id="userApiFormName" name="name" maxlength="100" required
@@ -491,7 +498,10 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 <p class="vs-form-hint">公开地址：<?php echo vs_e($iconBase); ?>/apis/短码</p>
             </div>
             <div id="userApiUpAuthBlock"<?php echo $canLocal ? ' hidden' : ''; ?>>
-                <div class="vs-form-row vs-form-row--2">
+                <div id="userApiUpKeyViaWrap" hidden>
+                    <input type="hidden" id="userApiFormUpKeyVia" name="upkeyvia" value="0">
+                </div>
+                <div class="vs-form-row vs-form-row--3">
                     <div>
                         <label class="vs-label" for="userApiFormUpAuth">上游认证方式</label>
                         <select class="vs-input vs-select" id="userApiFormUpAuth" name="upauth" data-vs-pick>
@@ -501,10 +511,25 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                             <option value="2">Bearer Token</option>
                         </select>
                     </div>
-                    <div id="userApiUpKeyViaWrap" hidden>
-                        <input type="hidden" id="userApiFormUpKeyVia" name="upkeyvia" value="0">
+                    <div>
+                        <label class="vs-label" for="userApiFormUpUaMode">出站 User-Agent</label>
+                        <select class="vs-input vs-select" id="userApiFormUpUaMode" name="upuamode" data-vs-pick>
+                            <option value="0">系统默认</option>
+                            <option value="1">内置设备 / 浏览器</option>
+                            <option value="2">自定义</option>
+                            <option value="3">轮询内置（按分钟）</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="vs-label" for="userApiFormUpRefererMode">出站 Referer</label>
+                        <select class="vs-input vs-select" id="userApiFormUpRefererMode" name="upreferermode" data-vs-pick>
+                            <option value="0">不发送</option>
+                            <option value="1">自定义</option>
+                            <option value="2">转发客户端</option>
+                        </select>
                     </div>
                 </div>
+                <p class="vs-form-hint">UA：系统默认=本站中继标识；内置=选预设；自定义=自填；轮询=按分钟轮换。Referer：不发送 / 自定义 / 转发调用方。</p>
                 <div class="vs-form-row vs-form-row--2" id="userApiUpKeyFields" hidden>
                     <div id="userApiUpKeyNameWrap">
                         <label class="vs-label" for="userApiFormUpKeyName">参数名 / 头名称</label>
@@ -517,67 +542,53 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                                placeholder="上游平台颁发的密钥或令牌" autocomplete="new-password">
                     </div>
                 </div>
-                <div class="vs-form-row vs-form-row--2">
-                    <div>
-                        <label class="vs-label" for="userApiFormUpUaMode">出站 User-Agent</label>
-                        <select class="vs-input vs-select" id="userApiFormUpUaMode" name="upuamode" data-vs-pick>
-                            <option value="0">系统默认</option>
-                            <option value="1">内置设备 / 浏览器</option>
-                            <option value="2">自定义</option>
-                            <option value="3">轮询内置（按分钟）</option>
-                        </select>
-                        <p class="vs-form-hint">系统默认：本站中继标识。内置：选手机/平板/电脑或轻量浏览器预设。自定义：自填 UA。轮询：按分钟轮换内置 UA。</p>
-                    </div>
-                    <div id="userApiUpUaPresetWrap" hidden>
-                        <label class="vs-label" for="userApiFormUpUaPreset">内置预设</label>
-                        <select class="vs-input vs-select" id="userApiFormUpUaPreset" name="upuapreset" data-vs-pick>
-                            <option value="">请选择</option>
-                            <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
-                                <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                <div class="vs-form-row" id="userApiUpUaPresetWrap" hidden>
+                    <label class="vs-label" for="userApiFormUpUaPreset">内置 UA 预设</label>
+                    <select class="vs-input vs-select" id="userApiFormUpUaPreset" name="upuapreset" data-vs-pick>
+                        <option value="">请选择</option>
+                        <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
+                            <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="vs-form-row" id="userApiUpUaCustomWrap" hidden>
                     <label class="vs-label" for="userApiFormUpUa">自定义 User-Agent</label>
                     <input type="text" class="vs-input" id="userApiFormUpUa" name="upua" maxlength="512"
                            placeholder="完整浏览器 User-Agent 字符串" autocomplete="off">
                 </div>
-                <div class="vs-form-row vs-form-row--2">
-                    <div>
-                        <label class="vs-label" for="userApiFormUpRefererMode">出站 Referer</label>
-                        <select class="vs-input vs-select" id="userApiFormUpRefererMode" name="upreferermode" data-vs-pick>
-                            <option value="0">不发送</option>
-                            <option value="1">自定义</option>
-                            <option value="2">转发客户端</option>
-                        </select>
-                    </div>
-                    <div id="userApiUpRefererWrap" hidden>
-                        <label class="vs-label" for="userApiFormUpReferer">自定义 Referer</label>
-                        <input type="url" class="vs-input" id="userApiFormUpReferer" name="upreferer" maxlength="500"
-                               placeholder="https://example.com/" autocomplete="off">
-                    </div>
+                <div class="vs-form-row" id="userApiUpRefererWrap" hidden>
+                    <label class="vs-label" for="userApiFormUpReferer">自定义 Referer</label>
+                    <input type="url" class="vs-input" id="userApiFormUpReferer" name="upreferer" maxlength="500"
+                           placeholder="https://example.com/" autocomplete="off">
                 </div>
                 <div class="vs-form-row" id="userApiJsonRewriteBlock">
                     <label class="vs-label">JSON 字段改写</label>
                     <label class="vs-check" for="userApiFormJsonRewriteOn">
                         <input type="checkbox" id="userApiFormJsonRewriteOn" value="1">
-                        <span>启用（仅处理上游返回的 JSON；其它类型不改）</span>
+                        <span>启用（只改上游返回的 JSON；其它类型不改）</span>
                     </label>
+                    <div class="vs-json-rewrite-help">
+                        <strong>怎么填「要改的字段」？</strong>
+                        <ol>
+                            <li>看上游返回的 JSON，找到要改的字段名。</li>
+                            <li>用英文句点 <code>.</code> 串起来：例如改 <code>api_info</code> 里的 <code>developer</code>，填 <code>api_info.developer</code>。</li>
+                            <li>「设置」= 改成你填的值；「删除」= 去掉该字段。</li>
+                        </ol>
+                        <div class="vs-json-rewrite-help__eg">示例：字段 api_info.blog → 设置 → https://你的博客</div>
+                    </div>
                     <input type="hidden" id="userApiFormJsonRewrite" name="jsonrewrite" value="">
                     <div class="vs-json-rewrite" id="userApiJsonRewriteEditor" hidden>
                         <div class="vs-json-rewrite__head">
-                            <span>字段路径</span>
+                            <span>要改的字段</span>
                             <span>操作</span>
-                            <span>值（设置时填写）</span>
+                            <span>新值（设置时填）</span>
                             <span></span>
                         </div>
                         <div class="vs-json-rewrite__rows" id="userApiJsonRewriteRows"></div>
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiJsonRewriteAdd">添加规则</button>
                     </div>
-                    <p class="vs-form-hint">路径如 <code>api_info.blog</code>。「设置」新增/覆盖，「删除」去掉字段。用于替换上游署名或补齐本站信息。</p>
                 </div>
-                <p class="vs-form-hint">本站请求上游后回传调用方。启用 JSON 改写时仅改合法 JSON 字段；跳转目标与二进制仍原样透传。密钥与出站 UA/Referer 仅服务端使用。</p>
+                <p class="vs-form-hint">本站请求上游后回传调用方。密钥与出站 UA/Referer 仅服务端使用。</p>
             </div>
 
             <div class="vs-form-row vs-form-row--2">
@@ -612,7 +623,7 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 <div>
                     <label class="vs-label" for="userApiFormQpm">QPM 每分钟上限</label>
                     <input type="number" class="vs-input" id="userApiFormQpm" name="qpm" min="0" max="1000000" step="1" value="0" placeholder="0 表示不限制">
-                    <p class="vs-form-hint">0 不限制；大于 0 为每分钟最大请求数（无需/可选密钥按 IP，必填密钥按 IP+密钥）。</p>
+                    <p class="vs-form-hint">0 不限制；大于 0 为每分钟最大请求数。</p>
                 </div>
                 <div>
                     <label class="vs-label" for="userApiFormCharge">是否收费</label>
@@ -639,6 +650,17 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 </select>
             </div>
             <div class="vs-form-row">
+                <label class="vs-label">接口图标</label>
+                <div class="vs-api-cat-icon-picker" id="userApiIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
+                <label class="vs-label vs-api-cat-icon-url-label" for="userApiIconUrl">或填写图标链接</label>
+                <input type="url" class="vs-input" id="userApiIconUrl" name="icon"
+                       placeholder="https://example.com/icon.png" maxlength="255">
+                <p class="vs-form-hint">点选下方图标，或填写图片链接地址。</p>
+            </div>
+            </div>
+
+            <div class="vs-api-list-form-pane" data-api-form-pane="params" hidden>
+            <div class="vs-form-row">
                 <label class="vs-label">请求参数</label>
                 <textarea class="vs-input vs-textarea" id="userApiFormParams" name="params" hidden aria-hidden="true"></textarea>
                 <div class="vs-params-editor" id="userApiParamsEditor" data-hidden-id="userApiFormParams"></div>
@@ -649,6 +671,9 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                           placeholder='{"code":1,"msg":"ok","data":{}}'></textarea>
                 <p class="vs-form-hint">返回示例保持 JSON 文本填写即可。</p>
             </div>
+            </div>
+
+            <div class="vs-api-list-form-pane" data-api-form-pane="docs" hidden>
             <div class="vs-ai-gen-banner" id="userApiAiBanner" hidden>
                 <span class="vs-ai-gen-banner__dot" aria-hidden="true"></span>
                 <span class="vs-ai-gen-banner__text" id="userApiAiBannerText">正在生成…</span>
@@ -691,13 +716,6 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                 </details>
                 <?php endif; ?>
             </div>
-            <div class="vs-form-row">
-                <label class="vs-label">接口图标</label>
-                <div class="vs-api-cat-icon-picker" id="userApiIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
-                <label class="vs-label vs-api-cat-icon-url-label" for="userApiIconUrl">或填写图标链接</label>
-                <input type="url" class="vs-input" id="userApiIconUrl" name="icon"
-                       placeholder="https://example.com/icon.png" maxlength="255">
-                <p class="vs-form-hint">点选下方图标，或填写图片链接地址。</p>
             </div>
         </form>
         <footer class="vs-overlay__foot">

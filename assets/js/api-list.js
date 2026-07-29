@@ -378,7 +378,7 @@
         var pathInput = document.createElement('input');
         pathInput.type = 'text';
         pathInput.className = 'vs-input';
-        pathInput.placeholder = '如 api_info.developer';
+        pathInput.placeholder = '例如 api_info.developer';
         pathInput.maxLength = 256;
         pathInput.value = path || '';
         var opSelect = document.createElement('select');

@@ -3411,7 +3411,13 @@ select.vs-input.vs-select {
     grid-template-columns: 1fr 1fr;
     gap: 14px;
 }
+.vs-form-row--3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
 .vs-form-row--2[hidden],
+.vs-form-row--3[hidden],
 #apiListUpAuthBlock[hidden],
 #apiListUpKeyFields[hidden],
 #apiListUpUaPresetWrap[hidden],
@@ -3455,8 +3461,13 @@ select.vs-input.vs-select {
     flex-direction: column;
     min-width: 0;
 }
-
-.vs-form-row--2 .vs-pick {
+.vs-form-row--3 > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.vs-form-row--2 .vs-pick,
+.vs-form-row--3 .vs-pick {
     width: 100%;
 }
 
@@ -3644,7 +3655,8 @@ select.vs-input.vs-select {
         height: 34px;
     }
 
-    .vs-form-row--2 {
+    .vs-form-row--2,
+    .vs-form-row--3 {
         grid-template-columns: 1fr;
     }
 
@@ -4153,7 +4165,13 @@ select.vs-input.vs-select {
     grid-template-columns: 1fr 1fr;
     gap: 14px;
 }
+.vs-form-row--3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
 .vs-form-row--2[hidden],
+.vs-form-row--3[hidden],
 #apiListUpAuthBlock[hidden],
 #apiListUpKeyFields[hidden],
 #apiListUpUaPresetWrap[hidden],
@@ -4197,8 +4215,13 @@ select.vs-input.vs-select {
     flex-direction: column;
     min-width: 0;
 }
-
-.vs-form-row--2 .vs-pick {
+.vs-form-row--3 > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.vs-form-row--2 .vs-pick,
+.vs-form-row--3 .vs-pick {
     width: 100%;
 }
 
@@ -4349,7 +4372,8 @@ select.vs-input.vs-select {
         height: 26px;
     }
 
-    .vs-form-row--2 {
+    .vs-form-row--2,
+    .vs-form-row--3 {
         grid-template-columns: 1fr;
     }
 
