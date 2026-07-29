@@ -7,7 +7,7 @@
 (function () {
     'use strict';
 
-    var root, overlay, titleEl, bodyEl, footEl;
+    var root, overlay, modalEl, titleEl, bodyEl, footEl;
     var resolveFn = null;
     var allowOverlayClose = true;
     var allowEscapeClose = true;
@@ -18,6 +18,7 @@
             return;
         }
         overlay = document.getElementById('vsModalOverlay');
+        modalEl = root.querySelector('.vs-modal');
         titleEl = document.getElementById('vsModalTitle');
         bodyEl = document.getElementById('vsModalBody');
         footEl = document.getElementById('vsModalFoot');
@@ -46,6 +47,10 @@
         document.body.classList.remove('vs-modal-open');
         allowOverlayClose = true;
         allowEscapeClose = true;
+        if (modalEl) {
+            modalEl.classList.remove('vs-modal--lg');
+            modalEl.classList.remove('vs-modal--license');
+        }
         if (resolveFn) {
             var fn = resolveFn;
             resolveFn = null;
@@ -73,6 +78,11 @@
         allowOverlayClose = options.closeOnOverlay !== false;
         allowEscapeClose = options.closeOnEscape !== false;
 
+        if (modalEl) {
+            modalEl.classList.toggle('vs-modal--lg', options.size === 'lg' || options.size === 'license');
+            modalEl.classList.toggle('vs-modal--license', options.size === 'license');
+        }
+
         titleEl.textContent = title || '提示';
         setBodyContent(message, options.html || '');
         footEl.innerHTML = '';
@@ -91,10 +101,19 @@
             if (btn.danger) {
                 el.className += ' vs-btn--danger';
             }
+            if (btn.disabled) {
+                el.disabled = true;
+            }
+            if (btn.id) {
+                el.id = btn.id;
+            }
 
             el.addEventListener('click', function () {
+                if (el.disabled) {
+                    return;
+                }
                 if (btn.action) {
-                    btn.action();
+                    btn.action(el);
                 }
             });
             footEl.appendChild(el);

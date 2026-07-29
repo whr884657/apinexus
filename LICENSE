@@ -1,47 +1,21 @@
-ApiNexus 开源许可协议
+MIT License
 
-版权所有 (c) 2026 xunjinlu
+Copyright (c) 2026 xunjinlu
 
-本项目采用以下开源许可。使用、复制、修改或分发本项目，即表示您已阅读并同意本协议全部条款。
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-一、您可以
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-1. 学习研究：阅读、学习本项目全部源码与实现方式
-2. 个人使用：在个人网站、个人项目中免费使用
-3. 商业使用：在商业项目、商业网站中免费使用，无需向作者支付费用
-4. 修改分发：可修改代码并再发布，但须保留原始版权声明与本协议全文
-
-二、您无需
-
-- 向作者报备或申请授权
-- 因商业使用而支付授权费用
-
-三、条件与限制
-
-1. 再发布（含修改后的版本）时，须在显著位置保留本项目的版权声明与本协议全文
-2. 不得移除或篡改源码中的版权与许可声明
-3. 不得将本项目包装后声称为完全原创产品并隐瞒开源来源（若对外分发修改版，建议说明基于 ApiNexus 修改）
-
-四、免责声明（重要）
-
-本项目按「原样（AS IS）」提供，不提供任何明示或暗示的担保，包括但不限于：
-
-- 适销性、特定用途适用性
-- 无错误、无中断、无安全漏洞
-- 数据完整性与业务连续性
-
-因使用、无法使用、误用或依赖本项目而产生的任何直接、间接、附带、特殊、惩罚性或后果性损害（包括但不限于数据丢失、业务中断、利润损失、安全事件、法律纠纷、第三方索赔等），作者及贡献者均不承担任何责任。
-
-使用者应自行评估安全风险，并在生产环境中做好备份、权限控制、安全加固与合规审查。出现问题由使用者自行承担，与作者无关。
-
-五、其他
-
-- 本协议适用于 ApiNexus 项目全部源码、文档与附属资源
-- 作者保留随时更新本协议表述的权利；以仓库中最新版本为准
-- 若您不同意本协议，请立即停止使用并删除本项目副本
-
----
-
-English Summary (non-binding reference):
-
-Permission is granted to use, copy, modify, and distribute this software for personal and commercial purposes, provided copyright and license notices are retained. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

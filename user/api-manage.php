@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result !== true) {
             AjaxResponse::error($result);
         }
-        // 历史管理员未挂身份的接口：首次由绑定用户保存时补挂 userid
+        // 管理员侧 userid=0：绑定用户首次保存时补挂 userid，便于后续精确归属
         if ((int) $owned['userid'] === 0) {
             ApiManager::attachUserIdIfOrphan($id, $userId);
         }

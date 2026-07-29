@@ -3,13 +3,23 @@
  * 文件：core/AuthSecurity.php
  * 作用：认证页安全防护（CSRF、频率限制、登录防暴力）
  *
- * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
+ * 说明：
+ * - 管理端与前台使用独立 Session Cookie（VSADMINSESSID / VSFRONTSESSID），CSRF 互不串用
+ * - 系统版本以 core/version.php 中 VS_VERSION 为准。
  */
 
 class AuthSecurity
 {
     const CSRF_SESSION_KEY = 'vs_csrf_token';
     const MAIL_TICKET_SESSION_KEY = 'vs_mail_tickets';
+
+    /** 管理端会话 Cookie 名（与前台隔离） */
+    const SESSION_NAME_ADMIN = 'VSADMINSESSID';
+    /** 前台 / 用户中心会话 Cookie 名 */
+    const SESSION_NAME_FRONT = 'VSFRONTSESSID';
+
+    const REALM_ADMIN = 'admin';
+    const REALM_FRONT = 'front';
 
     const MAIL_PURPOSE_USER_FORGOT = 'user_forgot';
     const MAIL_PURPOSE_USER_REGISTER = 'user_register';
@@ -52,6 +62,9 @@ class AuthSecurity
     const RESET_IP_MAX = 15;
     const RESET_IP_WINDOW = 3600;
 
+    /** 同一验证码会话内最多错误次数（达上限后作废验证码） */
+    const OTP_FAIL_MAX = 5;
+
     /** OAuth 授权发起：单 IP 15 分钟内最多次数 */
     const OAUTH_IP_MAX = 20;
     const OAUTH_IP_WINDOW = 900;
@@ -78,13 +91,66 @@ class AuthSecurity
     }
 
     /**
-     * 配置 Session Cookie 安全属性（须在 session_start 之前调用）
+     * 当前请求会话域：admin（后台）或 front（前台/用户中心）
+     *
+     * 判定顺序：
+     * 1. 显式 define('VS_SESSION_REALM', 'admin'|'front')
+     * 2. SCRIPT_NAME 位于 /admin/
+     * 3. captcha 入口按 scene（admin_* → admin）
+     * 4. 默认 front
+     *
+     * @return string self::REALM_ADMIN|self::REALM_FRONT
+     */
+    public static function detectSessionRealm()
+    {
+        if (defined('VS_SESSION_REALM')) {
+            $r = strtolower(trim((string) constant('VS_SESSION_REALM')));
+            return ($r === self::REALM_ADMIN) ? self::REALM_ADMIN : self::REALM_FRONT;
+        }
+
+        $script = isset($_SERVER['SCRIPT_NAME']) ? str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']) : '';
+        if ($script !== '' && preg_match('#/(admin)(/|$)#', $script)) {
+            return self::REALM_ADMIN;
+        }
+
+        if ($script !== '' && preg_match('#/core/captcha/#', $script)) {
+            $scene = '';
+            if (isset($_GET['scene'])) {
+                $scene = (string) $_GET['scene'];
+            } elseif (isset($_POST['scene'])) {
+                $scene = (string) $_POST['scene'];
+            }
+            $scene = preg_replace('/[^a-z0-9_]/', '', strtolower($scene));
+            if (strpos($scene, 'admin_') === 0) {
+                return self::REALM_ADMIN;
+            }
+        }
+
+        return self::REALM_FRONT;
+    }
+
+    /**
+     * @return string
+     */
+    public static function currentSessionRealm()
+    {
+        return self::detectSessionRealm();
+    }
+
+    /**
+     * 配置 Session Cookie 安全属性与会话名（须在 session_start 之前调用）
      *
      * @return void
      */
     public static function configureSessionCookies()
     {
         $secure = self::sessionCookieSecure();
+        $realm = self::detectSessionRealm();
+        $name = ($realm === self::REALM_ADMIN) ? self::SESSION_NAME_ADMIN : self::SESSION_NAME_FRONT;
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_name($name);
+        }
 
         if (PHP_VERSION_ID >= 70300) {
             session_set_cookie_params(array(
@@ -105,20 +171,25 @@ class AuthSecurity
         ini_set('session.cookie_secure', $secure ? '1' : '0');
         // 避免短时会话回收导致 CSRF 偶发失效（登录/发信页长时间停留）
         ini_set('session.gc_maxlifetime', '86400');
+
+        // 升级后清掉旧版 PHPSESSID，避免与双会话并存混淆
+        if (!empty($_COOKIE['PHPSESSID'])) {
+            self::expireNamedSessionCookie('PHPSESSID');
+        }
     }
 
     /**
-     * 退出时清除会话 Cookie（同时清 Secure / 非 Secure，避免历史残留）
+     * 过期指定名称的会话 Cookie（兼容 Secure/非 Secure）
      *
+     * @param string $name
      * @return void
      */
-    public static function clearSessionCookie()
+    public static function expireNamedSessionCookie($name)
     {
-        if (headers_sent() || !ini_get('session.use_cookies')) {
+        $name = (string) $name;
+        if ($name === '' || headers_sent() || !ini_get('session.use_cookies')) {
             return;
         }
-
-        $name = session_name();
         $params = session_get_cookie_params();
         $path = isset($params['path']) ? $params['path'] : '/';
         $domain = isset($params['domain']) ? $params['domain'] : '';
@@ -144,6 +215,19 @@ class AuthSecurity
     }
 
     /**
+     * 退出时清除当前域会话 Cookie（同时清 Secure / 非 Secure，避免历史残留）
+     *
+     * @return void
+     */
+    public static function clearSessionCookie()
+    {
+        if (headers_sent() || !ini_get('session.use_cookies')) {
+            return;
+        }
+        self::expireNamedSessionCookie(session_name());
+    }
+
+    /**
      * 是否 HTTPS 访问
      *
      * @return bool
@@ -155,6 +239,9 @@ class AuthSecurity
         }
         if (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443) {
             return true;
+        }
+        if (!self::trustForwardedHeaders()) {
+            return false;
         }
         if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
             $proto = strtolower(trim((string) $_SERVER['HTTP_X_FORWARDED_PROTO']));
@@ -182,6 +269,8 @@ class AuthSecurity
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: SAMEORIGIN');
         header('Referrer-Policy: strict-origin-when-cross-origin');
+        // 宽松基础 CSP：不限制 script/style，避免破坏页脚任意 HTML；仍挡外嵌与插件
+        header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'");
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
         header('Pragma: no-cache');
         header('Expires: 0');
@@ -189,6 +278,25 @@ class AuthSecurity
         // 常见 CDN 识别头，避免登录 HTML 被边缘节点缓存
         header('CDN-Cache-Control: no-store');
         header('Cloudflare-CDN-Cache-Control: no-store');
+        if (self::isHttps() && self::sessionCookieSecure()) {
+            header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+        }
+    }
+
+    /**
+     * 前台公共页基础安全头（可缓存；CSP 不限制页脚任意 HTML/脚本）
+     *
+     * @return void
+     */
+    public static function sendFrontendSecurityHeaders()
+    {
+        if (headers_sent()) {
+            return;
+        }
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: SAMEORIGIN');
+        header('Referrer-Policy: strict-origin-when-cross-origin');
+        header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'");
         if (self::isHttps() && self::sessionCookieSecure()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         }
@@ -340,11 +448,16 @@ class AuthSecurity
     /**
      * 客户端 IP
      *
+     * 默认只用 REMOTE_ADDR。仅当配置 trust_proxy=1 时采信 X-Forwarded-For 首段。
+     *
      * @return string
      */
     public static function clientIp()
     {
         $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+        if (!self::trustForwardedHeaders()) {
+            return $ip;
+        }
         if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && $_SERVER['HTTP_X_FORWARDED_FOR'] !== '') {
             $parts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
             $candidate = trim($parts[0]);
@@ -353,6 +466,19 @@ class AuthSecurity
             }
         }
         return $ip;
+    }
+
+    /**
+     * 是否信任反向代理转发头（XFF / X-Forwarded-Proto）
+     *
+     * @return bool
+     */
+    public static function trustForwardedHeaders()
+    {
+        if (!class_exists('Config')) {
+            return false;
+        }
+        return Config::get('trust_proxy', '0') === '1';
     }
 
     /**
@@ -592,13 +718,99 @@ class AuthSecurity
     }
 
     /**
-     * 记录重置密码提交
+     * 记录重置密码提交（成功或失败均应调用，防止 OTP 穷举）
      *
      * @return void
      */
     public static function recordResetSubmit()
     {
         self::rateLimitAllow('reset_submit_ip:' . self::clientIp(), self::RESET_IP_WINDOW, self::RESET_IP_MAX, true);
+    }
+
+    /**
+     * 验证码校验失败：计入 IP 限流 + 会话失败次数；达上限作废验证码
+     *
+     * @param string $context admin_reset|user_reset|user_register
+     * @return string
+     */
+    public static function recordOtpFailure($context = 'admin_reset')
+    {
+        self::recordResetSubmit();
+        $failKey = self::otpFailKey($context);
+        $fails = isset($_SESSION[$failKey]) ? (int) $_SESSION[$failKey] : 0;
+        $fails++;
+        $_SESSION[$failKey] = $fails;
+        if ($fails >= self::OTP_FAIL_MAX) {
+            self::clearOtpSession($context);
+            return '验证码错误次数过多，请重新获取';
+        }
+        if ($context === 'user_register') {
+            return '用户名、邮箱或验证码错误';
+        }
+        return '邮箱或验证码错误';
+    }
+
+    /**
+     * @param string $context
+     * @return string
+     */
+    private static function otpFailKey($context)
+    {
+        if ($context === 'user_register') {
+            return 'user_reg_otp_fails';
+        }
+        if ($context === 'user_reset') {
+            return 'user_reset_otp_fails';
+        }
+        return 'reset_otp_fails';
+    }
+
+    /**
+     * 清除验证码相关会话
+     *
+     * @param string $context
+     * @return void
+     */
+    public static function clearOtpSession($context = 'admin_reset')
+    {
+        if ($context === 'user_register') {
+            unset(
+                $_SESSION['user_reg_username'],
+                $_SESSION['user_reg_email'],
+                $_SESSION['user_reg_code'],
+                $_SESSION['user_reg_code_expires'],
+                $_SESSION['user_reg_otp_fails']
+            );
+            return;
+        }
+        if ($context === 'user_reset') {
+            unset(
+                $_SESSION['user_reset_id'],
+                $_SESSION['user_reset_email'],
+                $_SESSION['user_reset_code'],
+                $_SESSION['user_reset_code_expires'],
+                $_SESSION['user_reset_otp_fails']
+            );
+            return;
+        }
+        unset(
+            $_SESSION['reset_email'],
+            $_SESSION['reset_code'],
+            $_SESSION['reset_code_expires'],
+            $_SESSION['reset_admin_id'],
+            $_SESSION['reset_otp_fails']
+        );
+    }
+
+    /**
+     * 发信成功后重置 OTP 失败计数
+     *
+     * @param string $context
+     * @return void
+     */
+    public static function resetOtpFailCount($context = 'admin_reset')
+    {
+        unset($_SESSION[self::otpFailKey($context)]);
     }
 
     /**

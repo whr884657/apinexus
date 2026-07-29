@@ -151,6 +151,14 @@ class PlaygroundRelay
         if ($fetchUrl === '') {
             return self::fail('未配置调用地址', ApiError::UPSTREAM_BAD, $displayUrl);
         }
+        // 绝对 URL（含历史「本地直连」）必须过 SSRF 白名单；本站相对路径拼出的同源地址放行
+        if (preg_match('#^https?://#i', $fetchUrl)) {
+            $base = rtrim(vs_base_url(), '/');
+            $isSameOrigin = (stripos($fetchUrl, $base . '/') === 0 || strcasecmp(rtrim($fetchUrl, '/'), $base) === 0);
+            if (!$isSameOrigin && class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($fetchUrl)) {
+                return self::fail('调用地址不允许指向内网或非公网主机', ApiError::UPSTREAM_BLOCKED, $displayUrl);
+            }
+        }
         // 本站密钥需带给本地接口
         $result = self::httpRequest($fetchUrl, $method, $params);
         $result['displayUrl'] = $displayUrl;
@@ -624,6 +632,10 @@ class PlaygroundRelay
     private static function mediaKindFromCt($contentType)
     {
         $t = strtolower(trim(explode(';', (string) $contentType, 2)[0]));
+        // SVG 可含脚本，禁止作为媒体预览
+        if ($t === 'image/svg+xml' || $t === 'image/svg') {
+            return '';
+        }
         if (strpos($t, 'image/') === 0) {
             return 'image';
         }
@@ -634,6 +646,37 @@ class PlaygroundRelay
             return 'video';
         }
         return '';
+    }
+
+    /**
+     * 媒体预览 Content-Type 白名单
+     *
+     * @param string $contentType
+     * @return string
+     */
+    private static function sanitizeMediaContentType($contentType)
+    {
+        $t = strtolower(trim(explode(';', (string) $contentType, 2)[0]));
+        $allow = array(
+            'image/jpeg' => true,
+            'image/jpg'  => true,
+            'image/png'  => true,
+            'image/gif'  => true,
+            'image/webp' => true,
+            'audio/mpeg' => true,
+            'audio/mp3'  => true,
+            'audio/wav'  => true,
+            'audio/ogg'  => true,
+            'audio/mp4'  => true,
+            'audio/webm' => true,
+            'video/mp4'  => true,
+            'video/webm' => true,
+            'video/mpeg' => true,
+        );
+        if (isset($allow[$t])) {
+            return $t === 'image/jpg' ? 'image/jpeg' : $t;
+        }
+        return 'application/octet-stream';
     }
 
     /**
@@ -648,6 +691,14 @@ class PlaygroundRelay
         if (!is_dir($dir)) {
             @mkdir($dir, 0755, true);
         }
+        $denyHt = $dir . '/.htaccess';
+        if (!is_file($denyHt)) {
+            @file_put_contents($denyHt, "Require all denied\nDeny from all\n");
+        }
+        $dataDeny = $root . '/data/.htaccess';
+        if (!is_file($dataDeny)) {
+            @file_put_contents($dataDeny, "Require all denied\nDeny from all\n");
+        }
         if (!is_dir($dir) || !is_writable($dir)) {
             return '';
         }
@@ -660,8 +711,10 @@ class PlaygroundRelay
         if (@file_put_contents($binPath, $binary) === false) {
             return '';
         }
+        // 仅允许安全媒体类型，避免 SVG 等在站点源执行脚本
+        $ct = self::sanitizeMediaContentType($contentType);
         $meta = array(
-            'ct'      => (string) $contentType,
+            'ct'      => $ct,
             'expires' => time() + 3600,
             'bytes'   => strlen($binary),
         );

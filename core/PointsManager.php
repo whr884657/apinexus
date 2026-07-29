@@ -73,6 +73,32 @@ class PointsManager
     }
 
     /**
+     * 上游失败等场景退回已预扣积分
+     *
+     * @param int    $userId
+     * @param float  $amount
+     * @param int    $apiId
+     * @param int    $keyId
+     * @param string $remark
+     * @return array{ok:bool,msg:string,balance?:float}
+     */
+    public static function refundApiCall($userId, $amount, $apiId, $keyId, $remark = '')
+    {
+        return self::change(
+            (int) $userId,
+            OrderManager::DIRECT_INC,
+            OrderManager::KIND_REFUND,
+            (float) $amount,
+            array(
+                'apiid'  => (int) $apiId,
+                'keyid'  => (int) $keyId,
+                'remark' => $remark !== '' ? $remark : '上游失败退回',
+                'status' => OrderManager::STATUS_DONE,
+            )
+        );
+    }
+
+    /**
      * 管理员调整积分（可增可减）
      *
      * @param int    $userId

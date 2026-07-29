@@ -8,7 +8,7 @@
 CREATE TABLE IF NOT EXISTS `{prefix}admin` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `username` varchar(50) NOT NULL COMMENT '管理员用户名',
-    `password` char(32) NOT NULL COMMENT '密码哈希（MD5，非明文）',
+    `password` varchar(255) NOT NULL COMMENT '密码哈希（password_hash）',
     `email` varchar(100) NOT NULL COMMENT '管理员邮箱',
     `avatar` varchar(500) NOT NULL DEFAULT '' COMMENT '自定义头像链接',
     `binduid` int(10) unsigned DEFAULT NULL COMMENT '绑定的前台用户ID（后台发布内容所用身份）',
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}admin` (
 CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `username` varchar(50) NOT NULL COMMENT '用户名',
-    `password` char(32) NOT NULL COMMENT '密码哈希（MD5，非明文）',
+    `password` varchar(255) NOT NULL COMMENT '密码哈希（password_hash）',
     `email` varchar(100) NOT NULL COMMENT '用户邮箱',
     `avatar` varchar(500) NOT NULL DEFAULT '' COMMENT '自定义头像链接',
     `bio` varchar(200) NOT NULL DEFAULT '' COMMENT '个人简介',
@@ -121,11 +121,11 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('gt4_id', ''),
 ('gt4_key', ''),
 ('gt4_api', ''),
-('captcha_on_admin_login', '0'),
-('captcha_on_admin_forgot', '0'),
-('captcha_on_user_login', '0'),
-('captcha_on_user_register', '0'),
-('captcha_on_user_forgot', '0');
+('captcha_on_admin_login', '1'),
+('captcha_on_admin_forgot', '1'),
+('captcha_on_user_login', '1'),
+('captcha_on_user_register', '1'),
+('captcha_on_user_forgot', '1');
 
 -- 邮箱验证码发信频率限制记录
 CREATE TABLE IF NOT EXISTS `{prefix}mailrate` (

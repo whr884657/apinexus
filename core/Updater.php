@@ -592,6 +592,9 @@ class Updater
     private static function ensureSessionStarted()
     {
         if (session_status() === PHP_SESSION_NONE) {
+            if (class_exists('AuthSecurity')) {
+                AuthSecurity::configureSessionCookies();
+            }
             session_start();
         }
     }
@@ -941,12 +944,7 @@ class Updater
      */
     public static function configureCurlSsl($ch, $url = '')
     {
-        if ($url !== '' && self::isTrustedUpdateUrl($url)) {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-            return;
-        }
-
+        // 始终校验证书；不再对「信任域名」关闭 TLS（防供应链 MITM）
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
     }
@@ -985,8 +983,8 @@ class Updater
         }
 
         $sslOptions = array(
-            'verify_peer'      => !self::isTrustedUpdateUrl($url),
-            'verify_peer_name' => !self::isTrustedUpdateUrl($url),
+            'verify_peer'      => true,
+            'verify_peer_name' => true,
         );
 
         $context = stream_context_create(array(
@@ -1221,6 +1219,9 @@ class Updater
         $relative = strtolower(str_replace('\\', '/', $relative));
         $immutable = array(
             'config/database.php',
+            'config/install.lock',
+            'config/.htaccess',
+            '.htaccess',
         );
         return in_array($relative, $immutable, true);
     }

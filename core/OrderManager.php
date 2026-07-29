@@ -17,6 +17,8 @@ class OrderManager
     const KIND_REGISTER = 2;
     /** 增加：每日签到 */
     const KIND_CHECKIN = 3;
+    /** 增加：调用失败退回 */
+    const KIND_REFUND = 4;
 
     /** 减少：API 调用 */
     const KIND_API = 0;
@@ -85,6 +87,9 @@ class OrderManager
             if ($kind === self::KIND_CHECKIN) {
                 return '每日签到';
             }
+            if ($kind === self::KIND_REFUND) {
+                return '调用退回';
+            }
             return '用户充值';
         }
         if ($kind === self::KIND_ADMIN_SUB) {
@@ -116,6 +121,9 @@ class OrderManager
             }
             if ($kind === self::KIND_CHECKIN) {
                 return 'is-checkin';
+            }
+            if ($kind === self::KIND_REFUND) {
+                return 'is-refund';
             }
             return 'is-recharge';
         }
@@ -669,6 +677,7 @@ class OrderManager
             array(self::DIRECT_INC, self::KIND_ADMIN_ADD, array('加款', '管理员加款')),
             array(self::DIRECT_INC, self::KIND_REGISTER, array('注册', '赠送', '注册赠送', '注册赠送积分')),
             array(self::DIRECT_INC, self::KIND_CHECKIN, array('签到', '每日签到')),
+            array(self::DIRECT_INC, self::KIND_REFUND, array('退回', '调用退回', '上游失败退回')),
             array(self::DIRECT_DEC, self::KIND_API, array('API调用', '接口调用', '调用接口')),
             array(self::DIRECT_DEC, self::KIND_ADMIN_SUB, array('扣款', '管理员扣款')),
             array(self::DIRECT_DEC, self::KIND_AI, array('AI调用')),

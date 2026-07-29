@@ -164,13 +164,131 @@ function vs_theme_bg_preload_script()
 }
 
 /**
+ * 是否已在本会话同意开源许可（安装向导）
+ *
+ * @return bool
+ */
+function vs_install_license_accepted()
+{
+    return !empty($_SESSION['vs_license_accepted']);
+}
+
+/**
+ * 读取中文许可条款并转为简易 HTML（供安装弹窗）
+ *
+ * @return string
+ */
+function vs_license_zh_html()
+{
+    $path = (defined('VS_ROOT') ? VS_ROOT : dirname(__DIR__)) . '/LICENSE.zh-CN.md';
+    if (!is_file($path) || !is_readable($path)) {
+        return '<p>无法读取许可协议文件，请检查仓库根目录 <code>LICENSE.zh-CN.md</code>。</p>';
+    }
+    $raw = file_get_contents($path);
+    if (!is_string($raw) || $raw === '') {
+        return '<p>许可协议内容为空。</p>';
+    }
+    $raw = str_replace(array("\r\n", "\r"), "\n", $raw);
+    $lines = explode("\n", $raw);
+    $html = array('<div class="vs-license-doc">');
+    $inList = false;
+
+    $flushList = function () use (&$html, &$inList) {
+        if ($inList) {
+            $html[] = '</ul>';
+            $inList = false;
+        }
+    };
+
+    $inline = function ($text) {
+        $text = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        $text = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $text);
+        $text = preg_replace('/`([^`]+)`/', '<code>$1</code>', $text);
+        return $text;
+    };
+
+    foreach ($lines as $line) {
+        $trim = trim($line);
+        if ($trim === '') {
+            $flushList();
+            continue;
+        }
+        if ($trim === '---') {
+            $flushList();
+            $html[] = '<hr>';
+            continue;
+        }
+        if (preg_match('/^###\s+(.+)$/', $trim, $m)) {
+            $flushList();
+            $html[] = '<h3>' . $inline($m[1]) . '</h3>';
+            continue;
+        }
+        if (preg_match('/^##\s+(.+)$/', $trim, $m)) {
+            $flushList();
+            $html[] = '<h2>' . $inline($m[1]) . '</h2>';
+            continue;
+        }
+        if (preg_match('/^#\s+(.+)$/', $trim, $m)) {
+            $flushList();
+            $html[] = '<h1>' . $inline($m[1]) . '</h1>';
+            continue;
+        }
+        if (preg_match('/^[-*]\s+(.+)$/', $trim, $m) || preg_match('/^\d+\.\s+(.+)$/', $trim, $m)) {
+            if (!$inList) {
+                $html[] = '<ul>';
+                $inList = true;
+            }
+            $html[] = '<li>' . $inline($m[1]) . '</li>';
+            continue;
+        }
+        $flushList();
+        $html[] = '<p>' . $inline($trim) . '</p>';
+    }
+    $flushList();
+    $html[] = '</div>';
+    return implode("\n", $html);
+}
+
+/**
+ * 密码哈希（仅 password_hash / PASSWORD_DEFAULT，不兼容双 MD5）
  *
  * @param string $password
  * @return string
  */
 function vs_password_hash($password)
 {
-    return md5(md5($password));
+    return password_hash((string) $password, PASSWORD_DEFAULT);
+}
+
+/**
+ * 校验密码（仅 password_verify；拒绝双 MD5 等旧格式）
+ *
+ * @param string $password
+ * @param string $hash
+ * @return bool
+ */
+function vs_password_verify($password, $hash)
+{
+    $hash = (string) $hash;
+    if ($hash === '' || $hash[0] !== '$') {
+        return false;
+    }
+    return password_verify((string) $password, $hash);
+}
+
+/**
+ * 是否需要按当前算法参数重算哈希（仅现代哈希）
+ *
+ * @param string $hash
+ * @return bool
+ */
+function vs_password_needs_rehash($hash)
+{
+    $hash = (string) $hash;
+    if ($hash === '' || $hash[0] !== '$') {
+        return false;
+    }
+    return password_needs_rehash($hash, PASSWORD_DEFAULT);
 }
 
 /**
@@ -1260,6 +1378,9 @@ function vs_render_theme_seo_block(array $seo = array())
  */
 function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true, array $extraCssHrefs = array(), array $headScripts = array(), $bodyClass = 'vs-body', array $seoOpts = array())
 {
+    if (class_exists('AuthSecurity')) {
+        AuthSecurity::sendFrontendSecurityHeaders();
+    }
     $base = vs_base_url();
     $siteName = 'ApiNexus';
     $favicon = '';

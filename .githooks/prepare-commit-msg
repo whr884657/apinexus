@@ -1,0 +1,29 @@
+#!/bin/sh
+# 强制剥离 Cursor / AI 协助署名（prepare-commit-msg）
+# 由 core.hooksPath=.githooks 启用；勿删除。
+
+MSG_FILE=$1
+[ -n "$MSG_FILE" ] && [ -f "$MSG_FILE" ] || exit 0
+
+TMP_FILE="${MSG_FILE}.apinexus.strip"
+# 去掉 Co-authored-by: Cursor / cursoragent / @cursor.com
+# 去掉 Made with Cursor 类脚注
+# 使用 grep -v；无匹配时 grep 可能 exit 1，需容忍
+if grep -Eiv \
+  '^[[:space:]]*Co-authored-by:.*(Cursor|cursoragent|@cursor\.com)' \
+  "$MSG_FILE" 2>/dev/null | \
+  grep -Eiv \
+  '^[[:space:]]*(Made[- ]with[- ]Cursor|Made-with:[[:space:]]*Cursor)' \
+  > "$TMP_FILE" 2>/dev/null
+then
+  mv -f "$TMP_FILE" "$MSG_FILE"
+else
+  # 若过滤后为空文件，保留原文件避免毁掉提交（极端情况）
+  if [ -s "$TMP_FILE" ]; then
+    mv -f "$TMP_FILE" "$MSG_FILE"
+  else
+    rm -f "$TMP_FILE"
+  fi
+fi
+
+exit 0

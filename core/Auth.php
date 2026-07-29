@@ -28,15 +28,18 @@ class Auth
         try {
             $pdo = Database::connect();
             $table = Database::table('admin');
-            $hash = vs_password_hash($password);
 
             $stmt = $pdo->prepare(
-                'SELECT * FROM `' . $table . '` WHERE (`username` = ? OR `email` = ?) AND `password` = ? AND `status` = 1 LIMIT 1'
+                'SELECT * FROM `' . $table . '` WHERE (`username` = ? OR `email` = ?) AND `status` = 1 LIMIT 1'
             );
-            $stmt->execute(array($account, $account, $hash));
+            $stmt->execute(array($account, $account));
             $admin = $stmt->fetch();
 
-            if ($admin) {
+            if ($admin && vs_password_verify($password, isset($admin['password']) ? $admin['password'] : '')) {
+                if (vs_password_needs_rehash(isset($admin['password']) ? $admin['password'] : '')) {
+                    $upd = $pdo->prepare('UPDATE `' . $table . '` SET `password` = ? WHERE `id` = ?');
+                    $upd->execute(array(vs_password_hash($password), (int) $admin['id']));
+                }
                 $_SESSION[self::SESSION_KEY] = (int) $admin['id'];
                 $_SESSION['vs_admin_username'] = $admin['username'];
                 self::touchActivity();
@@ -53,7 +56,7 @@ class Auth
     }
 
     /**
-     * 退出登录
+     * 退出登录（仅销毁管理端会话 VSADMINSESSID，不影响前台 VSFRONTSESSID）
      *
      * @return void
      */
@@ -226,7 +229,7 @@ class Auth
                 $stmt = $pdo->prepare('SELECT `password` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
                 $stmt->execute(array(self::id()));
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                if (!$row || !hash_equals((string) $row['password'], vs_password_hash($oldPassword))) {
+                if (!$row || !vs_password_verify($oldPassword, isset($row['password']) ? $row['password'] : '')) {
                     return '当前密码不正确';
                 }
             } catch (Exception $e) {
@@ -302,7 +305,7 @@ class Auth
             $check->execute(array($adminId));
             $row = $check->fetch(PDO::FETCH_ASSOC);
 
-            return is_array($row) && hash_equals((string) $row['password'], $hash);
+            return is_array($row) && vs_password_verify($newPassword, isset($row['password']) ? $row['password'] : '');
         } catch (Exception $e) {
             return false;
         }

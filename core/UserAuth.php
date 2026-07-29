@@ -28,15 +28,18 @@ class UserAuth
         try {
             $pdo = Database::connect();
             $table = Database::table('user');
-            $hash = vs_password_hash($password);
 
             $stmt = $pdo->prepare(
-                'SELECT * FROM `' . $table . '` WHERE (`username` = ? OR `email` = ?) AND `password` = ? AND `status` = 1 LIMIT 1'
+                'SELECT * FROM `' . $table . '` WHERE (`username` = ? OR `email` = ?) AND `status` = 1 LIMIT 1'
             );
-            $stmt->execute(array($account, $account, $hash));
+            $stmt->execute(array($account, $account));
             $user = $stmt->fetch();
 
-            if ($user) {
+            if ($user && vs_password_verify($password, isset($user['password']) ? $user['password'] : '')) {
+                if (vs_password_needs_rehash(isset($user['password']) ? $user['password'] : '')) {
+                    $rehash = $pdo->prepare('UPDATE `' . $table . '` SET `password` = ? WHERE `id` = ?');
+                    $rehash->execute(array(vs_password_hash($password), (int) $user['id']));
+                }
                 $_SESSION[self::SESSION_KEY] = (int) $user['id'];
                 $_SESSION['vs_user_username'] = $user['username'];
                 self::touchActivity();
@@ -58,17 +61,18 @@ class UserAuth
     }
 
     /**
-     * 退出登录（仅清除用户会话，不影响管理员）
+     * 退出登录（仅销毁前台会话，不影响管理员 VSADMINSESSID）
      *
      * @return void
      */
     public static function logout()
     {
-        unset(
-            $_SESSION[self::SESSION_KEY],
-            $_SESSION['vs_user_username'],
-            $_SESSION[self::ACTIVITY_KEY]
-        );
+        $_SESSION = array();
+        AuthSecurity::clearSessionCookie();
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
     }
 
     /**
@@ -195,13 +199,19 @@ class UserAuth
         try {
             $pdo = Database::connect();
             $table = Database::table('user');
-            $hash = vs_password_hash($password);
             $stmt = $pdo->prepare(
-                'SELECT * FROM `' . $table . '` WHERE (`username` = ? OR `email` = ?) AND `password` = ? AND `status` = 1 LIMIT 1'
+                'SELECT * FROM `' . $table . '` WHERE (`username` = ? OR `email` = ?) AND `status` = 1 LIMIT 1'
             );
-            $stmt->execute(array($account, $account, $hash));
+            $stmt->execute(array($account, $account));
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $user ?: null;
+            if (!$user || !vs_password_verify($password, isset($user['password']) ? $user['password'] : '')) {
+                return null;
+            }
+            if (vs_password_needs_rehash(isset($user['password']) ? $user['password'] : '')) {
+                $upd = $pdo->prepare('UPDATE `' . $table . '` SET `password` = ? WHERE `id` = ?');
+                $upd->execute(array(vs_password_hash($password), (int) $user['id']));
+            }
+            return $user;
         } catch (Exception $e) {
             return null;
         }
@@ -224,13 +234,13 @@ class UserAuth
         try {
             $pdo = Database::connect();
             $table = Database::table('user');
-            $hash = vs_password_hash($password);
             $stmt = $pdo->prepare(
-                'SELECT `id` FROM `' . $table . '`
-                 WHERE (`username` = ? OR `email` = ?) AND `password` = ? AND `status` = 0 LIMIT 1'
+                'SELECT `id`, `password` FROM `' . $table . '`
+                 WHERE (`username` = ? OR `email` = ?) AND `status` = 0 LIMIT 1'
             );
-            $stmt->execute(array($account, $account, $hash));
-            return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute(array($account, $account));
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return is_array($row) && vs_password_verify($password, isset($row['password']) ? $row['password'] : '');
         } catch (Exception $e) {
             return false;
         }
@@ -376,7 +386,7 @@ class UserAuth
             $check->execute(array($userId));
             $row = $check->fetch(PDO::FETCH_ASSOC);
 
-            return is_array($row) && hash_equals((string) $row['password'], $hash);
+            return is_array($row) && vs_password_verify($newPassword, isset($row['password']) ? $row['password'] : '');
         } catch (Exception $e) {
             return false;
         }
@@ -524,7 +534,7 @@ class UserAuth
                 $stmt = $pdo->prepare('SELECT `password` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
                 $stmt->execute(array(self::id()));
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                if (!$row || !hash_equals((string) $row['password'], vs_password_hash($oldPassword))) {
+                if (!$row || !vs_password_verify($oldPassword, isset($row['password']) ? $row['password'] : '')) {
                     return '当前密码不正确';
                 }
             } catch (Exception $e) {

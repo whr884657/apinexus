@@ -40,10 +40,33 @@ if ($expires > 0 && $expires < time()) {
 }
 
 $ct = (is_array($meta) && !empty($meta['ct'])) ? (string) $meta['ct'] : 'application/octet-stream';
+$ctLower = strtolower(trim(explode(';', $ct, 2)[0]));
+$allowCt = array(
+    'image/jpeg' => true,
+    'image/png'  => true,
+    'image/gif'  => true,
+    'image/webp' => true,
+    'audio/mpeg' => true,
+    'audio/mp3'  => true,
+    'audio/wav'  => true,
+    'audio/ogg'  => true,
+    'audio/mp4'  => true,
+    'audio/webm' => true,
+    'video/mp4'  => true,
+    'video/webm' => true,
+    'video/mpeg' => true,
+);
+if (!isset($allowCt[$ctLower])) {
+    $ct = 'application/octet-stream';
+} else {
+    $ct = $ctLower;
+}
 $size = filesize($binPath);
 header('Content-Type: ' . $ct);
 header('Content-Length: ' . (string) (int) $size);
 header('Cache-Control: private, max-age=300');
 header('X-Content-Type-Options: nosniff');
+header('Content-Disposition: inline');
+header('Content-Security-Policy: default-src \'none\'; sandbox');
 readfile($binPath);
 exit;

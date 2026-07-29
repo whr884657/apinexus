@@ -6,6 +6,9 @@
 
 class RedisCache
 {
+    /** safeUnserialize 失败哨兵（区分合法 false） */
+    private static $unserializeMiss;
+
     const KEY_FRONTEND_API = 'cache:frontend:api_list';
     const KEY_FRONTEND_CATEGORY = 'cache:frontend:category_tags';
     const KEY_FRONTEND_LINK = 'cache:frontend:link_list';
@@ -76,8 +79,8 @@ class RedisCache
                 $raw = $redis->get($fullKey);
                 if ($raw !== false && $raw !== '') {
                     self::incrStat($redis, self::KEY_STAT_HITS);
-                    $value = @unserialize($raw);
-                    if ($value !== false || $raw === 'b:0;') {
+                    $value = self::safeUnserialize($raw);
+                    if ($value !== self::$unserializeMiss) {
                         return $value;
                     }
                 }
@@ -110,8 +113,8 @@ class RedisCache
                 if ($raw === false || $raw === '') {
                     return null;
                 }
-                $value = @unserialize($raw);
-                if ($value === false && $raw !== 'b:0;') {
+                $value = self::safeUnserialize($raw);
+                if ($value === self::$unserializeMiss) {
                     return null;
                 }
                 return $value;
@@ -164,6 +167,35 @@ class RedisCache
         } catch (Exception $e) {
             // 忽略
         }
+    }
+
+    /**
+     * 安全反序列化：禁止还原对象（防 POP 链 RCE）
+     *
+     * @param string $raw
+     * @return mixed 失败返回 self::$unserializeMiss
+     */
+    private static function safeUnserialize($raw)
+    {
+        if (self::$unserializeMiss === null) {
+            self::$unserializeMiss = new stdClass();
+        }
+        if (!is_string($raw) || $raw === '') {
+            return self::$unserializeMiss;
+        }
+        if ($raw === 'b:0;') {
+            return false;
+        }
+        $opts = array('allowed_classes' => false);
+        $value = @unserialize($raw, $opts);
+        if ($value === false && $raw !== 'b:0;') {
+            return self::$unserializeMiss;
+        }
+        // 拒绝意外还原出的对象（旧 PHP / 异常载荷）
+        if (is_object($value)) {
+            return self::$unserializeMiss;
+        }
+        return $value;
     }
 
     /**

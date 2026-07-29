@@ -623,7 +623,7 @@ class ApiManager
         if ($userId <= 0) {
             return array();
         }
-        // 含绑定身份下历史管理员发布（userid=0）的接口
+        // 含绑定身份下管理员侧发布（userid=0）的接口
         return self::listFiltered(array('owned_by_user' => $userId));
     }
 
@@ -1663,6 +1663,9 @@ class ApiManager
             if (mb_strlen($targeturl, 'UTF-8') > 500) {
                 return '代理上游地址不能超过 500 个字符';
             }
+            if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($targeturl)) {
+                return '上游地址不允许指向内网、本机或非公网主机';
+            }
             $proxyslug = ApiProxy::normalizeSlug(isset($data['proxyslug']) ? $data['proxyslug'] : '');
             if ($proxyslug === '') {
                 return '请填写 3～64 位字母或数字短码';
@@ -1689,7 +1692,10 @@ class ApiManager
                 return '接口地址不能超过 500 个字符';
             }
             if (preg_match('#^https?://#i', $endpoint)) {
-                // 兼容历史：完整 URL 视为本地直连
+                // 兼容历史：完整 URL 视为本地直连，但仍须公网可达（防 SSRF）
+                if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($endpoint)) {
+                    return '本地直连地址不允许指向内网、本机或非公网主机';
+                }
             } else {
                 if ($endpoint[0] !== '/') {
                     $endpoint = '/' . ltrim($endpoint, '/');

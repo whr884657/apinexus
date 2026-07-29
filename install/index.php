@@ -2,7 +2,7 @@
 /**
  * 文件：install/index.php
  * 作用：ApiNexus Web 五步安装向导（单文件实现全部安装逻辑）
- * @version 1.0.5
+ * @version 1.1.0
  */
 
 define('VS_ROOT', dirname(__DIR__));
@@ -14,6 +14,37 @@ $error   = '';
 $success = '';
 $step    = isset($_GET['step']) ? (int) $_GET['step'] : 1;
 $step    = max(1, min(5, $step));
+
+// ── POST：同意开源许可（安装门禁）────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'accept_license') {
+    $agree = isset($_POST['agree']) ? (string) $_POST['agree'] : '';
+    if ($agree !== '1') {
+        AjaxResponse::error('请勾选同意开源许可与部署使用条款');
+    }
+    $_SESSION['vs_license_accepted'] = 1;
+    $_SESSION['vs_license_accepted_at'] = time();
+    AjaxResponse::success('已确认开源许可');
+}
+
+$licenseAccepted = vs_install_license_accepted();
+
+// 未同意许可：禁止进入后续步骤与写库操作
+if (!$licenseAccepted) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $postAction = isset($_POST['action']) ? (string) $_POST['action'] : '';
+        if ($postAction !== 'accept_license') {
+            if ($postAction === 'test_db') {
+                AjaxResponse::error('请先阅读并同意开源许可协议');
+            }
+            $error = '请先阅读并同意开源许可协议';
+            $step = 1;
+            // 清空 action，避免下方安装写库逻辑继续执行
+            $_POST['action'] = '';
+        }
+    } elseif ($step > 1) {
+        vs_redirect(vs_base_url() . '/install/?step=1');
+    }
+}
 
 // ── POST：测试数据库（AJAX，不刷新页面）────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'test_db') {
@@ -228,6 +259,8 @@ function runEnvironmentCheck()
         array('name' => 'curl', 'label' => 'curl', 'required' => true),
         array('name' => 'openssl', 'label' => 'openssl', 'required' => true),
         array('name' => 'zip', 'label' => 'zip', 'required' => true),
+        // 本地图形验证码依赖 GD；缺省则无法通过环境检测
+        array('name' => 'gd', 'label' => 'GD（本地验证码必选）', 'required' => true),
     );
     foreach ($extensions as $ext) {
         $loaded = extension_loaded($ext['name']);
@@ -239,6 +272,15 @@ function runEnvironmentCheck()
             'required' => $ext['required'],
         );
     }
+
+    // GD 已加载时再确认可生成真彩图（部分裁剪构建会缺 imagecreatetruecolor）
+    $gdUsable = extension_loaded('gd') && function_exists('imagecreatetruecolor');
+    $checks[] = array(
+        'name'  => 'GD 绘图能力（本地验证码）',
+        'need'  => '支持 imagecreatetruecolor（必选）',
+        'value' => $gdUsable ? '可用' : '不可用',
+        'pass'  => $gdUsable,
+    );
 
     $writableDirs = array('config', 'data');
     foreach ($writableDirs as $dir) {
@@ -344,8 +386,11 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
 
             <?php if ($step === 1): ?>
                 <h2 class="vs-card-title">第一步：环境检测</h2>
-                <p class="vs-card-desc">系统将检测服务器环境是否满足 ApiNexus 运行要求。须安装 <strong>MySQL（pdo_mysql）</strong> 与 <strong>Redis</strong> 扩展，且 <code>config/</code>、<code>data/</code> 目录可写。</p>
-                <div class="vs-check-list">
+                <p class="vs-card-desc">须先阅读并同意开源许可协议后，再检测服务器环境是否满足运行要求。须安装 <strong>MySQL（pdo_mysql）</strong>、<strong>Redis</strong>、<strong>GD</strong>（本地验证码）扩展，且 <code>config/</code>、<code>data/</code> 目录可写。</p>
+                <?php if (!$licenseAccepted): ?>
+                    <div class="vs-alert vs-alert--warning" id="licenseGateHint">请先完成弹窗中的开源许可阅读与确认，方可继续安装。</div>
+                <?php endif; ?>
+                <div class="vs-check-list" id="installEnvChecks"<?php echo $licenseAccepted ? '' : ' hidden'; ?>>
                     <?php foreach ($envChecks as $check): ?>
                         <div class="vs-check-item<?php echo $check['pass'] ? ' is-pass' : ' is-fail'; ?>">
                             <span class="vs-check-icon"><?php echo $check['pass'] ? '&#10003;' : '&#10007;'; ?></span>
@@ -357,11 +402,11 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                     <?php endforeach; ?>
                 </div>
                 <?php if ($envAllPass): ?>
-                    <div class="vs-form-actions">
+                    <div class="vs-form-actions" id="installEnvNext"<?php echo $licenseAccepted ? '' : ' hidden'; ?>>
                         <a href="?step=2" class="vs-btn vs-btn--primary">下一步</a>
                     </div>
                 <?php else: ?>
-                    <div class="vs-form-actions">
+                    <div class="vs-form-actions" id="installEnvNext"<?php echo $licenseAccepted ? '' : ' hidden'; ?>>
                         <span class="vs-btn vs-btn--disabled">请先解决以上问题</span>
                     </div>
                 <?php endif; ?>
@@ -475,4 +520,11 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
     </div>
 </div>
 
+<?php
+$licenseBoot = array(
+    'accepted' => $licenseAccepted ? 1 : 0,
+    'html'     => vs_license_zh_html(),
+);
+?>
+<script>window.VS_INSTALL_LICENSE = <?php echo json_encode($licenseBoot, JSON_UNESCAPED_UNICODE); ?>;</script>
 <?php vs_render_foot(array('install.js')); ?>

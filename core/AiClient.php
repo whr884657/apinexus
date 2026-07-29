@@ -47,6 +47,10 @@ class AiClient
         if (!preg_match('#^https?://#i', $base)) {
             return array('ok' => false, 'msg' => '接口根地址须以 http:// 或 https:// 开头');
         }
+        $ssrf = self::assertSafeBaseUrl($base);
+        if ($ssrf !== true) {
+            return array('ok' => false, 'msg' => $ssrf);
+        }
 
         $adminId = class_exists('Auth') ? (int) Auth::id() : 0;
         $bucket = 'ai:test:' . ($adminId > 0 ? $adminId : '0');
@@ -143,6 +147,10 @@ class AiClient
         }
         if ($base === '' || $key === '') {
             return array('ok' => false, 'msg' => '请填写接口根地址与 API Key');
+        }
+        $ssrf = self::assertSafeBaseUrl($base);
+        if ($ssrf !== true) {
+            return array('ok' => false, 'msg' => $ssrf);
         }
 
         $adminId = class_exists('Auth') ? (int) Auth::id() : 0;
@@ -255,6 +263,10 @@ class AiClient
 
         if ($base === '' || $key === '' || $model === '') {
             return array('ok' => false, 'error' => 'AI 配置不完整（根地址 / Key / 模型）');
+        }
+        $ssrf = self::assertSafeBaseUrl($base);
+        if ($ssrf !== true) {
+            return array('ok' => false, 'error' => $ssrf);
         }
 
         $order = array();
@@ -565,6 +577,24 @@ class AiClient
     }
 
     /**
+     * AI 根地址 SSRF 守卫：禁止内网 / 回环 / 非公网主机
+     *
+     * @param string $baseurl
+     * @return true|string
+     */
+    public static function assertSafeBaseUrl($baseurl)
+    {
+        $base = self::normalizeBaseUrl($baseurl);
+        if ($base === '' || !preg_match('#^https?://#i', $base)) {
+            return '接口根地址须以 http:// 或 https:// 开头';
+        }
+        if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($base)) {
+            return '接口根地址不允许指向内网、本机或非公网主机';
+        }
+        return true;
+    }
+
+    /**
      * @param string $mode
      * @return string auto|chat|responses
      */
@@ -623,6 +653,10 @@ class AiClient
         $timeout = (int) $timeout;
         if (!function_exists('curl_init')) {
             return array('_error' => '服务器未启用 curl 扩展', '_http' => 0);
+        }
+        // 出站前再拦一层（含 models/chat 最终 URL）
+        if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($url)) {
+            return array('_error' => '接口地址不允许指向内网或非公网主机', '_http' => 0);
         }
         $ch = curl_init($url);
         if ($ch === false) {

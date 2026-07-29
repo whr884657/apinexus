@@ -212,6 +212,15 @@ class ApiProxy
         unset($params[self::REWRITE_SLUG_PARAM]);
         unset($params['key'], $params['api_key'], $params['apikey']);
 
+        // 付费代理：先扣积分再中继（失败由 hitProxy 退回）
+        $prepaid = ApiStats::chargeProxyUpfront($row);
+        if ($prepaid !== true) {
+            $errcode = isset($prepaid['errcode']) ? (int) $prepaid['errcode'] : ApiError::NO_POINTS;
+            $msg = isset($prepaid['msg']) ? (string) $prepaid['msg'] : '积分余额不足';
+            ApiStats::hitProxy($row, false, $errcode);
+            vs_api_error_exit($errcode, $msg);
+        }
+
         self::relayToUpstream($row, $target, $params);
     }
 
@@ -236,7 +245,8 @@ class ApiProxy
                 continue;
             }
             $key = (string) $k;
-            if ($key === '' || $key === 'key' || $key === 'api_key' || $key === 'apikey'
+            $keyLower = strtolower($key);
+            if ($key === '' || $keyLower === 'key' || $keyLower === 'api_key' || $keyLower === 'apikey'
                 || $key === self::REWRITE_SLUG_PARAM) {
                 continue;
             }
@@ -306,10 +316,13 @@ class ApiProxy
             $rawIn = file_get_contents('php://input');
             $body = is_string($rawIn) ? $rawIn : '';
             if ($body === '' && !empty($_POST)) {
-                $body = http_build_query($_POST);
+                $post = self::stripPlatformKeyFieldsFromArray($_POST);
+                $body = http_build_query($post);
                 if ($contentType === '') {
                     $contentType = 'application/x-www-form-urlencoded';
                 }
+            } elseif ($body !== '') {
+                $body = self::stripPlatformKeyFieldsFromBody($body, $contentType);
             }
         }
 
@@ -547,6 +560,104 @@ class ApiProxy
         } catch (Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * 平台密钥字段名（转发上游前须剥离，避免本站 sk 泄露给第三方）
+     *
+     * @param string $name
+     * @return bool
+     */
+    public static function isPlatformKeyFieldName($name)
+    {
+        $n = strtolower(trim((string) $name));
+        return ($n === 'key' || $n === 'api_key' || $n === 'apikey');
+    }
+
+    /**
+     * @param array $data
+     * @return array
+     */
+    public static function stripPlatformKeyFieldsFromArray(array $data)
+    {
+        $out = array();
+        foreach ($data as $k => $v) {
+            if (self::isPlatformKeyFieldName((string) $k)) {
+                continue;
+            }
+            $out[$k] = $v;
+        }
+        return $out;
+    }
+
+    /**
+     * 从请求体剥离平台密钥字段（JSON / x-www-form-urlencoded / multipart 字段）
+     *
+     * @param string $body
+     * @param string $contentType
+     * @return string
+     */
+    public static function stripPlatformKeyFieldsFromBody($body, $contentType = '')
+    {
+        $body = (string) $body;
+        if ($body === '') {
+            return '';
+        }
+        $ct = strtolower(trim(explode(';', (string) $contentType, 2)[0]));
+
+        // JSON 对象
+        $trim0 = isset($body[0]) ? $body[0] : '';
+        if ($ct === 'application/json' || $ct === 'text/json' || $trim0 === '{' || $trim0 === '[') {
+            $data = json_decode($body, true);
+            if (is_array($data)) {
+                // 仅处理对象（关联数组）；列表原样
+                $isList = array_keys($data) === range(0, count($data) - 1);
+                if (!$isList) {
+                    $data = self::stripPlatformKeyFieldsFromArray($data);
+                    $enc = json_encode($data, JSON_UNESCAPED_UNICODE);
+                    return is_string($enc) ? $enc : $body;
+                }
+            }
+            return $body;
+        }
+
+        // 表单
+        if ($ct === 'application/x-www-form-urlencoded' || $ct === '') {
+            $parsed = array();
+            parse_str($body, $parsed);
+            if (is_array($parsed) && $parsed !== array()) {
+                return http_build_query(self::stripPlatformKeyFieldsFromArray($parsed));
+            }
+            return $body;
+        }
+
+        // multipart：去掉 name="key|api_key|apikey" 的 part
+        if (strpos($ct, 'multipart/') === 0) {
+            if (!preg_match('/boundary=(?:"([^"]+)"|([^\s;]+))/i', (string) $contentType, $bm)) {
+                return $body;
+            }
+            $boundary = isset($bm[1]) && $bm[1] !== '' ? $bm[1] : $bm[2];
+            $boundary = trim($boundary);
+            if ($boundary === '') {
+                return $body;
+            }
+            $delim = '--' . $boundary;
+            $parts = explode($delim, $body);
+            $kept = array();
+            foreach ($parts as $part) {
+                if ($part === '' || $part === '--' || $part === "--\r\n" || $part === "--\n") {
+                    $kept[] = $part;
+                    continue;
+                }
+                if (preg_match('/Content-Disposition:\s*[^\r\n]*\bname=(["\']?)(key|api_key|apikey)\1/i', $part)) {
+                    continue;
+                }
+                $kept[] = $part;
+            }
+            return implode($delim, $kept);
+        }
+
+        return $body;
     }
 
     /**

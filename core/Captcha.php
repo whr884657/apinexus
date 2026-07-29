@@ -224,6 +224,21 @@ class Captcha
     }
 
     /**
+     * 场景是否在配置中勾选开启（不论凭证是否齐全）
+     *
+     * @param string $scene
+     * @return bool
+     */
+    public static function sceneConfiguredOn($scene)
+    {
+        $scene = preg_replace('/[^a-z_]/', '', (string) $scene);
+        if ($scene === '') {
+            return false;
+        }
+        return Config::get('captcha_on_' . $scene, Config::get('geetest_on_' . $scene, '1')) === '1';
+    }
+
+    /**
      * @param string $scene
      * @return bool
      */
@@ -233,7 +248,7 @@ class Captcha
         if ($scene === '' || !self::credentialsReady($scene)) {
             return false;
         }
-        return Config::get('captcha_on_' . $scene, Config::get('geetest_on_' . $scene, '0')) === '1';
+        return self::sceneConfiguredOn($scene);
     }
 
     /**
@@ -321,7 +336,7 @@ class Captcha
         }
         if ($mode === self::MODE_GT3) {
             $out['captchaId'] = self::gt3Id();
-            $out['register'] = $base . '/core/captcha/register.php';
+            $out['register'] = $base . '/core/captcha/register.php?scene=' . rawurlencode((string) $scene);
             return $out;
         }
         $out['captchaId'] = self::gt4Id();
@@ -377,6 +392,10 @@ class Captcha
      */
     public static function requireValid($scene, array $post)
     {
+        // 配置勾选开启但凭证不可用：fail-closed，禁止静默跳过
+        if (self::sceneConfiguredOn($scene) && !self::credentialsReady($scene)) {
+            return '验证码未正确配置，请联系管理员';
+        }
         if (!self::sceneEnabled($scene)) {
             return true;
         }
@@ -505,11 +524,11 @@ class Captcha
             'gt4_id'        => self::gt4Id(),
             'gt4_key'       => self::gt4Key(),
             'gt4_api'       => self::gt4Api(),
-            'admin_login'   => Config::get('captcha_on_admin_login', Config::get('geetest_on_admin_login', '0')) === '1',
-            'admin_forgot'  => Config::get('captcha_on_admin_forgot', Config::get('geetest_on_admin_forgot', '0')) === '1',
-            'user_login'    => Config::get('captcha_on_user_login', Config::get('geetest_on_user_login', '0')) === '1',
-            'user_register' => Config::get('captcha_on_user_register', Config::get('geetest_on_user_register', '0')) === '1',
-            'user_forgot'   => Config::get('captcha_on_user_forgot', Config::get('geetest_on_user_forgot', '0')) === '1',
+            'admin_login'   => Config::get('captcha_on_admin_login', Config::get('geetest_on_admin_login', '1')) === '1',
+            'admin_forgot'  => Config::get('captcha_on_admin_forgot', Config::get('geetest_on_admin_forgot', '1')) === '1',
+            'user_login'    => Config::get('captcha_on_user_login', Config::get('geetest_on_user_login', '1')) === '1',
+            'user_register' => Config::get('captcha_on_user_register', Config::get('geetest_on_user_register', '1')) === '1',
+            'user_forgot'   => Config::get('captcha_on_user_forgot', Config::get('geetest_on_user_forgot', '1')) === '1',
         );
     }
 }

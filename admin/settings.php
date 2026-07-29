@@ -99,6 +99,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($baseurl === '' && $provider !== 'custom') {
                 $baseurl = $presets[$provider];
             }
+            if ($baseurl !== '') {
+                $ssrf = AiClient::assertSafeBaseUrl($baseurl);
+                if ($ssrf !== true) {
+                    AjaxResponse::error($ssrf);
+                }
+            }
             $timeout = isset($_POST['ai_timeout']) ? (int) $_POST['ai_timeout'] : 120;
             if ($timeout < 10) {
                 $timeout = 10;
@@ -151,6 +157,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $baseurl = trim(isset($_POST['ai_baseurl']) ? (string) $_POST['ai_baseurl'] : '');
         if ($baseurl === '' && $provider !== 'custom') {
             $baseurl = $presets[$provider];
+        }
+        if ($baseurl !== '') {
+            $ssrf = AiClient::assertSafeBaseUrl($baseurl);
+            if ($ssrf !== true) {
+                AjaxResponse::error($ssrf);
+            }
         }
         $apikey = trim(isset($_POST['ai_apikey']) ? (string) $_POST['ai_apikey'] : '');
         if ($apikey === '') {

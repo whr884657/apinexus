@@ -266,27 +266,29 @@ function executeSequence() {
             if (step.glitch) titleEl.classList.add('is-glitching');
             if (charIndex < step.value.length) {
                 currentHtml += step.value[charIndex];
-                titleEl.innerHTML = currentHtml + '<span class="typing-cursor"></span>';
+                titleEl.innerHTML = escapeApiModalText(currentHtml) + '<span class="typing-cursor"></span>';
                 titleEl.setAttribute('data-text', currentHtml);
                 charIndex++;
                 setTimeout(executeSequence, 120 + Math.random() * 50);
             } else {
-                titleEl.innerHTML = currentHtml;
+                titleEl.innerHTML = escapeApiModalText(currentHtml);
                 charIndex = 0; sequenceIndex++;
                 setTimeout(executeSequence, step.delayAfter);
             }
             break;
         case 'html':
             titleEl.classList.remove('is-glitching');
-            var plainText = heroCfg.line2Plain, coloredText = heroCfg.line2Accent, endText = heroCfg.line2Rest;
+            var plainText = String(heroCfg.line2Plain || '');
+            var coloredText = String(heroCfg.line2Accent || '');
+            var endText = String(heroCfg.line2Rest || '');
             if (charIndex < plainText.length) {
                 currentHtml += plainText[charIndex];
-                titleEl.innerHTML = currentHtml + '<span class="typing-cursor"></span>';
+                titleEl.innerHTML = escapeApiModalText(currentHtml) + '<span class="typing-cursor"></span>';
                 charIndex++;
                 setTimeout(executeSequence, 100);
-            } else if (currentHtml.indexOf('<br>') === -1) {
-                currentHtml += '<br>';
-                titleEl.innerHTML = currentHtml + '<span class="typing-cursor"></span>';
+            } else if (currentHtml.indexOf('\n') === -1 && currentHtml.indexOf('<br>') === -1) {
+                currentHtml += '\n';
+                titleEl.innerHTML = escapeApiModalText(plainText) + '<br><span class="typing-cursor"></span>';
                 setTimeout(executeSequence, 200);
             } else {
                 if (!step.currentPart) step.currentPart = '';
@@ -295,10 +297,19 @@ function executeSequence() {
                     step.currentPart += fullPart[step.currentPart.length];
                     var coloredIdx = Math.min(step.currentPart.length, coloredText.length);
                     var endIdx = Math.max(0, step.currentPart.length - coloredText.length);
-                    titleEl.innerHTML = plainText + '<br><span style="color: var(--accent-primary)">' + coloredText.substring(0, coloredIdx) + '</span>' + endText.substring(0, endIdx) + '<span class="typing-cursor"></span>';
+                    titleEl.innerHTML = escapeApiModalText(plainText)
+                        + '<br><span style="color: var(--accent-primary)">'
+                        + escapeApiModalText(coloredText.substring(0, coloredIdx))
+                        + '</span>'
+                        + escapeApiModalText(endText.substring(0, endIdx))
+                        + '<span class="typing-cursor"></span>';
                     setTimeout(executeSequence, 100);
                 } else {
-                    titleEl.innerHTML = plainText + '<br><span style="color: var(--accent-primary)">' + coloredText + '</span>' + endText;
+                    titleEl.innerHTML = escapeApiModalText(plainText)
+                        + '<br><span style="color: var(--accent-primary)">'
+                        + escapeApiModalText(coloredText)
+                        + '</span>'
+                        + escapeApiModalText(endText);
                     sequenceIndex++;
                 }
             }
@@ -306,7 +317,7 @@ function executeSequence() {
         case 'delete':
             if (currentHtml.length > 0) {
                 currentHtml = currentHtml.slice(0, -1);
-                titleEl.innerHTML = currentHtml + '<span class="typing-cursor"></span>';
+                titleEl.innerHTML = escapeApiModalText(currentHtml) + '<span class="typing-cursor"></span>';
                 titleEl.setAttribute('data-text', currentHtml);
                 setTimeout(executeSequence, step.speed);
             } else { sequenceIndex++; charIndex = 0; setTimeout(executeSequence, 300); }
@@ -413,18 +424,18 @@ function renderAPI(data) {
         }
 
         return `
-        <div class="api-card api-card-compact" data-category="${api.category}" style="position: relative;">
+        <div class="api-card api-card-compact" data-category="${escapeApiModalText(api.category)}" style="position: relative;">
             ${apiTags}
             <div class="flex justify-start items-start mb-2 flex-wrap gap-1">
                 ${methodBadges}
                 ${maintenanceTag}
             </div>
-            <h3 class="font-bold">${api.name}</h3>
-            <p style="color: var(--text-muted);">${api.desc}</p>
+            <h3 class="font-bold">${escapeApiModalText(api.name)}</h3>
+            <p style="color: var(--text-muted);">${escapeApiModalText(api.desc)}</p>
             <div class="endpoint-box font-mono">
-                ${api.endpoint}
+                ${escapeApiModalText(api.endpoint)}
             </div>
-            <a href="${api.detail_url || ((window.VS_BASE_URL || '') + '/detail/' + (api.id || ''))}" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>
+            <a href="${escapeApiModalText(api.detail_url || ((window.VS_BASE_URL || '') + '/detail/' + (api.id || '')))}" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>
         </div>
     `}).join('');
 }
@@ -646,16 +657,16 @@ function renderParams(api) {
                     inputHtml = `
                         <div class="param-item">
                             <label class="param-label">
-                                ${p.name}
+                                ${escapeApiModalText(p.name)}
                                 ${p.required ? '<span class="param-required">*</span>' : ''}
-                                ${p.description ? `<span style="color: var(--text-muted);">- ${p.description}</span>` : ''}
+                                ${p.description ? `<span style="color: var(--text-muted);">- ${escapeApiModalText(p.description)}</span>` : ''}
                             </label>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
                                 <input type="file" 
                                        class="param-input" 
-                                       data-param="${p.name}"
+                                       data-param="${escapeApiModalText(p.name)}"
                                        data-type="file"
-                                       accept="${p.accept || '*/*'}"
+                                       accept="${escapeApiModalText(p.accept || '*/*')}"
                                        style="flex: 1;"
                                        ${p.required ? 'required' : ''}>
                                 <span class="file-name" style="font-size: 0.7rem; color: var(--text-muted);">未选择文件</span>
@@ -667,14 +678,14 @@ function renderParams(api) {
                     inputHtml = `
                         <div class="param-item">
                             <label class="param-label">
-                                ${p.name}
+                                ${escapeApiModalText(p.name)}
                                 ${p.required ? '<span class="param-required">*</span>' : ''}
-                                ${p.description ? `<span style="color: var(--text-muted);">- ${p.description}</span>` : ''}
+                                ${p.description ? `<span style="color: var(--text-muted);">- ${escapeApiModalText(p.description)}</span>` : ''}
                             </label>
                             <input type="${inputType === 'number' ? 'number' : 'text'}" 
                                    class="param-input" 
-                                   data-param="${p.name}"
-                                   data-type="${inputType}"
+                                   data-param="${escapeApiModalText(p.name)}"
+                                   data-type="${escapeApiModalText(inputType)}"
                                    placeholder="${escapeApiModalText(p.example || p.placeholder || p.description || p.name)}"
                                    ${p.required ? 'required' : ''}>
                         </div>
@@ -972,7 +983,7 @@ async function sendRequest() {
         const msg = /failed to fetch|networkerror|load failed/i.test(raw)
             ? '请求失败（浏览器无法完成，常见于跨域或上游未允许跨域）'
             : raw;
-        output.innerHTML = `<span style="color: #ef4444">// ${msg}</span>`;
+        output.innerHTML = `<span style="color: #ef4444">// ${escapeApiModalText(msg)}</span>`;
         status.textContent = "Error";
         status.className = "text-xs px-2 py-1 rounded bg-red-900 text-red-400 font-mono";
     }

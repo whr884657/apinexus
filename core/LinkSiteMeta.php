@@ -8,6 +8,7 @@ class LinkSiteMeta
 {
     const TIMEOUT = 8;
     const MAX_BYTES = 524288;
+    const MAX_REDIRECTS = 3;
 
     /**
      * @param string $url
@@ -61,15 +62,28 @@ class LinkSiteMeta
             return false;
         }
         $host = strtolower((string) $parts['host']);
-        if ($host === 'localhost' || substr($host, -6) === '.local' || substr($host, -5) === '.test') {
+        if ($host === '' || $host === 'localhost' || substr($host, -6) === '.local' || substr($host, -5) === '.test') {
             return false;
+        }
+        // 拒绝十进制/十六进制/短格式等非规范 IP（curl 可能仍解析到回环）
+        if (self::looksLikeIpLiteral($host)) {
+            if (!filter_var($host, FILTER_VALIDATE_IP)) {
+                return false;
+            }
+            return self::isPublicIp($host);
         }
         if (filter_var($host, FILTER_VALIDATE_IP)) {
             return self::isPublicIp($host);
         }
+        // 主机名形态校验
+        if (!preg_match('/^[a-z0-9]([a-z0-9\-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]*[a-z0-9])?)+$/i', $host)
+            && !preg_match('/^[a-z]([a-z0-9\-]*[a-z0-9])?$/i', $host)) {
+            return false;
+        }
         $ips = @gethostbynamel($host);
+        // DNS 失败：fail-closed
         if (!is_array($ips) || count($ips) === 0) {
-            return true;
+            return false;
         }
         foreach ($ips as $ip) {
             if (!self::isPublicIp($ip)) {
@@ -77,6 +91,33 @@ class LinkSiteMeta
             }
         }
         return true;
+    }
+
+    /**
+     * 是否看起来像 IP 字面量（含非规范十进制/hex/短写）
+     *
+     * @param string $host
+     * @return bool
+     */
+    private static function looksLikeIpLiteral($host)
+    {
+        $host = strtolower(trim((string) $host));
+        if ($host === '') {
+            return false;
+        }
+        if (strpos($host, ':') !== false) {
+            return true;
+        }
+        if (preg_match('/^[\d.]+$/', $host)) {
+            return true;
+        }
+        if (preg_match('/0x[0-9a-f]+/i', $host)) {
+            return true;
+        }
+        if (preg_match('/^0[0-7]+(\.|$)/', $host)) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -101,37 +142,90 @@ class LinkSiteMeta
         if (!function_exists('curl_init')) {
             return null;
         }
-        $ch = curl_init($url);
-        if ($ch === false) {
-            return null;
+
+        $current = $url;
+        for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
+            if (!self::isPublicHttpUrl($current)) {
+                return null;
+            }
+            $ch = curl_init($current);
+            if ($ch === false) {
+                return null;
+            }
+            curl_setopt_array($ch, array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_CONNECTTIMEOUT => self::TIMEOUT,
+                CURLOPT_TIMEOUT        => self::TIMEOUT,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_USERAGENT      => 'ApiNexus-LinkMeta/1.0',
+                CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                CURLOPT_REDIR_PROTOCOLS=> CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                CURLOPT_ENCODING       => '',
+                CURLOPT_HEADER         => true,
+            ));
+            $raw = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+            curl_close($ch);
+            if (!is_string($raw) || $raw === '') {
+                return null;
+            }
+            $headerBlob = substr($raw, 0, $headerSize);
+            $body = substr($raw, $headerSize);
+
+            if ($code >= 300 && $code < 400) {
+                $next = self::locationFromHeaders($headerBlob, $current);
+                if ($next === '') {
+                    return null;
+                }
+                $current = $next;
+                continue;
+            }
+            if ($code < 200 || $code >= 400 || !is_string($body) || $body === '') {
+                return null;
+            }
+            if (strlen($body) > self::MAX_BYTES) {
+                $body = substr($body, 0, self::MAX_BYTES);
+            }
+            return $body;
         }
-        curl_setopt_array($ch, array(
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 3,
-            CURLOPT_CONNECTTIMEOUT => self::TIMEOUT,
-            CURLOPT_TIMEOUT        => self::TIMEOUT,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_USERAGENT      => 'ApiNexus-LinkMeta/1.0',
-            CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_REDIR_PROTOCOLS=> CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_ENCODING       => '',
-        ));
-        $body = curl_exec($ch);
-        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $final = (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
-        curl_close($ch);
-        if (!is_string($body) || $body === '' || $code < 200 || $code >= 400) {
-            return null;
+        return null;
+    }
+
+    /**
+     * @param string $headerBlob
+     * @param string $baseUrl
+     * @return string
+     */
+    private static function locationFromHeaders($headerBlob, $baseUrl)
+    {
+        if (!preg_match('/^Location:\s*(.+)$/im', (string) $headerBlob, $m)) {
+            return '';
         }
-        if ($final !== '' && !self::isPublicHttpUrl($final)) {
-            return null;
+        $loc = trim($m[1]);
+        $loc = preg_replace('/[\r\n].*$/s', '', $loc);
+        if ($loc === '') {
+            return '';
         }
-        if (strlen($body) > self::MAX_BYTES) {
-            $body = substr($body, 0, self::MAX_BYTES);
+        if (preg_match('#^https?://#i', $loc)) {
+            return $loc;
         }
-        return $body;
+        $base = parse_url($baseUrl);
+        if (!is_array($base) || empty($base['scheme']) || empty($base['host'])) {
+            return '';
+        }
+        $origin = $base['scheme'] . '://' . $base['host'];
+        if (!empty($base['port'])) {
+            $origin .= ':' . $base['port'];
+        }
+        if (isset($loc[0]) && $loc[0] === '/') {
+            return $origin . $loc;
+        }
+        $path = isset($base['path']) ? (string) $base['path'] : '/';
+        $dir = preg_replace('#/[^/]*$#', '/', $path);
+        return $origin . $dir . $loc;
     }
 
     /**

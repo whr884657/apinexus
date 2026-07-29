@@ -1,37 +1,17 @@
 /**
- * 默认主题 · 关于页（粒子由 shell.js 统一绘制，本文件仅保留正文解析）
+ * 默认主题 · 关于页（粒子由 shell.js 统一绘制）
+ * 正文已由服务端 Markdown SafeMode 渲染，禁止二次 decode+innerHTML（防破转义 XSS）
  */
 (function () {
     'use strict';
-
-    function decodeHtmlEntities(html) {
-        if (!html) {
-            return '';
-        }
-        var textarea = document.createElement('textarea');
-        textarea.innerHTML = html;
-        return textarea.value;
-    }
 
     document.addEventListener('DOMContentLoaded', function () {
         var contentEl = document.getElementById('page-content');
         if (!contentEl) {
             return;
         }
-        var contentType = contentEl.getAttribute('data-type') || 'html';
-        var content = decodeHtmlEntities(contentEl.innerHTML);
-
-        if (contentType === 'markdown' && typeof window.feerMarkdownParse === 'function') {
-            contentEl.innerHTML = window.feerMarkdownParse(content, { fromInnerHtml: false });
-        } else if (contentType === 'markdown' && typeof window.marked !== 'undefined') {
-            if (typeof window.feerMarkdownConfigure === 'function') {
-                window.feerMarkdownConfigure();
-            }
-            contentEl.innerHTML = window.marked.parse(content);
-        } else {
-            contentEl.innerHTML = content;
-        }
-
+        // data-type=html：服务端已输出安全 HTML，保持原样
+        // 若将来需要客户端 markdown，应读 data 属性中的原始文本并用 DOMPurify，而非 decode 现有 innerHTML
         if (typeof window.hljs !== 'undefined') {
             window.hljs.highlightAll();
         }

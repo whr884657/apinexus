@@ -28,6 +28,14 @@ location / {
 整段复制下面（推荐）：
 
 ```nginx
+location ^~ /config/ {
+    deny all;
+    return 403;
+}
+location ^~ /data/ {
+    deny all;
+    return 403;
+}
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
@@ -44,6 +52,14 @@ location / {
 **只复制**下面两段，并保证它们出现在原来的 `location /` **上面**（写在文件更靠前的位置）：
 
 ```nginx
+location ^~ /config/ {
+    deny all;
+    return 403;
+}
+location ^~ /data/ {
+    deny all;
+    return 403;
+}
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
@@ -51,6 +67,8 @@ location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
     rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
 ```
+
+> **重要：** Nginx **不读** `.htaccess`。务必加上面的 `/config/`、`/data/` deny，否则运行时日志与数据库配置文件可能被直链下载。
 
 若站点**已有**旧的「仅 detail」单页规则，请**删掉**那条，改用上面的**通用**第二段。
 

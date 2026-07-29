@@ -8,6 +8,10 @@ config/.security/
 # 运行时数据
 data/*
 !data/.gitkeep
+!data/.htaccess
+!data/playground/
+!data/playground/.htaccess
+!data/playground/.gitkeep
 
 # IDE
 .idea/
@@ -49,6 +53,7 @@ svg图标.txt
 # 参考对照目录（本地其它项目 / 主题参考 UI / 后台大屏参考，勿提交、勿打进发行 ZIP）
 # 强制：凡根目录名含「参考」的目录、以及下列具名目录，均不得进入 Git 与 apinexus*.zip
 参考api系统/
+极验验证码/
 参考*/
 主题参考/
 主题一UI参考设计/
@@ -59,12 +64,4 @@ svg图标.txt
 管理员后台数据大屏参考UI/**
 *参考UI*/
 *参考UI*/**
-
-
-# 杂项
-admin/Untitled
-**/Untitled
-
-极验验证码/
-极验*/
 

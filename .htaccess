@@ -4,6 +4,7 @@
     RewriteBase /
 
     RewriteRule ^config/ - [F,L]
+    RewriteRule ^data/ - [F,L]
 
     # /apis/{slug} -> apis.php?_vs_slug= (proxy; must be before generic id rule)
     RewriteRule ^apis/([a-z0-9]+)/?$ apis.php?_vs_slug=$1 [QSA,L]

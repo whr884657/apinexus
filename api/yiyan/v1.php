@@ -20,7 +20,7 @@ ApiStats::hit(1); // ← 改成后台「接口管理」里本接口的真实 ID
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin');
-header('Access-Control-Allow-Credentials: true');
+// 禁止与 * 同时声明 Credentials（规范冲突且危险）
 header('Access-Control-Max-Age: 86400');
 header('Content-Type: application/json; charset=utf-8');
 

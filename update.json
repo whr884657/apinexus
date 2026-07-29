@@ -1,12 +1,12 @@
 {
-    "version": "13.9.0",
-    "title": "ApiNexus 13.9.0 控制台布局 · TOP 滚筒 · 用户仪表盘重构",
+    "version": "13.9.1",
+    "title": "ApiNexus 13.9.1 安全加固 · MIT 许可 · 安装确认",
     "release_date": "2026-07-29",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "修复管理员控制台「系统概览」与「最近调用」重叠；概览按条目撑开禁止滚动、手机两列网格",
-        "TOP 标题去掉「10」；控制台与数据大屏 TOP 无缝环形滚动（结构不变不重建）",
-        "用户控制台重构为 KPI+概览（无快捷入口）；侧栏移除「接口列表」；E167–E169"
+        "安全审计修复：密码仅 password_hash（废除双 MD5，升级作废旧密码须重置）、SSRF/Session 拆分/OTP/默认本地验证码、代理先扣后调、AI baseurl 拦内网等",
+        "开源许可改为标准 MIT；中文部署条款 LICENSE.zh-CN.md；安装向导强制阅读同意后方可继续",
+        "迁移 13.9.1.sql（密码列扩容、作废旧密码、默认开启各场景本地验证码）；须后台系统升级"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.9.0-blue?logo=semver&logoColor=white" alt="version">
-  <img src="https://img.shields.io/badge/License-开源-success?logo=opensourceinitiative&logoColor=white" alt="License">
+  <img src="https://img.shields.io/badge/version-13.9.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
   <a href="https://github.com/whr884657/apinexus"><img src="https://img.shields.io/badge/GitHub-whr884657%2Fapinexus-blue?logo=github&logoColor=white" alt="GitHub"></a>
@@ -274,31 +274,33 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.9.0（2026-07-29）
+### v13.9.1（2026-07-29）
 
-- 修复管理员控制台系统概览与最近调用重叠；TOP 无缝环形滚动
-- 用户控制台 KPI+概览重构（无快捷入口）；侧栏移除接口列表；E167–E169
+- 安全加固：现代密码哈希（废除双 MD5）、SSRF / Session 拆分 / 默认本地验证码 / 代理先扣后调 / AI 拦内网等
+- 开源许可改为标准 MIT；安装向导强制阅读中文部署条款
+- 迁移 `13.9.1.sql`（作废旧密码、默认开验证码）；须系统升级
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
 ## 开源协议
 
-本项目采用 **[ApiNexus 开源许可协议](LICENSE)**。
+本项目采用 **[MIT License](LICENSE)**（GitHub / Gitee 可识别的标准开源许可）。
+
+中文补充说明与部署使用条款见 **[LICENSE.zh-CN.md](LICENSE.zh-CN.md)**（安装向导首次进入时须完整阅读并确认）。
 
 ### 您可以
 
 - **学习研究**：阅读、学习本项目全部源码
 - **个人使用**：在个人网站、项目中免费使用
 - **商业使用**：在商业项目中免费使用
-- **修改分发**：可修改代码并再发布（需保留版权声明与协议全文）
+- **修改分发**：可修改代码并再发布（须保留版权声明与 MIT 许可全文）
 
 ### 作者声明（免责）
 
 - 本项目按 **「原样（AS IS）」** 提供，**不提供任何明示或暗示的担保**
 - 因使用、无法使用或依赖本项目而产生的任何直接、间接、附带、特殊或后果性损害（包括但不限于数据丢失、业务中断、安全漏洞、法律纠纷等），**作者不承担任何责任**
 - 使用者应自行评估安全风险，并在生产环境中做好备份、加固与合规审查
-
-完整法律条文见仓库根目录 **[LICENSE](LICENSE)** 文件。
+- 详细条款以仓库 **[LICENSE](LICENSE)** 与 **[LICENSE.zh-CN.md](LICENSE.zh-CN.md)** 为准
 
 ---
 

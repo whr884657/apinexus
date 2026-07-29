@@ -37,6 +37,129 @@
     animation: vsModalIn 0.22s ease;
 }
 
+/* 大屏 / 许可协议：可滚动正文 */
+.vs-modal.vs-modal--lg,
+.vs-modal.vs-modal--license {
+    max-width: min(720px, calc(100vw - 40px));
+    max-height: min(88vh, 840px);
+    display: flex;
+    flex-direction: column;
+}
+
+.vs-modal--lg .vs-modal__body,
+.vs-modal--license .vs-modal__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.vs-modal--license .vs-modal__foot {
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-top: 1px solid #f3f4f6;
+    padding-top: 14px;
+}
+
+.vs-license-doc h1,
+.vs-license-doc h2,
+.vs-license-doc h3 {
+    color: #111;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 1.1em 0 0.45em;
+}
+
+.vs-license-doc h1 { font-size: 1.15rem; margin-top: 0; }
+.vs-license-doc h2 { font-size: 1.02rem; }
+.vs-license-doc h3 { font-size: 0.95rem; }
+
+.vs-license-doc p,
+.vs-license-doc li {
+    color: #4b5563;
+    font-size: 13px;
+    line-height: 1.75;
+}
+
+.vs-license-doc p { margin: 0 0 0.65em; }
+
+.vs-license-doc ul,
+.vs-license-doc ol {
+    margin: 0 0 0.75em;
+    padding-left: 1.25em;
+}
+
+.vs-license-doc li { margin-bottom: 0.25em; }
+
+.vs-license-doc hr {
+    border: 0;
+    border-top: 1px solid #e5e7eb;
+    margin: 1em 0;
+}
+
+.vs-license-doc strong { color: #111; }
+
+.vs-license-agree {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #374151;
+    cursor: pointer;
+    user-select: none;
+}
+
+.vs-license-agree input {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.vs-license-hint {
+    width: 100%;
+    margin: 0;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+/* 手机端：统一抽屉式底部弹层 */
+@media (max-width: 768px) {
+    .vs-modal-root {
+        align-items: flex-end;
+        justify-content: stretch;
+        padding: 0;
+    }
+
+    .vs-modal-root .vs-modal {
+        max-width: none;
+        width: 100%;
+        max-height: var(--vs-mobile-drawer-height, 85vh);
+        border-radius: 16px 16px 0 0;
+        animation: vsModalDrawerIn 0.24s ease;
+    }
+
+    .vs-modal.vs-modal--lg,
+    .vs-modal.vs-modal--license {
+        max-width: none;
+        max-height: var(--vs-mobile-drawer-height, 88vh);
+    }
+}
+
+@keyframes vsModalDrawerIn {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes vsModalIn {
     from {
         opacity: 0;

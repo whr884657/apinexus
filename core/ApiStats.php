@@ -24,6 +24,12 @@ class ApiStats
     private static $keyCtx = null;
 
     /**
+     * 代理预扣：先扣后调时记录，供 write/hitProxy 记账与失败退回
+     * @var array|null {userid,keyid,apiid,amount,remark}
+     */
+    private static $proxyPrepaid = null;
+
+    /**
      * 本地接口入口：守卫（含密钥）+ 记账
      *
      * @param int $apiId 接口主键（必填；须与后台接口 ID 一致）
@@ -89,11 +95,84 @@ class ApiStats
             if ($id <= 0 || isset(self::$done[$id])) {
                 return;
             }
+            // 已预扣但上游失败：退回积分
+            if (!$ok && self::$proxyPrepaid !== null) {
+                self::refundProxyPrepaid('上游调用失败退回');
+            }
             self::write($row, (bool) $ok, (int) $http);
             self::$done[$id] = true;
+            self::$proxyPrepaid = null;
         } catch (Exception $e) {
             // ignore
         }
+    }
+
+    /**
+     * 付费代理：先扣积分再调上游（失败由 hitProxy 退回）
+     *
+     * @param array $row
+     * @return true|array{errcode:int,msg:string}
+     */
+    public static function chargeProxyUpfront(array $row)
+    {
+        self::$proxyPrepaid = null;
+        if (!ApiManager::hasChargeColumns()) {
+            return true;
+        }
+        $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
+        $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
+        if ($charge !== ApiManager::CHARGE_PAID || $price <= 0) {
+            return true;
+        }
+        if (empty(self::$keyCtx['valid']) || empty(self::$keyCtx['userid'])) {
+            return array('errcode' => ApiError::CHARGE_NEED_KEY, 'msg' => '收费接口须提供有效密钥');
+        }
+        if (!PointsManager::hasPointsColumn()) {
+            return array('errcode' => ApiError::POINTS_SYSTEM, 'msg' => '积分系统暂不可用');
+        }
+        $id = isset($row['id']) ? (int) $row['id'] : 0;
+        $remark = '调用接口：' . (isset($row['name']) ? (string) $row['name'] : ('#' . $id));
+        $deduct = PointsManager::deductApiCall(
+            (int) self::$keyCtx['userid'],
+            $price,
+            $id,
+            (int) self::$keyCtx['keyid'],
+            $remark
+        );
+        if (empty($deduct['ok'])) {
+            return array(
+                'errcode' => ApiError::NO_POINTS,
+                'msg'     => isset($deduct['msg']) ? (string) $deduct['msg'] : '积分余额不足',
+            );
+        }
+        self::$proxyPrepaid = array(
+            'userid' => (int) self::$keyCtx['userid'],
+            'keyid'  => (int) self::$keyCtx['keyid'],
+            'apiid'  => $id,
+            'amount' => $price,
+            'remark' => $remark,
+        );
+        return true;
+    }
+
+    /**
+     * @param string $remark
+     * @return void
+     */
+    private static function refundProxyPrepaid($remark = '')
+    {
+        if (self::$proxyPrepaid === null) {
+            return;
+        }
+        $p = self::$proxyPrepaid;
+        PointsManager::refundApiCall(
+            (int) $p['userid'],
+            (float) $p['amount'],
+            (int) $p['apiid'],
+            (int) $p['keyid'],
+            $remark !== '' ? $remark : '上游失败退回'
+        );
+        self::$proxyPrepaid = null;
     }
 
     /**
@@ -398,7 +477,15 @@ class ApiStats
 
         $charged = 0;
         $cost = 0.0;
-        if ($ok && ApiManager::hasChargeColumns()) {
+        // 代理已预扣：成功只记账，不再二次扣费
+        if (self::$proxyPrepaid !== null) {
+            $charged = 1;
+            $cost = (float) self::$proxyPrepaid['amount'];
+            if (!$ok) {
+                $charged = 0;
+                $cost = 0.0;
+            }
+        } elseif ($ok && ApiManager::hasChargeColumns()) {
             $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
             $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
             if ($charge === ApiManager::CHARGE_PAID && $price > 0

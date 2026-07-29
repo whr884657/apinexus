@@ -78,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $_SESSION['user_reg_email'] = $email;
             $_SESSION['user_reg_code'] = $code;
             $_SESSION['user_reg_code_expires'] = time() + $codeTtl;
+            AuthSecurity::resetOtpFailCount('user_register');
 
             $body = '<div style="font-family:sans-serif;line-height:1.8;">';
             $body .= '<p>您好：</p>';
@@ -137,8 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($savedEmail === '' || $savedCode === '' || $expires < time()) {
             vs_auth_json(array('code' => 0, 'msg' => '验证码已过期，请重新获取'));
         }
-        if ($email !== $savedEmail || $username !== $savedUsername || $code !== $savedCode) {
-            vs_auth_json(array('code' => 0, 'msg' => '用户名、邮箱或验证码错误'));
+        if ($email !== $savedEmail || $username !== $savedUsername || !hash_equals($savedCode, $code)) {
+            vs_auth_json(array('code' => 0, 'msg' => AuthSecurity::recordOtpFailure('user_register')));
         }
 
         $result = UserAuth::register($username, $email, $password, $role);
@@ -147,13 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         AuthSecurity::recordResetSubmit();
-
-        unset(
-            $_SESSION['user_reg_username'],
-            $_SESSION['user_reg_email'],
-            $_SESSION['user_reg_code'],
-            $_SESSION['user_reg_code_expires']
-        );
+        AuthSecurity::clearOtpSession('user_register');
 
         vs_auth_json(array(
             'code' => 1,

@@ -180,7 +180,8 @@ class AdminUserBinding
     /**
      * 接口是否归属该前台用户
      * - 直接：api.userid = 用户
-     * - 历史：api.userid = 0，且该用户为当前唯一绑定身份（多绑定时无法判断历史归属，不计入）
+     * - 管理员侧：api.userid = 0，且该用户为当前唯一绑定身份
+     *   （绑定前/后由管理员发布的接口均在此列，产品上视为管理员资产，由绑定用户代管）
      *
      * @param int $userId
      * @param int $apiUserId
@@ -205,7 +206,7 @@ class AdminUserBinding
     }
 
     /**
-     * SQL：接口归属指定用户（含唯一绑定身份下的历史 userid=0）
+     * SQL：接口归属指定用户（含唯一绑定身份下的管理员侧 userid=0）
      * 调用方需绑定两个相同的 userId 参数
      *
      * @param string $apiAlias
