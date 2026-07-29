@@ -772,7 +772,10 @@ class ThemeManager
             array(
                 'vsBase'     => vs_base_url(),
                 'siteName'   => SiteContext::siteName(),
+                'navName'    => SiteContext::navName(),
                 'systemName' => SiteContext::systemName(),
+                'copyrightName' => SiteContext::copyrightName(),
+                'copyrightUrl'  => SiteContext::copyrightUrl(),
                 'pageTitle' => $pageTitle,
                 'pageKey'   => $pageKey,
                 'themeId'   => self::activeId(),
@@ -963,7 +966,10 @@ class ThemeManager
             array(
                 'vsBase'         => $base,
                 'siteName'       => SiteContext::siteName(),
+                'navName'        => SiteContext::navName(),
                 'systemName'     => SiteContext::systemName(),
+                'copyrightName'  => SiteContext::copyrightName(),
+                'copyrightUrl'   => SiteContext::copyrightUrl(),
                 'siteDesc'       => SiteContext::siteDescription(),
                 'pageKey'        => $pageKey,
                 'pageTitle'      => $pageTitle,

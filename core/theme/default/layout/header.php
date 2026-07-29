@@ -47,7 +47,7 @@ if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_s
         <?php else: ?>
             <span class="feer-brand__fallback" aria-hidden="true"></span>
         <?php endif; ?>
-        <span class="font-mono text-base font-bold truncate"><?php echo vs_e($siteName); ?></span>
+        <span class="font-mono text-base font-bold truncate"><?php echo vs_e(isset($navName) ? $navName : $siteName); ?></span>
     </a>
     <div class="flex items-center gap-3">
         <div class="hidden md:flex items-center gap-6 font-mono text-xs">

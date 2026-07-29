@@ -247,11 +247,32 @@ class Markdown
         }
         if (class_exists('Parsedown', false)) {
             $pd = new Parsedown();
-            $pd->setSafeMode(true);
+            // 与后台 marked + DOMPurify 对齐：允许安全 HTML（如 README 徽章 div/img），再做服务端消毒
+            $pd->setSafeMode(false);
             $pd->setBreaksEnabled(true);
-            return $pd->text($text);
+            return self::sanitizeRenderedHtml($pd->text($text));
         }
         // 降级：纯文本转义
         return '<p>' . nl2br(vs_e($text)) . '</p>';
+    }
+
+    /**
+     * 去掉高危标签与事件属性，保留常见排版/徽章 HTML
+     *
+     * @param string $html
+     * @return string
+     */
+    private static function sanitizeRenderedHtml($html)
+    {
+        $html = (string) $html;
+        if ($html === '') {
+            return '';
+        }
+        $html = preg_replace('#<(script|style|iframe|object|embed|form|link|meta|base)(\s[^>]*)?>.*?</\1>#is', '', $html);
+        $html = preg_replace('#<(script|style|iframe|object|embed|form|link|meta|base)(\s[^>]*)?/?>#is', '', $html);
+        $html = preg_replace('/\s+on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html);
+        $html = preg_replace('/\s(href|src|xlink:href)\s*=\s*([\'"]?)\s*javascript:[^\'"\s>]*/i', ' $1=$2#', $html);
+        $html = preg_replace('/\s(href|src)\s*=\s*([\'"]?)\s*data:\s*text\/html[^\'"\s>]*/i', ' $1=$2#', $html);
+        return $html;
     }
 }

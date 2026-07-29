@@ -68,7 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'panelmonitor_provider'     => $provider,
                 'panelmonitor_baseurl'      => $baseUrl,
                 'panelmonitor_apikey'       => $apiKey,
-                'panelmonitor_sslverify'    => isset($_POST['panelmonitor_sslverify']) ? '1' : '0',
             ));
             AjaxResponse::success('控制台设置已保存');
         } catch (Exception $e) {
@@ -118,12 +117,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $siteName = trim(isset($_POST['site_name']) ? $_POST['site_name'] : '');
             $systemName = trim(isset($_POST['system_name']) ? $_POST['system_name'] : '');
+            $navName = trim(isset($_POST['nav_name']) ? $_POST['nav_name'] : '');
+            $copyrightName = trim(isset($_POST['copyright_name']) ? $_POST['copyright_name'] : '');
+            $copyrightUrl = trim(isset($_POST['copyright_url']) ? $_POST['copyright_url'] : '');
+            if ($siteName === '') {
+                AjaxResponse::error('请填写浏览器标题名称');
+            }
             if ($systemName === '') {
                 $systemName = $siteName;
+            }
+            if ($navName === '') {
+                $navName = $siteName;
+            }
+            if ($copyrightName === '') {
+                $copyrightName = $systemName;
+            }
+            if ($copyrightUrl !== '' && !preg_match('#^https?://#i', $copyrightUrl)) {
+                AjaxResponse::error('版权链接须以 http:// 或 https:// 开头，也可留空');
             }
             Config::setMany(array(
                 'site_name'        => $siteName,
                 'system_name'      => $systemName,
+                'nav_name'         => $navName,
+                'copyright_name'   => $copyrightName,
+                'copyright_url'    => $copyrightUrl,
                 'site_description' => trim(isset($_POST['site_description']) ? $_POST['site_description'] : ''),
                 'site_keywords'    => trim(isset($_POST['site_keywords']) ? $_POST['site_keywords'] : ''),
                 'site_favicon'     => trim(isset($_POST['site_favicon']) ? $_POST['site_favicon'] : ''),
@@ -510,23 +527,46 @@ vs_admin_layout_start('系统设置', 'settings');
 vs_admin_accordion_start(
     'settings-site',
     '站点信息',
-    '配置站点名称、系统名称、图标、描述与备案信息'
+    '系统名称、浏览器标题、顶栏名称、版权与备案'
 );
 ?>
     <form method="post" action="" class="vs-form" id="siteForm" data-ajax="1">
         <input type="hidden" name="action" value="save_site">
         <div class="vs-form-row">
-            <label class="vs-label">站点名称</label>
-            <input type="text" name="site_name" class="vs-input" required maxlength="50"
-                   value="<?php echo vs_e(Config::get('site_name', '')); ?>">
-            <?php vs_render_notice('tip', '', '用于 SEO、前台顶栏品牌、浏览器标题与搜索引擎展示。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-row">
             <label class="vs-label">系统名称</label>
             <input type="text" name="system_name" class="vs-input" maxlength="50"
                    value="<?php echo vs_e(Config::get('system_name', '')); ?>"
-                   placeholder="留空则与站点名称相同">
-            <?php vs_render_notice('tip', '', '用于管理后台侧栏/顶栏、关于页首行名称、管理员登录与忘记密码页标题等产品名展示。', array('field' => true, 'compact' => true)); ?>
+                   placeholder="留空则与浏览器标题相同">
+            <?php vs_render_notice('tip', '', '用于管理后台侧栏/顶栏、关于页、管理员登录与忘记密码等产品名展示。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">浏览器标题</label>
+            <input type="text" name="site_name" class="vs-input" required maxlength="80"
+                   value="<?php echo vs_e(Config::get('site_name', '')); ?>">
+            <?php vs_render_notice('tip', '', '用于浏览器标签页标题、SEO / Open Graph 站点名等；可填较长文案。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">顶部栏名称</label>
+            <input type="text" name="nav_name" class="vs-input" maxlength="40"
+                   value="<?php echo vs_e(Config::get('nav_name', '')); ?>"
+                   placeholder="留空则与浏览器标题相同">
+            <?php vs_render_notice('tip', '', '前台各主题顶栏品牌文字；建议短名，避免顶栏挤占。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-grid">
+            <div class="vs-form-row">
+                <label class="vs-label">版权名称</label>
+                <input type="text" name="copyright_name" class="vs-input" maxlength="80"
+                       value="<?php echo vs_e(Config::get('copyright_name', '')); ?>"
+                       placeholder="留空则与系统名称相同">
+                <?php vs_render_notice('tip', '', '页脚「名称 © 年份」中的名称；与浏览器标题、顶栏名称相互独立。', array('field' => true, 'compact' => true)); ?>
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label">版权链接（可选）</label>
+                <input type="url" name="copyright_url" class="vs-input"
+                       value="<?php echo vs_e(Config::get('copyright_url', '')); ?>"
+                       placeholder="https:// 留空则名称不可点击">
+                <?php vs_render_notice('tip', '', '填写后点击版权名称跳转；仅填名称不填链接则不跳转。', array('field' => true, 'compact' => true)); ?>
+            </div>
         </div>
         <div class="vs-form-grid">
             <div class="vs-form-row">
@@ -1084,7 +1124,6 @@ $pmProvider = PanelMonitor::normalizeProvider(
 );
 $pmBaseUrl = isset($vsCfg['panelmonitor_baseurl']) ? (string) $vsCfg['panelmonitor_baseurl'] : '';
 $pmApiKey = isset($vsCfg['panelmonitor_apikey']) ? (string) $vsCfg['panelmonitor_apikey'] : '';
-$pmSsl = !isset($vsCfg['panelmonitor_sslverify']) || $vsCfg['panelmonitor_sslverify'] !== '0';
 ?>
     <form method="post" action="" class="vs-form" id="dashboardForm" data-ajax="1">
         <input type="hidden" name="action" value="save_dashboard">
@@ -1130,12 +1169,6 @@ $pmSsl = !isset($vsCfg['panelmonitor_sslverify']) || $vsCfg['panelmonitor_sslver
                    placeholder="宝塔 API 密钥 / 1Panel API Key"
                    autocomplete="off">
             <?php vs_render_notice('tip', '', '留空并保存时将保留原密钥；更换时请填写新密钥。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="panelmonitor_sslverify" value="1" <?php echo $pmSsl ? 'checked' : ''; ?>>
-                <span>校验 HTTPS 证书（自签证书可关闭）</span>
-            </label>
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存控制台设置</button>

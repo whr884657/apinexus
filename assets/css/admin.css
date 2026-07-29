@@ -10227,6 +10227,20 @@ select.vs-input.vs-select {
     }
 }
 /* ---- content page badges / actions（色标须边框，禁止只涂底色） ---- */
+#contentOverlay .content-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+    margin-bottom: 4px;
+}
+#contentOverlay .content-meta-grid .vs-field {
+    margin-bottom: 0;
+}
+@media (max-width: 767px) {
+    #contentOverlay .content-meta-grid {
+        grid-template-columns: 1fr;
+    }
+}
 #contentPage .vs-badge {
     display: inline-flex;
     align-items: center;

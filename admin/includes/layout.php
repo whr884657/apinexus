@@ -40,6 +40,14 @@ function vs_admin_menu_groups()
             ),
         ),
         array(
+            'id'       => 'qqbot',
+            'title'    => 'QQ BOT',
+            'icon'     => 'share',
+            'children' => array(
+                array('id' => 'qqbot-home', 'title' => '概览', 'url' => '/admin/qqbot/index'),
+            ),
+        ),
+        array(
             'id'       => 'content',
             'title'    => '内容运营',
             'icon'     => 'folder',

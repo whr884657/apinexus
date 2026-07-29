@@ -31,7 +31,7 @@ if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_s
     <div class="st-wrap st-bar__inner">
         <div class="st-brand">
             <span class="st-brand__logo"><?php vs_theme_site_logo('st-brand__img', 'st-brand__fallback'); ?></span>
-            <a href="<?php echo vs_e($vsBase); ?>/" class="st-brand__name"><?php echo vs_e($siteName); ?></a>
+            <a href="<?php echo vs_e($vsBase); ?>/" class="st-brand__name"><?php echo vs_e(isset($navName) ? $navName : $siteName); ?></a>
         </div>
         <nav class="st-bar__nav" aria-label="主导航">
             <?php foreach ($navItems as $item): ?>

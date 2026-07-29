@@ -1722,9 +1722,30 @@ function vs_theme_site_logo($imgClass = '', $fallbackClass = '')
 }
 
 /**
+ * 渲染页脚版权文案（名称可链；年份自动）
+ *
+ * @return string HTML 片段（已转义）
+ */
+function vs_copyright_html()
+{
+    $name = 'ApiNexus';
+    $url = '';
+    if (class_exists('SiteContext') && InstallChecker::isInstalled()) {
+        $name = SiteContext::copyrightName();
+        $url = SiteContext::copyrightUrl();
+    }
+    $year = date('Y');
+    $nameHtml = vs_e($name);
+    if ($url !== '' && preg_match('#^https?://#i', $url)) {
+        $nameHtml = '<a href="' . vs_e($url) . '" target="_blank" rel="noopener noreferrer">' . $nameHtml . '</a>';
+    }
+    return $nameHtml . ' &copy; ' . vs_e($year);
+}
+
+/**
  * 渲染页脚（版权 + ICP + 公安备案）
  *
- * @param string|null $siteName
+ * @param string|null $siteName 已废弃：版权改走 copyright_* 配置
  * @return void
  */
 function vs_render_site_footer($siteName = null)
@@ -1733,16 +1754,14 @@ function vs_render_site_footer($siteName = null)
         return;
     }
 
-    $siteName = $siteName !== null ? trim($siteName) : SiteContext::siteName();
     $beian = SiteContext::beianInfo();
     $base = vs_base_url();
-    $year = date('Y');
 
     echo '<footer class="vs-site-footer">' . "\n";
     echo '<div class="vs-container vs-site-footer__inner">' . "\n";
 
     echo '<div class="vs-site-footer__item vs-site-footer__copyright">';
-    echo vs_e($siteName) . ' &copy; ' . vs_e($year);
+    echo vs_copyright_html();
     echo '</div>' . "\n";
 
     if ($beian['icp_number'] !== '') {

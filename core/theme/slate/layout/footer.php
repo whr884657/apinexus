@@ -32,7 +32,7 @@ $beian = SiteContext::beianInfo();
         </div>
         <?php endif; ?>
         <div class="st-foot__copy">
-            <span><?php echo vs_e($siteName); ?> &copy; <?php echo vs_e($year); ?></span>
+            <span><?php echo function_exists('vs_copyright_html') ? vs_copyright_html() : (vs_e($siteName) . ' &copy; ' . vs_e($year)); ?></span>
             <?php if ($beian['icp_number'] !== ''): ?>
                 <a href="<?php echo vs_e($beian['icp_link']); ?>" target="_blank" rel="noopener noreferrer"><?php echo vs_e($beian['icp_number']); ?></a>
             <?php endif; ?>

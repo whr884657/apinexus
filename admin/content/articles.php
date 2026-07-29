@@ -206,25 +206,27 @@ echo Markdown::renderAssetsHtml();
         </header>
         <form class="vs-overlay__body" id="contentForm" autocomplete="off">
             <input type="hidden" name="content_id" id="contentId" value="0">
-            <div class="vs-field">
-                <label class="vs-label" for="contentTitle">标题</label>
-                <input class="vs-input" type="text" name="title" id="contentTitle" maxlength="200" required>
-            </div>
-            <div class="vs-field">
-                <label class="vs-label" for="contentCover">封面图链接</label>
-                <input class="vs-input" type="url" name="cover" id="contentCover" maxlength="500" placeholder="https://">
-            </div>
-            <div class="vs-field">
-                <label class="vs-label" for="contentCoverLayout">封面布局</label>
-                <select class="vs-input vs-select" name="coverlayout" id="contentCoverLayout" data-vs-pick>
-                    <option value="0">左侧</option>
-                    <option value="1">右侧</option>
-                    <option value="2">背景</option>
-                </select>
-            </div>
-            <div class="vs-field">
-                <label class="vs-label" for="contentSummary">摘要</label>
-                <input class="vs-input" type="text" name="summary" id="contentSummary" maxlength="500">
+            <div class="content-meta-grid">
+                <div class="vs-field">
+                    <label class="vs-label" for="contentTitle">标题</label>
+                    <input class="vs-input" type="text" name="title" id="contentTitle" maxlength="200" required>
+                </div>
+                <div class="vs-field">
+                    <label class="vs-label" for="contentCover">封面图链接</label>
+                    <input class="vs-input" type="url" name="cover" id="contentCover" maxlength="500" placeholder="https://">
+                </div>
+                <div class="vs-field">
+                    <label class="vs-label" for="contentCoverLayout">封面布局</label>
+                    <select class="vs-input vs-select" name="coverlayout" id="contentCoverLayout" data-vs-pick>
+                        <option value="0">左侧</option>
+                        <option value="1">右侧</option>
+                        <option value="2">背景</option>
+                    </select>
+                </div>
+                <div class="vs-field">
+                    <label class="vs-label" for="contentSummary">摘要</label>
+                    <input class="vs-input" type="text" name="summary" id="contentSummary" maxlength="500">
+                </div>
             </div>
             <div class="vs-field">
                 <label class="vs-label" for="contentBody">正文（Markdown）</label>

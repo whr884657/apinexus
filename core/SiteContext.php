@@ -67,11 +67,23 @@ class SiteContext
         if ($systemName === '') {
             $systemName = $siteName;
         }
+        $navName = trim((string) Config::get('nav_name', ''));
+        if ($navName === '') {
+            $navName = $siteName;
+        }
+        $copyrightName = trim((string) Config::get('copyright_name', ''));
+        if ($copyrightName === '') {
+            $copyrightName = $systemName !== '' ? $systemName : $siteName;
+        }
+        $copyrightUrl = trim((string) Config::get('copyright_url', ''));
 
         self::$cache = array(
             'host'               => self::currentHost(),
             'site_name'          => $siteName,
             'system_name'        => $systemName,
+            'nav_name'           => $navName,
+            'copyright_name'     => $copyrightName,
+            'copyright_url'      => $copyrightUrl,
             'site_description'   => trim((string) Config::get('site_description', '')),
             'site_keywords'      => trim((string) Config::get('site_keywords', '')),
             'site_favicon'       => trim((string) Config::get('site_favicon', '')),
@@ -94,6 +106,8 @@ class SiteContext
     }
 
     /**
+     * 浏览器标题 / SEO 用名称（配置键 site_name）
+     *
      * @return string
      */
     public static function siteName()
@@ -104,7 +118,7 @@ class SiteContext
     }
 
     /**
-     * 系统/产品名称（后台侧栏/顶栏、关于页、管理员登录与忘记密码等；缺省回落 site_name）
+     * 系统/产品名称（后台侧栏/顶栏、关于页、管理员登录等；缺省回落浏览器标题名）
      *
      * @return string
      */
@@ -117,6 +131,47 @@ class SiteContext
         }
         $fallback = trim($ctx['site_name']);
         return $fallback !== '' ? $fallback : 'ApiNexus';
+    }
+
+    /**
+     * 前台顶栏品牌短名（缺省回落浏览器标题名）
+     *
+     * @return string
+     */
+    public static function navName()
+    {
+        $ctx = self::resolve();
+        $name = trim(isset($ctx['nav_name']) ? $ctx['nav_name'] : '');
+        if ($name !== '') {
+            return $name;
+        }
+        return self::siteName();
+    }
+
+    /**
+     * 页脚版权名称（缺省回落系统名）
+     *
+     * @return string
+     */
+    public static function copyrightName()
+    {
+        $ctx = self::resolve();
+        $name = trim(isset($ctx['copyright_name']) ? $ctx['copyright_name'] : '');
+        if ($name !== '') {
+            return $name;
+        }
+        return self::systemName();
+    }
+
+    /**
+     * 页脚版权跳转地址（可空）
+     *
+     * @return string
+     */
+    public static function copyrightUrl()
+    {
+        $ctx = self::resolve();
+        return trim(isset($ctx['copyright_url']) ? $ctx['copyright_url'] : '');
     }
 
     /**

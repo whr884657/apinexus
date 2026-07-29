@@ -641,7 +641,7 @@ class PanelMonitor
      */
     private static function httpRequest($method, $url, $body, array $headers)
     {
-        $verifySsl = Config::get('panelmonitor_sslverify', '1') !== '0';
+        $verifySsl = false;
         $timeout = 8;
 
         if (function_exists('curl_init')) {
@@ -656,8 +656,9 @@ class PanelMonitor
                 curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
             }
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            // 面板多为本机/自签证书：固定不校验对端证书（不再提供配置开关）
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verifySsl);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verifySsl ? 2 : 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
             curl_setopt($ch, CURLOPT_USERAGENT, 'ApiNexus-PanelMonitor/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
             if (strtoupper($method) === 'POST') {
                 curl_setopt($ch, CURLOPT_POST, true);

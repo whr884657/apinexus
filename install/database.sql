@@ -54,6 +54,9 @@ CREATE TABLE IF NOT EXISTS `{prefix}config` (
 INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('site_name', 'ApiNexus'),
 ('system_name', 'ApiNexus'),
+('nav_name', 'ApiNexus'),
+('copyright_name', 'ApiNexus'),
+('copyright_url', ''),
 ('site_description', '基于 PHP + MySQL 的轻量级 Web 管理系统'),
 ('site_keywords', 'ApiNexus,PHP,MySQL,管理系统'),
 ('site_favicon', ''),

@@ -55,7 +55,7 @@ $isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
             <?php endif; ?>
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-                    <span><?php echo vs_e($siteName); ?> &copy; <?php echo vs_e($year); ?></span>
+                    <span><?php echo function_exists('vs_copyright_html') ? vs_copyright_html() : (vs_e($siteName) . ' &copy; ' . vs_e($year)); ?></span>
                 </div>
                 <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-right">
                     <?php if ($beian['icp_number'] !== ''): ?>
