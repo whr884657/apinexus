@@ -1,0 +1,112 @@
+/**
+ * 青绿平台 · 认证页验证码（与 .st-auth__input 同系底边线风格）
+ * 仅本主题包引用，勿与默认主题 / 管理员 auth-login 共用。
+ */
+.st-auth .vs-captcha-field {
+    width: 100%;
+    min-height: 46px;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+}
+
+.st-auth .vs-captcha-field--gt {
+    width: 100%;
+    overflow: visible;
+    padding-top: 2px;
+}
+
+.st-auth .vs-captcha-field--gt > div {
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.st-auth .vs-captcha-field--gt .geetest_holder,
+.st-auth .vs-captcha-field--gt .geetest_wind,
+.st-auth .vs-captcha-field--gt .geetest_btn,
+.st-auth .vs-captcha-field--gt .geetest_box {
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* 极验外壳贴近青绿底边线：不硬改内部 logo 尺寸 */
+.st-auth .vs-captcha-field--gt img,
+.st-auth .vs-captcha-field--gt svg,
+.st-auth .vs-captcha-field--gt canvas,
+.st-auth .vs-captcha-field--gt .geetest_logo,
+.st-auth .vs-captcha-field--gt [class*="logo"],
+.st-auth .vs-captcha-field--gt [class*="Logo"],
+.st-auth .vs-captcha-field--gt [class*="icon"],
+.st-auth .vs-captcha-field--gt [class*="Icon"] {
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    object-fit: contain !important;
+    transform: none !important;
+}
+
+.st-auth .vs-captcha-local {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    width: 100%;
+}
+
+.st-auth .vs-captcha-local__input {
+    flex: 1;
+    min-width: 0;
+    height: 46px;
+    padding: 0 4px 0 2px;
+    border: none;
+    border-bottom: 2px solid var(--st-auth-border);
+    border-radius: 0;
+    font-size: 15px;
+    outline: none;
+    background: transparent;
+    color: var(--st-auth-fg);
+    text-transform: none;
+    font-variant: normal;
+    transition: border-color 0.25s, background 0.25s;
+}
+
+.st-auth .vs-captcha-local__input::placeholder {
+    color: var(--st-auth-fg3);
+}
+
+.st-auth .vs-captcha-local__input:focus {
+    border-bottom-color: var(--st-auth-accent);
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.st-auth .vs-captcha-local__refresh {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    min-width: 100px;
+    max-width: 128px;
+    padding: 0 6px;
+    border: 0;
+    border-bottom: 2px solid var(--st-auth-accent);
+    border-radius: 0;
+    background: transparent;
+    cursor: pointer;
+    overflow: hidden;
+    line-height: 0;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.st-auth .vs-captcha-local__refresh:hover {
+    background: rgba(36, 166, 106, 0.08);
+    border-bottom-color: var(--st-auth-accent-h);
+}
+
+.st-auth .vs-captcha-local__refresh img {
+    display: block;
+    width: 108px;
+    height: 36px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.7);
+}

@@ -29,6 +29,7 @@ function vs_theme_auth_head($pageTitle)
     vs_render_site_icons($favicon, vs_seo_share_image());
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e(ThemeManager::assetUrl($themeId, 'assets/auth.css')) . '?v=' . VS_VERSION . '">' . "\n";
+    echo '<link rel="stylesheet" href="' . vs_e(ThemeManager::assetUrl($themeId, 'assets/auth-captcha.css')) . '?v=' . VS_VERSION . '">' . "\n";
     echo '<script src="' . vs_e($base) . '/assets/js/auth-csrf.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '</head>' . "\n";
     echo '<body class="st-auth-body">' . "\n";

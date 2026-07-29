@@ -204,6 +204,9 @@ if (!$notFound) {
         <?php endif; ?>
     </header>
 
+    <div class="detail-layout">
+    <div class="detail-layout__main">
+
     <section class="detail-card">
         <h2 class="detail-section-title">接口信息</h2>
         <?php if (!empty($api['endpoint'])): ?>
@@ -267,6 +270,10 @@ if (!$notFound) {
         <?php endif; ?>
     </section>
 
+    <?php if ($paramsRaw !== '' || !empty($api['response'])): ?>
+    <div class="detail-duo">
+    <?php endif; ?>
+
     <?php if ($paramsRaw !== ''): ?>
     <section class="detail-card" id="detailParamsCard">
         <div class="detail-section-title detail-section-title--tools">
@@ -327,6 +334,10 @@ if (!$notFound) {
     </section>
     <?php endif; ?>
 
+    <?php if ($paramsRaw !== '' || !empty($api['response'])): ?>
+    </div>
+    <?php endif; ?>
+
     <section class="detail-card" id="detailFeedbackCard"
              data-logged-in="<?php echo !empty($playground['loggedIn']) ? '1' : '0'; ?>"
              data-login-url="<?php echo vs_e(isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login')); ?>"
@@ -370,6 +381,9 @@ if (!$notFound) {
         </div>
     </section>
 
+    </div><!-- /.detail-layout__main -->
+
+    <aside class="detail-layout__aside">
     <section class="detail-card" id="detailQuickstartCard">
         <h2 class="detail-section-title">快速上手</h2>
         <?php
@@ -466,6 +480,8 @@ if (!$notFound) {
         </script>
         <?php endif; ?>
     </section>
+    </aside>
+    </div><!-- /.detail-layout -->
 
     <?php
     // 内容：系统设置启用 + 非空正文；展示：默认主题 show_api_disclaimer

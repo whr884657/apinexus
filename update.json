@@ -1,12 +1,12 @@
 {
-    "version": "13.14.0",
-    "title": "ApiNexus 13.14.0 安全头 / SERP 卡片 / 首屏加速",
+    "version": "13.15.0",
+    "title": "ApiNexus 13.15.0 详情桌面适配与主题验证码隔离",
     "release_date": "2026-07-29",
     "db_changes": false,
     "changes": [
-        "补齐 X-XSS-Protection、Permissions-Policy 等安全响应头（PHP + Apache 兜底；Nginx 可选）",
-        "SERP：JSON-LD 升级为 Organization + WebSite + WebPage @graph；可收录页启用大图预览指令",
-        "首屏：默认主题改本地 Tailwind、粒子空闲后再绘、静态资源缓存；减轻首次进入 5s+ 绘制压力"
+        "默认主题 API 详情页电脑端：宽容器、主栏+快速上手侧栏、参数与返回示例并排、在线测试双栏",
+        "验证码 UI 按主题隔离：各主题独立 auth-captcha.css；主题二改为底边线风格对齐登录输入框",
+        "主题资源隔离规范补充认证验证码条款（E184）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
