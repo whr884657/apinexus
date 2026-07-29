@@ -54,38 +54,8 @@
     -webkit-overflow-scrolling: touch;
 }
 
-/*
- * 系统更新弹窗：固定宽高（电脑 + 手机抽屉），禁止随内容忽大忽小。
- * 长 changelog / 进度步骤仅在 body 内滚动；head / foot 钉住。
- */
-.vs-modal.vs-modal--update {
-    --vs-modal-update-width: 480px;
-    --vs-modal-update-height: min(560px, 72vh);
-    --vs-modal-update-mobile-height: 85vh;
-    width: var(--vs-modal-update-width);
-    max-width: min(var(--vs-modal-update-width), calc(100vw - 40px));
-    height: var(--vs-modal-update-height);
-    max-height: var(--vs-modal-update-height);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.vs-modal--update .vs-modal__head,
-.vs-modal--update .vs-modal__foot {
-    flex-shrink: 0;
-}
-
-.vs-modal--update .vs-modal__body {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-}
-
-.vs-modal--update .vs-modal__foot[hidden] {
+/* 无按钮时隐藏脚（系统更新进度等）；不强制固定弹窗高度 */
+.vs-modal__foot[hidden] {
     display: none !important;
 }
 
@@ -181,14 +151,6 @@
     .vs-modal.vs-modal--license {
         max-width: none;
         max-height: var(--vs-mobile-drawer-height, 88vh);
-    }
-
-    /* 更新弹窗：手机抽屉固定高度，勿用 height:auto + max-height（会随内容跳动） */
-    .vs-modal.vs-modal--update {
-        width: 100%;
-        max-width: none;
-        height: var(--vs-modal-update-mobile-height, 85vh);
-        max-height: var(--vs-modal-update-mobile-height, 85vh);
     }
 }
 
