@@ -1,5 +1,6 @@
 /**
  * 默认主题 · 全局 shell（移动端菜单 + 粒子背景）
+ * 粒子延后到 idle / load 后再启动，减轻首屏主线程压力（E183）
  */
 (function () {
     'use strict';
@@ -20,12 +21,24 @@
         return;
     }
 
+    var reducedMotion = false;
+    try {
+        reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) {
+        reducedMotion = false;
+    }
+    if (reducedMotion) {
+        return;
+    }
+
     var ctx = canvas.getContext('2d');
     var particles = [];
     var width = 0;
     var height = 0;
+    var drawLines = true;
     var currentParticleColor = 'rgba(107, 114, 128, 0.45)';
     var currentLineColor = 'rgba(107, 114, 128, 0.12)';
+    var started = false;
 
     function resize() {
         width = canvas.width = window.innerWidth;
@@ -74,13 +87,22 @@
 
     function initParticles() {
         particles = [];
-        var count = Math.floor((width * height) / 12000);
+        // 密度下调；小屏 / 省电模式进一步减量，避免 O(n²) 连线拖垮帧率
+        var density = 22000;
+        if (width < 768) {
+            density = 32000;
+        }
+        var count = Math.min(90, Math.floor((width * height) / density));
+        drawLines = count <= 55 && width >= 768;
         for (var i = 0; i < count; i++) {
             particles.push(new Particle());
         }
     }
 
     function connectParticles() {
+        if (!drawLines) {
+            return;
+        }
         for (var i = 0; i < particles.length; i++) {
             for (var j = i + 1; j < particles.length; j++) {
                 var dx = particles[i].x - particles[j].x;
@@ -90,7 +112,9 @@
                     ctx.beginPath();
                     ctx.moveTo(particles[i].x, particles[i].y);
                     ctx.lineTo(particles[j].x, particles[j].y);
-                    var alpha = parseFloat(currentLineColor.match(/,\s*([0-9.]+)\s*\)/)?.[1] || '0.12') * (1 - dist / 100);
+                    var m = currentLineColor.match(/,\s*([0-9.]+)\s*\)/);
+                    var baseAlpha = m && m[1] ? parseFloat(m[1]) : 0.12;
+                    var alpha = baseAlpha * (1 - dist / 100);
                     ctx.strokeStyle = currentLineColor.replace(/,\s*[0-9.]+\s*\)/, ', ' + alpha + ')');
                     ctx.lineWidth = 0.5;
                     ctx.stroke();
@@ -101,20 +125,44 @@
 
     function animate() {
         ctx.clearRect(0, 0, width, height);
-        particles.forEach(function (p) {
-            p.update();
-            p.draw();
-        });
+        for (var i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
+        }
         connectParticles();
         requestAnimationFrame(animate);
     }
 
-    resize();
-    window.updateParticleColors();
-    initParticles();
-    animate();
-    window.addEventListener('resize', function () {
+    function startParticles() {
+        if (started) {
+            return;
+        }
+        started = true;
         resize();
+        window.updateParticleColors();
         initParticles();
-    });
+        animate();
+        window.addEventListener('resize', function () {
+            resize();
+            initParticles();
+        });
+    }
+
+    function scheduleStart() {
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(function () {
+                startParticles();
+            }, { timeout: 1800 });
+            return;
+        }
+        if (document.readyState === 'complete') {
+            setTimeout(startParticles, 120);
+        } else {
+            window.addEventListener('load', function () {
+                setTimeout(startParticles, 120);
+            });
+        }
+    }
+
+    scheduleStart();
 })();

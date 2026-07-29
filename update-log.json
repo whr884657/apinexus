@@ -1,5 +1,15 @@
 {
     "versions": {
+        "13.14.0": {
+            "title": "ApiNexus 13.14.0 安全头 / SERP 卡片 / 首屏加速",
+            "date": "2026-07-29",
+            "db_changes": false,
+            "changes": [
+                "补齐 X-XSS-Protection、Permissions-Policy 等安全响应头（PHP + Apache 兜底；Nginx 可选）",
+                "SERP：JSON-LD 升级为 Organization + WebSite + WebPage @graph；可收录页启用大图预览指令",
+                "首屏：默认主题改本地 Tailwind、粒子空闲后再绘、静态资源缓存；减轻首次进入绘制压力（E183）"
+            ]
+        },
         "13.13.0": {
             "title": "ApiNexus 13.13.0 代理表单布局与用户编辑分栏",
             "date": "2026-07-29",

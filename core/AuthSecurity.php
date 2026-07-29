@@ -266,9 +266,7 @@ class AuthSecurity
      */
     public static function sendSecurityHeaders()
     {
-        header('X-Content-Type-Options: nosniff');
-        header('X-Frame-Options: SAMEORIGIN');
-        header('Referrer-Policy: strict-origin-when-cross-origin');
+        self::sendCommonSecurityHeaders();
         // 宽松基础 CSP：不限制 script/style，避免破坏页脚任意 HTML；仍挡外嵌与插件
         header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'");
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
@@ -293,13 +291,27 @@ class AuthSecurity
         if (headers_sent()) {
             return;
         }
-        header('X-Content-Type-Options: nosniff');
-        header('X-Frame-Options: SAMEORIGIN');
-        header('Referrer-Policy: strict-origin-when-cross-origin');
+        self::sendCommonSecurityHeaders();
         header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'");
         if (self::isHttps() && self::sessionCookieSecure()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         }
+    }
+
+    /**
+     * 认证页与前台公共页共用的基础安全响应头
+     * （扫描器常查 X-XSS-Protection / Permissions-Policy / Referrer-Policy）
+     *
+     * @return void
+     */
+    private static function sendCommonSecurityHeaders()
+    {
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: SAMEORIGIN');
+        header('Referrer-Policy: strict-origin-when-cross-origin');
+        // 现代浏览器已忽略 XSS 过滤器；保留以满足合规扫描对响应头完整性的检测
+        header('X-XSS-Protection: 1; mode=block');
+        header('Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()');
     }
 
     /**

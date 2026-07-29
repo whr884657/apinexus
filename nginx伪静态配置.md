@@ -100,7 +100,23 @@ location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
 
 ---
 
-## 四、地址对照（方便自测）
+## 四、可选：安全响应头（Nginx）
+
+PHP 前台已通过 `AuthSecurity` 下发安全头；若扫描仍报缺失（CDN 剥离 / 纯静态），可在**站点配置**（非伪静态框）的 `server { }` 内追加：
+
+```nginx
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header X-XSS-Protection "1; mode=block" always;
+add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()" always;
+```
+
+保存后重载 Nginx。Apache 站点已在根 `.htaccess` 做同等兜底。
+
+---
+
+## 五、地址对照（方便自测）
 
 | 浏览器地址 | 作用 |
 |------------|------|

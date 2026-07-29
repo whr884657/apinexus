@@ -876,12 +876,13 @@ class ThemeManager
             }
         }
 
-        $fallback = htmlspecialchars($asset('assets/vendor/tailwind.min.js'), ENT_QUOTES, 'UTF-8');
+        // 优先本地 vendor，避免首次访问走 CDN Play 编译拖垮首屏（E183）
+        $localTw = htmlspecialchars($asset('assets/vendor/tailwind.min.js'), ENT_QUOTES, 'UTF-8');
         return array(
             'css'           => $css,
             'js'            => $js,
             'head_scripts'  => array(
-                '<script src="https://cdn.tailwindcss.com" onerror="this.onerror=null;this.src=\'' . $fallback . '\';"></script>',
+                '<script src="' . $localTw . '"></script>',
             ),
             'body_class'    => 'vs-body feer-front',
             'skip_legacy'   => true,

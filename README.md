@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.13.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.14.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -274,9 +274,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.13.0（2026-07-29）
+### v13.14.0（2026-07-29）
 
-- 代理表单三列布局；JSON 改写白话说明；用户编辑三分栏；管理员图标库说明
+- 补齐 X-XSS-Protection / Permissions-Policy 等安全响应头；SERP JSON-LD @graph + 大图预览
+- 默认主题首屏：本地 Tailwind、粒子延后、静态缓存，缓解首次进入绘制偏慢
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

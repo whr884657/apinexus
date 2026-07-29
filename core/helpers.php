@@ -1157,6 +1157,8 @@ function vs_render_seo_meta(array $opts = array())
     echo '<meta http-equiv="X-UA-Compatible" content="IE=edge">' . "\n";
     echo '<meta name="renderer" content="webkit">' . "\n";
     echo '<meta name="format-detection" content="telephone=no">' . "\n";
+    // HTML 层 Referrer 兜底（部分 CDN / 中间件剥离响应头时仍生效）
+    echo '<meta name="referrer" content="strict-origin-when-cross-origin">' . "\n";
 
     if ($description !== '') {
         echo '<meta name="description" content="' . vs_e($description) . '">' . "\n";
@@ -1165,7 +1167,8 @@ function vs_render_seo_meta(array $opts = array())
         echo '<meta name="keywords" content="' . vs_e($keywords) . '">' . "\n";
     }
     if ($robots !== '') {
-        echo '<meta name="robots" content="' . vs_e($robots) . '">' . "\n";
+        echo '<meta name="robots" content="' . vs_e(vs_seo_robots_enrich($robots)) . '">' . "\n";
+        echo '<meta name="googlebot" content="' . vs_e(vs_seo_robots_enrich($robots)) . '">' . "\n";
     }
     if ($canonical !== '') {
         echo '<link rel="canonical" href="' . vs_e($canonical) . '">' . "\n";
@@ -1290,7 +1293,29 @@ function vs_page_seo_pack($pageTitle = '', array $overrides = array())
 }
 
 /**
- * JSON-LD WebSite（供搜索引擎 / 部分社交抓取）
+ * 丰富 robots 指令：可收录页启用大图预览，改善 SERP 小卡片观感
+ *
+ * @param string $robots
+ * @return string
+ */
+function vs_seo_robots_enrich($robots)
+{
+    $robots = trim((string) $robots);
+    if ($robots === '') {
+        return '';
+    }
+    $lower = strtolower($robots);
+    if (strpos($lower, 'noindex') !== false) {
+        return $robots;
+    }
+    if (strpos($lower, 'max-image-preview') !== false) {
+        return $robots;
+    }
+    return rtrim($robots, ',') . ', max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+}
+
+/**
+ * JSON-LD @graph（Organization + WebSite + WebPage，供搜索引擎 SERP 卡片 / 部分社交抓取）
  *
  * @param array $opts 与 vs_render_seo_meta 相同字段
  * @return void
@@ -1301,6 +1326,7 @@ function vs_render_seo_jsonld(array $opts = array())
     $desc = trim((string) (isset($opts['description']) ? $opts['description'] : ''));
     $url = trim((string) (isset($opts['url']) ? $opts['url'] : ''));
     $image = trim((string) (isset($opts['image']) ? $opts['image'] : ''));
+    $title = trim((string) (isset($opts['title']) ? $opts['title'] : ''));
     if ($url === '') {
         $url = vs_seo_canonical_url();
     }
@@ -1312,20 +1338,71 @@ function vs_render_seo_jsonld(array $opts = array())
     if ($name === '') {
         return;
     }
-    $data = array(
-        '@context'    => 'https://schema.org',
-        '@type'       => 'WebSite',
+    if ($title === '') {
+        $title = $name;
+    }
+    if ($desc === '') {
+        $desc = $name;
+    }
+    if ($image !== '') {
+        $image = vs_seo_abs_url($image);
+    }
+
+    $orgId = $home . '#organization';
+    $siteId = $home . '#website';
+    $pageId = $url . '#webpage';
+
+    $organization = array(
+        '@type'       => 'Organization',
+        '@id'         => $orgId,
         'name'        => $name,
         'url'         => $home,
-        'description' => $desc !== '' ? $desc : $name,
+        'description' => $desc,
     );
     if ($image !== '') {
-        $data['image'] = vs_seo_abs_url($image);
-        $data['thumbnailUrl'] = $data['image'];
+        $organization['logo'] = array(
+            '@type' => 'ImageObject',
+            'url'   => $image,
+        );
+        $organization['image'] = $image;
     }
-    if ($url !== '' && $url !== $home) {
-        $data['mainEntityOfPage'] = $url;
+
+    $website = array(
+        '@type'       => 'WebSite',
+        '@id'         => $siteId,
+        'name'        => $name,
+        'url'         => $home,
+        'description' => $desc,
+        'publisher'   => array('@id' => $orgId),
+        'inLanguage'  => 'zh-CN',
+    );
+    if ($image !== '') {
+        $website['image'] = $image;
+        $website['thumbnailUrl'] = $image;
     }
+
+    $webpage = array(
+        '@type'       => 'WebPage',
+        '@id'         => $pageId,
+        'url'         => $url,
+        'name'        => $title,
+        'description' => $desc,
+        'isPartOf'    => array('@id' => $siteId),
+        'about'       => array('@id' => $orgId),
+        'inLanguage'  => 'zh-CN',
+    );
+    if ($image !== '') {
+        $webpage['primaryImageOfPage'] = array(
+            '@type' => 'ImageObject',
+            'url'   => $image,
+        );
+        $webpage['image'] = $image;
+    }
+
+    $data = array(
+        '@context' => 'https://schema.org',
+        '@graph'   => array($organization, $website, $webpage),
+    );
     echo '<script type="application/ld+json">'
         . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         . '</script>' . "\n";
@@ -1473,15 +1550,15 @@ function vs_render_foot(array $jsFiles = array(), array $extraJsHrefs = array())
     $base = vs_base_url();
     vs_render_modal_shell();
     echo '<script>window.VS_BASE_URL = ' . json_encode($base) . ';</script>' . "\n";
-    echo '<script src="' . vs_e($base) . '/assets/js/modal.js?v=' . VS_VERSION . '"></script>' . "\n";
-    echo '<script src="' . vs_e($base) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
+    echo '<script src="' . vs_e($base) . '/assets/js/modal.js?v=' . VS_VERSION . '" defer></script>' . "\n";
+    echo '<script src="' . vs_e($base) . '/assets/js/common.js?v=' . VS_VERSION . '" defer></script>' . "\n";
     foreach ($jsFiles as $js) {
-        echo '<script src="' . vs_e($base) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '"></script>' . "\n";
+        echo '<script src="' . vs_e($base) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '" defer></script>' . "\n";
     }
     foreach ($extraJsHrefs as $href) {
         $href = trim((string) $href);
         if ($href !== '') {
-            echo '<script src="' . vs_e($href) . '"></script>' . "\n";
+            echo '<script src="' . vs_e($href) . '" defer></script>' . "\n";
         }
     }
     echo '</body></html>';

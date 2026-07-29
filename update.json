@@ -1,12 +1,12 @@
 {
-    "version": "13.13.0",
-    "title": "ApiNexus 13.13.0 代理表单布局与用户编辑分栏",
+    "version": "13.14.0",
+    "title": "ApiNexus 13.14.0 安全头 / SERP 卡片 / 首屏加速",
     "release_date": "2026-07-29",
     "db_changes": false,
     "changes": [
-        "代理表单：上游认证 / 出站 UA / Referer 电脑端三列并排，避免右侧大片留白",
-        "JSON 字段改写：白话说明 + 示例；用户端接口编辑与管理员统一「基础 / 参数 / 文档」三 Tab",
-        "管理员图标区补充本地 SVG 库路径说明（assets/img/category-icons/ 数字文件名）"
+        "补齐 X-XSS-Protection、Permissions-Policy 等安全响应头（PHP + Apache 兜底；Nginx 可选）",
+        "SERP：JSON-LD 升级为 Organization + WebSite + WebPage @graph；可收录页启用大图预览指令",
+        "首屏：默认主题改本地 Tailwind、粒子空闲后再绘、静态资源缓存；减轻首次进入 5s+ 绘制压力"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"
