@@ -98,4 +98,72 @@ class FrontendUser
         }
         return $result;
     }
+
+    /**
+     * 用户中心控制台汇总数据（主题只读本方法，勿在视图直查库）
+     *
+     * @return array
+     */
+    public static function dashboardStats()
+    {
+        $empty = array(
+            'points'           => '0',
+            'role_label'       => '',
+            'can_publish_api'  => false,
+            'bound_admin'      => false,
+            'api_total'        => 0,
+            'api_approved'     => 0,
+            'api_pending'      => 0,
+            'api_rejected'     => 0,
+            'api_calls'        => 0,
+            'key_total'        => 0,
+            'key_calls'        => 0,
+            'checkin_enabled'  => false,
+            'checked_today'    => false,
+        );
+        $user = self::current();
+        if (!$user) {
+            return $empty;
+        }
+        $uid = (int) $user['id'];
+        $out = $empty;
+        $out['points'] = isset($user['points']) ? (string) $user['points'] : '0';
+        $out['role_label'] = isset($user['role_label']) ? (string) $user['role_label'] : '';
+        $out['can_publish_api'] = !empty($user['can_publish_api']);
+        $out['bound_admin'] = class_exists('AdminUserBinding') && AdminUserBinding::isUserBoundToAdmin($uid);
+
+        if (class_exists('ApiManager') && ApiManager::tableReady() && $out['can_publish_api']) {
+            $apis = ApiManager::listByUser($uid);
+            $out['api_total'] = count($apis);
+            foreach ($apis as $row) {
+                $out['api_calls'] += isset($row['calls']) ? (int) $row['calls'] : 0;
+                if (!ApiManager::hasAuditColumn()) {
+                    $out['api_approved'] += 1;
+                    continue;
+                }
+                $audit = ApiManager::normalizeAuditStatus(isset($row['audit']) ? $row['audit'] : ApiManager::AUDIT_APPROVED);
+                if ($audit === ApiManager::AUDIT_APPROVED) {
+                    $out['api_approved'] += 1;
+                } elseif ($audit === ApiManager::AUDIT_PENDING) {
+                    $out['api_pending'] += 1;
+                } else {
+                    $out['api_rejected'] += 1;
+                }
+            }
+        }
+
+        if (class_exists('ApiKeyManager') && ApiKeyManager::tableReady()) {
+            $keys = ApiKeyManager::listByUser($uid);
+            $out['key_total'] = count($keys);
+            foreach ($keys as $k) {
+                $out['key_calls'] += isset($k['calls']) ? (int) $k['calls'] : 0;
+            }
+        }
+
+        $banner = self::checkinBanner();
+        $out['checkin_enabled'] = !empty($banner['enabled']);
+        $out['checked_today'] = !empty($banner['checked_today']);
+
+        return $out;
+    }
 }

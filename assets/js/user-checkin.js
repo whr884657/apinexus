@@ -20,6 +20,13 @@
                 throw new Error((res && res.msg) || '签到失败');
             }
             VS.showMessage(res.msg || '签到成功', 'success');
+            if (res.points != null || (res.stats && res.stats.points != null)) {
+                var pts = res.points != null ? res.points : res.stats.points;
+                var el = document.querySelector('#ucDashboard [data-field="points"]');
+                if (el) {
+                    el.textContent = String(pts);
+                }
+            }
             if (banner && banner.parentNode) {
                 banner.parentNode.removeChild(banner);
             }

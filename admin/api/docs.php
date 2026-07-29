@@ -225,8 +225,10 @@ function vs_api_docs_ctx(array $row)
         'examples'        => $examples,
         'apitype'         => $apitype,
         'apitype_label'   => ApiManager::apiTypeLabel($apitype),
+        'apitype_badge'   => ApiManager::apiTypeBadge($apitype),
         'needkey'         => $needkey,
         'needkey_label'   => ApiManager::requireKeyLabel($needkey),
+        'needkey_badge'   => ApiManager::requireKeyBadge($needkey),
         'qpm'             => $qpm,
         'qpm_label'       => ApiManager::qpmLabel($qpm),
         'charge'          => $charge,
@@ -424,14 +426,37 @@ function vs_api_docs_meta_badges_html(array $item)
 {
     $html = '<span class="vs-badge ' . vs_api_docs_status_badge_class($item['status']) . '">'
         . vs_e($item['status_label']) . '</span>';
-    $html .= '<span class="vs-badge vs-badge--default">' . vs_e($item['category']) . '</span>';
-    $html .= '<span class="vs-badge vs-badge--default">' . vs_e($item['apitype_label']) . '</span>';
-    $html .= '<span class="vs-badge vs-badge--default">' . vs_e($item['needkey_label']) . '</span>';
-    $html .= '<span class="vs-badge vs-badge--default">' . vs_e($item['charge_label']) . '</span>';
-    if ($item['price_label'] !== '') {
-        $html .= '<span class="vs-badge vs-badge--default">' . vs_e($item['price_label']) . '</span>';
+    if ($item['category'] !== '') {
+        $html .= '<span class="vs-badge vs-badge--default">' . vs_e($item['category']) . '</span>';
     }
-    $html .= '<span class="vs-badge vs-badge--default">QPM ' . vs_e($item['qpm_label']) . '</span>';
+    $typeBadge = isset($item['apitype_badge']) ? (string) $item['apitype_badge'] : (string) $item['apitype_label'];
+    $typeClass = ((int) $item['apitype'] === ApiManager::APITYPE_PROXY) ? 'type-badge--proxy' : 'type-badge--local';
+    $html .= '<span class="type-badge ' . $typeClass . '">' . vs_e($typeBadge) . '</span>';
+
+    $keyBadge = isset($item['needkey_badge']) ? (string) $item['needkey_badge'] : (string) $item['needkey_label'];
+    $needkey = isset($item['needkey']) ? (int) $item['needkey'] : 0;
+    if ($needkey === ApiManager::KEY_NONE) {
+        $noneLabel = $keyBadge !== '' ? $keyBadge : (isset($item['needkey_label']) && $item['needkey_label'] !== '' ? $item['needkey_label'] : '无需 KEY');
+        $html .= '<span class="key-badge key-badge--none">' . vs_e($noneLabel) . '</span>';
+    } elseif ($needkey === ApiManager::KEY_REQUIRED) {
+        $html .= '<span class="key-badge key-badge--required">' . vs_e($keyBadge) . '</span>';
+    } else {
+        $html .= '<span class="key-badge key-badge--optional">' . vs_e($keyBadge) . '</span>';
+    }
+
+    $charge = isset($item['charge']) ? (int) $item['charge'] : 0;
+    if ($charge === ApiManager::CHARGE_PAID && $item['price_label'] !== '') {
+        $html .= '<span class="charge-badge charge-badge--points">' . vs_e($item['price_label']) . '</span>';
+    } else {
+        $html .= '<span class="charge-badge charge-badge--free">' . vs_e($item['charge_label'] !== '' ? $item['charge_label'] : '免费') . '</span>';
+    }
+
+    $qpm = isset($item['qpm']) ? (int) $item['qpm'] : 0;
+    if ($qpm > 0) {
+        $html .= '<span class="qpm-badge qpm-badge--limit">QPM ' . vs_e($item['qpm_label']) . '</span>';
+    } else {
+        $html .= '<span class="vs-badge vs-badge--default">QPM ' . vs_e($item['qpm_label']) . '</span>';
+    }
     if ($item['keyways_label'] !== '') {
         $html .= '<span class="vs-badge vs-badge--default">' . vs_e($item['keyways_label']) . '</span>';
     }

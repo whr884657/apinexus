@@ -78,11 +78,197 @@
 .uc-checkin-banner__btn:hover {
     filter: brightness(0.97);
 }
+
+/* ── 控制台 Dashboard ── */
+.uc-dash {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.uc-dash__hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 20px 22px;
+    border-radius: 16px;
+    background: var(--vs-uc-hero-bg);
+    color: var(--vs-uc-hero-fg, #fff);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+}
+.uc-dash__hero-main {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+.uc-dash__avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.2);
+}
+.uc-dash__hello {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+.uc-dash__sub {
+    margin: 6px 0 0;
+    font-size: 0.875rem;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.uc-dash__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.18);
+}
+.uc-dash__chip--bound {
+    background: rgba(34, 197, 94, 0.28);
+}
+.uc-dash__hero-points {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    min-width: 120px;
+}
+.uc-dash__points-label {
+    font-size: 0.75rem;
+    opacity: 0.85;
+}
+.uc-dash__points-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+}
+.uc-dash__points-link {
+    margin-top: 4px;
+    font-size: 0.8125rem;
+    color: inherit;
+    opacity: 0.92;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.uc-dash__points-link:hover {
+    opacity: 1;
+}
+.uc-dash__stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+.uc-dash__stat {
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.uc-dash__stat-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+}
+.uc-dash__stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #111;
+    letter-spacing: -0.02em;
+    word-break: break-all;
+}
+.uc-dash__stat-value--sm {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+.uc-dash__stat-hint {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+.uc-dash__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.uc-dash__card {
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+}
+.uc-dash__card-title {
+    margin: 0 0 12px;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #111;
+}
+.uc-dash__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.uc-dash__link {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+    color: #111;
+    text-decoration: none;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.uc-dash__link:hover {
+    background: var(--vs-uc-accent-bg, #f4f4f5);
+    border-color: var(--vs-uc-accent-soft, #d4d4d8);
+}
+.uc-dash__meta {
+    margin: 0;
+    padding-left: 1.1em;
+    color: #475569;
+    font-size: 0.875rem;
+    line-height: 1.65;
+}
+@media (max-width: 960px) {
+    .uc-dash__stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
 @media (max-width: 640px) {
     .uc-checkin-banner {
         padding: 14px;
     }
     .uc-checkin-banner__btn {
         width: 100%;
+    }
+    .uc-dash__hero {
+        padding: 16px;
+    }
+    .uc-dash__hero-points {
+        align-items: flex-start;
+        width: 100%;
+    }
+    .uc-dash__stats,
+    .uc-dash__grid {
+        grid-template-columns: 1fr;
     }
 }

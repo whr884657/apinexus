@@ -233,7 +233,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `Auth.php` | **管理员**登录与会话 |
 | `UserAuth.php` | **用户**登录、注册、重置密码 |
 | `UserRole.php` | 用户角色常量与权限判断（普通用户/开发者） |
-| `FrontendUser.php` | 前台用户资料调度（用户名、头像、简介、博客、壁纸、角色） |
+| `FrontendUser.php` | 前台用户资料调度（用户名、头像、简介、博客、壁纸、角色）；`dashboardStats()` 控制台汇总（v13.8.0） |
 | `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间；归属含绑定身份下历史 userid=0） |
 | `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据 |
 | `RateLimitStore.php` | 限流计数存储（MySQL） |

@@ -8642,6 +8642,42 @@ select.vs-input.vs-select {
     color: var(--vs-text-secondary, #6b7280);
     line-height: 1.65;
 }
+/* 文档页元信息标签：与接口列表页同色系（勿仅用 vs-badge--default） */
+#apiDocsPage .doc-panel__meta .type-badge,
+#apiDocsPage .doc-panel__meta .key-badge,
+#apiDocsPage .doc-panel__meta .charge-badge,
+#apiDocsPage .doc-panel__meta .qpm-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+#apiDocsPage .type-badge--local { background: #eef2ff; color: #4338ca; }
+#apiDocsPage .type-badge--proxy { background: #fdf2f8; color: #be185d; }
+#apiDocsPage .key-badge--required { background: #fff0f0; color: #dc2626; }
+#apiDocsPage .key-badge--optional { background: #f0f6ff; color: #2563eb; }
+#apiDocsPage .key-badge--none { background: #f1f5f9; color: #64748b; }
+#apiDocsPage .charge-badge--free { background: #f0faf5; color: #15803d; }
+#apiDocsPage .charge-badge--points { background: #fff7e8; color: #e37318; }
+#apiDocsPage .qpm-badge--limit { background: #f5f3ff; color: #6d28d9; }
+#apiDocsPage .doc-panel__meta .vs-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+#apiDocsPage .doc-panel__meta .vs-badge--success { background: #f0faf5; color: #15803d; }
+#apiDocsPage .doc-panel__meta .vs-badge--warning { background: #fff7e8; color: #e37318; }
+#apiDocsPage .doc-panel__meta .vs-badge--error { background: #fff0f0; color: #dc2626; }
+#apiDocsPage .doc-panel__meta .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+
 #apiDocsPage .doc-panel__meta {
     display: flex;
     align-items: center;

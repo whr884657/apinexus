@@ -652,6 +652,13 @@
         html += methodBadgesHtml(api);
         html += '<span class="vs-api-item__url" data-field="call_url" title="' + escapeHtml(callUrl) + '">' + escapeHtml(callUrl) + '</span></div>';
         html += '<div class="vs-api-item__tags">';
+        var apitype = parseInt(api.apitype, 10);
+        if (isNaN(apitype)) {
+            apitype = 0;
+        }
+        var typeBadge = api.apitype_badge || (apitype === 1 ? '代理' : '本地');
+        html += '<span class="vs-api-tag ' + (apitype === 1 ? 'vs-api-tag--proxy' : 'vs-api-tag--local')
+            + '" data-field="apitype_badge">' + escapeHtml(typeBadge) + '</span>';
         if (category) {
             html += '<span class="vs-api-tag vs-api-tag--cat">' + escapeHtml(category) + '</span>';
         }
@@ -1089,6 +1096,474 @@
             }
             currentPage = parseInt(btn.getAttribute('data-page'), 10) || 1;
             applyListView();
+        });
+    }
+
+    /* ── AI 编写详细文档 / 代码示例（与管理员分片协议一致） ── */
+    var aiBanner = document.getElementById('userApiAiBanner');
+    var aiBannerText = document.getElementById('userApiAiBannerText');
+    var aiBannerTime = document.getElementById('userApiAiBannerTime');
+    var aiDocBtn = document.getElementById('userApiAiDocBtn');
+    var aiCodeBtn = document.getElementById('userApiAiCodeBtn');
+    var aiBusy = false;
+    var aiTickTimer = null;
+    var aiStageTimer = null;
+    var aiStartedAt = 0;
+
+    function setTextareaValue(el, text) {
+        if (!el) {
+            return;
+        }
+        el.value = text == null ? '' : String(text);
+        try {
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        } catch (err) {
+            var ev = document.createEvent('Event');
+            ev.initEvent('input', true, true);
+            el.dispatchEvent(ev);
+        }
+    }
+
+    function aiNow() {
+        var d = new Date();
+        function pad(n) { return n < 10 ? '0' + n : String(n); }
+        return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+
+    function aiTermEls(kind) {
+        if (kind === 'code') {
+            return {
+                details: document.getElementById('userApiAiTermCode'),
+                log: document.getElementById('userApiAiTermCodeLog')
+            };
+        }
+        return {
+            details: document.getElementById('userApiAiTermDoc'),
+            log: document.getElementById('userApiAiTermDocLog')
+        };
+    }
+
+    function aiTermClear(kind) {
+        var els = aiTermEls(kind);
+        if (els.log) {
+            els.log.textContent = '';
+        }
+    }
+
+    function aiTermAppend(kind, line) {
+        var els = aiTermEls(kind);
+        if (!els.log) {
+            return;
+        }
+        els.log.textContent += (els.log.textContent ? '\n' : '') + '[' + aiNow() + '] ' + line;
+        els.log.scrollTop = els.log.scrollHeight;
+    }
+
+    function aiTermOpen(kind, running) {
+        var els = aiTermEls(kind);
+        if (els.details) {
+            els.details.open = true;
+            if (running) {
+                els.details.classList.add('is-running');
+            } else {
+                els.details.classList.remove('is-running');
+            }
+        }
+    }
+
+    function aiTermStopRunning(kind) {
+        var els = aiTermEls(kind);
+        if (els.details) {
+            els.details.classList.remove('is-running');
+        }
+    }
+
+    function aiStopTimers() {
+        if (aiTickTimer) {
+            clearInterval(aiTickTimer);
+            aiTickTimer = null;
+        }
+        if (aiStageTimer) {
+            clearInterval(aiStageTimer);
+            aiStageTimer = null;
+        }
+    }
+
+    function aiSetBanner(state, text) {
+        if (!aiBanner) {
+            return;
+        }
+        aiBanner.hidden = false;
+        aiBanner.classList.remove('is-done', 'is-error');
+        if (state === 'done') {
+            aiBanner.classList.add('is-done');
+        } else if (state === 'error') {
+            aiBanner.classList.add('is-error');
+        }
+        if (aiBannerText) {
+            aiBannerText.textContent = text || '';
+        }
+    }
+
+    function aiHideBannerLater() {
+        setTimeout(function () {
+            if (!aiBusy && aiBanner) {
+                aiBanner.hidden = true;
+            }
+        }, 5000);
+    }
+
+    function aiElapsedLabel() {
+        var sec = Math.max(0, Math.floor((Date.now() - aiStartedAt) / 1000));
+        var m = Math.floor(sec / 60);
+        var s = sec % 60;
+        return (m > 0 ? (m + '分') : '') + s + '秒';
+    }
+
+    function getAiCodeOpts() {
+        var o = window.VS_AI_CODE || {};
+        var mode = o.mode === 'parallel' ? 'parallel' : 'sequential';
+        var conc = parseInt(o.concurrency, 10);
+        if (isNaN(conc) || conc < 1) {
+            conc = 3;
+        }
+        if (conc > 6) {
+            conc = 6;
+        }
+        return { mode: mode, concurrency: mode === 'parallel' ? conc : 1 };
+    }
+
+    function authWayLabel(way) {
+        var w = String(way || '').toLowerCase();
+        if (w === 'header') {
+            return 'Header';
+        }
+        if (w === 'bearer') {
+            return 'Bearer';
+        }
+        return 'Query';
+    }
+
+    function buildCodeJobs(payload) {
+        var langs = ['curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust'];
+        var need = parseInt(payload.needkey, 10) || 0;
+        var ways = need === 0 ? ['query'] : getSelectedKeyways();
+        ways = ways.filter(function (w) {
+            return w === 'query' || w === 'header' || w === 'bearer';
+        });
+        if (!ways.length) {
+            ways = ['query'];
+        }
+        var jobs = [];
+        ways.forEach(function (auth) {
+            langs.forEach(function (lang) {
+                jobs.push({ auth: auth, lang: lang });
+            });
+        });
+        return jobs;
+    }
+
+    function aiUnlockButtons() {
+        if (aiDocBtn) {
+            aiDocBtn.disabled = false;
+        }
+        if (aiCodeBtn) {
+            aiCodeBtn.disabled = false;
+        }
+        aiBusy = false;
+        aiStopTimers();
+        aiHideBannerLater();
+    }
+
+    function runAiCodePieces(payload, btn) {
+        var kind = 'code';
+        var title = '代码示例';
+        var jobs = buildCodeJobs(payload);
+        var opts = getAiCodeOpts();
+        var concurrency = opts.concurrency;
+        var pieces = new Array(jobs.length);
+        var failed = [];
+        var doneCount = 0;
+        var runningLabels = {};
+        var aidocEl = document.getElementById('userApiFormAidoc');
+
+        aiBusy = true;
+        aiStartedAt = Date.now();
+        aiStopTimers();
+        aiTermClear(kind);
+        aiTermOpen(kind, true);
+        aiTermAppend(kind, '开始分片生成「' + title + '」· 共 ' + jobs.length + ' 片 · '
+            + (opts.mode === 'parallel' ? ('并行×' + concurrency) : '单线程逐片'));
+        aiSetBanner('run', '代码示例 0/' + jobs.length);
+        if (aiBannerTime) {
+            aiBannerTime.textContent = '已用时 0秒';
+        }
+        if (aiDocBtn) {
+            aiDocBtn.disabled = true;
+        }
+        if (aiCodeBtn) {
+            aiCodeBtn.disabled = true;
+        }
+        if (btn) {
+            btn.disabled = true;
+        }
+
+        function refreshRunBanner() {
+            var running = Object.keys(runningLabels).map(function (k) {
+                return runningLabels[k];
+            });
+            var tip = '代码示例 ' + doneCount + '/' + jobs.length;
+            if (running.length) {
+                tip += ' · 进行中：' + running.slice(0, 3).join('、');
+                if (running.length > 3) {
+                    tip += ' 等';
+                }
+            }
+            tip += ' · ' + aiElapsedLabel();
+            aiSetBanner('run', tip);
+        }
+
+        aiTickTimer = setInterval(function () {
+            if (aiBannerTime) {
+                aiBannerTime.textContent = '已用时 ' + aiElapsedLabel();
+            }
+            if (aiBusy) {
+                refreshRunBanner();
+            }
+        }, 1000);
+
+        window.VS.showMessage('正在分片生成代码示例（' + jobs.length + ' 片）', 'info');
+
+        function finishAll() {
+            var okChunks = [];
+            pieces.forEach(function (p) {
+                if (p) {
+                    okChunks.push(p);
+                }
+            });
+            if (!okChunks.length) {
+                var failMsg = failed.length
+                    ? ('全部失败：' + failed.slice(0, 5).join('；') + (failed.length > 5 ? '…' : ''))
+                    : '未能生成任何代码块';
+                aiTermAppend(kind, failMsg);
+                aiTermStopRunning(kind);
+                aiSetBanner('error', failMsg);
+                window.VS.showMessage(failMsg, 'error');
+                return;
+            }
+            var merged = okChunks.join('\n\n');
+            setTextareaValue(aidocEl, merged);
+            aiTermAppend(kind, '已写入代码示例（成功 ' + okChunks.length + '/' + jobs.length
+                + '，约 ' + merged.length + ' 字符）');
+            if (failed.length) {
+                var warn = '部分示例未成功：' + failed.slice(0, 12).join('、')
+                    + (failed.length > 12 ? (' 等共 ' + failed.length + ' 项') : '');
+                aiTermAppend(kind, '注意：' + warn);
+                window.VS.showMessage(warn, 'info');
+            } else {
+                window.VS.showMessage('代码示例已全部生成', 'success');
+            }
+            aiTermAppend(kind, '完成，总用时 ' + aiElapsedLabel());
+            aiTermStopRunning(kind);
+            aiSetBanner('done', (failed.length ? '代码示例已部分生成' : '代码示例已生成')
+                + ' · 用时 ' + aiElapsedLabel());
+        }
+
+        function runPool() {
+            return new Promise(function (resolve) {
+                var next = 0;
+                var active = 0;
+                var settled = 0;
+
+                function kick() {
+                    while (active < concurrency && next < jobs.length) {
+                        (function (jobIndex) {
+                            var job = jobs[jobIndex];
+                            var label = authWayLabel(job.auth) + ' · ' + job.lang;
+                            var key = String(jobIndex);
+                            next += 1;
+                            active += 1;
+                            runningLabels[key] = label;
+                            aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 开始编写 · ' + label);
+                            refreshRunBanner();
+
+                            var piecePayload = {};
+                            Object.keys(payload).forEach(function (k) {
+                                piecePayload[k] = payload[k];
+                            });
+                            delete piecePayload.doc;
+                            delete piecePayload.aidoc;
+                            piecePayload.auth = job.auth;
+                            piecePayload.lang = job.lang;
+
+                            postAction('ai_gen_code_piece', piecePayload)
+                                .then(function (data) {
+                                    if (!data || data.code !== 1 || !data.piece) {
+                                        var err = (data && data.msg) || '生成失败';
+                                        failed.push(label + '（' + err + '）');
+                                        aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：' + err);
+                                        return;
+                                    }
+                                    pieces[jobIndex] = String(data.piece);
+                                    aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 完成 · ' + label
+                                        + '（' + String(data.piece).length + ' 字符）');
+                                })
+                                .catch(function () {
+                                    failed.push(label + '（网络异常）');
+                                    aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：网络异常');
+                                })
+                                .then(function () {
+                                    delete runningLabels[key];
+                                    active -= 1;
+                                    settled += 1;
+                                    doneCount += 1;
+                                    refreshRunBanner();
+                                    if (settled >= jobs.length) {
+                                        resolve();
+                                    } else {
+                                        kick();
+                                    }
+                                });
+                        })(next);
+                    }
+                }
+                if (!jobs.length) {
+                    resolve();
+                    return;
+                }
+                kick();
+            });
+        }
+
+        runPool().then(function () {
+            finishAll();
+        }).finally(function () {
+            aiUnlockButtons();
+        });
+    }
+
+    function runAiGenerate(action, btn) {
+        if (aiBusy) {
+            window.VS.showMessage('已有生成任务进行中，请稍候', 'info');
+            return;
+        }
+        var payload = collectPayload();
+        if (payload.__error) {
+            window.VS.showMessage(payload.__error, 'error');
+            return;
+        }
+        if (!payload.name) {
+            window.VS.showMessage('请先填写接口名称', 'error');
+            return;
+        }
+        delete payload.upkey;
+        delete payload.targeturl;
+        if (formMode === 'edit' && formId && formId.value) {
+            payload.api_id = formId.value;
+        }
+
+        if (action === 'ai_gen_code') {
+            runAiCodePieces(payload, btn);
+            return;
+        }
+
+        var kind = 'doc';
+        var title = '详细文档';
+        var stages = [
+            '已提交生成请求',
+            '正在整理接口上下文…',
+            '正在请求大模型撰写详细文档…',
+            '模型正在编写参数表与响应说明…',
+            '仍在生成中，请耐心等待…',
+            '接近完成，正在整理 Markdown…'
+        ];
+        var docEl = document.getElementById('userApiFormDoc');
+
+        aiBusy = true;
+        aiStartedAt = Date.now();
+        aiStopTimers();
+        aiTermClear(kind);
+        aiTermOpen(kind, true);
+        aiTermAppend(kind, '开始生成「' + title + '」');
+        aiSetBanner('run', '正在生成' + title + '…');
+        if (aiBannerTime) {
+            aiBannerTime.textContent = '已用时 0秒';
+        }
+        if (aiDocBtn) {
+            aiDocBtn.disabled = true;
+        }
+        if (aiCodeBtn) {
+            aiCodeBtn.disabled = true;
+        }
+        if (btn) {
+            btn.disabled = true;
+        }
+
+        var stageIdx = 0;
+        var longWaitHinted = false;
+        aiTermAppend(kind, stages[0]);
+        aiTickTimer = setInterval(function () {
+            if (aiBannerTime) {
+                aiBannerTime.textContent = '已用时 ' + aiElapsedLabel();
+            }
+            if (aiBannerText && aiBanner && !aiBanner.classList.contains('is-done') && !aiBanner.classList.contains('is-error')) {
+                aiBannerText.textContent = '正在生成' + title + '…（' + aiElapsedLabel() + '）';
+            }
+        }, 1000);
+        aiStageTimer = setInterval(function () {
+            stageIdx += 1;
+            var elapsed = Math.floor((Date.now() - aiStartedAt) / 1000);
+            if (!longWaitHinted && elapsed >= 55) {
+                longWaitHinted = true;
+                aiTermAppend(kind, '已等待较久。若仍无结果，请联系管理员检查 AI 对接配置');
+            }
+            if (stageIdx >= stages.length) {
+                aiTermAppend(kind, '仍在等待上游响应（已 ' + aiElapsedLabel() + '）…');
+                return;
+            }
+            aiTermAppend(kind, stages[stageIdx]);
+            if (aiBannerText && aiBanner && !aiBanner.classList.contains('is-done') && !aiBanner.classList.contains('is-error')) {
+                aiSetBanner('run', stages[stageIdx]);
+            }
+        }, 4500);
+
+        window.VS.showMessage('正在生成' + title, 'info');
+        postAction(action, payload)
+            .then(function (data) {
+                if (!data || data.code !== 1) {
+                    var err = (data && data.msg) || '生成失败';
+                    aiTermAppend(kind, '失败：' + err);
+                    aiTermStopRunning(kind);
+                    aiSetBanner('error', err);
+                    window.VS.showMessage(err, 'error');
+                    return;
+                }
+                setTextareaValue(docEl, data.doc || '');
+                aiTermAppend(kind, '已写入详细文档（约 ' + String(data.doc || '').length + ' 字符）');
+                aiTermAppend(kind, '完成，总用时 ' + aiElapsedLabel());
+                aiTermStopRunning(kind);
+                aiSetBanner('done', '详细文档已生成 · 用时 ' + aiElapsedLabel());
+                window.VS.showMessage(data.msg || '详细文档已生成', 'success');
+            })
+            .catch(function () {
+                aiTermAppend(kind, '失败：网络异常或网关超时');
+                aiTermStopRunning(kind);
+                aiSetBanner('error', '网络异常或网关超时');
+                window.VS.showMessage('网络异常，请稍后重试', 'error');
+            })
+            .finally(function () {
+                aiUnlockButtons();
+            });
+    }
+
+    if (aiDocBtn) {
+        aiDocBtn.addEventListener('click', function () {
+            runAiGenerate('ai_gen_doc', aiDocBtn);
+        });
+    }
+    if (aiCodeBtn) {
+        aiCodeBtn.addEventListener('click', function () {
+            runAiGenerate('ai_gen_code', aiCodeBtn);
         });
     }
 

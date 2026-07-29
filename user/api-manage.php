@@ -174,6 +174,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ));
     }
 
+    if ($action === 'ai_gen_doc' || $action === 'ai_gen_code' || $action === 'ai_gen_code_piece') {
+        if (!class_exists('AiConfig') || !AiConfig::isReady()) {
+            AjaxResponse::error('请先联系管理员在系统设置中启用并配置 AI');
+        }
+        @ignore_user_abort(true);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        $data = $payloadFromPost();
+        $data['id'] = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
+        if ($data['id'] > 0) {
+            $owned = $assertOwner($data['id']);
+            if (!is_array($owned)) {
+                AjaxResponse::error($owned);
+            }
+            $call = ApiManager::resolveCallUrl($owned);
+            if ($call !== '') {
+                $data['endpoint'] = $call;
+                $data['callurl'] = $call;
+            }
+            if (empty($data['proxyslug']) && isset($owned['proxyslug'])) {
+                $data['proxyslug'] = $owned['proxyslug'];
+            }
+            if (!isset($data['apitype'])) {
+                $data['apitype'] = isset($owned['apitype']) ? (int) $owned['apitype'] : ApiManager::APITYPE_PROXY;
+            }
+        }
+        $aiCfg = AiConfig::get();
+        $aiTimeout = (int) (isset($aiCfg['timeout']) ? $aiCfg['timeout'] : 60);
+        if ($aiTimeout < 30) {
+            $aiTimeout = 30;
+        }
+        if ($aiTimeout > 300) {
+            $aiTimeout = 300;
+        }
+        @set_time_limit($aiTimeout + 60);
+        unset(
+            $data['upkey'],
+            $data['targeturl'],
+            $data['upuamode'],
+            $data['upuapreset'],
+            $data['upua'],
+            $data['upreferermode'],
+            $data['upreferer'],
+            $data['upkeyvia'],
+            $data['upkeyname'],
+            $data['upauth']
+        );
+
+        if ($action === 'ai_gen_doc') {
+            $gen = AiApiDoc::generateDetailDoc($data);
+            if (!is_array($gen)) {
+                AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+            }
+            AjaxResponse::success('详细文档已生成', array('doc' => $gen['doc']));
+        }
+
+        if ($action === 'ai_gen_code_piece') {
+            $auth = isset($_POST['auth']) ? (string) $_POST['auth'] : '';
+            $lang = isset($_POST['lang']) ? (string) $_POST['lang'] : '';
+            $gen = AiApiDoc::generateCodeSamplePiece($data, $auth, $lang);
+            if (!is_array($gen)) {
+                AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+            }
+            AjaxResponse::success('单片已生成', array(
+                'piece' => $gen['piece'],
+                'auth'  => $gen['auth'],
+                'lang'  => $gen['lang'],
+            ));
+        }
+
+        $gen = AiApiDoc::generateCodeSamples($data);
+        if (!is_array($gen)) {
+            AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+        }
+        $payload = array('aidoc' => $gen['aidoc']);
+        if (!empty($gen['warning'])) {
+            $payload['warning'] = (string) $gen['warning'];
+        }
+        $okMsg = !empty($gen['warning']) ? '代码示例已部分生成' : '代码示例已生成';
+        AjaxResponse::success($okMsg, $payload);
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
@@ -185,6 +268,8 @@ $apis = $tableReady ? ApiManager::listByUser($userId) : array();
 $categories = ApiCategoryManager::tableReady() ? ApiCategoryManager::listEnabled() : array();
 $defaultIconPaths = ApiCategoryManager::defaultIconPaths();
 $iconBase = rtrim(vs_base_url(), '/');
+$aiReady = class_exists('AiConfig') && AiConfig::isReady();
+$aiCodeOpts = class_exists('AiConfig') ? AiConfig::codeClientOptions() : array('mode' => 'sequential', 'concurrency' => 1, 'ready' => false);
 
 /**
  * @param array $row
@@ -237,6 +322,12 @@ function vs_render_user_api_item(array $row)
             <span class="vs-api-item__url" data-field="call_url" title="<?php echo vs_e($callUrl); ?>"><?php echo vs_e($callUrl); ?></span>
         </div>
         <div class="vs-api-item__tags">
+            <?php
+            $apitype = isset($api['apitype']) ? (int) $api['apitype'] : ApiManager::APITYPE_LOCAL;
+            $typeBadge = isset($api['apitype_badge']) ? (string) $api['apitype_badge'] : ApiManager::apiTypeBadge($apitype);
+            $typeTagClass = ($apitype === ApiManager::APITYPE_PROXY) ? 'vs-api-tag--proxy' : 'vs-api-tag--local';
+            ?>
+            <span class="vs-api-tag <?php echo $typeTagClass; ?>" data-field="apitype_badge"><?php echo vs_e($typeBadge !== '' ? $typeBadge : ($apitype === ApiManager::APITYPE_PROXY ? '代理' : '本地')); ?></span>
             <?php if ($category !== ''): ?>
                 <span class="vs-api-tag vs-api-tag--cat"><?php echo vs_e($category); ?></span>
             <?php endif; ?>
@@ -538,13 +629,47 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
                           placeholder='{"code":1,"msg":"ok","data":{}}'></textarea>
                 <p class="vs-form-hint">返回示例保持 JSON 文本填写即可。</p>
             </div>
-            <div class="vs-form-row">
-                <label class="vs-label" for="userApiFormDoc">详细文档（Markdown）</label>
-                <textarea class="vs-input vs-textarea" id="userApiFormDoc" name="doc" rows="5" data-vs-md></textarea>
+            <div class="vs-ai-gen-banner" id="userApiAiBanner" hidden>
+                <span class="vs-ai-gen-banner__dot" aria-hidden="true"></span>
+                <span class="vs-ai-gen-banner__text" id="userApiAiBannerText">正在生成…</span>
+                <span class="vs-ai-gen-banner__time" id="userApiAiBannerTime"></span>
             </div>
             <div class="vs-form-row">
-                <label class="vs-label" for="userApiFormAidoc">代码示例（Markdown）</label>
-                <textarea class="vs-input vs-textarea" id="userApiFormAidoc" name="aidoc" rows="5" data-vs-md></textarea>
+                <div class="vs-api-doc-head">
+                    <label class="vs-label" for="userApiFormDoc">详细文档（Markdown）</label>
+                    <?php if ($aiReady): ?>
+                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiDocBtn"
+                                title="根据已填接口资料生成">AI 生成详细文档</button>
+                    <?php endif; ?>
+                </div>
+                <textarea class="vs-input vs-textarea" id="userApiFormDoc" name="doc" rows="5"
+                          data-vs-md="off" placeholder="面向调用方的详细说明…"></textarea>
+                <p class="vs-form-hint"><?php echo $aiReady
+                    ? '建议由 AI 生成后人工微调；勿写入上游地址或密钥。'
+                    : '管理员启用 AI 后可一键生成；亦可手写 Markdown。'; ?></p>
+                <?php if ($aiReady): ?>
+                <details class="vs-ai-term" id="userApiAiTermDoc" data-ai-term="doc">
+                    <summary class="vs-ai-term__summary">AI 编写进程（详细文档）</summary>
+                    <pre class="vs-ai-term__log font-mono" id="userApiAiTermDocLog">尚未开始生成。</pre>
+                </details>
+                <?php endif; ?>
+            </div>
+            <div class="vs-form-row">
+                <div class="vs-api-doc-head">
+                    <label class="vs-label" for="userApiFormAidoc">代码示例（Markdown）</label>
+                    <?php if ($aiReady): ?>
+                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiCodeBtn"
+                                title="按鉴权方式与语言分片生成">AI 生成代码示例</button>
+                    <?php endif; ?>
+                </div>
+                <textarea class="vs-input vs-textarea" id="userApiFormAidoc" name="aidoc" rows="5"
+                          data-vs-md="off" placeholder="多语言调用示例…"></textarea>
+                <?php if ($aiReady): ?>
+                <details class="vs-ai-term" id="userApiAiTermCode" data-ai-term="code">
+                    <summary class="vs-ai-term__summary">AI 编写进程（代码示例）</summary>
+                    <pre class="vs-ai-term__log font-mono" id="userApiAiTermCodeLog">尚未开始生成。</pre>
+                </details>
+                <?php endif; ?>
             </div>
             <div class="vs-form-row">
                 <label class="vs-label">接口图标</label>
@@ -576,4 +701,7 @@ vs_user_layout_start('API 管理', 'api-manage', $headerActions);
 
 <?php
 echo Markdown::renderAssetsHtml();
+if ($tableReady && !empty($aiReady)) {
+    echo '<script>window.VS_AI_CODE=' . json_encode($aiCodeOpts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
+}
 vs_user_layout_end($tableReady ? array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'user-api-manage.js') : array());
