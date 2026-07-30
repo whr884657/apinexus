@@ -10635,3 +10635,89 @@ select.vs-input.vs-select {
         grid-template-columns: 1fr;
     }
 }
+
+/* ========== 管理员后台轻交互动效（v13.20.1）========== */
+.vs-admin-shell .vs-panel,
+.vs-admin-shell .vs-card,
+.vs-admin-shell .vs-stat-card,
+.vs-admin-shell .vs-list-card,
+.vs-admin-shell .vs-feedback-card,
+.vs-admin-shell .vs-mobile-card {
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+.vs-admin-shell .vs-panel:hover,
+.vs-admin-shell .vs-card:hover,
+.vs-admin-shell .vs-stat-card:hover,
+.vs-admin-shell .vs-list-card:hover,
+.vs-admin-shell .vs-feedback-card:hover,
+.vs-admin-shell .vs-mobile-card:hover {
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+.vs-admin-shell .vs-panel.is-pressed,
+.vs-admin-shell .vs-card.is-pressed,
+.vs-admin-shell .vs-stat-card.is-pressed,
+.vs-admin-shell .vs-list-card.is-pressed,
+.vs-admin-shell .vs-feedback-card.is-pressed,
+.vs-admin-shell .vs-mobile-card.is-pressed {
+    transform: scale(0.995);
+}
+
+.vs-admin-shell .vs-table tbody tr {
+    transition: background-color 0.14s ease;
+}
+.vs-admin-shell .vs-table tbody tr:hover td {
+    background: rgba(37, 99, 235, 0.04);
+}
+
+.vs-admin-shell .vs-btn {
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.vs-admin-shell .vs-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+.vs-admin-shell .vs-btn:active:not(:disabled),
+.vs-admin-shell .vs-btn.is-pressed:not(:disabled) {
+    transform: translateY(0) scale(0.97);
+}
+
+.vs-admin-shell .vs-sidebar__link,
+.vs-admin-shell .vs-sidebar__group-btn,
+.vs-admin-shell .vs-tabs__btn,
+.vs-admin-shell .vs-pick__trigger,
+.vs-admin-shell .vs-nav-tab,
+.vs-admin-shell .vs-filter-chip {
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.vs-admin-shell .vs-sidebar__link:active,
+.vs-admin-shell .vs-tabs__btn:active,
+.vs-admin-shell .vs-filter-chip:active {
+    transform: scale(0.98);
+}
+
+.vs-admin-shell .vs-accordion__head {
+    transition: background-color 0.15s ease;
+}
+.vs-admin-shell .vs-form .vs-input,
+.vs-admin-shell .vs-form .vs-select,
+.vs-admin-shell .vs-form textarea.vs-input {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vs-admin-shell .vs-panel,
+    .vs-admin-shell .vs-card,
+    .vs-admin-shell .vs-stat-card,
+    .vs-admin-shell .vs-list-card,
+    .vs-admin-shell .vs-feedback-card,
+    .vs-admin-shell .vs-mobile-card,
+    .vs-admin-shell .vs-btn,
+    .vs-admin-shell .vs-sidebar__link,
+    .vs-admin-shell .vs-tabs__btn,
+    .vs-admin-shell .vs-filter-chip,
+    .vs-admin-shell .vs-table tbody tr {
+        transition: none !important;
+        transform: none !important;
+        animation: none !important;
+    }
+}
+

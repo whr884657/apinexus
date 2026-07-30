@@ -127,5 +127,37 @@
         refreshReviewBadgePlacement();
     }
 
-    document.addEventListener('DOMContentLoaded', initSidebar);
+    /** 全后台轻按下反馈（面板/卡片/按钮），尊重减少动态偏好 */
+    function initPressFeedback() {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+        var shell = document.getElementById('vsAdminShell') || document.body;
+        if (!shell) return;
+        var SEL = '.vs-panel, .vs-card, .vs-stat-card, .vs-list-card, .vs-feedback-card, .vs-mobile-card, .vs-btn';
+
+        function clearPressed() {
+            var list = shell.querySelectorAll('.is-pressed');
+            for (var i = 0; i < list.length; i++) {
+                list[i].classList.remove('is-pressed');
+            }
+        }
+
+        shell.addEventListener('pointerdown', function (ev) {
+            var t = ev.target;
+            if (!t || !t.closest) return;
+            var el = t.closest(SEL);
+            if (!el || !shell.contains(el)) return;
+            if (el.disabled || el.getAttribute('aria-disabled') === 'true') return;
+            el.classList.add('is-pressed');
+        });
+        shell.addEventListener('pointerup', clearPressed);
+        shell.addEventListener('pointercancel', clearPressed);
+        shell.addEventListener('pointerleave', clearPressed, true);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initSidebar();
+        initPressFeedback();
+    });
 })();
