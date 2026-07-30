@@ -110,6 +110,12 @@
     font-weight: 700;
     letter-spacing: -0.02em;
 }
+.uc-dash__hint {
+    margin: 6px 0 0;
+    font-size: 0.8125rem;
+    opacity: 0.88;
+    line-height: 1.45;
+}
 .uc-dash__sub {
     margin: 6px 0 0;
     font-size: 0.875rem;
@@ -131,14 +137,14 @@
 .uc-dash__chip--bound {
     background: rgba(34, 197, 94, 0.28);
 }
-/* KPI：普通用户 4 卡；开发者 5 卡（含「发布被调用」） */
+/* KPI：普通 5 卡 / 开发者 6 卡 */
 .uc-dash__kpi {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
 }
-.uc-dash__kpi.is-five {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+.uc-dash__kpi.is-six {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 .uc-dash__kpi-card {
     padding: 14px 16px;
@@ -149,6 +155,15 @@
     flex-direction: column;
     gap: 6px;
     min-width: 0;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.uc-dash__kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    border-color: #dbe3ee;
+}
+.uc-dash__kpi-card.is-pressed {
+    transform: scale(0.985);
 }
 .uc-dash__kpi-label {
     font-size: 0.75rem;
@@ -167,14 +182,94 @@
     color: #94a3b8;
     line-height: 1.4;
 }
-@media (max-width: 1200px) {
+.uc-dash__panel {
+    margin: 0;
+}
+.uc-dash__sys {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.uc-dash__sys-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f8fafc;
+    min-width: 0;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.uc-dash__sys-item:hover {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+}
+.uc-dash__sys-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.uc-dash__sys-dot.is-warn { background: #e37318; }
+.uc-dash__sys-dot.is-danger { background: #dc2626; }
+.uc-dash__sys-dot.is-info { background: #2563eb; }
+.uc-dash__sys-dot.is-neutral { background: #64748b; }
+.uc-dash__sys-dot.is-success { background: #15803d; }
+.uc-dash__sys-name {
+    flex: 0 0 auto;
+    font-size: 0.8125rem;
+    color: #64748b;
+    font-weight: 600;
+}
+.uc-dash__sys-num {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    font-weight: 700;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+}
+.uc-dash__sys-num--text {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* 入场动效 */
+.uc-motion {
+    animation: ucFadeUp 0.42s ease both;
+}
+.uc-dash__kpi-card.uc-motion:nth-child(1) { animation-delay: 0.04s; }
+.uc-dash__kpi-card.uc-motion:nth-child(2) { animation-delay: 0.08s; }
+.uc-dash__kpi-card.uc-motion:nth-child(3) { animation-delay: 0.12s; }
+.uc-dash__kpi-card.uc-motion:nth-child(4) { animation-delay: 0.16s; }
+.uc-dash__kpi-card.uc-motion:nth-child(5) { animation-delay: 0.2s; }
+.uc-dash__kpi-card.uc-motion:nth-child(6) { animation-delay: 0.24s; }
+.uc-dash__panel.uc-motion { animation-delay: 0.18s; }
+@keyframes ucFadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .uc-motion,
+    .uc-dash__kpi-card {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+@media (max-width: 1280px) {
+    .uc-dash__kpi.is-six {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
     .uc-dash__kpi.is-five {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 @media (max-width: 960px) {
     .uc-dash__kpi,
-    .uc-dash__kpi.is-five {
+    .uc-dash__kpi.is-five,
+    .uc-dash__kpi.is-six {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }

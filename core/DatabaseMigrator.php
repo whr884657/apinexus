@@ -114,6 +114,12 @@ class DatabaseMigrator
             $prefix = Database::prefix();
 
             foreach ($pending as $version => $file) {
+                // 新装最终结构已满足时跳过会改旧列名的脚本（E201：require_key → needkey）
+                if (self::isMigrationObsolete($version)) {
+                    self::markApplied($version);
+                    $applied[] = $version;
+                    continue;
+                }
                 self::executeFile($pdo, $file, $prefix);
                 if (self::hasSchemaProbe($version) && !self::versionSchemaReady($version)) {
                     throw new Exception('版本 v' . $version . ' 结构更新后校验失败');
@@ -207,6 +213,11 @@ class DatabaseMigrator
 
         if (!in_array('3.8.0', $applied, true) && self::tableColumnExists('api', 'audit')) {
             self::markApplied('3.8.0');
+        }
+
+        // 新装已是 needkey：3.7.1 仍写 require_key，必须跳过（E201）
+        if (!in_array('3.7.1', $applied, true) && self::tableColumnExists('api', 'needkey')) {
+            self::markApplied('3.7.1');
         }
 
         // 新装已含 3.9.0（字段去下划线）时跳过迁移
@@ -710,12 +721,15 @@ class DatabaseMigrator
         }
         uksort($candidates, 'version_compare');
 
+        // 先按表结构补标 / 识别过时脚本，避免 force 路径 unmark 后误跑旧列名 SQL
+        self::reconcileSchemaState();
+
         $appliedNow = array();
         $pdo = Database::connect();
         $prefix = Database::prefix();
 
         foreach ($candidates as $version => $file) {
-            if (self::versionSchemaReady($version)) {
+            if (self::versionSchemaReady($version) || self::isMigrationObsolete($version)) {
                 self::markApplied($version);
                 continue;
             }
@@ -751,6 +765,76 @@ class DatabaseMigrator
     {
         $version = trim((string) $version);
         return ($version === '7.0.0' || $version === '7.1.0' || $version === '10.12.0');
+    }
+
+    /**
+     * 迁移是否对当前库已过时（新装最终结构下禁止再跑旧列名脚本）
+     *
+     * E201：新装 database.sql 已是 needkey/aidoc 终态，但安装未写入 schema_migrations 时，
+     * 升级 pending 会误跑 3.6.0（DROP api）/ 3.7.1～3.8.0（require_key）/ 3.9.0（CHANGE 旧列）。
+     *
+     * @param string $version
+     * @return bool
+     */
+    public static function isMigrationObsolete($version)
+    {
+        $version = self::normalizeVersionToken($version);
+        // 3.6.0 会 DROP 重建旧结构，现代库只要已有 needkey 或 aidoc 即禁止再跑
+        if ($version === '3.6.0') {
+            return self::tableColumnExists('api', 'needkey')
+                || self::tableColumnExists('api', 'aidoc');
+        }
+        if ($version === '3.7.1' || $version === '3.8.0' || $version === '3.9.0') {
+            return self::tableColumnExists('api', 'needkey')
+                && !self::tableColumnExists('api', 'require_key');
+        }
+        return false;
+    }
+
+    /**
+     * 新装完成后：将 <= 当前代码版本的全部迁移标记为已应用
+     * （新装走 database.sql 终态，禁止升级时再跑历史增量）
+     *
+     * @param string $codeVersion
+     * @return int 新标记的版本数
+     */
+    public static function seedAppliedUpTo($codeVersion)
+    {
+        $codeVersion = self::normalizeVersionToken($codeVersion);
+        if ($codeVersion === '' || !InstallChecker::isInstalled()) {
+            return 0;
+        }
+
+        $dir = self::migrationsDir();
+        if (!is_dir($dir)) {
+            return 0;
+        }
+
+        $files = glob($dir . '/*.sql');
+        if ($files === false || count($files) === 0) {
+            return 0;
+        }
+
+        $applied = self::getAppliedVersions();
+        $added = 0;
+        foreach ($files as $file) {
+            $base = basename($file, '.sql');
+            if (!preg_match('/^\d+\.\d+\.\d+$/', $base)) {
+                continue;
+            }
+            if (version_compare($base, $codeVersion, '>')) {
+                continue;
+            }
+            if (!in_array($base, $applied, true)) {
+                $applied[] = $base;
+                $added++;
+            }
+        }
+        if ($added > 0) {
+            usort($applied, 'version_compare');
+            self::writeAppliedVersions($applied);
+        }
+        return $added;
     }
 
     /**

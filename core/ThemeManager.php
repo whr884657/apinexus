@@ -787,6 +787,65 @@ class ThemeManager
         require $viewFile;
     }
 
+    /**
+     * 用户中心登录后业务页视图（各主题独立模板，禁止跨主题共用 HTML）
+     *
+     * 路由仅放在 user/*.php；视图必须在 core/theme/{id}/user/pages/{pageKey}.php
+     *
+     * @param string $pageKey        如 dashboard / points / account
+     * @param string $pageTitle
+     * @param string $activeMenu     侧栏高亮
+     * @param array  $pageData       注入视图变量
+     * @param string $headerActions  标题行右侧 HTML
+     * @param array  $extraScripts   页脚额外脚本（站点 assets/js）
+     * @return void
+     */
+    public static function renderUserPage(
+        $pageKey,
+        $pageTitle,
+        $activeMenu = '',
+        array $pageData = array(),
+        $headerActions = '',
+        array $extraScripts = array()
+    ) {
+        if (!defined('VS_THEME_RENDER')) {
+            define('VS_THEME_RENDER', true);
+        }
+
+        $pageKey = preg_replace('/[^a-z0-9]/i', '', (string) $pageKey);
+        $viewFile = self::resolveActiveThemeFile('user/pages/' . $pageKey . '.php');
+        if ($viewFile === '') {
+            self::renderUserLayoutStart($pageTitle, $activeMenu, $headerActions);
+            echo '<div class="vs-alert vs-alert--error">用户中心主题页面缺失：' . vs_e($pageKey) . '</div>';
+            self::renderUserLayoutEnd($extraScripts);
+            return;
+        }
+
+        global $vsUser, $vsUserProfile, $vsBase, $vsSiteName;
+
+        $ctx = array_merge(
+            array(
+                'vsBase'        => isset($vsBase) ? $vsBase : vs_base_url(),
+                'vsUser'        => isset($vsUser) ? $vsUser : null,
+                'vsUserProfile' => isset($vsUserProfile) ? $vsUserProfile : null,
+                'vsSiteName'    => isset($vsSiteName) ? $vsSiteName : SiteContext::siteName(),
+                'siteName'      => SiteContext::siteName(),
+                'navName'       => SiteContext::navName(),
+                'systemName'    => SiteContext::systemName(),
+                'pageTitle'     => $pageTitle,
+                'pageKey'       => $pageKey,
+                'activeMenu'    => $activeMenu,
+                'themeId'       => self::activeId(),
+            ),
+            $pageData
+        );
+
+        self::renderUserLayoutStart($pageTitle, $activeMenu, $headerActions);
+        extract($ctx, EXTR_SKIP);
+        require $viewFile;
+        self::renderUserLayoutEnd($extraScripts);
+    }
+
     public static function assetUrl($themeId, $relative)
     {
         $themeId = trim((string) $themeId);

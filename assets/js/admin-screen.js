@@ -36,12 +36,14 @@
     var mapRoamBound = false;
     var mapRegistered = { china: false, world: false };
     var pollTimer = null;
-    var softTimer = null;
     var clockTimer = null;
     var clockBaseMs = 0;
     var clockOffset = 0;
-    var liveIntervalMs = 5000;
-    var softIntervalMs = 45000;
+    var liveIntervalMs = 10000;
+    var liveInFlight = false;
+    var softInFlight = false;
+    var softEveryN = 6;
+    var liveTickCount = 0;
     var topMarqueeRaf = null;
     var topMarqueeY = 0;
     var topMarqueePaused = false;
@@ -53,18 +55,16 @@
         boot = {};
     }
     liveIntervalMs = readLiveIntervalMs(boot.live_interval);
-    softIntervalMs = Math.max(15000, liveIntervalMs * 6);
-
-    function syncSoftIntervalFromLive() {
-        softIntervalMs = Math.max(15000, liveIntervalMs * 6);
-        restartSoftPoll();
-    }
 
     function readLiveIntervalMs(v) {
         var n = parseInt(v, 10);
-        if (isNaN(n) || n < 1) n = 5;
-        if (n > 5) n = 5;
+        if (isNaN(n) || n < 1) n = 10;
+        if (n > 30) n = 30;
         return n * 1000;
+    }
+
+    function pageVisible() {
+        return typeof document.hidden === 'undefined' || !document.hidden;
     }
 
     function esc(s) {
@@ -785,7 +785,6 @@
             if (next !== liveIntervalMs) {
                 liveIntervalMs = next;
                 restartLivePoll();
-                syncSoftIntervalFromLive();
             }
         }
         if (boot.server_time) syncClock(boot.server_time);
@@ -808,7 +807,6 @@
             if (next !== liveIntervalMs) {
                 liveIntervalMs = next;
                 restartLivePoll();
-                syncSoftIntervalFromLive();
             }
         }
         if (live.kpi) {
@@ -882,13 +880,24 @@
     }
 
     function pollLive() {
+        if (liveInFlight || !pageVisible()) return;
+        liveInFlight = true;
         post('live').then(function (res) {
             if (!res || res.code !== 1 || !res.live) return;
             mergeLive(res.live);
-        }).catch(function () { /* 静默 */ });
+        }).catch(function () { /* 静默 */ }).then(function () {
+            liveInFlight = false;
+            liveTickCount += 1;
+            if (pageVisible() && !softInFlight
+                && liveTickCount > 0 && (liveTickCount % softEveryN) === 0) {
+                softSnapshot();
+            }
+        });
     }
 
     function softSnapshot() {
+        if (softInFlight || !pageVisible()) return;
+        softInFlight = true;
         post('snapshot').then(function (res) {
             if (!res || res.code !== 1 || !res.snapshot) return;
             var snap = res.snapshot;
@@ -929,7 +938,9 @@
             renderKpi(boot.kpi, boot.current_rpm);
             if (mapRegistered[mapMode]) applyMapOption();
             else loadMap(mapMode);
-        }).catch(function () { /* 静默 */ });
+        }).catch(function () { /* 静默 */ }).then(function () {
+            softInFlight = false;
+        });
     }
 
     function restartLivePoll() {
@@ -937,15 +948,20 @@
             clearInterval(pollTimer);
             pollTimer = null;
         }
+        if (!pageVisible()) {
+            return;
+        }
+        if (!liveInFlight) {
+            pollLive();
+        }
         pollTimer = setInterval(pollLive, liveIntervalMs);
     }
 
-    function restartSoftPoll() {
-        if (softTimer) {
-            clearInterval(softTimer);
-            softTimer = null;
+    function stopLivePoll() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
         }
-        softTimer = setInterval(softSnapshot, softIntervalMs);
     }
 
     document.addEventListener('fullscreenchange', function () {
@@ -1033,7 +1049,14 @@
     renderAll(boot);
     clockTimer = setInterval(tickClock, 1000);
     restartLivePoll();
-    restartSoftPoll();
+
+    document.addEventListener('visibilitychange', function () {
+        if (pageVisible()) {
+            restartLivePoll();
+        } else {
+            stopLivePoll();
+        }
+    });
 
     var topViewport = document.getElementById('dsTopViewport');
     if (topViewport) {
@@ -1043,8 +1066,7 @@
 
     window.addEventListener('beforeunload', function () {
         stopTopMarquee();
-        if (pollTimer) clearInterval(pollTimer);
-        if (softTimer) clearInterval(softTimer);
+        stopLivePoll();
         if (clockTimer) clearInterval(clockTimer);
         if (mapChart) {
             try { mapChart.dispose(); } catch (e) { /* ignore */ }

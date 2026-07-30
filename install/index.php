@@ -154,6 +154,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 writeDatabaseConfig($dbConfig);
                 writeInstallLock();
 
+                // 新装已是 database.sql 终态：标记全部历史迁移已应用，避免升级误跑 require_key 等旧脚本（E201）
+                try {
+                    if (class_exists('Config')) {
+                        Config::clearCache();
+                    }
+                    if (class_exists('DatabaseMigrator') && defined('VS_VERSION')) {
+                        DatabaseMigrator::seedAppliedUpTo(VS_VERSION);
+                    }
+                } catch (Exception $seedEx) {
+                    // 播种失败不阻断安装；升级时仍靠 reconcile / isMigrationObsolete 兜底
+                }
+
                 unset($_SESSION['vs_install_db'], $_SESSION['vs_db_tested'], $_SESSION['vs_tables_created']);
 
                 vs_redirect(vs_base_url() . '/install/?step=5');

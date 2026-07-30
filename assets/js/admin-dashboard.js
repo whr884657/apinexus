@@ -11,17 +11,20 @@
     var BAR_COLORS = ['#2563eb', '#06b6d4', '#8b5cf6', '#f59e0b', '#10b981', '#ec4899', '#3b82f6', '#14b8a6', '#a855f7', '#fb923c'];
     var boot = {};
     var pollTimer = null;
-    var softTimer = null;
     var clockTimer = null;
     var loading = false;
     var softLoading = false;
+    var liveInFlight = false;
     var pendingForceRefresh = false;
     var ready = false;
     var initialPending = false;
     var snapshotRetryLeft = 1;
     var clockBaseMs = 0;
     var clockOffset = 0;
-    var liveIntervalMs = 5000;
+    var liveIntervalMs = 10000;
+    /** 每 N 次 live 后软刷趋势/TOP（合并独立 soft 定时器，降 POST 频次，E202） */
+    var softEveryN = 6;
+    var liveTickCount = 0;
     var topMarqueeRaf = null;
     var topMarqueeY = 0;
     var topMarqueePaused = false;
@@ -38,9 +41,13 @@
 
     function readLiveIntervalMs(v) {
         var n = parseInt(v, 10);
-        if (isNaN(n) || n < 1) n = 5;
-        if (n > 5) n = 5;
+        if (isNaN(n) || n < 1) n = 10;
+        if (n > 30) n = 30;
         return n * 1000;
+    }
+
+    function pageVisible() {
+        return typeof document.hidden === 'undefined' || !document.hidden;
     }
 
     function weekdayLabel(ts) {
@@ -752,7 +759,6 @@
             if (next !== liveIntervalMs) {
                 liveIntervalMs = next;
                 restartLivePoll();
-                restartSoftPoll();
             }
         }
     }
@@ -900,11 +906,20 @@
     }
 
     function pollLive() {
-        if (!ready || loading) return;
+        if (!ready || loading || liveInFlight || !pageVisible()) return;
+        liveInFlight = true;
         post('live').then(function (res) {
             if (!res || res.code !== 1 || !res.live) return;
             mergeLive(res.live);
-        }).catch(function () { /* 静默 */ });
+        }).catch(function () { /* 静默 */ }).then(function () {
+            liveInFlight = false;
+            liveTickCount += 1;
+            // 软刷挂在 live 之后串行触发，避免双定时器并发 POST
+            if (pageVisible() && ready && !loading && !softLoading
+                && liveTickCount > 0 && (liveTickCount % softEveryN) === 0) {
+                fetchSnapshot(false);
+            }
+        });
     }
 
     function restartLivePoll() {
@@ -912,21 +927,21 @@
             clearInterval(pollTimer);
             pollTimer = null;
         }
-        // 立即拉一拍，再按设置间隔轮询（与官方面板秒级刷新对齐）
+        if (!pageVisible()) {
+            return;
+        }
+        // 立即拉一拍，再按设置间隔轮询
         if (ready && !loading) {
             pollLive();
         }
         pollTimer = setInterval(pollLive, liveIntervalMs);
     }
 
-    function restartSoftPoll() {
-        if (softTimer) {
-            clearInterval(softTimer);
-            softTimer = null;
+    function stopLivePoll() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
         }
-        // 软刷跟随 live 间隔，不再最低卡 10 秒
-        var softMs = Math.max(liveIntervalMs * 4, liveIntervalMs);
-        softTimer = setInterval(function () { fetchSnapshot(false); }, softMs);
     }
 
     var refreshBtn = document.getElementById('dashRefreshBtn');
@@ -949,7 +964,14 @@
     }
     clockTimer = setInterval(tickClock, 1000);
     restartLivePoll();
-    restartSoftPoll();
+
+    document.addEventListener('visibilitychange', function () {
+        if (pageVisible()) {
+            restartLivePoll();
+        } else {
+            stopLivePoll();
+        }
+    });
 
     // 卡片轻交互：按下反馈（不改业务逻辑）
     page.addEventListener('pointerdown', function (ev) {
@@ -969,8 +991,7 @@
     }, true);
 
     window.addEventListener('beforeunload', function () {
-        if (pollTimer) clearInterval(pollTimer);
-        if (softTimer) clearInterval(softTimer);
+        stopLivePoll();
         if (clockTimer) clearInterval(clockTimer);
     });
 })();

@@ -224,6 +224,11 @@ class ApiLogManager
         $username = isset($row['username']) ? trim((string) $row['username']) : '';
         $iploc = isset($row['iploc']) ? trim((string) $row['iploc']) : '';
         $httpLabel = self::httpcodeLabel($httpcode);
+        // 列表角标：失败时带上原因（如「失败-上游网关错误」）
+        $okLabel = '成功';
+        if (!$ok) {
+            $okLabel = ($httpLabel !== '') ? ('失败-' . $httpLabel) : '失败';
+        }
 
         return array(
             'id'             => (int) (isset($row['id']) ? $row['id'] : 0),
@@ -251,7 +256,7 @@ class ApiLogManager
             'domain'         => isset($row['domain']) ? (string) $row['domain'] : '',
             'ua'             => isset($row['ua']) ? (string) $row['ua'] : '',
             'ok'             => $ok ? 1 : 0,
-            'ok_label'       => $ok ? '成功' : '失败',
+            'ok_label'       => $okLabel,
             'ok_class'       => $ok ? 'is-ok' : 'is-fail',
             'httpcode'       => $httpcode,
             'httpcode_label' => $httpLabel,

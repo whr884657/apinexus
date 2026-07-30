@@ -30,10 +30,11 @@ class DashboardStats
         $max = 20;
         $window = 60;
         if ($action === 'live') {
+            // E202：按所选间隔放行 + 缓冲；1 秒档需约 60+/min，上限 80
             $interval = self::liveIntervalSeconds();
             $max = (int) ceil(60 / max(1, $interval)) + 8;
-            if ($max < 20) {
-                $max = 20;
+            if ($max < 12) {
+                $max = 12;
             }
             if ($max > 80) {
                 $max = 80;
@@ -43,7 +44,7 @@ class DashboardStats
             $max = 10;
             $window = 60;
         } elseif ($action === 'snapshot') {
-            $max = 20;
+            $max = 16;
             $window = 60;
         }
         if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, $window, $max, true)) {
@@ -137,24 +138,41 @@ class DashboardStats
         return $cached;
     }
 
+    /** live 间隔下限（秒）；高性能站可开 1～5（E202） */
+    const LIVE_INTERVAL_MIN = 1;
+    /** live 间隔上限（秒） */
+    const LIVE_INTERVAL_MAX = 30;
+    /** live 间隔默认（秒）：偏稳，降防火墙误拦 */
+    const LIVE_INTERVAL_DEFAULT = 10;
+
     /**
-     * 控制台 live 轮询间隔（秒），设置项 1～5，默认 5
+     * 可选档位：1～5 秒 + 10/15/20/30（E202）
+     *
+     * @return int[]
+     */
+    public static function liveIntervalChoices()
+    {
+        return array(1, 2, 3, 4, 5, 10, 15, 20, 30);
+    }
+
+    /**
+     * 控制台 / 大屏 live 轮询间隔（秒），1～30（档位见 liveIntervalChoices），默认 10（E202）
      *
      * @return int
      */
     public static function liveIntervalSeconds()
     {
-        $n = 5;
+        $n = self::LIVE_INTERVAL_DEFAULT;
         try {
-            $n = (int) Config::get('dashboard_live_interval', '5');
+            $n = (int) Config::get('dashboard_live_interval', (string) self::LIVE_INTERVAL_DEFAULT);
         } catch (Exception $e) {
-            $n = 5;
+            $n = self::LIVE_INTERVAL_DEFAULT;
         }
-        if ($n < 1) {
-            $n = 1;
+        if ($n < self::LIVE_INTERVAL_MIN) {
+            $n = self::LIVE_INTERVAL_MIN;
         }
-        if ($n > 5) {
-            $n = 5;
+        if ($n > self::LIVE_INTERVAL_MAX) {
+            $n = self::LIVE_INTERVAL_MAX;
         }
         return $n;
     }

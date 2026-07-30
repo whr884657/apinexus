@@ -6024,19 +6024,20 @@ select.vs-input.vs-select {
 }
 
 .vs-log-grid {
-    min-width: 780px;
+    min-width: 860px;
 }
 
 .vs-log-row {
     display: grid;
     grid-template-columns:
-        minmax(150px, 1.6fr)
-        88px
-        minmax(120px, 1.1fr)
         72px
-        72px
-        minmax(130px, 1fr)
-        72px;
+        minmax(140px, 1.5fr)
+        80px
+        minmax(110px, 1.1fr)
+        minmax(96px, 1.2fr)
+        64px
+        minmax(120px, 1fr)
+        64px;
     gap: 8px 12px;
     align-items: center;
     padding: 12px 16px;
@@ -6108,13 +6109,32 @@ select.vs-input.vs-select {
 .vs-log-method.is-patch { color: #6d28d9; background: #f5f3ff; }
 .vs-log-method.is-other { color: #475569; background: #f1f5f9; }
 
+.vs-log-id {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.vs-log-c-id {
+    min-width: 0;
+}
+
 .vs-log-status {
     display: inline-flex;
     align-items: center;
+    max-width: 100%;
     padding: 2px 8px;
     border-radius: 999px;
     font-size: 12px;
     font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .vs-log-status.is-ok {
@@ -6125,6 +6145,8 @@ select.vs-input.vs-select {
 .vs-log-status.is-fail {
     color: #b91c1c;
     background: #fef2f2;
+    font-size: 11px;
+    border-radius: 8px;
 }
 
 .vs-log-http {
@@ -6166,7 +6188,7 @@ select.vs-input.vs-select {
 .vs-log-card {
     padding: 12px 14px;
     border: 1px solid #e2e8f0;
-    border-radius: 10px;
+    border-radius: 12px;
     background: #fff;
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
@@ -6178,10 +6200,24 @@ select.vs-input.vs-select {
 
 .vs-log-card__top {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 8px;
+}
+
+.vs-log-card__title {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+}
+
+.vs-log-card__title .vs-log-id {
+    color: #94a3b8;
+    font-size: 11px;
 }
 
 .vs-log-card__name {
@@ -6190,6 +6226,12 @@ select.vs-input.vs-select {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 100%;
+}
+
+.vs-log-card__top .vs-log-status {
+    flex-shrink: 0;
+    max-width: 46%;
 }
 
 .vs-log-card__meta {
@@ -6198,7 +6240,7 @@ select.vs-input.vs-select {
     gap: 8px 12px;
     font-size: 12px;
     color: #64748b;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     align-items: center;
 }
 
@@ -6207,6 +6249,8 @@ select.vs-input.vs-select {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    padding-top: 2px;
+    border-top: 1px solid #f1f5f9;
 }
 
 .vs-log-card__time {

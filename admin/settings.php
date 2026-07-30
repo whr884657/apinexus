@@ -37,7 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_dashboard') {
         try {
-            $interval = isset($_POST['dashboard_live_interval']) ? (int) $_POST['dashboard_live_interval'] : 5;
+            $interval = isset($_POST['dashboard_live_interval'])
+                ? (int) $_POST['dashboard_live_interval']
+                : (int) DashboardStats::LIVE_INTERVAL_DEFAULT;
             $provider = isset($_POST['panelmonitor_provider']) ? $_POST['panelmonitor_provider'] : '';
             $baseUrl = isset($_POST['panelmonitor_baseurl']) ? (string) $_POST['panelmonitor_baseurl'] : '';
             $apiKey = isset($_POST['panelmonitor_apikey']) ? (string) $_POST['panelmonitor_apikey'] : '';
@@ -1129,12 +1131,28 @@ vs_admin_accordion_start(
     '控制台与监控',
     '实时刷新间隔，以及宝塔 / 1Panel 服务器监控'
 );
-$dashLive = isset($vsCfg['dashboard_live_interval']) ? (int) $vsCfg['dashboard_live_interval'] : 5;
-if ($dashLive < 1) {
-    $dashLive = 1;
+$dashLive = isset($vsCfg['dashboard_live_interval'])
+    ? (int) $vsCfg['dashboard_live_interval']
+    : (int) DashboardStats::LIVE_INTERVAL_DEFAULT;
+if ($dashLive < (int) DashboardStats::LIVE_INTERVAL_MIN) {
+    $dashLive = (int) DashboardStats::LIVE_INTERVAL_MIN;
 }
-if ($dashLive > 5) {
-    $dashLive = 5;
+if ($dashLive > (int) DashboardStats::LIVE_INTERVAL_MAX) {
+    $dashLive = (int) DashboardStats::LIVE_INTERVAL_MAX;
+}
+$dashLiveChoices = DashboardStats::liveIntervalChoices();
+if (!in_array($dashLive, $dashLiveChoices, true)) {
+    // 非档位值：就近落到可选档
+    $nearest = (int) DashboardStats::LIVE_INTERVAL_DEFAULT;
+    $best = PHP_INT_MAX;
+    foreach ($dashLiveChoices as $c) {
+        $d = abs((int) $c - $dashLive);
+        if ($d < $best) {
+            $best = $d;
+            $nearest = (int) $c;
+        }
+    }
+    $dashLive = $nearest;
 }
 $pmEnabled = PanelMonitor::isEnabled();
 $pmProvider = PanelMonitor::normalizeProvider(
@@ -1149,11 +1167,11 @@ $pmHasKey = $pmApiKey !== '';
         <div class="vs-form-row">
             <label class="vs-label" for="dashboard_live_interval">实时刷新间隔（秒）</label>
             <select class="vs-input" id="dashboard_live_interval" name="dashboard_live_interval" data-vs-pick>
-                <?php for ($i = 1; $i <= 5; $i++): ?>
-                    <option value="<?php echo $i; ?>"<?php echo $dashLive === $i ? ' selected' : ''; ?>><?php echo $i; ?> 秒</option>
-                <?php endfor; ?>
+                <?php foreach ($dashLiveChoices as $i): ?>
+                    <option value="<?php echo (int) $i; ?>"<?php echo $dashLive === (int) $i ? ' selected' : ''; ?>><?php echo (int) $i; ?> 秒</option>
+                <?php endforeach; ?>
             </select>
-            <?php vs_render_notice('tip', '', '控制台与「实时数据监控中心」共用此间隔：时钟、今日/累计调用、运营速览、最近调用、服务器监控与大屏飞线按此刷新；趋势与 TOP 约按 6 倍间隔软刷。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '控制台与数据大屏共用此间隔：可选 1～5 秒（高性能/无防火墙）或 10/15/20/30 秒（默认 10，更稳）。时钟本地每秒走动不发请求；KPI/最近调用/服务器/飞线按间隔刷新；趋势与 TOP 约每 6 次 live 软刷一次。切到后台标签页会自动暂停轮询（E202）。', array('field' => true, 'compact' => true)); ?>
         </div>
 
         <hr class="vs-divider">

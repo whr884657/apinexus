@@ -142,7 +142,7 @@ class PanelMonitor
      * @param string      $baseUrl
      * @param string      $apiKey      空串表示保留原密钥
      * @param bool        $enabled
-     * @param int|null    $liveInterval 1～5；null 不改刷新间隔
+     * @param int|null    $liveInterval 1～30；null 不改刷新间隔（E202）
      * @return true|string 成功返回 true，失败返回业务错误文案
      */
     public static function persistConfig($provider, $baseUrl, $apiKey, $enabled, $liveInterval = null)
@@ -190,11 +190,13 @@ class PanelMonitor
         );
         if ($liveInterval !== null) {
             $interval = (int) $liveInterval;
-            if ($interval < 1) {
-                $interval = 1;
+            $min = class_exists('DashboardStats') ? (int) DashboardStats::LIVE_INTERVAL_MIN : 1;
+            $max = class_exists('DashboardStats') ? (int) DashboardStats::LIVE_INTERVAL_MAX : 30;
+            if ($interval < $min) {
+                $interval = $min;
             }
-            if ($interval > 5) {
-                $interval = 5;
+            if ($interval > $max) {
+                $interval = $max;
             }
             $items['dashboard_live_interval'] = (string) $interval;
         }
@@ -389,7 +391,7 @@ class PanelMonitor
     }
 
     /**
-     * 成功快照缓存 TTL：与控制台「实时刷新间隔」一致（1～5 秒）
+     * 成功快照缓存 TTL：与控制台「实时刷新间隔」一致（1～30 秒，E202）
      *
      * @return int
      */
@@ -399,11 +401,13 @@ class PanelMonitor
         if (class_exists('DashboardStats') && method_exists('DashboardStats', 'liveIntervalSeconds')) {
             $n = (int) DashboardStats::liveIntervalSeconds();
         }
-        if ($n < 1) {
-            $n = 1;
+        $min = class_exists('DashboardStats') ? (int) DashboardStats::LIVE_INTERVAL_MIN : 1;
+        $max = class_exists('DashboardStats') ? (int) DashboardStats::LIVE_INTERVAL_MAX : 30;
+        if ($n < $min) {
+            $n = $min;
         }
-        if ($n > 5) {
-            $n = 5;
+        if ($n > $max) {
+            $n = $max;
         }
         return $n;
     }

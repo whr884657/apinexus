@@ -90,8 +90,23 @@
         return code;
     }
 
+    function statusBadge(row) {
+        var label = row && row.ok_label ? String(row.ok_label) : '—';
+        return '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '" title="'
+            + escapeHtml(label) + '">' + escapeHtml(label) + '</span>';
+    }
+
+    function idBadge(row) {
+        var id = row && row.id != null ? String(row.id) : '';
+        if (id === '' || id === '0') {
+            return '<span class="vs-log-id">—</span>';
+        }
+        return '<span class="vs-log-id" title="记录 ID">#' + escapeHtml(id) + '</span>';
+    }
+
     function headHtml() {
         return '<div class="vs-log-row vs-log-row--head" aria-hidden="true">'
+            + '<div class="vs-log-cell">ID</div>'
             + '<div class="vs-log-cell">接口</div>'
             + '<div class="vs-log-cell">方法</div>'
             + '<div class="vs-log-cell">IP / 归属地</div>'
@@ -104,6 +119,7 @@
 
     function rowHtml(row) {
         return '<article class="vs-log-row" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
+            + '<div class="vs-log-cell vs-log-c-id">' + idBadge(row) + '</div>'
             + '<div class="vs-log-cell vs-log-c-name">'
             + '<strong>' + escapeHtml(row.apiname || ('#' + row.apiid)) + '</strong>'
             + '<span class="vs-log-sub">' + escapeHtml(row.path || '') + '</span>'
@@ -113,10 +129,7 @@
             + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
             + '<span class="vs-log-sub">' + escapeHtml(row.iploc !== undefined && row.iploc !== null && row.iploc !== '' ? row.iploc : '—') + '</span>'
             + '</div>'
-            + '<div class="vs-log-cell vs-log-c-ok">'
-            + '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '">'
-            + escapeHtml(row.ok_label) + '</span>'
-            + '</div>'
+            + '<div class="vs-log-cell vs-log-c-ok">' + statusBadge(row) + '</div>'
             + '<div class="vs-log-cell vs-log-c-code">' + httpBadge(row) + '</div>'
             + '<div class="vs-log-cell vs-log-c-time">' + escapeHtml(row.createtime || '—') + '</div>'
             + '<div class="vs-log-cell vs-log-c-act"><span class="vs-log-view">查看</span></div>'
@@ -126,9 +139,11 @@
     function cardHtml(row) {
         return '<article class="vs-log-card" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
             + '<div class="vs-log-card__top">'
-            + '<strong class="vs-log-card__name">' + escapeHtml(row.apiname || ('#' + row.apiid)) + '</strong>'
-            + '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '">'
-            + escapeHtml(row.ok_label) + '</span>'
+            + '<div class="vs-log-card__title">'
+            + idBadge(row)
+            + '<strong class="vs-log-card__name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</strong>'
+            + '</div>'
+            + statusBadge(row)
             + '</div>'
             + '<div class="vs-log-card__meta">'
             + methodBadge(row)

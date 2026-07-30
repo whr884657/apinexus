@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.20.2-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.20.3-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -275,13 +275,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.20.2（2026-07-31）
+### v13.20.3（2026-07-31）
 
-- 修复控制台「接口调用 TOP」条目增多撑高整行：恢复 280px 定高，榜单在框内滚筒
-- 「运营速览」与 TOP 同高起步，不再被 TOP 拉出大片空白
-- 未启用或未完整配置宝塔 / 1Panel 时隐藏「服务器」板块，最近调用占满整行
-- 用户控制台（双主题）：去掉角色文案与重复积分；仅同权绑定提示；删除账户概览/状态提示
-- KPI：普通 4 卡 / 开发者 5 卡（发布被调用 + 我的调用）；签到细条，签到后消失
+- **严重：** 修复新装后升级误跑 `require_key` 历史迁移导致库结构失败（E201）
+- 控制台/大屏轮询可选 1～5 或 10～30 秒并防误拦（E202）；日志 ID 与失败原因（E203）
+- 用户中心业务页进主题包（E200）；控制台账户概览与 KPI 增强
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

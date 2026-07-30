@@ -108,6 +108,10 @@ class FrontendUser
     {
         $empty = array(
             'points'           => '0',
+            'points_spent'     => '0',
+            'email'            => '',
+            'createtime'       => '',
+            'lastlogin'        => '',
             'role_label'       => '',
             'can_publish_api'  => false,
             'bound_admin'      => false,
@@ -128,9 +132,18 @@ class FrontendUser
         $uid = (int) $user['id'];
         $out = $empty;
         $out['points'] = isset($user['points']) ? (string) $user['points'] : '0';
+        $out['email'] = isset($user['email']) ? (string) $user['email'] : '';
+        $out['createtime'] = isset($user['createtime']) ? (string) $user['createtime'] : '';
+        $out['lastlogin'] = isset($user['lastlogin']) ? (string) $user['lastlogin'] : '';
         $out['role_label'] = isset($user['role_label']) ? (string) $user['role_label'] : '';
         $out['can_publish_api'] = !empty($user['can_publish_api']);
         $out['bound_admin'] = class_exists('AdminUserBinding') && AdminUserBinding::isUserBoundToAdmin($uid);
+        if (class_exists('OrderManager') && method_exists('OrderManager', 'sumUserSpent')) {
+            $spent = OrderManager::sumUserSpent($uid);
+            $out['points_spent'] = class_exists('PayConfig')
+                ? PayConfig::fmtPoints($spent)
+                : (string) $spent;
+        }
 
         // 发布接口统计：所有登录用户均可有归属接口；「发布被调用」KPI 仅开发者展示
         if (class_exists('ApiManager') && ApiManager::tableReady()) {

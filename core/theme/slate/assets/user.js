@@ -127,6 +127,25 @@
         });
     }
 
+    function initDashPress() {
+        var cards = document.querySelectorAll('#ucDashboard [data-uc-press]');
+        if (!cards.length) return;
+        cards.forEach(function (el) {
+            el.addEventListener('pointerdown', function () {
+                el.classList.add('is-pressed');
+            });
+            el.addEventListener('pointerup', function () {
+                el.classList.remove('is-pressed');
+            });
+            el.addEventListener('pointerleave', function () {
+                el.classList.remove('is-pressed');
+            });
+            el.addEventListener('pointercancel', function () {
+                el.classList.remove('is-pressed');
+            });
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var mode = document.body.getAttribute('data-nav-mode') || 'top_drawer';
         if (mode === 'fab_popup') {
@@ -134,5 +153,6 @@
         } else {
             initDrawerMenu();
         }
+        initDashPress();
     });
 })();

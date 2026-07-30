@@ -42,6 +42,28 @@ function vs_user_layout_end(array $extraScripts = array())
 }
 
 /**
+ * 渲染当前主题用户中心业务页（视图在主题包 user/pages/）
+ *
+ * @param string $pageKey
+ * @param string $pageTitle
+ * @param string $activeMenu
+ * @param array  $pageData
+ * @param string $headerActions
+ * @param array  $extraScripts
+ * @return void
+ */
+function vs_user_render_page(
+    $pageKey,
+    $pageTitle,
+    $activeMenu = '',
+    array $pageData = array(),
+    $headerActions = '',
+    array $extraScripts = array()
+) {
+    ThemeManager::renderUserPage($pageKey, $pageTitle, $activeMenu, $pageData, $headerActions, $extraScripts);
+}
+
+/**
  * @param string $pageTitle
  * @param string $activeMenu
  * @return void

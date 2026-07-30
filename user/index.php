@@ -1,10 +1,7 @@
 <?php
 /**
  * 文件：user/index.php
- * 作用：用户中心控制台（仪表盘）；双主题共用结构，每日签到细条横幅
- *
- * 无快捷入口；浏览公开接口请走前台首页 / 全部接口页。
- * 开发者 5 KPI（含「发布被调用」）；普通用户 4 KPI。
+ * 作用：用户中心控制台路由（POST/取数）；视图在各主题 user/pages/dashboard.php
  */
 
 require_once __DIR__ . '/init.php';
@@ -38,64 +35,54 @@ $dash = FrontendUser::dashboardStats();
 $displayName = $vsUser ? (string) $vsUser['username'] : '用户';
 $isDeveloper = !empty($dash['can_publish_api']);
 
-vs_user_layout_start('控制台', 'dashboard');
-?>
+// 默认主题：按时段问候（仅 default）
+$helloLine = '欢迎回来，' . $displayName;
+$helloHint = '';
+$themeId = class_exists('ThemeManager') ? ThemeManager::activeId() : 'default';
+if ($themeId === 'default') {
+    $hour = (int) date('G');
+    if ($hour >= 0 && $hour < 5) {
+        $helloLine = '夜深了，' . $displayName;
+        $helloHint = '这么晚还在忙，注意休息，明天会更高效。';
+    } elseif ($hour < 9) {
+        $helloLine = '早上好，' . $displayName;
+        $helloHint = '新的一天开始了，先处理最重要的事吧。';
+    } elseif ($hour < 12) {
+        $helloLine = '上午好，' . $displayName;
+        $helloHint = '状态不错的话，趁上午把关键任务推进一下。';
+    } elseif ($hour < 14) {
+        $helloLine = '中午好，' . $displayName;
+        $helloHint = '午饭后稍微缓一缓，下午再冲刺。';
+    } elseif ($hour < 18) {
+        $helloLine = '下午好，' . $displayName;
+        $helloHint = '下午时光正好，欢迎回来继续打理接口。';
+    } elseif ($hour < 22) {
+        $helloLine = '晚上好，' . $displayName;
+        $helloHint = '晚上好，今天辛苦了，慢慢来也很好。';
+    } else {
+        $helloLine = '夜深了，' . $displayName;
+        $helloHint = '这么晚还在线，别忘了早点休息。';
+    }
+}
 
-<?php if (!empty($checkinBanner['show_banner'])): ?>
-<div class="uc-checkin-banner" id="ucCheckinBanner" role="region" aria-label="每日签到">
-    <span class="uc-checkin-banner__label">每日签到</span>
-    <button type="button" class="vs-btn vs-btn--primary vs-btn--sm uc-checkin-banner__btn" id="ucCheckinBtn">签到</button>
-</div>
-<?php endif; ?>
+$scripts = array();
+if (!empty($checkinBanner['show_banner'])) {
+    $scripts[] = 'user-checkin.js';
+}
 
-<section class="uc-dash" id="ucDashboard" data-theme="<?php echo vs_e(class_exists('ThemeManager') ? ThemeManager::activeId() : 'default'); ?>">
-    <header class="uc-dash__hero">
-        <div class="uc-dash__hero-main">
-            <img class="uc-dash__avatar" src="<?php echo vs_e($avatarPreview); ?>" alt="" width="56" height="56" loading="lazy" referrerpolicy="no-referrer">
-            <div class="uc-dash__hero-text">
-                <h2 class="uc-dash__hello">欢迎回来，<?php echo vs_e($displayName); ?></h2>
-                <?php if (!empty($dash['bound_admin'])): ?>
-                    <p class="uc-dash__sub">
-                        <span class="uc-dash__chip uc-dash__chip--bound">与管理员同权绑定</span>
-                    </p>
-                <?php endif; ?>
-            </div>
-        </div>
-    </header>
-
-    <div class="uc-dash__kpi<?php echo $isDeveloper ? ' is-five' : ''; ?>" aria-label="关键指标">
-        <div class="uc-dash__kpi-card">
-            <span class="uc-dash__kpi-label">接口总数</span>
-            <strong class="uc-dash__kpi-value" data-field="api_total"><?php echo (int) $dash['api_total']; ?></strong>
-            <span class="uc-dash__kpi-meta">已通过 <?php echo (int) $dash['api_approved']; ?> · 待审 <?php echo (int) $dash['api_pending']; ?></span>
-        </div>
-        <div class="uc-dash__kpi-card">
-            <span class="uc-dash__kpi-label">API 令牌</span>
-            <strong class="uc-dash__kpi-value" data-field="key_total"><?php echo (int) $dash['key_total']; ?></strong>
-            <span class="uc-dash__kpi-meta">当前密钥数量</span>
-        </div>
-        <div class="uc-dash__kpi-card">
-            <span class="uc-dash__kpi-label">积分</span>
-            <strong class="uc-dash__kpi-value" data-field="points_kpi"><?php echo vs_e($dash['points']); ?></strong>
-            <span class="uc-dash__kpi-meta">当前可用余额</span>
-        </div>
-        <?php if ($isDeveloper): ?>
-        <div class="uc-dash__kpi-card">
-            <span class="uc-dash__kpi-label">发布被调用</span>
-            <strong class="uc-dash__kpi-value" data-field="api_calls"><?php echo (int) $dash['api_calls']; ?></strong>
-            <span class="uc-dash__kpi-meta">我发布的接口累计</span>
-        </div>
-        <?php endif; ?>
-        <div class="uc-dash__kpi-card">
-            <span class="uc-dash__kpi-label">我的调用</span>
-            <strong class="uc-dash__kpi-value" data-field="key_calls"><?php echo (int) $dash['key_calls']; ?></strong>
-            <span class="uc-dash__kpi-meta">令牌累计调用次数</span>
-        </div>
-    </div>
-</section>
-
-<?php
-vs_user_layout_end(!empty($checkinBanner['show_banner'])
-    ? array('user-checkin.js')
-    : array());
-?>
+vs_user_render_page(
+    'dashboard',
+    '控制台',
+    'dashboard',
+    array(
+        'dash'           => $dash,
+        'checkinBanner'  => $checkinBanner,
+        'avatarPreview'  => $avatarPreview,
+        'displayName'    => $displayName,
+        'isDeveloper'    => $isDeveloper,
+        'helloLine'      => $helloLine,
+        'helloHint'      => $helloHint,
+    ),
+    '',
+    $scripts
+);

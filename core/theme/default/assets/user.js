@@ -1,7 +1,6 @@
 /**
- * 文件：assets/js/admin.js
- * 作用：ApiNexus 后台框架交互（侧边栏展开/收缩）
- * @version 1.0.0
+ * 文件：core/theme/default/assets/user.js
+ * 作用：默认主题用户中心壳层 + 控制台轻交互
  */
 
 (function () {
@@ -97,5 +96,27 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', initSidebar);
+    function initDashPress() {
+        var cards = document.querySelectorAll('#ucDashboard [data-uc-press]');
+        if (!cards.length) return;
+        cards.forEach(function (el) {
+            el.addEventListener('pointerdown', function () {
+                el.classList.add('is-pressed');
+            });
+            el.addEventListener('pointerup', function () {
+                el.classList.remove('is-pressed');
+            });
+            el.addEventListener('pointerleave', function () {
+                el.classList.remove('is-pressed');
+            });
+            el.addEventListener('pointercancel', function () {
+                el.classList.remove('is-pressed');
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initSidebar();
+        initDashPress();
+    });
 })();

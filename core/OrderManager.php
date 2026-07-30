@@ -274,6 +274,31 @@ class OrderManager
     }
 
     /**
+     * 用户累计积分消耗（已完成的扣减流水之和）
+     *
+     * @param int $userid
+     * @return float
+     */
+    public static function sumUserSpent($userid)
+    {
+        $userid = (int) $userid;
+        if ($userid <= 0 || !self::tableReady()) {
+            return 0.0;
+        }
+        try {
+            $pdo = Database::pdo();
+            $sql = 'SELECT COALESCE(SUM(`amount`), 0) AS s FROM `' . self::table() . '`'
+                . ' WHERE `userid` = ? AND `direct` = ? AND `status` = ?';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array($userid, self::DIRECT_DEC, self::STATUS_DONE));
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? (float) $row['s'] : 0.0;
+        } catch (Exception $e) {
+            return 0.0;
+        }
+    }
+
+    /**
      * 分页列表：每页条数 + keyset；附带筛选总数（短 TTL 缓存 COUNT，禁止深页 OFFSET）
      *
      * @param array $opts userid?, status?, scope(recharge|ledger)?, q?, pagesize, before_id

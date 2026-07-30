@@ -37,7 +37,7 @@ try {
 } catch (Exception $e) {
     $boot = array(
         'server_time'   => date('Y-m-d H:i:s'),
-        'live_interval' => 5,
+        'live_interval' => (int) DashboardStats::LIVE_INTERVAL_DEFAULT,
         'kpi'           => array(),
         'hourly'        => array('labels' => array(), 'series' => array()),
         'top_apis'      => array(),
