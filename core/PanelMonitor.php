@@ -60,6 +60,29 @@ class PanelMonitor
     }
 
     /**
+     * 是否已完整配置（面板类型 + 地址 + 密钥）
+     *
+     * @return bool
+     */
+    public static function isConfigured()
+    {
+        $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
+        $url = trim((string) Config::get('panelmonitor_baseurl', ''));
+        $key = trim((string) Config::get('panelmonitor_apikey', ''));
+        return ($provider !== self::PROVIDER_NONE && $url !== '' && $key !== '');
+    }
+
+    /**
+     * 控制台是否应展示服务器监控板块（已启用且已配置）
+     *
+     * @return bool
+     */
+    public static function isDisplayReady()
+    {
+        return self::isEnabled() && self::isConfigured();
+    }
+
+    /**
      * 清除面板监控缓存（保存/测试成功后调用）
      *
      * @return void

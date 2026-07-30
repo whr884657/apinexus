@@ -132,7 +132,8 @@ class FrontendUser
         $out['can_publish_api'] = !empty($user['can_publish_api']);
         $out['bound_admin'] = class_exists('AdminUserBinding') && AdminUserBinding::isUserBoundToAdmin($uid);
 
-        if (class_exists('ApiManager') && ApiManager::tableReady() && $out['can_publish_api']) {
+        // 发布接口统计：所有登录用户均可有归属接口；「发布被调用」KPI 仅开发者展示
+        if (class_exists('ApiManager') && ApiManager::tableReady()) {
             $apis = ApiManager::listByUser($uid);
             $out['api_total'] = count($apis);
             foreach ($apis as $row) {

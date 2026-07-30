@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/user-checkin.js
- * 作用：用户中心每日签到（默认主题横幅）
+ * 作用：用户中心每日签到（双主题细条横幅；成功后移除）
  */
 (function () {
     'use strict';
@@ -22,7 +22,7 @@
             VS.showMessage(res.msg || '签到成功', 'success');
             if (res.points != null || (res.stats && res.stats.points != null)) {
                 var pts = res.points != null ? res.points : res.stats.points;
-                document.querySelectorAll('#ucDashboard [data-field="points"], #ucDashboard [data-field="points_kpi"]').forEach(function (el) {
+                document.querySelectorAll('#ucDashboard [data-field="points_kpi"]').forEach(function (el) {
                     el.textContent = String(pts);
                 });
             }

@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $mailEnabled = Config::isMailEnabled();
 $boot = DashboardStats::consoleBootShell();
 $liveInterval = DashboardStats::liveIntervalSeconds();
+$serverMonitorReady = class_exists('PanelMonitor') && PanelMonitor::isDisplayReady();
 
 $refreshBtn = '<button type="button" class="vs-btn vs-btn--outline vs-btn--icon" id="dashRefreshBtn" title="刷新" aria-label="刷新">'
     . '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
@@ -121,7 +122,7 @@ vs_admin_layout_start('控制台', 'dashboard', $refreshBtn);
         </div>
     </section>
 
-    <section class="dash-grid dash-grid-bottom" aria-label="最近调用与服务器">
+    <section class="dash-grid dash-grid-bottom<?php echo $serverMonitorReady ? '' : ' is-server-hidden'; ?>" aria-label="<?php echo $serverMonitorReady ? '最近调用与服务器' : '最近调用'; ?>">
         <div class="vs-panel dash-panel dash-panel--recent">
             <div class="vs-panel__header">
                 <h2 class="vs-panel__title">最近调用记录</h2>
@@ -130,10 +131,10 @@ vs_admin_layout_start('控制台', 'dashboard', $refreshBtn);
                 <div class="dash-recent-wrap" id="dashRecentTable"></div>
             </div>
         </div>
-        <div class="vs-panel dash-panel dash-panel--server">
+        <div class="vs-panel dash-panel dash-panel--server<?php echo $serverMonitorReady ? '' : ' is-hidden'; ?>"<?php echo $serverMonitorReady ? '' : ' hidden'; ?> id="dashServerPanel">
             <div class="vs-panel__header dash-panel__head">
                 <h2 class="vs-panel__title">服务器</h2>
-                <span class="vs-badge vs-badge--info" id="dashServerBadge">未配置</span>
+                <span class="vs-badge vs-badge--info" id="dashServerBadge"><?php echo $serverMonitorReady ? '加载中' : '未配置'; ?></span>
             </div>
             <div class="vs-panel__body">
                 <div class="dash-server" id="dashServer"></div>

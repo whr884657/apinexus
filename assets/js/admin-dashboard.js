@@ -631,50 +631,61 @@
         return 4;
     }
 
+    /** 仅在已启用且已配置时展示服务器板块 */
+    function setServerPanelVisible(visible) {
+        var panel = document.getElementById('dashServerPanel');
+        var bottom = page.querySelector('.dash-grid-bottom');
+        if (panel) {
+            if (visible) {
+                panel.classList.remove('is-hidden');
+                panel.removeAttribute('hidden');
+            } else {
+                panel.classList.add('is-hidden');
+                panel.setAttribute('hidden', '');
+            }
+        }
+        if (bottom) {
+            if (visible) {
+                bottom.classList.remove('is-server-hidden');
+                bottom.setAttribute('aria-label', '最近调用与服务器');
+            } else {
+                bottom.classList.add('is-server-hidden');
+                bottom.setAttribute('aria-label', '最近调用');
+            }
+        }
+    }
+
     function renderServer(s) {
         var el = document.getElementById('dashServer');
         var badge = document.getElementById('dashServerBadge');
         if (!el) return;
         s = s || {};
         if (!Object.prototype.hasOwnProperty.call(s, 'enabled')) {
-            if (badge) {
-                badge.textContent = '加载中';
-                badge.className = 'vs-badge vs-badge--info';
+            // 首屏轻量 boot：保持 PHP 初始显隐，已展示时显示加载态
+            var panel = document.getElementById('dashServerPanel');
+            if (panel && !panel.classList.contains('is-hidden')) {
+                if (badge) {
+                    badge.textContent = '加载中';
+                    badge.className = 'vs-badge vs-badge--info';
+                }
+                el.innerHTML = '<div class="dash-empty">正在获取服务器状态…</div>';
             }
-            el.innerHTML = '<div class="dash-empty">正在获取服务器状态…</div>';
             return;
         }
+        // 未启用或未完整配置：整块不显示
+        if (!s.enabled || !s.configured) {
+            setServerPanelVisible(false);
+            return;
+        }
+        setServerPanelVisible(true);
         if (badge) {
-            if (!s.enabled) {
-                badge.textContent = '未启用';
-                badge.className = 'vs-badge vs-badge--default';
-            } else if (!String(s.provider || '').trim()) {
-                badge.textContent = '未选择';
-                badge.className = 'vs-badge vs-badge--warning';
-            } else if (!s.configured) {
-                badge.textContent = '未配置';
-                badge.className = 'vs-badge vs-badge--warning';
-            } else if (s.ok) {
+            if (s.ok) {
                 badge.textContent = s.providerlabel || '在线';
                 badge.className = 'vs-badge vs-badge--success';
             } else {
                 badge.textContent = '异常';
                 badge.className = 'vs-badge vs-badge--error';
             }
-        }
-
-        if (!s.enabled) {
-            el.innerHTML = '<div class="dash-empty">服务器监控未启用。<br>请到系统设置 → 控制台与监控中开启，或使用「测试连接」自动保存并启用。</div>';
-            return;
-        }
-        var provider = String(s.provider || '').trim();
-        if (!provider) {
-            el.innerHTML = '<div class="dash-empty">请选择面板类型（宝塔或 1Panel）并保存。</div>';
-            return;
-        }
-        if (!s.configured) {
-            el.innerHTML = '<div class="dash-empty">请填写面板地址与接口密钥，并保存或测试连接。</div>';
-            return;
         }
         if (!s.ok) {
             el.innerHTML = '<div class="dash-empty">' + esc(s.error || '暂时无法获取服务器数据') + '</div>';
