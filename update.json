@@ -1,13 +1,13 @@
 {
-    "version": "13.18.0",
-    "title": "ApiNexus 13.18.0 面板监控实测对接",
+    "version": "13.19.0",
+    "title": "ApiNexus 13.19.0 修复测通但控制台异常",
     "release_date": "2026-07-30",
     "db_changes": false,
     "changes": [
-        "按宝塔/1Panel 真实 API 重写对接：宝塔 GetSystemTotal+GetNetWorkApi，1Panel 优先 base/all/all（含 currentInfo）",
-        "1Panel：MD5 优先、仅鉴权失败再试 HMAC；仪表盘只用 GET；禁止把累计流量字节当 KB/s",
-        "修正负载/核数/运行时长/系统名/面板版本字段解析；连接超时与请求超时对齐，减少 3 秒内空转",
-        "专项规范与易错点 E194 同步；本地探测脚本发版前清理"
+        "根因：控制台 snapshot 成功拉取后误调不存在的 RedisCache::set，被 Throwable 打成「面板暂时不可用」；测试连接不写缓存故能成功（E195）",
+        "重构 PanelMonitor：测试与控制台共用 fetchMetrics；仅缓存成功快照并用 put；缓存写入失败不影响返回",
+        "测试保存后 publishSuccessSnapshot 预热；控制台软刷不再保留旧服务器异常态",
+        "RedisCache 增加 set→put 别名；完善面板监控/主题/易错点规范"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

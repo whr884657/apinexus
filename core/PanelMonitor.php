@@ -199,55 +199,46 @@ class PanelMonitor
     /**
      * 控制台用快照（短缓存；失败不抛出）
      *
+     * 与 testConnection 共用 fetchMetrics；成功写入 Redis（put），禁止因缓存写入异常把已成功的指标打成失败。
+     *
      * @param bool $refresh
      * @return array
      */
     public static function snapshot($refresh = false)
     {
-        $base = self::emptySnapshot();
+        $cfg = self::readConfigState();
+        $base = self::applyConfigFlags(self::emptySnapshot(), $cfg['enabled'], $cfg['provider'], $cfg['url'], $cfg['key']);
+
+        if (!$cfg['enabled']) {
+            $base['error'] = '未启用服务器监控';
+            return $base;
+        }
+        if ($cfg['provider'] === self::PROVIDER_NONE) {
+            $base['error'] = '请选择面板类型';
+            return $base;
+        }
+        if ($cfg['url'] === '' || $cfg['key'] === '') {
+            $base['configured'] = false;
+            $base['error'] = '请先在系统设置中填写面板地址与接口密钥，并点击保存';
+            return $base;
+        }
+
+        $cacheKey = self::cacheKey($cfg['provider'], $cfg['url']);
+        if (!$refresh) {
+            $hit = self::cacheGet($cacheKey);
+            // 仅采用成功快照；失败缓存一律忽略并重试（E195）
+            if (is_array($hit) && !empty($hit['ok'])) {
+                $hit = self::sanitizeSnapshot($hit);
+                return self::applyConfigFlags($hit, true, $cfg['provider'], $cfg['url'], $cfg['key']);
+            }
+        }
+
         try {
-            $enabled = self::isEnabled();
-            $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
-            $url = trim((string) Config::get('panelmonitor_baseurl', ''));
-            $key = trim((string) Config::get('panelmonitor_apikey', ''));
-            $base = self::applyConfigFlags($base, $enabled, $provider, $url, $key);
-
-            if (!$enabled) {
-                $base['error'] = '未启用服务器监控';
-                return $base;
-            }
-            if ($provider === self::PROVIDER_NONE) {
-                $base['error'] = '请选择面板类型';
-                return $base;
-            }
-            if ($url === '' || $key === '') {
-                $base['configured'] = false;
-                $base['error'] = '请先在系统设置中填写面板地址与接口密钥，并点击保存';
-                return $base;
-            }
-
-            $cacheKey = self::cacheKey($provider, $url);
-            if (!$refresh && class_exists('RedisCache')) {
-                $hit = RedisCache::get($cacheKey);
-                if (is_array($hit) && isset($hit['ok'])) {
-                    // E191：缓存命中也必须叠加当前 Config，禁止旧 enabled=false 误显示「未启用」
-                    $hit = self::sanitizeSnapshot($hit);
-                    return self::applyConfigFlags($hit, true, $provider, $url, $key);
-                }
-            }
-
-            if ($provider === self::PROVIDER_BAOTA) {
-                $snap = self::fetchBaota($url, $key);
-            } else {
-                $snap = self::fetchOnePanel($url, $key);
-            }
-            $snap = self::applyConfigFlags($snap, true, $provider, $url, $key);
+            $snap = self::fetchMetrics($cfg['provider'], $cfg['url'], $cfg['key']);
+            $snap = self::applyConfigFlags($snap, true, $cfg['provider'], $cfg['url'], $cfg['key']);
             $snap['fetchedat'] = date('Y-m-d H:i:s');
             $snap = self::sanitizeSnapshot($snap);
-            if (class_exists('RedisCache')) {
-                RedisCache::set($cacheKey, $snap, self::CACHE_TTL);
-                RedisCache::set('panel_monitor_last_key', $cacheKey, self::CACHE_TTL + 30);
-            }
+            self::cachePutSuccess($cacheKey, $snap);
             return $snap;
         } catch (Exception $e) {
             return self::failSnapshot($base, '面板连接失败，请检查地址、密钥与白名单');
@@ -263,32 +254,17 @@ class PanelMonitor
      */
     private static function failSnapshot(array $base, $msg)
     {
+        $cfg = self::readConfigState();
+        $base = self::applyConfigFlags($base, $cfg['enabled'], $cfg['provider'], $cfg['url'], $cfg['key']);
         $base['ok'] = false;
         $base['error'] = $msg;
         $base['fetchedat'] = date('Y-m-d H:i:s');
-        try {
-            $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
-            $url = trim((string) Config::get('panelmonitor_baseurl', ''));
-            $key = trim((string) Config::get('panelmonitor_apikey', ''));
-            $enabled = self::isEnabled();
-            $base = self::applyConfigFlags($base, $enabled, $provider, $url, $key);
-            $base['ok'] = false;
-            $base['error'] = $msg;
-            if ($url !== '' && $provider !== self::PROVIDER_NONE && class_exists('RedisCache')) {
-                $cacheKey = self::cacheKey($provider, $url);
-                RedisCache::set($cacheKey, $base, self::CACHE_FAIL_TTL);
-                RedisCache::set('panel_monitor_last_key', $cacheKey, self::CACHE_FAIL_TTL + 30);
-            }
-        } catch (Exception $e) {
-            // 回落路径禁止再抛
-        } catch (Throwable $e) {
-            // 回落路径禁止再抛
-        }
+        // 失败不写 Redis：避免「测通后仍命中失败缓存」；短时雪崩由成功缓存与请求超时约束
         return $base;
     }
 
     /**
-     * 设置页「测试连接」
+     * 设置页「测试连接」——与控制台共用 fetchMetrics；成功可预热成功缓存
      *
      * @param string $provider
      * @param string $baseUrl
@@ -307,14 +283,12 @@ class PanelMonitor
             return array('ok' => false, 'msg' => '请填写面板地址与接口密钥');
         }
         try {
-            if ($provider === self::PROVIDER_BAOTA) {
-                $snap = self::fetchBaota($baseUrl, $apiKey);
-            } else {
-                $snap = self::fetchOnePanel($baseUrl, $apiKey);
-            }
+            $snap = self::fetchMetrics($provider, $baseUrl, $apiKey);
             $snap = self::sanitizeSnapshot($snap);
             $snap['provider'] = $provider;
             $snap['providerlabel'] = self::providerLabel($provider);
+            $snap['ok'] = true;
+            $snap['fetchedat'] = date('Y-m-d H:i:s');
             $label = $snap['providerlabel'];
             $ver = isset($snap['panelversion']) ? (string) $snap['panelversion'] : '';
             $msg = '连接成功：' . $label;
@@ -326,6 +300,111 @@ class PanelMonitor
             return array('ok' => false, 'msg' => '连接失败，请检查地址、密钥、IP 白名单与面板 API 是否已开启');
         } catch (Throwable $e) {
             return array('ok' => false, 'msg' => '连接失败，请稍后重试');
+        }
+    }
+
+    /**
+     * 测试/保存成功后预热控制台成功缓存（须在 persistConfig 清缓存之后调用）
+     *
+     * @param array $snap testConnection 返回的 snapshot
+     * @return void
+     */
+    public static function publishSuccessSnapshot(array $snap)
+    {
+        if (empty($snap['ok'])) {
+            return;
+        }
+        $cfg = self::readConfigState();
+        if (!$cfg['enabled'] || $cfg['provider'] === self::PROVIDER_NONE || $cfg['url'] === '' || $cfg['key'] === '') {
+            return;
+        }
+        $snap = self::applyConfigFlags(self::sanitizeSnapshot($snap), true, $cfg['provider'], $cfg['url'], $cfg['key']);
+        $snap['ok'] = true;
+        if ($snap['fetchedat'] === '') {
+            $snap['fetchedat'] = date('Y-m-d H:i:s');
+        }
+        self::cachePutSuccess(self::cacheKey($cfg['provider'], $cfg['url']), $snap);
+    }
+
+    /**
+     * 统一拉取（测试连接与控制台快照共用）
+     *
+     * @param string $provider
+     * @param string $baseUrl
+     * @param string $apiKey
+     * @return array
+     */
+    private static function fetchMetrics($provider, $baseUrl, $apiKey)
+    {
+        $provider = self::normalizeProvider($provider);
+        if ($provider === self::PROVIDER_BAOTA) {
+            return self::fetchBaota($baseUrl, $apiKey);
+        }
+        if ($provider === self::PROVIDER_ONEPANEL) {
+            return self::fetchOnePanel($baseUrl, $apiKey);
+        }
+        throw new Exception('unknown provider');
+    }
+
+    /**
+     * 每次读库相关键前刷新 Config 静态缓存中的面板项，避免同进程内旧值
+     *
+     * @return array{enabled:bool,provider:string,url:string,key:string}
+     */
+    private static function readConfigState()
+    {
+        Config::clearCache();
+        $enabled = self::isEnabled();
+        $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
+        $url = trim((string) Config::get('panelmonitor_baseurl', ''));
+        $key = trim((string) Config::get('panelmonitor_apikey', ''));
+        return array(
+            'enabled'  => $enabled,
+            'provider' => $provider,
+            'url'      => $url,
+            'key'      => $key,
+        );
+    }
+
+    /**
+     * @param string $cacheKey
+     * @return array|null
+     */
+    private static function cacheGet($cacheKey)
+    {
+        if ($cacheKey === '' || !class_exists('RedisCache')) {
+            return null;
+        }
+        try {
+            $hit = RedisCache::get($cacheKey);
+            return is_array($hit) ? $hit : null;
+        } catch (Exception $e) {
+            return null;
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * 仅缓存成功快照；写入失败不得影响返回结果（E195）
+     *
+     * @param string $cacheKey
+     * @param array  $snap
+     * @return void
+     */
+    private static function cachePutSuccess($cacheKey, array $snap)
+    {
+        if ($cacheKey === '' || empty($snap['ok']) || !class_exists('RedisCache')) {
+            return;
+        }
+        try {
+            // 必须用 put（历史误写 set 导致成功拉取后被 Throwable 打成失败）
+            RedisCache::put($cacheKey, $snap, self::CACHE_TTL);
+            RedisCache::put('panel_monitor_last_key', $cacheKey, self::CACHE_TTL + 30);
+        } catch (Exception $e) {
+            // 缓存失败不影响业务
+        } catch (Throwable $e) {
+            // 缓存失败不影响业务
         }
     }
 

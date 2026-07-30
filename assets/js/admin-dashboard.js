@@ -770,9 +770,12 @@
             boot.sys_overview = live.sys_overview;
             renderSys(boot.sys_overview);
         }
-        if (live.server) {
-            boot.server = live.server;
-            renderServer(boot.server);
+        if (live.server && Object.prototype.hasOwnProperty.call(live.server, 'enabled')) {
+            // live 成功优先；live 失败且本地已在线则不降级
+            if (live.server.ok || !boot.server || !boot.server.ok) {
+                boot.server = live.server;
+                renderServer(boot.server);
+            }
         }
         if (live.top_apis) {
             boot.top_apis = live.top_apis;
@@ -815,27 +818,17 @@
             var wasReady = ready;
             ready = true;
             // 软刷：保留 live 已刷新的最近调用 / 系统概览 / KPI / TOP，避免被 snapshot 慢路径覆盖
+            // 服务器卡片不参与 keep：一律用本次 snapshot（E195：禁止旧异常盖住新成功）
             var keepRecent = (!forceRefresh && wasReady && Array.isArray(boot.recent) && boot.recent.length)
                 ? boot.recent
                 : null;
             var keepSys = (!forceRefresh && wasReady && boot.sys_overview)
                 ? boot.sys_overview
                 : null;
-            var keepServer = (!forceRefresh && wasReady && boot.server
-                && Object.prototype.hasOwnProperty.call(boot.server, 'enabled'))
-                ? boot.server
-                : null;
             var keepKpi = (!forceRefresh && wasReady && boot.kpi) ? boot.kpi : null;
             var keepTop = (!forceRefresh && wasReady && Array.isArray(boot.top_apis) && boot.top_apis.length)
                 ? boot.top_apis
                 : null;
-            // E191：软刷不得用旧「未启用/未配置」盖住新快照；新快照状态不低于旧值时一律采用新快照
-            if (keepServer && res.snapshot && res.snapshot.server
-                && Object.prototype.hasOwnProperty.call(res.snapshot.server, 'enabled')) {
-                if (serverStatusRank(res.snapshot.server) >= serverStatusRank(keepServer)) {
-                    keepServer = null;
-                }
-            }
             renderAll(res.snapshot);
             if (keepRecent) {
                 boot.recent = keepRecent;
@@ -844,10 +837,6 @@
             if (keepSys) {
                 boot.sys_overview = keepSys;
                 renderSys(keepSys);
-            }
-            if (keepServer) {
-                boot.server = keepServer;
-                renderServer(keepServer);
             }
             if (keepKpi) {
                 boot.kpi = keepKpi;

@@ -1,5 +1,15 @@
 {
     "versions": {
+        "13.19.0": {
+            "title": "ApiNexus 13.19.0 修复测通但控制台异常",
+            "date": "2026-07-30",
+            "db_changes": false,
+            "changes": [
+                "根因：snapshot 成功后误调 RedisCache::set（不存在）被 Throwable 打成异常；测试连接不写缓存故能成功（E195）",
+                "重构 PanelMonitor：共用 fetchMetrics；仅 put 成功缓存；测试保存后预热成功快照",
+                "控制台软刷不再保留旧服务器异常态；RedisCache::set 别名到 put"
+            ]
+        },
         "13.18.0": {
             "title": "ApiNexus 13.18.0 面板监控实测对接",
             "date": "2026-07-30",

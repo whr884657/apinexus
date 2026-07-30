@@ -92,6 +92,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($saved !== true) {
                 AjaxResponse::error(is_string($saved) ? $saved : '连接成功但保存失败');
             }
+            // persist 会清缓存：用本次测通快照预热，控制台打开即可命中成功态（E195）
+            if (!empty($result['snapshot']) && is_array($result['snapshot'])) {
+                PanelMonitor::publishSuccessSnapshot($result['snapshot']);
+            }
             $msg = isset($result['msg']) ? (string) $result['msg'] : '连接成功';
             AjaxResponse::success($msg . '（已保存并启用）');
         }

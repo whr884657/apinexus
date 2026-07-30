@@ -214,10 +214,20 @@ class DashboardStats
     private static function safePanelSnapshot($refresh = false)
     {
         if (!class_exists('PanelMonitor')) {
-            return array();
+            return array(
+                'enabled'    => false,
+                'configured' => false,
+                'ok'         => false,
+                'error'      => '面板暂时不可用',
+                'provider'   => '',
+            );
         }
         try {
-            return PanelMonitor::snapshot($refresh);
+            $snap = PanelMonitor::snapshot($refresh);
+            if (!is_array($snap) || !array_key_exists('enabled', $snap)) {
+                return PanelMonitor::configOnlySnapshot('面板暂时不可用');
+            }
+            return $snap;
         } catch (Exception $e) {
             return self::fallbackPanelSnapshot('面板暂时不可用');
         } catch (Throwable $e) {

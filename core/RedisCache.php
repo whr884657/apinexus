@@ -151,6 +151,19 @@ class RedisCache
     }
 
     /**
+     * 写入已序列化缓存（与 put 同义；保留 set 别名避免业务误调）
+     *
+     * @param string $logicalKey
+     * @param mixed  $value
+     * @param int    $ttl
+     * @return void
+     */
+    public static function set($logicalKey, $value, $ttl)
+    {
+        self::put($logicalKey, $value, $ttl);
+    }
+
+    /**
      * @param string $logicalKey
      * @return void
      */

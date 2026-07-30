@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.18.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.19.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -275,11 +275,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.18.0（2026-07-30）
+### v13.19.0（2026-07-30）
 
-- 按宝塔 / 1Panel **真实 API 实测**重写控制台服务器监控对接：宝塔轻量系统总量+网络；1Panel 优先一次拉取基础信息（含实时指标）
-- 修正 1Panel 鉴权与字段：MD5 优先、负载/核数/运行时长/版本解析；累计流量不再误显示为网速
-- 缩短无效回退请求，连接超时与请求超时对齐，避免 3 秒内空转导致「面板异常」
+- 修复「设置里测试连接成功，控制台仍显示面板异常」：成功拉取后误调不存在的缓存写入方法，被异常捕获打成不可用（E195）
+- 重构面板监控：测试与控制台共用拉取；仅缓存成功快照；测试保存后预热；软刷不再保留旧异常态
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
