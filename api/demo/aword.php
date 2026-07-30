@@ -1,6 +1,6 @@
 <?php
 /**
- * 一言API代理接口
+ * 演示包：一言代理接口（目录 api/demo，勿与业务接口重名）
  * 完全兼容 hitokoto.cn 官方API，纯转发不做任何修改
  * 官方文档: https://developer.hitokoto.cn/sentence/
  */

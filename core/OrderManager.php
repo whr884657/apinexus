@@ -286,7 +286,7 @@ class OrderManager
             return 0.0;
         }
         try {
-            $pdo = Database::pdo();
+            $pdo = Database::connect();
             $sql = 'SELECT COALESCE(SUM(`amount`), 0) AS s FROM `' . self::table() . '`'
                 . ' WHERE `userid` = ? AND `direct` = ? AND `status` = ?';
             $stmt = $pdo->prepare($sql);

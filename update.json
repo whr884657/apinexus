@@ -1,14 +1,11 @@
 {
-    "version": "13.20.3",
-    "title": "ApiNexus 13.20.3 主题页归属、迁移修复与轮询/日志优化",
+    "version": "13.20.4",
+    "title": "ApiNexus 13.20.4 修复用户控制台 Fatal 与演示包精简",
     "release_date": "2026-07-31",
     "db_changes": false,
     "changes": [
-        "修复新装后升级误跑 require_key 历史迁移导致库结构失败（E201）",
-        "控制台/大屏轮询防防火墙误拦：可选 1～5 或 10/15/20/30 秒（默认 10）、隐藏暂停、单飞、软刷串行（E202）",
-        "日志列表展示记录 ID；失败角标显示原因如「失败-上游网关错误」（E203）",
-        "用户中心登录后业务页拆入各主题 user/pages/，路由仅取数（E200）",
-        "控制台：账户概览恢复；KPI 普通 5 / 开发者 6；默认主题时段问候与动效"
+        "修复 OrderManager::sumUserSpent 误调不存在的 Database::pdo() 导致用户控制台 Fatal（E204）",
+        "演示包 api/demo 仅保留 aword.php（上游代理 + ApiStats 示例）；移除本地一言数据与 v1 接口"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

@@ -1,5 +1,14 @@
 {
     "versions": {
+        "13.20.4": {
+            "title": "ApiNexus 13.20.4 修复用户控制台 Fatal 与演示包精简",
+            "date": "2026-07-31",
+            "db_changes": false,
+            "changes": [
+                "修复 OrderManager::sumUserSpent 误调不存在的 Database::pdo() 导致用户控制台 Fatal（E204）",
+                "演示包 api/demo 仅保留 aword.php（上游代理 + ApiStats 示例）；移除本地一言数据与 v1 接口"
+            ]
+        },
         "13.20.3": {
             "title": "ApiNexus 13.20.3 主题页归属、迁移修复与轮询/日志优化",
             "date": "2026-07-31",

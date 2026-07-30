@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.20.3-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.20.4-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -124,7 +124,7 @@ ApiNexus/
 ├── detail.php                  # 接口详情（对外 /detail/{id}，伪静态 → ?id=）
 ├── profile.php                 # 开发者公开主页（对外 /profile/{id}）
 ├── api/                        # 本地业务接口（头部 ApiStats::hit(接口ID)）+ 统计代码使用说明.md
-│   └── yiyan/                  # 示例：随机一言
+│   └── demo/                   # 演示包：aword.php（上游一言代理 + ApiStats 示例；勿与业务接口重名）
 ├── articles.php                # 前台 · 文章
 ├── links.php                   # 前台 · 友情链接
 ├── sponsor.php                 # 前台 · 赞助
@@ -275,11 +275,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.20.3（2026-07-31）
+### v13.20.4（2026-07-31）
 
-- **严重：** 修复新装后升级误跑 `require_key` 历史迁移导致库结构失败（E201）
-- 控制台/大屏轮询可选 1～5 或 10～30 秒并防误拦（E202）；日志 ID 与失败原因（E203）
-- 用户中心业务页进主题包（E200）；控制台账户概览与 KPI 增强
+- **严重：** 修复用户控制台 Fatal（`Database::pdo()` 不存在 → `Database::connect()`）（E204）
+- 演示包 `api/demo` 仅保留 `aword.php`；移除本地一言数据与 v1 接口
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
