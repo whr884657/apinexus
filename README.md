@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.19.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.20.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -275,10 +275,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.19.0（2026-07-30）
+### v13.20.0（2026-07-30）
 
-- 修复「设置里测试连接成功，控制台仍显示面板异常」：成功拉取后误调不存在的缓存写入方法，被异常捕获打成不可用（E195）
-- 重构面板监控：测试与控制台共用拉取；仅缓存成功快照；测试保存后预热；软刷不再保留旧异常态
+- 服务器监控刷新对齐控制台「实时刷新间隔」：缓存 TTL 随 1～5 秒设置；live 强制拉新，不再卡在约 10 秒旧数据
+- 1Panel 上下行按累计流量差分推算；控制台卡片悬停/按下、进度条过渡与刷新动效
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

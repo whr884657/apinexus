@@ -198,7 +198,8 @@ class DashboardStats
             ),
             'recent'        => self::recentCallsCompact(),
             'sys_overview'  => self::sysOverviewLive($ttl),
-            'server'        => self::safePanelSnapshot(false),
+            // live 强制刷新面板，与设置间隔一致（禁止 10s 成功缓存拖慢网速/负载）
+            'server'        => self::safePanelSnapshot(true),
             'top_apis'      => self::remember('top_apis_live_10', $ttl, function () {
                 return self::topApisToday(10);
             }),

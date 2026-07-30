@@ -55,6 +55,17 @@
     border-radius: 12px;
     padding: 14px 16px;
     min-width: 0;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    will-change: transform;
+}
+#adminDashPage .dash-kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    border-color: #dbeafe;
+}
+#adminDashPage .dash-kpi.is-pressed {
+    transform: translateY(0) scale(0.985);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 #adminDashPage .dash-kpi__top {
     display: flex;
@@ -130,6 +141,15 @@
 #adminDashPage .dash-grid-bars { grid-template-columns: 1.2fr 1fr; align-items: stretch; }
 #adminDashPage .dash-grid-bottom { grid-template-columns: 1.2fr 1fr; align-items: stretch; }
 #adminDashPage .dash-panel { margin: 0; }
+#adminDashPage .dash-panel {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+#adminDashPage .dash-panel:hover {
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+#adminDashPage .dash-panel.is-pressed {
+    transform: scale(0.995);
+}
 /* TOP 与运营速览：同行等高；TOP 内部滚筒，速览随内容撑开后顶齐 */
 #adminDashPage .dash-panel--top,
 #adminDashPage .dash-panel--sys {
@@ -537,6 +557,7 @@
     height: 100%;
     border-radius: inherit;
     background: #3b82f6;
+    transition: width 0.45s ease, background-color 0.25s ease;
 }
 #adminDashPage .dash-server__bar i.is-ok { background: #16a34a; }
 #adminDashPage .dash-server__bar i.is-warn { background: #f59e0b; }
@@ -558,6 +579,42 @@
     border-radius: 8px;
     background: #f8fafc;
     min-width: 0;
+    transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+#adminDashPage .dash-server__stat:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+#adminDashPage .dash-server__stat.is-pressed {
+    transform: scale(0.98);
+}
+#adminDashPage .dash-server.is-live .dash-server__stat strong {
+    transition: color 0.2s ease;
+}
+#adminDashPage .dash-server.is-flash {
+    animation: dashServerFlash 0.55s ease;
+}
+@keyframes dashServerFlash {
+    0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.35); }
+    100% { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
+}
+.vs-content__actions #dashRefreshBtn.vs-btn--icon.is-spinning svg {
+    animation: dashRefreshSpin 0.7s linear infinite;
+}
+@keyframes dashRefreshSpin {
+    to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    #adminDashPage .dash-kpi,
+    #adminDashPage .dash-panel,
+    #adminDashPage .dash-server__bar i,
+    #adminDashPage .dash-server__stat,
+    #adminDashPage .dash-server.is-flash,
+    .vs-content__actions #dashRefreshBtn.vs-btn--icon.is-spinning svg {
+        transition: none !important;
+        animation: none !important;
+        transform: none !important;
+    }
 }
 #adminDashPage .dash-server__stat span {
     display: block;

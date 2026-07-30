@@ -12,10 +12,10 @@ class PanelMonitor
     const PROVIDER_BAOTA = 'baota';
     const PROVIDER_ONEPANEL = 'onepanel';
 
-    /** 成功缓存秒数 */
-    const CACHE_TTL = 10;
-    /** 失败缓存秒数（防雪崩） */
-    const CACHE_FAIL_TTL = 6;
+    /** 成功缓存默认秒数（实际以控制台 live 间隔为准，见 successCacheTtl） */
+    const CACHE_TTL = 5;
+    /** 失败缓存秒数（当前失败不写 Redis，保留常量兼容） */
+    const CACHE_FAIL_TTL = 2;
     /** 单次 HTTP 超时（秒） */
     const HTTP_TIMEOUT = 3;
 
@@ -347,13 +347,12 @@ class PanelMonitor
     }
 
     /**
-     * 每次读库相关键前刷新 Config 静态缓存中的面板项，避免同进程内旧值
+     * 每次读面板相关配置（同请求内沿用 Config 静态缓存；persist 已 clearCache）
      *
      * @return array{enabled:bool,provider:string,url:string,key:string}
      */
     private static function readConfigState()
     {
-        Config::clearCache();
         $enabled = self::isEnabled();
         $provider = self::normalizeProvider(Config::get('panelmonitor_provider', ''));
         $url = trim((string) Config::get('panelmonitor_baseurl', ''));
@@ -364,6 +363,26 @@ class PanelMonitor
             'url'      => $url,
             'key'      => $key,
         );
+    }
+
+    /**
+     * 成功快照缓存 TTL：与控制台「实时刷新间隔」一致（1～5 秒）
+     *
+     * @return int
+     */
+    private static function successCacheTtl()
+    {
+        $n = self::CACHE_TTL;
+        if (class_exists('DashboardStats') && method_exists('DashboardStats', 'liveIntervalSeconds')) {
+            $n = (int) DashboardStats::liveIntervalSeconds();
+        }
+        if ($n < 1) {
+            $n = 1;
+        }
+        if ($n > 5) {
+            $n = 5;
+        }
+        return $n;
     }
 
     /**
@@ -398,9 +417,10 @@ class PanelMonitor
             return;
         }
         try {
-            // 必须用 put（历史误写 set 导致成功拉取后被 Throwable 打成失败）
-            RedisCache::put($cacheKey, $snap, self::CACHE_TTL);
-            RedisCache::put('panel_monitor_last_key', $cacheKey, self::CACHE_TTL + 30);
+            // 必须用 put；TTL 对齐控制台 live 间隔，避免「设置 1 秒仍 10 秒一变」
+            $ttl = self::successCacheTtl();
+            RedisCache::put($cacheKey, $snap, $ttl);
+            RedisCache::put('panel_monitor_last_key', $cacheKey, $ttl + 30);
         } catch (Exception $e) {
             // 缓存失败不影响业务
         } catch (Throwable $e) {
@@ -871,7 +891,7 @@ class PanelMonitor
             $snap['mempercent'] = self::safeFloat($snap['memused'] * 100 / $snap['memtotal'], 1);
         }
 
-        // 网速：仅接受明确的速率字段。netBytesSent/Recv 是累计字节，禁止当成 KB/s
+        // 网速：优先明确速率字段；否则用累计字节差分推算 KB/s（对齐官方 APP 秒级刷新）
         if (isset($cur['shotNet']) && is_array($cur['shotNet'])) {
             if (isset($cur['shotNet']['up'])) {
                 $snap['netup'] = self::safeFloat($cur['shotNet']['up'], 1);
@@ -887,6 +907,20 @@ class PanelMonitor
                 $snap['netdown'] = self::safeFloat($cur['net']['down'], 1);
             }
         }
+        if (($snap['netup'] === null || $snap['netdown'] === null)
+            && (isset($cur['netBytesSent']) || isset($cur['netBytesRecv']))
+        ) {
+            $rates = self::onePanelNetRatesFromBytes(
+                isset($cur['netBytesSent']) ? (float) $cur['netBytesSent'] : null,
+                isset($cur['netBytesRecv']) ? (float) $cur['netBytesRecv'] : null
+            );
+            if ($snap['netup'] === null && $rates['up'] !== null) {
+                $snap['netup'] = $rates['up'];
+            }
+            if ($snap['netdown'] === null && $rates['down'] !== null) {
+                $snap['netdown'] = $rates['down'];
+            }
+        }
 
         foreach (array('version', 'panelVersion', 'panel_version', 'appVersion', 'systemVersion') as $vk) {
             if ($snap['panelversion'] === '' && isset($base[$vk]) && (string) $base[$vk] !== '') {
@@ -895,6 +929,65 @@ class PanelMonitor
         }
 
         return $snap;
+    }
+
+    /**
+     * 1Panel 累计流量差分 → KB/s（短缓存上一拍字节与时间）
+     *
+     * @param float|null $sent
+     * @param float|null $recv
+     * @return array{up:float|null,down:float|null}
+     */
+    private static function onePanelNetRatesFromBytes($sent, $recv)
+    {
+        $out = array('up' => null, 'down' => null);
+        $now = microtime(true);
+        $key = 'panel_monitor_1p_net_prev';
+        $prev = null;
+        if (class_exists('RedisCache')) {
+            try {
+                $prev = RedisCache::get($key);
+            } catch (Exception $e) {
+                $prev = null;
+            } catch (Throwable $e) {
+                $prev = null;
+            }
+        }
+        if (is_array($prev)
+            && isset($prev['t'], $prev['sent'], $prev['recv'])
+            && is_numeric($prev['t'])
+        ) {
+            $dt = $now - (float) $prev['t'];
+            if ($dt >= 0.4 && $dt <= 30) {
+                if ($sent !== null && is_numeric($prev['sent'])) {
+                    $dUp = $sent - (float) $prev['sent'];
+                    if ($dUp >= 0) {
+                        $out['up'] = self::safeFloat(($dUp / $dt) / 1024.0, 1);
+                    }
+                }
+                if ($recv !== null && is_numeric($prev['recv'])) {
+                    $dDown = $recv - (float) $prev['recv'];
+                    if ($dDown >= 0) {
+                        $out['down'] = self::safeFloat(($dDown / $dt) / 1024.0, 1);
+                    }
+                }
+            }
+        }
+        if (class_exists('RedisCache')) {
+            try {
+                $ttl = self::successCacheTtl() + 30;
+                RedisCache::put($key, array(
+                    't'    => $now,
+                    'sent' => $sent,
+                    'recv' => $recv,
+                ), $ttl);
+            } catch (Exception $e) {
+                // ignore
+            } catch (Throwable $e) {
+                // ignore
+            }
+        }
+        return $out;
     }
 
     /**

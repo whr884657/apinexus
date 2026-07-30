@@ -717,7 +717,18 @@
         html += '<div class="dash-server__stat"><span>下行</span><strong>' + esc(fmtRate(s.netdown)) + '</strong></div>';
         html += '</div>';
 
+        var prevOk = el.getAttribute('data-server-ok') === '1';
         el.innerHTML = html;
+        el.setAttribute('data-server-ok', s.ok ? '1' : '0');
+        if (s.ok) {
+            el.classList.add('is-live');
+            if (!prevOk) {
+                el.classList.add('is-flash');
+                window.setTimeout(function () { el.classList.remove('is-flash'); }, 600);
+            }
+        } else {
+            el.classList.remove('is-live');
+        }
     }
 
     function updateClock(data) {
@@ -771,7 +782,7 @@
             renderSys(boot.sys_overview);
         }
         if (live.server && Object.prototype.hasOwnProperty.call(live.server, 'enabled')) {
-            // live 成功优先；live 失败且本地已在线则不降级
+            // live 成功优先；同为成功时也更新（秒级网速/负载）
             if (live.server.ok || !boot.server || !boot.server.ok) {
                 boot.server = live.server;
                 renderServer(boot.server);
@@ -817,6 +828,10 @@
             snapshotRetryLeft = 1;
             var wasReady = ready;
             ready = true;
+            if (!wasReady) {
+                // 首屏就绪后立刻 live 一拍，服务器指标尽快跟上设置间隔
+                pollLive();
+            }
             // 软刷：保留 live 已刷新的最近调用 / 系统概览 / KPI / TOP，避免被 snapshot 慢路径覆盖
             // 服务器卡片不参与 keep：一律用本次 snapshot（E195：禁止旧异常盖住新成功）
             var keepRecent = (!forceRefresh && wasReady && Array.isArray(boot.recent) && boot.recent.length)
@@ -862,7 +877,10 @@
             loading = false;
             softLoading = false;
             var btn = document.getElementById('dashRefreshBtn');
-            if (btn) btn.disabled = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('is-spinning');
+            }
             if (pendingForceRefresh) {
                 pendingForceRefresh = false;
                 fetchSnapshot(true);
@@ -883,6 +901,10 @@
             clearInterval(pollTimer);
             pollTimer = null;
         }
+        // 立即拉一拍，再按设置间隔轮询（与官方面板秒级刷新对齐）
+        if (ready && !loading) {
+            pollLive();
+        }
         pollTimer = setInterval(pollLive, liveIntervalMs);
     }
 
@@ -891,7 +913,8 @@
             clearInterval(softTimer);
             softTimer = null;
         }
-        var softMs = Math.max(liveIntervalMs * 6, 10000);
+        // 软刷跟随 live 间隔，不再最低卡 10 秒
+        var softMs = Math.max(liveIntervalMs * 4, liveIntervalMs);
         softTimer = setInterval(function () { fetchSnapshot(false); }, softMs);
     }
 
@@ -899,6 +922,7 @@
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
             refreshBtn.disabled = true;
+            refreshBtn.classList.add('is-spinning');
             fetchSnapshot(true);
         });
     }
@@ -915,6 +939,23 @@
     clockTimer = setInterval(tickClock, 1000);
     restartLivePoll();
     restartSoftPoll();
+
+    // 卡片轻交互：按下反馈（不改业务逻辑）
+    page.addEventListener('pointerdown', function (ev) {
+        var card = ev.target && ev.target.closest
+            ? ev.target.closest('.dash-kpi, .dash-panel, .dash-server__stat')
+            : null;
+        if (!card || !page.contains(card)) return;
+        card.classList.add('is-pressed');
+    });
+    page.addEventListener('pointerup', function () {
+        var list = page.querySelectorAll('.is-pressed');
+        for (var i = 0; i < list.length; i++) list[i].classList.remove('is-pressed');
+    });
+    page.addEventListener('pointerleave', function () {
+        var list = page.querySelectorAll('.is-pressed');
+        for (var i = 0; i < list.length; i++) list[i].classList.remove('is-pressed');
+    }, true);
 
     window.addEventListener('beforeunload', function () {
         if (pollTimer) clearInterval(pollTimer);
