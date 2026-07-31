@@ -1,11 +1,12 @@
 {
-    "version": "13.20.4",
-    "title": "ApiNexus 13.20.4 修复用户控制台 Fatal 与演示包精简",
+    "version": "13.21.0",
+    "title": "ApiNexus 13.21.0 缓存键前缀隔离与安装伪静态指引",
     "release_date": "2026-07-31",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "修复 OrderManager::sumUserSpent 误调不存在的 Database::pdo() 导致用户控制台 Fatal（E204）",
-        "演示包 api/demo 仅保留 aword.php（上游代理 + ApiStats 示例）；移除本地一言数据与 v1 接口"
+        "同机多站 Redis：安装与系统设置可配缓存键前缀；保存清空本站键空间；冲突检测（E205）",
+        "安装向导改为六步：许可后第 1 步 Nginx 伪静态（情况 A + 一键复制），环境检测为第 2 步（E206）",
+        "新增迁移预置 redis_prefix；Redis 管理清空走本站键空间删除"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

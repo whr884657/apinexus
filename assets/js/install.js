@@ -27,6 +27,10 @@
         if (hint) {
             hint.hidden = true;
         }
+        var nginxPanel = document.getElementById('installNginxPanel');
+        if (nginxPanel) {
+            nginxPanel.hidden = false;
+        }
         var checks = document.getElementById('installEnvChecks');
         if (checks) {
             checks.hidden = false;
@@ -38,6 +42,53 @@
         if (window.VS_INSTALL_LICENSE) {
             window.VS_INSTALL_LICENSE.accepted = 1;
         }
+    }
+
+    function bindNginxCopy() {
+        var btn = document.getElementById('nginxCopyBtn');
+        var pre = document.getElementById('nginxSnippetPre');
+        if (!btn || !pre) {
+            return;
+        }
+        btn.addEventListener('click', function () {
+            var text = pre.textContent || '';
+            function ok() {
+                if (window.VsToast) {
+                    VsToast.show('已复制到剪贴板', 'success');
+                } else {
+                    showAlert('已复制到剪贴板');
+                }
+            }
+            function fail() {
+                if (window.VsToast) {
+                    VsToast.show('复制失败，请手动选中复制', 'error');
+                } else {
+                    showAlert('复制失败，请手动选中复制');
+                }
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(ok).catch(fail);
+            } else {
+                try {
+                    var ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.setAttribute('readonly', '');
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    var done = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    if (done) {
+                        ok();
+                    } else {
+                        fail();
+                    }
+                } catch (e) {
+                    fail();
+                }
+            }
+        });
     }
 
     function openLicenseGate() {
@@ -152,6 +203,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         openLicenseGate();
+        bindNginxCopy();
 
         var adminForm = document.getElementById('adminForm');
         if (adminForm) {

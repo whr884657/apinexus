@@ -55,6 +55,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'check_redis_prefix') {
+        try {
+            $raw = isset($_POST['redis_prefix']) ? (string) $_POST['redis_prefix'] : '';
+            $result = RedisService::detectPrefixConflict($raw);
+            AjaxResponse::success(
+                $result['message'] !== '' ? $result['message'] : '此前缀可用',
+                array(
+                    'conflict' => !empty($result['conflict']) ? 1 : 0,
+                    'prefix' => $result['prefix'],
+                    'count' => (int) $result['count'],
+                )
+            );
+        } catch (Exception $e) {
+            AjaxResponse::error('检测失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_redis_prefix') {
+        try {
+            $raw = isset($_POST['redis_prefix']) ? (string) $_POST['redis_prefix'] : '';
+            $force = isset($_POST['force']) && (string) $_POST['force'] === '1';
+            $result = RedisService::savePrefixConfig($raw, $force);
+            if (!empty($result['need_confirm'])) {
+                AjaxResponse::json(array(
+                    'code' => 0,
+                    'msg' => $result['msg'],
+                    'need_confirm' => 1,
+                    'prefix' => $result['prefix'],
+                ));
+            }
+            if (empty($result['ok'])) {
+                AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '保存失败');
+            }
+            AjaxResponse::success($result['msg'], array(
+                'prefix' => $result['prefix'],
+                'deleted' => (int) $result['deleted'],
+            ));
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
     if ($action === 'test_panelmonitor') {
         // E193：测试连接限流，降低管理员会话被滥用时的内网探测频率
         $admin = Auth::user();
@@ -1123,6 +1165,39 @@ vs_admin_accordion_start(
     }
 })();
 </script>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-redis-prefix',
+    '缓存键前缀',
+    '同机多站共用 Redis 时隔离缓存，避免站点数据串读'
+);
+$redisPrefixCfg = RedisService::connectionConfig()['prefix'];
+?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="redisPrefixForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_redis_prefix">
+        <input type="hidden" name="force" id="redisPrefixForce" value="0">
+        <?php vs_render_notice(
+            'tip',
+            '',
+            '同一台服务器部署多套本系统并共用 Redis 时，必须为每套填写互不相同的键前缀。仅部署一套时可使用默认值。保存时会清空本站旧缓存，随后按新前缀重新写入。',
+            array('field' => true, 'compact' => true)
+        ); ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="settings_redis_prefix">键前缀</label>
+            <input type="text" class="vs-input" id="settings_redis_prefix" name="redis_prefix"
+                   value="<?php echo vs_e($redisPrefixCfg); ?>"
+                   placeholder="例 site_a: 或 apinexus:"
+                   autocomplete="off">
+            <p class="vs-form-hint" id="redisPrefixHint">仅允许字母、数字、下划线、连字符；保存时自动补齐末尾冒号。留空则使用默认前缀。</p>
+            <p class="vs-form-hint" id="redisPrefixConflict" hidden></p>
+        </div>
+        <div class="vs-form-actions">
+            <button type="button" class="vs-btn vs-btn--default" id="redisPrefixCheckBtn">检测冲突</button>
+            <button type="submit" class="vs-btn vs-btn--primary">保存键前缀</button>
+        </div>
+    </form>
 <?php vs_admin_accordion_end(); ?>
 
 <?php

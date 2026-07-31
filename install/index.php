@@ -1,8 +1,8 @@
 <?php
 /**
  * 文件：install/index.php
- * 作用：ApiNexus Web 五步安装向导（单文件实现全部安装逻辑）
- * @version 1.1.0
+ * 作用：ApiNexus Web 六步安装向导（伪静态 → 环境 → 数据库 → 建表 → 管理员 → 完成）
+ * @version 13.21.0
  */
 
 define('VS_ROOT', dirname(__DIR__));
@@ -13,7 +13,33 @@ InstallChecker::requireNotInstalled();
 $error   = '';
 $success = '';
 $step    = isset($_GET['step']) ? (int) $_GET['step'] : 1;
-$step    = max(1, min(5, $step));
+$step    = max(1, min(6, $step));
+
+/**
+ * 安装向导展示的 Nginx 伪静态（情况 A 全文，与 nginx伪静态配置.md 一致）
+ *
+ * @return string
+ */
+function vs_install_nginx_rewrite_snippet()
+{
+    return "location ^~ /config/ {\n"
+        . "    deny all;\n"
+        . "    return 403;\n"
+        . "}\n"
+        . "location ^~ /data/ {\n"
+        . "    deny all;\n"
+        . "    return 403;\n"
+        . "}\n"
+        . "location ~ ^/apis/([a-z0-9]+)/?$ {\n"
+        . "    rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=\$1 last;\n"
+        . "}\n"
+        . "location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {\n"
+        . "    rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /\$1.php?id=\$2 last;\n"
+        . "}\n"
+        . "location / {\n"
+        . "    try_files \$uri \$uri/ \$uri.php\$is_args\$args;\n"
+        . "}";
+}
 
 // ── POST：同意开源许可（安装门禁）────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'accept_license') {
@@ -38,7 +64,6 @@ if (!$licenseAccepted) {
             }
             $error = '请先阅读并同意开源许可协议';
             $step = 1;
-            // 清空 action，避免下方安装写库逻辑继续执行
             $_POST['action'] = '';
         }
     } elseif ($step > 1) {
@@ -62,6 +87,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         AjaxResponse::error('请填写数据库用户名和数据库名');
     }
 
+    $prefixRaw = isset($_POST['redis_prefix']) ? (string) $_POST['redis_prefix'] : '';
+    if (trim($prefixRaw) === '') {
+        $_SESSION['vs_install_redis_prefix'] = RedisService::DEFAULT_PREFIX;
+    } else {
+        $norm = RedisService::normalizePrefix($prefixRaw, true);
+        if ($norm === false) {
+            AjaxResponse::error('缓存键前缀格式无效：仅允许字母、数字、下划线、连字符，并以冒号结尾');
+        }
+        $_SESSION['vs_install_redis_prefix'] = $norm;
+    }
+
     try {
         Database::testConnection($dbConfig);
         $_SESSION['vs_install_db'] = $dbConfig;
@@ -78,20 +114,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? $_POST['action'] : '';
     $postStep = isset($_POST['step']) ? (int) $_POST['step'] : $step;
 
-    // Step 2: 进入下一步（已测试连接）
-    if ($action === 'next_step' && $postStep === 2) {
+    if ($action === 'next_step' && $postStep === 1) {
+        $_SESSION['vs_nginx_ack'] = 1;
+        vs_redirect(vs_base_url() . '/install/?step=2');
+    }
+
+    if ($action === 'next_step' && $postStep === 3) {
         if (!empty($_SESSION['vs_db_tested'])) {
-            vs_redirect(vs_base_url() . '/install/?step=3');
+            vs_redirect(vs_base_url() . '/install/?step=4');
         } else {
             $error = '请先测试数据库连接';
-            $step = 2;
+            $step = 3;
         }
     }
 
-    // Step 3: 创建数据表
-    if (($action === 'create_tables' || $action === 'clear_and_create') && $postStep === 3) {
+    if (($action === 'create_tables' || $action === 'clear_and_create') && $postStep === 4) {
         if (empty($_SESSION['vs_db_tested']) || empty($_SESSION['vs_install_db'])) {
-            vs_redirect(vs_base_url() . '/install/?step=2');
+            vs_redirect(vs_base_url() . '/install/?step=3');
         }
 
         $dbConfig = $_SESSION['vs_install_db'];
@@ -108,17 +147,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $action === 'clear_and_create'
             );
             $_SESSION['vs_tables_created'] = true;
-            vs_redirect(vs_base_url() . '/install/?step=4');
+            vs_redirect(vs_base_url() . '/install/?step=5');
         } catch (Exception $e) {
             $error = '创建数据表失败：' . $e->getMessage();
-            $step = 3;
+            $step = 4;
         }
     }
 
-    // Step 4: 创建管理员并完成安装
-    if ($action === 'create_admin' && $postStep === 4) {
+    if ($action === 'create_admin' && $postStep === 5) {
         if (empty($_SESSION['vs_tables_created']) || empty($_SESSION['vs_install_db'])) {
-            vs_redirect(vs_base_url() . '/install/?step=3');
+            vs_redirect(vs_base_url() . '/install/?step=4');
         }
 
         $username = trim(isset($_POST['admin_username']) ? $_POST['admin_username'] : '');
@@ -128,19 +166,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($username === '' || $password === '' || $email === '') {
             $error = '请填写完整的管理员信息';
-            $step = 4;
+            $step = 5;
         } elseif (strlen($username) < 3) {
             $error = '管理员用户名至少 3 个字符';
-            $step = 4;
+            $step = 5;
         } elseif (strlen($password) < 6) {
             $error = '管理员密码至少 6 个字符';
-            $step = 4;
+            $step = 5;
         } elseif ($password !== $password2) {
             $error = '两次输入的密码不一致';
-            $step = 4;
+            $step = 5;
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = '邮箱格式不正确';
-            $step = 4;
+            $step = 5;
         } else {
             try {
                 $dbConfig = $_SESSION['vs_install_db'];
@@ -154,45 +192,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 writeDatabaseConfig($dbConfig);
                 writeInstallLock();
 
-                // 新装已是 database.sql 终态：标记全部历史迁移已应用，避免升级误跑 require_key 等旧脚本（E201）
                 try {
                     if (class_exists('Config')) {
                         Config::clearCache();
                     }
+                    $redisPrefix = isset($_SESSION['vs_install_redis_prefix'])
+                        ? (string) $_SESSION['vs_install_redis_prefix']
+                        : RedisService::DEFAULT_PREFIX;
+                    $normPrefix = RedisService::normalizePrefix($redisPrefix, true);
+                    if ($normPrefix === false) {
+                        $normPrefix = RedisService::DEFAULT_PREFIX;
+                    }
+                    Config::set(RedisService::CONFIG_PREFIX, $normPrefix);
+
                     if (class_exists('DatabaseMigrator') && defined('VS_VERSION')) {
                         DatabaseMigrator::seedAppliedUpTo(VS_VERSION);
                     }
                 } catch (Exception $seedEx) {
-                    // 播种失败不阻断安装；升级时仍靠 reconcile / isMigrationObsolete 兜底
+                    // 播种失败不阻断安装
                 }
 
-                unset($_SESSION['vs_install_db'], $_SESSION['vs_db_tested'], $_SESSION['vs_tables_created']);
+                unset(
+                    $_SESSION['vs_install_db'],
+                    $_SESSION['vs_db_tested'],
+                    $_SESSION['vs_tables_created'],
+                    $_SESSION['vs_install_redis_prefix'],
+                    $_SESSION['vs_nginx_ack']
+                );
 
-                vs_redirect(vs_base_url() . '/install/?step=5');
+                vs_redirect(vs_base_url() . '/install/?step=6');
             } catch (Exception $e) {
                 $error = '安装失败：' . $e->getMessage();
-                $step = 4;
+                $step = 5;
             }
         }
     }
 }
 
 // ── 步骤访问控制 ──────────────────────────────────────────
-if ($step === 3 && empty($_SESSION['vs_db_tested'])) {
-    vs_redirect(vs_base_url() . '/install/?step=2');
+if ($step >= 2 && $step < 6 && empty($_SESSION['vs_nginx_ack']) && $licenseAccepted) {
+    vs_redirect(vs_base_url() . '/install/?step=1');
 }
-if ($step === 4 && empty($_SESSION['vs_tables_created'])) {
+if ($step === 4 && empty($_SESSION['vs_db_tested'])) {
     vs_redirect(vs_base_url() . '/install/?step=3');
 }
-if ($step === 5 && !InstallChecker::isInstalled()) {
+if ($step === 5 && empty($_SESSION['vs_tables_created'])) {
+    vs_redirect(vs_base_url() . '/install/?step=4');
+}
+if ($step === 6 && !InstallChecker::isInstalled()) {
     vs_redirect(vs_base_url() . '/install/?step=1');
 }
 
-// ── 辅助函数 ──────────────────────────────────────────────
-
 /**
- * 获取已有数据表
- *
  * @param PDO    $pdo
  * @param string $prefix
  * @return array
@@ -205,8 +256,6 @@ function getExistingTables(PDO $pdo, $prefix)
 }
 
 /**
- * 写入数据库配置文件
- *
  * @param array $config
  * @return void
  * @throws Exception
@@ -230,8 +279,6 @@ function writeDatabaseConfig(array $config)
 }
 
 /**
- * 写入安装锁
- *
  * @return void
  * @throws Exception
  */
@@ -245,8 +292,6 @@ function writeInstallLock()
 }
 
 /**
- * 环境检测
- *
  * @return array
  */
 function runEnvironmentCheck()
@@ -271,7 +316,6 @@ function runEnvironmentCheck()
         array('name' => 'curl', 'label' => 'curl', 'required' => true),
         array('name' => 'openssl', 'label' => 'openssl', 'required' => true),
         array('name' => 'zip', 'label' => 'zip', 'required' => true),
-        // 本地图形验证码依赖 GD；缺省则无法通过环境检测
         array('name' => 'gd', 'label' => 'GD（本地验证码必选）', 'required' => true),
     );
     foreach ($extensions as $ext) {
@@ -285,7 +329,6 @@ function runEnvironmentCheck()
         );
     }
 
-    // GD 已加载时再确认可生成真彩图（部分裁剪构建会缺 imagecreatetruecolor）
     $gdUsable = extension_loaded('gd') && function_exists('imagecreatetruecolor');
     $checks[] = array(
         'name'  => 'GD 绘图能力（本地验证码）',
@@ -336,13 +379,15 @@ function runEnvironmentCheck()
     return $checks;
 }
 
-// ── 页面数据准备 ──────────────────────────────────────────
 $dbConfig = isset($_SESSION['vs_install_db']) ? $_SESSION['vs_install_db'] : array(
     'host' => 'localhost', 'port' => '3306', 'username' => '', 'password' => '', 'dbname' => '', 'prefix' => Database::TABLE_PREFIX,
 );
 $dbConfig['prefix'] = Database::TABLE_PREFIX;
 $dbTested = !empty($_SESSION['vs_db_tested']);
-$envChecks = ($step === 1) ? runEnvironmentCheck() : array();
+$redisPrefixValue = isset($_SESSION['vs_install_redis_prefix'])
+    ? (string) $_SESSION['vs_install_redis_prefix']
+    : '';
+$envChecks = ($step === 2) ? runEnvironmentCheck() : array();
 $envAllPass = true;
 foreach ($envChecks as $c) {
     if (!$c['pass']) {
@@ -352,7 +397,7 @@ foreach ($envChecks as $c) {
 
 $dbHasTables = false;
 $existingTables = array();
-if ($step === 3 && $dbTested) {
+if ($step === 4 && $dbTested) {
     try {
         $pdo = Database::testConnection($dbConfig);
         $existingTables = getExistingTables($pdo, Database::TABLE_PREFIX);
@@ -362,7 +407,15 @@ if ($step === 3 && $dbTested) {
     }
 }
 
-$stepTitles = array(1 => '环境检测', 2 => '数据库配置', 3 => '创建数据表', 4 => '管理员配置', 5 => '安装完成');
+$nginxSnippet = vs_install_nginx_rewrite_snippet();
+$stepTitles = array(
+    1 => '伪静态配置',
+    2 => '环境检测',
+    3 => '数据库配置',
+    4 => '创建数据表',
+    5 => '管理员配置',
+    6 => '安装完成',
+);
 $base = vs_base_url();
 
 vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
@@ -375,9 +428,8 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
             <p class="vs-install-subtitle">版本 v<?php echo vs_e(VS_VERSION); ?></p>
         </div>
 
-        <!-- 步骤条 -->
         <div class="vs-steps">
-            <?php for ($i = 1; $i <= 5; $i++): ?>
+            <?php for ($i = 1; $i <= 6; $i++): ?>
                 <?php if ($i > 1): ?>
                     <div class="vs-step__line<?php echo $i <= $step ? ' is-finished' : ''; ?>"></div>
                 <?php endif; ?>
@@ -397,12 +449,30 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
             <?php endif; ?>
 
             <?php if ($step === 1): ?>
-                <h2 class="vs-card-title">第一步：环境检测</h2>
-                <p class="vs-card-desc">须先阅读并同意开源许可协议后，再检测服务器环境是否满足运行要求。须安装 <strong>MySQL（pdo_mysql）</strong>、<strong>Redis</strong>、<strong>GD</strong>（本地验证码）扩展，且 <code>config/</code>、<code>data/</code> 目录可写。</p>
+                <h2 class="vs-card-title">第一步：配置 Nginx 伪静态</h2>
+                <p class="vs-card-desc">请先在服务器（如宝塔：网站 → 设置 → 伪静态）粘贴下方规则并保存、重载 Nginx。未配置时，代理短链与详情路径可能无法访问。</p>
                 <?php if (!$licenseAccepted): ?>
                     <div class="vs-alert vs-alert--warning" id="licenseGateHint">请先完成弹窗中的开源许可阅读与确认，方可继续安装。</div>
                 <?php endif; ?>
-                <div class="vs-check-list" id="installEnvChecks"<?php echo $licenseAccepted ? '' : ' hidden'; ?>>
+                <div id="installNginxPanel"<?php echo $licenseAccepted ? '' : ' hidden'; ?>>
+                    <div class="vs-alert vs-alert--info">复制整段规则到站点伪静态配置中（推荐整站使用本段）。</div>
+                    <div class="vs-nginx-toolbar">
+                        <button type="button" class="vs-btn vs-btn--primary" id="nginxCopyBtn">一键复制</button>
+                    </div>
+                    <pre class="vs-nginx-code" id="nginxSnippetPre"><?php echo vs_e($nginxSnippet); ?></pre>
+                    <form method="post" action="" class="vs-form" id="nginxAckForm">
+                        <input type="hidden" name="step" value="1">
+                        <input type="hidden" name="action" value="next_step">
+                        <div class="vs-form-actions">
+                            <button type="submit" class="vs-btn vs-btn--primary">我已配置，下一步</button>
+                        </div>
+                    </form>
+                </div>
+
+            <?php elseif ($step === 2): ?>
+                <h2 class="vs-card-title">第二步：环境检测</h2>
+                <p class="vs-card-desc">检测服务器环境是否满足运行要求。须安装 <strong>MySQL（pdo_mysql）</strong>、<strong>Redis</strong>、<strong>GD</strong>（本地验证码）扩展，且 <code>config/</code>、<code>data/</code> 目录可写。</p>
+                <div class="vs-check-list" id="installEnvChecks">
                     <?php foreach ($envChecks as $check): ?>
                         <div class="vs-check-item<?php echo $check['pass'] ? ' is-pass' : ' is-fail'; ?>">
                             <span class="vs-check-icon"><?php echo $check['pass'] ? '&#10003;' : '&#10007;'; ?></span>
@@ -414,20 +484,20 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                     <?php endforeach; ?>
                 </div>
                 <?php if ($envAllPass): ?>
-                    <div class="vs-form-actions" id="installEnvNext"<?php echo $licenseAccepted ? '' : ' hidden'; ?>>
-                        <a href="?step=2" class="vs-btn vs-btn--primary">下一步</a>
+                    <div class="vs-form-actions" id="installEnvNext">
+                        <a href="?step=3" class="vs-btn vs-btn--primary">下一步</a>
                     </div>
                 <?php else: ?>
-                    <div class="vs-form-actions" id="installEnvNext"<?php echo $licenseAccepted ? '' : ' hidden'; ?>>
+                    <div class="vs-form-actions" id="installEnvNext">
                         <span class="vs-btn vs-btn--disabled">请先解决以上问题</span>
                     </div>
                 <?php endif; ?>
 
-            <?php elseif ($step === 2): ?>
-                <h2 class="vs-card-title">第二步：数据库配置</h2>
+            <?php elseif ($step === 3): ?>
+                <h2 class="vs-card-title">第三步：数据库配置</h2>
                 <p class="vs-card-desc">请填写 MySQL 数据库连接信息，然后测试连接。数据表前缀固定为 <code>vs_</code>，无需配置。</p>
                 <form method="post" action="" class="vs-form" id="dbForm">
-                    <input type="hidden" name="step" value="2">
+                    <input type="hidden" name="step" value="3">
                     <div class="vs-form-grid">
                         <div class="vs-form-row">
                             <label class="vs-label">数据库主机</label>
@@ -449,16 +519,23 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                             <label class="vs-label">数据库名</label>
                             <input type="text" name="dbname" class="vs-input" value="<?php echo vs_e($dbConfig['dbname']); ?>" placeholder="apinexus" required>
                         </div>
+                        <div class="vs-form-row">
+                            <label class="vs-label" for="redis_prefix">缓存键前缀（可选）</label>
+                            <input type="text" name="redis_prefix" id="redis_prefix" class="vs-input"
+                                   value="<?php echo vs_e($redisPrefixValue === RedisService::DEFAULT_PREFIX ? '' : $redisPrefixValue); ?>"
+                                   placeholder="默认 apinexus: ，例 site_a:">
+                            <p class="vs-form-hint">同一台服务器部署<strong>多套</strong>本系统且共用 Redis 时<strong>必须</strong>填写互不相同的前缀，否则站点数据会串缓存。仅部署一套时可留空使用默认值。</p>
+                        </div>
                     </div>
                     <div id="dbTestMessage" class="vs-alert" role="alert" hidden></div>
                     <div class="vs-form-actions" id="dbFormActions">
                         <button type="button" class="vs-btn vs-btn--primary" id="testDbBtn">测试数据库连接</button>
-                        <a href="?step=3" class="vs-btn vs-btn--primary" id="dbNextBtn" style="<?php echo $dbTested ? '' : 'display:none;'; ?>">下一步</a>
+                        <a href="?step=4" class="vs-btn vs-btn--primary" id="dbNextBtn" style="<?php echo $dbTested ? '' : 'display:none;'; ?>">下一步</a>
                     </div>
                 </form>
 
-            <?php elseif ($step === 3): ?>
-                <h2 class="vs-card-title">第三步：创建数据表</h2>
+            <?php elseif ($step === 4): ?>
+                <h2 class="vs-card-title">第四步：创建数据表</h2>
                 <?php if ($dbHasTables): ?>
                     <div class="vs-alert vs-alert--warning">
                         检测到数据库中已有 <?php echo count($existingTables); ?> 张相关数据表：
@@ -466,7 +543,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                     </div>
                     <p class="vs-card-desc">如需全新安装，请先清空现有数据表。普通「创建数据表」按钮已禁用。</p>
                     <form method="post" action="" class="vs-form" id="clearDbForm">
-                        <input type="hidden" name="step" value="3">
+                        <input type="hidden" name="step" value="4">
                         <input type="hidden" name="action" value="clear_and_create">
                         <div class="vs-form-actions">
                             <button type="button" class="vs-btn vs-btn--disabled" disabled>创建数据表</button>
@@ -476,7 +553,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                 <?php else: ?>
                     <p class="vs-card-desc">数据库为空，可以直接创建 ApiNexus 所需的数据表。</p>
                     <form method="post" action="" class="vs-form">
-                        <input type="hidden" name="step" value="3">
+                        <input type="hidden" name="step" value="4">
                         <input type="hidden" name="action" value="create_tables">
                         <div class="vs-form-actions">
                             <button type="submit" class="vs-btn vs-btn--primary">创建数据表</button>
@@ -484,11 +561,11 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                     </form>
                 <?php endif; ?>
 
-            <?php elseif ($step === 4): ?>
-                <h2 class="vs-card-title">第四步：管理员配置</h2>
+            <?php elseif ($step === 5): ?>
+                <h2 class="vs-card-title">第五步：管理员配置</h2>
                 <p class="vs-card-desc">请设置系统管理员账号，密码将加密存储。</p>
                 <form method="post" action="" class="vs-form" id="adminForm">
-                    <input type="hidden" name="step" value="4">
+                    <input type="hidden" name="step" value="5">
                     <input type="hidden" name="action" value="create_admin">
                     <div class="vs-form-grid">
                         <div class="vs-form-row">
@@ -513,7 +590,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                     </div>
                 </form>
 
-            <?php elseif ($step === 5): ?>
+            <?php elseif ($step === 6): ?>
                 <div class="vs-success-block">
                     <div class="vs-success-icon">&#10003;</div>
                     <h2 class="vs-card-title">安装完成！</h2>

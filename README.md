@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.20.4-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.21.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -24,7 +24,7 @@
 
 **主要能力：**
 
-- Web 五步安装向导，自动创建数据表与初始配置
+- Web **六步**安装向导（伪静态 → 环境 → 数据库 → 建表 → 管理员 → 完成），自动创建数据表与初始配置；同机多站可配 Redis 缓存键前缀
 - **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ/Gitee OAuth）
 - **API 管理（已实现）**：后台接口列表（v8.0）/ 审核（v8.1）/ 分类（v8.2～8.3）/ 令牌（v9.0 表格卡片）/ 文档（v9.0 树+面板）/ 反馈（v9.0 列表+处理）；用户中心开发者投稿与邮件通知
 - **调用统计（v3.18+ / v13.3.0）：** 本地脚本头 2 行 `bootstrap` + `ApiStats::hit(接口ID)`（见 `api/统计代码使用说明.md`）+ 代理 `/apis/{短码}` 自动记账；日志表 `apilog`
@@ -198,7 +198,7 @@ ApiNexus/
 │   └── DatabaseMigrator.php    # 数据库增量迁移
 ├── data/                       # 运行时数据（更新临时文件等，自动创建）
 ├── install/
-│   ├── index.php               # 五步安装向导
+│   ├── index.php               # 六步安装向导
 │   ├── database.sql            # 全新安装数据库结构
 │   └── migrations/             # 在线升级增量 SQL
 └── 发行说明/                   # 各版本发行说明 Markdown
@@ -213,7 +213,7 @@ ApiNexus/
 1. 上传代码到 Web 服务器（或 `git clone` 后部署）
 2. 确保 `config/` 目录可写
 3. 创建 MySQL 空数据库
-4. 访问 `https://你的域名/install/` 完成五步安装
+4. 访问 `https://你的域名/install/` 完成六步安装（先配 Nginx 伪静态）
 5. 安装完成后访问 `/admin/login.php` 登录后台
 
 ---
@@ -275,10 +275,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.20.4（2026-07-31）
+### v13.21.0（2026-07-31）
 
-- **严重：** 修复用户控制台 Fatal（`Database::pdo()` 不存在 → `Database::connect()`）（E204）
-- 演示包 `api/demo` 仅保留 `aword.php`；移除本地一言数据与 v1 接口
+- **同机多站 Redis：** 安装与系统设置可配缓存键前缀；保存清空本站键空间；冲突检测（E205）
+- **安装向导六步：** 第 1 步 Nginx 伪静态（情况 A + 一键复制），第 2 步环境检测（E206）
+- 迁移预置 `redis_prefix`；Redis 管理清空走本站键空间删除
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

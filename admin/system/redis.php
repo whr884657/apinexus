@@ -18,7 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'clear_cache') {
         RedisCache::invalidateFrontend();
         RedisCache::invalidateApiLog();
-        AjaxResponse::success('业务缓存已清空', array('snapshot' => RedisService::collectMonitorSnapshot()));
+        $flush = RedisService::flushKeyspace(null);
+        $msg = '业务缓存已清空';
+        if (!empty($flush['ok'])) {
+            $msg .= '（键空间 ' . (int) $flush['deleted'] . ' 项）';
+        }
+        AjaxResponse::success($msg, array('snapshot' => RedisService::collectMonitorSnapshot()));
     }
 
     AjaxResponse::error('无效操作', 400);

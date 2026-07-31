@@ -133,7 +133,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('panelmonitor_enabled', '0'),
 ('panelmonitor_provider', ''),
 ('panelmonitor_baseurl', ''),
-('panelmonitor_apikey', '');
+('panelmonitor_apikey', ''),
+('redis_prefix', 'apinexus:');
 
 -- 邮箱验证码发信频率限制记录
 CREATE TABLE IF NOT EXISTS `{prefix}mailrate` (

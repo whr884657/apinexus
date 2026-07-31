@@ -226,6 +226,31 @@
     margin: 0 auto;
 }
 
+.vs-nginx-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin: 12px 0 8px;
+}
+
+.vs-nginx-code {
+    margin: 0 0 20px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.vs-form-hint {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--vs-text-secondary, #64748b);
+}
+
 /* ── 手机端适配 ── */
 @media (max-width: 768px) {
     .vs-install-page {

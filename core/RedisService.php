@@ -12,12 +12,267 @@ class RedisService
     const CONFIG_DATABASE = 'redis_database';
     const CONFIG_PREFIX = 'redis_prefix';
 
+    /** 单站默认键前缀（同机多站须改） */
+    const DEFAULT_PREFIX = 'apinexus:';
+
+    /** 前缀最大长度（含末尾冒号） */
+    const PREFIX_MAX_LEN = 48;
+
     /**
      * @return bool
      */
     public static function extensionLoaded()
     {
         return class_exists('Redis');
+    }
+
+    /**
+     * 规范化缓存键前缀：去空白、非法字符剔除、空则默认、末尾补冒号
+     *
+     * @param string $raw
+     * @param bool   $emptyAsDefault 空串是否回落到 DEFAULT_PREFIX
+     * @return string|false 非法时 false
+     */
+    public static function normalizePrefix($raw, $emptyAsDefault = true)
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return $emptyAsDefault ? self::DEFAULT_PREFIX : '';
+        }
+
+        // 仅允许字母数字、下划线、连字符、冒号；统一小写更稳
+        $clean = strtolower(preg_replace('/[^a-zA-Z0-9_:\-]/', '', $raw));
+        if ($clean === '' || $clean === ':') {
+            return false;
+        }
+        if (substr($clean, -1) !== ':') {
+            $clean .= ':';
+        }
+        if (strlen($clean) > self::PREFIX_MAX_LEN) {
+            return false;
+        }
+        // 禁止仅冒号堆叠或开头为冒号
+        if ($clean[0] === ':' || preg_match('/:{2,}/', $clean)) {
+            return false;
+        }
+
+        return $clean;
+    }
+
+    /**
+     * 统计某前缀下已有键数量（用于同机多站冲突提示）
+     *
+     * @param string $prefix 已规范化前缀
+     * @param int    $limit  扫描上限
+     * @return array{ok:bool,count:int,error:string}
+     */
+    public static function countKeysUnderPrefix($prefix, $limit = 50)
+    {
+        $prefix = self::normalizePrefix($prefix, false);
+        if ($prefix === false || $prefix === '') {
+            return array('ok' => false, 'count' => 0, 'error' => '前缀无效');
+        }
+        if (!self::extensionLoaded()) {
+            return array('ok' => false, 'count' => 0, 'error' => 'Redis 扩展未安装');
+        }
+
+        $limit = max(1, min(500, (int) $limit));
+        try {
+            $count = (int) self::withClient(function (Redis $redis) use ($prefix, $limit) {
+                $n = 0;
+                $it = null;
+                $pattern = $prefix . '*';
+                do {
+                    $keys = $redis->scan($it, $pattern, 80);
+                    if ($keys === false || !is_array($keys)) {
+                        break;
+                    }
+                    foreach ($keys as $key) {
+                        // 仅统计本前缀（避免更短前缀误伤，如 a: 命中 ab:）
+                        if (strpos((string) $key, $prefix) !== 0) {
+                            continue;
+                        }
+                        $n++;
+                        if ($n >= $limit) {
+                            return $n;
+                        }
+                    }
+                } while ($it !== 0 && $it !== null);
+
+                return $n;
+            });
+
+            return array('ok' => true, 'count' => $count, 'error' => '');
+        } catch (Exception $e) {
+            return array('ok' => false, 'count' => 0, 'error' => $e->getMessage());
+        }
+    }
+
+    /**
+     * 检测目标前缀是否可能与其它站点冲突（目标前缀下已有键，且不同于当前站前缀）
+     *
+     * @param string $candidateRaw
+     * @return array{conflict:bool,prefix:string,count:int,message:string}
+     */
+    public static function detectPrefixConflict($candidateRaw)
+    {
+        $normalized = self::normalizePrefix($candidateRaw, true);
+        if ($normalized === false) {
+            return array(
+                'conflict' => true,
+                'prefix' => '',
+                'count' => 0,
+                'message' => '前缀格式无效：仅允许字母、数字、下划线、连字符，并以冒号结尾',
+            );
+        }
+
+        $current = self::connectionConfig()['prefix'];
+        if ($normalized === $current) {
+            return array(
+                'conflict' => false,
+                'prefix' => $normalized,
+                'count' => 0,
+                'message' => '',
+            );
+        }
+
+        $scan = self::countKeysUnderPrefix($normalized, 20);
+        if (!$scan['ok']) {
+            // 连不上 Redis 时不挡保存，仅提示
+            return array(
+                'conflict' => false,
+                'prefix' => $normalized,
+                'count' => 0,
+                'message' => $scan['error'] !== '' ? ('无法检测冲突：' . $scan['error']) : '',
+            );
+        }
+
+        if ($scan['count'] > 0) {
+            return array(
+                'conflict' => true,
+                'prefix' => $normalized,
+                'count' => $scan['count'],
+                'message' => '该前缀下已有缓存数据（约 ' . $scan['count'] . ' 项起），可能与同机其它站点共用。继续使用会导致数据串读，请更换前缀。',
+            );
+        }
+
+        return array(
+            'conflict' => false,
+            'prefix' => $normalized,
+            'count' => 0,
+            'message' => '',
+        );
+    }
+
+    /**
+     * 删除指定前缀下全部键（本站键空间清空；不 flushdb）
+     *
+     * @param string|null $prefixRaw null=当前配置前缀
+     * @return array{ok:bool,deleted:int,error:string}
+     */
+    public static function flushKeyspace($prefixRaw = null)
+    {
+        if ($prefixRaw === null) {
+            $prefix = self::connectionConfig()['prefix'];
+        } else {
+            $prefix = self::normalizePrefix($prefixRaw, true);
+            if ($prefix === false) {
+                return array('ok' => false, 'deleted' => 0, 'error' => '前缀无效');
+            }
+        }
+
+        if (!self::extensionLoaded()) {
+            return array('ok' => false, 'deleted' => 0, 'error' => 'Redis 扩展未安装');
+        }
+
+        try {
+            $deleted = (int) self::withClient(function (Redis $redis) use ($prefix) {
+                $n = 0;
+                $it = null;
+                $pattern = $prefix . '*';
+                do {
+                    $keys = $redis->scan($it, $pattern, 100);
+                    if ($keys === false || !is_array($keys)) {
+                        break;
+                    }
+                    $batch = array();
+                    foreach ($keys as $key) {
+                        if (strpos((string) $key, $prefix) === 0) {
+                            $batch[] = $key;
+                        }
+                    }
+                    if (!empty($batch)) {
+                        $n += (int) $redis->del($batch);
+                    }
+                } while ($it !== 0 && $it !== null);
+
+                return $n;
+            });
+
+            return array('ok' => true, 'deleted' => $deleted, 'error' => '');
+        } catch (Exception $e) {
+            return array('ok' => false, 'deleted' => 0, 'error' => $e->getMessage());
+        }
+    }
+
+    /**
+     * 保存键前缀：先清空旧前缀键空间，再写入配置；目标前缀冲突且未强制时返回需确认
+     *
+     * @param string $rawPrefix
+     * @param bool   $forceConflict 冲突时仍保存
+     * @return array{ok:bool,need_confirm:bool,msg:string,prefix:string,deleted:int}
+     */
+    public static function savePrefixConfig($rawPrefix, $forceConflict = false)
+    {
+        $normalized = self::normalizePrefix($rawPrefix, true);
+        if ($normalized === false) {
+            return array(
+                'ok' => false,
+                'need_confirm' => false,
+                'msg' => '前缀格式无效：仅允许字母、数字、下划线、连字符，长度不超过 '
+                    . self::PREFIX_MAX_LEN . '，建议以冒号结尾',
+                'prefix' => '',
+                'deleted' => 0,
+            );
+        }
+
+        $conflict = self::detectPrefixConflict($normalized);
+        if (!empty($conflict['conflict']) && !$forceConflict) {
+            return array(
+                'ok' => false,
+                'need_confirm' => true,
+                'msg' => $conflict['message'],
+                'prefix' => $normalized,
+                'deleted' => 0,
+            );
+        }
+
+        $oldPrefix = self::connectionConfig()['prefix'];
+        $flush = self::flushKeyspace($oldPrefix);
+        // 前缀变更时也清掉目标前缀下残留（全新缓存）
+        if ($normalized !== $oldPrefix) {
+            $flushNew = self::flushKeyspace($normalized);
+            if ($flushNew['ok']) {
+                $flush['deleted'] = (int) $flush['deleted'] + (int) $flushNew['deleted'];
+            }
+        }
+
+        Config::set(self::CONFIG_PREFIX, $normalized);
+
+        $msg = '缓存键前缀已保存';
+        if ($flush['ok']) {
+            $msg .= '，已清空旧缓存 ' . (int) $flush['deleted'] . ' 项，将按新前缀重新写入';
+        } elseif ($flush['error'] !== '') {
+            $msg .= '（清空缓存时：' . $flush['error'] . '）';
+        }
+
+        return array(
+            'ok' => true,
+            'need_confirm' => false,
+            'msg' => $msg,
+            'prefix' => $normalized,
+            'deleted' => (int) $flush['deleted'],
+        );
     }
 
     /**
@@ -98,9 +353,10 @@ class RedisService
             $database = 0;
         }
 
-        $prefix = trim((string) Config::get(self::CONFIG_PREFIX, 'apinexus:'));
-        if ($prefix === '') {
-            $prefix = 'apinexus:';
+        $prefixRaw = (string) Config::get(self::CONFIG_PREFIX, self::DEFAULT_PREFIX);
+        $prefix = self::normalizePrefix($prefixRaw, true);
+        if ($prefix === false || $prefix === '') {
+            $prefix = self::DEFAULT_PREFIX;
         }
 
         return array(

@@ -952,7 +952,9 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 | `formatUptime($seconds)` | 格式化为「N 天 N 小时 N 分 N 秒」 |
 | `versionLabel()` | 关于页一行摘要 |
 
-**配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`apinexus:`）。
+**配置键（`vs_config`，可选）：** `redis_host`、`redis_port`、`redis_password`、`redis_database`、`redis_prefix`（默认 `127.0.0.1:6379`、db0、`apinexus:`）。同机多站共用 Redis 时 **必须** 为每站设置互异 `redis_prefix`（安装向导 / 系统设置均可配；保存清空本站键空间）。见《Redis缓存键前缀规范》。
+
+**前缀 API（v13.21.0）：** `normalizePrefix` / `detectPrefixConflict` / `flushKeyspace` / `savePrefixConfig`；禁止对整库 `FLUSHDB`。
 
 **业务缓存项（`RedisCache`，监控列表 v10.6.0 / 扩充 v10.16.0）：**
 

@@ -521,12 +521,118 @@
         });
     }
 
+    function bindRedisPrefixForm() {
+        var form = document.getElementById('redisPrefixForm');
+        if (!form) {
+            return;
+        }
+        var forceEl = document.getElementById('redisPrefixForce');
+        var conflictEl = document.getElementById('redisPrefixConflict');
+        var checkBtn = document.getElementById('redisPrefixCheckBtn');
+        var input = document.getElementById('settings_redis_prefix');
+
+        function setConflictTip(text, isBad) {
+            if (!conflictEl) {
+                return;
+            }
+            if (!text) {
+                conflictEl.hidden = true;
+                conflictEl.textContent = '';
+                return;
+            }
+            conflictEl.hidden = false;
+            conflictEl.textContent = text;
+            conflictEl.style.color = isBad ? '#b91c1c' : '';
+        }
+
+        function runCheck() {
+            var fd = new FormData();
+            fd.append('action', 'check_redis_prefix');
+            fd.append('redis_prefix', input ? input.value : '');
+            return window.VS.postForm(fd).then(function (data) {
+                if (data.code === 1) {
+                    setConflictTip(data.msg || '', !!data.conflict);
+                    return data;
+                }
+                setConflictTip(data.msg || '检测失败', true);
+                return data;
+            });
+        }
+
+        if (checkBtn) {
+            checkBtn.addEventListener('click', function () {
+                checkBtn.disabled = true;
+                runCheck().finally(function () {
+                    checkBtn.disabled = false;
+                });
+            });
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (forceEl) {
+                forceEl.value = '0';
+            }
+            postForm(form).then(function (data) {
+                if (data.code === 1) {
+                    showFlash(data.msg || '已保存', 'success');
+                    if (input && data.prefix) {
+                        input.value = data.prefix;
+                    }
+                    setConflictTip('', false);
+                    return;
+                }
+                if (data.need_confirm) {
+                    var ask = window.VsModal && window.VsModal.confirm
+                        ? window.VsModal.confirm(data.msg + '\n\n仍要强制使用此前缀吗？', '前缀冲突确认', {
+                            confirmText: '仍要保存',
+                            danger: true
+                        })
+                        : Promise.resolve(window.confirm(data.msg + '\n仍要强制保存吗？'));
+                    ask.then(function (ok) {
+                        if (!ok) {
+                            showFlash(data.msg || '已取消', 'error');
+                            return;
+                        }
+                        if (forceEl) {
+                            forceEl.value = '1';
+                        }
+                        postForm(form).then(function (data2) {
+                            if (forceEl) {
+                                forceEl.value = '0';
+                            }
+                            if (data2.code === 1) {
+                                showFlash(data2.msg || '已保存', 'success');
+                                if (input && data2.prefix) {
+                                    input.value = data2.prefix;
+                                }
+                                setConflictTip('', false);
+                            } else {
+                                showFlash(data2.msg || '保存失败', 'error');
+                            }
+                        }).catch(function () {
+                            if (forceEl) {
+                                forceEl.value = '0';
+                            }
+                            showFlash('网络异常，请稍后重试', 'error');
+                        });
+                    });
+                    return;
+                }
+                showFlash(data.msg || '保存失败', 'error');
+            }).catch(function () {
+                showFlash('网络异常，请稍后重试', 'error');
+            });
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
         ['siteForm', 'registerForm', 'captchaForm', 'checkinForm', 'oauthForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm', 'aiForm', 'iplocForm', 'iplocTestForm'].forEach(function (id) {
             bindAjaxForm(document.getElementById(id));
         });
+        bindRedisPrefixForm();
         bindApilogCron();
         bindAiProvider();
         bindAiListModels();
