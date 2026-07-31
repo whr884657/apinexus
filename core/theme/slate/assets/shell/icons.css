@@ -1,0 +1,98 @@
+/**
+ * 文件：assets/css/icons.css
+ * 作用：ApiNexus 专属图标（纯 CSS / SVG 实现）
+ * @version 1.0.0
+ */
+
+.vs-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+/* 三横线菜单 */
+.vs-icon--menu {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='3' y1='6' x2='21' y2='6'/%3E%3Cline x1='3' y1='12' x2='21' y2='12'/%3E%3Cline x1='3' y1='18' x2='21' y2='18'/%3E%3C/svg%3E");
+}
+
+.vs-icon--dashboard {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Crect x='3' y='3' width='7' height='7' rx='1'/%3E%3Crect x='14' y='3' width='7' height='7' rx='1'/%3E%3Crect x='3' y='14' width='7' height='7' rx='1'/%3E%3Crect x='14' y='14' width='7' height='7' rx='1'/%3E%3C/svg%3E");
+}
+
+.vs-icon--user {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 20c0-4 4-6 8-6s8 2 8 6'/%3E%3C/svg%3E");
+}
+
+.vs-icon--users {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Ccircle cx='9' cy='8' r='3'/%3E%3Cpath d='M2 20c0-3.5 3.5-5.5 7-5.5s7 2 7 5.5'/%3E%3Ccircle cx='17' cy='9' r='2.5'/%3E%3Cpath d='M14.5 20c.3-2.2 2.2-3.5 4.5-3.5 1.4 0 2.7.4 3.5 1.2'/%3E%3C/svg%3E");
+}
+
+.vs-icon--setting {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42'/%3E%3C/svg%3E");
+}
+
+.is-active .vs-icon--dashboard,
+.is-active .vs-icon--user,
+.is-active .vs-icon--users,
+.is-active .vs-icon--setting,
+.is-active .vs-icon--about,
+.is-active .vs-icon--folder,
+.is-active .vs-icon--cloud,
+.is-active .vs-icon--archive,
+.is-active .vs-icon--ai,
+.is-active .vs-icon--share,
+.is-active .vs-icon--bot,
+.is-active .vs-icon--search,
+.vs-sidebar__link.is-active .vs-icon,
+.vs-sidebar__group-btn.is-active .vs-icon {
+    filter: brightness(0) saturate(100%);
+}
+
+.vs-topbar__toggle .vs-icon--menu {
+    width: 22px;
+    height: 22px;
+}
+
+.vs-icon--about {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cline x1='12' y1='8' x2='12' y2='8.01'/%3E%3Cline x1='12' y1='12' x2='12' y2='16'/%3E%3C/svg%3E");
+}
+
+.vs-icon--folder {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M3 7a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z'/%3E%3C/svg%3E");
+}
+
+.vs-icon--cloud {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.9 1A4 4 0 0 1 17 18H7z'/%3E%3C/svg%3E");
+}
+
+.vs-icon--archive {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Crect x='3' y='4' width='18' height='4' rx='1'/%3E%3Cpath d='M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8'/%3E%3Cpath d='M10 12h4'/%3E%3C/svg%3E");
+}
+
+.vs-icon--ai {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z'/%3E%3Cpath d='M5 19l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z'/%3E%3Cpath d='M19 13l.8 1.6L21.4 15l-1.6.8L19 17.4l-.8-1.6L16.6 15l1.6-.8L19 13z'/%3E%3C/svg%3E");
+}
+
+.vs-icon--chevron {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.vs-icon--share {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='18' cy='5' r='3'/%3E%3Ccircle cx='6' cy='12' r='3'/%3E%3Ccircle cx='18' cy='19' r='3'/%3E%3Cline x1='8.59' y1='13.51' x2='15.42' y2='17.49'/%3E%3Cline x1='15.41' y1='6.51' x2='8.59' y2='10.49'/%3E%3C/svg%3E");
+}
+
+.vs-icon--bot {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='9' width='14' height='10' rx='3'/%3E%3Cpath d='M12 3v3'/%3E%3Ccircle cx='12' cy='3' r='1'/%3E%3Ccircle cx='9' cy='13' r='1' fill='%23666' stroke='none'/%3E%3Ccircle cx='15' cy='13' r='1' fill='%23666' stroke='none'/%3E%3Cpath d='M9 17h6'/%3E%3Cpath d='M3 13h2M19 13h2'/%3E%3C/svg%3E");
+}
+
+.vs-icon--search {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='16.65' y1='16.65' x2='21' y2='21'/%3E%3C/svg%3E");
+}
+
+.vs-icon--logout {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/%3E%3Cpolyline points='16 17 21 12 16 7'/%3E%3Cline x1='21' y1='12' x2='9' y2='12'/%3E%3C/svg%3E");
+}

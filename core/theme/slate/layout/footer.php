@@ -2,6 +2,14 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : rtrim(vs_base_url(), '/');
+$siteName = isset($siteName) ? (string) $siteName : SiteContext::siteName();
+$siteDesc = isset($siteDesc) ? (string) $siteDesc : '';
+$navItems = (isset($navItems) && is_array($navItems)) ? $navItems : ThemeManager::navItems();
+$activeNav = isset($activeNav) ? (string) $activeNav : '';
+$userLoggedIn = !empty($userLoggedIn);
+$authUrl = isset($authUrl) ? (string) $authUrl : ($userLoggedIn ? ($vsBase . '/user/index') : ($vsBase . '/user/login'));
+$authLabel = isset($authLabel) ? (string) $authLabel : ($userLoggedIn ? '用户中心' : '登录 / 注册');
 $footDesc = $siteDesc !== '' ? $siteDesc : '为开发者提供稳定、快速的 API 接口服务';
 $stNavExpandMode = ThemeManager::themeSettingStr('nav_expand_mode', 'top_drawer');
 $stNavUseFab = ($stNavExpandMode === 'fab_popup');
@@ -38,7 +46,7 @@ $beian = SiteContext::beianInfo();
             <?php endif; ?>
             <?php if ($beian['gongan_number'] !== ''): ?>
                 <a href="<?php echo vs_e($beian['gongan_link']); ?>" target="_blank" rel="noopener noreferrer" class="st-foot__gongan">
-                    <img src="<?php echo vs_e($vsBase); ?>/assets/img/gov.png" alt="" width="16" height="16">
+                    <img src="<?php echo vs_e(SiteMedia::imgUrl('gov.png')); ?>" alt="" width="16" height="16">
                     <span><?php echo vs_e($beian['gongan_number']); ?></span>
                 </a>
             <?php endif; ?>
@@ -47,7 +55,7 @@ $beian = SiteContext::beianInfo();
 </footer>
 <?php if ($showRuntime && $hasRuntime): ?>
 <script>var runtimeStartDate = new Date(<?php echo json_encode($runtimeStart); ?>).getTime();</script>
-<script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/js/front-runtime.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>"></script>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/js/front-runtime.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <?php endif; ?>
 <button type="button" class="st-back-top" id="stBackTop" aria-label="返回顶部" hidden>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>

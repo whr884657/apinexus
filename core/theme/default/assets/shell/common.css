@@ -1,0 +1,891 @@
+/**
+ * 文件：assets/css/common.css
+ * 作用：ApiNexus 全局公共样式（白色主题）
+ * @version 1.0.0
+ */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --vs-mobile-drawer-height: 80vh;
+    --vs-desktop-modal-width: min(96vw, 1120px);
+    --vs-desktop-modal-max-width: 1120px;
+    --vs-desktop-modal-min-width: min(96vw, 720px);
+    --vs-desktop-modal-height: min(92vh, 860px);
+    --vs-primary: #111111;
+    --vs-primary-hover: #2d2d2d;
+    /* 后台 Markdown：钉死黑强调色，禁止回落成任何绿色 */
+    --vs-md-accent: #111111;
+    --vs-danger: #dc2626;
+    --vs-danger-hover: #ef4444;
+    --vs-success: #15803d;
+    --vs-warning: #e37318;
+    --vs-text: #111111;
+    --vs-text-secondary: #6b7280;
+    --vs-border: #e5e7eb;
+    --vs-bg: #f8fafc;
+    --vs-white: #ffffff;
+    --vs-radius: 10px;
+    --vs-btn-radius: 10px;
+    --vs-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    height: auto;
+}
+
+body.vs-body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+        'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: var(--vs-text);
+    background: var(--vs-bg);
+    line-height: 1.6;
+    min-height: 100vh;
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+a {
+    color: var(--vs-primary);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--vs-primary-hover);
+}
+
+.vs-container {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.vs-page {
+    min-height: 100vh;
+}
+
+/* Logo */
+.vs-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vs-logo--center {
+    justify-content: center;
+}
+
+.vs-logo-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--vs-primary);
+    color: var(--vs-white);
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.vs-site-logo-img.vs-logo-icon,
+.vs-logo-icon.vs-site-logo-img {
+    background: transparent;
+    object-fit: contain;
+    padding: 0;
+}
+
+.vs-logo-text {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--vs-text);
+}
+
+/* Card */
+.vs-card {
+    background: var(--vs-white);
+    border-radius: var(--vs-radius);
+    box-shadow: var(--vs-shadow);
+    padding: 32px;
+}
+
+.vs-card-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.vs-card-desc {
+    color: var(--vs-text-secondary);
+    margin-bottom: 24px;
+    font-size: 14px;
+}
+
+/* Form */
+.vs-form-row {
+    margin-bottom: 20px;
+}
+
+.vs-form-row--between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.vs-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--vs-text);
+}
+
+.vs-input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--vs-border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--vs-text);
+    background: var(--vs-white);
+    transition: border-color 0.2s;
+    outline: none;
+}
+
+.vs-input:focus {
+    border-color: var(--vs-primary);
+    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.08);
+}
+
+.vs-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--vs-text-secondary);
+    cursor: pointer;
+}
+
+.vs-checkbox input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--vs-primary);
+}
+
+.vs-form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+}
+
+.vs-form-actions--center {
+    justify-content: center;
+}
+
+/* Buttons */
+.vs-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    padding: 0 24px;
+    border: none;
+    border-radius: var(--vs-btn-radius, 10px);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.vs-btn--primary {
+    background: var(--vs-primary);
+    color: var(--vs-white);
+    border: 1px solid var(--vs-primary);
+}
+
+.vs-btn--primary:hover {
+    background: var(--vs-primary-hover);
+    border-color: var(--vs-primary-hover);
+    color: var(--vs-white);
+}
+
+.vs-btn--default {
+    background: var(--vs-white);
+    color: var(--vs-text);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-btn-radius, 10px);
+}
+
+.vs-btn--default:hover {
+    border-color: var(--vs-primary);
+    color: var(--vs-primary);
+}
+
+.vs-btn--danger {
+    background: var(--vs-danger);
+    color: var(--vs-white);
+}
+
+.vs-btn--danger:hover {
+    background: var(--vs-danger-hover);
+    color: var(--vs-white);
+}
+
+.vs-btn--text {
+    background: transparent;
+    color: var(--vs-primary);
+    padding: 0 12px;
+    height: 32px;
+}
+
+.vs-btn--block {
+    width: 100%;
+}
+
+.vs-btn--rect {
+    border-radius: var(--vs-btn-radius, 10px);
+    height: auto;
+    min-height: 34px;
+    padding: 6px 14px;
+    font-weight: 500;
+}
+
+.vs-btn--xs {
+    min-height: 28px;
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+.vs-btn--disabled {
+    background: #f0f0f0;
+    color: #bbb;
+    cursor: not-allowed;
+    padding: 0 24px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* Alert */
+.vs-alert {
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.vs-alert--error {
+    background: #fff0f0;
+    color: var(--vs-danger);
+    border: 1px solid #ffd6d6;
+}
+
+.vs-alert--success {
+    background: #f0faf5;
+    color: var(--vs-success);
+    border: 1px solid #b8e6cc;
+}
+
+.vs-alert--warning {
+    background: #fff7e8;
+    color: var(--vs-warning);
+    border: 1px solid #ffe4b8;
+}
+
+/* Notice — 表单说明、操作提醒等统一提示块（仅保留色块，无图标） */
+.vs-notice {
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--vs-text);
+}
+
+.vs-notice__title {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.vs-notice__text {
+    margin: 0;
+    color: var(--vs-text-secondary);
+}
+
+.vs-notice__text p {
+    margin: 0 0 6px;
+}
+
+.vs-notice__text p:last-child {
+    margin-bottom: 0;
+}
+
+.vs-notice__text ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+.vs-notice__text li {
+    margin-bottom: 4px;
+}
+
+.vs-notice__text li:last-child {
+    margin-bottom: 0;
+}
+
+.vs-notice__link {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.vs-notice--info {
+    background: #f0f6ff;
+    border-color: #c8dcff;
+}
+
+.vs-notice--warning {
+    background: #fff8eb;
+    border-color: #f5d9a8;
+}
+
+.vs-notice--tip {
+    background: #f4f8f4;
+    border-color: #c8e6c9;
+}
+
+.vs-notice--success {
+    background: #f0faf5;
+    border-color: #b8e6cc;
+}
+
+.vs-notice--danger {
+    background: #fff0f0;
+    border-color: #ffd6d6;
+}
+
+.vs-notice--compact {
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+.vs-notice--field {
+    padding: 8px 10px;
+    margin: 6px 0 0;
+    font-size: 12px;
+    border-radius: 8px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.vs-notice--field .vs-notice__title {
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.vs-notice__text code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.06);
+    font-size: 0.92em;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+/* 可复制长链接行：输入框 + 复制按钮，防溢出 */
+.vs-copy-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+}
+
+.vs-copy-row .vs-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+
+.vs-copy-row .vs-btn {
+    flex: 0 0 auto;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 16px;
+}
+
+/* 开关行：与上下提示/字段间距均衡 */
+.vs-form-row--check,
+.vs-form-row:has(> .vs-checkbox) {
+    margin-top: 12px;
+    margin-bottom: 16px;
+    padding: 2px 0;
+}
+
+.vs-form-row--check .vs-checkbox,
+.vs-form-row:has(> .vs-checkbox) .vs-checkbox {
+    min-height: 24px;
+    line-height: 1.4;
+}
+
+/* 系统设置：同行动作按钮统一高度 */
+.vs-settings-form .vs-form-actions .vs-btn,
+.vs-form.vs-settings-form .vs-form-actions .vs-btn {
+    height: 44px;
+    min-height: 44px;
+}
+
+.vs-form-subtitle {
+    margin-top: 4px;
+    margin-bottom: 12px;
+}
+
+.vs-divider + .vs-form-subtitle {
+    margin-top: 0;
+}
+
+.vs-form .vs-notice--compact + .vs-form-row--check,
+.vs-form .vs-notice--field + .vs-form-row--check {
+    margin-top: 14px;
+}
+
+.vs-form-row--check + .vs-form-row {
+    margin-top: 4px;
+}
+
+.vs-link {
+    font-size: 14px;
+    color: var(--vs-primary);
+}
+
+.vs-link-sep {
+    color: var(--vs-border);
+    margin: 0 8px;
+}
+
+/* Header / Footer */
+.vs-header {
+    background: var(--vs-white);
+    border-bottom: 1px solid var(--vs-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.vs-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+}
+
+.vs-nav {
+    display: flex;
+    gap: 24px;
+}
+
+.vs-nav-link {
+    font-size: 14px;
+    color: var(--vs-text-secondary);
+    font-weight: 500;
+}
+
+.vs-nav-link.is-active,
+.vs-nav-link:hover {
+    color: var(--vs-primary);
+}
+
+.vs-footer {
+    padding: 24px 0;
+    margin-top: auto;
+    border-top: 1px solid var(--vs-border);
+}
+
+.vs-site-footer {
+    width: 100%;
+}
+
+.vs-site-footer__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 20px;
+    color: var(--vs-text-secondary);
+    font-size: 13px;
+    text-align: center;
+}
+
+.vs-site-footer__item a {
+    color: var(--vs-text-secondary);
+    text-decoration: none;
+}
+
+.vs-site-footer__item a:hover {
+    color: var(--vs-primary);
+}
+
+.vs-site-footer__gongan-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.vs-gongan-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+/* 兼容旧类名 */
+.vs-beian {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.vs-beian a {
+    color: var(--vs-text-secondary);
+    text-decoration: none;
+}
+
+.vs-beian a:hover {
+    color: var(--vs-primary);
+}
+
+.vs-beian__sep {
+    margin: 0 8px;
+    color: var(--vs-border);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .vs-container {
+        padding: 0 16px;
+    }
+
+    .vs-card {
+        padding: 20px 16px;
+    }
+
+    .vs-btn {
+        min-height: 44px;
+        padding: 0 16px;
+    }
+
+    .vs-form-actions {
+        flex-direction: column;
+    }
+
+    .vs-form-actions .vs-btn,
+    .vs-form-actions .vs-btn--disabled {
+        width: 100%;
+    }
+
+    .vs-account-form .vs-form-actions,
+    .vs-admin-bind-form .vs-form-actions--inline {
+        flex-direction: row;
+        justify-content: flex-end;
+    }
+
+    .vs-account-form .vs-form-actions .vs-btn,
+    .vs-account-form .vs-form-actions .vs-btn--disabled,
+    .vs-admin-bind-form .vs-form-actions--inline .vs-btn {
+        width: auto;
+    }
+
+    .vs-header-inner {
+        height: 52px;
+    }
+
+    .vs-nav {
+        gap: 16px;
+    }
+
+    .vs-site-footer__inner {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* ═══ 全站数据加载动效（列表 / 详情 / 配置面板）═══ */
+.vs-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 48px 20px;
+    min-height: 140px;
+    text-align: center;
+    color: var(--vs-text-secondary, #6b7280);
+}
+.vs-loading--compact {
+    padding: 28px 16px;
+    min-height: 96px;
+    gap: 10px;
+}
+.vs-loading__orbit {
+    position: relative;
+    width: 40px;
+    height: 40px;
+}
+.vs-loading__ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2.5px solid rgba(15, 23, 42, 0.08);
+    border-top-color: #0f172a;
+    animation: vs-loading-spin 0.75s linear infinite;
+}
+.vs-loading__dot {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin: -3.5px 0 0 -3.5px;
+    border-radius: 50%;
+    background: #0f172a;
+    animation: vs-loading-pulse 1s ease-in-out infinite;
+}
+.vs-loading__text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    color: var(--vs-text-secondary, #64748b);
+}
+@keyframes vs-loading-spin {
+    to { transform: rotate(360deg); }
+}
+@keyframes vs-loading-pulse {
+    0%, 100% { transform: scale(0.85); opacity: 0.55; }
+    50% { transform: scale(1.15); opacity: 1; }
+}
+
+/* vs-pick 弹层模式（底栏「每页」等，居中/底部抽屉，非下拉） */
+.vs-pick-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 5600;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+.vs-pick-sheet[hidden] {
+    display: none !important;
+}
+.vs-pick-sheet__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.38);
+}
+.vs-pick-sheet__panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 360px;
+    margin: 0 12px 16px;
+    background: #fff;
+    border-radius: 16px 16px 14px 14px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+    padding: 12px 12px 14px;
+    animation: vs-pick-sheet-up 0.2s ease;
+}
+.vs-pick-sheet__handle {
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    margin: 2px auto 10px;
+}
+.vs-pick-sheet__title {
+    margin: 0 4px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+}
+.vs-pick-sheet__options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+.vs-pick-sheet__option {
+    display: block;
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 12px 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f172a;
+    cursor: pointer;
+    text-align: center;
+}
+.vs-pick-sheet__option:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+}
+.vs-pick-sheet__option.is-selected {
+    border-color: #0f172a;
+    background: #0f172a;
+    color: #fff;
+}
+@keyframes vs-pick-sheet-up {
+    from { transform: translateY(12px); opacity: 0.6; }
+    to { transform: translateY(0); opacity: 1; }
+}
+@media (min-width: 901px) {
+    .vs-pick-sheet {
+        align-items: center;
+    }
+    .vs-pick-sheet__panel {
+        margin: 0;
+        border-radius: 14px;
+        animation: vs-pick-sheet-pop 0.18s ease;
+    }
+    .vs-pick-sheet__handle {
+        display: none;
+    }
+    @keyframes vs-pick-sheet-pop {
+        from { transform: scale(0.96); opacity: 0.5; }
+        to { transform: scale(1); opacity: 1; }
+    }
+}
+
+/* JSON 改写说明卡片 */
+.vs-json-rewrite-help {
+    margin: 0.45rem 0 0.65rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    background: #f8fafc;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--vs-text-secondary, #64748b);
+}
+.vs-json-rewrite-help strong {
+    color: var(--vs-text, #0f172a);
+    font-weight: 600;
+}
+.vs-json-rewrite-help code {
+    font-size: 12px;
+    padding: 0.05em 0.35em;
+    border-radius: 4px;
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.vs-json-rewrite-help ol {
+    margin: 0.35rem 0 0;
+    padding-left: 1.2rem;
+}
+.vs-json-rewrite-help li + li {
+    margin-top: 0.2rem;
+}
+.vs-json-rewrite-help__eg {
+    margin-top: 0.45rem;
+    padding: 0.45rem 0.55rem;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px dashed #cbd5e1;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    white-space: pre-wrap;
+    color: #334155;
+}
+
+/* 代理 JSON 字段改写规则编辑器 */
+.vs-json-rewrite {
+    margin-top: 0.6rem;
+    padding: 0.75rem;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--vs-surface-soft, #f9fafb);
+}
+.vs-json-rewrite__head,
+.vs-json-rewrite__row {
+    display: grid;
+    grid-template-columns: minmax(7rem, 1.2fr) 5.5rem minmax(8rem, 1.6fr) 2.25rem;
+    gap: 0.5rem;
+    align-items: start;
+}
+.vs-json-rewrite__head {
+    margin-bottom: 0.4rem;
+    font-size: 12px;
+    color: var(--vs-muted, #6b7280);
+}
+.vs-json-rewrite__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-bottom: 0.6rem;
+}
+.vs-json-rewrite__row .vs-input,
+.vs-json-rewrite__row .vs-select,
+.vs-json-rewrite__row textarea.vs-input {
+    width: 100%;
+    min-width: 0;
+}
+.vs-json-rewrite__row textarea.vs-input {
+    min-height: 2.25rem;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+}
+.vs-json-rewrite__del {
+    height: 36px;
+    padding: 0 0.4rem;
+}
+.vs-check {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    margin: 0.25rem 0 0.35rem;
+    font-size: 13px;
+    line-height: 1.45;
+    cursor: pointer;
+    user-select: none;
+}
+.vs-check input {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+}
+@media (max-width: 720px) {
+    .vs-json-rewrite__head {
+        display: none;
+    }
+    .vs-json-rewrite__head,
+    .vs-json-rewrite__row {
+        grid-template-columns: 1fr;
+    }
+    .vs-json-rewrite__del {
+        width: 100%;
+    }
+}

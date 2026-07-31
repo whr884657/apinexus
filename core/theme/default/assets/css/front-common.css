@@ -30,7 +30,7 @@ a.btn-geek *, a.btn-secondary *, a.btn-danger *, a.btn * {
     text-decoration: none !important;
 }
 
-body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.4s, color 0.4s; }
+body { font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.4s, color 0.4s; }
 
 /* SEO 抓取兜底文案：对用户不可见，供社交/搜索在 meta 失效时优先读到系统描述 */
 .vs-seo-fallback-desc {
@@ -45,7 +45,7 @@ body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); colo
     border: 0 !important;
 }
 
-.font-mono { font-family: 'JetBrains Mono', monospace; }
+.font-mono { font-family: 'JetBrains Mono', Consolas, 'Sarasa Mono SC', monospace; }
 
 #shader-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 
@@ -103,7 +103,7 @@ footer { border-top: 1px solid var(--border-color); background: var(--bg-panel);
 
 /* === from: api-docs.php === */
 
-body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; font-size: 14px; }
+body { font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; font-size: 14px; }
 
 .menu-btn { display: none; padding: 0.5rem; background: transparent; border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); cursor: pointer; }
 
@@ -152,19 +152,19 @@ footer { border-top: 1px solid var(--border-color); background: var(--bg-panel);
 
 /* === from: articles.php === */
 
-body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
+body { font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; }
 
 
 /* === from: contributors.php === */
 
-body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.3s, color 0.3s; }
+body { font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; transition: background 0.3s, color 0.3s; }
 
 
 /* === from: index.php === */
 
 * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--accent-primary) transparent; }
 
-body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); color: var(--text-main); overflow-x: hidden; transition: background 0.4s ease, color 0.4s ease; }
+body { font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg-deep); color: var(--text-main); overflow-x: hidden; transition: background 0.4s ease, color 0.4s ease; }
 
 [data-theme="light"] .grid-overlay { opacity: 0.1; background-image: linear-gradient(rgba(17, 17, 17, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(17, 17, 17, 0.08) 1px, transparent 1px); }
 
@@ -181,7 +181,7 @@ body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); colo
 .section-title__mark {
     color: var(--accent-primary);
     margin-right: 0.5rem;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', Consolas, 'Sarasa Mono SC', monospace;
     font-weight: 700;
 }
 
@@ -192,7 +192,7 @@ body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-deep); colo
     font-weight: 600;
     font-size: 0.65rem;
     padding: 2px 6px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', Consolas, 'Sarasa Mono SC', monospace;
     text-transform: uppercase;
     line-height: 1.25;
     vertical-align: middle;

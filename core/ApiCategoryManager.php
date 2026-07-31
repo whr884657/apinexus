@@ -73,7 +73,11 @@ class ApiCategoryManager
 
         $paths = array();
         foreach ($nums as $name) {
-            $paths[] = '/assets/img/category-icons/' . $name;
+            if (class_exists('SiteMedia')) {
+                $paths[] = SiteMedia::imgWebPath('category-icons/' . $name);
+            } else {
+                $paths[] = '/assets/img/category-icons/' . $name;
+            }
         }
 
         $cached = $paths;
@@ -87,10 +91,16 @@ class ApiCategoryManager
      */
     public static function defaultIcons()
     {
-        $base = rtrim(vs_base_url(), '/');
         $out = array();
         foreach (self::defaultIconPaths() as $path) {
-            $out[] = $base . $path;
+            if (class_exists('SiteMedia')) {
+                $u = SiteMedia::resolve($path);
+                if ($u !== '') {
+                    $out[] = $u;
+                    continue;
+                }
+            }
+            $out[] = rtrim(vs_base_url(), '/') . $path;
         }
         return $out;
     }
@@ -110,6 +120,12 @@ class ApiCategoryManager
         }
 
         if (preg_match('#^/assets/img/category-icons/\d+\.svg$#i', $icon)) {
+            if (class_exists('SiteMedia')) {
+                $u = SiteMedia::resolve($icon);
+                if ($u !== '') {
+                    return $u;
+                }
+            }
             return rtrim(vs_base_url(), '/') . $icon;
         }
 

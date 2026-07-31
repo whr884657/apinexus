@@ -2,6 +2,9 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
+// 渲染上下文由 ThemeManager::renderBody extract 注入；此处兜底避免静态分析/异常路径未定义
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : rtrim(vs_base_url(), '/');
+$siteName = isset($siteName) ? (string) $siteName : SiteContext::siteName();
 $year = date('Y');
 $beian = SiteContext::beianInfo();
 $showRuntime = ThemeManager::themeSettingBool('show_runtime', true);
@@ -28,8 +31,8 @@ $footerLinks = isset($footerLinksPick['items']) && is_array($footerLinksPick['it
     ? $footerLinksPick['items']
     : array();
 $footerLinksHasMore = !empty($footerLinksPick['has_more']);
-$applyUrl = rtrim($vsBase, '/') . '/applylink';
-$linksPageUrl = rtrim($vsBase, '/') . '/links';
+$applyUrl = $vsBase . '/applylink';
+$linksPageUrl = $vsBase . '/links';
 $isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
 $isLinksPage = (isset($pageKey) && $pageKey === 'links');
 ?>
@@ -87,7 +90,7 @@ $isLinksPage = (isset($pageKey) && $pageKey === 'links');
                     <?php endif; ?>
                     <?php if ($beian['gongan_number'] !== ''): ?>
                         <a href="<?php echo vs_e($beian['gongan_link']); ?>" target="_blank" rel="noopener noreferrer" class="beian-link" style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                            <img src="<?php echo vs_e($vsBase); ?>/assets/img/gov.png" alt="" style="width: 16px; height: 16px; display: inline-block;">
+                            <img src="<?php echo vs_e(class_exists('SiteMedia') ? SiteMedia::imgUrl('gov.png') : ($vsBase . '/assets/img/gov.png')); ?>" alt="" style="width: 16px; height: 16px; display: inline-block;">
                             <?php echo vs_e($beian['gongan_number']); ?>
                         </a>
                     <?php endif; ?>
@@ -103,10 +106,21 @@ window.VS_BASE_URL = <?php echo json_encode(rtrim($vsBase, '/')); ?>;
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode(AuthSecurity::csrfToken()); ?>;
 window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(rtrim($vsBase, '/') . '/core/playground/relay.php'); ?>;
 </script>
-<link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/assets/css/toast.css?v=<?php echo vs_e(VS_VERSION); ?>">
-<script src="<?php echo vs_e($vsBase); ?>/assets/js/common.js?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<?php
+// 前台已由 ThemeAssetPack 下发壳资源时，禁止页脚再拉 toast/common（重复请求拖慢无 CDN 首屏）
+if (empty($GLOBALS['vs_front_pack_loaded'])) {
+    $toastShell = class_exists('ThemeManager') ? ThemeManager::shellUrl('toast.css') : '';
+    $commonShell = class_exists('ThemeManager') ? ThemeManager::shellUrl('common.js') : '';
+    if ($toastShell !== '') {
+        echo '<link rel="stylesheet" href="' . vs_e($toastShell) . '">' . "\n";
+    }
+    if ($commonShell !== '') {
+        echo '<script src="' . vs_e($commonShell) . '" defer></script>' . "\n";
+    }
+}
+?>
 <?php endif; ?>
 <?php if ($showRuntime && $hasRuntime): ?>
 <script>var runtimeStartDate = new Date(<?php echo json_encode($runtimeStart); ?>).getTime();</script>
-<script src="<?php echo vs_e(ThemeManager::assetUrl('default', 'assets/js/front-runtime.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>"></script>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('default', 'assets/js/front-runtime.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <?php endif; ?>

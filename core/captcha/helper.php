@@ -61,7 +61,15 @@ function vs_captcha_js($scene = null)
     echo '<script>window.VS_CAPTCHA_BOOT='
         . json_encode($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         . ';</script>' . "\n";
-    echo '<script src="' . vs_e($base) . '/assets/js/captcha.js?v=' . VS_VERSION . '"></script>' . "\n";
+    // 前台/用户主题：优先主题包 shell；管理员等回落根目录 assets/js
+    $captchaSrc = '';
+    if (class_exists('ThemeManager')) {
+        $captchaSrc = ThemeManager::shellUrl('captcha.js');
+    }
+    if ($captchaSrc === '') {
+        $captchaSrc = $base . '/assets/js/captcha.js?v=' . VS_VERSION;
+    }
+    echo '<script src="' . vs_e($captchaSrc) . '"></script>' . "\n";
 }
 
 /** @deprecated */

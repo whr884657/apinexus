@@ -1451,9 +1451,10 @@ function vs_render_theme_seo_block(array $seo = array())
  * @param array  $headScripts   head 内联脚本或外链（完整 URL）
  * @param string $bodyClass     body 额外 class
  * @param array  $seoOpts       页面级 SEO 覆盖（description / image / robots 等）
+ * @param bool   $loadRootShell true=根目录 assets/css 壳（安装/后台等）；false=壳已由主题包 URL 放进 extraCssHrefs
  * @return void
  */
-function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true, array $extraCssHrefs = array(), array $headScripts = array(), $bodyClass = 'vs-body', array $seoOpts = array())
+function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true, array $extraCssHrefs = array(), array $headScripts = array(), $bodyClass = 'vs-body', array $seoOpts = array(), $loadRootShell = true)
 {
     if (class_exists('AuthSecurity')) {
         AuthSecurity::sendFrontendSecurityHeaders();
@@ -1508,19 +1509,28 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     vs_render_seo_meta($seo);
     echo '<title>' . vs_e($pageTitle) . '</title>' . "\n";
     vs_render_site_icons($favicon, $ogImage);
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/common.css?v=' . VS_VERSION . '">' . "\n";
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/modal.css?v=' . VS_VERSION . '">' . "\n";
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/icons.css?v=' . VS_VERSION . '">' . "\n";
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/site-footer.css?v=' . VS_VERSION . '">' . "\n";
+    if ($loadRootShell) {
+        echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/common.css?v=' . VS_VERSION . '">' . "\n";
+        echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
+        echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/modal.css?v=' . VS_VERSION . '">' . "\n";
+        echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/icons.css?v=' . VS_VERSION . '">' . "\n";
+        echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/site-footer.css?v=' . VS_VERSION . '">' . "\n";
+    }
     foreach ($cssFiles as $css) {
         echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/' . vs_e($css) . '?v=' . VS_VERSION . '">' . "\n";
     }
+    $cssIdx = 0;
     foreach ($extraCssHrefs as $href) {
         $href = trim((string) $href);
-        if ($href !== '') {
-            echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
+        if ($href === '') {
+            continue;
         }
+        // 前两个样式预加载，缩短无 CDN 时的首包发现延迟（源文件仍分立，仅打包 URL）
+        if ($cssIdx < 2) {
+            echo '<link rel="preload" href="' . vs_e($href) . '" as="style">' . "\n";
+        }
+        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
+        $cssIdx++;
     }
     foreach ($headScripts as $script) {
         $script = trim((string) $script);
@@ -1543,15 +1553,18 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
  *
  * @param array  $jsFiles
  * @param array  $extraJsHrefs 完整 URL（如主题 theme.js）
+ * @param bool   $loadRootShell true=根目录 modal/common；false=壳脚本已在 extraJsHrefs（主题包）
  * @return void
  */
-function vs_render_foot(array $jsFiles = array(), array $extraJsHrefs = array())
+function vs_render_foot(array $jsFiles = array(), array $extraJsHrefs = array(), $loadRootShell = true)
 {
     $base = vs_base_url();
     vs_render_modal_shell();
     echo '<script>window.VS_BASE_URL = ' . json_encode($base) . ';</script>' . "\n";
-    echo '<script src="' . vs_e($base) . '/assets/js/modal.js?v=' . VS_VERSION . '" defer></script>' . "\n";
-    echo '<script src="' . vs_e($base) . '/assets/js/common.js?v=' . VS_VERSION . '" defer></script>' . "\n";
+    if ($loadRootShell) {
+        echo '<script src="' . vs_e($base) . '/assets/js/modal.js?v=' . VS_VERSION . '" defer></script>' . "\n";
+        echo '<script src="' . vs_e($base) . '/assets/js/common.js?v=' . VS_VERSION . '" defer></script>' . "\n";
+    }
     foreach ($jsFiles as $js) {
         echo '<script src="' . vs_e($base) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '" defer></script>' . "\n";
     }
@@ -1589,28 +1602,38 @@ function vs_frontend_page($pageKey, $pageTitle, array $pageData = array())
     $bodyClass = 'vs-body';
     $themeId = ThemeManager::activeId();
 
-    if ($themeId === 'default') {
-        $bundle = ThemeManager::defaultFrontendAssets($pageKey);
-        $extraCss = $bundle['css'];
-        $extraJs = $bundle['js'];
-        $headScripts = $bundle['head_scripts'];
-        $bodyClass = $bundle['body_class'];
-    } else {
-        $cssHref = ThemeManager::activeStylesheetHref();
-        if ($cssHref !== '') {
-            $extraCss[] = $cssHref;
-        }
-        $jsHref = ThemeManager::activeScriptHref();
-        if ($jsHref !== '') {
-            $extraJs[] = $jsHref;
-        }
+    // 前台：壳 + 主题样式/脚本走 ThemeAssetPack（磁盘文件仍分立，HTTP 合并请求）
+    $shellCss = ThemeAssetPack::url('front-shell-css', $themeId);
+    if ($shellCss !== '') {
+        $extraCss[] = $shellCss;
+    }
+    $frontCss = ThemeAssetPack::url('front-css', $themeId, $pageKey);
+    if ($frontCss !== '') {
+        $extraCss[] = $frontCss;
     }
 
-    vs_render_head($pageTitle, array(), true, $extraCss, $headScripts, $bodyClass, $seoOpts);
+    $shellJs = ThemeAssetPack::url('front-shell-js', $themeId);
+    if ($shellJs !== '') {
+        $extraJs[] = $shellJs;
+    }
+    $frontJs = ThemeAssetPack::url('front-js', $themeId, $pageKey);
+    if ($frontJs !== '') {
+        $extraJs[] = $frontJs;
+    }
+
+    if ($themeId === 'default') {
+        $bundle = ThemeManager::defaultFrontendAssets($pageKey);
+        $headScripts = $bundle['head_scripts'];
+        $bodyClass = $bundle['body_class'];
+    }
+
+    $GLOBALS['vs_front_pack_loaded'] = true;
+
+    vs_render_head($pageTitle, array(), true, $extraCss, $headScripts, $bodyClass, $seoOpts, false);
 
     ThemeManager::renderBody($pageKey, $pageTitle, $pageData);
 
-    vs_render_foot(array(), $extraJs);
+    vs_render_foot(array(), $extraJs, false);
 }
 
 /**
@@ -1773,7 +1796,8 @@ function vs_render_site_footer($siteName = null)
     if ($beian['gongan_number'] !== '') {
         echo '<div class="vs-site-footer__item vs-site-footer__gongan">';
         echo '<a href="' . vs_e($beian['gongan_link']) . '" target="_blank" rel="noopener noreferrer" class="vs-site-footer__gongan-link">';
-        echo '<img src="' . vs_e($base) . '/assets/img/gov.png" alt="" class="vs-gongan-icon" width="16" height="16">';
+        $govIcon = class_exists('SiteMedia') ? SiteMedia::imgUrl('gov.png') : ($base . '/assets/img/gov.png');
+        echo '<img src="' . vs_e($govIcon) . '" alt="" class="vs-gongan-icon" width="16" height="16">';
         echo '<span>' . vs_e($beian['gongan_number']) . '</span>';
         echo '</a></div>' . "\n";
     }

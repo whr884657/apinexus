@@ -61,12 +61,12 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                     <div class="oauth-section__icons">
                         <?php if (!empty($oauthProviders['qq'])): ?>
                             <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=qq" class="oauth-icon" title="QQ 登录" aria-label="QQ 登录">
-                                <img src="<?php echo vs_e($base); ?>/assets/img/QQ.svg" alt="" width="22" height="22">
+                                <img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="" width="22" height="22">
                             </a>
                         <?php endif; ?>
                         <?php if (!empty($oauthProviders['gitee'])): ?>
                             <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=gitee" class="oauth-icon" title="Gitee 登录" aria-label="Gitee 登录">
-                                <img src="<?php echo vs_e($base); ?>/assets/img/gitee.svg" alt="" width="22" height="22">
+                                <img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="" width="22" height="22">
                             </a>
                         <?php endif; ?>
                     </div>

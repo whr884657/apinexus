@@ -252,12 +252,18 @@ class PayConfig
     public static function iconPath($type)
     {
         $map = array(
-            'alipay' => '/assets/img/zhfubao.svg',
-            'wxpay'  => '/assets/img/weixinzhifu.svg',
-            'qqpay'  => '/assets/img/QQ.svg',
+            'alipay' => 'zhfubao.svg',
+            'wxpay'  => 'weixinzhifu.svg',
+            'qqpay'  => 'QQ.svg',
         );
         $type = strtolower((string) $type);
-        return isset($map[$type]) ? $map[$type] : '';
+        if (!isset($map[$type])) {
+            return '';
+        }
+        if (class_exists('SiteMedia')) {
+            return SiteMedia::imgWebPath($map[$type]);
+        }
+        return '/assets/img/' . $map[$type];
     }
 
     /**
@@ -271,6 +277,9 @@ class PayConfig
         $path = self::iconPath($type);
         if ($path === '') {
             return '';
+        }
+        if (class_exists('SiteMedia')) {
+            return SiteMedia::resolve($path);
         }
         return rtrim(vs_base_url(), '/') . $path;
     }

@@ -500,5 +500,5 @@ vs_user_render_page(
         'canLocal'         => $canLocal,
     ),
     $headerActions,
-    $tableReady ? array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'vs-syntax.js', 'user-api-manage.js') : array()
+    $tableReady ? array('icon-picker.js', 'api-params-editor.js', 'vs-syntax.js', 'user-api-manage.js') : array()
 );

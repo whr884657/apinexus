@@ -27,10 +27,16 @@ function vs_theme_auth_head($pageTitle)
     echo '<title>' . vs_e(vs_page_title($pageTitle, $siteName)) . '</title>' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">' . "\n";
     vs_render_site_icons($favicon, vs_seo_share_image());
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
+    $toast = ThemeManager::shellUrl('toast.css', $themeId);
+    if ($toast !== '') {
+        echo '<link rel="stylesheet" href="' . vs_e($toast) . '">' . "\n";
+    }
     echo '<link rel="stylesheet" href="' . vs_e(ThemeManager::assetUrl($themeId, 'assets/auth.css')) . '?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e(ThemeManager::assetUrl($themeId, 'assets/auth-captcha.css')) . '?v=' . VS_VERSION . '">' . "\n";
-    echo '<script src="' . vs_e($base) . '/assets/js/auth-csrf.js?v=' . VS_VERSION . '"></script>' . "\n";
+    $csrf = ThemeManager::shellUrl('auth-csrf.js', $themeId);
+    if ($csrf !== '') {
+        echo '<script src="' . vs_e($csrf) . '"></script>' . "\n";
+    }
     echo '</head>' . "\n";
     echo '<body class="st-auth-body">' . "\n";
 }
@@ -90,7 +96,10 @@ function vs_theme_auth_foot($inlineJs = '')
     if ($inlineJs !== '') {
         echo '<script>' . $inlineJs . '</script>' . "\n";
     }
-    echo '<script src="' . vs_e($base) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
+    $common = ThemeManager::shellUrl('common.js', ThemeManager::activeId());
+    if ($common !== '') {
+        echo '<script src="' . vs_e($common) . '"></script>' . "\n";
+    }
     $authJs = ThemeManager::authScriptHref();
     if ($authJs !== '') {
         echo '<script src="' . vs_e($authJs) . '"></script>' . "\n";

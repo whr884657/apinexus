@@ -98,6 +98,12 @@ class UserAvatar
         }
 
         $index = abs(crc32((string) $userId)) % count($files);
+        if (class_exists('SiteMedia')) {
+            $url = SiteMedia::imgUrl('avatar/' . basename($files[$index]));
+            if ($url !== '') {
+                return $url;
+            }
+        }
         return vs_base_url() . '/assets/img/avatar/' . rawurlencode(basename($files[$index]));
     }
 
@@ -108,9 +114,21 @@ class UserAvatar
     {
         $files = self::localAvatarFiles();
         if (count($files) > 0) {
+            if (class_exists('SiteMedia')) {
+                $url = SiteMedia::imgUrl('avatar/' . basename($files[0]));
+                if ($url !== '') {
+                    return $url;
+                }
+            }
             return vs_base_url() . '/assets/img/avatar/' . rawurlencode(basename($files[0]));
         }
 
+        if (class_exists('SiteMedia')) {
+            $gov = SiteMedia::imgUrl('gov.png');
+            if ($gov !== '') {
+                return $gov;
+            }
+        }
         return vs_base_url() . '/assets/img/gov.png';
     }
 

@@ -80,6 +80,13 @@ class ApiQuickstart
         if ($icon === '') {
             return '';
         }
+        $file = ($icon === 'curl') ? 'lang/curl.svg' : ('lang/' . $icon . ($color ? '-color.svg' : '.svg'));
+        if (class_exists('SiteMedia')) {
+            $url = SiteMedia::imgUrl($file);
+            if ($url !== '') {
+                return $url;
+            }
+        }
         $base = rtrim(vs_base_url(), '/') . '/assets/img/lang/';
         if ($icon === 'curl') {
             return $base . 'curl.svg';

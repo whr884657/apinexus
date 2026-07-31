@@ -1,8 +1,8 @@
 /**
  * 默认主题 · 用户中心增量样式
  *
- * 壳层 / 列表 / 表单等后台共用样式统一来自 /assets/css/admin.css。
- * 本文件只放默认主题用户中心的差异覆盖，禁止再整份复制 admin.css（见 E25 / 主题资源隔离规范）。
+ * 壳层样式来自本主题 assets/shell/user-shell.css（与根目录 admin.css 隔离；见《主题资源隔离规范》）。
+ * 本文件只放默认主题用户中心的差异覆盖。
  *
  * 默认主题：页面背景由调色盘写 --page-bg；英雄条由 theme-picker 派生 --vs-uc-hero-bg。
  * 禁止写死与调色盘无关的纯绿 / 纯蓝英雄条。
@@ -115,6 +115,41 @@
     font-size: 0.8125rem;
     opacity: 0.88;
     line-height: 1.45;
+    min-height: 1.45em;
+}
+.uc-dash__hello[data-uc-hello] {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.uc-dash__hello[data-uc-hello].uc-dash__hello--in {
+    opacity: 1;
+    transform: none;
+}
+.uc-dash__hint.is-typing::after {
+    content: '';
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: -0.12em;
+    background: currentColor;
+    opacity: 0.55;
+    animation: uc-dash-caret 0.85s steps(1) infinite;
+}
+@keyframes uc-dash-caret {
+    50% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .uc-dash__hello[data-uc-hello] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    .uc-dash__hint.is-typing::after {
+        display: none;
+        animation: none;
+    }
 }
 .uc-dash__sub {
     margin: 6px 0 0;

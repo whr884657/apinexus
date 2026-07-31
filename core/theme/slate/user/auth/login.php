@@ -44,10 +44,10 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
         <div class="st-auth__oauth-label">第三方登录</div>
         <div class="st-auth__oauth-icons">
             <?php if (!empty($oauthProviders['qq'])): ?>
-                <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=qq" title="QQ 登录"><img src="<?php echo vs_e($base); ?>/assets/img/QQ.svg" alt="QQ" width="22" height="22"></a>
+                <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=qq" title="QQ 登录"><img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="QQ" width="22" height="22"></a>
             <?php endif; ?>
             <?php if (!empty($oauthProviders['gitee'])): ?>
-                <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=gitee" title="Gitee 登录"><img src="<?php echo vs_e($base); ?>/assets/img/gitee.svg" alt="Gitee" width="22" height="22"></a>
+                <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=gitee" title="Gitee 登录"><img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="Gitee" width="22" height="22"></a>
             <?php endif; ?>
         </div>
     </div>

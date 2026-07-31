@@ -599,5 +599,7 @@ window.detailAiMeta = <?php echo json_encode(array(
 ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
-<script src="<?php echo vs_e($vsBase); ?>/assets/js/vs-syntax.js?v=<?php echo vs_e(VS_VERSION); ?>"></script>
-<script src="<?php echo vs_e($vsBase); ?>/core/markdown/assets/js/markdown-render.js?v=<?php echo vs_e(VS_VERSION); ?>"></script>
+<?php $vsSyntaxHref = ThemeManager::pageScriptUrl('vs-syntax.js'); if ($vsSyntaxHref !== ''): ?>
+<script src="<?php echo vs_e($vsSyntaxHref); ?>" defer></script>
+<?php endif; ?>
+<script src="<?php echo vs_e($vsBase); ?>/core/markdown/assets/js/markdown-render.js?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

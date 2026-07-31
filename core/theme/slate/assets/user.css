@@ -766,6 +766,47 @@ body.st-uc-menu-open {
     font-size: 1.2rem;
     font-weight: 700;
 }
+.st-uc-body .uc-dash__hint {
+    margin: 6px 0 0;
+    font-size: 0.8125rem;
+    opacity: 0.9;
+    line-height: 1.45;
+    min-height: 1.45em;
+}
+.st-uc-body .uc-dash__hello[data-uc-hello] {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.st-uc-body .uc-dash__hello[data-uc-hello].uc-dash__hello--in {
+    opacity: 1;
+    transform: none;
+}
+.st-uc-body .uc-dash__hint.is-typing::after {
+    content: '';
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: -0.12em;
+    background: currentColor;
+    opacity: 0.55;
+    animation: uc-dash-caret-st 0.85s steps(1) infinite;
+}
+@keyframes uc-dash-caret-st {
+    50% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .st-uc-body .uc-dash__hello[data-uc-hello] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    .st-uc-body .uc-dash__hint.is-typing::after {
+        display: none;
+        animation: none;
+    }
+}
 .st-uc-body .uc-dash__sub {
     margin: 6px 0 0;
     font-size: 0.875rem;

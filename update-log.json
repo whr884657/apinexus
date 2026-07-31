@@ -1,5 +1,17 @@
 {
     "versions": {
+        "13.22.3": {
+            "title": "ApiNexus 13.22.3 主题资源隔离与首屏打包加速",
+            "date": "2026-08-01",
+            "db_changes": false,
+            "changes": [
+                "双主题 CSS\/JS 与根目录 assets 强制隔离；壳与业务脚本进主题包 shell\/js",
+                "SiteMedia 统一转发内置图标；主题禁止手写 \/assets\/img 直链",
+                "ThemeAssetPack：源文件分立、HTTP 打包下发；Google Fonts 改 idle 不阻塞首屏",
+                "用户控制台时段问候（2 小时段）+ 双主题打字动效",
+                "theme-asset 入口加固：页键白名单、realpath、仅 GET\/HEAD、安全响应头"
+            ]
+        },
         "13.22.2": {
             "title": "ApiNexus 13.22.2 CDN 代码流保活与用户 KPI 缓存列",
             "date": "2026-08-01",

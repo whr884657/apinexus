@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.22.2-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.22.3-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -40,7 +40,7 @@
 - **用户令牌（v3.29+）**：表 `apikey`；用户中心与管理员后台均可管理；格式 `sk-`+32 位（小写前缀）；每账号最多 3 个；本地/代理调用已校验密钥并累计次数
 - **积分计费与充值（v3.33+ / v3.34）**：接口收费扣积分；用户充值中心扫码支付；订单管理与积分变动分栏；回调直访 `core/play/codeplay/notify.php`
 
-- **前台双主题**：默认主题（FeerApi 风：粒子背景、终端 Hero、接口目录、在线调试）+ 主题二 slate（API 平台风：搜索与**数据库分类**筛选、接口卡片列表）；首页与全部接口页分类标签默认显示 15 个、超出「更多」展开；各主题 CSS/JS/shell **完全独立**；首页「累计调用」可在主题设置中选完整数字或单位转换（v5.7.0+）
+- **前台双主题（v13.22.3）**：默认主题（FeerApi 风）+ 主题二 slate；各主题 CSS/JS/shell **完全独立**（根目录 assets 仅管理员）；`ThemeAssetPack` 打包加速首屏；内置图标经 `SiteMedia` 转发；首页「累计调用」可在主题设置中选完整数字或单位转换
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态，URL 无 `.php` 后缀）
 - **友情链接 / 合作伙伴（v5.0+）**：共用表 `link`；友链可审核与禁用；合作伙伴管理员直加（编辑/启禁）；默认主题首页合作伙伴区读库展示
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）；控制台含 KPI·平滑趋势；数据大屏为 ECharts 飞线地图 + 四角实时面板（v12.1.0）
@@ -275,11 +275,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.22.2（2026-08-01）
+### v13.22.3（2026-08-01）
 
-- CDN 友好：单线程代码片 SSE + curl 心跳；多线程 JSON；超时上限 600s（E214）
-- 用户表 `pointsspent` / `keycalls` 缓存累计消耗与密钥调用；升级聚合回填（不扫 apilog）
-- 双主题用户控制台去掉「与管理员同权绑定」芯片
+- 双主题 CSS/JS 与根目录 assets 强制隔离；SiteMedia 转发内置图标
+- ThemeAssetPack 源文件分立、HTTP 打包下发；Google Fonts idle 不阻塞首屏
+- 用户控制台时段问候 + 双主题打字动效；theme-asset 入口安全加固
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

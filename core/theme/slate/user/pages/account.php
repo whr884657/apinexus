@@ -131,7 +131,7 @@ $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindi
             <?php if ($oauthProviders['qq']): ?>
             <div class="vs-oauth-bind-item">
                 <div class="vs-oauth-bind-item__info">
-                    <img src="<?php echo vs_e($vsBase); ?>/assets/img/QQ.svg" alt="" class="vs-oauth-bind-item__icon" width="24" height="24">
+                    <img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="" class="vs-oauth-bind-item__icon" width="24" height="24">
                     <div>
                         <div class="vs-oauth-bind-item__name">QQ</div>
                         <div class="vs-oauth-bind-item__status"><?php echo $oauthBindings['qq'] ? '已绑定' : '未绑定'; ?></div>
@@ -154,7 +154,7 @@ $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindi
             <?php if ($oauthProviders['gitee']): ?>
             <div class="vs-oauth-bind-item">
                 <div class="vs-oauth-bind-item__info">
-                    <img src="<?php echo vs_e($vsBase); ?>/assets/img/gitee.svg" alt="" class="vs-oauth-bind-item__icon" width="24" height="24">
+                    <img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="" class="vs-oauth-bind-item__icon" width="24" height="24">
                     <div>
                         <div class="vs-oauth-bind-item__name">Gitee</div>
                         <div class="vs-oauth-bind-item__status"><?php echo $oauthBindings['gitee'] ? '已绑定' : '未绑定'; ?></div>

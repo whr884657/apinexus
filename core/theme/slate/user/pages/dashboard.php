@@ -11,6 +11,9 @@ $checkinBanner = isset($checkinBanner) && is_array($checkinBanner) ? $checkinBan
 $avatarPreview = isset($avatarPreview) ? (string) $avatarPreview : '';
 $displayName = isset($displayName) ? (string) $displayName : '用户';
 $isDeveloper = !empty($isDeveloper);
+$helloLine = isset($helloLine) ? (string) $helloLine : ('欢迎回来，' . $displayName);
+$helloHint = isset($helloHint) ? (string) $helloHint : '';
+$helloSlot = isset($helloSlot) ? (string) $helloSlot : '';
 $email = isset($dash['email']) && $dash['email'] !== '' ? (string) $dash['email'] : '—';
 $created = isset($dash['createtime']) && $dash['createtime'] !== '' ? (string) $dash['createtime'] : '—';
 $lastLogin = isset($dash['lastlogin']) && $dash['lastlogin'] !== '' ? (string) $dash['lastlogin'] : '暂无记录';
@@ -23,12 +26,15 @@ $lastLogin = isset($dash['lastlogin']) && $dash['lastlogin'] !== '' ? (string) $
 </div>
 <?php endif; ?>
 
-<section class="uc-dash" id="ucDashboard" data-theme="slate">
+<section class="uc-dash" id="ucDashboard" data-theme="slate"<?php echo $helloSlot !== '' ? ' data-hello-slot="' . vs_e($helloSlot) . '"' : ''; ?>>
     <header class="uc-dash__hero uc-motion">
         <div class="uc-dash__hero-main">
             <img class="uc-dash__avatar" src="<?php echo vs_e($avatarPreview); ?>" alt="" width="56" height="56" loading="lazy" referrerpolicy="no-referrer">
             <div class="uc-dash__hero-text">
-                <h2 class="uc-dash__hello">欢迎回来，<?php echo vs_e($displayName); ?></h2>
+                <h2 class="uc-dash__hello" data-uc-hello><?php echo vs_e($helloLine); ?></h2>
+                <?php if ($helloHint !== ''): ?>
+                    <p class="uc-dash__hint" data-uc-hello-hint data-text="<?php echo vs_e($helloHint); ?>"></p>
+                <?php endif; ?>
             </div>
         </div>
     </header>

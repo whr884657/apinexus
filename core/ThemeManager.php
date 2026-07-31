@@ -823,7 +823,7 @@ class ThemeManager
      * @param string $activeMenu     侧栏高亮
      * @param array  $pageData       注入视图变量
      * @param string $headerActions  标题行右侧 HTML
-     * @param array  $extraScripts   页脚额外脚本（站点 assets/js）
+     * @param array  $extraScripts   页脚额外脚本文件名（解析为当前主题 assets/js/，禁止根目录 assets/js）
      * @return void
      */
     public static function renderUserPage(
@@ -886,6 +886,129 @@ class ThemeManager
     }
 
     /**
+     * 主题包 shell 资源 URL（仅本主题 assets/shell/，供前台/用户中心隔离加载）
+     *
+     * @param string      $file    如 common.css、modal.js、user-shell.css
+     * @param string|null $themeId
+     * @return string
+     */
+    public static function shellUrl($file, $themeId = null)
+    {
+        $themeId = $themeId !== null ? $themeId : self::activeId();
+        $file = basename(str_replace('\\', '/', (string) $file));
+        if ($file === '' || !self::isValidTheme($themeId)) {
+            return '';
+        }
+        $path = self::themeDir($themeId) . '/assets/shell/' . $file;
+        if (!is_file($path)) {
+            return '';
+        }
+        return self::assetUrl($themeId, 'assets/shell/' . $file) . '?v=' . VS_VERSION;
+    }
+
+    /**
+     * 主题包页脚业务脚本 URL（assets/js/，如 user-keys.js）
+     *
+     * @param string      $file
+     * @param string|null $themeId
+     * @return string
+     */
+    public static function pageScriptUrl($file, $themeId = null)
+    {
+        $themeId = $themeId !== null ? $themeId : self::activeId();
+        $file = basename(str_replace('\\', '/', (string) $file));
+        if ($file === '' || !self::isValidTheme($themeId)) {
+            return '';
+        }
+        $path = self::themeDir($themeId) . '/assets/js/' . $file;
+        if (!is_file($path)) {
+            return '';
+        }
+        return self::assetUrl($themeId, 'assets/js/' . $file) . '?v=' . VS_VERSION;
+    }
+
+    /**
+     * 前台公共壳 CSS（主题包内，不再读根目录 assets/css）
+     *
+     * @return array<int,string>
+     */
+    public static function frontendShellCssHrefs()
+    {
+        $files = array('common.css', 'toast.css', 'modal.css', 'icons.css', 'site-footer.css');
+        $out = array();
+        foreach ($files as $f) {
+            $u = self::shellUrl($f);
+            if ($u !== '') {
+                $out[] = $u;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * 前台公共壳 JS
+     *
+     * @return array<int,string>
+     */
+    public static function frontendShellJsHrefs()
+    {
+        $files = array('modal.js', 'common.js');
+        $out = array();
+        foreach ($files as $f) {
+            $u = self::shellUrl($f);
+            if ($u !== '') {
+                $out[] = $u;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * 用户中心壳 CSS（主题包内）
+     *
+     * @param bool $withThemePicker default 主题需要配色器样式
+     * @return array<int,string>
+     */
+    public static function userShellCssHrefs($withThemePicker = false)
+    {
+        $files = array('common.css', 'toast.css', 'modal.css', 'icons.css');
+        if ($withThemePicker) {
+            $files[] = 'theme-picker.css';
+        }
+        $files[] = 'user-shell.css';
+        $out = array();
+        foreach ($files as $f) {
+            $u = self::shellUrl($f);
+            if ($u !== '') {
+                $out[] = $u;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * 用户中心壳 JS（主题包内）
+     *
+     * @param bool $withThemePicker
+     * @return array<int,string>
+     */
+    public static function userShellJsHrefs($withThemePicker = false)
+    {
+        $files = array('modal.js', 'common.js', 'vs-pick.js');
+        if ($withThemePicker) {
+            $files[] = 'theme-picker.js';
+        }
+        $out = array();
+        foreach ($files as $f) {
+            $u = self::shellUrl($f);
+            if ($u !== '') {
+                $out[] = $u;
+            }
+        }
+        return $out;
+    }
+
+    /**
      * 默认主题 · 参考 UI 资源清单（多 CSS/JS）
      *
      * @param string $pageKey
@@ -899,81 +1022,22 @@ class ThemeManager
             return self::assetUrl('default', $rel) . '?v=' . $v;
         };
 
-        $css = array(
-            'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap',
-            $asset('assets/css/front-common.css'),
-            $asset('assets/css/markdown-content.css'),
-        );
+        // Google Fonts 绝不阻塞首屏（国内无 CDN 时常 5～11s）；idle/load 后再挂，系统字体先兜底
+        $fontHref = 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap';
+        $fontBoot = '<script>(function(){var u=' . json_encode($fontHref) . ';function go(){try{var l=document.createElement("link");l.rel="stylesheet";l.href=u;l.media="print";l.onload=function(){this.media="all"};document.head.appendChild(l);}catch(e){}}if("requestIdleCallback" in window){requestIdleCallback(go,{timeout:2500});}else{window.addEventListener("load",go);}})();</script>';
 
-        $pageCssMap = array(
-            'home'         => 'assets/css/pages/index.css',
-            'apis'         => 'assets/css/pages/apis.css',
-            'detail'       => 'assets/css/pages/detail.css',
-            'articles'     => 'assets/css/pages/articles.css',
-            'about'        => 'assets/css/pages/about.css',
-            'links'        => 'assets/css/pages/links.css',
-            'applylink'    => 'assets/css/pages/applylink.css',
-            'contributors' => 'assets/css/pages/contributors.css',
-            'profile'      => 'assets/css/pages/profile.css',
-            'sponsor'      => 'assets/css/pages/donate.css',
-        );
-        if (isset($pageCssMap[$pageKey])) {
-            $css[] = $asset($pageCssMap[$pageKey]);
-        }
-        $css[] = $asset('assets/css/theme-tokens.css');
-        $css[] = $asset('assets/css/feer-compat.css');
-
-        $js = array(
-            $asset('assets/js/front-theme.js'),
-            $asset('assets/js/shell.js'),
-            $asset('assets/js/sidebar-close.js'),
-            $asset('assets/js/external-link-modal.js'),
-        );
-
-        $pageJsMap = array(
-            'home'         => array(
-                'assets/js/playground-response.js',
-                'assets/js/pages/index-terminal.js',
-                'assets/js/pages/index.js',
-            ),
-            'apis'         => array('assets/js/pages/apis-page.js'),
-            'detail'       => array(
-                'assets/js/playground-response.js',
-                'assets/js/pages/detail.js',
-                'assets/js/pages/detail-quickstart.js',
-            ),
-            'articles'     => array('assets/js/pages/articles-page.js'),
-            'about'        => array('assets/js/pages/about-page.js'),
-            'links'        => array('assets/js/pages/links-page.js'),
-            'applylink'    => array('assets/js/pages/applylink.js'),
-            'contributors' => array('assets/js/pages/contributors-page.js'),
-            'profile'      => array(
-                'assets/js/pages/profile.js',
-                'assets/js/pages/profile-search.js',
-            ),
-            'sponsor'      => array('assets/js/pages/donate.js'),
-        );
-        if (isset($pageJsMap[$pageKey])) {
-            foreach ($pageJsMap[$pageKey] as $rel) {
-                $rel = (string) $rel;
-                if (preg_match('#^https?://#i', $rel)) {
-                    $js[] = $rel;
-                } else {
-                    $js[] = $asset($rel);
-                }
-            }
-        }
-
-        // 优先本地 vendor，避免首次访问走 CDN Play 编译拖垮首屏（E183）
+        // 优先本地 vendor Tailwind（E183）；样式/业务脚本由 ThemeAssetPack 打包下发
         $localTw = htmlspecialchars($asset('assets/vendor/tailwind.min.js'), ENT_QUOTES, 'UTF-8');
         return array(
-            'css'           => $css,
-            'js'            => $js,
+            'css'           => array(),
+            'js'            => array(),
             'head_scripts'  => array(
+                $fontBoot,
                 '<script src="' . $localTw . '"></script>',
             ),
             'body_class'    => 'vs-body feer-front',
             'skip_legacy'   => true,
+            'page_key'      => $pageKey,
         );
     }
 
