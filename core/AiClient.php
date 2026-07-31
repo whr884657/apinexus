@@ -220,8 +220,9 @@ class AiClient
     {
         $adminId = class_exists('Auth') ? (int) Auth::id() : 0;
         $userId = class_exists('UserAuth') ? (int) UserAuth::id() : 0;
+        // 代码示例最多 27 片/批，10 次/分会误杀；放宽到 45 次/分
         $bucket = 'ai:chat:' . ($adminId > 0 ? ('a' . $adminId) : ('u' . $userId));
-        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 10, true)) {
+        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 45, true)) {
             return '错误：请求过于频繁，请稍后再试';
         }
 
@@ -254,7 +255,7 @@ class AiClient
         $adminId = class_exists('Auth') ? (int) Auth::id() : 0;
         $userId = class_exists('UserAuth') ? (int) UserAuth::id() : 0;
         $bucket = 'ai:chat:' . ($adminId > 0 ? ('a' . $adminId) : ('u' . $userId));
-        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 10, true)) {
+        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 45, true)) {
             return array('ok' => false, 'error' => '请求过于频繁，请稍后再试');
         }
 
@@ -265,8 +266,8 @@ class AiClient
         if ($timeout < 10) {
             $timeout = 10;
         }
-        if ($timeout > 300) {
-            $timeout = 300;
+        if ($timeout > 600) {
+            $timeout = 600;
         }
         if ($base === '' || $key === '' || $model === '') {
             return array('ok' => false, 'error' => 'AI 配置不完整（根地址 / Key / 模型）');
@@ -338,8 +339,8 @@ class AiClient
         if ($timeout < 10) {
             $timeout = 10;
         }
-        if ($timeout > 300) {
-            $timeout = 300;
+        if ($timeout > 600) {
+            $timeout = 600;
         }
         $mode = self::normalizeApiMode(isset($cfg['api_mode']) ? $cfg['api_mode'] : AiConfig::apiMode());
         $probe = !empty($opts['probe']);
@@ -875,6 +876,8 @@ class AiClient
             'Content-Type: application/json',
         );
         $errHold = array('');
+        // 首包前上游也可能「思考」很久：靠进度回调给浏览器/CDN 打 SSE 心跳，避免空闲掐断
+        $lastKeepAt = array(microtime(true));
         $opts = array(
             CURLOPT_RETURNTRANSFER => false,
             CURLOPT_CONNECTTIMEOUT => min(15, $timeout),
@@ -884,6 +887,18 @@ class AiClient
             CURLOPT_CUSTOMREQUEST  => strtoupper($method),
             CURLOPT_POSTFIELDS     => $jsonBody !== null ? $jsonBody : '{}',
             CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_NOPROGRESS     => false,
+            CURLOPT_PROGRESSFUNCTION => function () use (&$lastKeepAt) {
+                if (!class_exists('AiSse') || !AiSse::isActive()) {
+                    return 0;
+                }
+                $now = microtime(true);
+                if (($now - $lastKeepAt[0]) >= 5.0) {
+                    $lastKeepAt[0] = $now;
+                    AiSse::maybePing(true);
+                }
+                return 0;
+            },
             CURLOPT_WRITEFUNCTION  => function ($ch, $data) use ($onChunk, &$httpOut, $errHold) {
                 if ($httpOut <= 0) {
                     $httpOut = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);

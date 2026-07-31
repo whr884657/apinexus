@@ -222,8 +222,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($timeout < 10) {
                 $timeout = 10;
             }
-            if ($timeout > 300) {
-                $timeout = 300;
+            if ($timeout > 600) {
+                $timeout = 600;
             }
             $maxLen = isset($_POST['ai_doc_maxlen']) ? (int) $_POST['ai_doc_maxlen'] : 8000;
             if ($maxLen < 1000) {
@@ -1552,9 +1552,9 @@ $aiPresets = AiConfig::providerPresets();
         <div class="vs-form-row vs-form-row--inline">
             <div class="vs-form-col">
                 <label class="vs-label" for="aiTimeout">单片超时（秒）</label>
-                <input type="number" name="ai_timeout" id="aiTimeout" class="vs-input" min="10" max="300"
+                <input type="number" name="ai_timeout" id="aiTimeout" class="vs-input" min="10" max="600"
                        value="<?php echo (int) $aiCfg['timeout']; ?>">
-                <p class="vs-form-hint">每片（一种鉴权×一种语言）请求上限，建议 60～180</p>
+                <p class="vs-form-hint">每片（一种鉴权×一种语言）请求上限，最长 600 秒（10 分钟）；建议 120～300</p>
             </div>
             <div class="vs-form-col">
                 <label class="vs-label" for="aiDocMaxlen">详细文档字数上限</label>
@@ -1569,7 +1569,7 @@ $aiPresets = AiConfig::providerPresets();
                     <option value="sequential" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : 'sequential') === 'sequential' ? 'selected' : ''; ?>>单线程（写完一片再写下一片）</option>
                     <option value="parallel" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : '') === 'parallel' ? 'selected' : ''; ?>>多线程（浏览器并发多片）</option>
                 </select>
-                <p class="vs-form-hint">最多 3 鉴权 × 9 语言 = 27 片；多线程可加快，但更吃上游限流。</p>
+                <p class="vs-form-hint">最多 3 鉴权 × 9 语言 = 27 片。经 CDN 加速时请用「单线程」（SSE 心跳保活）；多线程走 JSON，若 CDN 回源空闲超时过短仍可能失败。</p>
             </div>
             <div class="vs-form-col">
                 <label class="vs-label" for="aiCodeConcurrency">并行并发数</label>

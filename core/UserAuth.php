@@ -172,11 +172,23 @@ class UserAuth
         try {
             $pdo = Database::connect();
             $table = Database::table('user');
-            $stmt = $pdo->prepare(
-                'SELECT `id`, `username`, `email`, `avatar`, `bio`, `blog`, `wallpaper`, `qqopenid`, `giteeid`, `role`, `createtime`, `lastlogin` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
-            );
-            $stmt->execute(array(self::id()));
-            return $stmt->fetch() ?: null;
+            $cols = '`id`, `username`, `email`, `avatar`, `bio`, `blog`, `wallpaper`, `qqopenid`, `giteeid`, `role`,'
+                . ' `points`, `pointsspent`, `keycalls`, `createtime`, `lastlogin`';
+            try {
+                $stmt = $pdo->prepare(
+                    'SELECT ' . $cols . ' FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array(self::id()));
+                return $stmt->fetch() ?: null;
+            } catch (Exception $eCols) {
+                // 未跑 13.22.2 迁移时无 pointsspent/keycalls；仍须带 points 以免余额空白
+                $stmt = $pdo->prepare(
+                    'SELECT `id`, `username`, `email`, `avatar`, `bio`, `blog`, `wallpaper`, `qqopenid`, `giteeid`, `role`,'
+                    . ' `points`, `createtime`, `lastlogin` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array(self::id()));
+                return $stmt->fetch() ?: null;
+            }
         } catch (Exception $e) {
             return null;
         }

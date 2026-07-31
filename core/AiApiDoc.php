@@ -257,19 +257,43 @@ class AiApiDoc
         if (!$needRetry && is_string($one) && self::qsBodyLength($one) > 700) {
             $needRetry = true;
         }
+        // 禁止在 SSE 已打开时再走整包 chatWithConfig：等待期无字节，CDN 必掐（E214）
         if ($needRetry) {
             @set_time_limit((int) $cfg['timeout'] + 30);
+            if (class_exists('AiSse') && AiSse::isActive()) {
+                AiSse::comment('retry');
+            }
             $retryUser = $prompts['user'] . "\n\n上次输出无效或过长。请再次只输出一个合法短码块，第一行必须是 "
                 . ($requireAuth
                     ? (':::qs lang=' . $lang . ' auth=' . $authWay)
                     : (':::qs lang=' . $lang))
                 . " ，最后一行必须是 ::: ，中间纯代码正文务必 ≤400 字符、≤15 行，禁止 emoji 与 ```。";
-            $out2 = AiClient::chatWithConfig($cfg, $prompts['system'], $retryUser, array(
-                'temperature' => 0.1,
-                'max_tokens'  => 500,
-            ));
-            if (is_string($out2) && strpos($out2, '错误：') !== 0) {
-                $retryOne = self::extractRequestedQsBlock($out2, $authWay, $lang, $requireAuth);
+            $assembledRetry = '';
+            $result2 = AiClient::chatStreamWithConfig(
+                $cfg,
+                array(
+                    array('role' => 'system', 'content' => $prompts['system']),
+                    array('role' => 'user', 'content' => $retryUser),
+                ),
+                array('temperature' => 0.1, 'max_tokens' => 500),
+                function ($chunk) use (&$assembledRetry) {
+                    $assembledRetry .= (string) $chunk;
+                    if (class_exists('AiSse')) {
+                        AiSse::maybePing(false);
+                    }
+                }
+            );
+            $text2 = '';
+            if (!empty($result2['ok'])) {
+                $text2 = isset($result2['text']) ? (string) $result2['text'] : $assembledRetry;
+                if ($assembledRetry !== '' && strlen($assembledRetry) >= strlen($text2)) {
+                    $text2 = $assembledRetry;
+                }
+            } elseif ($assembledRetry !== '') {
+                $text2 = $assembledRetry;
+            }
+            if ($text2 !== '') {
+                $retryOne = self::extractRequestedQsBlock($text2, $authWay, $lang, $requireAuth);
                 if ($retryOne !== '') {
                     $one = $retryOne;
                 }

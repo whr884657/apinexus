@@ -208,8 +208,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($aiTimeout < 30) {
             $aiTimeout = 30;
         }
-        if ($aiTimeout > 300) {
-            $aiTimeout = 300;
+        if ($aiTimeout > 600) {
+            $aiTimeout = 600;
         }
         @set_time_limit($aiTimeout + 60);
         unset(

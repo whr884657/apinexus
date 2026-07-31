@@ -34,11 +34,6 @@ $lastLogin = isset($dash['lastlogin']) && $dash['lastlogin'] !== '' ? (string) $
                 <?php if ($helloHint !== ''): ?>
                     <p class="uc-dash__hint"><?php echo vs_e($helloHint); ?></p>
                 <?php endif; ?>
-                <?php if (!empty($dash['bound_admin'])): ?>
-                    <p class="uc-dash__sub">
-                        <span class="uc-dash__chip uc-dash__chip--bound">与管理员同权绑定</span>
-                    </p>
-                <?php endif; ?>
             </div>
         </div>
     </header>

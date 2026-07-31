@@ -386,11 +386,89 @@ class ApiKeyManager
         }
         try {
             $pdo = Database::connect();
-            $table = Database::table('apikey');
-            $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `calls` = `calls` + 1 WHERE `id` = ? LIMIT 1');
-            $stmt->execute(array($id));
+            $keyTable = Database::table('apikey');
+            $userTable = Database::table('user');
+            // 令牌 calls + 用户 keycalls 同事务口径（用户列 v13.22.2+；缺列时仅更令牌）
+            if (self::userHasKeycallsColumn()) {
+                // 多表 UPDATE 不带 LIMIT（兼容 MySQL 5.7 / MariaDB）
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . $keyTable . '` k
+                     INNER JOIN `' . $userTable . '` u ON u.`id` = k.`userid`
+                     SET k.`calls` = k.`calls` + 1, u.`keycalls` = u.`keycalls` + 1
+                     WHERE k.`id` = ?'
+                );
+                $stmt->execute(array($id));
+            } else {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . $keyTable . '` SET `calls` = `calls` + 1 WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($id));
+            }
         } catch (Exception $e) {
             // ignore
+        }
+    }
+
+    /**
+     * @return bool
+     */
+    public static function userHasKeycallsColumn()
+    {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query(
+                'SHOW COLUMNS FROM `' . Database::table('user') . '` LIKE ' . $pdo->quote('keycalls')
+            );
+            $ok = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $ok = false;
+        }
+        return $ok;
+    }
+
+    /**
+     * 用户累计密钥调用（优先 user.keycalls，缺列时汇总令牌）
+     *
+     * @param int $userId
+     * @return int
+     */
+    public static function userKeyCallsTotal($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return 0;
+        }
+        if (self::userHasKeycallsColumn()) {
+            try {
+                $pdo = Database::connect();
+                $stmt = $pdo->prepare(
+                    'SELECT `keycalls` FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($userId));
+                $v = $stmt->fetchColumn();
+                if ($v !== false) {
+                    return (int) $v;
+                }
+            } catch (Exception $e) {
+                // fall through
+            }
+        }
+        if (!self::tableReady()) {
+            return 0;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT COALESCE(SUM(`calls`), 0) FROM `' . Database::table('apikey') . '` WHERE `userid` = ?'
+            );
+            $stmt->execute(array($userId));
+            return (int) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            return 0;
         }
     }
 

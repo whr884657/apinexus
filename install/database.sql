@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '账号状态：0禁用 1启用',
     `role` varchar(16) NOT NULL DEFAULT 'user' COMMENT '用户角色：user普通用户 developer开发者',
     `points` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '积分余额',
+    `pointsspent` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '累计消耗积分（已完成扣减流水合计）',
+    `keycalls` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '累计密钥调用次数（成功且有效密钥）',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     `lastlogin` datetime DEFAULT NULL COMMENT '最后登录时间',
     PRIMARY KEY (`id`),

@@ -29,11 +29,6 @@ $lastLogin = isset($dash['lastlogin']) && $dash['lastlogin'] !== '' ? (string) $
             <img class="uc-dash__avatar" src="<?php echo vs_e($avatarPreview); ?>" alt="" width="56" height="56" loading="lazy" referrerpolicy="no-referrer">
             <div class="uc-dash__hero-text">
                 <h2 class="uc-dash__hello">欢迎回来，<?php echo vs_e($displayName); ?></h2>
-                <?php if (!empty($dash['bound_admin'])): ?>
-                    <p class="uc-dash__sub">
-                        <span class="uc-dash__chip uc-dash__chip--bound">与管理员同权绑定</span>
-                    </p>
-                <?php endif; ?>
             </div>
         </div>
     </header>

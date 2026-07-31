@@ -114,7 +114,6 @@ class FrontendUser
             'lastlogin'        => '',
             'role_label'       => '',
             'can_publish_api'  => false,
-            'bound_admin'      => false,
             'api_total'        => 0,
             'api_approved'     => 0,
             'api_pending'      => 0,
@@ -137,8 +136,13 @@ class FrontendUser
         $out['lastlogin'] = isset($user['lastlogin']) ? (string) $user['lastlogin'] : '';
         $out['role_label'] = isset($user['role_label']) ? (string) $user['role_label'] : '';
         $out['can_publish_api'] = !empty($user['can_publish_api']);
-        $out['bound_admin'] = class_exists('AdminUserBinding') && AdminUserBinding::isUserBoundToAdmin($uid);
-        if (class_exists('OrderManager') && method_exists('OrderManager', 'sumUserSpent')) {
+        // 累计消耗 / 密钥调用：读用户表缓存列（v13.22.2+），避免每次扫 orders / 汇总令牌
+        if (class_exists('PointsManager') && method_exists('PointsManager', 'spentTotal')) {
+            $spent = PointsManager::spentTotal($uid);
+            $out['points_spent'] = class_exists('PayConfig')
+                ? PayConfig::fmtPoints($spent)
+                : (string) $spent;
+        } elseif (class_exists('OrderManager') && method_exists('OrderManager', 'sumUserSpent')) {
             $spent = OrderManager::sumUserSpent($uid);
             $out['points_spent'] = class_exists('PayConfig')
                 ? PayConfig::fmtPoints($spent)
@@ -169,8 +173,12 @@ class FrontendUser
         if (class_exists('ApiKeyManager') && ApiKeyManager::tableReady()) {
             $keys = ApiKeyManager::listByUser($uid);
             $out['key_total'] = count($keys);
-            foreach ($keys as $k) {
-                $out['key_calls'] += isset($k['calls']) ? (int) $k['calls'] : 0;
+            if (method_exists('ApiKeyManager', 'userKeyCallsTotal')) {
+                $out['key_calls'] = ApiKeyManager::userKeyCallsTotal($uid);
+            } else {
+                foreach ($keys as $k) {
+                    $out['key_calls'] += isset($k['calls']) ? (int) $k['calls'] : 0;
+                }
             }
         }
 

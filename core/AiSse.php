@@ -9,6 +9,17 @@ class AiSse
     /** @var float */
     private static $lastPingAt = 0;
 
+    /** @var bool 是否已 begin（供 curl 进度回调判断，避免误写到 JSON 响应） */
+    private static $active = false;
+
+    /**
+     * @return bool
+     */
+    public static function isActive()
+    {
+        return self::$active;
+    }
+
     /**
      * @return void
      */
@@ -24,11 +35,15 @@ class AiSse
         }
         header('Content-Type: text/event-stream; charset=utf-8');
         header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
         header('Connection: keep-alive');
         header('X-Accel-Buffering: no');
         header('X-Content-Type-Options: nosniff');
         // 部分 CDN 认此头减少缓冲
         header('Content-Encoding: none');
+        // Cloudflare 等：提示边缘勿缓冲
+        header('CDN-Cache-Control: no-store');
+        self::$active = true;
         self::$lastPingAt = microtime(true);
         self::comment('ok');
     }
@@ -72,8 +87,12 @@ class AiSse
      */
     public static function maybePing($force = false)
     {
+        if (!self::$active) {
+            return;
+        }
         $now = microtime(true);
-        if ($force || ($now - self::$lastPingAt) >= 8) {
+        // CDN 空闲掐断常见 10～15 秒；心跳略密一点
+        if ($force || ($now - self::$lastPingAt) >= 5) {
             self::comment('ping');
         }
     }
@@ -95,5 +114,6 @@ class AiSse
     public static function end()
     {
         self::flush();
+        self::$active = false;
     }
 }

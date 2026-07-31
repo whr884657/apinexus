@@ -47,6 +47,60 @@ class PointsManager
     }
 
     /**
+     * 用户表是否已有累计消耗字段（v13.22.2+）
+     *
+     * @return bool
+     */
+    public static function hasSpentColumn()
+    {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query('SHOW COLUMNS FROM `' . Database::table('user') . '` LIKE ' . $pdo->quote('pointsspent'));
+            $ok = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $ok = false;
+        }
+        return $ok;
+    }
+
+    /**
+     * 读取用户累计消耗（优先缓存列，缺列时回落扫 orders）
+     *
+     * @param int $userId
+     * @return float
+     */
+    public static function spentTotal($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return 0.0;
+        }
+        if (self::hasSpentColumn()) {
+            try {
+                $pdo = Database::connect();
+                $stmt = $pdo->prepare(
+                    'SELECT `pointsspent` FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($userId));
+                $v = $stmt->fetchColumn();
+                if ($v !== false) {
+                    return (float) $v;
+                }
+            } catch (Exception $e) {
+                // fall through
+            }
+        }
+        if (class_exists('OrderManager') && method_exists('OrderManager', 'sumUserSpent')) {
+            return (float) OrderManager::sumUserSpent($userId);
+        }
+        return 0.0;
+    }
+
+    /**
      * API 调用扣费（事务）
      *
      * @param int    $userId
@@ -431,9 +485,17 @@ class PointsManager
                 $newBal = round($cur + $amount, 4);
             }
 
-            $pdo->prepare(
-                'UPDATE `' . Database::table('user') . '` SET `points` = ? WHERE `id` = ?'
-            )->execute(array($newBal, $userId));
+            if ($direct === OrderManager::DIRECT_DEC && self::hasSpentColumn()) {
+                $pdo->prepare(
+                    'UPDATE `' . Database::table('user') . '`
+                     SET `points` = ?, `pointsspent` = `pointsspent` + ?
+                     WHERE `id` = ?'
+                )->execute(array($newBal, $amount, $userId));
+            } else {
+                $pdo->prepare(
+                    'UPDATE `' . Database::table('user') . '` SET `points` = ? WHERE `id` = ?'
+                )->execute(array($newBal, $userId));
+            }
 
             $orderno = OrderManager::genOrderNo($direct === OrderManager::DIRECT_DEC ? 'DC' : 'IN');
             $ins = $pdo->prepare(

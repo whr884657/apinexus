@@ -52,9 +52,9 @@ class AiConfig
         if ($timeout < 10) {
             $timeout = 10;
         }
-        // 单片生成超时上限（整包由前端分片，不再一次拖满）
-        if ($timeout > 300) {
-            $timeout = 300;
+        // 单片超时上限 10 分钟（长上下文模型理解慢；整包仍由前端分片）
+        if ($timeout > 600) {
+            $timeout = 600;
         }
         $maxLen = (int) Config::get('ai_doc_maxlen', '8000');
         if ($maxLen < 1000) {

@@ -1,13 +1,13 @@
 {
-    "version": "13.22.1",
-    "title": "ApiNexus 13.22.1 代码流式分片与外链图标加固",
+    "version": "13.22.2",
+    "title": "ApiNexus 13.22.2 CDN 代码流保活与用户 KPI 缓存列",
     "release_date": "2026-08-01",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "AI 代码示例单片改为 SSE 流式回填（后台/用户中心 ai_gen_code_piece_stream）",
-        "外链图标 http→https、失败字母兜底；CSP 增加 upgrade-insecure-requests（E212）",
-        "修复迁移 5.0.0 全表 SET kind=0 抹掉伙伴/赞助；迁徙器跳过已含 kind 的库（E211）",
-        "友链页硬上限 120、页脚硬上限 10；移除「友链改回伙伴」临时入口"
+        "CDN 友好：单线程代码片 SSE + curl 心跳保活；多线程仍 JSON；超时上限 600s（E214）",
+        "用户表新增 pointsspent/keycalls；升级回填 orders/apikey 聚合（不扫 apilog）；控制台读缓存列",
+        "迁徙器 reconcile/versionSchemaReady 识别 13.22.2，避免新装误重跑全表回填",
+        "双主题用户控制台去掉「与管理员同权绑定」芯片"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

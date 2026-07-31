@@ -199,8 +199,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($aiTimeout < 30) {
             $aiTimeout = 30;
         }
-        if ($aiTimeout > 300) {
-            $aiTimeout = 300;
+        if ($aiTimeout > 600) {
+            $aiTimeout = 600;
         }
         // 分片：单片只占一份超时；整包由前端多次请求，避免网关/PHP 一次拖死
         @set_time_limit($aiTimeout + 60);
@@ -1080,12 +1080,12 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
             </div>
 
             <div class="vs-api-list-form-pane" data-api-form-pane="docs" hidden>
-                <div class="vs-ai-gen-banner" id="apiListAiBanner" hidden>
-                    <span class="vs-ai-gen-banner__dot" aria-hidden="true"></span>
-                    <span class="vs-ai-gen-banner__text" id="apiListAiBannerText">正在生成…</span>
-                    <span class="vs-ai-gen-banner__time" id="apiListAiBannerTime"></span>
-                </div>
                 <div class="vs-form-row">
+                    <div class="vs-ai-gen-banner" id="apiListAiBanner" hidden data-ai-banner="doc">
+                        <span class="vs-ai-gen-banner__dot" aria-hidden="true"></span>
+                        <span class="vs-ai-gen-banner__text" id="apiListAiBannerText">正在生成…</span>
+                        <span class="vs-ai-gen-banner__time" id="apiListAiBannerTime"></span>
+                    </div>
                     <div class="vs-api-doc-head">
                         <label class="vs-label" for="apiListFormDocNormal">详细文档（Markdown）</label>
                         <div class="vs-api-doc-head__actions">
@@ -1106,14 +1106,25 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     </details>
                 </div>
                 <div class="vs-form-row">
+                    <div class="vs-ai-gen-banner" id="apiListAiBannerCode" hidden data-ai-banner="code">
+                        <span class="vs-ai-gen-banner__dot" aria-hidden="true"></span>
+                        <span class="vs-ai-gen-banner__text" id="apiListAiBannerCodeText">正在生成…</span>
+                        <span class="vs-ai-gen-banner__time" id="apiListAiBannerCodeTime"></span>
+                    </div>
                     <div class="vs-api-doc-head">
                         <label class="vs-label" for="apiListFormDocAi">代码示例（:::qs 多语言）</label>
-                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiCodeBtn"
-                                title="生成快速上手各语言示例">AI 生成代码示例</button>
+                        <div class="vs-api-doc-head__actions">
+                            <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiCodeBtn"
+                                    title="按鉴权×语言分片生成（JSON 单片，支持并行）">AI 生成代码示例</button>
+                            <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiCodeRetryBtn" hidden
+                                    title="只重试上次失败的片">重试失败</button>
+                            <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiCodeClearBtn"
+                                    title="清空代码示例框与进程日志">清空示例</button>
+                        </div>
                     </div>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="aidoc" rows="10"
                               data-vs-md="off" placeholder=":::qs lang=curl&#10;...&#10;:::&#10;&#10;:::qs lang=python&#10;...&#10;:::"></textarea>
-                    <p class="vs-form-hint">须使用 :::qs lang=语言标识 包裹，语言：curl / typescript / browser / python / go / java / php / cpp / rust。</p>
+                    <p class="vs-form-hint">须使用 :::qs lang=语言标识 包裹。AI 按「鉴权×语言」分片请求（非流式单片），生成后一片即回填；失败可点「重试失败」。</p>
                     <details class="vs-ai-term" id="apiListAiTermCode" data-ai-term="code">
                         <summary class="vs-ai-term__summary">AI 编写进程（代码示例）</summary>
                         <pre class="vs-ai-term__log font-mono" id="apiListAiTermCodeLog">尚未开始生成。</pre>

@@ -2112,19 +2112,35 @@
         refreshMdField(el);
     }
 
-    var aiBanner = document.getElementById('apiListAiBanner');
-    var aiBannerText = document.getElementById('apiListAiBannerText');
-    var aiBannerTime = document.getElementById('apiListAiBannerTime');
+    var aiBanners = {
+        doc: {
+            el: document.getElementById('apiListAiBanner'),
+            text: document.getElementById('apiListAiBannerText'),
+            time: document.getElementById('apiListAiBannerTime')
+        },
+        code: {
+            el: document.getElementById('apiListAiBannerCode'),
+            text: document.getElementById('apiListAiBannerCodeText'),
+            time: document.getElementById('apiListAiBannerCodeTime')
+        }
+    };
+    var aiBanner = aiBanners.doc.el;
+    var aiBannerText = aiBanners.doc.text;
+    var aiBannerTime = aiBanners.doc.time;
+    var aiActiveBannerKind = 'doc';
     var aiDocBtn = document.getElementById('apiListAiDocBtn');
     var aiDocContinueBtn = document.getElementById('apiListAiDocContinueBtn');
     var aiChatClearBtn = document.getElementById('apiListAiChatClearBtn');
     var aiCodeBtn = document.getElementById('apiListAiCodeBtn');
+    var aiCodeRetryBtn = document.getElementById('apiListAiCodeRetryBtn');
+    var aiCodeClearBtn = document.getElementById('apiListAiCodeClearBtn');
     var aiBusy = false;
     var aiTickTimer = null;
     var aiStageTimer = null;
     var aiStartedAt = 0;
     var aiAbort = null;
     var aiDocPartial = false;
+    var aiCodeLastState = null;
 
     function setAiDocContinueVisible(show) {
         aiDocPartial = !!show;
@@ -2231,7 +2247,22 @@
         }
     }
 
-    function aiSetBanner(state, text) {
+    function aiBannerRef(kind) {
+        return aiBanners[kind === 'code' ? 'code' : 'doc'] || aiBanners.doc;
+    }
+
+    function aiSetBanner(state, text, kind) {
+        var targetKind = kind === 'code' ? 'code' : 'doc';
+        aiActiveBannerKind = targetKind;
+        Object.keys(aiBanners).forEach(function (k) {
+            if (k !== targetKind && aiBanners[k].el) {
+                aiBanners[k].el.hidden = true;
+            }
+        });
+        var ref = aiBannerRef(targetKind);
+        aiBanner = ref.el;
+        aiBannerText = ref.text;
+        aiBannerTime = ref.time;
         if (!aiBanner) {
             return;
         }
@@ -2247,12 +2278,23 @@
         }
     }
 
-    function aiHideBannerLater() {
+    function aiHideBannerLater(kind) {
+        var hideKind = kind || aiActiveBannerKind;
         setTimeout(function () {
-            if (!aiBusy && aiBanner) {
-                aiBanner.hidden = true;
+            if (aiBusy) {
+                return;
+            }
+            var ref = aiBannerRef(hideKind);
+            if (ref.el) {
+                ref.el.hidden = true;
             }
         }, 5000);
+    }
+
+    function setAiCodeRetryVisible(show) {
+        if (aiCodeRetryBtn) {
+            aiCodeRetryBtn.hidden = !show;
+        }
     }
 
     function aiElapsedLabel() {
@@ -2305,26 +2347,53 @@
         return jobs;
     }
 
-    function runAiCodePieces(payload, btn) {
+    function runAiCodePieces(payload, btn, retryOnly) {
         var kind = 'code';
         var title = '代码示例';
-        var jobs = buildCodeJobs(payload);
+        var allJobs = buildCodeJobs(payload);
         var opts = getAiCodeOpts();
         var concurrency = opts.concurrency;
-        var pieces = new Array(jobs.length);
+        var pieces;
+        var jobIndexes;
         var failed = [];
         var doneCount = 0;
         var runningLabels = {};
+        var charsWritten = 0;
+
+        if (retryOnly && aiCodeLastState && aiCodeLastState.pieces && aiCodeLastState.jobs) {
+            pieces = aiCodeLastState.pieces.slice();
+            allJobs = aiCodeLastState.jobs;
+            jobIndexes = [];
+            allJobs.forEach(function (job, idx) {
+                if (!pieces[idx]) {
+                    jobIndexes.push(idx);
+                }
+            });
+            if (!jobIndexes.length) {
+                window.VS.showMessage('没有可重试的失败片', 'info');
+                return;
+            }
+        } else {
+            pieces = new Array(allJobs.length);
+            jobIndexes = allJobs.map(function (_, idx) { return idx; });
+        }
 
         switchFormTab('docs');
         aiBusy = true;
         aiStartedAt = Date.now();
         aiStopTimers();
-        aiTermClear(kind);
+        setAiCodeRetryVisible(false);
+        if (!retryOnly) {
+            aiTermClear(kind);
+        }
         aiTermOpen(kind, true);
-        aiTermAppend(kind, '开始流式分片生成「' + title + '」· 共 ' + jobs.length + ' 片 · '
-            + (opts.mode === 'parallel' ? ('并行×' + concurrency) : '单线程逐片'));
-        aiSetBanner('run', '代码示例 0/' + jobs.length);
+        // CDN：单线程走 SSE（持续心跳，与详细文档同策略）；并行走 JSON（多路 SSE 易被边缘掐断）
+        var useSse = opts.mode !== 'parallel';
+        aiTermAppend(kind, (retryOnly ? '重试失败片「' : '开始分片生成「') + title + '」· 本轮 '
+            + jobIndexes.length + '/' + allJobs.length + ' 片 · '
+            + (opts.mode === 'parallel' ? ('并行×' + concurrency + ' · JSON') : '单线程 · SSE 保活')
+            + (useSse ? '（适合 CDN）' : '（CDN 环境若失败请改单线程）'));
+        aiSetBanner('run', '代码示例 0/' + jobIndexes.length, 'code');
         if (aiBannerTime) {
             aiBannerTime.textContent = '已用时 0秒';
         }
@@ -2334,6 +2403,9 @@
         if (aiCodeBtn) {
             aiCodeBtn.disabled = true;
         }
+        if (aiCodeRetryBtn) {
+            aiCodeRetryBtn.disabled = true;
+        }
         if (btn) {
             btn.disabled = true;
         }
@@ -2342,15 +2414,15 @@
             var running = Object.keys(runningLabels).map(function (k) {
                 return runningLabels[k];
             });
-            var tip = '代码示例 ' + doneCount + '/' + jobs.length;
+            var tip = '正在生成代码示例 ' + doneCount + '/' + jobIndexes.length;
             if (running.length) {
                 tip += ' · 进行中：' + running.slice(0, 3).join('、');
                 if (running.length > 3) {
                     tip += ' 等';
                 }
             }
-            tip += ' · ' + aiElapsedLabel();
-            aiSetBanner('run', tip);
+            tip += '（' + aiElapsedLabel() + ' · 已回填约 ' + charsWritten + ' 字）';
+            aiSetBanner('run', tip, 'code');
         }
 
         aiTickTimer = setInterval(function () {
@@ -2362,17 +2434,33 @@
             }
         }, 1000);
 
-        window.VS.showMessage('正在分片生成代码示例（' + jobs.length + ' 片），进程见文档页', 'info');
+        window.VS.showMessage(
+            (retryOnly ? '正在重试失败片（' : '正在分片生成代码示例（') + jobIndexes.length + ' 片），进度见下方代码区',
+            'info'
+        );
 
         function finishAll() {
             var merged = mergeCodePieces(pieces);
+            aiCodeLastState = {
+                payload: payload,
+                jobs: allJobs,
+                pieces: pieces.slice()
+            };
+            var miss = 0;
+            allJobs.forEach(function (_, idx) {
+                if (!pieces[idx]) {
+                    miss += 1;
+                }
+            });
+            setAiCodeRetryVisible(miss > 0);
+
             if (!merged) {
                 var failMsg = failed.length
                     ? ('全部失败：' + failed.slice(0, 5).join('；') + (failed.length > 5 ? '…' : ''))
                     : '未能生成任何代码块';
                 aiTermAppend(kind, failMsg);
                 aiTermStopRunning(kind);
-                aiSetBanner('error', failMsg);
+                aiSetBanner('error', failMsg, 'code');
                 window.VS.showMessage(failMsg, 'error');
                 return;
             }
@@ -2382,12 +2470,14 @@
             draftSkip = true;
             setTextareaValue(fields.docAi, merged);
             draftSkip = false;
+            charsWritten = merged.length;
             aiTermAppend(kind, '已写入代码示例（成功 '
-                + pieces.filter(Boolean).length + '/' + jobs.length
+                + pieces.filter(Boolean).length + '/' + allJobs.length
                 + '，约 ' + merged.length + ' 字符）');
-            if (failed.length) {
+            if (failed.length || miss > 0) {
                 var warn = '部分示例未成功：' + failed.slice(0, 12).join('、')
-                    + (failed.length > 12 ? (' 等共 ' + failed.length + ' 项') : '');
+                    + (failed.length > 12 ? (' 等共 ' + failed.length + ' 项') : '')
+                    + '。可点「重试失败」。';
                 aiTermAppend(kind, '注意：' + warn);
                 window.VS.showMessage(warn, 'info');
             } else {
@@ -2395,8 +2485,8 @@
             }
             aiTermAppend(kind, '完成，总用时 ' + aiElapsedLabel());
             aiTermStopRunning(kind);
-            aiSetBanner('done', (failed.length ? '代码示例已部分生成' : '代码示例已生成')
-                + ' · 用时 ' + aiElapsedLabel());
+            aiSetBanner('done', (miss > 0 ? '代码示例已部分生成' : '代码示例已生成')
+                + ' · ' + aiElapsedLabel() + ' · ' + merged.length + ' 字', 'code');
             scheduleDraftSave();
         }
 
@@ -2408,6 +2498,7 @@
             if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
                 merged = window.VsSyntax.scrubHighlightLeak(merged);
             }
+            charsWritten = merged.length;
             draftSkip = true;
             setTextareaValue(fields.docAi, merged);
             draftSkip = false;
@@ -2420,98 +2511,105 @@
                 var settled = 0;
 
                 function kick() {
-                    while (active < concurrency && next < jobs.length) {
-                        (function (jobIndex) {
-                            var job = jobs[jobIndex];
+                    while (active < concurrency && next < jobIndexes.length) {
+                        (function (queuePos) {
+                            var jobIndex = jobIndexes[queuePos];
+                            var job = allJobs[jobIndex];
                             var label = authWayLabel(job.auth) + ' · ' + job.lang;
                             var key = String(jobIndex);
                             next += 1;
                             active += 1;
                             runningLabels[key] = label;
-                            aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 开始流式编写 · ' + label);
+                            aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + allJobs.length + '] 开始编写 · ' + label);
                             refreshRunBanner();
 
                             var piecePayload = {};
                             Object.keys(payload).forEach(function (k) {
                                 piecePayload[k] = payload[k];
                             });
-                            // 生成不读 doc/aidoc，去掉以免 VS64 大字段拖垮并行请求体积
                             delete piecePayload.doc;
                             delete piecePayload.aidoc;
                             piecePayload.auth = job.auth;
                             piecePayload.lang = job.lang;
 
-                            var livePiece = '';
-                            var pieceFailed = false;
-                            return postActionSse('ai_gen_code_piece_stream', piecePayload, {
-                                delta: function (d) {
-                                    var chunk = d && d.text != null ? String(d.text) : '';
-                                    if (!chunk) {
-                                        return;
-                                    }
-                                    livePiece += chunk;
-                                    pieces[jobIndex] = livePiece;
-                                    flushPiecesLive();
-                                },
-                                done: function (data) {
-                                    if (data && data.piece) {
-                                        pieces[jobIndex] = String(data.piece);
-                                        if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
-                                            pieces[jobIndex] = window.VsSyntax.scrubHighlightLeak(pieces[jobIndex]);
-                                        }
-                                        flushPiecesLive();
-                                        aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 完成并已回填 · ' + label
-                                            + '（' + String(data.piece).length + ' 字符）');
-                                    } else {
-                                        pieceFailed = true;
-                                        failed.push(label + '（空结果）');
-                                        aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：空结果');
-                                    }
-                                },
-                                error: function (err) {
-                                    pieceFailed = true;
-                                    var errMsg = (err && err.msg) ? String(err.msg) : '生成失败';
-                                    if (err && err.partial && !pieces[jobIndex]) {
-                                        pieces[jobIndex] = String(err.partial);
-                                        flushPiecesLive();
-                                    }
-                                    failed.push(label + '（' + errMsg + '）');
-                                    aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：' + errMsg);
+                            var pieceDone = function (pieceText) {
+                                pieces[jobIndex] = String(pieceText);
+                                if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
+                                    pieces[jobIndex] = window.VsSyntax.scrubHighlightLeak(pieces[jobIndex]);
                                 }
-                            }).catch(function (err) {
-                                if (pieceFailed) {
-                                    return;
-                                }
-                                var hint = '网络异常或网关超时';
-                                if (err && err.message === 'invalid_json') {
-                                    hint = '响应不是有效流（单片超时/网关切断）。可调大「单片超时」或改用单线程';
-                                } else if (err && err.message) {
-                                    hint = String(err.message);
-                                }
-                                if (livePiece && !pieces[jobIndex]) {
-                                    pieces[jobIndex] = livePiece;
-                                    flushPiecesLive();
-                                }
-                                failed.push(label + '（' + hint + '）');
-                                aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：' + hint);
-                            })
-                            .then(function () {
+                                flushPiecesLive();
+                                aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + allJobs.length + '] 完成并已回填 · ' + label
+                                    + '（' + String(pieceText).length + ' 字符）');
+                            };
+                            var pieceFail = function (errMsg) {
+                                failed.push(label + '（' + errMsg + '）');
+                                aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + allJobs.length + '] 失败 · ' + label + '：' + errMsg);
+                            };
+                            var afterPiece = function () {
                                 delete runningLabels[key];
                                 active -= 1;
                                 doneCount += 1;
                                 settled += 1;
                                 refreshRunBanner();
-                                if (settled >= jobs.length) {
+                                if (settled >= jobIndexes.length) {
                                     resolve();
                                     return;
                                 }
                                 kick();
-                            });
+                            };
+
+                            if (useSse) {
+                                var pieceFailed = false;
+                                postActionSse('ai_gen_code_piece_stream', piecePayload, {
+                                    done: function (data) {
+                                        if (data && data.piece) {
+                                            pieceDone(data.piece);
+                                        } else {
+                                            pieceFailed = true;
+                                            pieceFail('空结果');
+                                        }
+                                    },
+                                    error: function (err) {
+                                        pieceFailed = true;
+                                        pieceFail((err && err.msg) ? String(err.msg) : '生成失败');
+                                    }
+                                }).catch(function (err) {
+                                    if (pieceFailed) {
+                                        return;
+                                    }
+                                    var hint = '网络异常或 CDN/网关超时';
+                                    if (err && err.message === 'invalid_json') {
+                                        hint = '流被切断。CDN 请关闭缓冲并加大回源超时；或改单线程';
+                                    } else if (err && err.message) {
+                                        hint = String(err.message);
+                                    }
+                                    pieceFail(hint);
+                                }).then(afterPiece);
+                            } else {
+                                postAction('ai_gen_code_piece', piecePayload)
+                                    .then(function (data) {
+                                        if (!data || data.code !== 1 || !data.piece) {
+                                            pieceFail((data && data.msg) || '生成失败');
+                                            return;
+                                        }
+                                        pieceDone(data.piece);
+                                    })
+                                    .catch(function (err) {
+                                        var hint = '网络异常或 CDN/网关超时';
+                                        if (err && err.message === 'invalid_json') {
+                                            hint = '响应不是有效 JSON（单片超时/CDN 空闲掐断）。请改「单线程」或加大 CDN 回源超时';
+                                        } else if (err && err.message) {
+                                            hint = String(err.message);
+                                        }
+                                        pieceFail(hint);
+                                    })
+                                    .then(afterPiece);
+                            }
                         })(next);
                     }
                 }
 
-                if (!jobs.length) {
+                if (!jobIndexes.length) {
                     resolve();
                     return;
                 }
@@ -2533,7 +2631,10 @@
                 if (aiCodeBtn) {
                     aiCodeBtn.disabled = false;
                 }
-                aiHideBannerLater();
+                if (aiCodeRetryBtn) {
+                    aiCodeRetryBtn.disabled = false;
+                }
+                aiHideBannerLater('code');
             });
     }
 
@@ -2584,7 +2685,7 @@
         if (AiChatSessionHint()) {
             aiTermAppend(kind, '短时效历史：已启用（Redis，约 30 分钟）');
         }
-        aiSetBanner('run', '正在生成' + title + '…');
+        aiSetBanner('run', '正在生成' + title + '…', 'doc');
         if (aiBannerTime) {
             aiBannerTime.textContent = '已用时 0秒';
         }
@@ -2612,7 +2713,7 @@
             if (aiBannerTime) {
                 aiBannerTime.textContent = '已用时 ' + aiElapsedLabel();
             }
-            if (aiBannerText && !aiBanner.classList.contains('is-done') && !aiBanner.classList.contains('is-error')) {
+            if (aiBannerText && aiBanner && !aiBanner.classList.contains('is-done') && !aiBanner.classList.contains('is-error')) {
                 aiBannerText.textContent = '正在流式生成' + title + '…（' + aiElapsedLabel() + ' · '
                     + liveDoc.length + ' 字）';
             }
@@ -2654,7 +2755,7 @@
                 aiTermAppend(kind, '完成，约 ' + liveDoc.length + ' 字符，总用时 ' + aiElapsedLabel());
                 aiTermStopRunning(kind);
                 aiSetBanner('done', (data && data.msg ? data.msg : (title + '已生成'))
-                    + ' · 用时 ' + aiElapsedLabel());
+                    + ' · 用时 ' + aiElapsedLabel(), 'doc');
                 window.VS.showMessage((data && data.msg) || '生成完成', 'success');
                 scheduleDraftSave();
             },
@@ -2686,12 +2787,12 @@
                     setTextareaValue(fields.docNormal, liveDoc);
                     draftSkip = false;
                     aiTermAppend(kind, hint + '（可继续生成）');
-                    aiSetBanner('error', hint);
+                    aiSetBanner('error', hint, 'doc');
                     window.VS.showMessage(hint, 'error');
                 } else {
                     aiTermAppend(kind, hint);
                     aiTermStopRunning(kind);
-                    aiSetBanner('error', hint);
+                    aiSetBanner('error', hint, 'doc');
                     window.VS.showMessage(hint, 'error');
                 }
             })
@@ -2712,7 +2813,7 @@
                     aiCodeBtn.disabled = false;
                 }
                 refreshMdField(fields.docNormal);
-                aiHideBannerLater();
+                aiHideBannerLater('doc');
             });
     }
 
@@ -2751,6 +2852,39 @@
     if (aiCodeBtn) {
         aiCodeBtn.addEventListener('click', function () {
             runAiGenerate('ai_gen_code', aiCodeBtn, false);
+        });
+    }
+    if (aiCodeRetryBtn) {
+        aiCodeRetryBtn.addEventListener('click', function () {
+            if (aiBusy) {
+                window.VS.showMessage('已有生成任务进行中，请稍候', 'info');
+                return;
+            }
+            if (!aiCodeLastState || !aiCodeLastState.payload) {
+                window.VS.showMessage('没有可重试的记录，请先生成一次', 'info');
+                return;
+            }
+            runAiCodePieces(aiCodeLastState.payload, aiCodeRetryBtn, true);
+        });
+    }
+    if (aiCodeClearBtn) {
+        aiCodeClearBtn.addEventListener('click', function () {
+            if (aiBusy) {
+                window.VS.showMessage('生成进行中，请稍候再清空', 'info');
+                return;
+            }
+            draftSkip = true;
+            setTextareaValue(fields.docAi, '');
+            draftSkip = false;
+            aiCodeLastState = null;
+            setAiCodeRetryVisible(false);
+            aiTermClear('code');
+            aiTermAppend('code', '已清空代码示例与进程日志');
+            if (aiBanners.code.el) {
+                aiBanners.code.el.hidden = true;
+            }
+            window.VS.showMessage('已清空代码示例', 'success');
+            scheduleDraftSave();
         });
     }
     bindDraftAutoSave();

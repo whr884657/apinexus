@@ -305,12 +305,12 @@ $canLocal = !empty($canLocal);
             </div>
 
             <div class="vs-api-list-form-pane" data-api-form-pane="docs" hidden>
-            <div class="vs-ai-gen-banner" id="userApiAiBanner" hidden>
-                <span class="vs-ai-gen-banner__dot" aria-hidden="true"></span>
-                <span class="vs-ai-gen-banner__text" id="userApiAiBannerText">正在生成…</span>
-                <span class="vs-ai-gen-banner__time" id="userApiAiBannerTime"></span>
-            </div>
             <div class="vs-form-row">
+                <div class="vs-ai-gen-banner" id="userApiAiBanner" hidden data-ai-banner="doc">
+                    <span class="vs-ai-gen-banner__dot" aria-hidden="true"></span>
+                    <span class="vs-ai-gen-banner__text" id="userApiAiBannerText">正在生成…</span>
+                    <span class="vs-ai-gen-banner__time" id="userApiAiBannerTime"></span>
+                </div>
                 <div class="vs-api-doc-head">
                     <label class="vs-label" for="userApiFormDoc">详细文档（Markdown）</label>
                     <?php if ($aiReady): ?>
@@ -337,16 +337,28 @@ $canLocal = !empty($canLocal);
                 <?php endif; ?>
             </div>
             <div class="vs-form-row">
+                <div class="vs-ai-gen-banner" id="userApiAiBannerCode" hidden data-ai-banner="code">
+                    <span class="vs-ai-gen-banner__dot" aria-hidden="true"></span>
+                    <span class="vs-ai-gen-banner__text" id="userApiAiBannerCodeText">正在生成…</span>
+                    <span class="vs-ai-gen-banner__time" id="userApiAiBannerCodeTime"></span>
+                </div>
                 <div class="vs-api-doc-head">
                     <label class="vs-label" for="userApiFormAidoc">代码示例（Markdown）</label>
                     <?php if ($aiReady): ?>
+                    <div class="vs-api-doc-head__actions">
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiCodeBtn"
-                                title="按鉴权方式与语言分片生成">AI 生成代码示例</button>
+                                title="按鉴权×语言分片生成（JSON 单片）">AI 生成代码示例</button>
+                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiCodeRetryBtn" hidden
+                                title="只重试上次失败的片">重试失败</button>
+                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiCodeClearBtn"
+                                title="清空代码示例框与进程日志">清空示例</button>
+                    </div>
                     <?php endif; ?>
                 </div>
                 <textarea class="vs-input vs-textarea" id="userApiFormAidoc" name="aidoc" rows="5"
                           data-vs-md="off" placeholder="多语言调用示例…"></textarea>
                 <?php if ($aiReady): ?>
+                <p class="vs-form-hint">AI 按「鉴权×语言」分片请求，一片成功即回填；失败可点「重试失败」。</p>
                 <details class="vs-ai-term" id="userApiAiTermCode" data-ai-term="code">
                     <summary class="vs-ai-term__summary">AI 编写进程（代码示例）</summary>
                     <pre class="vs-ai-term__log font-mono" id="userApiAiTermCodeLog">尚未开始生成。</pre>

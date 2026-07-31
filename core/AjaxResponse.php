@@ -20,6 +20,10 @@ class AjaxResponse
         }
         http_response_code($httpCode);
         header('Content-Type: application/json; charset=utf-8');
+        // AI 长请求与后台 Ajax：禁止 CDN/浏览器缓存；提示 Nginx 勿缓冲整包
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('X-Accel-Buffering: no');
         $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
         if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
             $flags |= JSON_INVALID_UTF8_SUBSTITUTE;

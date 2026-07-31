@@ -160,8 +160,8 @@
             if (ctype.indexOf('text/event-stream') < 0 && ctype.indexOf('json') >= 0) {
                 return res.text().then(function (text) {
                     var data = global.VS.parseJsonResponse(text);
-                    if (data && data.code === 1 && data.doc != null) {
-                        if (handlers.delta) {
+                    if (data && data.code === 1 && (data.doc != null || data.piece != null)) {
+                        if (handlers.delta && data.doc != null) {
                             handlers.delta({ text: String(data.doc) });
                         }
                         if (handlers.done) {
