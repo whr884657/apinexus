@@ -956,12 +956,32 @@ async function sendRequest() {
         if (!window.VsPlaygroundResponse || !window.VsPlaygroundResponse.directRequest) {
             throw new Error('测试模块未加载');
         }
+        const VsPR = window.VsPlaygroundResponse;
         const keyways = Array.isArray(api.keyways) ? api.keyways : [];
-        let authWay = keyways.length ? String(keyways[0] || 'query').toLowerCase() : 'query';
-        if (authWay !== 'header' && authWay !== 'bearer' && authWay !== 'query') {
-            authWay = 'query';
+        const authWay = VsPR.resolvePlaygroundAuthWay
+            ? VsPR.resolvePlaygroundAuthWay(keyways, '')
+            : (keyways.length ? String(keyways[0]).toLowerCase() : 'query');
+        const useRelay = (authWay === 'header' || authWay === 'bearer') && api.id;
+
+        if (useRelay && VsPR.relayRequest && VsPR.renderRelayPayload) {
+            const data = await VsPR.relayRequest({
+                apiId: api.id,
+                method: currentMethod,
+                params: params,
+                authWay: authWay,
+                keyways: keyways
+            });
+            const elapsed = Math.round(performance.now() - startTime);
+            const http = data && data.http != null ? parseInt(data.http, 10) : 0;
+            const ok = !!(data && (data.ok || data.code === 1));
+            const label = ok ? ('OK ' + (http || 200)) : ((data && data.msg) ? String(data.msg) : 'Error');
+            status.textContent = label + ' ' + elapsed + 'ms';
+            status.className = 'text-xs px-2 py-1 rounded font-mono ' + (ok ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400');
+            VsPR.renderRelayPayload(data, output);
+            return;
         }
-        const res = await window.VsPlaygroundResponse.directRequest({
+
+        const res = await VsPR.directRequest({
             endpoint: endpoint,
             method: currentMethod,
             params: params,
@@ -970,14 +990,14 @@ async function sendRequest() {
         });
         const elapsed = Math.round(performance.now() - startTime);
         let info = { ok: (res.status || 0) >= 200 && (res.status || 0) < 400, label: String(res.status || 0) };
-        if (window.VsPlaygroundResponse.inspectFetchStatus) {
-            info = await window.VsPlaygroundResponse.inspectFetchStatus(res);
+        if (VsPR.inspectFetchStatus) {
+            info = await VsPR.inspectFetchStatus(res);
         }
         const ok = !!info.ok;
         const label = info.label || (ok ? 'OK' : 'Error');
         status.textContent = label + ' ' + elapsed + 'ms';
         status.className = 'text-xs px-2 py-1 rounded font-mono ' + (ok ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400');
-        await window.VsPlaygroundResponse.renderFetchResponse(res, output);
+        await VsPR.renderFetchResponse(res, output);
     } catch (error) {
         const raw = (error && error.message) ? String(error.message) : '请求失败';
         const msg = /failed to fetch|networkerror|load failed/i.test(raw)

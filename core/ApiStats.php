@@ -691,20 +691,69 @@ class ApiStats
         if (in_array('header', $ways, true) && !empty($_SERVER['HTTP_X_API_KEY'])) {
             $push($_SERVER['HTTP_X_API_KEY']);
         }
-        if (in_array('bearer', $ways, true) && !empty($_SERVER['HTTP_AUTHORIZATION'])) {
-            $auth = trim((string) $_SERVER['HTTP_AUTHORIZATION']);
-            if (preg_match('/^Bearer\s+(\S+)/i', $auth, $m)) {
-                $push($m[1]);
-            }
-        }
-        // 部分环境把 Authorization 放到 REDIRECT_HTTP_AUTHORIZATION
-        if (in_array('bearer', $ways, true) && !empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
-            $auth = trim((string) $_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
-            if (preg_match('/^Bearer\s+(\S+)/i', $auth, $m)) {
-                $push($m[1]);
+        if (in_array('bearer', $ways, true)) {
+            foreach (self::bearerHeaderCandidates() as $authLine) {
+                $token = self::parseBearerToken($authLine);
+                if ($token !== '') {
+                    $push($token);
+                }
             }
         }
         return $out;
+    }
+
+    /**
+     * 收集可能携带 Bearer 的请求头原文（含环境剥掉 Authorization 时的兼容头）
+     * 不依赖改 Nginx：X-Authorization / X-Api-Bearer 一般可直达 PHP
+     *
+     * @return array<int,string>
+     */
+    private static function bearerHeaderCandidates()
+    {
+        $lines = array();
+        $keys = array(
+            'HTTP_AUTHORIZATION',
+            'REDIRECT_HTTP_AUTHORIZATION',
+            'HTTP_X_AUTHORIZATION',
+            'HTTP_X_API_BEARER',
+        );
+        foreach ($keys as $k) {
+            if (!empty($_SERVER[$k])) {
+                $lines[] = trim((string) $_SERVER[$k]);
+            }
+        }
+        if (function_exists('getallheaders')) {
+            $all = @getallheaders();
+            if (is_array($all)) {
+                foreach ($all as $name => $val) {
+                    $n = strtolower(str_replace('_', '-', (string) $name));
+                    if ($n === 'authorization' || $n === 'x-authorization' || $n === 'x-api-bearer') {
+                        $lines[] = trim((string) $val);
+                    }
+                }
+            }
+        }
+        return $lines;
+    }
+
+    /**
+     * @param string $line
+     * @return string
+     */
+    private static function parseBearerToken($line)
+    {
+        $line = trim((string) $line);
+        if ($line === '') {
+            return '';
+        }
+        if (preg_match('/^Bearer\s+(\S+)/i', $line, $m)) {
+            return trim($m[1]);
+        }
+        // X-Api-Bearer 可直接传裸密钥
+        if (stripos($line, 'Bearer ') !== 0 && strpos($line, ' ') === false) {
+            return $line;
+        }
+        return '';
     }
 
     /**

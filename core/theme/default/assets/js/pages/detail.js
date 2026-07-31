@@ -363,13 +363,42 @@
                 return;
             }
 
-            var authWay = (typeof window.detailQsActiveAuth === 'string' && window.detailQsActiveAuth)
+            var authWayPreferred = (typeof window.detailQsActiveAuth === 'string' && window.detailQsActiveAuth)
                 ? String(window.detailQsActiveAuth).toLowerCase()
                 : '';
             var keyways = Array.isArray(api.keyways) ? api.keyways : [];
-            if (!authWay && keyways.length) {
-                authWay = String(keyways[0] || 'query').toLowerCase();
+            var authWay = VsPR.resolvePlaygroundAuthWay
+                ? VsPR.resolvePlaygroundAuthWay(keyways, authWayPreferred)
+                : (keyways.length ? String(keyways[0] || 'query').toLowerCase() : 'query');
+            var apiId = parseInt(api.id, 10) || 0;
+            var useRelay = (authWay === 'header' || authWay === 'bearer') && apiId > 0;
+
+            if (useRelay && VsPR.relayRequest && VsPR.renderRelayPayload) {
+                VsPR.relayRequest({
+                    apiId: apiId,
+                    method: method,
+                    params: params,
+                    authWay: authWay,
+                    keyways: keyways
+                }).then(function (data) {
+                    if (urlPreview) {
+                        urlPreview.textContent = String(api.endpoint || page.getAttribute('data-endpoint') || '');
+                    }
+                    var ok = !!(data && (data.ok || data.code === 1));
+                    var http = data && data.http != null ? parseInt(data.http, 10) : 0;
+                    var label = ok
+                        ? ('OK' + (http ? (' ' + http) : ''))
+                        : ((data && data.msg) ? String(data.msg) : 'Error');
+                    setStatus(label, ok ? 'ok' : 'err');
+                    VsPR.renderRelayPayload(data, responseEl);
+                }).catch(function (err) {
+                    setStatus('Error', 'err');
+                    var raw = err && err.message ? String(err.message) : 'network error';
+                    responseEl.textContent = '// 请求失败: ' + raw;
+                });
+                return;
             }
+
             VsPR.directRequest({
                 endpoint: endpoint,
                 method: method,

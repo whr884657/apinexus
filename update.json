@@ -1,12 +1,11 @@
 {
-    "version": "13.21.0",
-    "title": "ApiNexus 13.21.0 缓存键前缀隔离与安装伪静态指引",
+    "version": "13.21.1",
+    "title": "ApiNexus 13.21.1 在线测试兼容 Header/Bearer 鉴权",
     "release_date": "2026-07-31",
-    "db_changes": true,
+    "db_changes": false,
     "changes": [
-        "同机多站 Redis：安装与系统设置可配缓存键前缀；保存清空本站键空间；冲突检测（E205）",
-        "安装向导改为六步：许可后第 1 步 Nginx 伪静态（情况 A + 一键复制），环境检测为第 2 步（E206）",
-        "新增迁移预置 redis_prefix；Redis 管理清空走本站键空间删除"
+        "在线测试按接口 keyways 选通道：多选默认第一种；仅 Header/Bearer 也可测通（E207）",
+        "Header/Bearer 走同源中继并正确转发鉴权头；Bearer 兼容 X-Authorization（无需改 Nginx）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

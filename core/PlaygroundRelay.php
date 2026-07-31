@@ -19,9 +19,10 @@ class PlaygroundRelay
      * @param int    $apiId
      * @param string $method
      * @param array  $params  name => value（不含文件）
+     * @param string $authWay query|header|bearer；空则取接口 keyways 第一种
      * @return array{ok:bool,msg:string,http:int,contentType:string,body:string,encoding:string,displayUrl:string}
      */
-    public static function execute($apiId, $method, array $params)
+    public static function execute($apiId, $method, array $params, $authWay = '')
     {
         $apiId = (int) $apiId;
         $method = strtoupper(trim((string) $method));
@@ -60,12 +61,14 @@ class PlaygroundRelay
             );
         }
 
-        // 将参数注入超全局，供 guardAccess 读取密钥（按接口 keyways 注入对应通道）
+        // 将参数注入超全局，供 guardAccess 读取密钥（仅注入所选通道）
+        $authWay = self::resolveAuthWay($row, $authWay);
         $savedGet = $_GET;
         $savedPost = $_POST;
         $savedMethod = isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'GET';
         $savedAuth = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : null;
         $savedRedirAuth = isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) ? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] : null;
+        $savedXAuth = isset($_SERVER['HTTP_X_AUTHORIZATION']) ? $_SERVER['HTTP_X_AUTHORIZATION'] : null;
         $savedXApiKey = isset($_SERVER['HTTP_X_API_KEY']) ? $_SERVER['HTTP_X_API_KEY'] : null;
         foreach ($params as $k => $v) {
             $key = (string) $k;
@@ -76,7 +79,7 @@ class PlaygroundRelay
             $_POST[$key] = $v;
         }
         $_SERVER['REQUEST_METHOD'] = $method;
-        self::injectKeywaysForGuard($row, $params);
+        self::injectKeywaysForGuard($row, $params, $authWay);
 
         $guard = ApiStats::guardAccess($row);
         $_GET = $savedGet;
@@ -91,6 +94,11 @@ class PlaygroundRelay
             unset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
         } else {
             $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] = $savedRedirAuth;
+        }
+        if ($savedXAuth === null) {
+            unset($_SERVER['HTTP_X_AUTHORIZATION']);
+        } else {
+            $_SERVER['HTTP_X_AUTHORIZATION'] = $savedXAuth;
         }
         if ($savedXApiKey === null) {
             unset($_SERVER['HTTP_X_API_KEY']);
@@ -135,13 +143,13 @@ class PlaygroundRelay
             if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($target)) {
                 return self::fail('上游地址不允许指向内网或非公网主机', ApiError::UPSTREAM_BLOCKED, $displayUrl);
             }
-            $upstreamParams = $params;
-            unset($upstreamParams['key'], $upstreamParams['api_key'], $upstreamParams['apikey']);
+            $fwd = self::buildClientForward($params, $authWay);
+            $upstreamParams = $fwd['params'];
             $built = ApiProxy::buildUpstreamRequest($target, $row, $upstreamParams);
             if (!is_array($built)) {
                 return self::fail((string) $built, ApiError::UPSTREAM_BAD, $displayUrl);
             }
-            // URL 已含客户端参数与上游 Query Key；headers 含 Bearer / Header Key
+            // 上游只带 ApiProxy 拼装的头；本站调用方密钥已在 guard 阶段校验，勿转给上游
             $result = self::httpRequest($built['url'], $method, $upstreamParams, $built['headers']);
             // 与正式网关一致：对代理 JSON 应用字段改写（无论上游业务成功与否）
             if (is_array($result)
@@ -176,10 +184,61 @@ class PlaygroundRelay
                 return self::fail('调用地址不允许指向内网或非公网主机', ApiError::UPSTREAM_BLOCKED, $displayUrl);
             }
         }
-        // 本站密钥需带给本地接口
-        $result = self::httpRequest($fetchUrl, $method, $params);
+        // 本站密钥按所选通道带给本地接口（禁止 header/bearer 仍塞进 Query）
+        $fwd = self::buildClientForward($params, $authWay);
+        $result = self::httpRequest($fetchUrl, $method, $fwd['params'], $fwd['headers']);
         $result['displayUrl'] = $displayUrl;
         return $result;
+    }
+
+    /**
+     * @param array  $row
+     * @param string $authWay
+     * @return string
+     */
+    private static function resolveAuthWay(array $row, $authWay)
+    {
+        $allowed = ApiManager::normalizeKeyways(isset($row['keyways']) ? $row['keyways'] : 'query');
+        $way = strtolower(trim((string) $authWay));
+        if ($way !== '' && in_array($way, $allowed, true)) {
+            return $way;
+        }
+        return isset($allowed[0]) ? $allowed[0] : 'query';
+    }
+
+    /**
+     * @param array  $params
+     * @param string $authWay
+     * @return array{params:array,headers:array}
+     */
+    private static function buildClientForward(array $params, $authWay)
+    {
+        $next = array();
+        $secret = '';
+        foreach ($params as $k => $v) {
+            $n = strtolower((string) $k);
+            if ($n === 'key' || $n === 'api_key' || $n === 'apikey') {
+                $val = trim((string) $v);
+                if ($val !== '' && $secret === '') {
+                    $secret = $val;
+                }
+                continue;
+            }
+            $next[(string) $k] = $v;
+        }
+        $way = strtolower(trim((string) $authWay));
+        $headers = array();
+        if ($secret !== '') {
+            if ($way === 'header') {
+                $headers[] = 'X-API-Key: ' . $secret;
+            } elseif ($way === 'bearer') {
+                $headers[] = 'Authorization: Bearer ' . $secret;
+                $headers[] = 'X-Authorization: Bearer ' . $secret;
+            } else {
+                $next['key'] = $secret;
+            }
+        }
+        return array('params' => $next, 'headers' => $headers);
     }
 
     /**
@@ -224,13 +283,14 @@ class PlaygroundRelay
     }
 
     /**
-     * 中继守卫：按接口允许的 keyways 注入密钥，避免仅塞 query 导致 header/bearer 接口误报 11012
+     * 中继守卫：仅注入所选鉴权通道，避免 header/bearer 接口被 query 误伤
      *
-     * @param array $row
-     * @param array $params
+     * @param array  $row
+     * @param array  $params
+     * @param string $authWay
      * @return void
      */
-    private static function injectKeywaysForGuard(array $row, array $params)
+    private static function injectKeywaysForGuard(array $row, array $params, $authWay = '')
     {
         $secret = '';
         foreach ($params as $k => $v) {
@@ -243,24 +303,22 @@ class PlaygroundRelay
                 }
             }
         }
-        $allowed = ApiManager::normalizeKeyways(isset($row['keyways']) ? $row['keyways'] : 'query');
-        if (!in_array('query', $allowed, true)) {
-            foreach (array('key', 'api_key', 'apikey', 'API_KEY', 'ApiKey') as $nk) {
-                unset($_GET[$nk], $_POST[$nk]);
-            }
+        foreach (array('key', 'api_key', 'apikey', 'API_KEY', 'ApiKey') as $nk) {
+            unset($_GET[$nk], $_POST[$nk]);
         }
+        unset($_SERVER['HTTP_X_API_KEY'], $_SERVER['HTTP_AUTHORIZATION'], $_SERVER['HTTP_X_AUTHORIZATION']);
         if ($secret === '') {
             return;
         }
-        if (in_array('query', $allowed, true)) {
+        $way = self::resolveAuthWay($row, $authWay);
+        if ($way === 'header') {
+            $_SERVER['HTTP_X_API_KEY'] = $secret;
+        } elseif ($way === 'bearer') {
+            $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $secret;
+            $_SERVER['HTTP_X_AUTHORIZATION'] = 'Bearer ' . $secret;
+        } else {
             $_GET['key'] = $secret;
             $_POST['key'] = $secret;
-        }
-        if (in_array('header', $allowed, true)) {
-            $_SERVER['HTTP_X_API_KEY'] = $secret;
-        }
-        if (in_array('bearer', $allowed, true)) {
-            $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $secret;
         }
     }
 
@@ -351,7 +409,7 @@ class PlaygroundRelay
             return self::fail('服务器未启用 curl，无法完成测试');
         }
 
-        // 一律把参数拼进 Query（含 POST），避免上游/本地脚本只读 $_GET['key'] 时报未填密钥
+        // 一律把「业务参数」拼进 Query；密钥是否进 Query 由上层 buildClientForward 决定
         if ($params !== array()) {
             $url = self::mergeQuery($url, $params);
         }

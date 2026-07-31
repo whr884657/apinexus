@@ -63,7 +63,12 @@ if (isset($input['params']) && is_array($input['params'])) {
     }
 }
 
-$result = PlaygroundRelay::execute($apiId, $method, $params);
+$result = PlaygroundRelay::execute(
+    $apiId,
+    $method,
+    $params,
+    isset($input['auth_way']) ? (string) $input['auth_way'] : ''
+);
 
 AjaxResponse::json(array(
     'code'        => !empty($result['ok']) ? 1 : 0,

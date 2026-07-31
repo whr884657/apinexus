@@ -260,6 +260,7 @@
 
     /**
      * 从 params 抽出密钥字段，并按 keyways / authWay 决定 query / header / bearer
+     * Bearer 同时带 Authorization 与 X-Authorization（兼容剥掉 Authorization 的环境，无需改 Nginx）
      * @param {object} params
      * @param {string} authWay query|header|bearer
      * @returns {{params:object,headers:object}}
@@ -289,11 +290,42 @@
                 headers['X-API-Key'] = secret;
             } else if (way === 'bearer') {
                 headers['Authorization'] = 'Bearer ' + secret;
+                headers['X-Authorization'] = 'Bearer ' + secret;
             } else {
                 next[keyName || 'key'] = secret;
             }
         }
         return { params: next, headers: headers };
+    }
+
+    /**
+     * 按接口 keyways 选定测试通道：preferred 合法则用之，否则取第一种
+     * @param {string[]|string} keyways
+     * @param {string} preferred
+     * @returns {string}
+     */
+    function resolvePlaygroundAuthWay(keyways, preferred) {
+        var list = [];
+        if (Array.isArray(keyways)) {
+            list = keyways;
+        } else if (typeof keyways === 'string' && keyways) {
+            list = keyways.split(/[\s,|\/]+/);
+        }
+        var allowed = [];
+        list.forEach(function (w) {
+            var k = String(w || '').toLowerCase().trim();
+            if ((k === 'query' || k === 'header' || k === 'bearer') && allowed.indexOf(k) < 0) {
+                allowed.push(k);
+            }
+        });
+        if (!allowed.length) {
+            allowed = ['query'];
+        }
+        var pref = String(preferred || '').toLowerCase().trim();
+        if (pref && allowed.indexOf(pref) >= 0) {
+            return pref;
+        }
+        return allowed[0];
     }
 
     /**
@@ -311,14 +343,8 @@
         var method = String(opts && opts.method ? opts.method : 'GET').toUpperCase();
         if (!method) method = 'GET';
         var rawParams = (opts && opts.params && typeof opts.params === 'object') ? opts.params : {};
-        var authWay = String(opts && opts.authWay ? opts.authWay : '').toLowerCase();
-        if (!authWay) {
-            var ways = (opts && Array.isArray(opts.keyways)) ? opts.keyways : [];
-            authWay = ways.length ? String(ways[0]).toLowerCase() : 'query';
-        }
-        if (authWay !== 'header' && authWay !== 'bearer' && authWay !== 'query') {
-            authWay = 'query';
-        }
+        var ways = (opts && Array.isArray(opts.keyways)) ? opts.keyways : [];
+        var authWay = resolvePlaygroundAuthWay(ways, opts && opts.authWay ? opts.authWay : '');
         var applied = applyKeywayAuth(rawParams, authWay);
         var params = applied.params;
         var authHeaders = applied.headers || {};
@@ -476,18 +502,21 @@
     }
 
     /**
-     * @deprecated 4.8.0 起默认主题改用 directRequest；保留仅兼容旧调用
+     * 同源中继（Bearer/Header 在部分环境下直连失败时的可靠路径；无需改 Nginx）
      */
     function relayRequest(opts) {
         var playUrl = (typeof window.VS_PLAY_URL === 'string' && window.VS_PLAY_URL)
             ? window.VS_PLAY_URL
             : ((window.VS_BASE_URL || '') + '/core/playground/relay.php');
         var csrf = (typeof window.VS_CSRF_TOKEN === 'string') ? window.VS_CSRF_TOKEN : '';
+        var ways = (opts && Array.isArray(opts.keyways)) ? opts.keyways : [];
+        var authWay = resolvePlaygroundAuthWay(ways, opts && opts.authWay ? opts.authWay : '');
         var payload = {
             csrf_token: csrf,
             api_id: opts.apiId,
             method: opts.method || 'GET',
-            params: opts.params || {}
+            params: opts.params || {},
+            auth_way: authWay
         };
         return fetch(playUrl, {
             method: 'POST',
@@ -517,12 +546,41 @@
         });
     }
 
+    /**
+     * 在线测试统一入口：按 keyways 选通道；header/bearer 优先中继（不依赖 Nginx 传 Authorization）
+     * @returns {Promise<Response|object>}
+     */
+    function playgroundRequest(opts) {
+        var ways = (opts && Array.isArray(opts.keyways)) ? opts.keyways : [];
+        var authWay = resolvePlaygroundAuthWay(ways, opts && opts.authWay ? opts.authWay : '');
+        var needRelay = authWay === 'header' || authWay === 'bearer';
+        var apiId = opts && opts.apiId != null ? parseInt(opts.apiId, 10) : 0;
+        if (needRelay && apiId > 0) {
+            return relayRequest({
+                apiId: apiId,
+                method: opts.method || 'GET',
+                params: opts.params || {},
+                authWay: authWay,
+                keyways: ways
+            });
+        }
+        return directRequest({
+            endpoint: opts.endpoint,
+            method: opts.method || 'GET',
+            params: opts.params || {},
+            authWay: authWay,
+            keyways: ways
+        });
+    }
+
     global.VsPlaygroundResponse = {
         renderFetchResponse: renderFetchResponse,
         inspectFetchStatus: inspectFetchStatus,
         renderDirectMedia: renderDirectMedia,
         renderRelayPayload: renderRelayPayload,
         directRequest: directRequest,
+        playgroundRequest: playgroundRequest,
+        resolvePlaygroundAuthWay: resolvePlaygroundAuthWay,
         applyKeywayAuth: applyKeywayAuth,
         buildUrlWithParams: buildUrlWithParams,
         relayRequest: relayRequest,

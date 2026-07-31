@@ -1,5 +1,14 @@
 {
     "versions": {
+        "13.21.1": {
+            "title": "ApiNexus 13.21.1 在线测试兼容 Header/Bearer 鉴权",
+            "date": "2026-07-31",
+            "db_changes": false,
+            "changes": [
+                "在线测试按接口 keyways 选通道：多选默认第一种；仅 Header/Bearer 也可测通（E207）",
+                "Header/Bearer 走同源中继并正确转发鉴权头；Bearer 兼容 X-Authorization（无需改 Nginx）"
+            ]
+        },
         "13.21.0": {
             "title": "ApiNexus 13.21.0 缓存键前缀隔离与安装伪静态指引",
             "date": "2026-07-31",

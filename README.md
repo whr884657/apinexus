@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.21.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.21.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -275,11 +275,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.21.0（2026-07-31）
+### v13.21.1（2026-07-31）
 
-- **同机多站 Redis：** 安装与系统设置可配缓存键前缀；保存清空本站键空间；冲突检测（E205）
-- **安装向导六步：** 第 1 步 Nginx 伪静态（情况 A + 一键复制），第 2 步环境检测（E206）
-- 迁移预置 `redis_prefix`；Redis 管理清空走本站键空间删除
+- 在线测试按 `keyways` 选通道：多选默认第一种；仅 Header/Bearer 可测通（E207）
+- Header/Bearer 同源中继转发；Bearer 兼容 `X-Authorization`（无需改 Nginx）
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
