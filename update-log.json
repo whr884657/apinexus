@@ -9,7 +9,8 @@
                 "SiteMedia 统一转发内置图标；主题禁止手写 \/assets\/img 直链",
                 "ThemeAssetPack：源文件分立、HTTP 打包下发；Google Fonts 改 idle 不阻塞首屏",
                 "用户控制台时段问候（2 小时段）+ 双主题打字动效",
-                "theme-asset 入口加固：页键白名单、realpath、仅 GET\/HEAD、安全响应头"
+                "theme-asset 入口加固：页键白名单、realpath、仅 GET\/HEAD、安全响应头",
+                "文档：CORE模块说明同步至本版；README 主要能力去版本号与实现细节，在线更新只说云端"
             ]
         },
         "13.22.2": {
