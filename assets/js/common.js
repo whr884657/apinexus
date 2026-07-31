@@ -115,6 +115,138 @@
     };
 
     /**
+     * POST 并按 SSE 逐事件回调（AI 流式）
+     * handlers: { meta?, delta?, done?, error?, ping? }
+     *
+     * @param {FormData} formData
+     * @param {string} [url]
+     * @param {object} [handlers]
+     * @param {{signal?: AbortSignal}} [opts]
+     * @returns {Promise<object>} done 事件 data；error 时 reject
+     */
+    global.VS.postFormSse = function (formData, url, handlers, opts) {
+        global.VS.ensureCsrf(formData);
+        handlers = handlers || {};
+        opts = opts || {};
+        var fetchOpts = {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+            headers: { Accept: 'text/event-stream' }
+        };
+        if (opts.signal) {
+            fetchOpts.signal = opts.signal;
+        }
+        return fetch(url || window.location.href, fetchOpts).then(function (res) {
+            var ctype = (res.headers.get('content-type') || '').toLowerCase();
+            if (!res.body || typeof res.body.getReader !== 'function') {
+                return res.text().then(function (text) {
+                    var data = global.VS.parseJsonResponse(text);
+                    if (data && data.code === 1 && data.doc != null && handlers.done) {
+                        handlers.done(data);
+                        return data;
+                    }
+                    if (data && data.code === 0) {
+                        var errMsg = data.msg || '生成失败';
+                        if (handlers.error) {
+                            handlers.error({ msg: errMsg });
+                        }
+                        throw new Error(errMsg);
+                    }
+                    throw new Error('invalid_json');
+                });
+            }
+            // 非 SSE 却返回 JSON（兼容旧路径）
+            if (ctype.indexOf('text/event-stream') < 0 && ctype.indexOf('json') >= 0) {
+                return res.text().then(function (text) {
+                    var data = global.VS.parseJsonResponse(text);
+                    if (data && data.code === 1 && data.doc != null) {
+                        if (handlers.delta) {
+                            handlers.delta({ text: String(data.doc) });
+                        }
+                        if (handlers.done) {
+                            handlers.done(data);
+                        }
+                        return data;
+                    }
+                    throw new Error((data && data.msg) || 'invalid_json');
+                });
+            }
+            var reader = res.body.getReader();
+            var decoder = new TextDecoder('utf-8');
+            var buffer = '';
+            var donePayload = null;
+            var errorPayload = null;
+
+            function dispatchBlock(block) {
+                var lines = block.split(/\r?\n/);
+                var eventName = 'message';
+                var dataLines = [];
+                lines.forEach(function (line) {
+                    if (line.indexOf('event:') === 0) {
+                        eventName = line.slice(6).trim();
+                    } else if (line.indexOf('data:') === 0) {
+                        dataLines.push(line.slice(5).replace(/^\s/, ''));
+                    }
+                });
+                if (!dataLines.length && eventName === 'message') {
+                    return;
+                }
+                var raw = dataLines.join('\n');
+                var payload = null;
+                try {
+                    payload = raw ? JSON.parse(raw) : {};
+                } catch (e) {
+                    payload = { text: raw };
+                }
+                if (eventName === 'meta' && handlers.meta) {
+                    handlers.meta(payload);
+                } else if (eventName === 'delta' && handlers.delta) {
+                    handlers.delta(payload);
+                } else if (eventName === 'done') {
+                    donePayload = payload;
+                    if (handlers.done) {
+                        handlers.done(payload);
+                    }
+                } else if (eventName === 'error') {
+                    errorPayload = payload;
+                    if (handlers.error) {
+                        handlers.error(payload);
+                    }
+                }
+            }
+
+            function pump() {
+                return reader.read().then(function (result) {
+                    if (result.done) {
+                        if (buffer.trim()) {
+                            dispatchBlock(buffer);
+                            buffer = '';
+                        }
+                        if (errorPayload) {
+                            throw new Error((errorPayload && errorPayload.msg) || '生成失败');
+                        }
+                        if (!donePayload) {
+                            throw new Error('流式结束但未收到完成事件');
+                        }
+                        return donePayload;
+                    }
+                    buffer += decoder.decode(result.value, { stream: true });
+                    var parts = buffer.split(/\n\n/);
+                    buffer = parts.pop() || '';
+                    parts.forEach(function (block) {
+                        if (block && block.trim()) {
+                            dispatchBlock(block);
+                        }
+                    });
+                    return pump();
+                });
+            }
+            return pump();
+        });
+    };
+
+    /**
      * @param {string} message
      * @param {string} [type] success|error|info
      */

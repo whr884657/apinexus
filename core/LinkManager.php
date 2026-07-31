@@ -637,6 +637,53 @@ class LinkManager
     }
 
     /**
+     * 将友链记录改回合作伙伴（修复误标 kind）
+     *
+     * @param int $id
+     * @return true|string
+     */
+    public static function reclassifyToPartner($id)
+    {
+        $id = (int) $id;
+        if ($id <= 0 || !self::tableReady()) {
+            return '记录不存在';
+        }
+        $row = self::findById($id);
+        if (!is_array($row)) {
+            return '记录不存在';
+        }
+        $kind = self::normalizeKind(isset($row['kind']) ? $row['kind'] : self::KIND_FRIEND);
+        if ($kind === self::KIND_PARTNER) {
+            return true;
+        }
+        if ($kind !== self::KIND_FRIEND) {
+            return '仅支持将友情链接改回合作伙伴';
+        }
+        $status = self::normalizeStatus(isset($row['status']) ? $row['status'] : self::STATUS_PENDING);
+        if ($status !== self::STATUS_APPROVED) {
+            return '仅可将「已通过」的友情链接改回合作伙伴';
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '`
+                 SET `kind` = ?, `status` = ?, `enabled` = ?
+                 WHERE `id` = ? LIMIT 1'
+            );
+            $stmt->execute(array(
+                self::KIND_PARTNER,
+                self::STATUS_APPROVED,
+                self::ENABLED_ON,
+                $id,
+            ));
+            self::invalidateCache();
+            return true;
+        } catch (Exception $e) {
+            return '更新失败';
+        }
+    }
+
+    /**
      * @return void
      */
     public static function invalidateCache()

@@ -8,9 +8,30 @@ $showRuntime = ThemeManager::themeSettingBool('show_runtime', true);
 $hasRuntime = vs_site_has_runtime();
 $runtimeStart = vs_site_runtime_start();
 $showFriendLinks = Config::get('home_footer_links', '1') !== '0';
-$footerLinks = ($showFriendLinks && class_exists('FrontendLink')) ? FrontendLink::listForTheme() : array();
+$footerLinksDisplay = ThemeManager::themeSettingStr('footer_friend_links_display', 'limit8');
+$footerLinksLimit = 8;
+if ($footerLinksDisplay === 'all') {
+    $footerLinksLimit = 0;
+} elseif (preg_match('/^limit(\d+)$/', $footerLinksDisplay, $mFooterLim)) {
+    $footerLinksLimit = (int) $mFooterLim[1];
+    if ($footerLinksLimit < 1) {
+        $footerLinksLimit = 1;
+    }
+    if ($footerLinksLimit > 10) {
+        $footerLinksLimit = 10;
+    }
+}
+$footerLinksPick = ($showFriendLinks && class_exists('FrontendLink'))
+    ? FrontendLink::pickForFooter($footerLinksLimit)
+    : array('items' => array(), 'has_more' => false, 'total' => 0, 'limit' => $footerLinksLimit);
+$footerLinks = isset($footerLinksPick['items']) && is_array($footerLinksPick['items'])
+    ? $footerLinksPick['items']
+    : array();
+$footerLinksHasMore = !empty($footerLinksPick['has_more']);
 $applyUrl = rtrim($vsBase, '/') . '/applylink';
+$linksPageUrl = rtrim($vsBase, '/') . '/links';
 $isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
+$isLinksPage = (isset($pageKey) && $pageKey === 'links');
 ?>
 <footer class="mt-12 feer-footer">
     <div class="container mx-auto px-6">
@@ -27,8 +48,11 @@ $isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
                                class="footer-link-item"
                                data-friend-link="1"><?php echo vs_e($item['name']); ?></a>
                         <?php endforeach; ?>
+                        <?php if ($footerLinksHasMore && !$isLinksPage): ?>
+                            <a href="<?php echo vs_e($linksPageUrl); ?>" class="footer-link-item footer-link-item--more">查看更多</a>
+                        <?php endif; ?>
                         <?php if ($isApplyPage): ?>
-                            <a href="<?php echo vs_e(rtrim($vsBase, '/')); ?>/links" class="footer-link-item">友情链接</a>
+                            <a href="<?php echo vs_e($linksPageUrl); ?>" class="footer-link-item">友情链接</a>
                         <?php else: ?>
                             <a href="<?php echo vs_e($applyUrl); ?>" class="footer-link-item footer-link-item--apply">申请友链</a>
                         <?php endif; ?>

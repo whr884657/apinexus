@@ -165,20 +165,16 @@ class RedisService
     }
 
     /**
-     * 删除指定前缀下全部键（本站键空间清空；不 flushdb）
+     * 删除本站键空间下全部键（redis_prefix + 站点盐；不 flushdb，不误清它站）
      *
      * @param string|null $prefixRaw null=当前配置前缀
      * @return array{ok:bool,deleted:int,error:string}
      */
     public static function flushKeyspace($prefixRaw = null)
     {
-        if ($prefixRaw === null) {
-            $prefix = self::connectionConfig()['prefix'];
-        } else {
-            $prefix = self::normalizePrefix($prefixRaw, true);
-            if ($prefix === false) {
-                return array('ok' => false, 'deleted' => 0, 'error' => '前缀无效');
-            }
+        $space = self::keyspacePrefix($prefixRaw);
+        if ($space === false || $space === '') {
+            return array('ok' => false, 'deleted' => 0, 'error' => '前缀无效');
         }
 
         if (!self::extensionLoaded()) {
@@ -186,10 +182,10 @@ class RedisService
         }
 
         try {
-            $deleted = (int) self::withClient(function (Redis $redis) use ($prefix) {
+            $deleted = (int) self::withClient(function (Redis $redis) use ($space) {
                 $n = 0;
                 $it = null;
-                $pattern = $prefix . '*';
+                $pattern = $space . '*';
                 do {
                     $keys = $redis->scan($it, $pattern, 100);
                     if ($keys === false || !is_array($keys)) {
@@ -197,7 +193,7 @@ class RedisService
                     }
                     $batch = array();
                     foreach ($keys as $key) {
-                        if (strpos((string) $key, $prefix) === 0) {
+                        if (strpos((string) $key, $space) === 0) {
                             $batch[] = $key;
                         }
                     }
@@ -313,13 +309,62 @@ class RedisService
     }
 
     /**
+     * 站点命名空间（防同 redis_prefix 多站互串）
+     * 由库名 + 配置路径派生，与 redis_prefix 叠加进最终键
+     *
+     * @return string 形如「a1b2c3d4e5:」
+     */
+    public static function siteKeySalt()
+    {
+        static $salt = null;
+        if ($salt !== null) {
+            return $salt;
+        }
+        $dbname = '';
+        $host = '';
+        $root = defined('VS_ROOT') ? (string) VS_ROOT : '';
+        if (class_exists('Database')) {
+            $cfg = Database::loadConfig();
+            if (is_array($cfg)) {
+                $dbname = isset($cfg['dbname']) ? (string) $cfg['dbname'] : '';
+                $host = isset($cfg['host']) ? (string) $cfg['host'] : '';
+            }
+        }
+        $raw = strtolower($host . '|' . $dbname . '|' . str_replace('\\', '/', $root));
+        $salt = substr(hash('sha256', $raw), 0, 10) . ':';
+        return $salt;
+    }
+
+    /**
+     * 当前站完整键空间前缀 = redis_prefix + siteSalt
+     *
+     * @param string|null $prefixRaw null=当前配置
+     * @return string|false
+     */
+    public static function keyspacePrefix($prefixRaw = null)
+    {
+        if ($prefixRaw === null) {
+            $prefix = self::connectionConfig()['prefix'];
+        } else {
+            $prefix = self::normalizePrefix($prefixRaw, true);
+            if ($prefix === false) {
+                return false;
+            }
+        }
+        return $prefix . self::siteKeySalt();
+    }
+
+    /**
      * @param string $suffix
      * @return string
      */
     public static function buildKey($suffix)
     {
-        $prefix = self::connectionConfig()['prefix'];
-        return $prefix . ltrim((string) $suffix, ':');
+        $space = self::keyspacePrefix(null);
+        if ($space === false || $space === '') {
+            $space = self::DEFAULT_PREFIX . self::siteKeySalt();
+        }
+        return $space . ltrim((string) $suffix, ':');
     }
 
     /**
@@ -459,9 +504,12 @@ class RedisService
                 $snapshot['business']['app_hit_rate_percent'] = $appStats['hit_rate_percent'];
                 $snapshot['business']['entries'] = RedisCache::inspectEntries();
 
-                $prefix = $config['prefix'];
-                $cacheScan = self::scanKeyStats($redis, $prefix . 'cache:*');
-                $rateScan = self::scanKeyStats($redis, $prefix . 'rl:*');
+                $space = self::keyspacePrefix($config['prefix']);
+                if ($space === false) {
+                    $space = $config['prefix'] . self::siteKeySalt();
+                }
+                $cacheScan = self::scanKeyStats($redis, $space . 'cache:*');
+                $rateScan = self::scanKeyStats($redis, $space . 'rl:*');
 
                 $snapshot['business']['cache_keys'] = $cacheScan['count'];
                 $snapshot['business']['rate_limit_keys'] = $rateScan['count'];
@@ -519,8 +567,11 @@ class RedisService
     public static function pruneRateLimitKeys(Redis $redis, $maxKeys)
     {
         $maxKeys = max(100, (int) $maxKeys);
-        $prefix = self::connectionConfig()['prefix'];
-        $pattern = $prefix . 'rl:*';
+        $space = self::keyspacePrefix(null);
+        if ($space === false) {
+            $space = self::DEFAULT_PREFIX . self::siteKeySalt();
+        }
+        $pattern = $space . 'rl:*';
         $keys = array();
         $iterator = null;
 
@@ -547,7 +598,7 @@ class RedisService
                 $pruned++;
                 continue;
             }
-            if ($ttl === -1 && strpos($key, $prefix . 'rl:last:') !== 0) {
+            if ($ttl === -1 && strpos($key, $space . 'rl:last:') !== 0) {
                 $redis->expire($key, 3600);
             }
             $alive[] = $key;
@@ -559,7 +610,7 @@ class RedisService
 
         $candidates = array();
         foreach ($alive as $key) {
-            if (strpos($key, $prefix . 'rl:last:') === 0) {
+            if (strpos($key, $space . 'rl:last:') === 0) {
                 continue;
             }
             $candidates[] = array(

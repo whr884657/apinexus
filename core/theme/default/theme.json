@@ -65,6 +65,19 @@
             "default": true
         },
         {
+            "key": "footer_friend_links_display",
+            "label": "页脚友情链接显示数量",
+            "type": "select",
+            "default": "limit8",
+            "options": [
+                {"value": "all", "label": "显示全部（仍随机打乱顺序）"},
+                {"value": "limit3", "label": "随机显示 3 个，超出可点「查看更多」"},
+                {"value": "limit5", "label": "随机显示 5 个，超出可点「查看更多」"},
+                {"value": "limit8", "label": "随机显示 8 个，超出可点「查看更多」"},
+                {"value": "limit10", "label": "随机显示 10 个（上限），超出可点「查看更多」"}
+            ]
+        },
+        {
             "key": "show_runtime",
             "label": "显示网站运行时间",
             "type": "checkbox",

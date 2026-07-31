@@ -42,6 +42,8 @@ require_once VS_ROOT . '/core/ApiError.php';
 require_once VS_ROOT . '/core/ApiQuickstart.php';
 require_once VS_ROOT . '/core/AiConfig.php';
 require_once VS_ROOT . '/core/AiClient.php';
+require_once VS_ROOT . '/core/AiChatSession.php';
+require_once VS_ROOT . '/core/AiSse.php';
 require_once VS_ROOT . '/core/AiApiDoc.php';
 require_once VS_ROOT . '/core/ApiNotify.php';
 require_once VS_ROOT . '/core/ProxyClientProfile.php';

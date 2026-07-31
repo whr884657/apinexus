@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.21.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.22.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -32,7 +32,7 @@
 - **调用方密钥传递 keyways（v10.17.0 / v11.0.0）**：接口可多选 Query / Header(`X-API-Key`) / Bearer；守卫错误 JSON 含业务 `errcode`（非 HTTP 401/403）；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色（v11.1.0）**：登录/注册/忘记密码与后台仅可选系统 24 色；无自定义取色、无昼夜更替
 - **行为验证（v13.6.0 / v13.7.0）**：系统设置可选本站图形 / 极验三代 / 极验四代；**管理员与用户可分端选择**；三代与四代凭证分存；SDK 在 `core/captcha/`
-- **AI 代码示例（v12.0.0）**：前端按鉴权×语言分片请求（最多 27 片）；系统设置可开单线程/并行；进程实时显示当前任务
+- **AI 代码示例（v12.0.0 / v13.22.0）**：前端按鉴权×语言分片请求（最多 27 片）；详细文档 SSE 流式回填与短时效多轮；系统设置可开单线程/并行；进程实时显示当前任务
 - **快速上手语言图标（v12.0.1）**：默认主题切换鉴权方式后九种语言图标不再丢失（`detailQsLangIcons` 兜底）
 - **实时数据监控中心（v12.1.0）**：ECharts 中国/世界地图飞线、四角玻璃面板（今日/累计/成功率/失败率 + TOP + 趋势 + 实时调用日志）、太阳/月亮深浅色、双端自适应
 - **控制台服务器监控（v13.16.0 / v13.17.0）**：对接宝塔 / 1Panel；测试成功自动保存并启用；站点三名称与自定义页脚版权；文章编辑网格与 Markdown 安全 HTML
@@ -275,10 +275,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.21.1（2026-07-31）
+### v13.22.0（2026-07-31）
 
-- 在线测试按 `keyways` 选通道：多选默认第一种；仅 Header/Bearer 可测通（E207）
-- Header/Bearer 同源中继转发；Bearer 兼容 `X-Authorization`（无需改 Nginx）
+- AI 详细文档 SSE 流式 + 短时效多轮/断点；代码一片一回填（E209）
+- 同域外链弹窗按 hostname；页脚友链限量随机；Redis 站点盐隔离（E210）
+- 合作伙伴改回与前台缓存清理；Bearer 裸钥仅认 `X-Api-Bearer`（E208）
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

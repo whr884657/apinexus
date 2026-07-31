@@ -433,6 +433,32 @@ class ThemeManager
     }
 
     /**
+     * 读取主题配置整数（可夹逼）
+     *
+     * @param string   $key
+     * @param int      $default
+     * @param int|null $min
+     * @param int|null $max
+     * @return int
+     */
+    public static function themeSettingInt($key, $default = 0, $min = null, $max = null)
+    {
+        $val = self::themeSetting($key, $default);
+        if (is_bool($val)) {
+            $n = $val ? 1 : 0;
+        } else {
+            $n = (int) $val;
+        }
+        if ($min !== null && $n < (int) $min) {
+            $n = (int) $min;
+        }
+        if ($max !== null && $n > (int) $max) {
+            $n = (int) $max;
+        }
+        return $n;
+    }
+
+    /**
      * theme.json 中声明的可配置项
      *
      * @param string $themeId

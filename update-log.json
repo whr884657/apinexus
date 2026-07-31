@@ -1,5 +1,16 @@
 {
     "versions": {
+        "13.22.0": {
+            "title": "ApiNexus 13.22.0 AI 流式文档与 Redis 站点盐隔离",
+            "date": "2026-07-31",
+            "db_changes": false,
+            "changes": [
+                "AI 详细文档 SSE 流式生成 + 短时效多轮/断点续写；代码示例一片一回填（E209）",
+                "同域 http/https 外链弹窗按 hostname 判定；页脚友链数量/随机/查看更多（E210）",
+                "Redis buildKey 增加站点盐；清空/扫描仅本站键空间；合作伙伴改回与缓存清理",
+                "Bearer 裸钥仅认 X-Api-Bearer；Authorization/X-Authorization 须 Bearer 前缀（E208）"
+            ]
+        },
         "13.21.1": {
             "title": "ApiNexus 13.21.1 在线测试兼容 Header/Bearer 鉴权",
             "date": "2026-07-31",

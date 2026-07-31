@@ -57,6 +57,53 @@ class FrontendLink
     }
 
     /**
+     * 页脚展示用：随机打乱；可限制条数
+     *
+     * @param int $limit 0=全部；1～10=随机取这么多
+     * @return array{items:array,has_more:bool,total:int,limit:int}
+     */
+    public static function pickForFooter($limit = 0)
+    {
+        $all = self::listForTheme();
+        $total = count($all);
+        $limit = (int) $limit;
+        if ($limit < 0) {
+            $limit = 0;
+        }
+        if ($limit > 10) {
+            $limit = 10;
+        }
+
+        if ($total <= 1) {
+            return array(
+                'items'    => $all,
+                'has_more' => false,
+                'total'    => $total,
+                'limit'    => $limit,
+            );
+        }
+
+        // 每次请求不同顺序
+        shuffle($all);
+
+        if ($limit === 0 || $limit >= $total) {
+            return array(
+                'items'    => $all,
+                'has_more' => false,
+                'total'    => $total,
+                'limit'    => $limit,
+            );
+        }
+
+        return array(
+            'items'    => array_slice($all, 0, $limit),
+            'has_more' => true,
+            'total'    => $total,
+            'limit'    => $limit,
+        );
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public static function listForTheme()
@@ -72,7 +119,27 @@ class FrontendLink
             return $out;
         };
         if (class_exists('RedisCache')) {
-            return RedisCache::remember(RedisCache::KEY_FRONTEND_LINK, RedisCache::TTL_FRONTEND_LINK, $factory);
+            $cached = RedisCache::remember(RedisCache::KEY_FRONTEND_LINK, RedisCache::TTL_FRONTEND_LINK, $factory);
+            // 防御：缓存脏数据时再滤一层（仅保留合法友链结构）
+            if (!is_array($cached)) {
+                return $factory();
+            }
+            $clean = array();
+            foreach ($cached as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $name = isset($row['name']) ? trim((string) $row['name']) : '';
+                $url = isset($row['siteurl']) ? trim((string) $row['siteurl']) : '';
+                if ($name === '' || $url === '') {
+                    continue;
+                }
+                if (!preg_match('#^https?://#i', $url)) {
+                    continue;
+                }
+                $clean[] = $row;
+            }
+            return $clean;
         }
         return $factory();
     }

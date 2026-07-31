@@ -245,8 +245,10 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiError.php` | 公开 API 业务错误码常量与文案（v11.0.0，11001～11017） |
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型/单片超时/代码调度模式与并发） |
-| `AiClient.php` | OpenAI 兼容 Chat Completions / Responses 客户端 |
-| `AiApiDoc.php` | 生成详细文档（`doc`）与代码示例（`aidoc`）；剥离上游敏感字段；禁止 HTML 泄漏 |
+| `AiClient.php` | OpenAI 兼容 Chat Completions / Responses；支持流式 `chatStreamWithConfig` 与多轮 `messages` |
+| `AiChatSession.php` | AI 短时效多轮（Redis TTL 约 30 分钟）与断点 partial |
+| `AiSse.php` | SSE 输出（关缓冲头、心跳），供文档流式生成 |
+| `AiApiDoc.php` | 生成详细文档（`doc`，可流式）与代码示例（`aidoc`）；剥离上游敏感字段；禁止 HTML 泄漏 |
 | `IpLocator.php` | IP 归属地：系统内置或自定义接口；异步回填 `apilog.iploc`（v10.16.0 / **v13.2.0**） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ProxyClientProfile.php` | 代理出站 UA/Referer 内置预设与解析（**v13.4.0**） |
@@ -715,7 +717,7 @@ VsPlaygroundResponse.directRequest({
 
 ### 4.21.5 AiApiDoc.php / ApiQuickstart.php（AI 文档与快速上手）
 
-**AiApiDoc：** 管理员/用户接口编辑「AI 生成详细文档 / 代码示例」；上下文剔除 `targeturl`/`upkey`；输出经 `ApiQuickstart::scrubHighlightLeak` 剥离 HTML / `vs-syn` 碎片（E177：勿对已高亮 HTML 二次正则）。
+**AiApiDoc：** 管理员/用户接口编辑「AI 生成详细文档 / 代码示例」；详细文档默认 SSE 流式（`generateDetailDocStream` + `AiChatSession` 短时效历史）；上下文剔除 `targeturl`/`upkey`；输出经 `ApiQuickstart::scrubHighlightLeak` 剥离 HTML / `vs-syn` 碎片（E177：勿对已高亮 HTML 二次正则）。
 **展示：** `VsSyntax` bash 纯文本分词；复制用 `data-vs-plain` / `plainText`。
 
 **代码示例生成（v12.0.0）：** 前端按「鉴权 × 语言」**分片**调用 `generateCodeSamplePiece`（`ai_gen_code_piece`）；`AiConfig::codeMode` 为 `sequential`/`parallel`，并行并发 1～6；进程日志实时显示当前片。服务端 `extractRequestedQsBlock` 按语言容错收回并改写 auth，禁 emoji、要求中文注释，失败可重试 1 次。旧 `generateCodeSamples` 整包接口仅兼容保留。

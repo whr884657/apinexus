@@ -213,13 +213,14 @@ class AiClient
      * @param array  $cfg
      * @param string $system
      * @param string $user
-     * @param array  $opts
+     * @param array  $opts messages=多轮；stream 请用 chatStreamWithConfig
      * @return string
      */
     public static function chatWithConfig(array $cfg, $system, $user, array $opts = array())
     {
         $adminId = class_exists('Auth') ? (int) Auth::id() : 0;
-        $bucket = 'ai:chat:' . ($adminId > 0 ? $adminId : '0');
+        $userId = class_exists('UserAuth') ? (int) UserAuth::id() : 0;
+        $bucket = 'ai:chat:' . ($adminId > 0 ? ('a' . $adminId) : ('u' . $userId));
         if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 10, true)) {
             return '错误：请求过于频繁，请稍后再试';
         }
@@ -237,6 +238,88 @@ class AiClient
             $text = trim($m[1]);
         }
         return $text;
+    }
+
+    /**
+     * Chat Completions 流式；onDelta(string $chunk)。失败时回退整包并一次回调全文。
+     *
+     * @param array         $cfg
+     * @param array         $messages [{role,content},…]
+     * @param array         $opts
+     * @param callable|null $onDelta
+     * @return array{ok:bool,text?:string,error?:string,via?:string}
+     */
+    public static function chatStreamWithConfig(array $cfg, array $messages, array $opts = array(), $onDelta = null)
+    {
+        $adminId = class_exists('Auth') ? (int) Auth::id() : 0;
+        $userId = class_exists('UserAuth') ? (int) UserAuth::id() : 0;
+        $bucket = 'ai:chat:' . ($adminId > 0 ? ('a' . $adminId) : ('u' . $userId));
+        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 10, true)) {
+            return array('ok' => false, 'error' => '请求过于频繁，请稍后再试');
+        }
+
+        $base = self::normalizeBaseUrl(isset($cfg['baseurl']) ? $cfg['baseurl'] : '');
+        $key = trim((string) (isset($cfg['apikey']) ? $cfg['apikey'] : ''));
+        $model = trim((string) (isset($cfg['model']) ? $cfg['model'] : ''));
+        $timeout = isset($cfg['timeout']) ? (int) $cfg['timeout'] : 120;
+        if ($timeout < 10) {
+            $timeout = 10;
+        }
+        if ($timeout > 300) {
+            $timeout = 300;
+        }
+        if ($base === '' || $key === '' || $model === '') {
+            return array('ok' => false, 'error' => 'AI 配置不完整（根地址 / Key / 模型）');
+        }
+        $ssrf = self::assertSafeBaseUrl($base);
+        if ($ssrf !== true) {
+            return array('ok' => false, 'error' => $ssrf);
+        }
+        if ($messages === array()) {
+            return array('ok' => false, 'error' => '对话消息为空');
+        }
+
+        $hit = self::callChatCompletionsStream($base, $key, $model, $messages, $timeout, $opts, $onDelta);
+        if (!empty($hit['ok'])) {
+            $hit['via'] = 'chat_stream';
+            return $hit;
+        }
+
+        // 流式失败：整包 Chat，再一次性推给前端
+        $opts['messages'] = $messages;
+        $system = '';
+        $user = '';
+        foreach ($messages as $m) {
+            if (!is_array($m) || !isset($m['role'])) {
+                continue;
+            }
+            $role = strtolower((string) $m['role']);
+            $content = isset($m['content']) ? (string) $m['content'] : '';
+            if ($role === 'system' && $system === '') {
+                $system = $content;
+            } elseif ($role === 'user') {
+                $user = $content;
+            }
+        }
+        $fallback = self::callChatCompletions($base, $key, $model, $system, $user, $timeout, $opts);
+        if (!empty($fallback['ok'])) {
+            $text = isset($fallback['text']) ? (string) $fallback['text'] : '';
+            if ($text !== '' && is_callable($onDelta)) {
+                call_user_func($onDelta, $text);
+            }
+            return array(
+                'ok'   => true,
+                'text' => $text,
+                'via'  => 'chat_fallback',
+                'http' => isset($fallback['http']) ? (int) $fallback['http'] : 200,
+            );
+        }
+        return array(
+            'ok'    => false,
+            'error' => isset($hit['error']) ? (string) $hit['error'] : (
+                isset($fallback['error']) ? (string) $fallback['error'] : '流式与整包均失败'
+            ),
+        );
     }
 
     /**
@@ -322,12 +405,17 @@ class AiClient
     {
         $url = self::chatCompletionsUrl($base);
         $temperature = isset($opts['temperature']) ? (float) $opts['temperature'] : 0.3;
-        $payload = array(
-            'model'    => $model,
-            'messages' => array(
+        if (isset($opts['messages']) && is_array($opts['messages']) && $opts['messages'] !== array()) {
+            $messages = $opts['messages'];
+        } else {
+            $messages = array(
                 array('role' => 'system', 'content' => (string) $system),
                 array('role' => 'user', 'content' => (string) $user),
-            ),
+            );
+        }
+        $payload = array(
+            'model'    => $model,
+            'messages' => $messages,
         );
         // 探测时不加 max_tokens，避免部分模型（o 系列 / reasoner）空 content
         if (empty($opts['probe'])) {
@@ -360,6 +448,121 @@ class AiClient
             'http' => $http,
             'raw'  => $raw,
         );
+    }
+
+    /**
+     * @param string        $base
+     * @param string        $key
+     * @param string        $model
+     * @param array         $messages
+     * @param int           $timeout
+     * @param array         $opts
+     * @param callable|null $onDelta
+     * @return array{ok:bool,text?:string,error?:string,http?:int}
+     */
+    private static function callChatCompletionsStream($base, $key, $model, array $messages, $timeout, array $opts, $onDelta)
+    {
+        $url = self::chatCompletionsUrl($base);
+        $temperature = isset($opts['temperature']) ? (float) $opts['temperature'] : 0.3;
+        $payload = array(
+            'model'    => $model,
+            'messages' => $messages,
+            'stream'   => true,
+        );
+        $payload['temperature'] = $temperature;
+        if (isset($opts['max_tokens']) && (int) $opts['max_tokens'] > 0) {
+            $payload['max_tokens'] = (int) $opts['max_tokens'];
+        }
+        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($body === false) {
+            return array('ok' => false, 'error' => '请求编码失败');
+        }
+
+        $buf = '';
+        $full = '';
+        $http = 0;
+        $hadDelta = false;
+        $parseError = '';
+
+        $onLine = function ($line) use (&$full, &$hadDelta, &$parseError, $onDelta) {
+            $line = trim((string) $line);
+            if ($line === '' || $line === 'data: [DONE]' || $line === '[DONE]') {
+                return;
+            }
+            if (strpos($line, 'data:') === 0) {
+                $line = trim(substr($line, 5));
+            }
+            if ($line === '' || $line === '[DONE]') {
+                return;
+            }
+            $json = json_decode($line, true);
+            if (!is_array($json)) {
+                return;
+            }
+            if (isset($json['error'])) {
+                if (is_array($json['error']) && isset($json['error']['message'])) {
+                    $parseError = (string) $json['error']['message'];
+                } elseif (is_string($json['error'])) {
+                    $parseError = $json['error'];
+                }
+                return;
+            }
+            $piece = '';
+            if (isset($json['choices'][0]['delta']['content'])) {
+                $piece = self::stringifyContent($json['choices'][0]['delta']['content']);
+                // stringifyContent 会 trim，流式中间空格不能丢：改用手写
+                $rawC = $json['choices'][0]['delta']['content'];
+                if (is_string($rawC)) {
+                    $piece = $rawC;
+                }
+            } elseif (isset($json['choices'][0]['text'])) {
+                $rawC = $json['choices'][0]['text'];
+                $piece = is_string($rawC) ? $rawC : self::stringifyContent($rawC);
+            }
+            if ($piece === '') {
+                return;
+            }
+            $hadDelta = true;
+            $full .= $piece;
+            if (is_callable($onDelta)) {
+                call_user_func($onDelta, $piece);
+            }
+        };
+
+        $raw = self::httpRequestStream('POST', $url, $body, $key, $timeout, function ($chunk) use (&$buf, $onLine) {
+            $buf .= (string) $chunk;
+            while (($pos = strpos($buf, "\n")) !== false) {
+                $line = substr($buf, 0, $pos);
+                $buf = substr($buf, $pos + 1);
+                $onLine($line);
+            }
+        }, $http);
+
+        if ($buf !== '') {
+            $onLine($buf);
+        }
+
+        if (!empty($raw['_error'])) {
+            return array(
+                'ok'    => false,
+                'error' => (string) $raw['_error'],
+                'http'  => $http,
+            );
+        }
+        if ($parseError !== '') {
+            return array('ok' => false, 'error' => $parseError, 'http' => $http);
+        }
+        if ($http >= 400 && !$hadDelta) {
+            return array(
+                'ok'    => false,
+                'error' => '上游 HTTP ' . $http,
+                'http'  => $http,
+            );
+        }
+        if (!$hadDelta && trim($full) === '') {
+            return array('ok' => false, 'error' => '流式未返回正文', 'http' => $http);
+        }
+        return array('ok' => true, 'text' => $full, 'http' => $http);
     }
 
     /**
@@ -638,6 +841,77 @@ class AiClient
     {
         $base = self::normalizeBaseUrl($base);
         return $base . '/models';
+    }
+
+    /**
+     * 流式 HTTP：onChunk 收到原始字节；成功返回空数组；失败含 _error
+     *
+     * @param string        $method
+     * @param string        $url
+     * @param string|null   $jsonBody
+     * @param string        $apiKey
+     * @param int           $timeout
+     * @param callable      $onChunk
+     * @param int           $httpOut
+     * @return array
+     */
+    private static function httpRequestStream($method, $url, $jsonBody, $apiKey, $timeout, $onChunk, &$httpOut)
+    {
+        $timeout = (int) $timeout;
+        $httpOut = 0;
+        if (!function_exists('curl_init')) {
+            return array('_error' => '服务器未启用 curl 扩展');
+        }
+        if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($url)) {
+            return array('_error' => '接口地址不允许指向内网或非公网主机');
+        }
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return array('_error' => '无法发起请求');
+        }
+        $headers = array(
+            'Accept: text/event-stream, application/json',
+            'Authorization: Bearer ' . $apiKey,
+            'Content-Type: application/json',
+        );
+        $errHold = array('');
+        $opts = array(
+            CURLOPT_RETURNTRANSFER => false,
+            CURLOPT_CONNECTTIMEOUT => min(15, $timeout),
+            CURLOPT_TIMEOUT        => $timeout,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_CUSTOMREQUEST  => strtoupper($method),
+            CURLOPT_POSTFIELDS     => $jsonBody !== null ? $jsonBody : '{}',
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_WRITEFUNCTION  => function ($ch, $data) use ($onChunk, &$httpOut, $errHold) {
+                if ($httpOut <= 0) {
+                    $httpOut = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                }
+                // 非 2xx 仍收集正文以便报错
+                if (is_callable($onChunk)) {
+                    call_user_func($onChunk, $data);
+                } else {
+                    $errHold[0] .= $data;
+                }
+                return strlen($data);
+            },
+        );
+        curl_setopt_array($ch, $opts);
+        $ok = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $err = curl_error($ch);
+        if ($httpOut <= 0) {
+            $httpOut = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        }
+        curl_close($ch);
+        if ($errno) {
+            return array('_error' => '网络错误：' . ($err !== '' ? $err : ('#' . $errno)), '_http' => $httpOut);
+        }
+        if ($ok === false) {
+            return array('_error' => '流式请求失败', '_http' => $httpOut);
+        }
+        return array('_http' => $httpOut);
     }
 
     /**

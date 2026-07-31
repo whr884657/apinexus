@@ -248,6 +248,47 @@
                     VS.showMessage(err.message || '删除失败', 'error');
                 });
             });
+            return;
+        }
+
+        if (action === 'reclassify') {
+            var ask2 = (window.VsModal && window.VsModal.confirm)
+                ? window.VsModal.confirm('将该条从友情链接改回合作伙伴？前台友链将不再显示它。', '改回合作伙伴')
+                : Promise.resolve(window.confirm('确定改回合作伙伴？'));
+            ask2.then(function (ok) {
+                if (!ok) return;
+                var fd2 = new FormData();
+                fd2.append('action', 'reclassify');
+                fd2.append('link_id', String(id));
+                postAction(fd2).then(function (data) {
+                    VS.showMessage(data.msg || '已改回', 'success');
+                    var reRow = btn.closest('[data-reclass-row]');
+                    if (reRow) {
+                        reRow.remove();
+                    }
+                    if (data.link) {
+                        upsertRow(data.link);
+                    }
+                    window.setTimeout(function () {
+                        window.location.reload();
+                    }, 600);
+                }).catch(function (err) {
+                    VS.showMessage(err.message || '操作失败', 'error');
+                });
+            });
         }
     });
+
+    var purgeBtn = document.getElementById('partnerPurgeCacheBtn');
+    if (purgeBtn) {
+        purgeBtn.addEventListener('click', function () {
+            var fd = new FormData();
+            fd.append('action', 'purge_cache');
+            postAction(fd).then(function (data) {
+                VS.showMessage(data.msg || '已清理', 'success');
+            }).catch(function (err) {
+                VS.showMessage(err.message || '清理失败', 'error');
+            });
+        });
+    }
 })();

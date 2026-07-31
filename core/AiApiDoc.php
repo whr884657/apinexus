@@ -20,22 +20,7 @@ class AiApiDoc
         $safe = self::safeContext($api);
         $cfg = AiConfig::get();
         $maxLen = (int) $cfg['doc_maxlen'];
-
-        $system = '你是 API 文档撰写助手。只输出 Markdown 正文，不要寒暄，不要用 ```markdown 包裹全文。'
-            . '必须使用 Markdown：标题、列表、表格、代码块。'
-            . '篇幅控制在约 ' . $maxLen . ' 字以内，结构清晰、面向调用方。'
-            . '严禁输出任何 HTML 标签、CSS class、语法高亮标记（如 vs-syn、span class）。'
-            . '严禁提及：代理、上游、中继、源站地址、上游密钥、Authorization 上游头、User-Agent、Referer、出站身份、内部表名、枚举数字含义、后台路径。'
-            . '只能描述本站对外提供的调用地址、参数与行为。'
-            . '必须包含：接口说明、调用地址、请求方式、请求参数表、参数说明、'
-            . '成功响应示例、错误响应示例、响应字段说明，以及本平台业务错误码（errcode，不是 HTTP 状态码）：'
-            . '11001 未提供密钥、11002 密钥错误、11003 密钥已禁用、11004 积分不足、'
-            . '11005 请求过于频繁、11006 维护中、11007 接口已禁用、11012 鉴权方式错误。'
-            . '错误响应 JSON 示例必须为 {"code":0,"msg":"…","errcode":11001} 形态，禁止写 "http":401 或 "全部鉴权方式"。'
-            . '鉴权方式只写本接口实际支持的那几种（Query / Header / Bearer），禁止写「全部支持」「支持全部鉴权方式」。'
-            . '若接口有多种参数组合，用表格说明典型取值。'
-            . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。';
-
+        $system = self::detailDocSystemPrompt($maxLen);
         $user = "请根据下列接口资料撰写详细文档（Markdown）：\n\n" . self::contextMarkdown($safe);
         $cfg['timeout'] = max((int) $cfg['timeout'], 120);
         if ($cfg['timeout'] > 300) {
@@ -56,6 +41,129 @@ class AiApiDoc
             $out .= "\n\n…（已按长度限制截断）";
         }
         return array('doc' => $out);
+    }
+
+    /**
+     * 流式撰写详细文档（对话式 + 短时效历史 + 断点续写）
+     *
+     * @param array         $api
+     * @param string        $sessionKey
+     * @param bool          $continue
+     * @param callable|null $onDelta function(string $chunk)
+     * @return array{ok:bool,doc?:string,error?:string,continued?:bool,history?:bool}
+     */
+    public static function generateDetailDocStream(array $api, $sessionKey, $continue = false, $onDelta = null)
+    {
+        $safe = self::safeContext($api);
+        $cfg = AiConfig::get();
+        $maxLen = (int) $cfg['doc_maxlen'];
+        $system = self::detailDocSystemPrompt($maxLen);
+        $user = "请根据下列接口资料撰写详细文档（Markdown）：\n\n" . self::contextMarkdown($safe);
+
+        $state = AiChatSession::load($sessionKey);
+        $partial = isset($state['partial']) ? (string) $state['partial'] : '';
+        $doContinue = $continue && $partial !== '';
+        $messages = AiChatSession::buildMessages(
+            $system,
+            isset($state['messages']) ? $state['messages'] : array(),
+            $user,
+            $doContinue,
+            $partial
+        );
+
+        $cfg['timeout'] = max((int) $cfg['timeout'], 120);
+        if ($cfg['timeout'] > 300) {
+            $cfg['timeout'] = 300;
+        }
+        @set_time_limit((int) $cfg['timeout'] + 60);
+
+        $assembled = $doContinue ? $partial : '';
+        $lastSave = microtime(true);
+        $result = AiClient::chatStreamWithConfig(
+            $cfg,
+            $messages,
+            array('temperature' => 0.3, 'max_tokens' => 8000),
+            function ($chunk) use (&$assembled, &$lastSave, $sessionKey, $onDelta) {
+                $assembled .= (string) $chunk;
+                if (is_callable($onDelta)) {
+                    call_user_func($onDelta, (string) $chunk);
+                }
+                // 约每 2 秒落盘 partial，便于断点
+                $now = microtime(true);
+                if (($now - $lastSave) >= 2) {
+                    AiChatSession::savePartial($sessionKey, $assembled);
+                    $lastSave = $now;
+                }
+                if (class_exists('AiSse')) {
+                    AiSse::maybePing(false);
+                }
+            }
+        );
+
+        if (empty($result['ok'])) {
+            if ($assembled !== '') {
+                AiChatSession::savePartial($sessionKey, $assembled);
+            }
+            return array(
+                'ok'        => false,
+                'error'     => isset($result['error']) ? (string) $result['error'] : '生成失败',
+                'doc'       => $assembled,
+                'continued' => $doContinue,
+                'history'   => AiChatSession::historyAvailable(),
+            );
+        }
+
+        $text = isset($result['text']) ? (string) $result['text'] : $assembled;
+        if ($doContinue && $assembled !== '' && strpos($assembled, $partial) === 0) {
+            $text = $assembled;
+        } elseif ($doContinue && $partial !== '' && strpos($text, $partial) !== 0) {
+            // 模型未接上前文时手工拼接
+            $text = $partial . $text;
+        } elseif ($assembled !== '' && strlen($assembled) >= strlen($text)) {
+            $text = $assembled;
+        }
+
+        $text = self::sanitizeOutput($text);
+        if (function_exists('mb_strlen') && mb_strlen($text, 'UTF-8') > $maxLen + 500) {
+            $text = function_exists('mb_substr')
+                ? mb_substr($text, 0, $maxLen, 'UTF-8')
+                : substr($text, 0, $maxLen);
+            $text .= "\n\n…（已按长度限制截断）";
+        }
+
+        $historyUser = $doContinue
+            ? '（续写）请继续完成详细文档'
+            : $user;
+        AiChatSession::appendTurn($sessionKey, $historyUser, $text);
+
+        return array(
+            'ok'        => true,
+            'doc'       => $text,
+            'continued' => $doContinue,
+            'history'   => AiChatSession::historyAvailable(),
+        );
+    }
+
+    /**
+     * @param int $maxLen
+     * @return string
+     */
+    private static function detailDocSystemPrompt($maxLen)
+    {
+        return '你是 API 文档撰写助手。只输出 Markdown 正文，不要寒暄，不要用 ```markdown 包裹全文。'
+            . '必须使用 Markdown：标题、列表、表格、代码块。'
+            . '篇幅控制在约 ' . (int) $maxLen . ' 字以内，结构清晰、面向调用方。'
+            . '严禁输出任何 HTML 标签、CSS class、语法高亮标记（如 vs-syn、span class）。'
+            . '严禁提及：代理、上游、中继、源站地址、上游密钥、Authorization 上游头、User-Agent、Referer、出站身份、内部表名、枚举数字含义、后台路径。'
+            . '只能描述本站对外提供的调用地址、参数与行为。'
+            . '必须包含：接口说明、调用地址、请求方式、请求参数表、参数说明、'
+            . '成功响应示例、错误响应示例、响应字段说明，以及本平台业务错误码（errcode，不是 HTTP 状态码）：'
+            . '11001 未提供密钥、11002 密钥错误、11003 密钥已禁用、11004 积分不足、'
+            . '11005 请求过于频繁、11006 维护中、11007 接口已禁用、11012 鉴权方式错误。'
+            . '错误响应 JSON 示例必须为 {"code":0,"msg":"…","errcode":11001} 形态，禁止写 "http":401 或 "全部鉴权方式"。'
+            . '鉴权方式只写本接口实际支持的那几种（Query / Header / Bearer），禁止写「全部支持」「支持全部鉴权方式」。'
+            . '若接口有多种参数组合，用表格说明典型取值。'
+            . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。';
     }
 
     /**

@@ -93,11 +93,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('合作伙伴已删除', array('link_id' => $id));
     }
 
+    if ($action === 'purge_cache') {
+        LinkManager::invalidateCache();
+        AjaxResponse::success('已清理友链与合作伙伴前台缓存');
+    }
+
+    if ($action === 'reclassify') {
+        $id = isset($_POST['link_id']) ? (int) $_POST['link_id'] : 0;
+        $result = LinkManager::reclassifyToPartner($id);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        $row = LinkManager::findById($id);
+        AjaxResponse::success('已改回合作伙伴', array(
+            'link' => is_array($row) ? LinkManager::formatRow($row) : null,
+        ));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
 $tableReady = LinkManager::tableReady();
 $partners = $tableReady ? LinkManager::listAll(null, LinkManager::KIND_PARTNER) : array();
+$friendCandidates = $tableReady ? LinkManager::listAll(LinkManager::STATUS_APPROVED, LinkManager::KIND_FRIEND) : array();
 
 /**
  * @param array $row
@@ -156,6 +174,7 @@ $headerActions = '';
 if ($tableReady) {
     ob_start();
     ?>
+    <button type="button" class="vs-btn vs-btn--default" id="partnerPurgeCacheBtn" title="清理 Redis 中的友链/伙伴列表缓存">清理前台缓存</button>
     <button type="button" class="vs-btn vs-btn--primary" id="partnerOpenAddBtn">添加合作伙伴</button>
     <?php
     $headerActions = ob_get_clean();
@@ -168,14 +187,44 @@ vs_admin_layout_start('合作伙伴', 'partners', $headerActions);
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '合作伙伴功能尚未就绪，请前往「系统管理 → 系统升级」完成数据库结构更新。', array('compact' => true)); ?>
     <?php else: ?>
+        <?php
+        vs_render_notice(
+            'info',
+            '',
+            '合作伙伴与友情链接共用数据表、用类型区分。若升级或缓存串站后，伙伴出现在友链里，可在下方「从友链改回」处理；GitHub / PHP / Gitee 为安装时的默认伙伴种子。',
+            array('compact' => true)
+        );
+        ?>
         <div class="vs-link-empty" id="partnerEmpty"<?php echo count($partners) > 0 ? ' hidden' : ''; ?>>
             <?php vs_render_notice('info', '', '暂无合作伙伴。添加后将显示在默认主题首页「合作伙伴」区域；禁用后前台不再展示。', array('compact' => true)); ?>
         </div>
         <div class="vs-link-list" id="partnerList"<?php echo count($partners) === 0 ? ' hidden' : ''; ?>>
-            <?php foreach ($partners as $row): ?>
-                <?php vs_render_partner_item($row); ?>
+            <?php foreach ($partners as $pRow): ?>
+                <?php vs_render_partner_item($pRow); ?>
             <?php endforeach; ?>
         </div>
+        <?php if (count($friendCandidates) > 0): ?>
+        <div class="vs-form-section" style="margin-top:24px;">
+            <h3 class="vs-form-section__title">从友链改回合作伙伴</h3>
+            <p class="vs-form-hint">以下为当前「已通过」的友情链接。若某条本应是合作伙伴，点「改回合作伙伴」即可（会从前台友链消失、进入伙伴区）。</p>
+            <div class="vs-link-list" id="partnerReclassList">
+                <?php foreach ($friendCandidates as $fRow):
+                    $f = $fRow;
+                    $fid = (int) $f['id'];
+                    ?>
+                <div class="vs-link-row" data-reclass-row="<?php echo $fid; ?>">
+                    <div class="vs-link-row__main">
+                        <div class="vs-link-row__name"><?php echo vs_e($f['name']); ?></div>
+                        <a class="vs-link-row__url" href="<?php echo vs_e($f['siteurl']); ?>" target="_blank" rel="noopener noreferrer"><?php echo vs_e($f['siteurl']); ?></a>
+                    </div>
+                    <div class="vs-link-row__actions">
+                        <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-partner-action="reclassify" data-link-id="<?php echo $fid; ?>">改回合作伙伴</button>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 

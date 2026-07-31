@@ -10534,6 +10534,12 @@ select.vs-input.vs-select {
 .vs-api-doc-head .vs-label {
     margin-bottom: 0;
 }
+.vs-api-doc-head__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
 .vs-api-draft-hint {
     margin-right: auto;
     font-size: 12px;

@@ -182,7 +182,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('已自动保存', array('api_id' => $id, 'silent' => 1));
     }
 
-    if ($action === 'ai_gen_doc' || $action === 'ai_gen_code' || $action === 'ai_gen_code_piece') {
+    if ($action === 'ai_gen_doc' || $action === 'ai_gen_doc_stream' || $action === 'ai_gen_code'
+        || $action === 'ai_gen_code_piece' || $action === 'ai_chat_clear') {
         if (!AiConfig::isReady()) {
             AjaxResponse::error('请先在系统设置中启用并配置 AI');
         }
@@ -235,6 +236,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['jsonrewrite']
         );
 
+        $adminId = (int) Auth::id();
+        $topic = AiChatSession::topicFromApi($data);
+        $docSessionKey = AiChatSession::key('admin', $adminId, 'doc', $topic);
+        $codeSessionKey = AiChatSession::key('admin', $adminId, 'code', $topic);
+
+        if ($action === 'ai_chat_clear') {
+            $scope = isset($_POST['scope']) ? strtolower(trim((string) $_POST['scope'])) : 'doc';
+            if ($scope === 'code') {
+                AiChatSession::clear($codeSessionKey);
+            } elseif ($scope === 'all') {
+                AiChatSession::clear($docSessionKey);
+                AiChatSession::clear($codeSessionKey);
+            } else {
+                AiChatSession::clear($docSessionKey);
+            }
+            AjaxResponse::success('已清除短时效对话记录');
+        }
+
+        if ($action === 'ai_gen_doc_stream') {
+            $continue = !empty($_POST['continue']);
+            AiSse::begin();
+            AiSse::emit('meta', array(
+                'history'   => AiChatSession::historyAvailable(),
+                'continue'  => $continue ? 1 : 0,
+                'topic'     => $topic,
+            ));
+            $gen = AiApiDoc::generateDetailDocStream(
+                $data,
+                $docSessionKey,
+                $continue,
+                function ($chunk) {
+                    AiSse::emit('delta', array('text' => (string) $chunk));
+                }
+            );
+            if (empty($gen['ok'])) {
+                AiSse::emit('error', array(
+                    'msg'  => isset($gen['error']) ? (string) $gen['error'] : '生成失败',
+                    'doc'  => isset($gen['doc']) ? (string) $gen['doc'] : '',
+                    'partial' => 1,
+                ));
+                AiSse::end();
+                exit;
+            }
+            AiSse::emit('done', array(
+                'doc'       => $gen['doc'],
+                'continued' => !empty($gen['continued']) ? 1 : 0,
+                'history'   => !empty($gen['history']) ? 1 : 0,
+                'msg'       => '详细文档已生成',
+            ));
+            AiSse::end();
+            exit;
+        }
+
         if ($action === 'ai_gen_doc') {
             $gen = AiApiDoc::generateDetailDoc($data);
             if (!is_array($gen)) {
@@ -250,6 +304,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $gen = AiApiDoc::generateCodeSamplePiece($data, $auth, $lang);
             if (!is_array($gen)) {
                 AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+            }
+            // 短时效：记一笔「已完成某片」，便于同会话风格连贯（压缩）
+            if (AiChatSession::historyAvailable()) {
+                AiChatSession::appendTurn(
+                    $codeSessionKey,
+                    '请生成鉴权=' . $gen['auth'] . ' 语言=' . $gen['lang'] . ' 的极简示例',
+                    '已完成 :::qs lang=' . $gen['lang'] . ' auth=' . $gen['auth']
+                );
             }
             AjaxResponse::success('单片已生成', array(
                 'piece' => $gen['piece'],
@@ -982,12 +1044,18 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                 <div class="vs-form-row">
                     <div class="vs-api-doc-head">
                         <label class="vs-label" for="apiListFormDocNormal">详细文档（Markdown）</label>
-                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiDocBtn"
-                                title="根据已填接口资料生成">AI 生成详细文档</button>
+                        <div class="vs-api-doc-head__actions">
+                            <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiDocBtn"
+                                    title="流式生成，可实时回填">AI 生成详细文档</button>
+                            <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiDocContinueBtn" hidden
+                                    title="从上次中断处续写">继续生成</button>
+                            <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiChatClearBtn"
+                                    title="清除本接口短时效对话（约 30 分钟）">清除对话</button>
+                        </div>
                     </div>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocNormal" name="doc" rows="10"
                               data-vs-md="off" placeholder="面向调用方的详细说明…"></textarea>
-                    <p class="vs-form-hint">建议由 AI 生成后人工微调；勿写入上游地址或密钥。</p>
+                    <p class="vs-form-hint">点击生成即向 AI 发一轮对话：支持实时流式回填与短时效历史（需 Redis，约 30 分钟）。中断后可点「继续生成」。勿写入上游地址或密钥。</p>
                     <details class="vs-ai-term" id="apiListAiTermDoc" data-ai-term="doc">
                         <summary class="vs-ai-term__summary">AI 编写进程（详细文档）</summary>
                         <pre class="vs-ai-term__log font-mono" id="apiListAiTermDocLog">尚未开始生成。</pre>

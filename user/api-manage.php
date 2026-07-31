@@ -175,7 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ));
     }
 
-    if ($action === 'ai_gen_doc' || $action === 'ai_gen_code' || $action === 'ai_gen_code_piece') {
+    if ($action === 'ai_gen_doc' || $action === 'ai_gen_doc_stream' || $action === 'ai_gen_code'
+        || $action === 'ai_gen_code_piece' || $action === 'ai_chat_clear') {
         if (!class_exists('AiConfig') || !AiConfig::isReady()) {
             AjaxResponse::error('请先联系管理员在系统设置中启用并配置 AI');
         }
@@ -224,6 +225,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['upauth']
         );
 
+        $topic = AiChatSession::topicFromApi($data);
+        $docSessionKey = AiChatSession::key('user', $userId, 'doc', $topic);
+        $codeSessionKey = AiChatSession::key('user', $userId, 'code', $topic);
+
+        if ($action === 'ai_chat_clear') {
+            $scope = isset($_POST['scope']) ? strtolower(trim((string) $_POST['scope'])) : 'doc';
+            if ($scope === 'code') {
+                AiChatSession::clear($codeSessionKey);
+            } elseif ($scope === 'all') {
+                AiChatSession::clear($docSessionKey);
+                AiChatSession::clear($codeSessionKey);
+            } else {
+                AiChatSession::clear($docSessionKey);
+            }
+            AjaxResponse::success('已清除短时效对话记录');
+        }
+
+        if ($action === 'ai_gen_doc_stream') {
+            $continue = !empty($_POST['continue']);
+            AiSse::begin();
+            AiSse::emit('meta', array(
+                'history'  => AiChatSession::historyAvailable(),
+                'continue' => $continue ? 1 : 0,
+                'topic'    => $topic,
+            ));
+            $gen = AiApiDoc::generateDetailDocStream(
+                $data,
+                $docSessionKey,
+                $continue,
+                function ($chunk) {
+                    AiSse::emit('delta', array('text' => (string) $chunk));
+                }
+            );
+            if (empty($gen['ok'])) {
+                AiSse::emit('error', array(
+                    'msg'     => isset($gen['error']) ? (string) $gen['error'] : '生成失败',
+                    'doc'     => isset($gen['doc']) ? (string) $gen['doc'] : '',
+                    'partial' => 1,
+                ));
+                AiSse::end();
+                exit;
+            }
+            AiSse::emit('done', array(
+                'doc'       => $gen['doc'],
+                'continued' => !empty($gen['continued']) ? 1 : 0,
+                'history'   => !empty($gen['history']) ? 1 : 0,
+                'msg'       => '详细文档已生成',
+            ));
+            AiSse::end();
+            exit;
+        }
+
         if ($action === 'ai_gen_doc') {
             $gen = AiApiDoc::generateDetailDoc($data);
             if (!is_array($gen)) {
@@ -238,6 +291,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $gen = AiApiDoc::generateCodeSamplePiece($data, $auth, $lang);
             if (!is_array($gen)) {
                 AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+            }
+            if (AiChatSession::historyAvailable()) {
+                AiChatSession::appendTurn(
+                    $codeSessionKey,
+                    '请生成鉴权=' . $gen['auth'] . ' 语言=' . $gen['lang'] . ' 的极简示例',
+                    '已完成 :::qs lang=' . $gen['lang'] . ' auth=' . $gen['auth']
+                );
             }
             AjaxResponse::success('单片已生成', array(
                 'piece' => $gen['piece'],

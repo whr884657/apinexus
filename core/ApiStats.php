@@ -692,8 +692,8 @@ class ApiStats
             $push($_SERVER['HTTP_X_API_KEY']);
         }
         if (in_array('bearer', $ways, true)) {
-            foreach (self::bearerHeaderCandidates() as $authLine) {
-                $token = self::parseBearerToken($authLine);
+            foreach (self::bearerHeaderCandidates() as $item) {
+                $token = self::parseBearerToken($item['line'], !empty($item['allow_bare']));
                 if ($token !== '') {
                     $push($token);
                 }
@@ -703,23 +703,31 @@ class ApiStats
     }
 
     /**
-     * 收集可能携带 Bearer 的请求头原文（含环境剥掉 Authorization 时的兼容头）
+     * 收集可能携带 Bearer 的请求头（含环境剥掉 Authorization 时的兼容头）
      * 不依赖改 Nginx：X-Authorization / X-Api-Bearer 一般可直达 PHP
+     * allow_bare 仅 X-Api-Bearer 为 true，避免把 Authorization 等非 Bearer 正文当密钥
      *
-     * @return array<int,string>
+     * @return array<int,array{line:string,allow_bare:bool}>
      */
     private static function bearerHeaderCandidates()
     {
-        $lines = array();
-        $keys = array(
-            'HTTP_AUTHORIZATION',
-            'REDIRECT_HTTP_AUTHORIZATION',
-            'HTTP_X_AUTHORIZATION',
-            'HTTP_X_API_BEARER',
+        $items = array();
+        $push = function ($line, $allowBare) use (&$items) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                return;
+            }
+            $items[] = array('line' => $line, 'allow_bare' => (bool) $allowBare);
+        };
+        $serverMap = array(
+            'HTTP_AUTHORIZATION' => false,
+            'REDIRECT_HTTP_AUTHORIZATION' => false,
+            'HTTP_X_AUTHORIZATION' => false,
+            'HTTP_X_API_BEARER' => true,
         );
-        foreach ($keys as $k) {
+        foreach ($serverMap as $k => $allowBare) {
             if (!empty($_SERVER[$k])) {
-                $lines[] = trim((string) $_SERVER[$k]);
+                $push($_SERVER[$k], $allowBare);
             }
         }
         if (function_exists('getallheaders')) {
@@ -727,20 +735,23 @@ class ApiStats
             if (is_array($all)) {
                 foreach ($all as $name => $val) {
                     $n = strtolower(str_replace('_', '-', (string) $name));
-                    if ($n === 'authorization' || $n === 'x-authorization' || $n === 'x-api-bearer') {
-                        $lines[] = trim((string) $val);
+                    if ($n === 'authorization' || $n === 'x-authorization') {
+                        $push($val, false);
+                    } elseif ($n === 'x-api-bearer') {
+                        $push($val, true);
                     }
                 }
             }
         }
-        return $lines;
+        return $items;
     }
 
     /**
      * @param string $line
+     * @param bool   $allowBare 仅 X-Api-Bearer 允许无空格裸密钥
      * @return string
      */
-    private static function parseBearerToken($line)
+    private static function parseBearerToken($line, $allowBare = false)
     {
         $line = trim((string) $line);
         if ($line === '') {
@@ -749,8 +760,8 @@ class ApiStats
         if (preg_match('/^Bearer\s+(\S+)/i', $line, $m)) {
             return trim($m[1]);
         }
-        // X-Api-Bearer 可直接传裸密钥
-        if (stripos($line, 'Bearer ') !== 0 && strpos($line, ' ') === false) {
+        // 仅专用头允许裸密钥；Authorization / X-Authorization 必须带 Bearer 前缀
+        if ($allowBare && strpos($line, ' ') === false) {
             return $line;
         }
         return '';

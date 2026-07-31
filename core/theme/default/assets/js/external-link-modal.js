@@ -136,25 +136,45 @@
             });
         }
 
-        // 统一拦截：友情链接 + 其它外部链接（host 不同）
+        // 统一拦截：外站链接（仅 hostname 不同才算外站；同域 http/https 不弹）
         var links = document.querySelectorAll('a[href]');
+        var localHost = String(window.location.hostname || '').toLowerCase();
+        function sameSiteHost(hostname) {
+            var h = String(hostname || '').toLowerCase();
+            if (!h || !localHost) {
+                return false;
+            }
+            if (h === localHost) {
+                return true;
+            }
+            // www.example.com 与 example.com 视为同站
+            if (h === 'www.' + localHost || localHost === 'www.' + h) {
+                return true;
+            }
+            return false;
+        }
         links.forEach(function (a) {
             var href = a.getAttribute('href');
             if (!href) return;
             if (href.startsWith('#')) return;
             if (href.toLowerCase().startsWith('javascript:')) return;
+            if (href.toLowerCase().startsWith('mailto:')) return;
+            if (href.toLowerCase().startsWith('tel:')) return;
 
-            // 判断是否为友情链接或合作伙伴（这些链接直接跳转，不弹窗）
-            var isFriend = !!(a.closest('.footer-links') || a.closest('.links-grid') || a.closest('.partners-grid'));
-
-            // 底部板块（版权、备案、自定义底栏等）直接跳转，不弹窗
+            // 底部板块（版权、备案、友链条、自定义底栏等）直接跳转，不弹窗
             if (a.closest('footer')) return;
+
+            // 合作伙伴区直接跳转
+            if (a.closest('.partners-grid')) return;
+
+            var isFriendPage = !!(a.closest('.links-grid') || a.getAttribute('data-friend-link') === '1');
 
             var isExternal = false;
             var u;
             try {
-                u = new URL(href, window.location.origin);
-                if (u.origin !== window.location.origin) {
+                u = new URL(href, window.location.href);
+                // 相对路径 / 同域：不弹（协议不同也不弹）
+                if (!sameSiteHost(u.hostname)) {
                     isExternal = true;
                 }
             } catch (e) {
@@ -164,16 +184,14 @@
             // 申请友链页不弹窗，直接跳转
             if (u && (u.pathname.indexOf('/applylink') !== -1 || u.pathname.indexOf('applylink.php') !== -1)) return;
 
-            // 合作伙伴直接跳转，不弹窗
-            if (a.closest('.partners-grid')) return;
-
-            if (!isFriend && !isExternal) return;
+            // 仅外站需要提示；友链列表页外站仍提示（友情链接跳转提示）
+            if (!isExternal) return;
 
             a.addEventListener('click', function (e) {
                 var h = a.getAttribute('href');
                 if (!h) return;
                 e.preventDefault();
-                openModal(h, isFriend ? 'friend' : 'external');
+                openModal(h, isFriendPage ? 'friend' : 'external');
             });
         });
     });

@@ -314,14 +314,20 @@ $canLocal = !empty($canLocal);
                 <div class="vs-api-doc-head">
                     <label class="vs-label" for="userApiFormDoc">详细文档（Markdown）</label>
                     <?php if ($aiReady): ?>
+                    <div class="vs-api-doc-head__actions">
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiDocBtn"
-                                title="根据已填接口资料生成">AI 生成详细文档</button>
+                                title="流式生成，可实时回填">AI 生成详细文档</button>
+                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiDocContinueBtn" hidden
+                                title="从上次中断处续写">继续生成</button>
+                        <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiChatClearBtn"
+                                title="清除本接口短时效对话">清除对话</button>
+                    </div>
                     <?php endif; ?>
                 </div>
                 <textarea class="vs-input vs-textarea" id="userApiFormDoc" name="doc" rows="5"
                           data-vs-md="off" placeholder="面向调用方的详细说明…"></textarea>
                 <p class="vs-form-hint"><?php echo $aiReady
-                    ? '建议由 AI 生成后人工微调；勿写入上游地址或密钥。'
+                    ? '点击生成即向 AI 发一轮对话：支持实时流式回填与短时效历史（约 30 分钟）。中断后可点「继续生成」。'
                     : '管理员启用 AI 后可一键生成；亦可手写 Markdown。'; ?></p>
                 <?php if ($aiReady): ?>
                 <details class="vs-ai-term" id="userApiAiTermDoc" data-ai-term="doc">
