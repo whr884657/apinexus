@@ -48,7 +48,7 @@ class FrontendSponsor
             return '';
         }
         if (preg_match('#^https?://#i', $raw)) {
-            return $raw;
+            return LinkManager::upgradeInsecureUrl($raw);
         }
         if (isset($raw[0]) && $raw[0] === '/') {
             return rtrim(vs_base_url(), '/') . $raw;
@@ -113,7 +113,19 @@ class FrontendSponsor
             return $out;
         };
         if (class_exists('RedisCache')) {
-            return RedisCache::remember(RedisCache::KEY_FRONTEND_SPONSOR, RedisCache::TTL_FRONTEND_PARTNER, $factory);
+            $cached = RedisCache::remember(RedisCache::KEY_FRONTEND_SPONSOR, RedisCache::TTL_FRONTEND_SPONSOR, $factory);
+            if (!is_array($cached)) {
+                return $factory();
+            }
+            foreach ($cached as $i => $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                if (!empty($row['icon']) && is_string($row['icon'])) {
+                    $cached[$i]['icon'] = LinkManager::upgradeInsecureUrl($row['icon']);
+                }
+            }
+            return $cached;
         }
         return $factory();
     }

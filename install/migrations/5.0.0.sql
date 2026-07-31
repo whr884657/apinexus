@@ -14,7 +14,8 @@ ALTER TABLE `{prefix}link`
     MODIFY COLUMN `icon` varchar(255) NOT NULL DEFAULT '' COMMENT '图标链接',
     COMMENT='友情链接与合作伙伴';
 
-UPDATE `{prefix}link` SET `kind` = 0, `enabled` = 1;
+-- 禁止：UPDATE … SET kind=0（全表抹成友链）。
+-- ADD COLUMN 已 DEFAULT 0；重跑若再刷 kind，会把已有合作伙伴/赞助全部改成友链（E211）。
 
 INSERT INTO `{prefix}link` (`name`, `siteurl`, `icon`, `description`, `contact`, `kind`, `enabled`, `status`, `sort`, `createtime`)
 SELECT v.`name`, v.`siteurl`, v.`icon`, '', '', 1, 1, 1, v.`sort`, NOW()

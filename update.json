@@ -1,13 +1,13 @@
 {
-    "version": "13.22.0",
-    "title": "ApiNexus 13.22.0 AI 流式文档与 Redis 站点盐隔离",
-    "release_date": "2026-07-31",
+    "version": "13.22.1",
+    "title": "ApiNexus 13.22.1 代码流式分片与外链图标加固",
+    "release_date": "2026-08-01",
     "db_changes": false,
     "changes": [
-        "AI 详细文档 SSE 流式生成 + 短时效多轮/断点续写；代码示例一片一回填（E209）",
-        "同域 http/https 外链弹窗按 hostname 判定；页脚友链数量/随机/查看更多（E210）",
-        "Redis buildKey 增加站点盐；清空/扫描仅本站键空间；合作伙伴改回与缓存清理",
-        "Bearer 裸钥仅认 X-Api-Bearer；Authorization/X-Authorization 须 Bearer 前缀（E208）"
+        "AI 代码示例单片改为 SSE 流式回填（后台/用户中心 ai_gen_code_piece_stream）",
+        "外链图标 http→https、失败字母兜底；CSP 增加 upgrade-insecure-requests（E212）",
+        "修复迁移 5.0.0 全表 SET kind=0 抹掉伙伴/赞助；迁徙器跳过已含 kind 的库（E211）",
+        "友链页硬上限 120、页脚硬上限 10；移除「友链改回伙伴」临时入口"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

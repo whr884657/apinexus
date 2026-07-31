@@ -257,6 +257,69 @@
     };
 
     /**
+     * http:// → https://，消除 HTTPS 页 Mixed Content 控制台噪音与弱 WebView 崩溃风险
+     *
+     * @param {string} url
+     * @returns {string}
+     */
+    global.VS.upgradeInsecureUrl = function (url) {
+        var s = String(url == null ? '' : url).trim();
+        if (!s) {
+            return '';
+        }
+        if (/^http:\/\//i.test(s)) {
+            return 'https://' + s.slice(7);
+        }
+        return s;
+    };
+
+    /**
+     * 外链图标加载失败时隐藏 img，避免弱 WebView 连环报错
+     *
+     * @param {ParentNode|null} root
+     */
+    global.VS.bindExternalImgFallback = function (root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        var imgs = scope.querySelectorAll
+            ? scope.querySelectorAll('img[data-ext-icon], img.link-avatar, .vs-link-row__icon img, .donate-sponsor-card__avatar, .partner-tile img, .partners-grid img')
+            : [];
+        Array.prototype.forEach.call(imgs, function (img) {
+            if (!img || img.getAttribute('data-ext-bound') === '1') {
+                return;
+            }
+            img.setAttribute('data-ext-bound', '1');
+            var src = img.getAttribute('src') || '';
+            if (/^http:\/\//i.test(src)) {
+                img.setAttribute('src', global.VS.upgradeInsecureUrl(src));
+            }
+            img.addEventListener('error', function onImgErr() {
+                img.removeEventListener('error', onImgErr);
+                img.removeAttribute('src');
+                img.setAttribute('aria-hidden', 'true');
+                img.style.display = 'none';
+                var wrap = img.parentNode;
+                if (wrap && !wrap.querySelector('[data-ext-icon-fallback]')) {
+                    var fb = document.createElement('span');
+                    fb.setAttribute('data-ext-icon-fallback', '1');
+                    fb.className = img.className || 'link-avatar';
+                    fb.textContent = (img.getAttribute('alt') || '?').charAt(0) || '?';
+                    wrap.appendChild(fb);
+                }
+            });
+        });
+    };
+
+    if (typeof document !== 'undefined') {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                global.VS.bindExternalImgFallback(document);
+            });
+        } else {
+            global.VS.bindExternalImgFallback(document);
+        }
+    }
+
+    /**
      * 从可能含 BOM / 杂讯的响应文本中解析 JSON
      *
      * @param {string} text

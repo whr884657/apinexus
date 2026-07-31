@@ -203,7 +203,7 @@ function vs_render_link_item(array $row)
          data-enabled="<?php echo $enabled; ?>">
         <div class="vs-link-row__icon">
             <?php if ($icon !== ''): ?>
-                <img src="<?php echo vs_e($icon); ?>" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer">
+                <img src="<?php echo vs_e($icon); ?>" alt="<?php echo vs_e($name); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
             <?php else: ?>
                 <span class="vs-link-row__initial"><?php echo vs_e(mb_substr($name, 0, 1, 'UTF-8')); ?></span>
             <?php endif; ?>

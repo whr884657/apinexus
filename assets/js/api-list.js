@@ -2322,7 +2322,7 @@
         aiStopTimers();
         aiTermClear(kind);
         aiTermOpen(kind, true);
-        aiTermAppend(kind, '开始分片生成「' + title + '」· 共 ' + jobs.length + ' 片 · '
+        aiTermAppend(kind, '开始流式分片生成「' + title + '」· 共 ' + jobs.length + ' 片 · '
             + (opts.mode === 'parallel' ? ('并行×' + concurrency) : '单线程逐片'));
         aiSetBanner('run', '代码示例 0/' + jobs.length);
         if (aiBannerTime) {
@@ -2428,7 +2428,7 @@
                             next += 1;
                             active += 1;
                             runningLabels[key] = label;
-                            aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 开始编写 · ' + label);
+                            aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 开始流式编写 · ' + label);
                             refreshRunBanner();
 
                             var piecePayload = {};
@@ -2441,42 +2441,72 @@
                             piecePayload.auth = job.auth;
                             piecePayload.lang = job.lang;
 
-                            postAction('ai_gen_code_piece', piecePayload)
-                                .then(function (data) {
-                                    if (!data || data.code !== 1 || !data.piece) {
-                                        var err = (data && data.msg) || '生成失败';
-                                        failed.push(label + '（' + err + '）');
-                                        aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：' + err);
+                            var livePiece = '';
+                            var pieceFailed = false;
+                            return postActionSse('ai_gen_code_piece_stream', piecePayload, {
+                                delta: function (d) {
+                                    var chunk = d && d.text != null ? String(d.text) : '';
+                                    if (!chunk) {
                                         return;
                                     }
-                                    pieces[jobIndex] = String(data.piece);
-                                    if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
-                                        pieces[jobIndex] = window.VsSyntax.scrubHighlightLeak(pieces[jobIndex]);
-                                    }
+                                    livePiece += chunk;
+                                    pieces[jobIndex] = livePiece;
                                     flushPiecesLive();
-                                    aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 完成并已回填 · ' + label
-                                        + '（' + String(data.piece).length + ' 字符）');
-                                })
-                                .catch(function (err) {
-                                    var hint = '网络异常或网关超时';
-                                    if (err && err.message === 'invalid_json') {
-                                        hint = '响应不是有效 JSON（单片超时/网关切断）。可调大「单片超时」或改用单线程';
+                                },
+                                done: function (data) {
+                                    if (data && data.piece) {
+                                        pieces[jobIndex] = String(data.piece);
+                                        if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
+                                            pieces[jobIndex] = window.VsSyntax.scrubHighlightLeak(pieces[jobIndex]);
+                                        }
+                                        flushPiecesLive();
+                                        aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 完成并已回填 · ' + label
+                                            + '（' + String(data.piece).length + ' 字符）');
+                                    } else {
+                                        pieceFailed = true;
+                                        failed.push(label + '（空结果）');
+                                        aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：空结果');
                                     }
-                                    failed.push(label + '（' + hint + '）');
-                                    aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：' + hint);
-                                })
-                                .then(function () {
-                                    delete runningLabels[key];
-                                    active -= 1;
-                                    doneCount += 1;
-                                    settled += 1;
-                                    refreshRunBanner();
-                                    if (settled >= jobs.length) {
-                                        resolve();
-                                        return;
+                                },
+                                error: function (err) {
+                                    pieceFailed = true;
+                                    var errMsg = (err && err.msg) ? String(err.msg) : '生成失败';
+                                    if (err && err.partial && !pieces[jobIndex]) {
+                                        pieces[jobIndex] = String(err.partial);
+                                        flushPiecesLive();
                                     }
-                                    kick();
-                                });
+                                    failed.push(label + '（' + errMsg + '）');
+                                    aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：' + errMsg);
+                                }
+                            }).catch(function (err) {
+                                if (pieceFailed) {
+                                    return;
+                                }
+                                var hint = '网络异常或网关超时';
+                                if (err && err.message === 'invalid_json') {
+                                    hint = '响应不是有效流（单片超时/网关切断）。可调大「单片超时」或改用单线程';
+                                } else if (err && err.message) {
+                                    hint = String(err.message);
+                                }
+                                if (livePiece && !pieces[jobIndex]) {
+                                    pieces[jobIndex] = livePiece;
+                                    flushPiecesLive();
+                                }
+                                failed.push(label + '（' + hint + '）');
+                                aiTermAppend(kind, '[' + (jobIndex + 1) + '/' + jobs.length + '] 失败 · ' + label + '：' + hint);
+                            })
+                            .then(function () {
+                                delete runningLabels[key];
+                                active -= 1;
+                                doneCount += 1;
+                                settled += 1;
+                                refreshRunBanner();
+                                if (settled >= jobs.length) {
+                                    resolve();
+                                    return;
+                                }
+                                kick();
+                            });
                         })(next);
                     }
                 }

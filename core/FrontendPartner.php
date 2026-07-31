@@ -60,7 +60,19 @@ class FrontendPartner
             return $out;
         };
         if (class_exists('RedisCache')) {
-            return RedisCache::remember(RedisCache::KEY_FRONTEND_PARTNER, RedisCache::TTL_FRONTEND_PARTNER, $factory);
+            $cached = RedisCache::remember(RedisCache::KEY_FRONTEND_PARTNER, RedisCache::TTL_FRONTEND_PARTNER, $factory);
+            if (!is_array($cached)) {
+                return $factory();
+            }
+            foreach ($cached as $i => $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                if (!empty($row['icon']) && is_string($row['icon'])) {
+                    $cached[$i]['icon'] = LinkManager::upgradeInsecureUrl($row['icon']);
+                }
+            }
+            return $cached;
         }
         return $factory();
     }

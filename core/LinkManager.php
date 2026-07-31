@@ -140,7 +140,7 @@ class LinkManager
 
     /**
      * @param string $icon
-     * @return string
+     * @return string 展示用绝对 URL；HTTPS 页下 http 图标自动升为 https，避免 Mixed Content
      */
     public static function normalizeIcon($icon)
     {
@@ -149,12 +149,30 @@ class LinkManager
             return '';
         }
         if (preg_match('#^https?://#i', $icon)) {
-            return $icon;
+            return self::upgradeInsecureUrl($icon);
         }
         if (isset($icon[0]) && $icon[0] === '/') {
-            return rtrim(vs_base_url(), '/') . $icon;
+            return self::upgradeInsecureUrl(rtrim(vs_base_url(), '/') . $icon);
         }
         return '';
+    }
+
+    /**
+     * 将 http:// 绝对地址升为 https://（相对路径原样返回）
+     *
+     * @param string $url
+     * @return string
+     */
+    public static function upgradeInsecureUrl($url)
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+        if (stripos($url, 'http://') === 0) {
+            return 'https://' . substr($url, 7);
+        }
+        return $url;
     }
 
     /**
@@ -633,53 +651,6 @@ class LinkManager
             return true;
         } catch (Exception $e) {
             return '删除失败';
-        }
-    }
-
-    /**
-     * 将友链记录改回合作伙伴（修复误标 kind）
-     *
-     * @param int $id
-     * @return true|string
-     */
-    public static function reclassifyToPartner($id)
-    {
-        $id = (int) $id;
-        if ($id <= 0 || !self::tableReady()) {
-            return '记录不存在';
-        }
-        $row = self::findById($id);
-        if (!is_array($row)) {
-            return '记录不存在';
-        }
-        $kind = self::normalizeKind(isset($row['kind']) ? $row['kind'] : self::KIND_FRIEND);
-        if ($kind === self::KIND_PARTNER) {
-            return true;
-        }
-        if ($kind !== self::KIND_FRIEND) {
-            return '仅支持将友情链接改回合作伙伴';
-        }
-        $status = self::normalizeStatus(isset($row['status']) ? $row['status'] : self::STATUS_PENDING);
-        if ($status !== self::STATUS_APPROVED) {
-            return '仅可将「已通过」的友情链接改回合作伙伴';
-        }
-        try {
-            $pdo = Database::connect();
-            $stmt = $pdo->prepare(
-                'UPDATE `' . self::table() . '`
-                 SET `kind` = ?, `status` = ?, `enabled` = ?
-                 WHERE `id` = ? LIMIT 1'
-            );
-            $stmt->execute(array(
-                self::KIND_PARTNER,
-                self::STATUS_APPROVED,
-                self::ENABLED_ON,
-                $id,
-            ));
-            self::invalidateCache();
-            return true;
-        } catch (Exception $e) {
-            return '更新失败';
         }
     }
 

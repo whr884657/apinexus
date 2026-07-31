@@ -268,7 +268,8 @@ class AuthSecurity
     {
         self::sendCommonSecurityHeaders();
         // 宽松基础 CSP：不限制 script/style，避免破坏页脚任意 HTML；仍挡外嵌与插件
-        header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'");
+        // upgrade-insecure-requests：HTTPS 页自动把子资源 http 请求升为 https，减轻 Mixed Content（E212）
+        header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests");
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
         header('Pragma: no-cache');
         header('Expires: 0');
@@ -292,7 +293,7 @@ class AuthSecurity
             return;
         }
         self::sendCommonSecurityHeaders();
-        header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'");
+        header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests");
         if (self::isHttps() && self::sessionCookieSecure()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         }
@@ -312,6 +313,9 @@ class AuthSecurity
         // 现代浏览器已忽略 XSS 过滤器；保留以满足合规扫描对响应头完整性的检测
         header('X-XSS-Protection: 1; mode=block');
         header('Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()');
+        // 封装 APP / 弱 WebView：声明业务常用请求头，降低预检与头过滤导致的异常
+        header('Access-Control-Allow-Headers: *');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     }
 
     /**

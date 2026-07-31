@@ -177,6 +177,133 @@ class AiApiDoc
     public static function generateCodeSamplePiece(array $api, $authWay, $lang)
     {
         $safe = self::safeContext($api);
+        $prep = self::prepareCodePieceRequest($safe, $authWay, $lang);
+        if (is_string($prep)) {
+            return $prep;
+        }
+        $part = self::generateOneCodeSample(
+            $safe,
+            $prep['auth'],
+            $prep['lang'],
+            $prep['require_auth']
+        );
+        if (is_string($part) && strpos($part, '错误：') === 0) {
+            return $part;
+        }
+        if (!is_string($part) || $part === '') {
+            return '错误：未能解析出有效代码块';
+        }
+        return array(
+            'piece' => $part,
+            'auth'  => $prep['auth'],
+            'lang'  => $prep['lang'],
+        );
+    }
+
+    /**
+     * 流式生成单片代码示例（SSE delta 回填）
+     *
+     * @param array         $api
+     * @param string        $authWay
+     * @param string        $lang
+     * @param callable|null $onDelta function(string $chunk)
+     * @return array{ok:bool,piece?:string,auth?:string,lang?:string,error?:string,partial?:string}
+     */
+    public static function generateCodeSamplePieceStream(array $api, $authWay, $lang, $onDelta = null)
+    {
+        $safe = self::safeContext($api);
+        $prep = self::prepareCodePieceRequest($safe, $authWay, $lang);
+        if (is_string($prep)) {
+            return array('ok' => false, 'error' => preg_replace('/^错误：/', '', $prep));
+        }
+        $authWay = $prep['auth'];
+        $lang = $prep['lang'];
+        $requireAuth = $prep['require_auth'];
+        $prompts = self::buildCodeSamplePrompts($safe, $authWay, $lang, $requireAuth);
+        $cfg = $prompts['cfg'];
+        @set_time_limit((int) $cfg['timeout'] + 30);
+
+        $assembled = '';
+        $result = AiClient::chatStreamWithConfig(
+            $cfg,
+            array(
+                array('role' => 'system', 'content' => $prompts['system']),
+                array('role' => 'user', 'content' => $prompts['user']),
+            ),
+            array('temperature' => 0.2, 'max_tokens' => 700),
+            function ($chunk) use (&$assembled, $onDelta) {
+                $assembled .= (string) $chunk;
+                if (is_callable($onDelta)) {
+                    call_user_func($onDelta, (string) $chunk);
+                }
+                if (class_exists('AiSse')) {
+                    AiSse::maybePing(false);
+                }
+            }
+        );
+
+        $text = '';
+        if (!empty($result['ok'])) {
+            $text = isset($result['text']) ? (string) $result['text'] : $assembled;
+            if ($assembled !== '' && strlen($assembled) >= strlen($text)) {
+                $text = $assembled;
+            }
+        } elseif ($assembled !== '') {
+            $text = $assembled;
+        }
+
+        $one = $text !== '' ? self::extractRequestedQsBlock($text, $authWay, $lang, $requireAuth) : '';
+        $needRetry = ($one === '');
+        if (!$needRetry && is_string($one) && self::qsBodyLength($one) > 700) {
+            $needRetry = true;
+        }
+        if ($needRetry) {
+            @set_time_limit((int) $cfg['timeout'] + 30);
+            $retryUser = $prompts['user'] . "\n\n上次输出无效或过长。请再次只输出一个合法短码块，第一行必须是 "
+                . ($requireAuth
+                    ? (':::qs lang=' . $lang . ' auth=' . $authWay)
+                    : (':::qs lang=' . $lang))
+                . " ，最后一行必须是 ::: ，中间纯代码正文务必 ≤400 字符、≤15 行，禁止 emoji 与 ```。";
+            $out2 = AiClient::chatWithConfig($cfg, $prompts['system'], $retryUser, array(
+                'temperature' => 0.1,
+                'max_tokens'  => 500,
+            ));
+            if (is_string($out2) && strpos($out2, '错误：') !== 0) {
+                $retryOne = self::extractRequestedQsBlock($out2, $authWay, $lang, $requireAuth);
+                if ($retryOne !== '') {
+                    $one = $retryOne;
+                }
+            }
+        }
+
+        if ($one === '') {
+            return array(
+                'ok'      => false,
+                'error'   => empty($result['ok'])
+                    ? (isset($result['error']) ? (string) $result['error'] : ('鉴权 ' . $authWay . ' / 语言 ' . $lang . ' 生成失败'))
+                    : ('鉴权 ' . $authWay . ' / 语言 ' . $lang . ' 未能解析出有效代码块'),
+                'partial' => $assembled,
+                'auth'    => $authWay,
+                'lang'    => $lang,
+            );
+        }
+
+        return array(
+            'ok'    => true,
+            'piece' => $one,
+            'auth'  => $authWay,
+            'lang'  => $lang,
+        );
+    }
+
+    /**
+     * @param array  $safe
+     * @param string $authWay
+     * @param string $lang
+     * @return array{auth:string,lang:string,require_auth:bool}|string
+     */
+    private static function prepareCodePieceRequest(array $safe, $authWay, $lang)
+    {
         $needKey = (int) (isset($safe['needkey']) ? $safe['needkey'] : 0);
         $keyways = isset($safe['keyways']) && is_array($safe['keyways']) ? $safe['keyways'] : array('query');
         if ($needKey === 0) {
@@ -199,17 +326,10 @@ class AiApiDoc
             return '错误：本接口未启用该鉴权方式';
         }
 
-        $part = self::generateOneCodeSample($safe, $authWay, $lang, $needKey !== 0);
-        if (is_string($part) && strpos($part, '错误：') === 0) {
-            return $part;
-        }
-        if (!is_string($part) || $part === '') {
-            return '错误：未能解析出有效代码块';
-        }
         return array(
-            'piece' => $part,
-            'auth'  => $authWay,
-            'lang'  => $lang,
+            'auth'         => $authWay,
+            'lang'         => $lang,
+            'require_auth' => $needKey !== 0,
         );
     }
 
@@ -273,6 +393,64 @@ class AiApiDoc
      */
     private static function generateOneCodeSample(array $safe, $authWay, $lang, $requireAuthAttr)
     {
+        $prompts = self::buildCodeSamplePrompts($safe, $authWay, $lang, $requireAuthAttr);
+        if (isset($prompts['error'])) {
+            return '错误：' . $prompts['error'];
+        }
+        $authWay = $prompts['auth'];
+        $lang = $prompts['lang'];
+        $cfg = $prompts['cfg'];
+        @set_time_limit((int) $cfg['timeout'] + 30);
+
+        $chatOpts = array(
+            'temperature' => 0.2,
+            'max_tokens'  => 700,
+        );
+        $out = AiClient::chatWithConfig($cfg, $prompts['system'], $prompts['user'], $chatOpts);
+        if (strpos($out, '错误：') === 0) {
+            return $out;
+        }
+        $one = self::extractRequestedQsBlock($out, $authWay, $lang, $requireAuthAttr);
+        $needRetry = ($one === '');
+        if (!$needRetry && is_string($one)) {
+            $bodyLen = self::qsBodyLength($one);
+            if ($bodyLen > 700) {
+                $needRetry = true;
+            }
+        }
+        if ($needRetry) {
+            @set_time_limit((int) $cfg['timeout'] + 30);
+            $retryUser = $prompts['user'] . "\n\n上次输出无效或过长。请再次只输出一个合法短码块，第一行必须是 "
+                . ($requireAuthAttr
+                    ? (':::qs lang=' . $lang . ' auth=' . $authWay)
+                    : (':::qs lang=' . $lang))
+                . " ，最后一行必须是 ::: ，中间纯代码正文务必 ≤400 字符、≤15 行，禁止 emoji 与 ```。";
+            $out2 = AiClient::chatWithConfig($cfg, $prompts['system'], $retryUser, array(
+                'temperature' => 0.1,
+                'max_tokens'  => 500,
+            ));
+            if (strpos($out2, '错误：') !== 0) {
+                $retryOne = self::extractRequestedQsBlock($out2, $authWay, $lang, $requireAuthAttr);
+                if ($retryOne !== '') {
+                    $one = $retryOne;
+                }
+            }
+        }
+        if ($one === '') {
+            return '错误：鉴权 ' . $authWay . ' / 语言 ' . $lang . ' 未能解析出有效代码块';
+        }
+        return $one;
+    }
+
+    /**
+     * @param array  $safe
+     * @param string $authWay
+     * @param string $lang
+     * @param bool   $requireAuthAttr
+     * @return array{system:string,user:string,auth:string,lang:string,cfg:array,error?:string}
+     */
+    private static function buildCodeSamplePrompts(array $safe, $authWay, $lang, $requireAuthAttr)
+    {
         $authWay = strtolower((string) $authWay);
         if (!in_array($authWay, array('query', 'header', 'bearer'), true)) {
             $authWay = 'query';
@@ -280,7 +458,7 @@ class AiApiDoc
         $lang = strtolower((string) $lang);
         $allowedLangs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
         if (!in_array($lang, $allowedLangs, true)) {
-            return '错误：不支持的语言 ' . $lang;
+            return array('error' => '不支持的语言 ' . $lang);
         }
 
         if ($authWay === 'query') {
@@ -333,48 +511,14 @@ class AiApiDoc
         if ($cfg['timeout'] > 300) {
             $cfg['timeout'] = 300;
         }
-        // 单块请求：每片重置 PHP 执行时限，避免长串排队被杀
-        @set_time_limit((int) $cfg['timeout'] + 30);
 
-        $chatOpts = array(
-            'temperature' => 0.2,
-            'max_tokens'  => 700,
+        return array(
+            'system' => $system,
+            'user'   => $user,
+            'auth'   => $authWay,
+            'lang'   => $lang,
+            'cfg'    => $cfg,
         );
-        $out = AiClient::chatWithConfig($cfg, $system, $user, $chatOpts);
-        if (strpos($out, '错误：') === 0) {
-            return $out;
-        }
-        $one = self::extractRequestedQsBlock($out, $authWay, $lang, $requireAuthAttr);
-        // 解析失败或过长：再试一次，强调压缩
-        $needRetry = ($one === '');
-        if (!$needRetry && is_string($one)) {
-            $bodyLen = self::qsBodyLength($one);
-            if ($bodyLen > 700) {
-                $needRetry = true;
-            }
-        }
-        if ($needRetry) {
-            @set_time_limit((int) $cfg['timeout'] + 30);
-            $retryUser = $user . "\n\n上次输出无效或过长。请再次只输出一个合法短码块，第一行必须是 "
-                . ($requireAuthAttr
-                    ? (':::qs lang=' . $lang . ' auth=' . $authWay)
-                    : (':::qs lang=' . $lang))
-                . " ，最后一行必须是 ::: ，中间纯代码正文务必 ≤400 字符、≤15 行，禁止 emoji 与 ```。";
-            $out2 = AiClient::chatWithConfig($cfg, $system, $retryUser, array(
-                'temperature' => 0.1,
-                'max_tokens'  => 500,
-            ));
-            if (strpos($out2, '错误：') !== 0) {
-                $retryOne = self::extractRequestedQsBlock($out2, $authWay, $lang, $requireAuthAttr);
-                if ($retryOne !== '') {
-                    $one = $retryOne;
-                }
-            }
-        }
-        if ($one === '') {
-            return '错误：鉴权 ' . $authWay . ' / 语言 ' . $lang . ' 未能解析出有效代码块';
-        }
-        return $one;
     }
 
     /**

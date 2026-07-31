@@ -1,8 +1,12 @@
 /**
- * 友情链接页轻交互（头像点击轻微摆动）
+ * 友情链接页轻交互（头像点击轻微摆动）+ 外链图标失败兜底
  */
 (function () {
     'use strict';
+
+    if (window.VS && typeof window.VS.bindExternalImgFallback === 'function') {
+        window.VS.bindExternalImgFallback(document.querySelector('.links-page') || document);
+    }
 
     var avatars = document.querySelectorAll('.links-page .link-avatar');
     if (!avatars.length) {
@@ -17,8 +21,7 @@
     }
 
     avatars.forEach(function (el) {
-        el.addEventListener('click', function (e) {
-            e.preventDefault();
+        el.addEventListener('click', function () {
             el.classList.remove('link-avatar-swing');
             void el.offsetWidth;
             el.classList.add('link-avatar-swing');

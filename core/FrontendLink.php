@@ -6,6 +6,9 @@
 
 class FrontendLink
 {
+    /** 友链页硬上限，防止 kind 误刷后海量 DOM 卡死浏览器 */
+    const PAGE_HARD_LIMIT = 120;
+
     /**
      * @param array $row LinkManager::formatRow 或库行
      * @return array|null
@@ -70,7 +73,8 @@ class FrontendLink
         if ($limit < 0) {
             $limit = 0;
         }
-        if ($limit > 10) {
+        // 页脚硬上限 10：即便主题选「全部」也不刷爆页脚 DOM
+        if ($limit === 0 || $limit > 10) {
             $limit = 10;
         }
 
@@ -86,7 +90,7 @@ class FrontendLink
         // 每次请求不同顺序
         shuffle($all);
 
-        if ($limit === 0 || $limit >= $total) {
+        if ($limit >= $total) {
             return array(
                 'items'    => $all,
                 'has_more' => false,
@@ -99,6 +103,32 @@ class FrontendLink
             'items'    => array_slice($all, 0, $limit),
             'has_more' => true,
             'total'    => $total,
+            'limit'    => $limit,
+        );
+    }
+
+    /**
+     * 友链页取数（带硬上限，防卡死）
+     *
+     * @return array{items:array,total:int,truncated:bool,limit:int}
+     */
+    public static function listForThemePage()
+    {
+        $all = self::listForTheme();
+        $total = count($all);
+        $limit = self::PAGE_HARD_LIMIT;
+        if ($total <= $limit) {
+            return array(
+                'items'    => $all,
+                'total'    => $total,
+                'truncated' => false,
+                'limit'    => $limit,
+            );
+        }
+        return array(
+            'items'    => array_slice($all, 0, $limit),
+            'total'    => $total,
+            'truncated' => true,
             'limit'    => $limit,
         );
     }
@@ -136,6 +166,9 @@ class FrontendLink
                 }
                 if (!preg_match('#^https?://#i', $url)) {
                     continue;
+                }
+                if (!empty($row['icon']) && is_string($row['icon'])) {
+                    $row['icon'] = LinkManager::upgradeInsecureUrl($row['icon']);
                 }
                 $clean[] = $row;
             }

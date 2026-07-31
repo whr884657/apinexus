@@ -271,6 +271,21 @@ class DatabaseMigrator
 
         // 新装无历史 /proxy.php?s= 地址时，3.12.0 的 UPDATE 幂等，不强制跳过
 
+        // 新装/已升级含 link.kind 时跳过 5.0.0（E211：旧脚本曾全表 SET kind=0）
+        if (!in_array('5.0.0', $applied, true) && self::tableColumnExists('link', 'kind')) {
+            self::markApplied('5.0.0');
+        }
+
+        // 新装已含 5.5.0（kind 含赞助注释或收款码键）时跳过
+        if (!in_array('5.5.0', $applied, true)
+            && self::tableColumnExists('link', 'kind')
+        ) {
+            $allCfg55 = Config::all();
+            if (isset($allCfg55['sponsor_qr_alipay']) || isset($allCfg55['sponsor_qr_wechat'])) {
+                self::markApplied('5.5.0');
+            }
+        }
+
         // 新装已含 5.8.0 apilog 复合索引时跳过
         if (!in_array('5.8.0', $applied, true) && self::tableIndexExists('apilog', 'idx_createtime_id')) {
             self::markApplied('5.8.0');
@@ -764,7 +779,10 @@ class DatabaseMigrator
     public static function hasSchemaProbe($version)
     {
         $version = trim((string) $version);
-        return ($version === '7.0.0' || $version === '7.1.0' || $version === '10.12.0');
+        return ($version === '5.0.0'
+            || $version === '7.0.0'
+            || $version === '7.1.0'
+            || $version === '10.12.0');
     }
 
     /**
@@ -787,6 +805,10 @@ class DatabaseMigrator
         if ($version === '3.7.1' || $version === '3.8.0' || $version === '3.9.0') {
             return self::tableColumnExists('api', 'needkey')
                 && !self::tableColumnExists('api', 'require_key');
+        }
+        // E211：link.kind 已存在时禁止再跑 5.0.0（历史包含全表 SET kind=0）
+        if ($version === '5.0.0') {
+            return self::tableColumnExists('link', 'kind');
         }
         return false;
     }
@@ -1179,6 +1201,9 @@ class DatabaseMigrator
         }
         if ($version === '7.0.0') {
             return self::tableExists('content');
+        }
+        if ($version === '5.0.0') {
+            return self::tableColumnExists('link', 'kind');
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

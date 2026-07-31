@@ -214,7 +214,7 @@ if (count($announcePopup) > 0) {
                    rel="noopener noreferrer"
                    title="<?php echo vs_e($partner['name']); ?>">
                     <?php if (!empty($partner['icon'])): ?>
-                        <img src="<?php echo vs_e($partner['icon']); ?>" alt="<?php echo vs_e($partner['name']); ?>" loading="lazy" referrerpolicy="no-referrer">
+                        <img src="<?php echo vs_e($partner['icon']); ?>" alt="<?php echo vs_e($partner['name']); ?>" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
                     <?php else: ?>
                         <span class="partner-tile-initial" aria-hidden="true"><?php echo vs_e($partner['initial']); ?></span>
                     <?php endif; ?>

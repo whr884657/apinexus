@@ -82,8 +82,8 @@ $firstQr = $qrCount > 0 ? $paymentQrs[0] : null;
                         <<?php echo $tag; ?> class="donate-sponsor-card"<?php echo $href; ?>
                            style="--donate-i: <?php echo (int) $idx; ?>">
                             <?php if (!empty($item['icon'])): ?>
-                                <img class="donate-sponsor-card__avatar" src="<?php echo vs_e($item['icon']); ?>" alt=""
-                                     loading="lazy" referrerpolicy="no-referrer" width="48" height="48">
+                                <img class="donate-sponsor-card__avatar" src="<?php echo vs_e($item['icon']); ?>" alt="<?php echo vs_e($item['name']); ?>"
+                                     loading="lazy" decoding="async" referrerpolicy="no-referrer" width="48" height="48" data-ext-icon="1">
                             <?php else: ?>
                                 <div class="donate-sponsor-card__avatar donate-sponsor-card__avatar--text"><?php echo vs_e($item['initial']); ?></div>
                             <?php endif; ?>

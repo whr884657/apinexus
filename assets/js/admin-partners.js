@@ -43,10 +43,12 @@
     }
 
     function iconHtml(link) {
-        var url = link.icon_url || '';
+        var url = (window.VS && window.VS.upgradeInsecureUrl)
+            ? window.VS.upgradeInsecureUrl(link.icon_url || '')
+            : (link.icon_url || '');
         var name = link.name || '';
         if (url) {
-            return '<img src="' + esc(url) + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer">';
+            return '<img src="' + esc(url) + '" alt="' + esc(name) + '" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">';
         }
         var initial = name ? name.charAt(0) : '?';
         return '<span class="vs-link-row__initial">' + esc(initial) + '</span>';
@@ -97,6 +99,9 @@
             list.insertAdjacentHTML('afterbegin', html);
         }
         syncEmpty();
+        if (window.VS && window.VS.bindExternalImgFallback) {
+            window.VS.bindExternalImgFallback(list);
+        }
     }
 
     function openOverlay() {
@@ -246,34 +251,6 @@
                     syncEmpty();
                 }).catch(function (err) {
                     VS.showMessage(err.message || '删除失败', 'error');
-                });
-            });
-            return;
-        }
-
-        if (action === 'reclassify') {
-            var ask2 = (window.VsModal && window.VsModal.confirm)
-                ? window.VsModal.confirm('将该条从友情链接改回合作伙伴？前台友链将不再显示它。', '改回合作伙伴')
-                : Promise.resolve(window.confirm('确定改回合作伙伴？'));
-            ask2.then(function (ok) {
-                if (!ok) return;
-                var fd2 = new FormData();
-                fd2.append('action', 'reclassify');
-                fd2.append('link_id', String(id));
-                postAction(fd2).then(function (data) {
-                    VS.showMessage(data.msg || '已改回', 'success');
-                    var reRow = btn.closest('[data-reclass-row]');
-                    if (reRow) {
-                        reRow.remove();
-                    }
-                    if (data.link) {
-                        upsertRow(data.link);
-                    }
-                    window.setTimeout(function () {
-                        window.location.reload();
-                    }, 600);
-                }).catch(function (err) {
-                    VS.showMessage(err.message || '操作失败', 'error');
                 });
             });
         }

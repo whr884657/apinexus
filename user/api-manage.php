@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'ai_gen_doc' || $action === 'ai_gen_doc_stream' || $action === 'ai_gen_code'
-        || $action === 'ai_gen_code_piece' || $action === 'ai_chat_clear') {
+        || $action === 'ai_gen_code_piece' || $action === 'ai_gen_code_piece_stream' || $action === 'ai_chat_clear') {
         if (!class_exists('AiConfig') || !AiConfig::isReady()) {
             AjaxResponse::error('请先联系管理员在系统设置中启用并配置 AI');
         }
@@ -283,6 +283,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
             }
             AjaxResponse::success('详细文档已生成', array('doc' => $gen['doc']));
+        }
+
+        if ($action === 'ai_gen_code_piece_stream') {
+            $auth = isset($_POST['auth']) ? (string) $_POST['auth'] : '';
+            $lang = isset($_POST['lang']) ? (string) $_POST['lang'] : '';
+            AiSse::begin();
+            AiSse::emit('meta', array(
+                'auth' => $auth,
+                'lang' => $lang,
+            ));
+            $gen = AiApiDoc::generateCodeSamplePieceStream(
+                $data,
+                $auth,
+                $lang,
+                function ($chunk) {
+                    AiSse::emit('delta', array('text' => (string) $chunk));
+                }
+            );
+            if (empty($gen['ok'])) {
+                AiSse::emit('error', array(
+                    'msg'     => isset($gen['error']) ? (string) $gen['error'] : '生成失败',
+                    'partial' => isset($gen['partial']) ? (string) $gen['partial'] : '',
+                    'auth'    => isset($gen['auth']) ? (string) $gen['auth'] : $auth,
+                    'lang'    => isset($gen['lang']) ? (string) $gen['lang'] : $lang,
+                ));
+                AiSse::end();
+                exit;
+            }
+            if (AiChatSession::historyAvailable()) {
+                AiChatSession::appendTurn(
+                    $codeSessionKey,
+                    '请生成鉴权=' . $gen['auth'] . ' 语言=' . $gen['lang'] . ' 的极简示例',
+                    '已完成 :::qs lang=' . $gen['lang'] . ' auth=' . $gen['auth']
+                );
+            }
+            AiSse::emit('done', array(
+                'piece' => $gen['piece'],
+                'auth'  => $gen['auth'],
+                'lang'  => $gen['lang'],
+                'msg'   => '单片已生成',
+            ));
+            AiSse::end();
+            exit;
         }
 
         if ($action === 'ai_gen_code_piece') {

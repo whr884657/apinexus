@@ -43,10 +43,12 @@
     }
 
     function iconHtml(link) {
-        var url = link.icon_url || '';
+        var url = (window.VS && window.VS.upgradeInsecureUrl)
+            ? window.VS.upgradeInsecureUrl(link.icon_url || '')
+            : (link.icon_url || '');
         var name = link.name || '';
         if (url) {
-            return '<img src="' + esc(url) + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer">';
+            return '<img src="' + esc(url) + '" alt="' + esc(name) + '" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">';
         }
         var initial = name ? name.charAt(0) : '?';
         return '<span class="vs-link-row__initial">' + esc(initial) + '</span>';
@@ -108,6 +110,9 @@
             list.insertAdjacentHTML('afterbegin', html);
         }
         syncEmpty();
+        if (window.VS && window.VS.bindExternalImgFallback) {
+            window.VS.bindExternalImgFallback(list);
+        }
     }
 
     function openOverlay() {

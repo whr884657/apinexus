@@ -36,6 +36,8 @@ class RedisCache
     const TTL_FRONTEND_CATEGORY = 300;
     const TTL_FRONTEND_LINK = 300;
     const TTL_FRONTEND_PARTNER = 300;
+    /** 赞助商列表与伙伴同级缓存时长 */
+    const TTL_FRONTEND_SPONSOR = 300;
     const TTL_FRONTEND_ARTICLE = 120;
     const TTL_FRONTEND_ANNOUNCE = 60;
     const TTL_FRONTEND_MISC = 120;
@@ -521,7 +523,7 @@ class RedisCache
                 'label' => '赞助名单',
                 'desc' => '前台赞助展示',
                 'key' => self::KEY_FRONTEND_SPONSOR,
-                'ttl_hint' => self::TTL_FRONTEND_PARTNER . ' 秒',
+                'ttl_hint' => self::TTL_FRONTEND_SPONSOR . ' 秒',
                 'chart_color' => '#84cc16',
             ),
             array(
