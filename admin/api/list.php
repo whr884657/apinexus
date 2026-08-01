@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'targeturl'   => isset($_POST['targeturl']) ? (string) $_POST['targeturl'] : '',
             'proxyslug'   => isset($_POST['proxyslug']) ? (string) $_POST['proxyslug'] : '',
             'upauth'      => isset($_POST['upauth']) ? (int) $_POST['upauth'] : 0,
+            'upmethod'    => isset($_POST['upmethod']) ? (int) $_POST['upmethod'] : 0,
             'upkeyvia'    => isset($_POST['upkeyvia']) ? (int) $_POST['upkeyvia'] : 0,
             'upkeyname'   => isset($_POST['upkeyname']) ? (string) $_POST['upkeyname'] : '',
             'upkey'       => isset($_POST['upkey']) ? (string) $_POST['upkey'] : '',
@@ -916,7 +917,14 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <div id="apiListUpKeyViaWrap" hidden>
                         <input type="hidden" id="apiListFormUpKeyVia" name="upkeyvia" value="0">
                     </div>
-                    <div class="vs-form-row vs-form-row--3">
+                    <div class="vs-form-row vs-form-row--2">
+                        <div>
+                            <label class="vs-label" for="apiListFormUpMethod">上游请求方式</label>
+                            <select class="vs-input vs-select" id="apiListFormUpMethod" name="upmethod" data-vs-pick>
+                                <option value="0">GET</option>
+                                <option value="1">POST</option>
+                            </select>
+                        </div>
                         <div>
                             <label class="vs-label" for="apiListFormUpAuth">上游认证方式</label>
                             <select class="vs-input vs-select" id="apiListFormUpAuth" name="upauth" data-vs-pick>
@@ -926,6 +934,9 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                 <option value="2">Bearer Token</option>
                             </select>
                         </div>
+                    </div>
+                    <p class="vs-form-hint">上游请求方式：中继真正打向上游的方法（可与上方调用方「请求方式」不同）。例：调用方用 GET，上游只收 POST 时选 POST。</p>
+                    <div class="vs-form-row vs-form-row--2">
                         <div>
                             <label class="vs-label" for="apiListFormUpUaMode">出站 User-Agent</label>
                             <select class="vs-input vs-select" id="apiListFormUpUaMode" name="upuamode" data-vs-pick>

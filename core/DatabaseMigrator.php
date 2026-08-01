@@ -392,6 +392,11 @@ class DatabaseMigrator
             self::markApplied('13.22.2');
         }
 
+        // 新装已含 13.22.5 代理上游请求方式列时跳过
+        if (!in_array('13.22.5', $applied, true) && self::tableColumnExists('api', 'upmethod')) {
+            self::markApplied('13.22.5');
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
     }
@@ -790,7 +795,8 @@ class DatabaseMigrator
             || $version === '7.0.0'
             || $version === '7.1.0'
             || $version === '10.12.0'
-            || $version === '13.22.2');
+            || $version === '13.22.2'
+            || $version === '13.22.5');
     }
 
     /**
@@ -1216,6 +1222,9 @@ class DatabaseMigrator
         if ($version === '13.22.2') {
             return self::tableColumnExists('user', 'pointsspent')
                 && self::tableColumnExists('user', 'keycalls');
+        }
+        if ($version === '13.22.5') {
+            return self::tableColumnExists('api', 'upmethod');
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

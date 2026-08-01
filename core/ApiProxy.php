@@ -8,6 +8,8 @@
  *
  * 转发策略（v13.4.0+）：
  *   - 一律先由本站 curl 请求上游（无论上游是否需要密钥），不对「上游接口 URL」本身做网关 302
+ *   - 上游 HTTP 方法由 api.upmethod 决定（0=GET / 1=POST，v13.22.5）；可与调用方方法不同
+ *   - 调用方 method 字段声明允许的 GET/POST；不在声明内则 errcode 11018
  *   - 上游响应为 JSON/TXT/二进制等：透传状态码、Content-Type 与正文
  *   - 若配置了 jsonrewrite：仅对合法 JSON 正文做字段级 set/del（见 ProxyJsonRewrite；TXT/二进制不改）
  *   - 上游响应为 3xx + Location（如随机视频跳转）：校验公网后原样把跳转还给调用方（v13.4.1）
@@ -209,9 +211,20 @@ class ApiProxy
             vs_api_error_exit(ApiError::UPSTREAM_BLOCKED, '上游地址不允许指向内网或非公网主机');
         }
 
-        $params = $_GET;
-        unset($params[self::REWRITE_SLUG_PARAM]);
-        unset($params['key'], $params['api_key'], $params['apikey']);
+        $clientMethod = isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string) $_SERVER['REQUEST_METHOD']) : 'GET';
+        if ($clientMethod === '') {
+            $clientMethod = 'GET';
+        }
+        if ($clientMethod !== 'OPTIONS') {
+            $checkMethod = ($clientMethod === 'HEAD') ? 'GET' : $clientMethod;
+            $allowed = ApiManager::normalizeMethods(isset($row['method']) ? $row['method'] : ApiManager::METHOD_GET);
+            if (!in_array($checkMethod, $allowed, true)) {
+                ApiStats::hitProxy($row, false, ApiError::BAD_METHOD);
+                vs_api_error_exit(ApiError::BAD_METHOD, '请求方式不允许，请使用本接口支持的方式调用');
+            }
+        }
+
+        $collected = self::collectClientPayload();
 
         // 付费代理：先扣积分再中继（失败由 hitProxy 退回）
         $prepaid = ApiStats::chargeProxyUpfront($row);
@@ -222,23 +235,95 @@ class ApiProxy
             vs_api_error_exit($errcode, $msg);
         }
 
-        self::relayToUpstream($row, $target, $params);
+        self::relayToUpstream($row, $target, $collected);
     }
 
     /**
-     * 组装上游请求（URL + 额外头）
+     * 收集调用方 Query / 表单 / JSON 参数（已剥离平台密钥字段）
+     *
+     * @return array{params:array<string,mixed>,rawBody:string,contentType:string}
+     */
+    private static function collectClientPayload()
+    {
+        $params = array();
+        if (!empty($_GET) && is_array($_GET)) {
+            foreach ($_GET as $k => $v) {
+                if (is_array($v)) {
+                    continue;
+                }
+                $key = (string) $k;
+                $keyLower = strtolower($key);
+                if ($key === '' || $key === self::REWRITE_SLUG_PARAM
+                    || $keyLower === 'key' || $keyLower === 'api_key' || $keyLower === 'apikey') {
+                    continue;
+                }
+                $params[$key] = $v;
+            }
+        }
+        if (!empty($_POST) && is_array($_POST)) {
+            $post = self::stripPlatformKeyFieldsFromArray($_POST);
+            foreach ($post as $k => $v) {
+                if (is_array($v)) {
+                    continue;
+                }
+                $params[(string) $k] = $v;
+            }
+        }
+
+        $contentType = isset($_SERVER['CONTENT_TYPE']) ? (string) $_SERVER['CONTENT_TYPE'] : '';
+        $rawIn = file_get_contents('php://input');
+        $rawBody = is_string($rawIn) ? $rawIn : '';
+        if ($rawBody !== '') {
+            $rawBody = self::stripPlatformKeyFieldsFromBody($rawBody, $contentType);
+        }
+
+        // application/json：把一层对象键值并入 params（供 GET 上游或表单化 POST）
+        if ($rawBody !== '' && stripos($contentType, 'application/json') !== false) {
+            $decoded = json_decode($rawBody, true);
+            if (is_array($decoded)) {
+                foreach ($decoded as $k => $v) {
+                    if (is_array($v) || is_object($v)) {
+                        continue;
+                    }
+                    $key = (string) $k;
+                    $keyLower = strtolower($key);
+                    if ($key === '' || $keyLower === 'key' || $keyLower === 'api_key' || $keyLower === 'apikey') {
+                        continue;
+                    }
+                    if (!array_key_exists($key, $params)) {
+                        $params[$key] = $v;
+                    }
+                }
+            }
+        }
+
+        return array(
+            'params'      => $params,
+            'rawBody'     => $rawBody,
+            'contentType' => $contentType,
+        );
+    }
+
+    /**
+     * 组装上游请求（URL + 头 + 正文；按 upmethod）
      *
      * @param string $targetUrl
      * @param array  $row
-     * @param array  $clientParams
-     * @return array{url:string,headers:array}|string
+     * @param array  $clientParams 扁平参数
+     * @param array  $payload      collectClientPayload 结果（可选）
+     * @return array{url:string,headers:array,method:string,body:string,contentType:string}|string
      */
-    public static function buildUpstreamRequest($targetUrl, array $row, array $clientParams)
+    public static function buildUpstreamRequest($targetUrl, array $row, array $clientParams, array $payload = array())
     {
         $targetUrl = trim((string) $targetUrl);
         if ($targetUrl === '' || !preg_match('#^https?://#i', $targetUrl)) {
             return '上游地址无效';
         }
+
+        $upmethod = ApiManager::hasUpmethodColumn()
+            ? ApiManager::normalizeUpmethod(isset($row['upmethod']) ? $row['upmethod'] : ApiManager::UPMETHOD_GET)
+            : ApiManager::UPMETHOD_GET;
+        $httpMethod = ApiManager::upmethodHttp($upmethod);
 
         $params = array();
         foreach ($clientParams as $k => $v) {
@@ -255,10 +340,12 @@ class ApiProxy
         }
 
         $headers = array();
+        $queryExtra = array();
         $upauth = ApiManager::hasUpstreamAuthColumns()
             ? ApiManager::normalizeUpauth(isset($row['upauth']) ? $row['upauth'] : 0)
             : ApiManager::UPAUTH_NONE;
         $upkey = isset($row['upkey']) ? trim((string) $row['upkey']) : '';
+        $upkeyQueryName = '';
 
         if ($upauth === ApiManager::UPAUTH_APIKEY) {
             if ($upkey === '') {
@@ -272,7 +359,8 @@ class ApiProxy
             if ($via === ApiManager::UPKEYVIA_HEADER) {
                 $headers[] = $name . ': ' . $upkey;
             } else {
-                $params[$name] = $upkey;
+                $queryExtra[$name] = $upkey;
+                $upkeyQueryName = $name;
             }
         } elseif ($upauth === ApiManager::UPAUTH_BEARER) {
             if ($upkey === '') {
@@ -281,57 +369,86 @@ class ApiProxy
             $headers[] = 'Authorization: Bearer ' . $upkey;
         }
 
+        $rawBody = isset($payload['rawBody']) ? (string) $payload['rawBody'] : '';
+        $clientCt = isset($payload['contentType']) ? (string) $payload['contentType'] : '';
+        $body = '';
+        $contentType = '';
+
+        if ($upmethod === ApiManager::UPMETHOD_GET) {
+            $url = self::mergeQuery($targetUrl, array_merge($params, $queryExtra));
+            return array(
+                'url'         => $url,
+                'headers'     => $headers,
+                'method'      => 'GET',
+                'body'        => '',
+                'contentType' => '',
+            );
+        }
+
+        // POST 上游：业务参数进正文；Query 仅保留上游 Key（若配置为 Query）
+        $url = self::mergeQuery($targetUrl, $queryExtra);
+        $isJson = ($rawBody !== '' && stripos($clientCt, 'application/json') !== false);
+        if ($isJson) {
+            $body = $rawBody;
+            $contentType = 'application/json';
+            // JSON 已转发时，仍把未进 JSON 的扁平参数并入 Query（不含 upkey 重复）
+            $urlParams = $params;
+            if ($upkeyQueryName !== '' && array_key_exists($upkeyQueryName, $urlParams)) {
+                unset($urlParams[$upkeyQueryName]);
+            }
+            if ($urlParams !== array()) {
+                $url = self::mergeQuery($url, $urlParams);
+            }
+        } else {
+            $bodyParams = $params;
+            if ($upkeyQueryName !== '' && array_key_exists($upkeyQueryName, $bodyParams)) {
+                unset($bodyParams[$upkeyQueryName]);
+            }
+            $body = http_build_query($bodyParams);
+            $contentType = 'application/x-www-form-urlencoded';
+        }
+
         return array(
-            'url'     => self::mergeQuery($targetUrl, $params),
-            'headers' => $headers,
+            'url'         => $url,
+            'headers'     => $headers,
+            'method'      => $httpMethod,
+            'body'        => $body,
+            'contentType' => $contentType,
         );
     }
 
     /**
      * @param array  $row
      * @param string $target
-     * @param array  $params
+     * @param array  $collected collectClientPayload()
      * @return void
      */
-    private static function relayToUpstream(array $row, $target, array $params)
+    private static function relayToUpstream(array $row, $target, array $collected)
     {
         if (!function_exists('curl_init')) {
             ApiStats::hitProxy($row, false, ApiError::SERVER);
             vs_api_error_exit(ApiError::SERVER, '服务器未启用 curl，无法完成代理');
         }
 
-        $built = self::buildUpstreamRequest($target, $row, $params);
+        $params = isset($collected['params']) && is_array($collected['params']) ? $collected['params'] : array();
+        $built = self::buildUpstreamRequest($target, $row, $params, $collected);
         if (!is_array($built)) {
             ApiStats::hitProxy($row, false, ApiError::UPSTREAM_BAD);
             vs_api_error_exit(ApiError::UPSTREAM_BAD, (string) $built);
         }
 
-        $method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string) $_SERVER['REQUEST_METHOD']) : 'GET';
-        if ($method === '') {
+        $method = isset($built['method']) ? strtoupper((string) $built['method']) : 'GET';
+        if ($method !== 'POST') {
             $method = 'GET';
         }
-
-        $body = '';
-        $contentType = isset($_SERVER['CONTENT_TYPE']) ? (string) $_SERVER['CONTENT_TYPE'] : '';
-        if ($method !== 'GET' && $method !== 'HEAD' && $method !== 'OPTIONS') {
-            $rawIn = file_get_contents('php://input');
-            $body = is_string($rawIn) ? $rawIn : '';
-            if ($body === '' && !empty($_POST)) {
-                $post = self::stripPlatformKeyFieldsFromArray($_POST);
-                $body = http_build_query($post);
-                if ($contentType === '') {
-                    $contentType = 'application/x-www-form-urlencoded';
-                }
-            } elseif ($body !== '') {
-                $body = self::stripPlatformKeyFieldsFromBody($body, $contentType);
-            }
-        }
+        $body = isset($built['body']) ? (string) $built['body'] : '';
+        $contentType = isset($built['contentType']) ? (string) $built['contentType'] : '';
 
         $clientHeaders = class_exists('ProxyClientProfile')
             ? ProxyClientProfile::buildClientHeaders($row)
             : array('Accept: */*', 'User-Agent: ApiNexus-Proxy/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
         $headers = array_merge($clientHeaders, $built['headers']);
-        if ($contentType !== '' && $method !== 'GET' && $method !== 'HEAD') {
+        if ($contentType !== '' && $method === 'POST') {
             $headers[] = 'Content-Type: ' . $contentType;
         }
 
@@ -352,9 +469,7 @@ class ApiProxy
             CURLOPT_HEADER         => true,
             CURLOPT_ENCODING       => '',
         ));
-        if ($method === 'HEAD') {
-            curl_setopt($ch, CURLOPT_NOBODY, true);
-        } elseif ($body !== '' && $method !== 'GET' && $method !== 'OPTIONS') {
+        if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
         }
 

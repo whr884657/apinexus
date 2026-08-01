@@ -47,6 +47,20 @@ class IpLocator
     }
 
     /**
+     * 自定义接口请求方式：get（默认）| post
+     *
+     * @return string
+     */
+    public static function requestMethod()
+    {
+        if (!class_exists('Config')) {
+            return 'get';
+        }
+        $m = strtolower(trim((string) Config::get('ip_loc_method', 'get')));
+        return ($m === 'post') ? 'post' : 'get';
+    }
+
+    /**
      * 解析 IP 归属地文案（失败返回空串）
      *
      * @param string $ip
@@ -98,7 +112,7 @@ class IpLocator
         $host = 'opendata.' . implode('', array_map('chr', array(98, 97, 105, 100, 117))) . '.com';
         $fullUrl = 'http://' . $host . '/api.php?query=' . rawurlencode($ip)
             . '&resource_id=6006&oe=utf8';
-        $body = self::httpGet($fullUrl, array('Accept: application/json'));
+        $body = self::httpRequest($fullUrl, 'GET', array(), array('Accept: application/json'));
         if ($body === '') {
             self::cacheMiss($cacheKey);
             return '';
@@ -175,10 +189,14 @@ class IpLocator
             $query[$authName] = $authValue;
         }
 
-        $sep = (strpos($url, '?') !== false) ? '&' : '?';
-        $fullUrl = $url . $sep . http_build_query($query);
-
-        $body = self::httpGet($fullUrl, $headers);
+        $method = self::requestMethod();
+        if ($method === 'post') {
+            $body = self::httpRequest($url, 'POST', $query, $headers);
+        } else {
+            $sep = (strpos($url, '?') !== false) ? '&' : '?';
+            $fullUrl = $url . $sep . http_build_query($query);
+            $body = self::httpRequest($fullUrl, 'GET', array(), $headers);
+        }
         if ($body === '') {
             self::cacheMiss($cacheKey);
             return '';
@@ -331,14 +349,25 @@ class IpLocator
     }
 
     /**
-     * @param string   $url
-     * @param string[] $headers
+     * @param string               $url
+     * @param string               $method GET|POST
+     * @param array<string,mixed>  $formParams POST 时作 application/x-www-form-urlencoded；GET 时忽略（URL 已含查询串）
+     * @param string[]             $headers
      * @return string
      */
-    private static function httpGet($url, array $headers)
+    private static function httpRequest($url, $method, array $formParams, array $headers)
     {
         if (!self::assertPublicHttpUrl($url)) {
             return '';
+        }
+        $method = strtoupper(trim((string) $method));
+        if ($method !== 'POST') {
+            $method = 'GET';
+        }
+        $bodyStr = '';
+        if ($method === 'POST') {
+            $bodyStr = http_build_query($formParams);
+            $headers[] = 'Content-Type: application/x-www-form-urlencoded';
         }
         if (function_exists('curl_init')) {
             $ch = curl_init($url);
@@ -350,7 +379,15 @@ class IpLocator
             curl_setopt($ch, CURLOPT_TIMEOUT, self::TIMEOUT);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_USERAGENT, 'ApiNexus-IpLocator/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            // 自定义上游可能证书不全；内置同路径兼容
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            if ($method === 'POST') {
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $bodyStr);
+            } else {
+                curl_setopt($ch, CURLOPT_HTTPGET, true);
+            }
             $body = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
@@ -363,15 +400,17 @@ class IpLocator
         foreach ($headers as $h) {
             $hdr .= $h . "\r\n";
         }
-        $ctx = stream_context_create(array(
-            'http' => array(
-                'method'        => 'GET',
-                'header'        => $hdr,
-                'timeout'       => self::TIMEOUT,
-                'follow_location' => 0,
-                'max_redirects' => 0,
-            ),
-        ));
+        $httpOpts = array(
+            'method'          => $method,
+            'header'          => $hdr,
+            'timeout'         => self::TIMEOUT,
+            'follow_location' => 0,
+            'max_redirects'   => 0,
+        );
+        if ($method === 'POST') {
+            $httpOpts['content'] = $bodyStr;
+        }
+        $ctx = stream_context_create(array('http' => $httpOpts));
         $body = @file_get_contents($url, false, $ctx);
         return is_string($body) ? $body : '';
     }

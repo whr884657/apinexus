@@ -160,6 +160,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}api` (
     `upkeyvia` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'API Key传递：0URL参数(Query) 1请求头(Header)（仅upauth=1）',
     `upkeyname` varchar(64) NOT NULL DEFAULT '' COMMENT 'API Key参数名或头名（如api_key、X-API-Key）',
     `upkey` varchar(500) NOT NULL DEFAULT '' COMMENT '上游密钥或Bearer令牌（仅服务端使用，不对外暴露）',
+    `upmethod` tinyint(1) NOT NULL DEFAULT 0 COMMENT '上游请求方式：0=GET 1=POST（仅代理类型）',
     `upuamode` tinyint(1) NOT NULL DEFAULT 0 COMMENT '出站UA模式：0系统默认 1内置预设 2自定义 3轮询内置',
     `upuapreset` varchar(32) NOT NULL DEFAULT '' COMMENT '内置UA预设键',
     `upua` varchar(512) NOT NULL DEFAULT '' COMMENT '自定义User-Agent',

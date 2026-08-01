@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'targeturl'    => isset($_POST['targeturl']) ? (string) $_POST['targeturl'] : '',
             'proxyslug'    => isset($_POST['proxyslug']) ? (string) $_POST['proxyslug'] : '',
             'upauth'       => isset($_POST['upauth']) ? (int) $_POST['upauth'] : 0,
+            'upmethod'     => isset($_POST['upmethod']) ? (int) $_POST['upmethod'] : 0,
             'upkeyvia'     => isset($_POST['upkeyvia']) ? (int) $_POST['upkeyvia'] : 0,
             'upkeyname'    => isset($_POST['upkeyname']) ? (string) $_POST['upkeyname'] : '',
             'upkey'        => isset($_POST['upkey']) ? (string) $_POST['upkey'] : '',

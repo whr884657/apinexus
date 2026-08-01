@@ -442,10 +442,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     AjaxResponse::error('IP 解析 API 地址无效或指向内网，请使用公网 http(s) 地址');
                 }
             }
+            $reqMethod = isset($_POST['ip_loc_method']) ? strtolower(trim((string) $_POST['ip_loc_method'])) : 'get';
+            if ($reqMethod !== 'post') {
+                $reqMethod = 'get';
+            }
             Config::setMany(array(
                 'ip_loc_enabled'   => $enabled,
                 'ip_loc_mode'      => 'custom',
                 'ip_loc_url'       => $url,
+                'ip_loc_method'    => $reqMethod,
                 'ip_loc_ip_param'  => trim(isset($_POST['ip_loc_ip_param']) ? $_POST['ip_loc_ip_param'] : 'ip'),
                 'ip_loc_auth'      => (string) $auth,
                 'ip_loc_auth_name' => trim(isset($_POST['ip_loc_auth_name']) ? $_POST['ip_loc_auth_name'] : ''),
@@ -1065,6 +1070,7 @@ vs_admin_accordion_start(
 $ipLocExtras = IpLocator::parseExtras(Config::get('ip_loc_extras', '[]'));
 $ipLocAuth = (int) Config::get('ip_loc_auth', '0');
 $ipLocMode = IpLocator::provider();
+$ipLocMethod = IpLocator::requestMethod();
 vs_admin_accordion_start(
     'settings-iploc',
     'IP 归属地',
@@ -1090,13 +1096,22 @@ vs_admin_accordion_start(
             <?php vs_render_notice('tip', '', '内置方式开箱即用；若你已有稳定的归属地 API，可选自定义并填写下方参数。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div id="ipLocCustomFields">
-        <div class="vs-form-row">
-            <label class="vs-label" for="ipLocUrl">查询接口 URL</label>
-            <input type="url" class="vs-input" name="ip_loc_url" id="ipLocUrl"
-                   value="<?php echo vs_e(Config::get('ip_loc_url', '')); ?>"
-                   placeholder="https://example.com/ip/query">
-            <?php vs_render_notice('tip', '', '仅自定义模式需要。使用 GET 请求；IP 与其它参数会自动拼到查询串。', array('field' => true, 'compact' => true)); ?>
+        <div class="vs-form-row vs-form-row--2">
+            <div>
+                <label class="vs-label" for="ipLocUrl">查询接口 URL</label>
+                <input type="url" class="vs-input" name="ip_loc_url" id="ipLocUrl"
+                       value="<?php echo vs_e(Config::get('ip_loc_url', '')); ?>"
+                       placeholder="https://example.com/ip/query">
+            </div>
+            <div>
+                <label class="vs-label" for="ipLocMethod">请求方式</label>
+                <select class="vs-input" name="ip_loc_method" id="ipLocMethod" data-vs-pick>
+                    <option value="get"<?php echo $ipLocMethod === 'get' ? ' selected' : ''; ?>>GET（默认）</option>
+                    <option value="post"<?php echo $ipLocMethod === 'post' ? ' selected' : ''; ?>>POST</option>
+                </select>
+            </div>
         </div>
+        <?php vs_render_notice('tip', '', '仅自定义模式需要。GET：IP 与其它参数拼到查询串；POST：以表单字段提交到正文。按上游文档选择。', array('field' => true, 'compact' => true)); ?>
         <div class="vs-form-row">
             <label class="vs-label" for="ipLocIpParam">IP 参数名</label>
             <input type="text" class="vs-input" name="ip_loc_ip_param" id="ipLocIpParam"

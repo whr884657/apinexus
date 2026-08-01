@@ -49,6 +49,7 @@
         targeturl: document.getElementById('apiListFormTargetUrl'),
         proxyslug: document.getElementById('apiListFormProxySlug'),
         upauth: document.getElementById('apiListFormUpAuth'),
+        upmethod: document.getElementById('apiListFormUpMethod'),
         upkeyvia: document.getElementById('apiListFormUpKeyVia'),
         upkeyname: document.getElementById('apiListFormUpKeyName'),
         upkey: document.getElementById('apiListFormUpKey'),
@@ -163,7 +164,7 @@
         }
 
         if (window.VSPick) {
-            ['apiListFormUpAuth', 'apiListFormUpUaMode', 'apiListFormUpUaPreset', 'apiListFormUpRefererMode'].forEach(function (id) {
+            ['apiListFormUpMethod', 'apiListFormUpAuth', 'apiListFormUpUaMode', 'apiListFormUpUaPreset', 'apiListFormUpRefererMode'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -1531,6 +1532,9 @@
         if (fields.proxyslug) {
             fields.proxyslug.value = '';
         }
+        if (fields.upmethod) {
+            fields.upmethod.value = '0';
+        }
         if (fields.upauth) {
             fields.upauth.value = '0';
         }
@@ -1598,7 +1602,7 @@
         switchFormTab('basic');
         syncKeywaysUi();
         if (window.VSPick) {
-            ['apiListFormStatus', 'apiListFormCategory', 'apiListFormRequireKey', 'apiListFormUpAuth', 'apiListFormUpUaMode', 'apiListFormUpUaPreset', 'apiListFormUpRefererMode'].forEach(function (id) {
+            ['apiListFormStatus', 'apiListFormCategory', 'apiListFormRequireKey', 'apiListFormUpMethod', 'apiListFormUpAuth', 'apiListFormUpUaMode', 'apiListFormUpUaPreset', 'apiListFormUpRefererMode'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -1634,6 +1638,9 @@
         }
         if (fields.proxyslug) {
             fields.proxyslug.value = api.proxyslug || '';
+        }
+        if (fields.upmethod) {
+            fields.upmethod.value = String(parseInt(api.upmethod, 10) || 0);
         }
         if (fields.upauth) {
             fields.upauth.value = encodeUpAuthUi(api.upauth, api.upkeyvia);
@@ -1707,7 +1714,7 @@
         setIconPickerSelection(api.icon || api.icon_raw || '');
         switchFormTab('basic');
         if (window.VSPick) {
-            ['apiListFormStatus','apiListFormCategory','apiListFormRequireKey','apiListFormCharge','apiListFormUpAuth','apiListFormUpUaMode','apiListFormUpUaPreset','apiListFormUpRefererMode'].forEach(function (id) {
+            ['apiListFormStatus','apiListFormCategory','apiListFormRequireKey','apiListFormCharge','apiListFormUpMethod','apiListFormUpAuth','apiListFormUpUaMode','apiListFormUpUaPreset','apiListFormUpRefererMode'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -1783,6 +1790,7 @@
             })(),
             upkeyname: fields.upkeyname ? fields.upkeyname.value.trim() : '',
             upkey: fields.upkey ? fields.upkey.value.trim() : '',
+            upmethod: fields.upmethod ? String(parseInt(fields.upmethod.value, 10) || 0) : '0',
             upuamode: fields.upuamode ? String(parseInt(fields.upuamode.value, 10) || 0) : '0',
             upuapreset: fields.upuapreset ? fields.upuapreset.value : '',
             upua: fields.upua ? fields.upua.value.trim() : '',

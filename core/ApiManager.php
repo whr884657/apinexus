@@ -7,6 +7,7 @@
  * 审核状态 audit：0 待审核 / 1 通过 / 2 不通过（管理员发布默认通过；用户投稿为待审核）
  * 接口类型 apitype：0 本地路径 / 1 代理外链（一律服务端中继，v13.4.0+）
  * 上游认证 upauth：0 无需 / 1 API Key（配合 upkeyvia：0 Query / 1 Header）/ 2 Bearer Token
+ * 上游请求方式 upmethod：0 GET / 1 POST（仅代理；中继按此调用上游，与调用方 method 可不同）
  * 出站身份：upuamode / upuapreset / upua / upreferermode / upreferer（见 ProxyClientProfile）
  * 文档字段：doc=详细文档（Markdown）；aidoc=代码示例（Markdown）
  */
@@ -43,6 +44,11 @@ class ApiManager
     const UPKEYVIA_QUERY = 0;
     /** API Key 经请求头传递 */
     const UPKEYVIA_HEADER = 1;
+
+    /** 上游请求方式：GET */
+    const UPMETHOD_GET = 0;
+    /** 上游请求方式：POST */
+    const UPMETHOD_POST = 1;
 
     const METHOD_GET = 'GET';
     const METHOD_POST = 'POST';
@@ -250,6 +256,57 @@ class ApiManager
             $ok = false;
         }
         return $ok;
+    }
+
+    /**
+     * 是否已具备上游请求方式字段（迁移 13.22.5 后为 true）
+     *
+     * @return bool
+     */
+    public static function hasUpmethodColumn()
+    {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
+        try {
+            $pdo = Database::connect();
+            $col = $pdo->query('SHOW COLUMNS FROM `' . self::table() . '` LIKE ' . $pdo->quote('upmethod'));
+            $ok = $col && $col->fetchColumn();
+        } catch (Exception $e) {
+            $ok = false;
+        }
+        return $ok;
+    }
+
+    /**
+     * @param mixed $v
+     * @return int
+     */
+    public static function normalizeUpmethod($v)
+    {
+        $n = (int) $v;
+        return ($n === self::UPMETHOD_POST) ? self::UPMETHOD_POST : self::UPMETHOD_GET;
+    }
+
+    /**
+     * @param mixed $v
+     * @return string
+     */
+    public static function upmethodLabel($v)
+    {
+        return self::normalizeUpmethod($v) === self::UPMETHOD_POST ? 'POST' : 'GET';
+    }
+
+    /**
+     * 上游方式常量 → curl 用 HTTP 动词
+     *
+     * @param mixed $v
+     * @return string
+     */
+    public static function upmethodHttp($v)
+    {
+        return self::upmethodLabel($v);
     }
 
     /**
@@ -899,6 +956,7 @@ class ApiManager
             self::applyQpmField($id, $parsed);
             self::applyKeywaysField($id, $parsed);
             self::applyUpstreamAuthFields($id, $parsed);
+            self::applyUpmethodField($id, $parsed);
             self::applyProxyClientFields($id, $parsed);
             self::applyJsonRewriteField($id, $parsed);
             RedisCache::invalidateFrontend();
@@ -1081,6 +1139,7 @@ class ApiManager
             self::applyQpmField($apiId, $parsed);
             self::applyKeywaysField($apiId, $parsed);
             self::applyUpstreamAuthFields($apiId, $parsed);
+            self::applyUpmethodField($apiId, $parsed);
             self::applyProxyClientFields($apiId, $parsed);
             self::applyJsonRewriteField($apiId, $parsed);
             RedisCache::invalidateFrontend();
@@ -1443,6 +1502,10 @@ class ApiManager
             'upkeyvia'      => self::normalizeUpkeyvia(isset($row['upkeyvia']) ? $row['upkeyvia'] : self::UPKEYVIA_QUERY),
             'upkeyname'     => isset($row['upkeyname']) ? (string) $row['upkeyname'] : '',
             'upkey'         => isset($row['upkey']) ? (string) $row['upkey'] : '',
+            'upmethod'      => self::hasUpmethodColumn()
+                ? self::normalizeUpmethod(isset($row['upmethod']) ? $row['upmethod'] : self::UPMETHOD_GET)
+                : self::UPMETHOD_GET,
+            'upmethod_label'=> self::upmethodLabel(isset($row['upmethod']) ? $row['upmethod'] : self::UPMETHOD_GET),
             'upuamode'      => class_exists('ProxyClientProfile')
                 ? ProxyClientProfile::normalizeUaMode(isset($row['upuamode']) ? $row['upuamode'] : 0)
                 : 0,
@@ -1686,6 +1749,7 @@ class ApiManager
             $data['upkeyvia'] = self::UPKEYVIA_QUERY;
             $data['upkeyname'] = '';
             $data['upkey'] = '';
+            $data['upmethod'] = self::UPMETHOD_GET;
             $data['upuamode'] = 0;
             $data['upuapreset'] = '';
             $data['upua'] = '';
@@ -1722,6 +1786,7 @@ class ApiManager
         $upkeyvia = self::UPKEYVIA_QUERY;
         $upkeyname = '';
         $upkey = '';
+        $upmethod = self::UPMETHOD_GET;
         $upuamode = 0;
         $upuapreset = '';
         $upua = '';
@@ -1732,6 +1797,10 @@ class ApiManager
             $upkeyvia = self::normalizeUpkeyvia(isset($data['upkeyvia']) ? $data['upkeyvia'] : self::UPKEYVIA_QUERY);
             $upkeyname = self::normalizeUpkeyname(isset($data['upkeyname']) ? $data['upkeyname'] : '');
             $upkey = self::normalizeUpkey(isset($data['upkey']) ? $data['upkey'] : '');
+            $upmethod = self::normalizeUpmethod(isset($data['upmethod']) ? $data['upmethod'] : self::UPMETHOD_GET);
+            if ($upmethod === self::UPMETHOD_POST && !self::hasUpmethodColumn()) {
+                return '上游请求方式功能尚未就绪，请先前往「系统升级」完成结构更新';
+            }
             if ($upauth !== self::UPAUTH_NONE && !self::hasUpstreamAuthColumns()) {
                 return '上游认证功能尚未就绪，请先前往「系统升级」完成结构更新';
             }
@@ -1817,6 +1886,7 @@ class ApiManager
         $data['upkeyvia'] = $upkeyvia;
         $data['upkeyname'] = $upkeyname;
         $data['upkey'] = $upkey;
+        $data['upmethod'] = $upmethod;
         $data['upuamode'] = $upuamode;
         $data['upuapreset'] = $upuapreset;
         $data['upua'] = $upua;
@@ -1945,6 +2015,7 @@ class ApiManager
             'upkeyvia'      => $upkeyvia,
             'upkeyname'     => $upkeyname,
             'upkey'         => $upkey,
+            'upmethod'      => $upmethod,
             'upuamode'      => $upuamode,
             'upuapreset'    => $upuapreset,
             'upua'          => $upua,
@@ -2074,6 +2145,33 @@ class ApiManager
                 self::normalizeUpkeyvia(isset($parsed['upkeyvia']) ? $parsed['upkeyvia'] : self::UPKEYVIA_QUERY),
                 isset($parsed['upkeyname']) ? (string) $parsed['upkeyname'] : '',
                 isset($parsed['upkey']) ? (string) $parsed['upkey'] : '',
+                $apiId,
+            ));
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
+     * 写入上游请求方式（独立 UPDATE，兼容未迁移站点）
+     *
+     * @param int   $apiId
+     * @param array $parsed
+     * @return void
+     */
+    private static function applyUpmethodField($apiId, array $parsed)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId <= 0 || !self::hasUpmethodColumn()) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . self::table() . '` SET `upmethod` = ? WHERE `id` = ?'
+            );
+            $stmt->execute(array(
+                self::normalizeUpmethod(isset($parsed['upmethod']) ? $parsed['upmethod'] : self::UPMETHOD_GET),
                 $apiId,
             ));
         } catch (Exception $e) {

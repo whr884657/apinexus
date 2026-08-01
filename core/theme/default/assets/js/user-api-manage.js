@@ -34,6 +34,7 @@
     var upKeyFields = document.getElementById('userApiUpKeyFields');
     var upKeyNameWrap = document.getElementById('userApiUpKeyNameWrap');
     var upAuthSelect = document.getElementById('userApiFormUpAuth');
+    var upMethodSelect = document.getElementById('userApiFormUpMethod');
     var upKeyViaSelect = document.getElementById('userApiFormUpKeyVia');
     var upKeyNameInput = document.getElementById('userApiFormUpKeyName');
     var upKeyInput = document.getElementById('userApiFormUpKey');
@@ -356,7 +357,7 @@
             upRefererWrap.hidden = refMode !== 1;
         }
         if (window.VSPick) {
-            ['userApiFormUpAuth', 'userApiFormUpUaMode', 'userApiFormUpUaPreset', 'userApiFormUpRefererMode'].forEach(function (id) {
+            ['userApiFormUpMethod', 'userApiFormUpAuth', 'userApiFormUpUaMode', 'userApiFormUpUaPreset', 'userApiFormUpRefererMode'].forEach(function (id) {
                 var s = document.getElementById(id);
                 if (s) { window.VSPick.refresh(s); }
             });
@@ -998,6 +999,7 @@
             userApiFormTargetUrl: api.targeturl || '',
             userApiFormProxySlug: api.proxyslug || '',
             userApiFormUpAuth: encodeUpAuthUi(api.upauth, api.upkeyvia),
+            userApiFormUpMethod: String(parseInt(api.upmethod, 10) || 0),
             userApiFormUpKeyVia: String(parseInt(api.upkeyvia, 10) === 1 ? 1 : 0),
             userApiFormUpKeyName: api.upkeyname || '',
             userApiFormUpKey: api.upkey || '',
@@ -1086,6 +1088,7 @@
             })(),
             upkeyname: upKeyNameInput ? upKeyNameInput.value.trim() : '',
             upkey: upKeyInput ? upKeyInput.value.trim() : '',
+            upmethod: upMethodSelect ? String(parseInt(upMethodSelect.value, 10) || 0) : '0',
             upuamode: upUaModeSelect ? String(parseInt(upUaModeSelect.value, 10) || 0) : '0',
             upuapreset: upUaPresetSelect ? upUaPresetSelect.value : '',
             upua: upUaInput ? upUaInput.value.trim() : '',

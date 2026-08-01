@@ -132,7 +132,14 @@ $canLocal = !empty($canLocal);
                 <div id="userApiUpKeyViaWrap" hidden>
                     <input type="hidden" id="userApiFormUpKeyVia" name="upkeyvia" value="0">
                 </div>
-                <div class="vs-form-row vs-form-row--3">
+                <div class="vs-form-row vs-form-row--2">
+                    <div>
+                        <label class="vs-label" for="userApiFormUpMethod">上游请求方式</label>
+                        <select class="vs-input vs-select" id="userApiFormUpMethod" name="upmethod" data-vs-pick>
+                            <option value="0">GET</option>
+                            <option value="1">POST</option>
+                        </select>
+                    </div>
                     <div>
                         <label class="vs-label" for="userApiFormUpAuth">上游认证方式</label>
                         <select class="vs-input vs-select" id="userApiFormUpAuth" name="upauth" data-vs-pick>
@@ -142,6 +149,9 @@ $canLocal = !empty($canLocal);
                             <option value="2">Bearer Token</option>
                         </select>
                     </div>
+                </div>
+                <p class="vs-form-hint">上游请求方式：中继打向上游的方法（可与调用方「请求方式」不同）。</p>
+                <div class="vs-form-row vs-form-row--2">
                     <div>
                         <label class="vs-label" for="userApiFormUpUaMode">出站 User-Agent</label>
                         <select class="vs-input vs-select" id="userApiFormUpUaMode" name="upuamode" data-vs-pick>

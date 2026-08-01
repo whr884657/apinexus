@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.22.4-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.22.5-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -257,11 +257,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.22.4（2026-08-01）
+### v13.22.5（2026-08-01）
 
-- 代理与在线测试兼容上游 HTTPS 坏证书，减少误报上游请求失败
-- AI 详细文档写入全部业务错误码 11001～11017
-- CORE 与代理/AI 相关说明同步
+- 代理接口可单独选择上游 GET/POST；与调用方请求方式分离
+- 自定义 IP 归属地接口支持 GET/POST（默认 GET）
+- 新增业务错误码：请求方式不允许
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

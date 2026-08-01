@@ -1,13 +1,13 @@
 {
-    "version": "13.22.4",
-    "title": "ApiNexus 13.22.4 代理上游 TLS 兼容与 AI 全量错误码",
+    "version": "13.22.5",
+    "title": "ApiNexus 13.22.5 代理上游方法与 IP 归属地请求方式",
     "release_date": "2026-08-01",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "代理/在线测试出站兼容上游 HTTPS 坏证书（过期/自签），避免误报 11016",
-        "不自动把 HTTPS 改写成 HTTP；对外仍只回「上游请求失败」",
-        "AI 详细文档强制写入 11001～11017 全部业务错误码（ApiError::aiDetailDocErrcodeClause）",
-        "CORE / 代理统计 / AI 文档规范同步"
+        "代理接口新增上游请求方式 upmethod（GET/POST），中继按配置调用上游",
+        "调用方 method 与上游方法分离；不在声明方式内返回 11018",
+        "系统设置：自定义 IP 归属地接口可选 GET/POST（默认 GET）",
+        "在线测试中继与正式网关对齐上游方法"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

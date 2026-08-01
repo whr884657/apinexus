@@ -145,12 +145,16 @@ class PlaygroundRelay
             }
             $fwd = self::buildClientForward($params, $authWay);
             $upstreamParams = $fwd['params'];
-            $built = ApiProxy::buildUpstreamRequest($target, $row, $upstreamParams);
+            $built = ApiProxy::buildUpstreamRequest($target, $row, $upstreamParams, array(
+                'params'      => $upstreamParams,
+                'rawBody'     => '',
+                'contentType' => '',
+            ));
             if (!is_array($built)) {
                 return self::fail((string) $built, ApiError::UPSTREAM_BAD, $displayUrl);
             }
-            // 上游只带 ApiProxy 拼装的头；本站调用方密钥已在 guard 阶段校验，勿转给上游
-            $result = self::httpRequest($built['url'], $method, $upstreamParams, $built['headers']);
+            // 上游方法/正文由 api.upmethod 决定（与正式网关一致）；勿跟测试页所选 method
+            $result = self::httpRequestBuilt($built);
             // 与正式网关一致：对代理 JSON 应用字段改写（无论上游业务成功与否）
             if (is_array($result)
                 && class_exists('ProxyJsonRewrite') && ProxyJsonRewrite::hasColumn()) {
@@ -396,12 +400,74 @@ class PlaygroundRelay
     }
 
     /**
-     * @param string $url
-     * @param string $method
-     * @param array  $params
-     * @param array  $extraHeaders 额外请求头（如上游 Authorization）
+     * 按 ApiProxy::buildUpstreamRequest 结果出站（已含 URL/方法/正文）
+     *
+     * @param array $built
      * @return array
      */
+    private static function httpRequestBuilt(array $built)
+    {
+        $url = isset($built['url']) ? (string) $built['url'] : '';
+        $method = isset($built['method']) ? strtoupper((string) $built['method']) : 'GET';
+        $body = isset($built['body']) ? (string) $built['body'] : '';
+        $contentType = isset($built['contentType']) ? (string) $built['contentType'] : '';
+        $extraHeaders = isset($built['headers']) && is_array($built['headers']) ? $built['headers'] : array();
+        if ($url === '') {
+            return self::fail('上游地址无效', ApiError::UPSTREAM_BAD);
+        }
+        if ($method !== 'POST') {
+            $method = 'GET';
+        }
+        if (!function_exists('curl_init')) {
+            return self::fail('服务器未启用 curl，无法完成测试');
+        }
+
+        $ch = curl_init();
+        $headers = array('Accept: */*', 'User-Agent: ApiNexus-Playground/' . VS_VERSION);
+        foreach ($extraHeaders as $h) {
+            $h = trim((string) $h);
+            if ($h !== '') {
+                $headers[] = $h;
+            }
+        }
+        if ($method === 'POST') {
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+            if ($contentType !== '') {
+                $headers[] = 'Content-Type: ' . $contentType;
+            }
+            $headers[] = 'Content-Length: ' . (string) strlen($body);
+        } else {
+            curl_setopt($ch, CURLOPT_HTTPGET, true);
+        }
+
+        curl_setopt_array($ch, array(
+            CURLOPT_URL            => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => self::TIMEOUT,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_HEADER         => true,
+        ));
+
+        $raw = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $err = curl_error($ch);
+        $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        curl_close($ch);
+
+        if ($raw === false || $errno) {
+            return self::fail($err !== '' ? ('请求失败：' . $err) : '请求失败');
+        }
+
+        return self::consumeHttpResponse($url, $raw, $http, $headerSize, $headers);
+    }
+
     private static function httpRequest($url, $method, array $params, array $extraHeaders = array())
     {
         $method = strtoupper($method);
@@ -467,6 +533,21 @@ class PlaygroundRelay
             return self::fail($err !== '' ? ('请求失败：' . $err) : '请求失败');
         }
 
+        return self::consumeHttpResponse($url, $raw, $http, $headerSize, $headers);
+    }
+
+    /**
+     * 解析上游 HTTP 响应（含有限次重定向跟随）
+     *
+     * @param string   $url
+     * @param string   $raw
+     * @param int      $http
+     * @param int      $headerSize
+     * @param string[] $headers
+     * @return array
+     */
+    private static function consumeHttpResponse($url, $raw, $http, $headerSize, array $headers)
+    {
         // 手动跟随有限次重定向，每跳校验公网 URL
         $redirLeft = 5;
         while ($redirLeft > 0 && ($http === 301 || $http === 302 || $http === 303 || $http === 307 || $http === 308)) {
@@ -515,13 +596,11 @@ class PlaygroundRelay
             $body = substr($body, 0, self::MAX_BODY);
         }
 
-        // 跟随重定向时 header 含多段，必须取最后一跳的 Content-Type
         $headerBlob = self::lastResponseHeaders($headerBlob);
         $contentType = 'application/octet-stream';
         if (preg_match('/^Content-Type:\s*(.+)$/mi', $headerBlob, $m)) {
             $contentType = trim($m[1]);
         }
-        // 以文件魔数纠偏（上游常标错或标 octet-stream）
         $sniffed = self::sniffMediaType($body);
         if ($sniffed !== '') {
             $contentType = $sniffed;
@@ -534,7 +613,6 @@ class PlaygroundRelay
             return self::packBinaryResult($http, $contentType, $body);
         }
 
-        // 文本须为合法 UTF-8，否则 json_encode 会失败导致前端 Unexpected end of JSON input
         $isUtf8 = function_exists('mb_check_encoding')
             ? mb_check_encoding($body, 'UTF-8')
             : (bool) preg_match('//u', $body);
