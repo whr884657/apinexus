@@ -1,15 +1,13 @@
 {
-    "version": "13.22.3",
-    "title": "ApiNexus 13.22.3 主题资源隔离与首屏打包加速",
+    "version": "13.22.4",
+    "title": "ApiNexus 13.22.4 代理上游 TLS 兼容与 AI 全量错误码",
     "release_date": "2026-08-01",
     "db_changes": false,
     "changes": [
-        "双主题 CSS/JS 与根目录 assets 强制隔离；壳与业务脚本进主题包 shell/js",
-        "SiteMedia 统一转发内置图标；主题禁止手写 /assets/img 直链",
-        "ThemeAssetPack：源文件分立、HTTP 打包下发；Google Fonts 改 idle 不阻塞首屏",
-        "用户控制台时段问候（2 小时段）+ 双主题打字动效",
-        "theme-asset 入口加固：页键白名单、realpath、仅 GET/HEAD、安全响应头",
-        "文档：CORE模块说明同步至本版；README 主要能力去版本号与实现细节，在线更新只说云端"
+        "代理/在线测试出站兼容上游 HTTPS 坏证书（过期/自签），避免误报 11016",
+        "不自动把 HTTPS 改写成 HTTP；对外仍只回「上游请求失败」",
+        "AI 详细文档强制写入 11001～11017 全部业务错误码（ApiError::aiDetailDocErrcodeClause）",
+        "CORE / 代理统计 / AI 文档规范同步"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

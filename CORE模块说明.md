@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.22.3**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.22.4**）
 
 ---
 
@@ -251,19 +251,19 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `UserManager.php` | 后台用户列表/封禁/删除/身份转换 |
 | `UserAvatar.php` | 用户头像 URL 解析 |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
-| `ApiError.php` | 公开 API 业务错误码常量与文案（v11.0.0，11001～11017） |
+| `ApiError.php` | 公开 API 业务错误码（11001～11017）；`businessLabelMap` / `aiDetailDocErrcodeClause` 供 AI 详细文档全量写入 |
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型/单片超时/代码调度模式与并发） |
 | `AiClient.php` | OpenAI 兼容 Chat Completions / Responses；支持流式 `chatStreamWithConfig` 与多轮 `messages` |
 | `AiChatSession.php` | AI 短时效多轮（Redis TTL 约 30 分钟）与断点 partial |
 | `AiSse.php` | SSE 输出（关缓冲头、心跳），供文档流式生成 |
-| `AiApiDoc.php` | 生成详细文档（`doc`，可流式）与代码示例（`aidoc`）；剥离上游敏感字段；禁止 HTML 泄漏 |
+| `AiApiDoc.php` | 生成详细文档（`doc`，可流式）与代码示例（`aidoc`）；详细文档 prompt 须含全部 errcode；剥离上游敏感字段 |
 | `IpLocator.php` | IP 归属地：系统内置或自定义接口；异步回填 `apilog.iploc`（v10.16.0 / **v13.2.0**） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ProxyClientProfile.php` | 代理出站 UA/Referer 内置预设与解析（**v13.4.0**） |
 | `ProxyJsonRewrite.php` | 代理响应 JSON 字段改写（set/del；仅 JSON；**v13.12.0**） |
-| `ApiProxy.php` | 外链网关：先 curl 上游再回传；可选 JSON 改写；上游 3xx 透传 Location（**v13.4.1 / v13.12.0**） |
-| `PlaygroundRelay.php` | 可选中继（兼容旧主题）；默认主题浏览器直连 |
+| `ApiProxy.php` | 外链网关：curl 中继上游；可选 JSON 改写；3xx Location 透传；**上游 TLS 不校验证书**（坏证书兼容） |
+| `PlaygroundRelay.php` | 在线测试同源中继；上游 TLS 策略与 ApiProxy 一致 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`（**v13.3.0**） |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
 | `DashboardStats.php` | 控制台/大屏 KPI·趋势·TOP·live（含 TOP live / 服务器监控快照，**v13.4.0 / v13.16.0**）；geo 飞线三色 |
@@ -704,7 +704,7 @@ VsPlaygroundResponse.directRequest({
 {"code":0,"msg":"请提供调用密钥","errcode":11001}
 ```
 
-传输层 HTTP 固定 **200**；业务看 `errcode`（`ApiError`：11001 未提供密钥 … 11012 鉴权方式错误 … 11017）。旧版 `http:401/403` 已废弃。
+传输层 HTTP 固定 **200**；业务看 `errcode`（`ApiError` **11001～11017 全套**，见 `businessLabelMap()`）。旧版 `http:401/403` 已废弃。AI 详细文档须用 `aiDetailDocErrcodeClause()` 写全，禁止只列子集。
 
 **日志：** 成功/失败写 `api.calls`、`StatDayManager::recordHit`；详细日志开时写 `apilog`（`ok` / `apikey` / `httpcode`；含异步 `IpLocator` 回填 `iploc`）。大屏飞线按 `ok`+`apikey` 拆绿/黄/红。
 

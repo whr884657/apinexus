@@ -45,12 +45,13 @@ class ApiError
     const SERVER = 11017;
 
     /**
-     * @param int $errcode
-     * @return string
+     * 业务错误码 → 文案（11001～11017；不含传输层 200/302）
+     *
+     * @return array<int,string>
      */
-    public static function label($errcode)
+    public static function businessLabelMap()
     {
-        $map = array(
+        return array(
             self::NO_KEY           => '未提供调用密钥',
             self::BAD_KEY          => '密钥错误',
             self::KEY_DISABLED     => '密钥已禁用',
@@ -68,11 +69,36 @@ class ApiError
             self::UPSTREAM_BLOCKED => '上游地址不允许',
             self::UPSTREAM_FAIL    => '上游请求失败',
             self::SERVER           => '服务暂不可用',
-            200                    => '成功',
-            302                    => '代理跳转成功',
         );
+    }
+
+    /**
+     * @param int $errcode
+     * @return string
+     */
+    public static function label($errcode)
+    {
+        $map = self::businessLabelMap();
+        $map[200] = '成功';
+        $map[302] = '代理跳转成功';
         $code = (int) $errcode;
         return isset($map[$code]) ? $map[$code] : '业务错误';
+    }
+
+    /**
+     * AI 详细文档用：完整业务错误码清单（须写进 prompt，禁止只列子集）
+     *
+     * @return string
+     */
+    public static function aiDetailDocErrcodeClause()
+    {
+        $parts = array();
+        foreach (self::businessLabelMap() as $code => $label) {
+            $parts[] = (int) $code . ' ' . $label;
+        }
+        return implode('、', $parts)
+            . '。详细文档必须用 Markdown 表格列出上述全部 errcode 与含义（不得只写部分），'
+            . '并至少给出一个错误 JSON 示例。';
     }
 
     /**

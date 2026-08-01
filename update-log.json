@@ -1,5 +1,16 @@
 {
     "versions": {
+        "13.22.4": {
+            "title": "ApiNexus 13.22.4 代理上游 TLS 兼容与 AI 全量错误码",
+            "date": "2026-08-01",
+            "db_changes": false,
+            "changes": [
+                "代理\/在线测试出站兼容上游 HTTPS 坏证书（过期\/自签），避免误报 11016",
+                "不自动把 HTTPS 改写成 HTTP；对外仍只回「上游请求失败」",
+                "AI 详细文档强制写入 11001～11017 全部业务错误码（ApiError::aiDetailDocErrcodeClause）",
+                "CORE \/ 代理统计 \/ AI 文档规范同步"
+            ]
+        },
         "13.22.3": {
             "title": "ApiNexus 13.22.3 主题资源隔离与首屏打包加速",
             "date": "2026-08-01",

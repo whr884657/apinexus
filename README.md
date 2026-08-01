@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.22.3-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.22.4-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -257,12 +257,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.22.3（2026-08-01）
+### v13.22.4（2026-08-01）
 
-- 双主题 CSS/JS 与根目录 assets 强制隔离；SiteMedia 转发内置图标
-- ThemeAssetPack 源文件分立、HTTP 打包下发；Google Fonts idle 不阻塞首屏
-- 用户控制台时段问候 + 双主题打字动效；theme-asset 入口安全加固
-- 文档：CORE模块说明同步本版；README 能力介绍与在线更新表述规范
+- 代理与在线测试兼容上游 HTTPS 坏证书，减少误报上游请求失败
+- AI 详细文档写入全部业务错误码 11001～11017
+- CORE 与代理/AI 相关说明同步
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
