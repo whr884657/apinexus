@@ -1,7 +1,8 @@
 <?php
 /**
  * 文件：core/ProxyClientProfile.php
- * 作用：代理中继出站身份（User-Agent / Referer）内置预设与解析
+ * 作用：出站身份（User-Agent / Referer）内置预设与解析
+ *       代理网关中继与本地脚本（ApiStats::outboundHeaders）共用
  *
  * 字段（api 表，无下划线）：
  *   upuamode     0系统默认 1内置预设 2自定义 3轮询内置
@@ -248,7 +249,9 @@ class ProxyClientProfile
         }
 
         $ver = defined('VS_VERSION') ? VS_VERSION : '1';
-        return 'ApiNexus-Proxy/' . $ver;
+        $apitype = isset($row['apitype']) ? (int) $row['apitype'] : 0;
+        $prefix = ($apitype === 1) ? 'ApiNexus-Proxy/' : 'ApiNexus/';
+        return $prefix . $ver;
     }
 
     /**

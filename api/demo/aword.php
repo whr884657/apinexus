@@ -95,16 +95,10 @@ foreach ($apiList as $api) {
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     curl_setopt($ch, CURLOPT_ENCODING, 'gzip');
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Accept: */*',
-        'Accept-Language: zh-CN,zh;q=0.9'
-    ]);
-    
-    if (isset($_SERVER['HTTP_USER_AGENT'])) {
-        curl_setopt($ch, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
-    } else {
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; Hitokoto-Proxy/1.0)');
-    }
+    $outHeaders = ApiStats::outboundHeaders();
+    $outHeaders[] = 'Accept-Language: zh-CN,zh;q=0.9';
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $outHeaders);
+    curl_setopt($ch, CURLOPT_USERAGENT, ApiStats::outboundUa());
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

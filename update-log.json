@@ -1,13 +1,14 @@
 {
     "versions": {
         "13.22.5": {
-            "title": "ApiNexus 13.22.5 代理上游方法与 IP 归属地请求方式",
+            "title": "ApiNexus 13.22.5 代理上游方法、IP 归属地与本地出站身份",
             "date": "2026-08-01",
             "db_changes": true,
             "changes": [
                 "代理接口新增上游请求方式 upmethod（GET\/POST），中继按配置调用上游",
                 "调用方 method 与上游方法分离；不在声明方式内返回 11018",
                 "系统设置：自定义 IP 归属地接口可选 GET\/POST（默认 GET）",
+                "本地接口也可配置出站 User-Agent \/ Referer；脚本用 ApiStats::outboundHeaders()",
                 "在线测试中继与正式网关对齐上游方法"
             ]
         },

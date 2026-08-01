@@ -314,12 +314,29 @@
             upAuthBlock.hidden = !isProxy;
             upAuthBlock.setAttribute('aria-hidden', isProxy ? 'false' : 'true');
         }
+        var uaMode = upUaModeSelect ? parseInt(upUaModeSelect.value, 10) || 0 : 0;
+        if (upUaPresetWrap) {
+            upUaPresetWrap.hidden = uaMode !== 1;
+        }
+        if (upUaCustomWrap) {
+            upUaCustomWrap.hidden = uaMode !== 2;
+        }
+        var refMode = upRefererModeSelect ? parseInt(upRefererModeSelect.value, 10) || 0 : 0;
+        if (upRefererWrap) {
+            upRefererWrap.hidden = refMode !== 1;
+        }
         if (!isProxy) {
             if (upKeyFields) {
                 upKeyFields.hidden = true;
             }
             if (upKeyInput) {
                 upKeyInput.required = false;
+            }
+            if (window.VSPick) {
+                ['userApiFormUpUaMode', 'userApiFormUpUaPreset', 'userApiFormUpRefererMode'].forEach(function (id) {
+                    var s = document.getElementById(id);
+                    if (s) { window.VSPick.refresh(s); }
+                });
             }
             return;
         }
@@ -344,17 +361,6 @@
         }
         if (decoded.upauth === 1 && upKeyNameInput && !upKeyNameInput.value.trim()) {
             upKeyNameInput.value = decoded.upkeyvia === 1 ? 'X-API-Key' : 'api_key';
-        }
-        var uaMode = upUaModeSelect ? parseInt(upUaModeSelect.value, 10) || 0 : 0;
-        if (upUaPresetWrap) {
-            upUaPresetWrap.hidden = uaMode !== 1;
-        }
-        if (upUaCustomWrap) {
-            upUaCustomWrap.hidden = uaMode !== 2;
-        }
-        var refMode = upRefererModeSelect ? parseInt(upRefererModeSelect.value, 10) || 0 : 0;
-        if (upRefererWrap) {
-            upRefererWrap.hidden = refMode !== 1;
         }
         if (window.VSPick) {
             ['userApiFormUpMethod', 'userApiFormUpAuth', 'userApiFormUpUaMode', 'userApiFormUpUaPreset', 'userApiFormUpRefererMode'].forEach(function (id) {
@@ -1247,24 +1253,6 @@
                     }
                     return;
                 }
-                var uaMode = parseInt(payload.upuamode, 10) || 0;
-                if (uaMode === 1 && !payload.upuapreset) {
-                    window.VS.showMessage('请选择内置 User-Agent 预设', 'error');
-                    switchFormTab('basic');
-                    return;
-                }
-                if (uaMode === 2 && !payload.upua) {
-                    window.VS.showMessage('请填写自定义 User-Agent', 'error');
-                    switchFormTab('basic');
-                    return;
-                }
-                if ((parseInt(payload.upreferermode, 10) || 0) === 1) {
-                    if (!payload.upreferer || !/^https?:\/\//i.test(payload.upreferer)) {
-                        window.VS.showMessage('请填写合法的 Referer（以 http:// 或 https:// 开头）', 'error');
-                        switchFormTab('basic');
-                        return;
-                    }
-                }
             } else if (!payload.endpoint) {
                 window.VS.showMessage('请填写本地接口路径', 'error');
                 switchFormTab('basic');
@@ -1272,6 +1260,24 @@
                     endpointInput.focus();
                 }
                 return;
+            }
+            var uaMode = parseInt(payload.upuamode, 10) || 0;
+            if (uaMode === 1 && !payload.upuapreset) {
+                window.VS.showMessage('请选择内置 User-Agent 预设', 'error');
+                switchFormTab('basic');
+                return;
+            }
+            if (uaMode === 2 && !payload.upua) {
+                window.VS.showMessage('请填写自定义 User-Agent', 'error');
+                switchFormTab('basic');
+                return;
+            }
+            if ((parseInt(payload.upreferermode, 10) || 0) === 1) {
+                if (!payload.upreferer || !/^https?:\/\//i.test(payload.upreferer)) {
+                    window.VS.showMessage('请填写合法的 Referer（以 http:// 或 https:// 开头）', 'error');
+                    switchFormTab('basic');
+                    return;
+                }
             }
             var action = formMode === 'edit' ? 'update' : 'create';
             if (action === 'update') {

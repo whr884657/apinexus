@@ -128,6 +128,47 @@ $canLocal = !empty($canLocal);
                        autocomplete="off" <?php echo $canLocal ? '' : 'required'; ?>>
                 <p class="vs-form-hint">公开地址：<?php echo vs_e($iconBase); ?>/apis/短码</p>
             </div>
+            <div id="userApiClientProfileBlock">
+                <div class="vs-form-row vs-form-row--2">
+                    <div>
+                        <label class="vs-label" for="userApiFormUpUaMode">出站 User-Agent</label>
+                        <select class="vs-input vs-select" id="userApiFormUpUaMode" name="upuamode" data-vs-pick>
+                            <option value="0">系统默认</option>
+                            <option value="1">内置设备 / 浏览器</option>
+                            <option value="2">自定义</option>
+                            <option value="3">轮询内置（按分钟）</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="vs-label" for="userApiFormUpRefererMode">出站 Referer</label>
+                        <select class="vs-input vs-select" id="userApiFormUpRefererMode" name="upreferermode" data-vs-pick>
+                            <option value="0">不发送</option>
+                            <option value="1">自定义</option>
+                            <option value="2">转发客户端</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="vs-form-hint">本地与代理均可配置。代理由网关自动带上；本地脚本出站请求时使用此处配置。</p>
+                <div class="vs-form-row" id="userApiUpUaPresetWrap" hidden>
+                    <label class="vs-label" for="userApiFormUpUaPreset">内置 UA 预设</label>
+                    <select class="vs-input vs-select" id="userApiFormUpUaPreset" name="upuapreset" data-vs-pick>
+                        <option value="">请选择</option>
+                        <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
+                            <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="vs-form-row" id="userApiUpUaCustomWrap" hidden>
+                    <label class="vs-label" for="userApiFormUpUa">自定义 User-Agent</label>
+                    <input type="text" class="vs-input" id="userApiFormUpUa" name="upua" maxlength="512"
+                           placeholder="完整浏览器 User-Agent 字符串" autocomplete="off">
+                </div>
+                <div class="vs-form-row" id="userApiUpRefererWrap" hidden>
+                    <label class="vs-label" for="userApiFormUpReferer">自定义 Referer</label>
+                    <input type="url" class="vs-input" id="userApiFormUpReferer" name="upreferer" maxlength="500"
+                           placeholder="https://example.com/" autocomplete="off">
+                </div>
+            </div>
             <div id="userApiUpAuthBlock"<?php echo $canLocal ? ' hidden' : ''; ?>>
                 <div id="userApiUpKeyViaWrap" hidden>
                     <input type="hidden" id="userApiFormUpKeyVia" name="upkeyvia" value="0">
@@ -151,26 +192,6 @@ $canLocal = !empty($canLocal);
                     </div>
                 </div>
                 <p class="vs-form-hint">上游请求方式：中继打向上游的方法（可与调用方「请求方式」不同）。</p>
-                <div class="vs-form-row vs-form-row--2">
-                    <div>
-                        <label class="vs-label" for="userApiFormUpUaMode">出站 User-Agent</label>
-                        <select class="vs-input vs-select" id="userApiFormUpUaMode" name="upuamode" data-vs-pick>
-                            <option value="0">系统默认</option>
-                            <option value="1">内置设备 / 浏览器</option>
-                            <option value="2">自定义</option>
-                            <option value="3">轮询内置（按分钟）</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="vs-label" for="userApiFormUpRefererMode">出站 Referer</label>
-                        <select class="vs-input vs-select" id="userApiFormUpRefererMode" name="upreferermode" data-vs-pick>
-                            <option value="0">不发送</option>
-                            <option value="1">自定义</option>
-                            <option value="2">转发客户端</option>
-                        </select>
-                    </div>
-                </div>
-                <p class="vs-form-hint">UA：系统默认=本站中继标识；内置=选预设；自定义=自填；轮询=按分钟轮换。Referer：不发送 / 自定义 / 转发调用方。</p>
                 <div class="vs-form-row vs-form-row--2" id="userApiUpKeyFields" hidden>
                     <div id="userApiUpKeyNameWrap">
                         <label class="vs-label" for="userApiFormUpKeyName">参数名 / 头名称</label>
@@ -182,25 +203,6 @@ $canLocal = !empty($canLocal);
                         <input type="password" class="vs-input" id="userApiFormUpKey" name="upkey" maxlength="500"
                                placeholder="上游平台颁发的密钥或令牌" autocomplete="new-password">
                     </div>
-                </div>
-                <div class="vs-form-row" id="userApiUpUaPresetWrap" hidden>
-                    <label class="vs-label" for="userApiFormUpUaPreset">内置 UA 预设</label>
-                    <select class="vs-input vs-select" id="userApiFormUpUaPreset" name="upuapreset" data-vs-pick>
-                        <option value="">请选择</option>
-                        <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
-                            <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="vs-form-row" id="userApiUpUaCustomWrap" hidden>
-                    <label class="vs-label" for="userApiFormUpUa">自定义 User-Agent</label>
-                    <input type="text" class="vs-input" id="userApiFormUpUa" name="upua" maxlength="512"
-                           placeholder="完整浏览器 User-Agent 字符串" autocomplete="off">
-                </div>
-                <div class="vs-form-row" id="userApiUpRefererWrap" hidden>
-                    <label class="vs-label" for="userApiFormUpReferer">自定义 Referer</label>
-                    <input type="url" class="vs-input" id="userApiFormUpReferer" name="upreferer" maxlength="500"
-                           placeholder="https://example.com/" autocomplete="off">
                 </div>
                 <div class="vs-form-row" id="userApiJsonRewriteBlock">
                     <label class="vs-label">JSON 字段改写</label>

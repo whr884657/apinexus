@@ -913,6 +913,47 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                            placeholder="例如 sjspks（3～64 位字母或数字）" pattern="[A-Za-z0-9]{3,64}" autocomplete="off">
                     <p class="vs-form-hint">公开地址形如 <?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/apis/短码</p>
                 </div>
+                <div id="apiListClientProfileBlock">
+                    <div class="vs-form-row vs-form-row--2">
+                        <div>
+                            <label class="vs-label" for="apiListFormUpUaMode">出站 User-Agent</label>
+                            <select class="vs-input vs-select" id="apiListFormUpUaMode" name="upuamode" data-vs-pick>
+                                <option value="0">系统默认</option>
+                                <option value="1">内置设备 / 浏览器</option>
+                                <option value="2">自定义</option>
+                                <option value="3">轮询内置（按分钟）</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="vs-label" for="apiListFormUpRefererMode">出站 Referer</label>
+                            <select class="vs-input vs-select" id="apiListFormUpRefererMode" name="upreferermode" data-vs-pick>
+                                <option value="0">不发送</option>
+                                <option value="1">自定义</option>
+                                <option value="2">转发客户端</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="vs-form-hint">本地与代理均可配置。代理：网关中继上游时带上；本地：脚本内用 <code>ApiStats::outboundHeaders()</code> 读取。UA 系统默认=本站标识；Referer：不发送 / 自定义 / 转发调用方。</p>
+                    <div class="vs-form-row" id="apiListUpUaPresetWrap" hidden>
+                        <label class="vs-label" for="apiListFormUpUaPreset">内置 UA 预设</label>
+                        <select class="vs-input vs-select" id="apiListFormUpUaPreset" name="upuapreset" data-vs-pick>
+                            <option value="">请选择</option>
+                            <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
+                                <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="vs-form-row" id="apiListUpUaCustomWrap" hidden>
+                        <label class="vs-label" for="apiListFormUpUa">自定义 User-Agent</label>
+                        <input type="text" class="vs-input" id="apiListFormUpUa" name="upua" maxlength="512"
+                               placeholder="完整浏览器 User-Agent 字符串" autocomplete="off">
+                    </div>
+                    <div class="vs-form-row" id="apiListUpRefererWrap" hidden>
+                        <label class="vs-label" for="apiListFormUpReferer">自定义 Referer</label>
+                        <input type="url" class="vs-input" id="apiListFormUpReferer" name="upreferer" maxlength="500"
+                               placeholder="https://example.com/" autocomplete="off">
+                    </div>
+                </div>
                 <div id="apiListUpAuthBlock" hidden>
                     <div id="apiListUpKeyViaWrap" hidden>
                         <input type="hidden" id="apiListFormUpKeyVia" name="upkeyvia" value="0">
@@ -936,26 +977,6 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                         </div>
                     </div>
                     <p class="vs-form-hint">上游请求方式：中继真正打向上游的方法（可与上方调用方「请求方式」不同）。例：调用方用 GET，上游只收 POST 时选 POST。</p>
-                    <div class="vs-form-row vs-form-row--2">
-                        <div>
-                            <label class="vs-label" for="apiListFormUpUaMode">出站 User-Agent</label>
-                            <select class="vs-input vs-select" id="apiListFormUpUaMode" name="upuamode" data-vs-pick>
-                                <option value="0">系统默认</option>
-                                <option value="1">内置设备 / 浏览器</option>
-                                <option value="2">自定义</option>
-                                <option value="3">轮询内置（按分钟）</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="vs-label" for="apiListFormUpRefererMode">出站 Referer</label>
-                            <select class="vs-input vs-select" id="apiListFormUpRefererMode" name="upreferermode" data-vs-pick>
-                                <option value="0">不发送</option>
-                                <option value="1">自定义</option>
-                                <option value="2">转发客户端</option>
-                            </select>
-                        </div>
-                    </div>
-                    <p class="vs-form-hint">UA：系统默认=本站中继标识；内置=选预设；自定义=自填；轮询=按分钟轮换内置。Referer：不发送 / 自定义地址 / 转发调用方带来的 Referer。</p>
                     <div class="vs-form-row vs-form-row--2" id="apiListUpKeyFields" hidden>
                         <div id="apiListUpKeyNameWrap">
                             <label class="vs-label" for="apiListFormUpKeyName">参数名 / 头名称</label>
@@ -967,25 +988,6 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             <input type="password" class="vs-input" id="apiListFormUpKey" name="upkey" maxlength="500"
                                    placeholder="上游平台颁发的密钥或令牌" autocomplete="new-password">
                         </div>
-                    </div>
-                    <div class="vs-form-row" id="apiListUpUaPresetWrap" hidden>
-                        <label class="vs-label" for="apiListFormUpUaPreset">内置 UA 预设</label>
-                        <select class="vs-input vs-select" id="apiListFormUpUaPreset" name="upuapreset" data-vs-pick>
-                            <option value="">请选择</option>
-                            <?php foreach (ProxyClientProfile::presetOptions() as $opt): ?>
-                                <option value="<?php echo vs_e($opt['value']); ?>"><?php echo vs_e($opt['label']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="vs-form-row" id="apiListUpUaCustomWrap" hidden>
-                        <label class="vs-label" for="apiListFormUpUa">自定义 User-Agent</label>
-                        <input type="text" class="vs-input" id="apiListFormUpUa" name="upua" maxlength="512"
-                               placeholder="完整浏览器 User-Agent 字符串" autocomplete="off">
-                    </div>
-                    <div class="vs-form-row" id="apiListUpRefererWrap" hidden>
-                        <label class="vs-label" for="apiListFormUpReferer">自定义 Referer</label>
-                        <input type="url" class="vs-input" id="apiListFormUpReferer" name="upreferer" maxlength="500"
-                               placeholder="https://example.com/" autocomplete="off">
                     </div>
                     <div class="vs-form-row" id="apiListJsonRewriteBlock">
                         <label class="vs-label">JSON 字段改写</label>
@@ -1015,7 +1017,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListJsonRewriteAdd">添加规则</button>
                         </div>
                     </div>
-                    <p class="vs-form-hint">本站先请求上游，再把结果交给调用方。出站 UA / Referer 只影响本站访问上游，不会写进对外文档。</p>
+                    <p class="vs-form-hint">本站先请求上游，再把结果交给调用方。上游认证与 JSON 改写仅代理可用；出站 UA / Referer 见上方，不会写进对外文档。</p>
                 </div>
                 <div class="vs-form-row vs-form-row--2">
                     <div>

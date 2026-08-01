@@ -6,6 +6,8 @@
  * 本地注入（唯一写法，须填接口 ID）：
  *   require_once dirname(__DIR__, N) . '/core/bootstrap.php';
  *   ApiStats::hit(14);   // 括号内为本接口在后台的数字 ID
+ *   // 本地脚本再 curl 外网时：
+ *   curl_setopt($ch, CURLOPT_HTTPHEADER, ApiStats::outboundHeaders());
  *
  * 代理：ApiProxy 网关内自动调用，勿在上游文件注入。
  *
@@ -16,6 +18,12 @@ class ApiStats
 {
     /** @var array 本请求已记账的接口 ID，防重复 */
     private static $done = array();
+
+    /**
+     * 本请求 hit 成功解析到的接口行（供 outboundHeaders 复用）
+     * @var array|null
+     */
+    private static $hitRow = null;
 
     /**
      * 本请求解析出的密钥上下文
@@ -56,6 +64,7 @@ class ApiStats
             if (!$row) {
                 return;
             }
+            self::$hitRow = $row;
 
             $id = (int) $row['id'];
             if (isset(self::$done[$id])) {
@@ -75,6 +84,70 @@ class ApiStats
         } catch (Exception $e) {
             // 统计失败不影响业务
         }
+    }
+
+    /**
+     * 本地脚本出站请求头（User-Agent / 可选 Referer）
+     * 优先用本请求 hit 过的接口行；也可显式传接口 ID。
+     *
+     * @param int $apiId 可选；0 则用 hit 缓存行
+     * @return array curl CURLOPT_HTTPHEADER 用的字符串数组
+     */
+    public static function outboundHeaders($apiId = 0)
+    {
+        $row = self::resolveOutboundRow($apiId);
+        if ($row && class_exists('ProxyClientProfile')) {
+            return ProxyClientProfile::buildClientHeaders($row);
+        }
+        $ver = defined('VS_VERSION') ? VS_VERSION : '1';
+        return array(
+            'Accept: */*',
+            'User-Agent: ApiNexus/' . $ver,
+        );
+    }
+
+    /**
+     * @param int $apiId
+     * @return string
+     */
+    public static function outboundUa($apiId = 0)
+    {
+        $row = self::resolveOutboundRow($apiId);
+        if ($row && class_exists('ProxyClientProfile')) {
+            return ProxyClientProfile::resolveUa($row);
+        }
+        $ver = defined('VS_VERSION') ? VS_VERSION : '1';
+        return 'ApiNexus/' . $ver;
+    }
+
+    /**
+     * @param int $apiId
+     * @return string 空串表示不发送
+     */
+    public static function outboundReferer($apiId = 0)
+    {
+        $row = self::resolveOutboundRow($apiId);
+        if ($row && class_exists('ProxyClientProfile')) {
+            return ProxyClientProfile::resolveReferer($row);
+        }
+        return '';
+    }
+
+    /**
+     * @param int $apiId
+     * @return array|null
+     */
+    private static function resolveOutboundRow($apiId)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId > 0) {
+            try {
+                return self::resolveApiRow($apiId);
+            } catch (Exception $e) {
+                return null;
+            }
+        }
+        return is_array(self::$hitRow) ? self::$hitRow : null;
     }
 
     /**

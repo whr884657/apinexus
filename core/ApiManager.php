@@ -1744,17 +1744,12 @@ class ApiManager
             }
             $endpoint = ApiProxy::publicPath($proxyslug);
         } else {
-            // 本地接口清空上游认证与出站身份
+            // 本地：清空上游认证/方法；出站 UA/Referer 仍可配置（供本地脚本 curl 使用）
             $data['upauth'] = self::UPAUTH_NONE;
             $data['upkeyvia'] = self::UPKEYVIA_QUERY;
             $data['upkeyname'] = '';
             $data['upkey'] = '';
             $data['upmethod'] = self::UPMETHOD_GET;
-            $data['upuamode'] = 0;
-            $data['upuapreset'] = '';
-            $data['upua'] = '';
-            $data['upreferermode'] = 0;
-            $data['upreferer'] = '';
             if ($endpoint === '') {
                 return '请填写本地接口路径';
             }
@@ -1781,7 +1776,7 @@ class ApiManager
             $proxyslug = '';
         }
 
-        // 上游认证（仅代理类型有效）
+        // 上游认证 / 上游方法（仅代理）；出站 UA/Referer（本地与代理均可）
         $upauth = self::UPAUTH_NONE;
         $upkeyvia = self::UPKEYVIA_QUERY;
         $upkeyname = '';
@@ -1848,36 +1843,36 @@ class ApiManager
                 $upkeyname = '';
                 $upkey = '';
             }
+        }
 
-            if (class_exists('ProxyClientProfile')) {
-                $upuamode = ProxyClientProfile::normalizeUaMode(isset($data['upuamode']) ? $data['upuamode'] : 0);
-                $upuapreset = ProxyClientProfile::normalizePresetKey(isset($data['upuapreset']) ? $data['upuapreset'] : '');
-                $upua = ProxyClientProfile::normalizeUa(isset($data['upua']) ? $data['upua'] : '');
-                $upreferermode = ProxyClientProfile::normalizeRefererMode(isset($data['upreferermode']) ? $data['upreferermode'] : 0);
-                $upreferer = ProxyClientProfile::normalizeReferer(isset($data['upreferer']) ? $data['upreferer'] : '');
-                if ($upuamode === ProxyClientProfile::UAMODE_PRESET && $upuapreset === '') {
-                    return '请选择内置 User-Agent 预设';
+        if (class_exists('ProxyClientProfile')) {
+            $upuamode = ProxyClientProfile::normalizeUaMode(isset($data['upuamode']) ? $data['upuamode'] : 0);
+            $upuapreset = ProxyClientProfile::normalizePresetKey(isset($data['upuapreset']) ? $data['upuapreset'] : '');
+            $upua = ProxyClientProfile::normalizeUa(isset($data['upua']) ? $data['upua'] : '');
+            $upreferermode = ProxyClientProfile::normalizeRefererMode(isset($data['upreferermode']) ? $data['upreferermode'] : 0);
+            $upreferer = ProxyClientProfile::normalizeReferer(isset($data['upreferer']) ? $data['upreferer'] : '');
+            if ($upuamode === ProxyClientProfile::UAMODE_PRESET && $upuapreset === '') {
+                return '请选择内置 User-Agent 预设';
+            }
+            if ($upuamode === ProxyClientProfile::UAMODE_CUSTOM && $upua === '') {
+                return '请填写自定义 User-Agent';
+            }
+            if ($upuamode !== ProxyClientProfile::UAMODE_PRESET) {
+                $upuapreset = '';
+            }
+            if ($upuamode !== ProxyClientProfile::UAMODE_CUSTOM) {
+                $upua = '';
+            }
+            if ($upreferermode === ProxyClientProfile::REFMODE_CUSTOM) {
+                if ($upreferer === '') {
+                    return '请填写合法的 Referer（以 http:// 或 https:// 开头）';
                 }
-                if ($upuamode === ProxyClientProfile::UAMODE_CUSTOM && $upua === '') {
-                    return '请填写自定义 User-Agent';
-                }
-                if ($upuamode !== ProxyClientProfile::UAMODE_PRESET) {
-                    $upuapreset = '';
-                }
-                if ($upuamode !== ProxyClientProfile::UAMODE_CUSTOM) {
-                    $upua = '';
-                }
-                if ($upreferermode === ProxyClientProfile::REFMODE_CUSTOM) {
-                    if ($upreferer === '') {
-                        return '请填写合法的 Referer（以 http:// 或 https:// 开头）';
-                    }
-                } else {
-                    $upreferer = '';
-                }
-                if (($upuamode !== ProxyClientProfile::UAMODE_DEFAULT || $upreferermode !== ProxyClientProfile::REFMODE_NONE)
-                    && !self::hasProxyClientColumns()) {
-                    return '代理出站身份功能尚未就绪，请先前往「系统升级」完成结构更新';
-                }
+            } else {
+                $upreferer = '';
+            }
+            if (($upuamode !== ProxyClientProfile::UAMODE_DEFAULT || $upreferermode !== ProxyClientProfile::REFMODE_NONE)
+                && !self::hasProxyClientColumns()) {
+                return '出站身份功能尚未就绪，请先前往「系统升级」完成结构更新';
             }
         }
 
