@@ -42,7 +42,8 @@
         .contributor-name a { color: var(--text-main); text-decoration: none; }
         .contributor-name a:hover { color: var(--accent-primary); }
         
-        .contributor-bio { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.5; }
+        .contributor-bio { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.5; min-height: 1.3em; }
+        .contributor-bio[data-vs-hitokoto="1"]:empty::before { content: "…"; opacity: 0.45; }
         
         .contributor-stats { display: flex; justify-content: center; gap: 1.5rem; font-size: 0.8rem; }
         .contributor-stat { text-align: center; }

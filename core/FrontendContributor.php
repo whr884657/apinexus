@@ -249,7 +249,9 @@ class FrontendContributor
         }
 
         $bio = isset($row['bio']) ? trim((string) $row['bio']) : '';
-        if ($bio === '') {
+        $bioCustom = ($bio !== '');
+        if (!$bioCustom) {
+            // 未配置简介：默认占位；默认主题可改走一言（见 theme/default）
             $bio = '独立开发者 / 接口贡献者';
         }
 
@@ -266,6 +268,7 @@ class FrontendContributor
             'avatar'       => UserAvatar::resolve($row),
             'letter'       => $letter !== '' ? $letter : 'U',
             'bio'          => $bio,
+            'bio_custom'   => $bioCustom,
             'blog'         => isset($row['blog']) ? trim((string) $row['blog']) : '',
             'wallpaper'    => isset($row['wallpaper']) ? trim((string) $row['wallpaper']) : '',
             'apicount'     => (int) (isset($row['apicount']) ? $row['apicount'] : 0),

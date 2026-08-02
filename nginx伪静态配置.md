@@ -30,11 +30,7 @@ location / {
 整段复制下面：
 
 ```nginx
-location ^~ /config/ {
-    deny all;
-    return 403;
-}
-location ^~ /data/ {
+location ~ ^/(config|data)/ {
     deny all;
     return 403;
 }
@@ -51,14 +47,10 @@ location / {
 
 ### 情况 B：伪静态 / 站点配置里**已经有**上面的 `location / { try_files ... }`
 
-**只复制**下面两段，并保证它们出现在原来的 `location /` **上面**（写在文件更靠前的位置）：
+**只复制**下面几段，并保证它们出现在原来的 `location /` **上面**（写在文件更靠前的位置）：
 
 ```nginx
-location ^~ /config/ {
-    deny all;
-    return 403;
-}
-location ^~ /data/ {
+location ~ ^/(config|data)/ {
     deny all;
     return 403;
 }
@@ -70,16 +62,17 @@ location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
 }
 ```
 
-> **重要：** Nginx **不读** `.htaccess`。务必加上面的 `/config/`、`/data/` deny，否则运行时日志与数据库配置文件可能被直链下载。
+> **重要：** Nginx **不读** `.htaccess`。务必加上面的 `/config/`、`/data/` 合并 deny（须写在其它 `location ~` **之前**），否则运行时日志与数据库配置文件可能被直链下载。
 
 若站点**已有**旧的「仅 detail」单页规则，请**删掉**那条，改用上面的**通用**第二段。
 
-### 两条规则分别干什么？
+### 几条规则分别干什么？
 
 | 顺序 | 规则 | 作用 |
 |------|------|------|
-| 1（必须在上） | `/apis/{短码}` | **代理网关**（特殊：内部 `_vs_slug`，不是 `?id=`） |
-| 2 | `/{页面名}/{数字ID}` | **通用路径式资源**：落到 `/{页面名}.php?id={数字ID}` |
+| 1（必须在上） | `config` 与 `data` 合并 deny | **禁止直链**配置与运行时目录 |
+| 2 | `/apis/{短码}` | **代理网关**（特殊：内部 `_vs_slug`，不是 `?id=`） |
+| 3 | `/{页面名}/{数字ID}` | **通用路径式资源**：落到 `/{页面名}.php?id={数字ID}` |
 
 因此：
 

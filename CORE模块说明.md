@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.22.6**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.22.7**）
 
 ---
 
@@ -242,7 +242,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `FrontendUser.php` | 前台用户资料调度（用户名、头像、简介、博客、壁纸、角色）；`dashboardStats()` 控制台汇总 |
 | `UserDashHello.php` | 用户控制台按时段问候（12 个 2 小时槽；文案池随机；双主题共用） |
 | `SiteMedia.php` | 内置图片出站 URL（`assets/img/` 物理文件；主题禁止手写路径） |
-| `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间；归属含绑定身份下历史 userid=0） |
+| `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间；`bio_custom` 标记是否自填简介；归属含绑定身份下历史 userid=0） |
 | `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据 |
 | `Captcha.php` | 行为验证统一入口（本站图形 / 第三方；分端配置） |
 | `RateLimitStore.php` | 限流计数存储（MySQL） |

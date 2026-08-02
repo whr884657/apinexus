@@ -1,16 +1,15 @@
 {
-    "version": "13.22.6",
-    "title": "ApiNexus 13.22.6 取消主题资源 HTTP 打包、恢复逐文件加载",
+    "version": "13.22.7",
+    "title": "ApiNexus 13.22.7 默认主题贡献者简介一言与伪静态精简",
     "release_date": "2026-08-03",
     "db_changes": false,
     "changes": [
-        "移除 ThemeAssetPack / theme-asset.php；前台与用户中心恢复逐文件加载 CSS/JS",
-        "vs_frontend_page 与双主题 user layout 改走 ThemeManager 壳/页清单",
-        "保留主题资源隔离与 Google Fonts idle；页脚不再依赖打包标志",
-        "在线升级废弃清单清理旧打包入口文件",
-        "默认主题强制移除外链弹窗；外链直接跳转",
-        "撤销主题独立 404 美化与复杂伪静态；乱路径交由 Nginx 默认页；业务缺失资源仍走主题页 notFound",
-        "升级废弃清单清理主题 404 残留文件（pages/404、error404.css/js）"
+        "默认主题个人主页去掉博客/贡献者按钮",
+        "默认主题贡献者列表与个人主页：未配置简介时客户端拉取一言（纯随机）",
+        "默认主题个人主页接口卡：计费与 KEY 分标、方法/免费标签深色可见；电脑端每行最多 4 卡",
+        "修复极验三/四代拼图滑块被 CSS width:100% 拉成长条（认证页 default/slate/管理员）",
+        "FrontendContributor 增加 bio_custom 标记；slate 仍用原占位文案",
+        "Nginx 伪静态将 config/data deny 合并为一条；安装向导同步"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

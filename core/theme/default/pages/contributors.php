@@ -25,7 +25,13 @@ $authUrl = isset($authUrl) ? $authUrl : ($vsBase . '/user/login');
                      onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                 <div class="contributor-avatar-placeholder" style="display:none;"><span><?php echo vs_e($c['letter']); ?></span></div>
                 <div class="contributor-name"><?php echo vs_e($c['username']); ?></div>
-                <p class="contributor-bio"><?php echo vs_e($c['bio']); ?></p>
+                <?php
+                $bioCustom = !empty($c['bio_custom']);
+                $bioText = isset($c['bio']) ? (string) $c['bio'] : '';
+                ?>
+                <p class="contributor-bio"<?php echo $bioCustom ? '' : ' data-vs-hitokoto="1"'; ?>><?php
+                    echo $bioCustom ? vs_e($bioText) : '';
+                ?></p>
                 <div class="contributor-stats">
                     <div class="contributor-stat">
                         <div class="contributor-stat-value"><?php echo (int) $c['apicount']; ?></div>

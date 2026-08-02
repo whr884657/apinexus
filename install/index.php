@@ -22,11 +22,7 @@ $step    = max(1, min(6, $step));
  */
 function vs_install_nginx_rewrite_snippet()
 {
-    return "location ^~ /config/ {\n"
-        . "    deny all;\n"
-        . "    return 403;\n"
-        . "}\n"
-        . "location ^~ /data/ {\n"
+    return "location ~ ^/(config|data)/ {\n"
         . "    deny all;\n"
         . "    return 403;\n"
         . "}\n"

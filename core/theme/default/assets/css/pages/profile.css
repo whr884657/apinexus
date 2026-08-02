@@ -47,13 +47,58 @@
     border-color: var(--accent-primary);
     color: var(--accent-primary);
 }
-.tag-get { background: rgba(17, 17, 17,0.12); color: #111111; }
-.tag-post { background: rgba(59,130,246,0.12); color: #3b82f6; }
-.tag-put { background: rgba(249,115,22,0.12); color: #f97316; }
-.tag-delete { background: rgba(239,68,68,0.12); color: #ef4444; }
-.tag-patch { background: rgba(168,85,247,0.12); color: #a855f7; }
-.tag-free { background: rgba(17, 17, 17,0.15) !important; color: #111111 !important; }
-.tag-points { background: rgba(245,158,11,0.15) !important; color: #f59e0b !important; }
+/* 标签：对齐接口列表/详情（深色下可见；计费与 KEY 分开展示） */
+.profile-page .profile-api-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+.profile-page .method-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.25;
+    vertical-align: middle;
+}
+.profile-page .method-badge.get { background: rgba(107, 114, 128, 0.18); color: var(--accent-primary, #9ca3af); }
+.profile-page .method-badge.post { background: rgba(0, 212, 255, 0.15); color: var(--accent-secondary, #22d3ee); }
+.profile-page .method-badge.put { background: rgba(245, 158, 11, 0.18); color: #f59e0b; }
+.profile-page .method-badge.delete { background: rgba(239, 68, 68, 0.18); color: #f87171; }
+.profile-page .method-badge.patch { background: rgba(168, 85, 247, 0.18); color: #a855f7; }
+[data-theme="light"] .profile-page .method-badge.get { color: #111111; }
+[data-theme="light"] .profile-page .method-badge.post { color: #0284c7; }
+
+.profile-page .api-chip {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.25;
+    vertical-align: middle;
+}
+.profile-page .api-chip--free { background: rgba(107, 114, 128, 0.15); color: var(--accent-primary, #9ca3af); }
+.profile-page .api-chip--points { background: rgba(245, 158, 11, 0.18); color: #f59e0b; }
+.profile-page .api-chip--key { background: rgba(59, 130, 246, 0.18); color: #60a5fa; }
+.profile-page .api-chip--maintenance { background: rgba(239, 68, 68, 0.18); color: #f87171; }
+[data-theme="light"] .profile-page .api-chip--points { color: #c2410c; }
+[data-theme="light"] .profile-page .api-chip--key { color: #2563eb; }
+[data-theme="light"] .profile-page .api-chip--maintenance { color: #dc2626; }
+.profile-page .api-item-more {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: rgba(107, 114, 128, 0.12);
+}
 .profile-search-input {
     width: 100%;
     padding: 0.45rem 0.75rem 0.45rem 0.75rem;
@@ -79,12 +124,32 @@
     border-color: var(--accent-primary);
     color: var(--accent-primary);
 }
+/* 电脑端每行最多 4 卡，加宽间距减轻拥挤 */
 #apiList {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1rem;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+}
+@media (min-width: 768px) {
+    #apiList {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.35rem;
+    }
+}
+@media (min-width: 1100px) {
+    #apiList {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.5rem;
+    }
+}
+@media (min-width: 1400px) {
+    #apiList {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1.6rem;
+    }
 }
 #apiList .api-card-stack {
     margin-bottom: 0;
     min-width: 0;
+    padding: 1.35rem 1.25rem;
 }

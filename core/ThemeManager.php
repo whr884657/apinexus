@@ -1071,8 +1071,12 @@ class ThemeManager
             'about'        => array('assets/js/pages/about-page.js'),
             'links'        => array('assets/js/pages/links-page.js'),
             'applylink'    => array('assets/js/pages/applylink.js'),
-            'contributors' => array('assets/js/pages/contributors-page.js'),
+            'contributors' => array(
+                'assets/js/pages/hitokoto-bio.js',
+                'assets/js/pages/contributors-page.js',
+            ),
             'profile'      => array(
+                'assets/js/pages/hitokoto-bio.js',
                 'assets/js/pages/profile.js',
                 'assets/js/pages/profile-search.js',
             ),

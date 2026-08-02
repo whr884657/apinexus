@@ -15,16 +15,9 @@
     padding-top: 2px;
 }
 
-.st-auth .vs-captcha-field--gt > div {
-    width: 100% !important;
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
+/* 仅撑满挂载条外层；禁止 width:100% 落到 .geetest_btn/.geetest_box（会拉爆弹层滑块） */
 .st-auth .vs-captcha-field--gt .geetest_holder,
-.st-auth .vs-captcha-field--gt .geetest_wind,
-.st-auth .vs-captcha-field--gt .geetest_btn,
-.st-auth .vs-captcha-field--gt .geetest_box {
+.st-auth .vs-captcha-field--gt .geetest_wind {
     width: 100% !important;
     max-width: 100%;
     box-sizing: border-box;
@@ -36,14 +29,29 @@
 .st-auth .vs-captcha-field--gt canvas,
 .st-auth .vs-captcha-field--gt .geetest_logo,
 .st-auth .vs-captcha-field--gt [class*="logo"],
-.st-auth .vs-captcha-field--gt [class*="Logo"],
-.st-auth .vs-captcha-field--gt [class*="icon"],
-.st-auth .vs-captcha-field--gt [class*="Icon"] {
+.st-auth .vs-captcha-field--gt [class*="Logo"] {
     width: auto !important;
     max-width: none !important;
     height: auto !important;
     object-fit: contain !important;
     transform: none !important;
+}
+
+/* 三代/四代拼图弹层：滑块把手保持官方小按钮 */
+.st-auth .geetest_slider_button,
+.geetest_slider_button,
+.geetest_panel .geetest_slider_button,
+.geetest_popup .geetest_slider_button,
+.geetest_panel_box .geetest_slider_button,
+.geetest_box .geetest_slider_button,
+.geetest_slider .geetest_btn,
+.geetest_panel .geetest_slider .geetest_btn,
+.st-auth .geetest_slider .geetest_btn {
+    width: 40px !important;
+    max-width: 48px !important;
+    min-width: 36px !important;
+    flex: 0 0 auto !important;
+    box-sizing: border-box !important;
 }
 
 .st-auth .vs-captcha-local {
