@@ -49,15 +49,14 @@ $seo = vs_page_seo_pack('文章', array(
 
 if ($articleId > 0) {
     $article = FrontendArticle::findById($articleId, true);
-    if (!is_array($article) || empty($article['title'])) {
-        vs_render_404_page('文章不存在', '该文章不存在、未发布或已下架。');
+    if (is_array($article) && !empty($article['title'])) {
+        $pageTitle = (string) $article['title'];
+        $sum = isset($article['summary']) ? trim((string) $article['summary']) : '';
+        $seo = vs_page_seo_pack($pageTitle, array(
+            'description' => vs_seo_truncate($sum !== '' ? $sum : ($pageTitle . ' · ' . SiteContext::siteName())),
+            'type'        => 'article',
+        ));
     }
-    $pageTitle = (string) $article['title'];
-    $sum = isset($article['summary']) ? trim((string) $article['summary']) : '';
-    $seo = vs_page_seo_pack($pageTitle, array(
-        'description' => vs_seo_truncate($sum !== '' ? $sum : ($pageTitle . ' · ' . SiteContext::siteName())),
-        'type'        => 'article',
-    ));
 }
 
 vs_frontend_page('articles', $pageTitle, array(

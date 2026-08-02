@@ -23,6 +23,12 @@
         "admin/data-screen.php",
         "core/ThemeAssetPack.php",
         "core/theme-asset.php",
-        "core/theme/default/assets/js/external-link-modal.js"
+        "core/theme/default/assets/js/external-link-modal.js",
+        "core/theme/default/pages/404.php",
+        "core/theme/slate/pages/404.php",
+        "core/theme/default/assets/css/pages/error404.css",
+        "core/theme/slate/assets/css/pages/error404.css",
+        "core/theme/default/assets/js/pages/error404.js",
+        "core/theme/slate/assets/js/pages/error404.js"
     ]
 }

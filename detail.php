@@ -58,7 +58,18 @@ if (is_array($playground)) {
 }
 
 if ($api === null) {
-    vs_render_404_page('接口不存在', '该接口不存在、未通过审核或已下架。请从接口目录进入有效详情页。');
+    http_response_code(404);
+    vs_frontend_page('detail', '接口不存在', array(
+        'api'         => null,
+        'apiId'       => $apiId,
+        'notFound'    => true,
+        'playground'  => $playground,
+        'seo'         => vs_page_seo_pack('接口不存在', array(
+            'description' => '该接口不存在、未通过审核或已下架。',
+            'robots'      => 'noindex,follow',
+        )),
+    ));
+    exit;
 }
 
 $pageTitle = isset($api['name']) ? ((string) $api['name'] . ' · 接口详情') : '接口详情';

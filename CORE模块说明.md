@@ -341,7 +341,7 @@ echo 'v' . VS_VERSION;     // v2.17.1
 | `vs_render_seo_meta()` / `vs_seo_defaults()` / `vs_seo_abs_url()` | SEO / OG / 分享 meta 统一输出 |
 | `vs_render_head()` / `vs_render_foot()` | 输出 HTML 头尾（head 支持 `$seoOpts` 页面级覆盖） |
 | `vs_frontend_page($pageKey, $title)` | **前台页面统一入口**（自动选主题、加载 CSS/JS） |
-| `vs_render_404_page($heading, $lead)` | **全站 404 入口**：按当前主题渲染 `theme/{id}/pages/404.php`（独立 CSS/JS 动效 + 法律提示）；`vs_404_legal_items()` 供文案；Nginx 须 `error_page 404 /404.php` |
+| `vs_render_404_page()` | **全站 404 页**（根目录 `404.php` / Apache ErrorDocument；含安全法律提示；乱路径由 Nginx 默认页处理，不强制伪静态指到本页） |
 | `vs_render_notice()` | 后台提示块 |
 | `vs_render_site_logo()` | 站点 Logo |
 | `vs_require_secure_post()` | 校验 POST + CSRF |

@@ -15,7 +15,16 @@ $userId = vs_resolve_path_id();
 $profile = $userId > 0 ? FrontendContributor::findProfile($userId) : null;
 
 if ($profile === null) {
-    vs_render_404_page('用户不存在', '该用户不存在或暂无公开主页。');
+    http_response_code(404);
+    vs_frontend_page('profile', '用户不存在', array(
+        'profile'  => null,
+        'notFound' => true,
+        'seo'      => vs_page_seo_pack('用户不存在', array(
+            'description' => '该用户不存在或暂无公开主页。',
+            'robots'      => 'noindex,follow',
+        )),
+    ));
+    exit;
 }
 
 $wallpaper = FrontendContributor::wallpaperUrl($profile);

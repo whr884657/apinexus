@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：404.php
- * 作用：全站 404 错误页入口（Nginx/Apache ErrorDocument 与业务层共用 vs_render_404_page）
+ * 作用：全站 404 错误页（含网络安全法律提示）
  */
 
 define('VS_ROOT', __DIR__);

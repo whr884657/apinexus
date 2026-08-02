@@ -9,8 +9,8 @@
         "保留主题资源隔离与 Google Fonts idle；页脚不再依赖打包标志",
         "在线升级废弃清单清理旧打包入口文件",
         "默认主题强制移除外链弹窗；外链直接跳转",
-        "全站 404 改为各主题独立页（default/slate pages/404 + error404.css/js 动效与法律提示）",
-        "无效接口/文章/用户与乱路径走 vs_render_404_page；Nginx 须 error_page 404"
+        "撤销主题独立 404 美化与复杂伪静态；乱路径交由 Nginx 默认页；业务缺失资源仍走主题页 notFound",
+        "升级废弃清单清理主题 404 残留文件（pages/404、error404.css/js）"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

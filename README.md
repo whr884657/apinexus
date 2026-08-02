@@ -219,13 +219,13 @@ location ~ ^/apis/([a-z0-9]+)/?$ {
 location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
     rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
-error_page 404 /404.php;
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
 }
 ```
 
-若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` + **通用路径**两段，并放在 `location /` **上面**；同时补上 `error_page 404 /404.php;`。若仍留着旧的「仅 detail」单页规则，请删掉，改用通用第二段。
+若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` + **通用路径**两段，并放在 `location /` **上面**。若仍留着旧的「仅 detail」单页规则，请删掉，改用通用第二段。  
+完整规则（含 `/config` `/data` deny）见 [`nginx伪静态配置.md`](nginx伪静态配置.md) **情况 A**。
 
 > **注意：** 不要写 `[a-z0-9]{3,64}` 或 `[0-9]{1,10}`。宝塔伪静态保存时会吞掉 `{…}`，导致 PCRE 报错。  
 > **注意：** 不要 rewrite 到 `/xxx.php/$1`（PATH_INFO）；必须 `/$1.php?id=$2`。  
@@ -259,8 +259,8 @@ location / {
 ### v13.22.6（2026-08-03）
 
 - 取消主题资源 HTTP 打包，前台与用户中心恢复逐文件加载 CSS/JS
-- 默认主题移除外链弹窗；全站 404 改为双主题各自独立动效页
-- 保留主题包隔离与 Google Fonts idle；升级清理旧打包入口
+- 默认主题移除外链弹窗；撤销主题独立 404 美化，伪静态恢复精简，乱路径由 Nginx 默认页处理
+- 保留主题包隔离与 Google Fonts idle；升级清理旧打包入口与主题 404 残留
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
