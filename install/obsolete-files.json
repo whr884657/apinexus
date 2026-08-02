@@ -20,6 +20,9 @@
         "play.php",
         "core/theme/default/data/settings.json",
         "core/theme/slate/data/settings.json",
-        "admin/data-screen.php"
+        "admin/data-screen.php",
+        "core/ThemeAssetPack.php",
+        "core/theme-asset.php",
+        "core/theme/default/assets/js/external-link-modal.js"
     ]
 }

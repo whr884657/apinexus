@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.22.5**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.22.6**）
 
 ---
 
@@ -34,11 +34,11 @@ require_once VS_ROOT . '/core/bootstrap.php';
 | 读写的数据库逻辑、业务规则 | HTML 结构、**本主题** CSS/JS/shell、页面布局 |
 | 后台管理类（`*Manager`） | 主题配置项（`theme.json` settings） |
 | 前台调度类（`Frontend*`） | 调用 core 类展示数据 |
-| `SiteMedia` / `ThemeAssetPack` 等资源出站与打包 | **禁止**手写拼 `/assets/img/…`；**禁止**引用其它主题或根目录前台 CSS/JS |
+| `SiteMedia` 等资源出站 | **禁止**手写拼 `/assets/img/…`；**禁止**引用其它主题或根目录前台 CSS/JS |
 | 在 `bootstrap.php` 注册 | **禁止**直接 `Database::connect()` / 写表名 |
 | 全主题共用的数据格式约定 | 各主题独立的视觉与交互 |
 
-**主题资源隔离（13.22.3）：** 前台 / 用户中心只加载**当前主题包**内 `assets/shell`、`assets/css`、`assets/js`；根目录 `assets/css|js` **仅**管理员后台与安装等系统页。内置图标物理文件仍在 `assets/img/`，出站须经 `SiteMedia`（或 `UserAvatar` / 分类图标等核心类）。首屏可用 `ThemeAssetPack` 减少 HTTP 往返，**磁盘源文件保持分立**，禁止为维护方便合并成单个大 CSS。
+**主题资源隔离（13.22.3；加载方式 13.22.6）：** 前台 / 用户中心只加载**当前主题包**内 `assets/shell`、`assets/css`、`assets/js`；根目录 `assets/css|js` **仅**管理员后台与安装等系统页。内置图标物理文件仍在 `assets/img/`，出站须经 `SiteMedia`（或 `UserAvatar` / 分类图标等核心类）。**浏览器按文件逐个请求**（`ThemeManager::frontendShell*Hrefs` / `defaultFrontendAssets` 等清单），**不再**使用 HTTP 打包入口；磁盘源文件保持分立，禁止为维护方便合并成单个大 CSS。Google Fonts 宜 idle 加载。
 
 **默认主题 UI 改动边界：** 详情免责声明开关、快速上手鉴权 Tab、Hero 文案等**仅改** `core/theme/default/`；其它主题须自行对齐 `theme.json` settings，core 不提供跨主题样式回退。
 
@@ -74,7 +74,7 @@ version.php
 → CheckinManager
 → Markdown（core/markdown/）
 → FrontendAnnouncement → FrontendArticle → FrontendAbout
-→ PlaygroundRelay → ThemeAssetPack → ThemeManager
+→ PlaygroundRelay → ThemeManager
 → oauth/*（HttpClient → OAuthConfig → OAuthState → OAuthService → QQ/Gitee）
 → Session 启动 + CSRF
 →（已安装时）DatabaseMigrator::pruneAppliedAboveCodeVersion
@@ -156,7 +156,7 @@ version.php
 | Markdown | `Markdown`（`core/markdown/`） | 编辑器 + 渲染 | 公告/文章/API 文档编辑 | ✅ 是 | **已完成**（本地 marked/purify/Parsedown；短码扩展） |
 | Redis 缓存 | — | `RedisService` / `RedisCache` / `DashboardStats` / `StatDayManager` | `admin/system/redis.php`、`admin/index.php`、`admin/screen.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 今日调用←statday / 控制台 `cache:dashboard:*` + `statday` 日聚合） |
 | 贡献者 | `FrontendContributor` | `FrontendContributor` | `contributors.php`、`profile.php`、`core/ping.php` | ✅ 是 | **已完成**（开发者卡片、公开主页、加入时间、壁纸、延迟检测） |
-| 主题资源 / 媒体 | `ThemeManager` / `ThemeAssetPack` / `SiteMedia` | （主题 layout 调用） | 各主题 `assets/shell|js|css`、`core/theme-asset.php` | ✅ 是 | **已完成**（双主题完全隔离；HTTP 打包；图标经 SiteMedia） |
+| 主题资源 / 媒体 | `ThemeManager` / `SiteMedia` | （主题 layout 调用） | 各主题 `assets/shell|js|css`（逐文件 link/script） | ✅ 是 | **已完成**（双主题完全隔离；逐文件加载；图标经 SiteMedia） |
 | 用户控制台问候 | `UserDashHello` | — | `user/index`（双主题） | 用户中心 | **已完成**（12×2h 槽 + 打字动效） |
 
 > 上表「待开发」项：须先完成 `XxxManager` + `FrontendXxx` 并注册 bootstrap，主题才能接入；在此之前主题页仅能做静态占位。
@@ -291,9 +291,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（条数可配）、计划任务密钥 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
-| `ThemeAssetPack.php` | 主题 CSS/JS：源文件分立、HTTP 白名单打包（配合 `theme-asset.php`） |
-| `theme-asset.php` | 打包资源 HTTP 入口（GET/HEAD；page 白名单；realpath；安全头） |
-| `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL |
+| `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL；前台/用户中心壳与页 CSS·JS 清单 |
 | `SystemInfo.php` | 关于页环境信息 |
 | `Updater.php` | 云端在线更新检测与安装；安全解压；覆盖后按废弃清单清理文件 |
 | `UpdateLog.php` | 版本更新记录读取 |
@@ -343,6 +341,7 @@ echo 'v' . VS_VERSION;     // v2.17.1
 | `vs_render_seo_meta()` / `vs_seo_defaults()` / `vs_seo_abs_url()` | SEO / OG / 分享 meta 统一输出 |
 | `vs_render_head()` / `vs_render_foot()` | 输出 HTML 头尾（head 支持 `$seoOpts` 页面级覆盖） |
 | `vs_frontend_page($pageKey, $title)` | **前台页面统一入口**（自动选主题、加载 CSS/JS） |
+| `vs_render_404_page($heading, $lead)` | **全站 404 入口**：按当前主题渲染 `theme/{id}/pages/404.php`（独立 CSS/JS 动效 + 法律提示）；`vs_404_legal_items()` 供文案；Nginx 须 `error_page 404 /404.php` |
 | `vs_render_notice()` | 后台提示块 |
 | `vs_render_site_logo()` | 站点 Logo |
 | `vs_require_secure_post()` | 校验 POST + CSRF |
@@ -933,21 +932,9 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 ---
 
-### 4.24d ThemeAssetPack.php + theme-asset.php（主题资源打包）
+### 4.24d （已移除）主题资源 HTTP 打包
 
-**作用：** 磁盘上 CSS/JS **保持多个源文件**便于维护；浏览器通过少数打包 URL 一次拉取（减少串行 RTT）。不改变主题 UI。
-
-**入口：** `core/theme-asset.php`（仅 GET/HEAD；`pack` / `page` 白名单；`realpath` 限制在主题目录；CORP / XFO 等安全头；支持 ETag）。
-
-| 常用 pack | 内容概要 |
-|-----------|----------|
-| `front-shell-css` / `front-shell-js` | 前台壳层（common/toast/modal/icons/site-footer 等） |
-| `front-css` / `front-js` | 当前页相关主题 CSS/JS |
-| `user-shell-css` / `user-shell-js` | 用户中心壳（含本主题 `user-shell.css` / `user.js` 等） |
-
-**用法：** `ThemeAssetPack::url($pack, $pageKey)`；`vs_frontend_page` / 用户中心 layout 已接入。默认主题 Google Fonts 宜 idle 加载，勿阻塞首屏。
-
-**禁止：** 为「少请求」把多个源 CSS 合并成一个维护用大文件；管理员后台继续用根目录 `assets/`，不走本打包。
+**v13.22.6：** 删除 `ThemeAssetPack.php` 与 `theme-asset.php`。前台 / 用户中心改回**逐文件** `<link>` / `<script>`（清单见 `ThemeManager`）。在线升级时由 `install/obsolete-files.json` 清理旧站残留。Google Fonts 仍建议 idle，勿阻塞首屏。
 
 ---
 
@@ -983,9 +970,12 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 | `renderBody($pageKey, $title, $data)` | 渲染 layout + pages |
 | `themeSetting($key, $default)` | 读当前主题 settings |
 | `assetUrl($themeId, $relative)` | 主题静态资源 URL |
+| `shellUrl($file)` | 当前主题 `assets/shell/` 下单文件 URL |
 | `pageScriptUrl($file)` | 当前主题页脚本 URL（如 `vs-syntax.js`） |
+| `frontendShellCssHrefs` / `frontendShellJsHrefs` | 前台壳 CSS/JS 逐文件列表 |
+| `userShellCssHrefs` / `userShellJsHrefs` | 用户中心壳 CSS/JS 逐文件列表 |
 | `navItems()` | 前台导航项 |
-| `defaultFrontendAssets($pageKey)` | 前台资源清单（已与 ThemeAssetPack 协同） |
+| `defaultFrontendAssets($pageKey)` | 默认主题前台页 CSS/JS 清单（逐文件 URL） |
 
 **新建主题步骤：**
 
@@ -997,7 +987,7 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 **主题隔离（强制）：**
 
 - 各主题 CSS/JS **完全独立**，无跨主题文件回退，**禁止**引用根目录 `assets/css|js` 作前台/用户中心壳层
-- 用户中心壳样式用本主题 `assets/shell/user-shell.css`（及 ThemeAssetPack `user-shell-*`），**不是**根目录 `admin.css`
+- 用户中心壳样式用本主题 `assets/shell/user-shell.css` 等（`userShellCssHrefs` 逐文件加载），**不是**根目录 `admin.css`
 - 根目录 `admin.css` / 管理员脚本 **只给管理员后台**
 - 详见《主题资源隔离规范》；旧「用户中心共用 admin.css」说法已废止
 
@@ -1172,13 +1162,13 @@ MySQL
 ## 七、常见问题
 
 **Q：用户中心样式乱了 / 和后台搅在一起？**  
-A：用户中心必须只加载**当前主题**的 `user-shell` 打包（或本包 `assets/shell/user-shell.css` 等），**不要**再引根目录 `/assets/css/admin.css`。根目录 `admin.css` 仅管理员后台。见《主题资源隔离规范》。
+A：用户中心必须只加载**当前主题**的 `assets/shell` / `user.css` 等（`userShellCssHrefs`），**不要**再引根目录 `/assets/css/admin.css`。根目录 `admin.css` 仅管理员后台。见《主题资源隔离规范》。
 
 **Q：主题里可以直接写 `/assets/img/xxx.svg` 吗？**  
 A：不可以。须 `SiteMedia::imgUrl(...)`（或头像 / 分类等已有核心类）。
 
-**Q：为什么页面上只有少数几个 CSS/JS 请求，磁盘上却有很多文件？**  
-A：`ThemeAssetPack` 只在 HTTP 层拼接白名单文件；源文件仍分立，便于维护。
+**Q：为什么 Network 里会有很多个 CSS/JS 请求？**  
+A：v13.22.6 起已取消 HTTP 打包；有几个主题文件就请求几次，便于对照文件名维护。Google Fonts 仍 idle，不挡首屏。
 
 **Q：主题里可以直接 `Database::connect()` 吗？**  
 A：不推荐。请使用 `FrontendCategory`、`FrontendApi` 等已封装类；新能力应在 core 新增类后在 bootstrap 注册。

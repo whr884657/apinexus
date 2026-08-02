@@ -107,17 +107,7 @@ window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode(AuthSecuri
 window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(rtrim($vsBase, '/') . '/core/playground/relay.php'); ?>;
 </script>
 <?php
-// 前台已由 ThemeAssetPack 下发壳资源时，禁止页脚再拉 toast/common（重复请求拖慢无 CDN 首屏）
-if (empty($GLOBALS['vs_front_pack_loaded'])) {
-    $toastShell = class_exists('ThemeManager') ? ThemeManager::shellUrl('toast.css') : '';
-    $commonShell = class_exists('ThemeManager') ? ThemeManager::shellUrl('common.js') : '';
-    if ($toastShell !== '') {
-        echo '<link rel="stylesheet" href="' . vs_e($toastShell) . '">' . "\n";
-    }
-    if ($commonShell !== '') {
-        echo '<script src="' . vs_e($commonShell) . '" defer></script>' . "\n";
-    }
-}
+// 壳 toast/common 已由 vs_frontend_page 逐文件加载，页脚不再重复拉取
 ?>
 <?php endif; ?>
 <?php if ($showRuntime && $hasRuntime): ?>

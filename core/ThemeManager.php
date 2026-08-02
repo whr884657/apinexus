@@ -1022,15 +1022,73 @@ class ThemeManager
             return self::assetUrl('default', $rel) . '?v=' . $v;
         };
 
-        // Google Fonts 绝不阻塞首屏（国内无 CDN 时常 5～11s）；idle/load 后再挂，系统字体先兜底
+        // 逐文件列出 CSS/JS（不再 HTTP 打包）；Google Fonts idle 挂载，避免阻塞首屏
         $fontHref = 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap';
         $fontBoot = '<script>(function(){var u=' . json_encode($fontHref) . ';function go(){try{var l=document.createElement("link");l.rel="stylesheet";l.href=u;l.media="print";l.onload=function(){this.media="all"};document.head.appendChild(l);}catch(e){}}if("requestIdleCallback" in window){requestIdleCallback(go,{timeout:2500});}else{window.addEventListener("load",go);}})();</script>';
 
-        // 优先本地 vendor Tailwind（E183）；样式/业务脚本由 ThemeAssetPack 打包下发
+        $css = array(
+            $asset('assets/css/front-common.css'),
+            $asset('assets/css/markdown-content.css'),
+        );
+
+        $pageCssMap = array(
+            'home'         => 'assets/css/pages/index.css',
+            'apis'         => 'assets/css/pages/apis.css',
+            'detail'       => 'assets/css/pages/detail.css',
+            'articles'     => 'assets/css/pages/articles.css',
+            'about'        => 'assets/css/pages/about.css',
+            'links'        => 'assets/css/pages/links.css',
+            'applylink'    => 'assets/css/pages/applylink.css',
+            'contributors' => 'assets/css/pages/contributors.css',
+            'profile'      => 'assets/css/pages/profile.css',
+            'sponsor'      => 'assets/css/pages/donate.css',
+        );
+        if (isset($pageCssMap[$pageKey])) {
+            $css[] = $asset($pageCssMap[$pageKey]);
+        }
+        $css[] = $asset('assets/css/theme-tokens.css');
+        $css[] = $asset('assets/css/feer-compat.css');
+
+        $js = array(
+            $asset('assets/js/front-theme.js'),
+            $asset('assets/js/shell.js'),
+            $asset('assets/js/sidebar-close.js'),
+        );
+
+        $pageJsMap = array(
+            'home'         => array(
+                'assets/js/playground-response.js',
+                'assets/js/pages/index-terminal.js',
+                'assets/js/pages/index.js',
+            ),
+            'apis'         => array('assets/js/pages/apis-page.js'),
+            'detail'       => array(
+                'assets/js/playground-response.js',
+                'assets/js/pages/detail.js',
+                'assets/js/pages/detail-quickstart.js',
+            ),
+            'articles'     => array('assets/js/pages/articles-page.js'),
+            'about'        => array('assets/js/pages/about-page.js'),
+            'links'        => array('assets/js/pages/links-page.js'),
+            'applylink'    => array('assets/js/pages/applylink.js'),
+            'contributors' => array('assets/js/pages/contributors-page.js'),
+            'profile'      => array(
+                'assets/js/pages/profile.js',
+                'assets/js/pages/profile-search.js',
+            ),
+            'sponsor'      => array('assets/js/pages/donate.js'),
+        );
+        if (isset($pageJsMap[$pageKey])) {
+            foreach ($pageJsMap[$pageKey] as $rel) {
+                $js[] = $asset($rel);
+            }
+        }
+
+        // 优先本地 vendor Tailwind（E183）
         $localTw = htmlspecialchars($asset('assets/vendor/tailwind.min.js'), ENT_QUOTES, 'UTF-8');
         return array(
-            'css'           => array(),
-            'js'            => array(),
+            'css'           => $css,
+            'js'            => $js,
             'head_scripts'  => array(
                 $fontBoot,
                 '<script src="' . $localTw . '"></script>',

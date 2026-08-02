@@ -36,6 +36,7 @@ function vs_install_nginx_rewrite_snippet()
         . "location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {\n"
         . "    rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /\$1.php?id=\$2 last;\n"
         . "}\n"
+        . "error_page 404 /404.php;\n"
         . "location / {\n"
         . "    try_files \$uri \$uri/ \$uri.php\$is_args\$args;\n"
         . "}";

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.22.5-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.22.6-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -38,7 +38,7 @@
 - **控制台服务器监控**：对接常见面板；站点三名称与自定义页脚版权；文章编辑与 Markdown
 - **用户令牌**：用户中心与管理员后台均可管理；每账号有数量上限；调用时校验并累计次数
 - **积分计费与充值**：接口收费扣积分；用户扫码充值；订单与积分变动分栏管理
-- **前台双主题**：默认主题 + 主题二；各主题样式与脚本完全独立（根目录静态资源仅服务管理员后台）；主题资源打包加速首屏；内置图标经核心统一出站；首页「累计调用」可在主题设置中选完整数字或单位转换
+- **前台双主题**：默认主题 + 主题二；各主题样式与脚本完全独立（根目录静态资源仅服务管理员后台）；前台/用户中心按文件逐个加载本主题 CSS/JS；内置图标经核心统一出站；首页「累计调用」可在主题设置中选完整数字或单位转换
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态）
 - **友情链接 / 合作伙伴**：友链可审核与禁用；合作伙伴由管理员维护；默认主题首页可展示合作伙伴
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
@@ -160,9 +160,7 @@ ApiNexus/
 ├── core/
 │   ├── bootstrap.php
 │   ├── version.php             # VS_VERSION 版本常量
-│   ├── ThemeManager.php        # 前台主题加载与切换
-│   ├── ThemeAssetPack.php      # 主题 CSS/JS 源文件分立、HTTP 打包下发
-│   ├── theme-asset.php         # 主题资源打包入口（白名单）
+│   ├── ThemeManager.php        # 前台主题加载与切换；壳/页 CSS·JS 清单
 │   ├── SiteMedia.php           # 内置图片统一出站 URL
 │   ├── UserDashHello.php       # 用户控制台时段问候文案
 │   ├── ApiManager.php          # 接口列表 CRUD 与状态
@@ -221,12 +219,13 @@ location ~ ^/apis/([a-z0-9]+)/?$ {
 location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
     rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
+error_page 404 /404.php;
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
 }
 ```
 
-若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` + **通用路径**两段，并放在 `location /` **上面**。若仍留着旧的「仅 detail」单页规则，请删掉，改用通用第二段。
+若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` + **通用路径**两段，并放在 `location /` **上面**；同时补上 `error_page 404 /404.php;`。若仍留着旧的「仅 detail」单页规则，请删掉，改用通用第二段。
 
 > **注意：** 不要写 `[a-z0-9]{3,64}` 或 `[0-9]{1,10}`。宝塔伪静态保存时会吞掉 `{…}`，导致 PCRE 报错。  
 > **注意：** 不要 rewrite 到 `/xxx.php/$1`（PATH_INFO）；必须 `/$1.php?id=$2`。  
@@ -257,12 +256,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.22.5（2026-08-01）
+### v13.22.6（2026-08-03）
 
-- 代理接口可单独选择上游 GET/POST；与调用方请求方式分离
-- 自定义 IP 归属地接口支持 GET/POST（默认 GET）
-- 本地接口也可配置出站 User-Agent / Referer
-- 新增业务错误码：请求方式不允许
+- 取消主题资源 HTTP 打包，前台与用户中心恢复逐文件加载 CSS/JS
+- 默认主题移除外链弹窗；全站 404 改为双主题各自独立动效页
+- 保留主题包隔离与 Google Fonts idle；升级清理旧打包入口
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

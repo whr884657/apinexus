@@ -1,70 +1,152 @@
 /**
  * 文件：assets/css/error.css
- * 作用：404 等错误页样式
+ * 作用：全站 404 等错误页样式（与系统中性色板一致）
  */
 
 .vs-error-body {
     min-height: 100vh;
+    margin: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px 16px;
-    background: var(--page-bg, #f5f6f8);
+    padding: 28px 16px;
+    background:
+        radial-gradient(1200px 480px at 12% -10%, rgba(15, 23, 42, 0.06), transparent 55%),
+        radial-gradient(900px 420px at 100% 0%, rgba(15, 23, 42, 0.04), transparent 50%),
+        var(--page-bg, #f4f5f7);
+    color: var(--vs-text, #1f2937);
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+}
+
+html[data-theme="dark"] .vs-error-body {
+    background:
+        radial-gradient(1200px 480px at 12% -10%, rgba(148, 163, 184, 0.08), transparent 55%),
+        radial-gradient(900px 420px at 100% 0%, rgba(148, 163, 184, 0.05), transparent 50%),
+        #0b0f14;
+    color: #e5e7eb;
 }
 
 .vs-error-page {
     width: 100%;
-    max-width: 640px;
-    padding: 32px 28px;
+    max-width: 680px;
+    padding: 36px 32px 32px;
     background: var(--vs-content-bg, #fff);
-    border-radius: 12px;
-    border: 1px solid var(--vs-border, #e8eaed);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="dark"] .vs-error-page {
+    background: #121821;
+    border-color: #243041;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.vs-error-page__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vs-text-secondary, #6b7280);
+    text-decoration: none;
+}
+
+.vs-error-page__brand:hover {
+    color: var(--vs-text, #1f2937);
+}
+
+html[data-theme="dark"] .vs-error-page__brand:hover {
+    color: #f3f4f6;
+}
+
+.vs-error-page__brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #111827;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+html[data-theme="dark"] .vs-error-page__brand-mark {
+    background: #e5e7eb;
+    color: #111827;
 }
 
 .vs-error-page__code {
-    font-size: 48px;
-    font-weight: 700;
+    font-size: clamp(56px, 10vw, 72px);
+    font-weight: 800;
     line-height: 1;
-    color: var(--vs-text-secondary, #6b7280);
-    margin-bottom: 8px;
+    letter-spacing: -0.04em;
+    color: #111827;
+    margin: 0 0 10px;
+}
+
+html[data-theme="dark"] .vs-error-page__code {
+    color: #f3f4f6;
 }
 
 .vs-error-page__title {
     font-size: 22px;
-    font-weight: 600;
-    margin: 0 0 8px;
-    color: var(--vs-text, #1f2937);
+    font-weight: 650;
+    margin: 0 0 10px;
+    color: inherit;
 }
 
 .vs-error-page__lead {
     font-size: 14px;
     color: var(--vs-text-secondary, #6b7280);
-    margin: 0 0 20px;
-    line-height: 1.6;
+    margin: 0 0 22px;
+    line-height: 1.7;
+}
+
+html[data-theme="dark"] .vs-error-page__lead {
+    color: #9ca3af;
 }
 
 .vs-error-page__legal {
-    padding: 16px;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-radius: 8px;
+    padding: 16px 16px 14px;
+    background: #fafafa;
+    border: 1px solid #e5e7eb;
+    border-left: 3px solid #111827;
+    border-radius: 10px;
     margin-bottom: 24px;
 }
 
+html[data-theme="dark"] .vs-error-page__legal {
+    background: #0f141c;
+    border-color: #243041;
+    border-left-color: #d1d5db;
+}
+
 .vs-error-page__legal-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #991b1b;
+    font-size: 13px;
+    font-weight: 650;
+    color: #111827;
     margin: 0 0 10px;
+}
+
+html[data-theme="dark"] .vs-error-page__legal-title {
+    color: #e5e7eb;
 }
 
 .vs-error-page__legal-list {
     margin: 0;
     padding-left: 18px;
-    font-size: 13px;
-    line-height: 1.65;
-    color: #7f1d1d;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: #4b5563;
+}
+
+html[data-theme="dark"] .vs-error-page__legal-list {
+    color: #9ca3af;
 }
 
 .vs-error-page__legal-list li + li {
@@ -73,5 +155,61 @@
 
 .vs-error-page__actions {
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.vs-error-page__actions .vs-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.vs-error-page__actions .vs-btn--primary {
+    background: #111827;
+    color: #fff;
+    border-color: #111827;
+}
+
+.vs-error-page__actions .vs-btn--primary:hover {
+    background: #000;
+}
+
+html[data-theme="dark"] .vs-error-page__actions .vs-btn--primary {
+    background: #f3f4f6;
+    color: #111827;
+    border-color: #f3f4f6;
+}
+
+.vs-error-page__actions .vs-btn--default {
+    background: transparent;
+    color: inherit;
+    border-color: #d1d5db;
+}
+
+.vs-error-page__actions .vs-btn--default:hover {
+    border-color: #9ca3af;
+}
+
+html[data-theme="dark"] .vs-error-page__actions .vs-btn--default {
+    border-color: #374151;
+}
+
+@media (max-width: 520px) {
+    .vs-error-page {
+        padding: 28px 20px 24px;
+    }
+
+    .vs-error-page__actions .vs-btn {
+        width: 100%;
+    }
 }

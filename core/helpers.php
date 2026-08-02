@@ -1519,18 +1519,11 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     foreach ($cssFiles as $css) {
         echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/' . vs_e($css) . '?v=' . VS_VERSION . '">' . "\n";
     }
-    $cssIdx = 0;
     foreach ($extraCssHrefs as $href) {
         $href = trim((string) $href);
-        if ($href === '') {
-            continue;
+        if ($href !== '') {
+            echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
         }
-        // 前两个样式预加载，缩短无 CDN 时的首包发现延迟（源文件仍分立，仅打包 URL）
-        if ($cssIdx < 2) {
-            echo '<link rel="preload" href="' . vs_e($href) . '" as="style">' . "\n";
-        }
-        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
-        $cssIdx++;
     }
     foreach ($headScripts as $script) {
         $script = trim((string) $script);
@@ -1602,32 +1595,36 @@ function vs_frontend_page($pageKey, $pageTitle, array $pageData = array())
     $bodyClass = 'vs-body';
     $themeId = ThemeManager::activeId();
 
-    // 前台：壳 + 主题样式/脚本走 ThemeAssetPack（磁盘文件仍分立，HTTP 合并请求）
-    $shellCss = ThemeAssetPack::url('front-shell-css', $themeId);
-    if ($shellCss !== '') {
-        $extraCss[] = $shellCss;
+    // 前台：壳 + 页资源逐文件加载（主题包内；不走 ThemeAssetPack HTTP 打包）
+    foreach (ThemeManager::frontendShellCssHrefs() as $href) {
+        $extraCss[] = $href;
     }
-    $frontCss = ThemeAssetPack::url('front-css', $themeId, $pageKey);
-    if ($frontCss !== '') {
-        $extraCss[] = $frontCss;
-    }
-
-    $shellJs = ThemeAssetPack::url('front-shell-js', $themeId);
-    if ($shellJs !== '') {
-        $extraJs[] = $shellJs;
-    }
-    $frontJs = ThemeAssetPack::url('front-js', $themeId, $pageKey);
-    if ($frontJs !== '') {
-        $extraJs[] = $frontJs;
+    foreach (ThemeManager::frontendShellJsHrefs() as $href) {
+        $extraJs[] = $href;
     }
 
     if ($themeId === 'default') {
         $bundle = ThemeManager::defaultFrontendAssets($pageKey);
+        foreach ($bundle['css'] as $href) {
+            $extraCss[] = $href;
+        }
+        foreach ($bundle['js'] as $href) {
+            $extraJs[] = $href;
+        }
         $headScripts = $bundle['head_scripts'];
         $bodyClass = $bundle['body_class'];
+    } else {
+        $cssHref = ThemeManager::activeStylesheetHref();
+        if ($cssHref !== '') {
+            $extraCss[] = $cssHref;
+        }
+        $jsHref = ThemeManager::activeScriptHref();
+        if ($jsHref !== '') {
+            $extraJs[] = $jsHref;
+        }
     }
 
-    $GLOBALS['vs_front_pack_loaded'] = true;
+    $GLOBALS['vs_front_shell_loaded'] = true;
 
     vs_render_head($pageTitle, array(), true, $extraCss, $headScripts, $bodyClass, $seoOpts, false);
 
@@ -1822,45 +1819,125 @@ function vs_render_modal_shell()
 }
 
 /**
- * 输出 404 页面并终止（含网络安全法律提示）
+ * 404 页网络安全 / 业务提醒条文（主题模板共用文案池，UI 各自实现）
  *
+ * @return array<int,string>
+ */
+function vs_404_legal_items()
+{
+    return array(
+        '若您是误点链接或输错地址，可返回首页继续浏览，无需担心。',
+        '请通过本站正常入口访问功能；勿尝试扫描、爆破或篡改未公开地址。',
+        '根据《中华人民共和国网络安全法》，危害网络安全、非法侵入或干扰网络功能的行为，将依法承担法律责任。',
+        '根据《中华人民共和国刑法》第二百八十五条等规定，非法侵入计算机信息系统、非法获取数据或提供侵入工具，构成犯罪的，依法追究刑事责任。',
+        '异常抓包、伪造/重放请求、绕过安全校验等行为，可能被记录并作为安全审计依据。',
+    );
+}
+
+/**
+ * 输出全站 404 并终止：优先渲染**当前主题包** `pages/404.php`（各主题独立 UI/动效）
+ *
+ * @param string $heading 标题（如「接口不存在」）；空则用「页面不存在」
+ * @param string $lead    说明文案；空则用默认提示
  * @return void
  */
-function vs_render_404_page()
+function vs_render_404_page($heading = '', $lead = '')
 {
     if (!headers_sent()) {
         http_response_code(404);
-        AuthSecurity::sendSecurityHeaders();
+        if (class_exists('AuthSecurity')) {
+            AuthSecurity::sendSecurityHeaders();
+        }
     }
 
-    $base = vs_base_url();
+    $base = rtrim(vs_base_url(), '/');
     $siteName = 'ApiNexus';
+    $favicon = '';
     if (class_exists('InstallChecker') && InstallChecker::isInstalled() && class_exists('SiteContext')) {
         $siteName = SiteContext::siteName();
+        $favicon = SiteContext::siteFavicon();
     }
 
-    echo '<!DOCTYPE html>' . "\n";
-    echo '<html lang="zh-CN"><head><meta charset="UTF-8">' . "\n";
-    echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
-    echo '<title>' . vs_e(vs_page_title('页面不存在', $siteName)) . '</title>' . "\n";
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/common.css?v=' . VS_VERSION . '">' . "\n";
-    echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/error.css?v=' . VS_VERSION . '">' . "\n";
-    echo '</head><body class="vs-body vs-error-body">' . "\n";
-    echo '<main class="vs-error-page">' . "\n";
-    echo '<div class="vs-error-page__code">404</div>' . "\n";
-    echo '<h1 class="vs-error-page__title">页面不存在</h1>' . "\n";
-    echo '<p class="vs-error-page__lead">您访问的地址不存在，或请求方式不符合站点安全策略。</p>' . "\n";
-    echo '<div class="vs-error-page__legal">' . "\n";
-    echo '<h2 class="vs-error-page__legal-title">安全与法律提示</h2>' . "\n";
-    echo '<ul class="vs-error-page__legal-list">' . "\n";
-    echo '<li>请通过本站提供的正常入口访问功能，勿尝试扫描、爆破或篡改未公开接口。</li>' . "\n";
-    echo '<li>根据《中华人民共和国网络安全法》，任何危害网络安全、非法侵入他人网络或干扰网络正常功能的行为，将依法承担法律责任。</li>' . "\n";
-    echo '<li>根据《中华人民共和国刑法》第二百八十五条等规定，非法侵入计算机信息系统、非法获取数据或提供侵入工具，构成犯罪的，依法追究刑事责任。</li>' . "\n";
-    echo '<li>异常抓包、伪造或重放请求、绕过 CSRF/令牌校验等行为，可能被记录并作为安全审计依据。</li>' . "\n";
-    echo '</ul></div>' . "\n";
-    echo '<div class="vs-error-page__actions">' . "\n";
-    echo '<a href="' . vs_e($base) . '/" class="vs-btn vs-btn--primary">返回首页</a>' . "\n";
-    echo '</div></main></body></html>';
+    $heading = trim((string) $heading);
+    if ($heading === '') {
+        $heading = '页面不存在';
+    }
+    $lead = trim((string) $lead);
+    if ($lead === '') {
+        $lead = '您访问的地址不存在，或内容已下架、未公开。请通过本站正常入口访问。';
+    }
+
+    $themeId = 'default';
+    $pageFile = '';
+    $cssHref = '';
+    $jsHref = '';
+    if (class_exists('ThemeManager')) {
+        $themeId = ThemeManager::activeId();
+        $candidate = ThemeManager::themeDir($themeId) . '/pages/404.php';
+        if (is_file($candidate)) {
+            $pageFile = $candidate;
+            $cssHref = ThemeManager::assetUrl($themeId, 'assets/css/pages/error404.css');
+            $jsHref = ThemeManager::assetUrl($themeId, 'assets/js/pages/error404.js');
+            if ($cssHref !== '') {
+                $cssHref .= '?v=' . VS_VERSION;
+            }
+            if ($jsHref !== '') {
+                $jsHref .= '?v=' . VS_VERSION;
+            }
+        }
+    }
+
+    $mark = function_exists('mb_substr')
+        ? mb_substr($siteName, 0, 1, 'UTF-8')
+        : substr($siteName, 0, 1);
+    if ($mark === '' || $mark === false) {
+        $mark = 'A';
+    }
+
+    // 路径提示仅作展示：去控制字符、限长；模板侧仍须 vs_e / json_encode
+    $pathHint = '';
+    if (isset($_SERVER['REQUEST_URI'])) {
+        $pathHint = (string) strtok((string) $_SERVER['REQUEST_URI'], '?');
+        $pathHint = str_replace("\0", '', $pathHint);
+        $pathHint = preg_replace('/[\x00-\x1F\x7F]/', '', $pathHint);
+        if (!is_string($pathHint)) {
+            $pathHint = '';
+        }
+        if (function_exists('mb_substr')) {
+            $pathHint = (string) mb_substr($pathHint, 0, 200, 'UTF-8');
+        } elseif (strlen($pathHint) > 200) {
+            $pathHint = substr($pathHint, 0, 200);
+        }
+    }
+
+    $vs404 = array(
+        'base'      => $base,
+        'siteName'  => $siteName,
+        'favicon'   => $favicon,
+        'heading'   => $heading,
+        'lead'      => $lead,
+        'mark'      => $mark,
+        'themeId'   => $themeId,
+        'cssHref'   => $cssHref,
+        'jsHref'    => $jsHref,
+        'pageTitle' => vs_page_title($heading, $siteName),
+        'legal'     => vs_404_legal_items(),
+        'pathHint'  => $pathHint,
+    );
+
+    if ($pageFile !== '') {
+        extract($vs404, EXTR_SKIP);
+        include $pageFile;
+        exit;
+    }
+
+    // 主题包缺失 404 模板时的极简兜底（不跨主题回退）
+    echo '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">';
+    echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+    echo '<meta name="robots" content="noindex,nofollow">';
+    echo '<title>' . vs_e($vs404['pageTitle']) . '</title></head><body>';
+    echo '<h1>' . vs_e($heading) . '</h1><p>' . vs_e($lead) . '</p>';
+    echo '<p><a href="' . vs_e($base) . '/">返回首页</a></p></body></html>';
     exit;
 }
 

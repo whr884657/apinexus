@@ -44,6 +44,7 @@ location ~ ^/apis/([a-z0-9]+)/?$ {
 location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
     rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
+error_page 404 /404.php;
 location / {
     try_files $uri $uri/ $uri.php$is_args$args;
 }
@@ -51,7 +52,7 @@ location / {
 
 ### 情况 B：伪静态 / 站点配置里**已经有**上面的 `location / { try_files ... }`
 
-**只复制**下面两段，并保证它们出现在原来的 `location /` **上面**（写在文件更靠前的位置）：
+**只复制**下面几段，并保证它们出现在原来的 `location /` **上面**（写在文件更靠前的位置）；若尚无 `error_page 404`，一并补上：
 
 ```nginx
 location ^~ /config/ {
@@ -68,6 +69,7 @@ location ~ ^/apis/([a-z0-9]+)/?$ {
 location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
     rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
+error_page 404 /404.php;
 ```
 
 > **重要：** Nginx **不读** `.htaccess`。务必加上面的 `/config/`、`/data/` deny，否则运行时日志与数据库配置文件可能被直链下载。
@@ -98,7 +100,8 @@ location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
 3. **不要**写成 `/xxx.php/$1`（PATH_INFO）—— 面板 PHP 常只认「以 `.php` 结尾」的 URI。必须用 `/$1.php?id=$2`。  
 4. **`apis` 段必须写在通用段上面**，否则纯数字短码可能被当成 `apis.php?id=`。  
 5. 通用段只匹配「恰好两段且第二段为纯数字」；`/articles`、`/admin/login`、`/user/apis` 等不受影响。  
-6. **码支付回调不要加伪静态**：`core/play/codeplay/notify.php` / `return.php` 直访（带 `.php`）。
+6. **码支付回调不要加伪静态**：`core/play/codeplay/notify.php` / `return.php` 直访（带 `.php`）。  
+7. **必须配置 `error_page 404 /404.php;`**：否则乱路径只显示 Nginx 默认页，看不到本站美化 404。若 PHP-FPM 场景下仍是白页/默认页，在站点 `server` 里再加 `fastcgi_intercept_errors on;`（视面板而定）。
 
 ---
 
@@ -128,5 +131,6 @@ add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment
 | `/其它根入口名/数字ID` | 同类资源页（同一条通用规则） |
 | `/core/play/codeplay/notify.php` | 码支付异步回调（直访，无伪静态） |
 | `/articles` 等 | 去 `.php` 的 `try_files` |
+| 不存在的路径 / 无效 ID | 本站 `404.php`（须配置 `error_page 404`；业务层也会直接调 `vs_render_404_page`） |
 
-保存、重载后仍异常时：先确认伪静态已生效，再确认 **apis 在通用规则之上**、通用规则在 `location /` 之上。
+保存、重载后仍异常时：先确认伪静态已生效，再确认 **apis 在通用规则之上**、通用规则在 `location /` 之上，并确认已配置 **`error_page 404 /404.php`**。

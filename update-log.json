@@ -1,5 +1,19 @@
 {
     "versions": {
+        "13.22.6": {
+            "title": "ApiNexus 13.22.6 取消主题资源 HTTP 打包、恢复逐文件加载",
+            "date": "2026-08-03",
+            "db_changes": false,
+            "changes": [
+                "移除 ThemeAssetPack \/ theme-asset.php；前台与用户中心恢复逐文件加载 CSS\/JS",
+                "vs_frontend_page 与双主题 user layout 改走 ThemeManager 壳\/页清单",
+                "保留主题资源隔离与 Google Fonts idle；页脚不再依赖打包标志",
+                "在线升级废弃清单清理旧打包入口文件",
+                "默认主题强制移除外链弹窗；外链直接跳转",
+                "全站 404 改为各主题独立页（default\/slate pages\/404 + error404.css\/js 动效与法律提示）",
+                "无效接口\/文章\/用户与乱路径走 vs_render_404_page；Nginx 须 error_page 404"
+            ]
+        },
         "13.22.5": {
             "title": "ApiNexus 13.22.5 代理上游方法、IP 归属地与本地出站身份",
             "date": "2026-08-01",

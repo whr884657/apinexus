@@ -38,17 +38,11 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     echo '<title>' . vs_e(vs_page_title($pageTitle, $siteName)) . '</title>' . "\n";
     vs_render_site_icons($favicon, vs_seo_share_image());
     vs_theme_bg_preload_script();
-    $userCssPack = class_exists('ThemeAssetPack') ? ThemeAssetPack::url('user-shell-css', 'default') : '';
-    if ($userCssPack !== '') {
-        echo '<link rel="preload" href="' . vs_e($userCssPack) . '" as="style">' . "\n";
-        echo '<link rel="stylesheet" href="' . vs_e($userCssPack) . '">' . "\n";
-    } else {
-        foreach (ThemeManager::userShellCssHrefs(true) as $href) {
-            echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
-        }
-        foreach (ThemeManager::userStylesheetHrefs() as $href) {
-            echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
-        }
+    foreach (ThemeManager::userShellCssHrefs(true) as $href) {
+        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
+    }
+    foreach (ThemeManager::userStylesheetHrefs() as $href) {
+        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
     }
     echo '</head>' . "\n";
     echo '<body class="vs-body vs-admin-body">' . "\n";
@@ -129,17 +123,12 @@ function vs_theme_user_layout_end(array $extraScripts = array())
 
     echo '<script>window.VS_BASE_URL = ' . json_encode($vsBase) . ';</script>' . "\n";
     echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
-    $userJsPack = class_exists('ThemeAssetPack') ? ThemeAssetPack::url('user-shell-js', 'default') : '';
-    if ($userJsPack !== '') {
-        echo '<script src="' . vs_e($userJsPack) . '" defer></script>' . "\n";
-    } else {
-        foreach (ThemeManager::userShellJsHrefs(true) as $href) {
-            echo '<script src="' . vs_e($href) . '" defer></script>' . "\n";
-        }
-        $userJs = ThemeManager::userScriptHref();
-        if ($userJs !== '') {
-            echo '<script src="' . vs_e($userJs) . '" defer></script>' . "\n";
-        }
+    foreach (ThemeManager::userShellJsHrefs(true) as $href) {
+        echo '<script src="' . vs_e($href) . '" defer></script>' . "\n";
+    }
+    $userJs = ThemeManager::userScriptHref();
+    if ($userJs !== '') {
+        echo '<script src="' . vs_e($userJs) . '" defer></script>' . "\n";
     }
     foreach ($extraScripts as $js) {
         $js = basename(str_replace('\\', '/', (string) $js));
