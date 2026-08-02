@@ -217,7 +217,7 @@ $canLocal = !empty($canLocal);
                             <li>用英文句点 <code>.</code> 串起来：例如改 <code>api_info</code> 里的 <code>developer</code>，填 <code>api_info.developer</code>。</li>
                             <li>「设置」= 改成你填的值；「删除」= 去掉该字段。</li>
                         </ol>
-                        <div class="vs-json-rewrite-help__eg">示例：字段 api_info.blog → 设置 → https://你的博客</div>
+                        <div class="vs-json-rewrite-help__eg">示例：字段 api_info.blog → 设置 → https://你的博客。勿填库账号/密码/密钥；业务错误响应不改写。</div>
                     </div>
                     <input type="hidden" id="userApiFormJsonRewrite" name="jsonrewrite" value="">
                     <div class="vs-json-rewrite" id="userApiJsonRewriteEditor" hidden>

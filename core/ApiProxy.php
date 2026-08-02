@@ -18,7 +18,8 @@
  *   - 上游响应为 JSON/TXT/二进制等：透传状态码、Content-Type 与正文
  *   - 若配置了 jsonrewrite：仅对合法 JSON 正文做字段级 set/del（见 ProxyJsonRewrite；TXT/二进制不改）
  *   - v13.25.0：剥离调用方 callback/jsonp 参数，禁止 JSONP 透传上游（JsonpGuard）
- *   - v13.25.0：出站 JSON 擦除 /admin 等敏感路径（ApiOutboundSanitize）；错误体不附带行数据/后台 URL
+ *   - v13.25.0：出站 JSON 擦除 /admin 等敏感路径（ApiOutboundSanitize）
+ *   - v13.25.2：业务错误体（errcode 11001～11018）禁止改写，并强制只保留 code/msg/errcode
  *   - 上游响应为 3xx + Location（如随机视频跳转）：校验公网后原样把跳转还给调用方（v13.4.1）
  *     禁止服务端跟随跳转去拉最终大文件（视频等）
  *   - 可配置上游认证、出站 User-Agent / Referer（见 ProxyClientProfile）
@@ -561,6 +562,13 @@ class ApiProxy
             if (!empty($scrub['changed']) && isset($scrub['body'])) {
                 $respBody = (string) $scrub['body'];
                 $jsonRewritten = true;
+            }
+            // 业务错误体收窄：去掉 api_info 等附加字段（含改写灌入的 developer）
+            $narrow = ApiOutboundSanitize::narrowBusinessErrorBody($respBody, $upstreamCt);
+            if (!empty($narrow['changed']) && isset($narrow['body'])) {
+                $respBody = (string) $narrow['body'];
+                $jsonRewritten = true;
+                $upstreamCt = 'application/json; charset=utf-8';
             }
         }
 

@@ -173,12 +173,16 @@ class PlaygroundRelay
                 }
             }
             if (is_array($result) && class_exists('ApiOutboundSanitize') && isset($result['body'])) {
-                $scrub = ApiOutboundSanitize::scrubJsonBody(
-                    (string) $result['body'],
-                    isset($result['contentType']) ? (string) $result['contentType'] : ''
-                );
+                $ct = isset($result['contentType']) ? (string) $result['contentType'] : '';
+                $scrub = ApiOutboundSanitize::scrubJsonBody((string) $result['body'], $ct);
                 if (!empty($scrub['changed'])) {
                     $result['body'] = (string) $scrub['body'];
+                    $result['encoding'] = 'text';
+                }
+                $narrow = ApiOutboundSanitize::narrowBusinessErrorBody((string) $result['body'], $ct);
+                if (!empty($narrow['changed'])) {
+                    $result['body'] = (string) $narrow['body'];
+                    $result['contentType'] = 'application/json; charset=utf-8';
                     $result['encoding'] = 'text';
                 }
             }

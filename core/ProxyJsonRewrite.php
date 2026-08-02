@@ -10,6 +10,7 @@
  *   - 规则仅来自库内配置（管理员/投稿者保存），绝不信任调用方请求参数
  *   - 禁止 __proto__ / constructor / prototype 路径段，防原型污染
  *   - v13.25.0：禁止 SET 值含 /admin、config/database.php 等敏感路径（ApiOutboundSanitize）
+ *   - v13.25.2：正文已是平台业务错误（errcode 11001～11018）时**不改写**，避免 api_info 等灌入错误体
  *   - 限制条数、深度、体积；非法配置视为关闭
  *   - 改写失败 fail-open：原样回传上游正文（稳定性）
  *   - 非 JSON（TXT/二进制/HTML 等）一律不处理
@@ -403,6 +404,12 @@ class ProxyJsonRewrite
             return $out;
         }
         if (!self::looksLikeJson($body, $contentType)) {
+            return $out;
+        }
+
+        // 平台业务错误体禁止改写（防 api_info.developer 等密钥误填值泄露）
+        $probe = json_decode($body, true);
+        if (is_array($probe) && class_exists('ApiError') && ApiError::looksLikeBusinessErrorPayload($probe)) {
             return $out;
         }
 

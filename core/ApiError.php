@@ -115,4 +115,34 @@ class ApiError
         $code = (int) $errcode;
         return $code === 200 || $code === 302 || ($code >= 11001 && $code <= 11018);
     }
+
+    /**
+     * 是否为平台业务失败码（11001～11018；不含 200/302）
+     *
+     * @param int $errcode
+     * @return bool
+     */
+    public static function isBusinessFailure($errcode)
+    {
+        $code = (int) $errcode;
+        return $code >= 11001 && $code <= 11018;
+    }
+
+    /**
+     * 关联数组是否像平台业务错误 JSON（用于出站收窄，禁止附带 api_info 等）
+     *
+     * @param mixed $data
+     * @return bool
+     */
+    public static function looksLikeBusinessErrorPayload($data)
+    {
+        if (!is_array($data) || !isset($data['errcode'])) {
+            return false;
+        }
+        // 列表根（数字下标）不当业务错误体
+        if (array_keys($data) === range(0, count($data) - 1)) {
+            return false;
+        }
+        return self::isBusinessFailure($data['errcode']);
+    }
 }

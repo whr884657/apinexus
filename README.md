@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.25.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.25.2-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -256,11 +256,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.25.0（2026-08-03）
+### v13.25.2（2026-08-03）
 
-- 代理仅短码访问；出站擦除管理路径与凭证字段；剥离危险 JSONP 参数
-- 发行包新增本地接口安全须知；移除登录明文「记住密码」
-- 欢迎部署后实测反馈安全问题，共同加固
+- 业务错误体（errcode 11001～11018）禁止 JSON 改写，并强制只保留 `code` / `msg` / `errcode`
+- 堵住「未提供密钥」等错误响应被改写灌入 `api_info.developer` 等问题；成功响应改写不变
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
@@ -268,7 +267,7 @@ location / {
 
 ## 安全实测与共建
 
-本项目会持续根据授权扫描与社区反馈加固公开接口与登录链路。近期已针对 **JSONP 回调注入**、**代理响应泄露管理路径**、**浏览器明文记住密码** 等做过针对性修复（见版本记录）。
+本项目会持续根据授权扫描与社区反馈加固公开接口与登录链路。近期已针对 **JSONP 回调注入**、**代理响应泄露管理路径**、**业务错误体附加字段泄露**、**浏览器明文记住密码** 等做过针对性修复（见版本记录）。
 
 欢迎各位网友在自有环境部署实测后，通过仓库 Issues 反馈问题；我们一起排查与修复。
 

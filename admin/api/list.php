@@ -1004,7 +1004,8 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             </ol>
                             <div class="vs-json-rewrite-help__eg">示例：上游 {"api_info":{"developer":"别人"}}
 要改成你的名字 → 字段填 api_info.developer，操作选「设置」，值填 尋鯨錄。
-禁止把本站管理后台地址（含 /admin）写进改写值。</div>
+禁止把本站管理后台地址（含 /admin）写进改写值。
+禁止把数据库账号、密码、密钥等敏感值填进改写；业务错误响应不会应用改写。</div>
                         </div>
                         <input type="hidden" id="apiListFormJsonRewrite" name="jsonrewrite" value="">
                         <div class="vs-json-rewrite" id="apiListJsonRewriteEditor" hidden>

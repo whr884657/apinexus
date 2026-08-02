@@ -23,6 +23,10 @@ function vs_e($value)
  * 传输层 HTTP 固定 200，避免与网关/浏览器常见 401/403/503 混淆。
  * 业务错误看 body.errcode（见 ApiError 常量，如 11001 未提供密钥、11012 鉴权方式错误）。
  *
+ * 强制（v13.25.2）：正文**只允许** code / msg / errcode 三键。
+ * 禁止附带 api_info、developer、后台 URL、库账号等任何额外字段；
+ * 亦不在此出口应用 JSON 改写。
+ *
  * @param int    $errcode 业务错误码（ApiError::*）
  * @param string $msg
  * @return void
@@ -43,6 +47,7 @@ function vs_api_error_exit($errcode, $msg)
     }
     http_response_code(200);
     header('Content-Type: application/json; charset=utf-8');
+    // 仅三字段；勿在此合并改写规则或站点附加信息
     echo json_encode(array(
         'code'    => 0,
         'msg'     => (string) $msg,

@@ -134,6 +134,51 @@ class ApiOutboundSanitize
     }
 
     /**
+     * 平台业务错误体只保留 code / msg / errcode（v13.25.2）
+     *
+     * 背景：代理 JSON 改写可能把 api_info.developer 等写入「未提供密钥」等错误 JSON，
+     * 造成库账号/密码误填值或后台痕迹随错误响应泄露。业务失败体禁止任何附加字段。
+     *
+     * @param string $body
+     * @param string $contentType
+     * @return array{body:string,changed:bool}
+     */
+    public static function narrowBusinessErrorBody($body, $contentType = '')
+    {
+        $body = (string) $body;
+        if ($body === '') {
+            return array('body' => $body, 'changed' => false);
+        }
+        $trim = ltrim($body);
+        $ct = strtolower(trim(explode(';', (string) $contentType, 2)[0]));
+        $looksJson = ($ct === 'application/json' || $ct === 'text/json'
+            || (isset($trim[0]) && ($trim[0] === '{' || $trim[0] === '[')));
+        if (!$looksJson || !isset($trim[0]) || $trim[0] !== '{') {
+            return array('body' => $body, 'changed' => false);
+        }
+        $data = json_decode($body, true);
+        if (!is_array($data) || !class_exists('ApiError') || !ApiError::looksLikeBusinessErrorPayload($data)) {
+            return array('body' => $body, 'changed' => false);
+        }
+        $narrow = array(
+            'code'    => array_key_exists('code', $data) ? $data['code'] : 0,
+            'msg'     => isset($data['msg']) ? (string) $data['msg'] : '',
+            'errcode' => (int) $data['errcode'],
+        );
+        // 已是三字段且键序无关：仍统一重编码，去掉 api_info 等附加键
+        $extra = array_diff_key($data, array('code' => 1, 'msg' => 1, 'errcode' => 1));
+        if ($extra === array()) {
+            // 无附加字段则不必改（避免无意义 changed）
+            return array('body' => $body, 'changed' => false);
+        }
+        $enc = json_encode($narrow, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (!is_string($enc)) {
+            return array('body' => $body, 'changed' => false);
+        }
+        return array('body' => $enc, 'changed' => true);
+    }
+
+    /**
      * 若正文为 JSON，擦除敏感字段值后重新编码；非 JSON 原样返回
      *
      * @param string $body
