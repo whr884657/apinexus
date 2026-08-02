@@ -1,15 +1,30 @@
 <?php
 /**
  * 默认主题 · 用户登录页视图
+ * 变量由 ThemeManager::renderAuthPage extract 注入；此处全部兜底，避免静态分析误报
+ *
+ * @var string $vsBase
+ * @var string $base
+ * @var string $pageTitle
+ * @var string $siteName
+ * @var string $expiredMsg
+ * @var string $oauthError
+ * @var array $oauthProviders
+ * @var string $loginRedirect
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 
-$base = isset($base) ? $base : $vsBase;
-$expiredMsg = isset($expiredMsg) ? $expiredMsg : '';
-$oauthError = isset($oauthError) ? $oauthError : '';
-$oauthProviders = isset($oauthProviders) ? $oauthProviders : array('qq' => false, 'gitee' => false);
+$vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
+$base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
+$pageTitle = isset($pageTitle) ? (string) $pageTitle : '用户登录';
+$siteName = isset($siteName) ? (string) $siteName : (class_exists('SiteContext') ? SiteContext::siteName() : 'ApiNexus');
+$expiredMsg = isset($expiredMsg) ? (string) $expiredMsg : '';
+$oauthError = isset($oauthError) ? (string) $oauthError : '';
+$oauthProviders = isset($oauthProviders) && is_array($oauthProviders)
+    ? $oauthProviders
+    : array('qq' => false, 'gitee' => false);
 $loginRedirect = isset($loginRedirect) ? (string) $loginRedirect : '';
 
 ThemeManager::renderThemeAuthHead($pageTitle);
@@ -46,10 +61,7 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                 <?php vs_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
 
                 <div class="row">
-                    <label class="remember">
-                        <input type="checkbox" id="rememberCredentials" value="1">
-                        记住账号密码
-                    </label>
+                    <span></span>
                     <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
                 </div>
 
@@ -87,30 +99,14 @@ ThemeManager::renderThemeAuthHead($pageTitle);
     var form = document.getElementById('loginForm');
     var messageEl = document.getElementById('formMessage');
     var loginBtn = document.getElementById('loginBtn');
-    var rememberEl = document.getElementById('rememberCredentials');
     var expiredMsg = <?php echo json_encode($expiredMsg, JSON_UNESCAPED_UNICODE); ?>;
     var oauthError = <?php echo json_encode($oauthError, JSON_UNESCAPED_UNICODE); ?>;
-    var storageKey = 'vs_user_login_credentials';
     if (!form) return;
-    function loadSavedCredentials() {
-        try {
-            var raw = localStorage.getItem(storageKey);
-            if (!raw) return;
-            var saved = JSON.parse(raw);
-            if (!saved || typeof saved.username !== 'string') return;
-            form.username.value = saved.username;
-            if (typeof saved.password === 'string') form.password.value = saved.password;
-            if (rememberEl) rememberEl.checked = true;
-        } catch (err) { localStorage.removeItem(storageKey); }
-    }
-    function saveCredentials(username, password, remember) {
-        try {
-            if (remember) localStorage.setItem(storageKey, JSON.stringify({ username: username, password: password }));
-            else localStorage.removeItem(storageKey);
-        } catch (err) {}
-    }
-    loadSavedCredentials();
-    if (rememberEl) rememberEl.addEventListener('change', function () { if (!rememberEl.checked) localStorage.removeItem(storageKey); });
+    // v13.25.0：强制清除历史「记住密码」明文，禁止再读写 localStorage 凭证
+    try {
+        localStorage.removeItem('vs_user_login_credentials');
+        localStorage.removeItem('vs_login_credentials');
+    } catch (err) {}
     function showMessage(text, type) {
         if (text && window.VsToast) { VsToast.show(text, type === 'error' ? 'error' : 'success'); if (messageEl) messageEl.hidden = true; return; }
         if (!messageEl) return;
@@ -148,7 +144,6 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                 if (!data || typeof data !== 'object') { showMessage('网络异常或会话已过期，请刷新页面后重试', 'error'); return; }
                 if (data.csrf && form.csrf_token) form.csrf_token.value = data.csrf;
                 if (data.code === 1) {
-                    saveCredentials(username, password, rememberEl && rememberEl.checked);
                     showMessage(data.msg || '登录成功', 'success');
                     if (data.url) setTimeout(function () { window.location.href = data.url; }, 800);
                 } else {

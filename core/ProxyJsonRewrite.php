@@ -9,6 +9,7 @@
  * 安全约束：
  *   - 规则仅来自库内配置（管理员/投稿者保存），绝不信任调用方请求参数
  *   - 禁止 __proto__ / constructor / prototype 路径段，防原型污染
+ *   - v13.25.0：禁止 SET 值含 /admin、config/database.php 等敏感路径（ApiOutboundSanitize）
  *   - 限制条数、深度、体积；非法配置视为关闭
  *   - 改写失败 fail-open：原样回传上游正文（稳定性）
  *   - 非 JSON（TXT/二进制/HTML 等）一律不处理
@@ -315,7 +316,14 @@ class ProxyJsonRewrite
             return true;
         }
         if (is_string($value)) {
-            return strlen($value) <= self::MAX_VALUE_BYTES;
+            if (strlen($value) > self::MAX_VALUE_BYTES) {
+                return false;
+            }
+            // 禁止把后台/配置路径写进出站 JSON
+            if (class_exists('ApiOutboundSanitize') && !ApiOutboundSanitize::isAllowedRewriteValue($value)) {
+                return false;
+            }
+            return true;
         }
         if (!is_array($value)) {
             return false;

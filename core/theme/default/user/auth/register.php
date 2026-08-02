@@ -1,6 +1,20 @@
 <?php
+/**
+ * 默认主题 · 用户注册
+ * 变量由 ThemeManager::renderAuthPage extract 注入；此处全部兜底
+ *
+ * @var string $vsBase
+ * @var string $base
+ * @var bool   $mailEnabled
+ * @var string $mailDisabledMsg
+ */
 if (!defined('VS_THEME_RENDER')) { exit; }
-$base = isset($base) ? $base : $vsBase;
+$vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
+$base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
+$mailEnabled = !empty($mailEnabled);
+$mailDisabledMsg = isset($mailDisabledMsg) && (string) $mailDisabledMsg !== ''
+    ? (string) $mailDisabledMsg
+    : '管理员尚未配置邮箱发信，请联系管理员在后台「系统设置」中配置邮箱后方可注册。';
 
 ThemeManager::renderThemeAuthHead('用户注册');
 ?>

@@ -1,6 +1,20 @@
 <?php
+/**
+ * 青绿平台 · OAuth 绑定
+ * 变量由 ThemeManager::renderAuthPage extract 注入；此处全部兜底
+ *
+ * @var string $vsBase
+ * @var string $base
+ * @var string $providerLabel
+ * @var string $displayName
+ * @var string $provider
+ */
 if (!defined('VS_THEME_RENDER')) { exit; }
-$base = isset($base) ? $base : $vsBase;
+$vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
+$base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
+$providerLabel = isset($providerLabel) ? (string) $providerLabel : '';
+$displayName = isset($displayName) ? (string) $displayName : '';
+$provider = isset($provider) ? (string) $provider : '';
 
 ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
 vs_slate_auth_shell_start('绑定' . $providerLabel . '账号', '请使用已注册账号验证身份');

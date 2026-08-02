@@ -172,6 +172,16 @@ class PlaygroundRelay
                     }
                 }
             }
+            if (is_array($result) && class_exists('ApiOutboundSanitize') && isset($result['body'])) {
+                $scrub = ApiOutboundSanitize::scrubJsonBody(
+                    (string) $result['body'],
+                    isset($result['contentType']) ? (string) $result['contentType'] : ''
+                );
+                if (!empty($scrub['changed'])) {
+                    $result['body'] = (string) $scrub['body'];
+                    $result['encoding'] = 'text';
+                }
+            }
             $result['displayUrl'] = $displayUrl;
             return $result;
         }
@@ -226,6 +236,9 @@ class PlaygroundRelay
                 if ($val !== '' && $secret === '') {
                     $secret = $val;
                 }
+                continue;
+            }
+            if (class_exists('JsonpGuard') && JsonpGuard::isJsonpParamName((string) $k)) {
                 continue;
             }
             $next[(string) $k] = $v;

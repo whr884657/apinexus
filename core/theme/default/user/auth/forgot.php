@@ -1,6 +1,16 @@
 <?php
+/**
+ * 默认主题 · 忘记密码
+ * 变量由 ThemeManager::renderAuthPage extract 注入；此处全部兜底
+ *
+ * @var string $vsBase
+ * @var string $base
+ * @var bool   $mailEnabled
+ */
 if (!defined('VS_THEME_RENDER')) { exit; }
-$base = isset($base) ? $base : $vsBase;
+$vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
+$base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
+$mailEnabled = !empty($mailEnabled);
 
 ThemeManager::renderThemeAuthHead('忘记密码');
 ?>

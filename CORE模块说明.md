@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.22.7**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.25.0**）
 
 ---
 
@@ -61,7 +61,7 @@ version.php
 → UserAvatar → UserManager → AdminUserBinding
 → ApiManager → ApiError → ApiQuickstart
 → AiConfig → AiClient → AiChatSession → AiSse → AiApiDoc
-→ ApiNotify → ProxyClientProfile → ProxyJsonRewrite → ApiProxy → ApiStats → IpLocator
+→ ApiNotify → ProxyClientProfile → ProxyJsonRewrite → JsonpGuard → ApiOutboundSanitize → ApiProxy → ApiStats → IpLocator
 → StatDayManager → ApiLogManager → ApiLogArchive → ApiKeyManager
 → ApiFeedbackManager → FrontendFeedback → FeedbackNotify
 → ApiCategoryManager
@@ -261,9 +261,11 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `IpLocator.php` | IP 归属地：系统内置或自定义接口；自定义可选 GET/POST（`ip_loc_method`，默认 GET）；异步回填 `apilog.iploc` |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ProxyClientProfile.php` | 出站 UA/Referer 内置预设与解析；代理网关与本地 `ApiStats::outboundHeaders` 共用 |
-| `ProxyJsonRewrite.php` | 代理响应 JSON 字段改写（set/del；仅 JSON；**v13.12.0**） |
-| `ApiProxy.php` | 外链网关：curl 中继上游；按 `upmethod` 选上游 GET/POST；可选 JSON 改写；3xx Location 透传；上游 TLS 不校验证书 |
-| `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS 与 ApiProxy 一致 |
+| `ProxyJsonRewrite.php` | 代理响应 JSON 字段改写（set/del；仅 JSON；**v13.12.0**；**v13.25.0** 禁止 SET 后台路径） |
+| `JsonpGuard.php` | JSONP 回调白名单与参数剥离（**v13.25.0**） |
+| `ApiOutboundSanitize.php` | 出站 JSON 擦除 `/admin` 等敏感路径（**v13.25.0**） |
+| `ApiProxy.php` | 外链网关：curl 中继上游；按 `upmethod` 选上游 GET/POST；可选 JSON 改写；剥离 JSONP 参数；出站消毒；3xx Location 透传；上游 TLS 不校验证书 |
+| `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer` |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
 | `DashboardStats.php` | 控制台/大屏 KPI·趋势·TOP·live（含 TOP live / 服务器监控快照，**v13.4.0 / v13.16.0**）；geo 飞线三色 |
@@ -1210,6 +1212,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 | 查询串转路径样式 | `开发规范/查询串转路径样式规范.md`（**一条通用伪静态** `/{页}/{数字ID}`→`/{页}.php?id=`；代理 `/apis/{短码}` 另置顶） |
 | 本地/代理调用统计 | `开发规范/本地与代理接口统计机制.md`（`ApiStats` + `apilog`） |
 | 代理 JSON 字段改写 | `开发规范/代理JSON字段改写规范.md`（`ProxyJsonRewrite` + `jsonrewrite`） |
+| JSONP / 出站响应安全 | `开发规范/JSONP与出站响应安全规范.md`（`JsonpGuard` + `ApiOutboundSanitize`） |
 | 主题资源隔离 | `开发规范/主题资源隔离规范.md` |
 | 开发易错点 | `开发规范/开发易错点备忘.md` |
 | 版本记录 | `update-log.json`、`发行说明/` |

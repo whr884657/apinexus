@@ -1003,7 +1003,8 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                                 <li>选「设置」= 改成你填的值（没有就新建）；选「删除」= 去掉这个字段。最多 40 条。</li>
                             </ol>
                             <div class="vs-json-rewrite-help__eg">示例：上游 {"api_info":{"developer":"别人"}}
-要改成你的名字 → 字段填 api_info.developer，操作选「设置」，值填 尋鯨錄</div>
+要改成你的名字 → 字段填 api_info.developer，操作选「设置」，值填 尋鯨錄。
+禁止把本站管理后台地址（含 /admin）写进改写值。</div>
                         </div>
                         <input type="hidden" id="apiListFormJsonRewrite" name="jsonrewrite" value="">
                         <div class="vs-json-rewrite" id="apiListJsonRewriteEditor" hidden>

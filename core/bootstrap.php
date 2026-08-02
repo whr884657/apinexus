@@ -50,6 +50,8 @@ require_once VS_ROOT . '/core/AiApiDoc.php';
 require_once VS_ROOT . '/core/ApiNotify.php';
 require_once VS_ROOT . '/core/ProxyClientProfile.php';
 require_once VS_ROOT . '/core/ProxyJsonRewrite.php';
+require_once VS_ROOT . '/core/JsonpGuard.php';
+require_once VS_ROOT . '/core/ApiOutboundSanitize.php';
 require_once VS_ROOT . '/core/ApiProxy.php';
 require_once VS_ROOT . '/core/ApiStats.php';
 require_once VS_ROOT . '/core/IpLocator.php';

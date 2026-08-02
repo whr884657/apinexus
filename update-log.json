@@ -1,5 +1,16 @@
 {
     "versions": {
+        "13.25.0": {
+            "title": "ApiNexus 13.25.0 JSONP 与代理出站安全加固、移除记住密码",
+            "date": "2026-08-03",
+            "db_changes": false,
+            "changes": [
+                "代理网关：仅按短码 proxyslug 解析（禁止按接口 ID）；剥离 JSONP；出站擦除 \/admin 与凭证字段",
+                "JSON 改写禁止写入后台 URL；发行包新增 api\/接口开发安全须知.md（演示包不改逻辑）",
+                "强制移除管理员\/用户登录「记住账号密码」明文 localStorage，并清理历史缓存",
+                "业务错误 JSON 仍仅 code\/msg\/errcode，不附带管理路径或凭证字段"
+            ]
+        },
         "13.22.7": {
             "title": "ApiNexus 13.22.7 默认主题贡献者简介一言与伪静态精简",
             "date": "2026-08-03",

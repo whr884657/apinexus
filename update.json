@@ -1,15 +1,13 @@
 {
-    "version": "13.22.7",
-    "title": "ApiNexus 13.22.7 默认主题贡献者简介一言与伪静态精简",
+    "version": "13.25.0",
+    "title": "ApiNexus 13.25.0 JSONP 与代理出站安全加固、移除记住密码",
     "release_date": "2026-08-03",
     "db_changes": false,
     "changes": [
-        "默认主题个人主页去掉博客/贡献者按钮",
-        "默认主题贡献者列表与个人主页：未配置简介时客户端拉取一言（纯随机）",
-        "默认主题个人主页接口卡：计费与 KEY 分标、方法/免费标签深色可见；电脑端每行最多 4 卡",
-        "修复极验三/四代拼图滑块被 CSS width:100% 拉成长条（认证页 default/slate/管理员）",
-        "FrontendContributor 增加 bio_custom 标记；slate 仍用原占位文案",
-        "Nginx 伪静态将 config/data deny 合并为一条；安装向导同步"
+        "代理网关：仅按短码 proxyslug 解析（禁止按接口 ID）；剥离 JSONP；出站擦除 /admin 与凭证字段",
+        "JSON 改写禁止写入后台 URL；发行包新增 api/接口开发安全须知.md（演示包不改逻辑）",
+        "强制移除管理员/用户登录「记住账号密码」明文 localStorage，并清理历史缓存",
+        "业务错误 JSON 仍仅 code/msg/errcode，不附带管理路径或凭证字段"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

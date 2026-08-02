@@ -3,6 +3,10 @@
  * 演示包：一言代理接口（目录 api/demo，勿与业务接口重名）
  * 完全兼容 hitokoto.cn 官方API，纯转发不做任何修改
  * 官方文档: https://developer.hitokoto.cn/sentence/
+ *
+ * 注意：本文件仅为演示/联调。自写本地接口的安全要求见：
+ *   api/接口开发安全须知.md
+ * （含 JSONP callback 校验、禁止泄露后台路径与凭证等）
  */
 
 // —— 调用统计（须填本接口在后台的数字 ID；详见 api/统计代码使用说明.md）——

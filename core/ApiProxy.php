@@ -6,12 +6,19 @@
  * 出站（美观）：
  *   /apis/{proxyslug}?foo=1
  *
+ * 解析规则（强制 · v13.25.0 起写死）：
+ *   - 公开入口**只认短码 proxyslug**，查询条件仅为 `proxyslug` + 代理类型
+ *   - **禁止**按数据库主键 `api.id` 解析；路径里即使是纯数字，也只当短码字符串匹配
+ *   - 不存在「把短码换成接口 ID 即可调用」的能力；ID 仅用于后台/本地 ApiStats::hit
+ *
  * 转发策略（v13.4.0+）：
  *   - 一律先由本站 curl 请求上游（无论上游是否需要密钥），不对「上游接口 URL」本身做网关 302
  *   - 上游 HTTP 方法由 api.upmethod 决定（0=GET / 1=POST，v13.22.5）；可与调用方方法不同
  *   - 调用方 method 字段声明允许的 GET/POST；不在声明内则 errcode 11018
  *   - 上游响应为 JSON/TXT/二进制等：透传状态码、Content-Type 与正文
  *   - 若配置了 jsonrewrite：仅对合法 JSON 正文做字段级 set/del（见 ProxyJsonRewrite；TXT/二进制不改）
+ *   - v13.25.0：剥离调用方 callback/jsonp 参数，禁止 JSONP 透传上游（JsonpGuard）
+ *   - v13.25.0：出站 JSON 擦除 /admin 等敏感路径（ApiOutboundSanitize）；错误体不附带行数据/后台 URL
  *   - 上游响应为 3xx + Location（如随机视频跳转）：校验公网后原样把跳转还给调用方（v13.4.1）
  *     禁止服务端跟随跳转去拉最终大文件（视频等）
  *   - 可配置上游认证、出站 User-Agent / Referer（见 ProxyClientProfile）
@@ -39,6 +46,9 @@ class ApiProxy
     /**
      * 按短码查代理接口行（不过滤状态/审核，供网关返回明确错误文案）
      *
+     * 强制：仅 `proxyslug` 等值匹配；**永不** `WHERE id = ?`。
+     * 纯数字短码（如 016）若存在，是短码碰巧为数字，不是按主键 ID 访问。
+     *
      * @param string $slug
      * @return array|null
      */
@@ -51,6 +61,7 @@ class ApiProxy
 
         try {
             $pdo = Database::connect();
+            // 禁止改成按 id 查询；公开网关只认短码
             $sql = 'SELECT * FROM `' . ApiManager::table() . '`
                     WHERE `proxyslug` = ? AND `apitype` = ?
                     LIMIT 1';
@@ -190,6 +201,7 @@ class ApiProxy
 
         $row = self::findBySlug($slug);
         if (!$row) {
+            // 短码不存在：不尝试用数字当 api.id 二次查找
             vs_api_error_exit(ApiError::NOT_FOUND, '接口不存在');
         }
 
@@ -257,6 +269,10 @@ class ApiProxy
                     || $keyLower === 'key' || $keyLower === 'api_key' || $keyLower === 'apikey') {
                     continue;
                 }
+                // 禁止 JSONP 回调参数转发给上游（防反射型 XSS）
+                if (class_exists('JsonpGuard') && JsonpGuard::isJsonpParamName($key)) {
+                    continue;
+                }
                 $params[$key] = $v;
             }
         }
@@ -264,6 +280,9 @@ class ApiProxy
             $post = self::stripPlatformKeyFieldsFromArray($_POST);
             foreach ($post as $k => $v) {
                 if (is_array($v)) {
+                    continue;
+                }
+                if (class_exists('JsonpGuard') && JsonpGuard::isJsonpParamName((string) $k)) {
                     continue;
                 }
                 $params[(string) $k] = $v;
@@ -288,6 +307,9 @@ class ApiProxy
                     $key = (string) $k;
                     $keyLower = strtolower($key);
                     if ($key === '' || $keyLower === 'key' || $keyLower === 'api_key' || $keyLower === 'apikey') {
+                        continue;
+                    }
+                    if (class_exists('JsonpGuard') && JsonpGuard::isJsonpParamName($key)) {
                         continue;
                     }
                     if (!array_key_exists($key, $params)) {
@@ -530,6 +552,15 @@ class ApiProxy
                     }
                     $jsonRewritten = true;
                 }
+            }
+        }
+
+        // 出站消毒：擦除 /admin 等敏感路径（含改写写入的后台 URL）
+        if (class_exists('ApiOutboundSanitize')) {
+            $scrub = ApiOutboundSanitize::scrubJsonBody($respBody, $upstreamCt);
+            if (!empty($scrub['changed']) && isset($scrub['body'])) {
+                $respBody = (string) $scrub['body'];
+                $jsonRewritten = true;
             }
         }
 
