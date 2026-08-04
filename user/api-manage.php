@@ -98,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_array($result)) {
             AjaxResponse::error($result);
         }
+        AiChatSession::clearAllForActor('user', (int) $userId);
         $mail = ApiNotify::notifyAdminsPending($result);
         $msg = '已提交，等待管理员审核';
         if (!$mail['ok'] && $mail['error'] !== '' && strpos($mail['error'], '已关闭') === false) {
@@ -126,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ((int) $owned['userid'] === 0) {
             ApiManager::attachUserIdIfOrphan($id, $userId);
         }
+        AiChatSession::clearAllForActor('user', (int) $userId);
         $row = ApiManager::findById($id);
         $formatted = ApiManager::formatRow($row);
         $mail = ApiNotify::notifyAdminsPending($formatted);
@@ -223,7 +225,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['upreferer'],
             $data['upkeyvia'],
             $data['upkeyname'],
-            $data['upauth']
+            $data['upauth'],
+            $data['jsonrewrite']
         );
 
         $topic = AiChatSession::topicFromApi($data);

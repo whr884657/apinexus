@@ -1640,10 +1640,10 @@ $aiPresets = AiConfig::providerPresets();
         </div>
         <div class="vs-form-row vs-form-row--inline">
             <div class="vs-form-col">
-                <label class="vs-label" for="aiTimeout">单片超时（秒）</label>
+                <label class="vs-label" for="aiTimeout">单次超时（秒）</label>
                 <input type="number" name="ai_timeout" id="aiTimeout" class="vs-input" min="10" max="600"
                        value="<?php echo (int) $aiCfg['timeout']; ?>">
-                <p class="vs-form-hint">每片（curl 或 PHP）请求上限，最长 600 秒；建议 60～180</p>
+                <p class="vs-form-hint">单次请求超时（详细文档每一章 / 代码示例每一片），最长 600 秒；建议 60～180</p>
             </div>
             <div class="vs-form-col">
                 <label class="vs-label" for="aiDocMaxlen">详细文档字数上限</label>
@@ -1658,7 +1658,7 @@ $aiPresets = AiConfig::providerPresets();
                     <option value="sequential" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : 'sequential') === 'sequential' ? 'selected' : ''; ?>>单线程（写完一片再写下一片）</option>
                     <option value="parallel" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : '') === 'parallel' ? 'selected' : ''; ?>>多线程（浏览器并发多片）</option>
                 </select>
-                <p class="vs-form-hint">最多 3 鉴权 × 9 语言 = 27 片；亦可按鉴权单独生成 9 片。经 CDN 时建议「单线程」（SSE 保活）；多线程并发建议 1～3。</p>
+                <p class="vs-form-hint">详细文档按章顺序生成。代码示例最多 3 鉴权 × 9 语言 = 27 片，亦可按鉴权单独生成 9 片。经 CDN 时建议「单线程」。</p>
             </div>
             <div class="vs-form-col">
                 <label class="vs-label" for="aiCodeConcurrency">并行并发数</label>

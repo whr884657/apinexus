@@ -1,5 +1,18 @@
 {
     "versions": {
+        "13.26.3": {
+            "title": "ApiNexus 13.26.3 AI 详细文档标题与自动重试",
+            "date": "2026-08-05",
+            "db_changes": false,
+            "changes": [
+                "详细文档：文首强制接口名一级标题；接口说明改为短概述；调用示例须同时含 curl 与 PHP",
+                "详细文档章节失败自动重试 1 次，第二次失败才需点「继续生成」",
+                "界面文案去掉「流式」表述；系统设置 AI 超时\/调度提示与按章\/按片现状对齐",
+                "鉴权生成按钮同行短文案（生成 Query\/Header\/Bearer）；用户端 AI 标签\/hint\/交互对齐管理端",
+                "AI 对话 Redis TTL 改为 10 分钟；接口保存（create\/update）成功即清空该操作者全部短时效会话",
+                "安全加固：文档标题接口名消毒；代码片 wrapQsBlock 二次 scrub；用户 AI 剥离 jsonrewrite；clearAllForActor 前缀校验"
+            ]
+        },
         "13.26.2": {
             "title": "ApiNexus 13.26.2 AI 详细文档分章与代码示例少解析",
             "date": "2026-08-04",

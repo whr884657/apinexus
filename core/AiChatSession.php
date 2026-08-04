@@ -10,8 +10,8 @@
 
 class AiChatSession
 {
-    /** 短时效：30 分钟无活动即丢弃 */
-    const TTL = 1800;
+    /** 短时效：10 分钟无活动即丢弃（保存接口时也会整批清空，见 clearAllForActor） */
+    const TTL = 600;
 
     /** 除 system 外最多保留的 user/assistant 条数（成对约 4 轮） */
     const MAX_TURNS = 10;
@@ -106,6 +106,60 @@ class AiChatSession
             return;
         }
         RedisCache::forget($key);
+    }
+
+    /**
+     * 清空某操作者名下全部 AI 对话缓存（doc/code × 各 topic）
+     * 用于接口「保存/提交」成功后立刻释放，避免连续生成多个接口时 Redis 堆积。
+     *
+     * @param string $actor admin|user
+     * @param int    $actorId
+     * @return int 删除键数（失败或不可用时为 0）
+     */
+    public static function clearAllForActor($actor, $actorId)
+    {
+        if (!class_exists('RedisCache') || !RedisCache::enabled()) {
+            return 0;
+        }
+        if (!class_exists('RedisService')) {
+            return 0;
+        }
+        $actor = preg_replace('/[^a-z]/', '', strtolower((string) $actor));
+        $actorId = (int) $actorId;
+        if ($actor === '' || $actorId <= 0) {
+            return 0;
+        }
+        $logicalPrefix = 'ai:chat:' . $actor . ':' . $actorId . ':';
+        $deleted = 0;
+        try {
+            RedisService::withClient(function ($redis) use ($logicalPrefix, &$deleted) {
+                $fullPrefix = RedisService::buildKey($logicalPrefix);
+                $pattern = $fullPrefix . '*';
+                $it = null;
+                do {
+                    $keys = $redis->scan($it, $pattern, 80);
+                    if ($keys === false) {
+                        break;
+                    }
+                    if (!empty($keys)) {
+                        $batch = array();
+                        foreach ($keys as $key) {
+                            // 与 flushKeyspace 一致：二次确认前缀，防 SCAN 异常误删
+                            if (strpos((string) $key, $fullPrefix) === 0) {
+                                $batch[] = $key;
+                            }
+                        }
+                        if (!empty($batch)) {
+                            $n = $redis->del($batch);
+                            $deleted += is_int($n) ? $n : count($batch);
+                        }
+                    }
+                } while ($it !== 0 && $it !== null);
+            });
+        } catch (Exception $e) {
+            return $deleted;
+        }
+        return $deleted;
     }
 
     /**

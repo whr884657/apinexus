@@ -1726,6 +1726,17 @@ class ApiManager
         if ($name === '') {
             return '请填写接口名称';
         }
+        // 入库名禁止 HTML/高亮碎片（与 AI 文档标题消毒对齐，E232）
+        if (class_exists('ApiQuickstart')) {
+            $name = trim(ApiQuickstart::scrubHighlightLeak($name));
+        } else {
+            $name = trim(strip_tags($name));
+        }
+        $name = str_replace(array("\r", "\n", "\t"), ' ', $name);
+        $name = trim(preg_replace('/\s+/u', ' ', $name));
+        if ($name === '') {
+            return '请填写接口名称';
+        }
         if (mb_strlen($name, 'UTF-8') > 100) {
             return '接口名称不能超过 100 个字符';
         }

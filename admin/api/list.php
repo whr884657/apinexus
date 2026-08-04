@@ -74,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_array($result)) {
             AjaxResponse::error($result);
         }
+        AiChatSession::clearAllForActor('admin', (int) Auth::id());
         AjaxResponse::success('接口已添加', array(
             'api'         => $result,
             'api_summary' => ApiManager::formatRowSummary($result),
@@ -98,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $row = ApiManager::findById($id);
             }
         }
+        AiChatSession::clearAllForActor('admin', (int) Auth::id());
         $formatted = ApiManager::formatRow($row);
         AjaxResponse::success('接口已保存', array(
             'api'         => $formatted,
@@ -1207,16 +1209,16 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                         <label class="vs-label" for="apiListFormDocNormal">详细文档（Markdown）</label>
                         <div class="vs-api-doc-head__actions">
                             <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiDocBtn"
-                                    title="流式生成，可实时回填">AI 生成详细文档</button>
+                                    title="按章节生成详细文档">AI 生成详细文档</button>
                             <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiDocContinueBtn" hidden
-                                    title="从上次中断处续写">继续生成</button>
+                                    title="从中断章节继续">继续生成</button>
                             <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiChatClearBtn"
-                                    title="清除本接口短时效对话（约 30 分钟）">清除对话</button>
+                                    title="清除本接口短时效对话（约 10 分钟；保存接口时会全部清空）">清除对话</button>
                         </div>
                     </div>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocNormal" name="doc" rows="10"
                               data-vs-md="off" placeholder="面向调用方的详细说明…"></textarea>
-                    <p class="vs-form-hint">点击生成即向 AI 发一轮对话：支持实时流式回填与短时效历史（需 Redis，约 30 分钟）。中断后可点「继续生成」。勿写入上游地址或密钥。</p>
+                    <p class="vs-form-hint">按章节自动生成详细文档；偶尔中断会自动重试一次，仍失败可点「继续生成」。勿写入上游地址或密钥。</p>
                     <details class="vs-ai-term" id="apiListAiTermDoc" data-ai-term="doc">
                         <summary class="vs-ai-term__summary">AI 编写进程（详细文档）</summary>
                         <pre class="vs-ai-term__log font-mono" id="apiListAiTermDocLog">尚未开始生成。</pre>
@@ -1241,11 +1243,11 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     </div>
                     <div class="vs-api-ai-code-ways" id="apiListAiCodeWays" hidden>
                         <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="query" hidden
-                                title="仅生成 Query 鉴权下 9 种语言">生成 Query 示例</button>
+                                title="仅生成 Query 鉴权下 9 种语言">生成 Query</button>
                         <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="header" hidden
-                                title="仅生成 Header 鉴权下 9 种语言">生成 Header 示例</button>
+                                title="仅生成 Header 鉴权下 9 种语言">生成 Header</button>
                         <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="bearer" hidden
-                                title="仅生成 Bearer 鉴权下 9 种语言">生成 Bearer 示例</button>
+                                title="仅生成 Bearer 鉴权下 9 种语言">生成 Bearer</button>
                     </div>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="aidoc" rows="10"
                               data-vs-md="off" placeholder=":::qs lang=curl&#10;...&#10;:::&#10;&#10;:::qs lang=python&#10;...&#10;:::"></textarea>

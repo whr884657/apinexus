@@ -328,19 +328,19 @@ $canLocal = !empty($canLocal);
                     <?php if ($aiReady): ?>
                     <div class="vs-api-doc-head__actions">
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiDocBtn"
-                                title="流式生成，可实时回填">AI 生成详细文档</button>
+                                title="按章节生成详细文档">AI 生成详细文档</button>
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiDocContinueBtn" hidden
-                                title="从上次中断处续写">继续生成</button>
+                                title="从中断章节继续">继续生成</button>
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiChatClearBtn"
-                                title="清除本接口短时效对话">清除对话</button>
+                                title="清除本接口短时效对话（约 10 分钟；保存接口时会全部清空）">清除对话</button>
                     </div>
                     <?php endif; ?>
                 </div>
-                <textarea class="vs-input vs-textarea" id="userApiFormDoc" name="doc" rows="5"
+                <textarea class="vs-input vs-textarea vs-api-list-code" id="userApiFormDoc" name="doc" rows="10"
                           data-vs-md="off" placeholder="面向调用方的详细说明…"></textarea>
                 <p class="vs-form-hint"><?php echo $aiReady
-                    ? '点击生成即向 AI 发一轮对话：支持实时流式回填与短时效历史（约 30 分钟）。中断后可点「继续生成」。'
-                    : '管理员启用 AI 后可一键生成；亦可手写 Markdown。'; ?></p>
+                    ? '按章节自动生成详细文档；偶尔中断会自动重试一次，仍失败可点「继续生成」。勿写入上游地址或密钥。'
+                    : '管理员启用 AI 后可一键生成；亦可手写 Markdown。勿写入上游地址或密钥。'; ?></p>
                 <?php if ($aiReady): ?>
                 <details class="vs-ai-term" id="userApiAiTermDoc" data-ai-term="doc">
                     <summary class="vs-ai-term__summary">AI 编写进程（详细文档）</summary>
@@ -355,7 +355,7 @@ $canLocal = !empty($canLocal);
                     <span class="vs-ai-gen-banner__time" id="userApiAiBannerCodeTime"></span>
                 </div>
                 <div class="vs-api-doc-head">
-                    <label class="vs-label" for="userApiFormAidoc">代码示例（Markdown）</label>
+                    <label class="vs-label" for="userApiFormAidoc">代码示例（:::qs 多语言）</label>
                     <?php if ($aiReady): ?>
                     <div class="vs-api-doc-head__actions">
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiCodeBtn"
@@ -370,17 +370,19 @@ $canLocal = !empty($canLocal);
                 <?php if ($aiReady): ?>
                 <div class="vs-api-ai-code-ways" id="userApiAiCodeWays" hidden>
                     <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="query" hidden
-                            title="仅生成 Query 鉴权下 9 种语言">生成 Query 示例</button>
+                            title="仅生成 Query 鉴权下 9 种语言">生成 Query</button>
                     <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="header" hidden
-                            title="仅生成 Header 鉴权下 9 种语言">生成 Header 示例</button>
+                            title="仅生成 Header 鉴权下 9 种语言">生成 Header</button>
                     <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="bearer" hidden
-                            title="仅生成 Bearer 鉴权下 9 种语言">生成 Bearer 示例</button>
+                            title="仅生成 Bearer 鉴权下 9 种语言">生成 Bearer</button>
                 </div>
                 <?php endif; ?>
-                <textarea class="vs-input vs-textarea" id="userApiFormAidoc" name="aidoc" rows="5"
-                          data-vs-md="off" placeholder="多语言调用示例…"></textarea>
+                <textarea class="vs-input vs-textarea vs-api-list-code" id="userApiFormAidoc" name="aidoc" rows="10"
+                          data-vs-md="off" placeholder=":::qs lang=curl&#10;...&#10;:::&#10;&#10;:::qs lang=python&#10;...&#10;:::"></textarea>
+                <p class="vs-form-hint"><?php echo $aiReady
+                    ? '须使用 :::qs lang=语言标识 包裹。主按钮一键生成已选鉴权×9 语言（最多 27 片）；下方可按鉴权单独生成 9 片（会合并保留其它鉴权块）。失败可点「重试失败」。'
+                    : '须使用 :::qs lang=语言标识 包裹多语言示例。管理员启用 AI 后可一键生成。'; ?></p>
                 <?php if ($aiReady): ?>
-                <p class="vs-form-hint">主按钮一键生成已选鉴权×9 语言（最多 27 片）；下方可按鉴权单独生成 9 片。失败可点「重试失败」。</p>
                 <details class="vs-ai-term" id="userApiAiTermCode" data-ai-term="code">
                     <summary class="vs-ai-term__summary">AI 编写进程（代码示例）</summary>
                     <pre class="vs-ai-term__log font-mono" id="userApiAiTermCodeLog">尚未开始生成。</pre>

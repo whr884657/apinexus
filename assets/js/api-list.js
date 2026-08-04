@@ -2803,13 +2803,12 @@
     }
 
     /**
-     * 详细文档：按章节顺序多次 SSE，逐章回填（抗 CDN 长流切断）
+     * 详细文档：按章节顺序多次请求，逐章回填
      */
     function runAiDocSections(payload, btn, continueFlag) {
         var sections = getDocSections();
         var startIdx = continueFlag ? Math.max(0, Number(aiDocResumeIndex) || 0) : 0;
         if (startIdx >= sections.length) {
-            // 索引越界：已有正文则视为完成，勿回退到 0 造成重复拼接
             if (continueFlag) {
                 window.VS.showMessage('文档章节已全部生成，无需继续', 'info');
                 setAiDocContinueVisible(false);
@@ -2819,11 +2818,12 @@
             startIdx = 0;
         }
         var kind = 'doc';
-        var title = continueFlag ? '详细文档（续写章节）' : '详细文档';
         var assembled = '';
         if (continueFlag && fields.docNormal) {
             assembled = String(fields.docNormal.value || '').replace(/\s+$/, '');
         }
+        // 同一次任务内：章节失败自动重试 1 次；第二次失败才要人点「继续生成」
+        var autoRetryUsed = 0;
 
         switchFormTab('docs');
         aiBusy = true;
@@ -2837,8 +2837,8 @@
         aiTermOpen(kind, true);
         aiTermAppend(kind, continueFlag
             ? ('从第 ' + (startIdx + 1) + '/' + sections.length + ' 章继续…')
-            : ('按章节分片生成（共 ' + sections.length + ' 章）…'));
-        aiSetBanner('run', '正在生成' + title + '…', 'doc');
+            : ('正在生成详细文档（共 ' + sections.length + ' 章）…'));
+        aiSetBanner('run', '正在生成详细文档，请稍等', 'doc');
         if (aiBannerTime) {
             aiBannerTime.textContent = '已用时 0秒';
         }
@@ -2872,15 +2872,12 @@
                 aiBannerTime.textContent = '已用时 ' + aiElapsedLabel();
             }
             if (aiBannerText && aiBanner && !aiBanner.classList.contains('is-done') && !aiBanner.classList.contains('is-error')) {
-                var sec = sections[currentIdx];
-                var label = sec && sec.title ? sec.title : ('第' + (currentIdx + 1) + '章');
-                var previewLen = (assembled ? assembled.length : 0) + liveSection.length;
-                aiBannerText.textContent = '正在生成「' + label + '」（' + (currentIdx + 1) + '/'
-                    + sections.length + ' · ' + aiElapsedLabel() + ' · ' + previewLen + ' 字）';
+                aiBannerText.textContent = '正在生成详细文档，请稍等（'
+                    + (currentIdx + 1) + '/' + sections.length + ' · ' + aiElapsedLabel() + '）';
             }
         }, 1000);
 
-        window.VS.showMessage('正在按章节生成' + title + '，可在文档框实时查看', 'info');
+        window.VS.showMessage('正在生成详细文档，请稍等', 'info');
 
         function paintDoc(text) {
             draftSkip = true;
@@ -2890,30 +2887,13 @@
             draftSkip = false;
         }
 
-        function runOne(index) {
-            if (index >= sections.length) {
-                setAiDocContinueVisible(false);
-                aiDocResumeIndex = 0;
-                paintDoc(assembled);
-                setTextareaValue(fields.docNormal, assembled);
-                aiTermAppend(kind, '全部章节完成，约 ' + assembled.length + ' 字符，总用时 ' + aiElapsedLabel());
-                aiTermStopRunning(kind);
-                aiSetBanner('done', '详细文档已生成 · 用时 ' + aiElapsedLabel(), 'doc');
-                window.VS.showMessage('详细文档已生成', 'success');
-                scheduleDraftSave();
-                return Promise.resolve();
-            }
-
-            currentIdx = index;
+        function requestSection(index) {
             var sec = sections[index];
             var secId = sec && sec.id ? String(sec.id) : '';
             var secTitle = sec && sec.title ? String(sec.title) : secId;
-            liveSection = '';
-            aiTermAppend(kind, '[' + (index + 1) + '/' + sections.length + '] 开始 · ' + secTitle);
-            aiDocResumeIndex = index;
-
             var baseParts = assembled ? (assembled + '\n\n') : '';
             var sectionFailed = false;
+            liveSection = '';
             return postActionSse('ai_gen_doc_section_stream', payload, {
                 meta: function () { /* noop */ },
                 delta: function (d) {
@@ -2937,7 +2917,6 @@
                 },
                 error: function (err) {
                     sectionFailed = true;
-                    // 预览半成品不写入 assembled，继续生成时从本章重跑，避免重复拼接
                     liveSection = '';
                     paintDoc(assembled);
                     var msg = (err && err.msg) ? String(err.msg) : '生成失败';
@@ -2949,7 +2928,46 @@
                     stop.sseHandled = true;
                     throw stop;
                 }
+                return true;
+            });
+        }
+
+        function runOne(index) {
+            if (index >= sections.length) {
+                setAiDocContinueVisible(false);
+                aiDocResumeIndex = 0;
+                paintDoc(assembled);
+                setTextareaValue(fields.docNormal, assembled);
+                aiTermAppend(kind, '全部完成，约 ' + assembled.length + ' 字符，用时 ' + aiElapsedLabel());
+                aiTermStopRunning(kind);
+                aiSetBanner('done', '详细文档已生成', 'doc');
+                window.VS.showMessage('详细文档已生成', 'success');
+                scheduleDraftSave();
+                return Promise.resolve();
+            }
+
+            currentIdx = index;
+            var sec = sections[index];
+            var secTitle = sec && sec.title ? String(sec.title) : String(sec && sec.id ? sec.id : '');
+            aiTermAppend(kind, '[' + (index + 1) + '/' + sections.length + '] 开始 · ' + secTitle);
+            aiDocResumeIndex = index;
+
+            return requestSection(index).then(function () {
                 return runOne(index + 1);
+            }).catch(function (err) {
+                if (!(err && err.message === 'section_failed') && !(err && err.sseHandled)) {
+                    throw err;
+                }
+                if (autoRetryUsed < 1) {
+                    autoRetryUsed += 1;
+                    aiTermAppend(kind, '网络异常，正在自动重试第 ' + (index + 1) + ' 章…');
+                    aiSetBanner('run', '正在生成详细文档，请稍等', 'doc');
+                    window.VS.showMessage('网络异常，正在自动重试', 'info');
+                    return requestSection(index).then(function () {
+                        return runOne(index + 1);
+                    });
+                }
+                throw err;
             });
         }
 
@@ -2957,29 +2975,29 @@
             .catch(function (err) {
                 var msg;
                 if (err && err.message === 'section_failed') {
-                    msg = '章节生成中断';
+                    msg = '生成中断';
                 } else if (err && err.sseError && err.sseError.msg) {
                     msg = String(err.sseError.msg);
                 } else if (err && err.message) {
                     msg = String(err.message);
                 } else {
-                    msg = '网络异常或网关超时';
+                    msg = '网络异常';
                 }
                 if (msg === 'invalid_json') {
-                    msg = '响应异常（常见于网关切断）。已保留已完成章节，可点「继续生成」';
+                    msg = '生成中断，可点「继续生成」';
                 }
                 liveSection = '';
                 paintDoc(assembled);
                 setTextareaValue(fields.docNormal, assembled);
                 if (assembled || currentIdx < sections.length) {
                     setAiDocContinueVisible(true);
-                    aiTermAppend(kind, '中断于第 ' + (currentIdx + 1) + ' 章（可继续生成）：' + msg);
+                    aiTermAppend(kind, '中断于第 ' + (currentIdx + 1) + ' 章，可点「继续生成」');
                 } else {
                     aiTermAppend(kind, '失败：' + msg);
                     aiTermStopRunning(kind);
                 }
-                aiSetBanner('error', msg, 'doc');
-                window.VS.showMessage(msg + (assembled ? '，可点「继续生成」' : ''), 'error');
+                aiSetBanner('error', '生成中断，可点「继续生成」', 'doc');
+                window.VS.showMessage('生成中断，可点「继续生成」', 'error');
             })
             .finally(function () {
                 aiBusy = false;

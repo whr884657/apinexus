@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.2**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.3**）
 
 ---
 
@@ -255,9 +255,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型/单片超时/代码调度模式与并发） |
 | `AiClient.php` | OpenAI 兼容 Chat Completions / Responses；流式 `chatStreamWithConfig`；连通测试须先 `session_write_close`（v13.26.0） |
-| `AiChatSession.php` | AI 短时效多轮（Redis TTL 约 30 分钟）与断点 partial |
+| `AiChatSession.php` | AI 短时效多轮（Redis TTL 约 10 分钟）；接口保存时 `clearAllForActor` 整批清空 |
 | `AiSse.php` | SSE 输出（`no-transform` / `Surrogate-Control` / 首包垫片 + 心跳），供文档与代码流式生成 |
-| `AiApiDoc.php` | 详细文档按章 SSE（`generateDetailDocSectionStream`）；代码示例最多 3×9；纯代码出站后服务端包 `:::qs`（v13.26.2） |
+| `AiApiDoc.php` | 详细文档按章生成（文首接口名标题、失败自动重试见前端）；代码示例最多 3×9；纯代码出站后服务端包 `:::qs`；按鉴权按钮同行短文案、用户端体验对齐管理端（v13.26.3） |
 | `IpLocator.php` | IP 归属地：内置（仅 IPv4）或自定义；`probe()` 支持表单草稿测试；自定义超时加长；IPv6 提醒需自定义接口（v13.26.1） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ProxyClientProfile.php` | 出站 UA/Referer 内置预设与解析；代理网关与本地 `ApiStats::outboundHeaders` 共用 |
@@ -730,11 +730,11 @@ VsPlaygroundResponse.directRequest({
 
 ### 4.21.5 AiApiDoc.php / ApiQuickstart.php（AI 文档与快速上手）
 
-**AiApiDoc：** 管理员/用户接口编辑「AI 生成详细文档 / 代码示例」；**v13.26.2** 详细文档默认按 7 章 `generateDetailDocSectionStream` 顺序 SSE 回填（旧 `generateDetailDocStream` 整篇保留兼容）；上下文剔除 `targeturl`/`upkey`；输出经 `ApiQuickstart::scrubHighlightLeak` 剥离 HTML / `vs-syn` 碎片（E177：勿对已高亮 HTML 二次正则）。
+**AiApiDoc：** 管理员/用户接口编辑「AI 生成详细文档 / 代码示例」；**v13.26.2+** 详细文档默认按 7 章 `generateDetailDocSectionStream` 顺序回填；**v13.26.3** intro 须 `# 接口名` + 短概述（`sanitizeApiTitleName` + `ensureIntroDocTitle` 后再消毒），examples 须 curl+非空 PHP；前端章节失败自动重试 1 次。用户端**仅使用平台 AI**（无自建模型配置）。上下文剔除 `targeturl`/`upkey`/`jsonrewrite`；输出经 `ApiQuickstart::scrubHighlightLeak`；代码片 `wrapQsBlock` 二次 scrub（E232）。
 **v13.26.1 文档约束：** 详细文档调用示例仅 **curl + PHP**；密钥传递只描述**首选一种**鉴权；章节顺序强制（参数→响应→错误码→调用示例→注意事项）；文末必有「注意事项」。
 **展示：** `VsSyntax` bash 纯文本分词；复制用 `data-vs-plain` / `plainText`。
 
-**代码示例生成（v12.0.0 / v13.26.2）：** 前端按片调用 `ai_gen_code_piece_stream`（SSE，`delta` 可预览）；**AI 生成最多 3 鉴权 × 9 语言 = 27 片**。主按钮一键全量；可按鉴权单独生成 9 片（合并保留其它鉴权块）。`AiConfig::codeMode` 为 `sequential`/`parallel`（并发 1～6，CDN 建议 ≤2）。提示词要求**纯代码**；服务端 `finalizeCodePieceBody` 包裹 `:::qs`（兼容旧 :::qs / fence / JSON），禁 emoji、要求中文注释，失败可重试 1 次（重试仍流式）。旧整包接口仅兼容保留。**纠正：** v13.26.0 误把「文档内仅 curl+PHP」套用到 aidoc 并降为 2 片，已在 13.26.1 恢复。
+**代码示例生成（v12.0.0 / v13.26.2 / v13.26.3）：** 前端按片调用 `ai_gen_code_piece_stream`（SSE，`delta` 可预览）；**AI 生成最多 3 鉴权 × 9 语言 = 27 片**。主按钮一键全量；可按鉴权单独生成 9 片（按钮文案「生成 Query / Header / Bearer」，**同行横排**，合并保留其它鉴权块）。用户开发者入口标签/hint/校验切 Tab/总用时与管理端对齐。`AiConfig::codeMode` 为 `sequential`/`parallel`（并发 1～6，CDN 建议 ≤2）。提示词要求**纯代码**；服务端 `finalizeCodePieceBody` 包裹 `:::qs`（兼容旧 :::qs / fence / JSON），禁 emoji、要求中文注释，失败可重试 1 次（重试仍流式）。旧整包接口仅兼容保留。**纠正：** v13.26.0 误把「文档内仅 curl+PHP」套用到 aidoc 并降为 2 片，已在 13.26.1 恢复。
 
 **默认主题快速上手图标（v12.0.1）：** `assets/img/lang/*.svg`；`detailQsBundle.byAuth[*]` 宜带 `icon_gray`/`icon_color`；另须注入 `window.detailQsLangIcons`（`ApiQuickstart::langIconMap`）。`detail-quickstart.js` 重绘 Tab 时按语言 id 兜底补图标；首屏已有 PHP 图标则勿无谓重绘。切换 Query/Header/Bearer **不得**丢九种语言图标。
 

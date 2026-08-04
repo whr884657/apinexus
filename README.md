@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.2-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.3-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -256,11 +256,14 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.2（2026-08-04）
+### v13.26.3（2026-08-05）
 
-- 详细文档改为按章节分片 SSE，逐章回填，降低 CDN 长流切断导致的半截文档
-- 代码示例改为模型只出纯代码、服务端包裹 `:::qs`，减少解析失败
-- 「继续生成」从中断章节续跑；管理端与用户开发者入口同步
+- 详细文档文首强制接口名标题；接口说明改为短概述；调用示例须同时含 curl 与 PHP
+- 章节失败自动重试一次，第二次失败才需点「继续生成」
+- 界面去掉「流式」表述；系统设置 AI 提示与按章/按片现状对齐
+- 鉴权生成按钮同行短文案；用户端 AI 标签/hint/交互对齐管理端
+- AI 对话缓存 TTL 10 分钟；保存接口成功即清空该操作者全部短时效会话
+- 安全加固：文档标题接口名消毒；代码片二次 scrub；用户 AI 剥离 jsonrewrite；会话清空前缀校验
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
