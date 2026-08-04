@@ -2,7 +2,9 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.3**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.4**）  
+>  
+> **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
 ---
 
@@ -208,16 +210,21 @@ foreach (FrontendCategory::listTags() as $tag) {
 - [ ] 已更新本文档「文件总览」「能力进度表」  
 - [ ] 若有表变更：迁移 SQL + `update.json` 的 `db_changes`  
 
-### 2.8 主题开发者只需记住
+### 2.8 主题开发者速记（完整对接见 **§六**）
 
 1. **读分类** → `FrontendCategory`  
 2. **读公开接口** → `FrontendApi`  
-3. **读站点名/描述** → `SiteContext::siteName()`（前台）；后台/用户中心壳层用 `SiteContext::systemName()`（或模板 `$systemName`）  
-4. **当前登录用户** → `FrontendUser::current()`（推荐）或 `UserAuth::user()`  
-5. **是否开发者** → `UserRole::currentCanPublishApi()`
-5. **读文章** → `FrontendArticle::listForTheme()` / `findById()`  
-6. **读公告** → `FrontendAnnouncement::listForTheme()` / `listPopups()`  
-7. **永远不要**在主题里写 SQL 或直接调 `*Manager` 做前台展示  
+3. **读统计 KPI** → `FrontendStats`（勿再调 `ApiManager` 计数）  
+4. **读站点名/描述** → `SiteContext::siteName()`；壳层系统名 → `SiteContext::systemName()`  
+5. **当前登录用户** → `FrontendUser::current()`；会话 → `UserAuth::check()`  
+6. **是否开发者** → `UserRole::currentCanPublishApi()` 或用户字段 `can_publish_api`  
+7. **文章 / 公告 / 关于** → `FrontendArticle` / `FrontendAnnouncement` / `FrontendAbout`  
+8. **友链 / 伙伴 / 赞助** → `FrontendLink` / `FrontendPartner` / `FrontendSponsor`  
+9. **贡献者** → `FrontendContributor`  
+10. **图标** → `SiteMedia::imgUrl()`；**主题配置** → `ThemeManager::themeSetting*`  
+11. **永远不要**在主题里写 SQL，或用 `*Manager` 做前台展示取数  
+
+> 详细方法签名、返回字段、入口管道、目录结构、Checklist：**见第六章**。
 
 ---
 
@@ -285,7 +292,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `FrontendLink.php` | 前台已通过且启用的友链列表与本站友链卡片（**主题向**） |
 | `FrontendPartner.php` | 前台已启用合作伙伴列表（**主题向**） |
 | `FrontendSponsor.php` | 前台赞助收款码 + 赞助名单（**主题向**） |
-| `FrontendStats.php` | 前台统计：注册用户数、今日调用次数（**主题向**） |
+| `FrontendStats.php` | 前台统计：注册用户数、今日调用、审核通过接口数、累计调用（**主题向**；首页 KPI 勿直调 ApiManager） |
 | `RedisCache.php` | 业务数据缓存（前台/公开列表 + apilog + orders + **控制台 dashboard 前缀** + statday topmap）；监控页展示逻辑键名（v10.6.0 / v10.12.0） |
 | `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`countToday` 优先读 `statday`；`detailEnabled()` 控制是否写详细日志；`httpcodeLabel`（v10.6.1）；`maskApikey` 展示/落库脱敏（v10.8.0） |
 | `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0）；业务时区东八区（v10.6.1） |
@@ -734,7 +741,7 @@ VsPlaygroundResponse.directRequest({
 **v13.26.1 文档约束：** 详细文档调用示例仅 **curl + PHP**；密钥传递只描述**首选一种**鉴权；章节顺序强制（参数→响应→错误码→调用示例→注意事项）；文末必有「注意事项」。
 **展示：** `VsSyntax` bash 纯文本分词；复制用 `data-vs-plain` / `plainText`。
 
-**代码示例生成（v12.0.0 / v13.26.2 / v13.26.3）：** 前端按片调用 `ai_gen_code_piece_stream`（SSE，`delta` 可预览）；**AI 生成最多 3 鉴权 × 9 语言 = 27 片**。主按钮一键全量；可按鉴权单独生成 9 片（按钮文案「生成 Query / Header / Bearer」，**同行横排**，合并保留其它鉴权块）。用户开发者入口标签/hint/校验切 Tab/总用时与管理端对齐。`AiConfig::codeMode` 为 `sequential`/`parallel`（并发 1～6，CDN 建议 ≤2）。提示词要求**纯代码**；服务端 `finalizeCodePieceBody` 包裹 `:::qs`（兼容旧 :::qs / fence / JSON），禁 emoji、要求中文注释，失败可重试 1 次（重试仍流式）。旧整包接口仅兼容保留。**纠正：** v13.26.0 误把「文档内仅 curl+PHP」套用到 aidoc 并降为 2 片，已在 13.26.1 恢复。
+**代码示例生成（v12.0.0 / v13.26.2 / v13.26.4）：** 前端按片调用 `ai_gen_code_piece_stream`（SSE，`delta` 可预览）；**AI 生成最多 3 鉴权 × 9 语言 = 27 片**。主按钮一键全量；可按鉴权单独生成 9 片（按钮文案「生成 Query / Header / Bearer」，**同行横排**，合并保留其它鉴权块）。用户开发者入口标签/hint/校验切 Tab/总用时与管理端对齐。`AiConfig::codeMode` 为 `sequential`/`parallel`（并发 1～6，CDN 建议 ≤2）。提示词要求**纯代码**（禁思考链）；服务端 `finalizeCodePieceBody` → `stripReasoningArtifacts` + `wrapQsBlock` 二次 scrub（E233），禁 emoji、要求中文注释，失败可重试 1 次（重试仍流式）。旧整包接口仅兼容保留。**纠正：** v13.26.0 误把「文档内仅 curl+PHP」套用到 aidoc 并降为 2 片，已在 13.26.1 恢复。
 
 **默认主题快速上手图标（v12.0.1）：** `assets/img/lang/*.svg`；`detailQsBundle.byAuth[*]` 宜带 `icon_gray`/`icon_color`；另须注入 `window.detailQsLangIcons`（`ApiQuickstart::langIconMap`）。`detail-quickstart.js` 重绘 Tab 时按语言 id 兜底补图标；首屏已有 PHP 图标则勿无谓重绘。切换 Query/Header/Bearer **不得**丢九种语言图标。
 
@@ -1108,63 +1115,503 @@ $result = OAuthService::handleCallback($provider, $code, $state);
 
 ---
 
-## 六、主题开发对接指南
+## 六、主题开发对接指南（完整 API）
 
-### 6.1 推荐分层
+> **铁律：** 主题 **零直连数据库**。所有展示数据、用户态、站点信息、图标 URL，一律通过 `core/` 已注册类获取。  
+> 缺能力时：先在 core 补 `Frontend*`（必要时再补 `*Manager`）并注册 `bootstrap.php`，再改主题。  
+> 参考实现：`core/theme/default/`、`core/theme/slate/`。
 
-> 完整开发顺序见 **第二章「core 开发规范与后续流程」**。主题处于最上层，只消费 core 已提供的 `Frontend*` 类。
+### 6.0 一页速查：主题该调谁？
 
-```
-主题 pages/*.php          ← 只做展示，不写 SQL
-    ↓ 只调用
-FrontendCategory / FrontendApi / Frontend*（未来）/ SiteContext / UserAuth
-    ↓ 内部调用
-XxxManager / Config / Database
-    ↓
-MySQL
-```
-
-### 6.2 分类标签标准写法（两主题已统一）
-
-1. 循环 `FrontendCategory::listTags()` 输出按钮/链接  
-2. 「全部」使用 `FrontendCategory::ALL_ID`（`'all'`）  
-3. 超过 `FrontendCategory::tagVisibleLimit()`（15）个时，主题 CSS/JS 做「更多」展开  
-4. **不要**在主题里写 `ApiCategoryManager::listEnabled()` 或直接 SQL  
-
-### 6.3 接口列表标准写法
-
-1. PHP：`$apiData = FrontendApi::listForTheme();`  
-2. 模板循环输出卡片，或 `json_encode` 交给主题 JS  
-3. 卡片上 `data-category="<?php echo vs_e($api['category']); ?>"` 用于筛选  
-4. 无公开接口时显示空状态，**分类栏仍保留**  
-
-### 6.4 新建主题 checklist
-
-- [ ] `core/theme/{id}/theme.json`  
-- [ ] `pages/home.php`、`pages/apis.php` 等  
-- [ ] `layout/header.php`、`layout/footer.php`  
-- [ ] `assets/theme.css`、`assets/theme.js`  
-- [ ] 分类：`FrontendCategory::listTags()`  
-- [ ] 接口：`FrontendApi::listForTheme()`  
-- [ ] 不引用其他主题的 CSS/JS  
-- [ ] 输出用户内容处使用 `vs_e()`  
-
-### 6.5 与后台的关系
-
-| 能力 | 后台管理类 | 前台主题类 | 状态 |
-|------|------------|------------|------|
-| 接口分类 | `ApiCategoryManager` | `FrontendCategory` | ✅ 可调用 |
-| 接口审核/上下线 | `ApiManager` | `FrontendApi` | ✅ 可调用 |
-| 用户管理 | `UserManager` | `UserAuth`（当前用户） | ✅ 可调用 |
-| 站点配置 | 后台设置页 → `Config` | `SiteContext::siteName()` / `systemName()` / `ThemeManager::themeSetting()` | ✅ 可调用 |
-| 文章 | `ContentManager`（kind=1） | `FrontendArticle` | ✅ 已完成 |
-| 友链 | `LinkManager` | `FrontendLink` | ✅ 可调用（已通过且启用） |
-| 合作伙伴 | `LinkManager` | `FrontendPartner` | ✅ 可调用（已启用） |
-| 赞助 | `LinkManager` | `FrontendSponsor` | ✅ 可调用（收款码 + 已启用名单） |
-| 公告 | `ContentManager`（kind=0） | `FrontendAnnouncement` | ✅ 已完成 |
-| Markdown | `Markdown` | 编辑器资源 `core/markdown/assets` | ✅ |
+| 你要做什么 | 调用（唯一推荐） | 禁止 |
+|------------|------------------|------|
+| 读公开接口列表/详情 | `FrontendApi::listForTheme()` / `findForThemeById($id)` | `ApiManager::*` 查库 |
+| 读分类标签 | `FrontendCategory::listTags()` / `nameMap()` | `ApiCategoryManager::*` |
+| 读首页统计 | `FrontendStats::userCount()` / `todayCallCount()` / `approvedApiCount()` / `totalCallCount()` | 主题内 COUNT SQL / 直接调 Manager 统计 |
+| 读友链 / 页脚友链 | `FrontendLink::listForThemePage()` / `pickForFooter($n)` / `siteCard()` | `LinkManager::*` |
+| 读合作伙伴 | `FrontendPartner::listForTheme()` | 写死外链或 SQL |
+| 读赞助名单 + 收款码 | `FrontendSponsor::listForTheme()` + `paymentQrs()` | 手写收款码路径 |
+| 读文章列表/详情 | `FrontendArticle::listForTheme()` / `listPaged()` / `findById()` | `ContentManager::*` |
+| 读公告 / 弹窗公告 | `FrontendAnnouncement::listForTheme()` / `listPopups()` | 同上 |
+| 读关于页正文 | `FrontendAbout::getBoundArticle()` | 主题硬编码长文 |
+| 读贡献者 / 个人主页 | `FrontendContributor::listForTheme()` / `findProfile($uid)` | 拼用户表 SQL |
+| 当前登录用户展示 | `FrontendUser::current()` | 主题直读 Session 字段拼装 |
+| 是否已登录 / 强制登录 | `UserAuth::check()` / `requireLogin()` | 自造 session key |
+| 站点名 / Logo / 备案 | `SiteContext::*` | 读 `Config::get` 当展示（后台键留给 core） |
+| 主题配置项 | `ThemeManager::themeSetting*()` | 读别的主题的 settings |
+| 内置图标 URL | `SiteMedia::imgUrl('xxx.svg')` | 手写 `/assets/img/...` |
+| 用户头像 | 已在 `FrontendUser`/`FrontendContributor`；兜底 `UserAvatar::*` | 外链拼 QQ 头像逻辑自造 |
+| 详情快速上手代码 | `ApiQuickstart::qsBundleFromAidoc($aidoc, $keyways)` | 主题内解析 aidoc |
+| Markdown 渲染 | 优先用 Frontend* 已给的 `body_html`；必要时 `Markdown::render()` | 主题自带 MD 引擎 |
+| 提交评论 / 反馈 | `FrontendComment::submit()` / `FrontendFeedback::submit()` | 主题 INSERT |
+| AJAX 成功/失败 | `AjaxResponse::success` / `error` + `vs_require_secure_post()` | 自造 JSON 协议 |
+| 壳层 CSS/JS URL | `ThemeManager::shellUrl` / `frontendShell*Hrefs` / `assetUrl` | 引用根目录 `assets/css\|js` 或其它主题 |
 
 ---
+
+### 6.1 请求如何进到主题页？
+
+#### 6.1.1 公开前台（访客可见）
+
+根目录入口脚本（如 `index.php`、`apis.php`、`detail.php`…）在 `bootstrap` 之后调用：
+
+```php
+vs_frontend_page($pageKey, $pageTitle, $pageData);
+```
+
+| 入口脚本 | `$pageKey` | 主题文件 |
+|----------|------------|----------|
+| `index.php` | `home` | `pages/home.php` |
+| `apis.php` | `apis` | `pages/apis.php` |
+| `detail.php` | `detail` | `pages/detail.php`（`$pageData` 含 `api` / `notFound` / `playground`） |
+| `articles.php` | `articles` | `pages/articles.php` |
+| `about.php` | `about` | `pages/about.php` |
+| `links.php` | `links` | `pages/links.php` |
+| `applylink.php` | `applylink` | `pages/applylink.php` |
+| `sponsor.php` | `sponsor` | `pages/sponsor.php` |
+| `contributors.php` | `contributors` | `pages/contributors.php` |
+| `profile.php` | `profile` | `pages/profile.php` |
+
+**管道：**
+
+```
+入口.php
+  → vs_frontend_page()
+      → 剥 seo → vs_page_seo_pack → $pageData['pageSeo']
+      → ThemeManager::frontendShellCssHrefs / JsHrefs
+      → default 主题：defaultFrontendAssets($pageKey)（多文件 CSS/JS）
+      → 其它主题：activeStylesheetHref + activeScriptHref（theme.css / theme.js）
+      → vs_render_head
+      → ThemeManager::renderBody($pageKey, $pageTitle, $pageData)
+            → layout/header.php
+            → pages/{pageKey}.php
+            → layout/footer.php
+      → vs_render_foot
+```
+
+**`renderBody` 注入到模板的变量（始终有）：**
+
+`$vsBase`、`$siteName`、`$navName`、`$systemName`、`$copyrightName`、`$copyrightUrl`、`$siteDesc`、`$pageKey`、`$pageTitle`、`$navItems`、`$activeNav`、`$userLoggedIn`、`$authUrl`、`$authLabel`、`$authAvatarUrl`、`$themeId`，以及 `$pageData` 全部键（含 `pageSeo`）。
+
+模板首行必须：
+
+```php
+<?php
+if (!defined('VS_THEME_RENDER')) {
+    exit;
+}
+```
+
+#### 6.1.2 用户中心（需登录）
+
+```
+user/init.php → UserAuth::requireLogin()
+  → 业务入口（如 user/index.php）
+  → vs_user_render_page(...) → ThemeManager::renderUserPage
+       → user/pages/{pageKey}.php
+       → 布局：user/layout.php（vs_theme_user_layout_start/end）
+```
+
+登录/注册/找回/OAuth 绑定：
+
+```
+ThemeManager::renderAuthPage($pageKey, ...)
+  → user/auth/{pageKey}.php
+  → ThemeManager::renderThemeAuthHead / Foot（加载 user/auth/layout.php）
+```
+
+#### 6.1.3 主题内 AJAX（可选）
+
+可放 `core/theme/{id}/api/*.php`（如 default 的 `api/sitemeta.php`）。  
+写操作协议：
+
+```
+POST + csrf_token + 同源
+→ vs_require_secure_post()
+→ Frontend* / 业务
+→ AjaxResponse::success($msg, $extra)   // {code:1, msg, ...}
+→ AjaxResponse::error($msg)             // {code:0, msg}
+```
+
+前端暴露：`window.VS_CSRF_TOKEN = <?php echo json_encode(AuthSecurity::csrfToken()); ?>;`
+
+---
+
+### 6.2 主题目录结构（必须 / 推荐）
+
+```text
+core/theme/{id}/
+  theme.json                 ← 必须（发现主题的门禁）
+  preview.png                ← 推荐
+  layout/
+    header.php               ← 前台必须
+    footer.php               ← 强烈推荐
+  pages/
+    home.php, apis.php, detail.php, articles.php, about.php,
+    links.php, applylink.php, sponsor.php, contributors.php, profile.php
+  assets/
+    theme.css / theme.js     ← 非 default 主题主资源
+    user.css / user.js
+    auth.css / auth.js
+    shell/                   ← common/toast/modal/icons/site-footer/user-shell…
+    css/  js/                ← default 按页拆分（见 ThemeManager::defaultFrontendAssets）
+  user/
+    layout.php
+    auth/layout.php + login.php + register.php + forgot.php + bind.php
+    pages/dashboard.php, apimanage.php, keys.php, recharge.php, points.php, account.php
+  partials/                  ← 可选片段
+  api/                       ← 可选主题 AJAX
+```
+
+**`theme.json` 关键字段：** `id`（须与目录名一致，`/^[a-z0-9][a-z0-9_-]{0,31}$/i`）、`name`、`version`、`author`、`description`、`preview`、`settings[]`。
+
+**settings 单项：** `key`、`label`、`type`（`text|textarea|number|checkbox|select`）、可选 `placeholder` / `default` / `options[{value,label}]`。
+
+读取：
+
+```php
+ThemeManager::themeSetting('stats_num_format', 'compact');
+ThemeManager::themeSettingStr('hero_title', '');
+ThemeManager::themeSettingBool('show_partners', true);
+ThemeManager::themeSettingInt('xxx', 0);
+```
+
+**新建主题步骤：**
+
+1. 复制 `default` 或 `slate` 为 `core/theme/mytheme/`（含完整 shell）  
+2. 改 `theme.json` 的 `id` / `name` / settings  
+3. 后台「主题设置」切换；打开页面时会自动在 `themesettings` 补该主题配置段  
+4. **禁止**引用其它主题或根目录前台 CSS/JS；图标一律 `SiteMedia`  
+
+---
+
+### 6.3 Frontend* 数据 API（主题只读入口）
+
+下列方法均可在主题 PHP 中直接调用（类已由 `bootstrap.php` 加载）。
+
+#### 6.3.1 `FrontendCategory` — 分类
+
+| 方法 | 返回 |
+|------|------|
+| `listTags()` | `[{id, name}, …]`；含「全部」 |
+| `nameMap()` | `{all:"全部", "12":"工具", …}` |
+| `nameToIdMap()` | `{名称: id}` |
+| `resolveIdByName($name)` | id 字符串或 `''` |
+| `countEnabled()` | int |
+| `tagVisibleLimit()` | int，**15**（超出由主题做「更多」） |
+
+常量：`FrontendCategory::ALL_ID` = `'all'`，`ALL_NAME` = `'全部'`。
+
+```php
+$tags = FrontendCategory::listTags();
+foreach ($tags as $tag) {
+    // $tag['id'] === 'all' 或数字字符串分类 id
+    echo vs_e($tag['name']);
+}
+```
+
+#### 6.3.2 `FrontendApi` — 公开接口
+
+| 方法 | 返回 |
+|------|------|
+| `listForTheme()` | 公开接口数组（已按**当前访问域名**重绑 `endpoint` / `detail_url`） |
+| `findForThemeById($id)` | 单条（含 `author`）或 `null` |
+| `countForTheme()` | int |
+| `billingLabel($charge, $price)` | 文案 |
+| `parseParamsList($raw)` / `prettyParamsJson($raw)` | 参数辅助 |
+
+**列表/详情字段（主题可用）：**
+
+`id, name, desc, category, category_name, method, methods, method_label, endpoint, call_path, apitype, params, response, doc, aidoc, maintenance(0|1), needkey, needkey_label, keyways, keyways_label, qpm, qpm_label, calls, icon, icon_path, detail_url, charge, charge_label, points, billing_label, createtime, params_list`  
+详情另有：`author => {id, username, avatar, profile_url}|null`
+
+```php
+$apis = FrontendApi::listForTheme();
+$api  = FrontendApi::findForThemeById((int) $apiId);
+// maintenance === 1 时主题须按维护态展示，勿引导真实调用
+```
+
+筛选约定：卡片上带 `data-category="<?php echo vs_e($api['category']); ?>"`，与 `FrontendCategory` 的 id 对齐。
+
+#### 6.3.3 `FrontendStats` — 统计（首页 KPI）
+
+| 方法 | 含义 |
+|------|------|
+| `userCount()` | 注册用户数 |
+| `todayCallCount()` | 今日调用 |
+| `approvedApiCount()` | 审核通过接口数 |
+| `totalCallCount()` | 全站累计调用 |
+
+```php
+$apiCount   = FrontendStats::approvedApiCount();
+$totalCalls = FrontendStats::totalCallCount();
+$userCount  = FrontendStats::userCount();
+$todayCalls = FrontendStats::todayCallCount();
+```
+
+#### 6.3.4 `FrontendLink` / `FrontendPartner` / `FrontendSponsor`
+
+**友链 `FrontendLink`**
+
+| 方法 | 返回 |
+|------|------|
+| `listForTheme()` | 已通过且启用 |
+| `listForThemePage()` | `{items, total, truncated, limit}`（硬上限 120，每次 shuffle） |
+| `pickForFooter($limit=0)` | `{items, has_more, total, limit}`（页脚；0=全部，上限 10） |
+| `siteCard()` | 本站卡片 `{name,url,desc,icon}`（申请页） |
+| `formatForTheme($row)` | `{id,name,siteurl,icon,description,host,initial}` |
+
+**合作伙伴 `FrontendPartner`：** `listForTheme()` → `{id,name,siteurl,icon,initial}`  
+**赞助 `FrontendSponsor`：** `paymentQrs()` → `[{id,label,url}]`（alipay/wechat/qq）；`listForTheme()` 名单
+
+#### 6.3.5 `FrontendArticle` / `FrontendAnnouncement` / `FrontendAbout`
+
+**文章**
+
+| 方法 | 返回 |
+|------|------|
+| `listForTheme($limit=10)` | 列表（无正文；limit 1–50） |
+| `listPaged($page, $pageSize, $beforeId)` | 分页包 |
+| `findById($id, $incrementViews=true)` | 含 `body` + **`body_html`** |
+
+列表字段：`id, title, summary, cover, coverlayout, coverlayout_label, views, views_label, createtime`
+
+**公告：** `listForTheme()` / `listPopups()` / `findById($id)`  
+字段：`id, title, summary, body, body_html, preview, ispinned, ispopup, createtime`
+
+**关于：** `FrontendAbout::getBoundArticle()` → `{id,title,summary,body,body_html,createtime}|null`
+
+#### 6.3.6 `FrontendComment` / `FrontendFeedback`
+
+| 方法 | 说明 |
+|------|------|
+| `FrontendComment::tableReady()` | 表是否就绪 |
+| `listByContentId($contentid)` | 已通过评论 |
+| `submit(...)` | 成功返回评论数组；失败返回 **错误字符串** |
+| `FrontendFeedback::tableReady()` | |
+| `submit($apiid, $content)` | 须登录；成功数组 / 失败字符串 |
+
+#### 6.3.7 `FrontendUser` — 当前用户 / 控制台
+
+| 方法 | 返回 |
+|------|------|
+| `current()` | 格式化用户或 `null` |
+| `format($user)` | 标准资料 |
+| `checkinBanner()` | `{enabled, checked_today, min, max, show_banner}` |
+| `doCheckin()` | `{ok, msg, amount?, balance?, points?}` |
+| `dashboardStats()` | 控制台 KPI |
+
+**用户字段：** `id, username, email, avatar, bio, blog, wallpaper, role, role_label, can_publish_api, points, createtime, lastlogin, profile_url`  
+**dashboardStats：** `points, points_spent, email, createtime, lastlogin, role_label, can_publish_api, api_total, api_approved, api_pending, api_rejected, api_calls, key_total, key_calls, checkin_enabled, checked_today`
+
+问候文案：`UserDashHello::pick($displayName)` → `{hello, hint, slot, hour}`。
+
+#### 6.3.8 `FrontendContributor` — 贡献者
+
+| 方法 | 返回 |
+|------|------|
+| `listForTheme()` | 卡片列表 |
+| `findProfile($userId)` | 卡片 + `apis[]` |
+| `listApisForUser($userId)` | 该用户公开接口 |
+| `wallpaperUrl($profile)` / `joinLabel($createtime)` | 辅助 |
+
+卡片字段：`id, username, avatar, letter, bio, bio_custom, blog, wallpaper, apicount, calls, calls_label, join_label, createtime, profile_url, role_label`
+
+---
+
+### 6.4 站点 / 主题引擎 / 媒体 / 认证
+
+#### 6.4.1 `SiteContext`（展示用）
+
+优先用访问器，勿在主题里拆 Config 键：
+
+`siteName()`、`systemName()`、`navName()`、`copyrightName()`、`copyrightUrl()`、  
+`siteDescription()`、`siteKeywords()`、`siteFavicon()`、`siteLogo()`、`siteRuntimeStart()`、  
+`footerHtmlLeft/Center/Right()`、`footerQr1/2{Enabled,Name,Url}()`、  
+`icpLink()`、`gonganLink($number)`、`beianInfo()`。
+
+#### 6.4.2 `ThemeManager`（主题只读侧）
+
+| 方法 | 用途 |
+|------|------|
+| `activeId()` / `themeDir()` / `isValidTheme()` | 当前主题 |
+| `themeSetting*` | 读本主题 settings |
+| `navItems()` | 主导航 `[{id,label,url}]` |
+| `userMenuGroups()` | 用户中心侧栏（会按角色隐藏开发者项） |
+| `assetUrl($themeId, $relative)` | 主题包内资源 URL |
+| `shellUrl($file)` / `pageScriptUrl($file)` | shell / js 单文件 |
+| `frontendShellCssHrefs()` / `frontendShellJsHrefs()` | 前台壳清单 |
+| `userShellCssHrefs` / `userShellJsHrefs` | 用户中心壳 |
+| `defaultFrontendAssets($pageKey)` | **仅 default** 多文件清单 |
+| `activeStylesheetHref()` / `activeScriptHref()` | 非 default 的 theme.css/js |
+| `renderBody` / `renderUserPage` / `renderAuthPage` | 通常由入口 helper 调用，主题页不必再调 |
+
+#### 6.4.3 `SiteMedia` / `UserAvatar`
+
+```php
+$icon = SiteMedia::imgUrl('QQ.svg');          // 不存在则 ''
+$av   = UserAvatar::resolve($userRow);        // 或 FrontendUser 已带 avatar
+$fb   = UserAvatar::defaultAvatar();
+```
+
+#### 6.4.4 `UserAuth`（会话）
+
+主题安全用法：`check()`、`id()`、`user()`、`requireLogin()`、`redirectIfLoggedIn()`、`logout()`。  
+**展示资料请用 `FrontendUser::current()`。** 登录/注册提交由入口脚本处理，勿在纯视图里散落写库逻辑。
+
+#### 6.4.5 验证码（登录/注册/找回）
+
+- UI：`vs_captcha_field($scene)`、`vs_captcha_js($scene)`  
+- 场景常量：`Captcha::SCENE_USER_LOGIN` / `REGISTER` / `FORGOT`  
+- 校验在入口：`Captcha::requireValid`（主题模板不负责验票）
+
+---
+
+### 6.5 详情页专用：快速上手 / Markdown / 在线测试
+
+```php
+// 详情数据来自入口注入的 $api（已由 FrontendApi::findForThemeById 准备）
+$qsBundle = ApiQuickstart::qsBundleFromAidoc(
+    isset($api['aidoc']) ? $api['aidoc'] : '',
+    isset($api['keyways']) ? $api['keyways'] : array('query')
+);
+// $qsBundle: {auths, authLabels, byAuth}
+// byAuth[*] 项建议含 icon_gray / icon_color；另注入 window.detailQsLangIcons = ApiQuickstart::langIconMap()
+
+// 长文：优先 $api 已格式化字段；裸 Markdown：
+$html = Markdown::render($rawMarkdown);
+```
+
+在线测试上下文（入口常注入）：`vs_playground_session_context()` →  
+`{loggedIn, apiKey, apiKeyCount, userCenterUrl, loginUrl, csrf, playUrl}`。  
+**默认主题浏览器直连公开 endpoint**，由 core 记账；勿在主题里写 apilog。
+
+鉴权展示：用 `$api['needkey_label']`、`$api['keyways']`、`$api['keyways_label']`、`$api['qpm_label']`；  
+**不要**再调 `ApiManager::keywaysLabel()`。缺省可写死 `'query'` / `'Query 参数'`。
+
+---
+
+### 6.6 常用 helpers（`core/helpers.php`）
+
+| 函数 | 用途 |
+|------|------|
+| `vs_e($v)` | HTML 转义（用户内容必用） |
+| `vs_base_url()` | 站点根 |
+| `vs_api_detail_url($id)` / `vs_profile_url($id)` | 伪静态友好链接 |
+| `vs_frontend_page(...)` | 公开页入口（根脚本用） |
+| `vs_page_seo_pack` / `vs_render_theme_seo_block` | SEO |
+| `vs_render_footer_custom_bar` / `vs_render_footer_qrs` | 页脚 |
+| `vs_copyright_html` / `vs_site_runtime_start` | 版权 / 运行时长 |
+| `vs_require_secure_post()` | AJAX POST 门禁 |
+| `vs_playground_session_context()` | 详情调试条 |
+| `vs_captcha_field` / `vs_captcha_js` | 验证码挂载 |
+| `vs_is_allowed_http_url` / `vs_safe_embed_url` | URL 安全 |
+| `vs_user_render_page` | 用户中心入口（`user/includes/layout.php`） |
+
+---
+
+### 6.7 标准页面写法（对照表）
+
+| 页面 | 主题应取数 |
+|------|------------|
+| 首页 | `FrontendApi::listForTheme` + `FrontendCategory::*` + `FrontendStats::*` + `FrontendAnnouncement::*` + `FrontendPartner::listForTheme` + `FrontendLink::pickForFooter` + `ThemeManager::themeSetting*` + `SiteContext::*` |
+| 接口目录 | 同列表 + 分类筛选（前端 data-category） |
+| 接口详情 | 入口已给 `$api`；补 `ApiQuickstart` / `FrontendFeedback` / 推荐接口再 `listForTheme` 筛选 |
+| 文章 | `FrontendArticle::*` + `FrontendComment::*` |
+| 关于 | `FrontendAbout::getBoundArticle()` |
+| 友链 | `FrontendLink::listForThemePage` + `siteCard`；申请 POST 走入口/主题 api + CSRF |
+| 赞助 | `FrontendSponsor::paymentQrs` + `listForTheme` |
+| 贡献者 | `FrontendContributor::listForTheme` |
+| 个人主页 | 入口注入或 `findProfile` |
+| 用户控制台 | `FrontendUser::current` + `dashboardStats` + `UserDashHello::pick` + `checkinBanner` |
+
+**分类标签标准：**
+
+1. 循环 `listTags()`  
+2. 「全部」用 `ALL_ID`  
+3. 超过 `tagVisibleLimit()` 做「更多」  
+4. 无公开接口时分类栏仍显示  
+
+---
+
+### 6.8 绝对禁止（主题）
+
+1. `Database::connect()` / 任何 SQL / 表名 / 字段名出现在主题  
+2. 用 `*Manager` **渲染或取展示数据**（`ApiManager`、`ContentManager`、`LinkManager`…）——统计请走 `FrontendStats`  
+3. 手写 `/assets/img/...`、引用根目录 `/assets/css|js` 作前台/用户中心壳  
+4. `include` / `assetUrl` 指向**其它主题**目录  
+5. 为省事把 shell 多文件合并成单文件大 CSS（维护约定）  
+6. 调用后台专用类：`DashboardStats`、`GeoCityCoords`、`PanelMonitor` 等  
+7. 「先在主题写 SQL 赶进度」——一律禁止；先补 core  
+
+**分层示意：**
+
+```
+主题 pages/*.php / user/pages/*.php     ← 只展示
+        ↓ 只调用
+Frontend* / SiteContext / ThemeManager / SiteMedia / UserAuth / UserAvatar
+ApiQuickstart / Markdown / AjaxResponse / helpers
+        ↓（core 内部）
+*Manager / Config / Database
+        ↓
+MySQL / Redis
+```
+
+---
+
+### 6.9 新建主题 Checklist
+
+- [ ] `core/theme/{id}/theme.json`（id 与目录一致）  
+- [ ] `layout/header.php` + `footer.php`  
+- [ ] 公开 `pages/*.php`（至少 home / apis / detail）  
+- [ ] `assets/shell/` 齐备；非 default 提供 `theme.css` / `theme.js`  
+- [ ] `user/layout.php` + `user/auth/*` + `user/pages/*`  
+- [ ] 数据全部来自 §6.3 / §6.4，**无** Manager / SQL  
+- [ ] 图标 `SiteMedia`；头像走 Frontend* / `UserAvatar`  
+- [ ] 用户内容 `vs_e()`；表单 CSRF  
+- [ ] 不引用其它主题与根目录前台资源  
+- [ ] 在后台切换主题后，桌面 + 手机各走查一遍  
+
+---
+
+### 6.10 与后台能力对照
+
+| 能力 | 后台类（主题勿用） | 主题类 |
+|------|-------------------|--------|
+| 接口分类 | `ApiCategoryManager` | `FrontendCategory` |
+| 接口审核/上下线 | `ApiManager` | `FrontendApi` + `FrontendStats` |
+| 用户管理 | `UserManager` | `UserAuth` + `FrontendUser` |
+| 站点配置 | `Config` / 设置页 | `SiteContext` + `ThemeManager::themeSetting*` |
+| 文章/公告/关于 | `ContentManager` | `FrontendArticle` / `Announcement` / `About` |
+| 友链/伙伴/赞助 | `LinkManager` | `FrontendLink` / `Partner` / `Sponsor` |
+| 评论/反馈 | `CommentManager` / `ApiFeedbackManager` | `FrontendComment` / `FrontendFeedback` |
+| 贡献者 | （用户+接口聚合） | `FrontendContributor` |
+| Markdown | — | `Markdown`（或 Frontend 已渲染 HTML） |
+
+---
+
+### 6.11 最小示例：首页取数
+
+```php
+<?php
+if (!defined('VS_THEME_RENDER')) {
+    exit;
+}
+
+$siteName   = SiteContext::siteName();
+$apiData    = FrontendApi::listForTheme();
+$tags       = FrontendCategory::listTags();
+$apiCount   = FrontendStats::approvedApiCount();
+$totalCalls = FrontendStats::totalCallCount();
+$partners   = FrontendPartner::listForTheme();
+$footerLinks = FrontendLink::pickForFooter(8);
+$announces  = FrontendAnnouncement::listForTheme();
+$heroTitle  = ThemeManager::themeSettingStr('hero_title', '');
+$qqIcon     = SiteMedia::imgUrl('QQ.svg');
+```
+
+把 `$apiData` `json_encode` 给主题 JS，或在 PHP 循环出卡片均可；**筛选/排序逻辑可在前端做，数据源必须是上述返回值。**
+
 
 ## 七、常见问题
 
@@ -1178,7 +1625,10 @@ A：不可以。须 `SiteMedia::imgUrl(...)`（或头像 / 分类等已有核心
 A：v13.22.6 起已取消 HTTP 打包；有几个主题文件就请求几次，便于对照文件名维护。Google Fonts 仍 idle，不挡首屏。
 
 **Q：主题里可以直接 `Database::connect()` 吗？**  
-A：不推荐。请使用 `FrontendCategory`、`FrontendApi` 等已封装类；新能力应在 core 新增类后在 bootstrap 注册。
+A：**禁止。** 请使用 `Frontend*` / `SiteContext` / `ThemeManager` 等；新能力应在 core 新增类后在 bootstrap 注册。完整对接见 **§六**。
+
+**Q：首页统计可以调 `ApiManager::totalCallCount()` 吗？**  
+A：**不可以。** 用 `FrontendStats::totalCallCount()` / `approvedApiCount()` / `userCount()` / `todayCallCount()`。
 
 **Q：为什么分 `ApiCategoryManager` 和 `FrontendCategory`？**  
 A：前者负责后台 CRUD 与图标；后者负责前台展示规则（all/id 键、可见数量、无接口仍显示）。职责分离，主题不依赖后台实现细节。
@@ -1229,7 +1679,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 1. 本文档文首 **同步至版本号** = 当前 `VS_VERSION`  
 2. **§1.1 bootstrap**（若增删 require）  
 3. **§三 文件总览**、对应 **§四 详细说明**  
-4. **§2.4 当前能力与进度** / **§6.5**（若影响能力表）  
+4. **§2.4 当前能力与进度** / **§六 主题对接 API**（新增 Frontend 方法时必须补方法表与字段）  
 5. 根目录 `README.md`（目录结构 + 主要能力，写法见《README编写要点》）  
 6. `开发规范/主题规范.md` / `主题资源隔离规范.md`（若涉及主题边界）  
 

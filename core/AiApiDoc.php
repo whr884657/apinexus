@@ -465,6 +465,7 @@ class AiApiDoc
         }
         $text = preg_replace('/<think\b[^>]*>[\s\S]*?<\/think>/i', '', $text);
         $text = preg_replace('/<thinking\b[^>]*>[\s\S]*?<\/thinking>/i', '', $text);
+        $text = self::stripReasoningArtifacts($text);
         $text = trim((string) $text);
         // 寒暄在前、正文从 Markdown 标题开始：从第一个标题截到全文末尾（勿用 /m+$，否则会只剩标题行）
         if ($text !== '' && strpos(ltrim($text), '#') !== 0) {
@@ -821,20 +822,24 @@ class AiApiDoc
             $langHint = '最短可运行示意即可，勿写完整工程脚手架。';
         }
 
-        // v13.26.2：模型只出纯代码；:::qs 由服务端 finalizeCodePieceBody 包裹，避免思考文/围栏导致解析失败
+        // v13.26.2 / v13.26.4：模型只出纯代码；:::qs 由服务端包裹；严禁思考链/需求分析混入
         $system = '你是 API 调用示例生成器。只输出可直接粘贴运行的纯代码正文。'
-            . '禁止：思考过程、解释、Markdown 标题、``` 代码围栏、:::qs 标签、::: 结束行、JSON 外壳、前后寒暄。'
+            . '禁止：思考过程、需求分析、方案推演、自我校对、Markdown 标题、``` 代码围栏、:::qs 标签、::: 结束行、JSON 外壳、前后寒暄。'
+            . '禁止输出「我们需要」「根据要求」「注意」「所以」「好吧」等中文推演句子；第一行就必须是代码。'
+            . '禁止输出 <think>、<thinking>、<reasoning> 或任何思考标签。'
             . $authHowLine
             . '【极简强制】代码只要能演示一次调用即可，禁止完整 SDK、多函数、大段错误处理、日志框架、CLI 参数解析、多余 import。'
-            . '正文目标：约 8～20 行、不超过约 500 字符（含注释）；最多 2～3 行简短中文注释。'
+            . '正文目标：约 8～20 行、不超过约 400 字符（含注释）；最多 2～3 行简短中文注释。'
             . '密钥用 YOUR_API_KEY；使用对外调用地址与给定参数名。'
-            . '错误处理最多一行（如判断 code!=1 则打印）；不要 try/catch 长链、不要打印完整响应字段说明。'
+            . '本站成功响应为 code=0：错误处理最多一行（如 if ($data[\'code\'] != 0) echo \'error\';），禁止按 code!=1 判断，不要 try/catch 长链、不要打印完整响应字段说明。'
             . '严禁 emoji、颜文字、图标、HTML/CSS/vs-syn、上游地址、代理、密钥明文、User-Agent、Referer、「全部支持」。'
             . $langHint
             . 'GET 用查询参数；POST 可用 form 或 JSON。';
 
-        $user = "请为下列接口生成「鉴权=" . $authWay . "，语言=" . $lang . "」的极简快速上手代码（能用即可，越短越好）。"
-            . "只输出纯代码，不要任何包裹标签：\n\n"
+        $user = "请为下列接口生成「"
+            . ($requireAuthAttr ? ('鉴权=' . $authWay . '，') : '无需密钥，')
+            . '语言=' . $lang . "」的极简快速上手代码（能用即可，越短越好）。"
+            . "只输出纯代码，从第一行代码写起，不要任何解释或思考过程：\n\n"
             . self::contextMarkdown($safe);
 
         $cfg = AiConfig::get();
@@ -888,23 +893,27 @@ class AiApiDoc
         if (class_exists('ApiQuickstart')) {
             $raw = ApiQuickstart::stripEmoji($raw);
         }
-        // 仅剥思考标签，不用 stripModelPreamble（避免把 Python `#` 注释当标题）
         if (strlen($raw) > 20000) {
             $raw = substr($raw, 0, 20000);
         }
-        $raw = preg_replace('/<think\b[^>]*>[\s\S]*?<\/think>/i', '', $raw);
-        $raw = preg_replace('/<thinking\b[^>]*>[\s\S]*?<\/thinking>/i', '', $raw);
+        // 先剥思考链/推演废话，再解析（含未闭合标签与无标签中文 CoT）
+        $raw = self::stripReasoningArtifacts($raw);
         $raw = trim((string) $raw);
 
         // 1) 若仍带 :::qs，走旧解析并改写目标 auth/lang
         $viaQs = self::extractRequestedQsBlock($raw, $authWay, $lang, $requireAuthAttr);
         if ($viaQs !== '') {
-            return $viaQs;
+            return self::rejectReasoningResidueQs($viaQs, $authWay, $lang, $requireAuthAttr);
         }
 
-        // 2) 可选 {"code":"..."}
+        // 2) 可选 {"code":"..."} — 与路径 3 同一套剥推演 / 残留拦截，禁止直接 wrap
         $jsonCode = self::extractJsonCodeField($raw);
         if ($jsonCode !== '') {
+            $jsonCode = self::stripReasoningArtifacts($jsonCode);
+            $jsonCode = self::stripToRawCodeBody($jsonCode);
+            if ($jsonCode === '' || self::looksLikeReasoningResidue($jsonCode)) {
+                return '';
+            }
             return self::wrapQsBlock($jsonCode, $authWay, $lang, $requireAuthAttr);
         }
 
@@ -913,7 +922,186 @@ class AiApiDoc
         if ($body === '') {
             return '';
         }
+        if (self::looksLikeReasoningResidue($body)) {
+            return '';
+        }
         return self::wrapQsBlock($body, $authWay, $lang, $requireAuthAttr);
+    }
+
+    /**
+     * 若 :::qs 块内仍像思考链，丢弃（触发上层重试）
+     *
+     * @param string $qsBlock
+     * @param string $authWay
+     * @param string $lang
+     * @param bool   $requireAuthAttr
+     * @return string
+     */
+    private static function rejectReasoningResidueQs($qsBlock, $authWay, $lang, $requireAuthAttr)
+    {
+        $qsBlock = (string) $qsBlock;
+        $lines = preg_split("/\r\n|\n|\r/", $qsBlock);
+        if (!is_array($lines) || count($lines) < 2) {
+            return $qsBlock;
+        }
+        array_shift($lines);
+        if (count($lines) > 0 && trim((string) $lines[count($lines) - 1]) === ':::') {
+            array_pop($lines);
+        }
+        $body = trim(implode("\n", $lines));
+        $body = self::stripReasoningArtifacts($body);
+        $body = self::stripToRawCodeBody($body);
+        if ($body === '' || self::looksLikeReasoningResidue($body)) {
+            return '';
+        }
+        return self::wrapQsBlock($body, $authWay, $lang, $requireAuthAttr);
+    }
+
+    /**
+     * 剥离模型思考标签与中文推演废话（业界常见：闭合/未闭合 think、无标签 CoT）
+     *
+     * @param string $text
+     * @return string
+     */
+    private static function stripReasoningArtifacts($text)
+    {
+        $text = (string) $text;
+        if ($text === '') {
+            return '';
+        }
+        if (strlen($text) > 30000) {
+            $text = substr($text, 0, 30000);
+        }
+
+        // 闭合标签：仅剥「独立块」（开标签在行首），避免误伤 echo '<think>…</think>' 等代码字面量
+        $closed = array(
+            '/(?:^|\n)\s*<think\b[^>]*>[\s\S]*?<\/think>\s*(?=\n|$)/i',
+            '/(?:^|\n)\s*<thinking\b[^>]*>[\s\S]*?<\/thinking>\s*(?=\n|$)/i',
+            '/(?:^|\n)\s*<reasoning\b[^>]*>[\s\S]*?<\/reasoning>\s*(?=\n|$)/i',
+            '/(?:^|\n)\s*<thought\b[^>]*>[\s\S]*?<\/thought>\s*(?=\n|$)/i',
+            '/(?:^|\n)\s*<redacted_reasoning\b[^>]*>[\s\S]*?<\/redacted_reasoning>\s*(?=\n|$)/i',
+            '/(?:^|\n)\s*\|redacted_reasoning\|[\s\S]*?\|\/redacted_reasoning\|\s*(?=\n|$)/i',
+            '/(?:^|\n)\s*\[thinking\][\s\S]*?\[\/thinking\]\s*(?=\n|$)/i',
+            '/(?:^|\n)\s*【思考】[\s\S]*?【\/?思考】\s*(?=\n|$)/u',
+        );
+        foreach ($closed as $re) {
+            $text = preg_replace($re, "\n", $text);
+        }
+
+        // 未闭合：开标签须在行首（或全文开头），再丢到文末 / 首个围栏
+        if (preg_match('/(?:^|\n)\s*<(think|thinking|reasoning|thought|redacted_reasoning)\b[^>]*>/i', $text, $om, PREG_OFFSET_CAPTURE)) {
+            $pos = isset($om[0][1]) ? (int) $om[0][1] : -1;
+            if ($pos >= 0) {
+                // 匹配可能含前导 \n，定位到该换行后的内容起点
+                $tagMatch = (string) $om[0][0];
+                $tagOffsetInMatch = 0;
+                if (isset($tagMatch[0]) && $tagMatch[0] === "\n") {
+                    $tagOffsetInMatch = 1;
+                }
+                $cut = $pos + $tagOffsetInMatch;
+                $before = substr($text, 0, $cut);
+                $after = substr($text, $cut);
+                if (preg_match('/```/', $after, $fm, PREG_OFFSET_CAPTURE)) {
+                    $fpos = isset($fm[0][1]) ? (int) $fm[0][1] : -1;
+                    $text = $before . ($fpos >= 0 ? substr($after, $fpos) : '');
+                } else {
+                    $text = $before;
+                }
+            }
+        }
+        // 孤儿闭合标签（整行）
+        $text = preg_replace('/(?:^|\n)\s*<\/(?:think|thinking|reasoning|thought|redacted_reasoning)\s*>\s*(?=\n|$)/i', "\n", $text);
+
+        return trim((string) $text);
+    }
+
+    /**
+     * 正文仍像「需求分析/思考过程」而非代码 → true
+     *
+     * @param string $body
+     * @return bool
+     */
+    private static function looksLikeReasoningResidue($body)
+    {
+        $body = trim((string) $body);
+        if ($body === '') {
+            return false;
+        }
+        $sample = function_exists('mb_substr') ? mb_substr($body, 0, 400, 'UTF-8') : substr($body, 0, 800);
+        // 典型推演词密度：只计「非代码行」，避免误杀 // 根据要求… 类注释
+        $hits = 0;
+        $markers = array(
+            '我们需要', '根据要求', '注意避免', '所以判断', '好吧', '调整优化',
+            '思考过程', '需求分析', '方案推演', '极简的PHP', '可能不用',
+            '不超过400', '禁止输出', '写代码：', '需要遵守',
+        );
+        $lines = preg_split("/\r\n|\n|\r/", $sample);
+        if (!is_array($lines)) {
+            $lines = array($sample);
+        }
+        foreach ($lines as $line) {
+            $probeLine = trim((string) $line);
+            if ($probeLine === '' || self::lineLooksLikeCode($probeLine)) {
+                continue;
+            }
+            foreach ($markers as $m) {
+                if (function_exists('mb_strpos')) {
+                    if (mb_strpos($probeLine, $m, 0, 'UTF-8') !== false) {
+                        $hits++;
+                    }
+                } elseif (strpos($probeLine, $m) !== false) {
+                    $hits++;
+                }
+            }
+        }
+        if ($hits >= 2) {
+            return true;
+        }
+        // 前几行几乎全是中文叙述、几乎无代码符号
+        if ($lines === array()) {
+            return false;
+        }
+        $probe = trim((string) $lines[0]);
+        if ($probe === '') {
+            return false;
+        }
+        if (self::lineLooksLikeCode($probe)) {
+            return false;
+        }
+        $cjk = preg_match_all('/[\x{4e00}-\x{9fff}]/u', $probe);
+        if ($cjk === false) {
+            $cjk = 0;
+        }
+        if ($cjk >= 8 && !preg_match('/[\$;=<>{}\[\]\(\)]/', $probe) && !preg_match('/https?:\/\//i', $probe)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @param string $line
+     * @return bool
+     */
+    private static function lineLooksLikeCode($line)
+    {
+        $t = trim((string) $line);
+        if ($t === '') {
+            return false;
+        }
+        // 代码注释可保留
+        if (preg_match('/^(\/\/|#|\/\*|\*|<!--)/', $t)) {
+            return true;
+        }
+        if (preg_match('/^(curl|import |from |package |using |#include|fn |func |public |private |var |let |const |def |echo |print |return |\$|[A-Za-z_][\w]*\s*=)/', $t)) {
+            return true;
+        }
+        if (preg_match('/https?:\/\//i', $t) && preg_match('/[\$=]/', $t)) {
+            return true;
+        }
+        if (preg_match('/[\$].*=|;$|\{$|=>$|->/', $t)) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1001,6 +1189,7 @@ class AiApiDoc
         if ($raw === '') {
             return '';
         }
+        $raw = self::stripReasoningArtifacts($raw);
         // ```lang ... ```
         if (preg_match('/```[a-zA-Z0-9_+-]*\s*\r?\n([\s\S]*?)\r?\n```/', $raw, $m)) {
             $raw = trim($m[1]);
@@ -1010,7 +1199,6 @@ class AiApiDoc
         // 去掉误写的 :::qs 首尾
         $raw = preg_replace('/^:::qs[^\r\n]*\r?\n?/i', '', $raw);
         $raw = preg_replace('/\r?\n:::\s*$/', '', $raw);
-        // 去掉常见寒暄行
         $lines = preg_split("/\r\n|\n|\r/", $raw);
         if (!is_array($lines)) {
             return trim($raw);
@@ -1020,15 +1208,32 @@ class AiApiDoc
         foreach ($lines as $line) {
             $t = trim((string) $line);
             if (!$started) {
-                if ($t === '' || preg_match('/^(以下|如下|好的|当然|这里是|示例|代码|说明)[:：]?/u', $t)) {
+                if ($t === '') {
                     continue;
                 }
+                // 寒暄 / 说明行跳过（收窄前缀，避免误跳过以「可以/需要」开头的合法字面量行）
+                if (preg_match('/^(以下|如下|好的|当然|这里是|示例代码|代码如下|说明[:：]|我们需要|根据要求|注意[:：]|所以判断|禁止输出)[:：]?/u', $t)) {
+                    continue;
+                }
+                if (!self::lineLooksLikeCode($t)) {
+                    $cjk = preg_match_all('/[\x{4e00}-\x{9fff}]/u', $t);
+                    if ($cjk >= 6) {
+                        continue;
+                    }
+                }
                 $started = true;
+            } else {
+                // 代码结束后的中文总结行丢掉
+                if ($t !== '' && !self::lineLooksLikeCode($t)) {
+                    $cjk = preg_match_all('/[\x{4e00}-\x{9fff}]/u', $t);
+                    if ($cjk >= 10 && preg_match('/(所以|因此|综上|注意|好吧|调整|总结)/u', $t)) {
+                        break;
+                    }
+                }
             }
             $out[] = $line;
         }
-        $body = trim(implode("\n", $out));
-        return $body;
+        return trim(implode("\n", $out));
     }
 
     /**

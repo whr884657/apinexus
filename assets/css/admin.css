@@ -1998,6 +1998,7 @@ select.vs-input.vs-select {
     margin-bottom: 16px;
 }
 
+/* ---- 用户管理（桌面表格 + 手机紧凑卡片，v13.26.4） ---- */
 .vs-users-avatar {
     width: 40px;
     height: 40px;
@@ -2084,12 +2085,6 @@ select.vs-input.vs-select {
     border-color: #fecdd3;
 }
 
-.vs-oauth-badge--none {
-    background: var(--vs-content-bg);
-    color: var(--vs-text-secondary);
-    border-color: var(--vs-border);
-}
-
 .vs-role-badge {
     display: inline-flex;
     align-items: center;
@@ -2117,6 +2112,36 @@ select.vs-input.vs-select {
     white-space: nowrap;
 }
 
+.vs-users-table th,
+.vs-users-table td {
+    vertical-align: middle;
+}
+
+.vs-users-table .vs-users-email-cell,
+.vs-users-table .vs-users-login-cell {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.vs-users-num-cell {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.vs-users-oauth-cell {
+    white-space: nowrap;
+}
+
+.vs-users-oauth-cell .vs-user-oauth-icon {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
 .vs-user-card__role {
     display: inline-flex;
     margin: 0;
@@ -2131,9 +2156,9 @@ select.vs-input.vs-select {
 }
 
 .vs-user-card__last-login {
-    margin-top: 6px;
-    font-size: 12px;
-    line-height: 1.4;
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.35;
     color: var(--vs-text-secondary);
     text-align: right;
 }
@@ -2194,14 +2219,8 @@ select.vs-input.vs-select {
 
 .vs-user-oauth-icon {
     display: block;
-    width: 18px;
-    height: 18px;
-}
-
-.vs-user-oauth-none {
-    font-size: 11px;
-    color: var(--vs-text-secondary);
-    white-space: nowrap;
+    width: 16px;
+    height: 16px;
 }
 
 .vs-user-card__email {
@@ -2211,89 +2230,51 @@ select.vs-input.vs-select {
     white-space: nowrap;
 }
 
+/* 手机端紧凑统计条：积分 / 发布 / 调用 */
+.vs-user-card__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin-top: 5px;
+}
+
+.vs-user-card__stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    padding: 1px 0;
+    font-size: 11px;
+    line-height: 1.3;
+    color: var(--vs-text-secondary);
+}
+
+.vs-user-card__stat i {
+    font-style: normal;
+    opacity: 0.85;
+}
+
+.vs-user-card__stat b {
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--vs-text);
+}
+
+.vs-user-card[data-user-role="user"] .vs-user-card__stat--apis {
+    display: none;
+}
+
 .vs-user-card__actions {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 6px;
-    margin-top: 8px;
-    padding-top: 8px;
+    margin-top: 6px;
+    padding-top: 6px;
     border-top: 1px solid var(--vs-border);
 }
 
-.vs-user-card__title {
-    min-width: 0;
-}
-
-.vs-user-card__grid {
-    display: none;
-}
-
-.vs-user-card__cell {
-    background: var(--vs-content-bg);
-    border-radius: 8px;
-    padding: 10px 12px;
-    min-width: 0;
-}
-
-.vs-user-card__label {
-    display: block;
-    font-size: 11px;
-    color: var(--vs-text-secondary);
-    margin-bottom: 4px;
-}
-
-.vs-user-card__value {
-    font-size: 13px;
-    color: var(--vs-text);
-    word-break: break-word;
-}
-
 @media (max-width: 768px) {
-    .vs-users-list-head {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-    }
-
-    .vs-users-list-head__text {
-        flex: 1 1 auto;
-        min-width: 0;
-        text-align: left;
-        order: 1;
-    }
-
-    .vs-users-search {
-        order: 2;
-        flex-direction: row;
-        justify-content: flex-end;
-        flex-shrink: 0;
-        margin-left: auto;
-    }
-
-    .vs-users-search__toggle {
-        display: inline-flex;
-    }
-
-    .vs-users-search__input {
-        width: 0;
-        min-width: 0;
-        padding: 0;
-        border-color: transparent;
-        opacity: 0;
-        pointer-events: none;
-        transition: width 0.22s ease, opacity 0.18s ease, padding 0.22s ease, border-color 0.18s ease;
-    }
-
-    .vs-users-search.is-open .vs-users-search__input {
-        width: min(52vw, 200px);
-        padding: 0 10px;
-        border-color: var(--vs-border);
-        opacity: 1;
-        pointer-events: auto;
-    }
-
     .vs-users-desktop {
         display: none;
     }
@@ -2321,7 +2302,7 @@ select.vs-input.vs-select {
     }
 
     .vs-user-card__actions .vs-btn--pill {
-        padding: 4px 12px;
+        padding: 4px 10px;
         font-size: 11px;
     }
 }
@@ -2332,7 +2313,6 @@ select.vs-input.vs-select {
     }
 }
 
-/* ---- 用户管理页（Tab + 搜索 + 分页，v10.17.0） ---- */
 #usersPage .vs-api-list-table-wrap[hidden],
 #usersPage .vs-users-mobile[hidden],
 #usersPage .vs-api-list-footer[hidden],
@@ -2347,7 +2327,7 @@ select.vs-input.vs-select {
 #usersPage .vs-users-mobile {
     display: none;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
 }
 
 @media (max-width: 768px) {
@@ -7143,6 +7123,8 @@ select.vs-input.vs-select {
     white-space: nowrap;
 }
 #apiListPage .qpm-badge--limit { background: #f5f3ff; color: #6d28d9; }
+#apiListPage .qpm-badge--none { background: #f1f5f9; color: #64748b; font-weight: 500; }
+#apiListPage .vs-api-list-qpm-cell .qpm-badge { margin-left: 0; }
 #apiListPage .api-card__tags .qpm-badge { margin-left: 0; }
 
 #apiListPage .type-badge {

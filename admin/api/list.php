@@ -578,7 +578,7 @@ function vs_api_list_charge_badge_html($charge, $price)
 }
 
 /**
- * QPM>0 时显示；0 不输出
+ * QPM>0 时显示徽章；0 不输出（手机标签区用）
  *
  * @param mixed $qpm
  * @return string
@@ -590,6 +590,21 @@ function vs_api_list_qpm_badge_html($qpm)
         return '';
     }
     return '<span class="qpm-badge qpm-badge--limit" data-field="qpm_badge">QPM ' . vs_e($n . '/MIN') . '</span>';
+}
+
+/**
+ * 桌面表格 QPM 列：有限制显示徽章，否则「不限制」
+ *
+ * @param mixed $qpm
+ * @return string
+ */
+function vs_api_list_qpm_cell_html($qpm)
+{
+    $badge = vs_api_list_qpm_badge_html($qpm);
+    if ($badge !== '') {
+        return $badge;
+    }
+    return '<span class="qpm-badge qpm-badge--none" data-field="qpm_badge">不限制</span>';
 }
 
 /**
@@ -632,7 +647,7 @@ function vs_api_list_action_buttons_html($apiId, $status)
             . $apiId . '">删除</button>';
     } elseif ($status === ApiManager::STATUS_MAINTENANCE) {
         $html .= '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success vs-api-list-action" data-api-action="normal" data-api-id="'
-            . $apiId . '">恢复正常</button>';
+            . $apiId . '">恢复</button>';
         $html .= '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning vs-api-list-action" data-api-action="disable" data-api-id="'
             . $apiId . '">禁用</button>';
         $html .= '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger vs-api-list-action" data-api-action="delete" data-api-id="'
@@ -743,7 +758,8 @@ function vs_render_api_list_desktop_row(array $ctx)
         <td><span class="type-badge <?php echo vs_e($ctx['typeClass']); ?>" data-field="apitype_badge"><?php echo vs_e($ctx['typeBadge']); ?></span></td>
         <td><?php echo vs_api_list_method_badges_html($ctx['methods']); ?></td>
         <td><?php echo vs_api_list_charge_badge_html($ctx['charge'], $ctx['price']); ?></td>
-        <td><?php echo vs_api_list_key_badge_html($ctx['keyBadge']); ?><?php echo vs_api_list_qpm_badge_html(isset($ctx['api']['qpm']) ? $ctx['api']['qpm'] : 0); ?></td>
+        <td><?php echo vs_api_list_key_badge_html($ctx['keyBadge']); ?></td>
+        <td class="vs-api-list-qpm-cell" data-field="qpm_cell"><?php echo vs_api_list_qpm_cell_html(isset($ctx['api']['qpm']) ? $ctx['api']['qpm'] : 0); ?></td>
         <td><span class="vs-badge <?php echo vs_e($ctx['statusBadgeClass']); ?>" data-field="status_label"><?php echo vs_e($ctx['statusText']); ?></span></td>
         <td class="vs-api-list-calls-cell"><span data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></span></td>
         <td><?php echo vs_api_list_action_buttons_html($ctx['apiId'], $ctx['status']); ?></td>
@@ -892,6 +908,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             <th>请求方式</th>
                             <th>收费状态</th>
                             <th>KEY要求</th>
+                            <th>QPM</th>
                             <th>状态</th>
                             <th>调用次数</th>
                             <th>操作</th>

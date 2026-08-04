@@ -39,12 +39,12 @@ if (!$notFound) {
     if ($needKeyVal !== 0) {
         $authWayLabel = !empty($api['keyways_label'])
             ? (string) $api['keyways_label']
-            : ApiManager::keywaysLabel(ApiManager::KEYWAY_QUERY);
+            : 'Query 参数';
     }
 }
 $keywaysList = (!$notFound && isset($api['keyways']) && is_array($api['keyways']))
     ? $api['keyways']
-    : array(ApiManager::KEYWAY_QUERY);
+    : array('query');
 $showQsAuthSwitch = !$notFound
     && (int) (isset($api['needkey']) ? $api['needkey'] : 0) !== 0
     && count($keywaysList) > 1;

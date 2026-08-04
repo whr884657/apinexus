@@ -24,10 +24,77 @@ class UserManager
                  ORDER BY `id` DESC'
             );
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            return is_array($rows) ? $rows : array();
+            if (!is_array($rows)) {
+                return array();
+            }
+            return self::attachListStats($rows);
         } catch (Exception $e) {
             return array();
         }
+    }
+
+    /**
+     * 列表附加：发布接口数（开发者用）+ 本人累计调用次数（apilog.userid）
+     *
+     * @param array $rows
+     * @return array
+     */
+    public static function attachListStats(array $rows)
+    {
+        if ($rows === array()) {
+            return $rows;
+        }
+        $ids = array();
+        foreach ($rows as $row) {
+            $id = isset($row['id']) ? (int) $row['id'] : 0;
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+        $ids = array_values(array_unique($ids));
+        if ($ids === array()) {
+            return $rows;
+        }
+
+        $apiCounts = array();
+        $callCounts = array();
+        try {
+            $pdo = Database::connect();
+            $in = implode(',', array_fill(0, count($ids), '?'));
+
+            if (class_exists('ApiManager') && ApiManager::tableReady()) {
+                $apiTable = Database::table('api');
+                $stmt = $pdo->prepare(
+                    'SELECT `userid`, COUNT(*) AS `cnt` FROM `' . $apiTable . '`
+                     WHERE `userid` IN (' . $in . ') GROUP BY `userid`'
+                );
+                $stmt->execute($ids);
+                while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $apiCounts[(int) $r['userid']] = (int) $r['cnt'];
+                }
+            }
+
+            if (class_exists('ApiLogManager') && ApiLogManager::tableReady()) {
+                $logTable = Database::table('apilog');
+                $stmt = $pdo->prepare(
+                    'SELECT `userid`, COUNT(*) AS `cnt` FROM `' . $logTable . '`
+                     WHERE `userid` IN (' . $in . ') GROUP BY `userid`'
+                );
+                $stmt->execute($ids);
+                while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $callCounts[(int) $r['userid']] = (int) $r['cnt'];
+                }
+            }
+        } catch (Exception $e) {
+            // 统计失败不阻断列表
+        }
+
+        foreach ($rows as $i => $row) {
+            $uid = isset($row['id']) ? (int) $row['id'] : 0;
+            $rows[$i]['api_count'] = isset($apiCounts[$uid]) ? $apiCounts[$uid] : 0;
+            $rows[$i]['call_count'] = isset($callCounts[$uid]) ? $callCounts[$uid] : 0;
+        }
+        return $rows;
     }
 
     /**

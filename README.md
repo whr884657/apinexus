@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.3-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.4-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -256,14 +256,14 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.3（2026-08-05）
+### v13.26.4（2026-08-05）
 
-- 详细文档文首强制接口名标题；接口说明改为短概述；调用示例须同时含 curl 与 PHP
-- 章节失败自动重试一次，第二次失败才需点「继续生成」
-- 界面去掉「流式」表述；系统设置 AI 提示与按章/按片现状对齐
-- 鉴权生成按钮同行短文案；用户端 AI 标签/hint/交互对齐管理端
-- AI 对话缓存 TTL 10 分钟；保存接口成功即清空该操作者全部短时效会话
-- 安全加固：文档标题接口名消毒；代码片二次 scrub；用户 AI 剥离 jsonrewrite；会话清空前缀校验
+- 代码示例加强剥离思考标签（含未闭合）与中文推演废话；残留则判无效并重试
+- 提示词禁止思考过程；成功码按 `code=0`；无需密钥时不误导「鉴权=query」
+- 管理端用户管理：电脑端原表格新增发布接口/调用数量并去掉注册时间；手机端卡片统计压紧
+- 管理端 API 管理：维护态按钮改为「恢复」；电脑端表格单独增加 QPM 列
+- `CORE模块说明.md` 大幅完善主题对接 API；首页统计统一走 `FrontendStats`
+- 代码示例 JSON `code` 路径同步残留拦截；思考标签仅剥独立块
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

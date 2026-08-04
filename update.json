@@ -1,15 +1,17 @@
 {
-    "version": "13.26.3",
-    "title": "ApiNexus 13.26.3 AI 详细文档标题与自动重试",
+    "version": "13.26.4",
+    "title": "ApiNexus 13.26.4 代码示例去思考链 + 用户管理列表增强",
     "release_date": "2026-08-05",
     "db_changes": false,
     "changes": [
-        "详细文档：文首强制接口名一级标题；接口说明改为短概述；调用示例须同时含 curl 与 PHP",
-        "详细文档章节失败自动重试 1 次，第二次失败才需点「继续生成」",
-        "界面文案去掉「流式」表述；系统设置 AI 超时/调度提示与按章/按片现状对齐",
-        "鉴权生成按钮同行短文案（生成 Query/Header/Bearer）；用户端 AI 标签/hint/交互对齐管理端",
-        "AI 对话 Redis TTL 改为 10 分钟；接口保存（create/update）成功即清空该操作者全部短时效会话",
-        "安全加固：文档标题接口名消毒；代码片 wrapQsBlock 二次 scrub；用户 AI 剥离 jsonrewrite；clearAllForActor 前缀校验"
+        "代码示例：加强剥离思考标签（含未闭合）与中文推演废话，残留则判无效并重试",
+        "提示词：禁止思考过程/需求分析；成功码按 code=0；无需密钥时不误导「鉴权=query」",
+        "入库前 looksLikeReasoningResidue 拦截混入正文的思考进程",
+                "管理端用户管理：电脑端保持原表格，去掉注册时间，新增发布接口/调用数量两列",
+        "手机端用户卡片压紧：统计改为积分/发布/调用一行小字；OAuth 未绑定不占位、已绑定仅图标",
+        "管理端 API 管理：维护态按钮「恢复正常」改为「恢复」；电脑端表格单独增加 QPM 列",
+        "CORE模块说明：大幅完善主题对接 API（入口管道、Frontend* 方法/字段、禁止事项）；首页统计改走 FrontendStats",
+        "代码示例：JSON code 路径同步剥推演与残留拦截；思考标签仅剥独立块，避免误伤字面量"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

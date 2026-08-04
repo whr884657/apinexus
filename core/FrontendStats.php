@@ -32,4 +32,38 @@ class FrontendStats
         }
         return ApiLogManager::countToday();
     }
+
+    /**
+     * 前台可见（审核通过）接口数量
+     *
+     * @return int
+     */
+    public static function approvedApiCount()
+    {
+        if (!class_exists('ApiManager')) {
+            return 0;
+        }
+        try {
+            return max(0, (int) ApiManager::countApproved());
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 全站累计调用次数
+     *
+     * @return int
+     */
+    public static function totalCallCount()
+    {
+        if (!class_exists('ApiManager')) {
+            return 0;
+        }
+        try {
+            return max(0, (int) ApiManager::totalCallCount());
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
 }

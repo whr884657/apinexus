@@ -117,14 +117,12 @@ function vs_users_oauth_badges(array $row)
 {
     $badges = array();
     if (trim((string) $row['qqopenid']) !== '') {
-        $badges[] = '<span class="vs-oauth-badge vs-oauth-badge--qq">QQ</span>';
+        $badges[] = '<span class="vs-oauth-badge vs-oauth-badge--qq" title="已绑定 QQ">QQ</span>';
     }
     if (trim((string) $row['giteeid']) !== '') {
-        $badges[] = '<span class="vs-oauth-badge vs-oauth-badge--gitee">Gitee</span>';
+        $badges[] = '<span class="vs-oauth-badge vs-oauth-badge--gitee" title="已绑定 Gitee">Gitee</span>';
     }
-    if (empty($badges)) {
-        return '<span class="vs-oauth-badge vs-oauth-badge--none">未绑定</span>';
-    }
+    // 未绑定：不显示
     return implode(' ', $badges);
 }
 
@@ -137,15 +135,26 @@ function vs_users_oauth_icons(array $row, $base)
 {
     $icons = array();
     if (trim((string) $row['qqopenid']) !== '') {
-        $icons[] = '<img src="' . vs_e($base) . '/assets/img/QQ.svg" alt="QQ" class="vs-user-oauth-icon" width="18" height="18">';
+        $icons[] = '<img src="' . vs_e($base) . '/assets/img/QQ.svg" alt="QQ" title="已绑定 QQ" class="vs-user-oauth-icon" width="18" height="18">';
     }
     if (trim((string) $row['giteeid']) !== '') {
-        $icons[] = '<img src="' . vs_e($base) . '/assets/img/gitee.svg" alt="Gitee" class="vs-user-oauth-icon" width="18" height="18">';
+        $icons[] = '<img src="' . vs_e($base) . '/assets/img/gitee.svg" alt="Gitee" title="已绑定 Gitee" class="vs-user-oauth-icon" width="18" height="18">';
     }
-    if (empty($icons)) {
-        return '<span class="vs-user-oauth-none">未绑定</span>';
-    }
+    // 未绑定：不显示
     return implode('', $icons);
+}
+
+/**
+ * @param int $n
+ * @return string
+ */
+function vs_users_fmt_count($n)
+{
+    $n = (int) $n;
+    if ($n < 0) {
+        $n = 0;
+    }
+    return number_format($n, 0, '.', ',');
 }
 
 /**
@@ -203,6 +212,7 @@ function vs_users_role_button($userId, $role, $label, $class)
 
 /**
  * @param int   $userId
+ * @param bool  $active
  * @param array $row
  * @return string
  */
@@ -244,6 +254,8 @@ function vs_users_search_blob(array $row)
     return strtolower(implode(' ', $parts));
 }
 
+$pointsOn = class_exists('PointsManager') && PointsManager::hasPointsColumn();
+
 vs_admin_layout_start('用户管理', 'users', $headerActions);
 ?>
 
@@ -283,11 +295,12 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                             <th>用户</th>
                             <th>邮箱</th>
                             <th>身份</th>
-                            <?php if (PointsManager::hasPointsColumn()): ?>
+                            <?php if ($pointsOn): ?>
                             <th>积分</th>
                             <?php endif; ?>
+                            <th>发布接口</th>
+                            <th>调用数量</th>
                             <th>第三方绑定</th>
-                            <th>注册时间</th>
                             <th>最后登录</th>
                             <th>操作</th>
                         </tr>
@@ -299,6 +312,9 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                         $active = (int) $row['status'] === 1;
                         $uid = (int) $row['id'];
                         $userRole = UserRole::normalize(isset($row['role']) ? $row['role'] : UserRole::ROLE_USER);
+                        $apiCount = isset($row['api_count']) ? (int) $row['api_count'] : 0;
+                        $callCount = isset($row['call_count']) ? (int) $row['call_count'] : 0;
+                        $oauthHtml = vs_users_oauth_icons($row, $vsBase);
                         ?>
                         <tr class="<?php echo $active ? '' : 'vs-users-row--banned'; ?>" data-user-row="<?php echo $uid; ?>"
                             data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>"
@@ -318,14 +334,15 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                                     </div>
                                 </div>
                             </td>
-                            <td><?php echo vs_e($row['email']); ?></td>
+                            <td class="vs-users-email-cell"><?php echo vs_e($row['email']); ?></td>
                             <td class="vs-users-role-cell"><?php echo vs_users_role_badge($row); ?></td>
-                            <?php if (PointsManager::hasPointsColumn()): ?>
+                            <?php if ($pointsOn): ?>
                             <td class="vs-users-points-cell" data-field="points"><?php echo vs_e(PayConfig::fmtPoints(isset($row['points']) ? $row['points'] : 0)); ?></td>
                             <?php endif; ?>
-                            <td><?php echo vs_users_oauth_badges($row); ?></td>
-                            <td><?php echo vs_e($row['createtime']); ?></td>
-                            <td><?php echo vs_e(vs_users_format_time(isset($row['lastlogin']) ? $row['lastlogin'] : null)); ?></td>
+                            <td class="vs-users-num-cell" data-field="api_count"><?php echo vs_e(vs_users_fmt_count($apiCount)); ?></td>
+                            <td class="vs-users-num-cell" data-field="call_count"><?php echo vs_e(vs_users_fmt_count($callCount)); ?></td>
+                            <td class="vs-users-oauth-cell"><?php echo $oauthHtml; ?></td>
+                            <td class="vs-users-login-cell"><?php echo vs_e(vs_users_format_time(isset($row['lastlogin']) ? $row['lastlogin'] : null)); ?></td>
                             <td>
                                 <?php echo vs_users_action_group($uid, $active, $row); ?>
                             </td>
@@ -343,6 +360,10 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                 $active = (int) $row['status'] === 1;
                 $uid = (int) $row['id'];
                 $userRole = UserRole::normalize(isset($row['role']) ? $row['role'] : UserRole::ROLE_USER);
+                $isDev = $userRole === UserRole::ROLE_DEVELOPER;
+                $apiCount = isset($row['api_count']) ? (int) $row['api_count'] : 0;
+                $callCount = isset($row['call_count']) ? (int) $row['call_count'] : 0;
+                $oauthHtml = vs_users_oauth_icons($row, $vsBase);
                 ?>
                 <article class="vs-user-card<?php echo $active ? '' : ' vs-user-card--banned'; ?>" data-user-row="<?php echo $uid; ?>"
                          data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>"
@@ -361,15 +382,19 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                                 </div>
                                 <div class="vs-user-card__badges">
                                     <span class="vs-user-card__role"><?php echo vs_users_role_badge($row); ?></span>
-                                    <div class="vs-user-card__oauth">
-                                        <?php echo vs_users_oauth_icons($row, $vsBase); ?>
-                                    </div>
+                                    <?php if ($oauthHtml !== ''): ?>
+                                    <div class="vs-user-card__oauth"><?php echo $oauthHtml; ?></div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="vs-users-meta vs-user-card__email"><?php echo vs_e($row['email']); ?></div>
-                            <?php if (PointsManager::hasPointsColumn()): ?>
-                            <div class="vs-users-meta">积分：<span data-field="points"><?php echo vs_e(PayConfig::fmtPoints(isset($row['points']) ? $row['points'] : 0)); ?></span></div>
-                            <?php endif; ?>
+                            <div class="vs-user-card__stats">
+                                <?php if ($pointsOn): ?>
+                                <span class="vs-user-card__stat"><i>积分</i><b data-field="points"><?php echo vs_e(PayConfig::fmtPoints(isset($row['points']) ? $row['points'] : 0)); ?></b></span>
+                                <?php endif; ?>
+                                <span class="vs-user-card__stat vs-user-card__stat--apis"><i>发布</i><b data-field="api_count"><?php echo vs_e(vs_users_fmt_count($apiCount)); ?></b></span>
+                                <span class="vs-user-card__stat"><i>调用</i><b data-field="call_count"><?php echo vs_e(vs_users_fmt_count($callCount)); ?></b></span>
+                            </div>
                             <div class="vs-user-card__last-login">
                                 最后登录：<?php echo vs_e(vs_users_format_time(isset($row['lastlogin']) ? $row['lastlogin'] : null)); ?>
                             </div>
@@ -381,12 +406,12 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                         <?php else: ?>
                             <?php echo vs_users_action_button($uid, 'unban', '解封', 'vs-btn--pill-primary'); ?>
                         <?php endif; ?>
-                        <?php if ($userRole === UserRole::ROLE_DEVELOPER): ?>
+                        <?php if ($isDev): ?>
                             <?php echo vs_users_role_button($uid, UserRole::ROLE_USER, '设为普通', 'vs-btn--pill-secondary'); ?>
                         <?php else: ?>
                             <?php echo vs_users_role_button($uid, UserRole::ROLE_DEVELOPER, '设为开发者', 'vs-btn--pill-primary'); ?>
                         <?php endif; ?>
-                        <?php if (PointsManager::hasPointsColumn()): ?>
+                        <?php if ($pointsOn): ?>
                             <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-secondary vs-user-action-btn"
                                     data-user-action="adjust_points" data-user-id="<?php echo $uid; ?>"
                                     data-user-points="<?php echo vs_e(PayConfig::fmtPoints(isset($row['points']) ? $row['points'] : 0)); ?>">积分</button>
@@ -417,7 +442,7 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
     <?php endif; ?>
 </div>
 
-<?php if (PointsManager::hasPointsColumn()): ?>
+<?php if ($pointsOn): ?>
 <div class="vs-overlay vs-overlay--form" id="usersPointsOverlay" hidden aria-hidden="true">
     <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
     <div class="vs-overlay__panel" role="dialog" aria-modal="true" aria-labelledby="usersPointsTitle">

@@ -3,14 +3,19 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 
+// ThemeManager::renderBody() 也会注入同名变量；此处显式读取，避免静态分析误报、并与 default 主题一致
+$siteName = SiteContext::siteName();
+$siteDesc = SiteContext::siteDescription();
+$vsBase = rtrim(vs_base_url(), '/');
+
 $categoryNames = FrontendCategory::nameMap();
 $apiData = FrontendApi::listForTheme();
 $payload = array(
     'categoryNames' => $categoryNames,
     'apiData'       => $apiData,
 );
-$apiCount = count($apiData);
-$totalCalls = ApiManager::totalCallCount();
+$apiCount = FrontendStats::approvedApiCount();
+$totalCalls = FrontendStats::totalCallCount();
 $catCount = FrontendCategory::countEnabled();
 $userCount = FrontendStats::userCount();
 $todayCalls = FrontendStats::todayCallCount();
@@ -20,7 +25,9 @@ $catBtnIndex = 0;
 $heroTitleRaw = trim((string) ThemeManager::themeSetting('hero_title', ''));
 $heroTitle = $heroTitleRaw !== '' ? $heroTitleRaw : ('欢迎使用 ' . $siteName);
 $heroLeadCustom = trim((string) ThemeManager::themeSetting('hero_lead', ''));
-$heroDesc = $heroLeadCustom !== '' ? $heroLeadCustom : (isset($heroDesc) ? $heroDesc : ($siteDesc !== '' ? $siteDesc : '为开发者提供丰富、稳定、快速的 API 数据接口，一行代码即可调用'));
+$heroDesc = $heroLeadCustom !== ''
+    ? $heroLeadCustom
+    : ($siteDesc !== '' ? $siteDesc : '为开发者提供丰富、稳定、快速的 API 数据接口，一行代码即可调用');
 
 $showStats = ThemeManager::themeSetting('show_stats', true);
 $showStats = $showStats === true || $showStats === 1 || $showStats === '1' || $showStats === 'true';

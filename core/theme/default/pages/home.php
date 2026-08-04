@@ -16,9 +16,9 @@ $payload = array(
     'categoryNames' => $categoryNames,
     'apiData'       => $apiData,
 );
-$apiCount = ApiManager::countApproved();
+$apiCount = FrontendStats::approvedApiCount();
 $catCount = FrontendCategory::countEnabled();
-$totalCalls = ApiManager::totalCallCount();
+$totalCalls = FrontendStats::totalCallCount();
 $statsNumFormat = ThemeManager::themeSetting('stats_num_format', 'compact');
 $statsNumFormat = ($statsNumFormat === 'full') ? 'full' : 'compact';
 // 0=完整数字；1=单位转换（与主题 JS statsDisplayMode 一致）
