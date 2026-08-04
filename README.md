@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.0-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.1-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -256,11 +256,12 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.0（2026-08-04）
+### v13.26.1（2026-08-04）
 
-- AI 测试连接不再因上游报错拖死后台；文档/代码 SSE 异常可恢复
-- 详细文档仅 curl + PHP 与一种鉴权；代码示例流式回填并降为 curl+php×首选鉴权
-- IP 归属地自定义接口可用草稿测试；内置标明仅支持 IPv4
+- 纠正 13.26.0 误解：详细文档仍仅 curl + PHP，并强制章节顺序与文末「注意事项」
+- 代码示例恢复最多 27 片（3 鉴权 × 9 语言）；可按鉴权单独生成 9 片
+- IP 归属地提示改为：若需查询 IPv6，需配置自定义接口
+- 前台接口域名按访问入口动态重绑；页脚友链「显示全部」生效；友链页每次打乱
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

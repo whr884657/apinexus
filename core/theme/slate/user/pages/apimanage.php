@@ -359,7 +359,7 @@ $canLocal = !empty($canLocal);
                     <?php if ($aiReady): ?>
                     <div class="vs-api-doc-head__actions">
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiCodeBtn"
-                                title="按鉴权×语言分片生成（JSON 单片）">AI 生成代码示例</button>
+                                title="按已选鉴权×9 语言一键生成（最多 27 片）">AI 生成代码示例</button>
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiCodeRetryBtn" hidden
                                 title="只重试上次失败的片">重试失败</button>
                         <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="userApiAiCodeClearBtn"
@@ -367,10 +367,20 @@ $canLocal = !empty($canLocal);
                     </div>
                     <?php endif; ?>
                 </div>
+                <?php if ($aiReady): ?>
+                <div class="vs-api-ai-code-ways" id="userApiAiCodeWays" hidden>
+                    <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="query" hidden
+                            title="仅生成 Query 鉴权下 9 种语言">生成 Query 示例</button>
+                    <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="header" hidden
+                            title="仅生成 Header 鉴权下 9 种语言">生成 Header 示例</button>
+                    <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="bearer" hidden
+                            title="仅生成 Bearer 鉴权下 9 种语言">生成 Bearer 示例</button>
+                </div>
+                <?php endif; ?>
                 <textarea class="vs-input vs-textarea" id="userApiFormAidoc" name="aidoc" rows="5"
                           data-vs-md="off" placeholder="多语言调用示例…"></textarea>
                 <?php if ($aiReady): ?>
-                <p class="vs-form-hint">AI 按「鉴权×语言」分片请求，一片成功即回填；失败可点「重试失败」。</p>
+                <p class="vs-form-hint">主按钮一键生成已选鉴权×9 语言（最多 27 片）；下方可按鉴权单独生成 9 片。失败可点「重试失败」。</p>
                 <details class="vs-ai-term" id="userApiAiTermCode" data-ai-term="code">
                     <summary class="vs-ai-term__summary">AI 编写进程（代码示例）</summary>
                     <pre class="vs-ai-term__log font-mono" id="userApiAiTermCodeLog">尚未开始生成。</pre>

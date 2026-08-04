@@ -1671,12 +1671,18 @@ class ApiManager
      * @param array $row
      * @return string
      */
-    public static function resolveCallUrl(array $row)
+    /**
+     * 对外调用路径（不含站点域名）：本地/代理为 `/path`；库内已是绝对外链则原样返回
+     *
+     * @param array $row
+     * @return string
+     */
+    public static function resolveCallPath(array $row)
     {
         $apitype = self::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : self::APITYPE_LOCAL);
         if ($apitype === self::APITYPE_PROXY) {
             $slug = isset($row['proxyslug']) ? (string) $row['proxyslug'] : '';
-            return ApiProxy::publicUrl($slug);
+            return ApiProxy::publicPath($slug);
         }
         $endpoint = trim((string) (isset($row['endpoint']) ? $row['endpoint'] : ''));
         if ($endpoint === '') {
@@ -1688,7 +1694,25 @@ class ApiManager
         if ($endpoint[0] !== '/') {
             $endpoint = '/' . $endpoint;
         }
-        return rtrim(vs_base_url(), '/') . $endpoint;
+        return $endpoint;
+    }
+
+    /**
+     * 对外完整调用 URL（按当前访问域名拼装；外链绝对地址不改）
+     *
+     * @param array $row
+     * @return string
+     */
+    public static function resolveCallUrl(array $row)
+    {
+        $path = self::resolveCallPath($row);
+        if ($path === '') {
+            return '';
+        }
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+        return rtrim(vs_base_url(), '/') . $path;
     }
 
     /**

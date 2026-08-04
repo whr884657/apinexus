@@ -62,7 +62,7 @@ class FrontendLink
     /**
      * 页脚展示用：随机打乱；可限制条数
      *
-     * @param int $limit 0=全部；1～10=随机取这么多
+     * @param int $limit 0=显示全部（仍打乱）；1～10=随机取这么多
      * @return array{items:array,has_more:bool,total:int,limit:int}
      */
     public static function pickForFooter($limit = 0)
@@ -73,8 +73,8 @@ class FrontendLink
         if ($limit < 0) {
             $limit = 0;
         }
-        // 页脚硬上限 10：即便主题选「全部」也不刷爆页脚 DOM
-        if ($limit === 0 || $limit > 10) {
+        // 主题「limitN」选项最高 10；「全部」(0) 不强制改成 10
+        if ($limit > 10) {
             $limit = 10;
         }
 
@@ -83,19 +83,19 @@ class FrontendLink
                 'items'    => $all,
                 'has_more' => false,
                 'total'    => $total,
-                'limit'    => $limit,
+                'limit'    => $limit === 0 ? $total : $limit,
             );
         }
 
         // 每次请求不同顺序
         shuffle($all);
 
-        if ($limit >= $total) {
+        if ($limit === 0 || $limit >= $total) {
             return array(
                 'items'    => $all,
                 'has_more' => false,
                 'total'    => $total,
-                'limit'    => $limit,
+                'limit'    => $limit === 0 ? $total : $limit,
             );
         }
 
@@ -108,7 +108,7 @@ class FrontendLink
     }
 
     /**
-     * 友链页取数（带硬上限，防卡死）
+     * 友链页取数（带硬上限，防卡死）；每次访问随机打乱顺序
      *
      * @return array{items:array,total:int,truncated:bool,limit:int}
      */
@@ -117,6 +117,9 @@ class FrontendLink
         $all = self::listForTheme();
         $total = count($all);
         $limit = self::PAGE_HARD_LIMIT;
+        if ($total > 1) {
+            shuffle($all);
+        }
         if ($total <= $limit) {
             return array(
                 'items'    => $all,

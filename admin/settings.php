@@ -1167,7 +1167,7 @@ vs_admin_accordion_start(
                 <option value="custom"<?php echo $ipLocMode === 'custom' ? ' selected' : ''; ?>>自定义接口</option>
             </select>
             <?php vs_render_notice('tip', '', '内置方式开箱即用；若你已有稳定的归属地 API，可选自定义并填写下方参数。', array('field' => true, 'compact' => true)); ?>
-            <?php vs_render_notice('warning', '', '系统内置解析仅支持 IPv4；IPv6 地址无法解析，请改用支持 IPv6 的自定义接口。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '系统内置解析仅支持 IPv4。若需要查询 IPv6 地址，需配置自定义归属地接口。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div id="ipLocCustomFields">
         <div class="vs-form-row vs-form-row--2">
@@ -1658,13 +1658,13 @@ $aiPresets = AiConfig::providerPresets();
                     <option value="sequential" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : 'sequential') === 'sequential' ? 'selected' : ''; ?>>单线程（写完一片再写下一片）</option>
                     <option value="parallel" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : '') === 'parallel' ? 'selected' : ''; ?>>多线程（浏览器并发多片）</option>
                 </select>
-                <p class="vs-form-hint">AI 仅生成 curl + PHP（首选一种鉴权，最多 2 片），全程 SSE 流式回填。经 CDN 时建议「单线程」；多线程并发实际不超过 2。</p>
+                <p class="vs-form-hint">最多 3 鉴权 × 9 语言 = 27 片；亦可按鉴权单独生成 9 片。经 CDN 时建议「单线程」（SSE 保活）；多线程并发建议 1～3。</p>
             </div>
             <div class="vs-form-col">
                 <label class="vs-label" for="aiCodeConcurrency">并行并发数</label>
                 <input type="number" name="ai_code_concurrency" id="aiCodeConcurrency" class="vs-input" min="1" max="6"
                        value="<?php echo (int) (isset($aiCfg['code_concurrency']) ? $aiCfg['code_concurrency'] : 3); ?>">
-                <p class="vs-form-hint">仅「多线程」生效；有 CDN 时建议 1～2</p>
+                <p class="vs-form-hint">仅「多线程」生效，范围 1～6；CDN 环境建议不超过 2</p>
             </div>
         </div>
         <div class="vs-form-actions">

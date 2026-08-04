@@ -10540,6 +10540,19 @@ select.vs-input.vs-select {
     gap: 8px;
     align-items: center;
 }
+.vs-api-ai-code-ways {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin: 0 0 10px;
+}
+.vs-api-ai-code-ways[hidden] {
+    display: none !important;
+}
+.vs-api-ai-code-ways .vs-btn[hidden] {
+    display: none !important;
+}
 .vs-api-draft-hint {
     margin-right: auto;
     font-size: 12px;

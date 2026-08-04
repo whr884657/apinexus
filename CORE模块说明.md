@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.0**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.1**）
 
 ---
 
@@ -257,8 +257,8 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `AiClient.php` | OpenAI 兼容 Chat Completions / Responses；流式 `chatStreamWithConfig`；连通测试须先 `session_write_close`（v13.26.0） |
 | `AiChatSession.php` | AI 短时效多轮（Redis TTL 约 30 分钟）与断点 partial |
 | `AiSse.php` | SSE 输出（`no-transform` / `Surrogate-Control` / 首包垫片 + 心跳），供文档与代码流式生成 |
-| `AiApiDoc.php` | 生成详细文档（`doc`，可流式）与代码示例（`aidoc`）；详细文档 prompt 须含全部 errcode；剥离上游敏感字段 |
-| `IpLocator.php` | IP 归属地：内置（仅 IPv4）或自定义；`probe()` 支持表单草稿测试；自定义超时加长（v13.26.0）；异步回填 `apilog.iploc` |
+| `AiApiDoc.php` | 生成详细文档（`doc`，可流式）与代码示例（`aidoc`）；详细文档 prompt 须含全部 errcode、强制章节顺序与文末注意事项；代码示例最多 3 鉴权×9 语言 |
+| `IpLocator.php` | IP 归属地：内置（仅 IPv4）或自定义；`probe()` 支持表单草稿测试；自定义超时加长；IPv6 提醒需自定义接口（v13.26.1） |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ProxyClientProfile.php` | 出站 UA/Referer 内置预设与解析；代理网关与本地 `ApiStats::outboundHeaders` 共用 |
 | `ProxyJsonRewrite.php` | 代理响应 JSON 字段改写（set/del；仅 JSON；**v13.12.0**；**v13.25.0** 禁止 SET 后台路径；**v13.25.2** 业务错误体不改写） |
@@ -731,10 +731,10 @@ VsPlaygroundResponse.directRequest({
 ### 4.21.5 AiApiDoc.php / ApiQuickstart.php（AI 文档与快速上手）
 
 **AiApiDoc：** 管理员/用户接口编辑「AI 生成详细文档 / 代码示例」；详细文档默认 SSE 流式（`generateDetailDocStream` + `AiChatSession` 短时效历史）；上下文剔除 `targeturl`/`upkey`；输出经 `ApiQuickstart::scrubHighlightLeak` 剥离 HTML / `vs-syn` 碎片（E177：勿对已高亮 HTML 二次正则）。
-**v13.26.0 文档约束：** 详细文档调用示例仅 **curl + PHP**；密钥传递只描述**首选一种**鉴权。
+**v13.26.1 文档约束：** 详细文档调用示例仅 **curl + PHP**；密钥传递只描述**首选一种**鉴权；章节顺序强制（参数→响应→错误码→调用示例→注意事项）；文末必有「注意事项」。
 **展示：** `VsSyntax` bash 纯文本分词；复制用 `data-vs-plain` / `plainText`。
 
-**代码示例生成（v12.0.0 / v13.26.0）：** 前端按片调用 `ai_gen_code_piece_stream`（SSE，`delta` 即回填）；**AI 仅生成 curl + php，且只跑首选鉴权**（最多 2 片）。`AiConfig::codeMode` 为 `sequential`/`parallel`（并行并发上限 2 且仍走 SSE）。服务端 `extractRequestedQsBlock` 按语言容错收回并改写 auth，禁 emoji、要求中文注释，失败可重试 1 次（重试仍流式）。旧整包接口仅兼容保留。
+**代码示例生成（v12.0.0 / v13.26.1）：** 前端按片调用 `ai_gen_code_piece_stream`（SSE，`delta` 即回填）；**AI 生成最多 3 鉴权 × 9 语言 = 27 片**。主按钮一键全量；可按鉴权单独生成 9 片（合并保留其它鉴权块）。`AiConfig::codeMode` 为 `sequential`/`parallel`（并发 1～6，CDN 建议 ≤2）。服务端 `extractRequestedQsBlock` 按语言容错收回并改写 auth，禁 emoji、要求中文注释，失败可重试 1 次（重试仍流式）。旧整包接口仅兼容保留。**纠正：** v13.26.0 误把「文档内仅 curl+PHP」套用到 aidoc 并降为 2 片，已在 13.26.1 恢复。
 
 **默认主题快速上手图标（v12.0.1）：** `assets/img/lang/*.svg`；`detailQsBundle.byAuth[*]` 宜带 `icon_gray`/`icon_color`；另须注入 `window.detailQsLangIcons`（`ApiQuickstart::langIconMap`）。`detail-quickstart.js` 重绘 Tab 时按语言 id 兜底补图标；首屏已有 PHP 图标则勿无谓重绘。切换 Query/Header/Bearer **不得**丢九种语言图标。
 
@@ -827,8 +827,9 @@ curl …
 
 | 方法 | 说明 |
 |------|------|
-| `listForTheme()` | 接口数组，供模板或 `json_encode` 给 JS（**不做调用量排序**；首页随机由主题 JS 负责） |
-| `findForThemeById($id)` | 单条详情（审核通过且非禁用） |
+| `listForTheme()` | 接口数组；Redis 缓存 `call_path`，取出后按当前访问域名重绑 `endpoint` / `detail_url`（多域名备用入口不串域） |
+| `findForThemeById($id)` | 单条详情（审核通过且非禁用）；同样按当前域名重绑 |
+| `bindRequestHost` / `bindRequestHostToList` | 将 `call_path` 拼到当前 `vs_base_url()` |
 | `countForTheme()` | 公开接口数量 |
 
 **返回字段（每条）：**
@@ -840,7 +841,8 @@ curl …
 | `desc` | 描述 |
 | `category` / `category_name` | 分类 id / 原始分类名 |
 | `method` / `methods` / `method_label` | 请求方式 |
-| `endpoint` | 调用地址 |
+| `endpoint` | 调用地址（**当前访问域名**动态拼装；外链绝对地址不改） |
+| `call_path` | 路径或外链绝对地址（Redis 缓存依赖此字段，勿把域名烤进缓存语义） |
 | `params` / `response` / `doc` / `aidoc` | 参数原文、返回、详细文档、代码示例 |
 | `params_list` | 解析后的参数表（name/type/required/description/example） |
 | `maintenance` | 1=维护中 |
@@ -849,7 +851,7 @@ curl …
 | `qpm` / `qpm_label` | 每分钟上限；文案「不限制」或「N/MIN」 |
 | `charge` / `charge_label` / `points` / `billing_label` | 计费；`billing_label` 为「免费」或「N积分/次」 |
 | `author` | 开发者作者卡（无则 null）；含 `profile_url` |
-| `calls` / `icon` / `detail_url` / `createtime` | 其它 |
+| `calls` / `icon` / `icon_path` / `detail_url` / `createtime` | 其它 |
 
 ---
 
@@ -879,6 +881,8 @@ curl …
 | 方法 | 说明 |
 |------|------|
 | `listForTheme()` | 已通过且启用的友链（含 name/siteurl/icon/description/host/initial） |
+| `listForThemePage()` | 友链页：每次访问 **shuffle**；硬上限 120 |
+| `pickForFooter($limit)` | 页脚：每次 **shuffle**；`$limit=0` 显示**全部**；`1～10` 随机取 N 条，超出可「查看更多」 |
 | `siteCard()` | 本站友链信息（申请页展示：name/url/desc/icon） |
 
 **前台 `FrontendPartner`：**

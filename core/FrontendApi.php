@@ -42,11 +42,14 @@ class FrontendApi
 
         $methods = ApiManager::normalizeMethods(isset($row['method']) ? $row['method'] : ApiManager::METHOD_GET);
         $primaryMethod = isset($methods[0]) ? $methods[0] : ApiManager::METHOD_GET;
-        $callUrl = ApiManager::resolveCallUrl($row);
-        $endpoint = $callUrl !== ''
-            ? $callUrl
-            : trim((string) (isset($row['endpoint']) ? $row['endpoint'] : ''));
+        $callPath = ApiManager::resolveCallPath($row);
+        $endpoint = ApiManager::resolveCallUrl($row);
+        if ($endpoint === '') {
+            $endpoint = trim((string) (isset($row['endpoint']) ? $row['endpoint'] : ''));
+        }
         $iconRaw = isset($row['icon']) ? (string) $row['icon'] : '';
+        $iconUrl = $iconRaw !== '' ? ApiCategoryManager::resolveIconUrl($iconRaw) : '';
+        $iconPath = self::siteAssetPathFromUrl($iconUrl);
         $apitype = ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0);
         $id = (int) (isset($row['id']) ? $row['id'] : 0);
 
@@ -60,6 +63,7 @@ class FrontendApi
             'methods'     => $methods,
             'method_label'=> ApiManager::methodsLabel($methods),
             'endpoint'    => $endpoint,
+            'call_path'   => $callPath,
             'apitype'     => $apitype,
             'params'      => isset($row['params']) ? (string) $row['params'] : '',
             'response'    => isset($row['response']) ? (string) $row['response'] : '',
@@ -73,7 +77,8 @@ class FrontendApi
             'qpm'         => ApiManager::normalizeQpm(isset($row['qpm']) ? $row['qpm'] : 0),
             'qpm_label'   => ApiManager::qpmLabel(isset($row['qpm']) ? $row['qpm'] : 0),
             'calls'       => isset($row['calls']) ? (int) $row['calls'] : 0,
-            'icon'        => $iconRaw !== '' ? ApiCategoryManager::resolveIconUrl($iconRaw) : '',
+            'icon'        => $iconUrl,
+            'icon_path'   => $iconPath,
             'detail_url'  => $id > 0 ? vs_api_detail_url($id) : '',
             'charge'      => ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0),
             'charge_label'=> ApiManager::chargeLabel(isset($row['charge']) ? $row['charge'] : 0),
@@ -88,6 +93,155 @@ class FrontendApi
             'params_list' => self::parseParamsList(isset($row['params']) ? (string) $row['params'] : ''),
             'author'      => $withAuthor ? self::authorForTheme(isset($row['userid']) ? (int) $row['userid'] : 0) : null,
         );
+    }
+
+    /**
+     * 从绝对 URL 取出本站 /assets/… 路径；外链或非本站资源返回空
+     *
+     * @param string $url
+     * @return string
+     */
+    private static function siteAssetPathFromUrl($url)
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+        if (isset($url[0]) && $url[0] === '/' && strpos($url, '/assets/') === 0) {
+            return $url;
+        }
+        if (!preg_match('#^https?://#i', $url)) {
+            return '';
+        }
+        $path = parse_url($url, PHP_URL_PATH);
+        if (!is_string($path) || strpos($path, '/assets/') !== 0) {
+            return '';
+        }
+        return $path;
+    }
+
+    /**
+     * 按当前访问域名重绑 endpoint / detail_url / 本站图标（Redis 只缓存路径）
+     *
+     * @param array $item
+     * @return array
+     */
+    public static function bindRequestHost(array $item)
+    {
+        $base = rtrim(vs_base_url(), '/');
+        $id = (int) (isset($item['id']) ? $item['id'] : 0);
+
+        $path = '';
+        if (isset($item['call_path']) && trim((string) $item['call_path']) !== '') {
+            $path = trim((string) $item['call_path']);
+        } else {
+            $path = self::legacyCallPathFromEndpoint(isset($item['endpoint']) ? $item['endpoint'] : '');
+        }
+
+        if ($path !== '' && preg_match('#^https?://#i', $path)) {
+            $item['call_path'] = $path;
+            $item['endpoint'] = $path;
+        } elseif ($path !== '') {
+            // 仅允许站内绝对路径；拒绝 //evil、含 .. 或控制字符的脏路径
+            if (!self::isSafeSiteCallPath($path)) {
+                $item['call_path'] = '';
+                $epNow = isset($item['endpoint']) ? (string) $item['endpoint'] : '';
+                if ($epNow === '' || !preg_match('#^https?://#i', $epNow)) {
+                    $item['endpoint'] = '';
+                }
+            } else {
+                if ($path[0] !== '/') {
+                    $path = '/' . $path;
+                }
+                $item['call_path'] = $path;
+                $item['endpoint'] = $base . $path;
+            }
+        }
+
+        $item['detail_url'] = $id > 0 ? vs_api_detail_url($id) : '';
+
+        $iconPath = '';
+        if (isset($item['icon_path']) && trim((string) $item['icon_path']) !== '') {
+            $iconPath = trim((string) $item['icon_path']);
+        } else {
+            $iconPath = self::siteAssetPathFromUrl(isset($item['icon']) ? $item['icon'] : '');
+        }
+        if ($iconPath !== '' && self::isSafeSiteCallPath($iconPath) && strpos($iconPath, '/assets/') === 0) {
+            if ($iconPath[0] !== '/') {
+                $iconPath = '/' . $iconPath;
+            }
+            $item['icon_path'] = $iconPath;
+            $item['icon'] = $base . $iconPath;
+        }
+
+        return $item;
+    }
+
+    /**
+     * 站内相对调用路径是否安全（禁止协议相对 URL、路径穿越、空白控制符）
+     *
+     * @param string $path
+     * @return bool
+     */
+    private static function isSafeSiteCallPath($path)
+    {
+        $path = (string) $path;
+        if ($path === '' || preg_match('#^https?://#i', $path)) {
+            return false;
+        }
+        if (isset($path[0]) && $path[0] === '/' && isset($path[1]) && $path[1] === '/') {
+            return false;
+        }
+        if (strpos($path, "\0") !== false || preg_match('/[\x00-\x1f\x7f]/', $path)) {
+            return false;
+        }
+        if (strpos($path, '..') !== false) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @param array<int, array> $list
+     * @return array<int, array>
+     */
+    public static function bindRequestHostToList(array $list)
+    {
+        $out = array();
+        foreach ($list as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $out[] = self::bindRequestHost($item);
+        }
+        return $out;
+    }
+
+    /**
+     * 兼容旧缓存：从绝对 endpoint 还原路径（新缓存应带 call_path；外链完整 URL 亦写在 call_path）
+     *
+     * @param string $endpoint
+     * @return string
+     */
+    private static function legacyCallPathFromEndpoint($endpoint)
+    {
+        $endpoint = trim((string) $endpoint);
+        if ($endpoint === '') {
+            return '';
+        }
+        if (!preg_match('#^https?://#i', $endpoint)) {
+            return $endpoint[0] === '/' ? $endpoint : '/' . $endpoint;
+        }
+        $parts = parse_url($endpoint);
+        if (!is_array($parts) || empty($parts['path'])) {
+            return $endpoint;
+        }
+        $path = (string) $parts['path'];
+        if (!empty($parts['query'])) {
+            $path .= '?' . $parts['query'];
+        }
+        // 旧缓存里本站入口域名已烤死：一律只留路径，按当前访问域名重绑
+        return $path;
     }
 
     /**
@@ -218,6 +372,8 @@ class FrontendApi
     /**
      * 供前台主题 / JS 使用的公开接口列表
      *
+     * Redis 缓存条目含 call_path（路径或外链绝对地址）；每次取出后按当前访问域名重绑 endpoint / detail_url。
+     *
      * @return array<int, array<string, mixed>>
      */
     public static function listForTheme()
@@ -236,9 +392,13 @@ class FrontendApi
             return $apiData;
         };
         if (class_exists('RedisCache')) {
-            return RedisCache::remember(RedisCache::KEY_FRONTEND_API, RedisCache::TTL_FRONTEND_API, $factory);
+            $cached = RedisCache::remember(RedisCache::KEY_FRONTEND_API, RedisCache::TTL_FRONTEND_API, $factory);
+            if (!is_array($cached)) {
+                return self::bindRequestHostToList($factory());
+            }
+            return self::bindRequestHostToList($cached);
         }
-        return $factory();
+        return self::bindRequestHostToList($factory());
     }
 
     /**
@@ -257,7 +417,8 @@ class FrontendApi
         if (!is_array($row)) {
             return null;
         }
-        return self::formatForTheme($row, true);
+        $item = self::formatForTheme($row, true);
+        return is_array($item) ? self::bindRequestHost($item) : null;
     }
 
     /**

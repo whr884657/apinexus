@@ -142,7 +142,7 @@ class IpLocator
 
         // 内置不支持 IPv6
         if ($mode === 'builtin' && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-            return array('ok' => false, 'msg' => '系统内置解析仅支持 IPv4，当前为 IPv6，请改用自定义接口');
+            return array('ok' => false, 'msg' => '系统内置解析仅支持 IPv4；当前为 IPv6。若需查询 IPv6，请配置自定义归属地接口');
         }
 
         $cacheKey = ''; // 探测不写缓存
@@ -159,7 +159,7 @@ class IpLocator
 
         $text = self::lookupBuiltin($ip, $cacheKey, self::TIMEOUT_PROBE);
         if ($text === '') {
-            return array('ok' => false, 'msg' => '内置解析失败或上游无结果（IP：' . $ip . '，仅支持 IPv4）');
+            return array('ok' => false, 'msg' => '内置解析失败或上游无结果（IP：' . $ip . '；内置仅支持 IPv4）');
         }
         return array('ok' => true, 'msg' => '解析成功（系统内置）', 'iploc' => $text);
     }

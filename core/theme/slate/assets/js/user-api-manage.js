@@ -692,6 +692,44 @@
         if (row && needEl) {
             row.hidden = (parseInt(needEl.value, 10) || 0) === 0;
         }
+        syncAiCodeAuthButtons();
+    }
+
+    function syncAiCodeAuthButtons() {
+        var wrap = document.getElementById('userApiAiCodeWays');
+        if (!wrap) {
+            return;
+        }
+        var needEl = document.getElementById('userApiFormNeedkey');
+        var need = needEl ? (parseInt(needEl.value, 10) || 0) : 0;
+        var selected = {};
+        if (need > 0) {
+            getSelectedKeyways().forEach(function (w) {
+                selected[w] = true;
+            });
+        }
+        var any = false;
+        var nodes = wrap.querySelectorAll('[data-ai-code-auth]');
+        for (var i = 0; i < nodes.length; i++) {
+            var auth = String(nodes[i].getAttribute('data-ai-code-auth') || '').toLowerCase();
+            var show = need > 0 && !!selected[auth];
+            nodes[i].hidden = !show;
+            if (show) {
+                any = true;
+            }
+        }
+        wrap.hidden = !any;
+    }
+
+    function setAiCodeAuthButtonsDisabled(disabled) {
+        var wrap = document.getElementById('userApiAiCodeWays');
+        if (!wrap) {
+            return;
+        }
+        var nodes = wrap.querySelectorAll('[data-ai-code-auth]');
+        for (var i = 0; i < nodes.length; i++) {
+            nodes[i].disabled = !!disabled;
+        }
     }
 
     (function bindUserKeywayToggles() {
@@ -712,6 +750,7 @@
                 btn.classList.add('is-on');
                 btn.setAttribute('aria-pressed', 'true');
             }
+            syncAiCodeAuthButtons();
         });
     })();
 
@@ -1409,6 +1448,34 @@
         return ok.join('\n\n');
     }
 
+    function stripAidocForAuth(text, auth) {
+        var a = String(auth || '').toLowerCase();
+        if (!a) {
+            return String(text || '').trim();
+        }
+        return String(text || '')
+            .replace(/:::qs[^\n]*\n[\s\S]*?:::/gi, function (block) {
+                var m = block.match(/\bauth\s*=\s*([a-z]+)/i);
+                if (m && String(m[1]).toLowerCase() === a) {
+                    return '';
+                }
+                return block;
+            })
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
+    function combineAidocKeep(kept, merged) {
+        var parts = [];
+        if (kept) {
+            parts.push(kept);
+        }
+        if (merged) {
+            parts.push(merged);
+        }
+        return parts.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
     function setTextareaValue(el, text) {
         if (!el) {
             return;
@@ -1569,9 +1636,8 @@
         return 'Query';
     }
 
-    function buildCodeJobs(payload) {
-        // AI 仅生成终端 curl + PHP；鉴权只取首选一种
-        var langs = ['curl', 'php'];
+    function buildCodeJobs(payload, onlyAuth) {
+        var langs = ['curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust'];
         var need = parseInt(payload.needkey, 10) || 0;
         var ways = need === 0 ? ['query'] : getSelectedKeyways();
         ways = ways.filter(function (w) {
@@ -1580,7 +1646,15 @@
         if (!ways.length) {
             ways = ['query'];
         }
-        ways = ways.slice(0, 1);
+        var filterAuth = String(onlyAuth || '').toLowerCase();
+        if (filterAuth === 'query' || filterAuth === 'header' || filterAuth === 'bearer') {
+            ways = ways.filter(function (w) {
+                return w === filterAuth;
+            });
+            if (!ways.length) {
+                ways = [filterAuth];
+            }
+        }
         var jobs = [];
         ways.forEach(function (auth) {
             langs.forEach(function (lang) {
@@ -1603,15 +1677,31 @@
         if (aiCodeRetryBtn) {
             aiCodeRetryBtn.disabled = false;
         }
+        setAiCodeAuthButtonsDisabled(false);
         aiBusy = false;
         aiStopTimers();
         aiHideBannerLater(bannerKind);
     }
 
-    function runAiCodePieces(payload, btn, retryOnly) {
+    function runAiCodePieces(payload, btn, retryOnly, onlyAuth) {
         var kind = 'code';
         var title = '代码示例';
-        var allJobs = buildCodeJobs(payload);
+        var filterAuth = '';
+        var keptBase = '';
+        var aidocEl = document.getElementById('userApiFormAidoc');
+        if (retryOnly && aiCodeLastState) {
+            filterAuth = String(aiCodeLastState.onlyAuth || '').toLowerCase();
+            keptBase = String(aiCodeLastState.keptBase || '');
+        } else {
+            filterAuth = String(onlyAuth || '').toLowerCase();
+            if (filterAuth !== 'query' && filterAuth !== 'header' && filterAuth !== 'bearer') {
+                filterAuth = '';
+            }
+            if (filterAuth && aidocEl) {
+                keptBase = stripAidocForAuth(String(aidocEl.value || ''), filterAuth);
+            }
+        }
+        var allJobs = buildCodeJobs(payload, filterAuth);
         var opts = getAiCodeOpts();
         var concurrency = opts.concurrency;
         var pieces;
@@ -1620,7 +1710,9 @@
         var doneCount = 0;
         var runningLabels = {};
         var charsWritten = 0;
-        var aidocEl = document.getElementById('userApiFormAidoc');
+        var scopeLabel = filterAuth
+            ? (authWayLabel(filterAuth) + ' · 9 语言')
+            : ('已选鉴权×9 语言 · 共 ' + allJobs.length + ' 片');
 
         if (retryOnly && aiCodeLastState && aiCodeLastState.pieces && aiCodeLastState.jobs) {
             pieces = aiCodeLastState.pieces.slice();
@@ -1650,13 +1742,10 @@
         }
         aiTermOpen(kind, true);
         var useSse = true;
-        if (opts.mode === 'parallel' && concurrency > 2) {
-            concurrency = 2;
-        }
         aiTermAppend(kind, (retryOnly ? '重试失败片「' : '开始分片生成「') + title + '」· 本轮 '
             + jobIndexes.length + '/' + allJobs.length + ' 片 · '
             + (opts.mode === 'parallel' ? ('并行×' + concurrency + ' · SSE') : '单线程 · SSE 保活')
-            + '（curl+php · 首选鉴权）');
+            + '（' + scopeLabel + '）');
         aiSetBanner('run', '代码示例 0/' + jobIndexes.length, 'code');
         if (aiBannerTime) {
             aiBannerTime.textContent = '已用时 0秒';
@@ -1670,8 +1759,17 @@
         if (aiCodeRetryBtn) {
             aiCodeRetryBtn.disabled = true;
         }
+        setAiCodeAuthButtonsDisabled(true);
         if (btn) {
             btn.disabled = true;
+        }
+
+        function composeLiveAidoc() {
+            var merged = mergeCodePieces(pieces);
+            if (!merged && !keptBase) {
+                return '';
+            }
+            return filterAuth ? combineAidocKeep(keptBase, merged) : merged;
         }
 
         function refreshRunBanner() {
@@ -1708,7 +1806,9 @@
             aiCodeLastState = {
                 payload: payload,
                 jobs: allJobs,
-                pieces: pieces.slice()
+                pieces: pieces.slice(),
+                onlyAuth: filterAuth,
+                keptBase: keptBase
             };
             var miss = 0;
             allJobs.forEach(function (_, idx) {
@@ -1718,7 +1818,8 @@
             });
             setAiCodeRetryVisible(miss > 0);
 
-            if (!merged) {
+            var finalText = filterAuth ? combineAidocKeep(keptBase, merged) : merged;
+            if (!finalText) {
                 var failMsg = failed.length
                     ? ('全部失败：' + failed.slice(0, 5).join('；') + (failed.length > 5 ? '…' : ''))
                     : '未能生成任何代码块';
@@ -1729,13 +1830,13 @@
                 return;
             }
             if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
-                merged = window.VsSyntax.scrubHighlightLeak(merged);
+                finalText = window.VsSyntax.scrubHighlightLeak(finalText);
             }
-            setTextareaValue(aidocEl, merged);
-            charsWritten = merged.length;
+            setTextareaValue(aidocEl, finalText);
+            charsWritten = finalText.length;
             aiTermAppend(kind, '已写入代码示例（成功 '
                 + pieces.filter(Boolean).length + '/' + allJobs.length
-                + '，约 ' + merged.length + ' 字符）');
+                + '，约 ' + finalText.length + ' 字符）');
             if (failed.length || miss > 0) {
                 var warn = '部分示例未成功：' + failed.slice(0, 12).join('、')
                     + (failed.length > 12 ? (' 等共 ' + failed.length + ' 项') : '')
@@ -1748,19 +1849,19 @@
             aiTermAppend(kind, '完成，总用时 ' + aiElapsedLabel());
             aiTermStopRunning(kind);
             aiSetBanner('done', (miss > 0 ? '代码示例已部分生成' : '代码示例已生成')
-                + ' · ' + aiElapsedLabel() + ' · ' + merged.length + ' 字', 'code');
+                + ' · ' + aiElapsedLabel() + ' · ' + finalText.length + ' 字', 'code');
         }
 
         function flushPiecesLive() {
-            var merged = mergeCodePieces(pieces);
-            if (!merged) {
+            var finalText = composeLiveAidoc();
+            if (!finalText) {
                 return;
             }
             if (window.VsSyntax && typeof window.VsSyntax.scrubHighlightLeak === 'function') {
-                merged = window.VsSyntax.scrubHighlightLeak(merged);
+                finalText = window.VsSyntax.scrubHighlightLeak(finalText);
             }
-            charsWritten = merged.length;
-            setTextareaValue(aidocEl, merged);
+            setTextareaValue(aidocEl, finalText);
+            charsWritten = finalText.length;
         }
 
         function runPool() {
@@ -1933,6 +2034,7 @@
         if (aiCodeBtn) {
             aiCodeBtn.disabled = true;
         }
+        setAiCodeAuthButtonsDisabled(true);
         if (btn) {
             btn.disabled = true;
         }
@@ -2064,6 +2166,44 @@
             runAiGenerate('ai_gen_code', aiCodeBtn, false);
         });
     }
+    (function bindAiCodeAuthButtons() {
+        var wrap = document.getElementById('userApiAiCodeWays');
+        if (!wrap) {
+            return;
+        }
+        wrap.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-ai-code-auth]');
+            if (!btn || !wrap.contains(btn) || btn.hidden) {
+                return;
+            }
+            e.preventDefault();
+            if (aiBusy) {
+                window.VS.showMessage('已有生成任务进行中，请稍候', 'info');
+                return;
+            }
+            var auth = String(btn.getAttribute('data-ai-code-auth') || '').toLowerCase();
+            if (auth !== 'query' && auth !== 'header' && auth !== 'bearer') {
+                return;
+            }
+            var payload = collectPayload();
+            if (payload.__error) {
+                window.VS.showMessage(payload.__error, 'error');
+                switchFormTab('params');
+                return;
+            }
+            if (!payload.name) {
+                window.VS.showMessage('请先填写接口名称', 'error');
+                switchFormTab('basic');
+                return;
+            }
+            delete payload.upkey;
+            delete payload.targeturl;
+            if (formMode === 'edit' && formId && formId.value) {
+                payload.api_id = formId.value;
+            }
+            runAiCodePieces(payload, btn, false, auth);
+        });
+    })();
     if (aiCodeRetryBtn) {
         aiCodeRetryBtn.addEventListener('click', function () {
             if (aiBusy) {

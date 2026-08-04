@@ -156,17 +156,21 @@ class AiApiDoc
             . '严禁输出任何 HTML 标签、CSS class、语法高亮标记（如 vs-syn、span class）。'
             . '严禁提及：代理、上游、中继、源站地址、上游密钥、Authorization 上游头、User-Agent、Referer、出站身份、内部表名、枚举数字含义、后台路径。'
             . '只能描述本站对外提供的调用地址、参数与行为。'
-            . '必须包含：接口说明、调用地址、请求方式、请求参数表、参数说明、'
-            . '成功响应示例、错误响应示例、响应字段说明，以及本平台业务错误码（errcode，不是 HTTP 状态码）。'
-            . '业务错误码须完整列出（不得遗漏）：'
-            . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11017。')
-            . '错误响应 JSON 示例必须为 {"code":0,"msg":"…","errcode":11001} 形态，禁止写 "http":401 或 "全部鉴权方式"。'
-            . '代理类接口也须写上 11013～11016（接口不存在/上游地址无效/不允许/上游请求失败）与 11017（服务暂不可用）。'
+            . '【章节顺序强制 · 不得打乱】必须严格按下列顺序输出（可用二级/三级标题），禁止在「请求参数」之后立刻写调用示例：'
+            . '1) 接口说明；2) 调用地址；3) 请求方式；4) 鉴权说明；5) 请求参数表与参数说明；'
+            . '6) 成功响应示例；7) 响应字段说明；8) 错误响应示例；9) 业务错误码说明与完整错误码表；'
+            . '10) 调用示例（仅 curl 与 PHP）；11) 注意事项（文末必有）。'
             . '【鉴权强制】密钥传递方式只描述资料中的「首选鉴权」这一种（Query 或 Header 或 Bearer），'
             . '禁止罗列多种密钥请求方式，禁止写「全部支持」「支持全部鉴权方式」。'
-            . '【调用示例强制】文档中的调用代码示例只允许两种：① 终端 curl（bash）；② PHP。'
+            . '业务错误码须完整列出（不得遗漏）：'
+            . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11017。')
+            . '错误响应 JSON 示例必须为 {"code":0,"msg":"…","errcode":11001} 形态，禁止写 "http":401。'
+            . '代理类接口也须写上 11013～11016 与 11017。'
+            . '【调用示例强制】仅允许放在业务错误码章节之后；文档内调用代码只允许两种：① 终端 curl（bash）；② PHP。'
             . '禁止输出 Python / Java / Go / JavaScript / TypeScript / C++ / Rust / 浏览器 fetch 等其它语言示例。'
             . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。'
+            . '【注意事项强制】全文最后一节必须是「注意事项」，结合本接口实际情况撰写（如密钥安全保管、勿泄露到前端、频率限制、'
+            . 'HTTPS、参数取值注意等），条目不固定，禁止空泛套话堆砌。'
             . '若接口有多种参数组合，用表格说明典型取值。';
     }
 
@@ -345,10 +349,9 @@ class AiApiDoc
 
         $authWay = strtolower(trim((string) $authWay));
         $lang = strtolower(trim((string) $lang));
-        // AI 仅生成终端 curl + PHP，降低片数与失败率（展示层仍可解析其它语言手写块）
-        $langs = array('curl', 'php');
+        $langs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
         if (!in_array($lang, $langs, true)) {
-            return '错误：不支持的语言（AI 仅生成 curl / php）';
+            return '错误：不支持的语言';
         }
         if ($needKey === 0) {
             $authWay = 'query';
@@ -381,9 +384,7 @@ class AiApiDoc
         } elseif ($keyways === array()) {
             $keyways = array('query');
         }
-        $langs = array('curl', 'php');
-        // 兼容整包：只跑首选鉴权，避免一次请求拖死
-        $keyways = array_values(array_slice($keyways, 0, 1));
+        $langs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
         $chunks = array();
         $lastErr = '';
         $failed = array();
@@ -490,9 +491,9 @@ class AiApiDoc
             $authWay = 'query';
         }
         $lang = strtolower((string) $lang);
-        $allowedLangs = array('curl', 'php');
+        $allowedLangs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
         if (!in_array($lang, $allowedLangs, true)) {
-            return array('error' => '不支持的语言 ' . $lang . '（AI 仅生成 curl / php）');
+            return array('error' => '不支持的语言 ' . $lang);
         }
 
         if ($authWay === 'query') {

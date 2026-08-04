@@ -6,10 +6,10 @@
 
 class RedisCache
 {
-    /** safeUnserialize 失败哨兵（区分合法 false） */
-    private static $unserializeMiss;
+    /** @var object|null safeUnserialize 失败哨兵（区分合法 false） */
+    private static $unserializeMiss = null;
 
-    const KEY_FRONTEND_API = 'cache:frontend:api_list';
+    const KEY_FRONTEND_API = 'cache:frontend:api_list:v2';
     const KEY_FRONTEND_CATEGORY = 'cache:frontend:category_tags';
     const KEY_FRONTEND_LINK = 'cache:frontend:link_list';
     const KEY_FRONTEND_PARTNER = 'cache:frontend:partner_list';
@@ -76,7 +76,7 @@ class RedisCache
         }
 
         try {
-            return RedisService::withClient(function (Redis $redis) use ($logicalKey, $ttl, $factory) {
+            return RedisService::withClient(function ($redis) use ($logicalKey, $ttl, $factory) {
                 $fullKey = RedisService::buildKey($logicalKey);
                 $raw = $redis->get($fullKey);
                 if ($raw !== false && $raw !== '') {
@@ -110,7 +110,7 @@ class RedisCache
             return null;
         }
         try {
-            return RedisService::withClient(function (Redis $redis) use ($logicalKey) {
+            return RedisService::withClient(function ($redis) use ($logicalKey) {
                 $raw = $redis->get(RedisService::buildKey($logicalKey));
                 if ($raw === false || $raw === '') {
                     return null;
@@ -140,7 +140,7 @@ class RedisCache
             return;
         }
         try {
-            RedisService::withClient(function (Redis $redis) use ($logicalKey, $value, $ttl) {
+            RedisService::withClient(function ($redis) use ($logicalKey, $value, $ttl) {
                 $redis->setex(
                     RedisService::buildKey($logicalKey),
                     max(1, (int) $ttl),
@@ -176,7 +176,7 @@ class RedisCache
         }
 
         try {
-            RedisService::withClient(function (Redis $redis) use ($logicalKey) {
+            RedisService::withClient(function ($redis) use ($logicalKey) {
                 $redis->del(RedisService::buildKey($logicalKey));
             });
         } catch (Exception $e) {
@@ -221,6 +221,7 @@ class RedisCache
     public static function invalidateFrontend()
     {
         self::forget(self::KEY_FRONTEND_API);
+        self::forget('cache:frontend:api_list'); // 旧键（绝对域名烤死）
         self::forget(self::KEY_FRONTEND_CATEGORY);
         self::forget(self::KEY_FRONTEND_LINK);
         self::forget(self::KEY_FRONTEND_PARTNER);
@@ -231,7 +232,7 @@ class RedisCache
         // 杂项前台缓存（公告弹窗、关于页摘要等）
         if (self::enabled()) {
             try {
-                RedisService::withClient(function (Redis $redis) {
+                RedisService::withClient(function ($redis) {
                     $pattern = RedisService::buildKey(self::KEY_FRONTEND_MISC_PREFIX) . '*';
                     $it = null;
                     do {
@@ -324,7 +325,7 @@ class RedisCache
             return 0;
         }
         try {
-            return (int) RedisService::withClient(function (Redis $redis) {
+            return (int) RedisService::withClient(function ($redis) {
                 $deleted = 0;
                 $pattern = RedisService::buildKey(self::KEY_ORDERS_RANGE_TOTAL_PREFIX) . '*';
                 $it = null;
@@ -358,7 +359,7 @@ class RedisCache
         self::forget(self::KEY_APILOG_TODAY);
 
         try {
-            return (int) RedisService::withClient(function (Redis $redis) {
+            return (int) RedisService::withClient(function ($redis) {
                 $deleted = 0;
                 foreach (array(self::KEY_APILOG_PAGE_PREFIX, self::KEY_APILOG_RANGE_TOTAL_PREFIX) as $prefix) {
                     $pattern = RedisService::buildKey($prefix) . '*';
@@ -396,7 +397,7 @@ class RedisCache
         }
 
         try {
-            return RedisService::withClient(function (Redis $redis) {
+            return RedisService::withClient(function ($redis) {
                 return self::runMaintain($redis);
             });
         } catch (Exception $e) {
@@ -405,10 +406,10 @@ class RedisCache
     }
 
     /**
-     * @param Redis $redis
+     * @param object $redis phpredis 客户端
      * @return void
      */
-    private static function maybeMaintain(Redis $redis)
+    private static function maybeMaintain($redis)
     {
         if (random_int(1, 12) > 1) {
             return;
@@ -417,10 +418,10 @@ class RedisCache
     }
 
     /**
-     * @param Redis $redis
+     * @param object $redis phpredis 客户端
      * @return array{pruned:int,capped:bool}
      */
-    private static function runMaintain(Redis $redis)
+    private static function runMaintain($redis)
     {
         $pruned = RedisService::pruneRateLimitKeys($redis, self::MAX_RATE_LIMIT_KEYS);
         $capped = self::capStatKeys($redis);
@@ -428,10 +429,10 @@ class RedisCache
     }
 
     /**
-     * @param Redis $redis
+     * @param object $redis phpredis 客户端
      * @return bool
      */
-    private static function capStatKeys(Redis $redis)
+    private static function capStatKeys($redis)
     {
         $capped = false;
         foreach (array(self::KEY_STAT_HITS, self::KEY_STAT_MISSES) as $statKey) {
@@ -463,7 +464,7 @@ class RedisCache
         }
 
         try {
-            return RedisService::withClient(function (Redis $redis) {
+            return RedisService::withClient(function ($redis) {
                 $hits = (int) $redis->get(RedisService::buildKey(self::KEY_STAT_HITS));
                 $misses = (int) $redis->get(RedisService::buildKey(self::KEY_STAT_MISSES));
                 $total = $hits + $misses;
@@ -489,7 +490,7 @@ class RedisCache
             array(
                 'id' => 'frontend_api',
                 'label' => '前台接口列表',
-                'desc' => '主题首页 / 全部接口等公开列表',
+                'desc' => '主题首页 / 全部接口等；缓存 call_path，域名按访问入口重绑',
                 'key' => self::KEY_FRONTEND_API,
                 'ttl_hint' => self::TTL_FRONTEND_API . ' 秒',
                 'chart_color' => '#3b82f6',
@@ -655,7 +656,7 @@ class RedisCache
         }
 
         try {
-            return RedisService::withClient(function (Redis $redis) use ($logicalPrefix, $result) {
+            return RedisService::withClient(function ($redis) use ($logicalPrefix, $result) {
                 $pattern = RedisService::buildKey($logicalPrefix) . '*';
                 $count = 0;
                 $size = 0;
@@ -714,7 +715,7 @@ class RedisCache
         }
 
         try {
-            return RedisService::withClient(function (Redis $redis) use ($logicalKey, $result) {
+            return RedisService::withClient(function ($redis) use ($logicalKey, $result) {
                 $fullKey = RedisService::buildKey($logicalKey);
                 $exists = $redis->exists($fullKey);
                 if (!$exists) {
@@ -738,11 +739,11 @@ class RedisCache
     }
 
     /**
-     * @param Redis  $redis
+     * @param object $redis phpredis 客户端
      * @param string $statKey
      * @return void
      */
-    private static function incrStat(Redis $redis, $statKey)
+    private static function incrStat($redis, $statKey)
     {
         $redis->incr(RedisService::buildKey($statKey));
     }

@@ -1182,16 +1182,24 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                         <label class="vs-label" for="apiListFormDocAi">代码示例（:::qs 多语言）</label>
                         <div class="vs-api-doc-head__actions">
                             <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiCodeBtn"
-                                    title="按鉴权×语言分片生成（JSON 单片，支持并行）">AI 生成代码示例</button>
+                                    title="按已选鉴权×9 语言一键生成（最多 27 片）">AI 生成代码示例</button>
                             <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiCodeRetryBtn" hidden
                                     title="只重试上次失败的片">重试失败</button>
                             <button type="button" class="vs-btn vs-btn--default vs-btn--sm" id="apiListAiCodeClearBtn"
                                     title="清空代码示例框与进程日志">清空示例</button>
                         </div>
                     </div>
+                    <div class="vs-api-ai-code-ways" id="apiListAiCodeWays" hidden>
+                        <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="query" hidden
+                                title="仅生成 Query 鉴权下 9 种语言">生成 Query 示例</button>
+                        <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="header" hidden
+                                title="仅生成 Header 鉴权下 9 种语言">生成 Header 示例</button>
+                        <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-ai-code-auth="bearer" hidden
+                                title="仅生成 Bearer 鉴权下 9 种语言">生成 Bearer 示例</button>
+                    </div>
                     <textarea class="vs-input vs-textarea vs-api-list-code" id="apiListFormDocAi" name="aidoc" rows="10"
                               data-vs-md="off" placeholder=":::qs lang=curl&#10;...&#10;:::&#10;&#10;:::qs lang=python&#10;...&#10;:::"></textarea>
-                    <p class="vs-form-hint">须使用 :::qs lang=语言标识 包裹。AI 按「鉴权×语言」分片请求（非流式单片），生成后一片即回填；失败可点「重试失败」。</p>
+                    <p class="vs-form-hint">须使用 :::qs lang=语言标识 包裹。主按钮一键生成已选鉴权×9 语言（最多 27 片）；下方可按鉴权单独生成 9 片（会合并保留其它鉴权块）。失败可点「重试失败」。</p>
                     <details class="vs-ai-term" id="apiListAiTermCode" data-ai-term="code">
                         <summary class="vs-ai-term__summary">AI 编写进程（代码示例）</summary>
                         <pre class="vs-ai-term__log font-mono" id="apiListAiTermCodeLog">尚未开始生成。</pre>
