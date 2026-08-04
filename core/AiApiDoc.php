@@ -3,14 +3,50 @@
  * 文件：core/AiApiDoc.php
  * 作用：根据接口资料生成详细文档（Markdown）与快速上手代码示例（:::qs 短码）
  *
- * 代码示例（v12.0.0）：前端按「鉴权×语言」分片调用 generateCodeSamplePiece；
- * 调度模式（单线程/并行）见 AiConfig::codeMode / codeConcurrency。
+ * 详细文档（v13.26.2）：按章节分片 SSE（generateDetailDocSectionStream），前端逐章回填，避免长文被 CDN/网关切断。
+ * 代码示例（v12.0.0+）：前端按「鉴权×语言」分片；v13.26.2 起模型只出纯代码，服务端包裹 :::qs。
+ * 调度模式见 AiConfig::codeMode / codeConcurrency。
  *
  * 安全：禁止在提示与输出中暴露代理上游 URL、上游密钥、内部实现细节。
  */
 
 class AiApiDoc
 {
+    /**
+     * 详细文档章节清单（前端顺序请求；id 须与 sectionPrompt 一致）
+     *
+     * @return array<int,array{id:string,title:string,max_tokens:int}>
+     */
+    public static function detailDocSections()
+    {
+        return array(
+            array('id' => 'intro', 'title' => '接口说明', 'max_tokens' => 900),
+            array('id' => 'call', 'title' => '调用地址、请求方式与鉴权', 'max_tokens' => 1000),
+            array('id' => 'params', 'title' => '请求参数', 'max_tokens' => 1400),
+            array('id' => 'success', 'title' => '成功响应与字段说明', 'max_tokens' => 1400),
+            array('id' => 'errors', 'title' => '错误响应与业务错误码', 'max_tokens' => 2200),
+            array('id' => 'examples', 'title' => '调用示例', 'max_tokens' => 1600),
+            array('id' => 'notes', 'title' => '注意事项', 'max_tokens' => 900),
+        );
+    }
+
+    /**
+     * 供前端注入（不含密钥）
+     *
+     * @return array<int,array{id:string,title:string}>
+     */
+    public static function detailDocSectionsForClient()
+    {
+        $out = array();
+        foreach (self::detailDocSections() as $sec) {
+            $out[] = array(
+                'id'    => $sec['id'],
+                'title' => $sec['title'],
+            );
+        }
+        return $out;
+    }
+
     /**
      * @param array $api 表单字段（不含 upkey / targeturl 等敏感上游信息）
      * @return string|array 成功 array{doc:string}；失败错误文案
@@ -20,31 +56,122 @@ class AiApiDoc
         $safe = self::safeContext($api);
         $cfg = AiConfig::get();
         $maxLen = (int) $cfg['doc_maxlen'];
-        $system = self::detailDocSystemPrompt($maxLen);
-        $user = "请根据下列接口资料撰写详细文档（Markdown）：\n\n" . self::contextMarkdown($safe);
-        $cfg['timeout'] = max((int) $cfg['timeout'], 120);
-        if ($cfg['timeout'] > 300) {
-            $cfg['timeout'] = 300;
+        $parts = array();
+        foreach (self::detailDocSections() as $sec) {
+            $prompts = self::buildDetailDocSectionPrompts($safe, $sec['id'], $maxLen);
+            if (isset($prompts['error'])) {
+                return '错误：' . $prompts['error'];
+            }
+            $secCfg = $prompts['cfg'];
+            $out = AiClient::chatWithConfig($secCfg, $prompts['system'], $prompts['user'], array(
+                'temperature' => 0.3,
+                'max_tokens'  => (int) $sec['max_tokens'],
+            ));
+            if (strpos($out, '错误：') === 0) {
+                return $out;
+            }
+            $piece = self::sanitizeSectionOutput($out, $sec['id']);
+            if ($piece !== '') {
+                $parts[] = $piece;
+            }
         }
-        $out = AiClient::chatWithConfig($cfg, $system, $user, array(
-            'temperature' => 0.3,
-            'max_tokens'  => 8000,
-        ));
-        if (strpos($out, '错误：') === 0) {
-            return $out;
+        $merged = trim(implode("\n\n", $parts));
+        if ($merged === '') {
+            return '错误：未能生成详细文档';
         }
-        $out = self::sanitizeOutput($out);
-        if (function_exists('mb_strlen') && mb_strlen($out, 'UTF-8') > $maxLen + 500) {
-            $out = function_exists('mb_substr')
-                ? mb_substr($out, 0, $maxLen, 'UTF-8')
-                : substr($out, 0, $maxLen);
-            $out .= "\n\n…（已按长度限制截断）";
+        if (function_exists('mb_strlen') && mb_strlen($merged, 'UTF-8') > $maxLen + 500) {
+            $merged = function_exists('mb_substr')
+                ? mb_substr($merged, 0, $maxLen, 'UTF-8')
+                : substr($merged, 0, $maxLen);
+            $merged .= "\n\n…（已按长度限制截断）";
         }
-        return array('doc' => $out);
+        return array('doc' => $merged);
     }
 
     /**
-     * 流式撰写详细文档（对话式 + 短时效历史 + 断点续写）
+     * 流式撰写详细文档单章（v13.26.2 默认路径；短请求抗 CDN 切断）
+     *
+     * @param array         $api
+     * @param string        $sectionId intro|call|params|success|errors|examples|notes
+     * @param callable|null $onDelta
+     * @return array{ok:bool,section?:string,section_id?:string,title?:string,error?:string,partial?:string}
+     */
+    public static function generateDetailDocSectionStream(array $api, $sectionId, $onDelta = null)
+    {
+        $safe = self::safeContext($api);
+        $cfgBase = AiConfig::get();
+        $maxLen = (int) $cfgBase['doc_maxlen'];
+        $sectionId = strtolower(trim((string) $sectionId));
+        $meta = null;
+        foreach (self::detailDocSections() as $sec) {
+            if ($sec['id'] === $sectionId) {
+                $meta = $sec;
+                break;
+            }
+        }
+        if ($meta === null) {
+            return array('ok' => false, 'error' => '未知文档章节');
+        }
+
+        $prompts = self::buildDetailDocSectionPrompts($safe, $sectionId, $maxLen);
+        if (isset($prompts['error'])) {
+            return array('ok' => false, 'error' => $prompts['error']);
+        }
+        $cfg = $prompts['cfg'];
+        @set_time_limit((int) $cfg['timeout'] + 60);
+
+        $assembled = '';
+        $result = AiClient::chatStreamWithConfig(
+            $cfg,
+            array(
+                array('role' => 'system', 'content' => $prompts['system']),
+                array('role' => 'user', 'content' => $prompts['user']),
+            ),
+            array('temperature' => 0.3, 'max_tokens' => (int) $meta['max_tokens']),
+            function ($chunk) use (&$assembled, $onDelta) {
+                $assembled .= (string) $chunk;
+                if (is_callable($onDelta)) {
+                    call_user_func($onDelta, (string) $chunk);
+                }
+                if (class_exists('AiSse')) {
+                    AiSse::maybePing(false);
+                }
+            }
+        );
+
+        $text = '';
+        if (!empty($result['ok'])) {
+            $text = isset($result['text']) ? (string) $result['text'] : $assembled;
+            if ($assembled !== '' && strlen($assembled) >= strlen($text)) {
+                $text = $assembled;
+            }
+        } elseif ($assembled !== '') {
+            $text = $assembled;
+        }
+
+        $clean = $text !== '' ? self::sanitizeSectionOutput($text, $sectionId) : '';
+        if ($clean === '') {
+            return array(
+                'ok'         => false,
+                'error'      => empty($result['ok'])
+                    ? (isset($result['error']) ? (string) $result['error'] : ('章节「' . $meta['title'] . '」生成失败'))
+                    : ('章节「' . $meta['title'] . '」输出为空'),
+                'partial'    => $assembled,
+                'section_id' => $sectionId,
+                'title'      => $meta['title'],
+            );
+        }
+
+        return array(
+            'ok'         => true,
+            'section'    => $clean,
+            'section_id' => $sectionId,
+            'title'      => $meta['title'],
+        );
+    }
+
+    /**
+     * @deprecated v13.26.2 起前端改走 generateDetailDocSectionStream；保留兼容旧客户端整篇流式
      *
      * @param array         $api
      * @param string        $sessionKey
@@ -57,7 +184,7 @@ class AiApiDoc
         $safe = self::safeContext($api);
         $cfg = AiConfig::get();
         $maxLen = (int) $cfg['doc_maxlen'];
-        $system = self::detailDocSystemPrompt($maxLen);
+        $system = self::detailDocFullSystemPrompt($maxLen);
         $user = "请根据下列接口资料撰写详细文档（Markdown）：\n\n" . self::contextMarkdown($safe);
 
         $state = AiChatSession::load($sessionKey);
@@ -88,7 +215,6 @@ class AiApiDoc
                 if (is_callable($onDelta)) {
                     call_user_func($onDelta, (string) $chunk);
                 }
-                // 约每 2 秒落盘 partial，便于断点
                 $now = microtime(true);
                 if (($now - $lastSave) >= 2) {
                     AiChatSession::savePartial($sessionKey, $assembled);
@@ -117,7 +243,6 @@ class AiApiDoc
         if ($doContinue && $assembled !== '' && strpos($assembled, $partial) === 0) {
             $text = $assembled;
         } elseif ($doContinue && $partial !== '' && strpos($text, $partial) !== 0) {
-            // 模型未接上前文时手工拼接
             $text = $partial . $text;
         } elseif ($assembled !== '' && strlen($assembled) >= strlen($text)) {
             $text = $assembled;
@@ -145,10 +270,80 @@ class AiApiDoc
     }
 
     /**
+     * 单章提示词
+     *
+     * @param array  $safe
+     * @param string $sectionId
+     * @param int    $maxLen
+     * @return array{system:string,user:string,cfg:array,error?:string}
+     */
+    private static function buildDetailDocSectionPrompts(array $safe, $sectionId, $maxLen)
+    {
+        $sectionId = strtolower(trim((string) $sectionId));
+        $common = '你是 API 文档撰写助手。只输出本任务指定的 Markdown 章节正文，不要寒暄，不要用 ```markdown 包裹全文。'
+            . '严禁输出任何 HTML 标签、CSS class、语法高亮标记（如 vs-syn、span class）。'
+            . '严禁提及：代理、上游、中继、源站地址、上游密钥、Authorization 上游头、User-Agent、Referer、出站身份、内部表名、枚举数字含义、后台路径。'
+            . '只能描述本站对外提供的调用地址、参数与行为。'
+            . '【鉴权强制】密钥传递方式只描述资料中的「首选鉴权」这一种（Query 或 Header 或 Bearer），'
+            . '禁止罗列多种密钥请求方式，禁止写「全部支持」「支持全部鉴权方式」。'
+            . '不要输出其它章节内容；不要写「下文」「见上节」等跨章引用废话。';
+
+        $task = '';
+        if ($sectionId === 'intro') {
+            $task = '【本任务】只写「## 接口说明」一节：概述本接口用途、适用场景与返回概要。不要写调用地址、参数表、错误码、示例代码。';
+        } elseif ($sectionId === 'call') {
+            $task = '【本任务】只写三节：## 调用地址、## 请求方式、## 鉴权说明。'
+                . '调用地址用资料中的对外地址；鉴权只写首选一种。不要写参数表、响应、错误码、示例。';
+        } elseif ($sectionId === 'params') {
+            $task = '【本任务】只写「## 请求参数」：用表格列出参数名、类型、必填、说明；必要时补充参数取值说明。'
+                . '不要写成功/错误响应、错误码、调用示例。';
+        } elseif ($sectionId === 'success') {
+            $task = '【本任务】只写「## 成功响应示例」与「## 响应字段说明」。'
+                . '成功示例须符合平台成功形态；字段用表格或列表说明。不要写错误码与调用示例。';
+        } elseif ($sectionId === 'errors') {
+            $task = '【本任务】只写「## 错误响应示例」与「## 业务错误码说明」（含完整错误码表）。'
+                . '错误响应 JSON 必须为 {"code":0,"msg":"…","errcode":11001} 形态，禁止写 "http":401。'
+                . '业务错误码须完整列出（不得遗漏）：'
+                . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11018。')
+                . '代理类接口也须写上 11013～11016 与 11017。不要写调用示例与注意事项。';
+        } elseif ($sectionId === 'examples') {
+            $task = '【本任务】只写「## 调用示例」。文档内调用代码只允许两种：① 终端 curl（bash）；② PHP。'
+                . '禁止输出 Python / Java / Go / JavaScript / TypeScript / C++ / Rust / 浏览器 fetch 等其它语言。'
+                . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。'
+                . '每种语言一个简短可运行示例即可。不要写错误码表与注意事项。';
+        } elseif ($sectionId === 'notes') {
+            $task = '【本任务】只写「## 注意事项」。结合本接口实际情况撰写（如密钥安全保管、勿泄露到前端、频率限制、'
+                . 'HTTPS、参数取值注意等），条目不固定，禁止空泛套话堆砌。不要再写其它章节。';
+        } else {
+            return array('error' => '未知文档章节');
+        }
+
+        $system = $common . $task
+            . '整站文档总篇幅约 ' . (int) $maxLen . ' 字，本段宜精炼。';
+
+        $user = "请根据下列接口资料撰写指定章节（只输出该章节 Markdown）：\n\n"
+            . self::contextMarkdown($safe);
+
+        $cfg = AiConfig::get();
+        $cfg['timeout'] = max((int) $cfg['timeout'], 60);
+        if ($cfg['timeout'] > 300) {
+            $cfg['timeout'] = 300;
+        }
+
+        return array(
+            'system' => $system,
+            'user'   => $user,
+            'cfg'    => $cfg,
+        );
+    }
+
+    /**
+     * 整篇撰写提示（仅兼容旧 ai_gen_doc_stream）
+     *
      * @param int $maxLen
      * @return string
      */
-    private static function detailDocSystemPrompt($maxLen)
+    private static function detailDocFullSystemPrompt($maxLen)
     {
         return '你是 API 文档撰写助手。只输出 Markdown 正文，不要寒暄，不要用 ```markdown 包裹全文。'
             . '必须使用 Markdown：标题、列表、表格、代码块。'
@@ -172,6 +367,51 @@ class AiApiDoc
             . '【注意事项强制】全文最后一节必须是「注意事项」，结合本接口实际情况撰写（如密钥安全保管、勿泄露到前端、频率限制、'
             . 'HTTPS、参数取值注意等），条目不固定，禁止空泛套话堆砌。'
             . '若接口有多种参数组合，用表格说明典型取值。';
+    }
+
+    /**
+     * @param string $text
+     * @param string $sectionId
+     * @return string
+     */
+    private static function sanitizeSectionOutput($text, $sectionId)
+    {
+        $text = self::sanitizeOutput($text);
+        $text = self::stripModelPreamble($text);
+        // 去掉误包的 markdown 围栏
+        if (preg_match('/^```(?:markdown|md)?\s*\r?\n([\s\S]*?)\r?\n```\s*$/i', $text, $m)) {
+            $text = trim($m[1]);
+        }
+        unset($sectionId);
+        return trim($text);
+    }
+
+    /**
+     * 去掉模型思考/寒暄前缀
+     *
+     * @param string $text
+     * @return string
+     */
+    private static function stripModelPreamble($text)
+    {
+        $text = (string) $text;
+        // 常见思考标签（先截长度，降低极端输出下的正则代价）
+        if (strlen($text) > 50000) {
+            $text = substr($text, 0, 50000);
+        }
+        $text = preg_replace('/<think\b[^>]*>[\s\S]*?<\/think>/i', '', $text);
+        $text = preg_replace('/<thinking\b[^>]*>[\s\S]*?<\/thinking>/i', '', $text);
+        $text = trim((string) $text);
+        // 寒暄在前、正文从 Markdown 标题开始：从第一个标题截到全文末尾（勿用 /m+$，否则会只剩标题行）
+        if ($text !== '' && strpos(ltrim($text), '#') !== 0) {
+            if (preg_match('/^#{1,3}\s/m', $text, $hm, PREG_OFFSET_CAPTURE)) {
+                $pos = isset($hm[0][1]) ? (int) $hm[0][1] : -1;
+                if ($pos >= 0) {
+                    $text = substr($text, $pos);
+                }
+            }
+        }
+        return trim($text);
     }
 
     /**
@@ -260,7 +500,7 @@ class AiApiDoc
             $text = $assembled;
         }
 
-        $one = $text !== '' ? self::extractRequestedQsBlock($text, $authWay, $lang, $requireAuth) : '';
+        $one = $text !== '' ? self::finalizeCodePieceBody($text, $authWay, $lang, $requireAuth) : '';
         $needRetry = ($one === '');
         if (!$needRetry && is_string($one) && self::qsBodyLength($one) > 700) {
             $needRetry = true;
@@ -271,11 +511,8 @@ class AiApiDoc
             if (class_exists('AiSse') && AiSse::isActive()) {
                 AiSse::comment('retry');
             }
-            $retryUser = $prompts['user'] . "\n\n上次输出无效或过长。请再次只输出一个合法短码块，第一行必须是 "
-                . ($requireAuth
-                    ? (':::qs lang=' . $lang . ' auth=' . $authWay)
-                    : (':::qs lang=' . $lang))
-                . " ，最后一行必须是 ::: ，中间纯代码正文务必 ≤400 字符、≤15 行，禁止 emoji 与 ```。";
+            $retryUser = $prompts['user'] . "\n\n上次输出无效或过长。请再次只输出纯代码正文（不要 :::qs、不要 ```、不要解释），"
+                . '务必 ≤400 字符、≤15 行，禁止 emoji。';
             $assembledRetry = '';
             $result2 = AiClient::chatStreamWithConfig(
                 $cfg,
@@ -304,7 +541,7 @@ class AiApiDoc
                 $text2 = $assembledRetry;
             }
             if ($text2 !== '') {
-                $retryOne = self::extractRequestedQsBlock($text2, $authWay, $lang, $requireAuth);
+                $retryOne = self::finalizeCodePieceBody($text2, $authWay, $lang, $requireAuth);
                 if ($retryOne !== '') {
                     $one = $retryOne;
                 }
@@ -445,7 +682,7 @@ class AiApiDoc
         if (strpos($out, '错误：') === 0) {
             return $out;
         }
-        $one = self::extractRequestedQsBlock($out, $authWay, $lang, $requireAuthAttr);
+        $one = self::finalizeCodePieceBody($out, $authWay, $lang, $requireAuthAttr);
         $needRetry = ($one === '');
         if (!$needRetry && is_string($one)) {
             $bodyLen = self::qsBodyLength($one);
@@ -455,17 +692,14 @@ class AiApiDoc
         }
         if ($needRetry) {
             @set_time_limit((int) $cfg['timeout'] + 30);
-            $retryUser = $prompts['user'] . "\n\n上次输出无效或过长。请再次只输出一个合法短码块，第一行必须是 "
-                . ($requireAuthAttr
-                    ? (':::qs lang=' . $lang . ' auth=' . $authWay)
-                    : (':::qs lang=' . $lang))
-                . " ，最后一行必须是 ::: ，中间纯代码正文务必 ≤400 字符、≤15 行，禁止 emoji 与 ```。";
+            $retryUser = $prompts['user'] . "\n\n上次输出无效或过长。请再次只输出纯代码正文（不要 :::qs、不要 ```、不要解释），"
+                . '务必 ≤400 字符、≤15 行，禁止 emoji。';
             $out2 = AiClient::chatWithConfig($cfg, $prompts['system'], $retryUser, array(
                 'temperature' => 0.1,
                 'max_tokens'  => 500,
             ));
             if (strpos($out2, '错误：') !== 0) {
-                $retryOne = self::extractRequestedQsBlock($out2, $authWay, $lang, $requireAuthAttr);
+                $retryOne = self::finalizeCodePieceBody($out2, $authWay, $lang, $requireAuthAttr);
                 if ($retryOne !== '') {
                     $one = $retryOne;
                 }
@@ -504,10 +738,9 @@ class AiApiDoc
             $authHow = 'Authorization: Bearer YOUR_API_KEY';
         }
 
-        $authLine = $requireAuthAttr
-            ? ('只输出恰好一个块：:::qs lang=' . $lang . ' auth=' . $authWay . "\n代码\n:::"
-                . '鉴权方式必须是 ' . $authWay . '（' . $authHow . '）。禁止输出其它语言或其它 auth。')
-            : ('本接口无需密钥。只输出恰好一个块：:::qs lang=' . $lang . "\n代码\n:::（可不写 auth）");
+        $authHowLine = $requireAuthAttr
+            ? ('鉴权方式必须是 ' . $authWay . '（' . $authHow . '）。禁止输出其它语言或其它 auth。')
+            : '本接口无需密钥，示例中不要伪造密钥参数。';
 
         $langHint = '';
         if ($lang === 'browser') {
@@ -515,17 +748,19 @@ class AiApiDoc
         } elseif ($lang === 'typescript') {
             $langHint = '用 async/await fetch，几行即可。';
         } elseif ($lang === 'php') {
-            $langHint = '禁止输出 <?php 与 ?>；从变量赋值起写；lang 必须写 php。';
+            $langHint = '禁止输出 <?php 与 ?>；从变量赋值起写。';
         } elseif ($lang === 'cpp') {
-            $langHint = '用 libcurl 或最短示意；lang 必须写 cpp（不要写 c++）。';
+            $langHint = '用 libcurl 或最短示意。';
         } elseif ($lang === 'python') {
             $langHint = '用 requests 或 urllib，最短脚本即可。';
         } elseif ($lang === 'go' || $lang === 'java' || $lang === 'rust') {
             $langHint = '最短可运行示意即可，勿写完整工程脚手架。';
         }
 
-        $system = '你是 API 调用示例生成器。只输出一个 :::qs 短码块，不要解释、不要 Markdown 标题、不要用 ``` 包裹、不要输出其它语言。'
-            . $authLine
+        // v13.26.2：模型只出纯代码；:::qs 由服务端 finalizeCodePieceBody 包裹，避免思考文/围栏导致解析失败
+        $system = '你是 API 调用示例生成器。只输出可直接粘贴运行的纯代码正文。'
+            . '禁止：思考过程、解释、Markdown 标题、``` 代码围栏、:::qs 标签、::: 结束行、JSON 外壳、前后寒暄。'
+            . $authHowLine
             . '【极简强制】代码只要能演示一次调用即可，禁止完整 SDK、多函数、大段错误处理、日志框架、CLI 参数解析、多余 import。'
             . '正文目标：约 8～20 行、不超过约 500 字符（含注释）；最多 2～3 行简短中文注释。'
             . '密钥用 YOUR_API_KEY；使用对外调用地址与给定参数名。'
@@ -534,12 +769,9 @@ class AiApiDoc
             . $langHint
             . 'GET 用查询参数；POST 可用 form 或 JSON。';
 
-        $user = "请为下列接口生成「鉴权=" . $authWay . "，语言=" . $lang . "」的极简快速上手代码（能用即可，越短越好）：\n\n"
-            . self::contextMarkdown($safe)
-            . "\n\n输出格式必须严格为（不要前后多余文字）：\n"
-            . ($requireAuthAttr
-                ? (":::qs lang=" . $lang . " auth=" . $authWay . "\n// 注释\n短代码\n:::")
-                : (":::qs lang=" . $lang . "\n// 注释\n短代码\n:::"));
+        $user = "请为下列接口生成「鉴权=" . $authWay . "，语言=" . $lang . "」的极简快速上手代码（能用即可，越短越好）。"
+            . "只输出纯代码，不要任何包裹标签：\n\n"
+            . self::contextMarkdown($safe);
 
         $cfg = AiConfig::get();
         $cfg['timeout'] = max((int) $cfg['timeout'], 60);
@@ -578,7 +810,194 @@ class AiApiDoc
     }
 
     /**
-     * 从模型输出中只取「当前鉴权 + 当前语言」一块，避免模型仍一次吐多语言被误合并
+     * 将模型输出整理为单个 :::qs 块（优先吃纯代码；兼容旧 :::qs / ``` / JSON）
+     *
+     * @param string $raw
+     * @param string $authWay
+     * @param string $lang
+     * @param bool   $requireAuthAttr
+     * @return string 单个 :::qs 块或空串
+     */
+    private static function finalizeCodePieceBody($raw, $authWay, $lang, $requireAuthAttr)
+    {
+        $raw = self::sanitizeOutput((string) $raw);
+        if (class_exists('ApiQuickstart')) {
+            $raw = ApiQuickstart::stripEmoji($raw);
+        }
+        // 仅剥思考标签，不用 stripModelPreamble（避免把 Python `#` 注释当标题）
+        if (strlen($raw) > 20000) {
+            $raw = substr($raw, 0, 20000);
+        }
+        $raw = preg_replace('/<think\b[^>]*>[\s\S]*?<\/think>/i', '', $raw);
+        $raw = preg_replace('/<thinking\b[^>]*>[\s\S]*?<\/thinking>/i', '', $raw);
+        $raw = trim((string) $raw);
+
+        // 1) 若仍带 :::qs，走旧解析并改写目标 auth/lang
+        $viaQs = self::extractRequestedQsBlock($raw, $authWay, $lang, $requireAuthAttr);
+        if ($viaQs !== '') {
+            return $viaQs;
+        }
+
+        // 2) 可选 {"code":"..."}
+        $jsonCode = self::extractJsonCodeField($raw);
+        if ($jsonCode !== '') {
+            return self::wrapQsBlock($jsonCode, $authWay, $lang, $requireAuthAttr);
+        }
+
+        // 3) 剥围栏 / 寒暄 → 纯代码
+        $body = self::stripToRawCodeBody($raw);
+        if ($body === '') {
+            return '';
+        }
+        return self::wrapQsBlock($body, $authWay, $lang, $requireAuthAttr);
+    }
+
+    /**
+     * @param string $raw
+     * @return string
+     */
+    private static function extractJsonCodeField($raw)
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return '';
+        }
+        // 限长，避免贪婪正则在极端模型输出上拖死 PHP（E227 / ReDoS）
+        if (strlen($raw) > 12000) {
+            $raw = substr($raw, 0, 12000);
+        }
+        // 优先整段 json_decode；失败再找 {"code":...} 子串（线性扫描，不用 [\s\S]* 回溯）
+        $data = json_decode($raw, true);
+        if (!is_array($data) || !isset($data['code'])) {
+            $marker = '"code"';
+            $pos = strpos($raw, $marker);
+            if ($pos === false) {
+                $marker = "'code'";
+                $pos = strpos($raw, $marker);
+            }
+            if ($pos === false) {
+                return '';
+            }
+            $brace = strrpos(substr($raw, 0, $pos), '{');
+            if ($brace === false) {
+                return '';
+            }
+            $slice = substr($raw, $brace);
+            // 截到与首 { 配对的 }（简单括号计数，忽略字符串内括号的极端情况）
+            $depth = 0;
+            $end = -1;
+            $inStr = false;
+            $quote = '';
+            $len = strlen($slice);
+            for ($i = 0; $i < $len; $i++) {
+                $ch = $slice[$i];
+                if ($inStr) {
+                    if ($ch === '\\' && $i + 1 < $len) {
+                        $i++;
+                        continue;
+                    }
+                    if ($ch === $quote) {
+                        $inStr = false;
+                    }
+                    continue;
+                }
+                if ($ch === '"' || $ch === "'") {
+                    $inStr = true;
+                    $quote = $ch;
+                    continue;
+                }
+                if ($ch === '{') {
+                    $depth++;
+                } elseif ($ch === '}') {
+                    $depth--;
+                    if ($depth === 0) {
+                        $end = $i;
+                        break;
+                    }
+                }
+            }
+            if ($end < 0) {
+                return '';
+            }
+            $data = json_decode(substr($slice, 0, $end + 1), true);
+        }
+        if (!is_array($data) || !isset($data['code'])) {
+            return '';
+        }
+        return trim((string) $data['code']);
+    }
+
+    /**
+     * @param string $raw
+     * @return string
+     */
+    private static function stripToRawCodeBody($raw)
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return '';
+        }
+        // ```lang ... ```
+        if (preg_match('/```[a-zA-Z0-9_+-]*\s*\r?\n([\s\S]*?)\r?\n```/', $raw, $m)) {
+            $raw = trim($m[1]);
+        } elseif (preg_match('/^```[a-zA-Z0-9_+-]*\s*\r?\n?([\s\S]*?)\r?\n?```\s*$/', $raw, $m2)) {
+            $raw = trim($m2[1]);
+        }
+        // 去掉误写的 :::qs 首尾
+        $raw = preg_replace('/^:::qs[^\r\n]*\r?\n?/i', '', $raw);
+        $raw = preg_replace('/\r?\n:::\s*$/', '', $raw);
+        // 去掉常见寒暄行
+        $lines = preg_split("/\r\n|\n|\r/", $raw);
+        if (!is_array($lines)) {
+            return trim($raw);
+        }
+        $out = array();
+        $started = false;
+        foreach ($lines as $line) {
+            $t = trim((string) $line);
+            if (!$started) {
+                if ($t === '' || preg_match('/^(以下|如下|好的|当然|这里是|示例|代码|说明)[:：]?/u', $t)) {
+                    continue;
+                }
+                $started = true;
+            }
+            $out[] = $line;
+        }
+        $body = trim(implode("\n", $out));
+        return $body;
+    }
+
+    /**
+     * @param string $code
+     * @param string $authWay
+     * @param string $lang
+     * @param bool   $requireAuthAttr
+     * @return string
+     */
+    private static function wrapQsBlock($code, $authWay, $lang, $requireAuthAttr)
+    {
+        $code = trim((string) $code);
+        if (class_exists('ApiQuickstart')) {
+            $code = ApiQuickstart::stripEmoji($code);
+        }
+        if ($code === '') {
+            return '';
+        }
+        // 过短噪声
+        if (strlen($code) < 8) {
+            return '';
+        }
+        $lang = strtolower((string) $lang);
+        $authWay = strtolower((string) $authWay);
+        $line = ':::qs lang=' . $lang;
+        if ($requireAuthAttr) {
+            $line .= ' auth=' . $authWay;
+        }
+        return $line . "\n" . $code . "\n:::";
+    }
+
+    /**
+     * 从模型输出中只取「当前鉴权 + 当前语言」一块（兼容旧输出仍带 :::qs 的情况）
      *
      * @param string $raw
      * @param string $authWay
@@ -590,6 +1009,9 @@ class AiApiDoc
     {
         $raw = self::sanitizeOutput((string) $raw);
         $raw = ApiQuickstart::stripEmoji($raw);
+        if (strpos($raw, ':::qs') === false && strpos($raw, '```') === false) {
+            return '';
+        }
         $parsed = ApiQuickstart::parseQsBlocks($raw);
         if ($parsed === array()) {
             $normalized = ApiQuickstart::normalizeAidocBlocks($raw);
@@ -605,7 +1027,6 @@ class AiApiDoc
         if (isset($parsed[$authWay][$lang])) {
             $code = trim((string) $parsed[$authWay][$lang]);
         }
-        // 模型常漏写 auth= 或写成其它 auth：只要语言匹配就收回并改写成目标 auth
         if ($code === '') {
             foreach ($parsed as $authKey => $langs) {
                 if (is_array($langs) && isset($langs[$lang]) && trim((string) $langs[$lang]) !== '') {
@@ -625,11 +1046,7 @@ class AiApiDoc
             return '';
         }
 
-        $line = ':::qs lang=' . $lang;
-        if ($requireAuthAttr) {
-            $line .= ' auth=' . $authWay;
-        }
-        return $line . "\n" . $code . "\n:::";
+        return self::wrapQsBlock($code, $authWay, $lang, $requireAuthAttr);
     }
 
     /**

@@ -114,10 +114,11 @@ class AiConfig
     {
         $cfg = self::get();
         return array(
-            'mode'         => $cfg['code_mode'],
-            'concurrency'  => $cfg['code_concurrency'],
-            'timeout'      => $cfg['timeout'],
-            'ready'        => self::isReady(),
+            'mode'          => $cfg['code_mode'],
+            'concurrency'   => $cfg['code_concurrency'],
+            'timeout'       => $cfg['timeout'],
+            'ready'         => self::isReady(),
+            'doc_sections'  => class_exists('AiApiDoc') ? AiApiDoc::detailDocSectionsForClient() : array(),
         );
     }
 

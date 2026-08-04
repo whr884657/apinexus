@@ -2193,6 +2193,7 @@
     var aiStartedAt = 0;
     var aiAbort = null;
     var aiDocPartial = false;
+    var aiDocResumeIndex = 0;
     var aiCodeLastState = null;
 
     function setAiDocContinueVisible(show) {
@@ -2778,9 +2779,51 @@
             return;
         }
 
+        runAiDocSections(payload, btn, !!continueFlag);
+    }
+
+    function defaultDocSections() {
+        return [
+            { id: 'intro', title: '接口说明' },
+            { id: 'call', title: '调用地址、请求方式与鉴权' },
+            { id: 'params', title: '请求参数' },
+            { id: 'success', title: '成功响应与字段说明' },
+            { id: 'errors', title: '错误响应与业务错误码' },
+            { id: 'examples', title: '调用示例' },
+            { id: 'notes', title: '注意事项' }
+        ];
+    }
+
+    function getDocSections() {
+        var list = window.VS_AI_CODE && window.VS_AI_CODE.doc_sections;
+        if (Array.isArray(list) && list.length) {
+            return list;
+        }
+        return defaultDocSections();
+    }
+
+    /**
+     * 详细文档：按章节顺序多次 SSE，逐章回填（抗 CDN 长流切断）
+     */
+    function runAiDocSections(payload, btn, continueFlag) {
+        var sections = getDocSections();
+        var startIdx = continueFlag ? Math.max(0, Number(aiDocResumeIndex) || 0) : 0;
+        if (startIdx >= sections.length) {
+            // 索引越界：已有正文则视为完成，勿回退到 0 造成重复拼接
+            if (continueFlag) {
+                window.VS.showMessage('文档章节已全部生成，无需继续', 'info');
+                setAiDocContinueVisible(false);
+                aiDocResumeIndex = 0;
+                return;
+            }
+            startIdx = 0;
+        }
         var kind = 'doc';
-        var title = continueFlag ? '详细文档（续写）' : '详细文档';
-        var liveDoc = continueFlag && fields.docNormal ? String(fields.docNormal.value || '') : '';
+        var title = continueFlag ? '详细文档（续写章节）' : '详细文档';
+        var assembled = '';
+        if (continueFlag && fields.docNormal) {
+            assembled = String(fields.docNormal.value || '').replace(/\s+$/, '');
+        }
 
         switchFormTab('docs');
         aiBusy = true;
@@ -2793,11 +2836,8 @@
         aiTermClear(kind);
         aiTermOpen(kind, true);
         aiTermAppend(kind, continueFlag
-            ? '续写请求已发出（对话式流式输出）…'
-            : '已向 AI 发出「撰写详细文档」请求（对话式流式输出）…');
-        if (AiChatSessionHint()) {
-            aiTermAppend(kind, '短时效历史：已启用（Redis，约 30 分钟）');
-        }
+            ? ('从第 ' + (startIdx + 1) + '/' + sections.length + ' 章继续…')
+            : ('按章节分片生成（共 ' + sections.length + ' 章）…'));
         aiSetBanner('run', '正在生成' + title + '…', 'doc');
         if (aiBannerTime) {
             aiBannerTime.textContent = '已用时 0秒';
@@ -2820,109 +2860,126 @@
             draftSkip = true;
             setTextareaValue(fields.docNormal, '');
             draftSkip = false;
-            liveDoc = '';
+            assembled = '';
+            aiDocResumeIndex = 0;
+            setAiDocContinueVisible(false);
         }
 
+        var liveSection = '';
+        var currentIdx = startIdx;
         aiTickTimer = setInterval(function () {
             if (aiBannerTime) {
                 aiBannerTime.textContent = '已用时 ' + aiElapsedLabel();
             }
             if (aiBannerText && aiBanner && !aiBanner.classList.contains('is-done') && !aiBanner.classList.contains('is-error')) {
-                aiBannerText.textContent = '正在流式生成' + title + '…（' + aiElapsedLabel() + ' · '
-                    + liveDoc.length + ' 字）';
+                var sec = sections[currentIdx];
+                var label = sec && sec.title ? sec.title : ('第' + (currentIdx + 1) + '章');
+                var previewLen = (assembled ? assembled.length : 0) + liveSection.length;
+                aiBannerText.textContent = '正在生成「' + label + '」（' + (currentIdx + 1) + '/'
+                    + sections.length + ' · ' + aiElapsedLabel() + ' · ' + previewLen + ' 字）';
             }
         }, 1000);
 
-        window.VS.showMessage('正在流式生成' + title + '，可在文档框实时查看', 'info');
+        window.VS.showMessage('正在按章节生成' + title + '，可在文档框实时查看', 'info');
 
-        var gotDelta = false;
-        postActionSse('ai_gen_doc_stream', payload, {
-            meta: function (m) {
-                if (m && m.history) {
-                    aiTermAppend(kind, '会话已接入短时效多轮上下文');
-                }
-                if (m && Number(m.continue) === 1) {
-                    aiTermAppend(kind, '正在从断点续写…');
-                }
-            },
-            delta: function (d) {
-                var chunk = d && d.text != null ? String(d.text) : '';
-                if (!chunk) {
-                    return;
-                }
-                gotDelta = true;
-                liveDoc += chunk;
-                draftSkip = true;
-                if (fields.docNormal) {
-                    fields.docNormal.value = liveDoc;
-                }
-                draftSkip = false;
-            },
-            done: function (data) {
-                if (data && data.doc != null) {
-                    liveDoc = String(data.doc);
-                }
-                draftSkip = true;
-                setTextareaValue(fields.docNormal, liveDoc);
-                draftSkip = false;
+        function paintDoc(text) {
+            draftSkip = true;
+            if (fields.docNormal) {
+                fields.docNormal.value = text;
+            }
+            draftSkip = false;
+        }
+
+        function runOne(index) {
+            if (index >= sections.length) {
                 setAiDocContinueVisible(false);
-                aiTermAppend(kind, '完成，约 ' + liveDoc.length + ' 字符，总用时 ' + aiElapsedLabel());
+                aiDocResumeIndex = 0;
+                paintDoc(assembled);
+                setTextareaValue(fields.docNormal, assembled);
+                aiTermAppend(kind, '全部章节完成，约 ' + assembled.length + ' 字符，总用时 ' + aiElapsedLabel());
                 aiTermStopRunning(kind);
-                aiSetBanner('done', (data && data.msg ? data.msg : (title + '已生成'))
-                    + ' · 用时 ' + aiElapsedLabel(), 'doc');
-                window.VS.showMessage((data && data.msg) || '生成完成', 'success');
+                aiSetBanner('done', '详细文档已生成 · 用时 ' + aiElapsedLabel(), 'doc');
+                window.VS.showMessage('详细文档已生成', 'success');
                 scheduleDraftSave();
-            },
-            error: function (err) {
-                var msg = (err && err.msg) ? String(err.msg) : '生成失败';
-                if (err && err.doc) {
-                    liveDoc = String(err.doc);
-                    draftSkip = true;
-                    setTextareaValue(fields.docNormal, liveDoc);
-                    draftSkip = false;
+                return Promise.resolve();
+            }
+
+            currentIdx = index;
+            var sec = sections[index];
+            var secId = sec && sec.id ? String(sec.id) : '';
+            var secTitle = sec && sec.title ? String(sec.title) : secId;
+            liveSection = '';
+            aiTermAppend(kind, '[' + (index + 1) + '/' + sections.length + '] 开始 · ' + secTitle);
+            aiDocResumeIndex = index;
+
+            var baseParts = assembled ? (assembled + '\n\n') : '';
+            var sectionFailed = false;
+            return postActionSse('ai_gen_doc_section_stream', payload, {
+                meta: function () { /* noop */ },
+                delta: function (d) {
+                    var chunk = d && d.text != null ? String(d.text) : '';
+                    if (!chunk) {
+                        return;
+                    }
+                    liveSection += chunk;
+                    paintDoc(baseParts + liveSection);
+                },
+                done: function (data) {
+                    var piece = data && data.section != null ? String(data.section) : liveSection;
+                    piece = String(piece).replace(/^\s+|\s+$/g, '');
+                    if (piece) {
+                        assembled = assembled ? (assembled + '\n\n' + piece) : piece;
+                    }
+                    liveSection = '';
+                    paintDoc(assembled);
+                    aiTermAppend(kind, '[' + (index + 1) + '/' + sections.length + '] 完成 · ' + secTitle
+                        + '（' + piece.length + ' 字）');
+                },
+                error: function (err) {
+                    sectionFailed = true;
+                    // 预览半成品不写入 assembled，继续生成时从本章重跑，避免重复拼接
+                    liveSection = '';
+                    paintDoc(assembled);
+                    var msg = (err && err.msg) ? String(err.msg) : '生成失败';
+                    aiTermAppend(kind, '[' + (index + 1) + '/' + sections.length + '] 失败 · ' + secTitle + '：' + msg);
                 }
-                if (liveDoc) {
+            }, { section: secId }).then(function () {
+                if (sectionFailed) {
+                    var stop = new Error('section_failed');
+                    stop.sseHandled = true;
+                    throw stop;
+                }
+                return runOne(index + 1);
+            });
+        }
+
+        runOne(startIdx)
+            .catch(function (err) {
+                var msg;
+                if (err && err.message === 'section_failed') {
+                    msg = '章节生成中断';
+                } else if (err && err.sseError && err.sseError.msg) {
+                    msg = String(err.sseError.msg);
+                } else if (err && err.message) {
+                    msg = String(err.message);
+                } else {
+                    msg = '网络异常或网关超时';
+                }
+                if (msg === 'invalid_json') {
+                    msg = '响应异常（常见于网关切断）。已保留已完成章节，可点「继续生成」';
+                }
+                liveSection = '';
+                paintDoc(assembled);
+                setTextareaValue(fields.docNormal, assembled);
+                if (assembled || currentIdx < sections.length) {
                     setAiDocContinueVisible(true);
-                    aiTermAppend(kind, '中断/失败，已保留部分内容，可点「继续生成」：' + msg);
+                    aiTermAppend(kind, '中断于第 ' + (currentIdx + 1) + ' 章（可继续生成）：' + msg);
                 } else {
                     aiTermAppend(kind, '失败：' + msg);
+                    aiTermStopRunning(kind);
                 }
                 aiSetBanner('error', msg, 'doc');
-                window.VS.showMessage(msg, 'error');
-            }
-        }, continueFlag ? { continue: '1' } : {})
-            .then(function () { /* done 已处理 */ })
-            .catch(function (err) {
-                // handlers.error 已提示时跳过重复 Toast，仍保证 UI 复位与保留正文
-                if (err && err.sseHandled) {
-                    if (gotDelta || liveDoc) {
-                        setAiDocContinueVisible(true);
-                        draftSkip = true;
-                        setTextareaValue(fields.docNormal, liveDoc);
-                        draftSkip = false;
-                    } else {
-                        aiTermStopRunning(kind);
-                    }
-                    return;
-                }
-                var hint = (err && err.message) ? String(err.message) : '网络异常或网关超时';
-                if (hint === 'invalid_json') {
-                    hint = '响应异常（常见于网关切断）。已尽量保留已输出内容，可点「继续生成」';
-                }
-                if (gotDelta || liveDoc) {
-                    setAiDocContinueVisible(true);
-                    draftSkip = true;
-                    setTextareaValue(fields.docNormal, liveDoc);
-                    draftSkip = false;
-                    aiTermAppend(kind, hint + '（可继续生成）');
-                    aiSetBanner('error', hint, 'doc');
-                    window.VS.showMessage(hint, 'error');
-                } else {
-                    aiTermAppend(kind, hint);
-                    aiTermStopRunning(kind);
-                    aiSetBanner('error', hint, 'doc');
-                    window.VS.showMessage(hint, 'error');
-                }
+                window.VS.showMessage(msg + (assembled ? '，可点「继续生成」' : ''), 'error');
             })
             .finally(function () {
                 aiBusy = false;

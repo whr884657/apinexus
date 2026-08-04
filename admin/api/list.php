@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('已自动保存', array('api_id' => $id, 'silent' => 1));
     }
 
-    if ($action === 'ai_gen_doc' || $action === 'ai_gen_doc_stream' || $action === 'ai_gen_code'
+    if ($action === 'ai_gen_doc' || $action === 'ai_gen_doc_stream' || $action === 'ai_gen_doc_section_stream' || $action === 'ai_gen_code'
         || $action === 'ai_gen_code_piece' || $action === 'ai_gen_code_piece_stream' || $action === 'ai_chat_clear') {
         if (!AiConfig::isReady()) {
             AjaxResponse::error('请先在系统设置中启用并配置 AI');
@@ -253,6 +253,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 AiChatSession::clear($docSessionKey);
             }
             AjaxResponse::success('已清除短时效对话记录');
+        }
+
+        if ($action === 'ai_gen_doc_section_stream') {
+            $section = isset($_POST['section']) ? strtolower(trim((string) $_POST['section'])) : '';
+            try {
+                AiSse::begin();
+                AiSse::emit('meta', array(
+                    'section' => $section,
+                    'topic'   => $topic,
+                ));
+                $gen = AiApiDoc::generateDetailDocSectionStream(
+                    $data,
+                    $section,
+                    function ($chunk) {
+                        AiSse::emit('delta', array('text' => (string) $chunk));
+                    }
+                );
+                if (empty($gen['ok'])) {
+                    AiSse::emit('error', array(
+                        'msg'        => isset($gen['error']) ? (string) $gen['error'] : '生成失败',
+                        'partial'    => isset($gen['partial']) ? (string) $gen['partial'] : '',
+                        'section_id' => isset($gen['section_id']) ? (string) $gen['section_id'] : $section,
+                        'title'      => isset($gen['title']) ? (string) $gen['title'] : '',
+                    ));
+                    AiSse::end();
+                    exit;
+                }
+                AiSse::emit('done', array(
+                    'section'    => $gen['section'],
+                    'section_id' => $gen['section_id'],
+                    'title'      => $gen['title'],
+                    'msg'        => '章节已生成',
+                ));
+                AiSse::end();
+                exit;
+            } catch (Exception $e) {
+                if (class_exists('AiSse') && AiSse::isActive()) {
+                    AiSse::emit('error', array('msg' => '章节生成失败，请稍后重试或点「继续生成」', 'partial' => 1));
+                    AiSse::end();
+                    exit;
+                }
+                AjaxResponse::error('生成失败，请稍后重试');
+            } catch (Throwable $e) {
+                if (class_exists('AiSse') && AiSse::isActive()) {
+                    AiSse::emit('error', array('msg' => '章节生成失败，请稍后重试或点「继续生成」', 'partial' => 1));
+                    AiSse::end();
+                    exit;
+                }
+                AjaxResponse::error('生成失败，请稍后重试');
+            }
         }
 
         if ($action === 'ai_gen_doc_stream') {

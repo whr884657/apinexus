@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.1-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.2-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -256,12 +256,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.1（2026-08-04）
+### v13.26.2（2026-08-04）
 
-- 纠正 13.26.0 误解：详细文档仍仅 curl + PHP，并强制章节顺序与文末「注意事项」
-- 代码示例恢复最多 27 片（3 鉴权 × 9 语言）；可按鉴权单独生成 9 片
-- IP 归属地提示改为：若需查询 IPv6，需配置自定义接口
-- 前台接口域名按访问入口动态重绑；页脚友链「显示全部」生效；友链页每次打乱
+- 详细文档改为按章节分片 SSE，逐章回填，降低 CDN 长流切断导致的半截文档
+- 代码示例改为模型只出纯代码、服务端包裹 `:::qs`，减少解析失败
+- 「继续生成」从中断章节续跑；管理端与用户开发者入口同步
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 
