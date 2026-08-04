@@ -293,7 +293,14 @@
             showFlash('正在测试连接…', 'info');
             var fd = collectAiFormData(form);
             fd.set('action', 'test_ai');
-            window.VS.postForm(fd, window.location.href)
+            var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            var timer = null;
+            if (ctrl) {
+                timer = setTimeout(function () {
+                    try { ctrl.abort(); } catch (eAbort) { /* ignore */ }
+                }, 55000);
+            }
+            window.VS.postForm(fd, window.location.href, ctrl ? { signal: ctrl.signal } : {})
                 .then(function (data) {
                     if (data && data.code === 1) {
                         showFlash(data.msg || '连接成功', 'success');
@@ -301,11 +308,68 @@
                         showFlash((data && data.msg) || '连接失败', 'error');
                     }
                 })
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') {
+                        showFlash('连接测试超时，请检查上游地址或稍后重试', 'error');
+                        return;
+                    }
+                    showFlash('连接失败或网络异常，请稍后重试', 'error');
+                })
+                .finally(function () {
+                    if (timer) {
+                        clearTimeout(timer);
+                    }
+                    btn.disabled = false;
+                });
+        });
+    }
+
+    function bindIplocTest() {
+        var form = document.getElementById('iplocTestForm');
+        var main = document.getElementById('iplocForm');
+        if (!form || !main || form.getAttribute('data-ajax') !== '1') {
+            return;
+        }
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var submitBtn = form.querySelector('[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
+            var fd = new FormData();
+            fd.append('action', 'test_iploc');
+            var testIp = document.getElementById('iplocTestIp');
+            fd.append('test_ip', testIp ? String(testIp.value || '').trim() : '');
+            // 带上当前表单草稿，避免「未保存就测」永远失败
+            var enabled = document.getElementById('ipLocEnabled');
+            fd.append('ip_loc_enabled', (enabled && enabled.checked) ? '1' : '0');
+            ['ip_loc_mode', 'ip_loc_url', 'ip_loc_method', 'ip_loc_ip_param',
+                'ip_loc_auth', 'ip_loc_auth_name', 'ip_loc_auth_value', 'ip_loc_field', 'ip_loc_extras'
+            ].forEach(function (name) {
+                var el = main.querySelector('[name="' + name + '"]');
+                if (el) {
+                    fd.append(name, el.value != null ? String(el.value) : '');
+                }
+            });
+            window.VS.postForm(fd, window.location.href)
+                .then(function (data) {
+                    if (data && data.code === 1) {
+                        var msg = data.msg || '解析成功';
+                        if (data.iploc) {
+                            msg += '：' + data.iploc;
+                        }
+                        showFlash(msg, 'success');
+                    } else {
+                        showFlash((data && data.msg) || '解析失败', 'error');
+                    }
+                })
                 .catch(function () {
                     showFlash('网络异常，请稍后重试', 'error');
                 })
                 .finally(function () {
-                    btn.disabled = false;
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                    }
                 });
         });
     }
@@ -629,7 +693,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
-        ['siteForm', 'registerForm', 'captchaForm', 'checkinForm', 'oauthForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm', 'aiForm', 'iplocForm', 'iplocTestForm'].forEach(function (id) {
+        ['siteForm', 'registerForm', 'captchaForm', 'checkinForm', 'oauthForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm', 'aiForm', 'iplocForm'].forEach(function (id) {
             bindAjaxForm(document.getElementById(id));
         });
         bindRedisPrefixForm();
@@ -637,6 +701,7 @@
         bindAiProvider();
         bindAiListModels();
         bindAiTest();
+        bindIplocTest();
         bindIplocExtras();
         bindPanelMonitorTest();
         bindCopyButtons();

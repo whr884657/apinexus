@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.25.2**）
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.0**）
 
 ---
 
@@ -254,11 +254,11 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiError.php` | 公开 API 业务错误码（11001～11018）；`businessLabelMap` / `aiDetailDocErrcodeClause` 供 AI 详细文档全量写入 |
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型/单片超时/代码调度模式与并发） |
-| `AiClient.php` | OpenAI 兼容 Chat Completions / Responses；支持流式 `chatStreamWithConfig` 与多轮 `messages` |
+| `AiClient.php` | OpenAI 兼容 Chat Completions / Responses；流式 `chatStreamWithConfig`；连通测试须先 `session_write_close`（v13.26.0） |
 | `AiChatSession.php` | AI 短时效多轮（Redis TTL 约 30 分钟）与断点 partial |
-| `AiSse.php` | SSE 输出（关缓冲头、心跳），供文档流式生成 |
+| `AiSse.php` | SSE 输出（`no-transform` / `Surrogate-Control` / 首包垫片 + 心跳），供文档与代码流式生成 |
 | `AiApiDoc.php` | 生成详细文档（`doc`，可流式）与代码示例（`aidoc`）；详细文档 prompt 须含全部 errcode；剥离上游敏感字段 |
-| `IpLocator.php` | IP 归属地：系统内置或自定义接口；自定义可选 GET/POST（`ip_loc_method`，默认 GET）；异步回填 `apilog.iploc` |
+| `IpLocator.php` | IP 归属地：内置（仅 IPv4）或自定义；`probe()` 支持表单草稿测试；自定义超时加长（v13.26.0）；异步回填 `apilog.iploc` |
 | `ApiNotify.php` | 接口投稿与审核结果的邮件通知 |
 | `ProxyClientProfile.php` | 出站 UA/Referer 内置预设与解析；代理网关与本地 `ApiStats::outboundHeaders` 共用 |
 | `ProxyJsonRewrite.php` | 代理响应 JSON 字段改写（set/del；仅 JSON；**v13.12.0**；**v13.25.0** 禁止 SET 后台路径；**v13.25.2** 业务错误体不改写） |
@@ -718,22 +718,23 @@ VsPlaygroundResponse.directRequest({
 | 要点 | 说明 |
 |------|------|
 | 开关 | `ip_loc_enabled`；仅详细日志开启时触发 |
-| 模式 | `ip_loc_mode`=`builtin`（系统内置，无需填 URL）或 `custom`（仅走自定义接口）；界面勿写明上游厂商 |
+| 模式 | `ip_loc_mode`=`builtin`（系统内置，**仅 IPv4**，无需填 URL）或 `custom`（仅走自定义接口）；界面勿写明上游厂商 |
 | 请求方式 | 自定义：`ip_loc_method`=`get`（默认）或 `post`；GET 拼查询串，POST 表单正文 |
 | 认证 | 自定义模式：无 / Bearer / Header / Query |
 | 安全 | 自定义 URL 公网校验；禁止跟随跳转；失败负缓存 300s；源码端点按片段拼接，禁明文厂商标识 |
-| 性能 | **shutdown 异步回填**，不阻塞接口响应 |
-| 缓存 | Redis `cache:iploc:{md5(ip)}`，TTL 86400s |
-| 设置 | 切内置保存时保留已填自定义参数，勿清空 |
+| 性能 | **shutdown 异步回填**，不阻塞接口响应；自定义热路径超时约 5s，探测约 10s |
+| 缓存 | Redis `cache:iploc:{md5(ip)}`，TTL 86400s；**探测不写缓存** |
+| 设置 | 切内置保存时保留已填自定义参数；测试可带表单草稿，不必先保存 |
 
 ---
 
 ### 4.21.5 AiApiDoc.php / ApiQuickstart.php（AI 文档与快速上手）
 
 **AiApiDoc：** 管理员/用户接口编辑「AI 生成详细文档 / 代码示例」；详细文档默认 SSE 流式（`generateDetailDocStream` + `AiChatSession` 短时效历史）；上下文剔除 `targeturl`/`upkey`；输出经 `ApiQuickstart::scrubHighlightLeak` 剥离 HTML / `vs-syn` 碎片（E177：勿对已高亮 HTML 二次正则）。
+**v13.26.0 文档约束：** 详细文档调用示例仅 **curl + PHP**；密钥传递只描述**首选一种**鉴权。
 **展示：** `VsSyntax` bash 纯文本分词；复制用 `data-vs-plain` / `plainText`。
 
-**代码示例生成（v12.0.0）：** 前端按「鉴权 × 语言」**分片**调用 `generateCodeSamplePiece`（`ai_gen_code_piece`）；`AiConfig::codeMode` 为 `sequential`/`parallel`，并行并发 1～6；进程日志实时显示当前片。服务端 `extractRequestedQsBlock` 按语言容错收回并改写 auth，禁 emoji、要求中文注释，失败可重试 1 次。旧 `generateCodeSamples` 整包接口仅兼容保留。
+**代码示例生成（v12.0.0 / v13.26.0）：** 前端按片调用 `ai_gen_code_piece_stream`（SSE，`delta` 即回填）；**AI 仅生成 curl + php，且只跑首选鉴权**（最多 2 片）。`AiConfig::codeMode` 为 `sequential`/`parallel`（并行并发上限 2 且仍走 SSE）。服务端 `extractRequestedQsBlock` 按语言容错收回并改写 auth，禁 emoji、要求中文注释，失败可重试 1 次（重试仍流式）。旧整包接口仅兼容保留。
 
 **默认主题快速上手图标（v12.0.1）：** `assets/img/lang/*.svg`；`detailQsBundle.byAuth[*]` 宜带 `icon_gray`/`icon_color`；另须注入 `window.detailQsLangIcons`（`ApiQuickstart::langIconMap`）。`detail-quickstart.js` 重绘 Tab 时按语言 id 兜底补图标；首屏已有 PHP 图标则勿无谓重绘。切换 Query/Header/Bearer **不得**丢九种语言图标。
 

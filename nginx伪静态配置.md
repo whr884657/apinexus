@@ -111,6 +111,28 @@ add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment
 
 ---
 
+## 四点五、AI 流式（SSE）与 CDN（v13.26.0）
+
+后台「AI 生成详细文档 / 代码示例」走 **Server-Sent Events**。若站点前有 Nginx 反代或 CDN，需避免整包缓冲与空闲掐断：
+
+1. **应用已下发：** `Content-Type: text/event-stream`、`X-Accel-Buffering: no`、`Cache-Control: no-store, no-transform`、`CDN-Cache-Control` / `Surrogate-Control: no-store`，以及约 5 秒心跳。
+2. **自建 Nginx 反代建议**（按实际入口路径调整；可写在站点配置而非伪静态框）：
+
+```nginx
+# 示例：关闭缓冲并放宽读超时（秒数建议 ≥ 系统设置 AI 单片超时）
+proxy_buffering off;
+proxy_cache off;
+gzip off;
+proxy_http_version 1.1;
+proxy_set_header Connection "";
+proxy_read_timeout 300s;
+proxy_send_timeout 300s;
+```
+
+3. **CDN：** 对管理后台 / 用户 API 管理 AJAX 路径配置「绕过缓存」或「不缓冲 SSE」；回源空闲超时建议 ≥ AI 超时。仍失败时在系统设置将代码生成改为**单线程**。
+
+---
+
 ## 五、地址对照（方便自测）
 
 | 浏览器地址 | 作用 |

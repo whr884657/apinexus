@@ -245,109 +245,153 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'ai_gen_doc_stream') {
             $continue = !empty($_POST['continue']);
-            AiSse::begin();
-            AiSse::emit('meta', array(
-                'history'  => AiChatSession::historyAvailable(),
-                'continue' => $continue ? 1 : 0,
-                'topic'    => $topic,
-            ));
-            $gen = AiApiDoc::generateDetailDocStream(
-                $data,
-                $docSessionKey,
-                $continue,
-                function ($chunk) {
-                    AiSse::emit('delta', array('text' => (string) $chunk));
+            try {
+                AiSse::begin();
+                AiSse::emit('meta', array(
+                    'history'  => AiChatSession::historyAvailable(),
+                    'continue' => $continue ? 1 : 0,
+                    'topic'    => $topic,
+                ));
+                $gen = AiApiDoc::generateDetailDocStream(
+                    $data,
+                    $docSessionKey,
+                    $continue,
+                    function ($chunk) {
+                        AiSse::emit('delta', array('text' => (string) $chunk));
+                    }
+                );
+                if (empty($gen['ok'])) {
+                    AiSse::emit('error', array(
+                        'msg'     => isset($gen['error']) ? (string) $gen['error'] : '生成失败',
+                        'doc'     => isset($gen['doc']) ? (string) $gen['doc'] : '',
+                        'partial' => 1,
+                    ));
+                    AiSse::end();
+                    exit;
                 }
-            );
-            if (empty($gen['ok'])) {
-                AiSse::emit('error', array(
-                    'msg'     => isset($gen['error']) ? (string) $gen['error'] : '生成失败',
-                    'doc'     => isset($gen['doc']) ? (string) $gen['doc'] : '',
-                    'partial' => 1,
+                AiSse::emit('done', array(
+                    'doc'       => $gen['doc'],
+                    'continued' => !empty($gen['continued']) ? 1 : 0,
+                    'history'   => !empty($gen['history']) ? 1 : 0,
+                    'msg'       => '详细文档已生成',
                 ));
                 AiSse::end();
                 exit;
+            } catch (Exception $e) {
+                if (class_exists('AiSse') && AiSse::isActive()) {
+                    AiSse::emit('error', array('msg' => '生成失败，请稍后重试或点「继续生成」', 'partial' => 1));
+                    AiSse::end();
+                    exit;
+                }
+                AjaxResponse::error('生成失败，请稍后重试');
+            } catch (Throwable $e) {
+                if (class_exists('AiSse') && AiSse::isActive()) {
+                    AiSse::emit('error', array('msg' => '生成失败，请稍后重试或点「继续生成」', 'partial' => 1));
+                    AiSse::end();
+                    exit;
+                }
+                AjaxResponse::error('生成失败，请稍后重试');
             }
-            AiSse::emit('done', array(
-                'doc'       => $gen['doc'],
-                'continued' => !empty($gen['continued']) ? 1 : 0,
-                'history'   => !empty($gen['history']) ? 1 : 0,
-                'msg'       => '详细文档已生成',
-            ));
-            AiSse::end();
-            exit;
         }
 
         if ($action === 'ai_gen_doc') {
-            $gen = AiApiDoc::generateDetailDoc($data);
-            if (!is_array($gen)) {
-                AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+            try {
+                $gen = AiApiDoc::generateDetailDoc($data);
+                if (!is_array($gen)) {
+                    AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+                }
+                AjaxResponse::success('详细文档已生成', array('doc' => $gen['doc']));
+            } catch (Exception $e) {
+                AjaxResponse::error('生成失败，请稍后重试');
+            } catch (Throwable $e) {
+                AjaxResponse::error('生成失败，请稍后重试');
             }
-            AjaxResponse::success('详细文档已生成', array('doc' => $gen['doc']));
         }
 
         if ($action === 'ai_gen_code_piece_stream') {
             $auth = isset($_POST['auth']) ? (string) $_POST['auth'] : '';
             $lang = isset($_POST['lang']) ? (string) $_POST['lang'] : '';
-            AiSse::begin();
-            AiSse::emit('meta', array(
-                'auth' => $auth,
-                'lang' => $lang,
-            ));
-            $gen = AiApiDoc::generateCodeSamplePieceStream(
-                $data,
-                $auth,
-                $lang,
-                function ($chunk) {
-                    AiSse::emit('delta', array('text' => (string) $chunk));
+            try {
+                AiSse::begin();
+                AiSse::emit('meta', array(
+                    'auth' => $auth,
+                    'lang' => $lang,
+                ));
+                $gen = AiApiDoc::generateCodeSamplePieceStream(
+                    $data,
+                    $auth,
+                    $lang,
+                    function ($chunk) {
+                        AiSse::emit('delta', array('text' => (string) $chunk));
+                    }
+                );
+                if (empty($gen['ok'])) {
+                    AiSse::emit('error', array(
+                        'msg'     => isset($gen['error']) ? (string) $gen['error'] : '生成失败',
+                        'partial' => isset($gen['partial']) ? (string) $gen['partial'] : '',
+                        'auth'    => isset($gen['auth']) ? (string) $gen['auth'] : $auth,
+                        'lang'    => isset($gen['lang']) ? (string) $gen['lang'] : $lang,
+                    ));
+                    AiSse::end();
+                    exit;
                 }
-            );
-            if (empty($gen['ok'])) {
-                AiSse::emit('error', array(
-                    'msg'     => isset($gen['error']) ? (string) $gen['error'] : '生成失败',
-                    'partial' => isset($gen['partial']) ? (string) $gen['partial'] : '',
-                    'auth'    => isset($gen['auth']) ? (string) $gen['auth'] : $auth,
-                    'lang'    => isset($gen['lang']) ? (string) $gen['lang'] : $lang,
+                if (AiChatSession::historyAvailable()) {
+                    AiChatSession::appendTurn(
+                        $codeSessionKey,
+                        '请生成鉴权=' . $gen['auth'] . ' 语言=' . $gen['lang'] . ' 的极简示例',
+                        '已完成 :::qs lang=' . $gen['lang'] . ' auth=' . $gen['auth']
+                    );
+                }
+                AiSse::emit('done', array(
+                    'piece' => $gen['piece'],
+                    'auth'  => $gen['auth'],
+                    'lang'  => $gen['lang'],
+                    'msg'   => '单片已生成',
                 ));
                 AiSse::end();
                 exit;
+            } catch (Exception $e) {
+                if (class_exists('AiSse') && AiSse::isActive()) {
+                    AiSse::emit('error', array('msg' => '生成失败，请稍后重试', 'auth' => $auth, 'lang' => $lang));
+                    AiSse::end();
+                    exit;
+                }
+                AjaxResponse::error('生成失败，请稍后重试');
+            } catch (Throwable $e) {
+                if (class_exists('AiSse') && AiSse::isActive()) {
+                    AiSse::emit('error', array('msg' => '生成失败，请稍后重试', 'auth' => $auth, 'lang' => $lang));
+                    AiSse::end();
+                    exit;
+                }
+                AjaxResponse::error('生成失败，请稍后重试');
             }
-            if (AiChatSession::historyAvailable()) {
-                AiChatSession::appendTurn(
-                    $codeSessionKey,
-                    '请生成鉴权=' . $gen['auth'] . ' 语言=' . $gen['lang'] . ' 的极简示例',
-                    '已完成 :::qs lang=' . $gen['lang'] . ' auth=' . $gen['auth']
-                );
-            }
-            AiSse::emit('done', array(
-                'piece' => $gen['piece'],
-                'auth'  => $gen['auth'],
-                'lang'  => $gen['lang'],
-                'msg'   => '单片已生成',
-            ));
-            AiSse::end();
-            exit;
         }
 
         if ($action === 'ai_gen_code_piece') {
             $auth = isset($_POST['auth']) ? (string) $_POST['auth'] : '';
             $lang = isset($_POST['lang']) ? (string) $_POST['lang'] : '';
-            $gen = AiApiDoc::generateCodeSamplePiece($data, $auth, $lang);
-            if (!is_array($gen)) {
-                AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+            try {
+                $gen = AiApiDoc::generateCodeSamplePiece($data, $auth, $lang);
+                if (!is_array($gen)) {
+                    AjaxResponse::error(is_string($gen) ? preg_replace('/^错误：/', '', $gen) : '生成失败');
+                }
+                if (AiChatSession::historyAvailable()) {
+                    AiChatSession::appendTurn(
+                        $codeSessionKey,
+                        '请生成鉴权=' . $gen['auth'] . ' 语言=' . $gen['lang'] . ' 的极简示例',
+                        '已完成 :::qs lang=' . $gen['lang'] . ' auth=' . $gen['auth']
+                    );
+                }
+                AjaxResponse::success('单片已生成', array(
+                    'piece' => $gen['piece'],
+                    'auth'  => $gen['auth'],
+                    'lang'  => $gen['lang'],
+                ));
+            } catch (Exception $e) {
+                AjaxResponse::error('生成失败，请稍后重试');
+            } catch (Throwable $e) {
+                AjaxResponse::error('生成失败，请稍后重试');
             }
-            if (AiChatSession::historyAvailable()) {
-                AiChatSession::appendTurn(
-                    $codeSessionKey,
-                    '请生成鉴权=' . $gen['auth'] . ' 语言=' . $gen['lang'] . ' 的极简示例',
-                    '已完成 :::qs lang=' . $gen['lang'] . ' auth=' . $gen['auth']
-                );
-            }
-            AjaxResponse::success('单片已生成', array(
-                'piece' => $gen['piece'],
-                'auth'  => $gen['auth'],
-                'lang'  => $gen['lang'],
-            ));
         }
 
         $gen = AiApiDoc::generateCodeSamples($data);

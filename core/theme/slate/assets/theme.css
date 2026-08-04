@@ -623,6 +623,14 @@ body.st-drawer-open {
     color: var(--st-fg);
     letter-spacing: -0.02em;
     line-height: 1.25;
+    /* 参考主题二设计 .box-text h1：硬偏移光影（blur=0） */
+    text-shadow: -5px 5px 0 rgba(0, 0, 0, 0.1);
+}
+
+@media screen and (min-width: 768px) {
+    .st-hero__title {
+        text-shadow: -5px 5px 0 rgba(0, 0, 0, 0.12);
+    }
 }
 
 .st-hero__lead {

@@ -1,12 +1,12 @@
 {
-    "version": "13.25.2",
-    "title": "ApiNexus 13.25.2 业务错误体禁止附加字段与改写",
-    "release_date": "2026-08-03",
+    "version": "13.26.0",
+    "title": "ApiNexus 13.26.0 AI 稳定性与 IP 归属地测试修复",
+    "release_date": "2026-08-04",
     "db_changes": false,
     "changes": [
-        "代理/中继：errcode 11001～11018 业务错误体禁止 JSON 改写，并强制只保留 code/msg/errcode",
-        "堵住 api_info.developer 等改写字段随「未提供密钥」等错误响应泄露（含误填库账号/密码）",
-        "成功响应的 JSON 字段改写能力不变"
+        "AI 测试连接：释放 Session 锁并限制探测超时，上游报错不再拖死整站后台",
+        "AI 文档/代码：SSE 异常可恢复；详细文档仅 curl+PHP 与一种鉴权；代码示例流式回填并降片数",
+        "IP 归属地：自定义接口可用表单草稿测试；加长超时；内置标明仅支持 IPv4"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

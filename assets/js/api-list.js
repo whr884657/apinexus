@@ -2344,7 +2344,8 @@
     }
 
     function buildCodeJobs(payload) {
-        var langs = ['curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust'];
+        // AI 仅生成终端 curl + PHP；鉴权只取首选一种，显著降低片数与失败率
+        var langs = ['curl', 'php'];
         var need = parseInt(payload.needkey, 10) || 0;
         var ways = need === 0 ? ['query'] : getSelectedKeyways();
         ways = ways.filter(function (w) {
@@ -2353,6 +2354,7 @@
         if (!ways.length) {
             ways = ['query'];
         }
+        ways = ways.slice(0, 1);
         var jobs = [];
         ways.forEach(function (auth) {
             langs.forEach(function (lang) {
@@ -2402,12 +2404,15 @@
             aiTermClear(kind);
         }
         aiTermOpen(kind, true);
-        // CDN：单线程走 SSE（持续心跳，与详细文档同策略）；并行走 JSON（多路 SSE 易被边缘掐断）
-        var useSse = opts.mode !== 'parallel';
+        // 默认 SSE 流式（CDN 友好心跳）；并行时并发降到 ≤2 并仍走 SSE，失败可改单线程
+        var useSse = true;
+        if (opts.mode === 'parallel' && concurrency > 2) {
+            concurrency = 2;
+        }
         aiTermAppend(kind, (retryOnly ? '重试失败片「' : '开始分片生成「') + title + '」· 本轮 '
             + jobIndexes.length + '/' + allJobs.length + ' 片 · '
-            + (opts.mode === 'parallel' ? ('并行×' + concurrency + ' · JSON') : '单线程 · SSE 保活')
-            + (useSse ? '（适合 CDN）' : '（CDN 环境若失败请改单线程）'));
+            + (opts.mode === 'parallel' ? ('并行×' + concurrency + ' · SSE') : '单线程 · SSE 保活')
+            + '（curl+php · 首选鉴权）');
         aiSetBanner('run', '代码示例 0/' + jobIndexes.length, 'code');
         if (aiBannerTime) {
             aiBannerTime.textContent = '已用时 0秒';
@@ -2573,53 +2578,47 @@
                                 kick();
                             };
 
-                            if (useSse) {
-                                var pieceFailed = false;
-                                postActionSse('ai_gen_code_piece_stream', piecePayload, {
-                                    done: function (data) {
-                                        if (data && data.piece) {
-                                            pieceDone(data.piece);
-                                        } else {
-                                            pieceFailed = true;
-                                            pieceFail('空结果');
-                                        }
-                                    },
-                                    error: function (err) {
-                                        pieceFailed = true;
-                                        pieceFail((err && err.msg) ? String(err.msg) : '生成失败');
-                                    }
-                                }).catch(function (err) {
-                                    if (pieceFailed) {
+                            var pieceFailed = false;
+                            var liveBuf = '';
+                            postActionSse('ai_gen_code_piece_stream', piecePayload, {
+                                delta: function (d) {
+                                    var chunk = d && d.text != null ? String(d.text) : '';
+                                    if (!chunk) {
                                         return;
                                     }
-                                    var hint = '网络异常或 CDN/网关超时';
-                                    if (err && err.message === 'invalid_json') {
-                                        hint = '流被切断。CDN 请关闭缓冲并加大回源超时；或改单线程';
-                                    } else if (err && err.message) {
-                                        hint = String(err.message);
-                                    }
-                                    pieceFail(hint);
-                                }).then(afterPiece);
-                            } else {
-                                postAction('ai_gen_code_piece', piecePayload)
-                                    .then(function (data) {
-                                        if (!data || data.code !== 1 || !data.piece) {
-                                            pieceFail((data && data.msg) || '生成失败');
-                                            return;
-                                        }
+                                    liveBuf += chunk;
+                                    // 流式过程预览：未完成解析前先写入原始增量，done 再换成合法 :::qs
+                                    pieces[jobIndex] = liveBuf;
+                                    flushPiecesLive();
+                                },
+                                done: function (data) {
+                                    if (data && data.piece) {
                                         pieceDone(data.piece);
-                                    })
-                                    .catch(function (err) {
-                                        var hint = '网络异常或 CDN/网关超时';
-                                        if (err && err.message === 'invalid_json') {
-                                            hint = '响应不是有效 JSON（单片超时/CDN 空闲掐断）。请改「单线程」或加大 CDN 回源超时';
-                                        } else if (err && err.message) {
-                                            hint = String(err.message);
-                                        }
-                                        pieceFail(hint);
-                                    })
-                                    .then(afterPiece);
-                            }
+                                    } else {
+                                        pieceFailed = true;
+                                        pieceFail('空结果');
+                                    }
+                                },
+                                error: function (err) {
+                                    pieceFailed = true;
+                                    pieceFail((err && err.msg) ? String(err.msg) : '生成失败');
+                                }
+                            }).catch(function (err) {
+                                if (pieceFailed || (err && err.sseHandled)) {
+                                    if (!pieceFailed && err && err.sseHandled) {
+                                        pieceFailed = true;
+                                        pieceFail((err && err.message) ? String(err.message) : '生成失败');
+                                    }
+                                    return;
+                                }
+                                var hint = '网络异常或 CDN/网关超时';
+                                if (err && err.message === 'invalid_json') {
+                                    hint = '流被切断。CDN 请关闭缓冲并加大回源超时；或改单线程';
+                                } else if (err && err.message) {
+                                    hint = String(err.message);
+                                }
+                                pieceFail(hint);
+                            }).then(afterPiece);
                         })(next);
                     }
                 }
@@ -2788,10 +2787,24 @@
                 } else {
                     aiTermAppend(kind, '失败：' + msg);
                 }
+                aiSetBanner('error', msg, 'doc');
+                window.VS.showMessage(msg, 'error');
             }
         }, continueFlag ? { continue: '1' } : {})
             .then(function () { /* done 已处理 */ })
             .catch(function (err) {
+                // handlers.error 已提示时跳过重复 Toast，仍保证 UI 复位与保留正文
+                if (err && err.sseHandled) {
+                    if (gotDelta || liveDoc) {
+                        setAiDocContinueVisible(true);
+                        draftSkip = true;
+                        setTextareaValue(fields.docNormal, liveDoc);
+                        draftSkip = false;
+                    } else {
+                        aiTermStopRunning(kind);
+                    }
+                    return;
+                }
                 var hint = (err && err.message) ? String(err.message) : '网络异常或网关超时';
                 if (hint === 'invalid_json') {
                     hint = '响应异常（常见于网关切断）。已尽量保留已输出内容，可点「继续生成」';

@@ -162,9 +162,12 @@ class AiApiDoc
             . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11017。')
             . '错误响应 JSON 示例必须为 {"code":0,"msg":"…","errcode":11001} 形态，禁止写 "http":401 或 "全部鉴权方式"。'
             . '代理类接口也须写上 11013～11016（接口不存在/上游地址无效/不允许/上游请求失败）与 11017（服务暂不可用）。'
-            . '鉴权方式只写本接口实际支持的那几种（Query / Header / Bearer），禁止写「全部支持」「支持全部鉴权方式」。'
-            . '若接口有多种参数组合，用表格说明典型取值。'
-            . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。';
+            . '【鉴权强制】密钥传递方式只描述资料中的「首选鉴权」这一种（Query 或 Header 或 Bearer），'
+            . '禁止罗列多种密钥请求方式，禁止写「全部支持」「支持全部鉴权方式」。'
+            . '【调用示例强制】文档中的调用代码示例只允许两种：① 终端 curl（bash）；② PHP。'
+            . '禁止输出 Python / Java / Go / JavaScript / TypeScript / C++ / Rust / 浏览器 fetch 等其它语言示例。'
+            . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。'
+            . '若接口有多种参数组合，用表格说明典型取值。';
     }
 
     /**
@@ -277,8 +280,11 @@ class AiApiDoc
                     array('role' => 'user', 'content' => $retryUser),
                 ),
                 array('temperature' => 0.1, 'max_tokens' => 500),
-                function ($chunk) use (&$assembledRetry) {
+                function ($chunk) use (&$assembledRetry, $onDelta) {
                     $assembledRetry .= (string) $chunk;
+                    if (is_callable($onDelta)) {
+                        call_user_func($onDelta, (string) $chunk);
+                    }
                     if (class_exists('AiSse')) {
                         AiSse::maybePing(false);
                     }
@@ -339,9 +345,10 @@ class AiApiDoc
 
         $authWay = strtolower(trim((string) $authWay));
         $lang = strtolower(trim((string) $lang));
-        $langs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
+        // AI 仅生成终端 curl + PHP，降低片数与失败率（展示层仍可解析其它语言手写块）
+        $langs = array('curl', 'php');
         if (!in_array($lang, $langs, true)) {
-            return '错误：不支持的语言';
+            return '错误：不支持的语言（AI 仅生成 curl / php）';
         }
         if ($needKey === 0) {
             $authWay = 'query';
@@ -374,7 +381,9 @@ class AiApiDoc
         } elseif ($keyways === array()) {
             $keyways = array('query');
         }
-        $langs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
+        $langs = array('curl', 'php');
+        // 兼容整包：只跑首选鉴权，避免一次请求拖死
+        $keyways = array_values(array_slice($keyways, 0, 1));
         $chunks = array();
         $lastErr = '';
         $failed = array();
@@ -481,9 +490,9 @@ class AiApiDoc
             $authWay = 'query';
         }
         $lang = strtolower((string) $lang);
-        $allowedLangs = array('curl', 'typescript', 'browser', 'python', 'go', 'java', 'php', 'cpp', 'rust');
+        $allowedLangs = array('curl', 'php');
         if (!in_array($lang, $allowedLangs, true)) {
-            return array('error' => '不支持的语言 ' . $lang);
+            return array('error' => '不支持的语言 ' . $lang . '（AI 仅生成 curl / php）');
         }
 
         if ($authWay === 'query') {
@@ -682,14 +691,26 @@ class AiApiDoc
             $needLabel = '可选密钥';
         }
         $charge = (int) $safe['charge'] === 1 ? '收费' : '免费';
-        $keywaysLabel = ApiManager::keywaysLabel(isset($safe['keyways']) ? $safe['keyways'] : 'query');
+        $keyways = isset($safe['keyways']) && is_array($safe['keyways']) ? $safe['keyways'] : array('query');
+        if ($keyways === array()) {
+            $keyways = array('query');
+        }
+        $primaryWay = strtolower((string) $keyways[0]);
+        if ($primaryWay === 'header') {
+            $primaryLabel = 'Header（X-API-Key）';
+        } elseif ($primaryWay === 'bearer') {
+            $primaryLabel = 'Bearer（Authorization: Bearer）';
+        } else {
+            $primaryLabel = 'Query（key=…）';
+            $primaryWay = 'query';
+        }
         $lines = array(
             '- 名称：' . $safe['name'],
             '- 描述：' . $safe['description'],
             '- 调用地址：' . $safe['endpoint'],
             '- 请求方式：' . (is_array($safe['method']) ? implode(',', $safe['method']) : (string) $safe['method']),
             '- 密钥要求：' . $needLabel,
-            '- 鉴权方式：' . ($need === 0 ? '无需密钥' : $keywaysLabel),
+            '- 首选鉴权：' . ($need === 0 ? '无需密钥' : $primaryLabel),
             '- 计费：' . $charge,
             '- 分类：' . $safe['category'],
             '- 请求参数 JSON：' . ($safe['params'] !== '' ? $safe['params'] : '[]'),

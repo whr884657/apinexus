@@ -220,9 +220,9 @@ class AiClient
     {
         $adminId = class_exists('Auth') ? (int) Auth::id() : 0;
         $userId = class_exists('UserAuth') ? (int) UserAuth::id() : 0;
-        // 代码示例最多 27 片/批，10 次/分会误杀；放宽到 45 次/分
+        // 代码示例按片请求；重试会额外占额，放宽到 90 次/分
         $bucket = 'ai:chat:' . ($adminId > 0 ? ('a' . $adminId) : ('u' . $userId));
-        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 45, true)) {
+        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 90, true)) {
             return '错误：请求过于频繁，请稍后再试';
         }
 
@@ -255,7 +255,7 @@ class AiClient
         $adminId = class_exists('Auth') ? (int) Auth::id() : 0;
         $userId = class_exists('UserAuth') ? (int) UserAuth::id() : 0;
         $bucket = 'ai:chat:' . ($adminId > 0 ? ('a' . $adminId) : ('u' . $userId));
-        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 45, true)) {
+        if (class_exists('RateLimitStore') && !RateLimitStore::allow($bucket, 60, 90, true)) {
             return array('ok' => false, 'error' => '请求过于频繁，请稍后再试');
         }
 

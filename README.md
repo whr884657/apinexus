@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.25.2-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.0-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -32,8 +32,8 @@
 - **调用方密钥传递**：接口可多选 Query / Header / Bearer；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色**：登录 / 注册 / 忘记密码与后台使用系统色板（无可自定义取色、无昼夜自动切换）
 - **行为验证**：系统设置可选本站图形或第三方验证；管理员与用户可分端选择
-- **AI 代码示例**：按鉴权 × 语言分片生成；详细文档支持流式输出；代码示例支持单线程流式或多线程；可在系统设置中切换
-- **快速上手**：多语言与多鉴权示例；切换鉴权方式后语言图标保持可用
+- **AI 文档与代码**：详细文档流式输出（示例仅 curl + PHP，一种鉴权）；代码示例按片 SSE 流式回填（curl + PHP）；可在系统设置切换单线程/并行
+- **快速上手**：前台仍可展示多语言示例；切换鉴权方式后语言图标保持可用
 - **实时数据监控中心**：地图飞线、四角实时面板（今日 / 累计 / 成功率等）、深浅色、双端自适应
 - **控制台服务器监控**：对接常见面板；站点三名称与自定义页脚版权；文章编辑与 Markdown
 - **用户令牌**：用户中心与管理员后台均可管理；每账号有数量上限；调用时校验并累计次数
@@ -256,10 +256,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.25.2（2026-08-03）
+### v13.26.0（2026-08-04）
 
-- 业务错误体（errcode 11001～11018）禁止 JSON 改写，并强制只保留 `code` / `msg` / `errcode`
-- 堵住「未提供密钥」等错误响应被改写灌入 `api_info.developer` 等问题；成功响应改写不变
+- AI 测试连接不再因上游报错拖死后台；文档/代码 SSE 异常可恢复
+- 详细文档仅 curl + PHP 与一种鉴权；代码示例流式回填并降为 curl+php×首选鉴权
+- IP 归属地自定义接口可用草稿测试；内置标明仅支持 IPv4
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

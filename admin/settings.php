@@ -262,58 +262,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'test_ai' || $action === 'list_ai_models') {
-        $provider = strtolower(trim(isset($_POST['ai_provider']) ? (string) $_POST['ai_provider'] : 'openai'));
-        $presets = AiConfig::providerPresets();
-        if (!isset($presets[$provider])) {
-            $provider = 'openai';
+        // 立刻释放 Session：上游探测可能长达数十秒，持锁会导致整站后台 AJAX/刷新假死
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
         }
-        $baseurl = trim(isset($_POST['ai_baseurl']) ? (string) $_POST['ai_baseurl'] : '');
-        if ($baseurl === '' && $provider !== 'custom') {
-            $baseurl = $presets[$provider];
-        }
-        if ($baseurl !== '') {
-            $ssrf = AiClient::assertSafeBaseUrl($baseurl);
-            if ($ssrf !== true) {
-                AjaxResponse::error($ssrf);
+        try {
+            $provider = strtolower(trim(isset($_POST['ai_provider']) ? (string) $_POST['ai_provider'] : 'openai'));
+            $presets = AiConfig::providerPresets();
+            if (!isset($presets[$provider])) {
+                $provider = 'openai';
             }
-        }
-        $apikey = trim(isset($_POST['ai_apikey']) ? (string) $_POST['ai_apikey'] : '');
-        if ($apikey === '') {
-            $apikey = (string) Config::get('ai_apikey', '');
-        }
-        $model = trim(isset($_POST['ai_model']) ? (string) $_POST['ai_model'] : '');
-        $timeout = isset($_POST['ai_timeout']) ? (int) $_POST['ai_timeout'] : 30;
-        $apiMode = AiClient::normalizeApiMode(isset($_POST['ai_api_mode']) ? $_POST['ai_api_mode'] : 'auto');
-        $probeCfg = array(
-            'baseurl'  => $baseurl,
-            'apikey'   => $apikey,
-            'model'    => $model,
-            'timeout'  => $timeout,
-            'api_mode' => $apiMode,
-        );
+            $baseurl = trim(isset($_POST['ai_baseurl']) ? (string) $_POST['ai_baseurl'] : '');
+            if ($baseurl === '' && $provider !== 'custom') {
+                $baseurl = $presets[$provider];
+            }
+            if ($baseurl !== '') {
+                $ssrf = AiClient::assertSafeBaseUrl($baseurl);
+                if ($ssrf !== true) {
+                    AjaxResponse::error($ssrf);
+                }
+            }
+            $apikey = trim(isset($_POST['ai_apikey']) ? (string) $_POST['ai_apikey'] : '');
+            if ($apikey === '') {
+                $apikey = (string) Config::get('ai_apikey', '');
+            }
+            $model = trim(isset($_POST['ai_model']) ? (string) $_POST['ai_model'] : '');
+            // 探测超时单独封顶，避免设置页「单片超时」把测试拖到数分钟
+            $timeout = isset($_POST['ai_timeout']) ? (int) $_POST['ai_timeout'] : 30;
+            if ($timeout < 10) {
+                $timeout = 10;
+            }
+            if ($timeout > 45) {
+                $timeout = 45;
+            }
+            $apiMode = AiClient::normalizeApiMode(isset($_POST['ai_api_mode']) ? $_POST['ai_api_mode'] : 'auto');
+            $probeCfg = array(
+                'baseurl'  => $baseurl,
+                'apikey'   => $apikey,
+                'model'    => $model,
+                'timeout'  => $timeout,
+                'api_mode' => $apiMode,
+            );
 
-        if ($action === 'list_ai_models') {
-            $listed = AiClient::listModels($probeCfg);
-            if (empty($listed['ok'])) {
-                AjaxResponse::error(isset($listed['msg']) ? (string) $listed['msg'] : '拉取失败');
+            if ($action === 'list_ai_models') {
+                $listed = AiClient::listModels($probeCfg);
+                if (empty($listed['ok'])) {
+                    AjaxResponse::error(isset($listed['msg']) ? (string) $listed['msg'] : '拉取失败');
+                }
+                AjaxResponse::success(
+                    isset($listed['msg']) ? (string) $listed['msg'] : 'ok',
+                    array('models' => isset($listed['models']) ? $listed['models'] : array())
+                );
+            }
+
+            $result = AiClient::testConnection($probeCfg);
+            if (empty($result['ok'])) {
+                AjaxResponse::error(isset($result['msg']) ? (string) $result['msg'] : '连接失败');
             }
             AjaxResponse::success(
-                isset($listed['msg']) ? (string) $listed['msg'] : 'ok',
-                array('models' => isset($listed['models']) ? $listed['models'] : array())
+                isset($result['msg']) ? (string) $result['msg'] : '连接成功',
+                array(
+                    'via'   => isset($result['via']) ? $result['via'] : '',
+                    'reply' => isset($result['reply']) ? $result['reply'] : '',
+                )
             );
+        } catch (Exception $e) {
+            AjaxResponse::error('连接测试失败，请检查上游地址与密钥后重试');
+        } catch (Throwable $e) {
+            AjaxResponse::error('连接测试失败，请检查上游地址与密钥后重试');
         }
-
-        $result = AiClient::testConnection($probeCfg);
-        if (empty($result['ok'])) {
-            AjaxResponse::error(isset($result['msg']) ? (string) $result['msg'] : '连接失败');
-        }
-        AjaxResponse::success(
-            isset($result['msg']) ? (string) $result['msg'] : '连接成功',
-            array(
-                'via'   => isset($result['via']) ? $result['via'] : '',
-                'reply' => isset($result['reply']) ? $result['reply'] : '',
-            )
-        );
     }
 
     if ($action === 'save_register') {
@@ -465,18 +482,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'test_iploc') {
-        $ip = trim(isset($_POST['test_ip']) ? $_POST['test_ip'] : '');
-        if ($ip === '') {
-            $ip = AuthSecurity::clientIp();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
         }
-        if (!IpLocator::enabled()) {
-            AjaxResponse::error('请先启用并保存 IP 归属地解析');
+        try {
+            $ip = trim(isset($_POST['test_ip']) ? $_POST['test_ip'] : '');
+            if ($ip === '') {
+                $ip = AuthSecurity::clientIp();
+            }
+            // 允许用表单草稿探测（不必先保存）；未传草稿时才要求已启用并落库
+            $hasDraft = isset($_POST['ip_loc_mode']) || isset($_POST['ip_loc_url']) || isset($_POST['ip_loc_enabled']);
+            if (!$hasDraft && !IpLocator::enabled()) {
+                AjaxResponse::error('请先启用 IP 归属地解析，或在上方填写配置后直接测试');
+            }
+            $draft = array();
+            if ($hasDraft) {
+                $mode = isset($_POST['ip_loc_mode']) ? trim((string) $_POST['ip_loc_mode']) : 'builtin';
+                if ($mode !== 'custom') {
+                    $mode = 'builtin';
+                }
+                // checkbox 未勾选时可能不传；前端会显式带上当前勾选状态
+                if (isset($_POST['ip_loc_enabled'])) {
+                    $enabled = ($_POST['ip_loc_enabled'] === '1' || $_POST['ip_loc_enabled'] === 'on') ? '1' : '0';
+                } else {
+                    $enabled = '1';
+                }
+                if ($enabled !== '1') {
+                    AjaxResponse::error('请先勾选「启用 IP 归属地解析」再测试');
+                }
+                $auth = isset($_POST['ip_loc_auth']) ? (int) $_POST['ip_loc_auth'] : 0;
+                if ($auth < 0 || $auth > 3) {
+                    $auth = 0;
+                }
+                $reqMethod = isset($_POST['ip_loc_method']) ? strtolower(trim((string) $_POST['ip_loc_method'])) : 'get';
+                if ($reqMethod !== 'post') {
+                    $reqMethod = 'get';
+                }
+                $draft = array(
+                    'enabled'   => '1',
+                    'mode'      => $mode,
+                    'url'       => trim(isset($_POST['ip_loc_url']) ? (string) $_POST['ip_loc_url'] : ''),
+                    'method'    => $reqMethod,
+                    'ip_param'  => trim(isset($_POST['ip_loc_ip_param']) ? (string) $_POST['ip_loc_ip_param'] : 'ip'),
+                    'auth'      => $auth,
+                    'auth_name' => trim(isset($_POST['ip_loc_auth_name']) ? (string) $_POST['ip_loc_auth_name'] : ''),
+                    'auth_value'=> trim(isset($_POST['ip_loc_auth_value']) ? (string) $_POST['ip_loc_auth_value'] : ''),
+                    'field'     => trim(isset($_POST['ip_loc_field']) ? (string) $_POST['ip_loc_field'] : ''),
+                    'extras'    => isset($_POST['ip_loc_extras']) ? (string) $_POST['ip_loc_extras'] : '[]',
+                );
+                if ($mode === 'custom' && $draft['url'] === '') {
+                    AjaxResponse::error('自定义模式下请填写查询接口地址');
+                }
+                if ($mode === 'custom' && !IpLocator::assertPublicHttpUrl($draft['url'])) {
+                    AjaxResponse::error('IP 解析 API 地址无效或指向内网，请使用公网 http(s) 地址');
+                }
+            }
+            $probed = IpLocator::probe($ip, $draft);
+            if (empty($probed['ok'])) {
+                AjaxResponse::error(isset($probed['msg']) ? (string) $probed['msg'] : ('解析失败（IP：' . $ip . '）'));
+            }
+            AjaxResponse::success(
+                isset($probed['msg']) ? (string) $probed['msg'] : '解析成功',
+                array('ip' => $ip, 'iploc' => isset($probed['iploc']) ? $probed['iploc'] : '')
+            );
+        } catch (Exception $e) {
+            AjaxResponse::error('解析测试失败，请稍后重试');
+        } catch (Throwable $e) {
+            AjaxResponse::error('解析测试失败，请稍后重试');
         }
-        $loc = IpLocator::lookup($ip);
-        if ($loc === '') {
-            AjaxResponse::error('解析失败或未提取到字段（IP：' . $ip . '）');
-        }
-        AjaxResponse::success('解析成功', array('ip' => $ip, 'iploc' => $loc));
     }
 
     if ($action === 'save_captcha') {
@@ -1081,9 +1154,9 @@ vs_admin_accordion_start(
         <input type="hidden" name="action" value="save_iploc">
         <input type="hidden" name="ip_loc_extras" id="ipLocExtrasJson" value="<?php echo vs_e(json_encode($ipLocExtras, JSON_UNESCAPED_UNICODE)); ?>">
         <?php vs_render_notice('tip', '', '可选用系统内置归属地解析，也可自行配置第三方查询接口。启用后写入调用日志，数据大屏飞线依赖此归属地。选择「自定义」时将只走你填写的接口，不再使用内置解析。', array('field' => true)); ?>
-        <div class="vs-form-row">
+        <div class="vs-form-row vs-form-row--check">
             <label class="vs-checkbox">
-                <input type="checkbox" name="ip_loc_enabled" value="1" <?php echo Config::get('ip_loc_enabled', '0') === '1' ? 'checked' : ''; ?>>
+                <input type="checkbox" name="ip_loc_enabled" id="ipLocEnabled" value="1" <?php echo Config::get('ip_loc_enabled', '0') === '1' ? 'checked' : ''; ?>>
                 <span>启用 IP 归属地解析（写入调用日志）</span>
             </label>
         </div>
@@ -1094,6 +1167,7 @@ vs_admin_accordion_start(
                 <option value="custom"<?php echo $ipLocMode === 'custom' ? ' selected' : ''; ?>>自定义接口</option>
             </select>
             <?php vs_render_notice('tip', '', '内置方式开箱即用；若你已有稳定的归属地 API，可选自定义并填写下方参数。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('warning', '', '系统内置解析仅支持 IPv4；IPv6 地址无法解析，请改用支持 IPv6 的自定义接口。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div id="ipLocCustomFields">
         <div class="vs-form-row vs-form-row--2">
@@ -1569,7 +1643,7 @@ $aiPresets = AiConfig::providerPresets();
                 <label class="vs-label" for="aiTimeout">单片超时（秒）</label>
                 <input type="number" name="ai_timeout" id="aiTimeout" class="vs-input" min="10" max="600"
                        value="<?php echo (int) $aiCfg['timeout']; ?>">
-                <p class="vs-form-hint">每片（一种鉴权×一种语言）请求上限，最长 600 秒（10 分钟）；建议 120～300</p>
+                <p class="vs-form-hint">每片（curl 或 PHP）请求上限，最长 600 秒；建议 60～180</p>
             </div>
             <div class="vs-form-col">
                 <label class="vs-label" for="aiDocMaxlen">详细文档字数上限</label>
@@ -1584,13 +1658,13 @@ $aiPresets = AiConfig::providerPresets();
                     <option value="sequential" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : 'sequential') === 'sequential' ? 'selected' : ''; ?>>单线程（写完一片再写下一片）</option>
                     <option value="parallel" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : '') === 'parallel' ? 'selected' : ''; ?>>多线程（浏览器并发多片）</option>
                 </select>
-                <p class="vs-form-hint">最多 3 鉴权 × 9 语言 = 27 片。经 CDN 加速时请用「单线程」（SSE 心跳保活）；多线程走 JSON，若 CDN 回源空闲超时过短仍可能失败。</p>
+                <p class="vs-form-hint">AI 仅生成 curl + PHP（首选一种鉴权，最多 2 片），全程 SSE 流式回填。经 CDN 时建议「单线程」；多线程并发实际不超过 2。</p>
             </div>
             <div class="vs-form-col">
                 <label class="vs-label" for="aiCodeConcurrency">并行并发数</label>
                 <input type="number" name="ai_code_concurrency" id="aiCodeConcurrency" class="vs-input" min="1" max="6"
                        value="<?php echo (int) (isset($aiCfg['code_concurrency']) ? $aiCfg['code_concurrency'] : 3); ?>">
-                <p class="vs-form-hint">仅「多线程」生效，范围 1～6</p>
+                <p class="vs-form-hint">仅「多线程」生效；有 CDN 时建议 1～2</p>
             </div>
         </div>
         <div class="vs-form-actions">

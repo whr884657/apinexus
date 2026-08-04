@@ -139,6 +139,19 @@
         }
         return fetch(url || window.location.href, fetchOpts).then(function (res) {
             var ctype = (res.headers.get('content-type') || '').toLowerCase();
+            // 网关/PHP 未进入 SSE 时常见 502/504 HTML；先判状态，避免按流读到一半才炸
+            if (!res.ok && ctype.indexOf('text/event-stream') < 0) {
+                return res.text().then(function (text) {
+                    var data = global.VS.parseJsonResponse(text);
+                    var errMsg = (data && data.msg) ? String(data.msg) : ('请求失败（HTTP ' + res.status + '）');
+                    if (handlers.error) {
+                        handlers.error({ msg: errMsg, http: res.status });
+                    }
+                    var err = new Error(errMsg);
+                    err.sseHandled = true;
+                    throw err;
+                });
+            }
             if (!res.body || typeof res.body.getReader !== 'function') {
                 return res.text().then(function (text) {
                     var data = global.VS.parseJsonResponse(text);
@@ -151,7 +164,9 @@
                         if (handlers.error) {
                             handlers.error({ msg: errMsg });
                         }
-                        throw new Error(errMsg);
+                        var e0 = new Error(errMsg);
+                        e0.sseHandled = true;
+                        throw e0;
                     }
                     throw new Error('invalid_json');
                 });
@@ -224,7 +239,11 @@
                             buffer = '';
                         }
                         if (errorPayload) {
-                            throw new Error((errorPayload && errorPayload.msg) || '生成失败');
+                            // 已回调 handlers.error：用可识别错误结束，避免外层再当「未处理崩溃」
+                            var err = new Error((errorPayload && errorPayload.msg) || '生成失败');
+                            err.sseHandled = true;
+                            err.sseError = errorPayload;
+                            throw err;
                         }
                         if (!donePayload) {
                             throw new Error('流式结束但未收到完成事件');

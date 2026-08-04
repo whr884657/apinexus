@@ -34,17 +34,21 @@ class AiSse
             @apache_setenv('no-gzip', '1');
         }
         header('Content-Type: text/event-stream; charset=utf-8');
-        header('Cache-Control: no-cache, no-store, must-revalidate');
+        // no-transform：避免 CDN/代理 gzip 整包再吐；no-store：禁止边缘缓存 SSE
+        header('Cache-Control: no-cache, no-store, must-revalidate, no-transform');
         header('Pragma: no-cache');
+        header('Expires: 0');
         header('Connection: keep-alive');
         header('X-Accel-Buffering: no');
         header('X-Content-Type-Options: nosniff');
-        // 部分 CDN 认此头减少缓冲
-        header('Content-Encoding: none');
-        // Cloudflare 等：提示边缘勿缓冲
+        // 部分 CDN 认此头减少缓冲；勿声明 gzip
+        header('Content-Encoding: identity');
         header('CDN-Cache-Control: no-store');
+        header('Surrogate-Control: no-store');
         self::$active = true;
         self::$lastPingAt = microtime(true);
+        // 首包垫片：部分浏览器/边缘会缓冲前 1～2KB 才开始渲染
+        self::comment(str_repeat('pad ', 64));
         self::comment('ok');
     }
 

@@ -15,7 +15,12 @@ class IpLocator
     /** 解析失败负缓存，避免热路径反复打外网 */
     const MISS_TTL = 300;
     const MISS_SENTINEL = '__IPLOC_MISS__';
-    const TIMEOUT = 1;
+    /** 热路径超时（秒）：内置接口宜短 */
+    const TIMEOUT = 2;
+    /** 自定义接口热路径超时（秒）：第三方常 >1s */
+    const TIMEOUT_CUSTOM = 5;
+    /** 设置页探测超时（秒） */
+    const TIMEOUT_PROBE = 10;
 
     /**
      * @return bool
@@ -93,26 +98,94 @@ class IpLocator
 
         $text = '';
         if (self::provider() === 'custom') {
-            $text = self::lookupCustom($ip, $cacheKey);
+            $text = self::lookupCustom($ip, $cacheKey, null, self::TIMEOUT_CUSTOM);
         } else {
-            $text = self::lookupBuiltin($ip, $cacheKey);
+            $text = self::lookupBuiltin($ip, $cacheKey, self::TIMEOUT);
         }
         return $text;
+    }
+
+    /**
+     * 设置页探测：可用表单草稿；跳过负缓存；超时更长；返回可读错误
+     *
+     * @param string     $ip
+     * @param array|null $draft enabled/mode/url/method/ip_param/auth/auth_name/auth_value/field/extras
+     * @return array{ok:bool,msg:string,iploc?:string}
+     */
+    public static function probe($ip, array $draft = null)
+    {
+        $ip = trim((string) $ip);
+        if ($ip === '') {
+            return array('ok' => false, 'msg' => '请填写测试 IP');
+        }
+        if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+            return array('ok' => false, 'msg' => 'IP 格式无效');
+        }
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            return array('ok' => true, 'msg' => '内网地址无需外网解析', 'iploc' => '内网');
+        }
+
+        $mode = 'builtin';
+        $cfg = null;
+        if (is_array($draft) && $draft !== array()) {
+            $mode = isset($draft['mode']) ? trim((string) $draft['mode']) : 'builtin';
+            if ($mode !== 'custom') {
+                $mode = 'builtin';
+            }
+            $cfg = $draft;
+        } else {
+            if (!self::enabled()) {
+                return array('ok' => false, 'msg' => '请先启用并保存 IP 归属地解析');
+            }
+            $mode = self::provider();
+        }
+
+        // 内置不支持 IPv6
+        if ($mode === 'builtin' && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            return array('ok' => false, 'msg' => '系统内置解析仅支持 IPv4，当前为 IPv6，请改用自定义接口');
+        }
+
+        $cacheKey = ''; // 探测不写缓存
+        if ($mode === 'custom') {
+            $text = self::lookupCustom($ip, $cacheKey, $cfg, self::TIMEOUT_PROBE);
+            if ($text === '') {
+                return array(
+                    'ok'  => false,
+                    'msg' => '自定义接口解析失败：超时、非 JSON、字段路径不对或 HTTP 非 2xx（IP：' . $ip . '）',
+                );
+            }
+            return array('ok' => true, 'msg' => '解析成功（自定义接口）', 'iploc' => $text);
+        }
+
+        $text = self::lookupBuiltin($ip, $cacheKey, self::TIMEOUT_PROBE);
+        if ($text === '') {
+            return array('ok' => false, 'msg' => '内置解析失败或上游无结果（IP：' . $ip . '，仅支持 IPv4）');
+        }
+        return array('ok' => true, 'msg' => '解析成功（系统内置）', 'iploc' => $text);
     }
 
     /**
      * 系统内置归属地（端点按片段拼接，避免源码明文暴露上游标识）
      *
      * @param string $ip
-     * @param string $cacheKey
+     * @param string $cacheKey 空串表示不写缓存（探测）
+     * @param int    $timeout
      * @return string
      */
-    private static function lookupBuiltin($ip, $cacheKey)
+    private static function lookupBuiltin($ip, $cacheKey, $timeout = null)
     {
+        if ($timeout === null) {
+            $timeout = self::TIMEOUT;
+        }
+        // 内置仅 IPv4
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            self::cacheMiss($cacheKey);
+            return '';
+        }
         $host = 'opendata.' . implode('', array_map('chr', array(98, 97, 105, 100, 117))) . '.com';
         $fullUrl = 'http://' . $host . '/api.php?query=' . rawurlencode($ip)
             . '&resource_id=6006&oe=utf8';
-        $body = self::httpRequest($fullUrl, 'GET', array(), array('Accept: application/json'));
+        $body = self::httpRequest($fullUrl, 'GET', array(), array('Accept: application/json'), (int) $timeout);
         if ($body === '') {
             self::cacheMiss($cacheKey);
             return '';
@@ -135,34 +208,53 @@ class IpLocator
             return '';
         }
         $text = mb_substr($text, 0, 120, 'UTF-8');
-        if (class_exists('RedisCache') && RedisCache::enabled()) {
+        if ($cacheKey !== '' && class_exists('RedisCache') && RedisCache::enabled()) {
             RedisCache::put($cacheKey, $text, self::CACHE_TTL);
         }
         return $text;
     }
 
     /**
-     * @param string $ip
-     * @param string $cacheKey
+     * @param string     $ip
+     * @param string     $cacheKey 空串表示不写缓存（探测）
+     * @param array|null $override 草稿配置；null 读 Config
+     * @param int|null   $timeout
      * @return string
      */
-    private static function lookupCustom($ip, $cacheKey)
+    private static function lookupCustom($ip, $cacheKey, array $override = null, $timeout = null)
     {
-        $url = trim((string) Config::get('ip_loc_url', ''));
+        if ($timeout === null) {
+            $timeout = self::TIMEOUT_CUSTOM;
+        }
+        if (is_array($override)) {
+            $url = trim(isset($override['url']) ? (string) $override['url'] : '');
+            $ipParam = trim(isset($override['ip_param']) ? (string) $override['ip_param'] : 'ip');
+            $auth = isset($override['auth']) ? (int) $override['auth'] : self::AUTH_NONE;
+            $authName = trim(isset($override['auth_name']) ? (string) $override['auth_name'] : '');
+            $authValue = isset($override['auth_value']) ? (string) $override['auth_value'] : '';
+            $fieldPath = trim(isset($override['field']) ? (string) $override['field'] : '');
+            $extras = self::parseExtras(isset($override['extras']) ? $override['extras'] : '[]');
+            $method = isset($override['method']) ? strtolower(trim((string) $override['method'])) : 'get';
+            if ($method !== 'post') {
+                $method = 'get';
+            }
+        } else {
+            $url = trim((string) Config::get('ip_loc_url', ''));
+            $ipParam = trim((string) Config::get('ip_loc_ip_param', 'ip'));
+            $auth = (int) Config::get('ip_loc_auth', (string) self::AUTH_NONE);
+            $authName = trim((string) Config::get('ip_loc_auth_name', ''));
+            $authValue = (string) Config::get('ip_loc_auth_value', '');
+            $fieldPath = trim((string) Config::get('ip_loc_field', ''));
+            $extras = self::parseExtras(Config::get('ip_loc_extras', '[]'));
+            $method = self::requestMethod();
+        }
+        if ($ipParam === '') {
+            $ipParam = 'ip';
+        }
         if ($url === '' || !self::assertPublicHttpUrl($url)) {
             self::cacheMiss($cacheKey);
             return '';
         }
-
-        $ipParam = trim((string) Config::get('ip_loc_ip_param', 'ip'));
-        if ($ipParam === '') {
-            $ipParam = 'ip';
-        }
-        $auth = (int) Config::get('ip_loc_auth', (string) self::AUTH_NONE);
-        $authName = trim((string) Config::get('ip_loc_auth_name', ''));
-        $authValue = (string) Config::get('ip_loc_auth_value', '');
-        $fieldPath = trim((string) Config::get('ip_loc_field', ''));
-        $extras = self::parseExtras(Config::get('ip_loc_extras', '[]'));
 
         $query = array();
         $headers = array('Accept: application/json');
@@ -189,13 +281,12 @@ class IpLocator
             $query[$authName] = $authValue;
         }
 
-        $method = self::requestMethod();
         if ($method === 'post') {
-            $body = self::httpRequest($url, 'POST', $query, $headers);
+            $body = self::httpRequest($url, 'POST', $query, $headers, (int) $timeout);
         } else {
             $sep = (strpos($url, '?') !== false) ? '&' : '?';
             $fullUrl = $url . $sep . http_build_query($query);
-            $body = self::httpRequest($fullUrl, 'GET', array(), $headers);
+            $body = self::httpRequest($fullUrl, 'GET', array(), $headers, (int) $timeout);
         }
         if ($body === '') {
             self::cacheMiss($cacheKey);
@@ -208,7 +299,6 @@ class IpLocator
         }
         $text = self::extractField($json, $fieldPath);
         if ($text === '' && $fieldPath === '') {
-            // 常见字段兜底
             foreach (array('data.0.location', 'data.city', 'city', 'location', 'result.ad_info.city') as $try) {
                 $text = self::extractField($json, $try);
                 if ($text !== '') {
@@ -223,7 +313,7 @@ class IpLocator
         }
         $text = mb_substr($text, 0, 120, 'UTF-8');
 
-        if (class_exists('RedisCache') && RedisCache::enabled()) {
+        if ($cacheKey !== '' && class_exists('RedisCache') && RedisCache::enabled()) {
             RedisCache::put($cacheKey, $text, self::CACHE_TTL);
         }
         return $text;
@@ -235,6 +325,9 @@ class IpLocator
      */
     private static function cacheMiss($cacheKey)
     {
+        if ($cacheKey === '') {
+            return;
+        }
         if (class_exists('RedisCache') && RedisCache::enabled()) {
             RedisCache::put($cacheKey, self::MISS_SENTINEL, self::MISS_TTL);
         }
@@ -355,10 +448,17 @@ class IpLocator
      * @param string[]             $headers
      * @return string
      */
-    private static function httpRequest($url, $method, array $formParams, array $headers)
+    private static function httpRequest($url, $method, array $formParams, array $headers, $timeout = null)
     {
         if (!self::assertPublicHttpUrl($url)) {
             return '';
+        }
+        $timeout = $timeout === null ? self::TIMEOUT : (int) $timeout;
+        if ($timeout < 1) {
+            $timeout = 1;
+        }
+        if ($timeout > 30) {
+            $timeout = 30;
         }
         $method = strtoupper(trim((string) $method));
         if ($method !== 'POST') {
@@ -375,8 +475,8 @@ class IpLocator
             // 禁止跟随跳转，避免 SSRF 经 302 打到内网
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
             curl_setopt($ch, CURLOPT_MAXREDIRS, 0);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::TIMEOUT);
-            curl_setopt($ch, CURLOPT_TIMEOUT, self::TIMEOUT);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(5, $timeout));
+            curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_USERAGENT, 'ApiNexus-IpLocator/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
             // 自定义上游可能证书不全；内置同路径兼容
@@ -403,7 +503,7 @@ class IpLocator
         $httpOpts = array(
             'method'          => $method,
             'header'          => $hdr,
-            'timeout'         => self::TIMEOUT,
+            'timeout'         => $timeout,
             'follow_location' => 0,
             'max_redirects'   => 0,
         );
