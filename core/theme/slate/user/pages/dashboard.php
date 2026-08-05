@@ -29,7 +29,7 @@ $lastLogin = isset($dash['lastlogin']) && $dash['lastlogin'] !== '' ? (string) $
 <section class="uc-dash" id="ucDashboard" data-theme="slate"<?php echo $helloSlot !== '' ? ' data-hello-slot="' . vs_e($helloSlot) . '"' : ''; ?>>
     <header class="uc-dash__hero uc-motion">
         <div class="uc-dash__hero-main">
-            <img class="uc-dash__avatar" src="<?php echo vs_e($avatarPreview); ?>" alt="" width="56" height="56" loading="lazy" referrerpolicy="no-referrer">
+            <img class="uc-dash__avatar" src="<?php echo vs_e($avatarPreview); ?>" alt="用户头像" width="56" height="56" loading="lazy" referrerpolicy="no-referrer">
             <div class="uc-dash__hero-text">
                 <h2 class="uc-dash__hello" data-uc-hello><?php echo vs_e($helloLine); ?></h2>
                 <?php if ($helloHint !== ''): ?>

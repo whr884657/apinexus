@@ -446,6 +446,32 @@ class Captcha
     }
 
     /**
+     * 极验 3：比对 session 中 register 的 challenge 与前端 getValidate 回传值。
+     * 官方前端常在 challenge 后追加 2 位字符，禁止整串全等。
+     *
+     * @param string $expect    register 写入的 challenge
+     * @param string $submitted 表单 geetest_challenge
+     * @return bool
+     */
+    private static function gt3ChallengeMatches($expect, $submitted)
+    {
+        $expect = (string) $expect;
+        $submitted = (string) $submitted;
+        if ($expect === '' || $submitted === '') {
+            return false;
+        }
+        $len = strlen($expect);
+        // 允许官方常见 +2，并留少量余量防前端微调；过长视为伪造
+        if (strlen($submitted) < $len || strlen($submitted) > $len + 8) {
+            return false;
+        }
+        $prefix = substr($submitted, 0, $len);
+        return function_exists('hash_equals')
+            ? hash_equals($expect, $prefix)
+            : $expect === $prefix;
+    }
+
+    /**
      * @param string $scene
      * @param array  $post
      * @return true|string
@@ -472,13 +498,11 @@ class Captcha
         if ($serverOk !== 1) {
             return '行为验证未初始化或服务异常，请刷新页面后重试';
         }
-        if ($expectChallenge === '' || !(function_exists('hash_equals')
-                ? hash_equals($expectChallenge, $challenge)
-                : $expectChallenge === $challenge)
-        ) {
+        if ($expectChallenge === '' || !self::gt3ChallengeMatches($expectChallenge, $challenge)) {
             return '行为验证已失效，请重新完成验证';
         }
-        if (!self::consumeToken('gt3', $scene, $challenge)) {
+        // 一次性票据用 register 基准 challenge，避免前后端后缀差异导致无法防重放
+        if (!self::consumeToken('gt3', $scene, $expectChallenge)) {
             return '行为验证已失效，请重新完成验证';
         }
         $gtLib = new GeetestLib(self::gt3Id(), self::gt3Key());
@@ -489,7 +513,7 @@ class Captcha
             }
             return true;
         }
-        self::releaseToken('gt3', $scene, $challenge);
+        self::releaseToken('gt3', $scene, $expectChallenge);
         return '行为验证未通过';
     }
 

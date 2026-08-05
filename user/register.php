@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：user/register.php
- * 作用：用户注册（邮箱验证码）
+ * 作用：用户注册（可关闭；可选邮箱验证码）
  */
 
 define('VS_ROOT', dirname(__DIR__));
@@ -14,16 +14,32 @@ UserAuth::redirectIfLoggedIn();
 $base = vs_base_url();
 $siteName = SiteContext::siteName();
 $mailEnabled = Config::isMailEnabled();
+$registerOpen = RegisterPolicy::isOpen();
+$emailVerify = RegisterPolicy::requiresEmailVerify();
 $codeTtl = 300;
 $mailDisabledMsg = '管理员尚未配置邮箱发信，请联系管理员在后台「系统设置」中配置邮箱后方可注册。';
+$registerClosedMsg = RegisterPolicy::closedMessage();
+$registerClosedSub = '如有问题请联系管理员';
+$registerClosedDetail = '本站已暂停开放新用户注册。如有账号问题或合作需求，请联系站点管理员。请勿通过篡改地址或重复提交尝试绕过。';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     vs_auth_require_post();
 
     $action = (string) $_POST['action'];
+    $closedMsg = RegisterPolicy::assertOpen();
+    if ($closedMsg !== null) {
+        if ($action === 'send_code') {
+            vs_auth_json_mail(AuthSecurity::MAIL_PURPOSE_USER_REGISTER, array('code' => 0, 'msg' => $closedMsg));
+        }
+        vs_auth_json(array('code' => 0, 'msg' => $closedMsg));
+    }
 
     if ($action === 'send_code') {
         $mailPurpose = AuthSecurity::MAIL_PURPOSE_USER_REGISTER;
+
+        if (!RegisterPolicy::requiresEmailVerify()) {
+            vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '当前注册无需邮箱验证码，请直接提交注册'));
+        }
 
         if (!$mailEnabled) {
             vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => $mailDisabledMsg));
@@ -98,7 +114,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     if ($action === 'register') {
-        if (!$mailEnabled) {
+        $needEmailVerify = RegisterPolicy::requiresEmailVerify();
+
+        if ($needEmailVerify && !$mailEnabled) {
             vs_auth_json(array('code' => 0, 'msg' => $mailDisabledMsg));
         }
 
@@ -115,7 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $role = isset($_POST['role']) ? (string) $_POST['role'] : UserRole::ROLE_USER;
         $role = UserRole::normalize($role);
 
-        if ($username === '' || $email === '' || $code === '') {
+        if ($username === '' || $email === '') {
+            vs_auth_json(array('code' => 0, 'msg' => '请完整填写注册信息'));
+        }
+        if ($needEmailVerify && $code === '') {
             vs_auth_json(array('code' => 0, 'msg' => '请完整填写注册信息'));
         }
         if (strlen($password) < 6) {
@@ -130,16 +151,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             vs_auth_json(array('code' => 0, 'msg' => $suffixMsg));
         }
 
-        $savedUsername = isset($_SESSION['user_reg_username']) ? (string) $_SESSION['user_reg_username'] : '';
-        $savedEmail = isset($_SESSION['user_reg_email']) ? (string) $_SESSION['user_reg_email'] : '';
-        $savedCode = isset($_SESSION['user_reg_code']) ? (string) $_SESSION['user_reg_code'] : '';
-        $expires = isset($_SESSION['user_reg_code_expires']) ? (int) $_SESSION['user_reg_code_expires'] : 0;
+        if ($needEmailVerify) {
+            $savedUsername = isset($_SESSION['user_reg_username']) ? (string) $_SESSION['user_reg_username'] : '';
+            $savedEmail = isset($_SESSION['user_reg_email']) ? (string) $_SESSION['user_reg_email'] : '';
+            $savedCode = isset($_SESSION['user_reg_code']) ? (string) $_SESSION['user_reg_code'] : '';
+            $expires = isset($_SESSION['user_reg_code_expires']) ? (int) $_SESSION['user_reg_code_expires'] : 0;
 
-        if ($savedEmail === '' || $savedCode === '' || $expires < time()) {
-            vs_auth_json(array('code' => 0, 'msg' => '验证码已过期，请重新获取'));
-        }
-        if ($email !== $savedEmail || $username !== $savedUsername || !hash_equals($savedCode, $code)) {
-            vs_auth_json(array('code' => 0, 'msg' => AuthSecurity::recordOtpFailure('user_register')));
+            if ($savedEmail === '' || $savedCode === '' || $expires < time()) {
+                vs_auth_json(array('code' => 0, 'msg' => '验证码已过期，请重新获取'));
+            }
+            if ($email !== $savedEmail || $username !== $savedUsername || !hash_equals($savedCode, $code)) {
+                vs_auth_json(array('code' => 0, 'msg' => AuthSecurity::recordOtpFailure('user_register')));
+            }
+        } else {
+            $captchaErr = Captcha::requireValid(Captcha::SCENE_USER_REGISTER, $_POST);
+            if ($captchaErr !== true) {
+                vs_auth_json(array('code' => 0, 'msg' => $captchaErr));
+            }
         }
 
         $result = UserAuth::register($username, $email, $password, $role);
@@ -160,10 +188,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     vs_auth_json(array('code' => 0, 'msg' => '未知操作'), 400);
 }
 
+// 开放且「需邮箱验证」时依赖发信；免验证时未配邮箱也可注册
+$formEnabled = $registerOpen && (!$emailVerify || $mailEnabled);
 
 ThemeManager::renderAuthPage('register', '用户注册', array(
-    'base' => $base,
-    'mailEnabled' => $mailEnabled,
-    'mailDisabledMsg' => $mailDisabledMsg,
+    'base'                 => $base,
+    'mailEnabled'          => $mailEnabled,
+    'mailDisabledMsg'      => $mailDisabledMsg,
+    'registerOpen'         => $registerOpen,
+    'emailVerify'          => $emailVerify,
+    'formEnabled'          => $formEnabled,
+    'registerClosedMsg'    => $registerClosedMsg,
+    'registerClosedSub'    => $registerClosedSub,
+    'registerClosedDetail' => $registerClosedDetail,
 ));
-

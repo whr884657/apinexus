@@ -11,6 +11,7 @@
  * @var string $oauthError
  * @var array $oauthProviders
  * @var string $loginRedirect
+ * @var bool   $registerOpen
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
@@ -26,6 +27,7 @@ $oauthProviders = isset($oauthProviders) && is_array($oauthProviders)
     ? $oauthProviders
     : array('qq' => false, 'gitee' => false);
 $loginRedirect = isset($loginRedirect) ? (string) $loginRedirect : '';
+$registerOpen = !isset($registerOpen) || !empty($registerOpen);
 
 ThemeManager::renderThemeAuthHead($pageTitle);
 ?>
@@ -72,22 +74,24 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                     <div class="oauth-section__label">第三方登录</div>
                     <div class="oauth-section__icons">
                         <?php if (!empty($oauthProviders['qq'])): ?>
-                            <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=qq" class="oauth-icon" title="QQ 登录" aria-label="QQ 登录">
-                                <img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="" width="22" height="22">
+                            <a href="<?php echo vs_e($base); ?>/user/oauth/start?provider=qq" class="oauth-icon" title="QQ 登录" aria-label="QQ 登录">
+                                <img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="QQ" width="22" height="22">
                             </a>
                         <?php endif; ?>
                         <?php if (!empty($oauthProviders['gitee'])): ?>
-                            <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=gitee" class="oauth-icon" title="Gitee 登录" aria-label="Gitee 登录">
-                                <img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="" width="22" height="22">
+                            <a href="<?php echo vs_e($base); ?>/user/oauth/start?provider=gitee" class="oauth-icon" title="Gitee 登录" aria-label="Gitee 登录">
+                                <img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="Gitee" width="22" height="22">
                             </a>
                         <?php endif; ?>
                     </div>
                 </div>
                 <?php endif; ?>
 
+                <?php if ($registerOpen): ?>
                 <div class="divider">
                     还没有账号？<a href="<?php echo vs_e($base); ?>/user/register">立即注册</a>
                 </div>
+                <?php endif; ?>
             </form>
         </div>
     </div>

@@ -7,6 +7,12 @@
  * @var string $base
  * @var bool   $mailEnabled
  * @var string $mailDisabledMsg
+ * @var bool   $registerOpen
+ * @var bool   $emailVerify
+ * @var bool   $formEnabled
+ * @var string $registerClosedMsg
+ * @var string $registerClosedSub
+ * @var string $registerClosedDetail
  */
 if (!defined('VS_THEME_RENDER')) { exit; }
 $vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
@@ -15,6 +21,20 @@ $mailEnabled = !empty($mailEnabled);
 $mailDisabledMsg = isset($mailDisabledMsg) && (string) $mailDisabledMsg !== ''
     ? (string) $mailDisabledMsg
     : '管理员尚未配置邮箱发信，请联系管理员在后台「系统设置」中配置邮箱后方可注册。';
+$registerOpen = !isset($registerOpen) || !empty($registerOpen);
+$emailVerify = !isset($emailVerify) || !empty($emailVerify);
+$formEnabled = isset($formEnabled) ? !empty($formEnabled) : ($registerOpen && (!$emailVerify || $mailEnabled));
+$registerClosedMsg = isset($registerClosedMsg) && (string) $registerClosedMsg !== ''
+    ? (string) $registerClosedMsg
+    : '已停止注册，如有问题请联系管理员';
+$registerClosedSub = isset($registerClosedSub) && (string) $registerClosedSub !== ''
+    ? (string) $registerClosedSub
+    : '如有问题请联系管理员';
+$registerClosedDetail = isset($registerClosedDetail) && (string) $registerClosedDetail !== ''
+    ? (string) $registerClosedDetail
+    : '本站已暂停开放新用户注册。如有账号问题或合作需求，请联系站点管理员。请勿通过篡改地址或重复提交尝试绕过。';
+$subTitle = $emailVerify ? '使用邮箱验证注册，完成验证后即可使用' : '填写账号信息即可注册';
+$dis = $formEnabled ? '' : 'disabled';
 
 ThemeManager::renderThemeAuthHead('用户注册');
 ?>
@@ -25,70 +45,90 @@ ThemeManager::renderThemeAuthHead('用户注册');
     <div class="right">
         <div class="form-box">
             <div class="header header-desktop">
-                <h1>注册账号</h1>
-                <p class="header-sub">使用邮箱验证注册，完成验证后即可使用</p>
+                <h1><?php echo $registerOpen ? '注册账号' : '已停止注册'; ?></h1>
+                <p class="header-sub"><?php echo vs_e($registerOpen ? $subTitle : $registerClosedSub); ?></p>
             </div>
 
             <div id="formMessage" class="form-message" role="alert" hidden></div>
 
-            <?php if (!$mailEnabled): ?>
-                <?php vs_render_notice('warning', '暂无法注册', $mailDisabledMsg); ?>
-            <?php endif; ?>
-
-            <form id="registerForm" method="post" action="" novalidate>
-                <?php vs_auth_csrf_field(); ?>
-                <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_USER_REGISTER); ?>
-                <div class="field field--role-segment">
-                    <div class="vs-role-segment" id="roleSegment">
-                        <div class="vs-role-segment__track" id="roleSegmentTrack" data-role="user" role="radiogroup" aria-label="账号类型">
-                            <span class="vs-role-segment__thumb" aria-hidden="true"></span>
-                            <button type="button" class="vs-role-segment__btn is-active" data-role="user" aria-pressed="true" <?php echo $mailEnabled ? '' : 'disabled'; ?>>普通用户</button>
-                            <button type="button" class="vs-role-segment__btn" data-role="developer" aria-pressed="false" <?php echo $mailEnabled ? '' : 'disabled'; ?>>开发者</button>
-                        </div>
-                        <input type="hidden" name="role" id="roleInput" value="user" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                    </div>
+            <?php if (!$registerOpen): ?>
+                <div class="form-message form-message--error" style="display:block;" role="status">
+                    <?php echo vs_e($registerClosedDetail); ?>
                 </div>
-
-                <div class="field">
-                    <input id="username" name="username" type="text" placeholder="请输入用户名（3～50 个字符）" autocomplete="username" maxlength="50" required aria-label="用户名" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                </div>
-
-                <div class="field">
-                    <input id="email" name="email" type="email" placeholder="请输入邮箱" autocomplete="email" maxlength="64" required aria-label="邮箱" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                </div>
-
-                <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER, 'local'); ?>
-
-                <div class="field">
-                    <div class="input-group">
-                        <input id="code" name="code" type="text" placeholder="请输入邮箱验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="邮箱验证码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                        <button type="button" class="code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
-                    </div>
-                </div>
-
-                <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER, 'gt'); ?>
-
-                <div class="field">
-                    <div class="input-wrap">
-                        <input id="password" name="password" type="password" placeholder="请设置密码（至少6位）" autocomplete="new-password" maxlength="64" required aria-label="密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                        <?php echo vs_auth_toggle_password_html(); ?>
-                    </div>
-                </div>
-
-                <div class="field">
-                    <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $mailEnabled ? '' : 'disabled'; ?>>
-                </div>
-
-                <?php echo vs_auth_submit_btn('立即注册', 'submitBtn'); ?>
-
                 <div class="divider">
-                    已有账号？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a>
+                    <a href="<?php echo vs_e($base); ?>/user/login">返回登录</a>
                 </div>
-            </form>
+            <?php else: ?>
+                <?php if ($emailVerify && !$mailEnabled): ?>
+                    <?php vs_render_notice('warning', '暂无法注册', $mailDisabledMsg); ?>
+                <?php endif; ?>
+
+                <form id="registerForm" method="post" action="" novalidate>
+                    <?php vs_auth_csrf_field(); ?>
+                    <?php if ($emailVerify): ?>
+                        <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_USER_REGISTER); ?>
+                    <?php endif; ?>
+                    <div class="field field--role-segment">
+                        <div class="vs-role-segment" id="roleSegment">
+                            <div class="vs-role-segment__track" id="roleSegmentTrack" data-role="user" role="radiogroup" aria-label="账号类型">
+                                <span class="vs-role-segment__thumb" aria-hidden="true"></span>
+                                <button type="button" class="vs-role-segment__btn is-active" data-role="user" aria-pressed="true" <?php echo $dis; ?>>普通用户</button>
+                                <button type="button" class="vs-role-segment__btn" data-role="developer" aria-pressed="false" <?php echo $dis; ?>>开发者</button>
+                            </div>
+                            <input type="hidden" name="role" id="roleInput" value="user" <?php echo $dis; ?>>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <input id="username" name="username" type="text" placeholder="请输入用户名（3～50 个字符）" autocomplete="username" maxlength="50" required aria-label="用户名" <?php echo $dis; ?>>
+                    </div>
+
+                    <div class="field">
+                        <input id="email" name="email" type="email" placeholder="请输入邮箱" autocomplete="email" maxlength="64" required aria-label="邮箱" <?php echo $dis; ?>>
+                    </div>
+
+                    <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER, 'local'); ?>
+
+                    <?php if ($emailVerify): ?>
+                    <div class="field">
+                        <div class="input-group">
+                            <input id="code" name="code" type="text" placeholder="请输入邮箱验证码" autocomplete="one-time-code" maxlength="6" inputmode="numeric" pattern="[0-9]*" aria-label="邮箱验证码" <?php echo $dis; ?>>
+                            <button type="button" class="code-btn" id="sendCodeBtn" <?php echo $dis; ?>>获取验证码</button>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php vs_captcha_field(Captcha::SCENE_USER_REGISTER, 'gt'); ?>
+
+                    <div class="field">
+                        <div class="input-wrap">
+                            <input id="password" name="password" type="password" placeholder="请设置密码（至少6位）" autocomplete="new-password" maxlength="64" required aria-label="密码" <?php echo $dis; ?>>
+                            <?php echo vs_auth_toggle_password_html(); ?>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <input id="confirm_password" name="confirm_password" type="password" placeholder="请再次输入密码" autocomplete="new-password" maxlength="64" required aria-label="确认密码" <?php echo $dis; ?>>
+                    </div>
+
+                    <?php
+                    $regBtn = vs_auth_submit_btn('立即注册', 'submitBtn');
+                    if (!$formEnabled) {
+                        $regBtn = str_replace('<button type="submit"', '<button type="submit" disabled', $regBtn);
+                    }
+                    echo $regBtn;
+                    ?>
+
+                    <div class="divider">
+                        已有账号？<a href="<?php echo vs_e($base); ?>/user/login">返回登录</a>
+                    </div>
+                </form>
+            <?php endif; ?>
         </div>
     </div>
 </div>
 
+<?php if ($registerOpen): ?>
 <script>
 (function () {
     'use strict';
@@ -97,7 +137,8 @@ ThemeManager::renderThemeAuthHead('用户注册');
     var messageEl = document.getElementById('formMessage');
     var sendCodeBtn = document.getElementById('sendCodeBtn');
     var submitBtn = document.getElementById('submitBtn');
-    var mailEnabled = <?php echo $mailEnabled ? 'true' : 'false'; ?>;
+    var formEnabled = <?php echo $formEnabled ? 'true' : 'false'; ?>;
+    var emailVerify = <?php echo $emailVerify ? 'true' : 'false'; ?>;
     var countdown = 0;
     var countdownTimer = null;
 
@@ -192,10 +233,10 @@ ThemeManager::renderThemeAuthHead('用户注册');
         }
     }
 
-    if (sendCodeBtn) {
+    if (sendCodeBtn && emailVerify) {
         sendCodeBtn.addEventListener('click', function () {
             hideMessage();
-            if (!mailEnabled) return;
+            if (!formEnabled) return;
 
             var username = form.username.value.trim();
             var email = form.email.value.trim();
@@ -270,11 +311,12 @@ ThemeManager::renderThemeAuthHead('用户注册');
         e.preventDefault();
         hideMessage();
 
-        if (!mailEnabled) return;
+        if (!formEnabled) return;
 
         var username = form.username.value.trim();
         var email = form.email.value.trim();
-        var code = form.code.value.trim();
+        var codeEl = form.code;
+        var code = codeEl ? String(codeEl.value || '').trim() : '';
         var password = form.password.value;
         var confirm = form.confirm_password.value;
 
@@ -286,7 +328,7 @@ ThemeManager::renderThemeAuthHead('用户注册');
             showMessage('请输入邮箱', 'error');
             return;
         }
-        if (!code) {
+        if (emailVerify && !code) {
             showMessage('请输入验证码', 'error');
             return;
         }
@@ -301,33 +343,51 @@ ThemeManager::renderThemeAuthHead('用户注册');
 
         if (submitBtn) submitBtn.disabled = true;
 
-        var body = new FormData(form);
-        body.append('action', 'register');
+        var runRegister = function () {
+            var body = new FormData(form);
+            body.append('action', 'register');
+            if (window.VsCaptcha && window.VsCaptcha.appendToFormData && !emailVerify) {
+                window.VsCaptcha.appendToFormData(body);
+            }
 
-        fetch(window.location.href, {
-            method: 'POST',
-            body: body,
-            credentials: 'same-origin'
-        })
-            .then(function (res) { return res.json(); })
-            .then(function (data) {
-                if (data.code === 1) {
-                    showMessage(data.msg || '注册成功', 'success');
-                    if (data.url) {
-                        setTimeout(function () { window.location.href = data.url; }, 1200);
+            fetch(window.location.href, {
+                method: 'POST',
+                body: body,
+                credentials: 'same-origin'
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.code === 1) {
+                        showMessage(data.msg || '注册成功', 'success');
+                        if (data.url) {
+                            setTimeout(function () { window.location.href = data.url; }, 1200);
+                        }
+                    } else {
+                        showMessage(data.msg || '注册失败', 'error');
+                        if (!emailVerify && window.VsCaptcha && window.VsCaptcha.reset) {
+                            window.VsCaptcha.reset(form);
+                        }
                     }
-                } else {
-                    showMessage(data.msg || '注册失败', 'error');
-                }
-            })
-            .catch(function () {
-                showMessage('网络异常，请稍后重试', 'error');
-            })
-            .finally(function () {
+                })
+                .catch(function () {
+                    showMessage('网络异常，请稍后重试', 'error');
+                })
+                .finally(function () {
+                    if (submitBtn) submitBtn.disabled = false;
+                });
+        };
+
+        if (!emailVerify && window.VsCaptcha && window.VsCaptcha.enabled && window.VsCaptcha.ensure) {
+            window.VsCaptcha.ensure(form).then(runRegister).catch(function (err) {
+                showMessage((err && err.message) || '请先完成行为验证', 'error');
                 if (submitBtn) submitBtn.disabled = false;
             });
+        } else {
+            runRegister();
+        }
     });
 })();
 </script>
+<?php endif; ?>
 
 <?php ThemeManager::renderThemeAuthFoot(); ?>

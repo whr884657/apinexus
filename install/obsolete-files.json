@@ -29,6 +29,7 @@
         "core/theme/default/assets/css/pages/error404.css",
         "core/theme/slate/assets/css/pages/error404.css",
         "core/theme/default/assets/js/pages/error404.js",
-        "core/theme/slate/assets/js/pages/error404.js"
+        "core/theme/slate/assets/js/pages/error404.js",
+        "core/theme/default/assets/vendor/tailwind.min.js"
     ]
 }

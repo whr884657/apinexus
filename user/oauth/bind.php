@@ -55,4 +55,5 @@ ThemeManager::renderAuthPage('bind', '绑定' . $providerLabel, array(
     'provider' => $provider,
     'providerLabel' => $providerLabel,
     'displayName' => $displayName,
+    'registerOpen' => RegisterPolicy::isOpen(),
 ));

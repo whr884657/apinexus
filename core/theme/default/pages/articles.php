@@ -34,8 +34,8 @@ if ($articleId > 0) {
             <span>阅读 <?php echo vs_e($article['views_label']); ?></span>
         </div>
         <?php if (!empty($article['cover'])): ?>
-            <img class="article-cover" src="<?php echo vs_e($article['cover']); ?>" alt=""
-                 loading="lazy" referrerpolicy="no-referrer">
+            <img class="article-cover" src="<?php echo vs_e($article['cover']); ?>" alt="<?php echo vs_e($article['title']); ?>"
+                 width="920" height="360" loading="lazy" decoding="async" referrerpolicy="no-referrer">
         <?php endif; ?>
         <div class="markdown-body vs-md-body article-content" data-vs-md="desktop">
             <?php echo $article['body_html']; ?>
@@ -209,7 +209,7 @@ $articles = FrontendArticle::listForTheme(30);
                 <?php endif; ?>
                 <div class="article-card-inner <?php echo vs_e($innerClass); ?>">
                     <?php if ($hasCover && $coverlayout === ContentManager::COVER_LEFT): ?>
-                        <img class="article-card-cover left" src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+                        <img class="article-card-cover left" src="<?php echo vs_e($a['cover']); ?>" alt="<?php echo vs_e($a['title']); ?>" width="200" height="140" loading="lazy" decoding="async" referrerpolicy="no-referrer">
                     <?php endif; ?>
                     <div class="article-card-content">
                         <a href="<?php echo vs_e(vs_path_resource_url('articles', $a['id'])); ?>" class="article-card-title"><?php echo vs_e($a['title']); ?></a>
@@ -222,7 +222,7 @@ $articles = FrontendArticle::listForTheme(30);
                         </div>
                     </div>
                     <?php if ($hasCover && $coverlayout === ContentManager::COVER_RIGHT): ?>
-                        <img class="article-card-cover right" src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+                        <img class="article-card-cover right" src="<?php echo vs_e($a['cover']); ?>" alt="<?php echo vs_e($a['title']); ?>" width="200" height="140" loading="lazy" decoding="async" referrerpolicy="no-referrer">
                     <?php endif; ?>
                 </div>
             </article>

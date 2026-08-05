@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.4**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.5**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -40,7 +40,7 @@ require_once VS_ROOT . '/core/bootstrap.php';
 | 在 `bootstrap.php` 注册 | **禁止**直接 `Database::connect()` / 写表名 |
 | 全主题共用的数据格式约定 | 各主题独立的视觉与交互 |
 
-**主题资源隔离（13.22.3；加载方式 13.22.6）：** 前台 / 用户中心只加载**当前主题包**内 `assets/shell`、`assets/css`、`assets/js`；根目录 `assets/css|js` **仅**管理员后台与安装等系统页。内置图标物理文件仍在 `assets/img/`，出站须经 `SiteMedia`（或 `UserAvatar` / 分类图标等核心类）。**浏览器按文件逐个请求**（`ThemeManager::frontendShell*Hrefs` / `defaultFrontendAssets` 等清单），**不再**使用 HTTP 打包入口；磁盘源文件保持分立，禁止为维护方便合并成单个大 CSS。Google Fonts 宜 idle 加载。
+**主题资源隔离（13.22.3；加载方式 13.22.6；字体 13.26.5）：** 前台 / 用户中心只加载**当前主题包**内 `assets/shell`、`assets/css`、`assets/js`；根目录 `assets/css|js` **仅**管理员后台与安装等系统页。内置图标物理文件仍在 `assets/img/`，出站须经 `SiteMedia`（或 `UserAvatar` / 分类图标等核心类）。**浏览器按文件逐个请求**（`ThemeManager::frontendShell*Hrefs` / `defaultFrontendAssets` 等清单），**不再**使用 HTTP 打包入口；磁盘源文件保持分立，禁止为维护方便合并成单个大 CSS。默认主题等宽字体用本地 `fonts-local.css` + JetBrains Mono woff2，中文走系统字体栈；**禁止**再挂运行时 Tailwind / 境外 Google Fonts。
 
 **默认主题 UI 改动边界：** 详情免责声明开关、快速上手鉴权 Tab、Hero 文案等**仅改** `core/theme/default/`；其它主题须自行对齐 `theme.json` settings，core 不提供跨主题样式回退。
 
@@ -76,7 +76,7 @@ version.php
 → CheckinManager
 → Markdown（core/markdown/）
 → FrontendAnnouncement → FrontendArticle → FrontendAbout
-→ PlaygroundRelay → ThemeManager
+→ PlaygroundRelay → ThemeManager → Sitemap
 → oauth/*（HttpClient → OAuthConfig → OAuthState → OAuthService → QQ/Gitee）
 → Session 启动 + CSRF
 →（已安装时）DatabaseMigrator::pruneAppliedAboveCodeVersion
@@ -241,7 +241,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `DatabaseMigrator.php` | 版本迁移 SQL（含清理旧系统残留） |
 | `Config.php` | 系统配置读写（`vs_config` 表） |
 | `SiteContext.php` | 站点名称（前台）、系统名称（后台壳层）、描述、Logo 等展示信息 |
-| `RegisterPolicy.php` | 注册邮箱后缀策略 |
+| `RegisterPolicy.php` | 注册开放/邮箱验证/后缀策略 |
 | `Mailer.php` | SMTP 发信 |
 | `Auth.php` | **管理员**登录与会话 |
 | `UserAuth.php` | **用户**登录、注册、重置密码 |
@@ -301,6 +301,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（条数可配）、计划任务密钥 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL；前台/用户中心壳与页 CSS·JS 清单 |
+| `Sitemap.php` | 前台 SEO 站点地图（静态页 + 公开接口详情 + 已发布文章）；入口 `sitemap.php` / `/sitemap.xml` |
 | `SystemInfo.php` | 关于页环境信息 |
 | `Updater.php` | 云端在线更新检测与安装；安全解压；覆盖后按废弃清单清理文件 |
 | `UpdateLog.php` | 版本更新记录读取 |
@@ -474,13 +475,33 @@ Config::set('site_name', '我的 API 站');
 
 ### 4.11 RegisterPolicy.php
 
-**作用：** 用户注册策略，主要是**允许的邮箱后缀白名单**。
+**作用：** 用户注册策略——**是否开放注册**、**是否须邮箱验证码**、邮箱后缀白名单。
 
 | 方法 | 说明 |
 |------|------|
-| `getPolicy()` | 读取策略 |
+| `isOpen()` | `register_enabled===1`（默认开放） |
+| `requiresEmailVerify()` | `register_email_verify===1`（默认须验证） |
+| `assertOpen()` / `closedMessage()` | 关闭时统一错误文案 |
+| `getPolicy()` | 读取后缀策略 |
 | `saveEmailSuffixes($suffixes)` | 保存后缀列表 |
-| `isEmailAllowed($email)` | 邮箱是否允许注册 |
+| `validateEmailSuffix($email)` | 后缀是否允许；不允许返回文案 |
+
+**配置键：** `register_enabled`、`register_email_verify`（`install/migrations/13.26.5.sql` 种子）。  
+**硬闸门：** `user/register.php` 与 `UserAuth::register()` 双重拒绝关闭态；免邮箱验证时提交侧仍须 captcha。  
+**主题：** 经入口注入 `$registerOpen`、`$emailVerify`、`$formEnabled`、`$registerClosedSub` 等；**禁止主题直连 Config/库**。
+
+---
+
+### 4.11b Sitemap.php
+
+**作用：** 生成 SEO `sitemap.xml`（首页/列表等静态页 + 公开接口 `/detail/{id}` + 已发布文章 `/articles/{id}`）。
+
+| 方法 | 说明 |
+|------|------|
+| `emit()` | 输出 XML 并结束 |
+| `buildXml()` / `collectUrls()` | 组装 URL（上限约 5000） |
+
+**入口：** 根目录 `sitemap.php`；伪静态 `/sitemap.xml`（安装向导 / `.htaccess` / Nginx 须同步）。`robots.txt` 声明 `Sitemap: /sitemap.xml`。
 
 ---
 
@@ -948,7 +969,8 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 ### 4.24d （已移除）主题资源 HTTP 打包
 
-**v13.22.6：** 删除 `ThemeAssetPack.php` 与 `theme-asset.php`。前台 / 用户中心改回**逐文件** `<link>` / `<script>`（清单见 `ThemeManager`）。在线升级时由 `install/obsolete-files.json` 清理旧站残留。Google Fonts 仍建议 idle，勿阻塞首屏。
+**v13.22.6：** 删除 `ThemeAssetPack.php` 与 `theme-asset.php`。前台 / 用户中心改回**逐文件** `<link>` / `<script>`（清单见 `ThemeManager`）。在线升级时由 `install/obsolete-files.json` 清理旧站残留。  
+**v13.26.5：** 默认主题禁止运行时 Tailwind；`defaultFrontendAssets` 加载 `fonts-local.css`（本地 JetBrains Mono），中文走系统字体；禁止再链境外 Google Fonts。
 
 ---
 
@@ -1622,7 +1644,7 @@ A：用户中心必须只加载**当前主题**的 `assets/shell` / `user.css` �
 A：不可以。须 `SiteMedia::imgUrl(...)`（或头像 / 分类等已有核心类）。
 
 **Q：为什么 Network 里会有很多个 CSS/JS 请求？**  
-A：v13.22.6 起已取消 HTTP 打包；有几个主题文件就请求几次，便于对照文件名维护。Google Fonts 仍 idle，不挡首屏。
+A：v13.22.6 起已取消 HTTP 打包；有几个主题文件就请求几次，便于对照文件名维护。v13.26.5 起默认主题用本地字体 CSS，勿再挂境外 Google Fonts。
 
 **Q：主题里可以直接 `Database::connect()` 吗？**  
 A：**禁止。** 请使用 `Frontend*` / `SiteContext` / `ThemeManager` 等；新能力应在 core 新增类后在 bootstrap 注册。完整对接见 **§六**。

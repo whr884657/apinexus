@@ -153,7 +153,7 @@
                         if (actionEl && window.VS_BASE_URL) {
                             var provider = data.provider;
                             var label = provider === 'qq' ? 'QQ' : 'Gitee';
-                            actionEl.innerHTML = '<a href="' + window.VS_BASE_URL + '/user/oauth/start.php?provider='
+                            actionEl.innerHTML = '<a href="' + window.VS_BASE_URL + '/user/oauth/start?provider='
                                 + encodeURIComponent(provider) + '&amp;intent=bind" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>';
                             item.setAttribute('data-oauth-bound', '0');
                         }

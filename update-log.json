@@ -1,5 +1,18 @@
 {
     "versions": {
+        "13.26.5": {
+            "title": "ApiNexus 13.26.5 极验修复、注册开关与兼容性优化",
+            "date": "2026-08-05",
+            "db_changes": true,
+            "changes": [
+                "极验三代：challenge 改为前缀匹配，修复「前端成功、登录仍失败」",
+                "后台可关闭注册 / 开关注册邮箱验证；双主题登录隐藏入口，强访注册页无表单",
+                "前台去掉运行时 Tailwind，工具类改静态 feer-compat；本地 JetBrains Mono 字体",
+                "公安备案等关键图补 alt；自动 sitemap.xml（安装向导/Nginx/Apache/robots 同步）",
+                "平板 769–1024 断点与图片 lazy/尺寸；热点查询索引（api/apilog/user）",
+                "大屏 ECharts 地图改为本地 JSON，消除境外 CDN 520；OAuth 出站去 .php 后缀"
+            ]
+        },
         "13.26.4": {
             "title": "ApiNexus 13.26.4 代码示例去思考链 + 用户管理列表增强",
             "date": "2026-08-05",

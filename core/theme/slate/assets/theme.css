@@ -1687,3 +1687,31 @@ body.st-nav-fab-open {
     border: 1px solid rgba(15, 23, 42, 0.12);
     color: #64748b;
 }
+
+/* 平板 769–1024：中间断点补齐 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .st-shell,
+    .st-page {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+    .st-hero__lead {
+        max-width: 640px;
+        font-size: 15px;
+    }
+    .st-api-grid,
+    .st-grid,
+    .st-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .st-article-card__cover,
+    .st-profile-avatar {
+        max-width: 100%;
+        height: auto;
+    }
+}
+
+img[width][height] {
+    max-width: 100%;
+    height: auto;
+}

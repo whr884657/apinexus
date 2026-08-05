@@ -37,6 +37,9 @@ location ~ ^/(config|data)/ {
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
+location = /sitemap.xml {
+    rewrite ^ /sitemap.php last;
+}
 location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
     rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
@@ -57,6 +60,9 @@ location ~ ^/(config|data)/ {
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
+location = /sitemap.xml {
+    rewrite ^ /sitemap.php last;
+}
 location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
     rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
@@ -72,13 +78,15 @@ location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
 |------|------|------|
 | 1（必须在上） | `config` 与 `data` 合并 deny | **禁止直链**配置与运行时目录 |
 | 2 | `/apis/{短码}` | **代理网关**（特殊：内部 `_vs_slug`，不是 `?id=`） |
-| 3 | `/{页面名}/{数字ID}` | **通用路径式资源**：落到 `/{页面名}.php?id={数字ID}` |
+| 3 | `/sitemap.xml` | **站点地图** → `sitemap.php` |
+| 4 | `/{页面名}/{数字ID}` | **通用路径式资源**：落到 `/{页面名}.php?id={数字ID}` |
 
 因此：
 
 - `/detail/11` → `detail.php?id=11`
-- `/article/5` → `article.php?id=5`（以后有文章详情入口即可，**不用再写伪静态**）
-- 任意根目录入口脚本 `xxx.php`，只要出站写成 `/xxx/数字`，同一条规则生效
+- `/articles/5` → `articles.php?id=5`
+- `/sitemap.xml` → `sitemap.php`
+- 任意根目录入口脚本 `xxx.php`，只要出站写成 `/xxx/数字`，同一条通用规则生效
 
 **不要**为每个新详情页再复制一条 `location`。
 

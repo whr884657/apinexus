@@ -109,7 +109,7 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     if ($userProfile) {
         $avatarUrl = $userProfile['avatar'];
         echo '<a href="' . vs_e($base) . '/user/account" class="st-uc-topbar__avatar" title="账号设置">';
-        echo '<img src="' . vs_e($avatarUrl) . '" alt="" width="32" height="32"></a>' . "\n";
+        echo '<img src="' . vs_e($avatarUrl) . '" alt="用户头像" width="32" height="32"></a>' . "\n";
     }
 
     if (!$nav['use_fab']) {

@@ -88,7 +88,7 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     if ($userProfile) {
         $avatarUrl = $userProfile['avatar'];
         echo '<a href="' . vs_e($base) . '/user/account" class="vs-topbar__avatar-link" title="账号设置">' . "\n";
-        echo '<img src="' . vs_e($avatarUrl) . '" alt="" class="vs-topbar__avatar" width="32" height="32">' . "\n";
+        echo '<img src="' . vs_e($avatarUrl) . '" alt="用户头像" class="vs-topbar__avatar" width="32" height="32">' . "\n";
         echo '</a>' . "\n";
     }
     echo '<a href="' . vs_e($logoutUrl) . '" class="vs-topbar__logout">退出</a>' . "\n";

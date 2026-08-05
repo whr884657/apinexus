@@ -29,6 +29,9 @@ function vs_install_nginx_rewrite_snippet()
         . "location ~ ^/apis/([a-z0-9]+)/?$ {\n"
         . "    rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=\$1 last;\n"
         . "}\n"
+        . "location = /sitemap.xml {\n"
+        . "    rewrite ^ /sitemap.php last;\n"
+        . "}\n"
         . "location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {\n"
         . "    rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /\$1.php?id=\$2 last;\n"
         . "}\n"
@@ -446,7 +449,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
 
             <?php if ($step === 1): ?>
                 <h2 class="vs-card-title">第一步：配置 Nginx 伪静态</h2>
-                <p class="vs-card-desc">请先在服务器（如宝塔：网站 → 设置 → 伪静态）粘贴下方规则并保存、重载 Nginx。未配置时，代理短链与详情路径可能无法访问。</p>
+                <p class="vs-card-desc">请先在服务器（如宝塔：网站 → 设置 → 伪静态）粘贴下方规则并保存、重载 Nginx。未配置时，代理短链、详情路径与 <code>/sitemap.xml</code> 站点地图可能无法访问。</p>
                 <?php if (!$licenseAccepted): ?>
                     <div class="vs-alert vs-alert--warning" id="licenseGateHint">请先完成弹窗中的开源许可阅读与确认，方可继续安装。</div>
                 <?php endif; ?>

@@ -91,6 +91,7 @@ require_once VS_ROOT . '/core/FrontendArticle.php';
 require_once VS_ROOT . '/core/FrontendAbout.php';
 require_once VS_ROOT . '/core/PlaygroundRelay.php';
 require_once VS_ROOT . '/core/ThemeManager.php';
+require_once VS_ROOT . '/core/Sitemap.php';
 require_once VS_ROOT . '/core/oauth/HttpClient.php';
 require_once VS_ROOT . '/core/oauth/OAuthConfig.php';
 require_once VS_ROOT . '/core/oauth/OAuthState.php';

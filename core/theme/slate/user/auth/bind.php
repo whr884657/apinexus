@@ -8,6 +8,7 @@
  * @var string $providerLabel
  * @var string $displayName
  * @var string $provider
+ * @var bool   $registerOpen
  */
 if (!defined('VS_THEME_RENDER')) { exit; }
 $vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
@@ -15,12 +16,17 @@ $base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
 $providerLabel = isset($providerLabel) ? (string) $providerLabel : '';
 $displayName = isset($displayName) ? (string) $displayName : '';
 $provider = isset($provider) ? (string) $provider : '';
+$registerOpen = !isset($registerOpen) || !empty($registerOpen);
 
 ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
 vs_slate_auth_shell_start('绑定' . $providerLabel . '账号', '请使用已注册账号验证身份');
 ?>
 
+<?php if ($registerOpen): ?>
 <div class="st-auth__msg st-auth__msg--info">仅支持已注册用户。请使用本站用户名/邮箱与密码完成绑定；未注册请先 <a href="<?php echo vs_e($base); ?>/user/register">注册</a>。</div>
+<?php else: ?>
+<div class="st-auth__msg st-auth__msg--info">仅支持已注册用户。请使用本站已有账号完成绑定；本站当前已停止开放新用户注册。</div>
+<?php endif; ?>
 
 <?php if ($displayName !== ''): ?>
     <div class="st-auth__msg st-auth__msg--info"><?php echo vs_e($providerLabel); ?> 账号：<?php echo vs_e($displayName); ?></div>

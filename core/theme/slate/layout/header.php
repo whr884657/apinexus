@@ -2,6 +2,15 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : rtrim(vs_base_url(), '/');
+$siteName = isset($siteName) ? (string) $siteName : SiteContext::siteName();
+$navName = isset($navName) ? (string) $navName : $siteName;
+$navItems = isset($navItems) && is_array($navItems) ? $navItems : array();
+$activeNav = isset($activeNav) ? (string) $activeNav : '';
+$authUrl = isset($authUrl) ? (string) $authUrl : ($vsBase . '/user/login');
+$authLabel = isset($authLabel) ? (string) $authLabel : '登录';
+$userLoggedIn = !empty($userLoggedIn);
+$authAvatarUrl = isset($authAvatarUrl) ? (string) $authAvatarUrl : '';
 $stNavExpandMode = ThemeManager::themeSettingStr('nav_expand_mode', 'top_drawer');
 $stNavUseFab = ($stNavExpandMode === 'fab_popup');
 $stColorPreset = ThemeManager::themeSettingStr('color_preset', 'green');
@@ -61,7 +70,7 @@ if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_s
             </div>
             <a href="<?php echo vs_e($authUrl); ?>" class="st-bar__login<?php echo (!empty($userLoggedIn) && !empty($authAvatarUrl)) ? ' st-bar__login--user' : ''; ?>">
                 <?php if (!empty($userLoggedIn) && !empty($authAvatarUrl)): ?>
-                    <img src="<?php echo vs_e($authAvatarUrl); ?>" alt="" class="st-bar__login-avatar" width="28" height="28">
+                    <img src="<?php echo vs_e($authAvatarUrl); ?>" alt="用户头像" class="st-bar__login-avatar" width="28" height="28">
                     <span>用户中心</span>
                 <?php else: ?>
                     <?php echo vs_e($authLabel); ?>
@@ -91,7 +100,7 @@ if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_s
     <div class="st-drawer__foot">
         <a href="<?php echo vs_e($authUrl); ?>" class="st-bar__login st-bar__login--block<?php echo (!empty($userLoggedIn) && !empty($authAvatarUrl)) ? ' st-bar__login--user' : ''; ?>">
             <?php if (!empty($userLoggedIn) && !empty($authAvatarUrl)): ?>
-                <img src="<?php echo vs_e($authAvatarUrl); ?>" alt="" class="st-bar__login-avatar" width="28" height="28">
+                <img src="<?php echo vs_e($authAvatarUrl); ?>" alt="用户头像" class="st-bar__login-avatar" width="28" height="28">
                 <span>用户中心</span>
             <?php else: ?>
                 <?php echo vs_e($authLabel); ?>

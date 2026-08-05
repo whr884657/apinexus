@@ -90,7 +90,7 @@ $isLinksPage = (isset($pageKey) && $pageKey === 'links');
                     <?php endif; ?>
                     <?php if ($beian['gongan_number'] !== ''): ?>
                         <a href="<?php echo vs_e($beian['gongan_link']); ?>" target="_blank" rel="noopener noreferrer" class="beian-link" style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                            <img src="<?php echo vs_e(class_exists('SiteMedia') ? SiteMedia::imgUrl('gov.png') : ($vsBase . '/assets/img/gov.png')); ?>" alt="" style="width: 16px; height: 16px; display: inline-block;">
+                            <img src="<?php echo vs_e(class_exists('SiteMedia') ? SiteMedia::imgUrl('gov.png') : ($vsBase . '/assets/img/gov.png')); ?>" alt="公安备案" width="16" height="16" loading="lazy" decoding="async" style="width: 16px; height: 16px; display: inline-block;">
                             <?php echo vs_e($beian['gongan_number']); ?>
                         </a>
                     <?php endif; ?>

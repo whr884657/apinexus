@@ -2,10 +2,19 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
-$authBtnLabel = !empty($userLoggedIn) ? '用户中心' : $authLabel;
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : rtrim(vs_base_url(), '/');
+$siteName = isset($siteName) ? (string) $siteName : SiteContext::siteName();
+$navName = isset($navName) ? (string) $navName : $siteName;
+$navItems = isset($navItems) && is_array($navItems) ? $navItems : array();
+$activeNav = isset($activeNav) ? (string) $activeNav : '';
+$authUrl = isset($authUrl) ? (string) $authUrl : ($vsBase . '/user/login');
+$authLabel = isset($authLabel) ? (string) $authLabel : '登录';
+$userLoggedIn = !empty($userLoggedIn);
+$authAvatarUrl = isset($authAvatarUrl) ? (string) $authAvatarUrl : '';
+$authBtnLabel = $userLoggedIn ? '用户中心' : $authLabel;
 $siteLogo = class_exists('SiteContext') ? trim(SiteContext::siteLogo()) : '';
-$avatarUrl = (!empty($userLoggedIn) && !empty($authAvatarUrl)) ? (string) $authAvatarUrl : '';
-if (!empty($userLoggedIn) && $avatarUrl === '' && class_exists('UserAvatar') && class_exists('UserAuth')) {
+$avatarUrl = ($userLoggedIn && $authAvatarUrl !== '') ? $authAvatarUrl : '';
+if ($userLoggedIn && $avatarUrl === '' && class_exists('UserAvatar') && class_exists('UserAuth')) {
     $authUser = UserAuth::user();
     if (is_array($authUser)) {
         $avatarUrl = UserAvatar::resolve($authUser);
@@ -34,7 +43,7 @@ if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_s
     <div class="mt-auto sidebar-auth-slot">
         <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek w-full text-center auth-entry-btn<?php echo ($avatarUrl !== '' && !empty($userLoggedIn)) ? ' auth-entry-btn--user' : ''; ?>" onclick="closeSidebarNow()">
             <?php if ($avatarUrl !== '' && !empty($userLoggedIn)): ?>
-                <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="" width="22" height="22" loading="lazy" referrerpolicy="no-referrer" decoding="async">
+                <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="用户头像" width="22" height="22" loading="lazy" referrerpolicy="no-referrer" decoding="async">
             <?php endif; ?>
             <span><?php echo vs_e($authBtnLabel); ?></span>
         </a>
@@ -71,7 +80,7 @@ if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_s
         <?php else: ?>
         <a href="<?php echo vs_e($authUrl); ?>" class="btn-geek text-xs py-2 px-4 auth-entry-btn auth-entry-btn--nav<?php echo ($avatarUrl !== '') ? ' auth-entry-btn--user' : ''; ?>">
             <?php if ($avatarUrl !== ''): ?>
-                <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer" decoding="async">
+                <img class="auth-entry-avatar" src="<?php echo vs_e($avatarUrl); ?>" alt="用户头像" width="20" height="20" loading="lazy" referrerpolicy="no-referrer" decoding="async">
             <?php endif; ?>
             <span><?php echo vs_e($authBtnLabel); ?></span>
         </a>

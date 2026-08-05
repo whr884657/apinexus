@@ -397,8 +397,51 @@ class DatabaseMigrator
             self::markApplied('13.22.5');
         }
 
+        // 新装已含 13.26.5 热点查询索引时跳过（配置种子仍靠 INSERT IGNORE 幂等）
+        if (!in_array('13.26.5', $applied, true)
+            && self::tableIndexExists('api', 'idx_status_audit_id')
+            && self::tableIndexExists('apilog', 'idx_createtime_apiname')) {
+            self::markApplied('13.26.5');
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
+        // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
+        self::ensureCompatHotIndexes();
+    }
+
+    /**
+     * 确保兼容性热点查询索引存在（幂等）
+     *
+     * @return void
+     */
+    private static function ensureCompatHotIndexes()
+    {
+        try {
+            $pdo = Database::connect();
+            $checks = array(
+                array('api', 'idx_status_audit_id', 'ADD KEY `idx_status_audit_id` (`status`, `audit`, `id`)'),
+                array('api', 'idx_createtime', 'ADD KEY `idx_createtime` (`createtime`)'),
+                array('apilog', 'idx_createtime_apiname', 'ADD KEY `idx_createtime_apiname` (`createtime`, `apiname`)'),
+                array('apilog', 'idx_createtime_iploc', 'ADD KEY `idx_createtime_iploc` (`createtime`, `iploc`(64))'),
+                array('user', 'idx_createtime', 'ADD KEY `idx_createtime` (`createtime`)'),
+            );
+            foreach ($checks as $row) {
+                $tableShort = $row[0];
+                $indexName = $row[1];
+                $addSql = $row[2];
+                if (self::tableIndexExists($tableShort, $indexName)) {
+                    continue;
+                }
+                if (!self::tableExists($tableShort)) {
+                    continue;
+                }
+                $table = Database::table($tableShort);
+                self::execStatement($pdo, 'ALTER TABLE `' . $table . '` ' . $addSql);
+            }
+        } catch (Exception $e) {
+            // 留待下次结构更新重试
+        }
     }
 
     /**

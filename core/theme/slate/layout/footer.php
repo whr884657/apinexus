@@ -46,7 +46,7 @@ $beian = SiteContext::beianInfo();
             <?php endif; ?>
             <?php if ($beian['gongan_number'] !== ''): ?>
                 <a href="<?php echo vs_e($beian['gongan_link']); ?>" target="_blank" rel="noopener noreferrer" class="st-foot__gongan">
-                    <img src="<?php echo vs_e(SiteMedia::imgUrl('gov.png')); ?>" alt="" width="16" height="16">
+                    <img src="<?php echo vs_e(SiteMedia::imgUrl('gov.png')); ?>" alt="公安备案" width="16" height="16" loading="lazy" decoding="async">
                     <span><?php echo vs_e($beian['gongan_number']); ?></span>
                 </a>
             <?php endif; ?>

@@ -1799,7 +1799,7 @@ function vs_render_site_footer($siteName = null)
         echo '<div class="vs-site-footer__item vs-site-footer__gongan">';
         echo '<a href="' . vs_e($beian['gongan_link']) . '" target="_blank" rel="noopener noreferrer" class="vs-site-footer__gongan-link">';
         $govIcon = class_exists('SiteMedia') ? SiteMedia::imgUrl('gov.png') : ($base . '/assets/img/gov.png');
-        echo '<img src="' . vs_e($govIcon) . '" alt="" class="vs-gongan-icon" width="16" height="16">';
+        echo '<img src="' . vs_e($govIcon) . '" alt="公安备案" class="vs-gongan-icon" width="16" height="16" loading="lazy" decoding="async">';
         echo '<span>' . vs_e($beian['gongan_number']) . '</span>';
         echo '</a></div>' . "\n";
     }

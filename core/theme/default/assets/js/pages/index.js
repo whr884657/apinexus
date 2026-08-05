@@ -774,7 +774,7 @@ function getPlaygroundUserApiKey() {
 }
 
 function getPlaygroundKeyContext() {
-    const d = { loggedIn: false, apiKeyCount: 0, userCenterUrl: '/user/index.php', loginUrl: '/user/login.php' };
+    const d = { loggedIn: false, apiKeyCount: 0, userCenterUrl: '/user/index', loginUrl: '/user/login' };
     if (typeof window.playgroundKeyContext === 'object' && window.playgroundKeyContext !== null) {
         return Object.assign(d, window.playgroundKeyContext);
     }
@@ -822,8 +822,8 @@ function applyPlaygroundSessionApiKey(api, container) {
     const ctx = getPlaygroundKeyContext();
     const loggedIn = !!ctx.loggedIn;
     const keyCount = parseInt(String(ctx.apiKeyCount != null ? ctx.apiKeyCount : 0), 10) || 0;
-    const userCenter = String(ctx.userCenterUrl || '/user/index.php');
-    const loginUrl = String(ctx.loginUrl || '/user/login.php');
+    const userCenter = String(ctx.userCenterUrl || '/user/index');
+    const loginUrl = String(ctx.loginUrl || '/user/login');
     const keyVal = getPlaygroundUserApiKey();
     const keyInput = findKeyParamInput(container);
 

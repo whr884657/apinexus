@@ -1022,11 +1022,10 @@ class ThemeManager
             return self::assetUrl('default', $rel) . '?v=' . $v;
         };
 
-        // 逐文件列出 CSS/JS（不再 HTTP 打包）；Google Fonts idle 挂载，避免阻塞首屏
-        $fontHref = 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap';
-        $fontBoot = '<script>(function(){var u=' . json_encode($fontHref) . ';function go(){try{var l=document.createElement("link");l.rel="stylesheet";l.href=u;l.media="print";l.onload=function(){this.media="all"};document.head.appendChild(l);}catch(e){}}if("requestIdleCallback" in window){requestIdleCallback(go,{timeout:2500});}else{window.addEventListener("load",go);}})();</script>';
-
+        // 本地字体（JetBrains Mono woff2）；中文走系统字体栈，避免 Google Fonts 境外节点 520/超时
+        // 工具类由 feer-compat.css 静态提供，禁止再加载运行时 Tailwind（拖垮 LCP/TTI，见 E183/E236）
         $css = array(
+            $asset('assets/vendor/fonts-local.css'),
             $asset('assets/css/front-common.css'),
             $asset('assets/css/markdown-content.css'),
         );
@@ -1088,15 +1087,10 @@ class ThemeManager
             }
         }
 
-        // 优先本地 vendor Tailwind（E183）
-        $localTw = htmlspecialchars($asset('assets/vendor/tailwind.min.js'), ENT_QUOTES, 'UTF-8');
         return array(
             'css'           => $css,
             'js'            => $js,
-            'head_scripts'  => array(
-                $fontBoot,
-                '<script src="' . $localTw . '"></script>',
-            ),
+            'head_scripts'  => array(),
             'body_class'    => 'vs-body feer-front',
             'skip_legacy'   => true,
             'page_key'      => $pageKey,

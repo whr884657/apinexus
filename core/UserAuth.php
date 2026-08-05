@@ -309,6 +309,11 @@ class UserAuth
      */
     public static function register($username, $email, $password, $role = UserRole::ROLE_USER)
     {
+        $closedMsg = RegisterPolicy::assertOpen();
+        if ($closedMsg !== null) {
+            return $closedMsg;
+        }
+
         $username = trim((string) $username);
         $email = trim((string) $email);
         $role = UserRole::normalize($role);

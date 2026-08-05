@@ -24,7 +24,7 @@ if ($articleId > 0) {
     <h1 class="st-page-title"><?php echo vs_e($article['title']); ?></h1>
     <p class="st-page-desc"><?php echo vs_e($article['createtime']); ?> · 阅读 <?php echo vs_e($article['views_label']); ?></p>
     <?php if (!empty($article['cover'])): ?>
-        <img src="<?php echo vs_e($article['cover']); ?>" alt="" style="width:100%;border-radius:12px;margin:12px 0 18px;max-height:360px;object-fit:cover;" loading="lazy" referrerpolicy="no-referrer">
+        <img src="<?php echo vs_e($article['cover']); ?>" alt="<?php echo vs_e($article['title']); ?>" width="920" height="360" style="width:100%;border-radius:12px;margin:12px 0 18px;max-height:360px;object-fit:cover;" loading="lazy" decoding="async" referrerpolicy="no-referrer">
     <?php endif; ?>
     <div class="st-card markdown-body vs-md-body" style="padding:18px;">
         <?php echo $article['body_html']; ?>
@@ -66,7 +66,7 @@ $articles = FrontendArticle::listForTheme(30);
                 <?php endif; ?>
                 <div class="st-article-card__inner">
                     <?php if ($hasCover && $coverlayout === ContentManager::COVER_LEFT): ?>
-                        <img class="st-article-card__cover" src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+                        <img class="st-article-card__cover" src="<?php echo vs_e($a['cover']); ?>" alt="<?php echo vs_e($a['title']); ?>" width="280" height="160" loading="lazy" decoding="async" referrerpolicy="no-referrer">
                     <?php endif; ?>
                     <div class="st-article-card__body">
                         <div class="st-card__title"><?php echo vs_e($a['title']); ?></div>
@@ -76,7 +76,7 @@ $articles = FrontendArticle::listForTheme(30);
                         <?php endif; ?>
                     </div>
                     <?php if ($hasCover && $coverlayout === ContentManager::COVER_RIGHT): ?>
-                        <img class="st-article-card__cover" src="<?php echo vs_e($a['cover']); ?>" alt="" loading="lazy" referrerpolicy="no-referrer">
+                        <img class="st-article-card__cover" src="<?php echo vs_e($a['cover']); ?>" alt="<?php echo vs_e($a['title']); ?>" width="280" height="160" loading="lazy" decoding="async" referrerpolicy="no-referrer">
                     <?php endif; ?>
                 </div>
             </a>

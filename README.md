@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.4-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.5-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -216,6 +216,9 @@ ApiNexus/
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
+location = /sitemap.xml {
+    rewrite ^ /sitemap.php last;
+}
 location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
     rewrite ^/([a-z0-9_-]+)/([0-9]+)/?$ /$1.php?id=$2 last;
 }
@@ -224,7 +227,7 @@ location / {
 }
 ```
 
-若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` + **通用路径**两段，并放在 `location /` **上面**。若仍留着旧的「仅 detail」单页规则，请删掉，改用通用第二段。  
+若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` + `sitemap.xml` + **通用路径**三段，并放在 `location /` **上面**。若仍留着旧的「仅 detail」单页规则，请删掉，改用通用段。  
 完整规则（含 `/config` `/data` deny）见 [`nginx伪静态配置.md`](nginx伪静态配置.md) **情况 A**。
 
 > **注意：** 不要写 `[a-z0-9]{3,64}` 或 `[0-9]{1,10}`。宝塔伪静态保存时会吞掉 `{…}`，导致 PCRE 报错。  
@@ -256,14 +259,13 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.4（2026-08-05）
+### v13.26.5（2026-08-05）
 
-- 代码示例加强剥离思考标签（含未闭合）与中文推演废话；残留则判无效并重试
-- 提示词禁止思考过程；成功码按 `code=0`；无需密钥时不误导「鉴权=query」
-- 管理端用户管理：电脑端原表格新增发布接口/调用数量并去掉注册时间；手机端卡片统计压紧
-- 管理端 API 管理：维护态按钮改为「恢复」；电脑端表格单独增加 QPM 列
-- `CORE模块说明.md` 大幅完善主题对接 API；首页统计统一走 `FrontendStats`
-- 代码示例 JSON `code` 路径同步残留拦截；思考标签仅剥独立块
+- 极验三代 challenge 前缀匹配，修复「前端验证成功、登录仍失败」
+- 后台可关闭注册 / 开关注册邮箱验证；双主题登录隐藏入口，强访注册页无表单
+- 去掉运行时 Tailwind，本地字体与静态工具类；公安备案等补 alt；自动 sitemap.xml
+- 平板断点与图片 lazy；热点查询索引；大屏地图本地化；OAuth 出站去 .php
+- 安装向导 / Nginx / Apache / robots 同步 sitemap 规则；升级执行 `13.26.5.sql`
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

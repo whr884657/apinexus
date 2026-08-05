@@ -10,6 +10,7 @@
  * @var string $oauthError
  * @var array $oauthProviders
  * @var string $loginRedirect
+ * @var bool   $registerOpen
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
@@ -24,6 +25,7 @@ $oauthProviders = isset($oauthProviders) && is_array($oauthProviders)
     ? $oauthProviders
     : array('qq' => false, 'gitee' => false);
 $loginRedirect = isset($loginRedirect) ? (string) $loginRedirect : '';
+$registerOpen = !isset($registerOpen) || !empty($registerOpen);
 
 ThemeManager::renderThemeAuthHead($pageTitle);
 vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号');
@@ -57,16 +59,18 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
         <div class="st-auth__oauth-label">第三方登录</div>
         <div class="st-auth__oauth-icons">
             <?php if (!empty($oauthProviders['qq'])): ?>
-                <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=qq" title="QQ 登录"><img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="QQ" width="22" height="22"></a>
+                <a href="<?php echo vs_e($base); ?>/user/oauth/start?provider=qq" title="QQ 登录"><img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="QQ" width="22" height="22"></a>
             <?php endif; ?>
             <?php if (!empty($oauthProviders['gitee'])): ?>
-                <a href="<?php echo vs_e($base); ?>/user/oauth/start.php?provider=gitee" title="Gitee 登录"><img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="Gitee" width="22" height="22"></a>
+                <a href="<?php echo vs_e($base); ?>/user/oauth/start?provider=gitee" title="Gitee 登录"><img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="Gitee" width="22" height="22"></a>
             <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>
 
+    <?php if ($registerOpen): ?>
     <div class="st-auth__foot">还没有账号？<a href="<?php echo vs_e($base); ?>/user/register">立即注册</a></div>
+    <?php endif; ?>
 </form>
 
 <?php vs_slate_auth_shell_end(); ?>

@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `lastlogin` datetime DEFAULT NULL COMMENT '最后登录时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_username` (`username`),
-    UNIQUE KEY `uk_email` (`email`)
+    UNIQUE KEY `uk_email` (`email`),
+    KEY `idx_createtime` (`createtime`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
 -- 系统配置表
@@ -66,6 +67,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('site_icp', ''),
 ('site_gongan', ''),
 ('register_policy', '{"email_suffixes":[]}'),
+('register_enabled', '1'),
+('register_email_verify', '1'),
 ('oauth_config', '{"qq":{"enabled":false,"app_id":"","app_key":""},"gitee":{"enabled":false,"client_id":"","client_secret":""}}'),
 ('mail_enabled', '0'),
 ('mail_smtp_host', ''),
@@ -189,10 +192,12 @@ CREATE TABLE IF NOT EXISTS `{prefix}api` (
     PRIMARY KEY (`id`),
     KEY `idx_status` (`status`),
     KEY `idx_audit` (`audit`),
+    KEY `idx_status_audit_id` (`status`, `audit`, `id`),
     KEY `idx_category` (`category`),
     KEY `idx_userid` (`userid`),
     KEY `idx_apitype` (`apitype`),
-    KEY `idx_proxyslug` (`proxyslug`)
+    KEY `idx_proxyslug` (`proxyslug`),
+    KEY `idx_createtime` (`createtime`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API接口表';
 
 -- API 调用日志表
@@ -225,7 +230,9 @@ CREATE TABLE IF NOT EXISTS `{prefix}apilog` (
     KEY `idx_createtime` (`createtime`),
     KEY `idx_createtime_id` (`createtime`, `id`),
     KEY `idx_ok_createtime` (`ok`, `createtime`),
-    KEY `idx_apiid_createtime` (`apiid`, `createtime`)
+    KEY `idx_apiid_createtime` (`apiid`, `createtime`),
+    KEY `idx_createtime_apiname` (`createtime`, `apiname`),
+    KEY `idx_createtime_iploc` (`createtime`, `iploc`(64))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API调用日志';
 
 -- 控制台按日调用聚合（滚动固定 30 天）

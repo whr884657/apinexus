@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/RegisterPolicy.php
- * 作用：用户注册策略（邮箱后缀限制等，存于 config.register_policy JSON）
+ * 作用：用户注册策略（开放开关、邮箱验证、邮箱后缀限制等）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */
@@ -9,6 +9,48 @@
 class RegisterPolicy
 {
     const CONFIG_KEY = 'register_policy';
+    const KEY_ENABLED = 'register_enabled';
+    const KEY_EMAIL_VERIFY = 'register_email_verify';
+
+    /**
+     * 是否开放用户注册（默认开放）
+     *
+     * @return bool
+     */
+    public static function isOpen()
+    {
+        return Config::get(self::KEY_ENABLED, '1') === '1';
+    }
+
+    /**
+     * 注册是否必须邮箱验证码（默认必须）
+     *
+     * @return bool
+     */
+    public static function requiresEmailVerify()
+    {
+        return Config::get(self::KEY_EMAIL_VERIFY, '1') === '1';
+    }
+
+    /**
+     * 关闭注册时的统一对外文案
+     *
+     * @return string
+     */
+    public static function closedMessage()
+    {
+        return '已停止注册，如有问题请联系管理员';
+    }
+
+    /**
+     * 开放注册时返回 null；关闭时返回错误文案
+     *
+     * @return string|null
+     */
+    public static function assertOpen()
+    {
+        return self::isOpen() ? null : self::closedMessage();
+    }
 
     /**
      * 读取注册策略配置

@@ -8,3 +8,5 @@ Disallow: /config/
 Disallow: /data/
 Disallow: /core/
 Disallow: /upload/
+
+Sitemap: /sitemap.xml

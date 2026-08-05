@@ -74,4 +74,5 @@ ThemeManager::renderAuthPage('login', '用户登录', array(
     'oauthError'     => $oauthError,
     'oauthProviders' => $oauthProviders,
     'loginRedirect'  => $loginRedirect,
+    'registerOpen'   => RegisterPolicy::isOpen(),
 ));

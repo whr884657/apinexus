@@ -8,6 +8,11 @@ if (!defined('VS_THEME_RENDER')) {
 
 $error = isset($error) ? (string) $error : '';
 $success = isset($success) ? (string) $success : '';
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : rtrim(vs_base_url(), '/');
+$vsUser = (isset($vsUser) && is_array($vsUser)) ? $vsUser : null;
+$accountUserId = ($vsUser && isset($vsUser['id'])) ? (int) $vsUser['id'] : 0;
+$accountUsername = ($vsUser && isset($vsUser['username'])) ? (string) $vsUser['username'] : '';
+$accountEmail = ($vsUser && isset($vsUser['email'])) ? (string) $vsUser['email'] : '';
 $avatarUrl = isset($avatarUrl) ? (string) $avatarUrl : '';
 $bio = isset($bio) ? (string) $bio : '';
 $blog = isset($blog) ? (string) $blog : '';
@@ -16,6 +21,8 @@ $avatarPreview = isset($avatarPreview) ? (string) $avatarPreview : '';
 $roleLabel = isset($roleLabel) ? (string) $roleLabel : '普通用户';
 $oauthProviders = isset($oauthProviders) && is_array($oauthProviders) ? $oauthProviders : array('qq' => false, 'gitee' => false);
 $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindings : array('qq' => false, 'gitee' => false);
+$oauthBindQq = $vsBase . '/user/oauth/start?provider=qq&intent=bind';
+$oauthBindGitee = $vsBase . '/user/oauth/start?provider=gitee&intent=bind';
 ?>
 
 <div class="vs-panel">
@@ -31,8 +38,8 @@ $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindi
             <div class="vs-account-form__layout">
                 <aside class="vs-account-form__aside">
                     <div class="vs-account-avatar">
-                        <img src="<?php echo vs_e($avatarPreview); ?>" alt="" class="vs-account-avatar__img" id="avatarPreview"
-                             data-fallback="<?php echo vs_e(UserAvatar::localRandomAvatar($vsUser ? (int) $vsUser['id'] : 0)); ?>">
+                        <img src="<?php echo vs_e($avatarPreview); ?>" alt="用户头像" class="vs-account-avatar__img" id="avatarPreview"
+                             data-fallback="<?php echo vs_e(UserAvatar::localRandomAvatar($accountUserId)); ?>">
                         <label class="vs-label vs-account-avatar__label">头像链接</label>
                         <input type="text" name="avatar" id="avatarUrlInput" class="vs-input"
                                value="<?php echo vs_e($avatarUrl); ?>" placeholder="https://example.com/avatar.jpg" maxlength="500" inputmode="url" autocomplete="off">
@@ -53,14 +60,14 @@ $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindi
                         <label class="vs-label" for="accountUsername">用户名</label>
                         <div class="vs-form-row__field">
                             <input type="text" name="username" id="accountUsername" class="vs-input" required minlength="3" maxlength="50"
-                                   value="<?php echo vs_e($vsUser ? $vsUser['username'] : ''); ?>" placeholder="至少 3 个字符">
+                                   value="<?php echo vs_e($accountUsername); ?>" placeholder="至少 3 个字符">
                         </div>
                     </div>
                     <div class="vs-form-row vs-form-row--account">
                         <label class="vs-label" for="accountEmail">邮箱</label>
                         <div class="vs-form-row__field">
                             <input type="email" name="email" id="accountEmail" class="vs-input" required
-                                   value="<?php echo vs_e($vsUser ? $vsUser['email'] : ''); ?>" placeholder="user@example.com">
+                                   value="<?php echo vs_e($accountEmail); ?>" placeholder="user@example.com">
                             <?php vs_render_notice('tip', '', '用于找回密码；QQ 邮箱可自动匹配 QQ 头像', array('field' => true, 'compact' => true)); ?>
                         </div>
                     </div>
@@ -131,7 +138,7 @@ $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindi
             <?php if ($oauthProviders['qq']): ?>
             <div class="vs-oauth-bind-item">
                 <div class="vs-oauth-bind-item__info">
-                    <img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="" class="vs-oauth-bind-item__icon" width="24" height="24">
+                    <img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="QQ" class="vs-oauth-bind-item__icon" width="24" height="24">
                     <div>
                         <div class="vs-oauth-bind-item__name">QQ</div>
                         <div class="vs-oauth-bind-item__status"><?php echo $oauthBindings['qq'] ? '已绑定' : '未绑定'; ?></div>
@@ -146,7 +153,7 @@ $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindi
                             <button type="submit" class="vs-btn vs-btn--text vs-btn--oauth-action">解绑</button>
                         </form>
                     <?php else: ?>
-                        <a href="<?php echo vs_e($vsBase); ?>/user/oauth/start.php?provider=qq&amp;intent=bind" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>
+                        <a href="<?php echo vs_e($oauthBindQq); ?>" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -154,7 +161,7 @@ $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindi
             <?php if ($oauthProviders['gitee']): ?>
             <div class="vs-oauth-bind-item">
                 <div class="vs-oauth-bind-item__info">
-                    <img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="" class="vs-oauth-bind-item__icon" width="24" height="24">
+                    <img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="Gitee" class="vs-oauth-bind-item__icon" width="24" height="24">
                     <div>
                         <div class="vs-oauth-bind-item__name">Gitee</div>
                         <div class="vs-oauth-bind-item__status"><?php echo $oauthBindings['gitee'] ? '已绑定' : '未绑定'; ?></div>
@@ -169,7 +176,7 @@ $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindi
                             <button type="submit" class="vs-btn vs-btn--text vs-btn--oauth-action">解绑</button>
                         </form>
                     <?php else: ?>
-                        <a href="<?php echo vs_e($vsBase); ?>/user/oauth/start.php?provider=gitee&amp;intent=bind" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>
+                        <a href="<?php echo vs_e($oauthBindGitee); ?>" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>
                     <?php endif; ?>
                 </div>
             </div>

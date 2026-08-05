@@ -67,8 +67,8 @@ vs_admin_layout_start('实时数据监控中心', 'screen', '');
 <div id="adminScreenPage"
      class="vs-datascreen vs-datascreen--light vs-datascreen--solo-head"
      data-boot="<?php echo DashboardStats::bootAttrJson($boot); ?>"
-     data-map-china="<?php echo vs_e('https://cdn.jsdelivr.net/gh/apache/echarts@5.4.3/test/data/map/json/china.json'); ?>"
-     data-map-world="<?php echo vs_e('https://cdn.jsdelivr.net/gh/apache/echarts@5.4.3/test/data/map/json/world.json'); ?>">
+     data-map-china="<?php echo vs_e($vsBase . '/assets/vendor/echarts/map/china.json?v=' . VS_VERSION); ?>"
+     data-map-world="<?php echo vs_e($vsBase . '/assets/vendor/echarts/map/world.json?v=' . VS_VERSION); ?>">
 
     <header class="ds-header">
         <div class="ds-header__brand">

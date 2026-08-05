@@ -346,6 +346,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $giftPoints = 1000000;
             }
             Config::setMany(array(
+                'register_enabled'      => isset($_POST['register_enabled']) ? '1' : '0',
+                'register_email_verify' => isset($_POST['register_email_verify']) ? '1' : '0',
                 'register_gift_enabled' => isset($_POST['register_gift_enabled']) ? '1' : '0',
                 'register_gift_points'  => (string) $giftPoints,
             ));
@@ -742,11 +744,33 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-register',
     '用户注册',
-    '限制可注册邮箱后缀，减少临时邮箱滥用'
+    '开放注册、邮箱验证与邮箱后缀白名单'
 );
 ?>
     <form method="post" action="" class="vs-form" id="registerForm" data-ajax="1">
         <input type="hidden" name="action" value="save_register">
+        <?php
+        vs_render_notice(
+            'info',
+            '注册策略',
+            '<p>关闭「开放注册」后，登录页注册入口隐藏，强访注册页仅提示，服务端拒绝注册请求。</p><p>关闭「注册需邮箱验证」后，注册不再发送/校验邮箱验证码，仍须填写邮箱；未配置发信时也可注册。开启时须完成邮箱验证码（未配置发信则无法注册）。</p>',
+            array('allow_html' => true, 'compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_enabled" value="1" <?php echo RegisterPolicy::isOpen() ? 'checked' : ''; ?>>
+                <span>开放注册</span>
+            </label>
+            <p class="vs-form-hint">关闭后用户无法注册；登录页注册入口隐藏；强访注册页仅提示。</p>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_email_verify" value="1" <?php echo RegisterPolicy::requiresEmailVerify() ? 'checked' : ''; ?>>
+                <span>注册需邮箱验证</span>
+            </label>
+            <p class="vs-form-hint">关闭后注册不再发送/校验邮箱验证码；仍须填写邮箱作为账号邮箱。</p>
+        </div>
         <?php
         vs_render_notice(
             'info',
@@ -791,7 +815,7 @@ vs_admin_accordion_start(
         vs_render_notice(
             'info',
             '配置说明',
-            '<p>管理员后台与用户端可各自选择验证方式。例如用户侧用行为验证，管理员改用本站图形，可避免第三方服务异常时管理员无法登录。</p><p>三代与四代的验证 ID / 密钥可同时保存；登录在提交时校验，注册与忘记密码在发送邮箱验证码时校验。</p>',
+            '<p>管理员后台与用户端可各自选择验证方式。例如用户侧用行为验证，管理员改用本站图形，可避免第三方服务异常时管理员无法登录。</p><p>三代与四代的验证 ID / 密钥可同时保存；登录在提交时校验；忘记密码在发送邮箱验证码时校验；用户注册在「需邮箱验证」时验发码，关闭邮箱验证时验注册提交。</p>',
             array('allow_html' => true, 'compact' => true)
         );
         ?>
@@ -857,7 +881,7 @@ vs_admin_accordion_start(
             </label>
             <label class="vs-checkbox" style="margin-top:8px;display:flex;">
                 <input type="checkbox" name="captcha_on_user_register" value="1" <?php echo $captchaCfg['user_register'] ? 'checked' : ''; ?>>
-                <span>用户注册（发送邮箱验证码时）</span>
+                <span>用户注册</span>
             </label>
             <label class="vs-checkbox" style="margin-top:8px;display:flex;">
                 <input type="checkbox" name="captcha_on_user_forgot" value="1" <?php echo $captchaCfg['user_forgot'] ? 'checked' : ''; ?>>

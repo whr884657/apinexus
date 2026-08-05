@@ -8,6 +8,7 @@
  * @var string $providerLabel
  * @var string $displayName
  * @var string $provider
+ * @var bool   $registerOpen
  */
 if (!defined('VS_THEME_RENDER')) { exit; }
 $vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
@@ -15,6 +16,10 @@ $base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
 $providerLabel = isset($providerLabel) ? (string) $providerLabel : '';
 $displayName = isset($displayName) ? (string) $displayName : '';
 $provider = isset($provider) ? (string) $provider : '';
+$registerOpen = !isset($registerOpen) || !empty($registerOpen);
+$bindNotice = $registerOpen
+    ? '请使用您在本站注册的用户名/邮箱与密码完成绑定。未注册账号请先<a href="' . vs_e($base) . '/user/register" class="vs-notice__link">注册</a>。'
+    : '请使用您在本站已有账号的用户名/邮箱与密码完成绑定。本站当前已停止开放新用户注册。';
 
 ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
 ?>
@@ -33,7 +38,7 @@ ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
             vs_render_notice(
                 'info',
                 '仅支持已注册用户',
-                '请使用您在本站注册的用户名/邮箱与密码完成绑定。未注册账号请先<a href="' . vs_e($base) . '/user/register" class="vs-notice__link">注册</a>。',
+                $bindNotice,
                 array('allow_html' => true, 'compact' => true)
             );
             ?>

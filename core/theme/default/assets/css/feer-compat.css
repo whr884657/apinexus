@@ -100,7 +100,45 @@
 .bg-green-500 { background-color: #22c55e; }
 
 .opacity-50 { opacity: 0.5; }
+.opacity-0 { opacity: 0; }
+.opacity-100 { opacity: 1; }
 .pointer-events-none { pointer-events: none; }
+
+.inset-0 { inset: 0; }
+.rounded-full { border-radius: 9999px; }
+.rounded-2xl { border-radius: 1rem; }
+.object-cover { object-fit: cover; }
+.overflow-hidden { overflow: hidden; }
+.col-span-full { grid-column: 1 / -1; }
+.font-semibold { font-weight: 600; }
+.tracking-wider { letter-spacing: 0.05em; }
+.h-full { height: 100%; }
+.w-20 { width: 5rem; }
+.h-20 { height: 5rem; }
+.h-64 { height: 16rem; }
+.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+.py-12 { padding-top: 3rem; padding-bottom: 3rem; }
+.pt-4 { padding-top: 1rem; }
+.pt-14 { padding-top: 3.5rem; }
+.px-1 { padding-left: 0.25rem; padding-right: 0.25rem; }
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.p-5 { padding: 1.25rem; }
+.p-8 { padding: 2rem; }
+.mb-3 { margin-bottom: 0.75rem; }
+.text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+.bottom-1 { bottom: 0.25rem; }
+.right-1 { right: 0.25rem; }
+.border-2 { border-width: 2px; border-style: solid; }
+.z-10 { z-index: 10; }
+.shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); }
+.max-w-\[60\%\] { max-width: 60%; }
+.bg-fade { background: rgba(17, 17, 17, 0.35); }
+.bg-gradient-to-t {
+    background-image: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
+}
 
 @media (min-width: 640px) {
     .sm\:text-xl { font-size: 1.25rem; line-height: 1.75rem; }
@@ -114,6 +152,15 @@
     .md\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .md\:flex-row { flex-direction: row; }
     .md\:w-1\/3 { width: 33.333333%; }
+    .md\:w-28 { width: 7rem; }
+    .md\:h-28 { height: 7rem; }
+    .md\:h-80 { height: 20rem; }
+    .md\:items-start { align-items: flex-start; }
+    .md\:justify-between { justify-content: space-between; }
+    .md\:text-left { text-align: left; }
+    .md\:text-right { text-align: right; }
+    .md\:text-2xl { font-size: 1.5rem; line-height: 2rem; }
+    .md\:text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
 }
 
 @media (min-width: 1024px) {
@@ -121,6 +168,8 @@
     .lg\:gap-12 { gap: 3rem; }
     .lg\:flex-shrink-0 { flex-shrink: 0; }
     .lg\:self-end { align-self: flex-end; }
+    .lg\:mt-8 { margin-top: 2rem; }
+    .lg\:h-96 { height: 24rem; }
 }
 
 /* 品牌 Logo */
@@ -368,3 +417,35 @@ body.vs-body.feer-front .mobile-sidebar .auth-entry-avatar {
 body.vs-body.feer-front .vs-toast-host {
     top: calc(68px + env(safe-area-inset-top, 0px));
 }
+
+/* —— 平板断点 769–1024：避免只靠 640/768/1024 两端跳跃 —— */
+@media (min-width: 769px) and (max-width: 1024px) {
+    body.vs-body.feer-front .content-wrapper,
+    body.vs-body.feer-front .main-wrapper > main {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+    body.vs-body.feer-front .card-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+    body.vs-body.feer-front .nav-bar {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+    body.vs-body.feer-front img.article-cover,
+    body.vs-body.feer-front img.article-card-cover {
+        max-width: 100%;
+        height: auto;
+    }
+    body.vs-body.feer-front .page-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* 图片防 CLS：带宽高属性的 img 仍可被 CSS 约束 */
+body.vs-body.feer-front img[width][height] {
+    max-width: 100%;
+    height: auto;
+}
+
