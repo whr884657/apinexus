@@ -110,6 +110,7 @@ body.vs-body.feer-front .main-wrapper.container.links-page,
     margin: 0;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     word-break: break-word;
@@ -205,6 +206,7 @@ body.vs-body.feer-front .main-wrapper.container.links-page,
 
     .link-desc {
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         max-height: 2.9em;
     }
 

@@ -161,6 +161,23 @@
         if (!img || !boot.image) {
             return;
         }
+        if (img._vsCaptchaOnDone) {
+            img.removeEventListener('load', img._vsCaptchaOnDone);
+            img.removeEventListener('error', img._vsCaptchaOnDone);
+            img._vsCaptchaOnDone = null;
+        }
+        img.style.opacity = '0.45';
+        var onDone = function () {
+            img.style.opacity = '1';
+            img.removeEventListener('load', onDone);
+            img.removeEventListener('error', onDone);
+            if (img._vsCaptchaOnDone === onDone) {
+                img._vsCaptchaOnDone = null;
+            }
+        };
+        img._vsCaptchaOnDone = onDone;
+        img.addEventListener('load', onDone);
+        img.addEventListener('error', onDone);
         img.src = String(boot.image) + (boot.image.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
         var input = $('captchaCode');
         if (input) {
@@ -175,6 +192,18 @@
             btn.setAttribute('data-bound', '1');
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
+                refreshLocal();
+            });
+        }
+        // 仅首次聚焦换一张：解决首屏图与会话不同步；再聚焦不清空，避免改字时被刷掉
+        var input = $('captchaCode');
+        if (input && !input.getAttribute('data-focus-refresh-bound')) {
+            input.setAttribute('data-focus-refresh-bound', '1');
+            input.addEventListener('focus', function () {
+                if (input.getAttribute('data-focus-refreshed') === '1') {
+                    return;
+                }
+                input.setAttribute('data-focus-refreshed', '1');
                 refreshLocal();
             });
         }

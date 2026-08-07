@@ -21,6 +21,64 @@
     background: rgba(255, 255, 255, 0.75);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
+/* 贡献者身份卡：收紧高度（工具类补全后原 p-5 + 大头像偏高） */
+.upf-glass--identity {
+    padding: 0.85rem 1rem;
+}
+.upf-glass--identity .avatar-ring {
+    box-shadow: 0 0 0 3px var(--bg-deep, #050508);
+}
+[data-theme="light"] .upf-glass--identity .avatar-ring {
+    box-shadow: 0 0 0 3px #fff;
+}
+.upf-avatar {
+    width: 3.5rem;
+    height: 3.5rem;
+}
+.upf-avatar-letter {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+.upf-avatar-online {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-width: 2px;
+    border-style: solid;
+}
+.upf-identity-name {
+    font-size: 1.05rem;
+    line-height: 1.35;
+    margin: 0 0 0.2rem;
+}
+.upf-identity-bio {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    margin: 0;
+}
+.upf-identity-stats {
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border-color);
+}
+@media (min-width: 768px) {
+    .upf-glass--identity {
+        padding: 1rem 1.15rem;
+    }
+    .upf-avatar {
+        width: 4.25rem;
+        height: 4.25rem;
+    }
+    .upf-avatar-letter {
+        font-size: 1.6rem;
+    }
+    .upf-identity-name {
+        font-size: 1.2rem;
+    }
+}
 .upf-text { color: var(--text-main); }
 .upf-text-muted { color: var(--text-muted); }
 .upf-accent { color: var(--accent-primary); }

@@ -25,7 +25,7 @@ class CaptchaLocal
             $parts[] = (string) Config::get('gt3_key', '');
             $parts[] = (string) Config::get('mail_smtp_pass', '');
         }
-        return hash('sha256', implode('|', $parts) . '|vs_local_captcha_v2');
+        return hash('sha256', implode('|', $parts) . '|vs_local_captcha_v3');
     }
 
     /**
@@ -98,10 +98,10 @@ class CaptchaLocal
             $salt = session_id();
         }
         $scene = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $scene));
-        // 区分大小写：勿再 strtoupper
+        // 不区分大小写：统一转大写再哈希（图仍可含大小写混排）
         return hash_hmac(
             'sha256',
-            trim((string) $code) . '|' . $salt . '|' . $scene,
+            strtoupper(trim((string) $code)) . '|' . $salt . '|' . $scene,
             self::serverPepper()
         );
     }

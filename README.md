@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.5-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.6-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -259,13 +259,11 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.5（2026-08-05）
+### v13.26.6（2026-08-07）
 
-- 极验三代 challenge 前缀匹配，修复「前端验证成功、登录仍失败」
-- 后台可关闭注册 / 开关注册邮箱验证；双主题登录隐藏入口，强访注册页无表单
-- 去掉运行时 Tailwind，本地字体与静态工具类；公安备案等补 alt；自动 sitemap.xml
-- 平板断点与图片 lazy；热点查询索引；大屏地图本地化；OAuth 出站去 .php
-- 安装向导 / Nginx / Apache / robots 同步 sitemap 规则；升级执行 `13.26.5.sql`
+- 本地图形验证码校验改为不区分大小写；聚焦输入框首次自动换一张，修复首屏图易提示过期
+- 占位文案与双主题 / 根目录 `captcha.js` 同步（换图淡入）
+- 默认主题贡献者主页：补全叠层工具类、恢复壁纸淡入，并收紧身份卡高度
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

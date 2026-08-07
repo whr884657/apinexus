@@ -32,7 +32,7 @@ function vs_captcha_field($scene, $only = null)
             . '<div class="vs-captcha-local">'
             . '<input type="text" name="captcha_code" id="captchaCode" class="vs-captcha-local__input" '
             . 'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" '
-            . 'maxlength="5" placeholder="请输入图中字符（区分大小写）" required aria-label="图形验证码">'
+            . 'maxlength="5" placeholder="请输入图中字符（不区分大小写）" required aria-label="图形验证码">'
             . '<button type="button" class="vs-captcha-local__refresh" id="vsCaptchaRefresh" title="换一张" aria-label="换一张">'
             . '<img src="' . vs_e($img) . '" id="vsCaptchaImg" alt="图形验证码" width="120" height="40">'
             . '</button>'
@@ -72,13 +72,21 @@ function vs_captcha_js($scene = null)
     echo '<script src="' . vs_e($captchaSrc) . '"></script>' . "\n";
 }
 
-/** @deprecated */
+/**
+ * @deprecated
+ * @param string $scene Captcha::SCENE_*
+ * @return void
+ */
 function vs_auth_captcha_field($scene)
 {
     vs_captcha_field($scene);
 }
 
-/** @deprecated */
+/**
+ * @deprecated
+ * @param string|null $scene
+ * @return void
+ */
 function vs_auth_captcha_scripts($scene = null)
 {
     vs_captcha_js($scene);

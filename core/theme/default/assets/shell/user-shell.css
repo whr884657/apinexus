@@ -6652,6 +6652,7 @@ select.vs-input.vs-select {
     line-height: 1.45;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     max-height: 2.9em;
@@ -9483,6 +9484,7 @@ select.vs-input.vs-select {
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     word-break: break-word;
 }
@@ -9549,6 +9551,7 @@ select.vs-input.vs-select {
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     word-break: break-word;
 }

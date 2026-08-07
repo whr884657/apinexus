@@ -1,15 +1,14 @@
 {
-    "version": "13.26.5",
-    "title": "ApiNexus 13.26.5 极验修复、注册开关与兼容性优化",
-    "release_date": "2026-08-05",
-    "db_changes": true,
+    "version": "13.26.6",
+    "title": "ApiNexus 13.26.6 本地验证码体验修复",
+    "release_date": "2026-08-07",
+    "db_changes": false,
     "changes": [
-        "极验三代：challenge 改为前缀匹配，修复「前端成功、登录仍失败」",
-        "后台可关闭注册 / 开关注册邮箱验证；双主题登录隐藏入口，强访注册页无表单",
-        "前台去掉运行时 Tailwind，工具类改静态 feer-compat；本地 JetBrains Mono 字体",
-        "公安备案等关键图补 alt；自动 sitemap.xml（安装向导/Nginx/Apache/robots 同步）",
-        "平板 769–1024 断点与图片 lazy/尺寸；热点查询索引（api/apilog/user）",
-        "大屏 ECharts 地图改为本地 JSON，消除境外 CDN 520；OAuth 出站去 .php 后缀"
+        "本地图形验证码：校验改为不区分大小写（哈希前统一大写，pepper 升至 v3）",
+        "聚焦验证码输入框时首次自动换一张，避免首屏图与会话不同步导致「已过期」",
+        "占位文案改为「不区分大小写」；assets 与双主题 captcha.js 同步（换图淡入）",
+        "默认主题贡献者主页：补全 -mt-16 等工具类；去掉误用的 .bg-fade 背景以恢复壁纸淡入；身份卡叠层毛玻璃并收紧高度",
+        "多页 CSS 补标准 line-clamp，消除仅写 -webkit-line-clamp 的告警"
     ],
     "repo": "xunjinlu/apinexus",
     "branch": "main"

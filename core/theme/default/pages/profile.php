@@ -67,27 +67,27 @@ if (!$notFound && is_array($profile)) {
                 <a href="<?php echo vs_e($vsBase); ?>/contributors" class="upf-btn-outline px-4 py-2 rounded-full text-sm no-underline">返回贡献者</a>
             </div>
         <?php else: ?>
-            <div class="upf-glass rounded-2xl shadow-lg p-5 mb-6">
-                <div class="flex items-center gap-4">
+            <div class="upf-glass upf-glass--identity rounded-2xl shadow-lg mb-6">
+                <div class="flex items-center gap-3">
                     <div class="relative flex-shrink-0 cursor-pointer" id="avatarBox">
                         <img src="<?php echo vs_e($pfAvatar); ?>" alt="<?php echo vs_e($pfUsername); ?>" id="avatarImg"
-                             class="w-20 h-20 md:w-28 md:h-28 rounded-full avatar-ring object-cover"
+                             class="upf-avatar rounded-full avatar-ring object-cover"
                              referrerpolicy="no-referrer" decoding="async"
                              onerror="this.style.display='none';document.getElementById('avatarPh').style.display='flex';">
-                        <div id="avatarPh" class="hidden w-20 h-20 md:w-28 md:h-28 rounded-full avatar-ring flex items-center justify-center" style="background: rgba(17, 17, 17, 0.06);">
-                            <span class="text-3xl md:text-4xl font-bold" style="color: var(--accent-primary); font-family: 'JetBrains Mono', monospace;"><?php echo vs_e($pfLetter); ?></span>
+                        <div id="avatarPh" class="upf-avatar rounded-full avatar-ring flex items-center justify-center" style="display:none; background: rgba(17, 17, 17, 0.06);">
+                            <span class="upf-avatar-letter font-bold" style="color: var(--accent-primary); font-family: 'JetBrains Mono', monospace;"><?php echo vs_e($pfLetter); ?></span>
                         </div>
-                        <div class="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2" style="border-color: var(--bg-deep);"></div>
+                        <div class="upf-avatar-online bg-green-500 rounded-full" style="border-color: var(--bg-deep);"></div>
                     </div>
 
                     <div class="flex-1 min-w-0">
-                        <h1 class="text-xl md:text-2xl font-bold mb-1 truncate upf-text"><?php echo vs_e($pfUsername); ?></h1>
-                        <p class="upf-text-muted text-sm line-clamp-2" id="userBio"<?php echo $pfBioCustom ? '' : ' data-vs-hitokoto="1"'; ?>><?php
+                        <h1 class="upf-identity-name font-bold truncate upf-text"><?php echo vs_e($pfUsername); ?></h1>
+                        <p class="upf-text-muted upf-identity-bio line-clamp-2" id="userBio"<?php echo $pfBioCustom ? '' : ' data-vs-hitokoto="1"'; ?>><?php
                             echo $pfBioCustom ? vs_e($pfBio) : '';
                         ?></p>
                     </div>
                 </div>
-                <div class="flex items-center gap-4 text-sm upf-text-muted mt-4 pt-4" style="border-top: 1px solid var(--border-color);">
+                <div class="flex items-center gap-3 upf-identity-stats upf-text-muted">
                     <div class="flex items-center gap-1">
                         <span><span class="font-bold upf-accent font-mono"><?php echo (int) $pfApiCount; ?></span> 个接口</span>
                     </div>

@@ -783,5 +783,5 @@
         /* 接口卡片紧凑样式 */
         .api-card-compact { padding: 0.75rem; }
         .api-card-compact h3 { font-size: 0.9rem; margin-bottom: 0.25rem; }
-        .api-card-compact p { font-size: 0.75rem; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .api-card-compact p { font-size: 0.75rem; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .api-card-compact .endpoint-box { font-size: 0.7rem; padding: 0.25rem 0.5rem; }
