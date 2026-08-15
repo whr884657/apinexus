@@ -8,7 +8,8 @@
  * - 「开发与维护」（相关人员 team）、「相关链接」、「技术栈」均由 AboutCatalog::load() 提供。
  * - 数据文件：core/vx/seed/r9/m2/catalog.json（有本地则用本地；仅缺失时才从仓库 raw 拉取）。
  * - 详解见 core/AboutCatalog.php 文件头注释。
- * - 技术栈 / 链接图标：一律 assets/img/ 根目录（本页 vs_about_icon_src）。
+ * - 技术栈 / 链接图标：一律放在 assets/img/ 根目录（本页 vs_about_icon_src）；勿把路径说明写到页面正文。
+ * - 相关链接仅三仓；不展示发行版下载与技术栈说明文案。
  */
 
 require_once __DIR__ . '/init.php';
@@ -225,7 +226,6 @@ vs_admin_layout_start('关于', 'about');
                     </<?php echo $tag; ?>>
                 <?php endforeach; ?>
             </div>
-            <p class="about-tech-note"><?php echo vs_e($catalog['note']); ?></p>
         </div>
     </div>
 

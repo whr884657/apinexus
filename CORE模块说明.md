@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.8**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.9**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -171,7 +171,7 @@ core/
 | 积分与支付 | `PointsManager` / `PointsNotify` / `OrderManager` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到 / 控制台） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；注册赠送 / 每日签到；积分归零/充值成功邮件；表 `orders` + `checkin`） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` / `Auth` | `UserAuth` + `FrontendUser`；管理员 `Auth::loginById` | `user/`、`admin/login.php`、`admin/users.php` | ✅ 是 | **已完成**（含角色；**13.26.7** 双端邮箱验证码登录） |
-| 用户控制台统计 | `UserStat7Manager` / `ApiKeyManager` / `ApiLogManager` | `FrontendUser::dashboardStats` / `myLogsPaged` | `user/index.php`、`user/logs.php`、双主题 dashboard/logs | ✅ 是 | **已完成（13.26.7 数据 / 13.26.8 UI）**：`user.stat7`、密钥 `pointsspent`、本人日志白名单；控制台 KPI 7/8、排行更名与定高内滚 |
+| 用户控制台统计 | `UserStat7Manager` / `ApiKeyManager` / `ApiLogManager` | `FrontendUser::dashboardStats` / `myLogsPaged` | `user/index.php`、`user/logs.php`、双主题 dashboard/logs | ✅ 是 | **已完成（13.26.7 数据 / 13.26.8 UI / 13.26.9 实时刷新）**：KPI 7/8；固定 3s live + 同款图标刷新 |
 | 注册策略 | `RegisterPolicy` | （入口注入 `$registerOpen` 等） | `admin/settings`、`user/register.php` | 入口/后台 | **已完成**（开放/关停、邮箱验证、后缀白名单 `register_policy`） |
 | 验证码 | `Captcha` + `captcha/*` | `vs_captcha_field` / `vs_captcha_js`（`captcha/helper.php`） | 系统设置分端 mode；`captcha/image.php` | 认证页 | **已完成**（local / gt3 / gt4；场景 SCENE_USER_*；v13.26.6 大小写不敏感 + 首次 focus 换图） |
 | 站点地图 | `Sitemap` | — | 根 `sitemap.php` → `/sitemap.xml` | SEO | **已完成**（四处伪静态同步 + `robots.txt`） |
@@ -287,7 +287,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `AdminUserBinding.php` | 管理员绑定用户身份（发布内容用） |
 | `UserManager.php` | 后台用户列表/封禁/删除/身份转换 |
 | `UserAvatar.php` | 用户头像 URL 解析 |
-| `AboutCatalog.php` | 关于页「开发与维护 / 相关链接 / 技术基础」目录（本地 JSON 优先，缺则云端） |
+| `AboutCatalog.php` | 关于页「开发与维护 / 相关链接 / 技术栈」目录（本地 JSON 优先，缺则云端；三仓链接，无页面 note） |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiError.php` | 公开 API 业务错误码（11001～11018）；`businessLabelMap` / `aiDetailDocErrcodeClause` 供 AI 详细文档全量写入 |
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |

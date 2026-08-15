@@ -1,5 +1,5 @@
 {
-    "_doc": "管理员关于页目录。路径：core/vx/seed/r9/m2/catalog.json。由 AboutCatalog 加载：有本地用本地，仅本地缺失才从仓库 raw 拉取。team=开发与维护相关人员；links=相关链接；tech=技术栈；note=技术栈说明。图标文件放 assets/img/。_doc 字段仅文档用，运行时忽略。",
+    "_doc": "管理员关于页目录。路径：core/vx/seed/r9/m2/catalog.json。由 AboutCatalog 加载：有本地用本地，仅本地缺失才从仓库 raw 拉取。team=开发与维护相关人员；links=相关链接（仅三仓，无发行版下载）；tech=技术栈。图标文件一律放 assets/img/ 根目录（仅代码/文档说明，勿写到页面文案）。_doc 字段仅文档用，运行时忽略。",
     "version": 1,
     "team": [
         {
@@ -24,11 +24,6 @@
             "name": "GitHub",
             "href": "https://github.com/whr884657/apinexus",
             "icon": "github"
-        },
-        {
-            "name": "发行版下载",
-            "href": "https://gitee.com/xunjinlu/apinexus/releases",
-            "icon": "gitee"
         }
     ],
     "tech": [
@@ -75,5 +70,5 @@
             "tone": "parsedown"
         }
     ],
-    "note": "涵盖本站后端运行环境、前端交互与常用开源组件；图标统一放在 assets/img/。感谢相关项目与贡献者。"
+    "note": ""
 }

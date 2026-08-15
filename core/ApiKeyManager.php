@@ -109,7 +109,9 @@ class ApiKeyManager
             $userTable = Database::table('user');
             $cols = self::selectColumnSql('t');
             $sql = 'SELECT ' . $cols . ',
-                           u.`username` AS `username`
+                           u.`username` AS `username`,
+                           u.`email` AS `email`,
+                           u.`avatar` AS `avatar`
                     FROM `' . $tokenTable . '` t
                     LEFT JOIN `' . $userTable . '` u ON u.`id` = t.`userid`
                     ORDER BY t.`id` DESC';

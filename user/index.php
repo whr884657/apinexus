@@ -24,6 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             )
         );
     }
+    if ($action === 'live' || $action === 'refresh') {
+        AjaxResponse::success('ok', array(
+            'stats' => FrontendUser::dashboardStats(),
+        ));
+    }
     AjaxResponse::error('无效操作', 400);
 }
 
@@ -62,6 +67,6 @@ vs_user_render_page(
         'helloHint'      => $helloHint,
         'helloSlot'      => $helloSlot,
     ),
-    '',
+    vs_user_refresh_btn_html('ucDashRefreshBtn'),
     $scripts
 );

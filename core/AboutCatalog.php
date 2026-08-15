@@ -15,10 +15,10 @@
  *   team[]  —— 「开发与维护」相关人员（name / role / avatar / site）
  *   links[] —— 「相关链接」（name / href / icon）
  *   tech[]  —— 「技术栈」（name / href / icon / tone）
- *   note    —— 技术栈下方说明文案
+ *   note    —— 已废弃；页面不再展示（保留字段仅为兼容旧 JSON，normalize 恒为空）
  *
  * 加载顺序（有本地文件就绝不会再拉仓库）：
- *   1) Redis 缓存键 cache:about:catalog:v3（TTL 约 30 分钟）
+ *   1) Redis 缓存键 cache:about:catalog:v4（TTL 约 30 分钟）
  *   2) 本地 catalog.json（发版 ZIP / 在线更新会带上）
  *   3) 仅当本地文件缺失时：按 Updater 镜像顺序拉取仓库 raw
  *        Gitee:   https://gitee.com/{repo}/raw/main/core/vx/seed/r9/m2/catalog.json
@@ -29,7 +29,8 @@
  * 改相关人员 / 技术栈：改本地 catalog.json（并同步 defaults 以免无文件时兜底不一致）。
  * 改完若页面仍旧：管理后台 Redis 管理清空业务缓存，或等缓存过期。
  *
- * 技术栈图标：一律 assets/img/ 根目录（见 admin/about.php 的 vs_about_icon_src）。
+ * 技术栈 / 链接图标文件一律放在 assets/img/ 根目录（见 admin/about.php 的 vs_about_icon_src）。
+ * 「相关链接」仅保留 Gitee / GitCode / GitHub 三仓，不展示发行版下载。
  * 兼容：云端多字段 / 新人不会撑爆旧版 normalize；未知字段忽略。
  */
 
@@ -42,7 +43,7 @@ class AboutCatalog
     const REL_PATH = 'core/vx/seed/r9/m2/catalog.json';
 
     /** 改 catalog 结构或内容后递增版本，避免旧 Redis 缓存挡住新数据 */
-    const CACHE_KEY = 'cache:about:catalog:v3';
+    const CACHE_KEY = 'cache:about:catalog:v4';
     const CACHE_TTL = 1800;
 
     /**
@@ -211,8 +212,13 @@ class AboutCatalog
                 if ($href === '') {
                     continue;
                 }
+                $name = (string) $row['name'];
+                // 发行版由用户自行在三仓 Releases 查找，关于页不展示下载入口
+                if ($name === '发行版下载') {
+                    continue;
+                }
                 $links[] = array(
-                    'name' => (string) $row['name'],
+                    'name' => $name,
                     'href' => $href,
                     'icon' => isset($row['icon']) ? (string) $row['icon'] : '',
                 );
@@ -244,16 +250,11 @@ class AboutCatalog
             $tech = $defaults['tech'];
         }
 
-        $note = isset($data['note']) ? trim((string) $data['note']) : '';
-        if ($note === '') {
-            $note = $defaults['note'];
-        }
-
         return array(
             'team'  => $team,
             'links' => $links,
             'tech'  => $tech,
-            'note'  => $note,
+            'note'  => '',
         );
     }
 
@@ -295,11 +296,6 @@ class AboutCatalog
                 array('name' => 'Gitee', 'href' => 'https://gitee.com/xunjinlu/apinexus', 'icon' => 'gitee'),
                 array('name' => 'GitCode', 'href' => 'https://gitcode.com/xunjinlu/apinexus', 'icon' => 'gitcode'),
                 array('name' => 'GitHub', 'href' => 'https://github.com/whr884657/apinexus', 'icon' => 'github'),
-                array(
-                    'name' => '发行版下载',
-                    'href' => 'https://gitee.com/xunjinlu/apinexus/releases',
-                    'icon' => 'gitee',
-                ),
             ),
             'tech' => array(
                 array('name' => 'PHP', 'href' => 'https://www.php.net', 'icon' => 'php', 'tone' => 'php'),
@@ -310,7 +306,7 @@ class AboutCatalog
                 array('name' => 'ECharts', 'href' => 'https://echarts.apache.org', 'icon' => 'echarts', 'tone' => 'echarts'),
                 array('name' => 'Parsedown', 'href' => 'https://parsedown.org', 'icon' => '', 'tone' => 'parsedown'),
             ),
-            'note' => '涵盖本站后端运行环境、前端交互与常用开源组件；图标统一放在 assets/img/。感谢相关项目与贡献者。',
+            'note' => '',
         );
     }
 }

@@ -140,14 +140,12 @@ function vs_render_user_token_item(array $row)
         <div class="vs-api-item__tags">
             <span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($token['status_label']); ?></span>
         </div>
-        <div class="vs-api-item__meta">
-            <div class="vs-api-item__calls" title="调用次数">调用：<strong data-field="calls"><?php echo (int) $token['calls']; ?></strong></div>
-            <div class="vs-api-item__calls" title="累计消耗积分">消耗：<strong data-field="pointsspent"><?php
-                $spent = isset($token['pointsspent']) ? (float) $token['pointsspent'] : 0.0;
-                echo vs_e(class_exists('PayConfig') ? PayConfig::fmtPoints($spent) : (string) $spent);
-            ?></strong></div>
-            <div class="vs-api-item__author" data-field="createtime" title="创建时间"><?php echo vs_e($token['createtime']); ?></div>
-        </div>
+        <div class="vs-api-item__calls vs-token-row__calls" title="调用次数">调用 <strong data-field="calls"><?php echo (int) $token['calls']; ?></strong></div>
+        <div class="vs-api-item__spent vs-token-row__spent" title="累计消耗积分">消耗 <strong data-field="pointsspent"><?php
+            $spent = isset($token['pointsspent']) ? (float) $token['pointsspent'] : 0.0;
+            echo vs_e(class_exists('PayConfig') ? PayConfig::fmtPoints($spent) : (string) $spent);
+        ?></strong></div>
+        <div class="vs-api-item__author vs-token-row__time" data-field="createtime" title="创建时间"><?php echo vs_e($token['createtime']); ?></div>
         <div class="vs-api-item__actions vs-token-row__actions">
             <button type="button" class="vs-btn vs-btn--outline vs-token-edit" data-token-id="<?php echo $id; ?>">编辑</button>
             <button type="button" class="vs-btn vs-btn--outline vs-token-reset" data-token-id="<?php echo $id; ?>">重置</button>

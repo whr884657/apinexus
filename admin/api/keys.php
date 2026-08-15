@@ -63,7 +63,17 @@ function vs_admin_key_row_ctx(array $row)
     $id = (int) $token['id'];
     $enabled = (int) $token['status'] === ApiKeyManager::STATUS_ENABLED;
     $username = $token['username'] !== '' ? $token['username'] : ('用户#' . $token['userid']);
-    $avatar = mb_substr($username, 0, 1, 'UTF-8');
+    $avatarLetter = function_exists('mb_substr')
+        ? mb_substr($username, 0, 1, 'UTF-8')
+        : substr($username, 0, 1);
+    $avatarUrl = '';
+    if (class_exists('UserAvatar')) {
+        $avatarUrl = UserAvatar::resolve(array(
+            'id'     => (int) $token['userid'],
+            'email'  => isset($row['email']) ? (string) $row['email'] : '',
+            'avatar' => isset($row['avatar']) ? (string) $row['avatar'] : '',
+        ));
+    }
     $time = $token['createtime'];
     if ($time !== '' && strlen($time) >= 16) {
         $time = substr($time, 0, 16);
@@ -77,7 +87,8 @@ function vs_admin_key_row_ctx(array $row)
         'enabled'         => $enabled,
         'secret'          => $token['secret'],
         'username'        => $username,
-        'avatar'          => $avatar,
+        'avatar'          => $avatarLetter,
+        'avatar_url'      => $avatarUrl,
         'time'            => $time,
         'calls'           => (int) $token['calls'],
         'pointsspent'     => $spent,
@@ -134,7 +145,11 @@ function vs_render_admin_key_desktop_row(array $ctx)
         </td>
         <td>
             <div class="user-cell">
-                <div class="user-cell__avatar" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></div>
+                <?php if ($ctx['avatar_url'] !== ''): ?>
+                    <img class="user-cell__avatar" src="<?php echo vs_e($ctx['avatar_url']); ?>" alt="" width="28" height="28" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-field="avatar_img">
+                <?php else: ?>
+                    <div class="user-cell__avatar user-cell__avatar--letter" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></div>
+                <?php endif; ?>
                 <span class="user-cell__name" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
             </div>
         </td>
@@ -168,18 +183,25 @@ function vs_render_admin_key_mobile_card(array $ctx)
     ?>
     <div class="key-card"<?php echo $attrs; ?>>
         <div class="key-card__header">
-            <code class="key-card__key" data-field="secret" data-copy="<?php echo vs_e($ctx['secret']); ?>"><?php echo vs_e($ctx['secret']); ?></code>
+            <div class="key-card__user">
+                <?php if ($ctx['avatar_url'] !== ''): ?>
+                    <img class="key-card__avatar" src="<?php echo vs_e($ctx['avatar_url']); ?>" alt="" width="28" height="28" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-field="avatar_img">
+                <?php else: ?>
+                    <span class="key-card__avatar key-card__avatar--letter" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></span>
+                <?php endif; ?>
+                <span class="key-card__username" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
+            </div>
             <span class="vs-badge <?php echo $ctx['enabled'] ? 'vs-badge--success' : 'vs-badge--error'; ?>" data-field="status_label">
                 <?php echo $ctx['enabled'] ? '正常' : '已禁用'; ?>
             </span>
         </div>
-        <div class="key-card__info">
-            <div class="key-card__info-item"><span class="key-card__info-label">所属用户</span><span data-field="username"><?php echo vs_e($ctx['username']); ?></span></div>
-            <div class="key-card__info-item"><span class="key-card__info-label">创建时间</span><span data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span></div>
-            <div class="key-card__stats" aria-label="调用与消耗">
-                <div class="key-card__stat"><span class="key-card__info-label">调用</span><strong data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></strong></div>
-                <div class="key-card__stat"><span class="key-card__info-label">消耗</span><strong data-field="pointsspent"><?php echo vs_e($ctx['pointsspent_fmt']); ?></strong></div>
-            </div>
+        <code class="key-card__key" data-field="secret" data-copy="<?php echo vs_e($ctx['secret']); ?>"><?php echo vs_e($ctx['secret']); ?></code>
+        <div class="key-card__meta">
+            <span class="key-card__time" data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span>
+            <span class="key-card__metrics" aria-label="调用与消耗">
+                调用 <strong data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></strong>
+                · 消耗 <strong data-field="pointsspent"><?php echo vs_e($ctx['pointsspent_fmt']); ?></strong>
+            </span>
         </div>
         <div class="key-card__actions" data-field="actions">
             <button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-key-copy" data-copy="<?php echo vs_e($ctx['secret']); ?>">复制</button>

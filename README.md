@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.8-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.9-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -284,14 +284,12 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.8（2026-08-15）
+### v13.26.9（2026-08-15）
 
-- 用户控制台：去掉令牌总数 KPI；普通 7 卡 / 开发者 8 卡；今日三数并入同款 KPI 网格
-- 「热门接口」更名为「近 7 日调用排行」（本人近 7 日，非全站）；底部排行与近期调用同高内滚并对调顺序
-- 修复近 7 日折线悬停 tooltip 靠边消失；调用量图悬停兼显示积分；原积分图改为调用成功率
-- 管理员令牌展示调用/消耗；令牌/用户分页中间最多 3 页码
-- 用户日志卡片化并显示 IP 归属地；用户管理可弹窗查看完整调用日志；更新弹窗可滚+电脑宽版
-- 禁用接口详情可打开并模糊地址；控制台头像抖动与 24 小时问候文案；default / slate 同步
+- 管理员关于页：去掉技术栈下方说明文案（图标路径仅代码注释）；相关链接去掉「发行版下载」，仅保留 Gitee / GitCode / GitHub
+- 用户控制台：标题行同款图标刷新；页面可见时固定每 3 秒自动刷新 KPI / 折线 / 排行 / 近期调用；标签页隐藏暂停轮询
+- UI：用户调用日志弹窗/用户日志/令牌管理按电脑列表·手机紧凑卡片重构；令牌页显示真实头像；近期调用状态改右上角角标
+- default / slate 双主题同步
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

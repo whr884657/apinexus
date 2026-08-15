@@ -78,6 +78,32 @@ function vs_user_stub_page($pageTitle, $activeMenu)
 }
 
 /**
+ * 用户中心统一图标刷新按钮（与管理员后台同款）
+ *
+ * @param string $id 按钮 id（如 ucDashRefreshBtn）
+ * @param string $extraClass 额外 class（可选）
+ * @return string
+ */
+function vs_user_refresh_btn_html($id, $extraClass = '')
+{
+    $id = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $id);
+    if ($id === '') {
+        $id = 'vsRefreshBtn';
+    }
+    $extra = trim((string) $extraClass);
+    $class = 'vs-btn vs-btn--outline vs-btn--icon vs-refresh-btn';
+    if ($extra !== '') {
+        $class .= ' ' . $extra;
+    }
+    return '<button type="button" class="' . vs_e($class) . '" id="' . vs_e($id) . '" title="刷新" aria-label="刷新">'
+        . '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        . '<polyline points="23 4 23 10 17 10"></polyline>'
+        . '<polyline points="1 20 1 14 7 14"></polyline>'
+        . '<path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>'
+        . '</svg></button>';
+}
+
+/**
  * 要求当前用户为开发者，否则输出权限不足页并终止
  *
  * @param string $pageTitle

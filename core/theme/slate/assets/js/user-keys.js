@@ -132,11 +132,9 @@
         html += '<div class="vs-api-item__tags">';
         html += '<span class="vs-api-tag vs-api-tag--status ' + statusClass + '" data-field="status_label">' + escapeHtml(token.status_label || '') + '</span>';
         html += '</div>';
-        html += '<div class="vs-api-item__meta">';
-        html += '<div class="vs-api-item__calls" title="调用次数">调用：<strong data-field="calls">' + (parseInt(token.calls, 10) || 0) + '</strong></div>';
-        html += '<div class="vs-api-item__calls" title="累计消耗积分">消耗：<strong data-field="pointsspent">' + escapeHtml(fmtSpent(token.pointsspent)) + '</strong></div>';
-        html += '<div class="vs-api-item__author" data-field="createtime" title="创建时间">' + escapeHtml(token.createtime || '') + '</div>';
-        html += '</div>';
+        html += '<div class="vs-api-item__calls vs-token-row__calls" title="调用次数">调用 <strong data-field="calls">' + (parseInt(token.calls, 10) || 0) + '</strong></div>';
+        html += '<div class="vs-api-item__spent vs-token-row__spent" title="累计消耗积分">消耗 <strong data-field="pointsspent">' + escapeHtml(fmtSpent(token.pointsspent)) + '</strong></div>';
+        html += '<div class="vs-api-item__author vs-token-row__time" data-field="createtime" title="创建时间">' + escapeHtml(token.createtime || '') + '</div>';
         html += '<div class="vs-api-item__actions vs-token-row__actions">';
         html += '<button type="button" class="vs-btn vs-btn--outline vs-token-edit" data-token-id="' + id + '">编辑</button>';
         html += '<button type="button" class="vs-btn vs-btn--outline vs-token-reset" data-token-id="' + id + '">重置</button>';

@@ -6226,7 +6226,7 @@ select.vs-input.vs-select {
 .vs-users-logs-body {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     min-height: 0;
 }
 .vs-users-logs-toolbar {
@@ -6235,6 +6235,7 @@ select.vs-input.vs-select {
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
+    flex: 0 0 auto;
 }
 .vs-users-logs-filters {
     display: flex;
@@ -6247,11 +6248,23 @@ select.vs-input.vs-select {
     background: rgba(37, 99, 235, 0.06);
 }
 .vs-users-logs-list {
-    min-height: 160px;
+    min-height: 120px;
+    max-height: min(58vh, 520px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
 }
-.vs-users-logs-cards {
-    display: flex !important;
-    padding: 0 !important;
+.vs-users-logs-desktop {
+    display: block;
+    min-width: 640px;
+}
+.vs-users-logs-mobile {
+    display: none !important;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
 }
 .vs-users-logs-footer {
     display: flex;
@@ -6259,7 +6272,145 @@ select.vs-input.vs-select {
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
-    padding-top: 4px;
+    padding-top: 2px;
+    flex: 0 0 auto;
+}
+.vs-users-log-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 1.4fr) 56px minmax(140px, 1.5fr) 64px 56px minmax(120px, 1fr) 48px;
+    gap: 8px 10px;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eef2f7;
+    cursor: pointer;
+    background: #fff;
+    transition: background 0.12s;
+}
+.vs-users-log-row:hover {
+    background: #f8fafc;
+}
+.vs-users-log-row--head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: default;
+    border-bottom-color: #e2e8f0;
+}
+.vs-users-log-row--head:hover {
+    background: #f8fafc;
+}
+.vs-users-log-row__name {
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.vs-users-log-row__name .vs-log-id {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: #94a3b8;
+}
+.vs-users-log-row__ip {
+    min-width: 0;
+    font-size: 12px;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.vs-users-log-row__ip .vs-log-mono {
+    margin-right: 6px;
+}
+.vs-users-log-row__time {
+    font-size: 12px;
+    color: #64748b;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.vs-users-log-row__act {
+    text-align: right;
+}
+.vs-users-log-row__act .vs-log-view {
+    font-size: 12px;
+    color: #2563eb;
+}
+.vs-users-log-card {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+}
+.vs-users-log-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+.vs-users-log-card__name {
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.vs-users-log-card__mid {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    min-width: 0;
+    font-size: 12px;
+    color: #64748b;
+}
+.vs-users-log-card__mid .vs-users-log-card__ip {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.vs-users-log-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+.vs-users-log-card__foot .vs-log-view {
+    color: #2563eb;
+    flex-shrink: 0;
+}
+@media (max-width: 768px) {
+    .vs-users-logs-list {
+        max-height: min(62vh, 480px);
+        border: 0;
+        background: transparent;
+        overflow: visible;
+    }
+    .vs-users-logs-desktop {
+        display: none !important;
+    }
+    .vs-users-logs-mobile {
+        display: flex !important;
+    }
+}
+
+/* legacy card hooks（详情页等仍可能引用） */
+.vs-users-logs-cards {
+    display: flex !important;
+    padding: 0 !important;
 }
 .vs-users-log-item {
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
@@ -8433,6 +8584,10 @@ select.vs-input.vs-select {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    object-fit: cover;
+}
+#apiKeysPage .user-cell__avatar--letter {
+    display: inline-flex;
 }
 
 #apiKeysPage .user-cell__name {
@@ -8499,11 +8654,11 @@ select.vs-input.vs-select {
     background: var(--vs-content-bg, #fff);
     border: 1px solid var(--vs-border, #e5e7eb);
     border-radius: 12px;
-    padding: 14px;
+    padding: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -8511,9 +8666,44 @@ select.vs-input.vs-select {
 
 #apiKeysPage .key-card__header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 8px;
+}
+
+#apiKeysPage .key-card__user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+#apiKeysPage .key-card__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #e2e8f0;
+}
+
+#apiKeysPage .key-card__avatar--letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+}
+
+#apiKeysPage .key-card__username {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #apiKeysPage .key-card__key {
@@ -8523,52 +8713,33 @@ select.vs-input.vs-select {
     padding: 4px 8px;
     border-radius: 6px;
     word-break: break-all;
-    flex: 1;
+    display: block;
     min-width: 0;
 }
 
-#apiKeysPage .key-card__info {
+#apiKeysPage .key-card__meta {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 13px;
-}
-
-#apiKeysPage .key-card__info-item {
-    display: flex;
-    gap: 8px;
-}
-
-#apiKeysPage .key-card__info-label {
-    color: var(--vs-text-secondary, #6b7280);
-    flex-shrink: 0;
-}
-
-#apiKeysPage .key-card__stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px 10px;
-    margin-top: 2px;
-    padding-top: 6px;
-    border-top: 1px dashed rgba(148, 163, 184, 0.45);
-}
-
-#apiKeysPage .key-card__stat {
-    display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
-    gap: 6px;
-    min-width: 0;
+    gap: 8px;
+    flex-wrap: wrap;
     font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
 }
 
-#apiKeysPage .key-card__stat strong {
+#apiKeysPage .key-card__time {
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+#apiKeysPage .key-card__metrics {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+#apiKeysPage .key-card__metrics strong {
     font-weight: 700;
     color: var(--vs-text, #111);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 #apiKeysPage .vs-api-keys-stat-cell {

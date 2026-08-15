@@ -655,33 +655,57 @@
         }
 
         function cardHtml(row) {
-            return '<article class="vs-log-card vs-users-log-item" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
-                + '<div class="vs-log-card__top">'
-                + '<div class="vs-log-card__title">'
-                + '<span class="vs-log-id">#' + escapeHtml(row.id) + '</span>'
-                + '<strong class="vs-log-card__name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</strong>'
-                + '</div>'
+            var name = row.apiname || ('接口 #' + row.apiid);
+            var ip = row.ip || '—';
+            var loc = row.iploc || '';
+            var ipLine = escapeHtml(ip) + (loc ? (' ' + escapeHtml(loc)) : '');
+            return '<article class="vs-users-log-card" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
+                + '<div class="vs-users-log-card__top">'
+                + '<strong class="vs-users-log-card__name" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</strong>'
                 + statusBadge(row)
                 + '</div>'
-                + '<div class="vs-log-card__meta">'
+                + '<div class="vs-users-log-card__mid">'
                 + methodBadge(row)
-                + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
-                + '<span>' + escapeHtml(row.iploc || '—') + '</span>'
-                + httpBadge(row)
+                + '<span class="vs-users-log-card__ip" title="' + escapeHtml(ip + (loc ? (' ' + loc) : '')) + '">' + ipLine + '</span>'
                 + '</div>'
-                + '<div class="vs-log-card__foot">'
-                + '<span class="vs-log-card__time">' + escapeHtml(row.createtime || '—') + '</span>'
-                + '<span class="vs-log-view">查看详情</span>'
+                + '<div class="vs-users-log-card__foot">'
+                + '<time>' + escapeHtml(row.createtime || '—') + '</time>'
+                + '<span class="vs-log-view">详情</span>'
                 + '</div>'
                 + '</article>';
         }
 
+        function desktopRowHtml(row) {
+            var name = row.apiname || ('接口 #' + row.apiid);
+            var ip = row.ip || '—';
+            var loc = row.iploc || '';
+            return '<div class="vs-users-log-row" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
+                + '<div class="vs-users-log-row__name" title="' + escapeHtml(name) + '">'
+                + '<span class="vs-log-id">#' + escapeHtml(row.id) + '</span>'
+                + escapeHtml(name)
+                + '</div>'
+                + '<div>' + methodBadge(row) + '</div>'
+                + '<div class="vs-users-log-row__ip" title="' + escapeHtml(ip + (loc ? (' ' + loc) : '')) + '">'
+                + '<span class="vs-log-mono">' + escapeHtml(ip) + '</span>'
+                + (loc ? escapeHtml(loc) : '')
+                + '</div>'
+                + '<div>' + statusBadge(row) + '</div>'
+                + '<div>' + httpBadge(row) + '</div>'
+                + '<div class="vs-users-log-row__time">' + escapeHtml(row.createtime || '—') + '</div>'
+                + '<div class="vs-users-log-row__act"><span class="vs-log-view">详情</span></div>'
+                + '</div>';
+        }
+
         function renderList(list) {
             if (!list || !list.length) {
-                listEl.innerHTML = '<p class="vs-empty vs-finance-empty">暂无调用记录</p>';
+                listEl.innerHTML = '<p class="vs-empty vs-finance-empty" style="padding:24px;">暂无调用记录</p>';
                 return;
             }
-            listEl.innerHTML = '<div class="vs-log-cards vs-users-logs-cards">' + list.map(cardHtml).join('') + '</div>';
+            var head = '<div class="vs-users-log-row vs-users-log-row--head" role="presentation">'
+                + '<div>接口</div><div>方法</div><div>IP / 归属</div><div>状态</div><div>HTTP</div><div>时间</div><div></div>'
+                + '</div>';
+            listEl.innerHTML = '<div class="vs-users-logs-desktop">' + head + list.map(desktopRowHtml).join('') + '</div>'
+                + '<div class="vs-users-logs-mobile">' + list.map(cardHtml).join('') + '</div>';
         }
 
         function renderPager() {
