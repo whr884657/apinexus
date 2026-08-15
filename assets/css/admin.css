@@ -6223,11 +6223,41 @@ select.vs-input.vs-select {
     color: #111;
 }
 
+/* 用户调用日志弹窗：按内容收高，禁止 lg 定高留白 */
+.vs-overlay--users-logs .vs-overlay__back[hidden] {
+    display: none !important;
+}
+@media (min-width: 768px) {
+    .vs-overlay--users-logs .vs-overlay__panel {
+        width: min(980px, calc(100vw - 48px));
+        height: auto;
+        max-height: min(82vh, 720px);
+    }
+}
+@media (max-width: 767px) {
+    .vs-overlay--users-logs .vs-overlay__panel {
+        height: auto;
+        max-height: min(88vh, 640px);
+    }
+}
 .vs-users-logs-body {
     display: flex;
     flex-direction: column;
     gap: 10px;
     min-height: 0;
+    flex: 0 1 auto;
+}
+#usersLogsListPanel,
+#usersLogsDetailPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    flex: 0 1 auto;
+}
+#usersLogsDetailPanel[hidden],
+#usersLogsListPanel[hidden] {
+    display: none !important;
 }
 .vs-users-logs-toolbar {
     display: flex;
@@ -6254,23 +6284,24 @@ select.vs-input.vs-select {
     white-space: nowrap;
 }
 .vs-users-logs-list {
-    min-height: 120px;
-    max-height: min(58vh, 520px);
+    min-height: 0;
+    max-height: min(52vh, 420px);
     overflow: auto;
     -webkit-overflow-scrolling: touch;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     background: #fff;
+    flex: 0 1 auto;
 }
 .vs-users-logs-detail {
-    min-height: 120px;
-    max-height: min(62vh, 560px);
+    min-height: 0;
+    max-height: min(58vh, 480px);
     overflow: auto;
     -webkit-overflow-scrolling: touch;
 }
 .vs-users-logs-desktop {
     display: block;
-    min-width: 720px;
+    min-width: 680px;
 }
 .vs-users-logs-mobile {
     display: none !important;
@@ -6283,8 +6314,8 @@ select.vs-input.vs-select {
 }
 .vs-users-log-row {
     display: grid;
-    /* 方法列收窄贴接口；状态列加宽避免「失败-…」被裁切 */
-    grid-template-columns: minmax(140px, 1.35fr) 40px minmax(120px, 1.05fr) minmax(110px, 1.25fr) 44px 132px 40px;
+    /* 接口列封顶 → 方法贴接口；状态 max-content → 徽章随文字，禁止拉成长条 */
+    grid-template-columns: minmax(0, 200px) auto minmax(0, 1.4fr) max-content 44px 132px 40px;
     gap: 6px 8px;
     align-items: center;
     padding: 8px 12px;
@@ -6345,18 +6376,19 @@ select.vs-input.vs-select {
     margin-right: 6px;
 }
 .vs-users-log-row__status {
-    min-width: 0;
+    width: max-content;
+    max-width: 11.5em;
+    justify-self: start;
 }
 .vs-users-log-row__status .vs-log-status {
-    max-width: 100%;
-    white-space: normal;
-    line-height: 1.25;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    display: inline-flex;
+    width: fit-content;
+    max-width: 11.5em;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     border-radius: 8px;
+    vertical-align: middle;
 }
 .vs-users-log-row__http {
     text-align: center;
@@ -6427,7 +6459,7 @@ select.vs-input.vs-select {
 }
 @media (max-width: 768px) {
     .vs-users-logs-list {
-        max-height: min(62vh, 480px);
+        max-height: min(48vh, 360px);
         border: 0;
         background: transparent;
         overflow: auto;

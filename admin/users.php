@@ -528,7 +528,7 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
 </div>
 <?php endif; ?>
 
-<div class="vs-overlay vs-overlay--lg" id="usersLogsOverlay" hidden aria-hidden="true">
+<div class="vs-overlay vs-overlay--users-logs" id="usersLogsOverlay" hidden aria-hidden="true">
     <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
     <div class="vs-overlay__panel" role="dialog" aria-modal="true" aria-labelledby="usersLogsTitle">
         <div class="vs-overlay__handle" aria-hidden="true"></div>

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.10-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.11-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -284,12 +284,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.10（2026-08-15）
+### v13.26.11（2026-08-15）
 
-- 管理端用户「调用日志」弹窗：去掉分页与「每页条数」，固定仅加载最近 20 条；列表 `skip_total` 避免海量 COUNT
-- 电脑端列宽：方法列收窄贴接口名，状态列加宽完整显示失败原因
-- 手机端：方法 / IP 归属 / 时间同行；去掉底部分页叠层「幻影」；去掉底部「关闭」，仅保留右上角 ×
-- 详情改为同弹窗内切换（返回箭头），消除双叠层卡顿；请求可中止 + 分帧渲染
+- 管理端用户调用日志弹窗：取消 lg 定高，按内容收高，消除底部大片空白（电脑/手机）
+- 电脑端：接口列封顶，方法紧贴接口名；状态徽章随文字宽度，不再拉成长条
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

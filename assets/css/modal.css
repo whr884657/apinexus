@@ -669,6 +669,10 @@ body.vs-modal-open {
     padding: 16px 20px;
 }
 
+.vs-overlay--users-logs .vs-overlay__body {
+    flex: 0 1 auto;
+}
+
 .vs-overlay__foot {
     display: flex;
     justify-content: flex-end;
@@ -717,6 +721,11 @@ body.is-overlay-open {
         transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
     }
 
+    .vs-overlay--users-logs .vs-overlay__panel {
+        height: auto;
+        max-height: min(88vh, 640px);
+    }
+
     .vs-overlay.is-open .vs-overlay__panel {
         transform: translateY(0);
     }
@@ -759,6 +768,13 @@ body.is-overlay-open {
         width: min(var(--vs-overlay-lg-width), var(--vs-overlay-lg-max-width), calc(100vw - 48px));
         height: min(var(--vs-overlay-lg-height), var(--vs-overlay-lg-max-height), calc(100vh - 48px));
         max-height: min(var(--vs-overlay-lg-height), var(--vs-overlay-lg-max-height), calc(100vh - 48px));
+    }
+
+    /* 用户调用日志：按内容收高，禁止 lg 式定高留白 */
+    .vs-overlay--users-logs .vs-overlay__panel {
+        width: min(980px, calc(100vw - 48px));
+        height: auto;
+        max-height: min(82vh, 720px);
     }
 
     .vs-overlay__panel {
