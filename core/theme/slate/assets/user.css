@@ -981,6 +981,7 @@ body.st-uc-menu-open {
 .st-uc-body .uc-dash__legend-line--calls { background: var(--st-uc-accent); }
 .st-uc-body .uc-dash__legend-line--cost { background: #c9a227; }
 .st-uc-body .uc-dash__legend-line--rate { background: #0d9488; }
+.uc-dash__legend-line--fail { background: #ef4444; }
 .st-uc-body .uc-dash__chart-wrap { min-height: 200px; }
 .st-uc-body .uc-dash__chart-canvas {
     position: relative;

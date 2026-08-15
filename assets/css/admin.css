@@ -6480,6 +6480,13 @@ select.vs-input.vs-select {
     }
 }
 
+.vs-log-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+}
+
 .vs-log-card {
     padding: 12px 14px;
     border: 1px solid #e2e8f0;
@@ -6693,6 +6700,8 @@ select.vs-input.vs-select {
 
     .vs-log-cards {
         display: flex;
+        flex-direction: column;
+        gap: 10px;
     }
 }
 

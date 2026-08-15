@@ -5361,12 +5361,13 @@ select.vs-input.vs-select {
 
 @media (max-width: 900px) {
     .vs-api-item.vs-token-row {
-        grid-template-columns: 28px minmax(0, 1fr) auto !important;
+        /* 4 列：避免「调用/消耗」落在 28px 图标列上叠字 */
+        grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) auto !important;
         grid-template-areas:
-            "icon title tags"
-            "endpoint endpoint endpoint"
-            "calls spent author"
-            "actions actions actions" !important;
+            "icon title title tags"
+            "endpoint endpoint endpoint endpoint"
+            ". calls spent author"
+            "actions actions actions actions" !important;
         gap: 8px 10px !important;
         padding: 12px !important;
     }
@@ -5377,18 +5378,23 @@ select.vs-input.vs-select {
         color: #64748b;
         text-align: left !important;
         justify-self: start !important;
+        white-space: nowrap;
+        min-width: 0;
     }
     .vs-api-item.vs-token-row .vs-api-item__spent,
     .vs-api-item.vs-token-row .vs-token-row__spent {
         grid-area: spent !important;
         font-size: 12px;
         color: #64748b;
+        white-space: nowrap;
+        min-width: 0;
     }
     .vs-api-item.vs-token-row .vs-api-item__author {
         grid-area: author !important;
         font-size: 12px;
         color: #94a3b8;
         text-align: right;
+        white-space: nowrap;
     }
     .vs-api-item.vs-token-row .vs-api-item__actions {
         grid-area: actions !important;

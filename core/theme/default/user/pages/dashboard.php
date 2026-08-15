@@ -138,9 +138,10 @@ $kpiClass = $isDeveloper ? ' is-eight' : ' is-seven';
         </div>
         <div class="vs-panel uc-dash__panel">
             <div class="vs-panel__header uc-dash__panel-head">
-                <h2 class="vs-panel__title">调用成功率</h2>
+                <h2 class="vs-panel__title">调用成功/失败率</h2>
                 <div class="uc-dash__legend">
                     <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--rate"></i>成功率</span>
+                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--fail"></i>失败率</span>
                 </div>
             </div>
             <div class="vs-panel__body">

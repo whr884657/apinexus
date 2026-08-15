@@ -10,7 +10,7 @@
         return;
     }
 
-    var COLORS = { calls: '#2563eb', cost: '#f59e0b', rate: '#0d9488' };
+    var COLORS = { calls: '#2563eb', cost: '#f59e0b', rate: '#0d9488', fail: '#ef4444' };
     var boot = {};
     try {
         boot = JSON.parse(page.getAttribute('data-chart-boot') || '{}') || {};
@@ -101,7 +101,7 @@
      * @param {string[]} chartLabels
      * @param {number[]} values
      * @param {string} color
-     * @param {{unit?:string,yMax?:number,tipRows?:function(number,number):Array<{color:string,text:string}>}} opts
+     * @param {{unit?:string,yMax?:number,values2?:number[],color2?:string,tipRows?:function(number,number):Array<{color:string,text:string}>}} opts
      */
     function lineChart(el, chartLabels, values, color, opts) {
         if (!el) return;
@@ -113,9 +113,14 @@
             return;
         }
         var unit = opts.unit || '';
+        var values2 = Array.isArray(opts.values2) ? opts.values2 : null;
+        var color2 = opts.color2 || '#ef4444';
         var w = 560, h = 200, L = 36, R = 10, T = 14, B = 26;
         var plotTop = T, plotBottom = h - B;
         var dataMax = Math.max.apply(null, values.concat([0]));
+        if (values2 && values2.length) {
+            dataMax = Math.max(dataMax, Math.max.apply(null, values2.concat([0])));
+        }
         var max = opts.yMax != null ? opts.yMax : Math.max(dataMax, 1);
         var min = 0;
         var span = Math.max(0.0001, max - min);
@@ -132,6 +137,14 @@
             return { x: xAt(i), y: yAt(v) };
         });
         var path = smoothPath(pts, plotTop, plotBottom);
+        var path2 = '';
+        if (values2 && values2.length) {
+            var pts2 = values2.map(function (v, i) {
+                return { x: xAt(i), y: yAt(v) };
+            });
+            path2 = '<path d="' + smoothPath(pts2, plotTop, plotBottom) + '" fill="none" stroke="' + color2
+                + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4"/>';
+        }
         var xLabels = '';
         chartLabels.forEach(function (lb, i) {
             if (n > 8 && i % 2 === 1 && i !== n - 1) return;
@@ -141,6 +154,7 @@
             + '<svg viewBox="0 0 ' + w + ' ' + h + '" role="img">'
             + grid
             + '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+            + path2
             + xLabels
             + '<line class="uc-dash__chart-guide" x1="0" y1="' + plotTop + '" x2="0" y2="' + plotBottom + '" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3" opacity="0"></line>'
             + '<g class="uc-dash__chart-dots"></g>'
@@ -247,9 +261,19 @@
             {
                 unit: '%',
                 yMax: 100,
+                values2: rates.map(function (v) {
+                    var n = parseFloat(v);
+                    if (isNaN(n)) n = 0;
+                    return Math.max(0, Math.min(100, 100 - n));
+                }),
+                color2: COLORS.fail,
                 tipRows: function (idx, v) {
+                    var ok = parseFloat(v);
+                    if (isNaN(ok)) ok = 0;
+                    var fail = Math.max(0, Math.min(100, 100 - ok));
                     return [
-                        { color: COLORS.rate, text: '成功率 ' + fmtRate(v) + '%' }
+                        { color: COLORS.rate, text: '成功率 ' + fmtRate(ok) + '%' },
+                        { color: COLORS.fail, text: '失败率 ' + fmtRate(fail) + '%' }
                     ];
                 }
             }
