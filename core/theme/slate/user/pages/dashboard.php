@@ -19,8 +19,16 @@ $stat7 = isset($dash['stat7']) && is_array($dash['stat7']) ? $dash['stat7'] : ar
 $days = isset($stat7['days']) && is_array($stat7['days']) ? $stat7['days'] : array();
 $labels = isset($days['labels']) && is_array($days['labels']) ? $days['labels'] : array();
 $callsSeries = isset($days['calls']) && is_array($days['calls']) ? $days['calls'] : array();
-$costSeries = isset($days['cost']) && is_array($days['cost']) ? $days['cost'] : array();
+$keyCallsSeries = isset($days['key_calls']) && is_array($days['key_calls']) ? $days['key_calls'] : $callsSeries;
+$pointsCallsSeries = isset($days['points_calls']) && is_array($days['points_calls']) ? $days['points_calls'] : array();
 $rateSeries = isset($days['success_rate']) && is_array($days['success_rate']) ? $days['success_rate'] : array();
+$failSeries = isset($days['fail_rate']) && is_array($days['fail_rate']) ? $days['fail_rate'] : array();
+if (count($pointsCallsSeries) < count($keyCallsSeries)) {
+    $pointsCallsSeries = array_pad($pointsCallsSeries, count($keyCallsSeries), 0);
+}
+if (count($failSeries) < count($rateSeries)) {
+    $failSeries = array_pad($failSeries, count($rateSeries), 0);
+}
 $labelShort = array();
 foreach ($labels as $lb) {
     $lb = (string) $lb;
@@ -48,9 +56,10 @@ foreach ($topList as $t) {
 
 $chartBoot = array(
     'labels'       => $labelShort,
-    'calls'        => array_map('intval', $callsSeries),
-    'cost'         => array_map(function ($v) { return round((float) $v, 4); }, $costSeries),
-    'success_rate' => array_map(function ($v) { return round((float) $v, 1); }, $rateSeries),
+    'key_calls'    => array_map('intval', $keyCallsSeries),
+    'points_calls' => array_map('intval', $pointsCallsSeries),
+    'success_rate' => array_map(function ($v) { return round((float) $v, 2); }, $rateSeries),
+    'fail_rate'    => array_map(function ($v) { return round((float) $v, 2); }, $failSeries),
 );
 $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
 $kpiClass = $isDeveloper ? ' is-eight' : ' is-seven';
@@ -128,8 +137,8 @@ $kpiClass = $isDeveloper ? ' is-eight' : ' is-seven';
             <div class="vs-panel__header uc-dash__panel-head">
                 <h2 class="vs-panel__title">近 7 日调用量</h2>
                 <div class="uc-dash__legend">
-                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--calls"></i>调用次数</span>
-                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--cost"></i>积分消耗</span>
+                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--key"></i>密钥</span>
+                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--points"></i>积分</span>
                 </div>
             </div>
             <div class="vs-panel__body">
@@ -138,9 +147,9 @@ $kpiClass = $isDeveloper ? ' is-eight' : ' is-seven';
         </div>
         <div class="vs-panel uc-dash__panel">
             <div class="vs-panel__header uc-dash__panel-head">
-                <h2 class="vs-panel__title">调用成功/失败率</h2>
+                <h2 class="vs-panel__title">调用成功 / 失败率</h2>
                 <div class="uc-dash__legend">
-                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--rate"></i>成功率</span>
+                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--ok"></i>成功率</span>
                     <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--fail"></i>失败率</span>
                 </div>
             </div>

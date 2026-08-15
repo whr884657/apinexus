@@ -10,7 +10,7 @@
         return;
     }
 
-    var COLORS = { calls: '#2563eb', cost: '#f59e0b', rate: '#0d9488', fail: '#ef4444' };
+    var COLORS = { key: '#2563eb', points: '#f59e0b', ok: '#16a34a', fail: '#dc2626' };
     var boot = {};
     try {
         boot = JSON.parse(page.getAttribute('data-chart-boot') || '{}') || {};
@@ -19,9 +19,10 @@
     }
 
     var labels = boot.labels || [];
-    var calls = boot.calls || [];
-    var cost = boot.cost || [];
-    var rates = boot.success_rate || [];
+    var keyCalls = boot.key_calls || [];
+    var pointsCalls = boot.points_calls || [];
+    var successRates = boot.success_rate || [];
+    var failRates = boot.fail_rate || [];
     var liveInFlight = false;
     var liveTimer = null;
 
@@ -97,34 +98,33 @@
     }
 
     /**
+     * 多系列折线（对齐管理端 admin-dashboard.js：固定 Y 轴、虚线、悬停各系列）
      * @param {HTMLElement} el
      * @param {string[]} chartLabels
-     * @param {number[]} values
-     * @param {string} color
-     * @param {{unit?:string,yMax?:number,values2?:number[],color2?:string,tipRows?:function(number,number):Array<{color:string,text:string}>}} opts
+     * @param {Array<{name:string,data:number[],color:string,dashed?:boolean}>} seriesList
+     * @param {{fixedMin?:number,fixedMax?:number,unit?:string,formatValue?:function(*)}} opts
      */
-    function lineChart(el, chartLabels, values, color, opts) {
+    function lineChart(el, chartLabels, seriesList, opts) {
         if (!el) return;
         opts = opts || {};
         chartLabels = Array.isArray(chartLabels) ? chartLabels : [];
-        values = Array.isArray(values) ? values : [];
-        if (!values.length) {
+        seriesList = Array.isArray(seriesList) ? seriesList : [];
+        var all = [];
+        seriesList.forEach(function (s) { all = all.concat(s.data || []); });
+        if (!all.length) {
             el.innerHTML = '<div class="uc-dash__chart-empty">暂无趋势数据</div>';
             return;
         }
         var unit = opts.unit || '';
-        var values2 = Array.isArray(opts.values2) ? opts.values2 : null;
-        var color2 = opts.color2 || '#ef4444';
         var w = 560, h = 200, L = 36, R = 10, T = 14, B = 26;
         var plotTop = T, plotBottom = h - B;
-        var dataMax = Math.max.apply(null, values.concat([0]));
-        if (values2 && values2.length) {
-            dataMax = Math.max(dataMax, Math.max.apply(null, values2.concat([0])));
-        }
-        var max = opts.yMax != null ? opts.yMax : Math.max(dataMax, 1);
+        var max = Math.max.apply(null, all.concat([1]));
         var min = 0;
+        if (opts.fixedMin != null) min = opts.fixedMin;
+        if (opts.fixedMax != null) max = opts.fixedMax;
+        if (min < 0) min = 0;
         var span = Math.max(0.0001, max - min);
-        var n = Math.max(1, chartLabels.length || values.length);
+        var n = Math.max(1, chartLabels.length || 1);
         function xAt(i) { return L + (i * (w - L - R)) / Math.max(1, n - 1); }
         function yAt(v) { return T + (1 - (v - min) / span) * (h - T - B); }
         var grid = '';
@@ -133,29 +133,27 @@
             var gy = T + g * (h - T - B) / 3;
             grid += '<line x1="' + L + '" y1="' + gy + '" x2="' + (w - R) + '" y2="' + gy + '" stroke="#e5e7eb" stroke-width="1"/>';
         }
-        var pts = values.map(function (v, i) {
-            return { x: xAt(i), y: yAt(v) };
-        });
-        var path = smoothPath(pts, plotTop, plotBottom);
-        var path2 = '';
-        if (values2 && values2.length) {
-            var pts2 = values2.map(function (v, i) {
+        var paths = seriesList.map(function (s) {
+            var pts = (s.data || []).map(function (v, i) {
                 return { x: xAt(i), y: yAt(v) };
             });
-            path2 = '<path d="' + smoothPath(pts2, plotTop, plotBottom) + '" fill="none" stroke="' + color2
-                + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4"/>';
-        }
+            var dash = s.dashed ? ' stroke-dasharray="5 4"' : '';
+            return '<path d="' + smoothPath(pts, plotTop, plotBottom) + '" fill="none" stroke="'
+                + esc(s.color || '#2563eb') + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"' + dash + '/>';
+        }).join('');
         var xLabels = '';
         chartLabels.forEach(function (lb, i) {
             if (n > 8 && i % 2 === 1 && i !== n - 1) return;
             xLabels += '<text x="' + xAt(i) + '" y="' + (h - 8) + '" text-anchor="middle" fill="#94a3b8" font-size="11">' + esc(lb) + '</text>';
         });
+        var fmtTip = opts.formatValue || function (v) {
+            var num = parseFloat(v);
+            if (isNaN(num)) return '0';
+            return (Math.round(num * 100) / 100).toLocaleString('zh-CN');
+        };
         el.innerHTML = '<div class="uc-dash__chart-canvas">'
             + '<svg viewBox="0 0 ' + w + ' ' + h + '" role="img">'
-            + grid
-            + '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
-            + path2
-            + xLabels
+            + grid + paths + xLabels
             + '<line class="uc-dash__chart-guide" x1="0" y1="' + plotTop + '" x2="0" y2="' + plotBottom + '" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3" opacity="0"></line>'
             + '<g class="uc-dash__chart-dots"></g>'
             + '</svg>'
@@ -187,23 +185,21 @@
         }
 
         function showAt(idx) {
-            var v = values[idx] != null ? values[idx] : 0;
             var lb = chartLabels[idx] != null ? chartLabels[idx] : '';
             var x = xAt(idx);
-            var y = yAt(v);
             var rect = svg.getBoundingClientRect();
             var scaleX = rect.width > 0 ? (rect.width / w) : 1;
-            var rows = typeof opts.tipRows === 'function' ? opts.tipRows(idx, v) : null;
             var rowsHtml = '';
-            if (rows && rows.length) {
-                rows.forEach(function (row) {
-                    rowsHtml += '<div class="uc-dash__chart-tip-row"><i style="background:'
-                        + esc(row.color || color) + '"></i><b>' + esc(row.text || '') + '</b></div>';
-                });
-            } else {
-                rowsHtml = '<div class="uc-dash__chart-tip-row"><i style="background:' + color + '"></i><b>'
-                    + esc(String(v)) + esc(unit) + '</b></div>';
-            }
+            var dotsHtml = '';
+            seriesList.forEach(function (s) {
+                var raw = (s.data || [])[idx];
+                if (raw == null) raw = 0;
+                var yi = Math.max(plotTop, Math.min(plotBottom, yAt(raw)));
+                dotsHtml += '<circle cx="' + x.toFixed(1) + '" cy="' + yi.toFixed(1) + '" r="3.5" fill="#fff" stroke="'
+                    + esc(s.color || '#2563eb') + '" stroke-width="2"/>';
+                rowsHtml += '<div class="uc-dash__chart-tip-row"><i style="background:' + esc(s.color || '#2563eb')
+                    + '"></i><span>' + esc(s.name || '') + '</span><b>' + esc(fmtTip(raw) + unit) + '</b></div>';
+            });
             tip.hidden = false;
             tip.innerHTML = '<div class="uc-dash__chart-tip-title">' + esc(lb) + '</div>' + rowsHtml;
             var tipW = tip.offsetWidth || 100;
@@ -216,9 +212,7 @@
                 guide.setAttribute('x2', String(x));
                 guide.setAttribute('opacity', '1');
             }
-            if (dotsG) {
-                dotsG.innerHTML = '<circle cx="' + x + '" cy="' + y + '" r="4" fill="#fff" stroke="' + color + '" stroke-width="2"/>';
-            }
+            if (dotsG) dotsG.innerHTML = dotsHtml;
         }
 
         svg.addEventListener('mousemove', function (ev) {
@@ -241,40 +235,27 @@
         lineChart(
             document.getElementById('ucDashCallsChart'),
             labels,
-            calls,
-            COLORS.calls,
-            {
-                tipRows: function (idx, v) {
-                    var c = cost[idx] != null ? cost[idx] : 0;
-                    return [
-                        { color: COLORS.calls, text: '调用 ' + String(v) + ' 次' },
-                        { color: COLORS.cost, text: '积分 ' + fmtCost(c) }
-                    ];
-                }
-            }
+            [
+                { name: '密钥', data: keyCalls, color: COLORS.key },
+                { name: '积分', data: pointsCalls, color: COLORS.points, dashed: true }
+            ],
+            { fixedMin: 0 }
         );
         lineChart(
             document.getElementById('ucDashRateChart'),
             labels,
-            rates,
-            COLORS.rate,
+            [
+                { name: '成功率', data: successRates, color: COLORS.ok },
+                { name: '失败率', data: failRates, color: COLORS.fail, dashed: true }
+            ],
             {
+                fixedMin: 0,
+                fixedMax: 100,
                 unit: '%',
-                yMax: 100,
-                values2: rates.map(function (v) {
+                formatValue: function (v) {
                     var n = parseFloat(v);
                     if (isNaN(n)) n = 0;
-                    return Math.max(0, Math.min(100, 100 - n));
-                }),
-                color2: COLORS.fail,
-                tipRows: function (idx, v) {
-                    var ok = parseFloat(v);
-                    if (isNaN(ok)) ok = 0;
-                    var fail = Math.max(0, Math.min(100, 100 - ok));
-                    return [
-                        { color: COLORS.rate, text: '成功率 ' + fmtRate(ok) + '%' },
-                        { color: COLORS.fail, text: '失败率 ' + fmtRate(fail) + '%' }
-                    ];
+                    return (Math.round(n * 100) / 100).toFixed(2);
                 }
             }
         );
@@ -368,9 +349,18 @@
         }
 
         labels = Array.isArray(days.labels) ? days.labels.map(shortLabel) : [];
-        calls = Array.isArray(days.calls) ? days.calls.map(function (v) { return parseInt(v, 10) || 0; }) : [];
-        cost = Array.isArray(days.cost) ? days.cost.map(function (v) { return Math.round(parseFloat(v) * 10000) / 10000 || 0; }) : [];
-        rates = Array.isArray(days.success_rate) ? days.success_rate.map(function (v) { return Math.round(parseFloat(v) * 10) / 10 || 0; }) : [];
+        keyCalls = Array.isArray(days.key_calls)
+            ? days.key_calls.map(function (v) { return parseInt(v, 10) || 0; })
+            : (Array.isArray(days.calls) ? days.calls.map(function (v) { return parseInt(v, 10) || 0; }) : []);
+        pointsCalls = Array.isArray(days.points_calls)
+            ? days.points_calls.map(function (v) { return parseInt(v, 10) || 0; })
+            : keyCalls.map(function () { return 0; });
+        successRates = Array.isArray(days.success_rate)
+            ? days.success_rate.map(function (v) { return Math.round(parseFloat(v) * 100) / 100 || 0; })
+            : [];
+        failRates = Array.isArray(days.fail_rate)
+            ? days.fail_rate.map(function (v) { return Math.round(parseFloat(v) * 100) / 100 || 0; })
+            : successRates.map(function () { return 0; });
         renderCharts();
         renderTop(s7.top);
         renderRecent(stats);

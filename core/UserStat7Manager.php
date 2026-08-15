@@ -5,6 +5,7 @@
  *
  * 写入：ApiStats 记账成功后 recordHit（失败静默，不拖垮接口）
  * 读取：仅经 FrontendUser / 本类；主题禁止直查库
+ * 日桶字段：calls/ok/fail/cost/keycalls/pointscalls/apis
  * 禁止：从 apilog 全表回填（见 E215 / 方案讨论第 8～9 轮）
  */
 
@@ -90,19 +91,33 @@ class UserStat7Manager
             $day = date('Y-m-d');
             if (!isset($map[$day]) || !is_array($map[$day])) {
                 $map[$day] = array(
-                    'calls' => 0,
-                    'ok'    => 0,
-                    'fail'  => 0,
-                    'cost'  => 0.0,
-                    'apis'  => array(),
+                    'calls'        => 0,
+                    'ok'           => 0,
+                    'fail'         => 0,
+                    'cost'         => 0.0,
+                    'keycalls'     => 0,
+                    'pointscalls'  => 0,
+                    'apis'         => array(),
                 );
             }
             $bucket = &$map[$day];
+            if (!isset($bucket['keycalls'])) {
+                $bucket['keycalls'] = 0;
+            }
+            if (!isset($bucket['pointscalls'])) {
+                $bucket['pointscalls'] = 0;
+            }
             $bucket['calls'] = (int) $bucket['calls'] + 1;
             if ($ok) {
                 $bucket['ok'] = (int) $bucket['ok'] + 1;
             } else {
                 $bucket['fail'] = (int) $bucket['fail'] + 1;
+            }
+            // 与管理端 type 趋势口径一致：扣费=积分调用，否则=普通密钥调用
+            if ($cost > 0) {
+                $bucket['pointscalls'] = (int) $bucket['pointscalls'] + 1;
+            } else {
+                $bucket['keycalls'] = (int) $bucket['keycalls'] + 1;
             }
             $bucket['cost'] = round((float) $bucket['cost'] + $cost, 4);
             if (!isset($bucket['apis']) || !is_array($bucket['apis'])) {
@@ -180,8 +195,11 @@ class UserStat7Manager
     {
         $labels = array();
         $callsSeries = array();
+        $keySeries = array();
+        $pointsSeries = array();
         $costSeries = array();
-        $rateSeries = array();
+        $successSeries = array();
+        $failSeries = array();
         $totalCalls = 0;
         $today = date('Y-m-d');
         $todayCalls = 0;
@@ -192,11 +210,34 @@ class UserStat7Manager
             $row = isset($map[$day]) && is_array($map[$day]) ? $map[$day] : array();
             $c = isset($row['calls']) ? (int) $row['calls'] : 0;
             $ok = isset($row['ok']) ? (int) $row['ok'] : 0;
+            $fail = isset($row['fail']) ? (int) $row['fail'] : 0;
+            if ($fail < 0) {
+                $fail = 0;
+            }
+            // 旧桶无 keycalls/pointscalls：全部归入密钥，避免臆造积分线
+            $hasSplit = array_key_exists('keycalls', $row) || array_key_exists('pointscalls', $row);
+            if ($hasSplit) {
+                $keyC = isset($row['keycalls']) ? (int) $row['keycalls'] : 0;
+                $ptsC = isset($row['pointscalls']) ? (int) $row['pointscalls'] : 0;
+            } else {
+                $keyC = $c;
+                $ptsC = 0;
+            }
             $cost = isset($row['cost']) ? (float) $row['cost'] : 0.0;
             $labels[] = $day;
             $callsSeries[] = $c;
+            $keySeries[] = max(0, $keyC);
+            $pointsSeries[] = max(0, $ptsC);
             $costSeries[] = round($cost, 4);
-            $rateSeries[] = $c > 0 ? round(($ok / (float) $c) * 100, 1) : 0.0;
+            // 与管理端 rateTrend7d 一致：无调用时成功/失败率均为 0（禁止 100-成功率 得出 100% 失败）
+            $t = $ok + $fail;
+            if ($t > 0) {
+                $successSeries[] = round(($ok * 100) / (float) $t, 2);
+                $failSeries[] = round(($fail * 100) / (float) $t, 2);
+            } else {
+                $successSeries[] = 0.0;
+                $failSeries[] = 0.0;
+            }
             $totalCalls += $c;
             if ($day === $today) {
                 $todayCalls = $c;
@@ -226,8 +267,11 @@ class UserStat7Manager
             'days'         => array(
                 'labels'       => $labels,
                 'calls'        => $callsSeries,
+                'key_calls'    => $keySeries,
+                'points_calls' => $pointsSeries,
                 'cost'         => $costSeries,
-                'success_rate' => $rateSeries,
+                'success_rate' => $successSeries,
+                'fail_rate'    => $failSeries,
             ),
             'today_calls'  => $todayCalls,
             'today_cost'   => $todayCost,

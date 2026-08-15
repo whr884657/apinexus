@@ -1,5 +1,15 @@
 {
     "versions": {
+        "13.26.14": {
+            "title": "ApiNexus 13.26.14 用户控制台折线对齐管理端",
+            "date": "2026-08-15",
+            "db_changes": false,
+            "changes": [
+                "用户控制台近 7 日调用量改为密钥/积分双折线（对齐管理端类型趋势口径）",
+                "成功/失败率双线改为读日桶 fail_rate；无调用日两边为 0，修复失败率从 100% 起步",
+                "UserStat7 日桶增加 keycalls/pointscalls；双主题 default/slate 同步"
+            ]
+        },
         "13.26.13": {
             "title": "ApiNexus 13.26.13 管理日志卡片与令牌/成功率修复",
             "date": "2026-08-15",

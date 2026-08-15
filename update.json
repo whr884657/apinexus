@@ -1,11 +1,11 @@
 {
-    "version": "13.26.13",
-    "title": "ApiNexus 13.26.13 管理日志卡片与令牌/成功率修复",
+    "version": "13.26.14",
+    "title": "ApiNexus 13.26.14 用户控制台折线对齐管理端",
     "release_date": "2026-08-15",
     "db_changes": false,
     "changes": [
-        "修复管理端系统日志页手机卡片横排错乱：恢复 .vs-log-cards 纵向 flex（13.26.8 误删）",
-        "用户令牌管理手机端：调用/消耗栅格列修正，避免叠字",
-        "用户控制台折线：调用成功/失败率双线 + tooltip 同时显示失败率"
+        "用户控制台近 7 日调用量改为密钥/积分双折线（对齐管理端类型趋势口径）",
+        "成功/失败率双线改为读日桶 fail_rate；无调用日两边为 0，修复失败率从 100% 起步",
+        "UserStat7 日桶增加 keycalls/pointscalls；双主题 default/slate 同步"
     ]
 }
