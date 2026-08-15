@@ -43,7 +43,7 @@ $helloLine = isset($hello['hello']) ? (string) $hello['hello'] : ('欢迎回来�
 $helloHint = isset($hello['hint']) ? (string) $hello['hint'] : '';
 $helloSlot = isset($hello['slot']) ? (string) $hello['slot'] : '';
 
-$scripts = array('user-dash-hello.js');
+$scripts = array('user-dash-hello.js', 'user-dashboard.js');
 if (!empty($checkinBanner['show_banner'])) {
     $scripts[] = 'user-checkin.js';
 }

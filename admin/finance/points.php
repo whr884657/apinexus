@@ -35,7 +35,7 @@ if ($tableReady) {
     ob_start();
     ?>
     <div class="vs-finance-head-actions vs-finance-head-actions--points" id="pointsToolbar">
-        <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="pointsRefreshBtn">刷新</button>
+        <?php echo vs_admin_refresh_btn_html('pointsRefreshBtn'); ?>
         <div class="vs-finance-search">
             <input type="search" class="vs-input vs-finance-search__input" id="pointsSearchInput"
                    placeholder="搜索用户 / 邮箱 / 类型 / 说明 / 订单号…" autocomplete="off">

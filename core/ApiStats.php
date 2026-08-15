@@ -591,6 +591,15 @@ class ApiStats
             StatDayManager::recordHit($id, (bool) $ok, (int) $charged, $hasKey);
         }
 
+        // 用户近 7 日窗：仅有效密钥归属用户（与 keycalls /「我的调用」口径一致；勿用登录 Cookie 回退污染）
+        $uidForStat7 = 0;
+        if (!empty(self::$keyCtx['valid']) && !empty(self::$keyCtx['userid'])) {
+            $uidForStat7 = (int) self::$keyCtx['userid'];
+        }
+        if ($uidForStat7 > 0 && class_exists('UserStat7Manager')) {
+            UserStat7Manager::recordHit($uidForStat7, $id, (bool) $ok, (float) $cost);
+        }
+
         if (!class_exists('ApiLogManager') || !ApiLogManager::detailEnabled()) {
             return;
         }

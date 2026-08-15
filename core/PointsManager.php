@@ -409,6 +409,13 @@ class PointsManager
             if (class_exists('RedisCache')) {
                 RedisCache::invalidateOrders();
             }
+            if (class_exists('PointsNotify')) {
+                try {
+                    PointsNotify::notifyRechargeSuccess($userId, $amount, $newBal, $orderno);
+                } catch (Exception $e) {
+                    // 发信失败不阻断充值履约
+                }
+            }
             return true;
         } catch (Exception $e) {
             try {
@@ -518,9 +525,32 @@ class PointsManager
                 isset($extra['paytime']) ? $extra['paytime'] : null,
             ));
 
+            // 密钥维度累计消耗：仅 API 扣费 / 调用退回且带 keyid（与账户 pointsspent 并存）
+            $keyIdForSpent = (int) (isset($extra['keyid']) ? $extra['keyid'] : 0);
+            if ($keyIdForSpent > 0 && class_exists('ApiKeyManager')
+                && method_exists('ApiKeyManager', 'adjustPointsspent')) {
+                if ($direct === OrderManager::DIRECT_DEC
+                    && (int) $kind === OrderManager::KIND_API) {
+                    ApiKeyManager::adjustPointsspent($keyIdForSpent, $amount, $pdo);
+                } elseif ($direct === OrderManager::DIRECT_INC
+                    && (int) $kind === OrderManager::KIND_REFUND) {
+                    ApiKeyManager::adjustPointsspent($keyIdForSpent, -$amount, $pdo);
+                }
+            }
+
             $pdo->commit();
             if (class_exists('RedisCache')) {
                 RedisCache::invalidateOrders();
+            }
+            if ($direct === OrderManager::DIRECT_DEC
+                && $cur > 0.0000001
+                && $newBal <= 0.0000001
+                && class_exists('PointsNotify')) {
+                try {
+                    PointsNotify::notifyBalanceZero($userId, $newBal);
+                } catch (Exception $e) {
+                    // 发信失败不阻断积分主流程
+                }
             }
             return array(
                 'ok'      => true,

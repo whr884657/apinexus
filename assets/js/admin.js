@@ -127,14 +127,19 @@
         refreshReviewBadgePlacement();
     }
 
-    /** 全后台轻按下反馈（面板/卡片/按钮），尊重减少动态偏好 */
+    /**
+     * 全后台轻按下反馈（卡片/按钮），尊重减少动态偏好。
+     * 禁止挂在整块 .vs-panel：高大内容面板（如系统升级「更新记录」）scale 会以中心收缩，
+     * 手机端表现为点顶部往下缩、点底部往上跳（E241）。
+     */
     function initPressFeedback() {
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             return;
         }
         var shell = document.getElementById('vsAdminShell') || document.body;
         if (!shell) return;
-        var SEL = '.vs-panel, .vs-card, .vs-stat-card, .vs-list-card, .vs-feedback-card, .vs-mobile-card, .vs-btn';
+        var SEL = '.vs-card, .vs-stat-card, .vs-list-card, .vs-feedback-card, .vs-mobile-card, .vs-btn:not(.vs-refresh-btn)';
+
 
         function clearPressed() {
             var list = shell.querySelectorAll('.is-pressed');

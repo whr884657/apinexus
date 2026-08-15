@@ -48,7 +48,7 @@ if ($tableReady) {
             <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="1">已完成</button>
             <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="2">已取消</button>
         </div>
-        <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="orderRefreshBtn">刷新</button>
+        <?php echo vs_admin_refresh_btn_html('orderRefreshBtn'); ?>
     </div>
     <?php
     $headerActions = ob_get_clean();

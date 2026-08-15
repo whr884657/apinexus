@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.6-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.7-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -25,9 +25,9 @@
 **主要能力：**
 
 - Web **六步**安装向导（伪静态 → 环境 → 数据库 → 建表 → 管理员 → 完成），自动创建数据表与初始配置；同机多站可配缓存键前缀
-- **双端认证**：管理员后台（安装时创建）+ 用户中心（邮箱验证码注册 + QQ / Gitee 第三方登录）
+- **双端认证**：管理员后台与用户中心均支持**账号密码 / 邮箱验证码**登录；用户注册可用邮箱验证码；支持 QQ / Gitee 第三方登录
 - **API 管理**：后台接口列表 / 审核 / 分类 / 令牌 / 文档 / 反馈；用户中心开发者投稿与邮件通知
-- **调用统计**：本地接口脚本可接入统计；代理短码访问自动记账（说明见 `api/统计代码使用说明.md`）
+- **调用统计**：本地接口脚本可接入统计；代理短码访问自动记账（说明见 `api/统计代码使用说明.md`）；用户近 7 日聚合与密钥累计消耗
 - **代理网关**：服务端中继上游；支持多种上游认证方式；可配置出站 UA / Referer；可选改写 JSON 响应字段；密钥不暴露给调用方
 - **调用方密钥传递**：接口可多选 Query / Header / Bearer；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色**：登录 / 注册 / 忘记密码与后台使用系统色板（无可自定义取色、无昼夜自动切换）
@@ -36,17 +36,17 @@
 - **快速上手**：前台仍可展示多语言示例；切换鉴权方式后语言图标保持可用
 - **实时数据监控中心**：地图飞线、四角实时面板（今日 / 累计 / 成功率等）、深浅色、双端自适应
 - **控制台服务器监控**：对接常见面板；站点三名称与自定义页脚版权；文章编辑与 Markdown
-- **用户令牌**：用户中心与管理员后台均可管理；每账号有数量上限；调用时校验并累计次数
-- **积分计费与充值**：接口收费扣积分；用户扫码充值；订单与积分变动分栏管理
+- **用户令牌**：用户中心与管理员后台均可管理；每账号有数量上限；调用时校验并累计次数与消耗
+- **积分计费与充值**：接口收费扣积分；用户扫码充值；订单与积分变动分栏管理；余额归零 / 充值成功可邮件通知
 - **前台双主题**：默认主题 + 主题二；各主题样式与脚本完全独立（根目录静态资源仅服务管理员后台）；前台/用户中心按文件逐个加载本主题 CSS/JS；内置图标经核心统一出站；首页「累计调用」可在主题设置中选完整数字或单位转换
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态）
 - **友情链接 / 合作伙伴**：友链可审核与禁用；合作伙伴由管理员维护；默认主题首页可展示合作伙伴
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
-- 用户中心：控制台、API 管理（仅开发者）、令牌管理、积分变动、接口列表、账号设置
+- 用户中心：控制台（近 7 日图 / 近期调用 / 热门接口）、日志查询（仅本人）、API 管理（仅开发者）、令牌管理、积分变动、充值、账号设置
 - **用户角色**：普通用户（调用接口、管理令牌）/ 开发者（可投稿接口待审）；注册可选身份，管理员可转换
 - 用户管理：列表、搜索、封禁 / 解封 / 删除、身份转换
 - 用户头像：邮箱匹配 / 自定义链接 / 默认头像
-- 管理员：登录、忘记密码（邮箱验证码）；站点信息、注册邮箱后缀、SMTP 发信
+- 管理员：登录（密码 / 邮箱验证码）、忘记密码（邮箱验证码）；站点信息、注册邮箱后缀、SMTP 发信
 - **站点扩展**：自定义底栏 HTML、站点运行时间、页脚二维码；主题可开关相关区块
 - **SEO**：分享元数据与各页独立描述
 - **云端在线更新**：后台检测新版本、分步下载安装、可选数据库结构迁移
@@ -145,9 +145,10 @@ ApiNexus/
 ├── user/                       # 用户中心
 │   ├── init.php
 │   ├── includes/layout.php
-│   ├── index.php
-│   ├── api-manage.php / keys.php     # API 投稿 / 令牌管理（已实现）
-│   ├── points.php / apis.php         # 占位
+│   ├── index.php               # 控制台（近 7 日图 / 近期 / 热门）
+│   ├── logs.php                # 本人调用日志（白名单、无详情）
+│   ├── api-manage.php / keys.php     # API 投稿 / 令牌管理
+│   ├── points.php / recharge.php / apis.php
 │   ├── account.php
 │   └── login.php / register.php / forgot.php
 ├── assets/
@@ -160,9 +161,12 @@ ApiNexus/
 ├── core/
 │   ├── bootstrap.php
 │   ├── version.php             # VS_VERSION 版本常量
+│   ├── helpers.php             # 全局辅助（含 Host 清洗 / LIKE 转义）
 │   ├── ThemeManager.php        # 前台主题加载与切换；壳/页 CSS·JS 清单
 │   ├── SiteMedia.php           # 内置图片统一出站 URL
 │   ├── UserDashHello.php       # 用户控制台时段问候文案
+│   ├── UserStat7Manager.php    # 用户近 7 日聚合 user.stat7
+│   ├── PointsNotify.php        # 积分归零 / 充值成功邮件
 │   ├── ApiManager.php          # 接口列表 CRUD 与状态
 │   ├── ApiStats.php            # 本地/代理调用统计
 │   ├── ApiProxy.php            # 代理网关 /apis/{短码}
@@ -204,15 +208,28 @@ ApiNexus/
 
 ## 伪静态 / URL 重写
 
+> **权威规则以根目录 [`nginx伪静态配置.md`](nginx伪静态配置.md) 情况 A 为准**，须与安装向导 `vs_install_nginx_rewrite_snippet()`、根目录 `.htaccess`、本段保持一致。改规则时四处同步（含 `robots.txt` 的 `Sitemap:`）。
+
 ### Apache
 
-项目根目录 `.htaccess` 已含：`/apis/{短码}` 代理规则 + **通用** `/{页面}/{数字ID}` → `/{页面}.php?id=`。启用 `mod_rewrite` 即可。
+项目根目录 `.htaccess` 已含：
+
+1. 禁止直链 `config/`、`data/`
+2. `/apis/{短码}` → `apis.php?_vs_slug=`（代理网关）
+3. `/sitemap.xml` → `sitemap.php`
+4. **通用** `/{页面}/{数字ID}` → `/{页面}.php?id=`
+
+启用 `mod_rewrite` 即可。
 
 ### Nginx（宝塔「伪静态」请只粘贴英文规则，不要带中文注释）
 
-**可直接粘贴（推荐完整）：**
+**推荐整段粘贴（情况 A，与安装向导默认一致）：**
 
 ```nginx
+location ~ ^/(config|data)/ {
+    deny all;
+    return 403;
+}
 location ~ ^/apis/([a-z0-9]+)/?$ {
     rewrite ^/apis/([a-z0-9]+)/?$ /apis.php?_vs_slug=$1 last;
 }
@@ -227,15 +244,23 @@ location / {
 }
 ```
 
-若站点配置里已有 `location / { try_files ... }`，**只追加**上面的 `apis` + `sitemap.xml` + **通用路径**三段，并放在 `location /` **上面**。若仍留着旧的「仅 detail」单页规则，请删掉，改用通用段。  
-完整规则（含 `/config` `/data` deny）见 [`nginx伪静态配置.md`](nginx伪静态配置.md) **情况 A**。
+| 顺序 | 规则 | 作用 |
+|------|------|------|
+| 1 | `config` + `data` 合并 deny | **禁止直链**配置与运行时目录（须写在其它 `location ~` 之前） |
+| 2 | `/apis/{短码}` | 代理网关（内部 `_vs_slug`，不是 `?id=`） |
+| 3 | `/sitemap.xml` | 站点地图 → `sitemap.php` |
+| 4 | `/{页面}/{数字}` | 通用路径式资源 → `/{页面}.php?id=` |
+| 5 | `location /` | 去 `.php`（`try_files`） |
+
+若站点配置里**已有** `location / { try_files ... }`，可只追加上表 1～4 段，并放在 `location /` **上面**。若仍留着旧的「仅 detail」单页规则，请删掉，改用通用段。
 
 > **注意：** 不要写 `[a-z0-9]{3,64}` 或 `[0-9]{1,10}`。宝塔伪静态保存时会吞掉 `{…}`，导致 PCRE 报错。  
 > **注意：** 不要 rewrite 到 `/xxx.php/$1`（PATH_INFO）；必须 `/$1.php?id=$2`。  
-> **注意：** `apis` 段必须在通用段之上。  
-> **路径式资源：** `/detail/11`、日后 `/article/5` 等共用**一条**通用规则，不必每页再加伪静态。
+> **注意：** `apis` 段必须在通用段之上；`config|data` deny 必须在其它 `location ~` 之上。  
+> **路径式资源：** `/detail/11`、`/articles/5` 等共用**一条**通用规则，不必每页再加伪静态。  
+> **勿伪静态：** 码支付回调 `core/play/codeplay/notify.php` / `return.php` 须直访（带 `.php`）。
 
-详情见 [`nginx伪静态配置.md`](nginx伪静态配置.md)。
+完整说明（情况 B、安全响应头、AI SSE/CDN）见 [`nginx伪静态配置.md`](nginx伪静态配置.md)。
 
 ---
 
@@ -259,11 +284,18 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.6（2026-08-07）
+### v13.26.7（2026-08-15）
 
-- 本地图形验证码校验改为不区分大小写；聚焦输入框首次自动换一张，修复首屏图易提示过期
-- 占位文案与双主题 / 根目录 `captcha.js` 同步（换图淡入）
-- 默认主题贡献者主页：补全叠层工具类、恢复壁纸淡入，并收紧身份卡高度
+- 管理员登录与用户中心双主题登录：支持账号密码 / 邮箱验证码切换登录
+- 登录页左侧「验证码登录」、右侧保留「忘记密码」；发信限流与一次性票据防抓包骚扰
+- 新增登录验证码邮件模板；未注册邮箱不发信
+- 完善业务邮件通知目录；新增积分余额归零、充值成功到账邮件通知（系统设置可关）
+- 系统升级页：修复手机端点更新记录跳动；「执行数据库结构更新」增加用途说明与二次确认
+- 统一后台图标刷新按钮并修复电脑端旋转；积分/订单/日志/Redis 对齐；关于页改为「技术栈」
+- 日志查询：列表 ID 后显示用户名；修复按用户名/密钥搜索；搜索词 LIKE 通配符转义防放大扫描
+- 站点绝对 URL / 邮件内链：清洗 HTTP Host，防 Host 头污染钓鱼链接
+- 用户近 7 日聚合字段、密钥累计消耗（升级执行结构更新；禁止扫日志回填）
+- 用户控制台双主题：去概览、近 7 日图、近期/热门、侧栏日志查询（本人白名单、无详情）
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

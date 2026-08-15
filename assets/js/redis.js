@@ -518,7 +518,14 @@
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
-            refreshBtn.disabled = true;
+            if (window.VsRefreshBtn && VsRefreshBtn.isBusy(refreshBtn)) {
+                return;
+            }
+            if (window.VsRefreshBtn) {
+                VsRefreshBtn.start(refreshBtn);
+            } else {
+                refreshBtn.disabled = true;
+            }
             postAction('refresh')
                 .then(function (data) {
                     renderSnapshot(data.snapshot);
@@ -527,7 +534,13 @@
                 .catch(function (err) {
                     window.VS.showMessage(err.message || '网络异常', 'error');
                 })
-                .finally(function () { refreshBtn.disabled = false; });
+                .finally(function () {
+                    if (window.VsRefreshBtn) {
+                        VsRefreshBtn.stop(refreshBtn);
+                    } else {
+                        refreshBtn.disabled = false;
+                    }
+                });
         });
     }
 

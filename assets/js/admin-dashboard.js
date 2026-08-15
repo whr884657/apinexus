@@ -895,8 +895,12 @@
             softLoading = false;
             var btn = document.getElementById('dashRefreshBtn');
             if (btn) {
-                btn.disabled = false;
-                btn.classList.remove('is-spinning');
+                if (window.VsRefreshBtn) {
+                    VsRefreshBtn.stop(btn);
+                } else {
+                    btn.disabled = false;
+                    btn.classList.remove('is-spinning');
+                }
             }
             if (pendingForceRefresh) {
                 pendingForceRefresh = false;
@@ -947,8 +951,15 @@
     var refreshBtn = document.getElementById('dashRefreshBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
-            refreshBtn.disabled = true;
-            refreshBtn.classList.add('is-spinning');
+            if (window.VsRefreshBtn && VsRefreshBtn.isBusy(refreshBtn)) {
+                return;
+            }
+            if (window.VsRefreshBtn) {
+                VsRefreshBtn.start(refreshBtn);
+            } else {
+                refreshBtn.disabled = true;
+                refreshBtn.classList.add('is-spinning');
+            }
             fetchSnapshot(true);
         });
     }

@@ -1,10 +1,14 @@
 <?php
 /**
  * 文件：admin/about.php
- * 作用：ApiNexus 后台关于页面（产品信息 / 运行环境 / 链接 / 致谢）
+ * 作用：ApiNexus 后台关于页面（产品信息 / 运行环境 / 开发与维护 / 链接 / 技术栈）
  *
- * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
- *       开发维护 / 链接 / 技术栈由 AboutCatalog 本地优先加载（无本地文件再拉云端）。
+ * 说明：
+ * - 系统版本以 core/version.php 中 VS_VERSION 为准。
+ * - 「开发与维护」（相关人员 team）、「相关链接」、「技术栈」均由 AboutCatalog::load() 提供。
+ * - 数据文件：core/vx/seed/r9/m2/catalog.json（有本地则用本地；仅缺失时才从仓库 raw 拉取）。
+ * - 详解见 core/AboutCatalog.php 文件头注释。
+ * - 技术栈 / 链接图标：一律 assets/img/ 根目录（本页 vs_about_icon_src）。
  */
 
 require_once __DIR__ . '/init.php';
@@ -44,29 +48,43 @@ $assetBase = rtrim(vs_base_url(), '/');
 $imgBase = $assetBase . '/assets/img';
 
 /**
- * @param string $icon
- * @return string
+ * 关于页图标：只认 assets/img/ 根目录下的文件（与 MySQL.svg / Redis.svg 同级）。
+ * icon 键 → 文件名；文件不存在则返回空（页面显示圆点占位）。
+ *
+ * @param string $icon catalog 里的 icon 字段，如 php / MySQL / javascript
+ * @return string 可访问的 URL，或空串
  */
 function vs_about_icon_src($icon)
 {
     global $imgBase;
     $map = array(
-        'gitee'   => 'gitee.svg',
-        'gitcode' => 'gitcode.svg',
-        'github'  => 'github.svg',
-        'php'     => 'php.svg',
-        'mysql'   => 'MySQL.svg',
-        'MySQL'   => 'MySQL.svg',
-        'redis'   => 'Redis.svg',
-        'Redis'   => 'Redis.svg',
+        'gitee'      => 'gitee.svg',
+        'gitcode'    => 'gitcode.svg',
+        'github'     => 'github.svg',
+        'php'        => 'php.svg',
+        'mysql'      => 'MySQL.svg',
+        'MySQL'      => 'MySQL.svg',
+        'redis'      => 'Redis.svg',
+        'Redis'      => 'Redis.svg',
+        'nginx'      => 'nginx.svg',
+        'javascript' => 'JavaScript.svg',
+        'JavaScript' => 'JavaScript.svg',
+        'echarts'    => 'echarts.svg',
     );
-    if ($icon === '' || !isset($map[$icon])) {
-        if ($icon !== '' && preg_match('/^[A-Za-z0-9_-]+$/', $icon)) {
-            return $imgBase . '/' . $icon . '.svg';
-        }
+    $file = '';
+    if ($icon !== '' && isset($map[$icon])) {
+        $file = $map[$icon];
+    } elseif ($icon !== '' && preg_match('/^[A-Za-z0-9_-]+$/', $icon)) {
+        $file = $icon . '.svg';
+    }
+    if ($file === '') {
         return '';
     }
-    return $imgBase . '/' . $map[$icon];
+    $abs = dirname(__DIR__) . '/assets/img/' . $file;
+    if (!is_file($abs)) {
+        return '';
+    }
+    return $imgBase . '/' . $file;
 }
 
 vs_admin_layout_start('关于', 'about');
@@ -180,7 +198,7 @@ vs_admin_layout_start('关于', 'about');
 
     <div class="vs-panel about-section about-reveal" style="--about-delay:4">
         <div class="about-panel-head">
-            <span class="about-panel-head__title">技术基础</span>
+            <span class="about-panel-head__title">技术栈</span>
             <span class="about-badge about-badge--tech">开源组件</span>
         </div>
         <div class="about-panel-body">

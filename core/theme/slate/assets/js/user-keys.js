@@ -33,6 +33,16 @@
             .replace(/"/g, '&quot;');
     }
 
+    /** 密钥累计消耗展示（与服务端 PayConfig::fmtPoints 观感接近） */
+    function fmtSpent(v) {
+        var n = parseFloat(v);
+        if (isNaN(n) || n < 0) n = 0;
+        if (Math.abs(n - Math.round(n)) < 0.00005) {
+            return String(Math.round(n));
+        }
+        return (Math.round(n * 10000) / 10000).toString();
+    }
+
     function postAction(action, payload) {
         var fd = new FormData();
         fd.append('action', action);
@@ -124,6 +134,7 @@
         html += '</div>';
         html += '<div class="vs-api-item__meta">';
         html += '<div class="vs-api-item__calls" title="调用次数">调用：<strong data-field="calls">' + (parseInt(token.calls, 10) || 0) + '</strong></div>';
+        html += '<div class="vs-api-item__calls" title="累计消耗积分">消耗：<strong data-field="pointsspent">' + escapeHtml(fmtSpent(token.pointsspent)) + '</strong></div>';
         html += '<div class="vs-api-item__author" data-field="createtime" title="创建时间">' + escapeHtml(token.createtime || '') + '</div>';
         html += '</div>';
         html += '<div class="vs-api-item__actions vs-token-row__actions">';

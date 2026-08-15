@@ -20,29 +20,6 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* 控制台刷新：正方形 26×26，禁止被拉伸成竖长方形 */
-.vs-content__actions #dashRefreshBtn.vs-btn--icon {
-    width: 26px;
-    min-width: 26px;
-    max-width: 26px;
-    height: 26px;
-    min-height: 26px;
-    max-height: 26px;
-    aspect-ratio: 1;
-    padding: 0;
-    flex: 0 0 26px;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-}
-.vs-content__actions #dashRefreshBtn.vs-btn--icon svg {
-    display: block;
-    width: 14px;
-    height: 14px;
-}
-
 #adminDashPage .dash-kpi-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -638,10 +615,7 @@
     100% { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
 }
 .vs-content__actions #dashRefreshBtn.vs-btn--icon.is-spinning svg {
-    animation: dashRefreshSpin 0.7s linear infinite;
-}
-@keyframes dashRefreshSpin {
-    to { transform: rotate(360deg); }
+    animation: vs-refresh-spin 0.7s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
     #adminDashPage .dash-kpi,

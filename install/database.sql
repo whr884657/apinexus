@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `points` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '积分余额',
     `pointsspent` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '累计消耗积分（已完成扣减流水合计）',
     `keycalls` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '累计密钥调用次数（成功且有效密钥）',
+    `stat7` mediumtext NULL COMMENT '近7日调用聚合JSON（按日分桶，供用户控制台）',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     `lastlogin` datetime DEFAULT NULL COMMENT '最后登录时间',
     PRIMARY KEY (`id`),
@@ -87,6 +88,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_feedback_admin', '1'),
 ('mail_notify_comment_admin', '1'),
 ('mail_notify_comment', '1'),
+('mail_notify_points_zero', '1'),
+('mail_notify_recharge_success', '1'),
 ('register_gift_enabled', '0'),
 ('register_gift_points', '100'),
 ('checkin_enabled', '0'),
@@ -232,7 +235,9 @@ CREATE TABLE IF NOT EXISTS `{prefix}apilog` (
     KEY `idx_ok_createtime` (`ok`, `createtime`),
     KEY `idx_apiid_createtime` (`apiid`, `createtime`),
     KEY `idx_createtime_apiname` (`createtime`, `apiname`),
-    KEY `idx_createtime_iploc` (`createtime`, `iploc`(64))
+    KEY `idx_createtime_iploc` (`createtime`, `iploc`(64)),
+    KEY `idx_userid_id` (`userid`, `id`),
+    KEY `idx_userid_createtime` (`userid`, `createtime`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API调用日志';
 
 -- 控制台按日调用聚合（滚动固定 30 天）
@@ -259,6 +264,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}apikey` (
     `secret` varchar(64) NOT NULL COMMENT '密钥明文（SK-开头，后接32位随机字符）',
     `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '密钥状态：0禁用 1启用',
     `calls` bigint unsigned NOT NULL DEFAULT 0 COMMENT '累计调用次数',
+    `pointsspent` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '该密钥累计消耗积分（接口扣费合计）',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_secret` (`secret`),

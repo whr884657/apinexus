@@ -36,14 +36,31 @@ class ThemeManager
         return $id;
     }
 
+    /**
+     * 主题目录绝对路径
+     *
+     * @param string|null $themeId null 时取当前启用主题
+     * @return string
+     */
     public static function themeDir($themeId = null)
     {
         if ($themeId === null) {
             $themeId = self::activeId();
+        } else {
+            $themeId = trim((string) $themeId);
+            if ($themeId === '' || !preg_match('/^[a-z0-9][a-z0-9_-]{0,31}$/i', $themeId)) {
+                $themeId = self::DEFAULT_THEME;
+            }
         }
         return self::themesRoot() . '/' . $themeId;
     }
 
+    /**
+     * 主题 ID 是否合法且主题包存在
+     *
+     * @param string $themeId
+     * @return bool
+     */
     public static function isValidTheme($themeId)
     {
         $themeId = trim((string) $themeId);
@@ -99,8 +116,18 @@ class ThemeManager
         return $themes;
     }
 
+    /**
+     * 读取主题包 theme.json
+     *
+     * @param string $themeId
+     * @return array<string, mixed>
+     */
     public static function readMeta($themeId)
     {
+        $themeId = trim((string) $themeId);
+        if ($themeId === '' || !self::isValidTheme($themeId)) {
+            return array();
+        }
         $file = self::themeDir($themeId) . '/theme.json';
         if (!is_file($file)) {
             return array();
@@ -109,8 +136,18 @@ class ThemeManager
         return is_array($json) ? $json : array();
     }
 
+    /**
+     * 主题预览图 URL（无则空串）
+     *
+     * @param string $themeId
+     * @return string
+     */
     public static function previewUrl($themeId)
     {
+        $themeId = trim((string) $themeId);
+        if ($themeId === '' || !self::isValidTheme($themeId)) {
+            return '';
+        }
         $meta = self::readMeta($themeId);
         if (!empty($meta['preview'])) {
             $rel = ltrim(str_replace('\\', '/', (string) $meta['preview']), '/');
@@ -126,6 +163,12 @@ class ThemeManager
         return '';
     }
 
+    /**
+     * 切换前台启用主题
+     *
+     * @param string $themeId
+     * @return true|string 成功返回 true，失败返回错误文案
+     */
     public static function setActive($themeId)
     {
         $themeId = trim((string) $themeId);
@@ -580,6 +623,7 @@ class ThemeManager
             array('id' => 'dashboard', 'title' => '控制台', 'icon' => 'dashboard', 'url' => $base . '/user/index'),
             array('id' => 'api-manage', 'title' => 'API 管理', 'icon' => 'cloud', 'url' => $base . '/user/api-manage', 'require_developer' => true),
             array('id' => 'keys', 'title' => '令牌管理', 'icon' => 'share', 'url' => $base . '/user/keys'),
+            array('id' => 'logs', 'title' => '日志查询', 'icon' => 'search', 'url' => $base . '/user/logs'),
             array('id' => 'recharge', 'title' => '充值中心', 'icon' => 'archive', 'url' => $base . '/user/recharge'),
             array('id' => 'points', 'title' => '积分变动', 'icon' => 'archive', 'url' => $base . '/user/points'),
             array('id' => 'account', 'title' => '账号设置', 'icon' => 'user', 'url' => $base . '/user/account'),
@@ -624,11 +668,21 @@ class ThemeManager
 
     /**
      * @deprecated 仅兼容旧调用，内部转严格解析
+     * @param string      $relative 主题包内相对路径
+     * @param string|null $themeId  非当前启用主题时直接拒绝
+     * @return string 绝对路径或空串
      */
     public static function resolveThemeFile($relative, $themeId = null)
     {
-        if ($themeId !== null && $themeId !== self::activeId()) {
+        $relative = ltrim(str_replace('\\', '/', (string) $relative), '/');
+        if ($relative === '' || strpos($relative, '..') !== false) {
             return '';
+        }
+        if ($themeId !== null) {
+            $themeId = trim((string) $themeId);
+            if ($themeId === '' || $themeId !== self::activeId()) {
+                return '';
+            }
         }
         return self::resolveActiveThemeFile($relative);
     }
@@ -872,10 +926,17 @@ class ThemeManager
         self::renderUserLayoutEnd($extraScripts);
     }
 
+    /**
+     * 主题包资源 URL（禁止 .. 路径穿越）
+     *
+     * @param string $themeId
+     * @param string $relative 主题包内相对路径
+     * @return string
+     */
     public static function assetUrl($themeId, $relative)
     {
         $themeId = trim((string) $themeId);
-        if (!self::isValidTheme($themeId)) {
+        if ($themeId === '' || !self::isValidTheme($themeId)) {
             return '';
         }
         $relative = ltrim(str_replace('\\', '/', (string) $relative), '/');
@@ -1117,12 +1178,22 @@ class ThemeManager
         return self::assetUrl($themeId, 'assets/theme.js') . '?v=' . VS_VERSION;
     }
 
+    /**
+     * 渲染前台主题页面（header + pages/{pageKey} + footer）
+     *
+     * @param string $pageKey   页面键（仅允许字母数字下划线与连字符）
+     * @param string $pageTitle 页面标题
+     * @param array  $pageData  注入模板的额外变量
+     * @return void
+     */
     public static function renderBody($pageKey, $pageTitle, array $pageData = array())
     {
         if (!defined('VS_THEME_RENDER')) {
             define('VS_THEME_RENDER', true);
         }
 
+        $pageKey = preg_replace('/[^a-z0-9_-]/i', '', (string) $pageKey);
+        $pageTitle = trim((string) $pageTitle);
         $themeId = self::activeId();
         $ctx = self::buildContext($pageKey, $pageTitle, $pageData);
         extract($ctx, EXTR_SKIP);
@@ -1147,15 +1218,43 @@ class ThemeManager
         }
     }
 
+    /**
+     * 解析主题 pages 下的页面文件（防路径穿越）
+     *
+     * @param string $themeId
+     * @param string $pageKey
+     * @return string 绝对路径或空串
+     */
     private static function resolvePageFile($themeId, $pageKey)
     {
+        $themeId = trim((string) $themeId);
+        if ($themeId === '' || !self::isValidTheme($themeId)) {
+            return '';
+        }
         $pageKey = preg_replace('/[^a-z0-9_-]/i', '', (string) $pageKey);
-        $file = self::themeDir($themeId) . '/pages/' . $pageKey . '.php';
-        return is_file($file) ? $file : '';
+        if ($pageKey === '') {
+            return '';
+        }
+        $root = realpath(self::themeDir($themeId) . '/pages');
+        $file = $root !== false ? realpath($root . '/' . $pageKey . '.php') : false;
+        if ($root === false || $file === false || strpos($file, $root) !== 0 || !is_file($file)) {
+            return '';
+        }
+        return $file;
     }
 
+    /**
+     * 组装前台模板上下文
+     *
+     * @param string $pageKey
+     * @param string $pageTitle
+     * @param array  $pageData
+     * @return array<string, mixed>
+     */
     private static function buildContext($pageKey, $pageTitle, array $pageData)
     {
+        $pageKey = preg_replace('/[^a-z0-9_-]/i', '', (string) $pageKey);
+        $pageTitle = trim((string) $pageTitle);
         $base = vs_base_url();
         $loggedIn = UserAuth::check();
         $authUrl = $loggedIn ? ($base . '/user/index') : ($base . '/user/login');

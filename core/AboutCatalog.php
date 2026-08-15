@@ -1,24 +1,52 @@
 <?php
 /**
  * 文件：core/AboutCatalog.php
- * 作用：关于页「开发与维护 / 相关链接 / 技术基础」目录（本地优先，无本地文件再拉云端）
+ * 作用：管理员关于页「开发与维护 / 相关链接 / 技术栈」目录加载
  *
- * 说明：
- * - 数据文件深藏于 core 多层目录，随整包更新落到本地。
- * - 顺序：本地 JSON →（仅本地缺失时）云端 raw → 内置默认。
- * - 兼容：旧站无文件时靠云端/默认；新云端多字段/新人不会撑爆旧版 normalize。
+ * ═══════════════════════════════════════════════════════════════
+ * 数据从哪来（相关人员 team 也在这份 JSON 里）
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * 唯一数据文件（相对站点根 VS_ROOT）：
+ *   core/vx/seed/r9/m2/catalog.json
+ * 常量：AboutCatalog::REL_PATH
+ *
+ * JSON 字段说明：
+ *   team[]  —— 「开发与维护」相关人员（name / role / avatar / site）
+ *   links[] —— 「相关链接」（name / href / icon）
+ *   tech[]  —— 「技术栈」（name / href / icon / tone）
+ *   note    —— 技术栈下方说明文案
+ *
+ * 加载顺序（有本地文件就绝不会再拉仓库）：
+ *   1) Redis 缓存键 cache:about:catalog:v3（TTL 约 30 分钟）
+ *   2) 本地 catalog.json（发版 ZIP / 在线更新会带上）
+ *   3) 仅当本地文件缺失时：按 Updater 镜像顺序拉取仓库 raw
+ *        Gitee:   https://gitee.com/{repo}/raw/main/core/vx/seed/r9/m2/catalog.json
+ *        GitCode: https://raw.gitcode.com/{repo}/raw/main/core/vx/seed/r9/m2/catalog.json
+ *        GitHub:  https://raw.githubusercontent.com/{repo}/main/core/vx/seed/r9/m2/catalog.json
+ *   4) 仍失败则用本类 defaults()
+ *
+ * 改相关人员 / 技术栈：改本地 catalog.json（并同步 defaults 以免无文件时兜底不一致）。
+ * 改完若页面仍旧：管理后台 Redis 管理清空业务缓存，或等缓存过期。
+ *
+ * 技术栈图标：一律 assets/img/ 根目录（见 admin/about.php 的 vs_about_icon_src）。
+ * 兼容：云端多字段 / 新人不会撑爆旧版 normalize；未知字段忽略。
  */
 
 class AboutCatalog
 {
-    /** 相对 VS_ROOT 的隐蔽数据路径（勿在前台暴露） */
+    /**
+     * 关于页目录 JSON（相对 VS_ROOT；勿在前台 URL 暴露此路径）
+     * 含 team（相关人员）/ links / tech / note
+     */
     const REL_PATH = 'core/vx/seed/r9/m2/catalog.json';
 
-    const CACHE_KEY = 'cache:about:catalog:v2';
+    /** 改 catalog 结构或内容后递增版本，避免旧 Redis 缓存挡住新数据 */
+    const CACHE_KEY = 'cache:about:catalog:v3';
     const CACHE_TTL = 1800;
 
     /**
-     * 加载目录：Redis 缓存 → 本地文件 → 云端 raw → 内置默认
+     * 加载目录：Redis → 本地 JSON →（仅本地缺失）云端 raw → 内置默认
      *
      * @return array{team:array,links:array,tech:array,note:string}
      */
@@ -57,7 +85,7 @@ class AboutCatalog
     }
 
     /**
-     * 按更新源顺序拉取 raw catalog.json（仅本地缺失时调用）
+     * 按更新源顺序拉取仓库 raw catalog.json（仅本地缺失时调用）
      *
      * @return array|null
      */
@@ -113,6 +141,8 @@ class AboutCatalog
     }
 
     /**
+     * 读本地 VS_ROOT/core/vx/seed/r9/m2/catalog.json
+     *
      * @return array|null
      */
     private static function loadLocal()
@@ -246,6 +276,8 @@ class AboutCatalog
     }
 
     /**
+     * 内置兜底（本地与云端都不可用时）
+     *
      * @return array{team:array,links:array,tech:array,note:string}
      */
     private static function defaults()
@@ -273,9 +305,12 @@ class AboutCatalog
                 array('name' => 'PHP', 'href' => 'https://www.php.net', 'icon' => 'php', 'tone' => 'php'),
                 array('name' => 'MySQL', 'href' => 'https://www.mysql.com', 'icon' => 'MySQL', 'tone' => 'mysql'),
                 array('name' => 'Redis', 'href' => 'https://redis.io', 'icon' => 'Redis', 'tone' => 'redis'),
+                array('name' => 'Nginx', 'href' => 'https://nginx.org', 'icon' => 'nginx', 'tone' => 'nginx'),
+                array('name' => 'JavaScript', 'href' => 'https://developer.mozilla.org/docs/Web/JavaScript', 'icon' => 'javascript', 'tone' => 'js'),
+                array('name' => 'ECharts', 'href' => 'https://echarts.apache.org', 'icon' => 'echarts', 'tone' => 'echarts'),
                 array('name' => 'Parsedown', 'href' => 'https://parsedown.org', 'icon' => '', 'tone' => 'parsedown'),
             ),
-            'note' => '本系统基于以上开源基础能力构建，感谢相关项目与贡献者。',
+            'note' => '涵盖本站后端运行环境、前端交互与常用开源组件；图标统一放在 assets/img/。感谢相关项目与贡献者。',
         );
     }
 }

@@ -460,6 +460,122 @@ function vs_resolve_path_id($queryKey = 'id')
 }
 
 /**
+ * 清洗请求 Host（防 HTTP_HOST 污染进绝对 URL / 邮件链接）
+ *
+ * 允许：域名、IPv4、方括号 IPv6，可选 :端口（1–65535）。
+ * 拒绝：CRLF/控制字符、空白、路径符号、连续点、非法端口等。
+ *
+ * @param string $host
+ * @return string 合法 Host（可含端口）；非法返回空串
+ */
+function vs_sanitize_http_host($host)
+{
+    $host = trim((string) $host);
+    if ($host === '' || strlen($host) > 253) {
+        return '';
+    }
+    // 一律拒绝控制字符与空白（含 CRLF 头注入）
+    if (preg_match('/[\x00-\x1f\x7f\s]/', $host)) {
+        return '';
+    }
+
+    $port = null;
+    $name = $host;
+
+    if ($host[0] === '[') {
+        // [IPv6] 或 [IPv6]:port
+        if (!preg_match('/^\[([0-9a-fA-F:]+)\](?::(\d{1,5}))?$/', $host, $m)) {
+            return '';
+        }
+        if ($m[1] === '' || strpos($m[1], ':::') !== false) {
+            return '';
+        }
+        $name = '[' . $m[1] . ']';
+        if (isset($m[2]) && $m[2] !== '') {
+            $port = (int) $m[2];
+        }
+    } else {
+        // 禁止路径/查询/用户信息等符号（防污染进 URL）
+        if (preg_match('/[\/\\\\#%?@\[\]]/', $host)) {
+            return '';
+        }
+        if (!preg_match('/^([A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?)(?::(\d{1,5}))?$/', $host, $m)) {
+            return '';
+        }
+        $name = $m[1];
+        if (isset($m[2]) && $m[2] !== '') {
+            $port = (int) $m[2];
+        }
+        if (strpos($name, '..') !== false) {
+            return '';
+        }
+    }
+
+    if ($port !== null && ($port < 1 || $port > 65535)) {
+        return '';
+    }
+
+    return $port !== null ? ($name . ':' . $port) : $name;
+}
+
+/**
+ * 解析当前请求可用的 HTTP Host（优先合法 HTTP_HOST，否则 SERVER_NAME，再否则 localhost）
+ *
+ * @return string
+ */
+function vs_request_http_host()
+{
+    $candidates = array();
+    if (!empty($_SERVER['HTTP_HOST'])) {
+        $candidates[] = (string) $_SERVER['HTTP_HOST'];
+    }
+    if (!empty($_SERVER['SERVER_NAME'])) {
+        $candidates[] = (string) $_SERVER['SERVER_NAME'];
+    }
+    foreach ($candidates as $raw) {
+        $host = vs_sanitize_http_host($raw);
+        if ($host !== '') {
+            return $host;
+        }
+    }
+    return 'localhost';
+}
+
+/**
+ * SQL LIKE 字面量转义（配合 LIKE … ESCAPE '\\'）
+ * 避免用户输入 % / _ 被当成通配符放大匹配、拖垮大表扫描
+ *
+ * @param string $value
+ * @return string
+ */
+function vs_sql_like_escape($value)
+{
+    return addcslashes((string) $value, "\\%_");
+}
+
+/**
+ * LIKE 包含匹配模板：%value%（value 已转义）
+ *
+ * @param string $value
+ * @return string
+ */
+function vs_sql_like_contains($value)
+{
+    return '%' . vs_sql_like_escape($value) . '%';
+}
+
+/**
+ * LIKE 前缀匹配模板：value%（value 已转义）
+ *
+ * @param string $value
+ * @return string
+ */
+function vs_sql_like_prefix($value)
+{
+    return vs_sql_like_escape($value) . '%';
+}
+
+/**
  * 获取站点根 URL
  *
  * @return string
@@ -477,12 +593,14 @@ function vs_base_url()
         : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443));
     $scheme = $https ? 'https' : 'http';
-    $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+    $host = vs_request_http_host();
 
     if (defined('VS_ROOT') && isset($_SERVER['DOCUMENT_ROOT'])) {
-        $docRoot = rtrim(str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT'])), '/');
-        $projectRoot = rtrim(str_replace('\\', '/', realpath(VS_ROOT)), '/');
-        if ($docRoot && $projectRoot && strpos($projectRoot, $docRoot) === 0) {
+        $docRootReal = realpath($_SERVER['DOCUMENT_ROOT']);
+        $projectRootReal = realpath(VS_ROOT);
+        $docRoot = $docRootReal ? rtrim(str_replace('\\', '/', $docRootReal), '/') : '';
+        $projectRoot = $projectRootReal ? rtrim(str_replace('\\', '/', $projectRootReal), '/') : '';
+        if ($docRoot !== '' && $projectRoot !== '' && strpos($projectRoot, $docRoot) === 0) {
             $path = substr($projectRoot, strlen($docRoot));
             $cached = rtrim($scheme . '://' . $host . $path, '/');
             return $cached;

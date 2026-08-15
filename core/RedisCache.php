@@ -361,7 +361,11 @@ class RedisCache
         try {
             return (int) RedisService::withClient(function ($redis) {
                 $deleted = 0;
-                foreach (array(self::KEY_APILOG_PAGE_PREFIX, self::KEY_APILOG_RANGE_TOTAL_PREFIX) as $prefix) {
+                foreach (array(
+                    self::KEY_APILOG_PAGE_PREFIX,
+                    self::KEY_APILOG_RANGE_TOTAL_PREFIX,
+                    'cache:userapilog:',
+                ) as $prefix) {
                     $pattern = RedisService::buildKey($prefix) . '*';
                     $it = null;
                     do {

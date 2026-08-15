@@ -56,6 +56,41 @@ class Auth
     }
 
     /**
+     * 按管理员 ID 登录（邮箱验证码登录等）
+     *
+     * @param int $adminId
+     * @return array|false
+     */
+    public static function loginById($adminId)
+    {
+        $adminId = (int) $adminId;
+        if ($adminId <= 0) {
+            return false;
+        }
+
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('admin');
+            $stmt = $pdo->prepare('SELECT * FROM `' . $table . '` WHERE `id` = ? AND `status` = 1 LIMIT 1');
+            $stmt->execute(array($adminId));
+            $admin = $stmt->fetch();
+            if (!$admin) {
+                return false;
+            }
+
+            $_SESSION[self::SESSION_KEY] = (int) $admin['id'];
+            $_SESSION['vs_admin_username'] = $admin['username'];
+            self::touchActivity();
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_regenerate_id(true);
+            }
+            return $admin;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
      * 退出登录（仅销毁管理端会话 VSADMINSESSID，不影响前台 VSFRONTSESSID）
      *
      * @return void

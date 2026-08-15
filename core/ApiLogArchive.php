@@ -366,6 +366,16 @@ class ApiLogArchive
         $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
         $ok = array_key_exists('ok', $opts) ? $opts['ok'] : null;
         $apiid = isset($opts['apiid']) ? (int) $opts['apiid'] : 0;
+        $userIds = array();
+        if (!empty($opts['user_ids']) && is_array($opts['user_ids'])) {
+            foreach ($opts['user_ids'] as $uid) {
+                $uid = (int) $uid;
+                if ($uid > 0) {
+                    $userIds[] = $uid;
+                }
+            }
+            $userIds = array_values(array_unique($userIds));
+        }
 
         $catalog = self::readCatalog();
         $dayKeys = array();
@@ -400,7 +410,7 @@ class ApiLogArchive
             if (count($out) >= $need) {
                 break;
             }
-            $chunk = self::readDayFiltered($day, $beforeId, $need - count($out), $q, $ok, $apiid);
+            $chunk = self::readDayFiltered($day, $beforeId, $need - count($out), $q, $ok, $apiid, $userIds);
             foreach ($chunk as $row) {
                 $out[] = $row;
                 if (count($out) >= $need) {
@@ -781,9 +791,10 @@ class ApiLogArchive
      * @param string $q
      * @param mixed  $ok
      * @param int    $apiid
+     * @param int[]  $userIds
      * @return array
      */
-    private static function readDayFiltered($day, $beforeId, $limit, $q, $ok, $apiid)
+    private static function readDayFiltered($day, $beforeId, $limit, $q, $ok, $apiid, array $userIds = array())
     {
         if (!self::sqliteAvailable()) {
             return array();
@@ -818,7 +829,7 @@ class ApiLogArchive
             if (!is_file($path)) {
                 continue;
             }
-            $rows = self::querySqliteShard($path, $beforeId, $limit - count($out), $q, $ok, $apiid);
+            $rows = self::querySqliteShard($path, $beforeId, $limit - count($out), $q, $ok, $apiid, $userIds);
             foreach ($rows as $r) {
                 $out[] = $r;
                 if (count($out) >= $limit) {
@@ -883,9 +894,10 @@ class ApiLogArchive
      * @param string $q
      * @param mixed  $ok
      * @param int    $apiid
+     * @param int[]  $userIds
      * @return array
      */
-    private static function querySqliteShard($path, $beforeId, $limit, $q, $ok, $apiid)
+    private static function querySqliteShard($path, $beforeId, $limit, $q, $ok, $apiid, array $userIds = array())
     {
         $limit = max(1, (int) $limit);
         try {
@@ -905,14 +917,33 @@ class ApiLogArchive
                 $where[] = '`ok` = ?';
                 $bind[] = (int) $ok;
             }
-            if ($q !== '') {
-                $where[] = '(
-                    `apiname` LIKE ? OR `path` LIKE ? OR `ip` LIKE ? OR `url` LIKE ?
-                    OR `apikey` LIKE ? OR `domain` LIKE ? OR `iploc` LIKE ?
-                )';
-                $like = '%' . $q . '%';
-                for ($i = 0; $i < 7; $i++) {
-                    $bind[] = $like;
+            if ($q !== '' || $userIds !== array()) {
+                $parts = array();
+                if ($q !== '') {
+                    $parts[] = '(
+                        `apiname` LIKE ? ESCAPE \'\\\\\' OR `path` LIKE ? ESCAPE \'\\\\\' OR `ip` LIKE ? ESCAPE \'\\\\\' OR `url` LIKE ? ESCAPE \'\\\\\'
+                        OR `apikey` LIKE ? ESCAPE \'\\\\\' OR `domain` LIKE ? ESCAPE \'\\\\\' OR `iploc` LIKE ? ESCAPE \'\\\\\'
+                    )';
+                    $like = function_exists('vs_sql_like_contains')
+                        ? vs_sql_like_contains($q)
+                        : ('%' . addcslashes($q, "\\%_") . '%');
+                    for ($i = 0; $i < 7; $i++) {
+                        $bind[] = $like;
+                    }
+                    if (ctype_digit($q)) {
+                        $parts[] = '`id` = ?';
+                        $bind[] = (int) $q;
+                    }
+                }
+                if ($userIds !== array()) {
+                    $ph = implode(',', array_fill(0, count($userIds), '?'));
+                    $parts[] = '`userid` IN (' . $ph . ')';
+                    foreach ($userIds as $uid) {
+                        $bind[] = (int) $uid;
+                    }
+                }
+                if ($parts !== array()) {
+                    $where[] = '(' . implode(' OR ', $parts) . ')';
                 }
             }
             $sql = 'SELECT * FROM `log` WHERE ' . implode(' AND ', $where) . ' ORDER BY `id` DESC LIMIT ' . $limit;

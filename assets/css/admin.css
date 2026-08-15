@@ -396,6 +396,62 @@
 
 .vs-content__actions {
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* ── 统一图标刷新按钮（控制台样式 · 全后台复用） ── */
+.vs-content__actions .vs-refresh-btn,
+.vs-finance-head-actions .vs-refresh-btn,
+button.vs-refresh-btn {
+    width: 26px;
+    min-width: 26px;
+    max-width: 26px;
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    aspect-ratio: 1;
+    padding: 0 !important;
+    flex: 0 0 26px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    line-height: 1 !important;
+    font-size: 0 !important;
+}
+.vs-content__actions .vs-refresh-btn svg,
+.vs-finance-head-actions .vs-refresh-btn svg,
+button.vs-refresh-btn svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    transform-origin: 50% 50%;
+}
+/* 旋转挂在 SVG 上；旋转期间取消按钮自身 transform，避免 hover/pressed 干扰 */
+button.vs-refresh-btn.is-spinning,
+button.vs-refresh-btn.is-spinning:hover,
+button.vs-refresh-btn.is-spinning:active,
+button.vs-refresh-btn.is-spinning.is-pressed,
+.vs-admin-shell button.vs-refresh-btn.is-spinning:hover:not(:disabled) {
+    transform: none !important;
+    pointer-events: none;
+}
+button.vs-refresh-btn.is-spinning svg {
+    animation: vs-refresh-spin 0.7s linear infinite;
+}
+@keyframes vs-refresh-spin {
+    to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    button.vs-refresh-btn.is-spinning svg {
+        animation: none !important;
+    }
 }
 
 .vs-admin-footer {
@@ -5367,7 +5423,7 @@ select.vs-input.vs-select {
     order: 1;
     flex: 0 1 auto;
 }
-.vs-finance-head-actions--points .vs-finance-refresh {
+.vs-finance-head-actions--points .vs-refresh-btn {
     order: 2;
     flex: 0 0 auto;
 }
@@ -6004,13 +6060,13 @@ select.vs-input.vs-select {
 }
 
 .vs-log-grid {
-    min-width: 860px;
+    min-width: 920px;
 }
 
 .vs-log-row {
     display: grid;
     grid-template-columns:
-        72px
+        minmax(148px, 1.35fr)
         minmax(140px, 1.5fr)
         80px
         minmax(110px, 1.1fr)
@@ -6097,6 +6153,15 @@ select.vs-input.vs-select {
     color: #64748b;
     letter-spacing: 0.01em;
     white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+}
+
+.vs-log-id__user {
+    font-weight: 500;
+    color: #334155;
 }
 
 .vs-log-c-id {
@@ -6526,7 +6591,7 @@ select.vs-input.vs-select {
         display: contents !important;
         width: auto !important;
     }
-    #pointsToolbar .vs-finance-refresh {
+    #pointsToolbar .vs-refresh-btn {
         grid-area: refresh !important;
         order: unset !important;
         justify-self: end !important;
@@ -10285,6 +10350,21 @@ select.vs-input.vs-select {
     color: #b91c1c;
     border-color: #fecaca;
 }
+#adminAboutPage .about-tech-badge--nginx {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color: #047857;
+    border-color: #a7f3d0;
+}
+#adminAboutPage .about-tech-badge--js {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    color: #a16207;
+    border-color: #fde68a;
+}
+#adminAboutPage .about-tech-badge--echarts {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
 #adminAboutPage .about-tech-badge--parsedown,
 #adminAboutPage .about-tech-badge--default {
     background: linear-gradient(135deg, #f8fafc, #eef2ff);
@@ -10699,7 +10779,7 @@ select.vs-input.vs-select {
 .vs-admin-shell .vs-mobile-card:hover {
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
-.vs-admin-shell .vs-panel.is-pressed,
+/* 仅卡片类按下缩放；禁止 .vs-panel.is-pressed（高大面板手机端整页跳动，E241） */
 .vs-admin-shell .vs-card.is-pressed,
 .vs-admin-shell .vs-stat-card.is-pressed,
 .vs-admin-shell .vs-list-card.is-pressed,

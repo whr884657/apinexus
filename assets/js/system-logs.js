@@ -48,7 +48,15 @@
 
     function setControlsDisabled(disabled) {
         if (refreshBtn) {
-            refreshBtn.disabled = !!disabled;
+            if (disabled) {
+                refreshBtn.setAttribute('aria-disabled', 'true');
+            } else if (window.VsRefreshBtn) {
+                VsRefreshBtn.stop(refreshBtn);
+            } else {
+                refreshBtn.disabled = false;
+                refreshBtn.classList.remove('is-spinning');
+                refreshBtn.removeAttribute('aria-disabled');
+            }
         }
         if (searchBtn) {
             searchBtn.disabled = !!disabled;
@@ -101,12 +109,26 @@
         if (id === '' || id === '0') {
             return '<span class="vs-log-id">—</span>';
         }
-        return '<span class="vs-log-id" title="记录 ID">#' + escapeHtml(id) + '</span>';
+        var user = '';
+        if (row && parseInt(row.userid, 10) > 0) {
+            if (row.username) {
+                user = String(row.username);
+            } else if (row.user_label && String(row.user_label) !== '匿名') {
+                user = String(row.user_label);
+            }
+        }
+        var title = user !== '' ? ('记录 #' + id + ' · ' + user) : ('记录 ID #' + id);
+        var html = '<span class="vs-log-id" title="' + escapeHtml(title) + '">#' + escapeHtml(id);
+        if (user !== '') {
+            html += ' <span class="vs-log-id__user">' + escapeHtml(user) + '</span>';
+        }
+        html += '</span>';
+        return html;
     }
 
     function headHtml() {
         return '<div class="vs-log-row vs-log-row--head" aria-hidden="true">'
-            + '<div class="vs-log-cell">ID</div>'
+            + '<div class="vs-log-cell">ID / 用户</div>'
             + '<div class="vs-log-cell">接口</div>'
             + '<div class="vs-log-cell">方法</div>'
             + '<div class="vs-log-cell">IP / 归属地</div>'
@@ -508,6 +530,12 @@
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
+            if (window.VsRefreshBtn && VsRefreshBtn.isBusy(refreshBtn)) {
+                return;
+            }
+            if (window.VsRefreshBtn) {
+                VsRefreshBtn.start(refreshBtn);
+            }
             load({ refresh: true });
         });
     }

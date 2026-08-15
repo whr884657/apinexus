@@ -44,7 +44,17 @@
     }
 
     function setControlsDisabled(disabled) {
-        if (refreshBtn) refreshBtn.disabled = !!disabled;
+        if (refreshBtn) {
+            if (disabled) {
+                refreshBtn.setAttribute('aria-disabled', 'true');
+            } else if (window.VsRefreshBtn) {
+                VsRefreshBtn.stop(refreshBtn);
+            } else {
+                refreshBtn.disabled = false;
+                refreshBtn.classList.remove('is-spinning');
+                refreshBtn.removeAttribute('aria-disabled');
+            }
+        }
         if (searchBtn) searchBtn.disabled = !!disabled;
         if (searchInput) searchInput.disabled = !!disabled;
         if (pageSizeEl) pageSizeEl.disabled = !!disabled;
@@ -224,6 +234,12 @@
     }
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
+            if (window.VsRefreshBtn && VsRefreshBtn.isBusy(refreshBtn)) {
+                return;
+            }
+            if (window.VsRefreshBtn) {
+                VsRefreshBtn.start(refreshBtn);
+            }
             resetCursors();
             load();
         });

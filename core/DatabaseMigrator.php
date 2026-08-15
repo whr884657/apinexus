@@ -404,10 +404,23 @@ class DatabaseMigrator
             self::markApplied('13.26.5');
         }
 
+        // 新装已含 13.26.7：邮件开关 + user.stat7 + apikey.pointsspent 时跳过（勿误重跑回填）
+        if (!in_array('13.26.7', $applied, true)) {
+            $allCfgPointsMail = Config::all();
+            if (isset($allCfgPointsMail['mail_notify_points_zero'])
+                && isset($allCfgPointsMail['mail_notify_recharge_success'])
+                && self::tableColumnExists('user', 'stat7')
+                && self::tableColumnExists('apikey', 'pointsspent')) {
+                self::markApplied('13.26.7');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
         self::ensureCompatHotIndexes();
+        // 13.26.7：用户七日窗 / 密钥消耗 / 用户日志索引（已 mark 仅含邮件开关的站点须补列）
+        self::ensureUserDashStatSchema();
     }
 
     /**
@@ -424,6 +437,8 @@ class DatabaseMigrator
                 array('api', 'idx_createtime', 'ADD KEY `idx_createtime` (`createtime`)'),
                 array('apilog', 'idx_createtime_apiname', 'ADD KEY `idx_createtime_apiname` (`createtime`, `apiname`)'),
                 array('apilog', 'idx_createtime_iploc', 'ADD KEY `idx_createtime_iploc` (`createtime`, `iploc`(64))'),
+                array('apilog', 'idx_userid_id', 'ADD KEY `idx_userid_id` (`userid`, `id`)'),
+                array('apilog', 'idx_userid_createtime', 'ADD KEY `idx_userid_createtime` (`userid`, `createtime`)'),
                 array('user', 'idx_createtime', 'ADD KEY `idx_createtime` (`createtime`)'),
             );
             foreach ($checks as $row) {
@@ -438,6 +453,63 @@ class DatabaseMigrator
                 }
                 $table = Database::table($tableShort);
                 self::execStatement($pdo, 'ALTER TABLE `' . $table . '` ' . $addSql);
+            }
+        } catch (Exception $e) {
+            // 留待下次结构更新重试
+        }
+    }
+
+    /**
+     * 确保用户控制台统计列与按用户日志索引存在（幂等；已 mark 13.26.7 仅邮件开关的站点可补齐）
+     *
+     * @return void
+     */
+    private static function ensureUserDashStatSchema()
+    {
+        try {
+            $pdo = Database::connect();
+            if (self::tableExists('user') && !self::tableColumnExists('user', 'stat7')) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . Database::table('user') . '` '
+                    . 'ADD COLUMN `stat7` mediumtext NULL COMMENT \'近7日调用聚合JSON（按日分桶，供用户控制台）\' AFTER `keycalls`'
+                );
+                if (class_exists('UserStat7Manager')) {
+                    UserStat7Manager::resetColumnCache();
+                }
+            }
+            if (self::tableExists('apikey') && !self::tableColumnExists('apikey', 'pointsspent')) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . Database::table('apikey') . '` '
+                    . 'ADD COLUMN `pointsspent` decimal(14,4) NOT NULL DEFAULT 0.0000 '
+                    . 'COMMENT \'该密钥累计消耗积分（接口扣费合计）\' AFTER `calls`'
+                );
+                if (class_exists('ApiKeyManager') && method_exists('ApiKeyManager', 'resetPointsspentColumnCache')) {
+                    ApiKeyManager::resetPointsspentColumnCache();
+                }
+                // 仅补列时回填密钥消耗（API 扣减 − 退回；不碰 user.points / pointsspent）
+                try {
+                    $pdo->exec(
+                        'UPDATE `' . Database::table('apikey') . '` k
+                         LEFT JOIN (
+                            SELECT `keyid` AS kid,
+                                   COALESCE(SUM(
+                                       CASE
+                                           WHEN `direct` = 0 AND `kind` = 0 THEN `amount`
+                                           WHEN `direct` = 1 AND `kind` = 4 THEN -`amount`
+                                           ELSE 0
+                                       END
+                                   ), 0) AS spent
+                            FROM `' . Database::table('orders') . '`
+                            WHERE `status` = 1 AND `keyid` > 0
+                            GROUP BY `keyid`
+                         ) o ON o.kid = k.`id`
+                         SET k.`pointsspent` = GREATEST(0, COALESCE(o.spent, 0))'
+                    );
+                } catch (Exception $e2) {
+                    // 下次结构更新重试
+                }
             }
         } catch (Exception $e) {
             // 留待下次结构更新重试
@@ -839,7 +911,8 @@ class DatabaseMigrator
             || $version === '7.1.0'
             || $version === '10.12.0'
             || $version === '13.22.2'
-            || $version === '13.22.5');
+            || $version === '13.22.5'
+            || $version === '13.26.7');
     }
 
     /**
@@ -1268,6 +1341,10 @@ class DatabaseMigrator
         }
         if ($version === '13.22.5') {
             return self::tableColumnExists('api', 'upmethod');
+        }
+        if ($version === '13.26.7') {
+            return self::tableColumnExists('user', 'stat7')
+                && self::tableColumnExists('apikey', 'pointsspent');
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

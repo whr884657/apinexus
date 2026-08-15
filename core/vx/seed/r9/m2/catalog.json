@@ -1,4 +1,5 @@
 {
+    "_doc": "管理员关于页目录。路径：core/vx/seed/r9/m2/catalog.json。由 AboutCatalog 加载：有本地用本地，仅本地缺失才从仓库 raw 拉取。team=开发与维护相关人员；links=相关链接；tech=技术栈；note=技术栈说明。图标文件放 assets/img/。_doc 字段仅文档用，运行时忽略。",
     "version": 1,
     "team": [
         {
@@ -50,11 +51,29 @@
             "tone": "redis"
         },
         {
+            "name": "Nginx",
+            "href": "https://nginx.org",
+            "icon": "nginx",
+            "tone": "nginx"
+        },
+        {
+            "name": "JavaScript",
+            "href": "https://developer.mozilla.org/docs/Web/JavaScript",
+            "icon": "javascript",
+            "tone": "js"
+        },
+        {
+            "name": "ECharts",
+            "href": "https://echarts.apache.org",
+            "icon": "echarts",
+            "tone": "echarts"
+        },
+        {
             "name": "Parsedown",
             "href": "https://parsedown.org",
             "icon": "",
             "tone": "parsedown"
         }
     ],
-    "note": "本系统基于以上开源基础能力构建，感谢相关项目与贡献者。"
+    "note": "涵盖本站后端运行环境、前端交互与常用开源组件；图标统一放在 assets/img/。感谢相关项目与贡献者。"
 }

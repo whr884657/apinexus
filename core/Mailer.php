@@ -35,6 +35,32 @@ class Mailer
     }
 
     /**
+     * 验证码邮件 HTML 正文（登录 / 重置 / 注册等）
+     *
+     * @param string $displayName 称呼（用户名）
+     * @param string $brandName   站点名或系统名
+     * @param string $actionDesc  用途说明，如「登录」「申请重置管理员密码」
+     * @param string $code        6 位验证码
+     * @param int    $ttlSeconds  有效期秒数
+     * @return string
+     */
+    public static function otpMailBody($displayName, $brandName, $actionDesc, $code, $ttlSeconds)
+    {
+        $mins = max(1, (int) ($ttlSeconds / 60));
+        $name = htmlspecialchars((string) $displayName, ENT_QUOTES, 'UTF-8');
+        $brand = htmlspecialchars((string) $brandName, ENT_QUOTES, 'UTF-8');
+        $action = htmlspecialchars((string) $actionDesc, ENT_QUOTES, 'UTF-8');
+        $codeEsc = htmlspecialchars((string) $code, ENT_QUOTES, 'UTF-8');
+
+        return '<div style="font-family:sans-serif;line-height:1.8;">'
+            . '<p>您好，' . $name . '：</p>'
+            . '<p>您正在' . $action . ' ' . $brand . '，验证码为：</p>'
+            . '<p style="font-size:24px;font-weight:bold;margin:16px 0;">' . $codeEsc . '</p>'
+            . '<p>验证码 ' . $mins . ' 分钟内有效，请勿泄露给他人。</p>'
+            . '<p>如非本人操作，请忽略此邮件。</p></div>';
+    }
+
+    /**
      * SMTP 发送
      *
      * @param string $host

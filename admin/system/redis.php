@@ -193,7 +193,7 @@ vs_admin_layout_start(
     'Redis 管理',
     'redis',
     '<button type="button" class="vs-btn vs-btn--default" id="redisClearBtn">清空业务缓存</button>'
-    . '<button type="button" class="vs-btn vs-btn--primary" id="redisRefreshBtn">刷新</button>'
+    . vs_admin_refresh_btn_html('redisRefreshBtn')
 );
 ?>
 

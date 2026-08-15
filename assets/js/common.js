@@ -276,6 +276,32 @@
     };
 
     /**
+     * 后台统一图标刷新按钮：开始/结束旋转。
+     * 禁止用 disabled（Chromium 下禁用按钮子元素 CSS animation 常不转，手机端却正常）。
+     */
+    global.VsRefreshBtn = {
+        start: function (el) {
+            if (!el) {
+                return;
+            }
+            el.classList.add('is-spinning');
+            el.setAttribute('aria-busy', 'true');
+            el.setAttribute('aria-disabled', 'true');
+        },
+        stop: function (el) {
+            if (!el) {
+                return;
+            }
+            el.classList.remove('is-spinning');
+            el.removeAttribute('aria-busy');
+            el.removeAttribute('aria-disabled');
+        },
+        isBusy: function (el) {
+            return !!(el && el.classList.contains('is-spinning'));
+        },
+    };
+
+    /**
      * http:// → https://，消除 HTTPS 页 Mixed Content 控制台噪音与弱 WebView 崩溃风险
      *
      * @param {string} url

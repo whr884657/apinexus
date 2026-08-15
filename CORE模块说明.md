@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.6**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.7**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -40,7 +40,7 @@ require_once VS_ROOT . '/core/bootstrap.php';
 | 在 `bootstrap.php` 注册 | **禁止**直接 `Database::connect()` / 写表名 |
 | 全主题共用的数据格式约定 | 各主题独立的视觉与交互 |
 
-**主题资源隔离（13.22.3；加载方式 13.22.6；字体 13.26.5）：** 前台 / 用户中心只加载**当前主题包**内 `assets/shell`、`assets/css`、`assets/js`；根目录 `assets/css|js` **仅**管理员后台与安装等系统页。内置图标物理文件仍在 `assets/img/`，出站须经 `SiteMedia`（或 `UserAvatar` / 分类图标等核心类）。**浏览器按文件逐个请求**（`ThemeManager::frontendShell*Hrefs` / `defaultFrontendAssets` 等清单），**不再**使用 HTTP 打包入口；磁盘源文件保持分立，禁止为维护方便合并成单个大 CSS。默认主题等宽字体用本地 `fonts-local.css` + JetBrains Mono woff2，中文走系统字体栈；**禁止**再挂运行时 Tailwind / 境外 Google Fonts。
+**主题资源隔离（13.22.3；加载方式 13.22.6；字体/工具类 13.26.5～13.26.6）：** 前台 / 用户中心只加载**当前主题包**内 `assets/shell`、`assets/css`、`assets/js`；根目录 `assets/css|js` **仅**管理员后台与安装等系统页。内置图标物理文件仍在 `assets/img/`，出站须经 `SiteMedia`（或 `UserAvatar` / 分类图标等核心类）。**浏览器按文件逐个请求**（`ThemeManager::frontendShell*Hrefs` / `defaultFrontendAssets` 等清单），**不再**使用 HTTP 打包入口；磁盘源文件保持分立，禁止为维护方便合并成单个大 CSS。默认主题由 `ThemeManager::defaultFrontendAssets` 加载主题包内 **`assets/css/feer-compat.css`**（静态工具类，**替代**运行时 Tailwind，禁止再挂 CDN/运行时 Tailwind）；等宽字体用本地 `fonts-local.css`（`assets/vendor/fonts-local.css`）+ JetBrains Mono woff2，中文走系统字体栈；**禁止**再链境外 Google Fonts。
 
 **默认主题 UI 改动边界：** 详情免责声明开关、快速上手鉴权 Tab、Hero 文案等**仅改** `core/theme/default/`；其它主题须自行对齐 `theme.json` settings，core 不提供跨主题样式回退。
 
@@ -53,6 +53,7 @@ require_once VS_ROOT . '/core/bootstrap.php';
 ```
 version.php
 → helpers.php
+→ date_default_timezone_set('Asia/Shanghai')   ← 业务时间统一东八区（与 MySQL session time_zone 对齐）
 → InstallChecker → Database → DatabaseInstaller → DatabaseMigrator
 → SiteContext → RegisterPolicy → Config
 → Mailer → RedisService → RedisCache
@@ -64,7 +65,7 @@ version.php
 → ApiManager → ApiError → ApiQuickstart
 → AiConfig → AiClient → AiChatSession → AiSse → AiApiDoc
 → ApiNotify → ProxyClientProfile → ProxyJsonRewrite → JsonpGuard → ApiOutboundSanitize → ApiProxy → ApiStats → IpLocator
-→ StatDayManager → ApiLogManager → ApiLogArchive → ApiKeyManager
+→ StatDayManager → UserStat7Manager → ApiLogManager → ApiLogArchive → ApiKeyManager
 → ApiFeedbackManager → FrontendFeedback → FeedbackNotify
 → ApiCategoryManager
 → PayConfig → OrderManager → PointsManager
@@ -81,6 +82,28 @@ version.php
 → Session 启动 + CSRF
 →（已安装时）DatabaseMigrator::pruneAppliedAboveCodeVersion
 ```
+
+### core 子目录一览（含 HTTP 入口）
+
+下列子目录**多数不在**上方 bootstrap `require` 列表中逐文件展开；类文件由门面 / 父类 `require_once`，或由独立 HTTP 脚本自行引入。
+
+```
+core/
+├── captcha/          验证码实现与 HTTP
+│   ├── local.php / gt3/* / gt4/LoginController.php / helper.php
+│   ├── image.php     ← HTTP：本地图形出图
+│   └── register.php  ← HTTP：极验 register / 校验中转
+├── oauth/            第三方登录（由 bootstrap 加载类；入口在 user/oauth/）
+├── markdown/         Markdown.php + Parsedown（bootstrap 加载）
+├── play/codeplay/    CodePayClient.php + notify.php / return.php（支付回调 HTTP）
+├── playground/       relay.php（在线测试同源中继 HTTP）、media.php
+├── cron/             apilogarchive.php 等计划任务 HTTP（密钥校验）
+├── theme/{id}/       主题包（pages / layout / assets；非 bootstrap 类）
+├── ping.php          ← HTTP：贡献者延迟检测等
+└── vx/               隐蔽数据（如 AboutCatalog 本地 JSON），勿当公开入口
+```
+
+**说明：** `image.php` / `register.php`、`playground/relay.php`、`cron/*`、`ping.php`、码支付 `notify.php`/`return.php` 等是**独立 HTTP 入口**，各自 `require bootstrap` 或按需加载，**不会**出现在 bootstrap 类清单里。主题包 `theme/{id}/` 只被 `ThemeManager` / `vs_frontend_page` 调度，不在 bootstrap 逐文件 require。
 
 ---
 
@@ -145,11 +168,17 @@ version.php
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
 | 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 `/detail/{id}`、多选 method、**keyways**、needkey/qpm/charge、审核三态、统计、在线测试浏览器直连、双端 UI） |
 | 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号最多 3 个；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
-| 积分与支付 | `PointsManager` / `OrderManager` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；v10.4.0 注册赠送 / 每日签到；表 `orders` + `checkin`） |
+| 积分与支付 | `PointsManager` / `PointsNotify` / `OrderManager` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到 / 控制台） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；注册赠送 / 每日签到；积分归零/充值成功邮件；表 `orders` + `checkin`） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
-| 用户认证 | `UserAuth` / `UserManager` | `UserAuth` + `FrontendUser` | `user/`、`admin/users.php` | ✅ 是 | **已完成**（含角色 user/developer） |
+| 用户认证 | `UserAuth` / `UserManager` / `Auth` | `UserAuth` + `FrontendUser`；管理员 `Auth::loginById` | `user/`、`admin/login.php`、`admin/users.php` | ✅ 是 | **已完成**（含角色；**13.26.7** 双端邮箱验证码登录） |
+| 用户控制台统计 | `UserStat7Manager` / `ApiKeyManager` / `ApiLogManager` | `FrontendUser::dashboardStats` / `myLogsPaged` | `user/index.php`、`user/logs.php`、双主题 dashboard/logs | ✅ 是 | **已完成（13.26.7）**：`user.stat7`、密钥 `pointsspent`、本人日志白名单 |
+| 注册策略 | `RegisterPolicy` | （入口注入 `$registerOpen` 等） | `admin/settings`、`user/register.php` | 入口/后台 | **已完成**（开放/关停、邮箱验证、后缀白名单 `register_policy`） |
+| 验证码 | `Captcha` + `captcha/*` | `vs_captcha_field` / `vs_captcha_js`（`captcha/helper.php`） | 系统设置分端 mode；`captcha/image.php` | 认证页 | **已完成**（local / gt3 / gt4；场景 SCENE_USER_*；v13.26.6 大小写不敏感 + 首次 focus 换图） |
+| 站点地图 | `Sitemap` | — | 根 `sitemap.php` → `/sitemap.xml` | SEO | **已完成**（四处伪静态同步 + `robots.txt`） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
-| 第三方登录 | `oauth/*` | `OAuthService` | 系统设置 | ✅ 是 | **已完成** |
+| 第三方登录 | `oauth/*` | `OAuthService` | 系统设置 | ✅ 是 | **已完成**（UI 出站 `/user/oauth/start`；回调仍 `callback.php`） |
+| AI 文档 / 快速上手 | `AiApiDoc` / `AiConfig` / `AiClient` / `AiChatSession` / `AiSse` / `ApiQuickstart` | （编辑页 SSE；详情读 aidoc） | 接口编辑（管理端/用户端） | 后台/开发者 | **已完成**（7 章 id 固定；代码最多 27 片；TTL=600；`clearAllForActor`） |
+| 面板监控 | `PanelMonitor` / `DashboardStats` | — | `admin/index`、`admin/screen` | 后台专用 | **已完成**（宝塔 / 1Panel 快照；v13.16.0） |
 | 文章 | `ContentManager`（kind=1） | `FrontendArticle` / `FrontendAbout` | `admin/content/articles.php`、`articles.php`、`about.php` | ✅ 是 | **已完成**（封面；可绑定关于页；隐藏态） |
 | 友情链接 | `LinkManager` / `LinkSiteMeta` / `LinkNotify` | `FrontendLink` | `admin/content/links.php`、`links.php`、`applylink.php`、`core/theme/default/api/sitemeta.php` | ✅ 是 | **已完成**（表 `link`；`kind=0`；审核 + 启禁；一键 TDK；邮件通知） |
 | 合作伙伴 | `LinkManager`（共用） | `FrontendPartner` | `admin/content/partners.php`、默认主题首页 | ✅ 是 | **已完成**（表 `link`；`kind=1`；无审核；仅编辑/启禁） |
@@ -241,28 +270,30 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `DatabaseMigrator.php` | 版本迁移 SQL（含清理旧系统残留） |
 | `Config.php` | 系统配置读写（`vs_config` 表） |
 | `SiteContext.php` | 站点名称（前台）、系统名称（后台壳层）、描述、Logo 等展示信息 |
-| `RegisterPolicy.php` | 注册开放/邮箱验证/后缀策略 |
+| `RegisterPolicy.php` | 注册开放/邮箱验证/后缀策略（`CONFIG_KEY=register_policy`） |
 | `Mailer.php` | SMTP 发信 |
 | `Auth.php` | **管理员**登录与会话 |
 | `UserAuth.php` | **用户**登录、注册、重置密码 |
 | `UserRole.php` | 用户角色常量与权限判断（普通用户/开发者） |
-| `FrontendUser.php` | 前台用户资料调度（用户名、头像、简介、博客、壁纸、角色）；`dashboardStats()` 控制台汇总 |
+| `FrontendUser.php` | 前台用户资料调度（用户名、头像、简介、博客、壁纸、角色）；`dashboardStats()` 控制台汇总；`myLogsPaged()` 本人日志 |
 | `UserDashHello.php` | 用户控制台按时段问候（12 个 2 小时槽；文案池随机；双主题共用） |
 | `SiteMedia.php` | 内置图片出站 URL（`assets/img/` 物理文件；主题禁止手写路径） |
 | `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间；`bio_custom` 标记是否自填简介；归属含绑定身份下历史 userid=0） |
 | `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据 |
-| `Captcha.php` | 行为验证统一入口（本站图形 / 第三方；分端配置） |
+| `Captcha.php` | 行为验证门面：分端 mode（管理员/用户可分别选）；`local` / `gt3` / `gt4`；场景 `SCENE_*`；helper 提供 `vs_captcha_*`（见 `captcha/helper.php`） |
+| `captcha/*` | 本地图 `local.php`；极验3 `gt3/`；极验4 `gt4/`；挂载 `helper.php`；HTTP `image.php` / `register.php` |
 | `RateLimitStore.php` | 限流计数存储（MySQL） |
 | `AjaxResponse.php` | 后台 AJAX 统一 JSON 响应 |
 | `AdminUserBinding.php` | 管理员绑定用户身份（发布内容用） |
 | `UserManager.php` | 后台用户列表/封禁/删除/身份转换 |
 | `UserAvatar.php` | 用户头像 URL 解析 |
+| `AboutCatalog.php` | 关于页「开发与维护 / 相关链接 / 技术基础」目录（本地 JSON 优先，缺则云端） |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
 | `ApiError.php` | 公开 API 业务错误码（11001～11018）；`businessLabelMap` / `aiDetailDocErrcodeClause` 供 AI 详细文档全量写入 |
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型/单片超时/代码调度模式与并发） |
 | `AiClient.php` | OpenAI 兼容 Chat Completions / Responses；流式 `chatStreamWithConfig`；连通测试须先 `session_write_close`（v13.26.0） |
-| `AiChatSession.php` | AI 短时效多轮（Redis TTL 约 10 分钟）；接口保存时 `clearAllForActor` 整批清空 |
+| `AiChatSession.php` | AI 短时效多轮（Redis **TTL=600**）；接口保存时 `clearAllForActor` 整批清空 |
 | `AiSse.php` | SSE 输出（`no-transform` / `Surrogate-Control` / 首包垫片 + 心跳），供文档与代码流式生成 |
 | `AiApiDoc.php` | 详细文档按章生成（文首接口名标题、失败自动重试见前端）；代码示例最多 3×9；纯代码出站后服务端包 `:::qs`；按鉴权按钮同行短文案、用户端体验对齐管理端（v13.26.3） |
 | `IpLocator.php` | IP 归属地：内置（仅 IPv4）或自定义；`probe()` 支持表单草稿测试；自定义超时加长；IPv6 提醒需自定义接口（v13.26.1） |
@@ -275,15 +306,18 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer` |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
+| `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser） |
 | `DashboardStats.php` | 控制台/大屏 KPI·趋势·TOP·live（含 TOP live / 服务器监控快照，**v13.4.0 / v13.16.0**）；geo 飞线三色 |
 | `PanelMonitor.php` | 宝塔 / 1Panel 面板监控客户端；控制台「服务器」卡片快照与测试连接（**v13.16.0**） |
 | `GeoCityCoords.php` | 大屏飞线全量城市坐标库；`resolveCityName` 地级优先 + 剥离运营商尾缀（v13.0.0 / **v13.2.0**） |
-| `ApiKeyManager.php` | 用户 API 调用密钥 CRUD |
-| `ApiLogManager.php` | 调用日志分页、今日计数、脱敏 |
-| `ApiLogArchive.php` | 调用日志冷热归档 |
+| `ApiKeyManager.php` | 用户 API 调用密钥 CRUD；含 `pointsspent` 密钥累计消耗与 `adjustPointsspent` |
+| `ApiLogManager.php` | API 调用日志：keyset 翻页、热冷合并；管理端搜用户名先解析 `user.id`；用户侧 `formatUserSafeRow` / `listForUser` / `recentForUser`；LIKE 须转义+`ESCAPE`（E243） |
+| `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片；冷库搜索同步 `user_ids` 与 LIKE 转义 |
+| `ApiFeedbackManager.php` / `FrontendFeedback.php` / `FeedbackNotify.php` | 接口反馈后台 CRUD / 前台提交 / 邮件通知 |
 | `ContentManager.php` | 文章/公告内容 CRUD（kind 区分） |
-| `CommentManager.php` / `FrontendComment.php` | 文章评论后台与前台 |
+| `CommentManager.php` / `CommentNotify.php` / `FrontendComment.php` | 文章评论后台、通知、前台提交与列表 |
 | `ApiCategoryManager.php` | API 分类 CRUD（**后台向**） |
+| `PayConfig.php` | 码支付与积分充值相关系统配置读写 |
 | `LinkManager.php` | 友情链接 / 合作伙伴 / 赞助共用 CRUD（`kind` 0/1/2；友链审核；前台申请）（**后台向**） |
 | `LinkSiteMeta.php` | 抓取外站 HTML 解析 title/description/favicon（友链一键填充；防 SSRF） |
 | `LinkNotify.php` | 友链申请通知管理员；通过后通知申请人邮箱 |
@@ -292,16 +326,18 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `FrontendLink.php` | 前台已通过且启用的友链列表与本站友链卡片（**主题向**） |
 | `FrontendPartner.php` | 前台已启用合作伙伴列表（**主题向**） |
 | `FrontendSponsor.php` | 前台赞助收款码 + 赞助名单（**主题向**） |
-| `FrontendStats.php` | 前台统计：注册用户数、今日调用、审核通过接口数、累计调用（**主题向**；首页 KPI 勿直调 ApiManager） |
-| `RedisCache.php` | 业务数据缓存（前台/公开列表 + apilog + orders + **控制台 dashboard 前缀** + statday topmap）；监控页展示逻辑键名（v10.6.0 / v10.12.0） |
-| `ApiLogManager.php` | API 调用日志：默认时间窗、COUNT 无 JOIN、keyset 翻页、热冷合并查询；`countToday` 优先读 `statday`；`detailEnabled()` 控制是否写详细日志；`httpcodeLabel`（v10.6.1）；`maskApikey` 展示/落库脱敏（v10.8.0） |
+| `FrontendStats.php` | 前台统计四 KPI：注册用户、今日调用、审核通过接口数、累计调用（**主题向**；禁止主题直调 `ApiManager` 计数） |
+| `FrontendAnnouncement.php` / `FrontendArticle.php` / `FrontendAbout.php` | 前台公告 / 文章 / 关于页绑定正文（**主题向**） |
+| `markdown/Markdown.php` | Markdown 渲染（本地 Parsedown + 短码；公告/文章/API 文档） |
+| `play/codeplay/CodePayClient.php` | 码支付下单/验签客户端（回调见同目录 `notify.php` / `return.php`） |
+| `RedisCache.php` | 业务数据缓存（前台/公开列表 + apilog + `cache:userapilog:*` + orders + 控制台 dashboard + statday）；`invalidateApiLog` 同步清用户日志缓存 |
 | `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0）；业务时区东八区（v10.6.1） |
-| `PointsManager.php` | 余额读写、扣费、充值完成/取消（回调不比对金额，见支付规范 §2.6）、`giftOnRegister` / `checkin`；列表走 OrderManager |
+| `PointsManager.php` | 余额读写、扣费、充值完成/取消（回调不比对金额，见支付规范 §2.6）、`giftOnRegister` / `checkin`；列表走 OrderManager；扣至零 / 充值履约后触发 `PointsNotify` |
+| `PointsNotify.php` | 积分余额归零、充值成功邮件（`mail_notify_points_zero` / `mail_notify_recharge_success`；失败不阻断） |
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
-| `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（条数可配）、计划任务密钥 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL；前台/用户中心壳与页 CSS·JS 清单 |
-| `Sitemap.php` | 前台 SEO 站点地图（静态页 + 公开接口详情 + 已发布文章）；入口 `sitemap.php` / `/sitemap.xml` |
+| `Sitemap.php` | 前台 SEO 站点地图（静态页 + 公开接口详情 + 已发布文章）；入口 `sitemap.php` → `Sitemap::emit()` / `/sitemap.xml` |
 | `SystemInfo.php` | 关于页环境信息 |
 | `Updater.php` | 云端在线更新检测与安装；安全解压；覆盖后按废弃清单清理文件 |
 | `UpdateLog.php` | 版本更新记录读取 |
@@ -323,13 +359,13 @@ foreach (FrontendCategory::listTags() as $tag) {
 
 ### 4.2 version.php
 
-**作用：** 定义常量 `VS_VERSION`（如 `2.17.1`）。在线更新、关于页、`update.json` 均以此为准。
+**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.7**）。在线更新、关于页、`update.json` 均以此为准。
 
 **用法：**
 
 ```php
-echo VS_VERSION;           // 2.17.1
-echo 'v' . VS_VERSION;     // v2.17.1
+echo VS_VERSION;           // 例如 13.26.7（以当前 core/version.php 为准）
+echo 'v' . VS_VERSION;     // 例如 v13.26.7
 ```
 
 **发版时：** 须同步修改 `update.json`、`update-log.json`、`README.md` 徽章。
@@ -343,7 +379,10 @@ echo 'v' . VS_VERSION;     // v2.17.1
 | 函数 | 作用 |
 |------|------|
 | `vs_e($value)` | HTML 转义，模板输出必用 |
-| `vs_base_url()` | 站点根 URL（含协议域名） |
+| `vs_sanitize_http_host($host)` | 清洗 HTTP Host（拒 CRLF/路径符号；允许域名/IPv4/`[IPv6]`+端口） |
+| `vs_request_http_host()` | 合法 `HTTP_HOST` → 否则 `SERVER_NAME` → 否则 `localhost` |
+| `vs_base_url()` | 站点根 URL（**仅用清洗后 Host**，防邮件/绝对链 Host 污染，E244） |
+| `vs_sql_like_escape` / `vs_sql_like_contains` / `vs_sql_like_prefix` | LIKE 字面转义（配合 `ESCAPE '\\'`，防 `%`/`_` 放大扫描，E243） |
 | `vs_path_resource_url($script, $id)` | 路径式资源 URL：`/{脚本}/{id}`（通用伪静态） |
 | `vs_api_detail_url($apiId)` | 接口详情 URL（→ `/detail/{id}`） |
 | `vs_resolve_path_id()` | 入站解析资源数字 ID（GET 优先，兼容 PATH_INFO） |
@@ -421,7 +460,8 @@ echo vs_e($siteName);
 | `hasPendingMigrations()` | 是否有未执行迁移 |
 | `getPendingFiles()` | 待执行文件列表 |
 
-**发版含表结构变更时：** 新增 `install/migrations/x.y.z.sql`，并在 `update.json` 标记 `db_changes: true`。
+**发版含表结构变更时：** 新增 `install/migrations/x.y.z.sql`，并在 `update.json` 标记 `db_changes: true`。  
+**13.26.7：** `ensureUserDashStatSchema` 幂等补 `user.stat7` / `apikey.pointsspent`（已 mark 迁移的站点也可补列）；密钥消耗按 orders 回填，禁止扫 apilog 回填七日窗。
 
 ---
 
@@ -481,12 +521,18 @@ Config::set('site_name', '我的 API 站');
 |------|------|
 | `isOpen()` | `register_enabled===1`（默认开放） |
 | `requiresEmailVerify()` | `register_email_verify===1`（默认须验证） |
-| `assertOpen()` / `closedMessage()` | 关闭时统一错误文案 |
-| `getPolicy()` | 读取后缀策略 |
-| `saveEmailSuffixes($suffixes)` | 保存后缀列表 |
+| `assertOpen()` / `closedMessage()` | 关闭时统一错误文案（「已停止注册，如有问题请联系管理员」） |
+| `getPolicy()` | 读取后缀策略（`email_suffixes` 数组） |
+| `hasEmailSuffixRestriction()` | 是否启用了邮箱后缀限制（列表非空） |
+| `parseSuffixInput($input)` | 后台表单文本 → 后缀数组 |
+| `formatSuffixInput($suffixes)` | 后缀数组 → 表单回显文本 |
+| `saveEmailSuffixes($suffixes)` | 保存后缀列表到 `CONFIG_KEY` |
 | `validateEmailSuffix($email)` | 后缀是否允许；不允许返回文案 |
 
-**配置键：** `register_enabled`、`register_email_verify`（`install/migrations/13.26.5.sql` 种子）。  
+**配置键：**  
+- `register_enabled`、`register_email_verify`（`install/migrations/13.26.5.sql` 种子）  
+- **`RegisterPolicy::CONFIG_KEY` = `register_policy`**：JSON 存邮箱后缀白名单等  
+
 **硬闸门：** `user/register.php` 与 `UserAuth::register()` 双重拒绝关闭态；免邮箱验证时提交侧仍须 captcha。  
 **主题：** 经入口注入 `$registerOpen`、`$emailVerify`、`$formEnabled`、`$registerClosedSub` 等；**禁止主题直连 Config/库**。
 
@@ -501,17 +547,27 @@ Config::set('site_name', '我的 API 站');
 | `emit()` | 输出 XML 并结束 |
 | `buildXml()` / `collectUrls()` | 组装 URL（上限约 5000） |
 
-**入口：** 根目录 `sitemap.php`；伪静态 `/sitemap.xml`（安装向导 / `.htaccess` / Nginx 须同步）。`robots.txt` 声明 `Sitemap: /sitemap.xml`。
+**入口：** 根目录 `sitemap.php` → `Sitemap::emit()`；伪静态 `/sitemap.xml`。  
+
+**四处须同步（改 rewrite 时缺一不可）：**
+
+1. 安装向导 Nginx 片段（`vs_install_nginx_rewrite_snippet()` / install 内嵌 snippet）  
+2. 根目录 `nginx伪静态配置.md`  
+3. 根目录 `.htaccess`（`RewriteRule ^sitemap\.xml$ sitemap.php`）  
+4. `README.md` 伪静态说明  
+
+另：根目录 `robots.txt` 声明 `Sitemap: /sitemap.xml`。
 
 ---
 
 ### 4.12 Mailer.php
 
-**作用：** 通过 SMTP 发送邮件（注册验证码、找回密码等）。
+**作用：** 通过 SMTP 发送邮件（注册验证码、找回密码、登录验证码等）。
 
 | 方法 | 说明 |
 |------|------|
 | `send($to, $subject, $body)` | 发送邮件，未配置 SMTP 时抛异常 |
+| `otpMailBody($displayName, $brandName, $actionDesc, $code, $ttlSeconds)` | 验证码邮件 HTML 正文（登录 / 重置 / 注册可复用） |
 
 **前置条件：** 后台已配置 SMTP（`Config::isMailEnabled()` 为 true）。
 
@@ -523,7 +579,8 @@ Config::set('site_name', '我的 API 站');
 
 | 方法 | 说明 |
 |------|------|
-| `login($account, $password)` | 登录，成功返回 true |
+| `login($account, $password)` | 账号密码登录，成功返回管理员数组 |
+| `loginById($adminId)` | 按 ID 登录（邮箱验证码登录等） |
 | `logout()` | 登出 |
 | `check()` | 是否已登录 |
 | `requireLogin()` | 未登录跳转后台登录页 |
@@ -569,13 +626,73 @@ $admin = Auth::user();
 | `checkLoginAllowed($username)` | 登录是否被限流 |
 | `recordLoginFailure($username)` | 记录登录失败 |
 | `checkMailCodeAllowed($email)` | 发验证码是否允许 |
-| `issueMailTicket()` / `validateAndConsumeMailTicket()` | 邮件验证码票据 |
+| `issueMailTicket()` / `validateAndConsumeMailTicket($purpose, $ticket)` | 邮件验证码一次性票据（用途见常量） |
+| `MAIL_PURPOSE_ADMIN_LOGIN` / `MAIL_PURPOSE_USER_LOGIN` 等 | 发信用途常量（登录 / 重置 / 注册等；须 `normalizeMailPurpose` 放行） |
+| `recordOtpFailure($context)` / `clearOtpSession($context)` | OTP 失败计数与会话清理（`admin_login` / `user_login` 等） |
 
 **表单/AJAX 示例：**
 
 ```php
 AuthSecurity::requireAuthPost();
 // 前端：assets/js/auth-csrf.js → VsAuthCsrf.postForm() 凭证失败自动重试一次
+```
+
+---
+
+### 4.15b Captcha.php / captcha/*（行为验证）
+
+**作用：** 系统级验证码**门面**；管理员端与用户端可**分别**选择方式。主题 / 认证页只挂载 UI，验票在入口脚本调用 `Captcha::requireValid`。
+
+#### 结构
+
+| 路径 | 说明 |
+|------|------|
+| `core/Captcha.php` | 门面：mode 归一、场景开关、`publicBoot`、`requireValid`、一次性消费 |
+| `core/captcha/local.php` | 本地图形（GD）；session 存场景绑定哈希 |
+| `core/captcha/gt3/*` | 极验 3：`GeetestLib.php`、`CheckGeetestStatus.php` 等 |
+| `core/captcha/gt4/LoginController.php` | 极验 4 |
+| `core/captcha/helper.php` | **`vs_captcha_field` / `vs_captcha_js`**（不在 `helpers.php`） |
+| `core/captcha/image.php` | **HTTP**：本地图出图 |
+| `core/captcha/register.php` | **HTTP**：极验 register / 校验中转 |
+
+#### Mode 与场景
+
+| 常量 | 值 | 说明 |
+|------|-----|------|
+| `Captcha::MODE_LOCAL` | `local` | 本站图形 |
+| `Captcha::MODE_GT3` | `gt3` | 极验 3 |
+| `Captcha::MODE_GT4` | `gt4` | 极验 4 |
+| `Captcha::SCENE_ADMIN_LOGIN` | `admin_login` | 管理员登录 |
+| `Captcha::SCENE_ADMIN_FORGOT` | `admin_forgot` | 管理员找回 |
+| `Captcha::SCENE_USER_LOGIN` | `user_login` | 用户登录 |
+| `Captcha::SCENE_USER_REGISTER` | `user_register` | 用户注册 |
+| `Captcha::SCENE_USER_FORGOT` | `user_forgot` | 用户找回 |
+
+分端配置：管理员 / 用户侧各自 `captcha_*_mode`（旧版单一 `captcha_mode` 可回退）。
+
+#### 本地图（v13.26.6）
+
+- **hashCode：** 明文先 `strtoupper` 再 `hash_hmac('sha256', …)`（校验**不区分大小写**；图面仍可大小写混排）  
+- **pepper：** `serverPepper()` 后缀 `|vs_local_captcha_v3`  
+- **一次性消费：** `Captcha::consumeToken` 绑定场景，防本站重放（session `vs_captcha_used`）  
+- TTL：本地码约 300s（`CaptchaLocal::TTL`）
+
+#### 前端
+
+三份 `captcha.js` **须保持同步**：
+
+1. `assets/js/captcha.js`（管理员等回落）  
+2. `core/theme/default/assets/shell/captcha.js`  
+3. `core/theme/slate/assets/shell/captcha.js`  
+
+本地图：**仅首次 focus** 验证码输入框时自动换图（属性 `data-focus-refreshed`）；主题勿另写一套换图逻辑。
+
+#### 主题挂载
+
+```php
+vs_captcha_field(Captcha::SCENE_USER_LOGIN);  // 定义于 captcha/helper.php
+vs_captcha_js(Captcha::SCENE_USER_LOGIN);
+// 入口验票：Captcha::requireValid($scene, $_POST);
 ```
 
 ---
@@ -737,6 +854,8 @@ VsPlaygroundResponse.directRequest({
 
 **日志：** 成功/失败写 `api.calls`、`StatDayManager::recordHit`；详细日志开时写 `apilog`（`ok` / `apikey` / `httpcode`；含异步 `IpLocator` 回填 `iploc`）。大屏飞线按 `ok`+`apikey` 拆绿/黄/红。
 
+**用户近 7 日窗（13.26.7）：** 记账成功后对**有效密钥归属用户**静默调用 `UserStat7Manager::recordHit`；**禁止**用登录 Cookie 回退污染 `user.stat7`（与「我的调用」密钥口径一致）。
+
 ---
 
 ### 4.21.4 IpLocator.php（IP 归属地）
@@ -756,15 +875,43 @@ VsPlaygroundResponse.directRequest({
 
 ---
 
+### 4.21.4b 出站安全三件套（JsonpGuard / ProxyJsonRewrite / ApiOutboundSanitize）
+
+代理网关与 Playground 中继在返回客户端前共用下列规则（**v13.25.0 / v13.25.2**）：
+
+| 类 | 要点 |
+|----|------|
+| **JsonpGuard** | 回调名白名单 `^[A-Za-z_$][A-Za-z0-9_$]{0,63}$`；识别参数 `callback` / `jsonp` / `jsonpcallback` / `_callback` / `cb`；`stripCallbackParams` 在代理侧剥离，防 JSONP 注入 |
+| **ProxyJsonRewrite** | 仅对成功 JSON 做 set/del；若 `ApiError::looksLikeBusinessErrorPayload`（errcode **11001～11018**）则**整段不改写**；禁止 SET 写入含 `/admin` 等后台路径 |
+| **ApiOutboundSanitize** | 出站擦除敏感路径字段；业务失败体经 `narrowBusinessErrorBody` **只保留 `code` / `msg` / `errcode`**，防止 `api_info` 等管理字段随错误响应泄露 |
+
+成功响应的 JSON 字段改写能力不变。专题规范见本地 `开发规范/JSONP与出站响应安全规范.md`、`代理JSON字段改写规范.md`。
+
+---
+
 ### 4.21.5 AiApiDoc.php / ApiQuickstart.php（AI 文档与快速上手）
 
-**AiApiDoc：** 管理员/用户接口编辑「AI 生成详细文档 / 代码示例」；**v13.26.2+** 详细文档默认按 7 章 `generateDetailDocSectionStream` 顺序回填；**v13.26.3** intro 须 `# 接口名` + 短概述（`sanitizeApiTitleName` + `ensureIntroDocTitle` 后再消毒），examples 须 curl+非空 PHP；前端章节失败自动重试 1 次。用户端**仅使用平台 AI**（无自建模型配置）。上下文剔除 `targeturl`/`upkey`/`jsonrewrite`；输出经 `ApiQuickstart::scrubHighlightLeak`；代码片 `wrapQsBlock` 二次 scrub（E232）。
-**v13.26.1 文档约束：** 详细文档调用示例仅 **curl + PHP**；密钥传递只描述**首选一种**鉴权；章节顺序强制（参数→响应→错误码→调用示例→注意事项）；文末必有「注意事项」。
-**展示：** `VsSyntax` bash 纯文本分词；复制用 `data-vs-plain` / `plainText`。
+**AiApiDoc：** 管理员/用户接口编辑「AI 生成详细文档 / 代码示例」；用户端**仅使用平台 AI**（无自建模型配置）。上下文剔除 `targeturl`/`upkey`/`jsonrewrite`；输出经 `ApiQuickstart::scrubHighlightLeak`；代码片 `wrapQsBlock` 二次 scrub（E232）。
 
-**代码示例生成（v12.0.0 / v13.26.2 / v13.26.4）：** 前端按片调用 `ai_gen_code_piece_stream`（SSE，`delta` 可预览）；**AI 生成最多 3 鉴权 × 9 语言 = 27 片**。主按钮一键全量；可按鉴权单独生成 9 片（按钮文案「生成 Query / Header / Bearer」，**同行横排**，合并保留其它鉴权块）。用户开发者入口标签/hint/校验切 Tab/总用时与管理端对齐。`AiConfig::codeMode` 为 `sequential`/`parallel`（并发 1～6，CDN 建议 ≤2）。提示词要求**纯代码**（禁思考链）；服务端 `finalizeCodePieceBody` → `stripReasoningArtifacts` + `wrapQsBlock` 二次 scrub（E233），禁 emoji、要求中文注释，失败可重试 1 次（重试仍流式）。旧整包接口仅兼容保留。**纠正：** v13.26.0 误把「文档内仅 curl+PHP」套用到 aidoc 并降为 2 片，已在 13.26.1 恢复。
+**详细文档 7 章 id（须按此顺序，`AiApiDoc::detailDocSections()`）：**
 
-**默认主题快速上手图标（v12.0.1）：** `assets/img/lang/*.svg`；`detailQsBundle.byAuth[*]` 宜带 `icon_gray`/`icon_color`；另须注入 `window.detailQsLangIcons`（`ApiQuickstart::langIconMap`）。`detail-quickstart.js` 重绘 Tab 时按语言 id 兜底补图标；首屏已有 PHP 图标则勿无谓重绘。切换 Query/Header/Bearer **不得**丢九种语言图标。
+| 顺序 | section id | 内容要点 |
+|------|------------|----------|
+| 1 | `intro` | 文首 `# 接口名` + 短概述（v13.26.3：`sanitizeApiTitleName` + `ensureIntroDocTitle`） |
+| 2 | `call` | 调用方式 / 鉴权说明 |
+| 3 | `params` | 请求参数 |
+| 4 | `success` | 成功响应 |
+| 5 | `errors` | 业务错误码 |
+| 6 | `examples` | **curl + 非空 PHP**（仅这两种） |
+| 7 | `notes` | 文末注意事项 |
+
+流式：`generateDetailDocSectionStream`；前端章节失败**自动重试 1 次**，第二次失败才需「继续生成」。
+
+**会话：** `AiChatSession::TTL = 600`（10 分钟）；接口 **create/update 保存成功** 后 `clearAllForActor` 清空该操作者全部短时效会话（自动草稿不清）。
+
+**代码示例（aidoc，最多 27 片 = 3 鉴权 × 9 语言）：** 前端按片 `ai_gen_code_piece_stream`（SSE）；主按钮一键全量；可按鉴权单独生成 9 片（「生成 Query / Header / Bearer」**同行**）。提示词要求**纯代码**（禁思考链）；服务端 `finalizeCodePieceBody` → `stripReasoningArtifacts` + `wrapQsBlock`（E233）。`AiConfig::codeMode`：`sequential` / `parallel`（并发 1～6，CDN 建议 ≤2）。
+
+**默认主题快速上手图标（v12.0.1）：** `assets/img/lang/*.svg`；`detailQsBundle.byAuth[*]` 宜带 `icon_gray`/`icon_color`；另须注入 `window.detailQsLangIcons`（`ApiQuickstart::langIconMap`）。
 
 **代码示例格式（aidoc）：**
 
@@ -781,14 +928,12 @@ curl …
 | 属性 | 说明 |
 |------|------|
 | `lang` | curl / typescript / browser / python / go / java / php / cpp / rust |
-| `auth` | **必填**（v10.17.0）：`query` / `header` / `bearer`；缺省按 query |
+| `auth` | **必填**：`query` / `header` / `bearer`；缺省按 query |
 | 多鉴权 | 接口 `keyways` 多种时，每种 auth 各一套语言块 |
 
-**ApiQuickstart：** `samplesFromAidoc($aidoc, $keyways)` / `qsBundleFromAidoc` 解析短码；默认主题详情页横滑语言 Tab + 鉴权 Tab（`auth=…` 维度）。
-
-**后台编辑（v11.1.0）：** 接口列表详细文档 / 代码示例 textarea 使用 `data-vs-md="off"`，**无右侧实时预览**（仍保留工具栏）。
-
-**详细文档要求（v11.0.0+）：** 错误响应示例须含 `"errcode":11001` 等业务码；传输层 HTTP 固定 200。鉴权方式错误为 `11012`。禁止再写 `"http":401`。
+**ApiQuickstart：** `samplesFromAidoc` / `qsBundleFromAidoc` 解析短码。  
+**后台编辑：** 详细文档 / 代码示例 textarea 使用 `data-vs-md="off"`，无右侧实时预览。  
+**错误示例：** 须含 `"errcode":11001` 等业务码；传输层 HTTP 固定 200；鉴权错误 `11012`。
 
 ---
 
@@ -970,7 +1115,13 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 ### 4.24d （已移除）主题资源 HTTP 打包
 
 **v13.22.6：** 删除 `ThemeAssetPack.php` 与 `theme-asset.php`。前台 / 用户中心改回**逐文件** `<link>` / `<script>`（清单见 `ThemeManager`）。在线升级时由 `install/obsolete-files.json` 清理旧站残留。  
-**v13.26.5：** 默认主题禁止运行时 Tailwind；`defaultFrontendAssets` 加载 `fonts-local.css`（本地 JetBrains Mono），中文走系统字体；禁止再链境外 Google Fonts。
+**v13.26.5：** 默认主题禁止运行时 Tailwind；`defaultFrontendAssets` 加载：
+
+1. `fonts-local.css`（本地 JetBrains Mono）  
+2. **`assets/css/feer-compat.css`**（静态工具类，**替代**运行时 Tailwind）  
+3. 页级 / `theme-tokens` 等主题 CSS  
+
+中文走系统字体栈；**禁止**再链境外 Google Fonts / 再挂运行时 Tailwind。
 
 ---
 
@@ -1003,13 +1154,15 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 | `setActive($themeId)` | 切换主题 |
 | `readThemeData` / `writeThemeData` | 读/写某主题配置段（库） |
 | `readAllThemesettings` / `syncThemesettingsEntries` | 总表读写与扫描补齐 |
-| `renderBody($pageKey, $title, $data)` | 渲染 layout + pages |
+| `renderBody($pageKey, $title, $data)` | 渲染 layout + pages（`pageKey` 清洗；pages 经 `realpath` 限制在主题目录） |
 | `themeSetting($key, $default)` | 读当前主题 settings |
-| `assetUrl($themeId, $relative)` | 主题静态资源 URL |
+| `assetUrl($themeId, $relative)` | 主题静态资源 URL（禁 `..`；主题须合法） |
+| `resolveThemeFile` / `resolveActiveThemeFile` | 主题内文件绝对路径（严格当前主题；禁穿越） |
 | `shellUrl($file)` | 当前主题 `assets/shell/` 下单文件 URL |
-| `pageScriptUrl($file)` | 当前主题页脚本 URL（如 `vs-syntax.js`） |
+| `pageScriptUrl($file)` | 当前主题页脚本 URL（如 `user-dashboard.js` / `user-logs.js`） |
 | `frontendShellCssHrefs` / `frontendShellJsHrefs` | 前台壳 CSS/JS 逐文件列表 |
 | `userShellCssHrefs` / `userShellJsHrefs` | 用户中心壳 CSS/JS 逐文件列表 |
+| `userMenuGroups()` | 用户中心侧栏（含「日志查询」；开发者项按角色隐藏） |
 | `navItems()` | 前台导航项 |
 | `defaultFrontendAssets($pageKey)` | 默认主题前台页 CSS/JS 清单（逐文件 URL） |
 
@@ -1101,7 +1254,7 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 ---
 
-### 4.28 UpdateLog.php
+### 4.29 UpdateLog.php
 
 **作用：** 读取版本历史（优先云端 `update-log.json`：Gitee → GitCode → GitHub，失败读本地）。
 
@@ -1133,7 +1286,15 @@ $providers = OAuthService::enabledProviders(); // ['qq'=>bool,'gitee'=>bool]
 $result = OAuthService::handleCallback($provider, $code, $state);
 ```
 
-**规则：** 仅**已注册用户**可绑定；首次 OAuth 需走绑定页 `user/oauth/bind.php`。
+**出站 URL 须分清（v13.26.5）：**
+
+| 类型 | 形态 | 说明 |
+|------|------|------|
+| **主题 / 前端可见出站** | `/user/oauth/start?provider=qq\|gitee` | **无** `.php` 后缀（与全站去后缀一致） |
+| **第三方登记的回调** | `/user/oauth/callback.php?provider=…`（`OAuthConfig::callbackUrl`） | **仍带** `.php`（须与开放平台登记一致，勿擅自去掉） |
+| **绑定页** | 入口脚本仍为 `user/oauth/bind.php`；对外链出宜去后缀（若经伪静态入口） | 仅已注册用户可绑定 |
+
+**规则：** 仅**已注册用户**可绑定；首次 OAuth 需走绑定页。
 
 ---
 
@@ -1422,9 +1583,11 @@ $todayCalls = FrontendStats::todayCallCount();
 | `checkinBanner()` | `{enabled, checked_today, min, max, show_banner}` |
 | `doCheckin()` | `{ok, msg, amount?, balance?, points?}` |
 | `dashboardStats()` | 控制台 KPI |
+| `myLogsPaged($opts)` | 本人调用日志分页（白名单字段） |
 
 **用户字段：** `id, username, email, avatar, bio, blog, wallpaper, role, role_label, can_publish_api, points, createtime, lastlogin, profile_url`  
-**dashboardStats：** `points, points_spent, email, createtime, lastlogin, role_label, can_publish_api, api_total, api_approved, api_pending, api_rejected, api_calls, key_total, key_calls, checkin_enabled, checked_today`
+**dashboardStats：** `points, points_spent, email, createtime, lastlogin, role_label, can_publish_api, api_total, api_approved, api_pending, api_rejected, api_calls, key_total, key_calls, stat7, recent, detail_enabled, checkin_enabled, checked_today`（`stat7` 含今日/日均/折线序列/热门名；`recent` 近 20 条白名单；须登录；主题禁止直查库）  
+**myLogsPaged：** 仅当前会话用户；禁止客户端指定 userid；无详情接口
 
 问候文案：`UserDashHello::pick($displayName)` → `{hello, hint, slot, hour}`。
 
@@ -1483,10 +1646,10 @@ $fb   = UserAvatar::defaultAvatar();
 
 #### 6.4.5 验证码（登录/注册/找回）
 
-- UI：`vs_captcha_field($scene)`、`vs_captcha_js($scene)`  
-- 场景常量：`Captcha::SCENE_USER_LOGIN` / `REGISTER` / `FORGOT`  
+- UI：`vs_captcha_field($scene)`、`vs_captcha_js($scene)`（定义于 **`core/captcha/helper.php`**，非 `helpers.php`）  
+- 场景常量（写全名）：`Captcha::SCENE_USER_LOGIN` / `Captcha::SCENE_USER_REGISTER` / `Captcha::SCENE_USER_FORGOT`  
 - 校验在入口：`Captcha::requireValid`（主题模板不负责验票）  
-- 本地图（v13.26.6）：校验不区分大小写；用户**首次聚焦**验证码输入框时自动换图（逻辑在 `captcha.js`，主题勿另写一套）
+- 本地图（v13.26.6）：校验不区分大小写；用户**首次聚焦**验证码输入框时自动换图（`data-focus-refreshed`；逻辑在三份同步的 `captcha.js`，主题勿另写一套）
 
 ---
 
@@ -1527,9 +1690,10 @@ $html = Markdown::render($rawMarkdown);
 | `vs_copyright_html` / `vs_site_runtime_start` | 版权 / 运行时长 |
 | `vs_require_secure_post()` | AJAX POST 门禁 |
 | `vs_playground_session_context()` | 详情调试条 |
-| `vs_captcha_field` / `vs_captcha_js` | 验证码挂载 |
 | `vs_is_allowed_http_url` / `vs_safe_embed_url` | URL 安全 |
 | `vs_user_render_page` | 用户中心入口（`user/includes/layout.php`） |
+
+**验证码挂载不在本文件：** `vs_captcha_field` / `vs_captcha_js` 定义于 **`core/captcha/helper.php`**（由 `Captcha` 门面加载），见 §4.15b。
 
 ---
 
@@ -1547,6 +1711,7 @@ $html = Markdown::render($rawMarkdown);
 | 贡献者 | `FrontendContributor::listForTheme` |
 | 个人主页 | 入口注入或 `findProfile` |
 | 用户控制台 | `FrontendUser::current` + `dashboardStats` + `UserDashHello::pick` + `checkinBanner` |
+| 用户日志 | `FrontendUser::myLogsPaged` → `ApiLogManager::listForUser` |
 
 **分类标签标准：**
 

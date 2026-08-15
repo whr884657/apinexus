@@ -80,7 +80,7 @@ class ApiKeyManager
             $pdo = Database::connect();
             $table = Database::table('apikey');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `userid`, `remark`, `secret`, `status`, `calls`, `createtime`
+                'SELECT ' . self::selectColumnSql('') . '
                  FROM `' . $table . '`
                  WHERE `userid` = ?
                  ORDER BY `id` DESC'
@@ -107,7 +107,8 @@ class ApiKeyManager
             $pdo = Database::connect();
             $tokenTable = Database::table('apikey');
             $userTable = Database::table('user');
-            $sql = 'SELECT t.`id`, t.`userid`, t.`remark`, t.`secret`, t.`status`, t.`calls`, t.`createtime`,
+            $cols = self::selectColumnSql('t');
+            $sql = 'SELECT ' . $cols . ',
                            u.`username` AS `username`
                     FROM `' . $tokenTable . '` t
                     LEFT JOIN `' . $userTable . '` u ON u.`id` = t.`userid`
@@ -133,8 +134,7 @@ class ApiKeyManager
             $pdo = Database::connect();
             $table = Database::table('apikey');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `userid`, `remark`, `secret`, `status`, `calls`, `createtime`
-                 FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                'SELECT ' . self::selectColumnSql('') . ' FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array($id));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -158,8 +158,7 @@ class ApiKeyManager
             $pdo = Database::connect();
             $table = Database::table('apikey');
             $stmt = $pdo->prepare(
-                'SELECT `id`, `userid`, `remark`, `secret`, `status`, `calls`, `createtime`
-                 FROM `' . $table . '` WHERE `secret` = ? LIMIT 1'
+                'SELECT ' . self::selectColumnSql('') . ' FROM `' . $table . '` WHERE `secret` = ? LIMIT 1'
             );
             $stmt->execute(array($secret));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -189,6 +188,7 @@ class ApiKeyManager
             'status'       => $status,
             'status_label' => self::statusLabel($status),
             'calls'        => isset($row['calls']) ? (int) $row['calls'] : 0,
+            'pointsspent'  => isset($row['pointsspent']) ? (float) $row['pointsspent'] : 0.0,
             'createtime'   => isset($row['createtime']) ? (string) $row['createtime'] : '',
             'username'     => isset($row['username']) ? (string) $row['username'] : '',
         );
@@ -497,5 +497,95 @@ class ApiKeyManager
             }
         }
         return '';
+    }
+
+    /**
+     * SELECT 列清单（兼容未迁移站点无 pointsspent）
+     *
+     * @param string $alias 表别名，空则无前缀
+     * @return string
+     */
+    private static function selectColumnSql($alias = '')
+    {
+        $p = $alias !== '' ? (rtrim((string) $alias, '.') . '.') : '';
+        $cols = $p . '`id`, ' . $p . '`userid`, ' . $p . '`remark`, ' . $p . '`secret`, '
+            . $p . '`status`, ' . $p . '`calls`, ' . $p . '`createtime`';
+        if (self::hasPointsspentColumn()) {
+            $cols .= ', ' . $p . '`pointsspent`';
+        }
+        return $cols;
+    }
+
+    /** @var bool|null */
+    private static $hasPointsspentCol = null;
+
+    /**
+     * @return bool
+     */
+    public static function hasPointsspentColumn()
+    {
+        if (self::$hasPointsspentCol !== null) {
+            return self::$hasPointsspentCol;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query(
+                'SHOW COLUMNS FROM `' . Database::table('apikey') . '` LIKE ' . $pdo->quote('pointsspent')
+            );
+            self::$hasPointsspentCol = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            self::$hasPointsspentCol = false;
+        }
+        return self::$hasPointsspentCol;
+    }
+
+    /**
+     * @return void
+     */
+    public static function resetPointsspentColumnCache()
+    {
+        self::$hasPointsspentCol = null;
+    }
+
+    /**
+     * 密钥累计消耗加减（接口扣费正数 / 退回负数；不低于 0）
+     *
+     * @param int      $keyId
+     * @param float    $delta
+     * @param PDO|null $pdo 传入则加入外层事务；独立调用失败静默
+     * @return void
+     */
+    public static function adjustPointsspent($keyId, $delta, $pdo = null)
+    {
+        $keyId = (int) $keyId;
+        $delta = round((float) $delta, 4);
+        if ($keyId <= 0 || $delta == 0.0 || !self::tableReady() || !self::hasPointsspentColumn()) {
+            return;
+        }
+        $own = ($pdo === null);
+        try {
+            if ($own) {
+                $pdo = Database::connect();
+            }
+            if ($delta > 0) {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . Database::table('apikey') . '`
+                     SET `pointsspent` = `pointsspent` + ?
+                     WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($delta, $keyId));
+            } else {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . Database::table('apikey') . '`
+                     SET `pointsspent` = GREATEST(0, `pointsspent` + ?)
+                     WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($delta, $keyId));
+            }
+        } catch (Exception $e) {
+            if (!$own) {
+                throw $e;
+            }
+        }
     }
 }

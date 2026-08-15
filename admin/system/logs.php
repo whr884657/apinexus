@@ -56,7 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $tableReady = ApiLogManager::tableReady();
 
-vs_admin_layout_start('日志查询', 'logs');
+$headerActions = $tableReady ? vs_admin_refresh_btn_html('logsRefreshBtn') : '';
+vs_admin_layout_start('日志查询', 'logs', $headerActions);
 ?>
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先完成系统升级以同步调用日志表。', array('compact' => true)); ?>
@@ -64,7 +65,7 @@ vs_admin_layout_start('日志查询', 'logs');
 <div class="vs-log-toolbar" id="logsToolbar">
     <div class="vs-log-search">
         <input type="search" class="vs-input vs-log-search__input" id="logsSearchInput"
-               placeholder="搜索接口名 / IP / 路径 / 密钥 / 用户…" autocomplete="off">
+               placeholder="搜索用户名 / 密钥 / 接口名 / IP / 路径…" autocomplete="off">
         <button type="button" class="vs-btn vs-btn--primary" id="logsSearchBtn">搜索</button>
     </div>
     <div class="vs-finance-filters" role="group" aria-label="调用结果">
@@ -72,7 +73,6 @@ vs_admin_layout_start('日志查询', 'logs');
         <button type="button" class="vs-btn vs-btn--default vs-log-filter" data-ok="1">成功</button>
         <button type="button" class="vs-btn vs-btn--default vs-log-filter" data-ok="0">失败</button>
     </div>
-    <button type="button" class="vs-btn vs-btn--outline vs-finance-refresh" id="logsRefreshBtn">刷新</button>
 </div>
 
 <div class="vs-panel vs-log-panel" id="logsPage">

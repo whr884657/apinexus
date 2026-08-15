@@ -1,0 +1,271 @@
+<?php
+/**
+ * 文件：core/UserStat7Manager.php
+ * 作用：用户近 7 日调用聚合（user.stat7 JSON，按日分桶）
+ *
+ * 写入：ApiStats 记账成功后 recordHit（失败静默，不拖垮接口）
+ * 读取：仅经 FrontendUser / 本类；主题禁止直查库
+ * 禁止：从 apilog 全表回填（见 E215 / 方案讨论第 8～9 轮）
+ */
+
+class UserStat7Manager
+{
+    const KEEP_DAYS = 7;
+
+    /** @var bool|null */
+    private static $hasCol = null;
+
+    /**
+     * @return bool
+     */
+    public static function hasColumn()
+    {
+        if (self::$hasCol !== null) {
+            return self::$hasCol;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query(
+                'SHOW COLUMNS FROM `' . Database::table('user') . '` LIKE ' . $pdo->quote('stat7')
+            );
+            self::$hasCol = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            self::$hasCol = false;
+        }
+        return self::$hasCol;
+    }
+
+    /**
+     * 迁移后刷新列探测
+     *
+     * @return void
+     */
+    public static function resetColumnCache()
+    {
+        self::$hasCol = null;
+    }
+
+    /**
+     * 单次调用写入用户近 7 日窗（失败静默）
+     *
+     * @param int   $userId
+     * @param int   $apiId
+     * @param bool  $ok
+     * @param float $cost 本次扣费积分数（未扣为 0）
+     * @return void
+     */
+    public static function recordHit($userId, $apiId, $ok, $cost = 0.0)
+    {
+        $userId = (int) $userId;
+        $apiId = (int) $apiId;
+        if ($userId <= 0 || $apiId <= 0 || !self::hasColumn()) {
+            return;
+        }
+        $cost = round(max(0, (float) $cost), 4);
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('user');
+            $started = false;
+            try {
+                if (!$pdo->inTransaction()) {
+                    $pdo->beginTransaction();
+                    $started = true;
+                }
+            } catch (Exception $eTx) {
+                $started = false;
+            }
+            $stmt = $pdo->prepare(
+                'SELECT `stat7` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                . ($started ? ' FOR UPDATE' : '')
+            );
+            $stmt->execute(array($userId));
+            $raw = $stmt->fetchColumn();
+            if ($raw === false) {
+                if ($started) {
+                    $pdo->rollBack();
+                }
+                return;
+            }
+            $map = self::decode((string) $raw);
+            $day = date('Y-m-d');
+            if (!isset($map[$day]) || !is_array($map[$day])) {
+                $map[$day] = array(
+                    'calls' => 0,
+                    'ok'    => 0,
+                    'fail'  => 0,
+                    'cost'  => 0.0,
+                    'apis'  => array(),
+                );
+            }
+            $bucket = &$map[$day];
+            $bucket['calls'] = (int) $bucket['calls'] + 1;
+            if ($ok) {
+                $bucket['ok'] = (int) $bucket['ok'] + 1;
+            } else {
+                $bucket['fail'] = (int) $bucket['fail'] + 1;
+            }
+            $bucket['cost'] = round((float) $bucket['cost'] + $cost, 4);
+            if (!isset($bucket['apis']) || !is_array($bucket['apis'])) {
+                $bucket['apis'] = array();
+            }
+            $aid = (string) $apiId;
+            $bucket['apis'][$aid] = (int) (isset($bucket['apis'][$aid]) ? $bucket['apis'][$aid] : 0) + 1;
+            unset($bucket);
+            $map = self::pruneToWindow($map);
+            $json = json_encode($map, JSON_UNESCAPED_UNICODE);
+            if ($json === false) {
+                if ($started) {
+                    $pdo->rollBack();
+                }
+                return;
+            }
+            $up = $pdo->prepare('UPDATE `' . $table . '` SET `stat7` = ? WHERE `id` = ? LIMIT 1');
+            $up->execute(array($json, $userId));
+            if ($started) {
+                $pdo->commit();
+            }
+        } catch (Exception $e) {
+            try {
+                if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+            } catch (Exception $e2) {
+                // ignore
+            }
+            // 非关键：静默，不影响接口响应
+        }
+    }
+
+    /**
+     * 读取并规范化近 7 日结构（供控制台；未登录勿调用）
+     *
+     * @param int $userId
+     * @return array{days:array,today_calls:int,today_cost:float,avg_calls:float,top:array}
+     */
+    public static function dashboardSlice($userId)
+    {
+        $empty = array(
+            'days'        => array(),
+            'today_calls' => 0,
+            'today_cost'  => 0.0,
+            'avg_calls'   => 0.0,
+            'top'         => array(),
+        );
+        $userId = (int) $userId;
+        if ($userId <= 0 || !self::hasColumn()) {
+            return $empty;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT `stat7` FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1'
+            );
+            $stmt->execute(array($userId));
+            $raw = $stmt->fetchColumn();
+            if ($raw === false) {
+                return $empty;
+            }
+            $map = self::pruneToWindow(self::decode((string) $raw));
+            return self::buildSlice($map);
+        } catch (Exception $e) {
+            return $empty;
+        }
+    }
+
+    /**
+     * @param array $map
+     * @return array
+     */
+    private static function buildSlice(array $map)
+    {
+        $labels = array();
+        $callsSeries = array();
+        $costSeries = array();
+        $totalCalls = 0;
+        $today = date('Y-m-d');
+        $todayCalls = 0;
+        $todayCost = 0.0;
+        $apiMerge = array();
+        for ($i = self::KEEP_DAYS - 1; $i >= 0; $i--) {
+            $day = date('Y-m-d', strtotime('-' . $i . ' day'));
+            $row = isset($map[$day]) && is_array($map[$day]) ? $map[$day] : array();
+            $c = isset($row['calls']) ? (int) $row['calls'] : 0;
+            $cost = isset($row['cost']) ? (float) $row['cost'] : 0.0;
+            $labels[] = $day;
+            $callsSeries[] = $c;
+            $costSeries[] = round($cost, 4);
+            $totalCalls += $c;
+            if ($day === $today) {
+                $todayCalls = $c;
+                $todayCost = round($cost, 4);
+            }
+            if (!empty($row['apis']) && is_array($row['apis'])) {
+                foreach ($row['apis'] as $aid => $n) {
+                    $k = (string) $aid;
+                    $apiMerge[$k] = (int) (isset($apiMerge[$k]) ? $apiMerge[$k] : 0) + (int) $n;
+                }
+            }
+        }
+        arsort($apiMerge, SORT_NUMERIC);
+        $top = array();
+        $rank = 0;
+        foreach ($apiMerge as $aid => $n) {
+            $rank++;
+            if ($rank > 10) {
+                break;
+            }
+            $top[] = array(
+                'apiid' => (int) $aid,
+                'calls' => (int) $n,
+            );
+        }
+        return array(
+            'days'         => array(
+                'labels' => $labels,
+                'calls'  => $callsSeries,
+                'cost'   => $costSeries,
+            ),
+            'today_calls'  => $todayCalls,
+            'today_cost'   => $todayCost,
+            'avg_calls'    => round($totalCalls / (float) self::KEEP_DAYS, 2),
+            'top'          => $top,
+        );
+    }
+
+    /**
+     * @param string $raw
+     * @return array
+     */
+    private static function decode($raw)
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '' || $raw === 'null') {
+            return array();
+        }
+        $data = json_decode($raw, true);
+        return is_array($data) ? $data : array();
+    }
+
+    /**
+     * 只保留含今天共 KEEP_DAYS 个日历日
+     *
+     * @param array $map
+     * @return array
+     */
+    private static function pruneToWindow(array $map)
+    {
+        $keep = array();
+        for ($i = self::KEEP_DAYS - 1; $i >= 0; $i--) {
+            $keep[date('Y-m-d', strtotime('-' . $i . ' day'))] = true;
+        }
+        $out = array();
+        foreach ($map as $day => $row) {
+            $day = (string) $day;
+            if (!isset($keep[$day]) || !is_array($row)) {
+                continue;
+            }
+            $out[$day] = $row;
+        }
+        return $out;
+    }
+}

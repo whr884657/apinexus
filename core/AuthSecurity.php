@@ -24,6 +24,10 @@ class AuthSecurity
     const MAIL_PURPOSE_USER_FORGOT = 'user_forgot';
     const MAIL_PURPOSE_USER_REGISTER = 'user_register';
     const MAIL_PURPOSE_ADMIN_FORGOT = 'admin_forgot';
+    /** 管理员邮箱验证码登录发信 */
+    const MAIL_PURPOSE_ADMIN_LOGIN = 'admin_login';
+    /** 用户邮箱验证码登录发信 */
+    const MAIL_PURPOSE_USER_LOGIN = 'user_login';
 
     /** 发信一次性票据有效期（秒） */
     const MAIL_TICKET_TTL = 600;
@@ -592,6 +596,8 @@ class AuthSecurity
             self::MAIL_PURPOSE_USER_FORGOT,
             self::MAIL_PURPOSE_USER_REGISTER,
             self::MAIL_PURPOSE_ADMIN_FORGOT,
+            self::MAIL_PURPOSE_ADMIN_LOGIN,
+            self::MAIL_PURPOSE_USER_LOGIN,
         );
         return in_array($purpose, $allowed, true) ? $purpose : self::MAIL_PURPOSE_USER_FORGOT;
     }
@@ -746,7 +752,7 @@ class AuthSecurity
     /**
      * 验证码校验失败：计入 IP 限流 + 会话失败次数；达上限作废验证码
      *
-     * @param string $context admin_reset|user_reset|user_register
+     * @param string $context admin_reset|user_reset|user_register|admin_login|user_login
      * @return string
      */
     public static function recordOtpFailure($context = 'admin_reset')
@@ -778,6 +784,12 @@ class AuthSecurity
         if ($context === 'user_reset') {
             return 'user_reset_otp_fails';
         }
+        if ($context === 'admin_login') {
+            return 'admin_login_otp_fails';
+        }
+        if ($context === 'user_login') {
+            return 'user_login_otp_fails';
+        }
         return 'reset_otp_fails';
     }
 
@@ -806,6 +818,26 @@ class AuthSecurity
                 $_SESSION['user_reset_code'],
                 $_SESSION['user_reset_code_expires'],
                 $_SESSION['user_reset_otp_fails']
+            );
+            return;
+        }
+        if ($context === 'admin_login') {
+            unset(
+                $_SESSION['admin_login_id'],
+                $_SESSION['admin_login_email'],
+                $_SESSION['admin_login_code'],
+                $_SESSION['admin_login_code_expires'],
+                $_SESSION['admin_login_otp_fails']
+            );
+            return;
+        }
+        if ($context === 'user_login') {
+            unset(
+                $_SESSION['user_login_id'],
+                $_SESSION['user_login_email'],
+                $_SESSION['user_login_code'],
+                $_SESSION['user_login_code_expires'],
+                $_SESSION['user_login_otp_fails']
             );
             return;
         }

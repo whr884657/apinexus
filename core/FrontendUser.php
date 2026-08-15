@@ -121,6 +121,9 @@ class FrontendUser
             'api_calls'        => 0,
             'key_total'        => 0,
             'key_calls'        => 0,
+            'stat7'            => array(),
+            'recent'           => array(),
+            'detail_enabled'   => false,
             'checkin_enabled'  => false,
             'checked_today'    => false,
         );
@@ -182,10 +185,100 @@ class FrontendUser
             }
         }
 
+        // 近 7 日聚合：仅当前登录用户；主题只读本字段，禁止直查库
+        if (class_exists('UserStat7Manager')) {
+            $out['stat7'] = UserStat7Manager::dashboardSlice($uid);
+            $out['stat7'] = self::enrichStat7Top($out['stat7']);
+            if (class_exists('PayConfig') && isset($out['stat7']['today_cost'])) {
+                $out['stat7']['today_cost_fmt'] = PayConfig::fmtPoints($out['stat7']['today_cost']);
+            } else {
+                $out['stat7']['today_cost_fmt'] = isset($out['stat7']['today_cost'])
+                    ? (string) $out['stat7']['today_cost']
+                    : '0';
+            }
+        }
+
+        if (class_exists('ApiLogManager')) {
+            $out['detail_enabled'] = ApiLogManager::detailEnabled();
+            if ($out['detail_enabled']) {
+                $out['recent'] = ApiLogManager::recentForUser($uid, 20);
+            }
+        }
+
         $banner = self::checkinBanner();
         $out['checkin_enabled'] = !empty($banner['enabled']);
         $out['checked_today'] = !empty($banner['checked_today']);
 
         return $out;
+    }
+
+    /**
+     * 用户侧日志分页（强制当前登录用户；主题禁止直查库）
+     *
+     * @param array $opts pagesize / before_id / ok / page
+     * @return array
+     */
+    public static function myLogsPaged(array $opts = array())
+    {
+        $empty = array(
+            'list'           => array(),
+            'total'          => 0,
+            'page'           => 1,
+            'pagesize'       => 20,
+            'before_id'      => 0,
+            'next_before_id' => 0,
+            'has_more'       => false,
+            'detail_enabled' => false,
+        );
+        $user = self::current();
+        if (!$user || !class_exists('ApiLogManager')) {
+            return $empty;
+        }
+        return ApiLogManager::listForUser((int) $user['id'], $opts);
+    }
+
+    /**
+     * 热门接口补名称（仅读 api 表 id→name）
+     *
+     * @param array $stat7
+     * @return array
+     */
+    private static function enrichStat7Top(array $stat7)
+    {
+        if (empty($stat7['top']) || !is_array($stat7['top'])) {
+            return $stat7;
+        }
+        $ids = array();
+        foreach ($stat7['top'] as $row) {
+            $id = isset($row['apiid']) ? (int) $row['apiid'] : 0;
+            if ($id > 0) {
+                $ids[$id] = true;
+            }
+        }
+        $nameMap = array();
+        if ($ids !== array() && class_exists('ApiManager') && ApiManager::tableReady()) {
+            try {
+                $pdo = Database::connect();
+                $idList = array_keys($ids);
+                $ph = implode(',', array_fill(0, count($idList), '?'));
+                $stmt = $pdo->prepare(
+                    'SELECT `id`, `name` FROM `' . Database::table('api') . '` WHERE `id` IN (' . $ph . ')'
+                );
+                $stmt->execute(array_values($idList));
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                    $nameMap[(int) $r['id']] = (string) $r['name'];
+                }
+            } catch (Exception $e) {
+                $nameMap = array();
+            }
+        }
+        foreach ($stat7['top'] as &$row) {
+            $aid = isset($row['apiid']) ? (int) $row['apiid'] : 0;
+            $row['name'] = isset($nameMap[$aid]) && $nameMap[$aid] !== ''
+                ? $nameMap[$aid]
+                : ('接口 #' . $aid);
+        }
+        unset($row);
+        return $stat7;
     }
 }
