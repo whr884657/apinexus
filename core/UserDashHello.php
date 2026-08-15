@@ -2,7 +2,7 @@
 
 /**
  * 文件：core/UserDashHello.php
- * 作用：用户控制台按时段问候（双主题共用文案池；每次随机一条）
+ * 作用：用户控制台按时段问候（双主题共用；按小时 24 槽；每次随机一条）
  */
 
 if (!class_exists('UserDashHello')) {
@@ -10,6 +10,7 @@ if (!class_exists('UserDashHello')) {
 class UserDashHello
 {
     /**
+     * @param string $displayName
      * @return array{hello:string,hint:string,slot:string,hour:int}
      */
     public static function pick($displayName)
@@ -32,19 +33,18 @@ class UserDashHello
     }
 
     /**
-     * 2 小时一段：0-1 … 22-23
+     * 1 小时一段：00 … 23
      *
      * @param int $hour
      * @return array{id:string,hellos:string[],hints:string[]}
      */
-    private static function slotMeta($hour)
+    private static function slotMeta(int $hour)
     {
         $hour = max(0, min(23, (int) $hour));
-        $start = $hour - ($hour % 2);
         $map = self::pools();
-        $id = sprintf('%02d-%02d', $start, $start + 1);
+        $id = sprintf('%02d', $hour);
         if (!isset($map[$id])) {
-            $id = '22-23';
+            $id = '12';
         }
         return $map[$id];
     }
@@ -76,158 +76,281 @@ class UserDashHello
             return $cache;
         }
 
-        $cache = array(
-            '00-01' => array(
-                'id' => '00-01',
-                'hellos' => array(
-                    '夜深了，{name}',
-                    '午夜好，{name}',
-                    '这么晚还在，{name}',
-                    '夜猫子你好，{name}',
-                    '深夜问候，{name}',
-                    '零点已过，{name}',
-                ),
-                'hints' => self::hintsNightDeep(),
-            ),
-            '02-03' => array(
-                'id' => '02-03',
-                'hellos' => array(
-                    '凌晨好，{name}',
-                    '夜深了，{name}',
-                    '还没休息吗，{name}',
-                    '凌晨时分，{name}',
-                    '夜色正浓，{name}',
-                    '辛苦了，{name}',
-                ),
-                'hints' => self::hintsDawnEarly(),
-            ),
-            '04-05' => array(
-                'id' => '04-05',
-                'hellos' => array(
-                    '凌晨好，{name}',
-                    '天快亮了，{name}',
-                    '还醒着啊，{name}',
-                    '清晨将至，{name}',
-                    '夜与昼交界，{name}',
-                    '嗨，{name}',
-                ),
-                'hints' => self::hintsPreMorning(),
-            ),
-            '06-07' => array(
-                'id' => '06-07',
-                'hellos' => array(
-                    '清晨好，{name}',
-                    '早起的你，{name}',
-                    '晨光里见，{name}',
-                    '新的一天，{name}',
-                    '早上好，{name}',
-                    '醒来了吗，{name}',
-                ),
-                'hints' => self::hintsMorningEarly(),
-            ),
-            '08-09' => array(
-                'id' => '08-09',
-                'hellos' => array(
-                    '早上好，{name}',
-                    '开工愉快，{name}',
-                    '上午好前奏，{name}',
-                    '嗨，{name}',
-                    '新一天继续，{name}',
-                    '早啊，{name}',
-                ),
-                'hints' => self::hintsMorning(),
-            ),
-            '10-11' => array(
-                'id' => '10-11',
-                'hellos' => array(
-                    '上午好，{name}',
-                    '状态在线，{name}',
-                    '上午好呀，{name}',
-                    '继续冲，{name}',
-                    '嗨，{name}',
-                    '忙里偷闲见，{name}',
-                ),
-                'hints' => self::hintsForenoon(),
-            ),
-            '12-13' => array(
-                'id' => '12-13',
-                'hellos' => array(
-                    '中午好，{name}',
-                    '午饭时间到，{name}',
-                    '午安，{name}',
-                    '歇口气吧，{name}',
-                    '中午见，{name}',
-                    '嗨，{name}',
-                ),
-                'hints' => self::hintsNoon(),
-            ),
-            '14-15' => array(
-                'id' => '14-15',
-                'hellos' => array(
-                    '下午好，{name}',
-                    '午后好，{name}',
-                    '午后继续，{name}',
-                    '嗨，{name}',
-                    '状态拉回来，{name}',
-                    '下午好呀，{name}',
-                ),
-                'hints' => self::hintsAfternoon(),
-            ),
-            '16-17' => array(
-                'id' => '16-17',
-                'hellos' => array(
-                    '下午好，{name}',
-                    '接近傍晚了，{name}',
-                    '下午好呀，{name}',
-                    '嗨，{name}',
-                    '收尾冲刺前，{name}',
-                    '继续加油，{name}',
-                ),
-                'hints' => self::hintsLateAfternoon(),
-            ),
-            '18-19' => array(
-                'id' => '18-19',
-                'hellos' => array(
-                    '傍晚好，{name}',
-                    '晚上好前奏，{name}',
-                    '下班点附近，{name}',
-                    '嗨，{name}',
-                    '黄昏好，{name}',
-                    '今天辛苦了，{name}',
-                ),
-                'hints' => self::hintsEvening(),
-            ),
-            '20-21' => array(
-                'id' => '20-21',
-                'hellos' => array(
-                    '晚上好，{name}',
-                    '夜色刚起，{name}',
-                    '晚上好呀，{name}',
-                    '嗨，{name}',
-                    '夜晚见，{name}',
-                    '慢下来也好，{name}',
-                ),
-                'hints' => self::hintsNight(),
-            ),
-            '22-23' => array(
-                'id' => '22-23',
-                'hellos' => array(
-                    '夜深了，{name}',
-                    '这么晚还在，{name}',
-                    '深夜好，{name}',
-                    '嗨，{name}',
-                    '别熬太晚，{name}',
-                    '夜安，{name}',
-                ),
-                'hints' => self::hintsLateNight(),
-            ),
+        $defs = array(
+            0  => array('hellos' => self::hellosNightDeep(0), 'hints' => self::hintsNightDeep()),
+            1  => array('hellos' => self::hellosNightDeep(1), 'hints' => self::hintsNightDeep()),
+            2  => array('hellos' => self::hellosDawnEarly(2), 'hints' => self::hintsDawnEarly()),
+            3  => array('hellos' => self::hellosDawnEarly(3), 'hints' => self::hintsDawnEarly()),
+            4  => array('hellos' => self::hellosPreMorning(4), 'hints' => self::hintsPreMorning()),
+            5  => array('hellos' => self::hellosPreMorning(5), 'hints' => self::hintsPreMorning()),
+            6  => array('hellos' => self::hellosMorningEarly(6), 'hints' => self::hintsMorningEarly()),
+            7  => array('hellos' => self::hellosMorningEarly(7), 'hints' => self::hintsMorningEarly()),
+            8  => array('hellos' => self::hellosMorning(8), 'hints' => self::hintsMorning()),
+            9  => array('hellos' => self::hellosMorning(9), 'hints' => self::hintsMorning()),
+            10 => array('hellos' => self::hellosForenoon(10), 'hints' => self::hintsForenoon()),
+            11 => array('hellos' => self::hellosForenoon(11), 'hints' => self::hintsForenoon()),
+            12 => array('hellos' => self::hellosNoon(12), 'hints' => self::hintsNoon()),
+            13 => array('hellos' => self::hellosNoon(13), 'hints' => self::hintsNoon()),
+            14 => array('hellos' => self::hellosAfternoon(14), 'hints' => self::hintsAfternoon()),
+            15 => array('hellos' => self::hellosAfternoon(15), 'hints' => self::hintsAfternoon()),
+            16 => array('hellos' => self::hellosLateAfternoon(16), 'hints' => self::hintsLateAfternoon()),
+            17 => array('hellos' => self::hellosLateAfternoon(17), 'hints' => self::hintsLateAfternoon()),
+            18 => array('hellos' => self::hellosEvening(18), 'hints' => self::hintsEvening()),
+            19 => array('hellos' => self::hellosEvening(19), 'hints' => self::hintsEvening()),
+            20 => array('hellos' => self::hellosNight(20), 'hints' => self::hintsNight()),
+            21 => array('hellos' => self::hellosNight(21), 'hints' => self::hintsNight()),
+            22 => array('hellos' => self::hellosLateNight(22), 'hints' => self::hintsLateNight()),
+            23 => array('hellos' => self::hellosLateNight(23), 'hints' => self::hintsLateNight()),
         );
 
+        $cache = array();
+        foreach ($defs as $h => $row) {
+            $id = sprintf('%02d', $h);
+            $cache[$id] = array(
+                'id'     => $id,
+                'hellos' => $row['hellos'],
+                'hints'  => $row['hints'],
+            );
+        }
         return $cache;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosNightDeep(int $hour)
+    {
+        $base = array(
+            '夜深了，{name}', '午夜好，{name}', '这么晚还在，{name}', '夜猫子你好，{name}',
+            '深夜问候，{name}', '零点档见，{name}', '城市睡了你还醒，{name}', '静夜好，{name}',
+            '夜色很深，{name}', '这个点还亮着屏，{name}', '深夜的控制台欢迎你，{name}', '慢一点也好，{name}',
+        );
+        if ($hour === 1) {
+            $base = array_merge($base, array('一点了，{name}', '凌晨一点你好，{name}', '过了零点还在，{name}'));
+        } else {
+            $base = array_merge($base, array('零点刚过，{name}', '新一天的开端，{name}', '午夜档报到，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosDawnEarly(int $hour)
+    {
+        $base = array(
+            '凌晨好，{name}', '夜深了，{name}', '还没休息吗，{name}', '凌晨时分，{name}',
+            '夜色正浓，{name}', '辛苦了，{name}', '这个点还在线，{name}', '先照顾自己，{name}',
+            '凌晨的风很凉，{name}', '夜班战友你好，{name}', '慢一点改，{name}', '别硬扛，{name}',
+        );
+        if ($hour === 3) {
+            $base = array_merge($base, array('凌晨三点，{name}', '三点的寂静里见，{name}'));
+        } else {
+            $base = array_merge($base, array('凌晨两点，{name}', '两点档还醒着，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosPreMorning(int $hour)
+    {
+        $base = array(
+            '凌晨好，{name}', '天快亮了，{name}', '还醒着啊，{name}', '清晨将至，{name}',
+            '夜与昼交界，{name}', '嗨，{name}', '末班或头班，{name}', '动作轻一点，{name}',
+            '可以先睡一会，{name}', '也可以慢慢醒，{name}', '五点前后见，{name}', '温柔对待自己，{name}',
+        );
+        if ($hour === 5) {
+            $base = array_merge($base, array('五点了，{name}', '天边将白，{name}'));
+        } else {
+            $base = array_merge($base, array('四点档，{name}', '天还没亮透，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosMorningEarly(int $hour)
+    {
+        $base = array(
+            '清晨好，{name}', '早起的你，{name}', '晨光里见，{name}', '新的一天，{name}',
+            '早上好，{name}', '醒来了吗，{name}', '晨间热身，{name}', '慢慢开工，{name}',
+            '今天从这里开始，{name}', '先一眼 KPI，{name}', '晨风不错，{name}', '加油但别急，{name}',
+        );
+        if ($hour === 7) {
+            $base = array_merge($base, array('七点好，{name}', '早高峰前见，{name}'));
+        } else {
+            $base = array_merge($base, array('六点好，{name}', '清晨六点档，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosMorning(int $hour)
+    {
+        $base = array(
+            '早上好，{name}', '开工愉快，{name}', '上午好前奏，{name}', '嗨，{name}',
+            '新一天继续，{name}', '早啊，{name}', '状态起来了吗，{name}', '今天也稳一点，{name}',
+            '先把主线推进，{name}', '收件箱可以等等，{name}', '控制台已就绪，{name}', '欢迎回来，{name}',
+        );
+        if ($hour === 9) {
+            $base = array_merge($base, array('九点好，{name}', '上午节奏成形，{name}'));
+        } else {
+            $base = array_merge($base, array('八点好，{name}', '八点档开工，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosForenoon(int $hour)
+    {
+        $base = array(
+            '上午好，{name}', '状态在线，{name}', '上午好呀，{name}', '继续冲，{name}',
+            '嗨，{name}', '忙里偷闲见，{name}', '心流来了就抓住，{name}', '少开并行，{name}',
+            '上午后半段你好，{name}', '文档写清楚点，{name}', '看一眼 TOP，{name}', '站起来伸个懒腰，{name}',
+        );
+        if ($hour === 11) {
+            $base = array_merge($base, array('十一点好，{name}', '午饭前收口，{name}'));
+        } else {
+            $base = array_merge($base, array('十点好，{name}', '十点档继续，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosNoon(int $hour)
+    {
+        $base = array(
+            '中午好，{name}', '午饭时间到，{name}', '午安，{name}', '歇口气吧，{name}',
+            '中午见，{name}', '嗨，{name}', '先吃饭再改，{name}', '短暂离开也行，{name}',
+            '午间巡航模式，{name}', '别边吃边发版，{name}', '回血中，{name}', '下午再战，{name}',
+        );
+        if ($hour === 13) {
+            $base = array_merge($base, array('午后一点，{name}', '刚吃完？慢慢来，{name}'));
+        } else {
+            $base = array_merge($base, array('十二点好，{name}', '午饭点见，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosAfternoon(int $hour)
+    {
+        $base = array(
+            '下午好，{name}', '午后好，{name}', '午后继续，{name}', '嗨，{name}',
+            '状态拉回来，{name}', '下午好呀，{name}', '犯困很正常，{name}', '先做小步，{name}',
+            '联调高峰到了，{name}', '喝口水再战，{name}', '完成比完美先到，{name}', '欢迎回来，{name}',
+        );
+        if ($hour === 15) {
+            $base = array_merge($base, array('十五点好，{name}', '下午三点档，{name}'));
+        } else {
+            $base = array_merge($base, array('十四点好，{name}', '午后两点见，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosLateAfternoon(int $hour)
+    {
+        $base = array(
+            '下午好，{name}', '接近傍晚了，{name}', '下午好呀，{name}', '嗨，{name}',
+            '收尾冲刺前，{name}', '继续加油，{name}', '今天画个句号，{name}', '先合并能合并的，{name}',
+            '临近晚饭别赌上线，{name}', '写明日清单，{name}', '见好就收，{name}', '辛苦了，{name}',
+        );
+        if ($hour === 17) {
+            $base = array_merge($base, array('十七点好，{name}', '下班点附近，{name}'));
+        } else {
+            $base = array_merge($base, array('十六点好，{name}', '傍晚前收口，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosEvening(int $hour)
+    {
+        $base = array(
+            '傍晚好，{name}', '晚上好前奏，{name}', '下班点附近，{name}', '嗨，{name}',
+            '黄昏好，{name}', '今天辛苦了，{name}', '节奏可以软一点，{name}', '先吃饭再加班，{name}',
+            '傍晚复盘也好，{name}', '允许低强度，{name}', '晚风不错，{name}', '欢迎回来，{name}',
+        );
+        if ($hour === 19) {
+            $base = array_merge($base, array('十九点好，{name}', '晚饭后见，{name}'));
+        } else {
+            $base = array_merge($base, array('十八点好，{name}', '黄昏档报到，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosNight(int $hour)
+    {
+        $base = array(
+            '晚上好，{name}', '夜色刚起，{name}', '晚上好呀，{name}', '嗨，{name}',
+            '夜晚见，{name}', '慢下来也好，{name}', '夜里温柔操作，{name}', '只完成七成就行，{name}',
+            '亮度调低点，{name}', '灵感可以明天验证，{name}', '别贴密钥到聊天，{name}', '欢迎回来，{name}',
+        );
+        if ($hour === 21) {
+            $base = array_merge($base, array('二十一点好，{name}', '九点档夜读，{name}'));
+        } else {
+            $base = array_merge($base, array('二十点好，{name}', '八点夜色，{name}'));
+        }
+        return $base;
+    }
+
+    /**
+     * @param int $hour
+     * @return string[]
+     */
+    private static function hellosLateNight(int $hour)
+    {
+        $base = array(
+            '夜深了，{name}', '这么晚还在，{name}', '深夜好，{name}', '嗨，{name}',
+            '别熬太晚，{name}', '夜安，{name}', '该收尾了，{name}', '睡眠窗口很短，{name}',
+            '重要上线留到白天，{name}', '保存后就睡，{name}', '辛苦了去休息，{name}', '欢迎回来，{name}',
+        );
+        if ($hour === 23) {
+            $base = array_merge($base, array('二十三点，{name}', '快到零点了，{name}'));
+        } else {
+            $base = array_merge($base, array('二十二点，{name}', '十点后放慢，{name}'));
+        }
+        return $base;
     }
 
     /** @return string[] */
     private static function hintsNightDeep()
+    {
+        return array_merge(self::hintsNightDeepCore(), self::hintsExtraQuiet());
+    }
+
+    /** @return string[] */
+    private static function hintsNightDeepCore()
     {
         return array(
             '大半夜还开着控制台，是灵感爆棚还是 deadline 在催？',
@@ -258,9 +381,24 @@ class UserDashHello
     }
 
     /** @return string[] */
-    private static function hintsDawnEarly()
+    private static function hintsExtraQuiet()
     {
         return array(
+            '把未保存的草稿先落盘，再决定要不要继续熬。',
+            '静夜里改配置，请再读一遍回滚步骤。',
+            '若只是刷一圈数据，刷完就允许自己下线。',
+            '深夜消息可以延迟回复，睡眠不能延迟太久。',
+            '给明天的自己留一句：别一上来就开十个坑。',
+            '耳机里放点轻的，别让告警声成为背景音乐。',
+            '一次只修一个问题，夜深尤其忌「顺手再改」。',
+            '关闭无关标签页，也是一种性能优化。',
+        );
+    }
+
+    /** @return string[] */
+    private static function hintsDawnEarly()
+    {
+        return array_merge(array(
             '凌晨两三点，身体在喊停，大脑却还想再看一眼数据。',
             '这个点还亮着屏，多半不是「早起」，而是「还没睡」。',
             '若你刚收工：先睡；若你刚醒来：也别急着加压。',
@@ -285,7 +423,7 @@ class UserDashHello
             '若是焦虑失眠，先看一眼余额与令牌是否安好，然后放下手机。',
             '两三点最容易钻牛角尖，站起来走两步再回来。',
             '欢迎回来。夜还长，步子放小一点。',
-        );
+        ), self::hintsExtraQuiet());
     }
 
     /** @return string[] */

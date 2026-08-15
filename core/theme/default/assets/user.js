@@ -115,8 +115,25 @@
         });
     }
 
+    function initDashAvatarShake() {
+        var box = document.getElementById('ucDashAvatarBox');
+        var img = document.getElementById('ucDashAvatarImg');
+        if (!box || !img) return;
+        function shake() {
+            img.classList.remove('uc-dash__avatar--shake');
+            void img.offsetWidth;
+            img.classList.add('uc-dash__avatar--shake');
+            window.setTimeout(function () {
+                img.classList.remove('uc-dash__avatar--shake');
+            }, 600);
+        }
+        window.setTimeout(shake, 800);
+        box.addEventListener('click', shake);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         initSidebar();
         initDashPress();
+        initDashAvatarShake();
     });
 })();

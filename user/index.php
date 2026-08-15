@@ -35,7 +35,7 @@ $dash = FrontendUser::dashboardStats();
 $displayName = $vsUser ? (string) $vsUser['username'] : '用户';
 $isDeveloper = !empty($dash['can_publish_api']);
 
-// 双主题：2 小时时段 + 文案池随机（core/UserDashHello）
+// 双主题：按小时时段 + 文案池随机（core/UserDashHello）
 $hello = class_exists('UserDashHello')
     ? UserDashHello::pick($displayName)
     : array('hello' => '欢迎回来，' . $displayName, 'hint' => '', 'slot' => '', 'hour' => (int) date('G'));

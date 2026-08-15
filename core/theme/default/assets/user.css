@@ -96,6 +96,11 @@
     gap: 14px;
     min-width: 0;
 }
+.uc-dash__avatar-box {
+    flex-shrink: 0;
+    cursor: pointer;
+    line-height: 0;
+}
 .uc-dash__avatar {
     width: 56px;
     height: 56px;
@@ -103,6 +108,20 @@
     object-fit: cover;
     border: 2px solid rgba(255, 255, 255, 0.55);
     background: rgba(255, 255, 255, 0.2);
+    display: block;
+}
+@keyframes ucDashAvatarShake {
+    0%, 100% { transform: rotate(0); }
+    10%, 30%, 50%, 70%, 90% { transform: rotate(-5deg); }
+    20%, 40%, 60%, 80% { transform: rotate(5deg); }
+}
+.uc-dash__avatar.uc-dash__avatar--shake {
+    animation: ucDashAvatarShake 0.6s ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    .uc-dash__avatar.uc-dash__avatar--shake {
+        animation: none;
+    }
 }
 .uc-dash__hello {
     margin: 0;
@@ -172,23 +191,24 @@
 .uc-dash__chip--bound {
     background: rgba(34, 197, 94, 0.28);
 }
-/* KPI：普通 5 卡 / 开发者 6 卡 */
+/* KPI：普通 7 卡 / 开发者 8 卡（已去掉令牌总数；含今日三数） */
 .uc-dash__kpi {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
 }
-.uc-dash__kpi.is-six {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+.uc-dash__kpi.is-seven,
+.uc-dash__kpi.is-eight {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .uc-dash__kpi-card {
-    padding: 14px 16px;
-    border-radius: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
     border: 1px solid #e5e7eb;
     background: #fff;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     min-width: 0;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -201,21 +221,22 @@
     transform: scale(0.985);
 }
 .uc-dash__kpi-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #64748b;
     font-weight: 600;
 }
 .uc-dash__kpi-value {
-    font-size: 1.45rem;
+    font-size: 1.2rem;
     font-weight: 800;
     color: #111;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
+    line-height: 1.25;
 }
 .uc-dash__kpi-meta {
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     color: #94a3b8;
-    line-height: 1.4;
+    line-height: 1.35;
 }
 .uc-dash__panel {
     margin: 0;
@@ -271,39 +292,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-/* 近七日三数 */
-.uc-dash__daykpi {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-}
-.uc-dash__daykpi-card {
-    padding: 14px 16px;
-    border-radius: 14px;
-    background: #fff;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
-}
-.uc-dash__daykpi-label {
-    display: block;
-    font-size: 0.75rem;
-    color: #64748b;
-    font-weight: 600;
-}
-.uc-dash__daykpi-value {
-    display: block;
-    margin-top: 6px;
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #0f172a;
-    font-variant-numeric: tabular-nums;
-}
-.uc-dash__daykpi-meta {
-    display: block;
-    margin-top: 4px;
-    font-size: 0.7rem;
-    color: #94a3b8;
-}
+/* 近七日三数已并入 KPI，保留类名防旧缓存 */
+.uc-dash__daykpi { display: none !important; }
 /* 双折线 */
 .uc-dash__charts {
     display: grid;
@@ -338,11 +328,13 @@
 }
 .uc-dash__legend-line--calls { background: #2563eb; }
 .uc-dash__legend-line--cost { background: #f59e0b; }
+.uc-dash__legend-line--rate { background: #0d9488; }
 .uc-dash__chart-wrap {
     min-height: 200px;
 }
 .uc-dash__chart-canvas {
     position: relative;
+    overflow: visible;
 }
 .uc-dash__chart-wrap svg {
     width: 100%;
@@ -351,8 +343,9 @@
 }
 .uc-dash__chart-tip {
     position: absolute;
-    z-index: 2;
+    z-index: 5;
     min-width: 88px;
+    max-width: calc(100% - 8px);
     padding: 8px 10px;
     border-radius: 8px;
     background: rgba(15, 23, 42, 0.92);
@@ -360,6 +353,7 @@
     font-size: 12px;
     pointer-events: none;
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+    white-space: nowrap;
 }
 .uc-dash__chart-tip-title {
     opacity: 0.85;
@@ -391,12 +385,29 @@
     font-weight: 600;
 }
 .uc-dash__more:hover { text-decoration: underline; }
-/* 底部近期 + 热门 */
+/* 底部：近 7 日调用排行 + 近期调用（等高内滚） */
 .uc-dash__bottom {
     display: grid;
-    grid-template-columns: 1.35fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 14px;
-    align-items: start;
+    align-items: stretch;
+}
+.uc-dash__panel--scroll {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 280px;
+}
+.uc-dash__panel--scroll > .vs-panel__header {
+    flex: 0 0 auto;
+}
+.uc-dash__scroll-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: 220px;
 }
 .uc-dash__recent {
     display: flex;
@@ -407,7 +418,7 @@
     grid-template-columns: minmax(0, 1.4fr) 1.1fr 0.9fr 0.7fr;
     gap: 8px;
     align-items: center;
-    padding: 10px 4px;
+    padding: 8px 4px;
     border-bottom: 1px solid rgba(15, 23, 42, 0.06);
     font-size: 0.8125rem;
 }
@@ -415,6 +426,10 @@
     color: #94a3b8;
     font-weight: 600;
     border-bottom-color: rgba(15, 23, 42, 0.1);
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
 }
 .uc-dash__recent-name {
     overflow: hidden;
@@ -503,44 +518,103 @@
     color: #2563eb;
     background: rgba(37, 99, 235, 0.06);
 }
-.uc-logs__table {
+.uc-logs__cards {
     display: flex;
     flex-direction: column;
-}
-.uc-logs__row {
-    display: grid;
-    grid-template-columns: minmax(0, 1.5fr) 1.2fr 1fr 0.7fr;
     gap: 10px;
+}
+.uc-log-card {
+    position: relative;
+    padding: 14px 16px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    animation: ucLogCardIn 0.4s ease both;
+    animation-delay: var(--uc-log-delay, 0s);
+}
+.uc-log-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(37, 99, 235, 0.28);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+.uc-log-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+.uc-log-card__name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.uc-log-card__ok {
+    flex-shrink: 0;
+    display: inline-flex;
     align-items: center;
-    padding: 12px 4px;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-    font-size: 0.875rem;
+    min-height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
 }
-.uc-logs__row--head {
-    color: #94a3b8;
-    font-weight: 600;
-    font-size: 0.8125rem;
+.uc-log-card__ok.is-ok {
+    color: #15803d;
+    background: #ecfdf5;
 }
-.uc-logs__name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-weight: 600;
+.uc-log-card__ok.is-fail {
+    color: #b91c1c;
+    background: #fef2f2;
 }
-.uc-logs__time,
-.uc-logs__ip {
+.uc-log-card__meta {
+    margin-top: 8px;
+}
+.uc-log-card__time {
     color: #64748b;
+    font-size: 0.8125rem;
     font-variant-numeric: tabular-nums;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
-.uc-logs__ok.is-ok { color: #15803d; font-weight: 600; }
-.uc-logs__ok.is-fail { color: #dc2626; font-weight: 600; }
+.uc-log-card__ip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 12px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(15, 23, 42, 0.08);
+}
+.uc-log-card__ip-addr {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #334155;
+    letter-spacing: 0.01em;
+}
+.uc-log-card__ip-loc {
+    font-size: 0.8125rem;
+    color: #475569;
+}
+.uc-log-card__ip-loc.is-empty {
+    color: #94a3b8;
+}
 .uc-logs__empty {
     margin: 0;
-    padding: 36px 12px;
+    padding: 48px 12px;
     text-align: center;
     color: #94a3b8;
+}
+@keyframes ucLogCardIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 /* 入场动效 */
 .uc-motion {
@@ -552,6 +626,8 @@
 .uc-dash__kpi-card.uc-motion:nth-child(4) { animation-delay: 0.16s; }
 .uc-dash__kpi-card.uc-motion:nth-child(5) { animation-delay: 0.2s; }
 .uc-dash__kpi-card.uc-motion:nth-child(6) { animation-delay: 0.24s; }
+.uc-dash__kpi-card.uc-motion:nth-child(7) { animation-delay: 0.28s; }
+.uc-dash__kpi-card.uc-motion:nth-child(8) { animation-delay: 0.32s; }
 .uc-dash__panel.uc-motion { animation-delay: 0.18s; }
 @keyframes ucFadeUp {
     from { opacity: 0; transform: translateY(10px); }
@@ -559,17 +635,17 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .uc-motion,
+    .uc-log-card,
     .uc-dash__kpi-card {
         animation: none !important;
         transition: none !important;
     }
 }
 @media (max-width: 1280px) {
-    .uc-dash__kpi.is-six {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .uc-dash__kpi.is-five {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+    .uc-dash__kpi,
+    .uc-dash__kpi.is-seven,
+    .uc-dash__kpi.is-eight {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
 @media (max-width: 1100px) {
@@ -577,11 +653,14 @@
     .uc-dash__bottom {
         grid-template-columns: 1fr;
     }
+    .uc-dash__panel--scroll {
+        max-height: 260px;
+    }
 }
 @media (max-width: 960px) {
     .uc-dash__kpi,
-    .uc-dash__kpi.is-five,
-    .uc-dash__kpi.is-six {
+    .uc-dash__kpi.is-seven,
+    .uc-dash__kpi.is-eight {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -589,20 +668,28 @@
     .uc-dash__hero {
         padding: 16px;
     }
-    .uc-dash__daykpi {
-        grid-template-columns: 1fr;
-    }
-    .uc-dash__recent-row,
-    .uc-logs__row {
+    .uc-dash__recent-row {
         grid-template-columns: 1fr 1fr;
         gap: 6px;
     }
-    .uc-dash__recent-row--head,
-    .uc-logs__row--head {
+    .uc-dash__recent-row--head {
         display: none;
     }
-    .uc-dash__recent-name,
-    .uc-logs__name {
+    .uc-dash__recent-name {
         grid-column: 1 / -1;
+    }
+    .uc-log-card {
+        padding: 12px 14px;
+        border-radius: 12px;
+    }
+    .uc-log-card:hover {
+        transform: none;
+    }
+    .uc-log-card:active {
+        transform: scale(0.99);
+    }
+    .uc-log-card__ip {
+        flex-direction: column;
+        gap: 4px;
     }
 }

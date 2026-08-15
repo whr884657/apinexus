@@ -50,6 +50,7 @@
         if (modalEl) {
             modalEl.classList.remove('vs-modal--lg');
             modalEl.classList.remove('vs-modal--license');
+            modalEl.classList.remove('vs-modal--update');
         }
         if (footEl) {
             footEl.hidden = false;
@@ -84,6 +85,7 @@
         if (modalEl) {
             modalEl.classList.toggle('vs-modal--lg', options.size === 'lg' || options.size === 'license');
             modalEl.classList.toggle('vs-modal--license', options.size === 'license');
+            modalEl.classList.toggle('vs-modal--update', options.size === 'update');
         }
 
         titleEl.textContent = title || '提示';

@@ -6223,11 +6223,59 @@ select.vs-input.vs-select {
     color: #111;
 }
 
-.vs-log-cards {
+.vs-users-logs-body {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
+    gap: 12px;
+    min-height: 0;
+}
+.vs-users-logs-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.vs-users-logs-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.vs-users-logs-filters .is-active {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.06);
+}
+.vs-users-logs-list {
+    min-height: 160px;
+}
+.vs-users-logs-cards {
+    display: flex !important;
+    padding: 0 !important;
+}
+.vs-users-logs-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+}
+.vs-users-log-item {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.vs-users-log-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.28);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+@media (prefers-reduced-motion: reduce) {
+    .vs-users-log-item {
+        transition: none;
+    }
+    .vs-users-log-item:hover {
+        transform: none;
+    }
 }
 
 .vs-log-card {
@@ -8496,6 +8544,39 @@ select.vs-input.vs-select {
     flex-shrink: 0;
 }
 
+#apiKeysPage .key-card__stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    margin-top: 2px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(148, 163, 184, 0.45);
+}
+
+#apiKeysPage .key-card__stat {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+    font-size: 12px;
+}
+
+#apiKeysPage .key-card__stat strong {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--vs-text, #111);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#apiKeysPage .vs-api-keys-stat-cell {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
 #apiKeysPage .key-card__actions {
     display: flex;
     flex-wrap: wrap;
@@ -8534,9 +8615,12 @@ select.vs-input.vs-select {
 #apiKeysPage .vs-api-pager__navs {
     display: inline-flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 6px;
+}
+#apiKeysPage .vs-api-pager__nums {
+    flex-wrap: nowrap;
 }
 
 @media (min-width: 769px) {

@@ -91,7 +91,6 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
         echo '<img src="' . vs_e($avatarUrl) . '" alt="用户头像" class="vs-topbar__avatar" width="32" height="32">' . "\n";
         echo '</a>' . "\n";
     }
-    echo '<a href="' . vs_e($logoutUrl) . '" class="vs-topbar__logout">退出</a>' . "\n";
     echo '</div>' . "\n";
     echo '</header>' . "\n";
     echo '<main class="vs-content">' . "\n";

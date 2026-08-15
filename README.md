@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.7-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.8-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -284,18 +284,14 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.7（2026-08-15）
+### v13.26.8（2026-08-15）
 
-- 管理员登录与用户中心双主题登录：支持账号密码 / 邮箱验证码切换登录
-- 登录页左侧「验证码登录」、右侧保留「忘记密码」；发信限流与一次性票据防抓包骚扰
-- 新增登录验证码邮件模板；未注册邮箱不发信
-- 完善业务邮件通知目录；新增积分余额归零、充值成功到账邮件通知（系统设置可关）
-- 系统升级页：修复手机端点更新记录跳动；「执行数据库结构更新」增加用途说明与二次确认
-- 统一后台图标刷新按钮并修复电脑端旋转；积分/订单/日志/Redis 对齐；关于页改为「技术栈」
-- 日志查询：列表 ID 后显示用户名；修复按用户名/密钥搜索；搜索词 LIKE 通配符转义防放大扫描
-- 站点绝对 URL / 邮件内链：清洗 HTTP Host，防 Host 头污染钓鱼链接
-- 用户近 7 日聚合字段、密钥累计消耗（升级执行结构更新；禁止扫日志回填）
-- 用户控制台双主题：去概览、近 7 日图、近期/热门、侧栏日志查询（本人白名单、无详情）
+- 用户控制台：去掉令牌总数 KPI；普通 7 卡 / 开发者 8 卡；今日三数并入同款 KPI 网格
+- 「热门接口」更名为「近 7 日调用排行」（本人近 7 日，非全站）；底部排行与近期调用同高内滚并对调顺序
+- 修复近 7 日折线悬停 tooltip 靠边消失；调用量图悬停兼显示积分；原积分图改为调用成功率
+- 管理员令牌展示调用/消耗；令牌/用户分页中间最多 3 页码
+- 用户日志卡片化并显示 IP 归属地；用户管理可弹窗查看完整调用日志；更新弹窗可滚+电脑宽版
+- 禁用接口详情可打开并模糊地址；控制台头像抖动与 24 小时问候文案；default / slate 同步
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

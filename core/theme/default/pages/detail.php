@@ -48,6 +48,11 @@ $keywaysList = (!$notFound && isset($api['keyways']) && is_array($api['keyways']
 $showQsAuthSwitch = !$notFound
     && (int) (isset($api['needkey']) ? $api['needkey'] : 0) !== 0
     && count($keywaysList) > 1;
+$isDisabled = !$notFound && !empty($api['disabled']);
+$isMaintenance = !$notFound && !empty($api['maintenance']);
+$callBlocked = $isDisabled || $isMaintenance;
+$endpointDisplay = (!$notFound && isset($api['endpoint'])) ? (string) $api['endpoint'] : '';
+$endpointBlurText = 'https://••••••••••••/api/v1/••••••••';
 
 $recommendApi = null;
 $pageApiSnapshot = (!$notFound && $api !== array()) ? $api : null;
@@ -87,8 +92,9 @@ if (!$notFound) {
 ?>
 <main class="main-wrapper container mx-auto px-4 detail-page" id="apiDetailPage"
       data-api-id="<?php echo $notFound ? '0' : (int) $api['id']; ?>"
-      data-endpoint="<?php echo $notFound ? '' : vs_e(isset($api['endpoint']) ? $api['endpoint'] : ''); ?>"
-      data-maintenance="<?php echo (!$notFound && !empty($api['maintenance'])) ? '1' : '0'; ?>">
+      data-endpoint="<?php echo ($notFound || $isDisabled) ? '' : vs_e(isset($api['endpoint']) ? $api['endpoint'] : ''); ?>"
+      data-maintenance="<?php echo $isMaintenance ? '1' : '0'; ?>"
+      data-disabled="<?php echo $isDisabled ? '1' : '0'; ?>">
     <nav class="detail-crumb text-sm" aria-label="面包屑">
         <a href="<?php echo vs_e($vsBase); ?>/">首页</a>
         <span class="detail-crumb__sep">/</span>
@@ -126,7 +132,8 @@ if (!$notFound) {
     }
     $detailMdParts[] = "## 接口信息\n\n"
         . '**方法：** ' . (isset($api['method_label']) ? (string) $api['method_label'] : strtoupper($primaryMethod)) . "\n"
-        . '**路径 / 完整地址：** ' . (isset($api['endpoint']) ? (string) $api['endpoint'] : '') . "\n"
+        . '**路径 / 完整地址：** ' . ($isDisabled ? '（已禁用，地址已隐藏）' : (isset($api['endpoint']) ? (string) $api['endpoint'] : '')) . "\n"
+        . '**状态：** ' . ($isDisabled ? '已禁用' : ($isMaintenance ? '维护中' : '正常')) . "\n"
         . '**计费：** ' . $chargeDetailLabel . "\n"
         . '**KEY：** ' . $keyLabel . "\n"
         . '**鉴权方式：** ' . $authWayLabel . "\n"
@@ -162,7 +169,9 @@ if (!$notFound) {
                 <?php foreach ($methods as $m): ?>
                     <span class="method-badge <?php echo vs_e(strtolower(trim((string) $m))); ?>"><?php echo vs_e(strtoupper(trim((string) $m))); ?></span>
                 <?php endforeach; ?>
-                <?php if (!empty($api['maintenance'])): ?>
+                <?php if ($isDisabled): ?>
+                    <span class="api-chip api-chip--disabled">已禁用</span>
+                <?php elseif ($isMaintenance): ?>
                     <span class="api-chip api-chip--maintenance">维护中</span>
                 <?php else: ?>
                     <span class="api-chip <?php echo $points > 0 ? 'api-chip--points' : 'api-chip--free'; ?>"><?php echo vs_e($billingLabel); ?></span>
@@ -206,13 +215,19 @@ if (!$notFound) {
 
     <section class="detail-card">
         <h2 class="detail-section-title">接口信息</h2>
-        <?php if (!empty($api['endpoint'])): ?>
-        <div class="endpoint-box">
+        <?php if ($endpointDisplay !== '' || $isDisabled): ?>
+        <div class="endpoint-box<?php echo $isDisabled ? ' is-blurred' : ''; ?>">
             <div class="endpoint-box__text font-mono">
                 <span class="endpoint-box__method"><?php echo vs_e(isset($api['method_label']) ? $api['method_label'] : strtoupper($primaryMethod)); ?></span>
-                <span id="detailEndpoint"><?php echo vs_e($api['endpoint']); ?></span>
+                <?php if ($isDisabled): ?>
+                <span id="detailEndpoint" class="endpoint-box__masked" title="接口已禁用，调用地址已隐藏"><?php echo vs_e($endpointBlurText); ?></span>
+                <?php else: ?>
+                <span id="detailEndpoint"><?php echo vs_e($endpointDisplay); ?></span>
+                <?php endif; ?>
             </div>
-            <button type="button" class="btn-copy" data-copy="<?php echo vs_e($api['endpoint']); ?>">复制</button>
+            <?php if (!$isDisabled): ?>
+            <button type="button" class="btn-copy" data-copy="<?php echo vs_e($endpointDisplay); ?>">复制</button>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
 
@@ -262,7 +277,9 @@ if (!$notFound) {
             </div>
         </div>
 
-        <?php if (!empty($api['maintenance'])): ?>
+        <?php if ($isDisabled): ?>
+        <div class="detail-notice detail-notice--danger">该接口已被禁用，调用地址与可调用信息已隐藏，暂时无法请求。</div>
+        <?php elseif ($isMaintenance): ?>
         <div class="detail-notice detail-notice--warn">当前接口维护中，暂时无法调用。</div>
         <?php endif; ?>
     </section>
@@ -486,16 +503,18 @@ if (!$notFound) {
 
     <section class="detail-card" id="detailPlayground">
         <h2 class="detail-section-title">在线测试</h2>
-        <?php if (!empty($api['maintenance'])): ?>
+        <?php if ($isDisabled): ?>
+        <div class="detail-notice detail-notice--danger">接口已禁用，暂不可测试。</div>
+        <?php elseif ($isMaintenance): ?>
         <div class="detail-notice detail-notice--warn">维护中，暂不可测试。</div>
-        <?php elseif (empty($api['endpoint'])): ?>
+        <?php elseif ($endpointDisplay === ''): ?>
         <p class="detail-empty-hint">未配置调用地址，无法测试。</p>
         <?php else: ?>
         <div class="playground-grid">
             <div class="playground-pane">
                 <div class="playground-label">请求地址</div>
                 <div class="endpoint-box endpoint-box--sm">
-                    <div class="endpoint-box__text font-mono" id="pgUrlPreview"><?php echo vs_e($api['endpoint']); ?></div>
+                    <div class="endpoint-box__text font-mono" id="pgUrlPreview"><?php echo vs_e($endpointDisplay); ?></div>
                 </div>
 
                 <?php if (count($methods) > 1): ?>
@@ -572,10 +591,11 @@ $jsApi = is_array($pageApiSnapshot) ? $pageApiSnapshot : ((!$notFound && is_arra
 window.detailApiData = <?php echo json_encode($jsApi === null ? null : array(
     'id' => (int) $jsApi['id'],
     'name' => isset($jsApi['name']) ? $jsApi['name'] : '',
-    'endpoint' => isset($jsApi['endpoint']) ? $jsApi['endpoint'] : '',
+    'endpoint' => $isDisabled ? '' : (isset($jsApi['endpoint']) ? $jsApi['endpoint'] : ''),
     'methods' => $methods,
     'method' => $primaryMethod,
     'maintenance' => !empty($jsApi['maintenance']) ? 1 : 0,
+    'disabled' => $isDisabled ? 1 : 0,
     'needkey' => isset($jsApi['needkey']) ? (int) $jsApi['needkey'] : 0,
     'keyways' => $keywaysList,
     'params_list' => $paramsList,

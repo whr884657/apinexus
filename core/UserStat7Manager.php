@@ -181,6 +181,7 @@ class UserStat7Manager
         $labels = array();
         $callsSeries = array();
         $costSeries = array();
+        $rateSeries = array();
         $totalCalls = 0;
         $today = date('Y-m-d');
         $todayCalls = 0;
@@ -190,10 +191,12 @@ class UserStat7Manager
             $day = date('Y-m-d', strtotime('-' . $i . ' day'));
             $row = isset($map[$day]) && is_array($map[$day]) ? $map[$day] : array();
             $c = isset($row['calls']) ? (int) $row['calls'] : 0;
+            $ok = isset($row['ok']) ? (int) $row['ok'] : 0;
             $cost = isset($row['cost']) ? (float) $row['cost'] : 0.0;
             $labels[] = $day;
             $callsSeries[] = $c;
             $costSeries[] = round($cost, 4);
+            $rateSeries[] = $c > 0 ? round(($ok / (float) $c) * 100, 1) : 0.0;
             $totalCalls += $c;
             if ($day === $today) {
                 $todayCalls = $c;
@@ -221,9 +224,10 @@ class UserStat7Manager
         }
         return array(
             'days'         => array(
-                'labels' => $labels,
-                'calls'  => $callsSeries,
-                'cost'   => $costSeries,
+                'labels'       => $labels,
+                'calls'        => $callsSeries,
+                'cost'         => $costSeries,
+                'success_rate' => $rateSeries,
             ),
             'today_calls'  => $todayCalls,
             'today_cost'   => $todayCost,

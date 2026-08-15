@@ -362,6 +362,10 @@ class ApiLogManager
         }
         $ok = array_key_exists('ok', $opts) ? $opts['ok'] : null;
         $apiid = isset($opts['apiid']) ? (int) $opts['apiid'] : 0;
+        $userid = isset($opts['userid']) ? (int) $opts['userid'] : 0;
+        if ($userid < 0) {
+            $userid = 0;
+        }
         $beforeId = isset($opts['before_id']) ? (int) $opts['before_id'] : 0;
         if ($beforeId < 0) {
             $beforeId = 0;
@@ -388,16 +392,20 @@ class ApiLogManager
             'q'         => $q,
             'ok'        => $ok,
             'apiid'     => $apiid,
+            'userid'    => $userid,
             'before_id' => $beforeId,
         ));
 
-        $loader = function () use ($page, $pagesize, $q, $ok, $apiid, $beforeId, $empty) {
+        $loader = function () use ($page, $pagesize, $q, $ok, $apiid, $userid, $beforeId, $empty) {
                 try {
                     $pdo = Database::connect();
                     self::applyQueryTimeout($pdo);
 
-                    $filters = self::buildFilters($q, $ok, $apiid, $beforeId);
+                    $filters = self::buildFilters($q, $ok, $apiid, $beforeId, $userid);
                     $userIdsForCold = isset($filters['userIds']) ? $filters['userIds'] : array();
+                    if ($userid > 0) {
+                        $userIdsForCold = array($userid);
+                    }
 
                     // 列表始终 LEFT JOIN user，保证卡片/表格能显示用户名（禁止仅搜索时才带 username）
                     $from = '`' . self::table() . '` l'
@@ -462,7 +470,7 @@ class ApiLogManager
                         $nextBefore = (int) $merged[count($merged) - 1]['id'];
                     }
 
-                    $total = self::countFilteredCached($q, $ok, $apiid);
+                    $total = self::countFilteredCached($q, $ok, $apiid, $userid);
 
                     return array(
                         'list'           => $merged,
@@ -507,15 +515,16 @@ class ApiLogManager
      * @param string $q
      * @param mixed  $ok
      * @param int    $apiid
+     * @param int    $userid
      * @return int
      */
-    private static function countFilteredCached($q, $ok, $apiid)
+    private static function countFilteredCached($q, $ok, $apiid, $userid = 0)
     {
-        $factory = function () use ($q, $ok, $apiid) {
+        $factory = function () use ($q, $ok, $apiid, $userid) {
             try {
                 $pdo = Database::connect();
                 self::applyQueryTimeout($pdo);
-                $filters = self::buildFilters($q, $ok, $apiid, 0);
+                $filters = self::buildFilters($q, $ok, $apiid, 0, $userid);
                 // COUNT 禁止 JOIN user（见《数据统计与性能规范》）；搜索用户走 userid IN / EXISTS
                 $sql = 'SELECT COUNT(*) FROM `' . self::table() . '` l WHERE ' . $filters['whereSql'];
                 $stmt = $pdo->prepare($sql);
@@ -529,7 +538,8 @@ class ApiLogManager
         if (class_exists('RedisCache')) {
             return (int) RedisCache::remember(
                 RedisCache::apilogFilterTotalKey(array(
-                    'q'     => $q,
+                    'q'      => $q,
+                    'userid' => $userid,
                     'ok'    => $ok,
                     'apiid' => $apiid,
                 )),
@@ -666,20 +676,32 @@ class ApiLogManager
      * @param mixed  $ok
      * @param int    $apiid
      * @param int    $beforeId
+     * @param int    $userid 指定用户（管理员按用户筛日志）
      * @return array{whereSql:string,bind:array,hasExtra:bool,userIds:int[]}
      */
-    private static function buildFilters($q, $ok, $apiid, $beforeId)
+    private static function buildFilters($q, $ok, $apiid, $beforeId, $userid = 0)
     {
         $where = array('1=1');
         $bind = array();
         $hasExtra = false;
         $userIds = array();
+        $userid = (int) $userid;
+
+        if ($userid > 0) {
+            $where[] = 'l.`userid` = ?';
+            $bind[] = $userid;
+            $userIds = array($userid);
+            $hasExtra = true;
+        }
 
         if ($q !== '') {
             $like = function_exists('vs_sql_like_contains')
                 ? vs_sql_like_contains($q)
                 : ('%' . addcslashes($q, "\\%_") . '%');
-            $userIds = self::resolveSearchUserIds($q);
+            // 强制 userid 过滤时，搜索解析出的用户 ID 不得覆盖/放宽范围
+            if ($userid <= 0) {
+                $userIds = self::resolveSearchUserIds($q);
+            }
             $parts = array(
                 'l.`apiname` LIKE ? ESCAPE \'\\\\\'',
                 'l.`path` LIKE ? ESCAPE \'\\\\\'',
@@ -695,7 +717,7 @@ class ApiLogManager
                 $parts[] = 'l.`id` = ?';
                 $bind[] = (int) $q;
             }
-            if ($userIds !== array()) {
+            if ($userid <= 0 && $userIds !== array()) {
                 $ph = implode(',', array_fill(0, count($userIds), '?'));
                 $parts[] = 'l.`userid` IN (' . $ph . ')';
                 foreach ($userIds as $uid) {
@@ -729,7 +751,7 @@ class ApiLogManager
     }
 
     /**
-     * 用户侧安全字段（仅接口名/时间/IP/成败；禁止 UA/Referer/参数/密钥全文）
+     * 用户侧安全字段（接口名/时间/IP/归属地/成败；禁止 UA/Referer/参数/密钥全文）
      *
      * @param array $row 原始行或 formatRow 结果
      * @return array|null
@@ -744,6 +766,7 @@ class ApiLogManager
             'id'         => (int) $full['id'],
             'apiname'    => (string) $full['apiname'],
             'ip'         => (string) $full['ip'],
+            'iploc'      => (string) $full['iploc'],
             'ok'         => (int) $full['ok'],
             'ok_label'   => (string) $full['ok_label'],
             'ok_class'   => (string) $full['ok_class'],
@@ -812,6 +835,7 @@ class ApiLogManager
         }
 
         $cacheKey = 'cache:userapilog:page:' . md5(json_encode(array(
+            'v'         => 2,
             'uid'       => $userId,
             'page'      => $page,
             'pagesize'  => $pagesize,
@@ -836,7 +860,7 @@ class ApiLogManager
                 }
                 $whereSql = implode(' AND ', $where);
 
-                $sql = 'SELECT l.`id`, l.`apiname`, l.`ip`, l.`ok`, l.`httpcode`, l.`createtime`
+                $sql = 'SELECT l.`id`, l.`apiname`, l.`ip`, l.`iploc`, l.`ok`, l.`httpcode`, l.`createtime`
                     FROM `' . self::table() . '` l
                     WHERE ' . $whereSql . '
                     ORDER BY l.`id` DESC

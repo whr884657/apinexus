@@ -69,18 +69,22 @@ function vs_admin_key_row_ctx(array $row)
         $time = substr($time, 0, 16);
     }
     $search = mb_strtolower($token['secret'] . ' ' . $username . ' ' . $token['remark'] . ' #' . $id, 'UTF-8');
+    $spent = isset($token['pointsspent']) ? (float) $token['pointsspent'] : 0.0;
+    $spentFmt = class_exists('PayConfig') ? PayConfig::fmtPoints($spent) : (string) $spent;
 
     return array(
-        'id'       => $id,
-        'enabled'  => $enabled,
-        'secret'   => $token['secret'],
-        'username' => $username,
-        'avatar'   => $avatar,
-        'time'     => $time,
-        'calls'    => (int) $token['calls'],
-        'remark'   => $token['remark'],
-        'search'   => $search,
-        'status'   => (int) $token['status'],
+        'id'              => $id,
+        'enabled'         => $enabled,
+        'secret'          => $token['secret'],
+        'username'        => $username,
+        'avatar'          => $avatar,
+        'time'            => $time,
+        'calls'           => (int) $token['calls'],
+        'pointsspent'     => $spent,
+        'pointsspent_fmt' => $spentFmt,
+        'remark'          => $token['remark'],
+        'search'          => $search,
+        'status'          => (int) $token['status'],
     );
 }
 
@@ -135,6 +139,8 @@ function vs_render_admin_key_desktop_row(array $ctx)
             </div>
         </td>
         <td><span class="time-cell" data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span></td>
+        <td class="vs-api-keys-stat-cell"><span data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></span></td>
+        <td class="vs-api-keys-stat-cell"><span data-field="pointsspent"><?php echo vs_e($ctx['pointsspent_fmt']); ?></span></td>
         <td>
             <span class="vs-badge <?php echo $ctx['enabled'] ? 'vs-badge--success' : 'vs-badge--error'; ?>" data-field="status_label">
                 <?php echo $ctx['enabled'] ? '正常' : '已禁用'; ?>
@@ -170,6 +176,10 @@ function vs_render_admin_key_mobile_card(array $ctx)
         <div class="key-card__info">
             <div class="key-card__info-item"><span class="key-card__info-label">所属用户</span><span data-field="username"><?php echo vs_e($ctx['username']); ?></span></div>
             <div class="key-card__info-item"><span class="key-card__info-label">创建时间</span><span data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span></div>
+            <div class="key-card__stats" aria-label="调用与消耗">
+                <div class="key-card__stat"><span class="key-card__info-label">调用</span><strong data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></strong></div>
+                <div class="key-card__stat"><span class="key-card__info-label">消耗</span><strong data-field="pointsspent"><?php echo vs_e($ctx['pointsspent_fmt']); ?></strong></div>
+            </div>
         </div>
         <div class="key-card__actions" data-field="actions">
             <button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-key-copy" data-copy="<?php echo vs_e($ctx['secret']); ?>">复制</button>
@@ -229,6 +239,8 @@ vs_admin_layout_start('令牌管理', 'api-keys', $headerActions);
                             <th>令牌 Key</th>
                             <th>所属用户</th>
                             <th>创建时间</th>
+                            <th>调用</th>
+                            <th>积分消耗</th>
                             <th>状态</th>
                             <th>操作</th>
                         </tr>

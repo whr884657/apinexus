@@ -469,6 +469,18 @@ body.vs-body.feer-front .main-wrapper.container.detail-page,
     border: 1px solid rgba(249, 115, 22, 0.25);
     color: #c2410c;
 }
+.detail-notice--danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.28);
+    color: #b91c1c;
+}
+.endpoint-box.is-blurred .endpoint-box__masked {
+    filter: blur(5px);
+    user-select: none;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+    opacity: 0.85;
+}
 
 .detail-empty-hint {
     margin: 0;
@@ -1034,6 +1046,7 @@ body.vs-body.feer-front .main-wrapper.container.detail-page,
 .detail-page .api-chip--points { background: rgba(245, 158, 11, 0.18); color: #c2410c; }
 .detail-page .api-chip--key { background: rgba(59, 130, 246, 0.18); color: #2563eb; }
 .detail-page .api-chip--maintenance { background: rgba(239, 68, 68, 0.18); color: #dc2626; }
+.detail-page .api-chip--disabled { background: rgba(100, 116, 139, 0.16); color: #475569; }
 .detail-page .method-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 2px; font-weight: bold; font-family: 'JetBrains Mono', monospace; }
 .detail-page .api-item-more { font-size: 0.65rem; padding: 2px 6px; border-radius: 2px; color: var(--text-muted); background: rgba(17, 17, 17, 0.06); }
 

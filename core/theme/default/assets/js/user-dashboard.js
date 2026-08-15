@@ -1,5 +1,5 @@
 /**
- * 默认主题 · 用户控制台近 7 日折线图（参考管理端 SVG 平滑曲线）
+ * 默认主题 · 用户控制台近 7 日折线图（调用量+积分 tooltip / 成功率）
  */
 (function () {
     'use strict';
@@ -7,7 +7,7 @@
     var page = document.getElementById('ucDashboard');
     if (!page) return;
 
-    var COLORS = { calls: '#2563eb', cost: '#f59e0b' };
+    var COLORS = { calls: '#2563eb', cost: '#f59e0b', rate: '#0d9488' };
     var boot = {};
     try {
         boot = JSON.parse(page.getAttribute('data-chart-boot') || '{}') || {};
@@ -19,6 +19,26 @@
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;')
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function fmtCost(v) {
+        var n = parseFloat(v);
+        if (!isFinite(n) || n === 0) {
+            return '0';
+        }
+        var s = (Math.round(n * 10000) / 10000).toString();
+        return s;
+    }
+
+    function fmtRate(v) {
+        var n = parseFloat(v);
+        if (!isFinite(n)) {
+            return '0';
+        }
+        if (Math.abs(n - Math.round(n)) < 0.05) {
+            return String(Math.round(n));
+        }
+        return n.toFixed(1);
     }
 
     function smoothPath(pts, yMin, yMax) {
@@ -52,17 +72,27 @@
         return d;
     }
 
-    function lineChart(el, labels, values, color, unit) {
+    /**
+     * @param {HTMLElement} el
+     * @param {string[]} labels
+     * @param {number[]} values
+     * @param {string} color
+     * @param {{unit?:string,yMax?:number,tipRows?:function(number,number):Array<{color:string,text:string}>}} opts
+     */
+    function lineChart(el, labels, values, color, opts) {
         if (!el) return;
+        opts = opts || {};
         labels = Array.isArray(labels) ? labels : [];
         values = Array.isArray(values) ? values : [];
         if (!values.length) {
             el.innerHTML = '<div class="uc-dash__chart-empty">暂无趋势数据</div>';
             return;
         }
+        var unit = opts.unit || '';
         var w = 560, h = 200, L = 36, R = 10, T = 14, B = 26;
         var plotTop = T, plotBottom = h - B;
-        var max = Math.max.apply(null, values.concat([1]));
+        var dataMax = Math.max.apply(null, values.concat([0]));
+        var max = opts.yMax != null ? opts.yMax : Math.max(dataMax, 1);
         var min = 0;
         var span = Math.max(0.0001, max - min);
         var n = Math.max(1, labels.length || values.length);
@@ -123,11 +153,25 @@
             var lb = labels[idx] != null ? labels[idx] : '';
             var x = xAt(idx);
             var y = yAt(v);
+            var rect = svg.getBoundingClientRect();
+            var scaleX = rect.width > 0 ? (rect.width / w) : 1;
+            var rows = typeof opts.tipRows === 'function' ? opts.tipRows(idx, v) : null;
+            var rowsHtml = '';
+            if (rows && rows.length) {
+                rows.forEach(function (row) {
+                    rowsHtml += '<div class="uc-dash__chart-tip-row"><i style="background:'
+                        + esc(row.color || color) + '"></i><b>' + esc(row.text || '') + '</b></div>';
+                });
+            } else {
+                rowsHtml = '<div class="uc-dash__chart-tip-row"><i style="background:' + color + '"></i><b>'
+                    + esc(String(v)) + esc(unit) + '</b></div>';
+            }
             tip.hidden = false;
-            tip.innerHTML = '<div class="uc-dash__chart-tip-title">' + esc(lb) + '</div>'
-                + '<div class="uc-dash__chart-tip-row"><i style="background:' + color + '"></i><b>'
-                + esc(String(v)) + esc(unit || '') + '</b></div>';
-            tip.style.left = Math.min(Math.max(8, x - 40), w - 100) + 'px';
+            tip.innerHTML = '<div class="uc-dash__chart-tip-title">' + esc(lb) + '</div>' + rowsHtml;
+            var tipW = tip.offsetWidth || 100;
+            var leftPx = (x * scaleX) - (tipW / 2);
+            leftPx = Math.max(4, Math.min(leftPx, Math.max(4, rect.width - tipW - 4)));
+            tip.style.left = leftPx + 'px';
             tip.style.top = '8px';
             if (guide) {
                 guide.setAttribute('x1', String(x));
@@ -141,24 +185,54 @@
 
         svg.addEventListener('mousemove', function (ev) {
             var rect = svg.getBoundingClientRect();
+            if (!rect.width) return;
             var px = ((ev.clientX - rect.left) / rect.width) * w;
             showAt(nearestIndex(px));
         });
         svg.addEventListener('mouseleave', hideTip);
+        svg.addEventListener('touchstart', function (ev) {
+            if (!ev.touches || !ev.touches[0]) return;
+            var rect = svg.getBoundingClientRect();
+            if (!rect.width) return;
+            var px = ((ev.touches[0].clientX - rect.left) / rect.width) * w;
+            showAt(nearestIndex(px));
+        }, { passive: true });
     }
+
+    var labels = boot.labels || [];
+    var calls = boot.calls || [];
+    var cost = boot.cost || [];
+    var rates = boot.success_rate || [];
 
     lineChart(
         document.getElementById('ucDashCallsChart'),
-        boot.labels || [],
-        boot.calls || [],
+        labels,
+        calls,
         COLORS.calls,
-        ' 次'
+        {
+            tipRows: function (idx, v) {
+                var c = cost[idx] != null ? cost[idx] : 0;
+                return [
+                    { color: COLORS.calls, text: '调用 ' + String(v) + ' 次' },
+                    { color: COLORS.cost, text: '积分 ' + fmtCost(c) }
+                ];
+            }
+        }
     );
+
     lineChart(
-        document.getElementById('ucDashCostChart'),
-        boot.labels || [],
-        boot.cost || [],
-        COLORS.cost,
-        ''
+        document.getElementById('ucDashRateChart'),
+        labels,
+        rates,
+        COLORS.rate,
+        {
+            unit: '%',
+            yMax: 100,
+            tipRows: function (idx, v) {
+                return [
+                    { color: COLORS.rate, text: '成功率 ' + fmtRate(v) + '%' }
+                ];
+            }
+        }
     );
 })();

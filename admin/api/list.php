@@ -881,7 +881,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
         </div>
     <?php else: ?>
         <div class="vs-api-list-tip vs-api-list-tip--enter">
-            <?php vs_render_notice('info', '', '正常：可对外提供服务。维护：站点前台仍可看到，但暂不可请求。禁用：站点前台不显示。未通过审核的接口也不会在站点前台展示。', array('compact' => true)); ?>
+            <?php vs_render_notice('info', '', '正常：可对外提供服务。维护：站点前台仍可看到，但暂不可请求。禁用：列表不展示，直接打开详情页仍可见但调用地址已隐藏。未通过审核的接口也不会在站点前台展示。', array('compact' => true)); ?>
         </div>
 
         <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiListEmpty"<?php echo count($apis) > 0 ? ' hidden' : ''; ?>>

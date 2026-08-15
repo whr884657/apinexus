@@ -119,9 +119,13 @@
                 pagerNumsEl.innerHTML = '';
                 return;
             }
+            // 中间最多 3 个页码：当前页尽量居中（首尾贴边）
+            var start = Math.max(1, currentPage - 1);
+            var end = Math.min(totalPages, start + 2);
+            start = Math.max(1, end - 2);
             var html = '';
             var i;
-            for (i = 1; i <= totalPages; i += 1) {
+            for (i = start; i <= end; i += 1) {
                 html += '<button type="button" class="vs-api-pager__num'
                     + (i === currentPage ? ' is-active' : '')
                     + '" data-page="' + i + '">' + i + '</button>';

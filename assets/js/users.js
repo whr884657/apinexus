@@ -46,7 +46,16 @@
     }
 
     function rebuildActions(container, userId, banned, role) {
+        var pointsBtn = container.querySelector('[data-user-action="adjust_points"]');
+        var pointsVal = pointsBtn ? (pointsBtn.getAttribute('data-user-points') || '0') : '0';
+        var nameEl = container.closest('[data-user-row]');
+        var userName = nameEl ? (nameEl.getAttribute('data-user-name') || '') : '';
         container.innerHTML = '';
+        var logsBtn = createActionBtn(userId, 'view_logs', '调用日志', 'vs-btn--pill-secondary');
+        if (userName) {
+            logsBtn.setAttribute('data-user-name', userName);
+        }
+        container.appendChild(logsBtn);
         if (banned) {
             container.appendChild(createActionBtn(userId, 'unban', '解封', 'vs-btn--pill-primary'));
         } else {
@@ -58,7 +67,9 @@
             container.appendChild(createActionBtn(userId, 'set_role', '设为开发者', 'vs-btn--pill-primary', false, 'developer'));
         }
         if (document.getElementById('usersPointsOverlay')) {
-            container.appendChild(createActionBtn(userId, 'adjust_points', '积分', 'vs-btn--pill-secondary'));
+            var pts = createActionBtn(userId, 'adjust_points', '积分', 'vs-btn--pill-secondary');
+            pts.setAttribute('data-user-points', pointsVal);
+            container.appendChild(pts);
         }
         container.appendChild(createActionBtn(userId, 'delete', '删除', 'vs-btn--pill-danger', true));
     }
@@ -164,9 +175,13 @@
             pagerNumsEl.innerHTML = '';
             return;
         }
+        // 中间最多 3 个页码：当前页尽量居中（首尾贴边）
+        var start = Math.max(1, currentPage - 1);
+        var end = Math.min(totalPages, start + 2);
+        start = Math.max(1, end - 2);
         var html = '';
         var i;
-        for (i = 1; i <= totalPages; i += 1) {
+        for (i = start; i <= end; i += 1) {
             html += '<button type="button" class="vs-api-pager__num'
                 + (i === currentPage ? ' is-active' : '')
                 + '" data-page="' + i + '">' + i + '</button>';
@@ -454,6 +469,18 @@
             return;
         }
 
+        if (action === 'view_logs') {
+            if (window.VsUsersLogs && typeof window.VsUsersLogs.open === 'function') {
+                var uname = btn.getAttribute('data-user-name') || '';
+                if (!uname) {
+                    var row = btn.closest('[data-user-row]');
+                    uname = row ? (row.getAttribute('data-user-name') || '') : '';
+                }
+                window.VsUsersLogs.open(userId, uname);
+            }
+            return;
+        }
+
         function run() {
             btn.disabled = true;
             postAction(userId, action, role)
@@ -527,6 +554,390 @@
                 window.VS.showMessage('网络异常', 'error');
             });
         });
+    })();
+
+    (function bindUsersLogs() {
+        var listOverlay = document.getElementById('usersLogsOverlay');
+        var detailOverlay = document.getElementById('usersLogDetailOverlay');
+        var listEl = document.getElementById('usersLogsList');
+        var titleEl = document.getElementById('usersLogsTitle');
+        var footerEl = document.getElementById('usersLogsFooter');
+        var pagerNav = document.getElementById('usersLogsPagerNav');
+        var totalEl = document.getElementById('usersLogsTotal');
+        var pageSizeEl = document.getElementById('usersLogsPageSize');
+        var detailBody = document.getElementById('usersLogDetailBody');
+        if (!listOverlay || !listEl) {
+            return;
+        }
+
+        var currentUserId = 0;
+        var currentUserName = '';
+        var page = 1;
+        var cursorStack = [0];
+        var hasMore = false;
+        var totalCount = 0;
+        var okFilter = '';
+        var loadSeq = 0;
+        var listAbort = null;
+        var openOverlays = 0;
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function lockBody(on) {
+            if (on) {
+                openOverlays += 1;
+                document.body.classList.add('is-overlay-open');
+            } else {
+                openOverlays = Math.max(0, openOverlays - 1);
+                if (openOverlays === 0) {
+                    document.body.classList.remove('is-overlay-open');
+                }
+            }
+        }
+
+        function openShell(el) {
+            if (!el || !el.hidden) {
+                return;
+            }
+            el.hidden = false;
+            el.setAttribute('aria-hidden', 'false');
+            el.classList.add('is-open');
+            lockBody(true);
+        }
+
+        function closeShell(el) {
+            if (!el || el.hidden) {
+                return;
+            }
+            el.hidden = true;
+            el.setAttribute('aria-hidden', 'true');
+            el.classList.remove('is-open');
+            lockBody(false);
+        }
+
+        function getPageSize() {
+            var n = pageSizeEl ? parseInt(pageSizeEl.value, 10) : 20;
+            if (!n || n < 1) n = 20;
+            return Math.min(50, n);
+        }
+
+        function resetCursors() {
+            page = 1;
+            cursorStack = [0];
+            hasMore = false;
+        }
+
+        function methodBadge(row) {
+            return '<span class="vs-log-method ' + escapeHtml(row.method_class || 'is-other') + '">'
+                + escapeHtml(row.method || '—') + '</span>';
+        }
+
+        function httpBadge(row) {
+            return '<span class="vs-log-http ' + escapeHtml(row.http_class || '') + '">'
+                + escapeHtml(row.httpcode) + '</span>';
+        }
+
+        function statusBadge(row) {
+            return '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '">'
+                + escapeHtml(row.ok_label || '—') + '</span>';
+        }
+
+        function httpcodeDisplay(row) {
+            var code = row && row.httpcode != null ? String(row.httpcode) : '';
+            var label = row && row.httpcode_label ? String(row.httpcode_label) : '';
+            if (code === '' && !label) return '—';
+            if (label) return code + ' · ' + label;
+            return code;
+        }
+
+        function cardHtml(row) {
+            return '<article class="vs-log-card vs-users-log-item" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
+                + '<div class="vs-log-card__top">'
+                + '<div class="vs-log-card__title">'
+                + '<span class="vs-log-id">#' + escapeHtml(row.id) + '</span>'
+                + '<strong class="vs-log-card__name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</strong>'
+                + '</div>'
+                + statusBadge(row)
+                + '</div>'
+                + '<div class="vs-log-card__meta">'
+                + methodBadge(row)
+                + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
+                + '<span>' + escapeHtml(row.iploc || '—') + '</span>'
+                + httpBadge(row)
+                + '</div>'
+                + '<div class="vs-log-card__foot">'
+                + '<span class="vs-log-card__time">' + escapeHtml(row.createtime || '—') + '</span>'
+                + '<span class="vs-log-view">查看详情</span>'
+                + '</div>'
+                + '</article>';
+        }
+
+        function renderList(list) {
+            if (!list || !list.length) {
+                listEl.innerHTML = '<p class="vs-empty vs-finance-empty">暂无调用记录</p>';
+                return;
+            }
+            listEl.innerHTML = '<div class="vs-log-cards vs-users-logs-cards">' + list.map(cardHtml).join('') + '</div>';
+        }
+
+        function renderPager() {
+            if (footerEl) footerEl.hidden = false;
+            if (totalEl) totalEl.textContent = '共 ' + (totalCount || 0) + ' 条';
+            if (pagerNav) {
+                pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"'
+                    + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
+                    + '<span class="vs-api-pager__info">' + page + '</span>'
+                    + '<button type="button" class="vs-api-pager__nav" data-p="1"'
+                    + (!hasMore ? ' disabled' : '') + '>下一页</button>';
+            }
+        }
+
+        function loadLogs() {
+            if (!window.VS || !currentUserId) return;
+            if (listAbort) {
+                try { listAbort.abort(); } catch (e) { /* ignore */ }
+            }
+            listAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            var seq = ++loadSeq;
+            var pagesize = getPageSize();
+            var beforeId = cursorStack[page - 1] || 0;
+            if (VS.setLoading) {
+                VS.setLoading(listEl, '正在加载日志');
+            } else {
+                listEl.innerHTML = '<div class="vs-loading">正在加载日志…</div>';
+            }
+            var fd = new FormData();
+            fd.append('action', 'user_logs');
+            fd.append('user_id', String(currentUserId));
+            fd.append('page', String(page));
+            fd.append('pagesize', String(pagesize));
+            fd.append('before_id', String(beforeId));
+            if (okFilter === '0' || okFilter === '1') {
+                fd.append('ok', okFilter);
+            }
+            var opts = listAbort ? { signal: listAbort.signal } : {};
+            VS.postForm(fd, window.location.href, opts).then(function (data) {
+                if (seq !== loadSeq) return;
+                if (!data || data.code !== 1) {
+                    listEl.innerHTML = '<p class="vs-empty vs-finance-empty">'
+                        + escapeHtml((data && data.msg) || '加载失败') + '</p>';
+                    return;
+                }
+                var nextBefore = parseInt(data.next_before_id, 10) || 0;
+                hasMore = !!data.has_more;
+                totalCount = parseInt(data.total, 10) || 0;
+                if (cursorStack.length === page) {
+                    cursorStack.push(nextBefore);
+                } else {
+                    cursorStack[page] = nextBefore;
+                }
+                renderList(data.list || []);
+                renderPager();
+            }).catch(function (err) {
+                if (err && err.name === 'AbortError') return;
+                if (seq !== loadSeq) return;
+                listEl.innerHTML = '<p class="vs-empty vs-finance-empty">网络异常</p>';
+            });
+        }
+
+        function detailItem(label, value, full) {
+            var v = value == null || value === '' ? '—' : String(value);
+            return '<div class="vs-log-detail__item' + (full ? ' vs-log-detail__item--full' : '') + '">'
+                + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+                + '<span class="vs-log-detail__value">' + escapeHtml(v) + '</span>'
+                + '</div>';
+        }
+
+        function eyeIconSvg(off) {
+            if (off) {
+                return '<svg class="vs-log-secret__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">'
+                    + '<path fill="currentColor" d="M12 7a5 5 0 0 1 5 5c0 .7-.15 1.36-.4 1.96l1.48 1.48A9.8 9.8 0 0 0 21 12c-1.73-4.39-6-7.5-9-7.5-1.1 0-2.16.3-3.12.82l1.5 1.5c.5-.2 1.05-.32 1.62-.32zm-7.03-.61 1.66 1.66A9.8 9.8 0 0 0 3 12c1.73 4.39 6 7.5 9 7.5 1.55 0 3.03-.45 4.3-1.22l1.7 1.7 1.27-1.27L5.24 4.12 3.97 5.39zm5.5 5.5 3.25 3.25A3 3 0 0 1 9 12c0-.2.02-.4.06-.58l1.41 1.41zM12 9a3 3 0 0 1 2.83 4.01l-3.84-3.84c.32-.1.66-.17 1.01-.17z"/>'
+                    + '</svg>';
+            }
+            return '<svg class="vs-log-secret__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">'
+                + '<path fill="currentColor" d="M12 5c-5 0-9.27 3.11-11 7 1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 .001 6.001A3 3 0 0 0 12 9z"/>'
+                + '</svg>';
+        }
+
+        function detailSecretItem(label, fullKey, maskedKey) {
+            var full = fullKey == null ? '' : String(fullKey);
+            var masked = maskedKey == null || maskedKey === '' ? '' : String(maskedKey);
+            if (full === '' && masked === '') return detailItem(label, '—');
+            if (masked === '') masked = full;
+            var canReveal = full !== '' && full !== masked;
+            var show = canReveal ? masked : (full || masked);
+            var btn = canReveal
+                ? ('<button type="button" class="vs-log-secret__toggle" aria-label="显示密钥" aria-pressed="false" title="显示/隐藏密钥">'
+                    + eyeIconSvg(false) + '</button>')
+                : '';
+            return '<div class="vs-log-detail__item vs-log-detail__item--secret">'
+                + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+                + '<div class="vs-log-secret" data-revealed="0"'
+                + ' data-full="' + escapeHtml(full) + '"'
+                + ' data-masked="' + escapeHtml(masked) + '">'
+                + '<span class="vs-log-detail__value vs-log-secret__text">' + escapeHtml(show) + '</span>'
+                + btn + '</div></div>';
+        }
+
+        function bindSecretToggles(root) {
+            if (!root) return;
+            root.querySelectorAll('.vs-log-secret__toggle').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var wrap = btn.closest('.vs-log-secret');
+                    if (!wrap) return;
+                    var text = wrap.querySelector('.vs-log-secret__text');
+                    var on = wrap.getAttribute('data-revealed') === '1';
+                    var next = !on;
+                    wrap.setAttribute('data-revealed', next ? '1' : '0');
+                    if (text) {
+                        text.textContent = next
+                            ? (wrap.getAttribute('data-full') || '')
+                            : (wrap.getAttribute('data-masked') || '');
+                    }
+                    btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+                    btn.setAttribute('aria-label', next ? '隐藏密钥' : '显示密钥');
+                    btn.innerHTML = eyeIconSvg(next);
+                });
+            });
+        }
+
+        function detailHtml(row) {
+            return '<div class="vs-log-detail">'
+                + '<div class="vs-log-detail__hero">'
+                + '<span class="vs-log-detail__hero-name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</span>'
+                + methodBadge(row)
+                + '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '">' + escapeHtml(row.ok_label) + '</span>'
+                + httpBadge(row)
+                + '</div>'
+                + '<div class="vs-log-detail__section">'
+                + '<h4 class="vs-log-detail__section-title">调用信息</h4>'
+                + '<div class="vs-log-detail__grid">'
+                + detailItem('记录 ID', row.id)
+                + detailItem('接口 ID', row.apiid)
+                + detailItem('类型', row.apitype_label)
+                + detailItem('时间', row.createtime)
+                + detailItem('结果', row.ok_label)
+                + detailItem('状态码', httpcodeDisplay(row), true)
+                + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '匿名'))
+                + detailSecretItem('密钥', row.apikey, row.apikey_masked)
+                + detailItem('扣费', (row.charged_label || '') + (row.charged ? (' · ' + row.cost) : ''))
+                + '</div></div>'
+                + '<div class="vs-log-detail__section">'
+                + '<h4 class="vs-log-detail__section-title">网络与来源</h4>'
+                + '<div class="vs-log-detail__grid">'
+                + detailItem('IP', row.ip)
+                + detailItem('IP 归属地', row.iploc)
+                + detailItem('来源域名', row.domain)
+                + detailItem('Host', row.host)
+                + detailItem('路径', row.path, true)
+                + detailItem('完整 URL', row.url, true)
+                + detailItem('Referer', row.referer, true)
+                + detailItem('Origin', row.origin, true)
+                + detailItem('User-Agent', row.ua, true)
+                + '</div></div></div>';
+        }
+
+        function openDetail(id) {
+            if (!detailOverlay || !detailBody || !window.VS) return;
+            detailBody.innerHTML = (VS.loadingHtml)
+                ? VS.loadingHtml('正在加载详情', true)
+                : '<p class="vs-empty">正在加载</p>';
+            openShell(detailOverlay);
+            var fd = new FormData();
+            fd.append('action', 'user_log_detail');
+            fd.append('user_id', String(currentUserId));
+            fd.append('id', String(id));
+            VS.postForm(fd).then(function (data) {
+                if (!data || data.code !== 1 || !data.row) {
+                    detailBody.innerHTML = '<p class="vs-empty">' + escapeHtml((data && data.msg) || '加载失败') + '</p>';
+                    return;
+                }
+                detailBody.innerHTML = detailHtml(data.row);
+                bindSecretToggles(detailBody);
+            }).catch(function () {
+                detailBody.innerHTML = '<p class="vs-empty">网络异常</p>';
+            });
+        }
+
+        function open(userId, userName) {
+            currentUserId = parseInt(userId, 10) || 0;
+            currentUserName = userName || '';
+            if (currentUserId <= 0) return;
+            closeShell(detailOverlay);
+            if (titleEl) {
+                titleEl.textContent = currentUserName
+                    ? ('调用日志 · ' + currentUserName)
+                    : ('调用日志 · 用户 #' + currentUserId);
+            }
+            okFilter = '';
+            listOverlay.querySelectorAll('[data-user-log-ok]').forEach(function (btn) {
+                btn.classList.toggle('is-active', btn.getAttribute('data-user-log-ok') === '');
+            });
+            resetCursors();
+            openShell(listOverlay);
+            loadLogs();
+        }
+
+        listOverlay.querySelectorAll('[data-overlay-close]').forEach(function (el) {
+            el.addEventListener('click', function () {
+                closeShell(detailOverlay);
+                closeShell(listOverlay);
+            });
+        });
+        if (detailOverlay) {
+            detailOverlay.querySelectorAll('[data-overlay-close]').forEach(function (el) {
+                el.addEventListener('click', function () {
+                    closeShell(detailOverlay);
+                });
+            });
+        }
+
+        listOverlay.addEventListener('click', function (e) {
+            var filterBtn = e.target.closest('[data-user-log-ok]');
+            if (filterBtn && listOverlay.contains(filterBtn)) {
+                okFilter = filterBtn.getAttribute('data-user-log-ok') || '';
+                listOverlay.querySelectorAll('[data-user-log-ok]').forEach(function (btn) {
+                    btn.classList.toggle('is-active', btn === filterBtn);
+                });
+                resetCursors();
+                loadLogs();
+                return;
+            }
+            var item = e.target.closest('[data-id]');
+            if (item && listEl.contains(item)) {
+                openDetail(item.getAttribute('data-id'));
+            }
+        });
+
+        if (pagerNav) {
+            pagerNav.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-p]');
+                if (!btn || btn.disabled) return;
+                var dir = parseInt(btn.getAttribute('data-p'), 10);
+                if (dir < 0 && page > 1) {
+                    page -= 1;
+                    loadLogs();
+                } else if (dir > 0 && hasMore) {
+                    page += 1;
+                    loadLogs();
+                }
+            });
+        }
+
+        if (pageSizeEl) {
+            pageSizeEl.addEventListener('change', function () {
+                resetCursors();
+                loadLogs();
+            });
+        }
+
+        window.VsUsersLogs = { open: open };
     })();
 
     if (pageSizeEl && !pageSizeEl.value) {

@@ -4,8 +4,12 @@ $api = isset($api) && is_array($api) ? $api : null;
 $notFound = !empty($notFound) || $api === null;
 $vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
 $methods = (!$notFound && isset($api['methods']) && is_array($api['methods'])) ? $api['methods'] : array('GET');
+$isDisabled = !$notFound && !empty($api['disabled']);
+$isMaintenance = !$notFound && !empty($api['maintenance']);
+$endpointDisplay = (!$notFound && isset($api['endpoint'])) ? (string) $api['endpoint'] : '';
+$endpointBlurText = 'https://••••••••••••/api/v1/••••••••';
 ?>
-<main class="st-main st-main--page" id="stApiDetailPage">
+<main class="st-main st-main--page" id="stApiDetailPage" data-disabled="<?php echo $isDisabled ? '1' : '0'; ?>">
 <div class="st-wrap">
 <section class="st-detail">
     <nav class="st-detail__crumb" aria-label="面包屑">
@@ -30,7 +34,9 @@ $methods = (!$notFound && isset($api['methods']) && is_array($api['methods'])) ?
             <?php foreach ($methods as $m): ?>
             <span class="st-api-card__method st-api-card__method--<?php echo vs_e(strtolower(trim((string) $m))); ?>"><?php echo vs_e(strtoupper(trim((string) $m))); ?></span>
             <?php endforeach; ?>
-            <?php if (!empty($api['maintenance'])): ?>
+            <?php if ($isDisabled): ?>
+            <span class="st-detail__chip st-detail__chip--disabled">已禁用</span>
+            <?php elseif ($isMaintenance): ?>
             <span class="st-detail__chip st-detail__chip--warn">维护中</span>
             <?php else: ?>
             <span class="st-detail__chip">免费</span>
@@ -49,16 +55,26 @@ $methods = (!$notFound && isset($api['methods']) && is_array($api['methods'])) ?
         <?php endif; ?>
     </header>
 
-    <?php if (!empty($api['endpoint'])): ?>
+    <?php if ($isDisabled): ?>
+    <div class="st-detail__notice st-detail__notice--danger">该接口已被禁用，调用地址已隐藏，暂时无法请求。</div>
+    <?php elseif ($isMaintenance): ?>
+    <div class="st-detail__notice st-detail__notice--warn">当前接口维护中，暂时无法调用。</div>
+    <?php endif; ?>
+
+    <?php if ($endpointDisplay !== '' || $isDisabled): ?>
     <div class="st-detail__panel">
         <h2 class="st-detail__h">调用地址</h2>
-        <code class="st-detail__endpoint" id="stDetailEndpoint"><?php echo vs_e($api['endpoint']); ?></code>
+        <?php if ($isDisabled): ?>
+        <code class="st-detail__endpoint is-blurred" id="stDetailEndpoint" title="接口已禁用，调用地址已隐藏"><?php echo vs_e($endpointBlurText); ?></code>
+        <?php else: ?>
+        <code class="st-detail__endpoint" id="stDetailEndpoint"><?php echo vs_e($endpointDisplay); ?></code>
         <div class="st-detail__actions st-detail__actions--inline">
-            <button type="button" class="st-detail__btn" id="stDetailCopyBtn" data-copy="<?php echo vs_e($api['endpoint']); ?>">复制地址</button>
-            <?php if (empty($api['maintenance'])): ?>
-            <a class="st-detail__btn st-detail__btn--primary" href="<?php echo vs_e($api['endpoint']); ?>" target="_blank" rel="noopener noreferrer">打开接口</a>
+            <button type="button" class="st-detail__btn" id="stDetailCopyBtn" data-copy="<?php echo vs_e($endpointDisplay); ?>">复制地址</button>
+            <?php if (!$isMaintenance): ?>
+            <a class="st-detail__btn st-detail__btn--primary" href="<?php echo vs_e($endpointDisplay); ?>" target="_blank" rel="noopener noreferrer">打开接口</a>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 

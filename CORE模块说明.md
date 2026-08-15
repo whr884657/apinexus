@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.7**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.8**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -171,7 +171,7 @@ core/
 | 积分与支付 | `PointsManager` / `PointsNotify` / `OrderManager` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到 / 控制台） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；注册赠送 / 每日签到；积分归零/充值成功邮件；表 `orders` + `checkin`） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` / `Auth` | `UserAuth` + `FrontendUser`；管理员 `Auth::loginById` | `user/`、`admin/login.php`、`admin/users.php` | ✅ 是 | **已完成**（含角色；**13.26.7** 双端邮箱验证码登录） |
-| 用户控制台统计 | `UserStat7Manager` / `ApiKeyManager` / `ApiLogManager` | `FrontendUser::dashboardStats` / `myLogsPaged` | `user/index.php`、`user/logs.php`、双主题 dashboard/logs | ✅ 是 | **已完成（13.26.7）**：`user.stat7`、密钥 `pointsspent`、本人日志白名单 |
+| 用户控制台统计 | `UserStat7Manager` / `ApiKeyManager` / `ApiLogManager` | `FrontendUser::dashboardStats` / `myLogsPaged` | `user/index.php`、`user/logs.php`、双主题 dashboard/logs | ✅ 是 | **已完成（13.26.7 数据 / 13.26.8 UI）**：`user.stat7`、密钥 `pointsspent`、本人日志白名单；控制台 KPI 7/8、排行更名与定高内滚 |
 | 注册策略 | `RegisterPolicy` | （入口注入 `$registerOpen` 等） | `admin/settings`、`user/register.php` | 入口/后台 | **已完成**（开放/关停、邮箱验证、后缀白名单 `register_policy`） |
 | 验证码 | `Captcha` + `captcha/*` | `vs_captcha_field` / `vs_captcha_js`（`captcha/helper.php`） | 系统设置分端 mode；`captcha/image.php` | 认证页 | **已完成**（local / gt3 / gt4；场景 SCENE_USER_*；v13.26.6 大小写不敏感 + 首次 focus 换图） |
 | 站点地图 | `Sitemap` | — | 根 `sitemap.php` → `/sitemap.xml` | SEO | **已完成**（四处伪静态同步 + `robots.txt`） |
@@ -188,7 +188,7 @@ core/
 | Redis 缓存 | — | `RedisService` / `RedisCache` / `DashboardStats` / `StatDayManager` | `admin/system/redis.php`、`admin/index.php`、`admin/screen.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 今日调用←statday / 控制台 `cache:dashboard:*` + `statday` 日聚合） |
 | 贡献者 | `FrontendContributor` | `FrontendContributor` | `contributors.php`、`profile.php`、`core/ping.php` | ✅ 是 | **已完成**（开发者卡片、公开主页、加入时间、壁纸、延迟检测） |
 | 主题资源 / 媒体 | `ThemeManager` / `SiteMedia` | （主题 layout 调用） | 各主题 `assets/shell|js|css`（逐文件 link/script） | ✅ 是 | **已完成**（双主题完全隔离；逐文件加载；图标经 SiteMedia） |
-| 用户控制台问候 | `UserDashHello` | — | `user/index`（双主题） | 用户中心 | **已完成**（12×2h 槽 + 打字动效） |
+| 用户控制台问候 | `UserDashHello` | — | `user/index`（双主题） | 用户中心 | **已完成**（24×1h 槽 + 打字动效；头像点击抖动） |
 
 > 上表「待开发」项：须先完成 `XxxManager` + `FrontendXxx` 并注册 bootstrap，主题才能接入；在此之前主题页仅能做静态占位。
 
@@ -276,7 +276,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `UserAuth.php` | **用户**登录、注册、重置密码 |
 | `UserRole.php` | 用户角色常量与权限判断（普通用户/开发者） |
 | `FrontendUser.php` | 前台用户资料调度（用户名、头像、简介、博客、壁纸、角色）；`dashboardStats()` 控制台汇总；`myLogsPaged()` 本人日志 |
-| `UserDashHello.php` | 用户控制台按时段问候（12 个 2 小时槽；文案池随机；双主题共用） |
+| `UserDashHello.php` | 用户控制台按时段问候（24 个 1 小时槽；文案池随机；双主题共用） |
 | `SiteMedia.php` | 内置图片出站 URL（`assets/img/` 物理文件；主题禁止手写路径） |
 | `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间；`bio_custom` 标记是否自填简介；归属含绑定身份下历史 userid=0） |
 | `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据 |
@@ -306,12 +306,12 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer` |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
-| `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser） |
+| `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser；含 calls/cost/success_rate） |
 | `DashboardStats.php` | 控制台/大屏 KPI·趋势·TOP·live（含 TOP live / 服务器监控快照，**v13.4.0 / v13.16.0**）；geo 飞线三色 |
 | `PanelMonitor.php` | 宝塔 / 1Panel 面板监控客户端；控制台「服务器」卡片快照与测试连接（**v13.16.0**） |
 | `GeoCityCoords.php` | 大屏飞线全量城市坐标库；`resolveCityName` 地级优先 + 剥离运营商尾缀（v13.0.0 / **v13.2.0**） |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD；含 `pointsspent` 密钥累计消耗与 `adjustPointsspent` |
-| `ApiLogManager.php` | API 调用日志：keyset 翻页、热冷合并；管理端搜用户名先解析 `user.id`；用户侧 `formatUserSafeRow` / `listForUser` / `recentForUser`；LIKE 须转义+`ESCAPE`（E243） |
+| `ApiLogManager.php` | API 调用日志：keyset 翻页、热冷合并；管理端搜用户名先解析 `user.id`；`listPaged` 支持 `userid`；用户侧 `formatUserSafeRow`（含 IP/归属地）/ `listForUser` / `recentForUser`；LIKE 须转义+`ESCAPE`（E243） |
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片；冷库搜索同步 `user_ids` 与 LIKE 转义 |
 | `ApiFeedbackManager.php` / `FrontendFeedback.php` / `FeedbackNotify.php` | 接口反馈后台 CRUD / 前台提交 / 邮件通知 |
 | `ContentManager.php` | 文章/公告内容 CRUD（kind 区分） |
@@ -1127,7 +1127,7 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 ### 4.24e UserDashHello.php（用户控制台问候）
 
-**作用：** 用户中心控制台按时段问候。12 个 2 小时槽（0–1 … 22–23）；每槽多条 hello/hint，每次随机；双主题共用文案池。**4–5 点属「凌晨」槽，不写「早上好」。**
+**作用：** 用户中心控制台按时段问候。**24 个 1 小时槽**（00 … 23）；每槽多条 hello/hint，每次随机；双主题共用文案池。**4–5 点属「凌晨」槽，不写「早上好」。**
 
 | 方法 | 说明 |
 |------|------|
@@ -1586,7 +1586,9 @@ $todayCalls = FrontendStats::todayCallCount();
 | `myLogsPaged($opts)` | 本人调用日志分页（白名单字段） |
 
 **用户字段：** `id, username, email, avatar, bio, blog, wallpaper, role, role_label, can_publish_api, points, createtime, lastlogin, profile_url`  
-**dashboardStats：** `points, points_spent, email, createtime, lastlogin, role_label, can_publish_api, api_total, api_approved, api_pending, api_rejected, api_calls, key_total, key_calls, stat7, recent, detail_enabled, checkin_enabled, checked_today`（`stat7` 含今日/日均/折线序列/热门名；`recent` 近 20 条白名单；须登录；主题禁止直查库）  
+**dashboardStats：** `points, points_spent, email, createtime, lastlogin, role_label, can_publish_api, api_total, api_approved, api_pending, api_rejected, api_calls, key_total, key_calls, stat7, recent, detail_enabled, checkin_enabled, checked_today`（`stat7` 含今日/日均/折线序列/**本人近 7 日调用排行 top**；`recent` 近若干条白名单；视图已不展示令牌总数 KPI，字段仍可返回；须登录；主题禁止直查库）
+
+**findForThemeById：** 详情允许**已审核且已禁用**（`disabled=1`，真实 endpoint 清空由主题模糊占位）；列表 `listForTheme` 仍排除禁用。
 **myLogsPaged：** 仅当前会话用户；禁止客户端指定 userid；无详情接口
 
 问候文案：`UserDashHello::pick($displayName)` → `{hello, hint, slot, hour}`。

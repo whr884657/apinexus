@@ -472,6 +472,34 @@ body.st-drawer-open {
     border-color: rgba(185, 28, 28, 0.25);
     background: rgba(254, 226, 226, 0.7);
 }
+.st-detail__chip--disabled {
+    color: #475569;
+    border-color: rgba(100, 116, 139, 0.35);
+    background: rgba(148, 163, 184, 0.18);
+}
+.st-detail__notice {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.55;
+}
+.st-detail__notice--warn {
+    color: #9a3412;
+    background: rgba(254, 215, 170, 0.45);
+    border: 1px solid rgba(234, 88, 12, 0.28);
+}
+.st-detail__notice--danger {
+    color: #991b1b;
+    background: rgba(254, 226, 226, 0.7);
+    border: 1px solid rgba(185, 28, 28, 0.28);
+}
+.st-detail__endpoint.is-blurred {
+    filter: blur(5px);
+    user-select: none;
+    pointer-events: none;
+    opacity: 0.85;
+}
 
 .st-detail__title {
     font-size: clamp(22px, 4vw, 28px);

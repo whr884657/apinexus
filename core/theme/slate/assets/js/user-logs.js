@@ -1,5 +1,5 @@
 /**
- * 用户调用日志（keyset；无详情；双主题共用逻辑副本）
+ * 用户调用日志（keyset；IP+归属地卡片；双主题共用逻辑副本）
  */
 (function () {
     'use strict';
@@ -65,24 +65,37 @@
         }
     }
 
+    function cardHtml(row, index) {
+        var ip = row.ip ? String(row.ip) : '—';
+        var loc = row.iploc ? String(row.iploc) : '';
+        var delay = Math.min(index, 12) * 0.035;
+        return '<article class="uc-log-card uc-motion" style="--uc-log-delay:' + delay + 's">'
+            + '<div class="uc-log-card__top">'
+            + '<strong class="uc-log-card__name" title="' + escapeHtml(row.apiname || '') + '">'
+            + escapeHtml(row.apiname || '—') + '</strong>'
+            + '<span class="uc-log-card__ok ' + escapeHtml(row.ok_class || '') + '">'
+            + escapeHtml(row.ok_label || '') + '</span>'
+            + '</div>'
+            + '<div class="uc-log-card__meta">'
+            + '<time class="uc-log-card__time">' + escapeHtml(row.createtime || '—') + '</time>'
+            + '</div>'
+            + '<div class="uc-log-card__ip">'
+            + '<span class="uc-log-card__ip-addr" title="' + escapeHtml(ip) + '">' + escapeHtml(ip) + '</span>'
+            + (loc
+                ? ('<span class="uc-log-card__ip-loc" title="' + escapeHtml(loc) + '">' + escapeHtml(loc) + '</span>')
+                : '<span class="uc-log-card__ip-loc is-empty">归属地暂无</span>')
+            + '</div>'
+            + '</article>';
+    }
+
     function renderList(list) {
         if (!list || !list.length) {
             body.innerHTML = '<p class="uc-logs__empty">暂无调用记录</p>';
             return;
         }
-        var rows = list.map(function (row) {
-            return '<div class="uc-logs__row">'
-                + '<span class="uc-logs__name" title="' + escapeHtml(row.apiname || '') + '">'
-                + escapeHtml(row.apiname || '—') + '</span>'
-                + '<span class="uc-logs__time">' + escapeHtml(row.createtime || '') + '</span>'
-                + '<span class="uc-logs__ip">' + escapeHtml(row.ip || '—') + '</span>'
-                + '<span class="uc-logs__ok ' + escapeHtml(row.ok_class || '') + '">'
-                + escapeHtml(row.ok_label || '') + '</span>'
-                + '</div>';
-        }).join('');
-        body.innerHTML = '<div class="uc-logs__table">'
-            + '<div class="uc-logs__row uc-logs__row--head"><span>接口</span><span>时间</span><span>IP</span><span>状态</span></div>'
-            + rows + '</div>';
+        body.innerHTML = '<div class="uc-logs__cards">'
+            + list.map(cardHtml).join('')
+            + '</div>';
     }
 
     function load() {

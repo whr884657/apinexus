@@ -37,21 +37,36 @@
     animation: vsModalIn 0.22s ease;
 }
 
-/* 大屏 / 许可协议：可滚动正文 */
+/* 大屏 / 许可协议 / 系统更新：可滚动正文 */
 .vs-modal.vs-modal--lg,
-.vs-modal.vs-modal--license {
+.vs-modal.vs-modal--license,
+.vs-modal.vs-modal--update {
     max-width: min(720px, calc(100vw - 40px));
     max-height: min(88vh, 840px);
     display: flex;
     flex-direction: column;
 }
 
+/* 电脑端更新弹窗：偏横向宽版，避免瘦高竖条 */
+.vs-modal.vs-modal--update {
+    max-width: min(760px, calc(100vw - 48px));
+    max-height: min(70vh, 520px);
+    width: 100%;
+}
+
 .vs-modal--lg .vs-modal__body,
-.vs-modal--license .vs-modal__body {
+.vs-modal--license .vs-modal__body,
+.vs-modal--update .vs-modal__body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+}
+
+.vs-modal--lg .vs-modal__foot,
+.vs-modal--license .vs-modal__foot,
+.vs-modal--update .vs-modal__foot {
+    flex-shrink: 0;
 }
 
 /* 无按钮时隐藏脚（系统更新进度等）；不强制固定弹窗高度 */
@@ -131,7 +146,7 @@
     color: #9ca3af;
 }
 
-/* 手机端：统一抽屉式底部弹层 */
+/* 手机端：统一抽屉式底部弹层（正文可滚，底栏按钮常显） */
 @media (max-width: 768px) {
     .vs-modal-root {
         align-items: flex-end;
@@ -145,12 +160,28 @@
         max-height: var(--vs-mobile-drawer-height, 85vh);
         border-radius: 16px 16px 0 0;
         animation: vsModalDrawerIn 0.24s ease;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
 
     .vs-modal.vs-modal--lg,
-    .vs-modal.vs-modal--license {
+    .vs-modal.vs-modal--license,
+    .vs-modal.vs-modal--update {
         max-width: none;
         max-height: var(--vs-mobile-drawer-height, 88vh);
+    }
+
+    .vs-modal-root .vs-modal__body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .vs-modal-root .vs-modal__head,
+    .vs-modal-root .vs-modal__foot {
+        flex-shrink: 0;
     }
 }
 

@@ -70,6 +70,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ));
     }
 
+    if ($action === 'user_logs') {
+        if (!class_exists('ApiLogManager') || !ApiLogManager::tableReady()) {
+            AjaxResponse::error('日志功能尚未就绪');
+        }
+        $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+        $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
+        $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
+        $ok = array_key_exists('ok', $_POST) && $_POST['ok'] !== '' ? $_POST['ok'] : null;
+        $paged = ApiLogManager::listPaged(array(
+            'page'      => $page,
+            'pagesize'  => $pagesize,
+            'before_id' => $beforeId,
+            'ok'        => $ok,
+            'userid'    => $userId,
+            'q'         => '',
+            'apiid'     => 0,
+        ));
+        AjaxResponse::success('ok', array(
+            'action'         => 'user_logs',
+            'user_id'        => $userId,
+            'list'           => $paged['list'],
+            'total'          => $paged['total'],
+            'page'           => $paged['page'],
+            'pagesize'       => $paged['pagesize'],
+            'before_id'      => $paged['before_id'],
+            'next_before_id' => $paged['next_before_id'],
+            'has_more'       => $paged['has_more'],
+            'total_approx'   => !empty($paged['total_approx']),
+        ));
+    }
+
+    if ($action === 'user_log_detail') {
+        if (!class_exists('ApiLogManager') || !ApiLogManager::tableReady()) {
+            AjaxResponse::error('日志功能尚未就绪');
+        }
+        $logId = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+        if ($logId <= 0) {
+            AjaxResponse::error('无效日志');
+        }
+        $row = ApiLogManager::findById($logId);
+        if ($row === null) {
+            AjaxResponse::error('记录不存在');
+        }
+        if ((int) (isset($row['userid']) ? $row['userid'] : 0) !== $userId) {
+            AjaxResponse::error('记录不属于该用户');
+        }
+        AjaxResponse::success('ok', array(
+            'action'  => 'user_log_detail',
+            'user_id' => $userId,
+            'row'     => $row,
+        ));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
@@ -201,6 +254,8 @@ function vs_users_role_badge(array $row)
 /**
  * @param int    $userId
  * @param string $role
+ * @param string $label
+ * @param string $class
  * @return string
  */
 function vs_users_role_button($userId, $role, $label, $class)
@@ -220,6 +275,9 @@ function vs_users_action_group($userId, $active, array $row)
 {
     $role = UserRole::normalize(isset($row['role']) ? $row['role'] : UserRole::ROLE_USER);
     $html = '<div class="vs-users-actions">';
+    $html .= '<button type="button" class="vs-btn vs-btn--pill vs-btn--pill-secondary vs-user-action-btn"'
+        . ' data-user-action="view_logs" data-user-id="' . (int) $userId . '"'
+        . ' data-user-name="' . vs_e(isset($row['username']) ? $row['username'] : '') . '">调用日志</button>';
     if ($active) {
         $html .= vs_users_action_button($userId, 'ban', '封禁', 'vs-btn--pill-danger');
     } else {
@@ -319,7 +377,8 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                         <tr class="<?php echo $active ? '' : 'vs-users-row--banned'; ?>" data-user-row="<?php echo $uid; ?>"
                             data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>"
                             data-user-role="<?php echo vs_e($userRole); ?>"
-                            data-user-status="<?php echo $active ? '1' : '0'; ?>">
+                            data-user-status="<?php echo $active ? '1' : '0'; ?>"
+                            data-user-name="<?php echo vs_e($row['username']); ?>">
                             <td>
                                 <div class="vs-users-cell-user">
                                     <img src="<?php echo vs_e($avatar); ?>" alt="" class="vs-users-avatar">
@@ -368,7 +427,8 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                 <article class="vs-user-card<?php echo $active ? '' : ' vs-user-card--banned'; ?>" data-user-row="<?php echo $uid; ?>"
                          data-search="<?php echo vs_e(vs_users_search_blob($row)); ?>"
                          data-user-role="<?php echo vs_e($userRole); ?>"
-                         data-user-status="<?php echo $active ? '1' : '0'; ?>">
+                         data-user-status="<?php echo $active ? '1' : '0'; ?>"
+                         data-user-name="<?php echo vs_e($row['username']); ?>">
                     <div class="vs-user-card__head">
                         <img src="<?php echo vs_e($avatar); ?>" alt="" class="vs-users-avatar">
                         <div class="vs-user-card__main">
@@ -401,6 +461,9 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                         </div>
                     </div>
                     <div class="vs-user-card__actions">
+                        <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-secondary vs-user-action-btn"
+                                data-user-action="view_logs" data-user-id="<?php echo $uid; ?>"
+                                data-user-name="<?php echo vs_e($row['username']); ?>">调用日志</button>
                         <?php if ($active): ?>
                             <?php echo vs_users_action_button($uid, 'ban', '封禁', 'vs-btn--pill-danger'); ?>
                         <?php else: ?>
@@ -471,5 +534,61 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
     </div>
 </div>
 <?php endif; ?>
+
+<div class="vs-overlay vs-overlay--lg" id="usersLogsOverlay" hidden aria-hidden="true">
+    <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
+    <div class="vs-overlay__panel" role="dialog" aria-modal="true" aria-labelledby="usersLogsTitle">
+        <div class="vs-overlay__handle" aria-hidden="true"></div>
+        <header class="vs-overlay__head">
+            <h3 class="vs-overlay__title" id="usersLogsTitle">用户调用日志</h3>
+            <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
+        </header>
+        <div class="vs-overlay__body vs-users-logs-body">
+            <div class="vs-users-logs-toolbar">
+                <div class="vs-users-logs-filters" role="group" aria-label="状态筛选">
+                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline is-active" data-user-log-ok="">全部</button>
+                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-user-log-ok="1">成功</button>
+                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-user-log-ok="0">失败</button>
+                </div>
+                <label class="vs-api-list-pagesize" for="usersLogsPageSize">
+                    <span class="vs-api-list-pagesize__label">每页</span>
+                    <select class="vs-input vs-select" id="usersLogsPageSize" data-vs-pick="sheet">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                    </select>
+                </label>
+            </div>
+            <div class="vs-users-logs-list" id="usersLogsList">
+                <?php vs_render_loading('正在加载日志', array('compact' => true)); ?>
+            </div>
+            <div class="vs-users-logs-footer" id="usersLogsFooter" hidden>
+                <div class="vs-api-pager__navs" id="usersLogsPagerNav"></div>
+                <div class="vs-api-list-total" id="usersLogsTotal"></div>
+            </div>
+        </div>
+        <footer class="vs-overlay__foot">
+            <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">关闭</button>
+        </footer>
+    </div>
+</div>
+
+<div class="vs-overlay vs-overlay--lg" id="usersLogDetailOverlay" hidden aria-hidden="true">
+    <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
+    <div class="vs-overlay__panel" role="dialog" aria-modal="true" aria-labelledby="usersLogDetailTitle">
+        <div class="vs-overlay__handle" aria-hidden="true"></div>
+        <header class="vs-overlay__head">
+            <h3 class="vs-overlay__title" id="usersLogDetailTitle">调用详情</h3>
+            <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
+        </header>
+        <div class="vs-overlay__body" id="usersLogDetailBody">
+            <?php vs_render_loading('正在加载详情', array('compact' => true)); ?>
+        </div>
+        <footer class="vs-overlay__foot">
+            <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">关闭</button>
+        </footer>
+    </div>
+</div>
 
 <?php vs_admin_layout_end(array('users.js')); ?>

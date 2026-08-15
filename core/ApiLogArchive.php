@@ -918,12 +918,17 @@ class ApiLogArchive
                 $bind[] = (int) $ok;
             }
             if ($q !== '' || $userIds !== array()) {
-                $parts = array();
+                // q 与 userid 必须 AND：禁止 OR 导致「搜到别的用户」串读
                 if ($q !== '') {
-                    $parts[] = '(
-                        `apiname` LIKE ? ESCAPE \'\\\\\' OR `path` LIKE ? ESCAPE \'\\\\\' OR `ip` LIKE ? ESCAPE \'\\\\\' OR `url` LIKE ? ESCAPE \'\\\\\'
-                        OR `apikey` LIKE ? ESCAPE \'\\\\\' OR `domain` LIKE ? ESCAPE \'\\\\\' OR `iploc` LIKE ? ESCAPE \'\\\\\'
-                    )';
+                    $qParts = array(
+                        '`apiname` LIKE ? ESCAPE \'\\\\\'',
+                        '`path` LIKE ? ESCAPE \'\\\\\'',
+                        '`ip` LIKE ? ESCAPE \'\\\\\'',
+                        '`url` LIKE ? ESCAPE \'\\\\\'',
+                        '`apikey` LIKE ? ESCAPE \'\\\\\'',
+                        '`domain` LIKE ? ESCAPE \'\\\\\'',
+                        '`iploc` LIKE ? ESCAPE \'\\\\\'',
+                    );
                     $like = function_exists('vs_sql_like_contains')
                         ? vs_sql_like_contains($q)
                         : ('%' . addcslashes($q, "\\%_") . '%');
@@ -931,19 +936,17 @@ class ApiLogArchive
                         $bind[] = $like;
                     }
                     if (ctype_digit($q)) {
-                        $parts[] = '`id` = ?';
+                        $qParts[] = '`id` = ?';
                         $bind[] = (int) $q;
                     }
+                    $where[] = '(' . implode(' OR ', $qParts) . ')';
                 }
                 if ($userIds !== array()) {
                     $ph = implode(',', array_fill(0, count($userIds), '?'));
-                    $parts[] = '`userid` IN (' . $ph . ')';
+                    $where[] = '`userid` IN (' . $ph . ')';
                     foreach ($userIds as $uid) {
                         $bind[] = (int) $uid;
                     }
-                }
-                if ($parts !== array()) {
-                    $where[] = '(' . implode(' OR ', $parts) . ')';
                 }
             }
             $sql = 'SELECT * FROM `log` WHERE ' . implode(' AND ', $where) . ' ORDER BY `id` DESC LIMIT ' . $limit;

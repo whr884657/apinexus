@@ -1,6 +1,6 @@
 <?php
 /**
- * 默认主题 · 用户中心控制台
+ * 默认主题 · 用户中心控制台（v13.26.8）
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
@@ -20,6 +20,7 @@ $days = isset($stat7['days']) && is_array($stat7['days']) ? $stat7['days'] : arr
 $labels = isset($days['labels']) && is_array($days['labels']) ? $days['labels'] : array();
 $callsSeries = isset($days['calls']) && is_array($days['calls']) ? $days['calls'] : array();
 $costSeries = isset($days['cost']) && is_array($days['cost']) ? $days['cost'] : array();
+$rateSeries = isset($days['success_rate']) && is_array($days['success_rate']) ? $days['success_rate'] : array();
 $labelShort = array();
 foreach ($labels as $lb) {
     $lb = (string) $lb;
@@ -29,7 +30,13 @@ $todayCalls = isset($stat7['today_calls']) ? (int) $stat7['today_calls'] : 0;
 $todayCostFmt = isset($stat7['today_cost_fmt']) ? (string) $stat7['today_cost_fmt'] : '0';
 $avgCalls = isset($stat7['avg_calls']) ? $stat7['avg_calls'] : 0;
 $topList = isset($stat7['top']) && is_array($stat7['top']) ? $stat7['top'] : array();
+if (count($topList) > 8) {
+    $topList = array_slice($topList, 0, 8);
+}
 $recent = isset($dash['recent']) && is_array($dash['recent']) ? $dash['recent'] : array();
+if (count($recent) > 12) {
+    $recent = array_slice($recent, 0, 12);
+}
 $detailEnabled = !empty($dash['detail_enabled']);
 $maxTopCalls = 1;
 foreach ($topList as $t) {
@@ -40,11 +47,13 @@ foreach ($topList as $t) {
 }
 
 $chartBoot = array(
-    'labels' => $labelShort,
-    'calls'  => array_map('intval', $callsSeries),
-    'cost'   => array_map(function ($v) { return round((float) $v, 4); }, $costSeries),
+    'labels'       => $labelShort,
+    'calls'        => array_map('intval', $callsSeries),
+    'cost'         => array_map(function ($v) { return round((float) $v, 4); }, $costSeries),
+    'success_rate' => array_map(function ($v) { return round((float) $v, 1); }, $rateSeries),
 );
 $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+$kpiClass = $isDeveloper ? ' is-eight' : ' is-seven';
 ?>
 
 <?php if (!empty($checkinBanner['show_banner'])): ?>
@@ -57,7 +66,9 @@ $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), EN
 <section class="uc-dash" id="ucDashboard" data-theme="default" data-chart-boot="<?php echo $bootAttr; ?>"<?php echo $helloSlot !== '' ? ' data-hello-slot="' . vs_e($helloSlot) . '"' : ''; ?>>
     <header class="uc-dash__hero uc-motion">
         <div class="uc-dash__hero-main">
-            <img class="uc-dash__avatar" src="<?php echo vs_e($avatarPreview); ?>" alt="用户头像" width="56" height="56" loading="lazy" referrerpolicy="no-referrer">
+            <div class="uc-dash__avatar-box" id="ucDashAvatarBox" title="点一点头像">
+                <img class="uc-dash__avatar" id="ucDashAvatarImg" src="<?php echo vs_e($avatarPreview); ?>" alt="用户头像" width="56" height="56" loading="lazy" referrerpolicy="no-referrer">
+            </div>
             <div class="uc-dash__hero-text">
                 <h2 class="uc-dash__hello" data-uc-hello><?php echo vs_e($helloLine); ?></h2>
                 <?php if ($helloHint !== ''): ?>
@@ -67,16 +78,21 @@ $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), EN
         </div>
     </header>
 
-    <div class="uc-dash__kpi<?php echo $isDeveloper ? ' is-six' : ' is-five'; ?>" aria-label="关键指标">
+    <div class="uc-dash__kpi<?php echo $kpiClass; ?>" aria-label="关键指标">
         <div class="uc-dash__kpi-card uc-motion" data-uc-press>
-            <span class="uc-dash__kpi-label">接口总数</span>
-            <strong class="uc-dash__kpi-value" data-field="api_total"><?php echo (int) (isset($dash['api_total']) ? $dash['api_total'] : 0); ?></strong>
-            <span class="uc-dash__kpi-meta">已通过 <?php echo (int) (isset($dash['api_approved']) ? $dash['api_approved'] : 0); ?> · 待审 <?php echo (int) (isset($dash['api_pending']) ? $dash['api_pending'] : 0); ?></span>
+            <span class="uc-dash__kpi-label">今日请求</span>
+            <strong class="uc-dash__kpi-value"><?php echo (int) $todayCalls; ?></strong>
+            <span class="uc-dash__kpi-meta">今日令牌调用次数</span>
         </div>
         <div class="uc-dash__kpi-card uc-motion" data-uc-press>
-            <span class="uc-dash__kpi-label">API 令牌</span>
-            <strong class="uc-dash__kpi-value" data-field="key_total"><?php echo (int) (isset($dash['key_total']) ? $dash['key_total'] : 0); ?></strong>
-            <span class="uc-dash__kpi-meta">当前密钥数量</span>
+            <span class="uc-dash__kpi-label">今日积分消耗</span>
+            <strong class="uc-dash__kpi-value"><?php echo vs_e($todayCostFmt); ?></strong>
+            <span class="uc-dash__kpi-meta">今日扣减合计</span>
+        </div>
+        <div class="uc-dash__kpi-card uc-motion" data-uc-press>
+            <span class="uc-dash__kpi-label">日均请求</span>
+            <strong class="uc-dash__kpi-value"><?php echo vs_e((string) $avgCalls); ?></strong>
+            <span class="uc-dash__kpi-meta">近 7 日合计 ÷ 7</span>
         </div>
         <div class="uc-dash__kpi-card uc-motion" data-uc-press>
             <span class="uc-dash__kpi-label">积分余额</span>
@@ -88,6 +104,16 @@ $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), EN
             <strong class="uc-dash__kpi-value" data-field="points_spent"><?php echo vs_e(isset($dash['points_spent']) ? $dash['points_spent'] : '0'); ?></strong>
             <span class="uc-dash__kpi-meta">历史扣减合计</span>
         </div>
+        <div class="uc-dash__kpi-card uc-motion" data-uc-press>
+            <span class="uc-dash__kpi-label">我的调用</span>
+            <strong class="uc-dash__kpi-value" data-field="key_calls"><?php echo (int) (isset($dash['key_calls']) ? $dash['key_calls'] : 0); ?></strong>
+            <span class="uc-dash__kpi-meta">令牌累计调用次数</span>
+        </div>
+        <div class="uc-dash__kpi-card uc-motion" data-uc-press>
+            <span class="uc-dash__kpi-label">接口总数</span>
+            <strong class="uc-dash__kpi-value" data-field="api_total"><?php echo (int) (isset($dash['api_total']) ? $dash['api_total'] : 0); ?></strong>
+            <span class="uc-dash__kpi-meta">已通过 <?php echo (int) (isset($dash['api_approved']) ? $dash['api_approved'] : 0); ?> · 待审 <?php echo (int) (isset($dash['api_pending']) ? $dash['api_pending'] : 0); ?></span>
+        </div>
         <?php if ($isDeveloper): ?>
         <div class="uc-dash__kpi-card uc-motion" data-uc-press>
             <span class="uc-dash__kpi-label">发布被调用</span>
@@ -95,26 +121,6 @@ $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), EN
             <span class="uc-dash__kpi-meta">我发布的接口累计</span>
         </div>
         <?php endif; ?>
-        <div class="uc-dash__kpi-card uc-motion" data-uc-press>
-            <span class="uc-dash__kpi-label">我的调用</span>
-            <strong class="uc-dash__kpi-value" data-field="key_calls"><?php echo (int) (isset($dash['key_calls']) ? $dash['key_calls'] : 0); ?></strong>
-            <span class="uc-dash__kpi-meta">令牌累计调用次数</span>
-        </div>
-    </div>
-
-    <div class="uc-dash__daykpi uc-motion" aria-label="近七日概览">
-        <div class="uc-dash__daykpi-card">
-            <span class="uc-dash__daykpi-label">今日请求</span>
-            <strong class="uc-dash__daykpi-value"><?php echo (int) $todayCalls; ?></strong>
-        </div>
-        <div class="uc-dash__daykpi-card">
-            <span class="uc-dash__daykpi-label">今日积分消耗</span>
-            <strong class="uc-dash__daykpi-value"><?php echo vs_e($todayCostFmt); ?></strong>
-        </div>
-        <div class="uc-dash__daykpi-card">
-            <span class="uc-dash__daykpi-label">日均请求</span>
-            <strong class="uc-dash__daykpi-value"><?php echo vs_e((string) $avgCalls); ?></strong>
-        </div>
     </div>
 
     <section class="uc-dash__charts uc-motion" aria-label="近七日趋势">
@@ -123,6 +129,7 @@ $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), EN
                 <h2 class="vs-panel__title">近 7 日调用量</h2>
                 <div class="uc-dash__legend">
                     <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--calls"></i>调用次数</span>
+                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--cost"></i>积分消耗</span>
                 </div>
             </div>
             <div class="vs-panel__body">
@@ -131,52 +138,25 @@ $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), EN
         </div>
         <div class="vs-panel uc-dash__panel">
             <div class="vs-panel__header uc-dash__panel-head">
-                <h2 class="vs-panel__title">近 7 日积分消耗</h2>
+                <h2 class="vs-panel__title">调用成功率</h2>
                 <div class="uc-dash__legend">
-                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--cost"></i>积分</span>
+                    <span class="uc-dash__legend-item"><i class="uc-dash__legend-line uc-dash__legend-line--rate"></i>成功率</span>
                 </div>
             </div>
             <div class="vs-panel__body">
-                <div class="uc-dash__chart-wrap" id="ucDashCostChart"></div>
+                <div class="uc-dash__chart-wrap" id="ucDashRateChart"></div>
             </div>
         </div>
     </section>
 
-    <section class="uc-dash__bottom uc-motion" aria-label="近期与热门">
-        <div class="vs-panel uc-dash__panel">
+    <section class="uc-dash__bottom uc-motion" aria-label="调用排行与近期">
+        <div class="vs-panel uc-dash__panel uc-dash__panel--scroll">
             <div class="vs-panel__header uc-dash__panel-head">
-                <h2 class="vs-panel__title">近期调用</h2>
-                <a class="uc-dash__more" href="<?php echo vs_e(vs_base_url() . '/user/logs'); ?>">全部日志</a>
+                <h2 class="vs-panel__title">近 7 日调用排行</h2>
             </div>
-            <div class="vs-panel__body">
-                <?php if (!$detailEnabled): ?>
-                    <p class="uc-dash__empty">管理员未开启调用明细，列表暂不可用；上方趋势仍可统计。</p>
-                <?php elseif (empty($recent)): ?>
-                    <p class="uc-dash__empty">暂无调用记录</p>
-                <?php else: ?>
-                    <div class="uc-dash__recent" role="list">
-                        <div class="uc-dash__recent-row uc-dash__recent-row--head" role="presentation">
-                            <span>接口</span><span>时间</span><span>IP</span><span>状态</span>
-                        </div>
-                        <?php foreach ($recent as $row): ?>
-                            <div class="uc-dash__recent-row" role="listitem">
-                                <span class="uc-dash__recent-name" title="<?php echo vs_e(isset($row['apiname']) ? $row['apiname'] : ''); ?>"><?php echo vs_e(isset($row['apiname']) && $row['apiname'] !== '' ? $row['apiname'] : '—'); ?></span>
-                                <span class="uc-dash__recent-time"><?php echo vs_e(isset($row['createtime']) ? $row['createtime'] : ''); ?></span>
-                                <span class="uc-dash__recent-ip"><?php echo vs_e(isset($row['ip']) && $row['ip'] !== '' ? $row['ip'] : '—'); ?></span>
-                                <span class="uc-dash__recent-ok <?php echo vs_e(isset($row['ok_class']) ? $row['ok_class'] : ''); ?>"><?php echo vs_e(isset($row['ok_label']) ? $row['ok_label'] : ''); ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        <div class="vs-panel uc-dash__panel">
-            <div class="vs-panel__header">
-                <h2 class="vs-panel__title">热门接口</h2>
-            </div>
-            <div class="vs-panel__body">
+            <div class="vs-panel__body uc-dash__scroll-body">
                 <?php if (empty($topList)): ?>
-                    <p class="uc-dash__empty">近 7 日暂无调用排行</p>
+                    <p class="uc-dash__empty">近 7 日暂无本人调用排行</p>
                 <?php else: ?>
                     <div class="uc-dash__bars">
                         <?php foreach ($topList as $i => $row):
@@ -193,6 +173,33 @@ $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), EN
                                     <span class="uc-dash__bar-count"><?php echo (int) $calls; ?></span>
                                 </div>
                                 <div class="uc-dash__bar-track"><div class="uc-dash__bar-fill" style="width:<?php echo (int) $pct; ?>%"></div></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div class="vs-panel uc-dash__panel uc-dash__panel--scroll">
+            <div class="vs-panel__header uc-dash__panel-head">
+                <h2 class="vs-panel__title">近期调用</h2>
+                <a class="uc-dash__more" href="<?php echo vs_e(vs_base_url() . '/user/logs'); ?>">全部日志</a>
+            </div>
+            <div class="vs-panel__body uc-dash__scroll-body">
+                <?php if (!$detailEnabled): ?>
+                    <p class="uc-dash__empty">管理员未开启调用明细，列表暂不可用；上方趋势仍可统计。</p>
+                <?php elseif (empty($recent)): ?>
+                    <p class="uc-dash__empty">暂无调用记录</p>
+                <?php else: ?>
+                    <div class="uc-dash__recent" role="list">
+                        <div class="uc-dash__recent-row uc-dash__recent-row--head" role="presentation">
+                            <span>接口</span><span>时间</span><span>IP</span><span>状态</span>
+                        </div>
+                        <?php foreach ($recent as $row): ?>
+                            <div class="uc-dash__recent-row" role="listitem">
+                                <span class="uc-dash__recent-name" title="<?php echo vs_e(isset($row['apiname']) ? $row['apiname'] : ''); ?>"><?php echo vs_e(isset($row['apiname']) && $row['apiname'] !== '' ? $row['apiname'] : '—'); ?></span>
+                                <span class="uc-dash__recent-time"><?php echo vs_e(isset($row['createtime']) ? $row['createtime'] : ''); ?></span>
+                                <span class="uc-dash__recent-ip"><?php echo vs_e(isset($row['ip']) && $row['ip'] !== '' ? $row['ip'] : '—'); ?></span>
+                                <span class="uc-dash__recent-ok <?php echo vs_e(isset($row['ok_class']) ? $row['ok_class'] : ''); ?>"><?php echo vs_e(isset($row['ok_label']) ? $row['ok_label'] : ''); ?></span>
                             </div>
                         <?php endforeach; ?>
                     </div>

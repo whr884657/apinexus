@@ -3,7 +3,8 @@
  * 文件：core/FrontendApi.php
  * 作用：前台主题 · 公开接口列表与详情（统一调度，主题只调用本类）
  *
- * 说明：仅输出审核通过且非禁用的接口；维护中输出 maintenance=1，主题应拦截请求并提示「维护中」。
+ * 说明：列表仅输出审核通过且非禁用的接口；详情允许已禁用（disabled=1，敏感地址脱敏）。
+ * 维护中输出 maintenance=1，主题应拦截请求并提示「维护中」。
  * 图标字段非主题通用，未接入图标展示的主题可忽略 icon。
  */
 
@@ -14,9 +15,10 @@ class FrontendApi
      *
      * @param array $row
      * @param bool  $withAuthor 仅详情需要；列表禁止拉取作者，避免 findProfile↔formatForTheme 递归爆内存
+     * @param bool  $forDetail  详情页允许已禁用（仍须审核通过）；列表保持排除
      * @return array|null
      */
-    public static function formatForTheme(array $row, $withAuthor = false)
+    public static function formatForTheme(array $row, $withAuthor = false, $forDetail = false)
     {
         $name = trim((string) (isset($row['name']) ? $row['name'] : ''));
         if ($name === '') {
@@ -24,7 +26,7 @@ class FrontendApi
         }
 
         $status = ApiManager::normalizeStatus(isset($row['status']) ? $row['status'] : ApiManager::STATUS_NORMAL);
-        if ($status === ApiManager::STATUS_DISABLED) {
+        if ($status === ApiManager::STATUS_DISABLED && !$forDetail) {
             return null;
         }
 
@@ -52,6 +54,12 @@ class FrontendApi
         $iconPath = self::siteAssetPathFromUrl($iconUrl);
         $apitype = ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0);
         $id = (int) (isset($row['id']) ? $row['id'] : 0);
+        $disabled = $status === ApiManager::STATUS_DISABLED ? 1 : 0;
+        if ($disabled) {
+            // 禁用详情仍可打开，但真实调用地址不下发（主题用模糊占位）；示例/文档可能含完整 URL，一并清空
+            $callPath = '';
+            $endpoint = '';
+        }
 
         return array(
             'id'          => $id,
@@ -67,9 +75,10 @@ class FrontendApi
             'apitype'     => $apitype,
             'params'      => isset($row['params']) ? (string) $row['params'] : '',
             'response'    => isset($row['response']) ? (string) $row['response'] : '',
-            'doc'         => isset($row['doc']) ? (string) $row['doc'] : '',
-            'aidoc'       => isset($row['aidoc']) ? (string) $row['aidoc'] : '',
+            'doc'         => $disabled ? '' : (isset($row['doc']) ? (string) $row['doc'] : ''),
+            'aidoc'       => $disabled ? '' : (isset($row['aidoc']) ? (string) $row['aidoc'] : ''),
             'maintenance' => $status === ApiManager::STATUS_MAINTENANCE ? 1 : 0,
+            'disabled'    => $disabled,
             'needkey'     => ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : 0),
             'needkey_label' => ApiManager::requireKeyLabel(isset($row['needkey']) ? $row['needkey'] : 0),
             'keyways'     => ApiManager::normalizeKeyways(isset($row['keyways']) ? $row['keyways'] : ApiManager::KEYWAY_QUERY),
@@ -402,7 +411,7 @@ class FrontendApi
     }
 
     /**
-     * 按 ID 取前台可展示的单条接口（审核通过且非禁用）
+     * 按 ID 取前台可展示的单条接口（审核通过；详情允许已禁用）
      *
      * @param int $apiId
      * @return array|null
@@ -417,7 +426,7 @@ class FrontendApi
         if (!is_array($row)) {
             return null;
         }
-        $item = self::formatForTheme($row, true);
+        $item = self::formatForTheme($row, true, true);
         return is_array($item) ? self::bindRequestHost($item) : null;
     }
 

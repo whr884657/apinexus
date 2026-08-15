@@ -271,6 +271,7 @@
             title: '发现新版本 v' + data.remote_version,
             html: buildUpdateHtml(data),
             closeOnOverlay: false,
+            size: 'update',
             buttons: buttons,
         });
     }

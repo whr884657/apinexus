@@ -74,10 +74,15 @@ if ($api === null) {
 
 $pageTitle = isset($api['name']) ? ((string) $api['name'] . ' · 接口详情') : '接口详情';
 $apiDesc = isset($api['desc']) ? trim((string) $api['desc']) : '';
-$seo = vs_page_seo_pack($pageTitle, array(
+$seoOpts = array(
     'description' => vs_seo_truncate($apiDesc !== '' ? $apiDesc : ($api['name'] . ' - 接口详情与在线测试')),
     'type'        => 'article',
-));
+);
+if (!empty($api['disabled'])) {
+    $seoOpts['robots'] = 'noindex,follow';
+    $seoOpts['description'] = vs_seo_truncate($api['name'] . ' · 该接口已禁用');
+}
+$seo = vs_page_seo_pack($pageTitle, $seoOpts);
 vs_frontend_page('detail', $pageTitle, array(
     'api'        => $api,
     'apiId'      => $apiId,
