@@ -1,11 +1,12 @@
 {
-    "version": "13.26.14",
-    "title": "ApiNexus 13.26.14 用户控制台折线对齐管理端",
-    "release_date": "2026-08-15",
+    "version": "13.26.15",
+    "title": "ApiNexus 13.26.15 近期调用排行与个人调用查询",
+    "release_date": "2026-08-16",
     "db_changes": false,
     "changes": [
-        "用户控制台近 7 日调用量改为密钥/积分双折线（对齐管理端类型趋势口径）",
-        "成功/失败率双线改为读日桶 fail_rate；无调用日两边为 0，修复失败率从 100% 起步",
-        "UserStat7 日桶增加 keycalls/pointscalls；双主题 default/slate 同步"
+        "用户控制台「近 7 日调用排行」更名为「近期调用排行」；右上角左右滑动切换今日/近7日（默认今日）",
+        "UserStat7 输出 top_today / top_7d；双主题 default/slate 同步",
+        "新增本地接口 api/index.php：凭密钥查询本人调用/积分与排行；请求仅 key+可选 q（字母 a～i 与数字 1～9 等价，all/0=全部）",
+        "新增 core/UserCallStats 与 ApiStats::keyContext；说明见 api/个人调用数据查询API接口文档.md"
     ]
 }

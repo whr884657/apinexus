@@ -1,5 +1,17 @@
 {
     "versions": {
+        "13.26.15": {
+            "title": "ApiNexus 13.26.15 近期调用排行与个人调用查询",
+            "date": "2026-08-16",
+            "db_changes": false,
+            "changes": [
+                "用户控制台「近 7 日调用排行」更名为「近期调用排行」",
+                "排行板块右上角增加左右滑动切换：默认今日接口排行，点击切近 7 日，再点回今日",
+                "UserStat7 输出 top_today / top_7d（top 仍兼容近 7 日）；双主题 default/slate 同步",
+                "新增本地接口 api/index.php：凭密钥查询本人调用/积分与排行；请求仅 key+可选 q（字母 a～i 与数字 1～9 等价，all/0=全部）",
+                "新增 core/UserCallStats 与 ApiStats::keyContext；说明见 api/个人调用数据查询API接口文档.md"
+            ]
+        },
         "13.26.14": {
             "title": "ApiNexus 13.26.14 用户控制台折线对齐管理端",
             "date": "2026-08-15",

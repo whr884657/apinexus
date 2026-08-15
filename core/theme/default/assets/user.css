@@ -400,7 +400,71 @@
     font-weight: 600;
 }
 .uc-dash__more:hover { text-decoration: underline; }
-/* 底部：近 7 日调用排行 + 近期调用（等高内滚） */
+/* 近期调用排行：今日 / 近7日左右滑动切换（圆角矩形，非胶囊） */
+.uc-dash__range-toggle {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    cursor: pointer;
+    line-height: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+.uc-dash__range-toggle:hover {
+    border-color: #cbd5e1;
+}
+.uc-dash__range-toggle:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+.uc-dash__range-toggle__track {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-width: 118px;
+    height: 28px;
+    padding: 2px;
+    box-sizing: border-box;
+}
+.uc-dash__range-toggle__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(50% - 2px);
+    height: calc(100% - 4px);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+    transition: transform 0.22s ease;
+    pointer-events: none;
+    z-index: 0;
+}
+.uc-dash__range-toggle.is-7d .uc-dash__range-toggle__thumb {
+    transform: translateX(100%);
+}
+.uc-dash__range-toggle__opt {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    user-select: none;
+    transition: color 0.18s ease;
+}
+.uc-dash__range-toggle__opt.is-on {
+    color: #0f172a;
+}
+@media (prefers-reduced-motion: reduce) {
+    .uc-dash__range-toggle__thumb {
+        transition: none;
+    }
+}
+/* 底部：近期调用排行 + 近期调用（等高内滚） */
 .uc-dash__bottom {
     display: grid;
     grid-template-columns: 1fr 1fr;

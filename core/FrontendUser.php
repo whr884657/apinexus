@@ -238,21 +238,24 @@ class FrontendUser
     }
 
     /**
-     * 热门接口补名称（仅读 api 表 id→name）
+     * 调用排行补名称（仅读 api 表 id→name；覆盖 top / top_today / top_7d）
      *
      * @param array $stat7
      * @return array
      */
     private static function enrichStat7Top(array $stat7)
     {
-        if (empty($stat7['top']) || !is_array($stat7['top'])) {
-            return $stat7;
-        }
+        $keys = array('top', 'top_today', 'top_7d');
         $ids = array();
-        foreach ($stat7['top'] as $row) {
-            $id = isset($row['apiid']) ? (int) $row['apiid'] : 0;
-            if ($id > 0) {
-                $ids[$id] = true;
+        foreach ($keys as $key) {
+            if (empty($stat7[$key]) || !is_array($stat7[$key])) {
+                continue;
+            }
+            foreach ($stat7[$key] as $row) {
+                $id = isset($row['apiid']) ? (int) $row['apiid'] : 0;
+                if ($id > 0) {
+                    $ids[$id] = true;
+                }
             }
         }
         $nameMap = array();
@@ -272,13 +275,18 @@ class FrontendUser
                 $nameMap = array();
             }
         }
-        foreach ($stat7['top'] as &$row) {
-            $aid = isset($row['apiid']) ? (int) $row['apiid'] : 0;
-            $row['name'] = isset($nameMap[$aid]) && $nameMap[$aid] !== ''
-                ? $nameMap[$aid]
-                : ('接口 #' . $aid);
+        foreach ($keys as $key) {
+            if (empty($stat7[$key]) || !is_array($stat7[$key])) {
+                continue;
+            }
+            foreach ($stat7[$key] as &$row) {
+                $aid = isset($row['apiid']) ? (int) $row['apiid'] : 0;
+                $row['name'] = isset($nameMap[$aid]) && $nameMap[$aid] !== ''
+                    ? $nameMap[$aid]
+                    : ('接口 #' . $aid);
+            }
+            unset($row);
         }
-        unset($row);
         return $stat7;
     }
 }

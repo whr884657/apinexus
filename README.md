@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.14-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.15-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -27,7 +27,7 @@
 - Web **六步**安装向导（伪静态 → 环境 → 数据库 → 建表 → 管理员 → 完成），自动创建数据表与初始配置；同机多站可配缓存键前缀
 - **双端认证**：管理员后台与用户中心均支持**账号密码 / 邮箱验证码**登录；用户注册可用邮箱验证码；支持 QQ / Gitee 第三方登录
 - **API 管理**：后台接口列表 / 审核 / 分类 / 令牌 / 文档 / 反馈；用户中心开发者投稿与邮件通知
-- **调用统计**：本地接口脚本可接入统计；代理短码访问自动记账（说明见 `api/统计代码使用说明.md`）；用户近 7 日聚合与密钥累计消耗
+- **调用统计**：本地接口脚本可接入统计；代理短码访问自动记账（说明见 `api/统计代码使用说明.md`）；用户近 7 日聚合与密钥累计消耗；**个人调用查询**本地接口 `/api/index.php`（见 `api/个人调用数据查询API接口文档.md`）
 - **代理网关**：服务端中继上游；支持多种上游认证方式；可配置出站 UA / Referer；可选改写 JSON 响应字段；密钥不暴露给调用方
 - **调用方密钥传递**：接口可多选 Query / Header / Bearer；站点名与系统名拆分；详情免责声明可主题开关
 - **调色盘固定色**：登录 / 注册 / 忘记密码与后台使用系统色板（无可自定义取色、无昼夜自动切换）
@@ -42,7 +42,7 @@
 - 前台页面：首页、全部接口、文章、贡献者、友情链接、赞助、关于（导航支持伪静态）
 - **友情链接 / 合作伙伴**：友链可审核与禁用；合作伙伴由管理员维护；默认主题首页可展示合作伙伴
 - 分组侧边栏管理后台（控制台、数据大屏、API 管理、内容运营、交易财务、系统管理）
-- 用户中心：控制台（近 7 日图 / 近期调用 / 热门接口）、日志查询（仅本人）、API 管理（仅开发者）、令牌管理、积分变动、充值、账号设置
+- 用户中心：控制台（近 7 日图 / 近期调用 / 近期调用排行）、日志查询（仅本人）、API 管理（仅开发者）、令牌管理、积分变动、充值、账号设置
 - **用户角色**：普通用户（调用接口、管理令牌）/ 开发者（可投稿接口待审）；注册可选身份，管理员可转换
 - 用户管理：列表、搜索、封禁 / 解封 / 删除、身份转换
 - 用户头像：邮箱匹配 / 自定义链接 / 默认头像
@@ -284,10 +284,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.14（2026-08-15）
+### v13.26.15（2026-08-16）
 
-- 用户控制台折线对齐管理端：近 7 日调用量 = 密钥 / 积分双线；成功 / 失败率双线
-- 无调用日成功与失败率均为 0（修复失败率从 100% 起步）；`UserStat7` 增加 `keycalls`/`pointscalls`
+- 用户控制台「近 7 日调用排行」更名为「近期调用排行」；右上角左右滑动切换今日 / 近 7 日（默认今日）
+- 新增本地接口 `/api/index.php`：凭调用密钥查询本人累计 / 今日 / 近 7 日调用与积分，以及今日 / 近 7 日接口调用排行；请求仅 `key` + 可选 `q`（字母 `a`～`i` 与数字 `0`～`9` 等价，说明见 `api/个人调用数据查询API接口文档.md`）
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

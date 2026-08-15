@@ -57,6 +57,7 @@ require_once VS_ROOT . '/core/ApiStats.php';
 require_once VS_ROOT . '/core/IpLocator.php';
 require_once VS_ROOT . '/core/StatDayManager.php';
 require_once VS_ROOT . '/core/UserStat7Manager.php';
+require_once VS_ROOT . '/core/UserCallStats.php';
 require_once VS_ROOT . '/core/ApiLogManager.php';
 require_once VS_ROOT . '/core/ApiLogArchive.php';
 require_once VS_ROOT . '/core/ApiKeyManager.php';

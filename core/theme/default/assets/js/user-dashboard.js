@@ -25,6 +25,30 @@
     var failRates = boot.fail_rate || [];
     var liveInFlight = false;
     var liveTimer = null;
+    var topScope = 'today';
+    var topToday = [];
+    var top7d = [];
+
+    function parseTopAttr(el, name) {
+        if (!el) return [];
+        try {
+            var raw = el.getAttribute(name) || '[]';
+            var list = JSON.parse(raw);
+            return Array.isArray(list) ? list : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    (function bootTopLists() {
+        var el = document.getElementById('ucDashTopBody');
+        topToday = parseTopAttr(el, 'data-top-today');
+        top7d = parseTopAttr(el, 'data-top-7d');
+        var rangeBtn = document.getElementById('ucDashTopRange');
+        if (rangeBtn && rangeBtn.getAttribute('data-scope') === '7d') {
+            topScope = '7d';
+        }
+    })();
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -261,12 +285,38 @@
         );
     }
 
-    function renderTop(list) {
+    function syncRangeToggle() {
+        var btn = document.getElementById('ucDashTopRange');
+        if (!btn) return;
+        var isToday = topScope === 'today';
+        btn.setAttribute('data-scope', isToday ? 'today' : '7d');
+        btn.setAttribute(
+            'aria-label',
+            isToday ? '切换排行范围：当前今日，点击切换为近7日' : '切换排行范围：当前近7日，点击切换为今日'
+        );
+        var opts = btn.querySelectorAll('.uc-dash__range-toggle__opt');
+        Array.prototype.forEach.call(opts, function (opt) {
+            var v = opt.getAttribute('data-v');
+            opt.classList.toggle('is-on', (v === 'today' && isToday) || (v === '7d' && !isToday));
+        });
+        btn.classList.toggle('is-7d', !isToday);
+    }
+
+    function renderTop(list, scope) {
         var el = document.getElementById('ucDashTopBody');
         if (!el) return;
+        if (scope) {
+            topScope = scope === '7d' ? '7d' : 'today';
+        }
+        if (list == null) {
+            list = topScope === '7d' ? top7d : topToday;
+        }
         list = Array.isArray(list) ? list.slice(0, 8) : [];
+        syncRangeToggle();
         if (!list.length) {
-            el.innerHTML = '<p class="uc-dash__empty">近 7 日暂无本人调用排行</p>';
+            el.innerHTML = topScope === '7d'
+                ? '<p class="uc-dash__empty">近 7 日暂无本人调用排行</p>'
+                : '<p class="uc-dash__empty">今日暂无本人调用排行</p>';
             return;
         }
         var maxCalls = 1;
@@ -362,7 +412,9 @@
             ? days.fail_rate.map(function (v) { return Math.round(parseFloat(v) * 100) / 100 || 0; })
             : successRates.map(function () { return 0; });
         renderCharts();
-        renderTop(s7.top);
+        topToday = Array.isArray(s7.top_today) ? s7.top_today : (Array.isArray(s7.top) ? s7.top : []);
+        top7d = Array.isArray(s7.top_7d) ? s7.top_7d : (Array.isArray(s7.top) ? s7.top : []);
+        renderTop(null);
         renderRecent(stats);
     }
 
@@ -435,6 +487,15 @@
     }
 
     renderCharts();
+
+    var rangeBtn = document.getElementById('ucDashTopRange');
+    if (rangeBtn) {
+        rangeBtn.addEventListener('click', function () {
+            topScope = topScope === 'today' ? '7d' : 'today';
+            renderTop(null);
+        });
+        syncRangeToggle();
+    }
 
     var refreshBtn = document.getElementById('ucDashRefreshBtn');
     if (refreshBtn) {

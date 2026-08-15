@@ -38,6 +38,30 @@ class ApiStats
     private static $proxyPrepaid = null;
 
     /**
+     * 本请求密钥上下文（hit / guardAccess 之后可读）
+     * 供本地接口按密钥归属用户返回「仅本人」数据
+     *
+     * @return array{raw:string,keyid:int,userid:int,valid:bool}
+     */
+    public static function keyContext()
+    {
+        if (!is_array(self::$keyCtx)) {
+            return array(
+                'raw'    => '',
+                'keyid'  => 0,
+                'userid' => 0,
+                'valid'  => false,
+            );
+        }
+        return array(
+            'raw'    => isset(self::$keyCtx['raw']) ? (string) self::$keyCtx['raw'] : '',
+            'keyid'  => isset(self::$keyCtx['keyid']) ? (int) self::$keyCtx['keyid'] : 0,
+            'userid' => isset(self::$keyCtx['userid']) ? (int) self::$keyCtx['userid'] : 0,
+            'valid'  => !empty(self::$keyCtx['valid']),
+        );
+    }
+
+    /**
      * 本地接口入口：守卫（含密钥）+ 记账
      *
      * @param int $apiId 接口主键（必填；须与后台接口 ID 一致）

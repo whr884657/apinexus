@@ -6,6 +6,7 @@
  * 写入：ApiStats 记账成功后 recordHit（失败静默，不拖垮接口）
  * 读取：仅经 FrontendUser / 本类；主题禁止直查库
  * 日桶字段：calls/ok/fail/cost/keycalls/pointscalls/apis
+ * 排行输出：top_today / top_7d（top 兼容=近7日）
  * 禁止：从 apilog 全表回填（见 E215 / 方案讨论第 8～9 轮）
  */
 
@@ -155,7 +156,7 @@ class UserStat7Manager
      * 读取并规范化近 7 日结构（供控制台；未登录勿调用）
      *
      * @param int $userId
-     * @return array{days:array,today_calls:int,today_cost:float,avg_calls:float,top:array}
+     * @return array{days:array,today_calls:int,today_cost:float,avg_calls:float,top:array,top_today:array,top_7d:array}
      */
     public static function dashboardSlice($userId)
     {
@@ -165,6 +166,8 @@ class UserStat7Manager
             'today_cost'  => 0.0,
             'avg_calls'   => 0.0,
             'top'         => array(),
+            'top_today'   => array(),
+            'top_7d'      => array(),
         );
         $userId = (int) $userId;
         if ($userId <= 0 || !self::hasColumn()) {
@@ -204,7 +207,8 @@ class UserStat7Manager
         $today = date('Y-m-d');
         $todayCalls = 0;
         $todayCost = 0.0;
-        $apiMerge = array();
+        $apiMerge7 = array();
+        $apiToday = array();
         for ($i = self::KEEP_DAYS - 1; $i >= 0; $i--) {
             $day = date('Y-m-d', strtotime('-' . $i . ' day'));
             $row = isset($map[$day]) && is_array($map[$day]) ? $map[$day] : array();
@@ -242,27 +246,21 @@ class UserStat7Manager
             if ($day === $today) {
                 $todayCalls = $c;
                 $todayCost = round($cost, 4);
+                if (!empty($row['apis']) && is_array($row['apis'])) {
+                    foreach ($row['apis'] as $aid => $n) {
+                        $apiToday[(string) $aid] = (int) $n;
+                    }
+                }
             }
             if (!empty($row['apis']) && is_array($row['apis'])) {
                 foreach ($row['apis'] as $aid => $n) {
                     $k = (string) $aid;
-                    $apiMerge[$k] = (int) (isset($apiMerge[$k]) ? $apiMerge[$k] : 0) + (int) $n;
+                    $apiMerge7[$k] = (int) (isset($apiMerge7[$k]) ? $apiMerge7[$k] : 0) + (int) $n;
                 }
             }
         }
-        arsort($apiMerge, SORT_NUMERIC);
-        $top = array();
-        $rank = 0;
-        foreach ($apiMerge as $aid => $n) {
-            $rank++;
-            if ($rank > 10) {
-                break;
-            }
-            $top[] = array(
-                'apiid' => (int) $aid,
-                'calls' => (int) $n,
-            );
-        }
+        $topToday = self::rankApis($apiToday, 10);
+        $top7d = self::rankApis($apiMerge7, 10);
         return array(
             'days'         => array(
                 'labels'       => $labels,
@@ -276,8 +274,40 @@ class UserStat7Manager
             'today_calls'  => $todayCalls,
             'today_cost'   => $todayCost,
             'avg_calls'    => round($totalCalls / (float) self::KEEP_DAYS, 2),
-            'top'          => $top,
+            // top 保留为近 7 日（兼容旧读法）；排行板块默认用 top_today
+            'top'          => $top7d,
+            'top_today'    => $topToday,
+            'top_7d'       => $top7d,
         );
+    }
+
+    /**
+     * apiid => calls 映射 → 排行列表
+     *
+     * @param array $map
+     * @param int   $limit
+     * @return array
+     */
+    private static function rankApis(array $map, $limit = 10)
+    {
+        if ($map === array()) {
+            return array();
+        }
+        arsort($map, SORT_NUMERIC);
+        $top = array();
+        $rank = 0;
+        $limit = max(1, (int) $limit);
+        foreach ($map as $aid => $n) {
+            $rank++;
+            if ($rank > $limit) {
+                break;
+            }
+            $top[] = array(
+                'apiid' => (int) $aid,
+                'calls' => (int) $n,
+            );
+        }
+        return $top;
     }
 
     /**

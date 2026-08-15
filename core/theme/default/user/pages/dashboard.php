@@ -37,10 +37,20 @@ foreach ($labels as $lb) {
 $todayCalls = isset($stat7['today_calls']) ? (int) $stat7['today_calls'] : 0;
 $todayCostFmt = isset($stat7['today_cost_fmt']) ? (string) $stat7['today_cost_fmt'] : '0';
 $avgCalls = isset($stat7['avg_calls']) ? $stat7['avg_calls'] : 0;
-$topList = isset($stat7['top']) && is_array($stat7['top']) ? $stat7['top'] : array();
-if (count($topList) > 8) {
-    $topList = array_slice($topList, 0, 8);
+// 近期调用排行默认今日；近 7 日由右上角滑动切换（v13.26.15）
+$topTodayList = isset($stat7['top_today']) && is_array($stat7['top_today'])
+    ? $stat7['top_today']
+    : (isset($stat7['top']) && is_array($stat7['top']) ? $stat7['top'] : array());
+$top7dList = isset($stat7['top_7d']) && is_array($stat7['top_7d'])
+    ? $stat7['top_7d']
+    : (isset($stat7['top']) && is_array($stat7['top']) ? $stat7['top'] : array());
+if (count($topTodayList) > 8) {
+    $topTodayList = array_slice($topTodayList, 0, 8);
 }
+if (count($top7dList) > 8) {
+    $top7dList = array_slice($top7dList, 0, 8);
+}
+$topList = $topTodayList;
 $recent = isset($dash['recent']) && is_array($dash['recent']) ? $dash['recent'] : array();
 if (count($recent) > 12) {
     $recent = array_slice($recent, 0, 12);
@@ -162,11 +172,21 @@ $kpiClass = $isDeveloper ? ' is-eight' : ' is-seven';
     <section class="uc-dash__bottom uc-motion" aria-label="调用排行与近期">
         <div class="vs-panel uc-dash__panel uc-dash__panel--scroll">
             <div class="vs-panel__header uc-dash__panel-head">
-                <h2 class="vs-panel__title">近 7 日调用排行</h2>
+                <h2 class="vs-panel__title">近期调用排行</h2>
+                <button type="button" class="uc-dash__range-toggle" id="ucDashTopRange" data-scope="today"
+                    aria-label="切换排行范围：当前今日，点击切换为近7日" title="点击切换今日 / 近7日">
+                    <span class="uc-dash__range-toggle__track" aria-hidden="true">
+                        <span class="uc-dash__range-toggle__thumb"></span>
+                        <span class="uc-dash__range-toggle__opt is-on" data-v="today">今日</span>
+                        <span class="uc-dash__range-toggle__opt" data-v="7d">近7日</span>
+                    </span>
+                </button>
             </div>
-            <div class="vs-panel__body uc-dash__scroll-body" id="ucDashTopBody">
+            <div class="vs-panel__body uc-dash__scroll-body" id="ucDashTopBody"
+                data-top-today="<?php echo htmlspecialchars(json_encode($topTodayList, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"
+                data-top-7d="<?php echo htmlspecialchars(json_encode($top7dList, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>">
                 <?php if (empty($topList)): ?>
-                    <p class="uc-dash__empty">近 7 日暂无本人调用排行</p>
+                    <p class="uc-dash__empty">今日暂无本人调用排行</p>
                 <?php else: ?>
                     <div class="uc-dash__bars">
                         <?php foreach ($topList as $i => $row):

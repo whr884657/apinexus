@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.14**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.15**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -65,7 +65,7 @@ version.php
 → ApiManager → ApiError → ApiQuickstart
 → AiConfig → AiClient → AiChatSession → AiSse → AiApiDoc
 → ApiNotify → ProxyClientProfile → ProxyJsonRewrite → JsonpGuard → ApiOutboundSanitize → ApiProxy → ApiStats → IpLocator
-→ StatDayManager → UserStat7Manager → ApiLogManager → ApiLogArchive → ApiKeyManager
+→ StatDayManager → UserStat7Manager → UserCallStats → ApiLogManager → ApiLogArchive → ApiKeyManager
 → ApiFeedbackManager → FrontendFeedback → FeedbackNotify
 → ApiCategoryManager
 → PayConfig → OrderManager → PointsManager
@@ -304,9 +304,10 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiOutboundSanitize.php` | 出站 JSON 擦除 `/admin` 等敏感路径（**v13.25.0**）；业务错误体收窄三字段（**v13.25.2**） |
 | `ApiProxy.php` | 外链网关：curl 中继上游；按 `upmethod` 选上游 GET/POST；可选 JSON 改写；剥离 JSONP 参数；出站消毒；3xx Location 透传；上游 TLS 不校验证书 |
 | `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
-| `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer` |
+| `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；`keyContext()` 供本地接口读本请求密钥用户 |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
 | `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser；含 calls/cost/success_rate） |
+| `UserCallStats.php` | 个人调用/积分/排行只读查询（`api/index.php`）；短字段含 `rank`/`rank7`；`parseFields` / `query` / `resolveUserFromRequest` |
 | `DashboardStats.php` | 控制台/大屏 KPI·趋势·TOP·live（含 TOP live / 服务器监控快照，**v13.4.0 / v13.16.0**）；geo 飞线三色 |
 | `PanelMonitor.php` | 宝塔 / 1Panel 面板监控客户端；控制台「服务器」卡片快照与测试连接（**v13.16.0**） |
 | `GeoCityCoords.php` | 大屏飞线全量城市坐标库；`resolveCityName` 地级优先 + 剥离运营商尾缀（v13.0.0 / **v13.2.0**） |
@@ -1586,7 +1587,7 @@ $todayCalls = FrontendStats::todayCallCount();
 | `myLogsPaged($opts)` | 本人调用日志分页（白名单字段） |
 
 **用户字段：** `id, username, email, avatar, bio, blog, wallpaper, role, role_label, can_publish_api, points, createtime, lastlogin, profile_url`  
-**dashboardStats：** `points, points_spent, email, createtime, lastlogin, role_label, can_publish_api, api_total, api_approved, api_pending, api_rejected, api_calls, key_total, key_calls, stat7, recent, detail_enabled, checkin_enabled, checked_today`（`stat7` 含今日/日均/折线序列/**本人近 7 日调用排行 top**；`recent` 近若干条白名单；视图已不展示令牌总数 KPI，字段仍可返回；须登录；主题禁止直查库）
+**dashboardStats：** `points, points_spent, email, createtime, lastlogin, role_label, can_publish_api, api_total, api_approved, api_pending, api_rejected, api_calls, key_total, key_calls, stat7, recent, detail_enabled, checkin_enabled, checked_today`（`stat7` 含今日/日均/折线序列/**本人近期调用排行** `top_today`/`top_7d`/`top`；`recent` 近若干条白名单；视图已不展示令牌总数 KPI，字段仍可返回；须登录；主题禁止直查库）
 
 **findForThemeById：** 详情允许**已审核且已禁用**（`disabled=1`，真实 endpoint 清空由主题模糊占位）；列表 `listForTheme` 仍排除禁用。
 **myLogsPaged：** 仅当前会话用户；禁止客户端指定 userid；无详情接口
