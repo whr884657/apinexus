@@ -627,6 +627,33 @@ body.vs-modal-open {
     justify-content: center;
 }
 
+.vs-overlay__back {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vs-overlay__back:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.vs-overlay__head .vs-overlay__title {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .vs-overlay__close:hover {
     background: #e2e8f0;
     color: #0f172a;

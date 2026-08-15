@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.9-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.10-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -284,12 +284,12 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.9（2026-08-15）
+### v13.26.10（2026-08-15）
 
-- 管理员关于页：去掉技术栈下方说明文案（图标路径仅代码注释）；相关链接去掉「发行版下载」，仅保留 Gitee / GitCode / GitHub
-- 用户控制台：标题行同款图标刷新；页面可见时固定每 3 秒自动刷新 KPI / 折线 / 排行 / 近期调用；标签页隐藏暂停轮询
-- UI：用户调用日志弹窗/用户日志/令牌管理按电脑列表·手机紧凑卡片重构；令牌页显示真实头像；近期调用状态改右上角角标
-- default / slate 双主题同步
+- 管理端用户「调用日志」弹窗：去掉分页与「每页条数」，固定仅加载最近 20 条；列表 `skip_total` 避免海量 COUNT
+- 电脑端列宽：方法列收窄贴接口名，状态列加宽完整显示失败原因
+- 手机端：方法 / IP 归属 / 时间同行；去掉底部分页叠层「幻影」；去掉底部「关闭」，仅保留右上角 ×
+- 详情改为同弹窗内切换（返回箭头），消除双叠层卡顿；请求可中止 + 分帧渲染
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

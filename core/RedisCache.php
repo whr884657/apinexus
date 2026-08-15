@@ -260,13 +260,14 @@ class RedisCache
     public static function apilogPageKey(array $opts)
     {
         $norm = array(
-            'page'      => (int) (isset($opts['page']) ? $opts['page'] : 1),
-            'pagesize'  => (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20),
-            'q'         => isset($opts['q']) ? (string) $opts['q'] : '',
-            'ok'        => array_key_exists('ok', $opts) ? $opts['ok'] : null,
-            'apiid'     => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
-            'userid'    => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
-            'before_id' => (int) (isset($opts['before_id']) ? $opts['before_id'] : 0),
+            'page'       => (int) (isset($opts['page']) ? $opts['page'] : 1),
+            'pagesize'   => (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20),
+            'q'          => isset($opts['q']) ? (string) $opts['q'] : '',
+            'ok'         => array_key_exists('ok', $opts) ? $opts['ok'] : null,
+            'apiid'      => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
+            'userid'     => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
+            'before_id'  => (int) (isset($opts['before_id']) ? $opts['before_id'] : 0),
+            'skip_total' => !empty($opts['skip_total']) ? 1 : 0,
         );
         return self::KEY_APILOG_PAGE_PREFIX . md5(json_encode($norm));
     }

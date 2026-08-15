@@ -6247,6 +6247,12 @@ select.vs-input.vs-select {
     color: #2563eb;
     background: rgba(37, 99, 235, 0.06);
 }
+.vs-users-logs-hint {
+    margin: 0;
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+}
 .vs-users-logs-list {
     min-height: 120px;
     max-height: min(58vh, 520px);
@@ -6256,9 +6262,15 @@ select.vs-input.vs-select {
     border-radius: 10px;
     background: #fff;
 }
+.vs-users-logs-detail {
+    min-height: 120px;
+    max-height: min(62vh, 560px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
 .vs-users-logs-desktop {
     display: block;
-    min-width: 640px;
+    min-width: 720px;
 }
 .vs-users-logs-mobile {
     display: none !important;
@@ -6267,18 +6279,13 @@ select.vs-input.vs-select {
     padding: 8px;
 }
 .vs-users-logs-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding-top: 2px;
-    flex: 0 0 auto;
+    display: none !important;
 }
 .vs-users-log-row {
     display: grid;
-    grid-template-columns: minmax(120px, 1.4fr) 56px minmax(140px, 1.5fr) 64px 56px minmax(120px, 1fr) 48px;
-    gap: 8px 10px;
+    /* 方法列收窄贴接口；状态列加宽避免「失败-…」被裁切 */
+    grid-template-columns: minmax(140px, 1.35fr) 40px minmax(120px, 1.05fr) minmax(110px, 1.25fr) 44px 132px 40px;
+    gap: 6px 8px;
     align-items: center;
     padding: 8px 12px;
     border-bottom: 1px solid #eef2f7;
@@ -6318,6 +6325,14 @@ select.vs-input.vs-select {
     font-weight: 500;
     color: #94a3b8;
 }
+.vs-users-log-row__method {
+    display: flex;
+    justify-content: flex-start;
+}
+.vs-users-log-row__method .vs-log-method {
+    min-width: 0;
+    padding: 2px 6px;
+}
 .vs-users-log-row__ip {
     min-width: 0;
     font-size: 12px;
@@ -6328,6 +6343,23 @@ select.vs-input.vs-select {
 }
 .vs-users-log-row__ip .vs-log-mono {
     margin-right: 6px;
+}
+.vs-users-log-row__status {
+    min-width: 0;
+}
+.vs-users-log-row__status .vs-log-status {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 8px;
+}
+.vs-users-log-row__http {
+    text-align: center;
 }
 .vs-users-log-row__time {
     font-size: 12px;
@@ -6373,31 +6405,32 @@ select.vs-input.vs-select {
     font-size: 12px;
     color: #64748b;
 }
+.vs-users-log-card__mid .vs-log-method {
+    flex-shrink: 0;
+    min-width: 0;
+    padding: 2px 6px;
+}
 .vs-users-log-card__mid .vs-users-log-card__ip {
     min-width: 0;
+    flex: 1 1 auto;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.vs-users-log-card__foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 6px;
-    font-size: 12px;
+.vs-users-log-card__time {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
     color: #94a3b8;
 }
-.vs-users-log-card__foot .vs-log-view {
-    color: #2563eb;
-    flex-shrink: 0;
+.vs-users-log-card__foot {
+    display: none;
 }
 @media (max-width: 768px) {
     .vs-users-logs-list {
         max-height: min(62vh, 480px);
         border: 0;
         background: transparent;
-        overflow: visible;
+        overflow: auto;
     }
     .vs-users-logs-desktop {
         display: none !important;

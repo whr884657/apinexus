@@ -370,6 +370,7 @@ class ApiLogManager
         if ($beforeId < 0) {
             $beforeId = 0;
         }
+        $skipTotal = !empty($opts['skip_total']);
 
         $empty = array(
             'list'           => array(),
@@ -387,16 +388,17 @@ class ApiLogManager
 
         $skipCache = !empty($opts['skip_cache']);
         $cacheKey = RedisCache::apilogPageKey(array(
-            'page'      => $page,
-            'pagesize'  => $pagesize,
-            'q'         => $q,
-            'ok'        => $ok,
-            'apiid'     => $apiid,
-            'userid'    => $userid,
-            'before_id' => $beforeId,
+            'page'       => $page,
+            'pagesize'   => $pagesize,
+            'q'          => $q,
+            'ok'         => $ok,
+            'apiid'      => $apiid,
+            'userid'     => $userid,
+            'before_id'  => $beforeId,
+            'skip_total' => $skipTotal,
         ));
 
-        $loader = function () use ($page, $pagesize, $q, $ok, $apiid, $userid, $beforeId, $empty) {
+        $loader = function () use ($page, $pagesize, $q, $ok, $apiid, $userid, $beforeId, $skipTotal, $empty) {
                 try {
                     $pdo = Database::connect();
                     self::applyQueryTimeout($pdo);
@@ -470,7 +472,14 @@ class ApiLogManager
                         $nextBefore = (int) $merged[count($merged) - 1]['id'];
                     }
 
-                    $total = self::countFilteredCached($q, $ok, $apiid, $userid);
+                    // skip_total：轻量预览（如管理端用户弹窗）只取页内数据，避免海量日志 COUNT
+                    $totalApprox = false;
+                    if ($skipTotal) {
+                        $total = count($merged) + ($hasMore ? 1 : 0);
+                        $totalApprox = true;
+                    } else {
+                        $total = self::countFilteredCached($q, $ok, $apiid, $userid);
+                    }
 
                     return array(
                         'list'           => $merged,
@@ -480,7 +489,7 @@ class ApiLogManager
                         'before_id'      => $beforeId,
                         'next_before_id' => $nextBefore,
                         'has_more'       => $hasMore,
-                        'total_approx'   => false,
+                        'total_approx'   => $totalApprox,
                     );
                 } catch (Exception $e) {
                     return $empty;

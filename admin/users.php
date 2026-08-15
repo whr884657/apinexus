@@ -74,30 +74,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!class_exists('ApiLogManager') || !ApiLogManager::tableReady()) {
             AjaxResponse::error('日志功能尚未就绪');
         }
-        $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
-        $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
-        $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
+        // 轻量预览：固定最新 20 条，跳过 COUNT（用户可能有海量日志）
         $ok = array_key_exists('ok', $_POST) && $_POST['ok'] !== '' ? $_POST['ok'] : null;
         $paged = ApiLogManager::listPaged(array(
-            'page'      => $page,
-            'pagesize'  => $pagesize,
-            'before_id' => $beforeId,
-            'ok'        => $ok,
-            'userid'    => $userId,
-            'q'         => '',
-            'apiid'     => 0,
+            'page'       => 1,
+            'pagesize'   => 20,
+            'before_id'  => 0,
+            'ok'         => $ok,
+            'userid'     => $userId,
+            'q'          => '',
+            'apiid'      => 0,
+            'skip_total' => true,
         ));
         AjaxResponse::success('ok', array(
-            'action'         => 'user_logs',
-            'user_id'        => $userId,
-            'list'           => $paged['list'],
-            'total'          => $paged['total'],
-            'page'           => $paged['page'],
-            'pagesize'       => $paged['pagesize'],
-            'before_id'      => $paged['before_id'],
-            'next_before_id' => $paged['next_before_id'],
-            'has_more'       => $paged['has_more'],
-            'total_approx'   => !empty($paged['total_approx']),
+            'action'   => 'user_logs',
+            'user_id'  => $userId,
+            'list'     => $paged['list'],
+            'pagesize' => 20,
         ));
     }
 
@@ -540,54 +533,30 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
     <div class="vs-overlay__panel" role="dialog" aria-modal="true" aria-labelledby="usersLogsTitle">
         <div class="vs-overlay__handle" aria-hidden="true"></div>
         <header class="vs-overlay__head">
+            <button type="button" class="vs-overlay__back" id="usersLogsBackBtn" hidden aria-label="返回列表">&larr;</button>
             <h3 class="vs-overlay__title" id="usersLogsTitle">用户调用日志</h3>
             <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
         </header>
         <div class="vs-overlay__body vs-users-logs-body">
-            <div class="vs-users-logs-toolbar">
-                <div class="vs-users-logs-filters" role="group" aria-label="状态筛选">
-                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline is-active" data-user-log-ok="">全部</button>
-                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-user-log-ok="1">成功</button>
-                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-user-log-ok="0">失败</button>
+            <div id="usersLogsListPanel">
+                <div class="vs-users-logs-toolbar">
+                    <div class="vs-users-logs-filters" role="group" aria-label="状态筛选">
+                        <button type="button" class="vs-btn vs-btn--sm vs-btn--outline is-active" data-user-log-ok="">全部</button>
+                        <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-user-log-ok="1">成功</button>
+                        <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-user-log-ok="0">失败</button>
+                    </div>
+                    <p class="vs-users-logs-hint">仅最近 20 条</p>
                 </div>
-                <label class="vs-api-list-pagesize" for="usersLogsPageSize">
-                    <span class="vs-api-list-pagesize__label">每页</span>
-                    <select class="vs-input vs-select" id="usersLogsPageSize" data-vs-pick="sheet">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
-                        <option value="30">30</option>
-                        <option value="50">50</option>
-                    </select>
-                </label>
+                <div class="vs-users-logs-list" id="usersLogsList">
+                    <?php vs_render_loading('正在加载日志', array('compact' => true)); ?>
+                </div>
             </div>
-            <div class="vs-users-logs-list" id="usersLogsList">
-                <?php vs_render_loading('正在加载日志', array('compact' => true)); ?>
-            </div>
-            <div class="vs-users-logs-footer" id="usersLogsFooter" hidden>
-                <div class="vs-api-pager__navs" id="usersLogsPagerNav"></div>
-                <div class="vs-api-list-total" id="usersLogsTotal"></div>
+            <div id="usersLogsDetailPanel" hidden>
+                <div class="vs-users-logs-detail" id="usersLogDetailBody">
+                    <?php vs_render_loading('正在加载详情', array('compact' => true)); ?>
+                </div>
             </div>
         </div>
-        <footer class="vs-overlay__foot">
-            <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">关闭</button>
-        </footer>
-    </div>
-</div>
-
-<div class="vs-overlay vs-overlay--lg" id="usersLogDetailOverlay" hidden aria-hidden="true">
-    <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
-    <div class="vs-overlay__panel" role="dialog" aria-modal="true" aria-labelledby="usersLogDetailTitle">
-        <div class="vs-overlay__handle" aria-hidden="true"></div>
-        <header class="vs-overlay__head">
-            <h3 class="vs-overlay__title" id="usersLogDetailTitle">调用详情</h3>
-            <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
-        </header>
-        <div class="vs-overlay__body" id="usersLogDetailBody">
-            <?php vs_render_loading('正在加载详情', array('compact' => true)); ?>
-        </div>
-        <footer class="vs-overlay__foot">
-            <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">关闭</button>
-        </footer>
     </div>
 </div>
 

@@ -558,28 +558,26 @@
 
     (function bindUsersLogs() {
         var listOverlay = document.getElementById('usersLogsOverlay');
-        var detailOverlay = document.getElementById('usersLogDetailOverlay');
         var listEl = document.getElementById('usersLogsList');
+        var listPanel = document.getElementById('usersLogsListPanel');
+        var detailPanel = document.getElementById('usersLogsDetailPanel');
         var titleEl = document.getElementById('usersLogsTitle');
-        var footerEl = document.getElementById('usersLogsFooter');
-        var pagerNav = document.getElementById('usersLogsPagerNav');
-        var totalEl = document.getElementById('usersLogsTotal');
-        var pageSizeEl = document.getElementById('usersLogsPageSize');
+        var backBtn = document.getElementById('usersLogsBackBtn');
         var detailBody = document.getElementById('usersLogDetailBody');
-        if (!listOverlay || !listEl) {
+        if (!listOverlay || !listEl || !listPanel || !detailPanel || !detailBody) {
             return;
         }
 
         var currentUserId = 0;
         var currentUserName = '';
-        var page = 1;
-        var cursorStack = [0];
-        var hasMore = false;
-        var totalCount = 0;
+        var listTitleText = '';
         var okFilter = '';
         var loadSeq = 0;
+        var detailSeq = 0;
         var listAbort = null;
+        var detailAbort = null;
         var openOverlays = 0;
+        var viewMode = 'list';
 
         function escapeHtml(s) {
             return String(s == null ? '' : s)
@@ -619,18 +617,6 @@
             lockBody(false);
         }
 
-        function getPageSize() {
-            var n = pageSizeEl ? parseInt(pageSizeEl.value, 10) : 20;
-            if (!n || n < 1) n = 20;
-            return Math.min(50, n);
-        }
-
-        function resetCursors() {
-            page = 1;
-            cursorStack = [0];
-            hasMore = false;
-        }
-
         function methodBadge(row) {
             return '<span class="vs-log-method ' + escapeHtml(row.method_class || 'is-other') + '">'
                 + escapeHtml(row.method || '—') + '</span>';
@@ -642,8 +628,9 @@
         }
 
         function statusBadge(row) {
-            return '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '">'
-                + escapeHtml(row.ok_label || '—') + '</span>';
+            var label = row.ok_label || '—';
+            return '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '" title="'
+                + escapeHtml(label) + '">' + escapeHtml(label) + '</span>';
         }
 
         function httpcodeDisplay(row) {
@@ -659,6 +646,7 @@
             var ip = row.ip || '—';
             var loc = row.iploc || '';
             var ipLine = escapeHtml(ip) + (loc ? (' ' + escapeHtml(loc)) : '');
+            var time = escapeHtml(row.createtime || '—');
             return '<article class="vs-users-log-card" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
                 + '<div class="vs-users-log-card__top">'
                 + '<strong class="vs-users-log-card__name" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</strong>'
@@ -667,10 +655,7 @@
                 + '<div class="vs-users-log-card__mid">'
                 + methodBadge(row)
                 + '<span class="vs-users-log-card__ip" title="' + escapeHtml(ip + (loc ? (' ' + loc) : '')) + '">' + ipLine + '</span>'
-                + '</div>'
-                + '<div class="vs-users-log-card__foot">'
-                + '<time>' + escapeHtml(row.createtime || '—') + '</time>'
-                + '<span class="vs-log-view">详情</span>'
+                + '<time class="vs-users-log-card__time">' + time + '</time>'
                 + '</div>'
                 + '</article>';
         }
@@ -684,13 +669,13 @@
                 + '<span class="vs-log-id">#' + escapeHtml(row.id) + '</span>'
                 + escapeHtml(name)
                 + '</div>'
-                + '<div>' + methodBadge(row) + '</div>'
+                + '<div class="vs-users-log-row__method">' + methodBadge(row) + '</div>'
                 + '<div class="vs-users-log-row__ip" title="' + escapeHtml(ip + (loc ? (' ' + loc) : '')) + '">'
                 + '<span class="vs-log-mono">' + escapeHtml(ip) + '</span>'
                 + (loc ? escapeHtml(loc) : '')
                 + '</div>'
-                + '<div>' + statusBadge(row) + '</div>'
-                + '<div>' + httpBadge(row) + '</div>'
+                + '<div class="vs-users-log-row__status">' + statusBadge(row) + '</div>'
+                + '<div class="vs-users-log-row__http">' + httpBadge(row) + '</div>'
                 + '<div class="vs-users-log-row__time">' + escapeHtml(row.createtime || '—') + '</div>'
                 + '<div class="vs-users-log-row__act"><span class="vs-log-view">详情</span></div>'
                 + '</div>';
@@ -708,16 +693,24 @@
                 + '<div class="vs-users-logs-mobile">' + list.map(cardHtml).join('') + '</div>';
         }
 
-        function renderPager() {
-            if (footerEl) footerEl.hidden = false;
-            if (totalEl) totalEl.textContent = '共 ' + (totalCount || 0) + ' 条';
-            if (pagerNav) {
-                pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"'
-                    + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
-                    + '<span class="vs-api-pager__info">' + page + '</span>'
-                    + '<button type="button" class="vs-api-pager__nav" data-p="1"'
-                    + (!hasMore ? ' disabled' : '') + '>下一页</button>';
+        function showListView() {
+            viewMode = 'list';
+            listPanel.hidden = false;
+            detailPanel.hidden = true;
+            if (backBtn) backBtn.hidden = true;
+            if (titleEl) titleEl.textContent = listTitleText || '用户调用日志';
+            if (detailAbort) {
+                try { detailAbort.abort(); } catch (e) { /* ignore */ }
+                detailAbort = null;
             }
+        }
+
+        function showDetailView() {
+            viewMode = 'detail';
+            listPanel.hidden = true;
+            detailPanel.hidden = false;
+            if (backBtn) backBtn.hidden = false;
+            if (titleEl) titleEl.textContent = '调用详情';
         }
 
         function loadLogs() {
@@ -727,8 +720,7 @@
             }
             listAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
             var seq = ++loadSeq;
-            var pagesize = getPageSize();
-            var beforeId = cursorStack[page - 1] || 0;
+            showListView();
             if (VS.setLoading) {
                 VS.setLoading(listEl, '正在加载日志');
             } else {
@@ -737,9 +729,6 @@
             var fd = new FormData();
             fd.append('action', 'user_logs');
             fd.append('user_id', String(currentUserId));
-            fd.append('page', String(page));
-            fd.append('pagesize', String(pagesize));
-            fd.append('before_id', String(beforeId));
             if (okFilter === '0' || okFilter === '1') {
                 fd.append('ok', okFilter);
             }
@@ -751,16 +740,7 @@
                         + escapeHtml((data && data.msg) || '加载失败') + '</p>';
                     return;
                 }
-                var nextBefore = parseInt(data.next_before_id, 10) || 0;
-                hasMore = !!data.has_more;
-                totalCount = parseInt(data.total, 10) || 0;
-                if (cursorStack.length === page) {
-                    cursorStack.push(nextBefore);
-                } else {
-                    cursorStack[page] = nextBefore;
-                }
                 renderList(data.list || []);
-                renderPager();
             }).catch(function (err) {
                 if (err && err.name === 'AbortError') return;
                 if (seq !== loadSeq) return;
@@ -868,23 +848,36 @@
         }
 
         function openDetail(id) {
-            if (!detailOverlay || !detailBody || !window.VS) return;
+            if (!window.VS) return;
+            if (detailAbort) {
+                try { detailAbort.abort(); } catch (e) { /* ignore */ }
+            }
+            detailAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            var seq = ++detailSeq;
+            showDetailView();
             detailBody.innerHTML = (VS.loadingHtml)
                 ? VS.loadingHtml('正在加载详情', true)
                 : '<p class="vs-empty">正在加载</p>';
-            openShell(detailOverlay);
             var fd = new FormData();
             fd.append('action', 'user_log_detail');
             fd.append('user_id', String(currentUserId));
             fd.append('id', String(id));
-            VS.postForm(fd).then(function (data) {
+            var opts = detailAbort ? { signal: detailAbort.signal } : {};
+            VS.postForm(fd, window.location.href, opts).then(function (data) {
+                if (seq !== detailSeq) return;
                 if (!data || data.code !== 1 || !data.row) {
                     detailBody.innerHTML = '<p class="vs-empty">' + escapeHtml((data && data.msg) || '加载失败') + '</p>';
                     return;
                 }
-                detailBody.innerHTML = detailHtml(data.row);
-                bindSecretToggles(detailBody);
-            }).catch(function () {
+                var html = detailHtml(data.row);
+                requestAnimationFrame(function () {
+                    if (seq !== detailSeq) return;
+                    detailBody.innerHTML = html;
+                    bindSecretToggles(detailBody);
+                });
+            }).catch(function (err) {
+                if (err && err.name === 'AbortError') return;
+                if (seq !== detailSeq) return;
                 detailBody.innerHTML = '<p class="vs-empty">网络异常</p>';
             });
         }
@@ -893,32 +886,29 @@
             currentUserId = parseInt(userId, 10) || 0;
             currentUserName = userName || '';
             if (currentUserId <= 0) return;
-            closeShell(detailOverlay);
-            if (titleEl) {
-                titleEl.textContent = currentUserName
-                    ? ('调用日志 · ' + currentUserName)
-                    : ('调用日志 · 用户 #' + currentUserId);
-            }
+            listTitleText = currentUserName
+                ? ('调用日志 · ' + currentUserName)
+                : ('调用日志 · 用户 #' + currentUserId);
             okFilter = '';
             listOverlay.querySelectorAll('[data-user-log-ok]').forEach(function (btn) {
                 btn.classList.toggle('is-active', btn.getAttribute('data-user-log-ok') === '');
             });
-            resetCursors();
             openShell(listOverlay);
             loadLogs();
         }
 
         listOverlay.querySelectorAll('[data-overlay-close]').forEach(function (el) {
             el.addEventListener('click', function () {
-                closeShell(detailOverlay);
+                showListView();
                 closeShell(listOverlay);
             });
         });
-        if (detailOverlay) {
-            detailOverlay.querySelectorAll('[data-overlay-close]').forEach(function (el) {
-                el.addEventListener('click', function () {
-                    closeShell(detailOverlay);
-                });
+
+        if (backBtn) {
+            backBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                showListView();
             });
         }
 
@@ -929,37 +919,15 @@
                 listOverlay.querySelectorAll('[data-user-log-ok]').forEach(function (btn) {
                     btn.classList.toggle('is-active', btn === filterBtn);
                 });
-                resetCursors();
                 loadLogs();
                 return;
             }
+            if (viewMode !== 'list') return;
             var item = e.target.closest('[data-id]');
             if (item && listEl.contains(item)) {
                 openDetail(item.getAttribute('data-id'));
             }
         });
-
-        if (pagerNav) {
-            pagerNav.addEventListener('click', function (e) {
-                var btn = e.target.closest('[data-p]');
-                if (!btn || btn.disabled) return;
-                var dir = parseInt(btn.getAttribute('data-p'), 10);
-                if (dir < 0 && page > 1) {
-                    page -= 1;
-                    loadLogs();
-                } else if (dir > 0 && hasMore) {
-                    page += 1;
-                    loadLogs();
-                }
-            });
-        }
-
-        if (pageSizeEl) {
-            pageSizeEl.addEventListener('change', function () {
-                resetCursors();
-                loadLogs();
-            });
-        }
 
         window.VsUsersLogs = { open: open };
     })();
