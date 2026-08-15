@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.11-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.12-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -284,10 +284,10 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.11（2026-08-15）
+### v13.26.12（2026-08-15）
 
-- 管理端用户调用日志弹窗：取消 lg 定高，按内容收高，消除底部大片空白（电脑/手机）
-- 电脑端：接口列封顶，方法紧贴接口名；状态徽章随文字宽度，不再拉成长条
+- 用户调用日志弹窗恢复规范定高：电脑 `vs-overlay--lg`（92vw×88vh）、手机抽屉固定 85vh
+- 下半空白改为列表区 flex 撑满内滚，不再压矮弹窗；列宽修正保留
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

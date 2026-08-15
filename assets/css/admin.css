@@ -6223,29 +6223,17 @@ select.vs-input.vs-select {
     color: #111;
 }
 
-/* 用户调用日志弹窗：按内容收高，禁止 lg 定高留白 */
+/* 用户调用日志弹窗：遵守 lg / 手机 85vh 定高；列表区撑满下半，禁止压矮弹窗 */
 .vs-overlay--users-logs .vs-overlay__back[hidden] {
     display: none !important;
 }
-@media (min-width: 768px) {
-    .vs-overlay--users-logs .vs-overlay__panel {
-        width: min(980px, calc(100vw - 48px));
-        height: auto;
-        max-height: min(82vh, 720px);
-    }
-}
-@media (max-width: 767px) {
-    .vs-overlay--users-logs .vs-overlay__panel {
-        height: auto;
-        max-height: min(88vh, 640px);
-    }
-}
-.vs-users-logs-body {
+.vs-overlay--users-logs .vs-overlay__body.vs-users-logs-body {
     display: flex;
     flex-direction: column;
     gap: 10px;
     min-height: 0;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
+    overflow: hidden;
 }
 #usersLogsListPanel,
 #usersLogsDetailPanel {
@@ -6253,7 +6241,7 @@ select.vs-input.vs-select {
     flex-direction: column;
     gap: 10px;
     min-height: 0;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
 }
 #usersLogsDetailPanel[hidden],
 #usersLogsListPanel[hidden] {
@@ -6285,17 +6273,16 @@ select.vs-input.vs-select {
 }
 .vs-users-logs-list {
     min-height: 0;
-    max-height: min(52vh, 420px);
+    flex: 1 1 auto;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     background: #fff;
-    flex: 0 1 auto;
 }
 .vs-users-logs-detail {
     min-height: 0;
-    max-height: min(58vh, 480px);
+    flex: 1 1 auto;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
 }
@@ -6459,7 +6446,6 @@ select.vs-input.vs-select {
 }
 @media (max-width: 768px) {
     .vs-users-logs-list {
-        max-height: min(48vh, 360px);
         border: 0;
         background: transparent;
         overflow: auto;
