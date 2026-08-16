@@ -1,5 +1,14 @@
 {
     "versions": {
+        "13.26.17": {
+            "title": "ApiNexus 13.26.17 详情页调用地址展示主机+路径",
+            "date": "2026-08-17",
+            "db_changes": false,
+            "changes": [
+                "详情页接口信息：展示为主机+路径（不含协议）；复制/打开/在线测试为带 http(s) 的完整 URL",
+                "新增 vs_call_url_absolute / vs_call_url_host_path；default / slate 详情页同步"
+            ]
+        },
         "13.26.16": {
             "title": "ApiNexus 13.26.16 移除 robots.txt 与前台源码简洁化",
             "date": "2026-08-17",

@@ -404,6 +404,70 @@ function vs_site_path($path = '/')
 }
 
 /**
+ * 调用地址 → 可请求的绝对 URL（含当前请求协议 http/https）
+ * 站内根相对路径按 vs_base_url 拼接；已是 http(s) 外链则原样返回。
+ *
+ * @param string $urlOrPath
+ * @return string
+ */
+function vs_call_url_absolute($urlOrPath)
+{
+    $raw = trim((string) $urlOrPath);
+    if ($raw === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $raw)) {
+        return $raw;
+    }
+    if (strpos($raw, '//') === 0) {
+        return '';
+    }
+    $path = vs_site_path($raw);
+    if ($path === '' || preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    $base = rtrim(vs_base_url(), '/');
+    $basePath = vs_site_base_path();
+    if ($basePath !== '' && ($path === $basePath || strpos($path, $basePath . '/') === 0)) {
+        return $base . substr($path, strlen($basePath));
+    }
+    if ($path === '/') {
+        return $base . '/';
+    }
+    return $base . $path;
+}
+
+/**
+ * 调用地址 → 详情页展示用（主机+路径，不含协议）
+ * 例：api.example.com/api/v1/foo ；复制请用 vs_call_url_absolute()
+ *
+ * @param string $urlOrPath
+ * @return string
+ */
+function vs_call_url_host_path($urlOrPath)
+{
+    $abs = vs_call_url_absolute($urlOrPath);
+    if ($abs === '') {
+        return '';
+    }
+    if (!preg_match('#^https?://#i', $abs)) {
+        return $abs;
+    }
+    $parts = parse_url($abs);
+    if (!is_array($parts) || empty($parts['host'])) {
+        return preg_replace('#^https?://#i', '', $abs);
+    }
+    $host = (string) $parts['host'];
+    if (!empty($parts['port'])) {
+        $host .= ':' . (int) $parts['port'];
+    }
+    $path = isset($parts['path']) ? (string) $parts['path'] : '';
+    $query = (!empty($parts['query'])) ? ('?' . (string) $parts['query']) : '';
+    $frag = (!empty($parts['fragment'])) ? ('#' . (string) $parts['fragment']) : '';
+    return $host . $path . $query . $frag;
+}
+
+/**
  * 路径式资源公开地址：/{脚本名}/{数字ID}（无 .php；依赖通用伪静态）
  *
  * @param string $script 根入口脚本名，如 detail / article（可带 .php，会去掉）

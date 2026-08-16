@@ -6,8 +6,10 @@ $vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $methods = (!$notFound && isset($api['methods']) && is_array($api['methods'])) ? $api['methods'] : array('GET');
 $isDisabled = !$notFound && !empty($api['disabled']);
 $isMaintenance = !$notFound && !empty($api['maintenance']);
-$endpointDisplay = (!$notFound && isset($api['endpoint'])) ? (string) $api['endpoint'] : '';
-$endpointBlurText = 'https://••••••••••••/api/v1/••••••••';
+$endpointRaw = (!$notFound && isset($api['endpoint'])) ? (string) $api['endpoint'] : '';
+$endpointCopy = ($endpointRaw !== '' && !$isDisabled) ? vs_call_url_absolute($endpointRaw) : '';
+$endpointDisplay = ($endpointRaw !== '' && !$isDisabled) ? vs_call_url_host_path($endpointRaw) : '';
+$endpointBlurText = '••••••••••••/••••••••••••';
 ?>
 <main class="st-main st-main--page" id="stApiDetailPage" data-disabled="<?php echo $isDisabled ? '1' : '0'; ?>">
 <div class="st-wrap">
@@ -69,9 +71,9 @@ $endpointBlurText = 'https://••••••••••••/api/v1/••�
         <?php else: ?>
         <code class="st-detail__endpoint" id="stDetailEndpoint"><?php echo vs_e($endpointDisplay); ?></code>
         <div class="st-detail__actions st-detail__actions--inline">
-            <button type="button" class="st-detail__btn" id="stDetailCopyBtn" data-copy="<?php echo vs_e($endpointDisplay); ?>">复制地址</button>
+            <button type="button" class="st-detail__btn" id="stDetailCopyBtn" data-copy="<?php echo vs_e($endpointCopy); ?>">复制地址</button>
             <?php if (!$isMaintenance): ?>
-            <a class="st-detail__btn st-detail__btn--primary" href="<?php echo vs_e($endpointDisplay); ?>" target="_blank" rel="noopener noreferrer">打开接口</a>
+            <a class="st-detail__btn st-detail__btn--primary" href="<?php echo vs_e($endpointCopy); ?>" target="_blank" rel="noopener noreferrer">打开接口</a>
             <?php endif; ?>
         </div>
         <?php endif; ?>

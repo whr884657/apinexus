@@ -1,17 +1,10 @@
 {
-    "version": "13.26.16",
-    "title": "ApiNexus 13.26.16 移除 robots.txt 与前台源码简洁化",
+    "version": "13.26.17",
+    "title": "ApiNexus 13.26.17 详情页调用地址展示主机+路径",
     "release_date": "2026-08-17",
     "db_changes": false,
     "changes": [
-        "移除根目录 robots.txt：Disallow 清单会暴露 admin/user/core/config 等目录结构",
-        "升级清理：install/obsolete-files.json 声明删除 robots.txt，在线更新后旧站自动去掉该文件",
-        "SEO 仍靠页面级 meta robots；sitemap.xml 伪静态规则保留，不再依赖 robots.txt 声明",
-        "登录验证码登录偶发失效：captcha loadScript/mount 与切模式 clearChallenge（E251）",
-        "前台同站资源/导航改为 vs_site_path 根路径；OG/canonical 仍绝对 https",
-        "新增 core/front/catalog.php：首页/apis 禁止首屏灌全量 apiData，POST+CSRF 一次拉取后本地筛选（双主题）",
-        "E253：前台禁共享缓存；禁止登录 KEY SSR；新增 playground-key.php 按需取钥",
-        "SEC-001：playground relay / sitemeta 增加 IP 频控",
-        "专项规范：前端页面渲染与源码规范；易错点 E252"
+        "详情页接口信息：展示为主机+路径（不含协议）；复制/打开/在线测试为带 http(s) 的完整 URL",
+        "新增 vs_call_url_absolute / vs_call_url_host_path；default / slate 详情页同步"
     ]
 }

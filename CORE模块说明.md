@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.16**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.17**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -268,7 +268,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 |------|--------|
 | `bootstrap.php` | 系统引导，加载全部 core 类 |
 | `version.php` | 版本常量 `VS_VERSION` |
-| `helpers.php` | 全局辅助函数（转义、页面渲染、前台入口；**v13.26.16** `vs_site_path` / `vs_site_base_path`；页脚注入 `VS_FRONT_CATALOG`） |
+| `helpers.php` | 全局辅助函数（转义、页面渲染、前台入口；**v13.26.16** `vs_site_path` / `vs_site_base_path`；**v13.26.17** `vs_call_url_absolute` / `vs_call_url_host_path`；页脚注入 `VS_FRONT_CATALOG`） |
 | `InstallChecker.php` | 安装状态检测 |
 | `Database.php` | PDO 连接、表名前缀 |
 | `DatabaseInstaller.php` | 安装向导执行 `database.sql` |

@@ -51,8 +51,10 @@ $showQsAuthSwitch = !$notFound
 $isDisabled = !$notFound && !empty($api['disabled']);
 $isMaintenance = !$notFound && !empty($api['maintenance']);
 $callBlocked = $isDisabled || $isMaintenance;
-$endpointDisplay = (!$notFound && isset($api['endpoint'])) ? (string) $api['endpoint'] : '';
-$endpointBlurText = 'https://••••••••••••/api/v1/••••••••';
+$endpointRaw = (!$notFound && isset($api['endpoint'])) ? (string) $api['endpoint'] : '';
+$endpointCopy = ($endpointRaw !== '' && !$isDisabled) ? vs_call_url_absolute($endpointRaw) : '';
+$endpointDisplay = ($endpointRaw !== '' && !$isDisabled) ? vs_call_url_host_path($endpointRaw) : '';
+$endpointBlurText = '••••••••••••/••••••••••••';
 
 $recommendApi = null;
 $pageApiSnapshot = (!$notFound && $api !== array()) ? $api : null;
@@ -92,7 +94,7 @@ if (!$notFound) {
 ?>
 <main class="main-wrapper container mx-auto px-4 detail-page" id="apiDetailPage"
       data-api-id="<?php echo $notFound ? '0' : (int) $api['id']; ?>"
-      data-endpoint="<?php echo ($notFound || $isDisabled) ? '' : vs_e(isset($api['endpoint']) ? $api['endpoint'] : ''); ?>"
+      data-endpoint="<?php echo ($notFound || $isDisabled) ? '' : vs_e($endpointCopy); ?>"
       data-maintenance="<?php echo $isMaintenance ? '1' : '0'; ?>"
       data-disabled="<?php echo $isDisabled ? '1' : '0'; ?>">
     <nav class="detail-crumb text-sm" aria-label="面包屑">
@@ -133,7 +135,7 @@ if (!$notFound) {
     }
     $detailMdParts[] = "## 接口信息\n\n"
         . '**方法：** ' . (isset($api['method_label']) ? (string) $api['method_label'] : strtoupper($primaryMethod)) . "\n"
-        . '**路径 / 完整地址：** ' . ($isDisabled ? '（已禁用，地址已隐藏）' : (isset($api['endpoint']) ? (string) $api['endpoint'] : '')) . "\n"
+        . '**路径 / 完整地址：** ' . ($isDisabled ? '（已禁用，地址已隐藏）' : $endpointCopy) . "\n"
         . '**状态：** ' . ($isDisabled ? '已禁用' : ($isMaintenance ? '维护中' : '正常')) . "\n"
         . '**计费：** ' . $chargeDetailLabel . "\n"
         . '**KEY：** ' . $keyLabel . "\n"
@@ -227,7 +229,7 @@ if (!$notFound) {
                 <?php endif; ?>
             </div>
             <?php if (!$isDisabled): ?>
-            <button type="button" class="btn-copy" data-copy="<?php echo vs_e($endpointDisplay); ?>">复制</button>
+            <button type="button" class="btn-copy" data-copy="<?php echo vs_e($endpointCopy); ?>">复制</button>
             <?php endif; ?>
         </div>
         <?php endif; ?>
@@ -592,7 +594,7 @@ $jsApi = is_array($pageApiSnapshot) ? $pageApiSnapshot : ((!$notFound && is_arra
 window.detailApiData = <?php echo json_encode($jsApi === null ? null : array(
     'id' => (int) $jsApi['id'],
     'name' => isset($jsApi['name']) ? $jsApi['name'] : '',
-    'endpoint' => $isDisabled ? '' : (isset($jsApi['endpoint']) ? $jsApi['endpoint'] : ''),
+    'endpoint' => $isDisabled ? '' : $endpointCopy,
     'methods' => $methods,
     'method' => $primaryMethod,
     'maintenance' => !empty($jsApi['maintenance']) ? 1 : 0,

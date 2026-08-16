@@ -13,6 +13,11 @@
     var toastTimer = null;
     var VsPR = window.VsPlaygroundResponse || null;
 
+    /** 展示用：去掉协议，仅主机+路径（与详情接口信息一致） */
+    function endpointHostPath(url) {
+        return String(url || '').replace(/^https?:\/\//i, '');
+    }
+
     function showToast(msg) {
         if (window.VsToast && typeof window.VsToast.show === 'function') {
             window.VsToast.show(msg || '已复制', 'success');
@@ -397,7 +402,7 @@
 
             // 请求地址展示保持接口信息中的公开地址，不拼接参数、不跳转到上游
             if (urlPreview) {
-                urlPreview.textContent = String(api.endpoint || page.getAttribute('data-endpoint') || '');
+                urlPreview.textContent = endpointHostPath(api.endpoint || page.getAttribute('data-endpoint') || '');
             }
 
             responseEl.textContent = '// 正在发送请求...';
@@ -439,7 +444,7 @@
                     keyways: keyways
                 }).then(function (data) {
                     if (urlPreview) {
-                        urlPreview.textContent = String(api.endpoint || page.getAttribute('data-endpoint') || '');
+                        urlPreview.textContent = endpointHostPath(api.endpoint || page.getAttribute('data-endpoint') || '');
                     }
                     var ok = !!(data && (data.ok || data.code === 1));
                     var http = data && data.http != null ? parseInt(data.http, 10) : 0;
@@ -464,7 +469,7 @@
                 keyways: keyways
             }).then(function (res) {
                 if (urlPreview) {
-                    urlPreview.textContent = String(api.endpoint || page.getAttribute('data-endpoint') || '');
+                    urlPreview.textContent = endpointHostPath(api.endpoint || page.getAttribute('data-endpoint') || '');
                 }
                 var statusFn = VsPR.inspectFetchStatus
                     ? VsPR.inspectFetchStatus(res)
