@@ -289,15 +289,6 @@ location / {
 - **详情页调用地址：** 展示「域名+路径」（无协议）；复制为带 `http`/`https` 的完整链接（default / slate）
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
-### v13.26.16（2026-08-17）
-
-- **安全：** 移除根目录 `robots.txt`——其 `Disallow` 清单会暴露 `admin/`、`user/`、`core/`、`config/` 等目录结构；升级清理见 `obsolete-files.json`
-- **安全（E253）：** 前台禁共享缓存；禁止登录 KEY SSR；`core/front/playground-key.php` 按需取钥
-- **安全（SEC-001）：** `playground/relay.php`、`sitemeta.php` IP 频控
-- **登录：** 修复「验证码登录」偶发失效（E251）
-- **前台源码：** 同站路径 `vs_site_path`；`core/front/catalog.php` 去首屏大包（双主题）；专项《前端页面渲染与源码规范》/ E252
-- **更多：** 见 [`更新记录.md`](更新记录.md)
-
 更早版本请查看 [更新记录.md](更新记录.md)。
 
 ---
