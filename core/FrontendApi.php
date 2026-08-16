@@ -137,7 +137,6 @@ class FrontendApi
      */
     public static function bindRequestHost(array $item)
     {
-        $base = rtrim(vs_base_url(), '/');
         $id = (int) (isset($item['id']) ? $item['id'] : 0);
 
         $path = '';
@@ -163,7 +162,7 @@ class FrontendApi
                     $path = '/' . $path;
                 }
                 $item['call_path'] = $path;
-                $item['endpoint'] = $base . $path;
+                $item['endpoint'] = vs_site_path($path);
             }
         }
 
@@ -180,7 +179,7 @@ class FrontendApi
                 $iconPath = '/' . $iconPath;
             }
             $item['icon_path'] = $iconPath;
-            $item['icon'] = $base . $iconPath;
+            $item['icon'] = vs_site_path($iconPath);
         }
 
         return $item;
@@ -408,6 +407,35 @@ class FrontendApi
             return self::bindRequestHostToList($cached);
         }
         return self::bindRequestHostToList($factory());
+    }
+
+    /**
+     * 公开目录用条目：去掉 doc/aidoc/response 大字段（首页调试仍保留 params）
+     *
+     * @param array $item
+     * @return array
+     */
+    public static function slimForCatalog(array $item)
+    {
+        unset($item['doc'], $item['aidoc'], $item['response']);
+        return $item;
+    }
+
+    /**
+     * 前台目录接口专用列表（listForTheme + slim，减少泄露与响应体积）
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function listForCatalog()
+    {
+        $out = array();
+        foreach (self::listForTheme() as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $out[] = self::slimForCatalog($item);
+        }
+        return $out;
     }
 
     /**

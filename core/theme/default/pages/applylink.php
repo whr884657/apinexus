@@ -1,6 +1,6 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $siteCard = isset($siteCard) && is_array($siteCard) ? $siteCard : (class_exists('FrontendLink') ? FrontendLink::siteCard() : array(
     'name' => isset($siteName) ? $siteName : 'ApiNexus',
     'url'  => $vsBase . '/',

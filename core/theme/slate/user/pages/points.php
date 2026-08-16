@@ -18,7 +18,7 @@ $balance = isset($balance) ? $balance : 0;
             <div class="vs-points-hero__label">当前余额</div>
             <div class="vs-points-hero__value" id="pointsBalance"><?php echo vs_e(PayConfig::fmtPoints($balance)); ?></div>
         </div>
-        <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/user/recharge'); ?>">去充值</a>
+        <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_site_path('/user/recharge')); ?>">去充值</a>
     </div>
 
     <div class="vs-panel vs-finance-panel">

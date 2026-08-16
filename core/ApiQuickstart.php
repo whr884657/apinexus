@@ -87,7 +87,7 @@ class ApiQuickstart
                 return $url;
             }
         }
-        $base = rtrim(vs_base_url(), '/') . '/assets/img/lang/';
+        $base = vs_site_path('/assets/img/lang/');
         if ($icon === 'curl') {
             return $base . 'curl.svg';
         }

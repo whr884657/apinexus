@@ -17,7 +17,7 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 
-$vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? (string) $vsBase : vs_site_base_path();
 $base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
 $pageTitle = isset($pageTitle) ? (string) $pageTitle : '用户登录';
 $expiredMsg = isset($expiredMsg) ? (string) $expiredMsg : '';
@@ -173,7 +173,11 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
         if (form.code) form.code.required = mode === 'code';
         if (toggleEl) toggleEl.textContent = mode === 'code' ? '密码登录' : '验证码登录';
         hideMessage();
-        if (window.VsCaptcha && window.VsCaptcha.reset) window.VsCaptcha.reset(form);
+        if (window.VsCaptcha && window.VsCaptcha.clearChallenge) {
+            window.VsCaptcha.clearChallenge(form);
+        } else if (window.VsCaptcha && window.VsCaptcha.reset) {
+            window.VsCaptcha.reset(form);
+        }
     }
 
     if (toggleEl) {
@@ -191,14 +195,14 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
     if (oauthError) showMessage(oauthError, 'error');
 
     if (sendCodeBtn) {
+        var sendingCode = false;
         sendCodeBtn.addEventListener('click', function () {
             hideMessage();
-            if (!mailEnabled || mode !== 'code') {
-                if (!mailEnabled) showMessage('邮箱发信功能尚未配置', 'error');
-                return;
-            }
+            if (!mailEnabled) { showMessage('邮箱发信功能尚未配置', 'error'); return; }
+            if (mode !== 'code' || sendingCode || countdown > 0) return;
             var email = form.email ? form.email.value.trim() : '';
             if (!email) { showMessage('请先输入邮箱', 'error'); if (form.email) form.email.focus(); return; }
+            sendingCode = true;
             sendCodeBtn.disabled = true;
             var body = new FormData();
             body.append('action', 'send_code');
@@ -216,7 +220,7 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
                         try { return text ? JSON.parse(text) : null; } catch (err) { return null; }
                     });
                 }).then(function (data) {
-                    if (!data || typeof data !== 'object') { showMessage('网络异常或会话已过期，请刷新页面后重试', 'error'); resetSendCodeBtn(); return; }
+                    if (!data || typeof data !== 'object') { showMessage('网络异常或会话已过期，请刷新页面后重试', 'error'); return; }
                     applyMailTicket(data);
                     if (data.csrf && form.csrf_token) form.csrf_token.value = data.csrf;
                     if (data.code === 1) {
@@ -226,17 +230,20 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
                     } else {
                         showMessage(data.msg || '发送失败', 'error');
                         var waitSec = parseWaitSeconds(data.msg);
-                        if (waitSec > 0) startCountdown(waitSec); else resetSendCodeBtn();
+                        if (waitSec > 0) startCountdown(waitSec);
                         if (window.VsCaptcha && window.VsCaptcha.reset) window.VsCaptcha.reset(form);
                     }
-                }).catch(function () { showMessage('网络异常，请稍后重试', 'error'); resetSendCodeBtn(); });
+                }).catch(function () { showMessage('网络异常，请稍后重试', 'error'); });
             };
-            if (window.VsCaptcha && window.VsCaptcha.enabled && window.VsCaptcha.ensure) {
-                window.VsCaptcha.ensure(form).then(doSend).catch(function (err) {
-                    showMessage((err && err.message) || '请先完成行为验证', 'error');
-                    resetSendCodeBtn();
-                });
-            } else { doSend(); }
+            var chain = (window.VsCaptcha && window.VsCaptcha.enabled && window.VsCaptcha.ensure)
+                ? window.VsCaptcha.ensure(form).then(doSend)
+                : doSend();
+            Promise.resolve(chain).catch(function (err) {
+                showMessage((err && err.message) || '请先完成行为验证', 'error');
+            }).then(function () {
+                sendingCode = false;
+                resetSendCodeBtn();
+            });
         });
     }
 

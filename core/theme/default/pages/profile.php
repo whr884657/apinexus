@@ -17,7 +17,7 @@ if (!isset($profile) || !is_array($profile)) {
     $profile = null;
 }
 $notFound = !empty($notFound) || $profile === null;
-$vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? (string) $vsBase : vs_site_base_path();
 $wallpaper = isset($wallpaper) ? trim((string) $wallpaper) : '';
 $pingUrl = isset($pingUrl) ? (string) $pingUrl : ($vsBase . '/core/ping.php');
 

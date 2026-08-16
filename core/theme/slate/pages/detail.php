@@ -2,7 +2,7 @@
 
 $api = isset($api) && is_array($api) ? $api : null;
 $notFound = !empty($notFound) || $api === null;
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $methods = (!$notFound && isset($api['methods']) && is_array($api['methods'])) ? $api['methods'] : array('GET');
 $isDisabled = !$notFound && !empty($api['disabled']);
 $isMaintenance = !$notFound && !empty($api['maintenance']);

@@ -251,34 +251,91 @@
         return params;
     }
 
+    var _playgroundKeyFetch = null;
+
+    function playgroundKeysFetchUrl() {
+        var ctx = window.playgroundKeyContext || {};
+        if (ctx.keysUrl) {
+            return String(ctx.keysUrl);
+        }
+        return (window.VS_BASE_URL || '') + '/core/front/playground-key.php';
+    }
+
+    function ensurePlaygroundUserApiKey() {
+        var existing = (typeof window.playgroundUserApiKey === 'string') ? window.playgroundUserApiKey.trim() : '';
+        if (existing) {
+            return Promise.resolve(existing);
+        }
+        var ctx = window.playgroundKeyContext || {};
+        if (!ctx.loggedIn) {
+            return Promise.resolve('');
+        }
+        var keyCount = parseInt(String(ctx.apiKeyCount != null ? ctx.apiKeyCount : 0), 10) || 0;
+        if (keyCount <= 0) {
+            return Promise.resolve('');
+        }
+        if (_playgroundKeyFetch) {
+            return _playgroundKeyFetch;
+        }
+        if (!window.VS || typeof window.VS.postForm !== 'function') {
+            return Promise.resolve('');
+        }
+        var fd = new FormData();
+        fd.append('action', 'get');
+        _playgroundKeyFetch = window.VS.postForm(fd, playgroundKeysFetchUrl()).then(function (data) {
+            if (data && data.csrf) {
+                window.VS_CSRF_TOKEN = data.csrf;
+            }
+            if (!data || Number(data.code) !== 1) {
+                _playgroundKeyFetch = null;
+                return '';
+            }
+            if (data.apiKeyCount != null && window.playgroundKeyContext) {
+                window.playgroundKeyContext.apiKeyCount = Number(data.apiKeyCount) || 0;
+            }
+            var key = data.apiKey != null ? String(data.apiKey).trim() : '';
+            window.playgroundUserApiKey = key;
+            return key;
+        }).catch(function () {
+            _playgroundKeyFetch = null;
+            return '';
+        });
+        return _playgroundKeyFetch;
+    }
+
     function autofillKey() {
-        if (!paramsWrap || !api) return;
+        if (!paramsWrap || !api) {
+            return Promise.resolve();
+        }
         var need = parseInt(api.needkey, 10) || 0;
-        if (need !== 1 && need !== 2) return;
-        var keyVal = (typeof window.playgroundUserApiKey === 'string') ? window.playgroundUserApiKey.trim() : '';
+        if (need !== 1 && need !== 2) {
+            return Promise.resolve();
+        }
         var ctx = window.playgroundKeyContext || {};
         var input = null;
         paramsWrap.querySelectorAll('.param-input[data-param]').forEach(function (el) {
             var n = String(el.getAttribute('data-param') || '').toLowerCase();
             if (n === 'key' || n === 'api_key' || n === 'apikey') input = el;
         });
-        if (keyVal && input && !String(input.value || '').trim()) {
-            input.value = keyVal;
-        }
-        var old = paramsWrap.querySelector('.playground-key-hint');
-        if (old) old.remove();
-        var hint = document.createElement('p');
-        hint.className = 'playground-key-hint';
-        if (ctx.loggedIn && keyVal) {
-            hint.innerHTML = '已填入可用 KEY，可直接测试。管理见 <a href="' + (ctx.userCenterUrl || '#') + '">用户中心</a>。';
-        } else if (ctx.loggedIn) {
-            hint.innerHTML = '账户暂无 KEY，请至 <a href="' + (ctx.userCenterUrl || '#') + '">用户中心</a> 创建。';
-        } else if (need === 1) {
-            hint.innerHTML = '需 KEY：请先 <a href="' + (ctx.loginUrl || '#') + '">登录</a> 后在用户中心创建。';
-        } else {
-            hint.innerHTML = '可选 KEY：登录后可在用户中心创建。';
-        }
-        paramsWrap.insertBefore(hint, paramsWrap.firstChild);
+        return ensurePlaygroundUserApiKey().then(function (keyVal) {
+            if (keyVal && input && !String(input.value || '').trim()) {
+                input.value = keyVal;
+            }
+            var old = paramsWrap.querySelector('.playground-key-hint');
+            if (old) old.remove();
+            var hint = document.createElement('p');
+            hint.className = 'playground-key-hint';
+            if (ctx.loggedIn && keyVal) {
+                hint.innerHTML = '已填入可用 KEY，可直接测试。管理见 <a href="' + (ctx.userCenterUrl || '#') + '">用户中心</a>。';
+            } else if (ctx.loggedIn) {
+                hint.innerHTML = '账户暂无 KEY，请至 <a href="' + (ctx.userCenterUrl || '#') + '">用户中心</a> 创建。';
+            } else if (need === 1) {
+                hint.innerHTML = '需 KEY：请先 <a href="' + (ctx.loginUrl || '#') + '">登录</a> 后在用户中心创建。';
+            } else {
+                hint.innerHTML = '可选 KEY：登录后可在用户中心创建。';
+            }
+            paramsWrap.insertBefore(hint, paramsWrap.firstChild);
+        });
     }
 
     autofillKey();
@@ -310,7 +367,7 @@
                 return;
             }
 
-            autofillKey();
+            autofillKey().then(function () {
             var method = getMethod();
             var params = collectParams();
             var need = parseInt(api.needkey, 10) || 0;
@@ -426,6 +483,7 @@
                     ? '请求失败（浏览器无法完成，常见于跨域或上游未允许跨域）'
                     : raw;
                 responseEl.textContent = '// 请求失败: ' + msg;
+            });
             });
         });
     }

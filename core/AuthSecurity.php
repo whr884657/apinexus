@@ -287,7 +287,10 @@ class AuthSecurity
     }
 
     /**
-     * 前台公共页基础安全头（可缓存；CSP 不限制页脚任意 HTML/脚本）
+     * 前台公共页基础安全头（CSP 不限制页脚任意 HTML/脚本）
+     *
+     * 说明：页脚/主题会 SSR CSRF；登录态还可能有用户态字段。禁止共享缓存与 CDN 边缘缓存，
+     * 避免「私人 HTML」被按 URL 复用放大泄露（E253）。
      *
      * @return void
      */
@@ -298,6 +301,12 @@ class AuthSecurity
         }
         self::sendCommonSecurityHeaders();
         header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests");
+        header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        header('Vary: Cookie');
+        header('CDN-Cache-Control: no-store');
+        header('Cloudflare-CDN-Cache-Control: no-store');
         if (self::isHttps() && self::sessionCookieSecure()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         }

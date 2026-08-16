@@ -12,7 +12,7 @@ InstallChecker::requireInstalled();
 UserAuth::requireLogin();
 AuthSecurity::sendSecurityHeaders();
 
-$vsBase     = vs_base_url();
+$vsBase     = vs_site_base_path();
 $vsUser     = UserAuth::user();
 $vsUserProfile = FrontendUser::current();
 $vsSiteName   = SiteContext::siteName();

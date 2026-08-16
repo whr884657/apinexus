@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.15-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.16-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -208,7 +208,7 @@ ApiNexus/
 
 ## 伪静态 / URL 重写
 
-> **权威规则以根目录 [`nginx伪静态配置.md`](nginx伪静态配置.md) 情况 A 为准**，须与安装向导 `vs_install_nginx_rewrite_snippet()`、根目录 `.htaccess`、本段保持一致。改规则时四处同步（含 `robots.txt` 的 `Sitemap:`）。
+> **权威规则以根目录 [`nginx伪静态配置.md`](nginx伪静态配置.md) 情况 A 为准**，须与安装向导 `vs_install_nginx_rewrite_snippet()`、根目录 `.htaccess`、本段保持一致。改规则时四处同步（含 `/sitemap.xml`）。**v13.26.16 起不再提供根目录 `robots.txt`**（Disallow 清单会暴露目录结构）。
 
 ### Apache
 
@@ -284,10 +284,14 @@ location / {
 
 > 此处**仅保留最新一条**版本记录；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.15（2026-08-16）
+### v13.26.16（2026-08-17）
 
-- 用户控制台「近 7 日调用排行」更名为「近期调用排行」；右上角左右滑动切换今日 / 近 7 日（默认今日）
-- 新增本地接口 `/api/index.php`：凭调用密钥查询本人累计 / 今日 / 近 7 日调用与积分，以及今日 / 近 7 日接口调用排行；请求仅 `key` + 可选 `q`（字母 `a`～`i` 与数字 `0`～`9` 等价，说明见 `api/个人调用数据查询API接口文档.md`）
+- **安全：** 移除根目录 `robots.txt`——其 `Disallow` 清单会暴露 `admin/`、`user/`、`core/`、`config/` 等目录结构；升级清理见 `obsolete-files.json`
+- **安全（E253）：** 前台禁共享缓存；禁止登录 KEY SSR；`core/front/playground-key.php` 按需取钥
+- **安全（SEC-001）：** `playground/relay.php`、`sitemeta.php` IP 频控
+- **登录：** 修复「验证码登录」偶发失效（E251）
+- **前台源码：** 同站路径 `vs_site_path`；`core/front/catalog.php` 去首屏大包（双主题）；专项《前端页面渲染与源码规范》/ E252
+- **更多：** 见 [`更新记录.md`](更新记录.md)
 
 更早版本请查看 [更新记录.md](更新记录.md)。
 

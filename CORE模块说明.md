@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.15**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.16**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -97,13 +97,18 @@ core/
 ├── markdown/         Markdown.php + Parsedown（bootstrap 加载）
 ├── play/codeplay/    CodePayClient.php + notify.php / return.php（支付回调 HTTP）
 ├── playground/       relay.php（在线测试同源中继 HTTP）、media.php
+├── front/            catalog.php（公开目录）；playground-key.php（登录按需取 KEY，禁 SSR；v13.26.16）
 ├── cron/             apilogarchive.php 等计划任务 HTTP（密钥校验）
 ├── theme/{id}/       主题包（pages / layout / assets；非 bootstrap 类）
-├── ping.php          ← HTTP：贡献者延迟检测等
+├── ping.php          ← HTTP：贡献者延迟检测等（含 IP 频控）
 └── vx/               隐蔽数据（如 AboutCatalog 本地 JSON），勿当公开入口
 ```
 
-**说明：** `image.php` / `register.php`、`playground/relay.php`、`cron/*`、`ping.php`、码支付 `notify.php`/`return.php` 等是**独立 HTTP 入口**，各自 `require bootstrap` 或按需加载，**不会**出现在 bootstrap 类清单里。主题包 `theme/{id}/` 只被 `ThemeManager` / `vs_frontend_page` 调度，不在 bootstrap 逐文件 require。
+**说明：** `image.php` / `register.php`、`playground/relay.php`、`front/catalog.php`、`front/playground-key.php`、`cron/*`、`ping.php`、码支付 `notify.php`/`return.php` 等是**独立 HTTP 入口**，各自 `require bootstrap` 或按需加载，**不会**出现在 bootstrap 类清单里。主题包 `theme/{id}/` 只被 `ThemeManager` / `vs_frontend_page` 调度，不在 bootstrap 逐文件 require。
+
+**`core/front/catalog.php`（v13.26.16）：** 首页 / apis **禁止**首屏 `json_encode` 全量 `apiData`；须 `POST` 本端点（`vs_require_secure_post` + `front_catalog_ip` 60/60s）一次拉取后 JS 本地筛选。数据经 `FrontendApi::listForCatalog()`（`listForTheme` + `slimForCatalog`，去掉 `doc`/`aidoc`/`response`）、`FrontendCategory::nameMap()`；可选 `partners=1` → `FrontendPartner::listForTheme()`。页脚 / `vs_render_foot` 注入 `VS_FRONT_CATALOG`；主题壳提供 `VS.fetchFrontCatalog`。详见《前端页面渲染与源码规范》。
+
+**`core/front/playground-key.php`（v13.26.16 / E253）：** 在线测试**禁止**把 API KEY 明文 SSR 进首页/详情 HTML。SSR 仅 `playgroundKeyContext`（loggedIn / apiKeyCount / urls）；调试时 `POST` 本端点（登录 + CSRF + UID/IP 频控）按需取钥。前台页 `sendFrontendSecurityHeaders` 固定 `private, no-store` + `Vary: Cookie`，防 CDN 缓存放大。
 
 ---
 
@@ -166,7 +171,7 @@ core/
 | 业务模块 | 后台类 | 前台调度类 | 后台管理页 | 主题可调用 | 状态 |
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
-| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php` | ✅ 是 | **已完成**（本地/外链、详情 `/detail/{id}`、多选 method、**keyways**、needkey/qpm/charge、审核三态、统计、在线测试浏览器直连、双端 UI） |
+| 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php`、**`core/front/catalog.php`** | ✅ 是 | **已完成**（本地/外链、详情 `/detail/{id}`、多选 method、**keyways**、needkey/qpm/charge、审核三态、统计、在线测试浏览器直连、双端 UI；**v13.26.16** 首页/apis 经 catalog 异步目录，`listForCatalog`/`slimForCatalog`） |
 | 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号最多 3 个；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
 | 积分与支付 | `PointsManager` / `PointsNotify` / `OrderManager` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到 / 控制台） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；注册赠送 / 每日签到；积分归零/充值成功邮件；表 `orders` + `checkin`） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
@@ -174,20 +179,20 @@ core/
 | 用户控制台统计 | `UserStat7Manager` / `ApiKeyManager` / `ApiLogManager` | `FrontendUser::dashboardStats` / `myLogsPaged` | `user/index.php`、`user/logs.php`、双主题 dashboard/logs | ✅ 是 | **已完成（13.26.7 数据 / 13.26.8 UI / 13.26.9 实时刷新）**：KPI 7/8；固定 3s live + 同款图标刷新 |
 | 注册策略 | `RegisterPolicy` | （入口注入 `$registerOpen` 等） | `admin/settings`、`user/register.php` | 入口/后台 | **已完成**（开放/关停、邮箱验证、后缀白名单 `register_policy`） |
 | 验证码 | `Captcha` + `captcha/*` | `vs_captcha_field` / `vs_captcha_js`（`captcha/helper.php`） | 系统设置分端 mode；`captcha/image.php` | 认证页 | **已完成**（local / gt3 / gt4；场景 SCENE_USER_*；v13.26.6 大小写不敏感 + 首次 focus 换图） |
-| 站点地图 | `Sitemap` | — | 根 `sitemap.php` → `/sitemap.xml` | SEO | **已完成**（四处伪静态同步 + `robots.txt`） |
+| 站点地图 | `Sitemap` | — | 根 `sitemap.php` → `/sitemap.xml` | SEO | **已完成**（四处伪静态同步；**v13.26.16 起不再提供 robots.txt**） |
 | 管理员认证 | `Auth` | — | `admin/` | 后台专用 | **已完成** |
 | 第三方登录 | `oauth/*` | `OAuthService` | 系统设置 | ✅ 是 | **已完成**（UI 出站 `/user/oauth/start`；回调仍 `callback.php`） |
 | AI 文档 / 快速上手 | `AiApiDoc` / `AiConfig` / `AiClient` / `AiChatSession` / `AiSse` / `ApiQuickstart` | （编辑页 SSE；详情读 aidoc） | 接口编辑（管理端/用户端） | 后台/开发者 | **已完成**（7 章 id 固定；代码最多 27 片；TTL=600；`clearAllForActor`） |
 | 面板监控 | `PanelMonitor` / `DashboardStats` | — | `admin/index`、`admin/screen` | 后台专用 | **已完成**（宝塔 / 1Panel 快照；v13.16.0） |
 | 文章 | `ContentManager`（kind=1） | `FrontendArticle` / `FrontendAbout` | `admin/content/articles.php`、`articles.php`、`about.php` | ✅ 是 | **已完成**（封面；可绑定关于页；隐藏态） |
 | 友情链接 | `LinkManager` / `LinkSiteMeta` / `LinkNotify` | `FrontendLink` | `admin/content/links.php`、`links.php`、`applylink.php`、`core/theme/default/api/sitemeta.php` | ✅ 是 | **已完成**（表 `link`；`kind=0`；审核 + 启禁；一键 TDK；邮件通知） |
-| 合作伙伴 | `LinkManager`（共用） | `FrontendPartner` | `admin/content/partners.php`、默认主题首页 | ✅ 是 | **已完成**（表 `link`；`kind=1`；无审核；仅编辑/启禁） |
+| 合作伙伴 | `LinkManager`（共用） | `FrontendPartner` | `admin/content/partners.php`、默认主题首页（**catalog `partners=1`**） | ✅ 是 | **已完成**（表 `link`；`kind=1`；无审核；仅编辑/启禁；**v13.26.16** 首页伙伴随目录接口拉取，禁首屏灌包） |
 | 赞助 | `LinkManager`（共用） | `FrontendSponsor` | `admin/finance/sponsor.php`、`sponsor.php`、默认主题赞助页、系统设置收款码 | ✅ 是 | **已完成**（表 `link`；`kind=2`；简介=赞助说明；收款码配置） |
 | 公告 | `ContentManager`（kind=0） | `FrontendAnnouncement` | `admin/content/announcements.php`、首页弹窗/跑马灯 | ✅ 是 | **已完成**（置顶/弹窗；Markdown；与文章共用表） |
 | Markdown | `Markdown`（`core/markdown/`） | 编辑器 + 渲染 | 公告/文章/API 文档编辑 | ✅ 是 | **已完成**（本地 marked/purify/Parsedown；短码扩展） |
 | Redis 缓存 | — | `RedisService` / `RedisCache` / `DashboardStats` / `StatDayManager` | `admin/system/redis.php`、`admin/index.php`、`admin/screen.php` | 后台专用 | **业务缓存已接入**（公开接口 / 前台展示 / 分类 / 日志分页 / 今日调用←statday / 控制台 `cache:dashboard:*` + `statday` 日聚合） |
 | 贡献者 | `FrontendContributor` | `FrontendContributor` | `contributors.php`、`profile.php`、`core/ping.php` | ✅ 是 | **已完成**（开发者卡片、公开主页、加入时间、壁纸、延迟检测） |
-| 主题资源 / 媒体 | `ThemeManager` / `SiteMedia` | （主题 layout 调用） | 各主题 `assets/shell|js|css`（逐文件 link/script） | ✅ 是 | **已完成**（双主题完全隔离；逐文件加载；图标经 SiteMedia） |
+| 主题资源 / 媒体 | `ThemeManager` / `SiteMedia` | （主题 layout 调用） | 各主题 `assets/shell|js|css`（逐文件 link/script） | ✅ 是 | **已完成**（双主题完全隔离；逐文件加载；图标经 SiteMedia；**v13.26.16** 同站出站改 `vs_site_path`，SEO 仍绝对 https） |
 | 用户控制台问候 | `UserDashHello` | — | `user/index`（双主题） | 用户中心 | **已完成**（24×1h 槽 + 打字动效；头像点击抖动） |
 
 > 上表「待开发」项：须先完成 `XxxManager` + `FrontendXxx` 并注册 bootstrap，主题才能接入；在此之前主题页仅能做静态占位。
@@ -242,7 +247,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 ### 2.8 主题开发者速记（完整对接见 **§六**）
 
 1. **读分类** → `FrontendCategory`  
-2. **读公开接口** → `FrontendApi`  
+2. **读公开接口** → 首页/apis：**禁止**首屏灌全量；`POST core/front/catalog.php` / `VS.fetchFrontCatalog`（服务端 `FrontendApi::listForCatalog`）；详情等单条仍 `FrontendApi::findForThemeById`  
 3. **读统计 KPI** → `FrontendStats`（勿再调 `ApiManager` 计数）  
 4. **读站点名/描述** → `SiteContext::siteName()`；壳层系统名 → `SiteContext::systemName()`  
 5. **当前登录用户** → `FrontendUser::current()`；会话 → `UserAuth::check()`  
@@ -263,7 +268,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 |------|--------|
 | `bootstrap.php` | 系统引导，加载全部 core 类 |
 | `version.php` | 版本常量 `VS_VERSION` |
-| `helpers.php` | 全局辅助函数（转义、页面渲染、前台入口） |
+| `helpers.php` | 全局辅助函数（转义、页面渲染、前台入口；**v13.26.16** `vs_site_path` / `vs_site_base_path`；页脚注入 `VS_FRONT_CATALOG`） |
 | `InstallChecker.php` | 安装状态检测 |
 | `Database.php` | PDO 连接、表名前缀 |
 | `DatabaseInstaller.php` | 安装向导执行 `database.sql` |
@@ -277,7 +282,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `UserRole.php` | 用户角色常量与权限判断（普通用户/开发者） |
 | `FrontendUser.php` | 前台用户资料调度（用户名、头像、简介、博客、壁纸、角色）；`dashboardStats()` 控制台汇总；`myLogsPaged()` 本人日志 |
 | `UserDashHello.php` | 用户控制台按时段问候（24 个 1 小时槽；文案池随机；双主题共用） |
-| `SiteMedia.php` | 内置图片出站 URL（`assets/img/` 物理文件；主题禁止手写路径） |
+| `SiteMedia.php` | 内置图片出站（`assets/img/` 物理文件；主题禁止手写路径；**v13.26.16** 同站返回根相对路径） |
 | `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间；`bio_custom` 标记是否自填简介；归属含绑定身份下历史 userid=0） |
 | `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据 |
 | `Captcha.php` | 行为验证门面：分端 mode（管理员/用户可分别选）；`local` / `gt3` / `gt4`；场景 `SCENE_*`；helper 提供 `vs_captcha_*`（见 `captcha/helper.php`） |
@@ -323,7 +328,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `LinkSiteMeta.php` | 抓取外站 HTML 解析 title/description/favicon（友链一键填充；防 SSRF） |
 | `LinkNotify.php` | 友链申请通知管理员；通过后通知申请人邮箱 |
 | `FrontendCategory.php` | 前台分类标签（**主题向**） |
-| `FrontendApi.php` | 前台公开接口列表与详情（**主题向**）；入口 SEO 见 `vs_page_seo_pack`（v10.8.2） |
+| `FrontendApi.php` | 前台公开接口列表与详情（**主题向**）；`listForCatalog` / `slimForCatalog`（目录端点瘦身）；入口 SEO 见 `vs_page_seo_pack`（v10.8.2 / **v13.26.16**） |
+| `front/catalog.php` | **HTTP**：前台公开接口目录（POST+CSRF+频控；非 bootstrap 类；**v13.26.16**） |
+| `front/playground-key.php` | **HTTP**：登录用户按需取 Playground KEY（POST+CSRF+频控；禁 SSR；**v13.26.16 / E253**） |
 | `FrontendLink.php` | 前台已通过且启用的友链列表与本站友链卡片（**主题向**） |
 | `FrontendPartner.php` | 前台已启用合作伙伴列表（**主题向**） |
 | `FrontendSponsor.php` | 前台赞助收款码 + 赞助名单（**主题向**） |
@@ -360,13 +367,13 @@ foreach (FrontendCategory::listTags() as $tag) {
 
 ### 4.2 version.php
 
-**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.7**）。在线更新、关于页、`update.json` 均以此为准。
+**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.16**）。在线更新、关于页、`update.json` 均以此为准。
 
 **用法：**
 
 ```php
-echo VS_VERSION;           // 例如 13.26.7（以当前 core/version.php 为准）
-echo 'v' . VS_VERSION;     // 例如 v13.26.7
+echo VS_VERSION;           // 例如 13.26.16（以当前 core/version.php 为准）
+echo 'v' . VS_VERSION;     // 例如 v13.26.16
 ```
 
 **发版时：** 须同步修改 `update.json`、`update-log.json`、`README.md` 徽章。
@@ -382,14 +389,16 @@ echo 'v' . VS_VERSION;     // 例如 v13.26.7
 | `vs_e($value)` | HTML 转义，模板输出必用 |
 | `vs_sanitize_http_host($host)` | 清洗 HTTP Host（拒 CRLF/路径符号；允许域名/IPv4/`[IPv6]`+端口） |
 | `vs_request_http_host()` | 合法 `HTTP_HOST` → 否则 `SERVER_NAME` → 否则 `localhost` |
-| `vs_base_url()` | 站点根 URL（**仅用清洗后 Host**，防邮件/绝对链 Host 污染，E244） |
+| `vs_base_url()` | 站点根 **绝对** URL（**仅用清洗后 Host**，防邮件/绝对链 Host 污染，E244）；**SEO / og / 邮件**用 |
+| `vs_site_base_path()` | 安装路径前缀（域名根为 `''`，子目录如 `/foo`）；**非**带域名的绝对 URL（**v13.26.16**） |
+| `vs_site_path($path)` | 同站根相对路径（导航、主题资源、详情、本站图）；拒 `//evil` 协议相对；外链 http(s) 原样（**v13.26.16**） |
 | `vs_sql_like_escape` / `vs_sql_like_contains` / `vs_sql_like_prefix` | LIKE 字面转义（配合 `ESCAPE '\\'`，防 `%`/`_` 放大扫描，E243） |
-| `vs_path_resource_url($script, $id)` | 路径式资源 URL：`/{脚本}/{id}`（通用伪静态） |
+| `vs_path_resource_url($script, $id)` | 路径式资源 URL：`/{脚本}/{id}`（通用伪静态；内部走 `vs_site_path`） |
 | `vs_api_detail_url($apiId)` | 接口详情 URL（→ `/detail/{id}`） |
 | `vs_resolve_path_id()` | 入站解析资源数字 ID（GET 优先，兼容 PATH_INFO） |
 | `vs_redirect($url)` | HTTP 重定向 |
-| `vs_render_seo_meta()` / `vs_seo_defaults()` / `vs_seo_abs_url()` | SEO / OG / 分享 meta 统一输出 |
-| `vs_render_head()` / `vs_render_foot()` | 输出 HTML 头尾（head 支持 `$seoOpts` 页面级覆盖） |
+| `vs_render_seo_meta()` / `vs_seo_defaults()` / `vs_seo_abs_url()` | SEO / OG / 分享 meta 统一输出（**绝对 https**；`vs_seo_abs_url` 防子目录前缀重复） |
+| `vs_render_head()` / `vs_render_foot()` | 输出 HTML 头尾（head 支持 `$seoOpts`；foot 注入 `VS_FRONT_CATALOG` 等） |
 | `vs_frontend_page($pageKey, $title)` | **前台页面统一入口**（自动选主题、加载 CSS/JS） |
 | `vs_render_404_page()` | **全站 404 页**（根目录 `404.php` / Apache ErrorDocument；含安全法律提示；乱路径由 Nginx 默认页处理，不强制伪静态指到本页） |
 | `vs_render_notice()` | 后台提示块 |
@@ -400,6 +409,13 @@ echo 'v' . VS_VERSION;     // 例如 v13.26.7
 | `vs_safe_embed_url()` / `vs_safe_css_color()` | Markdown 短码外链/色值白名单（防 XSS，v10.15.3 复查） |
 | `vs_password_hash()` | 密码哈希 |
 
+**两套 URL（v13.26.16，强制）：**
+
+| 用途 | API | 形态 |
+|------|-----|------|
+| SEO / 社交 / 邮件 | `vs_base_url()` / `vs_seo_abs_url()` | `https://域名/...` |
+| 同站导航 / CSS/JS / 本站图 / catalog | `vs_site_path()` / `vs_site_base_path()` | `/apis` 或 `/子目录/apis` |
+
 **主题开发常用：**
 
 ```php
@@ -408,6 +424,9 @@ vs_frontend_page('home', '首页');
 
 // 模板内输出
 echo vs_e($siteName);
+
+// 同站链（源码不写死域名）
+echo vs_e(vs_site_path('/apis'));
 ```
 
 ---
@@ -557,7 +576,7 @@ Config::set('site_name', '我的 API 站');
 3. 根目录 `.htaccess`（`RewriteRule ^sitemap\.xml$ sitemap.php`）  
 4. `README.md` 伪静态说明  
 
-另：根目录 `robots.txt` 声明 `Sitemap: /sitemap.xml`。
+另：站点地图对外地址为 `/sitemap.xml`（伪静态）。**v13.26.16 起不再提供根目录 `robots.txt`**（避免 Disallow 暴露目录结构）。
 
 ---
 
@@ -624,6 +643,7 @@ $admin = Auth::user();
 | `validateCsrf($token)` | 校验 CSRF |
 | `requireAuthPost()` | POST 必须带合法 CSRF；失败 JSON 含新 `csrf` |
 | `sendSecurityHeaders()` | 认证页 `no-store` + CDN 禁缓存 |
+| `sendFrontendSecurityHeaders()` | 前台页 `private, no-store` + `Vary: Cookie` + CDN 禁缓存（E253；防 CSRF/用户态 HTML 被边缘共享） |
 | `checkLoginAllowed($username)` | 登录是否被限流 |
 | `recordLoginFailure($username)` | 记录登录失败 |
 | `checkMailCodeAllowed($email)` | 发验证码是否允许 |
@@ -817,7 +837,7 @@ VsPlaygroundResponse.directRequest({
 });
 ```
 
-**KEY 上下文：** `vs_playground_session_context()` → `apiKey` / `loggedIn` / `apiKeyCount`（勿再依赖中继 CSRF）。
+**KEY 上下文：** `vs_playground_session_context()` → SSR 仅 `loggedIn` / `apiKeyCount` / urls（**不含**密钥明文，E253）；调试按需 `POST core/front/playground-key.php`。
 
 **可选中继 `PlaygroundRelay`：** 仅兼容旧主题；入口 `core/playground/relay.php`；**禁止**在中继内写 `apilog`（见 E57）。
 
@@ -1001,12 +1021,16 @@ curl …
 
 | 方法 | 说明 |
 |------|------|
-| `listForTheme()` | 接口数组；Redis 缓存 `call_path`，取出后按当前访问域名重绑 `endpoint` / `detail_url`（多域名备用入口不串域） |
-| `findForThemeById($id)` | 单条详情（审核通过且非禁用）；同样按当前域名重绑 |
-| `bindRequestHost` / `bindRequestHostToList` | 将 `call_path` 拼到当前 `vs_base_url()` |
+| `listForTheme()` | 接口数组；Redis 缓存 `call_path`，取出后按当前访问重绑 `endpoint` / `detail_url` / `icon`（同站走 `vs_site_path`） |
+| `listForCatalog()` | **目录端点专用**（v13.26.16）：`listForTheme` 后逐条 `slimForCatalog`；供 `core/front/catalog.php` |
+| `slimForCatalog($item)` | 去掉 `doc` / `aidoc` / `response` 大字段（首页调试仍可保留 `params`） |
+| `findForThemeById($id)` | 单条详情（审核通过；详情允许已禁用）；同样按当前请求重绑 |
+| `bindRequestHost` / `bindRequestHostToList` | 将 `call_path` 拼到当前同站路径（或保留外链绝对地址） |
 | `countForTheme()` | 公开接口数量 |
 
-**返回字段（每条）：**
+**首页 / apis（v13.26.16 强制）：** 主题**禁止**首屏 `json_encode(FrontendApi::listForTheme())`；须 `POST core/front/catalog.php`（见 §1.1 `front/`）+ `VS.fetchFrontCatalog` 后本地筛选。详情页单条 / 推荐卡少量 SSR 仍可调 `listForTheme` / `findForThemeById`（勿灌全站目录）。
+
+**返回字段（每条；catalog 瘦身后无 doc/aidoc/response）：**
 
 | 字段 | 说明 |
 |------|------|
@@ -1015,9 +1039,9 @@ curl …
 | `desc` | 描述 |
 | `category` / `category_name` | 分类 id / 原始分类名 |
 | `method` / `methods` / `method_label` | 请求方式 |
-| `endpoint` | 调用地址（**当前访问域名**动态拼装；外链绝对地址不改） |
+| `endpoint` | 调用地址（**同站根路径**或外链绝对地址） |
 | `call_path` | 路径或外链绝对地址（Redis 缓存依赖此字段，勿把域名烤进缓存语义） |
-| `params` / `response` / `doc` / `aidoc` | 参数原文、返回、详细文档、代码示例 |
+| `params` / `response` / `doc` / `aidoc` | 参数原文、返回、详细文档、代码示例（**catalog 响应不含**后三者） |
 | `params_list` | 解析后的参数表（name/type/required/description/example） |
 | `maintenance` | 1=维护中 |
 | `needkey` / `needkey_label` | 密钥要求（文案：`无需 KEY` / `KEY 必填` / `KEY 可选`） |
@@ -1076,26 +1100,24 @@ curl …
 
 **主题约定：**
 
-- 列表页 `pages/links.php` → `FrontendLink::listForTheme()`
-- 首页合作伙伴区 → `FrontendPartner::listForTheme()`（勿写死外链）
+- 列表页 `pages/links.php` → `FrontendLink::listForThemePage()`（或 `listForTheme()`）
+- 首页合作伙伴区 → **随 catalog `partners=1` 拉取**（`FrontendPartner::listForTheme`）；勿首屏灌包、勿写死外链
 - 赞助页 `pages/sponsor.php` → `FrontendSponsor::paymentQrs()` + `listForTheme()`（默认主题：单码切换 + 桌面左右布局 +「感谢支持」+ 赞助卡片多列网格；**禁止**「其它支持方式」；主题二后续对齐）
 - 申请页 `pages/applylink.php` + 根入口 `applylink.php`（短名无横线）
 - 页脚在二维码上方渲染已通过且启用的友链，末尾固定「申请友链」链到 `/applylink`
 - 禁止主题内 SQL；申请提交走 `applylink.php` POST + CSRF + `AjaxResponse`
 - 后台：`admin/content/links.php`、`admin/content/partners.php`、`admin/finance/sponsor.php`；操作须 AJAX 局部更新，禁止整页刷新（E61）
-**主题首页示例：**
+
+**首页 / apis 目录（v13.26.16，正确写法）：**
 
 ```php
-$apiData = FrontendApi::listForTheme();
+// 主题页：分类标签可 SSR；接口列表勿 json_encode 全量
 $categoryNames = FrontendCategory::nameMap();
-?>
-<script>
-var apiData = <?php echo json_encode($apiData, JSON_UNESCAPED_UNICODE); ?>;
-var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICODE); ?>;
-</script>
+// JS：VS.fetchFrontCatalog({ partners: true, shuffle: false })
+//    → POST core/front/catalog.php → apiData / categoryNames / partners
 ```
 
-**说明：** 用户侧「提交接口」等功能未上线时，`listForTheme()` 可能返回空数组，**分类标签仍应正常显示**。
+**说明：** 用户侧「提交接口」等功能未上线时，catalog 可能返回空 `apiData`，**分类标签仍应正常显示**。详情推荐卡等少量服务端挑卡可用 `listForTheme()`，**禁止**把全站目录烤进首页 HTML。
 
 ---
 
@@ -1105,11 +1127,11 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 
 | 方法 | 说明 |
 |------|------|
-| `imgUrl($relative)` | 相对 `assets/img/` → 完整 URL；文件不存在返回空串 |
+| `imgUrl($relative)` | 相对 `assets/img/` → **同站根路径**（v13.26.16）；外链 http(s) 原样；文件不存在返回空串 |
 | `imgWebPath($relative)` | 站内路径 `/assets/img/...`（可不强制存在） |
 | `resolve(...)` | 解析入库或前端传来的路径/URL，防穿越 |
 
-**主题约定：** 模板里写 `SiteMedia::imgUrl('QQ.svg')`、`SiteMedia::imgUrl('lang/php.svg')` 等；**禁止**手写 `/assets/img/...`。
+**主题约定：** 模板里写 `SiteMedia::imgUrl('QQ.svg')`、`SiteMedia::imgUrl('lang/php.svg')` 等；**禁止**手写 `/assets/img/...` 或写死 `https://本域/assets/img/...`。
 
 ---
 
@@ -1157,7 +1179,7 @@ var categoryNames = <?php echo json_encode($categoryNames, JSON_UNESCAPED_UNICOD
 | `readAllThemesettings` / `syncThemesettingsEntries` | 总表读写与扫描补齐 |
 | `renderBody($pageKey, $title, $data)` | 渲染 layout + pages（`pageKey` 清洗；pages 经 `realpath` 限制在主题目录） |
 | `themeSetting($key, $default)` | 读当前主题 settings |
-| `assetUrl($themeId, $relative)` | 主题静态资源 URL（禁 `..`；主题须合法） |
+| `assetUrl($themeId, $relative)` | 主题静态资源 URL（禁 `..`；主题须合法；**v13.26.16** 同站根路径） |
 | `resolveThemeFile` / `resolveActiveThemeFile` | 主题内文件绝对路径（严格当前主题；禁穿越） |
 | `shellUrl($file)` | 当前主题 `assets/shell/` 下单文件 URL |
 | `pageScriptUrl($file)` | 当前主题页脚本 URL（如 `user-dashboard.js` / `user-logs.js`） |
@@ -1309,11 +1331,12 @@ $result = OAuthService::handleCallback($provider, $code, $state);
 
 | 你要做什么 | 调用（唯一推荐） | 禁止 |
 |------------|------------------|------|
-| 读公开接口列表/详情 | `FrontendApi::listForTheme()` / `findForThemeById($id)` | `ApiManager::*` 查库 |
+| 读公开接口**目录**（首页/apis） | `POST core/front/catalog.php` / `VS.fetchFrontCatalog`（服务端 `FrontendApi::listForCatalog`） | 首屏 `json_encode(listForTheme())`；`ApiManager::*` |
+| 读公开接口**单条详情** | `FrontendApi::findForThemeById($id)`（入口常已注入 `$api`） | `ApiManager::*` 查库 |
 | 读分类标签 | `FrontendCategory::listTags()` / `nameMap()` | `ApiCategoryManager::*` |
 | 读首页统计 | `FrontendStats::userCount()` / `todayCallCount()` / `approvedApiCount()` / `totalCallCount()` | 主题内 COUNT SQL / 直接调 Manager 统计 |
 | 读友链 / 页脚友链 | `FrontendLink::listForThemePage()` / `pickForFooter($n)` / `siteCard()` | `LinkManager::*` |
-| 读合作伙伴 | `FrontendPartner::listForTheme()` | 写死外链或 SQL |
+| 读合作伙伴 | 首页：`catalog partners=1`；其它页可 `FrontendPartner::listForTheme()` | 写死外链、首屏灌伙伴大包或 SQL |
 | 读赞助名单 + 收款码 | `FrontendSponsor::listForTheme()` + `paymentQrs()` | 手写收款码路径 |
 | 读文章列表/详情 | `FrontendArticle::listForTheme()` / `listPaged()` / `findById()` | `ContentManager::*` |
 | 读公告 / 弹窗公告 | `FrontendAnnouncement::listForTheme()` / `listPopups()` | 同上 |
@@ -1375,7 +1398,9 @@ vs_frontend_page($pageKey, $pageTitle, $pageData);
 
 **`renderBody` 注入到模板的变量（始终有）：**
 
-`$vsBase`、`$siteName`、`$navName`、`$systemName`、`$copyrightName`、`$copyrightUrl`、`$siteDesc`、`$pageKey`、`$pageTitle`、`$navItems`、`$activeNav`、`$userLoggedIn`、`$authUrl`、`$authLabel`、`$authAvatarUrl`、`$themeId`，以及 `$pageData` 全部键（含 `pageSeo`）。
+`$vsBase`（**站内路径前缀**，v13.26.16；不是 `https://域名`）、`$siteName`、`$navName`、`$systemName`、`$copyrightName`、`$copyrightUrl`、`$siteDesc`、`$pageKey`、`$pageTitle`、`$navItems`、`$activeNav`、`$userLoggedIn`、`$authUrl`、`$authLabel`、`$authAvatarUrl`、`$themeId`，以及 `$pageData` 全部键（含 `pageSeo`）。
+
+> **陷阱：** 需要 Host 时用 `parse_url(vs_base_url(), PHP_URL_HOST)`，**不要**对 `$vsBase` 做 `parse_url(..., PHP_URL_HOST)`（路径前缀无 Host）。
 
 模板首行必须：
 
@@ -1498,7 +1523,9 @@ foreach ($tags as $tag) {
 
 | 方法 | 返回 |
 |------|------|
-| `listForTheme()` | 公开接口数组（已按**当前访问域名**重绑 `endpoint` / `detail_url`） |
+| `listForTheme()` | 公开接口数组（已按当前请求重绑 `endpoint` / `detail_url` / `icon`；**勿整表灌进首页 HTML**） |
+| `listForCatalog()` | 目录专用瘦身列表（无 doc/aidoc/response；**v13.26.16**） |
+| `slimForCatalog($item)` | 单条瘦身 |
 | `findForThemeById($id)` | 单条（含 `author`）或 `null` |
 | `countForTheme()` | int |
 | `billingLabel($charge, $price)` | 文案 |
@@ -1507,10 +1534,12 @@ foreach ($tags as $tag) {
 **列表/详情字段（主题可用）：**
 
 `id, name, desc, category, category_name, method, methods, method_label, endpoint, call_path, apitype, params, response, doc, aidoc, maintenance(0|1), needkey, needkey_label, keyways, keyways_label, qpm, qpm_label, calls, icon, icon_path, detail_url, charge, charge_label, points, billing_label, createtime, params_list`  
-详情另有：`author => {id, username, avatar, profile_url}|null`
+详情另有：`author => {id, username, avatar, profile_url}|null`  
+**catalog 响应：** 同上但**不含** `doc` / `aidoc` / `response`。
 
 ```php
-$apis = FrontendApi::listForTheme();
+// 首页 / apis：空壳 + VS.fetchFrontCatalog({ partners: true })
+// 详情 / 少量推荐卡：
 $api  = FrontendApi::findForThemeById((int) $apiId);
 // maintenance === 1 时主题须按维护态展示，勿引导真实调用
 ```
@@ -1672,7 +1701,7 @@ $html = Markdown::render($rawMarkdown);
 ```
 
 在线测试上下文（入口常注入）：`vs_playground_session_context()` →  
-`{loggedIn, apiKey, apiKeyCount, userCenterUrl, loginUrl, csrf, playUrl}`。  
+`{loggedIn, apiKeyCount, userCenterUrl, loginUrl, csrf, playUrl, keysUrl}`（SSR **无** `apiKey`；取钥见 `core/front/playground-key.php`）。  
 **默认主题浏览器直连公开 endpoint**，由 core 记账；勿在主题里写 apilog。
 
 鉴权展示：用 `$api['needkey_label']`、`$api['keyways']`、`$api['keyways_label']`、`$api['qpm_label']`；  
@@ -1685,8 +1714,9 @@ $html = Markdown::render($rawMarkdown);
 | 函数 | 用途 |
 |------|------|
 | `vs_e($v)` | HTML 转义（用户内容必用） |
-| `vs_base_url()` | 站点根 |
-| `vs_api_detail_url($id)` / `vs_profile_url($id)` | 伪静态友好链接 |
+| `vs_base_url()` | 站点根**绝对** URL（SEO / 邮件） |
+| `vs_site_base_path()` / `vs_site_path($path)` | 同站路径前缀 / 根相对路径（导航、资源、catalog；**v13.26.16**） |
+| `vs_api_detail_url($id)` / `vs_profile_url($id)` | 伪静态友好链接（同站路径） |
 | `vs_frontend_page(...)` | 公开页入口（根脚本用） |
 | `vs_page_seo_pack` / `vs_render_theme_seo_block` | SEO |
 | `vs_render_footer_custom_bar` / `vs_render_footer_qrs` | 页脚 |
@@ -1704,9 +1734,9 @@ $html = Markdown::render($rawMarkdown);
 
 | 页面 | 主题应取数 |
 |------|------------|
-| 首页 | `FrontendApi::listForTheme` + `FrontendCategory::*` + `FrontendStats::*` + `FrontendAnnouncement::*` + `FrontendPartner::listForTheme` + `FrontendLink::pickForFooter` + `ThemeManager::themeSetting*` + `SiteContext::*` |
-| 接口目录 | 同列表 + 分类筛选（前端 data-category） |
-| 接口详情 | 入口已给 `$api`；补 `ApiQuickstart` / `FrontendFeedback` / 推荐接口再 `listForTheme` 筛选 |
+| 首页 | **空壳** + `VS.fetchFrontCatalog({ partners })`；分类标签 `FrontendCategory::*`；KPI `FrontendStats::*`；公告 `FrontendAnnouncement::*`；页脚 `FrontendLink::pickForFooter`；`ThemeManager::themeSetting*` + `SiteContext::*` |
+| 接口目录（apis） | 同目录异步拉取（可 `shuffle`）+ 分类筛选（前端 data-category）；**禁止**首屏全量 `apiData` |
+| 接口详情 | 入口已给 `$api`；补 `ApiQuickstart` / `FrontendFeedback`；推荐接口可少量挑卡，勿灌全站目录 |
 | 文章 | `FrontendArticle::*` + `FrontendComment::*` |
 | 关于 | `FrontendAbout::getBoundArticle()` |
 | 友链 | `FrontendLink::listForThemePage` + `siteCard`；申请 POST 走入口/主题 api + CSRF |
@@ -1734,6 +1764,7 @@ $html = Markdown::render($rawMarkdown);
 5. 为省事把 shell 多文件合并成单文件大 CSS（维护约定）  
 6. 调用后台专用类：`DashboardStats`、`GeoCityCoords`、`PanelMonitor` 等  
 7. 「先在主题写 SQL 赶进度」——一律禁止；先补 core  
+8. 首页 / apis 首屏 `json_encode` 全量 `FrontendApi::listForTheme()`（须走 `core/front/catalog.php`，v13.26.16）  
 
 **分层示意：**
 
@@ -1790,21 +1821,28 @@ if (!defined('VS_THEME_RENDER')) {
 }
 
 $siteName   = SiteContext::siteName();
-$apiData    = FrontendApi::listForTheme();
+// 接口目录：勿 listForTheme() 灌首屏；由 VS.fetchFrontCatalog 拉取
 $tags       = FrontendCategory::listTags();
 $apiCount   = FrontendStats::approvedApiCount();
 $totalCalls = FrontendStats::totalCallCount();
-$partners   = FrontendPartner::listForTheme();
 $footerLinks = FrontendLink::pickForFooter(8);
 $announces  = FrontendAnnouncement::listForTheme();
 $heroTitle  = ThemeManager::themeSettingStr('hero_title', '');
 $qqIcon     = SiteMedia::imgUrl('QQ.svg');
+$showPartners = ThemeManager::themeSettingBool('show_partners', true);
 ```
 
-把 `$apiData` `json_encode` 给主题 JS，或在 PHP 循环出卡片均可；**筛选/排序逻辑可在前端做，数据源必须是上述返回值。**
+前台 JS：`VS.fetchFrontCatalog({ partners: $showPartners })` → 渲染卡片 / 伙伴区。  
+**筛选/排序在前端做；数据源必须是 catalog / 上述 Frontend* 返回值。**
 
 
 ## 七、常见问题
+
+**Q：首页可以把 `FrontendApi::listForTheme()` 整表 `json_encode` 进 HTML 吗？**  
+A：**不可以（v13.26.16）。** 须 `POST core/front/catalog.php`（`listForCatalog`）+ `VS.fetchFrontCatalog`；见《前端页面渲染与源码规范》。
+
+**Q：同站链接该用 `vs_base_url()` 还是 `vs_site_path()`？**  
+A：导航 / CSS/JS / 本站图 / catalog → **`vs_site_path`**（根相对路径）；`og:*` / canonical / 邮件 → **`vs_base_url` / `vs_seo_abs_url`**（绝对 https）。
 
 **Q：用户中心样式乱了 / 和后台搅在一起？**  
 A：用户中心必须只加载**当前主题**的 `assets/shell` / `user.css` 等（`userShellCssHrefs`），**不要**再引根目录 `/assets/css/admin.css`。根目录 `admin.css` 仅管理员后台。见《主题资源隔离规范》。
@@ -1847,6 +1885,7 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 |------|------|
 | 项目说明 | `README.md` |
 | **主题开发（数据来源）** | `开发规范/主题规范.md` §十（本地维护） |
+| **前端源码简洁 / catalog** | `开发规范/前端页面渲染与源码规范.md`（v13.26.16 起；本地维护） |
 | 数据库开发 | `开发规范/数据库开发规范.md`（禁止字段下划线；中文 COMMENT；数字状态） |
 | 升级策略 | `开发规范/版本升级不兼容旧版.md`（新版不长期兼容旧字段/旧代码） |
 | 请求与表单 | `开发规范/请求与表单规范.md`（本地维护） |
@@ -1872,6 +1911,6 @@ A：凡涉及数据库、且前台需要展示的业务，**强烈建议成对**
 3. **§三 文件总览**、对应 **§四 详细说明**  
 4. **§2.4 当前能力与进度** / **§六 主题对接 API**（新增 Frontend 方法时必须补方法表与字段）  
 5. 根目录 `README.md`（目录结构 + 主要能力，写法见《README编写要点》）  
-6. `开发规范/主题规范.md` / `主题资源隔离规范.md`（若涉及主题边界）  
+6. `开发规范/主题规范.md` / `主题资源隔离规范.md` / **`前端页面渲染与源码规范.md`**（若涉及主题边界或首屏源码）  
 
 发版检查清单已将「漏更 CORE模块说明」列为文档不合格项。

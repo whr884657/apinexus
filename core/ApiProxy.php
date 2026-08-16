@@ -677,7 +677,7 @@ class ApiProxy
         if ($path === '') {
             return '';
         }
-        return rtrim(vs_base_url(), '/') . $path;
+        return vs_site_path($path);
     }
 
     /**

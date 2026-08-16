@@ -1,6 +1,6 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $siteName = isset($siteName) ? $siteName : SiteContext::siteName();
 $articleId = function_exists('vs_resolve_path_id') ? (int) vs_resolve_path_id('id') : (isset($_GET['id']) ? (int) $_GET['id'] : 0);
 $csrf = class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '';
@@ -161,11 +161,11 @@ if ($articleId > 0) {
         <?php endif; ?>
     </section>
 </main>
-<link rel="stylesheet" href="<?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
+<link rel="stylesheet" href="<?php echo vs_e(vs_site_path('/core/markdown/assets/css/markdown-render.css')); ?>?v=<?php echo vs_e(VS_VERSION); ?>">
 <?php $vsSyntaxHref = ThemeManager::pageScriptUrl('vs-syntax.js'); if ($vsSyntaxHref !== ''): ?>
 <script src="<?php echo vs_e($vsSyntaxHref); ?>" defer></script>
 <?php endif; ?>
-<script src="<?php echo vs_e(rtrim(vs_base_url(), '/')); ?>/core/markdown/assets/js/markdown-render.js?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<script src="<?php echo vs_e(vs_site_path('/core/markdown/assets/js/markdown-render.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <script>
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE); ?>;
 window.VS_ARTICLE_COMMENT = {

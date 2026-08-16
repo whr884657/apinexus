@@ -8,7 +8,7 @@ if (!defined('VS_THEME_RENDER')) {
 
 $error = isset($error) ? (string) $error : '';
 $success = isset($success) ? (string) $success : '';
-$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
 $vsUser = (isset($vsUser) && is_array($vsUser)) ? $vsUser : null;
 $accountUserId = ($vsUser && isset($vsUser['id'])) ? (int) $vsUser['id'] : 0;
 $accountUsername = ($vsUser && isset($vsUser['username'])) ? (string) $vsUser['username'] : '';

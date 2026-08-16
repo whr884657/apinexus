@@ -11,7 +11,7 @@
  * @var bool   $registerOpen
  */
 if (!defined('VS_THEME_RENDER')) { exit; }
-$vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? (string) $vsBase : vs_site_base_path();
 $base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
 $providerLabel = isset($providerLabel) ? (string) $providerLabel : '';
 $displayName = isset($displayName) ? (string) $displayName : '';

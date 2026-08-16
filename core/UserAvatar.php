@@ -32,7 +32,7 @@ class UserAvatar
         $custom = isset($user['avatar']) ? trim((string) $user['avatar']) : '';
         if ($custom !== '' && vs_is_allowed_avatar_url($custom)) {
             if (isset($custom[0]) && $custom[0] === '/') {
-                return rtrim(vs_base_url(), '/') . $custom;
+                return vs_site_path($custom);
             }
             return $custom;
         }
@@ -104,7 +104,7 @@ class UserAvatar
                 return $url;
             }
         }
-        return vs_base_url() . '/assets/img/avatar/' . rawurlencode(basename($files[$index]));
+        return vs_site_path('/assets/img/avatar/' . rawurlencode(basename($files[$index])));
     }
 
     /**
@@ -120,7 +120,7 @@ class UserAvatar
                     return $url;
                 }
             }
-            return vs_base_url() . '/assets/img/avatar/' . rawurlencode(basename($files[0]));
+            return vs_site_path('/assets/img/avatar/' . rawurlencode(basename($files[0])));
         }
 
         if (class_exists('SiteMedia')) {
@@ -129,7 +129,7 @@ class UserAvatar
                 return $gov;
             }
         }
-        return vs_base_url() . '/assets/img/gov.png';
+        return vs_site_path('/assets/img/gov.png');
     }
 
     /**

@@ -27,7 +27,7 @@ class SiteMedia
         if (!is_file($full)) {
             return '';
         }
-        return rtrim(vs_base_url(), '/') . '/assets/img/' . self::encodeRel($rel);
+        return vs_site_path('/assets/img/' . self::encodeRel($rel));
     }
 
     /**

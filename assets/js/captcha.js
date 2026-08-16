@@ -8,6 +8,7 @@
     'use strict';
 
     var boot = global.VS_CAPTCHA_BOOT || { enabled: 0 };
+    var SCRIPT_TIMEOUT_MS = 12000;
     var state = {
         ready: false,
         loading: false,
@@ -15,6 +16,7 @@
         result: null,
         captchaObj: null
     };
+    var mountPromise = null;
 
     function $(id) {
         return document.getElementById(id);
@@ -64,21 +66,77 @@
         }
     }
 
+    /**
+     * 加载第三方脚本：若标签已在加载中，必须等 onload，禁止立刻 resolve（偶发 initGeetest 未就绪）
+     */
     function loadScript(src) {
         return new Promise(function (resolve, reject) {
+            var finished = false;
+            var timer = null;
+
+            function succeed(el) {
+                if (finished) {
+                    return;
+                }
+                finished = true;
+                if (timer) {
+                    clearTimeout(timer);
+                }
+                if (el) {
+                    el.setAttribute('data-vs-gt-ready', '1');
+                    el.removeAttribute('data-vs-gt-failed');
+                }
+                resolve();
+            }
+
+            function fail(el, msg) {
+                if (finished) {
+                    return;
+                }
+                finished = true;
+                if (timer) {
+                    clearTimeout(timer);
+                }
+                if (el && el.parentNode) {
+                    el.parentNode.removeChild(el);
+                }
+                reject(new Error(msg || '验证脚本加载失败'));
+            }
+
+            function armTimeout(el) {
+                timer = setTimeout(function () {
+                    fail(el, '验证脚本加载超时');
+                }, SCRIPT_TIMEOUT_MS);
+            }
+
             var exist = document.querySelector('script[data-vs-gt-src="' + src + '"]');
             if (exist) {
-                resolve();
-                return;
+                if (exist.getAttribute('data-vs-gt-ready') === '1') {
+                    // 脚本已就绪，再确认全局入口（防缓存残缺）
+                    succeed(exist);
+                    return;
+                }
+                if (exist.getAttribute('data-vs-gt-failed') === '1') {
+                    if (exist.parentNode) {
+                        exist.parentNode.removeChild(exist);
+                    }
+                    exist = null;
+                } else {
+                    armTimeout(exist);
+                    exist.addEventListener('load', function () { succeed(exist); });
+                    exist.addEventListener('error', function () { fail(exist, '验证脚本加载失败'); });
+                    return;
+                }
             }
-            // 官方 CDN 无固定 SRI（脚本常变）；属第三方脚本信任残留风险，见二次审计 BUG-S06
+
             var s = document.createElement('script');
             s.src = src;
             s.async = true;
             s.referrerPolicy = 'no-referrer';
             s.setAttribute('data-vs-gt-src', src);
-            s.onload = function () { resolve(); };
-            s.onerror = function () { reject(new Error('验证脚本加载失败')); };
+            armTimeout(s);
+            s.onload = function () { succeed(s); };
+            s.onerror = function () { fail(s, '验证脚本加载失败'); };
             document.head.appendChild(s);
         });
     }
@@ -222,18 +280,28 @@
         if (!box) {
             return Promise.resolve();
         }
-        if (state.loading || state.captchaObj) {
+        if (state.captchaObj) {
             return Promise.resolve();
         }
+        // 加载中：复用同一 Promise，避免「loading 时 ensure 立刻成功却无组件」
+        if (mountPromise) {
+            return mountPromise;
+        }
         state.loading = true;
+        while (box.firstChild) {
+            box.removeChild(box.firstChild);
+        }
         var p = state.mode === 'gt3' ? mountGt3(box) : mountGt4(box);
-        return p.then(function () {
+        mountPromise = p.then(function () {
             state.loading = false;
         }).catch(function (err) {
             state.loading = false;
+            mountPromise = null;
+            state.captchaObj = null;
             box.textContent = (err && err.message) ? err.message : '验证加载失败';
             throw err;
         });
+        return mountPromise;
     }
 
     function ensure(form) {
@@ -257,6 +325,9 @@
         });
     }
 
+    /**
+     * 完整重置（发码/登录失败后）：本地换图；极验 reset
+     */
     function reset(form) {
         if (state.mode === 'local') {
             refreshLocal();
@@ -271,6 +342,28 @@
             } catch (e) {
                 // ignore
             }
+        }
+    }
+
+    /**
+     * 登录模式切换用：清极验票据，不刷本地图（避免限流导致偶发空白）
+     */
+    function clearChallenge(form) {
+        if (state.mode === 'local') {
+            return;
+        }
+        state.ready = false;
+        state.result = null;
+        clearFields(form);
+        if (state.captchaObj && typeof state.captchaObj.reset === 'function') {
+            try {
+                state.captchaObj.reset();
+            } catch (e) {
+                // ignore
+            }
+        } else if (!state.captchaObj && !state.loading) {
+            // 首屏挂载失败时，切到验证码登录再试一次
+            mount().catch(function () { /* 文案已写在挂载点 */ });
         }
     }
 
@@ -318,6 +411,7 @@
         mount: mount,
         ensure: ensure,
         reset: reset,
+        clearChallenge: clearChallenge,
         refresh: refreshLocal,
         appendToFormData: appendToFormData,
         applyToForm: applyResultToForm,

@@ -52,7 +52,7 @@ class Markdown
      */
     public static function assetPaths()
     {
-        $base = rtrim(vs_base_url(), '/') . '/core/markdown/assets';
+        $base = vs_site_path('/core/markdown/assets');
         return array(
             'css' => array(
                 $base . '/css/markdown-editor.css',

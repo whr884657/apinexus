@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/theme/default/api/sitemeta.php
- * 作用：默认主题 · 一键获取站点 TDK（POST + CSRF；逻辑在 core/LinkSiteMeta）
+ * 作用：默认主题 · 一键获取站点 TDK（POST + CSRF + IP 频控；逻辑在 core/LinkSiteMeta）
  *
  * 公网地址：{站点根}/core/theme/default/api/sitemeta.php
  */
@@ -20,6 +20,12 @@ if (!InstallChecker::isInstalled()) {
 }
 
 vs_require_secure_post();
+
+// 频控：防持 CSRF 会话批量抓公网站（SEC-001；v13.26.16）
+$metaIp = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
+if (!AuthSecurity::rateLimitAllow('front_sitemeta_ip:' . $metaIp, 10, 60, true)) {
+    AjaxResponse::error('请求过于频繁，请稍后再试', 429);
+}
 
 $url = isset($_POST['url']) ? (string) $_POST['url'] : (isset($_POST['siteurl']) ? (string) $_POST['siteurl'] : '');
 $result = LinkSiteMeta::fetch($url);

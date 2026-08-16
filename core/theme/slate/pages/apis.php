@@ -1,7 +1,6 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-$apiData = FrontendApi::listForTheme();
-$apiCount = count($apiData);
+$apiCount = FrontendStats::approvedApiCount();
 $catVisibleLimit = FrontendCategory::tagVisibleLimit();
 $catIndex = 0;
 ?>
@@ -34,16 +33,12 @@ $catIndex = 0;
         <?php endif; ?>
     </div>
 
-    <div class="st-api-grid" id="stApisGrid">
-        <?php include __DIR__ . '/../partials/api-cards-html.php'; ?>
-    </div>
+    <div class="st-api-grid" id="stApisGrid" aria-busy="true"></div>
     <div id="stApisPagination" class="st-pagination" style="display:none;"></div>
 </section>
 </div>
 </main>
 <script>
-window.stApiPayload = <?php echo json_encode(array(
-    'categoryNames' => FrontendCategory::nameMap(),
-    'apiData'       => $apiData,
-), JSON_UNESCAPED_UNICODE); ?>;
+window.stApiPayload = { apiData: [], categoryNames: {} };
+window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php'), JSON_UNESCAPED_UNICODE); ?>;
 </script>

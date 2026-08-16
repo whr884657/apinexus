@@ -51,7 +51,7 @@ class FrontendSponsor
             return LinkManager::upgradeInsecureUrl($raw);
         }
         if (isset($raw[0]) && $raw[0] === '/') {
-            return rtrim(vs_base_url(), '/') . $raw;
+            return vs_site_path($raw);
         }
         return '';
     }

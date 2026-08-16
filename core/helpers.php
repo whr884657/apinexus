@@ -350,6 +350,60 @@ function vs_is_allowed_avatar_url($url)
 }
 
 /**
+ * 本站安装路径前缀（不含 scheme/host；域名根为空串，子目录如 /foo）
+ *
+ * @return string
+ */
+function vs_site_base_path()
+{
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+    $base = rtrim(vs_base_url(), '/');
+    $path = parse_url($base, PHP_URL_PATH);
+    if (!is_string($path) || $path === '' || $path === '/') {
+        $cached = '';
+        return $cached;
+    }
+    $cached = rtrim(str_replace('\\', '/', $path), '/');
+    return $cached;
+}
+
+/**
+ * 同站「根相对」路径（含子目录前缀，不含域名）
+ * 例：/apis、/core/theme/default/assets/theme.css；外链 http(s) 原样返回
+ *
+ * @param string $path
+ * @return string
+ */
+function vs_site_path($path = '/')
+{
+    $path = trim((string) $path);
+    if ($path === '') {
+        $path = '/';
+    }
+    // 仅放行完整 http(s) 外链；禁止 //evil 协议相对冒充站内路径
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    if (strpos($path, '//') === 0) {
+        return '';
+    }
+    if ($path[0] !== '/') {
+        $path = '/' . $path;
+    }
+    $prefix = vs_site_base_path();
+    if ($prefix !== '' && ($path === $prefix || strpos($path, $prefix . '/') === 0)) {
+        return $path;
+    }
+    if ($path === '/') {
+        return $prefix === '' ? '/' : ($prefix . '/');
+    }
+    return $prefix . $path;
+}
+
+/**
  * 路径式资源公开地址：/{脚本名}/{数字ID}（无 .php；依赖通用伪静态）
  *
  * @param string $script 根入口脚本名，如 detail / article（可带 .php，会去掉）
@@ -365,9 +419,9 @@ function vs_path_resource_url($script, $id)
     $script = preg_replace('/[^a-z0-9_-]/', '', $script);
     $id = (int) $id;
     if ($script === '' || $id <= 0) {
-        return rtrim(vs_base_url(), '/');
+        return vs_site_path('/');
     }
-    return rtrim(vs_base_url(), '/') . '/' . $script . '/' . $id;
+    return vs_site_path('/' . $script . '/' . $id);
 }
 
 /**
@@ -380,7 +434,7 @@ function vs_api_detail_url($apiId)
 {
     $apiId = (int) $apiId;
     if ($apiId <= 0) {
-        return rtrim(vs_base_url(), '/') . '/apis';
+        return vs_site_path('/apis');
     }
     return vs_path_resource_url('detail', $apiId);
 }
@@ -395,7 +449,7 @@ function vs_profile_url($userId)
 {
     $userId = (int) $userId;
     if ($userId <= 0) {
-        return rtrim(vs_base_url(), '/') . '/contributors';
+        return vs_site_path('/contributors');
     }
     return vs_path_resource_url('profile', $userId);
 }
@@ -1075,9 +1129,16 @@ function vs_seo_abs_url($path)
     if (preg_match('#^https?://#i', $path)) {
         return vs_seo_prefer_https($path);
     }
-    $base = rtrim(vs_base_url(), '/');
     if ($path[0] !== '/') {
         $path = '/' . $path;
+    }
+    $base = rtrim(vs_base_url(), '/');
+    $prefix = vs_site_base_path();
+    // 已是带安装前缀的站内路径：只拼 origin，避免 /subdir + /subdir/... 重复
+    if ($prefix !== '' && ($path === $prefix || strpos($path, $prefix . '/') === 0)) {
+        if (preg_match('#^(https?://[^/]+)#i', $base, $m)) {
+            return vs_seo_prefer_https($m[1] . $path);
+        }
     }
     return vs_seo_prefer_https($base . $path);
 }
@@ -1674,15 +1735,25 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
  */
 function vs_render_foot(array $jsFiles = array(), array $extraJsHrefs = array(), $loadRootShell = true)
 {
-    $base = vs_base_url();
+    // 后台/安装仍用绝对 URL 拉根 assets；前台壳脚本已在 extraJsHrefs（主题包站内路径）
+    $assetBase = rtrim(vs_base_url(), '/');
+    $siteBase = vs_site_base_path();
     vs_render_modal_shell();
-    echo '<script>window.VS_BASE_URL = ' . json_encode($base) . ';</script>' . "\n";
+    if (!isset($GLOBALS['vs_front_globals_injected'])) {
+        $GLOBALS['vs_front_globals_injected'] = true;
+        echo '<script>' . "\n";
+        echo 'window.VS_BASE_URL = window.VS_BASE_URL || ' . json_encode($siteBase) . ';' . "\n";
+        echo 'window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || ' . json_encode(class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '') . ';' . "\n";
+        echo 'window.VS_PLAY_URL = window.VS_PLAY_URL || ' . json_encode(vs_site_path('/core/playground/relay.php')) . ';' . "\n";
+        echo 'window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || ' . json_encode(vs_site_path('/core/front/catalog.php')) . ';' . "\n";
+        echo '</script>' . "\n";
+    }
     if ($loadRootShell) {
-        echo '<script src="' . vs_e($base) . '/assets/js/modal.js?v=' . VS_VERSION . '" defer></script>' . "\n";
-        echo '<script src="' . vs_e($base) . '/assets/js/common.js?v=' . VS_VERSION . '" defer></script>' . "\n";
+        echo '<script src="' . vs_e($assetBase) . '/assets/js/modal.js?v=' . VS_VERSION . '" defer></script>' . "\n";
+        echo '<script src="' . vs_e($assetBase) . '/assets/js/common.js?v=' . VS_VERSION . '" defer></script>' . "\n";
     }
     foreach ($jsFiles as $js) {
-        echo '<script src="' . vs_e($base) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '" defer></script>' . "\n";
+        echo '<script src="' . vs_e($assetBase) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '" defer></script>' . "\n";
     }
     foreach ($extraJsHrefs as $href) {
         $href = trim((string) $href);
@@ -1898,7 +1969,6 @@ function vs_render_site_footer($siteName = null)
     }
 
     $beian = SiteContext::beianInfo();
-    $base = vs_base_url();
 
     echo '<footer class="vs-site-footer">' . "\n";
     echo '<div class="vs-container vs-site-footer__inner">' . "\n";
@@ -1916,7 +1986,7 @@ function vs_render_site_footer($siteName = null)
     if ($beian['gongan_number'] !== '') {
         echo '<div class="vs-site-footer__item vs-site-footer__gongan">';
         echo '<a href="' . vs_e($beian['gongan_link']) . '" target="_blank" rel="noopener noreferrer" class="vs-site-footer__gongan-link">';
-        $govIcon = class_exists('SiteMedia') ? SiteMedia::imgUrl('gov.png') : ($base . '/assets/img/gov.png');
+        $govIcon = class_exists('SiteMedia') ? SiteMedia::imgUrl('gov.png') : vs_site_path('/assets/img/gov.png');
         echo '<img src="' . vs_e($govIcon) . '" alt="公安备案" class="vs-gongan-icon" width="16" height="16" loading="lazy" decoding="async">';
         echo '<span>' . vs_e($beian['gongan_number']) . '</span>';
         echo '</a></div>' . "\n";
@@ -1987,19 +2057,22 @@ function vs_render_404_page()
 /**
  * 前台在线测试：当前登录用户的 KEY 上下文
  *
- * @return array{loggedIn:bool,apiKey:string,apiKeyCount:int,userCenterUrl:string,loginUrl:string,csrf:string,playUrl:string}
+ * 不返回密钥明文（禁止 SSR 进 HTML，E253）。
+ * 调试取钥仅走已鉴权端点 core/front/playground-key.php。
+ *
+ * @return array{loggedIn:bool,apiKey:string,apiKeyCount:int,userCenterUrl:string,loginUrl:string,csrf:string,playUrl:string,keysUrl:string}
  */
 function vs_playground_session_context()
 {
-    $base = rtrim(vs_base_url(), '/');
     $out = array(
         'loggedIn'      => false,
         'apiKey'        => '',
         'apiKeyCount'   => 0,
-        'userCenterUrl' => $base . '/user/index',
-        'loginUrl'      => $base . '/user/login',
+        'userCenterUrl' => vs_site_path('/user/index'),
+        'loginUrl'      => vs_site_path('/user/login'),
         'csrf'          => class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '',
-        'playUrl'       => $base . '/core/playground/relay.php',
+        'playUrl'       => vs_site_path('/core/playground/relay.php'),
+        'keysUrl'       => vs_site_path('/core/front/playground-key.php'),
     );
     if (!class_exists('UserAuth') || !UserAuth::check()) {
         return $out;
@@ -2024,9 +2097,7 @@ function vs_playground_session_context()
             continue;
         }
         $out['apiKeyCount']++;
-        if ($out['apiKey'] === '' && !empty($row['secret'])) {
-            $out['apiKey'] = (string) $row['secret'];
-        }
+        // 故意不填充 apiKey：密钥明文仅允许 playground-key.php 按需返回
     }
     return $out;
 }

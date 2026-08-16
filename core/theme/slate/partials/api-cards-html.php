@@ -4,11 +4,12 @@ if (!defined('VS_THEME_RENDER')) {
 }
 
 if (!isset($apiData) || !is_array($apiData)) {
-    $apiData = FrontendApi::listForTheme();
+    // 禁止回落全量 listForTheme（会误把整站目录 SSR 进 HTML）；调用方须显式传入列表
+    $apiData = array();
 }
 
 $apis = $apiData;
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 
 foreach ($apis as $api):
     if (!is_array($api)) {

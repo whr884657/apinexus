@@ -2,7 +2,7 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
-$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
 $siteName = isset($siteName) ? (string) $siteName : SiteContext::siteName();
 $navName = isset($navName) ? (string) $navName : $siteName;
 $navItems = isset($navItems) && is_array($navItems) ? $navItems : array();

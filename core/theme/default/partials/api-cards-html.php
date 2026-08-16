@@ -4,14 +4,15 @@ if (!defined('VS_THEME_RENDER')) {
 }
 
 if (!isset($apiData) || !is_array($apiData)) {
-    $apiData = FrontendApi::listForTheme();
+    // 禁止回落全量 listForTheme（会误把整站目录 SSR 进 HTML）；调用方须显式传入列表
+    $apiData = array();
 }
 
 $apis = $apiData;
 $showDetailBtn = !isset($showDetailBtn) || $showDetailBtn;
 $cardExtraClass = isset($cardExtraClass) ? trim((string) $cardExtraClass) : '';
 $cardShell = !isset($cardShell) || $cardShell;
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 
 /**
  * 与首页卡片一致：最多展示 2 个 Method，多余显示 +N

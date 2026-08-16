@@ -374,6 +374,35 @@
     };
 
     /**
+     * 前台公开接口目录（POST + CSRF；首屏不灌大包）
+     *
+     * @param {{partners?: boolean, shuffle?: boolean}} [opts]
+     * @returns {Promise<object>}
+     */
+    global.VS.fetchFrontCatalog = function (opts) {
+        opts = opts || {};
+        var url = global.VS_FRONT_CATALOG
+            || ((global.VS_BASE_URL || '') + '/core/front/catalog.php');
+        var fd = new FormData();
+        fd.append('action', 'list');
+        if (opts.partners) {
+            fd.append('partners', '1');
+        }
+        if (opts.shuffle) {
+            fd.append('shuffle', '1');
+        }
+        return global.VS.postForm(fd, url).then(function (data) {
+            if (data && data.csrf) {
+                global.VS_CSRF_TOKEN = data.csrf;
+            }
+            if (!data || Number(data.code) !== 1) {
+                throw new Error((data && data.msg) ? data.msg : '目录加载失败');
+            }
+            return data;
+        });
+    };
+
+    /**
      * 数据加载动效 HTML（列表 / 详情面板统一用）
      *
      * @param {string} [label]

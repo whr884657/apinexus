@@ -435,9 +435,25 @@ function renderAPI(data) {
             <div class="endpoint-box font-mono">
                 ${escapeApiModalText(api.endpoint)}
             </div>
-            <a href="${escapeApiModalText(api.detail_url || ((window.VS_BASE_URL || '') + '/detail/' + (api.id || '')))}" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>
+            <a href="${escapeApiModalText(safeDetailHref(api))}" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>
         </div>
     `}).join('');
+}
+
+/**
+ * 详情链仅允许 http(s) 或站内绝对路径（拒绝 javascript: / //evil）
+ */
+function safeDetailHref(api) {
+    var detailUrl = String((api && api.detail_url) || '').trim();
+    var base = (window.VS_BASE_URL || '');
+    var apiId = api && api.id ? api.id : '';
+    if (!detailUrl) {
+        detailUrl = apiId ? (base + '/detail/' + apiId) : (base + '/apis');
+    }
+    if (!/^https?:\/\//i.test(detailUrl) && !(detailUrl.charAt(0) === '/' && detailUrl.charAt(1) !== '/')) {
+        detailUrl = base + '/apis';
+    }
+    return detailUrl;
 }
 
 // 分类展开/收起功能
@@ -493,7 +509,67 @@ function applyFilters() {
 
 document.getElementById('search-input').addEventListener('input', (e) => { currentSearch = e.target.value; applyFilters(); });
 
-renderAPI(apiData);
+function renderHomePartners(list) {
+    var section = document.getElementById('home-partners');
+    var grid = document.getElementById('home-partners-grid');
+    if (!section || !grid) {
+        return;
+    }
+    if (!Array.isArray(list) || list.length === 0) {
+        section.hidden = true;
+        grid.innerHTML = '';
+        return;
+    }
+    function safeHttpUrl(u) {
+        u = String(u || '').trim();
+        if (/^https?:\/\//i.test(u)) {
+            return u;
+        }
+        return '#';
+    }
+    section.hidden = false;
+    grid.innerHTML = list.map(function (partner) {
+        var name = escapeApiModalText(partner.name || '');
+        var url = escapeApiModalText(safeHttpUrl(partner.siteurl || ''));
+        var icon = String(partner.icon || '').trim();
+        var initial = escapeApiModalText(partner.initial || (name ? name.charAt(0) : ''));
+        var fallbackClass = icon ? '' : ' partner-tile--fallback';
+        var media = icon
+            ? '<img src="' + escapeApiModalText(icon) + '" alt="' + name + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">'
+            : '<span class="partner-tile-initial" aria-hidden="true">' + initial + '</span>';
+        return '<a class="partner-tile' + fallbackClass + '" href="' + url + '" target="_blank" rel="noopener noreferrer" title="' + name + '">'
+            + media
+            + '<span class="partner-tile-name">' + name + '</span></a>';
+    }).join('');
+}
+
+function bootHomeCatalog() {
+    var listEl = document.getElementById('api-list');
+    if (listEl && window.VS && typeof VS.setLoading === 'function') {
+        VS.setLoading(listEl, '正在加载接口');
+    }
+    var needPartners = !!document.getElementById('home-partners');
+    if (!window.VS || typeof VS.fetchFrontCatalog !== 'function') {
+        if (listEl) {
+            listEl.innerHTML = '<div class="col-span-full text-center py-12" style="color: var(--text-muted);">目录加载失败，请刷新重试</div>';
+        }
+        return;
+    }
+    VS.fetchFrontCatalog({ partners: needPartners }).then(function (data) {
+        apiData = Array.isArray(data.apiData) ? data.apiData : [];
+        categoryNames = data.categoryNames && typeof data.categoryNames === 'object' ? data.categoryNames : {};
+        applyFilters();
+        if (needPartners) {
+            renderHomePartners(data.partners || []);
+        }
+    }).catch(function () {
+        if (listEl) {
+            listEl.innerHTML = '<div class="col-span-full text-center py-12" style="color: var(--text-muted);">目录加载失败，请刷新重试</div>';
+        }
+    });
+}
+
+bootHomeCatalog();
 
 // ===== API SELECT MODAL =====
 const apiModal = document.getElementById('api-modal');
@@ -774,11 +850,75 @@ function getPlaygroundUserApiKey() {
 }
 
 function getPlaygroundKeyContext() {
-    const d = { loggedIn: false, apiKeyCount: 0, userCenterUrl: '/user/index', loginUrl: '/user/login' };
+    const d = {
+        loggedIn: false,
+        apiKeyCount: 0,
+        userCenterUrl: '/user/index',
+        loginUrl: '/user/login',
+        keysUrl: '/core/front/playground-key.php'
+    };
     if (typeof window.playgroundKeyContext === 'object' && window.playgroundKeyContext !== null) {
         return Object.assign(d, window.playgroundKeyContext);
     }
     return d;
+}
+
+/** 内存缓存；禁止 SSR 明文 KEY（E253） */
+var _playgroundKeyFetch = null;
+
+function playgroundKeysFetchUrl() {
+    var ctx = getPlaygroundKeyContext();
+    if (ctx.keysUrl) {
+        return String(ctx.keysUrl);
+    }
+    return (window.VS_BASE_URL || '') + '/core/front/playground-key.php';
+}
+
+/**
+ * 按需拉取当前用户启用 KEY（POST + CSRF）；未登录 / 无钥返回空串
+ *
+ * @returns {Promise<string>}
+ */
+function ensurePlaygroundUserApiKey() {
+    var existing = getPlaygroundUserApiKey();
+    if (existing) {
+        return Promise.resolve(existing);
+    }
+    var ctx = getPlaygroundKeyContext();
+    if (!ctx.loggedIn) {
+        return Promise.resolve('');
+    }
+    var keyCount = parseInt(String(ctx.apiKeyCount != null ? ctx.apiKeyCount : 0), 10) || 0;
+    if (keyCount <= 0) {
+        return Promise.resolve('');
+    }
+    if (_playgroundKeyFetch) {
+        return _playgroundKeyFetch;
+    }
+    if (!window.VS || typeof window.VS.postForm !== 'function') {
+        return Promise.resolve('');
+    }
+    var fd = new FormData();
+    fd.append('action', 'get');
+    _playgroundKeyFetch = window.VS.postForm(fd, playgroundKeysFetchUrl()).then(function (data) {
+        if (data && data.csrf) {
+            window.VS_CSRF_TOKEN = data.csrf;
+        }
+        if (!data || Number(data.code) !== 1) {
+            _playgroundKeyFetch = null;
+            return '';
+        }
+        if (data.apiKeyCount != null && window.playgroundKeyContext) {
+            window.playgroundKeyContext.apiKeyCount = Number(data.apiKeyCount) || 0;
+        }
+        var key = data.apiKey != null ? String(data.apiKey).trim() : '';
+        window.playgroundUserApiKey = key;
+        return key;
+    }).catch(function () {
+        _playgroundKeyFetch = null;
+        return '';
+    });
+    return _playgroundKeyFetch;
 }
 
 function removePlaygroundKeyHint(container) {
@@ -812,72 +952,83 @@ function mountPlaygroundKeyHint(container, html, tone) {
 
 /**
  * 需密钥接口：已登录有密钥则自动填入并提示；已登录无密钥 / 未登录分别提示
+ *
+ * @returns {Promise<void>}
  */
 function applyPlaygroundSessionApiKey(api, container) {
     removePlaygroundKeyHint(container);
-    if (!api || !container) return;
+    if (!api || !container) {
+        return Promise.resolve();
+    }
     var keyMode = parseInt(api.needkey, 10) || 0;
-    if (keyMode !== 1 && keyMode !== 2) return;
+    if (keyMode !== 1 && keyMode !== 2) {
+        return Promise.resolve();
+    }
 
     const ctx = getPlaygroundKeyContext();
     const loggedIn = !!ctx.loggedIn;
     const keyCount = parseInt(String(ctx.apiKeyCount != null ? ctx.apiKeyCount : 0), 10) || 0;
     const userCenter = String(ctx.userCenterUrl || '/user/index');
     const loginUrl = String(ctx.loginUrl || '/user/login');
-    const keyVal = getPlaygroundUserApiKey();
     const keyInput = findKeyParamInput(container);
 
-    if (loggedIn && keyVal && keyInput && keyInput.type !== 'file') {
-        if (!String(keyInput.value || '').trim()) {
-            keyInput.value = keyVal;
-        }
-        mountPlaygroundKeyHint(
-            container,
-            keyMode === 2
-                ? '已填入可用密钥，可直接测试。密钥管理见 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a>。'
-                : '已随机填入一条可用密钥，可直接测试。密钥管理见 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a>。',
-            'info'
-        );
-        return;
-    }
+    return ensurePlaygroundUserApiKey().then(function (keyVal) {
+        const countNow = parseInt(String((window.playgroundKeyContext && window.playgroundKeyContext.apiKeyCount != null)
+            ? window.playgroundKeyContext.apiKeyCount
+            : keyCount), 10) || 0;
 
-    if (loggedIn && keyCount === 0) {
-        if (keyMode === 2) {
+        if (loggedIn && keyVal && keyInput && keyInput.type !== 'file') {
+            if (!String(keyInput.value || '').trim()) {
+                keyInput.value = keyVal;
+            }
             mountPlaygroundKeyHint(
                 container,
-                '当前账户暂无密钥，可在 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a> 创建后填入测试。',
+                keyMode === 2
+                    ? '已填入可用密钥，可直接测试。密钥管理见 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a>。'
+                    : '已随机填入一条可用密钥，可直接测试。密钥管理见 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a>。',
                 'info'
             );
             return;
         }
-        if (keyMode === 1) {
+
+        if (loggedIn && countNow === 0) {
+            if (keyMode === 2) {
+                mountPlaygroundKeyHint(
+                    container,
+                    '当前账户暂无密钥，可在 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a> 创建后填入测试。',
+                    'info'
+                );
+                return;
+            }
+            if (keyMode === 1) {
+                mountPlaygroundKeyHint(
+                    container,
+                    '账户下暂无密钥，无法自动填入。请至 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a> 创建后再测。',
+                    'warn'
+                );
+                return;
+            }
+        }
+
+        if (loggedIn && countNow > 0 && !keyVal) {
             mountPlaygroundKeyHint(
                 container,
-                '账户下暂无密钥，无法自动填入。请至 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a> 创建后再测。',
+                '未能自动加载密钥，请手填或刷新；也可在 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a> 复制。',
                 'warn'
             );
             return;
         }
-    }
 
-    if (loggedIn && keyCount > 0 && !keyVal) {
-        mountPlaygroundKeyHint(
-            container,
-            '未能自动加载密钥，请手填或刷新；也可在 <a class="playground-key-hint-link" href="' + userCenter + '">用户中心</a> 复制。',
-            'warn'
-        );
-        return;
-    }
-
-    if (!loggedIn) {
-        mountPlaygroundKeyHint(
-            container,
-            keyMode === 2
-                ? '如需填写 key，请先 <a class="playground-key-hint-link" href="' + loginUrl + '">登录</a> 后在用户中心创建。'
-                : '需密钥：<a class="playground-key-hint-link" href="' + loginUrl + '">登录</a> 后在用户中心创建并填入 key。',
-            keyMode === 2 ? 'info' : 'guest'
-        );
-    }
+        if (!loggedIn) {
+            mountPlaygroundKeyHint(
+                container,
+                keyMode === 2
+                    ? '如需填写 key，请先 <a class="playground-key-hint-link" href="' + loginUrl + '">登录</a> 后在用户中心创建。'
+                    : '需密钥：<a class="playground-key-hint-link" href="' + loginUrl + '">登录</a> 后在用户中心创建并填入 key。',
+                keyMode === 2 ? 'info' : 'guest'
+            );
+        }
+    });
 }
 
 // ===== SEND REQUEST =====
@@ -921,12 +1072,12 @@ async function sendRequest() {
     }
 
     const params = {};
+    // POST/GET 均确保 KEY 进入 params（直连会拼进 Query，POST 另带 form body）
+    await applyPlaygroundSessionApiKey(api, paramsContainer);
     const paramInputs = paramsContainer.querySelectorAll('.param-input');
     paramInputs.forEach(input => {
         if (input.type !== 'file' && input.value) params[input.dataset.param] = input.value;
     });
-    // POST/GET 均确保 KEY 进入 params（直连会拼进 Query，POST 另带 form body）
-    applyPlaygroundSessionApiKey(api, paramsContainer);
     const keyModeSend = parseInt(api.needkey, 10) || 0;
     if (keyModeSend === 1 || keyModeSend === 2) {
         let hasKey = false;

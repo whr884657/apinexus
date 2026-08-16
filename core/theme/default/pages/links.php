@@ -1,6 +1,6 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $pagePack = class_exists('FrontendLink')
     ? FrontendLink::listForThemePage()
     : array('items' => array(), 'total' => 0, 'truncated' => false, 'limit' => 120);

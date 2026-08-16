@@ -1,0 +1,54 @@
+<?php if (!defined('VS_THEME_RENDER')) { exit; }
+
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
+$siteCard = isset($siteCard) && is_array($siteCard) ? $siteCard : (class_exists('FrontendLink') ? FrontendLink::siteCard() : array(
+    'name' => isset($siteName) ? $siteName : 'ApiNexus',
+    'url'  => ($vsBase === '' ? '/' : ($vsBase . '/')),
+    'desc' => isset($siteDesc) ? $siteDesc : '',
+    'icon' => '',
+));
+$csrf = class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '';
+$metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
+?>
+<main class="st-main"><div class="st-wrap">
+<section class="st-section">
+    <h1 class="st-page-title">申请友链</h1>
+    <p class="st-page-desc">欢迎优质网站交换友链，共同发展</p>
+
+    <div class="st-card" style="margin-bottom:1rem;">
+        <div class="st-card__title">本站友链信息（请先在贵站添加）</div>
+        <div class="st-card__desc">
+            <p><strong>名称：</strong><?php echo vs_e($siteCard['name']); ?></p>
+            <p><strong>链接：</strong><?php echo vs_e($siteCard['url']); ?></p>
+            <?php if (!empty($siteCard['desc'])): ?>
+            <p><strong>简介：</strong><?php echo vs_e($siteCard['desc']); ?></p>
+            <?php endif; ?>
+            <?php if (!empty($siteCard['icon'])): ?>
+            <p><strong>图标：</strong><?php echo vs_e($siteCard['icon']); ?></p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div id="applyAlert" class="st-card__desc" hidden style="margin-bottom:0.75rem;"></div>
+    <form id="applyLinkForm" method="post" action="<?php echo vs_e($vsBase); ?>/applylink" data-ajax="1" class="st-card">
+        <input type="hidden" name="csrf_token" value="<?php echo vs_e($csrf); ?>">
+        <input type="hidden" name="action" value="apply">
+        <div class="st-card__desc" style="display:flex;flex-direction:column;gap:0.75rem;">
+            <label>网站链接 *<br><input type="url" id="applyUrl" name="siteurl" required placeholder="https://example.com" maxlength="255" style="width:100%;"></label>
+            <button type="button" class="st-bar__login" id="applyFetchBtn">一键获取网站信息</button>
+            <p id="applyFetchStatus" aria-live="polite"></p>
+            <label>网站名称 *<br><input type="text" id="applyName" name="name" required maxlength="50" style="width:100%;"></label>
+            <label>头像链接<br><input type="url" id="applyIcon" name="icon" maxlength="255" style="width:100%;"></label>
+            <label>网站描述<br><input type="text" id="applyDesc" name="description" maxlength="200" style="width:100%;"></label>
+            <label>联系方式<br><input type="text" id="applyContact" name="contact" maxlength="100" style="width:100%;"></label>
+            <button type="submit" class="st-bar__login" id="applySubmitBtn">提交申请</button>
+        </div>
+    </form>
+    <p style="margin-top:1rem;"><a href="<?php echo vs_e($vsBase); ?>/links">← 返回友情链接</a></p>
+</section>
+</div></main>
+<script>
+window.VS_LINK_META_URL = <?php echo json_encode($metaUrl, JSON_UNESCAPED_UNICODE); ?>;
+window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE); ?>;
+</script>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/js/pages/applylink.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

@@ -1712,7 +1712,7 @@ class ApiManager
         if (preg_match('#^https?://#i', $path)) {
             return $path;
         }
-        return rtrim(vs_base_url(), '/') . $path;
+        return vs_site_path($path);
     }
 
     /**

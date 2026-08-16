@@ -151,8 +151,12 @@ class LinkManager
         if (preg_match('#^https?://#i', $icon)) {
             return self::upgradeInsecureUrl($icon);
         }
+        // 禁止协议相对 //evil 与非绝对站内脏路径
+        if (strpos($icon, '//') === 0) {
+            return '';
+        }
         if (isset($icon[0]) && $icon[0] === '/') {
-            return self::upgradeInsecureUrl(rtrim(vs_base_url(), '/') . $icon);
+            return self::upgradeInsecureUrl(vs_site_path($icon));
         }
         return '';
     }

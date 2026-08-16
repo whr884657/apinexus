@@ -1,6 +1,6 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $articleId = function_exists('vs_resolve_path_id') ? (int) vs_resolve_path_id('id') : (isset($_GET['id']) ? (int) $_GET['id'] : 0);
 
 if ($articleId > 0) {

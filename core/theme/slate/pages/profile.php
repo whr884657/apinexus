@@ -1,7 +1,7 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
 $notFound = !empty($notFound) || empty($profile) || !is_array($profile);
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $wallpaper = isset($wallpaper) ? trim((string) $wallpaper) : '';
 $pingUrl = isset($pingUrl) ? (string) $pingUrl : ($vsBase . '/core/ping.php');
 $apis = (!$notFound && isset($profile['apis']) && is_array($profile['apis'])) ? $profile['apis'] : array();

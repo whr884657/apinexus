@@ -6,16 +6,10 @@ if (!defined('VS_THEME_RENDER')) {
 // ThemeManager::renderBody() 会注入上下文；首页关键展示字段统一从站点/认证读取，避免静态分析误报
 $siteName = SiteContext::siteName();
 $siteDesc = SiteContext::siteDescription();
-$vsBase = rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
 $userLoggedIn = UserAuth::check();
 $authUrl = $userLoggedIn ? ($vsBase . '/user/index') : ($vsBase . '/user/login');
 
-$categoryNames = FrontendCategory::nameMap();
-$apiData = FrontendApi::listForTheme();
-$payload = array(
-    'categoryNames' => $categoryNames,
-    'apiData'       => $apiData,
-);
 $apiCount = FrontendStats::approvedApiCount();
 $catCount = FrontendCategory::countEnabled();
 $totalCalls = FrontendStats::totalCallCount();
@@ -23,6 +17,8 @@ $statsNumFormat = ThemeManager::themeSetting('stats_num_format', 'compact');
 $statsNumFormat = ($statsNumFormat === 'full') ? 'full' : 'compact';
 // 0=完整数字；1=单位转换（与主题 JS statsDisplayMode 一致）
 $statsDisplayMode = ($statsNumFormat === 'full') ? 0 : 1;
+
+$showHomePartners = ThemeManager::themeSettingBool('show_partners', true);
 
 $heroTitleSetting = ThemeManager::themeSettingStr('hero_title', '');
 $heroLeadSetting = ThemeManager::themeSettingStr('hero_lead', '');
@@ -198,30 +194,10 @@ if (count($announcePopup) > 0) {
             </div>
         </div>
     </section>
-    <?php
-    $homePartners = (class_exists('FrontendPartner') && ThemeManager::themeSettingBool('show_partners', true))
-        ? FrontendPartner::listForTheme()
-        : array();
-    if (count($homePartners) > 0):
-    ?>
-    <section id="home-partners" class="py-24 border-t" style="border-color: var(--border-color);">
+    <?php if ($showHomePartners): ?>
+    <section id="home-partners" class="py-24 border-t" style="border-color: var(--border-color);" hidden>
         <div class="partners-section-header"><h2 class="section-title">合作伙伴</h2></div>
-        <div class="partners-grid">
-            <?php foreach ($homePartners as $partner): ?>
-                <a class="partner-tile<?php echo empty($partner['icon']) ? ' partner-tile--fallback' : ''; ?>"
-                   href="<?php echo vs_e($partner['siteurl']); ?>"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   title="<?php echo vs_e($partner['name']); ?>">
-                    <?php if (!empty($partner['icon'])): ?>
-                        <img src="<?php echo vs_e($partner['icon']); ?>" alt="<?php echo vs_e($partner['name']); ?>" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
-                    <?php else: ?>
-                        <span class="partner-tile-initial" aria-hidden="true"><?php echo vs_e($partner['initial']); ?></span>
-                    <?php endif; ?>
-                    <span class="partner-tile-name"><?php echo vs_e($partner['name']); ?></span>
-                </a>
-            <?php endforeach; ?>
-        </div>
+        <div class="partners-grid" id="home-partners-grid"></div>
     </section>
     <?php endif; ?>
 </main>
@@ -236,19 +212,20 @@ if (count($announcePopup) > 0) {
     </div>
 </div>
 <script>
-var apiData = <?php echo json_encode($payload['apiData'], JSON_UNESCAPED_UNICODE); ?>;
-var categoryNames = <?php echo json_encode($payload['categoryNames'], JSON_UNESCAPED_UNICODE); ?>;
+var apiData = [];
+var categoryNames = {};
 var statsDisplayMode = <?php echo (int) $statsDisplayMode; ?>;
 var homeHeroConfig = <?php echo json_encode($homeHeroConfig, JSON_UNESCAPED_UNICODE); ?>;
 <?php $pgCtx = vs_playground_session_context(); ?>
-window.playgroundUserApiKey = <?php echo json_encode($pgCtx['apiKey'], JSON_UNESCAPED_UNICODE); ?>;
 window.playgroundKeyContext = <?php echo json_encode(array(
     'loggedIn' => !empty($pgCtx['loggedIn']),
     'apiKeyCount' => (int) $pgCtx['apiKeyCount'],
     'userCenterUrl' => $pgCtx['userCenterUrl'],
     'loginUrl' => $pgCtx['loginUrl'],
+    'keysUrl' => isset($pgCtx['keysUrl']) ? $pgCtx['keysUrl'] : vs_site_path('/core/front/playground-key.php'),
 ), JSON_UNESCAPED_UNICODE); ?>;
 window.VS_CSRF_TOKEN = <?php echo json_encode($pgCtx['csrf'], JSON_UNESCAPED_UNICODE); ?>;
 window.VS_PLAY_URL = <?php echo json_encode($pgCtx['playUrl'], JSON_UNESCAPED_UNICODE); ?>;
+window.VS_FRONT_CATALOG = <?php echo json_encode(vs_site_path('/core/front/catalog.php'), JSON_UNESCAPED_UNICODE); ?>;
 </script>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('default', 'assets/js/pages/home-announcement.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

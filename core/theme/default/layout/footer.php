@@ -3,7 +3,7 @@ if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 // 渲染上下文由 ThemeManager::renderBody extract 注入；此处兜底避免静态分析/异常路径未定义
-$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
 $siteName = isset($siteName) ? (string) $siteName : SiteContext::siteName();
 $year = date('Y');
 $beian = SiteContext::beianInfo();
@@ -102,9 +102,10 @@ $isLinksPage = (isset($pageKey) && $pageKey === 'links');
 <script>var SYSTEM_VERSION = <?php echo json_encode(VS_VERSION); ?>;</script>
 <?php if (!isset($GLOBALS['vs_front_csrf_injected'])): $GLOBALS['vs_front_csrf_injected'] = true; ?>
 <script>
-window.VS_BASE_URL = <?php echo json_encode(rtrim($vsBase, '/')); ?>;
+window.VS_BASE_URL = <?php echo json_encode(vs_site_base_path()); ?>;
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode(AuthSecurity::csrfToken()); ?>;
-window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(rtrim($vsBase, '/') . '/core/playground/relay.php'); ?>;
+window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(vs_site_path('/core/playground/relay.php')); ?>;
+window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php')); ?>;
 </script>
 <?php
 // 壳 toast/common 已由 vs_frontend_page 逐文件加载，页脚不再重复拉取

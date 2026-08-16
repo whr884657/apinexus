@@ -333,7 +333,10 @@ vs_auth_head('登录');
             toggleEl.textContent = mode === 'code' ? '密码登录' : '验证码登录';
         }
         hideMessage();
-        if (window.VsCaptcha && typeof window.VsCaptcha.reset === 'function') {
+        // 切模式勿 reset 刷本地图（易限流空白）；极验仅清票据，失败时可再挂载
+        if (window.VsCaptcha && typeof window.VsCaptcha.clearChallenge === 'function') {
+            window.VsCaptcha.clearChallenge(form);
+        } else if (window.VsCaptcha && typeof window.VsCaptcha.reset === 'function') {
             window.VsCaptcha.reset(form);
         }
     }
@@ -354,19 +357,21 @@ vs_auth_head('登录');
     }
 
     if (sendCodeBtn) {
+        var sendingCode = false;
         sendCodeBtn.addEventListener('click', function () {
             hideMessage();
             if (!mailEnabled) {
                 showMessage('邮箱发信功能尚未配置', 'error');
                 return;
             }
-            if (mode !== 'code') return;
+            if (mode !== 'code' || sendingCode || countdown > 0) return;
             var email = form.email ? form.email.value.trim() : '';
             if (!email) {
                 showMessage('请先输入邮箱', 'error');
                 if (form.email) form.email.focus();
                 return;
             }
+            sendingCode = true;
             sendCodeBtn.disabled = true;
 
             var body = new FormData();
@@ -395,7 +400,6 @@ vs_auth_head('登录');
                     .then(function (data) {
                         if (!data || typeof data !== 'object') {
                             showMessage('网络异常或会话已过期，请刷新页面后重试', 'error');
-                            resetSendCodeBtn();
                             return;
                         }
                         applyMailTicket(data);
@@ -408,24 +412,23 @@ vs_auth_head('登录');
                             showMessage(data.msg || '发送失败', 'error');
                             var waitSec = parseWaitSeconds(data.msg);
                             if (waitSec > 0) startCountdown(waitSec);
-                            else resetSendCodeBtn();
                             if (window.VsCaptcha && window.VsCaptcha.reset) window.VsCaptcha.reset(form);
                         }
                     })
                     .catch(function () {
                         showMessage('网络异常，请稍后重试', 'error');
-                        resetSendCodeBtn();
                     });
             };
 
-            if (window.VsCaptcha && window.VsCaptcha.enabled && window.VsCaptcha.ensure) {
-                window.VsCaptcha.ensure(form).then(doSend).catch(function (err) {
-                    showMessage((err && err.message) ? err.message : '请先完成行为验证', 'error');
-                    resetSendCodeBtn();
-                });
-            } else {
-                doSend();
-            }
+            var chain = (window.VsCaptcha && window.VsCaptcha.enabled && window.VsCaptcha.ensure)
+                ? window.VsCaptcha.ensure(form).then(doSend)
+                : doSend();
+            Promise.resolve(chain).catch(function (err) {
+                showMessage((err && err.message) ? err.message : '请先完成行为验证', 'error');
+            }).then(function () {
+                sendingCode = false;
+                resetSendCodeBtn();
+            });
         });
     }
 

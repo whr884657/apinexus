@@ -100,7 +100,7 @@ class ApiCategoryManager
                     continue;
                 }
             }
-            $out[] = rtrim(vs_base_url(), '/') . $path;
+            $out[] = vs_site_path($path);
         }
         return $out;
     }
@@ -126,7 +126,7 @@ class ApiCategoryManager
                     return $u;
                 }
             }
-            return rtrim(vs_base_url(), '/') . $icon;
+            return vs_site_path($icon);
         }
 
         if (preg_match('#^https?://#i', $icon)) {
@@ -135,7 +135,12 @@ class ApiCategoryManager
 
         $base = rtrim(vs_base_url(), '/');
         if (strpos($icon, $base) === 0) {
-            return $icon;
+            // 历史绝对本站 URL → 压成站内路径
+            $path = substr($icon, strlen($base));
+            if ($path === false || $path === '') {
+                $path = '/';
+            }
+            return vs_site_path($path);
         }
 
         $defaults = self::defaultIcons();

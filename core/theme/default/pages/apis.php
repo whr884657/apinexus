@@ -1,11 +1,7 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-$categoryNames = FrontendCategory::nameMap();
-$apiData = FrontendApi::listForTheme();
-if (is_array($apiData) && count($apiData) > 1) {
-    shuffle($apiData);
-}
-$apiCount = count($apiData);
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
+$apiCount = FrontendStats::approvedApiCount();
 $visibleLimit = FrontendCategory::tagVisibleLimit();
 $catIndex = 0;
 ?>
@@ -17,7 +13,7 @@ $catIndex = 0;
     <section class="py-4">
         <div class="mb-4">
             <div class="flex gap-2 flex-wrap">
-                <input type="text" id="apiSearchInput" class="search-input font-mono" style="flex: 1; min-width: 150px;" placeholder="搜索接口名称、描述..." oninput="filterApis()">
+                <input type="text" id="apiSearchInput" class="search-input font-mono" style="flex: 1; min-width: 150px;" placeholder="搜索接口名称或描述..." oninput="filterApis()">
                 <button type="button" class="btn-geek" onclick="filterApis()">搜索</button>
                 <button type="button" id="apiResetBtn" class="btn-geek" style="border-color: #52525b; color: #a1a1aa; display: none;" onclick="resetApis()">重置</button>
             </div>
@@ -38,9 +34,12 @@ $catIndex = 0;
             </button>
             <?php endif; ?>
         </div>
-        <div id="apiCardContainer" class="card-container">
-            <?php include __DIR__ . '/../partials/api-cards-html.php'; ?>
+        <div id="apiCardContainer" class="card-container" aria-busy="true">
+            <div class="col-span-full text-center py-8" style="color: var(--text-muted); grid-column: 1 / -1;">正在加载接口…</div>
         </div>
         <div id="apiPagination" class="pagination" style="display:none;"></div>
     </section>
 </main>
+<script>
+window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php'), JSON_UNESCAPED_UNICODE); ?>;
+</script>

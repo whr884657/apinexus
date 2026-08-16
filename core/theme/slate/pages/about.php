@@ -1,7 +1,7 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
 <?php
 $siteName = isset($siteName) ? $siteName : (class_exists('SiteContext') ? SiteContext::siteName() : '本站');
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $aboutArticle = isset($aboutArticle) && is_array($aboutArticle) ? $aboutArticle : null;
 $hasAbout = is_array($aboutArticle);
 $aboutTitle = '关于';

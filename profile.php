@@ -37,7 +37,7 @@ vs_frontend_page('profile', $pageTitle, array(
     'profile'   => $profile,
     'wallpaper' => $wallpaper,
     'notFound'  => false,
-    'pingUrl'   => rtrim(vs_base_url(), '/') . '/core/ping.php',
+    'pingUrl'   => vs_site_path('/core/ping.php'),
     'seo'       => vs_page_seo_pack($pageTitle, array(
         'description' => vs_seo_truncate($desc),
         'type'        => 'profile',

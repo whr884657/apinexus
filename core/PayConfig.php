@@ -281,7 +281,7 @@ class PayConfig
         if (class_exists('SiteMedia')) {
             return SiteMedia::resolve($path);
         }
-        return rtrim(vs_base_url(), '/') . $path;
+        return vs_site_path($path);
     }
 
     /**

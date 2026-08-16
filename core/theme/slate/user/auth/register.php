@@ -15,7 +15,7 @@
  * @var string $registerClosedDetail
  */
 if (!defined('VS_THEME_RENDER')) { exit; }
-$vsBase = isset($vsBase) ? (string) $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? (string) $vsBase : vs_site_base_path();
 $base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
 $mailEnabled = !empty($mailEnabled);
 $mailDisabledMsg = isset($mailDisabledMsg) && (string) $mailDisabledMsg !== ''

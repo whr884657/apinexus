@@ -6,14 +6,8 @@ if (!defined('VS_THEME_RENDER')) {
 // ThemeManager::renderBody() 也会注入同名变量；此处显式读取，避免静态分析误报、并与 default 主题一致
 $siteName = SiteContext::siteName();
 $siteDesc = SiteContext::siteDescription();
-$vsBase = rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
 
-$categoryNames = FrontendCategory::nameMap();
-$apiData = FrontendApi::listForTheme();
-$payload = array(
-    'categoryNames' => $categoryNames,
-    'apiData'       => $apiData,
-);
 $apiCount = FrontendStats::approvedApiCount();
 $totalCalls = FrontendStats::totalCallCount();
 $catCount = FrontendCategory::countEnabled();
@@ -103,7 +97,7 @@ $showStats = $showStats && count($statItems) > 0;
 </section>
 
 <section class="st-section st-api-section" id="stApiListWrap">
-    <div class="st-api-grid" id="stApiGrid"></div>
+    <div class="st-api-grid" id="stApiGrid" aria-busy="true"></div>
     <?php if ($apiCount > 8): ?>
     <div class="st-api-more-wrap">
         <a href="<?php echo vs_e($vsBase); ?>/apis" class="st-bar__login st-api-more-link">查看全部接口</a>
@@ -113,6 +107,7 @@ $showStats = $showStats && count($statItems) > 0;
 </div>
 </main>
 <script>
-window.stApiPayload = <?php echo json_encode($payload, JSON_UNESCAPED_UNICODE); ?>;
+window.stApiPayload = { apiData: [], categoryNames: {} };
 window.stHomePreviewLimit = 8;
+window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php'), JSON_UNESCAPED_UNICODE); ?>;
 </script>

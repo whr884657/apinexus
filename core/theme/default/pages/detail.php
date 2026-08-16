@@ -4,7 +4,7 @@ $apiRaw = (isset($api) && is_array($api)) ? $api : null;
 $notFound = !empty($notFound) || $apiRaw === null;
 /** @var array $api 始终为数组，避免 IDE 在分支内误判 null */
 $api = $apiRaw !== null ? $apiRaw : array();
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $playground = isset($playground) && is_array($playground) ? $playground : array(
     'loggedIn' => false,
     'apiKey' => '',
@@ -116,7 +116,8 @@ if (!$notFound) {
     <?php
     $detailImgBase = rtrim(ThemeManager::assetUrl(ThemeManager::activeId(), 'assets/img'), '/') . '/';
     $detailSiteName = class_exists('SiteContext') ? SiteContext::siteName() : 'ApiNexus';
-    $detailHost = parse_url($vsBase, PHP_URL_HOST);
+    // $vsBase 已是站内路径前缀，取 Host 须用绝对站根（勿 parse_url($vsBase)）
+    $detailHost = parse_url(vs_base_url(), PHP_URL_HOST);
     if (!is_string($detailHost) || $detailHost === '') {
         $detailHost = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
     }
@@ -600,12 +601,12 @@ window.detailApiData = <?php echo json_encode($jsApi === null ? null : array(
     'keyways' => $keywaysList,
     'params_list' => $paramsList,
 ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-window.playgroundUserApiKey = <?php echo json_encode(isset($playground['apiKey']) ? (string) $playground['apiKey'] : ''); ?>;
 window.playgroundKeyContext = <?php echo json_encode(array(
     'loggedIn' => !empty($playground['loggedIn']),
     'apiKeyCount' => isset($playground['apiKeyCount']) ? (int) $playground['apiKeyCount'] : 0,
     'userCenterUrl' => isset($playground['userCenterUrl']) ? (string) $playground['userCenterUrl'] : ($vsBase . '/user/index'),
     'loginUrl' => isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login'),
+    'keysUrl' => isset($playground['keysUrl']) ? (string) $playground['keysUrl'] : vs_site_path('/core/front/playground-key.php'),
     'feedbackReady' => !empty($playground['feedbackReady']),
 ), JSON_UNESCAPED_UNICODE); ?>;
 window.VS_CSRF_TOKEN = <?php echo json_encode(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;

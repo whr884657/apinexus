@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/playground/relay.php
- * 作用：前台在线测试同源中继入口（POST + CSRF）
+ * 作用：前台在线测试同源中继入口（POST + CSRF + IP 频控）
  *
  * 说明：
  * - 供各主题共用，勿放根目录、勿放单一主题包
@@ -50,6 +50,12 @@ if (isset($input['csrf_token'])) {
 
 if (!AuthSecurity::validateCsrf($token)) {
     AjaxResponse::error('登录凭证已失效，请刷新页面后重试', 403);
+}
+
+// 频控：防持会话账号狂刷中继占带宽 / 打上游（SEC-001；v13.26.16）
+$relayIp = AuthSecurity::clientIp();
+if (!AuthSecurity::rateLimitAllow('front_playground_relay_ip:' . $relayIp, 30, 60, true)) {
+    AjaxResponse::error('请求过于频繁，请稍后再试', 429);
 }
 
 $apiId = isset($input['api_id']) ? (int) $input['api_id'] : 0;

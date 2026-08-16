@@ -1,7 +1,7 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
 $contributors = FrontendContributor::listForTheme();
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $authUrl = isset($authUrl) ? $authUrl : ($vsBase . '/user/login');
 ?>
 <main class="main-wrapper container mx-auto px-4" style="padding-top:88px;">

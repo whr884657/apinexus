@@ -469,7 +469,7 @@ $tableReady = ApiManager::tableReady()
 $apis = $tableReady ? ApiManager::listByUser($userId) : array();
 $categories = ApiCategoryManager::tableReady() ? ApiCategoryManager::listEnabled() : array();
 $defaultIconPaths = ApiCategoryManager::defaultIconPaths();
-$iconBase = rtrim(vs_base_url(), '/');
+$iconBase = vs_site_base_path();
 $aiReady = class_exists('AiConfig') && AiConfig::isReady();
 $aiCodeOpts = class_exists('AiConfig') ? AiConfig::codeClientOptions() : array('mode' => 'sequential', 'concurrency' => 1, 'ready' => false);
 

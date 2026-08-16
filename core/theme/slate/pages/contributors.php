@@ -1,7 +1,7 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
 $contributors = FrontendContributor::listForTheme();
-$vsBase = isset($vsBase) ? $vsBase : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $authUrl = isset($authUrl) ? $authUrl : ($vsBase . '/user/login');
 ?>
 <main class="st-main"><div class="st-wrap">

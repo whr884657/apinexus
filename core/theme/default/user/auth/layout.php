@@ -9,7 +9,7 @@
  */
 function vs_theme_auth_head($pageTitle)
 {
-    $base = vs_base_url();
+    $base = vs_site_base_path();
     $siteName = SiteContext::siteName();
     $favicon = SiteContext::siteFavicon();
     $themeId = ThemeManager::activeId();
@@ -52,7 +52,7 @@ function vs_theme_auth_head($pageTitle)
  */
 function vs_theme_auth_foot($inlineJs = '')
 {
-    $base = vs_base_url();
+    $base = vs_site_base_path();
     $themeId = ThemeManager::activeId();
     if ($inlineJs !== '') {
         echo '<script>' . $inlineJs . '</script>' . "\n";

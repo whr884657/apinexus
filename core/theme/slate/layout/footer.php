@@ -2,7 +2,7 @@
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
-$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : rtrim(vs_base_url(), '/');
+$vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
 $siteName = isset($siteName) ? (string) $siteName : SiteContext::siteName();
 $siteDesc = isset($siteDesc) ? (string) $siteDesc : '';
 $navItems = (isset($navItems) && is_array($navItems)) ? $navItems : ThemeManager::navItems();
@@ -80,4 +80,12 @@ $beian = SiteContext::beianInfo();
 </div>
 <?php endif; ?>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/st-tint.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<?php if (!isset($GLOBALS['vs_front_csrf_injected'])): $GLOBALS['vs_front_csrf_injected'] = true; ?>
+<script>
+window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(vs_site_base_path()); ?>;
+window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode(AuthSecurity::csrfToken()); ?>;
+window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(vs_site_path('/core/playground/relay.php')); ?>;
+window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php')); ?>;
+</script>
+<?php endif; ?>
 </div>

@@ -13,6 +13,13 @@ require_once VS_ROOT . '/core/bootstrap.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
+// IP 频控：防滥用作外网扫描/占带宽（每分钟 30 次）
+$pingIp = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
+if (class_exists('AuthSecurity') && !AuthSecurity::rateLimitAllow('front_ping_ip:' . $pingIp, 30, 60, true)) {
+    echo json_encode(array('ok' => 0, 'msg' => '请求过于频繁'), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $host = isset($_GET['host']) ? trim((string) $_GET['host']) : '';
 $host = strtolower($host);
 $host = preg_replace('/:\d+$/', '', $host);

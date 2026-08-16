@@ -212,7 +212,7 @@ $kpiClass = $isDeveloper ? ' is-eight' : ' is-seven';
         <div class="vs-panel uc-dash__panel uc-dash__panel--scroll">
             <div class="vs-panel__header uc-dash__panel-head">
                 <h2 class="vs-panel__title">近期调用</h2>
-                <a class="uc-dash__more" href="<?php echo vs_e(vs_base_url() . '/user/logs'); ?>">全部日志</a>
+                <a class="uc-dash__more" href="<?php echo vs_e(vs_site_path('/user/logs')); ?>">全部日志</a>
             </div>
             <div class="vs-panel__body uc-dash__scroll-body" id="ucDashRecentBody" data-detail-enabled="<?php echo $detailEnabled ? '1' : '0'; ?>">
                 <?php if (!$detailEnabled): ?>

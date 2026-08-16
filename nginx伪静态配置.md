@@ -5,7 +5,7 @@
 
 > **权威同步（四处必须一致）：**  
 > ① 本文「情况 A」　② 安装向导 `install/index.php` → `vs_install_nginx_rewrite_snippet()`　③ 根目录 `.htaccess`　④ 根目录 `README.md`「伪静态」节  
-> 另：`robots.txt` 声明 `Sitemap: /sitemap.xml`。改规则时勿只改一处（见易错点 E236）。  
+> 另：站点地图为 `/sitemap.xml`（伪静态）。**v13.26.16 起不再提供根目录 `robots.txt`**（Disallow 会暴露目录结构，见易错点 E250）。改伪静态规则时勿只改一处（见易错点 E236）。  
 > **v13.21.0+：** 安装向导第 1 步默认提供情况 A 全文并支持一键复制。**v13.26.5+：** 含 `/sitemap.xml` 与 `config|data` 合并 deny。
 
 ---

@@ -597,15 +597,14 @@ class ThemeManager
             return self::$navCache;
         }
 
-        $base = vs_base_url();
         self::$navCache = array(
-            array('id' => 'home', 'label' => '首页', 'url' => $base . '/'),
-            array('id' => 'apis', 'label' => '全部接口', 'url' => $base . '/apis'),
-            array('id' => 'articles', 'label' => '文章', 'url' => $base . '/articles'),
-            array('id' => 'contributors', 'label' => '贡献者', 'url' => $base . '/contributors'),
-            array('id' => 'links', 'label' => '友情链接', 'url' => $base . '/links'),
-            array('id' => 'sponsor', 'label' => '赞助', 'url' => $base . '/sponsor'),
-            array('id' => 'about', 'label' => '关于', 'url' => $base . '/about'),
+            array('id' => 'home', 'label' => '首页', 'url' => vs_site_path('/')),
+            array('id' => 'apis', 'label' => '全部接口', 'url' => vs_site_path('/apis')),
+            array('id' => 'articles', 'label' => '文章', 'url' => vs_site_path('/articles')),
+            array('id' => 'contributors', 'label' => '贡献者', 'url' => vs_site_path('/contributors')),
+            array('id' => 'links', 'label' => '友情链接', 'url' => vs_site_path('/links')),
+            array('id' => 'sponsor', 'label' => '赞助', 'url' => vs_site_path('/sponsor')),
+            array('id' => 'about', 'label' => '关于', 'url' => vs_site_path('/about')),
         );
 
         return self::$navCache;
@@ -618,15 +617,14 @@ class ThemeManager
      */
     public static function userMenuGroups()
     {
-        $base = vs_base_url();
         $groups = array(
-            array('id' => 'dashboard', 'title' => '控制台', 'icon' => 'dashboard', 'url' => $base . '/user/index'),
-            array('id' => 'api-manage', 'title' => 'API 管理', 'icon' => 'cloud', 'url' => $base . '/user/api-manage', 'require_developer' => true),
-            array('id' => 'keys', 'title' => '令牌管理', 'icon' => 'share', 'url' => $base . '/user/keys'),
-            array('id' => 'logs', 'title' => '日志查询', 'icon' => 'search', 'url' => $base . '/user/logs'),
-            array('id' => 'recharge', 'title' => '充值中心', 'icon' => 'archive', 'url' => $base . '/user/recharge'),
-            array('id' => 'points', 'title' => '积分变动', 'icon' => 'archive', 'url' => $base . '/user/points'),
-            array('id' => 'account', 'title' => '账号设置', 'icon' => 'user', 'url' => $base . '/user/account'),
+            array('id' => 'dashboard', 'title' => '控制台', 'icon' => 'dashboard', 'url' => vs_site_path('/user/index')),
+            array('id' => 'api-manage', 'title' => 'API 管理', 'icon' => 'cloud', 'url' => vs_site_path('/user/api-manage'), 'require_developer' => true),
+            array('id' => 'keys', 'title' => '令牌管理', 'icon' => 'share', 'url' => vs_site_path('/user/keys')),
+            array('id' => 'logs', 'title' => '日志查询', 'icon' => 'search', 'url' => vs_site_path('/user/logs')),
+            array('id' => 'recharge', 'title' => '充值中心', 'icon' => 'archive', 'url' => vs_site_path('/user/recharge')),
+            array('id' => 'points', 'title' => '积分变动', 'icon' => 'archive', 'url' => vs_site_path('/user/points')),
+            array('id' => 'account', 'title' => '账号设置', 'icon' => 'user', 'url' => vs_site_path('/user/account')),
         );
 
         if (!UserRole::currentCanPublishApi()) {
@@ -850,7 +848,7 @@ class ThemeManager
 
         $ctx = array_merge(
             array(
-                'vsBase'     => vs_base_url(),
+                'vsBase'     => vs_site_base_path(),
                 'siteName'   => SiteContext::siteName(),
                 'navName'    => SiteContext::navName(),
                 'systemName' => SiteContext::systemName(),
@@ -905,7 +903,7 @@ class ThemeManager
 
         $ctx = array_merge(
             array(
-                'vsBase'        => isset($vsBase) ? $vsBase : vs_base_url(),
+                'vsBase'        => isset($vsBase) ? $vsBase : vs_site_base_path(),
                 'vsUser'        => isset($vsUser) ? $vsUser : null,
                 'vsUserProfile' => isset($vsUserProfile) ? $vsUserProfile : null,
                 'vsSiteName'    => isset($vsSiteName) ? $vsSiteName : SiteContext::siteName(),
@@ -943,7 +941,7 @@ class ThemeManager
         if ($relative === '' || strpos($relative, '..') !== false) {
             return '';
         }
-        return vs_base_url() . '/core/theme/' . rawurlencode($themeId) . '/' . $relative;
+        return vs_site_path('/core/theme/' . rawurlencode($themeId) . '/' . $relative);
     }
 
     /**
@@ -1255,9 +1253,9 @@ class ThemeManager
     {
         $pageKey = preg_replace('/[^a-z0-9_-]/i', '', (string) $pageKey);
         $pageTitle = trim((string) $pageTitle);
-        $base = vs_base_url();
+        $base = vs_site_base_path();
         $loggedIn = UserAuth::check();
-        $authUrl = $loggedIn ? ($base . '/user/index') : ($base . '/user/login');
+        $authUrl = $loggedIn ? vs_site_path('/user/index') : vs_site_path('/user/login');
         $authAvatarUrl = '';
         if ($loggedIn) {
             $authUser = UserAuth::user();
