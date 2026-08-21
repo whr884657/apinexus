@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.19**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.20**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -60,7 +60,7 @@ version.php
 → Auth → UserRole → UserAuth → FrontendUser
 → UserDashHello → SiteMedia
 → RateLimitStore → AuthSecurity → Captcha → AjaxResponse
-→ SystemInfo → AboutCatalog → ConsoleBrand → Updater → UpdateLog
+→ SystemInfo → AboutCatalog → Updater → UpdateLog
 → UserAvatar → UserManager → AdminUserBinding
 → ApiManager → ApiError → ApiQuickstart
 → AiConfig → AiClient → AiChatSession → AiSse → AiApiDoc
@@ -268,8 +268,8 @@ foreach (FrontendCategory::listTags() as $tag) {
 |------|--------|
 | `bootstrap.php` | 系统引导，加载全部 core 类 |
 | `version.php` | 版本常量 `VS_VERSION` |
-| `helpers.php` | 全局辅助函数（转义、页面渲染、前台入口；**v13.26.16** `vs_site_path` / `vs_site_base_path`；**v13.26.17** `vs_call_url_absolute` / `vs_call_url_host_path`；页脚注入 `VS_FRONT_CATALOG`；**v13.26.18** `vs_console_brand_script()`） |
-| `ConsoleBrand.php` | **全站**控制台品牌（本地 `assets/img` 图标芯片；无 Shields；无裸链；主题与后台不可改） |
+| `helpers.php` | 全局辅助函数（转义、页面渲染、前台入口；**v13.26.16** `vs_site_path` / `vs_site_base_path`；**v13.26.17** `vs_call_url_absolute` / `vs_call_url_host_path`；页脚注入 `VS_FRONT_CATALOG`；**v13.26.20** `vs_console_brand_script()` 挂载外链 `assets/js/console-brand.js`） |
+| `../assets/js/console-brand.js` | **全站**控制台品牌（系统级外链 JS；除版本外固定文案；主题与后台不可改） |
 | `InstallChecker.php` | 安装状态检测 |
 | `Database.php` | PDO 连接、表名前缀 |
 | `DatabaseInstaller.php` | 安装向导执行 `database.sql` |
@@ -368,13 +368,13 @@ foreach (FrontendCategory::listTags() as $tag) {
 
 ### 4.2 version.php
 
-**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.19**）。在线更新、关于页、`update.json` 均以此为准。
+**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.20**）。在线更新、关于页、`update.json` 均以此为准。
 
 **用法：**
 
 ```php
-echo VS_VERSION;           // 例如 13.26.19（以当前 core/version.php 为准）
-echo 'v' . VS_VERSION;     // 例如 v13.26.19
+echo VS_VERSION;           // 例如 13.26.20（以当前 core/version.php 为准）
+echo 'v' . VS_VERSION;     // 例如 v13.26.20
 ```
 
 **发版时：** 须同步修改 `update.json`、`update-log.json`、`README.md` 徽章。

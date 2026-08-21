@@ -101,7 +101,7 @@ if (count($announcePopup) > 0) {
         'popup_key' => $announcePopupKey,
     ),
 ), JSON_UNESCAPED_UNICODE); ?></script>
-<div class="home-announcement-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true">
+<div class="home-announcement-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true" inert>
     <div class="home-announcement-modal__mask" data-close-announcement="1"></div>
     <div class="home-announcement-modal__card" role="dialog" aria-modal="true">
         <div class="home-announcement-modal__head"><h3 class="home-announcement-modal__title"><?php echo vs_e($announceTitle); ?></h3><button type="button" class="home-announcement-modal__close" data-close-announcement="1">关闭</button></div>

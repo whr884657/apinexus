@@ -342,11 +342,12 @@
         if (!/^https?:\/\//i.test(detailUrl) && !(detailUrl.charAt(0) === '/' && detailUrl.charAt(1) !== '/')) {
             detailUrl = base + '/apis';
         }
+        var chipsHtml = cardChipsHtml(api);
         return '<article class="st-api-card' + cardState + '" data-category="' + escapeHtml(String(api.category || '')) + '" data-name="' + escapeHtml((api.name || '').toLowerCase()) + '" data-desc="' + escapeHtml((api.desc || '').toLowerCase()) + '">' +
             '<a class="st-api-card__link" href="' + escapeHtml(detailUrl) + '">' +
-            cardChipsHtml(api) +
             '<div class="st-api-card__head">' +
             '<div class="st-api-card__methods">' + methodHtml + '</div>' +
+            chipsHtml +
             '</div>' +
             '<h3 class="st-api-card__title">' + escapeHtml(api.name || '') + '</h3>' +
             '<code class="st-api-card__endpoint">' + (endpoint ? escapeHtml(endpoint) : '&nbsp;') + '</code>' +
@@ -391,8 +392,15 @@
                 return true;
             });
             var slice = filtered.slice(0, limit);
+            var moreWrap = document.getElementById('stApiMoreWrap');
+            if (moreWrap) {
+                moreWrap.hidden = filtered.length <= limit;
+            }
             if (slice.length === 0) {
                 grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">没有找到相关接口</p></div>';
+                if (moreWrap) {
+                    moreWrap.hidden = true;
+                }
                 return;
             }
             grid.innerHTML = slice.map(buildApiCardHtml).join('');
@@ -530,28 +538,6 @@
                 applyFilter();
             });
         }
-        var resetBtn = document.getElementById('stApisResetBtn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', function () {
-                currentCat = 'all';
-                currentPage = 1;
-                if (apisSearch) {
-                    apisSearch.value = '';
-                }
-                var clearBtn = document.getElementById('stApisSearchClear');
-                if (clearBtn) {
-                    clearBtn.hidden = true;
-                }
-                var catBar = document.getElementById('stApisCatBar');
-                if (catBar) {
-                    catBar.querySelectorAll('.st-cat-tag').forEach(function (tag) {
-                        tag.classList.toggle('is-on', tag.getAttribute('data-cat') === 'all');
-                    });
-                }
-                applyFilter();
-            });
-        }
-
         if (window.VS && typeof VS.setLoading === 'function') {
             VS.setLoading(grid, '正在加载接口');
         }

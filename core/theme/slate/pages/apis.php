@@ -12,9 +12,6 @@ $catIndex = 0;
             <h1 class="st-page-title">全部接口</h1>
             <p class="st-page-desc">共 <span id="stApiTotalCount"><?php echo (int) $apiCount; ?></span> 个 API 接口</p>
         </div>
-        <div class="st-apis-toolbar">
-            <button type="button" class="st-apis-toolbar__btn" id="stApisResetBtn" title="重置筛选">重置</button>
-        </div>
     </div>
 
     <div class="st-search st-search--page">
@@ -45,6 +42,3 @@ $catIndex = 0;
 </section>
 </div>
 </main>
-<script>
-window.stHomePreviewLimit = 8;
-</script>

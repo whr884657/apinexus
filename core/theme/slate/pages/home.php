@@ -116,7 +116,7 @@ $seoFallbackDesc = $siteDesc !== '' ? $siteDesc : $siteName;
     ),
 ), JSON_UNESCAPED_UNICODE); ?></script>
 <template id="stAnnounceBodyTpl"><?php echo $announceHtml; ?></template>
-<div class="st-announce-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true">
+<div class="st-announce-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true" inert>
     <div class="st-announce-modal__mask" data-close-announcement="1"></div>
     <div class="st-announce-modal__card" role="dialog" aria-modal="true" aria-labelledby="stAnnounceModalTitle">
         <div class="st-announce-modal__head">
@@ -145,10 +145,6 @@ $seoFallbackDesc = $siteDesc !== '' ? $siteDesc : $siteName;
         <?php endforeach; ?>
     </div>
     <?php endif; ?>
-    <div class="st-hero__actions">
-        <a class="st-bar__login st-hero__cta" href="#stApiListWrap">浏览接口</a>
-        <a class="st-hero__cta st-hero__cta--ghost" href="<?php echo vs_e($vsBase); ?>/apis">全部接口</a>
-    </div>
 </section>
 
 <section class="st-section st-home-tools">
@@ -176,15 +172,10 @@ $seoFallbackDesc = $siteDesc !== '' ? $siteDesc : $siteName;
 </section>
 
 <section class="st-section st-api-section" id="stApiListWrap">
-    <div class="st-section__head">
-        <h2 class="st-section__title">接口预览</h2>
-    </div>
     <div class="st-api-grid" id="stApiGrid" aria-busy="true"></div>
-    <?php if ($apiCount > 8): ?>
-    <div class="st-api-more-wrap">
-        <a href="<?php echo vs_e($vsBase); ?>/apis" class="st-bar__login st-api-more-link">查看全部接口</a>
+    <div class="st-api-more-wrap" id="stApiMoreWrap" hidden>
+        <a href="<?php echo vs_e($vsBase); ?>/apis" class="st-api-more-bar">全部接口</a>
     </div>
-    <?php endif; ?>
 </section>
 
 </div>

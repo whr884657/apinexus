@@ -57,15 +57,30 @@
     function openModal(el) {
         if (!el) return;
         hydrateAnnouncementModals();
+        el.removeAttribute('inert');
         el.classList.add('is-open');
         el.setAttribute('aria-hidden', 'false');
         document.body.classList.add('home-announcement-modal-open');
+        var focusEl = el.querySelector('.home-announcement-btn-ok') || el.querySelector('button');
+        if (focusEl && typeof focusEl.focus === 'function') {
+            try { focusEl.focus(); } catch (e) { /* ignore */ }
+        }
     }
 
     function closeModalEl(modal) {
         if (!modal) return;
+        var active = document.activeElement;
+        if (active && modal.contains(active) && typeof active.blur === 'function') {
+            try { active.blur(); } catch (e) { /* ignore */ }
+        }
+        if (btn && typeof btn.focus === 'function') {
+            try { btn.focus({ preventScroll: true }); } catch (e2) {
+                try { btn.focus(); } catch (e3) { /* ignore */ }
+            }
+        }
         modal.classList.remove('is-open');
         modal.setAttribute('aria-hidden', 'true');
+        modal.setAttribute('inert', '');
         if (!document.querySelector('.home-announcement-modal.is-open')) {
             document.body.classList.remove('home-announcement-modal-open');
         }

@@ -73,15 +73,32 @@
     function openModal(el) {
         if (!el) return;
         hydrateAnnouncementModals();
+        el.removeAttribute('inert');
         el.classList.add('is-open');
         el.setAttribute('aria-hidden', 'false');
         document.body.classList.add('st-announce-modal-open');
+        var focusEl = el.querySelector('.st-announce-btn--primary') || el.querySelector('button');
+        if (focusEl && typeof focusEl.focus === 'function') {
+            try { focusEl.focus(); } catch (e) { /* ignore */ }
+        }
     }
 
     function closeModalEl(modal) {
         if (!modal) return;
+        var active = document.activeElement;
+        if (active && modal.contains(active) && typeof active.blur === 'function') {
+            try { active.blur(); } catch (e) { /* ignore */ }
+        }
+        if (btn && typeof btn.focus === 'function') {
+            try { btn.focus({ preventScroll: true }); } catch (e2) {
+                try { btn.focus(); } catch (e3) { /* ignore */ }
+            }
+        }
         modal.classList.remove('is-open');
         modal.setAttribute('aria-hidden', 'true');
+        if (typeof modal.setAttribute === 'function') {
+            modal.setAttribute('inert', '');
+        }
         if (!document.querySelector('.st-announce-modal.is-open')) {
             document.body.classList.remove('st-announce-modal-open');
         }

@@ -31,6 +31,7 @@
         "core/theme/default/assets/js/pages/error404.js",
         "core/theme/slate/assets/js/pages/error404.js",
         "core/theme/default/assets/vendor/tailwind.min.js",
-        "robots.txt"
+        "robots.txt",
+        "core/ConsoleBrand.php"
     ]
 }

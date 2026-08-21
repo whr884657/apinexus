@@ -67,13 +67,6 @@ foreach ($apis as $api):
     ?>
 <article class="st-api-card<?php echo $disabled ? ' is-disabled' : ($maintenance ? ' is-maintenance' : ''); ?>" data-category="<?php echo vs_e($cat); ?>" data-name="<?php echo vs_e($nameKey); ?>" data-desc="<?php echo vs_e($descKey); ?>">
     <a class="st-api-card__link" href="<?php echo vs_e($detailUrl); ?>">
-        <?php if ($chips !== array()): ?>
-        <div class="st-api-card__chips" aria-label="接口标签">
-            <?php foreach ($chips as $chip): ?>
-            <span class="st-api-chip <?php echo vs_e($chip['class']); ?>"><?php echo vs_e($chip['text']); ?></span>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
         <div class="st-api-card__head">
             <div class="st-api-card__methods">
                 <?php foreach ($showMethods as $m): ?>
@@ -84,6 +77,13 @@ foreach ($apis as $api):
                 <span class="st-api-card__method-more">+<?php echo (int) $methodExtra; ?></span>
                 <?php endif; ?>
             </div>
+            <?php if ($chips !== array()): ?>
+            <div class="st-api-card__chips" aria-label="接口标签">
+                <?php foreach ($chips as $chip): ?>
+                <span class="st-api-chip <?php echo vs_e($chip['class']); ?>"><?php echo vs_e($chip['text']); ?></span>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
         </div>
         <h3 class="st-api-card__title"><?php echo vs_e($name); ?></h3>
         <code class="st-api-card__endpoint"><?php echo $endpoint !== '' ? vs_e($endpoint) : '&nbsp;'; ?></code>

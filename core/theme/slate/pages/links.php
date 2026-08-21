@@ -10,18 +10,27 @@ $linksTruncated = !empty($pagePack['truncated']);
 $applyUrl = $vsBase . '/applylink';
 ?>
 <main class="st-main"><div class="st-wrap">
-<section class="st-section">
-    <h1 class="st-page-title">友情链接</h1>
-    <p class="st-page-desc">与优质站点互相推荐，共同成长</p>
+<section class="st-section st-links-page">
+    <div class="st-links-head">
+        <div>
+            <h1 class="st-page-title">友情链接</h1>
+            <p class="st-page-desc">与优质站点互相推荐，共同成长</p>
+        </div>
+        <a class="st-links-apply-btn" href="<?php echo vs_e($applyUrl); ?>">
+            <span aria-hidden="true">+</span>
+            申请友链
+        </a>
+    </div>
 
     <?php if ($linksTruncated): ?>
     <p class="st-notice-box">当前共 <?php echo (int) $linksTotal; ?> 条，本页仅展示前 <?php echo (int) $pagePack['limit']; ?> 条。</p>
     <?php endif; ?>
 
     <?php if (count($friendLinks) === 0): ?>
-    <div class="st-card">
+    <div class="st-card st-links-empty">
         <div class="st-card__title">暂无友情链接</div>
-        <div class="st-card__desc">欢迎交换友链，点击下方申请。</div>
+        <div class="st-card__desc">欢迎交换友链。请先在贵站添加本站信息，再提交申请。</div>
+        <a class="st-links-apply-btn" href="<?php echo vs_e($applyUrl); ?>">申请友链</a>
     </div>
     <?php else: ?>
     <div class="st-links-grid">
@@ -46,8 +55,12 @@ $applyUrl = $vsBase . '/applylink';
     </div>
     <?php endif; ?>
 
-    <div class="st-links-apply">
-        <a class="st-bar__login" href="<?php echo vs_e($applyUrl); ?>">申请友链</a>
-    </div>
+    <aside class="st-links-apply-panel">
+        <div class="st-links-apply-panel__copy">
+            <h2 class="st-links-apply-panel__title">申请友链</h2>
+            <p class="st-links-apply-panel__hint">欢迎交换友情链接。请先在贵站添加本站信息，再提交申请。</p>
+        </div>
+        <a class="st-links-apply-btn st-links-apply-btn--solid" href="<?php echo vs_e($applyUrl); ?>">申请友链</a>
+    </aside>
 </section>
 </div></main>

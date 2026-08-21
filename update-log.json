@@ -1,5 +1,18 @@
 {
     "versions": {
+        "13.26.20": {
+            "title": "ApiNexus 13.26.20 控制台品牌外链与主题二首页体验修复",
+            "date": "2026-08-21",
+            "db_changes": false,
+            "changes": [
+                "全站控制台品牌改为 assets/js/console-brand.js 外链引入，删除 core/ConsoleBrand.php",
+                "vs_console_brand_script() 仅注入 VS_VERSION 与 script src；升级清单清理旧 PHP 类",
+                "双主题首页公告弹窗：关闭前移走焦点，配合 inert，消除 aria-hidden 控制台警告",
+                "主题二首页：去掉多余 CTA/「接口预览」；底部横条「全部接口」；卡片方法与免费标签同行",
+                "主题二公告：对齐默认主题固定弹窗高度与正文滚动；公告条与顶栏留间隙",
+                "主题二全部接口页去掉重置；友链页强化申请入口；贡献者个人主页 UI 重设计（slate 2.23.0）"
+            ]
+        },
         "13.26.19": {
             "title": "ApiNexus 13.26.19 主题二首页公告与详情页体验优化",
             "date": "2026-08-21",

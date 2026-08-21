@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.19-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.20-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -42,7 +42,7 @@
 | **GitHub** | [whr884657/apinexus](https://github.com/whr884657/apinexus) | 同步仓库 |
 | **发行版下载** | [Gitee Releases](https://gitee.com/xunjinlu/apinexus/releases) | 完整安装包 |
 
-压缩包命名：`apinexus{版本号}.zip`（如 `apinexus13.26.19.zip`）。完整版本历史见 **[更新记录.md](更新记录.md)**。
+压缩包命名：`apinexus{版本号}.zip`（如 `apinexus13.26.20.zip`）。完整版本历史见 **[更新记录.md](更新记录.md)**。
 
 ---
 
@@ -156,12 +156,11 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.19（2026-08-21）
+### v13.26.20（2026-08-21）
 
-- **主题二：** 公告弹窗不透明、公告条加边框；首页去掉在线调试与「精选展示」文案
-- **详情 / 卡片 / 贡献者：** 免责声明底栏常显、去掉推荐接口与标题重复标签；卡片右上角补全免费/积分/KEY/维护中/已禁用；贡献者页 UI 重设计（slate 2.22.0）
+- **控制台品牌：** 改为 `assets/js/console-brand.js` 外链；删除 `core/ConsoleBrand.php`
+- **主题二：** 首页去多余按钮与「接口预览」；底部横条进全部接口；卡片标签同行；公告弹窗/间距对齐默认主题；友链申请入口；贡献者主页重设计
 - **更多：** 见 [`更新记录.md`](更新记录.md)
-
 
 ---
 

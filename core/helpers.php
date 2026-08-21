@@ -18,21 +18,26 @@ function vs_e($value)
 }
 
 /**
- * 全站控制台品牌信息（系统级，主题/后台不可改）
+ * 全站控制台品牌信息（系统级外链 JS，主题/后台不可改）
  *
  * @return void
  */
 function vs_console_brand_script()
 {
-    if (!class_exists('ConsoleBrand', false)) {
-        $file = dirname(__FILE__) . '/ConsoleBrand.php';
-        if (is_file($file)) {
-            require_once $file;
-        }
+    if (!empty($GLOBALS['vs_console_brand_emitted'])) {
+        return;
     }
-    if (class_exists('ConsoleBrand', false)) {
-        ConsoleBrand::emit();
+    $GLOBALS['vs_console_brand_emitted'] = true;
+
+    $ver = defined('VS_VERSION') ? (string) VS_VERSION : '';
+    $src = rtrim(vs_base_url(), '/') . '/assets/js/console-brand.js';
+    if ($ver !== '') {
+        $src .= '?v=' . rawurlencode($ver);
     }
+
+    // 版本号先于品牌脚本；品牌脚本无 defer，保证控制台立刻可见
+    echo '<script>window.VS_VERSION=window.VS_VERSION||' . json_encode($ver, JSON_UNESCAPED_UNICODE) . ';</script>' . "\n";
+    echo '<script src="' . vs_e($src) . '"></script>' . "\n";
 }
 
 /**
