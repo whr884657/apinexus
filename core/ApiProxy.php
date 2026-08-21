@@ -477,8 +477,20 @@ class ApiProxy
 
         $url = $built['url'];
         $ch = curl_init();
+        if ($ch === false) {
+            ApiStats::hitProxy($row, false, ApiError::SERVER);
+            vs_api_error_exit(ApiError::SERVER, '无法初始化上游请求');
+        }
+        if (class_exists('LinkSiteMeta')) {
+            if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
+                curl_close($ch);
+                ApiStats::hitProxy($row, false, ApiError::UPSTREAM_BLOCKED);
+                vs_api_error_exit(ApiError::UPSTREAM_BLOCKED, '上游地址不允许指向内网或非公网主机');
+            }
+        } else {
+            curl_setopt($ch, CURLOPT_URL, $url);
+        }
         curl_setopt_array($ch, array(
-            CURLOPT_URL            => $url,
             CURLOPT_CUSTOMREQUEST  => $method,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => false,

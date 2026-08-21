@@ -44,7 +44,106 @@ class LinkSiteMeta
      */
     public static function isAllowedFetchUrl($url)
     {
-        return self::isPublicHttpUrl($url);
+        return self::pinPublicFetchTarget($url) !== null;
+    }
+
+    /**
+     * 解析 URL 并钉死公网 IP（供 CURLOPT_RESOLVE，防 DNS 重绑定 / TOCTOU）
+     *
+     * 同一解析结果既用于放行判定，也用于 curl 钉死，避免「先校验再请求」之间 DNS 翻转。
+     *
+     * @param string $url
+     * @return array{host:string,port:int,ip:string,resolve:array<int,string>}|null
+     */
+    public static function pinPublicFetchTarget($url)
+    {
+        $url = trim((string) $url);
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return null;
+        }
+        $scheme = strtolower((string) $parts['scheme']);
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            return null;
+        }
+        $host = strtolower((string) $parts['host']);
+        if ($host === '' || $host === 'localhost' || substr($host, -6) === '.local' || substr($host, -5) === '.test') {
+            return null;
+        }
+        $port = isset($parts['port']) ? (int) $parts['port'] : 0;
+        if ($port <= 0) {
+            $port = ($scheme === 'https') ? 443 : 80;
+        }
+
+        $ip = '';
+        if (self::looksLikeIpLiteral($host)) {
+            if (!filter_var($host, FILTER_VALIDATE_IP) || !self::isPublicIp($host)) {
+                return null;
+            }
+            $ip = $host;
+        } elseif (filter_var($host, FILTER_VALIDATE_IP)) {
+            if (!self::isPublicIp($host)) {
+                return null;
+            }
+            $ip = $host;
+        } else {
+            // 主机名形态校验
+            if (!preg_match('/^[a-z0-9]([a-z0-9\-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]*[a-z0-9])?)+$/i', $host)
+                && !preg_match('/^[a-z]([a-z0-9\-]*[a-z0-9])?$/i', $host)) {
+                return null;
+            }
+            $ips = @gethostbynamel($host);
+            // DNS 失败：fail-closed
+            if (!is_array($ips) || count($ips) === 0) {
+                return null;
+            }
+            foreach ($ips as $candidate) {
+                $candidate = (string) $candidate;
+                if (!self::isPublicIp($candidate)) {
+                    return null;
+                }
+                if ($ip === '') {
+                    $ip = $candidate;
+                }
+            }
+            if ($ip === '') {
+                return null;
+            }
+        }
+
+        // CURLOPT_RESOLVE：host:port:ip；IPv6 地址须加方括号
+        $resolveIp = (strpos($ip, ':') !== false) ? ('[' . $ip . ']') : $ip;
+        $resolve = array($host . ':' . $port . ':' . $resolveIp);
+
+        return array(
+            'host'    => $host,
+            'port'    => $port,
+            'ip'      => $ip,
+            'resolve' => $resolve,
+        );
+    }
+
+    /**
+     * 为 curl 句柄设置 URL，并钉死已校验的公网 IP
+     *
+     * @param resource|\CurlHandle $ch
+     * @param string               $url
+     * @return bool 失败表示 URL 不允许
+     */
+    public static function curlPreparePinnedUrl($ch, $url)
+    {
+        if ($ch === false || $ch === null) {
+            return false;
+        }
+        $pin = self::pinPublicFetchTarget($url);
+        if ($pin === null) {
+            return false;
+        }
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if (!empty($pin['resolve']) && is_array($pin['resolve'])) {
+            curl_setopt($ch, CURLOPT_RESOLVE, $pin['resolve']);
+        }
+        return true;
     }
 
     /**
@@ -53,44 +152,7 @@ class LinkSiteMeta
      */
     private static function isPublicHttpUrl($url)
     {
-        $parts = parse_url($url);
-        if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
-            return false;
-        }
-        $scheme = strtolower((string) $parts['scheme']);
-        if ($scheme !== 'http' && $scheme !== 'https') {
-            return false;
-        }
-        $host = strtolower((string) $parts['host']);
-        if ($host === '' || $host === 'localhost' || substr($host, -6) === '.local' || substr($host, -5) === '.test') {
-            return false;
-        }
-        // 拒绝十进制/十六进制/短格式等非规范 IP（curl 可能仍解析到回环）
-        if (self::looksLikeIpLiteral($host)) {
-            if (!filter_var($host, FILTER_VALIDATE_IP)) {
-                return false;
-            }
-            return self::isPublicIp($host);
-        }
-        if (filter_var($host, FILTER_VALIDATE_IP)) {
-            return self::isPublicIp($host);
-        }
-        // 主机名形态校验
-        if (!preg_match('/^[a-z0-9]([a-z0-9\-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]*[a-z0-9])?)+$/i', $host)
-            && !preg_match('/^[a-z]([a-z0-9\-]*[a-z0-9])?$/i', $host)) {
-            return false;
-        }
-        $ips = @gethostbynamel($host);
-        // DNS 失败：fail-closed
-        if (!is_array($ips) || count($ips) === 0) {
-            return false;
-        }
-        foreach ($ips as $ip) {
-            if (!self::isPublicIp($ip)) {
-                return false;
-            }
-        }
-        return true;
+        return self::pinPublicFetchTarget($url) !== null;
     }
 
     /**
@@ -145,11 +207,12 @@ class LinkSiteMeta
 
         $current = $url;
         for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
-            if (!self::isPublicHttpUrl($current)) {
+            $ch = curl_init();
+            if ($ch === false) {
                 return null;
             }
-            $ch = curl_init($current);
-            if ($ch === false) {
+            if (!self::curlPreparePinnedUrl($ch, $current)) {
+                curl_close($ch);
                 return null;
             }
             curl_setopt_array($ch, array(

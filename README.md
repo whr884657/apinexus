@@ -7,12 +7,12 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.20-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.21-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
   <a href="https://github.com/whr884657/apinexus"><img src="https://img.shields.io/badge/GitHub-whr884657%2Fapinexus-blue?logo=github&logoColor=white" alt="GitHub"></a>
-  <img src="https://img.shields.io/badge/PHP-7.4%20%7C%208.0%20%7C%208.2-purple?logo=php&logoColor=white" alt="PHP">
+  <img src="https://img.shields.io/badge/PHP-7.4%20%7C%208.0%20%7C%208.2%20%7C%208.5-purple?logo=php&logoColor=white" alt="PHP">
   <img src="https://img.shields.io/badge/MySQL-5.7%2B-blue?logo=mysql&logoColor=white" alt="MySQL">
 </p>
 
@@ -42,7 +42,7 @@
 | **GitHub** | [whr884657/apinexus](https://github.com/whr884657/apinexus) | 同步仓库 |
 | **发行版下载** | [Gitee Releases](https://gitee.com/xunjinlu/apinexus/releases) | 完整安装包 |
 
-压缩包命名：`apinexus{版本号}.zip`（如 `apinexus13.26.20.zip`）。完整版本历史见 **[更新记录.md](更新记录.md)**。
+压缩包命名：`apinexus{版本号}.zip`（如 `apinexus13.26.21.zip`）。完整版本历史见 **[更新记录.md](更新记录.md)**。
 
 ---
 
@@ -156,10 +156,13 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.20（2026-08-21）
+### v13.26.21（2026-08-21）
 
-- **控制台品牌：** 改为 `assets/js/console-brand.js` 外链；删除 `core/ConsoleBrand.php`
-- **主题二：** 首页去多余按钮与「接口预览」；底部横条进全部接口；卡片标签同行；公告弹窗/间距对齐默认主题；友链申请入口；贡献者主页重设计
+- **代理上游密钥：** 管理后台与用户投稿改为明文输入，便于核对
+- **上游认证方式：** 选项改为英文术语 + 中文解释（Query / Header / Bearer）
+- **PHP 8.5：** 消除弃用警告（显式可空参数 + HTTP 响应头 API），并保持 7.4/8.0/8.2 兼容
+- **安全：** Markdown 消毒加固；代理出站 DNS 钉死；全站更严格 CSP
+- **兼容：** Parsedown / PlaygroundRelay 补齐类型声明（IDE P1132）
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 ---

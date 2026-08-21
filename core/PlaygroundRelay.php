@@ -22,7 +22,7 @@ class PlaygroundRelay
      * @param string $authWay query|header|bearer；空则取接口 keyways 第一种
      * @return array{ok:bool,msg:string,http:int,contentType:string,body:string,encoding:string,displayUrl:string}
      */
-    public static function execute($apiId, $method, array $params, $authWay = '')
+    public static function execute(int $apiId, string $method, array $params, string $authWay = '')
     {
         $apiId = (int) $apiId;
         $method = strtoupper(trim((string) $method));
@@ -214,7 +214,7 @@ class PlaygroundRelay
      * @param string $authWay
      * @return string
      */
-    private static function resolveAuthWay(array $row, $authWay)
+    private static function resolveAuthWay(array $row, string $authWay)
     {
         $allowed = ApiManager::normalizeKeyways(isset($row['keyways']) ? $row['keyways'] : 'query');
         $way = strtolower(trim((string) $authWay));
@@ -229,7 +229,7 @@ class PlaygroundRelay
      * @param string $authWay
      * @return array{params:array,headers:array}
      */
-    private static function buildClientForward(array $params, $authWay)
+    private static function buildClientForward(array $params, string $authWay)
     {
         $next = array();
         $secret = '';
@@ -268,7 +268,7 @@ class PlaygroundRelay
      * @param string $displayUrl
      * @return array
      */
-    private static function fail($msg, $errcode = 0, $displayUrl = '')
+    private static function fail(string $msg, int $errcode = 0, string $displayUrl = '')
     {
         $errcode = (int) $errcode;
         if ($errcode > 0 && $errcode < 1000) {
@@ -311,7 +311,7 @@ class PlaygroundRelay
      * @param string $authWay
      * @return void
      */
-    private static function injectKeywaysForGuard(array $row, array $params, $authWay = '')
+    private static function injectKeywaysForGuard(array $row, array $params, string $authWay = '')
     {
         $secret = '';
         foreach ($params as $k => $v) {
@@ -350,7 +350,7 @@ class PlaygroundRelay
      * @param string $location
      * @return string
      */
-    private static function resolveRedirectUrl($base, $location)
+    private static function resolveRedirectUrl(string $base, string $location)
     {
         $location = trim((string) $location);
         if ($location === '') {
@@ -385,7 +385,7 @@ class PlaygroundRelay
      * @param array  $params
      * @return string
      */
-    private static function mergeQuery($url, array $params)
+    private static function mergeQuery(string $url, array $params)
     {
         if ($params === array()) {
             return $url;
@@ -440,6 +440,17 @@ class PlaygroundRelay
         }
 
         $ch = curl_init();
+        if ($ch === false) {
+            return self::fail('无法初始化上游请求');
+        }
+        if (class_exists('LinkSiteMeta')) {
+            if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
+                curl_close($ch);
+                return self::fail('上游地址不允许指向内网或非公网主机', ApiError::UPSTREAM_BLOCKED);
+            }
+        } else {
+            curl_setopt($ch, CURLOPT_URL, $url);
+        }
         $headers = array('Accept: */*', 'User-Agent: ApiNexus-Playground/' . VS_VERSION);
         foreach ($extraHeaders as $h) {
             $h = trim((string) $h);
@@ -459,7 +470,6 @@ class PlaygroundRelay
         }
 
         curl_setopt_array($ch, array(
-            CURLOPT_URL            => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 10,
@@ -485,7 +495,7 @@ class PlaygroundRelay
         return self::consumeHttpResponse($url, $raw, $http, $headerSize, $headers);
     }
 
-    private static function httpRequest($url, $method, array $params, array $extraHeaders = array())
+    private static function httpRequest(string $url, string $method, array $params, array $extraHeaders = array())
     {
         $method = strtoupper($method);
         if (!function_exists('curl_init')) {
@@ -498,6 +508,17 @@ class PlaygroundRelay
         }
 
         $ch = curl_init();
+        if ($ch === false) {
+            return self::fail('无法初始化上游请求');
+        }
+        if (class_exists('LinkSiteMeta')) {
+            if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
+                curl_close($ch);
+                return self::fail('上游地址不允许指向内网或非公网主机', ApiError::UPSTREAM_BLOCKED);
+            }
+        } else {
+            curl_setopt($ch, CURLOPT_URL, $url);
+        }
         $headers = array('Accept: */*', 'User-Agent: ApiNexus-Playground/' . VS_VERSION);
         if (is_array($extraHeaders)) {
             foreach ($extraHeaders as $h) {
@@ -525,7 +546,6 @@ class PlaygroundRelay
         }
 
         curl_setopt_array($ch, array(
-            CURLOPT_URL            => $url,
             CURLOPT_RETURNTRANSFER => true,
             // 禁止自动跟随：重定向须二次校验主机，防 SSRF
             CURLOPT_FOLLOWLOCATION => false,
@@ -563,7 +583,7 @@ class PlaygroundRelay
      * @param string[] $headers
      * @return array
      */
-    private static function consumeHttpResponse($url, $raw, $http, $headerSize, array $headers)
+    private static function consumeHttpResponse(string $url, string $raw, int $http, int $headerSize, array $headers)
     {
         // 手动跟随有限次重定向，每跳校验公网 URL
         $redirLeft = 5;
@@ -577,14 +597,24 @@ class PlaygroundRelay
                 break;
             }
             $next = self::resolveRedirectUrl($url, $loc);
-            if ($next === '' || (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($next))) {
+            if ($next === '') {
                 return self::fail('上游重定向目标不允许', ApiError::UPSTREAM_BLOCKED);
             }
             $url = $next;
             $redirLeft--;
             $ch = curl_init();
+            if ($ch === false) {
+                return self::fail('无法初始化上游请求');
+            }
+            if (class_exists('LinkSiteMeta')) {
+                if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
+                    curl_close($ch);
+                    return self::fail('上游重定向目标不允许', ApiError::UPSTREAM_BLOCKED);
+                }
+            } else {
+                curl_setopt($ch, CURLOPT_URL, $url);
+            }
             curl_setopt_array($ch, array(
-                CURLOPT_URL            => $url,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_FOLLOWLOCATION => false,
                 CURLOPT_CONNECTTIMEOUT => 10,
@@ -672,7 +702,7 @@ class PlaygroundRelay
      * @param string $body
      * @return array
      */
-    private static function packBinaryResult($http, $contentType, $body)
+    private static function packBinaryResult(int $http, string $contentType, string $body)
     {
         $ok = $http >= 200 && $http < 400;
         $sniffed = self::sniffMediaType($body);
@@ -726,7 +756,7 @@ class PlaygroundRelay
      * @param string $headerBlob
      * @return string
      */
-    private static function lastResponseHeaders($headerBlob)
+    private static function lastResponseHeaders(string $headerBlob)
     {
         $headerBlob = (string) $headerBlob;
         if ($headerBlob === '') {
@@ -745,7 +775,7 @@ class PlaygroundRelay
      * @param string $binary
      * @return string 如 image/jpeg、video/mp4；无法识别返回空
      */
-    private static function sniffMediaType($binary)
+    private static function sniffMediaType(string $binary)
     {
         if (!is_string($binary) || strlen($binary) < 12) {
             return '';
@@ -800,7 +830,7 @@ class PlaygroundRelay
      * @param string $contentType
      * @return string image|audio|video|''
      */
-    private static function mediaKindFromCt($contentType)
+    private static function mediaKindFromCt(string $contentType)
     {
         $t = strtolower(trim(explode(';', (string) $contentType, 2)[0]));
         // SVG 可含脚本，禁止作为媒体预览
@@ -825,7 +855,7 @@ class PlaygroundRelay
      * @param string $contentType
      * @return string
      */
-    private static function sanitizeMediaContentType($contentType)
+    private static function sanitizeMediaContentType(string $contentType)
     {
         $t = strtolower(trim(explode(';', (string) $contentType, 2)[0]));
         $allow = array(
@@ -855,7 +885,7 @@ class PlaygroundRelay
      * @param string $contentType
      * @return string 同源预览 URL，失败返回空串
      */
-    private static function storeMediaPreview($binary, $contentType)
+    private static function storeMediaPreview(string $binary, string $contentType)
     {
         $root = defined('VS_ROOT') ? VS_ROOT : dirname(__DIR__);
         $dir = $root . '/data/playground';
@@ -898,7 +928,7 @@ class PlaygroundRelay
      * @param string $dir
      * @return void
      */
-    private static function cleanupMediaPreview($dir)
+    private static function cleanupMediaPreview(string $dir)
     {
         $now = time();
         $files = @scandir($dir);
@@ -930,7 +960,7 @@ class PlaygroundRelay
      * @param string $body
      * @return bool
      */
-    private static function looksBinary($ctLower, $body)
+    private static function looksBinary(string $ctLower, string $body)
     {
         if (preg_match('#^(image|audio|video)/#', $ctLower)) {
             return true;

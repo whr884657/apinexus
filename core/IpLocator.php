@@ -112,7 +112,7 @@ class IpLocator
      * @param array|null $draft enabled/mode/url/method/ip_param/auth/auth_name/auth_value/field/extras
      * @return array{ok:bool,msg:string,iploc?:string}
      */
-    public static function probe($ip, array $draft = null)
+    public static function probe($ip, ?array $draft = null)
     {
         $ip = trim((string) $ip);
         if ($ip === '') {
@@ -221,7 +221,7 @@ class IpLocator
      * @param int|null   $timeout
      * @return string
      */
-    private static function lookupCustom($ip, $cacheKey, array $override = null, $timeout = null)
+    private static function lookupCustom($ip, $cacheKey, ?array $override = null, $timeout = null)
     {
         if ($timeout === null) {
             $timeout = self::TIMEOUT_CUSTOM;
@@ -341,6 +341,9 @@ class IpLocator
      */
     public static function assertPublicHttpUrl($url)
     {
+        if (class_exists('LinkSiteMeta')) {
+            return LinkSiteMeta::isAllowedFetchUrl($url);
+        }
         $url = trim((string) $url);
         $parts = parse_url($url);
         if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
@@ -450,9 +453,6 @@ class IpLocator
      */
     private static function httpRequest($url, $method, array $formParams, array $headers, $timeout = null)
     {
-        if (!self::assertPublicHttpUrl($url)) {
-            return '';
-        }
         $timeout = $timeout === null ? self::TIMEOUT : (int) $timeout;
         if ($timeout < 1) {
             $timeout = 1;
@@ -470,7 +470,22 @@ class IpLocator
             $headers[] = 'Content-Type: application/x-www-form-urlencoded';
         }
         if (function_exists('curl_init')) {
-            $ch = curl_init($url);
+            $ch = curl_init();
+            if ($ch === false) {
+                return '';
+            }
+            if (class_exists('LinkSiteMeta')) {
+                if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
+                    curl_close($ch);
+                    return '';
+                }
+            } else {
+                if (!self::assertPublicHttpUrl($url)) {
+                    curl_close($ch);
+                    return '';
+                }
+                curl_setopt($ch, CURLOPT_URL, $url);
+            }
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             // 禁止跟随跳转，避免 SSRF 经 302 打到内网
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
@@ -482,6 +497,9 @@ class IpLocator
             // 自定义上游可能证书不全；内置同路径兼容
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            if (defined('CURLPROTO_HTTP')) {
+                curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
+            }
             if ($method === 'POST') {
                 curl_setopt($ch, CURLOPT_POST, true);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $bodyStr);
@@ -495,6 +513,9 @@ class IpLocator
                 return '';
             }
             return (string) $body;
+        }
+        if (!self::assertPublicHttpUrl($url)) {
+            return '';
         }
         $hdr = '';
         foreach ($headers as $h) {

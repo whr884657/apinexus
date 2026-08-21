@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.20**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.21**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -368,13 +368,13 @@ foreach (FrontendCategory::listTags() as $tag) {
 
 ### 4.2 version.php
 
-**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.20**）。在线更新、关于页、`update.json` 均以此为准。
+**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.21**）。在线更新、关于页、`update.json` 均以此为准。
 
 **用法：**
 
 ```php
-echo VS_VERSION;           // 例如 13.26.20（以当前 core/version.php 为准）
-echo 'v' . VS_VERSION;     // 例如 v13.26.20
+echo VS_VERSION;           // 例如 13.26.21（以当前 core/version.php 为准）
+echo 'v' . VS_VERSION;     // 例如 v13.26.21
 ```
 
 **发版时：** 须同步修改 `update.json`、`update-log.json`、`README.md` 徽章。
@@ -643,8 +643,9 @@ $admin = Auth::user();
 | `csrfToken()` / `rotateCsrfToken()` | 获取 / 轮换 CSRF |
 | `validateCsrf($token)` | 校验 CSRF |
 | `requireAuthPost()` | POST 必须带合法 CSRF；失败 JSON 含新 `csrf` |
-| `sendSecurityHeaders()` | 认证页 `no-store` + CDN 禁缓存 |
-| `sendFrontendSecurityHeaders()` | 前台页 `private, no-store` + `Vary: Cookie` + CDN 禁缓存（E253；防 CSRF/用户态 HTML 被边缘共享） |
+| `sendSecurityHeaders()` | 认证/后台/用户中心：`no-store` + CDN 禁缓存 + **统一 CSP** |
+| `sendFrontendSecurityHeaders()` | 前台页 `private, no-store` + `Vary: Cookie` + CDN 禁缓存 + **统一 CSP**（E253 / E268） |
+| `sendContentSecurityPolicy()`（私有） | 全站 CSP：`default-src 'self'`、禁 object、限极验/hitokoto；主题 SSR 保留 `'unsafe-inline'` |
 | `checkLoginAllowed($username)` | 登录是否被限流 |
 | `recordLoginFailure($username)` | 记录登录失败 |
 | `checkMailCodeAllowed($email)` | 发验证码是否允许 |
@@ -1069,7 +1070,8 @@ curl …
 
 **后台 `LinkManager`：** `create` / `apply` / `update` / `setStatus` / `setEnabled` / `delete` / `listAll($status,$kind)` / `listApproved` / `listPartnersEnabled` / `listSponsorsEnabled`。
 
-**`LinkSiteMeta::fetch($url)`：** 服务端抓取公网页面解析名称/描述/图标；禁止内网与非 http(s)。
+**`LinkSiteMeta::fetch($url)`：** 服务端抓取公网页面解析名称/描述/图标；禁止内网与非 http(s)。  
+**v13.26.21：** `pinPublicFetchTarget` / `curlPreparePinnedUrl` 钉死公网 IP（`CURLOPT_RESOLVE`），供代理/中继/友链抓取/IpLocator 共用（防 DNS 重绑定）。
 
 **默认主题接口：** `POST /core/theme/default/api/sitemeta.php`（CSRF + 同源）；前端见 `assets/js/pages/applylink.js`。
 

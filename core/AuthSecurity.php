@@ -271,9 +271,7 @@ class AuthSecurity
     public static function sendSecurityHeaders()
     {
         self::sendCommonSecurityHeaders();
-        // 宽松基础 CSP：不限制 script/style，避免破坏页脚任意 HTML；仍挡外嵌与插件
-        // upgrade-insecure-requests：HTTPS 页自动把子资源 http 请求升为 https，减轻 Mixed Content（E212）
-        header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests");
+        self::sendContentSecurityPolicy();
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private');
         header('Pragma: no-cache');
         header('Expires: 0');
@@ -287,7 +285,7 @@ class AuthSecurity
     }
 
     /**
-     * 前台公共页基础安全头（CSP 不限制页脚任意 HTML/脚本）
+     * 前台公共页基础安全头
      *
      * 说明：页脚/主题会 SSR CSRF；登录态还可能有用户态字段。禁止共享缓存与 CDN 边缘缓存，
      * 避免「私人 HTML」被按 URL 复用放大泄露（E253）。
@@ -300,7 +298,7 @@ class AuthSecurity
             return;
         }
         self::sendCommonSecurityHeaders();
-        header("Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests");
+        self::sendContentSecurityPolicy();
         header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
         header('Pragma: no-cache');
         header('Expires: 0');
@@ -310,6 +308,35 @@ class AuthSecurity
         if (self::isHttps() && self::sessionCookieSecure()) {
             header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         }
+    }
+
+    /**
+     * 全站统一 CSP（前台 / 用户中心 / 后台 / 认证页）
+     *
+     * 主题与后台仍有大量内联 script/style（CSRF、配置注入），故保留 'unsafe-inline'；
+     * 同时收紧 default/object/base/frame/form，并白名单极验与 hitokoto 等必要外源。
+     *
+     * @return void
+     */
+    private static function sendContentSecurityPolicy()
+    {
+        $csp = implode('; ', array(
+            "default-src 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+            "frame-ancestors 'self'",
+            "form-action 'self'",
+            "script-src 'self' 'unsafe-inline' https://static.geetest.com https://static.geevisit.com",
+            "style-src 'self' 'unsafe-inline' https://static.geetest.com https://static.geevisit.com",
+            "img-src 'self' data: blob: https: http:",
+            "font-src 'self' data:",
+            "connect-src 'self' https: http://v1.hitokoto.cn https://v1.hitokoto.cn https://international.v1.hitokoto.cn https://static.geetest.com https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com",
+            "media-src 'self' data: blob: https: http:",
+            "frame-src 'self' https://static.geetest.com https://dn-staticdown.qbox.me",
+            "worker-src 'self' blob:",
+            'upgrade-insecure-requests',
+        ));
+        header('Content-Security-Policy: ' . $csp);
     }
 
     /**

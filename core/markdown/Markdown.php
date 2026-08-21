@@ -257,7 +257,7 @@ class Markdown
     }
 
     /**
-     * 去掉高危标签与事件属性，保留常见排版/徽章 HTML
+     * 去掉高危标签与事件属性，保留常见排版/徽章 HTML（img/a/div 等）
      *
      * @param string $html
      * @return string
@@ -268,11 +268,15 @@ class Markdown
         if ($html === '') {
             return '';
         }
-        $html = preg_replace('#<(script|style|iframe|object|embed|form|link|meta|base)(\s[^>]*)?>.*?</\1>#is', '', $html);
-        $html = preg_replace('#<(script|style|iframe|object|embed|form|link|meta|base)(\s[^>]*)?/?>#is', '', $html);
-        $html = preg_replace('/\s+on[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html);
-        $html = preg_replace('/\s(href|src|xlink:href)\s*=\s*([\'"]?)\s*javascript:[^\'"\s>]*/i', ' $1=$2#', $html);
-        $html = preg_replace('/\s(href|src)\s*=\s*([\'"]?)\s*data:\s*text\/html[^\'"\s>]*/i', ' $1=$2#', $html);
+        // 整段高危标签（\b 后允许 /onload 粘连；含 svg/math）
+        $html = preg_replace('#<(script|style|iframe|object|embed|form|link|meta|base|svg|math|template)\b[^>]*>.*?</\1>#is', '', $html);
+        $html = preg_replace('#<(script|style|iframe|object|embed|form|link|meta|base|svg|math|template)\b[^>]*/?>#is', '', $html);
+        // 事件属性：允许空格或 / 紧贴 on*（防 svg/onload 类绕过）
+        $html = preg_replace('/(?:\s|\/)on[a-z][a-z0-9]*\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html);
+        // 危险协议
+        $html = preg_replace('/\s(href|src|xlink:href|action|formaction)\s*=\s*([\'"]?)\s*javascript:[^\'"\s>]*/i', ' $1=$2#', $html);
+        $html = preg_replace('/\s(href|src|xlink:href|action|formaction)\s*=\s*([\'"]?)\s*vbscript:[^\'"\s>]*/i', ' $1=$2#', $html);
+        $html = preg_replace('/\s(href|src|xlink:href)\s*=\s*([\'"]?)\s*data:\s*text\/html[^\'"\s>]*/i', ' $1=$2#', $html);
         return $html;
     }
 }

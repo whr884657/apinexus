@@ -184,14 +184,15 @@ $canLocal = !empty($canLocal);
                     <div>
                         <label class="vs-label" for="userApiFormUpAuth">上游认证方式</label>
                         <select class="vs-input vs-select" id="userApiFormUpAuth" name="upauth" data-vs-pick>
-                            <option value="0">无需认证</option>
-                            <option value="1">Query API Key</option>
-                            <option value="3">Header API Key</option>
-                            <option value="2">Bearer Token</option>
+                            <option value="0">无需认证（不向上游传密钥）</option>
+                            <option value="1">Query API Key（URL 查询参数传密钥，如 ?api_key=xxx）</option>
+                            <option value="3">Header API Key（HTTP 请求头传密钥，如 X-API-Key）</option>
+                            <option value="2">Bearer Token（Authorization: Bearer 令牌）</option>
                         </select>
                     </div>
                 </div>
                 <p class="vs-form-hint">上游请求方式：中继打向上游的方法（可与调用方「请求方式」不同）。</p>
+                <p class="vs-form-hint">上游认证方式：按上游平台文档选择。Query=密钥拼在网址参数；Header=密钥放在请求头；Bearer=使用标准 Bearer 令牌。密钥输入框为明文，便于核对填写是否正确。</p>
                 <div class="vs-form-row vs-form-row--2" id="userApiUpKeyFields" hidden>
                     <div id="userApiUpKeyNameWrap">
                         <label class="vs-label" for="userApiFormUpKeyName">参数名 / 头名称</label>
@@ -200,8 +201,8 @@ $canLocal = !empty($canLocal);
                     </div>
                     <div>
                         <label class="vs-label" for="userApiFormUpKey">上游密钥 <span class="vs-req">*</span></label>
-                        <input type="password" class="vs-input" id="userApiFormUpKey" name="upkey" maxlength="500"
-                               placeholder="上游平台颁发的密钥或令牌" autocomplete="new-password">
+                        <input type="text" class="vs-input" id="userApiFormUpKey" name="upkey" maxlength="500"
+                               placeholder="上游平台颁发的密钥或令牌（明文显示便于核对）" autocomplete="off" spellcheck="false">
                     </div>
                 </div>
                 <div class="vs-form-row" id="userApiJsonRewriteBlock">

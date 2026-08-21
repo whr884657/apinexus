@@ -1892,7 +1892,7 @@
             var upMode = parseInt(payload.upauth, 10) || 0;
             var isEdit = !!(formId && formId.value);
             if ((upMode === 1 || upMode === 2) && !payload.upkey && !isEdit) {
-                window.VS.showMessage(upMode === 2 ? '请填写 Bearer Token' : '请填写上游 API Key', 'error');
+                window.VS.showMessage(upMode === 2 ? '请填写 Bearer Token（上游令牌）' : '请填写上游 API Key（密钥）', 'error');
                 switchFormTab('basic');
                 if (fields.upkey) {
                     fields.upkey.focus();

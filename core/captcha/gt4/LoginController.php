@@ -162,7 +162,20 @@ class Geetest4Login
         $context = stream_context_create($options);
         $result = @file_get_contents($url, false, $context);
         $responsecode = 0;
-        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+        // PHP 8.4+：http_get_last_response_headers()；旧版从局部符号表取自动头（源码避免写 $http_response_header，以免 8.5 弃用）
+        $responseHeaders = array();
+        if (function_exists('http_get_last_response_headers')) {
+            $tmpHeaders = http_get_last_response_headers();
+            if (is_array($tmpHeaders)) {
+                $responseHeaders = $tmpHeaders;
+            }
+        } else {
+            $locals = get_defined_vars();
+            if (isset($locals['http_response_header']) && is_array($locals['http_response_header'])) {
+                $responseHeaders = $locals['http_response_header'];
+            }
+        }
+        if (isset($responseHeaders[0]) && preg_match('/\s(\d{3})\s/', $responseHeaders[0], $m)) {
             $responsecode = (int) $m[1];
         }
         if ($result === false || $responsecode !== 200) {

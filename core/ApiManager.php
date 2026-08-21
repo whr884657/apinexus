@@ -379,15 +379,15 @@ class ApiManager
         $n = self::normalizeUpauth($auth);
         if ($n === self::UPAUTH_APIKEY) {
             if ($via !== null && self::normalizeUpkeyvia($via) === self::UPKEYVIA_HEADER) {
-                return 'Header API Key';
+                return 'Header API Key（请求头）';
             }
             if ($via !== null) {
-                return 'Query API Key';
+                return 'Query API Key（URL 参数）';
             }
-            return 'API Key';
+            return 'API Key（上游密钥）';
         }
         if ($n === self::UPAUTH_BEARER) {
-            return 'Bearer Token';
+            return 'Bearer Token（Bearer 令牌）';
         }
         return '无需认证';
     }
@@ -1842,10 +1842,10 @@ class ApiManager
                         if ($prevKey !== '') {
                             $upkey = $prevKey;
                         } else {
-                            return '请填写上游 API Key';
+                            return '请填写上游 API Key（密钥）';
                         }
                     } else {
-                        return '请填写上游 API Key';
+                        return '请填写上游 API Key（密钥）';
                     }
                 }
                 if ($upkeyname === '') {
@@ -1864,10 +1864,10 @@ class ApiManager
                         if ($prevKey !== '') {
                             $upkey = $prevKey;
                         } else {
-                            return '请填写 Bearer Token';
+                            return '请填写 Bearer Token（上游令牌）';
                         }
                     } else {
-                        return '请填写 Bearer Token';
+                        return '请填写 Bearer Token（上游令牌）';
                     }
                 }
                 $upkeyvia = self::UPKEYVIA_HEADER;
