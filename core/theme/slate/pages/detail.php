@@ -56,41 +56,7 @@ $endpointCopy = ($endpointRaw !== '' && !$isDisabled) ? vs_call_url_absolute($en
 $endpointDisplay = ($endpointRaw !== '' && !$isDisabled) ? vs_call_url_host_path($endpointRaw) : '';
 $endpointBlurText = '••••••••••••/••••••••••••';
 
-$recommendApi = null;
 $pageApiSnapshot = (!$notFound && $api !== array()) ? $api : null;
-if (!$notFound) {
-    $pool = FrontendApi::listForTheme();
-    $candidates = array();
-    $curId = (int) $api['id'];
-    $curCat = isset($api['category']) ? (string) $api['category'] : '';
-    foreach ($pool as $item) {
-        if (!is_array($item)) {
-            continue;
-        }
-        if ((int) (isset($item['id']) ? $item['id'] : 0) === $curId) {
-            continue;
-        }
-        $candidates[] = $item;
-    }
-    if ($candidates !== array()) {
-        $sameCat = array();
-        foreach ($candidates as $item) {
-            if ($curCat !== '' && (string) (isset($item['category']) ? $item['category'] : '') === $curCat) {
-                $sameCat[] = $item;
-            }
-        }
-        $pickPool = $sameCat !== array() ? $sameCat : $candidates;
-        usort($pickPool, function ($a, $b) {
-            $ca = isset($a['calls']) ? (int) $a['calls'] : 0;
-            $cb = isset($b['calls']) ? (int) $b['calls'] : 0;
-            if ($ca !== $cb) {
-                return $cb - $ca;
-            }
-            return (int) (isset($b['id']) ? $b['id'] : 0) - (int) (isset($a['id']) ? $a['id'] : 0);
-        });
-        $recommendApi = $pickPool[0];
-    }
-}
 
 $disclaimerEnabled = class_exists('Config') && Config::get('api_disclaimer_on', '0') === '1';
 $disclaimerThemeOn = class_exists('ThemeManager') && ThemeManager::themeSettingBool('show_api_disclaimer', true);
@@ -114,7 +80,7 @@ if (!$notFound) {
 }
 $qsShowAuthTabs = $showQsAuthSwitch && count($qsBundle['auths']) > 1;
 
-/* 水平 Tab：按内容可用性注册；首个可用为默认激活 */
+/* 水平 Tab：按内容可用性注册；首个可用为默认激活（免责声明不进 Tab，固定展示在底部） */
 $stTabs = array();
 if (!$notFound) {
     if ($paramsRaw !== '') {
@@ -127,12 +93,6 @@ if (!$notFound) {
     $stTabs[] = array('id' => 'quickstart', 'label' => '快速上手');
     $stTabs[] = array('id' => 'playground', 'label' => '在线测试');
     $stTabs[] = array('id' => 'feedback', 'label' => '接口反馈');
-    if ($disclaimerBody !== '') {
-        $stTabs[] = array('id' => 'disclaimer', 'label' => '免责声明');
-    }
-    if ($recommendApi !== null) {
-        $stTabs[] = array('id' => 'recommend', 'label' => '推荐接口');
-    }
 }
 $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
 ?>
@@ -207,24 +167,17 @@ $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
     $detailPageMarkdown = implode("\n\n", $detailMdParts);
     ?>
 
-    <!-- 上半：身份 + 接口信息 -->
+    <!-- 上半：标题 + 简介（计费/KEY/方法以「接口信息」为准，避免重复） -->
     <header class="st-detail__hero">
+        <?php if ($isDisabled || $isMaintenance): ?>
         <div class="st-detail__meta">
-            <?php foreach ($methods as $m): ?>
-            <span class="st-api-card__method st-api-card__method--<?php echo vs_e(strtolower(trim((string) $m))); ?>"><?php echo vs_e(strtoupper(trim((string) $m))); ?></span>
-            <?php endforeach; ?>
             <?php if ($isDisabled): ?>
             <span class="st-detail__chip st-detail__chip--disabled">已禁用</span>
             <?php elseif ($isMaintenance): ?>
             <span class="st-detail__chip st-detail__chip--warn">维护中</span>
-            <?php else: ?>
-            <span class="st-detail__chip<?php echo $points > 0 ? ' st-detail__chip--points' : ' st-detail__chip--free'; ?>"><?php echo vs_e($billingLabel); ?></span>
-            <?php endif; ?>
-            <span class="st-detail__chip"><?php echo vs_e($keyLabel); ?></span>
-            <?php if (!empty($api['category_name'])): ?>
-            <span class="st-detail__chip"><?php echo vs_e($api['category_name']); ?></span>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
         <div class="st-detail__title-row">
             <h1 class="st-detail__title"><?php echo vs_e($api['name']); ?></h1>
             <button type="button" class="detail-md-copy" id="detailCopyMdBtn" title="复制整页为 Markdown">
@@ -255,14 +208,6 @@ $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
                 <span id="detailEndpoint"><?php echo vs_e($endpointDisplay); ?></span>
                 <?php endif; ?>
             </div>
-            <?php if (!$isDisabled): ?>
-            <div class="st-detail__endpoint-actions">
-                <button type="button" class="btn-copy" data-copy="<?php echo vs_e($endpointCopy); ?>">复制</button>
-                <?php if (!$isMaintenance): ?>
-                <a class="st-detail__btn st-detail__btn--primary st-detail__btn--sm" href="<?php echo vs_e($endpointCopy); ?>" target="_blank" rel="noopener noreferrer">打开</a>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
         </div>
         <?php endif; ?>
 
@@ -562,33 +507,16 @@ $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
             <?php endif; ?>
         </div>
 
+    </div>
+
         <?php if ($disclaimerBody !== ''): ?>
-        <div class="st-detail-panel st-detail__panel detail-disclaimer" data-st-panel="disclaimer" role="tabpanel" id="detailDisclaimer"<?php echo $stFirstTab === 'disclaimer' ? '' : ' hidden'; ?>>
+        <section class="st-detail__panel detail-disclaimer" id="detailDisclaimer">
             <h2 class="st-detail__h">免责声明</h2>
             <div class="markdown-body vs-md-body st-md detail-md is-parsed detail-disclaimer__body">
                 <?php echo slate_md_render($disclaimerBody); ?>
             </div>
-        </div>
+        </section>
         <?php endif; ?>
-
-        <?php if ($recommendApi !== null): ?>
-        <div class="st-detail-panel st-detail__panel detail-recommend" data-st-panel="recommend" role="tabpanel"<?php echo $stFirstTab === 'recommend' ? '' : ' hidden'; ?>>
-            <h2 class="st-detail__h">推荐接口</h2>
-            <div class="detail-recommend__grid">
-                <?php
-                $apiData = array($recommendApi);
-                $showDetailBtn = true;
-                $cardShell = false;
-                include __DIR__ . '/../partials/api-cards-html.php';
-                if (is_array($pageApiSnapshot)) {
-                    $api = $pageApiSnapshot;
-                }
-                ?>
-            </div>
-        </div>
-        <?php endif; ?>
-
-    </div>
 
     <?php endif; ?>
 </section>

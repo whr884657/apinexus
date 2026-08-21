@@ -91,7 +91,6 @@ if (count($announcePopup) > 0) {
     $announcePopupKey = implode('-', $ids);
 }
 
-$showHomePlay = ThemeManager::themeSettingBool('show_home_playground', true);
 ?>
 <main class="st-main" id="stHome">
 <div class="st-wrap">
@@ -148,9 +147,7 @@ $seoFallbackDesc = $siteDesc !== '' ? $siteDesc : $siteName;
     <?php endif; ?>
     <div class="st-hero__actions">
         <a class="st-bar__login st-hero__cta" href="#stApiListWrap">浏览接口</a>
-        <?php if ($showHomePlay): ?>
-        <a class="st-hero__cta st-hero__cta--ghost" href="#stHomePlay">在线调试</a>
-        <?php endif; ?>
+        <a class="st-hero__cta st-hero__cta--ghost" href="<?php echo vs_e($vsBase); ?>/apis">全部接口</a>
     </div>
 </section>
 
@@ -181,7 +178,6 @@ $seoFallbackDesc = $siteDesc !== '' ? $siteDesc : $siteName;
 <section class="st-section st-api-section" id="stApiListWrap">
     <div class="st-section__head">
         <h2 class="st-section__title">接口预览</h2>
-        <p class="st-section__desc">精选展示，完整目录见全部接口</p>
     </div>
     <div class="st-api-grid" id="stApiGrid" aria-busy="true"></div>
     <?php if ($apiCount > 8): ?>
@@ -190,25 +186,6 @@ $seoFallbackDesc = $siteDesc !== '' ? $siteDesc : $siteName;
     </div>
     <?php endif; ?>
 </section>
-
-<?php if ($showHomePlay): ?>
-<section class="st-section st-home-play" id="stHomePlay">
-    <div class="st-section__head">
-        <h2 class="st-section__title">在线调试</h2>
-        <p class="st-section__desc">选择接口后进入详情页「在线测试」标签，完整发送请求与查看响应</p>
-    </div>
-    <div class="st-home-play__card">
-        <label class="st-home-play__label" for="stHomePlaySelect">选择接口</label>
-        <div class="st-home-play__row">
-            <select id="stHomePlaySelect" class="st-input st-home-play__select" aria-label="选择要调试的接口">
-                <option value="">加载中…</option>
-            </select>
-            <button type="button" class="st-bar__login st-home-play__go" id="stHomePlayGo" disabled>打开在线测试</button>
-        </div>
-        <p class="st-home-play__hint" id="stHomePlayHint">将跳转到详情页并自动打开「在线测试」标签。</p>
-    </div>
-</section>
-<?php endif; ?>
 
 </div>
 </main>

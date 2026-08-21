@@ -110,6 +110,8 @@
         root.style.setProperty('--st-bg-lo', preset.bgLo);
         root.style.setProperty('--st-bg-alt', '#ffffff');
         root.style.setProperty('--st-border', preset.border);
+        root.style.setProperty('--st-line', preset.border);
+        root.style.setProperty('--st-card', '#ffffff');
         root.style.setProperty('--st-wash-a', preset.washA);
         root.style.setProperty('--st-wash-b', preset.washB);
         root.style.setProperty('--st-bar-end', preset.barEnd);

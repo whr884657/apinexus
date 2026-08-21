@@ -273,28 +273,63 @@
         });
     }
 
-    function billingBadge(api) {
-        var label = String(api.billing_label || '').trim();
-        if (!label) {
-            var charge = parseInt(api.charge, 10) === 1;
+    function isApiFlagOn(val) {
+        return val === true || val === 1 || val === '1';
+    }
+
+    function cardChipsHtml(api) {
+        var disabled = isApiFlagOn(api.disabled);
+        var maintenance = isApiFlagOn(api.maintenance);
+        var chips = [];
+
+        if (disabled) {
+            chips.push('<span class="st-api-chip st-api-chip--disabled">已禁用</span>');
+        } else if (maintenance) {
+            chips.push('<span class="st-api-chip st-api-chip--maintenance">维护中</span>');
+        }
+
+        if (!disabled) {
             var points = parseFloat(api.points != null ? api.points : api.price) || 0;
-            if (charge && points > 0) {
-                label = points + ' 积分';
+            var label = String(api.billing_label || '').trim();
+            if (!label) {
+                var charge = parseInt(api.charge, 10) === 1;
+                label = (charge && points > 0) ? (points + '积分/次') : '免费';
+            }
+            var paid = points > 0 || (label !== '免费' && label.toLowerCase() !== 'free');
+            if (paid) {
+                chips.push('<span class="st-api-chip st-api-chip--points">' + escapeHtml(label) + '</span>');
             } else {
-                label = '免费';
+                chips.push('<span class="st-api-chip st-api-chip--free">免费</span>');
+            }
+            var keyMode = parseInt(api.needkey, 10) || 0;
+            if (keyMode === 1) {
+                chips.push('<span class="st-api-chip st-api-chip--key">KEY必填</span>');
+            } else if (keyMode === 2) {
+                chips.push('<span class="st-api-chip st-api-chip--key">KEY可选</span>');
             }
         }
-        var paid = label !== '免费' && label.toLowerCase() !== 'free';
-        return '<span class="st-api-card__badge' + (paid ? ' st-api-card__badge--paid' : '') + '">' + escapeHtml(label) + '</span>';
+
+        if (!chips.length) {
+            return '';
+        }
+        return '<div class="st-api-card__chips" aria-label="接口标签">' + chips.join('') + '</div>';
     }
 
     function buildApiCardHtml(api) {
         var methods = api.methods && api.methods.length ? api.methods : ['GET'];
-        var methodHtml = methods.slice(0, 2).map(function (m) {
+        var showMethods = methods.slice(0, 2);
+        var methodExtra = methods.length > 2 ? methods.length - 2 : 0;
+        var methodHtml = showMethods.map(function (m) {
             var method = String(m || 'GET').toUpperCase();
-            var methodClass = method.toLowerCase();
+            var methodClass = method.toLowerCase().replace(/[^a-z0-9]/g, '');
             return '<span class="st-api-card__method st-api-card__method--' + escapeHtml(methodClass) + '">' + escapeHtml(method) + '</span>';
         }).join('');
+        if (methodExtra > 0) {
+            methodHtml += '<span class="st-api-card__method-more">+' + methodExtra + '</span>';
+        }
+        var disabled = isApiFlagOn(api.disabled);
+        var maintenance = isApiFlagOn(api.maintenance);
+        var cardState = disabled ? ' is-disabled' : (maintenance ? ' is-maintenance' : '');
         var endpoint = String(api.endpoint || '').trim();
         var detailUrl = String(api.detail_url || '').trim();
         var base = (window.VS_BASE_URL || '').replace(/\/$/, '');
@@ -307,11 +342,12 @@
         if (!/^https?:\/\//i.test(detailUrl) && !(detailUrl.charAt(0) === '/' && detailUrl.charAt(1) !== '/')) {
             detailUrl = base + '/apis';
         }
-        return '<article class="st-api-card" data-category="' + escapeHtml(String(api.category || '')) + '" data-name="' + escapeHtml((api.name || '').toLowerCase()) + '" data-desc="' + escapeHtml((api.desc || '').toLowerCase()) + '">' +
+        return '<article class="st-api-card' + cardState + '" data-category="' + escapeHtml(String(api.category || '')) + '" data-name="' + escapeHtml((api.name || '').toLowerCase()) + '" data-desc="' + escapeHtml((api.desc || '').toLowerCase()) + '">' +
             '<a class="st-api-card__link" href="' + escapeHtml(detailUrl) + '">' +
+            cardChipsHtml(api) +
             '<div class="st-api-card__head">' +
             '<div class="st-api-card__methods">' + methodHtml + '</div>' +
-            billingBadge(api) + '</div>' +
+            '</div>' +
             '<h3 class="st-api-card__title">' + escapeHtml(api.name || '') + '</h3>' +
             '<code class="st-api-card__endpoint">' + (endpoint ? escapeHtml(endpoint) : '&nbsp;') + '</code>' +
             '</a></article>';
@@ -539,66 +575,6 @@
         });
     }
 
-    function initHomePlayground() {
-        var select = document.getElementById('stHomePlaySelect');
-        var goBtn = document.getElementById('stHomePlayGo');
-        if (!select || !goBtn) {
-            return;
-        }
-        var base = (window.VS_BASE_URL || '').replace(/\/$/, '');
-
-        function fill(list) {
-            select.innerHTML = '';
-            if (!list.length) {
-                select.innerHTML = '<option value="">暂无可用接口</option>';
-                goBtn.disabled = true;
-                return;
-            }
-            select.appendChild(new Option('请选择接口…', ''));
-            list.slice(0, 80).forEach(function (api) {
-                var id = String(api.id || '');
-                if (!id) return;
-                var name = String(api.name || ('接口 #' + id));
-                select.appendChild(new Option(name, id));
-            });
-            goBtn.disabled = true;
-        }
-
-        select.addEventListener('change', function () {
-            goBtn.disabled = !select.value;
-        });
-        goBtn.addEventListener('click', function () {
-            var id = select.value;
-            if (!id) return;
-            window.location.href = base + '/detail/' + id + '#playground';
-        });
-
-        function fromPayload() {
-            var payload = window.stApiPayload || {};
-            var list = Array.isArray(payload.apiData) ? payload.apiData : [];
-            if (list.length) {
-                fill(list);
-                return true;
-            }
-            return false;
-        }
-
-        if (fromPayload()) {
-            return;
-        }
-        if (window.VS && typeof VS.fetchFrontCatalog === 'function') {
-            VS.fetchFrontCatalog({ shuffle: false }).then(function (data) {
-                window.stApiPayload = {
-                    apiData: Array.isArray(data.apiData) ? data.apiData : [],
-                    categoryNames: data.categoryNames || {}
-                };
-                fromPayload();
-            }).catch(function () {
-                select.innerHTML = '<option value="">目录加载失败</option>';
-            });
-        }
-    }
-
     var home = document.getElementById('stHome');
     if (home) {
         var nums = home.querySelectorAll('.st-stat-num');
@@ -606,7 +582,6 @@
             animateNum(el, 0, 600 + i * 120);
         });
         initHomeApiList();
-        initHomePlayground();
         return;
     }
 

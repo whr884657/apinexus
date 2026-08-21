@@ -2,7 +2,7 @@
 /**
  * 文件：install/index.php
  * 作用：ApiNexus Web 六步安装向导（伪静态 → 环境 → 数据库 → 建表 → 管理员 → 完成）
- * @version 13.26.18
+ * @version 13.26.19
  */
 
 define('VS_ROOT', dirname(__DIR__));

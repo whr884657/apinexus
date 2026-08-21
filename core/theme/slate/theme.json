@@ -1,9 +1,9 @@
 {
     "id": "slate",
     "name": "主题二",
-    "version": "2.21.0",
+    "version": "2.22.0",
     "author": "ApiNexus",
-    "description": "主题二：首页公告、专属 Markdown、详情豆包/复制 MD、首页在线调试入口",
+    "description": "主题二：首页公告、专属 Markdown、详情复制 MD、免责声明底栏常显",
     "preview": "preview.png",
     "settings": [
         {
@@ -27,14 +27,8 @@
             "default": true
         },
         {
-            "key": "show_home_playground",
-            "label": "显示首页在线调试入口",
-            "type": "checkbox",
-            "default": true
-        },
-        {
             "key": "show_api_disclaimer",
-            "label": "详情页显示免责声明标签",
+            "label": "详情页显示免责声明",
             "type": "checkbox",
             "default": true
         },

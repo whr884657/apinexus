@@ -29,23 +29,61 @@ foreach ($apis as $api):
     $detailUrl = !empty($api['detail_url'])
         ? (string) $api['detail_url']
         : ($apiId > 0 ? vs_api_detail_url($apiId) : ($vsBase . '/apis'));
+    $maintenance = !empty($api['maintenance']);
+    $disabled = !empty($api['disabled']);
+    $points = isset($api['points']) ? (float) $api['points'] : 0;
+    $needkey = isset($api['needkey']) ? (int) $api['needkey'] : 0;
     $billing = trim((string) (isset($api['billing_label']) ? $api['billing_label'] : ''));
     if ($billing === '') {
         $charge = !empty($api['charge']);
-        $points = isset($api['points']) ? (float) $api['points'] : (isset($api['price']) ? (float) $api['price'] : 0);
-        $billing = ($charge && $points > 0) ? ($points . ' 积分') : '免费';
+        if ($charge && $points > 0) {
+            $billing = rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.') . '积分/次';
+        } else {
+            $billing = '免费';
+        }
     }
-    $badgePaid = ($billing !== '免费');
+    $isPaid = ($points > 0) || ($billing !== '免费' && strcasecmp($billing, 'free') !== 0);
+    $showMethods = array_slice($methods, 0, 2);
+    $methodExtra = count($methods) > 2 ? count($methods) - 2 : 0;
+
+    $chips = array();
+    if ($disabled) {
+        $chips[] = array('class' => 'st-api-chip--disabled', 'text' => '已禁用');
+    } elseif ($maintenance) {
+        $chips[] = array('class' => 'st-api-chip--maintenance', 'text' => '维护中');
+    }
+    if (!$disabled) {
+        if ($isPaid) {
+            $chips[] = array('class' => 'st-api-chip--points', 'text' => $billing);
+        } else {
+            $chips[] = array('class' => 'st-api-chip--free', 'text' => '免费');
+        }
+        if ($needkey === 1) {
+            $chips[] = array('class' => 'st-api-chip--key', 'text' => 'KEY必填');
+        } elseif ($needkey === 2) {
+            $chips[] = array('class' => 'st-api-chip--key', 'text' => 'KEY可选');
+        }
+    }
     ?>
-<article class="st-api-card" data-category="<?php echo vs_e($cat); ?>" data-name="<?php echo vs_e($nameKey); ?>" data-desc="<?php echo vs_e($descKey); ?>">
+<article class="st-api-card<?php echo $disabled ? ' is-disabled' : ($maintenance ? ' is-maintenance' : ''); ?>" data-category="<?php echo vs_e($cat); ?>" data-name="<?php echo vs_e($nameKey); ?>" data-desc="<?php echo vs_e($descKey); ?>">
     <a class="st-api-card__link" href="<?php echo vs_e($detailUrl); ?>">
+        <?php if ($chips !== array()): ?>
+        <div class="st-api-card__chips" aria-label="接口标签">
+            <?php foreach ($chips as $chip): ?>
+            <span class="st-api-chip <?php echo vs_e($chip['class']); ?>"><?php echo vs_e($chip['text']); ?></span>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
         <div class="st-api-card__head">
             <div class="st-api-card__methods">
-                <?php foreach (array_slice($methods, 0, 2) as $m): ?>
-                <span class="st-api-card__method st-api-card__method--<?php echo vs_e(strtolower(trim((string) $m))); ?>"><?php echo vs_e(strtoupper(trim((string) $m))); ?></span>
+                <?php foreach ($showMethods as $m): ?>
+                <?php $mUp = strtoupper(trim((string) $m)); $mCls = strtolower($mUp); ?>
+                <span class="st-api-card__method st-api-card__method--<?php echo vs_e($mCls); ?>"><?php echo vs_e($mUp); ?></span>
                 <?php endforeach; ?>
+                <?php if ($methodExtra > 0): ?>
+                <span class="st-api-card__method-more">+<?php echo (int) $methodExtra; ?></span>
+                <?php endif; ?>
             </div>
-            <span class="st-api-card__badge<?php echo $badgePaid ? ' st-api-card__badge--paid' : ''; ?>"><?php echo vs_e($billing); ?></span>
         </div>
         <h3 class="st-api-card__title"><?php echo vs_e($name); ?></h3>
         <code class="st-api-card__endpoint"><?php echo $endpoint !== '' ? vs_e($endpoint) : '&nbsp;'; ?></code>
