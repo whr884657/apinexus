@@ -3,7 +3,7 @@
     "name": "默认主题",
     "version": "1.9.0",
     "author": "ApiNexus",
-    "description": "参考 FeerApi 前台 UI 完整复刻，白色主题色板；含粒子背景、终端 Hero、接口目录与在线调试",
+    "description": "默认主题",
     "preview": "preview.png",
     "settings": [
         {
@@ -54,8 +54,14 @@
             "type": "select",
             "default": "compact",
             "options": [
-                {"value": "full", "label": "完整数字（不转换单位）"},
-                {"value": "compact", "label": "单位转换（如 1K+、1.2W+）"}
+                {
+                    "value": "full",
+                    "label": "完整数字（不转换单位）"
+                },
+                {
+                    "value": "compact",
+                    "label": "单位转换（如 1K+、1.2W+）"
+                }
             ]
         },
         {
@@ -70,11 +76,26 @@
             "type": "select",
             "default": "limit8",
             "options": [
-                {"value": "all", "label": "显示全部（仍随机打乱顺序）"},
-                {"value": "limit3", "label": "随机显示 3 个，超出可点「查看更多」"},
-                {"value": "limit5", "label": "随机显示 5 个，超出可点「查看更多」"},
-                {"value": "limit8", "label": "随机显示 8 个，超出可点「查看更多」"},
-                {"value": "limit10", "label": "随机显示 10 个（上限），超出可点「查看更多」"}
+                {
+                    "value": "all",
+                    "label": "显示全部（仍随机打乱顺序）"
+                },
+                {
+                    "value": "limit3",
+                    "label": "随机显示 3 个，超出可点「查看更多」"
+                },
+                {
+                    "value": "limit5",
+                    "label": "随机显示 5 个，超出可点「查看更多」"
+                },
+                {
+                    "value": "limit8",
+                    "label": "随机显示 8 个，超出可点「查看更多」"
+                },
+                {
+                    "value": "limit10",
+                    "label": "随机显示 10 个（上限），超出可点「查看更多」"
+                }
             ]
         },
         {

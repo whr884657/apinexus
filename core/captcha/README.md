@@ -15,3 +15,12 @@
 
 门面：`core/Captcha.php`  
 前端：`assets/js/captcha.js`
+
+## 前端
+
+| 路径 | 说明 |
+|------|------|
+| `assets/js/captcha.js`（主题 shell 同步） | 挂载 / 校验 / 重置 |
+| `assets/js/geetest/gt4.js` / `gt.js` | 极验入口 loader（本地优先，CDN 回落） |
+
+详见《极验验证码规范》§4.2 / E271。

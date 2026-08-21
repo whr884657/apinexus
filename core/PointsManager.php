@@ -310,6 +310,10 @@ class PointsManager
             // ignore
         }
 
+        if (class_exists('PayPendingWatch')) {
+            PayPendingWatch::track($orderno);
+        }
+
         return array(
             'ok'   => true,
             'msg'  => '请扫码支付',
@@ -321,6 +325,7 @@ class PointsManager
                 'pay_label'  => PayConfig::methodLabel($payType),
                 'qrcode'     => $data['qrcode'],
                 'payurl'     => $data['payurl'],
+                'expire_sec' => class_exists('PayPendingWatch') ? PayPendingWatch::ttlSeconds() : 180,
             ),
         );
     }
@@ -406,6 +411,9 @@ class PointsManager
             ));
 
             $pdo->commit();
+            if (class_exists('PayPendingWatch')) {
+                PayPendingWatch::untrack($orderno);
+            }
             if (class_exists('RedisCache')) {
                 RedisCache::invalidateOrders();
             }
@@ -434,6 +442,10 @@ class PointsManager
      */
     public static function cancelPending($orderno)
     {
+        $orderno = trim((string) $orderno);
+        if ($orderno === '') {
+            return false;
+        }
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
@@ -441,6 +453,9 @@ class PointsManager
             );
             $stmt->execute(array(OrderManager::STATUS_CANCEL, $orderno, OrderManager::STATUS_PENDING));
             $ok = $stmt->rowCount() > 0;
+            if (class_exists('PayPendingWatch')) {
+                PayPendingWatch::untrack($orderno);
+            }
             if ($ok && class_exists('RedisCache')) {
                 RedisCache::invalidateOrders();
             }

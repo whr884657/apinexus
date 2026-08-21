@@ -1,16 +1,16 @@
 {
-    "version": "13.26.21",
-    "title": "ApiNexus 13.26.21 安全加固与 PHP 8.5 / 上游密钥明文优化",
-    "release_date": "2026-08-21",
-    "db_changes": false,
+    "version": "13.26.22",
+    "title": "ApiNexus 13.26.22",
+    "release_date": "2026-08-22",
+    "db_changes": true,
     "changes": [
-        "代理接口上游密钥改为明文输入（管理后台 + 用户投稿），便于核对填写是否正确",
-        "上游认证方式选项改为英文术语 + 中文解释（Query / Header / Bearer）",
-        "补充表单提示与校验文案；ApiManager::upauthLabel 同步中英标签",
-        "PHP 8.5 兼容：显式可空参数（IpLocator / Parsedown）；极验 HTTP 头改用 http_get_last_response_headers 并向下兼容",
-        "安全：Markdown 服务端消毒加固（防 svg/onload 等绕过）",
-        "安全：代理/中继/友链抓取/IpLocator 出站 DNS 钉死（CURLOPT_RESOLVE）",
-        "安全：全站前台与后台统一更严格 CSP（保留主题所需 unsafe-inline）",
-        "兼容：Parsedown / PlaygroundRelay 补齐参数与属性类型声明（消除 IDE P1132，兼容 PHP 7.4+）"
+        "系统配置 apikey_max：每账号密钥创建上限（默认 3，范围 1～20）；降限不伤已有密钥；新装/迁移 13.26.22.sql 幂等种子",
+        "充值待支付超 3 分钟自动取消：PayPendingWatch（Redis ZSET + 登录/后台请求顺带弹出；无计划任务/全表扫）",
+        "极验加载修复：CSP 补齐官方域 + 入口 JS 本地化 assets/js/geetest（E271）",
+        "管理后台积分变动双栏：默认账户变动，可切接口调用（E272）",
+        "主题三 core/theme/three：首页按 api主题8 还原；公开页与认证页 th3-* 自研（禁移植 default/slate，E273）",
+        "主题三：全部接口页 + 卡片多标签（免费/积分/KEY必填|可选/维护/禁用）",
+        "主题三：详情/文章/关于/友链/申请/赞助/贡献者/主页；登录/注册/找回/绑定居中单卡",
+        "主题三用户中心仍占位：勿作生产主推主题"
     ]
 }

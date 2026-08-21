@@ -83,6 +83,17 @@
         return listEl ? listEl.querySelectorAll('.vs-token-row').length : 0;
     }
 
+    function applyMaxFromResponse(data) {
+        if (!data || data.max == null) {
+            return;
+        }
+        var n = parseInt(String(data.max), 10);
+        if (!isFinite(n) || n < 1) {
+            return;
+        }
+        maxTokens = n;
+        page.setAttribute('data-token-max', String(n));
+    }
     function syncEmptyAndStats() {
         var count = tokenCount();
         page.setAttribute('data-token-count', String(count));
@@ -336,6 +347,7 @@
                     if (row && row.parentNode) {
                         row.parentNode.removeChild(row);
                     }
+                    applyMaxFromResponse(data);
                     syncEmptyAndStats();
                 });
             }).catch(function () {
@@ -389,6 +401,8 @@
                 if (data.token) {
                     upsertRow(data.token);
                 }
+                applyMaxFromResponse(data);
+                syncEmptyAndStats();
             }).catch(function () {
                 if (submitBtn) {
                     submitBtn.disabled = false;

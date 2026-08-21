@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/finance-points.js
- * 作用：管理员积分变动列表（每页固定条数 + keyset / Abort）
+ * 作用：管理员积分变动列表（账户/接口两大类筛选 + keyset / Abort）
  */
 (function () {
     'use strict';
@@ -16,6 +16,7 @@
 
     var page = 1;
     var q = '';
+    var ledgerBucket = 'account';
     var cursorStack = [0];
     var nextBeforeId = 0;
     var hasMore = false;
@@ -42,6 +43,15 @@
         hasMore = false;
     }
 
+    function syncFilterButtons() {
+        document.querySelectorAll('.vs-points-filter').forEach(function (btn) {
+            var on = btn.getAttribute('data-bucket') === ledgerBucket;
+            btn.classList.toggle('is-active', on);
+            btn.classList.toggle('vs-btn--primary', on);
+            btn.classList.toggle('vs-btn--default', !on);
+        });
+    }
+
     function setControlsDisabled(disabled) {
         if (refreshBtn) {
             if (disabled) {
@@ -57,6 +67,16 @@
         if (searchBtn) searchBtn.disabled = !!disabled;
         if (searchInput) searchInput.disabled = !!disabled;
         if (pageSizeEl) pageSizeEl.disabled = !!disabled;
+        document.querySelectorAll('.vs-points-filter').forEach(function (btn) {
+            btn.disabled = !!disabled;
+        });
+    }
+
+    function emptyHint() {
+        if (q) {
+            return '未找到匹配的积分变动';
+        }
+        return ledgerBucket === 'api' ? '暂无接口调用积分变动' : '暂无账户积分变动';
     }
 
     function headHtml() {
@@ -78,7 +98,7 @@
         var sign = row.direct === 1 ? '+' : '-';
         var cls = row.direct === 1 ? 'is-inc' : 'is-dec';
         var detail = '—';
-        if (row.direct === 0 && row.kind === 0) {
+        if (row.direct === 0 && (row.kind === 0 || row.kind === 2)) {
             detail = [row.apiname, row.keymask].filter(Boolean).join(' · ') || '—';
         } else if (row.remark) {
             detail = row.remark;
@@ -143,6 +163,7 @@
         fd.append('page', String(page));
         fd.append('pagesize', String(pagesize));
         fd.append('before_id', String(beforeId));
+        fd.append('ledger_bucket', ledgerBucket === 'api' ? 'api' : 'account');
         if (q) fd.append('q', q);
 
         var opts = listAbort ? { signal: listAbort.signal } : {};
@@ -163,8 +184,7 @@
             }
             var list = data.list || [];
             if (!list.length) {
-                body.innerHTML = '<p class="vs-empty vs-finance-empty">'
-                    + (q ? '未找到匹配的积分变动' : '暂无积分变动') + '</p>';
+                body.innerHTML = '<p class="vs-empty vs-finance-empty">' + escapeHtml(emptyHint()) + '</p>';
             } else {
                 body.innerHTML = '<div class="vs-finance-table-wrap"><div class="vs-finance-grid">'
                     + headHtml() + list.map(rowHtml).join('') + '</div></div>';
@@ -210,6 +230,19 @@
         });
     }
 
+    document.querySelectorAll('.vs-points-filter').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var next = btn.getAttribute('data-bucket') === 'api' ? 'api' : 'account';
+            if (next === ledgerBucket) {
+                return;
+            }
+            ledgerBucket = next;
+            syncFilterButtons();
+            resetCursors();
+            load();
+        });
+    });
+
     if (pageSizeEl) {
         pageSizeEl.addEventListener('change', function () {
             resetCursors();
@@ -228,6 +261,7 @@
             load();
         });
     }
+    syncFilterButtons();
     if (pageRoot || body) {
         load();
     }

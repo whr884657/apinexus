@@ -357,6 +357,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'save_apikey') {
+        try {
+            $max = isset($_POST['apikey_max']) ? $_POST['apikey_max'] : ApiKeyManager::DEFAULT_MAX_PER_USER;
+            $max = ApiKeyManager::normalizeMaxPerUser($max);
+            Config::set('apikey_max', (string) $max);
+            AjaxResponse::success('密钥数量设置已保存', array('apikey_max' => $max));
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
     if ($action === 'save_checkin') {
         try {
             $min = isset($_POST['checkin_points_min']) ? (int) $_POST['checkin_points_min'] : 10;
@@ -800,6 +811,36 @@ vs_admin_accordion_start(
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存注册设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+$apikeyMaxSetting = ApiKeyManager::maxPerUser();
+vs_admin_accordion_start(
+    'settings-apikey',
+    '调用密钥',
+    '每账号可创建的密钥数量上限（默认 3，最多 20）'
+);
+?>
+    <form method="post" action="" class="vs-form" id="apikeySettingsForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_apikey">
+        <?php
+        vs_render_notice(
+            'info',
+            '上限说明',
+            '<p>仅限制<strong>新建</strong>密钥。若管理员下调上限，用户已有密钥仍可正常调用；删除后不可再超过新上限新建。</p>',
+            array('allow_html' => true, 'compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label">每账号密钥数量上限</label>
+            <input type="number" name="apikey_max" class="vs-input" min="1" max="20" step="1" required
+                   value="<?php echo (int) $apikeyMaxSetting; ?>">
+            <p class="vs-form-hint">填写 1～20；新装默认 3。保存后立即对新建生效，不删除、不禁用已有密钥。</p>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存密钥设置</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>

@@ -98,6 +98,18 @@
         }
     }
 
+    function applyMaxFromResponse(data) {
+        if (!data || data.max == null) {
+            return;
+        }
+        var n = parseInt(String(data.max), 10);
+        if (!isFinite(n) || n < 1) {
+            return;
+        }
+        maxTokens = n;
+        page.setAttribute('data-token-max', String(n));
+    }
+
     function listBody() {
         if (!listEl) {
             return null;
@@ -326,6 +338,7 @@
                     if (row && row.parentNode) {
                         row.parentNode.removeChild(row);
                     }
+                    applyMaxFromResponse(data);
                     syncEmptyAndStats();
                 });
             }).catch(function () {
@@ -379,6 +392,8 @@
                 if (data.token) {
                     upsertRow(data.token);
                 }
+                applyMaxFromResponse(data);
+                syncEmptyAndStats();
             }).catch(function () {
                 if (submitBtn) {
                     submitBtn.disabled = false;

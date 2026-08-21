@@ -301,7 +301,7 @@ class OrderManager
     /**
      * 分页列表：每页条数 + keyset；附带筛选总数（短 TTL 缓存 COUNT，禁止深页 OFFSET）
      *
-     * @param array $opts userid?, status?, scope(recharge|ledger)?, q?, pagesize, before_id
+     * @param array $opts userid?, status?, scope(recharge|ledger)?, ledger_bucket(account|api)?, q?, pagesize, before_id
      * @return array{list:array,total:int,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool}
      */
     public static function listPaged(array $opts = array())
@@ -311,6 +311,10 @@ class OrderManager
         $userid = isset($opts['userid']) ? (int) $opts['userid'] : 0;
         $status = array_key_exists('status', $opts) ? $opts['status'] : null;
         $scope = isset($opts['scope']) ? trim((string) $opts['scope']) : '';
+        $ledgerBucket = isset($opts['ledger_bucket']) ? trim((string) $opts['ledger_bucket']) : '';
+        if ($ledgerBucket !== 'account' && $ledgerBucket !== 'api') {
+            $ledgerBucket = '';
+        }
         $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
         if (function_exists('mb_substr')) {
             if (mb_strlen($q) > 64) {
@@ -355,13 +359,17 @@ class OrderManager
             } elseif ($scope === 'ledger') {
                 $where[] = 'o.`status` = ?';
                 $bind[] = self::STATUS_DONE;
+                $bucketSql = self::ledgerBucketSql($ledgerBucket);
+                if ($bucketSql !== '') {
+                    $where[] = $bucketSql;
+                }
             }
             if ($status !== null && $status !== '') {
                 $where[] = 'o.`status` = ?';
                 $bind[] = (int) $status;
             }
 
-            $needLedgerJoins = ($scope === 'ledger');
+            $needLedgerJoins = ($scope === 'ledger' && $ledgerBucket !== 'account');
 
             if ($q !== '') {
                 $search = self::buildSearchFilter($q, $needLedgerJoins);
@@ -406,6 +414,9 @@ class OrderManager
 
             $list = array();
             foreach ($rows as $row) {
+                if (class_exists('PayPendingWatch')) {
+                    $row = PayPendingWatch::applyLazyToRow($row);
+                }
                 if (!empty($row['keysecret'])) {
                     $sec = (string) $row['keysecret'];
                     if ($userid > 0) {
@@ -431,10 +442,11 @@ class OrderManager
             $total = 0;
             try {
                 $total = self::countFilteredCached(array(
-                    'scope'  => $scope,
-                    'userid' => $userid,
-                    'status' => $status,
-                    'q'      => $q,
+                    'scope'          => $scope,
+                    'ledger_bucket'  => $ledgerBucket,
+                    'userid'         => $userid,
+                    'status'         => $status,
+                    'q'              => $q,
                 ), $countWhere, $countBind);
             } catch (Exception $e) {
                 $total = count($list);
@@ -452,6 +464,38 @@ class OrderManager
         } catch (Exception $e) {
             return $empty;
         }
+    }
+
+    /**
+     * 积分变动大类：账户类（充值/签到/赠送/管理员加减）与接口调用类（扣费/返还/AI）
+     *
+     * @param string $bucket account|api|''
+     * @return string SQL 片段（无绑定参数）；空串表示不过滤
+     */
+    private static function ledgerBucketSql($bucket)
+    {
+        $bucket = trim((string) $bucket);
+        if ($bucket === 'account') {
+            // 充值 / 管理员加款 / 注册赠送 / 签到 / 管理员扣款
+            return '((o.`direct` = ' . (int) self::DIRECT_INC
+                . ' AND o.`kind` IN ('
+                . (int) self::KIND_RECHARGE . ','
+                . (int) self::KIND_ADMIN_ADD . ','
+                . (int) self::KIND_REGISTER . ','
+                . (int) self::KIND_CHECKIN
+                . ')) OR (o.`direct` = ' . (int) self::DIRECT_DEC
+                . ' AND o.`kind` = ' . (int) self::KIND_ADMIN_SUB . '))';
+        }
+        if ($bucket === 'api') {
+            // API 扣费 / AI 扣费 / 调用失败返还
+            return '((o.`direct` = ' . (int) self::DIRECT_DEC
+                . ' AND o.`kind` IN ('
+                . (int) self::KIND_API . ','
+                . (int) self::KIND_AI
+                . ')) OR (o.`direct` = ' . (int) self::DIRECT_INC
+                . ' AND o.`kind` = ' . (int) self::KIND_REFUND . '))';
+        }
+        return '';
     }
 
     /**

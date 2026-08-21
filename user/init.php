@@ -12,6 +12,10 @@ InstallChecker::requireInstalled();
 UserAuth::requireLogin();
 AuthSecurity::sendSecurityHeaders();
 
+if (class_exists('PayPendingWatch')) {
+    PayPendingWatch::onRequest((int) UserAuth::id());
+}
+
 $vsBase     = vs_site_base_path();
 $vsUser     = UserAuth::user();
 $vsUserProfile = FrontendUser::current();

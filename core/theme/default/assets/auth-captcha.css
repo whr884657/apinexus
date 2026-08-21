@@ -110,3 +110,15 @@
     height: 40px;
     border-radius: 4px;
 }
+
+
+/* 极验挂载占位：表单其它字段就绪时先显示，避免空白等待 */
+.vs-captcha-hint {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    color: #6b7280;
+    font-size: 13px;
+    line-height: 1.4;
+    box-sizing: border-box;
+}

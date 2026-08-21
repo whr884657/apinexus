@@ -1,0 +1,125 @@
+/**
+ * 主题三 · 认证页验证码（与 th3-auth 圆角卡片 / .input 风格协调）
+ * 勿拉伸极验 logo；仅撑满挂载条外层。
+ */
+.th3-auth .vs-captcha-field {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  margin-bottom: 0.85rem;
+}
+
+.th3-auth .vs-captcha-field--gt {
+  width: 100%;
+  overflow: visible;
+  padding-top: 2px;
+}
+
+.th3-auth .vs-captcha-field--gt .geetest_holder,
+.th3-auth .vs-captcha-field--gt .geetest_wind {
+  width: 100% !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.th3-auth .vs-captcha-field--gt img,
+.th3-auth .vs-captcha-field--gt svg,
+.th3-auth .vs-captcha-field--gt canvas,
+.th3-auth .vs-captcha-field--gt .geetest_logo,
+.th3-auth .vs-captcha-field--gt [class*="logo"],
+.th3-auth .vs-captcha-field--gt [class*="Logo"] {
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
+
+.th3-auth .geetest_slider_button,
+.geetest_slider_button,
+.geetest_panel .geetest_slider_button,
+.geetest_popup .geetest_slider_button,
+.geetest_panel_box .geetest_slider_button,
+.geetest_box .geetest_slider_button,
+.geetest_slider .geetest_btn,
+.geetest_panel .geetest_slider .geetest_btn,
+.th3-auth .geetest_slider .geetest_btn {
+  width: 40px !important;
+  max-width: 48px !important;
+  min-width: 36px !important;
+  flex: 0 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+.th3-auth .vs-captcha-local {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.th3-auth .vs-captcha-local__input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-size: 16px;
+  outline: none;
+  background: var(--th3-auth-bg2, #F4F1EA);
+  color: var(--th3-auth-fg, #0B0B0B);
+  font-family: inherit;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+}
+
+.th3-auth .vs-captcha-local__input::placeholder {
+  color: var(--th3-auth-muted, #8A8A82);
+}
+
+.th3-auth .vs-captcha-local__input:focus {
+  border-color: var(--th3-auth-accent, #FF4D2D);
+  background: var(--th3-auth-card, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--th3-auth-accent, #FF4D2D) 18%, transparent);
+}
+
+.th3-auth .vs-captcha-local__refresh {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  min-width: 100px;
+  max-width: 128px;
+  padding: 0 6px;
+  border: 1px solid var(--th3-auth-border, #E8E3D8);
+  border-radius: 14px;
+  background: var(--th3-auth-card, #fff);
+  cursor: pointer;
+  overflow: hidden;
+  line-height: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.th3-auth .vs-captcha-local__refresh:hover {
+  border-color: color-mix(in srgb, var(--th3-auth-accent, #FF4D2D) 40%, var(--th3-auth-border, #E8E3D8));
+  background: var(--th3-auth-accent-soft, #FFE8E1);
+}
+
+.th3-auth .vs-captcha-local__refresh img {
+  display: block;
+  width: 108px;
+  height: 36px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--th3-auth-card, #fff) 70%, transparent);
+}
+
+.vs-captcha-hint {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--th3-auth-muted, #8A8A82);
+  font-size: 13px;
+  line-height: 1.4;
+  box-sizing: border-box;
+}

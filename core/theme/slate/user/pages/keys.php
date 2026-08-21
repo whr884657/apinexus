@@ -13,7 +13,7 @@ $tokenCount = isset($tokenCount) ? (int) $tokenCount : count($tokens);
 
 <div class="vs-panel" id="userTokenPage"
      data-token-count="<?php echo (int) $tokenCount; ?>"
-     data-token-max="<?php echo (int) ApiKeyManager::MAX_PER_USER; ?>">
+     data-token-max="<?php echo (int) ApiKeyManager::maxPerUser(); ?>">
 
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '令牌功能尚未就绪，请联系管理员完成系统升级。', array('compact' => true)); ?>
@@ -22,7 +22,7 @@ $tokenCount = isset($tokenCount) ? (int) $tokenCount : count($tokens);
         vs_render_notice(
             'info',
             '',
-            '每个账号最多 ' . ApiKeyManager::MAX_PER_USER . ' 个令牌。令牌以 sk- 开头；禁用后即使泄露也无法继续调用。',
+            '每个账号最多 ' . ApiKeyManager::maxPerUser() . ' 个令牌。令牌以 sk- 开头；禁用后即使泄露也无法继续调用。若当前数量已超过管理员新设上限，已有令牌仍可正常使用，删除后不可再超限新建。',
             array('compact' => true)
         );
         ?>
@@ -46,7 +46,7 @@ $tokenCount = isset($tokenCount) ? (int) $tokenCount : count($tokens);
 
 <?php if ($tableReady): ?>
 <div class="vs-api-list-footer" id="userTokenFooter"<?php echo $tokenCount === 0 ? ' hidden' : ''; ?>>
-    <p class="vs-api-list-stats" id="userTokenStats">共 <?php echo (int) $tokenCount; ?> 个令牌（上限 <?php echo (int) ApiKeyManager::MAX_PER_USER; ?>）</p>
+    <p class="vs-api-list-stats" id="userTokenStats">共 <?php echo (int) $tokenCount; ?> 个令牌（上限 <?php echo (int) ApiKeyManager::maxPerUser(); ?>）</p>
 </div>
 <?php endif; ?>
 

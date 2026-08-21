@@ -246,6 +246,13 @@
                 VS.showMessage('充值成功，积分已到账', 'success');
                 return;
             }
+            if (st === 2) {
+                stopPoll();
+                closeOverlay(payOverlay);
+                currentOrder = '';
+                VS.showMessage('订单已取消或超时未支付，请重新下单', 'info');
+                return;
+            }
             if (manual) {
                 VS.showMessage('尚未支付，请完成支付后再试', 'info');
             }

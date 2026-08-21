@@ -1,0 +1,50 @@
+{
+    "id": "three",
+    "name": "第三个主题",
+    "version": "0.1.0",
+    "author": "ApiNexus",
+    "description": "第三个主题",
+    "preview": "preview.png",
+    "settings": [
+        {
+            "key": "stats_num_format",
+            "label": "累计调用次数显示",
+            "type": "select",
+            "default": "compact",
+            "options": [
+                {
+                    "value": "full",
+                    "label": "完整数字"
+                },
+                {
+                    "value": "compact",
+                    "label": "单位转换（K / W）"
+                }
+            ]
+        },
+        {
+            "key": "home_preview_limit",
+            "label": "首页 API 预览条数",
+            "type": "select",
+            "default": "12",
+            "options": [
+                {
+                    "value": "8",
+                    "label": "8"
+                },
+                {
+                    "value": "12",
+                    "label": "12"
+                },
+                {
+                    "value": "16",
+                    "label": "16"
+                },
+                {
+                    "value": "24",
+                    "label": "24"
+                }
+            ]
+        }
+    ]
+}

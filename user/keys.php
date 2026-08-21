@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：user/keys.php
- * 作用：用户中心 · 令牌管理（每账号最多 3 个）
+ * 作用：用户中心 · 令牌管理（每账号上限由系统设置配置）
  */
 
 require_once __DIR__ . '/init.php';
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('令牌已创建', array(
             'token' => $result,
             'count' => ApiKeyManager::countByUser($userId),
-            'max'   => ApiKeyManager::MAX_PER_USER,
+            'max'   => ApiKeyManager::maxPerUser(),
         ));
     }
 
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('令牌已删除', array(
             'token_id' => $id,
             'count'    => ApiKeyManager::countByUser($userId),
-            'max'      => ApiKeyManager::MAX_PER_USER,
+            'max'      => ApiKeyManager::maxPerUser(),
         ));
     }
 
@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $tokens = $tableReady ? ApiKeyManager::listByUser($userId) : array();
 $tokenCount = count($tokens);
-$canAdd = $tableReady && $tokenCount < ApiKeyManager::MAX_PER_USER;
+$canAdd = $tableReady && ApiKeyManager::canCreateMore($userId);
 
 /**
  * @param array $row

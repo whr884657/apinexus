@@ -415,6 +415,14 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 13.26.22 密钥数量上限配置时跳过
+        if (!in_array('13.26.22', $applied, true)) {
+            $allCfgKeyMax = Config::all();
+            if (isset($allCfgKeyMax['apikey_max'])) {
+                self::markApplied('13.26.22');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -912,7 +920,8 @@ class DatabaseMigrator
             || $version === '10.12.0'
             || $version === '13.22.2'
             || $version === '13.22.5'
-            || $version === '13.26.7');
+            || $version === '13.26.7'
+            || $version === '13.26.22');
     }
 
     /**
@@ -1345,6 +1354,10 @@ class DatabaseMigrator
         if ($version === '13.26.7') {
             return self::tableColumnExists('user', 'stat7')
                 && self::tableColumnExists('apikey', 'pointsspent');
+        }
+        if ($version === '13.26.22') {
+            $all = Config::all();
+            return isset($all['apikey_max']);
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

@@ -92,6 +92,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_recharge_success', '1'),
 ('register_gift_enabled', '0'),
 ('register_gift_points', '100'),
+('apikey_max', '3'),
 ('checkin_enabled', '0'),
 ('checkin_points_min', '10'),
 ('checkin_points_max', '30'),

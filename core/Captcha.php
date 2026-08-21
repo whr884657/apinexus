@@ -326,6 +326,7 @@ class Captcha
             'register'  => '',
             'image'     => '',
             'product'   => 'float',
+            'assetBase' => $base,
         );
         if (!$enabled) {
             return $out;

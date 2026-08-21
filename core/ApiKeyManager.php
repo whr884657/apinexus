@@ -1,18 +1,80 @@
 <?php
 /**
  * 文件：core/ApiKeyManager.php
- * 作用：用户 API 调用密钥 CRUD（每用户最多 3 条）
+ * 作用：用户 API 调用密钥 CRUD（每用户上限由系统设置 apikey_max 配置，默认 3、最大 20）
  */
 
 class ApiKeyManager
 {
-    /** 每用户密钥上限 */
+    /** 默认每用户密钥上限（与配置缺省一致） */
+    const DEFAULT_MAX_PER_USER = 3;
+
+    /** 管理员可配置的绝对上限 */
+    const ABSOLUTE_MAX_PER_USER = 20;
+
+    /** 管理员可配置的下限 */
+    const MIN_PER_USER = 1;
+
+    /**
+     * @deprecated 请用 maxPerUser()；保留常量以免旧代码硬引用炸裂，数值等于默认 3
+     */
     const MAX_PER_USER = 3;
 
     /** 状态：禁用 */
     const STATUS_DISABLED = 0;
     /** 状态：启用 */
     const STATUS_ENABLED = 1;
+
+    /**
+     * 当前站点「每账号可创建密钥数」上限（读 config.apikey_max，钳制 1～20）
+     *
+     * 语义：只限制**新建**；已有密钥即使超过上限仍可继续使用，删除后不可再超限新建。
+     *
+     * @return int
+     */
+    public static function maxPerUser()
+    {
+        $raw = '3';
+        if (class_exists('Config', false)) {
+            $raw = (string) Config::get('apikey_max', (string) self::DEFAULT_MAX_PER_USER);
+        }
+        return self::normalizeMaxPerUser($raw);
+    }
+
+    /**
+     * 规范化配置值：1～20，非法回落默认 3
+     *
+     * @param mixed $value
+     * @return int
+     */
+    public static function normalizeMaxPerUser($value)
+    {
+        if (is_string($value)) {
+            $value = trim($value);
+        }
+        if ($value === '' || $value === null || !is_numeric($value)) {
+            return self::DEFAULT_MAX_PER_USER;
+        }
+        $n = (int) $value;
+        if ($n < self::MIN_PER_USER) {
+            return self::MIN_PER_USER;
+        }
+        if ($n > self::ABSOLUTE_MAX_PER_USER) {
+            return self::ABSOLUTE_MAX_PER_USER;
+        }
+        return $n;
+    }
+
+    /**
+     * 该用户是否还能再建密钥（已有数量已达/超过上限则 false；已有密钥不因此失效）
+     *
+     * @param int $userId
+     * @return bool
+     */
+    public static function canCreateMore($userId)
+    {
+        return self::countByUser($userId) < self::maxPerUser();
+    }
 
     /**
      * @return bool
@@ -214,8 +276,8 @@ class ApiKeyManager
         if (!self::tableReady()) {
             return '令牌功能尚未就绪，请联系管理员完成系统升级';
         }
-        if (self::countByUser($userId) >= self::MAX_PER_USER) {
-            return '每个账号最多 ' . self::MAX_PER_USER . ' 个令牌，请先删除不用的令牌';
+        if (self::countByUser($userId) >= self::maxPerUser()) {
+            return '每个账号最多 ' . self::maxPerUser() . ' 个令牌，请先删除不用的令牌';
         }
 
         $secret = self::makeUniqueSecret();

@@ -68,6 +68,7 @@ require_once VS_ROOT . '/core/ApiCategoryManager.php';
 require_once VS_ROOT . '/core/PayConfig.php';
 require_once VS_ROOT . '/core/OrderManager.php';
 require_once VS_ROOT . '/core/PointsManager.php';
+require_once VS_ROOT . '/core/PayPendingWatch.php';
 require_once VS_ROOT . '/core/PointsNotify.php';
 require_once VS_ROOT . '/core/play/codeplay/CodePayClient.php';
 require_once VS_ROOT . '/core/FrontendCategory.php';

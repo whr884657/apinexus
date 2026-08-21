@@ -320,20 +320,28 @@ class AuthSecurity
      */
     private static function sendContentSecurityPolicy()
     {
+        // 极验 3/4：入口 JS 可同源；弹层/字体/worker 仍需官方域（见《极验验证码规范》）
+        $gtScript = 'https://static.geetest.com https://static.geevisit.com';
+        $gtFrame = 'https://static.geetest.com https://static.geevisit.com'
+            . ' https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com'
+            . ' https://api.geetest.com https://dn-staticdown.qbox.me';
         $csp = implode('; ', array(
             "default-src 'self'",
             "base-uri 'self'",
             "object-src 'none'",
             "frame-ancestors 'self'",
             "form-action 'self'",
-            "script-src 'self' 'unsafe-inline' https://static.geetest.com https://static.geevisit.com",
-            "style-src 'self' 'unsafe-inline' https://static.geetest.com https://static.geevisit.com",
+            "script-src 'self' 'unsafe-inline' " . $gtScript,
+            "style-src 'self' 'unsafe-inline' " . $gtScript,
             "img-src 'self' data: blob: https: http:",
-            "font-src 'self' data:",
-            "connect-src 'self' https: http://v1.hitokoto.cn https://v1.hitokoto.cn https://international.v1.hitokoto.cn https://static.geetest.com https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com",
+            "font-src 'self' data: " . $gtScript,
+            "connect-src 'self' https: http://v1.hitokoto.cn https://v1.hitokoto.cn https://international.v1.hitokoto.cn "
+                . "https://static.geetest.com https://static.geevisit.com "
+                . "https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com "
+                . "https://api.geetest.com https://monitor.geetest.com",
             "media-src 'self' data: blob: https: http:",
-            "frame-src 'self' https://static.geetest.com https://dn-staticdown.qbox.me",
-            "worker-src 'self' blob:",
+            "frame-src 'self' " . $gtFrame,
+            "worker-src 'self' blob: " . $gtScript,
             'upgrade-insecure-requests',
         ));
         header('Content-Security-Policy: ' . $csp);

@@ -40,7 +40,9 @@ function vs_captcha_field($scene, $only = null)
         return;
     }
     echo '<div class="field vs-captcha-field vs-captcha-field--gt" id="vsCaptchaBox" data-captcha-mode="'
-        . vs_e($mode) . '" aria-label="行为验证"></div>' . "\n";
+        . vs_e($mode) . '" aria-label="行为验证">'
+        . '<div class="vs-captcha-hint" role="status">验证组件加载中…</div>'
+        . '</div>' . "\n";
 }
 
 /**
@@ -58,6 +60,27 @@ function vs_captcha_js($scene = null)
     }
     $boot = Captcha::publicBoot($scene);
     $base = vs_base_url();
+    $mode = isset($boot['mode']) ? (string) $boot['mode'] : 'local';
+    // 极验二次资源仍走官方 CDN：提前建连，缩短按钮出现等待
+    if ($mode === Captcha::MODE_GT3 || $mode === Captcha::MODE_GT4) {
+        echo '<link rel="dns-prefetch" href="https://static.geetest.com">' . "\n";
+        echo '<link rel="dns-prefetch" href="https://static.geevisit.com">' . "\n";
+        echo '<link rel="preconnect" href="https://static.geetest.com" crossorigin>' . "\n";
+        echo '<link rel="preconnect" href="https://static.geevisit.com" crossorigin>' . "\n";
+        if ($mode === Captcha::MODE_GT4) {
+            echo '<link rel="dns-prefetch" href="https://gcaptcha4.geetest.com">' . "\n";
+            echo '<link rel="preconnect" href="https://gcaptcha4.geetest.com" crossorigin>' . "\n";
+            $localGt = $base . '/assets/js/geetest/gt4.js';
+            if (is_file(VS_ROOT . '/assets/js/geetest/gt4.js')) {
+                echo '<link rel="preload" href="' . vs_e($localGt) . '" as="script">' . "\n";
+            }
+        } else {
+            $localGt = $base . '/assets/js/geetest/gt.js';
+            if (is_file(VS_ROOT . '/assets/js/geetest/gt.js')) {
+                echo '<link rel="preload" href="' . vs_e($localGt) . '" as="script">' . "\n";
+            }
+        }
+    }
     echo '<script>window.VS_CAPTCHA_BOOT='
         . json_encode($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         . ';</script>' . "\n";

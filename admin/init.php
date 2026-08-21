@@ -14,6 +14,10 @@ InstallChecker::requireInstalled();
 Auth::requireLogin();
 AuthSecurity::sendSecurityHeaders();
 
+if (class_exists('PayPendingWatch')) {
+    PayPendingWatch::onRequest(0);
+}
+
 $vsBase     = vs_base_url();
 $vsAdmin    = Auth::user();
 $vsSiteName   = SiteContext::siteName();

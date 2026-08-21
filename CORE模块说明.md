@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.21**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.22**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -172,8 +172,8 @@ core/
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
 | 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php`、**`core/front/catalog.php`** | ✅ 是 | **已完成**（本地/外链、详情 `/detail/{id}`、多选 method、**keyways**、needkey/qpm/charge、审核三态、统计、在线测试浏览器直连、双端 UI；**v13.26.16** 首页/apis 经 catalog 异步目录，`listForCatalog`/`slimForCatalog`） |
-| 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号最多 3 个；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
-| 积分与支付 | `PointsManager` / `PointsNotify` / `OrderManager` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到 / 控制台） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；注册赠送 / 每日签到；积分归零/充值成功邮件；表 `orders` + `checkin`） |
+| 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号上限由 `config.apikey_max` 配置（默认 3、最大 20）；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
+| 积分与支付 | `PointsManager` / `PointsNotify` / `OrderManager` / `PayPendingWatch` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到 / 控制台） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；注册赠送 / 每日签到；积分归零/充值成功邮件；表 `orders` + `checkin`；待支付超 3 分钟自动取消） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` / `Auth` | `UserAuth` + `FrontendUser`；管理员 `Auth::loginById` | `user/`、`admin/login.php`、`admin/users.php` | ✅ 是 | **已完成**（含角色；**13.26.7** 双端邮箱验证码登录） |
 | 用户控制台统计 | `UserStat7Manager` / `ApiKeyManager` / `ApiLogManager` | `FrontendUser::dashboardStats` / `myLogsPaged` | `user/index.php`、`user/logs.php`、双主题 dashboard/logs | ✅ 是 | **已完成（13.26.7 数据 / 13.26.8 UI / 13.26.9 实时刷新）**：KPI 7/8；固定 3s live + 同款图标刷新 |
@@ -285,9 +285,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `UserDashHello.php` | 用户控制台按时段问候（24 个 1 小时槽；文案池随机；双主题共用） |
 | `SiteMedia.php` | 内置图片出站（`assets/img/` 物理文件；主题禁止手写路径；**v13.26.16** 同站返回根相对路径） |
 | `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间；`bio_custom` 标记是否自填简介；归属含绑定身份下历史 userid=0） |
-| `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据 |
-| `Captcha.php` | 行为验证门面：分端 mode（管理员/用户可分别选）；`local` / `gt3` / `gt4`；场景 `SCENE_*`；helper 提供 `vs_captcha_*`（见 `captcha/helper.php`） |
-| `captcha/*` | 本地图 `local.php`；极验3 `gt3/`；极验4 `gt4/`；挂载 `helper.php`；HTTP `image.php` / `register.php` |
+| `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据、全站 CSP（含极验域名白名单，v13.26.22） |
+| `Captcha.php` | 行为验证门面：分端 mode（管理员/用户可分别选）；`local` / `gt3` / `gt4`；场景 `SCENE_*`；`publicBoot` 含 `assetBase`；helper 提供 `vs_captcha_*`（preload/占位，见 `captcha/helper.php`） |
+| `captcha/*` | 本地图 `local.php`；极验3 `gt3/`；极验4 `gt4/`；挂载 `helper.php`；HTTP `image.php` / `register.php`；入口 JS 见 `assets/js/geetest/`（v13.26.22） |
 | `RateLimitStore.php` | 限流计数存储（MySQL） |
 | `AjaxResponse.php` | 后台 AJAX 统一 JSON 响应 |
 | `AdminUserBinding.php` | 管理员绑定用户身份（发布内容用） |
@@ -340,8 +340,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `markdown/Markdown.php` | Markdown 渲染（本地 Parsedown + 短码；公告/文章/API 文档） |
 | `play/codeplay/CodePayClient.php` | 码支付下单/验签客户端（回调见同目录 `notify.php` / `return.php`） |
 | `RedisCache.php` | 业务数据缓存（前台/公开列表 + apilog + `cache:userapilog:*` + orders + 控制台 dashboard + statday）；`invalidateApiLog` 同步清用户日志缓存 |
-| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0）；业务时区东八区（v10.6.1） |
-| `PointsManager.php` | 余额读写、扣费、充值完成/取消（回调不比对金额，见支付规范 §2.6）、`giftOnRegister` / `checkin`；列表走 OrderManager；扣至零 / 充值履约后触发 `PointsNotify` |
+| `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0）；业务时区东八区（v10.6.1）；管理端 ledger 支持 `ledger_bucket=account|api` 两大类筛选（v13.26.22） |
+| `PointsManager.php` | 余额读写、扣费、充值完成/取消（回调不比对金额，见支付规范 §2.6）、`giftOnRegister` / `checkin`；列表走 OrderManager；扣至零 / 充值履约后触发 `PointsNotify`；创建/履约/取消联动 `PayPendingWatch` |
+| `PayPendingWatch.php` | 充值待支付超时（默认 180 秒）自动取消：Redis ZSET 挂单索引 + 登录页顺带弹出；无 Redis 时按用户维度降级；订单列表/状态查询惰性过期；禁止全表扫与独立计划任务 |
 | `PointsNotify.php` | 积分余额归零、充值成功邮件（`mail_notify_points_zero` / `mail_notify_recharge_success`；失败不阻断） |
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
@@ -368,13 +369,13 @@ foreach (FrontendCategory::listTags() as $tag) {
 
 ### 4.2 version.php
 
-**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.21**）。在线更新、关于页、`update.json` 均以此为准。
+**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.22**）。在线更新、关于页、`update.json` 均以此为准。
 
 **用法：**
 
 ```php
-echo VS_VERSION;           // 例如 13.26.21（以当前 core/version.php 为准）
-echo 'v' . VS_VERSION;     // 例如 v13.26.21
+echo VS_VERSION;           // 例如 13.26.22（以当前 core/version.php 为准）
+echo 'v' . VS_VERSION;     // 例如 v13.26.22
 ```
 
 **发版时：** 须同步修改 `update.json`、`update-log.json`、`README.md` 徽章。
@@ -645,7 +646,7 @@ $admin = Auth::user();
 | `requireAuthPost()` | POST 必须带合法 CSRF；失败 JSON 含新 `csrf` |
 | `sendSecurityHeaders()` | 认证/后台/用户中心：`no-store` + CDN 禁缓存 + **统一 CSP** |
 | `sendFrontendSecurityHeaders()` | 前台页 `private, no-store` + `Vary: Cookie` + CDN 禁缓存 + **统一 CSP**（E253 / E268） |
-| `sendContentSecurityPolicy()`（私有） | 全站 CSP：`default-src 'self'`、禁 object、限极验/hitokoto；主题 SSR 保留 `'unsafe-inline'` |
+| `sendContentSecurityPolicy()`（私有） | 全站 CSP：`default-src 'self'`、禁 object；极验放行 `static.geetest.com` / `geevisit` / `gcaptcha4.*` / `api.geetest.com`（script/style/font/frame/worker）；hitokoto；主题 SSR 保留 `'unsafe-inline'`（v13.26.22 补齐，见 E271） |
 | `checkLoginAllowed($username)` | 登录是否被限流 |
 | `recordLoginFailure($username)` | 记录登录失败 |
 | `checkMailCodeAllowed($email)` | 发验证码是否允许 |
@@ -707,6 +708,8 @@ AuthSecurity::requireAuthPost();
 1. `assets/js/captcha.js`（管理员等回落）  
 2. `core/theme/default/assets/shell/captcha.js`  
 3. `core/theme/slate/assets/shell/captcha.js`  
+
+极验 **入口 loader**（非整包）本地化于 `assets/js/geetest/gt4.js`、`gt.js`；`captcha.js` 优先同源加载，失败回落官方 CDN。二次弹层/字体仍走官方域，CSP 须放行（v13.26.22 / E271）。  
 
 本地图：**仅首次 focus** 验证码输入框时自动换图（属性 `data-focus-refreshed`）；主题勿另写一套换图逻辑。
 
@@ -1169,7 +1172,9 @@ $categoryNames = FrontendCategory::nameMap();
 
 **主题目录：** `core/theme/{themeId}/`（须含 `theme.json`；推荐含 `assets/shell/`、`assets/css/`、`assets/js/`、`pages/`、`layout/`）
 
-**主题设置存储：** MySQL `config` 键 `themesettings`，值为 JSON 对象，键为主题 ID（如 `default` / `slate`），值为该主题配置。`listThemes()` 扫描主题包后自动为缺失主题补空对象；旧 `data/settings.json` 仅一次性迁入，不再写入。
+**内置主题：** `default`、`slate`；**主题三：** `three`（v13.26.22 首页按 api主题8 还原；公开页/认证页 `th3-*` 自研；用户中心仍占位，勿作生产主推）
+
+**主题设置存储：** MySQL `config` 键 `themesettings`，值为 JSON 对象，键为主题 ID（如 `default` / `slate` / `three`），值为该主题配置。`listThemes()` 扫描主题包后自动为缺失主题补空对象；旧 `data/settings.json` 仅一次性迁入，不再写入。
 
 **常用展示配置：** `stats_num_format` = `full`（完整数字）| `compact`（单位转换）；由各主题 `theme.json` settings 声明，首页「累计调用」读取。
 

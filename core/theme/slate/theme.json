@@ -1,9 +1,9 @@
 {
     "id": "slate",
-    "name": "主题二",
+    "name": "第二个主题",
     "version": "2.23.0",
     "author": "ApiNexus",
-    "description": "主题二：首页公告、专属 Markdown、详情复制 MD、免责声明底栏常显",
+    "description": "第二个主题",
     "preview": "preview.png",
     "settings": [
         {
@@ -74,8 +74,14 @@
             "type": "select",
             "default": "compact",
             "options": [
-                {"value": "full", "label": "完整数字（不转换单位）"},
-                {"value": "compact", "label": "单位转换（如 1K+、1.2W+）"}
+                {
+                    "value": "full",
+                    "label": "完整数字（不转换单位）"
+                },
+                {
+                    "value": "compact",
+                    "label": "单位转换（如 1K+、1.2W+）"
+                }
             ]
         },
         {
@@ -84,15 +90,42 @@
             "type": "select",
             "default": "green",
             "options": [
-                {"value": "green", "label": "浅绿（默认）"},
-                {"value": "rose", "label": "浅玫瑰"},
-                {"value": "orange", "label": "浅橙"},
-                {"value": "yellow", "label": "浅黄"},
-                {"value": "mint", "label": "薄荷"},
-                {"value": "sky", "label": "天空蓝"},
-                {"value": "violet", "label": "浅紫"},
-                {"value": "pink", "label": "浅粉"},
-                {"value": "cyan", "label": "浅青"}
+                {
+                    "value": "green",
+                    "label": "浅绿（默认）"
+                },
+                {
+                    "value": "rose",
+                    "label": "浅玫瑰"
+                },
+                {
+                    "value": "orange",
+                    "label": "浅橙"
+                },
+                {
+                    "value": "yellow",
+                    "label": "浅黄"
+                },
+                {
+                    "value": "mint",
+                    "label": "薄荷"
+                },
+                {
+                    "value": "sky",
+                    "label": "天空蓝"
+                },
+                {
+                    "value": "violet",
+                    "label": "浅紫"
+                },
+                {
+                    "value": "pink",
+                    "label": "浅粉"
+                },
+                {
+                    "value": "cyan",
+                    "label": "浅青"
+                }
             ]
         },
         {
@@ -101,8 +134,14 @@
             "type": "select",
             "default": "top_drawer",
             "options": [
-                {"value": "top_drawer", "label": "顶部三横线 · 右侧抽屉（默认）"},
-                {"value": "fab_popup", "label": "右下角圆形按钮 · 向上弹出"}
+                {
+                    "value": "top_drawer",
+                    "label": "顶部三横线 · 右侧抽屉（默认）"
+                },
+                {
+                    "value": "fab_popup",
+                    "label": "右下角圆形按钮 · 向上弹出"
+                }
             ]
         },
         {

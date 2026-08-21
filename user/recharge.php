@@ -30,6 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'status') {
         $orderno = isset($_POST['orderno']) ? trim((string) $_POST['orderno']) : '';
+        if (class_exists('PayPendingWatch')) {
+            PayPendingWatch::expireIfDue($orderno);
+        }
         $row = OrderManager::findByOrderNo($orderno);
         if (!$row || (int) $row['userid'] !== $userId) {
             AjaxResponse::error('订单不存在');
