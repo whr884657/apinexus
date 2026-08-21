@@ -2,7 +2,7 @@
 /**
  * 文件：install/index.php
  * 作用：ApiNexus Web 六步安装向导（伪静态 → 环境 → 数据库 → 建表 → 管理员 → 完成）
- * @version 13.21.0
+ * @version 13.26.18
  */
 
 define('VS_ROOT', dirname(__DIR__));
@@ -291,7 +291,9 @@ function writeInstallLock()
 }
 
 /**
- * @return array
+ * 环境检测（合并同类项，减少检测页纵向长度）
+ *
+ * @return array 每项含 name/need/value/pass，可选 tags（子项标签）
  */
 function runEnvironmentCheck()
 {
@@ -306,74 +308,92 @@ function runEnvironmentCheck()
     );
 
     $extensions = array(
-        array('name' => 'pdo', 'label' => 'PDO', 'required' => true),
-        array('name' => 'pdo_mysql', 'label' => 'PDO MySQL（MySQL 数据库）', 'required' => true),
-        array('name' => 'redis', 'label' => 'Redis（缓存，必选）', 'required' => true),
-        array('name' => 'mbstring', 'label' => 'mbstring', 'required' => true),
-        array('name' => 'json', 'label' => 'json', 'required' => true),
-        array('name' => 'session', 'label' => 'session', 'required' => true),
-        array('name' => 'curl', 'label' => 'curl', 'required' => true),
-        array('name' => 'openssl', 'label' => 'openssl', 'required' => true),
-        array('name' => 'zip', 'label' => 'zip', 'required' => true),
-        array('name' => 'gd', 'label' => 'GD（本地验证码必选）', 'required' => true),
+        array('name' => 'pdo', 'tag' => 'pdo', 'label' => 'PDO'),
+        array('name' => 'pdo_mysql', 'tag' => 'pdo_mysql', 'label' => 'PDO MySQL'),
+        array('name' => 'redis', 'tag' => 'redis', 'label' => 'Redis'),
+        array('name' => 'mbstring', 'tag' => 'mbstring', 'label' => 'mbstring'),
+        array('name' => 'json', 'tag' => 'json', 'label' => 'json'),
+        array('name' => 'session', 'tag' => 'session', 'label' => 'session'),
+        array('name' => 'curl', 'tag' => 'curl', 'label' => 'curl'),
+        array('name' => 'openssl', 'tag' => 'openssl', 'label' => 'openssl'),
+        array('name' => 'zip', 'tag' => 'zip', 'label' => 'zip'),
+        array('name' => 'gd', 'tag' => 'gd', 'label' => 'GD'),
     );
+    $extTags = array();
+    $extMissing = array();
     foreach ($extensions as $ext) {
         $loaded = extension_loaded($ext['name']);
-        $checks[] = array(
-            'name'  => 'PHP 扩展：' . $ext['label'],
-            'need'  => '已安装（必选）',
-            'value' => $loaded ? '已安装' : '未安装',
-            'pass'  => $loaded,
-            'required' => $ext['required'],
-        );
+        $extTags[] = array('label' => $ext['tag'], 'pass' => $loaded);
+        if (!$loaded) {
+            $extMissing[] = $ext['label'];
+        }
     }
-
     $gdUsable = extension_loaded('gd') && function_exists('imagecreatetruecolor');
+    $extTags[] = array('label' => 'GD绘图', 'pass' => $gdUsable);
+    if (!$gdUsable) {
+        $extMissing[] = 'GD 绘图（imagecreatetruecolor）';
+    }
+    $extPass = count($extMissing) === 0;
     $checks[] = array(
-        'name'  => 'GD 绘图能力（本地验证码）',
-        'need'  => '支持 imagecreatetruecolor（必选）',
-        'value' => $gdUsable ? '可用' : '不可用',
-        'pass'  => $gdUsable,
+        'name'  => 'PHP 扩展（必选）',
+        'need'  => 'pdo / pdo_mysql / redis / mbstring / json / session / curl / openssl / zip / gd（含绘图）',
+        'value' => $extPass ? '全部已安装' : ('缺少：' . implode('、', $extMissing)),
+        'pass'  => $extPass,
+        'tags'  => $extTags,
     );
 
     $writableDirs = array('config', 'data');
+    $writeTags = array();
+    $writeFail = array();
     foreach ($writableDirs as $dir) {
         $path = VS_ROOT . '/' . $dir;
         if (!is_dir($path)) {
             @mkdir($path, 0755, true);
         }
         $writable = is_dir($path) && is_writable($path);
-        $checks[] = array(
-            'name'  => '目录可写：' . $dir . '/',
-            'need'  => '可写（部署必选）',
-            'value' => $writable ? '可写' : '不可写',
-            'pass'  => $writable,
-        );
+        $writeTags[] = array('label' => $dir . '/', 'pass' => $writable);
+        if (!$writable) {
+            $writeFail[] = $dir . '/';
+        }
     }
+    $writePass = count($writeFail) === 0;
+    $checks[] = array(
+        'name'  => '目录可写（部署必选）',
+        'need'  => 'config/、data/ 可写',
+        'value' => $writePass ? '全部可写' : ('不可写：' . implode('、', $writeFail)),
+        'pass'  => $writePass,
+        'tags'  => $writeTags,
+    );
 
-    $readableDirs = array('core', 'assets/css', 'assets/js', 'assets/img');
-    foreach ($readableDirs as $dir) {
-        $path = VS_ROOT . '/' . $dir;
-        $readable = is_dir($path) && is_readable($path);
-        $checks[] = array(
-            'name'  => '目录可读：' . $dir . '/',
-            'need'  => '可读',
-            'value' => $readable ? '可读' : '不可读',
-            'pass'  => $readable,
-        );
+    $structureItems = array(
+        array('path' => 'core', 'tag' => 'core/', 'kind' => 'dir'),
+        array('path' => 'assets/css', 'tag' => 'assets/css/', 'kind' => 'dir'),
+        array('path' => 'assets/js', 'tag' => 'assets/js/', 'kind' => 'dir'),
+        array('path' => 'assets/img', 'tag' => 'assets/img/', 'kind' => 'dir'),
+        array('path' => 'install/database.sql', 'tag' => 'database.sql', 'kind' => 'file'),
+    );
+    $structTags = array();
+    $structFail = array();
+    foreach ($structureItems as $item) {
+        $full = VS_ROOT . '/' . $item['path'];
+        if ($item['kind'] === 'dir') {
+            $ok = is_dir($full) && is_readable($full);
+        } else {
+            $ok = is_file($full) && is_readable($full);
+        }
+        $structTags[] = array('label' => $item['tag'], 'pass' => $ok);
+        if (!$ok) {
+            $structFail[] = $item['tag'];
+        }
     }
-
-    $readableFiles = array('install/database.sql');
-    foreach ($readableFiles as $file) {
-        $path = VS_ROOT . '/' . $file;
-        $readable = is_file($path) && is_readable($path);
-        $checks[] = array(
-            'name'  => '安装文件：' . $file,
-            'need'  => '可读',
-            'value' => $readable ? '可读' : '不可读',
-            'pass'  => $readable,
-        );
-    }
+    $structPass = count($structFail) === 0;
+    $checks[] = array(
+        'name'  => '目录与安装文件',
+        'need'  => 'core/、assets/* 可读；install/database.sql 可读',
+        'value' => $structPass ? '结构正常' : ('异常：' . implode('、', $structFail)),
+        'pass'  => $structPass,
+        'tags'  => $structTags,
+    );
 
     return $checks;
 }
@@ -470,14 +490,21 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
 
             <?php elseif ($step === 2): ?>
                 <h2 class="vs-card-title">第二步：环境检测</h2>
-                <p class="vs-card-desc">检测服务器环境是否满足运行要求。须安装 <strong>MySQL（pdo_mysql）</strong>、<strong>Redis</strong>、<strong>GD</strong>（本地验证码）扩展，且 <code>config/</code>、<code>data/</code> 目录可写。</p>
+                <p class="vs-card-desc">检测服务器环境是否满足运行要求。须安装 <strong>MySQL（pdo_mysql）</strong>、<strong>Redis</strong>、<strong>GD</strong>（本地验证码）扩展，且 <code>config/</code>、<code>data/</code> 目录可写。同类项已合并展示，缺项见标签红色。</p>
                 <div class="vs-check-list" id="installEnvChecks">
                     <?php foreach ($envChecks as $check): ?>
-                        <div class="vs-check-item<?php echo $check['pass'] ? ' is-pass' : ' is-fail'; ?>">
+                        <div class="vs-check-item<?php echo $check['pass'] ? ' is-pass' : ' is-fail'; ?><?php echo !empty($check['tags']) ? ' vs-check-item--group' : ''; ?>">
                             <span class="vs-check-icon"><?php echo $check['pass'] ? '&#10003;' : '&#10007;'; ?></span>
                             <div class="vs-check-info">
                                 <strong><?php echo vs_e($check['name']); ?></strong>
                                 <span>要求：<?php echo vs_e($check['need']); ?> | 当前：<?php echo vs_e($check['value']); ?></span>
+                                <?php if (!empty($check['tags']) && is_array($check['tags'])): ?>
+                                    <div class="vs-check-tags" aria-label="分项状态">
+                                        <?php foreach ($check['tags'] as $tag): ?>
+                                            <span class="vs-check-tag<?php echo !empty($tag['pass']) ? ' is-pass' : ' is-fail'; ?>"><?php echo vs_e($tag['label']); ?></span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>

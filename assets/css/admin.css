@@ -4997,6 +4997,41 @@ select.vs-input.vs-select {
     text-align: center !important;
     width: 100% !important;
 }
+.vs-api-list-total {
+    margin: 0 !important;
+    text-align: center !important;
+    width: 100% !important;
+    font-size: 13px;
+    color: var(--vs-text-secondary, #64748b);
+}
+.vs-api-pager__info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 32px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vs-text-secondary, #64748b);
+    font-variant-numeric: tabular-nums;
+}
+.vs-finance-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    margin: 0 0 12px;
+}
+.vs-finance-toolbar .vs-finance-search {
+    flex: 1 1 220px;
+}
+.vs-finance-toolbar .vs-finance-filters {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
 
 /* 电脑端：一行多列铺开 */
 @media (min-width: 901px) {

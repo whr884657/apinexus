@@ -953,11 +953,9 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <option value="50">50</option>
                 </select>
             </label>
-            <button type="button" class="vs-api-pager__nav" id="apiListPrevBtn" aria-label="上一页">上一页</button>
-            <div class="vs-api-pager__nums" id="apiListPagerNums" role="navigation" aria-label="页码"></div>
-            <button type="button" class="vs-api-pager__nav" id="apiListNextBtn" aria-label="下一页">下一页</button>
+            <div class="vs-api-pager__navs" id="apiListPagerNav"></div>
         </div>
-        <p class="vs-api-list-stats" id="apiListStats"><?php echo vs_e($titleMeta); ?></p>
+        <div class="vs-api-list-total" id="apiListStats"><?php echo vs_e($titleMeta); ?></div>
     </div>
     <?php endif; ?>
 </div>

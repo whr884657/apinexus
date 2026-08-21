@@ -27,10 +27,8 @@
         var searchInput = document.getElementById('apiReviewSearchInput');
         var pageSizeEl = document.getElementById('apiReviewPageSize');
         var footerEl = document.getElementById('apiReviewFooter');
-        var pagerNumsEl = document.getElementById('apiReviewPagerNums');
+        var pagerNav = document.getElementById('apiReviewPagerNav');
         var statsEl = document.getElementById('apiReviewStats');
-        var prevBtn = document.getElementById('apiReviewPrevBtn');
-        var nextBtn = document.getElementById('apiReviewNextBtn');
         var overlay = document.getElementById('apiReviewRejectOverlay');
         var reasonInput = document.getElementById('apiReviewRejectReason');
         var confirmBtn = document.getElementById('apiReviewRejectConfirm');
@@ -167,22 +165,17 @@
             });
         }
 
-        function renderPagerNums(totalPages) {
-            if (!pagerNumsEl) {
+        function renderPagerNav(totalPages, matchedLen) {
+            if (!pagerNav) {
                 return;
             }
-            if (totalPages <= 1) {
-                pagerNumsEl.innerHTML = '';
-                return;
-            }
-            var html = '';
-            var i;
-            for (i = 1; i <= totalPages; i += 1) {
-                html += '<button type="button" class="vs-api-pager__num'
-                    + (i === currentPage ? ' is-active' : '')
-                    + '" data-page="' + i + '">' + i + '</button>';
-            }
-            pagerNumsEl.innerHTML = html;
+            var canPrev = currentPage > 1;
+            var canNext = matchedLen > 0 && currentPage < totalPages;
+            pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"'
+                + (canPrev ? '' : ' disabled') + '>上一页</button>'
+                + '<span class="vs-api-pager__info">' + currentPage + '</span>'
+                + '<button type="button" class="vs-api-pager__nav" data-p="1"'
+                + (canNext ? '' : ' disabled') + '>下一页</button>';
         }
 
         function applyView() {
@@ -247,13 +240,7 @@
                 statsEl.textContent = '共 ' + matched.length + ' 条'
                     + (hasAny ? ('（全部投稿 ' + totalAll + '）') : '');
             }
-            if (prevBtn) {
-                prevBtn.disabled = currentPage <= 1;
-            }
-            if (nextBtn) {
-                nextBtn.disabled = currentPage >= totalPages || matched.length === 0;
-            }
-            renderPagerNums(matched.length === 0 ? 0 : totalPages);
+            renderPagerNav(matched.length === 0 ? 1 : totalPages, matched.length);
             refreshTabBadges();
         }
 
@@ -365,13 +352,6 @@
                 return;
             }
 
-            var pageBtn = e.target.closest('.vs-api-pager__num[data-page]');
-            if (pageBtn && pagerNumsEl && pagerNumsEl.contains(pageBtn)) {
-                currentPage = parseInt(pageBtn.getAttribute('data-page'), 10) || 1;
-                applyView();
-                return;
-            }
-
             var denyBtn = e.target.closest('.vs-api-review-deny');
             if (denyBtn && page.contains(denyBtn)) {
                 var rowDeny = denyBtn.closest('[data-api-row]');
@@ -430,19 +410,23 @@
             });
         }
 
-        if (prevBtn) {
-            prevBtn.addEventListener('click', function () {
-                if (currentPage > 1) {
+        if (pagerNav) {
+            pagerNav.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-p]');
+                if (!btn || btn.disabled) {
+                    return;
+                }
+                var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
+                var pageSize = getPageSize();
+                var matched = matchedRows();
+                var totalPages = Math.max(1, Math.ceil(matched.length / pageSize) || 1);
+                if (delta > 0 && currentPage < totalPages) {
+                    currentPage += 1;
+                    applyView();
+                } else if (delta < 0 && currentPage > 1) {
                     currentPage -= 1;
                     applyView();
                 }
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', function () {
-                currentPage += 1;
-                applyView();
             });
         }
 

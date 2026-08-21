@@ -117,13 +117,6 @@ if (!$notFound) {
 
     <?php
     $detailImgBase = rtrim(ThemeManager::assetUrl(ThemeManager::activeId(), 'assets/img'), '/') . '/';
-    $detailSiteName = class_exists('SiteContext') ? SiteContext::siteName() : 'ApiNexus';
-    // $vsBase 已是站内路径前缀，取 Host 须用绝对站根（勿 parse_url($vsBase)）
-    $detailHost = parse_url(vs_base_url(), PHP_URL_HOST);
-    if (!is_string($detailHost) || $detailHost === '') {
-        $detailHost = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
-    }
-    $detailApiBase = rtrim($vsBase, '/') . '/api/v1';
     $detailDocRaw = isset($api['doc']) ? trim((string) $api['doc']) : '';
     $detailMdParts = array();
     $detailMdParts[] = '# ' . (isset($api['name']) ? (string) $api['name'] : '接口文档');
@@ -187,29 +180,10 @@ if (!$notFound) {
         </div>
         <div class="detail-title-row">
             <h1 class="detail-title"><?php echo vs_e($api['name']); ?></h1>
-            <div class="detail-ai-split" id="detailAiSplit">
-                <button type="button" class="detail-ai-split__main" id="detailAskDoubaoBtn" title="问问豆包">
-                    <span class="detail-ai-split__ask">问问</span>
-                    <img class="detail-ai-split__avatar" src="<?php echo vs_e($detailImgBase . 'doubao.svg'); ?>" alt="" width="16" height="16" decoding="async">
-                    <span class="detail-ai-split__name">豆包</span>
-                </button>
-                <span class="detail-ai-split__divider" aria-hidden="true"></span>
-                <button type="button" class="detail-ai-split__chevron" id="detailAiMenuBtn"
-                        aria-expanded="false" aria-haspopup="true" aria-controls="detailAiMenu" title="更多操作">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                </button>
-                <div class="detail-ai-split__menu" id="detailAiMenu" role="menu" hidden>
-                    <button type="button" class="detail-ai-split__item" role="menuitem" data-ai-action="copy-md">
-                        <img class="detail-ai-split__item-icon" src="<?php echo vs_e($detailImgBase . 'fuzhi.svg'); ?>" alt="" width="16" height="16" decoding="async">
-                        <span>复制整页为 Markdown</span>
-                    </button>
-                    <button type="button" class="detail-ai-split__item" role="menuitem" data-ai-action="ask-doubao">
-                        <img class="detail-ai-split__item-icon detail-ai-split__item-icon--round" src="<?php echo vs_e($detailImgBase . 'doubao.svg'); ?>" alt="" width="16" height="16" decoding="async">
-                        <span>问问豆包</span>
-                        <svg class="detail-ai-split__ext" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    </button>
-                </div>
-            </div>
+            <button type="button" class="detail-md-copy" id="detailCopyMdBtn" title="复制整页为 Markdown">
+                <img class="detail-md-copy__icon" src="<?php echo vs_e($detailImgBase . 'fuzhi.svg'); ?>" alt="" width="16" height="16" decoding="async">
+                <span>复制 Markdown</span>
+            </button>
         </div>
         <?php if (!empty($api['desc'])): ?>
         <p class="detail-desc"><?php echo vs_e($api['desc']); ?></p>
@@ -614,13 +588,8 @@ window.playgroundKeyContext = <?php echo json_encode(array(
 window.VS_CSRF_TOKEN = <?php echo json_encode(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
 window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/core/playground/relay.php')); ?>;
 window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(rtrim($vsBase, '/')); ?>;
-window.detailPageMarkdown = <?php echo json_encode(isset($detailPageMarkdown) ? (string) $detailPageMarkdown : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-window.detailAiMeta = <?php echo json_encode(array(
-    'siteName' => isset($detailSiteName) ? (string) $detailSiteName : 'ApiNexus',
-    'host' => isset($detailHost) ? (string) $detailHost : '',
-    'apiBase' => isset($detailApiBase) ? (string) $detailApiBase : (rtrim($vsBase, '/') . '/api/v1'),
-), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 </script>
+<script type="application/json" id="detailPageMarkdownJson"><?php echo json_encode(isset($detailPageMarkdown) ? (string) $detailPageMarkdown : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
 <?php $vsSyntaxHref = ThemeManager::pageScriptUrl('vs-syntax.js'); if ($vsSyntaxHref !== ''): ?>
 <script src="<?php echo vs_e($vsSyntaxHref); ?>" defer></script>

@@ -129,7 +129,7 @@
 #adminDashPage .dash-panel.is-pressed {
     transform: scale(0.995);
 }
-/* TOP：固定 280px 可视高度，内部滚筒；运营速览：同高起步、按条目撑开，禁止被 TOP 条目撑高整行（E167 / E197） */
+/* TOP：固定 280px 可视高度，框内手动滚动（同最近调用）；运营速览：同高起步、按条目撑开，禁止被 TOP 条目撑高整行（E167 / E197 / E256） */
 #adminDashPage .dash-panel--top {
     display: flex;
     flex-direction: column;
@@ -168,24 +168,21 @@
     min-height: 0;
     height: 196px;
     max-height: 196px;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     position: relative;
 }
 #adminDashPage .dash-bars {
     display: flex;
     flex-direction: column;
     gap: 0;
-    will-change: transform;
-    backface-visibility: hidden;
 }
 #adminDashPage .dash-bars__set {
     display: flex;
     flex-direction: column;
     gap: 10px;
     flex-shrink: 0;
-}
-#adminDashPage .dash-bars__set + .dash-bars__set {
-    margin-top: 10px;
 }
 #adminDashPage .dash-bar {
     flex-shrink: 0;

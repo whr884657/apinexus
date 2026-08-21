@@ -34,24 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tableReady = OrderManager::tableReady();
 $headerActions = '';
 if ($tableReady) {
-    ob_start();
-    ?>
-    <div class="vs-finance-head-actions" id="ordersToolbar">
-        <div class="vs-finance-search">
-            <input type="search" class="vs-input vs-finance-search__input" id="ordersSearchInput"
-                   placeholder="搜索订单号 / 用户 / 邮箱 / 平台单号…" autocomplete="off">
-            <button type="button" class="vs-btn vs-btn--primary" id="ordersSearchBtn">搜索</button>
-        </div>
-        <div class="vs-finance-filters" role="group" aria-label="订单状态">
-            <button type="button" class="vs-btn vs-btn--primary vs-finance-filter is-active" data-status="">全部</button>
-            <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="0">待支付</button>
-            <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="1">已完成</button>
-            <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="2">已取消</button>
-        </div>
-        <?php echo vs_admin_refresh_btn_html('orderRefreshBtn'); ?>
-    </div>
-    <?php
-    $headerActions = ob_get_clean();
+    $headerActions = '<div class="vs-finance-head-actions vs-finance-head-actions--simple">'
+        . vs_admin_refresh_btn_html('orderRefreshBtn')
+        . '</div>';
 }
 
 vs_admin_layout_start('订单管理', 'orders', $headerActions);
@@ -59,6 +44,19 @@ vs_admin_layout_start('订单管理', 'orders', $headerActions);
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先完成系统升级以同步订单数据。', array('compact' => true)); ?>
 <?php else: ?>
+<div class="vs-finance-toolbar" id="ordersToolbar">
+    <div class="vs-finance-search">
+        <input type="search" class="vs-input vs-finance-search__input" id="ordersSearchInput"
+               placeholder="搜索订单号 / 用户 / 邮箱 / 平台单号…" autocomplete="off">
+        <button type="button" class="vs-btn vs-btn--primary" id="ordersSearchBtn">搜索</button>
+    </div>
+    <div class="vs-finance-filters" role="group" aria-label="订单状态">
+        <button type="button" class="vs-btn vs-btn--primary vs-finance-filter is-active" data-status="">全部</button>
+        <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="0">待支付</button>
+        <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="1">已完成</button>
+        <button type="button" class="vs-btn vs-btn--default vs-finance-filter" data-status="2">已取消</button>
+    </div>
+</div>
 <div class="vs-panel vs-finance-panel" id="ordersPage">
     <div class="vs-finance-table" id="ordersListBody">
         <?php vs_render_loading('正在加载订单'); ?>

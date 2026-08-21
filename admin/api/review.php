@@ -407,11 +407,9 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
                         <option value="50">50</option>
                     </select>
                 </label>
-                <button type="button" class="vs-api-pager__nav" id="apiReviewPrevBtn" aria-label="上一页">上一页</button>
-                <div class="vs-api-pager__nums" id="apiReviewPagerNums" role="navigation" aria-label="页码"></div>
-                <button type="button" class="vs-api-pager__nav" id="apiReviewNextBtn" aria-label="下一页">下一页</button>
+                <div class="vs-api-pager__navs" id="apiReviewPagerNav"></div>
             </div>
-            <p class="vs-api-list-stats" id="apiReviewStats">共 <?php echo (int) count($apis); ?> 条</p>
+            <div class="vs-api-list-total" id="apiReviewStats">共 <?php echo (int) count($apis); ?> 条</div>
         </div>
     <?php endif; ?>
 </div>

@@ -7,8 +7,15 @@ $catIndex = 0;
 <main class="st-main" id="stApisPage">
 <div class="st-wrap">
 <section class="st-section st-apis-page">
-    <h1 class="st-page-title">全部接口</h1>
-    <p class="st-page-desc">共 <span id="stApiTotalCount"><?php echo (int) $apiCount; ?></span> 个 API 接口</p>
+    <div class="st-section__head st-apis-page__head">
+        <div>
+            <h1 class="st-page-title">全部接口</h1>
+            <p class="st-page-desc">共 <span id="stApiTotalCount"><?php echo (int) $apiCount; ?></span> 个 API 接口</p>
+        </div>
+        <div class="st-apis-toolbar">
+            <button type="button" class="st-apis-toolbar__btn" id="stApisResetBtn" title="重置筛选">重置</button>
+        </div>
+    </div>
 
     <div class="st-search st-search--page">
         <span class="st-search__icon" aria-hidden="true">⌕</span>
@@ -39,6 +46,5 @@ $catIndex = 0;
 </div>
 </main>
 <script>
-window.stApiPayload = { apiData: [], categoryNames: {} };
-window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php'), JSON_UNESCAPED_UNICODE); ?>;
+window.stHomePreviewLimit = 8;
 </script>

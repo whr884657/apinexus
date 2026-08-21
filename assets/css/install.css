@@ -1,7 +1,7 @@
 /**
  * 文件：assets/css/install.css
  * 作用：ApiNexus 安装向导页面样式
- * @version 1.0.0
+ * @version 13.26.18
  */
 
 .vs-install-page {
@@ -112,10 +112,10 @@
     color: var(--vs-primary);
 }
 
-/* 检测列表：两列网格 */
+/* 检测列表：合并同类后纵向排列，缩短页面 */
 .vs-check-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 12px;
 }
 
@@ -168,6 +168,7 @@
     gap: 2px;
     font-size: 13px;
     min-width: 0;
+    flex: 1;
 }
 
 .vs-check-info strong {
@@ -175,9 +176,38 @@
     word-break: break-word;
 }
 
-.vs-check-info span {
+.vs-check-info > span {
     color: var(--vs-text-secondary);
     word-break: break-word;
+}
+
+.vs-check-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.vs-check-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    border: 1px solid transparent;
+    word-break: break-all;
+}
+
+.vs-check-tag.is-pass {
+    color: #0f766e;
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+}
+
+.vs-check-tag.is-fail {
+    color: #b91c1c;
+    background: #fef2f2;
+    border-color: #fecaca;
 }
 
 /* 安装向导表单两列 */
@@ -259,10 +289,6 @@
 
     .vs-install-title {
         font-size: 22px;
-    }
-
-    .vs-check-list {
-        grid-template-columns: 1fr;
     }
 
     .vs-form-grid {

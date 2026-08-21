@@ -1,9 +1,9 @@
 {
     "id": "slate",
     "name": "主题二",
-    "version": "2.19.0",
+    "version": "2.21.0",
     "author": "ApiNexus",
-    "description": "主题二：可配首页统计与浅色主题色；API 平台风首页与全部接口页",
+    "description": "主题二：首页公告、专属 Markdown、详情豆包/复制 MD、首页在线调试入口",
     "preview": "preview.png",
     "settings": [
         {
@@ -19,6 +19,24 @@
             "type": "textarea",
             "placeholder": "留空则使用站点描述，前台以打字效果展示",
             "default": ""
+        },
+        {
+            "key": "show_home_announce",
+            "label": "显示首页公告条",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_home_playground",
+            "label": "显示首页在线调试入口",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_api_disclaimer",
+            "label": "详情页显示免责声明标签",
+            "type": "checkbox",
+            "default": true
         },
         {
             "key": "show_stats",

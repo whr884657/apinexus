@@ -34,6 +34,7 @@ require_once VS_ROOT . '/core/Captcha.php';
 require_once VS_ROOT . '/core/AjaxResponse.php';
 require_once VS_ROOT . '/core/SystemInfo.php';
 require_once VS_ROOT . '/core/AboutCatalog.php';
+require_once VS_ROOT . '/core/ConsoleBrand.php';
 require_once VS_ROOT . '/core/Updater.php';
 require_once VS_ROOT . '/core/UpdateLog.php';
 require_once VS_ROOT . '/core/UserAvatar.php';

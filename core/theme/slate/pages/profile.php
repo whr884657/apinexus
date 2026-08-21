@@ -1,6 +1,19 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; }
 
-$notFound = !empty($notFound) || empty($profile) || !is_array($profile);
+$profileRaw = (isset($profile) && is_array($profile)) ? $profile : null;
+$notFound = !empty($notFound) || $profileRaw === null;
+/** @var array $profile 始终为数组，避免静态分析在分支内误判 null */
+$profile = $profileRaw !== null ? $profileRaw : array(
+    'avatar' => '',
+    'letter' => '',
+    'username' => '',
+    'bio' => '',
+    'apicount' => 0,
+    'join_label' => '',
+    'calls_label' => '',
+    'blog' => '',
+    'apis' => array(),
+);
 $vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $wallpaper = isset($wallpaper) ? trim((string) $wallpaper) : '';
 $pingUrl = isset($pingUrl) ? (string) $pingUrl : ($vsBase . '/core/ping.php');
@@ -15,20 +28,24 @@ $apis = (!$notFound && isset($profile['apis']) && is_array($profile['apis'])) ? 
             <a class="st-btn" href="<?php echo vs_e($vsBase); ?>/contributors">返回贡献者</a>
         </section>
     <?php else: ?>
-        <div class="st-profile-hero"<?php echo $wallpaper !== '' ? ' style="background-image:url(' . vs_e($wallpaper) . ')"' : ''; ?>></div>
+        <div class="st-profile-hero<?php echo $wallpaper !== '' ? ' st-profile-hero--photo' : ''; ?>">
+            <?php if ($wallpaper !== ''): ?>
+                <img class="st-profile-hero__img" src="<?php echo vs_e($wallpaper); ?>" alt="" width="1200" height="240" loading="eager" decoding="async" referrerpolicy="no-referrer">
+            <?php endif; ?>
+        </div>
         <section class="st-section st-profile-card">
             <div class="st-profile-head">
-                <img class="st-profile-avatar" src="<?php echo vs_e($profile['avatar']); ?>" alt=""
+                <img class="st-profile-avatar" src="<?php echo vs_e(isset($profile['avatar']) ? $profile['avatar'] : ''); ?>" alt=""
                      loading="eager" decoding="async" referrerpolicy="no-referrer"
-                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                <div class="st-contrib__avatar st-profile-avatar-fallback" style="display:none;"><?php echo vs_e($profile['letter']); ?></div>
+                     onerror="this.classList.add('st-is-hidden');this.nextElementSibling.classList.remove('st-is-hidden');">
+                <div class="st-contrib__avatar st-profile-avatar-fallback st-is-hidden"><?php echo vs_e(isset($profile['letter']) ? $profile['letter'] : ''); ?></div>
                 <div class="st-profile-meta">
-                    <h1 class="st-page-title" style="margin:0;"><?php echo vs_e($profile['username']); ?></h1>
-                    <p class="st-page-desc" style="margin:6px 0 0;"><?php echo vs_e($profile['bio']); ?></p>
-                    <div class="st-contrib__stats" style="margin-top:10px;justify-content:flex-start;">
-                        <span><strong><?php echo (int) $profile['apicount']; ?></strong> 接口</span>
-                        <span><strong><?php echo vs_e($profile['join_label']); ?></strong> 加入</span>
-                        <span>总调用 <strong><?php echo vs_e($profile['calls_label']); ?></strong></span>
+                    <h1 class="st-page-title st-profile-name"><?php echo vs_e(isset($profile['username']) ? $profile['username'] : ''); ?></h1>
+                    <p class="st-page-desc st-profile-bio"><?php echo vs_e(isset($profile['bio']) ? $profile['bio'] : ''); ?></p>
+                    <div class="st-contrib__stats st-profile-stats">
+                        <span><strong><?php echo (int) (isset($profile['apicount']) ? $profile['apicount'] : 0); ?></strong> 接口</span>
+                        <span><strong><?php echo vs_e(isset($profile['join_label']) ? $profile['join_label'] : ''); ?></strong> 加入</span>
+                        <span>总调用 <strong><?php echo vs_e(isset($profile['calls_label']) ? $profile['calls_label'] : ''); ?></strong></span>
                     </div>
                     <div class="st-profile-actions">
                         <?php if (!empty($profile['blog'])): ?>

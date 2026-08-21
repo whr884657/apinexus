@@ -25,11 +25,7 @@
     /** 每 N 次 live 后软刷趋势/TOP（合并独立 soft 定时器，降 POST 频次，E202） */
     var softEveryN = 6;
     var liveTickCount = 0;
-    var topMarqueeRaf = null;
-    var topMarqueeY = 0;
-    var topMarqueePaused = false;
-    var topMarqueeFp = '';
-    var topMarqueeBound = false;
+    var topStructFp = '';
 
     try {
         boot = JSON.parse(page.getAttribute('data-boot') || '{}') || {};
@@ -408,50 +404,6 @@
         });
     }
 
-    function stopTopMarquee(resetY) {
-        if (topMarqueeRaf) {
-            cancelAnimationFrame(topMarqueeRaf);
-            topMarqueeRaf = null;
-        }
-        if (resetY !== false) {
-            topMarqueeY = 0;
-        }
-        topMarqueePaused = false;
-    }
-
-    function bindTopMarqueePause(viewport) {
-        if (!viewport || topMarqueeBound) {
-            return;
-        }
-        topMarqueeBound = true;
-        viewport.addEventListener('mouseenter', function () { topMarqueePaused = true; });
-        viewport.addEventListener('mouseleave', function () { topMarqueePaused = false; });
-        viewport.addEventListener('touchstart', function () { topMarqueePaused = true; }, { passive: true });
-        viewport.addEventListener('touchend', function () { topMarqueePaused = false; }, { passive: true });
-    }
-
-    function startTopMarquee(el, halfHeight) {
-        stopTopMarquee(false);
-        if (!el || halfHeight <= 0) {
-            return;
-        }
-        if (topMarqueeY >= halfHeight) {
-            topMarqueeY = topMarqueeY % halfHeight;
-        }
-        var speed = 0.28;
-        function tick() {
-            if (!topMarqueePaused) {
-                topMarqueeY += speed;
-                if (topMarqueeY >= halfHeight) {
-                    topMarqueeY -= halfHeight;
-                }
-                el.style.transform = 'translate3d(0,' + (-topMarqueeY) + 'px,0)';
-            }
-            topMarqueeRaf = requestAnimationFrame(tick);
-        }
-        topMarqueeRaf = requestAnimationFrame(tick);
-    }
-
     function topStructureFp(list) {
         return list.map(function (row, i) {
             return String(row.id != null ? row.id : i) + ':' + String(row.name || '');
@@ -501,50 +453,25 @@
 
     function renderTop(list) {
         var el = document.getElementById('dashTopBars');
-        var viewport = document.getElementById('dashTopViewport');
         if (!el) return;
         list = Array.isArray(list) ? list : [];
         var structFp = topStructureFp(list);
         var valueFp = topValueFp(list);
-        // 结构未变：只改数值，滚筒不中断
-        if (structFp === topMarqueeFp && el.querySelector('.dash-bars__set, .dash-bar')) {
+        if (structFp === topStructFp && el.querySelector('.dash-bar')) {
             if (el.getAttribute('data-top-values') !== valueFp) {
                 patchTopValues(el, list);
                 el.setAttribute('data-top-values', valueFp);
             }
             return;
         }
-        topMarqueeFp = structFp;
-        stopTopMarquee(true);
-        el.classList.remove('is-marquee');
+        topStructFp = structFp;
         el.style.transform = '';
         if (!list.length) {
             el.innerHTML = '<div class="dash-empty">今日暂无调用排行</div>';
             el.removeAttribute('data-top-values');
             return;
         }
-        var rowsHtml = buildTopRowsHtml(list);
-        if (list.length > 5 && viewport) {
-            el.innerHTML = '<div class="dash-bars__set">' + rowsHtml + '</div>'
-                + '<div class="dash-bars__set" aria-hidden="true">' + rowsHtml + '</div>';
-            el.classList.add('is-marquee');
-            el.setAttribute('data-top-values', valueFp);
-            bindTopMarqueePause(viewport);
-            requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
-                    var first = el.querySelector('.dash-bars__set');
-                    if (!first) {
-                        return;
-                    }
-                    var half = first.offsetHeight + 10;
-                    if (half > 8) {
-                        startTopMarquee(el, half);
-                    }
-                });
-            });
-            return;
-        }
-        el.innerHTML = '<div class="dash-bars__set">' + rowsHtml + '</div>';
+        el.innerHTML = '<div class="dash-bars__set">' + buildTopRowsHtml(list) + '</div>';
         el.setAttribute('data-top-values', valueFp);
     }
 

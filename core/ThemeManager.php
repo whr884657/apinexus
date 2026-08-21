@@ -782,6 +782,7 @@ class ThemeManager
     {
         self::ensureAuthLayoutLoaded();
         if (!function_exists('vs_theme_auth_foot')) {
+            vs_console_brand_script();
             echo '</body></html>';
             return;
         }
@@ -819,6 +820,7 @@ class ThemeManager
     {
         $file = self::resolveActiveThemeFile('user/layout.php');
         if ($file === '' || !function_exists('vs_theme_user_layout_end')) {
+            vs_console_brand_script();
             echo '</body></html>';
             return;
         }

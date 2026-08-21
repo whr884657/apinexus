@@ -1,5 +1,6 @@
 <?php if (!defined('VS_THEME_RENDER')) { exit; } ?>
 <?php
+require_once dirname(__DIR__) . '/lib/bootstrap.php';
 $siteName = isset($siteName) ? $siteName : (class_exists('SiteContext') ? SiteContext::siteName() : '本站');
 $vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $aboutArticle = isset($aboutArticle) && is_array($aboutArticle) ? $aboutArticle : null;
@@ -14,7 +15,10 @@ if ($hasAbout) {
     if (!empty($aboutArticle['summary'])) {
         $aboutSummary = (string) $aboutArticle['summary'];
     }
-    if (isset($aboutArticle['body_html'])) {
+    $raw = isset($aboutArticle['body']) ? (string) $aboutArticle['body'] : '';
+    if ($raw !== '') {
+        $aboutBodyHtml = slate_md_render($raw);
+    } elseif (isset($aboutArticle['body_html'])) {
         $aboutBodyHtml = (string) $aboutArticle['body_html'];
     }
 }
@@ -29,7 +33,7 @@ if ($hasAbout) {
     <?php endif; ?>
 
     <?php if ($hasAbout): ?>
-        <div class="st-card markdown-body vs-md-body" style="padding:18px;line-height:1.75;">
+        <div class="st-card markdown-body vs-md-body st-md" style="padding:18px;line-height:1.75;">
             <?php echo $aboutBodyHtml; ?>
         </div>
     <?php else: ?>
@@ -42,4 +46,14 @@ if ($hasAbout) {
 </div></main>
 <?php if ($hasAbout): ?>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
+<script src="<?php echo vs_e($vsBase); ?>/core/markdown/assets/js/markdown-render.js?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/js/pages/slate-markdown.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var root = document.querySelector('.st-md');
+    if (window.SlateMarkdown && root) {
+        window.SlateMarkdown.enhance(root);
+    }
+});
+</script>
 <?php endif; ?>

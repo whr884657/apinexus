@@ -18,6 +18,24 @@ function vs_e($value)
 }
 
 /**
+ * 全站控制台品牌信息（系统级，主题/后台不可改）
+ *
+ * @return void
+ */
+function vs_console_brand_script()
+{
+    if (!class_exists('ConsoleBrand', false)) {
+        $file = dirname(__FILE__) . '/ConsoleBrand.php';
+        if (is_file($file)) {
+            require_once $file;
+        }
+    }
+    if (class_exists('ConsoleBrand', false)) {
+        ConsoleBrand::emit();
+    }
+}
+
+/**
  * 公开 API 业务错误 JSON
  *
  * 传输层 HTTP 固定 200，避免与网关/浏览器常见 401/403/503 混淆。
@@ -1825,6 +1843,7 @@ function vs_render_foot(array $jsFiles = array(), array $extraJsHrefs = array(),
             echo '<script src="' . vs_e($href) . '" defer></script>' . "\n";
         }
     }
+    vs_console_brand_script();
     echo '</body></html>';
 }
 
@@ -2114,7 +2133,9 @@ function vs_render_404_page()
     echo '</ul></div>' . "\n";
     echo '<div class="vs-error-page__actions">' . "\n";
     echo '<a href="' . vs_e($base) . '/" class="vs-btn vs-btn--primary">返回首页</a>' . "\n";
-    echo '</div></main></body></html>';
+    echo '</div></main>' . "\n";
+    vs_console_brand_script();
+    echo '</body></html>';
     exit;
 }
 

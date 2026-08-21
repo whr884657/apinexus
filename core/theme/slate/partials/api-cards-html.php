@@ -29,6 +29,13 @@ foreach ($apis as $api):
     $detailUrl = !empty($api['detail_url'])
         ? (string) $api['detail_url']
         : ($apiId > 0 ? vs_api_detail_url($apiId) : ($vsBase . '/apis'));
+    $billing = trim((string) (isset($api['billing_label']) ? $api['billing_label'] : ''));
+    if ($billing === '') {
+        $charge = !empty($api['charge']);
+        $points = isset($api['points']) ? (float) $api['points'] : (isset($api['price']) ? (float) $api['price'] : 0);
+        $billing = ($charge && $points > 0) ? ($points . ' 积分') : '免费';
+    }
+    $badgePaid = ($billing !== '免费');
     ?>
 <article class="st-api-card" data-category="<?php echo vs_e($cat); ?>" data-name="<?php echo vs_e($nameKey); ?>" data-desc="<?php echo vs_e($descKey); ?>">
     <a class="st-api-card__link" href="<?php echo vs_e($detailUrl); ?>">
@@ -38,7 +45,7 @@ foreach ($apis as $api):
                 <span class="st-api-card__method st-api-card__method--<?php echo vs_e(strtolower(trim((string) $m))); ?>"><?php echo vs_e(strtoupper(trim((string) $m))); ?></span>
                 <?php endforeach; ?>
             </div>
-            <span class="st-api-card__badge">免费</span>
+            <span class="st-api-card__badge<?php echo $badgePaid ? ' st-api-card__badge--paid' : ''; ?>"><?php echo vs_e($billing); ?></span>
         </div>
         <h3 class="st-api-card__title"><?php echo vs_e($name); ?></h3>
         <code class="st-api-card__endpoint"><?php echo $endpoint !== '' ? vs_e($endpoint) : '&nbsp;'; ?></code>

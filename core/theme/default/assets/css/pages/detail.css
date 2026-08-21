@@ -81,19 +81,38 @@ body.vs-body.feer-front .main-wrapper.container.detail-page,
     min-width: 0;
 }
 
-/* 标题行「问问豆包」分栏胶囊（前台主题例外允许胶囊形；紧凑尺寸） */
-.detail-ai-split {
-    position: relative;
-    flex: 0 0 auto;
+/* 标题行：复制整页 Markdown（已移除问问豆包） */
+.detail-md-copy {
     display: inline-flex;
-    align-items: stretch;
-    max-width: 100%;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
     height: 30px;
+    padding: 0 12px;
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 999px;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    color: #1f2937;
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
     z-index: 40;
+}
+.detail-md-copy:hover {
+    border-color: #cbd5e1;
+    color: #111827;
+}
+.detail-md-copy__icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* 兼容旧类名（若残留） */
+.detail-ai-split {
+    display: none !important;
 }
 
 .detail-ai-split__main,

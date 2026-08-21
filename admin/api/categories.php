@@ -303,13 +303,9 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
                         <option value="50">50</option>
                     </select>
                 </label>
-                <div class="vs-api-pager__navs" id="apiCatPagerNav">
-                    <button type="button" class="vs-api-pager__nav" id="apiCatPrevBtn" aria-label="上一页">上一页</button>
-                    <div class="vs-api-pager__nums" id="apiCatPagerNums" role="navigation" aria-label="页码"></div>
-                    <button type="button" class="vs-api-pager__nav" id="apiCatNextBtn" aria-label="下一页">下一页</button>
-                </div>
+                <div class="vs-api-pager__navs" id="apiCatPagerNav"></div>
             </div>
-            <p class="vs-api-list-stats" id="apiCatStats">共 <?php echo (int) count($categories); ?> 条</p>
+            <div class="vs-api-list-total" id="apiCatStats">共 <?php echo (int) count($categories); ?> 条</div>
         </div>
     <?php endif; ?>
 </div>

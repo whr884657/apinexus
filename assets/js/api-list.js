@@ -22,10 +22,8 @@
     var pageSizeEl = document.getElementById('apiListPageSize');
     var footerEl = document.getElementById('apiListFooter');
     var pagerEl = document.getElementById('apiListPager');
-    var pagerNumsEl = document.getElementById('apiListPagerNums');
+    var pagerNav = document.getElementById('apiListPagerNav');
     var statsEl = document.getElementById('apiListStats');
-    var prevBtn = document.getElementById('apiListPrevBtn');
-    var nextBtn = document.getElementById('apiListNextBtn');
     var currentPage = 1;
     var openAddBtn = document.getElementById('apiListOpenAddBtn');
     var formOverlay = document.getElementById('apiListFormOverlay');
@@ -1320,28 +1318,17 @@
         page.setAttribute('data-stats-pending', String(pending));
     }
 
-    function renderPagerNums(totalPages) {
-        if (!pagerNumsEl) {
+    function renderPagerNav(totalPages, matchedLen) {
+        if (!pagerNav) {
             return;
         }
-        pagerNumsEl.innerHTML = '';
-        var maxShow = 7;
-        var start = 1;
-        var end = totalPages;
-        if (totalPages > maxShow) {
-            start = Math.max(1, currentPage - 3);
-            end = Math.min(totalPages, start + maxShow - 1);
-            start = Math.max(1, end - maxShow + 1);
-        }
-        var i;
-        for (i = start; i <= end; i += 1) {
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'vs-api-pager__num' + (i === currentPage ? ' is-active' : '');
-            btn.textContent = String(i);
-            btn.setAttribute('data-page', String(i));
-            pagerNumsEl.appendChild(btn);
-        }
+        var canPrev = currentPage > 1;
+        var canNext = matchedLen > 0 && currentPage < totalPages;
+        pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"'
+            + (canPrev ? '' : ' disabled') + '>上一页</button>'
+            + '<span class="vs-api-pager__info">' + currentPage + '</span>'
+            + '<button type="button" class="vs-api-pager__nav" data-p="1"'
+            + (canNext ? '' : ' disabled') + '>下一页</button>';
     }
 
     function applyListView() {
@@ -1387,13 +1374,7 @@
         if (pagerEl) {
             pagerEl.hidden = matched.length === 0;
         }
-        renderPagerNums(totalPages);
-        if (prevBtn) {
-            prevBtn.disabled = currentPage <= 1;
-        }
-        if (nextBtn) {
-            nextBtn.disabled = currentPage >= totalPages || matched.length === 0;
-        }
+        renderPagerNav(totalPages, matched.length);
         refreshEmptyState();
     }
 
@@ -3187,34 +3168,23 @@
         });
     }
 
-    if (prevBtn) {
-        prevBtn.addEventListener('click', function () {
-            if (currentPage > 1) {
+    if (pagerNav) {
+        pagerNav.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-p]');
+            if (!btn || btn.disabled) {
+                return;
+            }
+            var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
+            var size = getPageSize();
+            var matched = matchedRows();
+            var totalPages = Math.max(1, Math.ceil(matched.length / size) || 1);
+            if (delta > 0 && currentPage < totalPages) {
+                currentPage += 1;
+                applyListView();
+            } else if (delta < 0 && currentPage > 1) {
                 currentPage -= 1;
                 applyListView();
             }
-        });
-    }
-
-    if (nextBtn) {
-        nextBtn.addEventListener('click', function () {
-            currentPage += 1;
-            applyListView();
-        });
-    }
-
-    if (pagerNumsEl) {
-        pagerNumsEl.addEventListener('click', function (e) {
-            var btn = e.target.closest('.vs-api-pager__num');
-            if (!btn) {
-                return;
-            }
-            var p = parseInt(btn.getAttribute('data-page'), 10);
-            if (!p || p === currentPage) {
-                return;
-            }
-            currentPage = p;
-            applyListView();
         });
     }
 

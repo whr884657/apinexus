@@ -176,6 +176,7 @@ function vs_auth_foot($characterOptionsJs = '')
     if (function_exists('vs_captcha_js')) {
         vs_captcha_js(null);
     }
+    vs_console_brand_script();
     echo '</body></html>';
 }
 

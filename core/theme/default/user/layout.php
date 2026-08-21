@@ -139,5 +139,6 @@ function vs_theme_user_layout_end(array $extraScripts = array())
             echo '<script src="' . vs_e($pageJs) . '" defer></script>' . "\n";
         }
     }
+    vs_console_brand_script();
     echo '</body></html>';
 }

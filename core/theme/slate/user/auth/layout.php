@@ -42,14 +42,6 @@ function vs_theme_auth_head($pageTitle)
 }
 
 /**
- * 认证页居中 shell（无卡片）
- *
- * @param string $headTitle
- * @param string $headSub
- * @return void
- */
-
-/**
  * 主题二密码可见切换（眼睛图标，与默认主题同款）
  *
  * @return string
@@ -66,6 +58,14 @@ function vs_slate_pw_toggle_html()
         . '</svg>'
         . '</button>';
 }
+
+/**
+ * 认证页居中 shell（无卡片）
+ *
+ * @param string $headTitle
+ * @param string $headSub
+ * @return void
+ */
 function vs_slate_auth_shell_start($headTitle, $headSub = '')
 {
     echo '<div class="st-auth">' . "\n";
@@ -107,5 +107,6 @@ function vs_theme_auth_foot($inlineJs = '')
     if (function_exists('vs_captcha_js')) {
         vs_captcha_js(null);
     }
+    vs_console_brand_script();
     echo '</body></html>';
 }

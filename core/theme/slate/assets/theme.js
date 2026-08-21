@@ -273,6 +273,21 @@
         });
     }
 
+    function billingBadge(api) {
+        var label = String(api.billing_label || '').trim();
+        if (!label) {
+            var charge = parseInt(api.charge, 10) === 1;
+            var points = parseFloat(api.points != null ? api.points : api.price) || 0;
+            if (charge && points > 0) {
+                label = points + ' 积分';
+            } else {
+                label = '免费';
+            }
+        }
+        var paid = label !== '免费' && label.toLowerCase() !== 'free';
+        return '<span class="st-api-card__badge' + (paid ? ' st-api-card__badge--paid' : '') + '">' + escapeHtml(label) + '</span>';
+    }
+
     function buildApiCardHtml(api) {
         var methods = api.methods && api.methods.length ? api.methods : ['GET'];
         var methodHtml = methods.slice(0, 2).map(function (m) {
@@ -296,7 +311,7 @@
             '<a class="st-api-card__link" href="' + escapeHtml(detailUrl) + '">' +
             '<div class="st-api-card__head">' +
             '<div class="st-api-card__methods">' + methodHtml + '</div>' +
-            '<span class="st-api-card__badge">免费</span></div>' +
+            billingBadge(api) + '</div>' +
             '<h3 class="st-api-card__title">' + escapeHtml(api.name || '') + '</h3>' +
             '<code class="st-api-card__endpoint">' + (endpoint ? escapeHtml(endpoint) : '&nbsp;') + '</code>' +
             '</a></article>';
@@ -479,6 +494,27 @@
                 applyFilter();
             });
         }
+        var resetBtn = document.getElementById('stApisResetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function () {
+                currentCat = 'all';
+                currentPage = 1;
+                if (apisSearch) {
+                    apisSearch.value = '';
+                }
+                var clearBtn = document.getElementById('stApisSearchClear');
+                if (clearBtn) {
+                    clearBtn.hidden = true;
+                }
+                var catBar = document.getElementById('stApisCatBar');
+                if (catBar) {
+                    catBar.querySelectorAll('.st-cat-tag').forEach(function (tag) {
+                        tag.classList.toggle('is-on', tag.getAttribute('data-cat') === 'all');
+                    });
+                }
+                applyFilter();
+            });
+        }
 
         if (window.VS && typeof VS.setLoading === 'function') {
             VS.setLoading(grid, '正在加载接口');
@@ -503,6 +539,66 @@
         });
     }
 
+    function initHomePlayground() {
+        var select = document.getElementById('stHomePlaySelect');
+        var goBtn = document.getElementById('stHomePlayGo');
+        if (!select || !goBtn) {
+            return;
+        }
+        var base = (window.VS_BASE_URL || '').replace(/\/$/, '');
+
+        function fill(list) {
+            select.innerHTML = '';
+            if (!list.length) {
+                select.innerHTML = '<option value="">暂无可用接口</option>';
+                goBtn.disabled = true;
+                return;
+            }
+            select.appendChild(new Option('请选择接口…', ''));
+            list.slice(0, 80).forEach(function (api) {
+                var id = String(api.id || '');
+                if (!id) return;
+                var name = String(api.name || ('接口 #' + id));
+                select.appendChild(new Option(name, id));
+            });
+            goBtn.disabled = true;
+        }
+
+        select.addEventListener('change', function () {
+            goBtn.disabled = !select.value;
+        });
+        goBtn.addEventListener('click', function () {
+            var id = select.value;
+            if (!id) return;
+            window.location.href = base + '/detail/' + id + '#playground';
+        });
+
+        function fromPayload() {
+            var payload = window.stApiPayload || {};
+            var list = Array.isArray(payload.apiData) ? payload.apiData : [];
+            if (list.length) {
+                fill(list);
+                return true;
+            }
+            return false;
+        }
+
+        if (fromPayload()) {
+            return;
+        }
+        if (window.VS && typeof VS.fetchFrontCatalog === 'function') {
+            VS.fetchFrontCatalog({ shuffle: false }).then(function (data) {
+                window.stApiPayload = {
+                    apiData: Array.isArray(data.apiData) ? data.apiData : [],
+                    categoryNames: data.categoryNames || {}
+                };
+                fromPayload();
+            }).catch(function () {
+                select.innerHTML = '<option value="">目录加载失败</option>';
+            });
+        }
+    }
+
     var home = document.getElementById('stHome');
     if (home) {
         var nums = home.querySelectorAll('.st-stat-num');
@@ -510,6 +606,7 @@
             animateNum(el, 0, 600 + i * 120);
         });
         initHomeApiList();
+        initHomePlayground();
         return;
     }
 

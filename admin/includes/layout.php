@@ -328,6 +328,7 @@ function vs_admin_layout_end(array $extraScripts = array())
         }
         echo '<script src="' . vs_e($vsBase) . '/assets/js/' . vs_e($js) . '?v=' . VS_VERSION . '"></script>' . "\n";
     }
+    vs_console_brand_script();
     echo '</body></html>';
 }
 

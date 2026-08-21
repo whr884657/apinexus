@@ -1,5 +1,7 @@
 /**
- * 接口详情页：复制 / 参数表JSON切换 / Markdown / 在线测试 / JSON 高亮
+ * Slate 主题 · 水平 Tab 详情页脚本（与默认主题共用 DOM id：apiDetailPage、
+ * detailPlayground / pg*、detailQuickstart / detailQs*、detailFeedback* 等）
+ * 职责：复制 / 参数表JSON切换 / Markdown / 在线测试 / JSON 高亮
  */
 (function () {
     'use strict';
@@ -132,7 +134,9 @@
 
     /* ---- Markdown 代码块复制 / 高亮 ---- */
     function enhanceMarkdown() {
-        if (window.VsMarkdown && typeof window.VsMarkdown.enhance === 'function') {
+        if (window.SlateMarkdown && typeof window.SlateMarkdown.enhance === 'function') {
+            window.SlateMarkdown.enhance(page);
+        } else if (window.VsMarkdown && typeof window.VsMarkdown.enhance === 'function') {
             window.VsMarkdown.enhance(page);
         } else if (window.VsSyntax && typeof window.VsSyntax.highlightAll === 'function') {
             window.VsSyntax.highlightAll(page);

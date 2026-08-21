@@ -70,5 +70,6 @@ function vs_theme_auth_foot($inlineJs = '')
     if (function_exists('vs_captcha_js')) {
         vs_captcha_js(null);
     }
+    vs_console_brand_script();
     echo '</body></html>';
 }
