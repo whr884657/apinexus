@@ -1,10 +1,10 @@
 {
-    "version": "13.26.24",
-    "title": "ApiNexus 13.26.24",
-    "release_date": "2026-08-23",
+    "version": "13.26.25",
+    "title": "ApiNexus 13.26.25",
+    "release_date": "2026-08-24",
     "db_changes": false,
     "changes": [
-        "修复主题一、主题二、管理员登录页「验证码登录」切换按钮点击错位（对齐主题三：切换行上移至验证码上方，改用 button）",
-        "不改动极验/本地验证码挂载与 captcha.js 逻辑"
+        "恢复主题一、主题二、管理员登录页 13.26.23 布局（验证码条在切换行上方）；仅用 CSS z-index + overflow 修复「验证码登录」点击错位",
+        "撤销 13.26.24 的 DOM 换位与 button 样式；不改动极验/本地验证码挂载与 captcha.js"
     ]
 }

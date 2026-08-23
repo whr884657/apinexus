@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.24-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.25-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -42,7 +42,7 @@
 | **GitHub** | [whr884657/apinexus](https://github.com/whr884657/apinexus) | 同步仓库 |
 | **发行版下载** | [Gitee Releases](https://gitee.com/xunjinlu/apinexus/releases) | 完整安装包 |
 
-压缩包命名：`apinexus{版本号}.zip`（如 `apinexus13.26.24.zip`）。完整版本历史见 **[更新记录.md](更新记录.md)**。
+压缩包命名：`apinexus{版本号}.zip`（如 `apinexus13.26.25.zip`）。完整版本历史见 **[更新记录.md](更新记录.md)**。
 
 ---
 
@@ -156,9 +156,9 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.24（2026-08-23）
+### v13.26.25（2026-08-24）
 
-- **修复：** 主题一 / 主题二 / 管理员登录页「验证码登录」切换按钮点击错位
+- **修复：** 主题一 / 主题二 / 管理员登录页「验证码登录」点击错位（恢复 13.26.23 UI，纯 CSS 修复）
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

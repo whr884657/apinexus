@@ -302,7 +302,7 @@ body {
     justify-content: space-between;
     margin-bottom: 20px;
     position: relative;
-    z-index: 3;
+    z-index: 2;
 }
 
 .row .remember {
@@ -320,25 +320,14 @@ body {
     cursor: pointer;
 }
 
-.row a,
-.auth-mode-toggle {
+.row a {
     font-size: 14px;
     font-weight: 500;
     color: #111;
     text-decoration: none;
-    background: none;
-    border: 0;
-    padding: 6px 0;
-    margin: 0;
-    font-family: inherit;
-    line-height: 1.4;
-    cursor: pointer;
-    position: relative;
-    z-index: 1;
 }
 
-.row a:hover,
-.auth-mode-toggle:hover {
+.row a:hover {
     text-decoration: underline;
 }
 
@@ -624,7 +613,8 @@ body {
 
 .vs-captcha-field--gt {
     width: 100%;
-    overflow: visible;
+    overflow: hidden;
+    isolation: isolate;
 }
 
 /* 仅撑满挂载条外层；禁止 width:100% 落到 .geetest_btn/.geetest_box（会拉爆弹层滑块） */

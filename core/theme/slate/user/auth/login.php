@@ -60,11 +60,6 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
         </div>
     </div>
 
-    <div class="st-auth__row">
-        <button type="button" class="st-auth__mode-toggle" id="toggleLoginMode">验证码登录</button>
-        <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
-    </div>
-
     <?php vs_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
 
     <div id="modeCodeCode" data-mode-panel="code" hidden>
@@ -74,6 +69,11 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
                 <button type="button" class="st-auth__code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
             </div>
         </div>
+    </div>
+
+    <div class="st-auth__row">
+        <a href="#" id="toggleLoginMode" role="button">验证码登录</a>
+        <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
     </div>
     <button type="submit" class="st-auth__submit" id="loginBtn">登 录</button>
 

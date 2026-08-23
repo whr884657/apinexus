@@ -11,7 +11,8 @@
 
 .vs-captcha-field--gt {
     width: 100%;
-    overflow: visible;
+    overflow: hidden;
+    isolation: isolate;
 }
 
 /* 仅撑满挂载条外层；禁止 width:100% 落到 .geetest_btn/.geetest_box（会拉爆弹层滑块） */
