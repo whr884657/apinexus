@@ -71,6 +71,11 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                     </div>
                 </div>
 
+                <div class="row">
+                    <button type="button" class="auth-mode-toggle" id="toggleLoginMode">验证码登录</button>
+                    <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
+                </div>
+
                 <?php vs_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
 
                 <div id="modeCodeCode" data-mode-panel="code" hidden>
@@ -80,11 +85,6 @@ ThemeManager::renderThemeAuthHead($pageTitle);
                             <button type="button" class="code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
                         </div>
                     </div>
-                </div>
-
-                <div class="row">
-                    <a href="#" id="toggleLoginMode" role="button">验证码登录</a>
-                    <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
                 </div>
 
                 <?php echo vs_auth_submit_btn('登 录', 'loginBtn', 'login-btn'); ?>

@@ -301,6 +301,8 @@ body {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
+    position: relative;
+    z-index: 3;
 }
 
 .row .remember {
@@ -318,14 +320,25 @@ body {
     cursor: pointer;
 }
 
-.row a {
+.row a,
+.auth-mode-toggle {
     font-size: 14px;
     font-weight: 500;
     color: #111;
     text-decoration: none;
+    background: none;
+    border: 0;
+    padding: 6px 0;
+    margin: 0;
+    font-family: inherit;
+    line-height: 1.4;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
 }
 
-.row a:hover {
+.row a:hover,
+.auth-mode-toggle:hover {
     text-decoration: underline;
 }
 

@@ -253,18 +253,35 @@
     font-size: 13px;
     color: var(--st-auth-fg2);
     min-width: 0;
+    position: relative;
+    z-index: 3;
 }
 
 .st-auth__row label {
     min-width: 0;
 }
 
-.st-auth__row a {
+.st-auth__row a,
+.st-auth__mode-toggle {
     color: var(--st-auth-accent);
     text-decoration: none;
     font-weight: 500;
     white-space: nowrap;
     flex-shrink: 0;
+    background: none;
+    border: 0;
+    padding: 6px 0;
+    margin: 0;
+    font: inherit;
+    line-height: 1.4;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+}
+
+.st-auth__row a:hover,
+.st-auth__mode-toggle:hover {
+    text-decoration: underline;
 }
 
 .st-auth__submit {
