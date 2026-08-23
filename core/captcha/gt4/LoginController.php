@@ -20,6 +20,7 @@ class Geetest4Login
     private static $allowedHosts = array(
         'gcaptcha4.geetest.com',
         'gcaptcha4.geevisit.com',
+        'gcaptcha4.gsensebot.com',
     );
 
     /**

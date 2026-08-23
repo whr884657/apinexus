@@ -1,5 +1,5 @@
 /**
- * 主题三 · 认证页（奶油底 / 珊瑚橙 / 居中白卡）
+ * 主题三 · 认证页（奶油底 / 珊瑚橙 / 居中表单无背景卡）
  * 原创 th3-auth，禁止 st-* / 左右分栏壳。
  */
 :root {
@@ -66,17 +66,17 @@
   z-index: 1;
   width: 100%;
   max-width: 420px;
-  padding: 2rem 1.75rem 1.75rem;
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--th3-auth-card) 88%, transparent);
-  border: 1px solid var(--th3-auth-border);
-  box-shadow: var(--th3-auth-shadow);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .th3-auth__card.glass {
-  background: color-mix(in srgb, var(--th3-auth-card) 82%, transparent);
+  background: transparent;
 }
 
 .th3-auth__eyebrow {
@@ -255,16 +255,29 @@
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  margin: 0.35rem 0 1rem;
+  margin: 0.15rem 0 0.85rem;
   font-size: 0.875rem;
+  position: relative;
+  z-index: 3;
 }
 
-.th3-auth__row a {
+.th3-auth__row a,
+.th3-auth__mode-toggle {
   color: var(--th3-auth-fg2);
   text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 6px 0;
+  margin: 0;
+  font: inherit;
+  line-height: 1.4;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
 }
 
-.th3-auth__row a:hover {
+.th3-auth__row a:hover,
+.th3-auth__mode-toggle:hover {
   color: var(--th3-auth-accent);
 }
 

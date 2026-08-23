@@ -325,7 +325,7 @@ class Captcha
             'captchaId' => '',
             'register'  => '',
             'image'     => '',
-            'product'   => 'float',
+            'product'   => 'popup',
             'assetBase' => $base,
         );
         if (!$enabled) {
@@ -338,9 +338,11 @@ class Captcha
         if ($mode === self::MODE_GT3) {
             $out['captchaId'] = self::gt3Id();
             $out['register'] = $base . '/core/captcha/register.php?scene=' . rawurlencode((string) $scene);
+            $out['product'] = 'popup';
             return $out;
         }
         $out['captchaId'] = self::gt4Id();
+        $out['product'] = 'popup';
         return $out;
     }
 

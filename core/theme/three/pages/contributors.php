@@ -7,7 +7,7 @@ if (!defined('VS_THEME_RENDER')) {
 }
 
 $vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
-$authUrl = isset($authUrl) ? (string) $authUrl : ($vsBase . '/user/register');
+$authUrl = isset($authUrl) ? (string) $authUrl : ($vsBase . '/user/login');
 $contributors = class_exists('FrontendContributor') ? FrontendContributor::listForTheme() : array();
 if (!is_array($contributors)) {
     $contributors = array();
@@ -49,7 +49,7 @@ if (!is_array($contributors)) {
         <h2 class="font-display font-semibold text-lg m-0 mb-1">想加入贡献者？</h2>
         <p class="text-fg-2 text-sm m-0">注册开发者并发布接口后，即可出现在本页。</p>
       </div>
-      <a class="btn-primary" href="<?php echo vs_e($authUrl); ?>">立即注册</a>
+      <a class="btn-primary" href="<?php echo vs_e($authUrl); ?>">立即登录</a>
     </div>
   </div>
 </section>

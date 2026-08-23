@@ -7,6 +7,9 @@ if (!defined('VS_THEME_RENDER')) {
 }
 
 $siteName = SiteContext::siteName();
+$navName = SiteContext::navName();
+$siteLogo = SiteContext::siteLogo();
+$hasSiteLogo = trim((string) $siteLogo) !== '';
 $siteDesc = SiteContext::siteDescription();
 $vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
 $userLoggedIn = !empty($userLoggedIn);
@@ -33,6 +36,52 @@ if ($homePreviewLimit < 4) {
 if ($homePreviewLimit > 24) {
     $homePreviewLimit = 24;
 }
+
+$rechargePackages = PayConfig::packages();
+$rechargeFeatured = -1;
+foreach ($rechargePackages as $i => $pkg) {
+    if (!empty($pkg['hot'])) {
+        $rechargeFeatured = (int) $i;
+        break;
+    }
+}
+if ($rechargeFeatured < 0 && count($rechargePackages) >= 2) {
+    $rechargeFeatured = 1;
+}
+
+require_once dirname(__DIR__) . '/lib/bootstrap.php';
+
+$showAnnounce = ThemeManager::themeSettingBool('show_home_announce', true);
+$announceList = ($showAnnounce && class_exists('FrontendAnnouncement')) ? FrontendAnnouncement::listForTheme() : array();
+$announcePopup = ($showAnnounce && class_exists('FrontendAnnouncement')) ? FrontendAnnouncement::listPopups() : array();
+$announceMarquee = '欢迎使用 ' . $siteName . '，当前版本 v' . VS_VERSION . ' 已上线！';
+$announceTitle = '网站公告';
+$announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p><p>系统版本 v' . vs_e(VS_VERSION) . ' 已上线，欢迎体验。</p>';
+if (count($announceList) > 0) {
+    $first = $announceList[0];
+    $announceMarquee = isset($first['preview']) && $first['preview'] !== '' ? $first['preview'] : $first['title'];
+    $announceTitle = $first['title'];
+    $rawBody = isset($first['body']) ? (string) $first['body'] : '';
+    $announceHtml = $rawBody !== '' ? th3_md_render($rawBody) : (isset($first['body_html']) ? (string) $first['body_html'] : $announceHtml);
+}
+$announcePopupKey = '';
+if (count($announcePopup) > 0) {
+    $pop = $announcePopup[0];
+    $announceTitle = $pop['title'];
+    $rawBody = isset($pop['body']) ? (string) $pop['body'] : '';
+    $announceHtml = $rawBody !== '' ? th3_md_render($rawBody) : (isset($pop['body_html']) ? (string) $pop['body_html'] : $announceHtml);
+    if (isset($pop['preview']) && $pop['preview'] !== '') {
+        $announceMarquee = $pop['preview'];
+    }
+    $ids = array();
+    foreach ($announcePopup as $p) {
+        if (isset($p['id'])) {
+            $ids[] = (int) $p['id'];
+        }
+    }
+    sort($ids);
+    $announcePopupKey = implode('-', $ids);
+}
 ?>
 <script>
 window.TH3_HOME = {
@@ -46,7 +95,42 @@ window.TH3_HOME = {
 
 <p class="vs-seo-fallback-desc"><?php echo vs_e($siteDesc !== '' ? $siteDesc : ($siteName . ' API 聚合平台')); ?></p>
 
-<section class="relative pt-28 sm:pt-32 lg:pt-40 pb-14 sm:pb-20 overflow-hidden">
+<?php if ($showAnnounce): ?>
+<div class="th3-announce-bundle">
+<section class="th3-announce-wrap th3-announce-wrap--pending" id="homeAnnouncementWrap">
+  <button type="button" class="th3-announce-bar" id="homeAnnouncementBtn" aria-label="查看公告详情">
+    <span class="th3-announce__label">公告</span>
+    <span class="th3-announce__marquee"><span class="th3-announce__track"><?php echo vs_e($announceMarquee); ?></span></span>
+    <span class="th3-announce__action">点击查看</span>
+  </button>
+</section>
+<script type="application/json" id="feer-announcement-client-data"><?php echo json_encode(array(
+    'home' => array(
+        'title'     => $announceTitle,
+        'html'      => $announceHtml,
+        'autopopup' => count($announcePopup) > 0,
+        'popup_key' => $announcePopupKey,
+    ),
+), JSON_UNESCAPED_UNICODE); ?></script>
+<div class="th3-announce-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true" inert>
+  <div class="th3-announce-modal__mask" data-close-announcement="1"></div>
+  <div class="th3-announce-modal__card" role="dialog" aria-modal="true" aria-labelledby="th3AnnounceModalTitle">
+    <div class="th3-announce-modal__head">
+      <h3 class="th3-announce-modal__title" id="th3AnnounceModalTitle"><?php echo vs_e($announceTitle); ?></h3>
+      <button type="button" class="th3-announce-modal__close" data-close-announcement="1">关闭</button>
+    </div>
+    <div class="th3-announce-modal__body markdown-body vs-md-body" data-announcement-body="home"></div>
+    <div class="th3-announce-modal__footer">
+      <button type="button" class="th3-announce-btn th3-announce-btn--ghost" data-announcement-dismiss="1">不再提示</button>
+      <button type="button" class="th3-announce-btn th3-announce-btn--primary" data-close-announcement="1">我知道了</button>
+    </div>
+  </div>
+</div>
+<link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
+</div>
+<?php endif; ?>
+
+<section class="th3-hero-section relative pt-28 sm:pt-32 lg:pt-40 pb-14 sm:pb-20 overflow-hidden<?php echo $showAnnounce ? ' th3-hero--with-announce' : ''; ?>">
   <div class="hero-bg">
     <div class="hero-grid"></div>
     <div class="hero-blob blob-1"></div>
@@ -73,9 +157,9 @@ window.TH3_HOME = {
             浏览 API 市场
             <i data-lucide="arrow-up-right" style="width:16px;height:16px;"></i>
           </a>
-          <a href="#playground" class="btn-ghost justify-center lg:justify-start">
+          <a href="<?php echo vs_e($vsBase); ?>/apis" class="btn-ghost justify-center lg:justify-start">
             <i data-lucide="terminal" style="width:16px;height:16px;"></i>
-            立即试调用
+            浏览全部接口
           </a>
         </div>
         <div class="hero-trust reveal reveal-delay-4 mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -95,14 +179,20 @@ window.TH3_HOME = {
       </div>
 
       <div class="reveal reveal-delay-2 relative order-2 mt-2 lg:mt-0 hero-visual">
-        <div class="orbit-wrap" aria-hidden="true">
+        <div class="orbit-wrap<?php echo $hasSiteLogo ? ' orbit-wrap--logo' : ''; ?>" aria-hidden="true">
           <div class="orbit-shadow"></div>
           <div class="orbit-stage">
             <div class="orbit-ring r1" id="ring1"></div>
             <div class="orbit-ring r2" id="ring2"></div>
             <div class="orbit-ring r3" id="ring3"></div>
           </div>
-          <div class="orbit-core"><?php echo vs_e($siteName); ?></div>
+          <div class="orbit-core<?php echo $hasSiteLogo ? ' orbit-core--logo' : ''; ?>">
+            <?php if ($hasSiteLogo): ?>
+              <?php vs_render_site_logo('orbit-core__logo'); ?>
+            <?php else: ?>
+              <?php echo vs_e($navName); ?>
+            <?php endif; ?>
+          </div>
         </div>
       </div>
     </div>
@@ -188,19 +278,16 @@ window.TH3_HOME = {
           海量接口，<span class="gradient-text-2">按需接入</span>
         </h2>
       </div>
-      <div class="reveal reveal-delay-1 flex items-center gap-3 w-full lg:w-auto">
-        <div class="relative flex-1 lg:w-72 min-w-0">
-          <i data-lucide="search" style="width:16px;height:16px;position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);"></i>
-          <input id="apiSearch" class="input pl-10" type="search" enterkeyhint="search" placeholder="搜索 API…" data-ph-tpl="搜索 {n} 个 API…" autocomplete="off">
+      <div class="reveal reveal-delay-1 w-full lg:w-auto">
+        <div class="th3-api-search lg:w-72">
+          <span class="th3-api-search__icon" aria-hidden="true"><i data-lucide="search"></i></span>
+          <input id="apiSearch" class="input" type="search" enterkeyhint="search" placeholder="搜索 API…" data-ph-tpl="搜索 {n} 个 API…" autocomplete="off">
         </div>
-        <button class="btn-ghost shrink-0" style="padding:12px;" type="button" aria-label="筛选">
-          <i data-lucide="sliders-horizontal" style="width:16px;height:16px;"></i>
-        </button>
       </div>
     </div>
 
     
-    <div class="reveal cat-scroll -mx-4 px-4 sm:-mx-5 sm:px-5 lg:mx-0 lg:px-0" id="th3CatScroll" role="tablist" aria-label="接口分类">
+    <div class="reveal cat-scroll" id="th3CatScroll" role="tablist" aria-label="接口分类">
       <button class="cat-tab active" data-cat="all" type="button">全部</button>
       <?php foreach ($catTags as $tag): ?>
         <?php
@@ -219,96 +306,6 @@ window.TH3_HOME = {
         查看全部 <span id="th3ApiTotalLabel"><?php echo (int) $apiCount; ?></span> 个 API
         <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
       </a>
-    </div>
-  </div>
-</section>
-
-<!-- ============ 实时演示 ============ -->
-<section id="playground" class="py-16 sm:py-20 lg:py-28 bg-bg-2">
-  <div class="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8" style="width:100%;max-width:80rem;">
-    <div class="reveal text-center mb-10 sm:mb-12">
-      <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ 在线演示</div>
-      <h2 class="font-display font-bold tracking-tight" style="font-size: clamp(1.75rem, 5vw, 3rem);">
-        先看效果，<span class="gradient-text">再决定接入</span>
-      </h2>
-      <p class="mt-4 text-fg-2 max-w-2xl mx-auto text-sm sm:text-base px-1">在网页内即时试调接口：选中 API、填入参数、查看 JSON 响应。部分接口可直接体验，需密钥的请先注册获取后再调用。</p>
-    </div>
-
-    <div class="reveal reveal-delay-1 playground-grid grid lg:grid-cols-12 gap-4 lg:gap-6 w-full">
-      <div class="lg:col-span-3 demo-panel min-w-0">
-        <div class="card rounded-2xl p-3 w-full h-full demo-select-card">
-          <div class="text-xs font-mono uppercase tracking-widest text-muted px-2 sm:px-3 py-2">选择 API</div>
-          <div class="demo-api-search-wrap">
-            <span class="demo-search-icon" aria-hidden="true"><i data-lucide="search"></i></span>
-            <input id="demoApiSearch" class="input" type="search" enterkeyhint="search" placeholder="搜索接口名称 / 路径..." autocomplete="off">
-          </div>
-          <div id="demoApiList" class="demo-api-scroll" role="listbox" aria-label="演示 API 列表"></div>
-        </div>
-      </div>
-
-      <div class="lg:col-span-4 demo-panel min-w-0">
-        <div class="card rounded-2xl p-4 sm:p-6 h-full w-full">
-          <div class="flex items-center gap-3 mb-4 sm:mb-5 min-w-0">
-            <div id="demoIconBox" class="api-icon-box shrink-0"><i data-lucide="cloud-sun"></i></div>
-            <div class="min-w-0 flex-1 overflow-hidden">
-              <div id="demoName" class="font-display font-semibold text-base sm:text-lg truncate">天气查询</div>
-              <div id="demoPath" class="font-mono text-[11px] sm:text-xs text-muted truncate">GET /v1/weather/now</div>
-            </div>
-          </div>
-          <p id="demoDesc" class="text-sm text-fg-2 mb-4 sm:mb-5 leading-relaxed break-words">查询指定城市的实时天气状况。</p>
-          <div id="demoForm" class="space-y-3 mb-4 sm:mb-5 w-full min-w-0"></div>
-          <button id="demoRun" class="btn-primary w-full justify-center" type="button">
-            <i data-lucide="play" style="width:14px;height:14px;flex-shrink:0;"></i>
-            <span>发起调用</span>
-          </button>
-          <div id="demoLoading" class="hidden mt-3">
-            <div class="loading-bar"></div>
-            <div class="text-xs text-muted mt-2 font-mono">请求中...</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="lg:col-span-5 demo-panel min-w-0">
-        <div class="card rounded-2xl overflow-hidden h-full flex flex-col w-full">
-          <div class="flex items-center justify-between gap-2 px-3 sm:px-5 py-3" style="border-bottom: 1px solid var(--border);">
-            <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-              <div class="flex gap-1.5 shrink-0">
-                <div class="w-2.5 h-2.5 rounded-full" style="background:#FF5F57;"></div>
-                <div class="w-2.5 h-2.5 rounded-full" style="background:#FEBC2E;"></div>
-                <div class="w-2.5 h-2.5 rounded-full" style="background:#28C840;"></div>
-              </div>
-              <span class="font-mono text-xs text-muted truncate">response.json</span>
-            </div>
-            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              <span id="demoStatus" class="tag">待调用</span>
-              <span id="demoLatency" class="font-mono text-xs text-muted">—</span>
-            </div>
-          </div>
-          <div class="flex-1 p-3 sm:p-5 demo-response-pane">
-            <pre id="demoResponse" class="json-block json-comment">// 选择接口并填写参数后，点击「发起调用」查看结果</pre>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="reveal mt-6 w-full min-w-0">
-      <div class="card rounded-2xl overflow-hidden w-full">
-        <div class="flex flex-col gap-3 px-3 sm:px-5 py-3" style="border-bottom: 1px solid var(--border);">
-          <div class="flex items-center gap-2">
-            <i data-lucide="code-2" style="width:16px;height:16px;color:var(--accent);flex-shrink:0;"></i>
-            <span class="text-sm font-medium">代码示例</span>
-          </div>
-          <div class="code-tabs w-full">
-            <button class="code-tab active" data-lang="curl" type="button">cURL</button>
-            <button class="code-tab" data-lang="js" type="button">JavaScript</button>
-            <button class="code-tab" data-lang="python" type="button">Python</button>
-            <button class="code-tab" data-lang="go" type="button">Go</button>
-          </div>
-        </div>
-        <div class="p-3 sm:p-5 demo-code-pane">
-          <pre id="codeBlock" class="json-block"></pre>
-        </div>
-      </div>
     </div>
   </div>
 </section>
@@ -383,59 +380,40 @@ window.TH3_HOME = {
     </div>
 
     <div class="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-      <div class="reveal price-card">
-        <div class="text-sm font-medium text-muted mb-1">体验包</div>
-        <div class="flex items-baseline gap-1 mb-1">
-          <span class="font-display font-bold text-4xl">¥10</span>
+      <?php if (count($rechargePackages) > 0): ?>
+        <?php foreach (array_slice($rechargePackages, 0, 3) as $i => $pkg): ?>
+          <?php
+            $isFeatured = ((int) $i === $rechargeFeatured);
+            $money = isset($pkg['money']) ? (string) $pkg['money'] : '0';
+            $points = isset($pkg['points']) ? (string) $pkg['points'] : '0';
+            $pkgName = isset($pkg['name']) ? (string) $pkg['name'] : '套餐';
+          ?>
+          <div class="reveal<?php echo $i > 0 ? ' reveal-delay-' . min($i, 3) : ''; ?> price-card<?php echo $isFeatured ? ' featured' : ''; ?>">
+            <div class="text-sm font-medium<?php echo $isFeatured ? ' opacity-70' : ' text-muted'; ?> mb-1"><?php echo vs_e($pkgName); ?></div>
+            <div class="flex items-baseline gap-1 mb-1">
+              <span class="font-display font-bold text-4xl">¥<?php echo vs_e($money); ?></span>
+            </div>
+            <div class="text-xs<?php echo $isFeatured ? ' opacity-70' : ' text-muted'; ?> mb-1">到账 <span style="font-weight: 600;<?php echo $isFeatured ? '' : ' color: var(--accent-2);'; ?>"><?php echo vs_e($points); ?></span> 积分</div>
+            <div class="text-xs<?php echo $isFeatured ? ' opacity-70' : ' text-muted'; ?> price-desc">积分永久有效，用多少扣多少</div>
+            <a href="<?php echo vs_e($vsBase); ?>/user/recharge" class="<?php echo $isFeatured ? 'w-full inline-flex justify-center items-center gap-2 py-3 rounded-full font-medium price-cta' : 'btn-ghost w-full justify-center price-cta'; ?>"<?php echo $isFeatured ? ' style="background: var(--bg); color: var(--fg);"' : ''; ?>>
+              立即充值
+              <?php if ($isFeatured): ?>
+                <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+              <?php endif; ?>
+            </a>
+            <ul class="text-sm">
+              <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent<?php echo $isFeatured ? '' : '-2'; ?>);"></i>积分永久有效</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent<?php echo $isFeatured ? '' : '-2'; ?>);"></i>全部 API 可调用</li>
+              <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent<?php echo $isFeatured ? '' : '-2'; ?>);"></i>余额随时可查</li>
+            </ul>
+          </div>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <div class="reveal price-card md:col-span-3 text-center">
+          <p class="text-muted">充值套餐暂未配置，请前往用户中心充值页查看。</p>
+          <a href="<?php echo vs_e($vsBase); ?>/user/recharge" class="btn-primary inline-flex mt-4">前往充值</a>
         </div>
-        <div class="text-xs text-muted mb-1">到账 <span style="color: var(--accent-2); font-weight: 600;">1,000</span> 积分</div>
-        <div class="text-xs text-muted price-desc">适合个人尝鲜与调试</div>
-        <a href="<?php echo vs_e($vsBase); ?>/user/recharge" class="btn-ghost w-full justify-center price-cta">立即充值</a>
-        <ul class="text-sm">
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent-2);"></i>积分永久有效</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent-2);"></i>全部 API 可调用</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent-2);"></i>用多少扣多少</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent-2);"></i>余额随时可查</li>
-        </ul>
-      </div>
-
-      <div class="reveal reveal-delay-1 price-card featured">
-        <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-medium" style="background: var(--accent); color: white;">最受欢迎</div>
-        <div class="text-sm font-medium opacity-70 mb-1">常用包</div>
-        <div class="flex items-baseline gap-1 mb-1">
-          <span class="font-display font-bold text-4xl">¥50</span>
-        </div>
-        <div class="text-xs opacity-70 mb-1">到账 <span style="font-weight: 600;">6,000</span> 积分 · 多送 1,000</div>
-        <div class="text-xs opacity-70 price-desc">适合日常开发与小规模上线</div>
-        <a href="<?php echo vs_e($vsBase); ?>/user/recharge" class="w-full inline-flex justify-center items-center gap-2 py-3 rounded-full font-medium price-cta" style="background: var(--bg); color: var(--fg);">
-          立即充值
-          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
-        </a>
-        <ul class="text-sm">
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent);"></i>积分永久有效</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent);"></i>全部 API 可调用</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent);"></i>充值越多越划算</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent);"></i>调用明细可追溯</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent);"></i>工单优先响应</li>
-        </ul>
-      </div>
-
-      <div class="reveal reveal-delay-2 price-card">
-        <div class="text-sm font-medium text-muted mb-1">畅享包</div>
-        <div class="flex items-baseline gap-1 mb-1">
-          <span class="font-display font-bold text-4xl">¥200</span>
-        </div>
-        <div class="text-xs text-muted mb-1">到账 <span style="color: var(--accent-3); font-weight: 600;">28,000</span> 积分 · 多送 8,000</div>
-        <div class="text-xs text-muted price-desc">适合高频调用与团队使用</div>
-        <a href="<?php echo vs_e($vsBase); ?>/user/recharge" class="btn-ghost w-full justify-center price-cta">立即充值</a>
-        <ul class="text-sm">
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent-3);"></i>积分永久有效</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent-3);"></i>全部 API 可调用</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent-3);"></i>大额加赠更优惠</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent-3);"></i>专属技术支持</li>
-          <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent-3);"></i>可开具发票</li>
-        </ul>
-      </div>
+      <?php endif; ?>
     </div>
   </div>
 </section>
@@ -451,16 +429,20 @@ window.TH3_HOME = {
         </h2>
         <p class="mt-4 opacity-70 max-w-md text-sm sm:text-base">注册即送体验积分，充值积分永久有效，5 分钟完成第一次接入。</p>
         <div class="mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
-          <a href="#" class="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-full font-medium" style="background: var(--bg); color: var(--fg);">
-            创建免费账户
+          <a href="<?php echo vs_e($vsBase); ?>/user/login" class="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-full font-medium" style="background: var(--bg); color: var(--fg);">
+            立即登录
             <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
           </a>
-          <a href="#" class="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-full font-medium" style="border:1px solid color-mix(in srgb, var(--bg) 30%, transparent); color: var(--bg);">
+          <a href="<?php echo vs_e($vsBase); ?>/apis" class="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-full font-medium" style="border:1px solid color-mix(in srgb, var(--bg) 30%, transparent); color: var(--bg);">
             <i data-lucide="book-open" style="width:16px;height:16px;"></i>
-            阅读文档
+            浏览 API 市场
           </a>
         </div>
       </div>
     </div>
   </div>
 </section>
+
+<?php if ($showAnnounce): ?>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('three', 'assets/js/pages/home-announcement.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<?php endif; ?>

@@ -1,6 +1,6 @@
 <?php
 /**
- * 主题三 · 用户注册（居中单卡）
+ * 主题三 · 用户注册（居中表单）
  *
  * @var string $vsBase
  * @var string $base

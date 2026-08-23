@@ -581,6 +581,13 @@ class ThemeManager
             if ($field['type'] === 'number' && $value !== '' && !is_numeric($value)) {
                 $value = '';
             }
+            if (preg_match('/^footer_social_\d+_value$/', $key) && $value !== '') {
+                if (function_exists('mb_substr')) {
+                    $value = mb_substr($value, 0, 512, 'UTF-8');
+                } else {
+                    $value = substr($value, 0, 512);
+                }
+            }
             $out[$key] = $value;
         }
         return $out;

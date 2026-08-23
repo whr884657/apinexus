@@ -1,5 +1,5 @@
 /**
- * 主题三 · 认证页验证码（与 th3-auth 圆角卡片 / .input 风格协调）
+ * 主题三 · 认证页验证码（与 th3-auth 输入框风格协调）
  * 勿拉伸极验 logo；仅撑满挂载条外层。
  */
 .th3-auth .vs-captcha-field {
@@ -11,8 +11,11 @@
 
 .th3-auth .vs-captcha-field--gt {
   width: 100%;
-  overflow: visible;
+  overflow: hidden;
   padding-top: 2px;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
 }
 
 .th3-auth .vs-captcha-field--gt .geetest_holder,

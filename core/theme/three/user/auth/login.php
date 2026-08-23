@@ -1,6 +1,6 @@
 <?php
 /**
- * 主题三 · 用户登录（居中单卡）
+ * 主题三 · 用户登录（居中表单）
  *
  * @var string $vsBase
  * @var string $base
@@ -59,6 +59,11 @@ th3_auth_shell_start('欢迎回来', '登录后继续使用平台能力');
         </div>
     </div>
 
+    <div class="th3-auth__row">
+        <button type="button" class="th3-auth__mode-toggle" id="toggleLoginMode">验证码登录</button>
+        <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
+    </div>
+
     <?php vs_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
 
     <div id="modeCodeCode" data-mode-panel="code" hidden>
@@ -70,10 +75,6 @@ th3_auth_shell_start('欢迎回来', '登录后继续使用平台能力');
         </div>
     </div>
 
-    <div class="th3-auth__row">
-        <a href="#" id="toggleLoginMode" role="button">验证码登录</a>
-        <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
-    </div>
     <button type="submit" class="th3-auth__submit" id="loginBtn">登 录</button>
 
     <?php if (!empty($oauthProviders['qq']) || !empty($oauthProviders['gitee'])): ?>

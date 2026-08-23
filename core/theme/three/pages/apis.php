@@ -21,7 +21,7 @@ window.TH3_HOME = {
 };
 </script>
 
-<section id="market" class="th3-apis-page py-16 sm:py-20 lg:py-28" style="padding-top:6.5rem;">
+<section id="market" class="th3-apis-page py-16 sm:py-20 lg:py-28" style="padding-top:calc(3.75rem + env(safe-area-inset-top) + 2.5rem);">
   <div class="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8">
     <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 sm:mb-10">
       <div class="reveal visible">
@@ -33,16 +33,16 @@ window.TH3_HOME = {
           共 <span id="th3ApiTotalLabel"><?php echo (int) $apiCount; ?></span> 个 API 接口
         </p>
       </div>
-      <div class="reveal visible reveal-delay-1 flex items-center gap-3 w-full lg:w-auto">
-        <div class="relative flex-1 lg:w-72 min-w-0">
-          <i data-lucide="search" style="width:16px;height:16px;position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);"></i>
-          <input id="apiSearch" class="input pl-10" type="search" enterkeyhint="search"
+      <div class="reveal visible reveal-delay-1 w-full lg:w-auto">
+        <div class="th3-api-search lg:w-72">
+          <span class="th3-api-search__icon" aria-hidden="true"><i data-lucide="search"></i></span>
+          <input id="apiSearch" class="input" type="search" enterkeyhint="search"
                  placeholder="搜索 API…" data-ph-tpl="搜索 {n} 个 API…" autocomplete="off">
         </div>
       </div>
     </div>
 
-    <div class="reveal visible cat-scroll -mx-4 px-4 sm:-mx-5 sm:px-5 lg:mx-0 lg:px-0" id="th3CatScroll" role="tablist" aria-label="接口分类">
+    <div class="reveal visible cat-scroll" id="th3CatScroll" role="tablist" aria-label="接口分类">
       <button class="cat-tab active" data-cat="all" type="button">全部</button>
       <?php foreach ($catTags as $tag): ?>
         <?php

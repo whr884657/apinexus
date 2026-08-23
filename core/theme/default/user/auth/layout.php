@@ -38,10 +38,8 @@ function vs_theme_auth_head($pageTitle)
     if ($pickerCss !== '') {
         echo '<link rel="stylesheet" href="' . vs_e($pickerCss) . '">' . "\n";
     }
-    $csrf = ThemeManager::shellUrl('auth-csrf.js', $themeId);
-    if ($csrf !== '') {
-        echo '<script src="' . vs_e($csrf) . '"></script>' . "\n";
-    }
+    $base = function_exists('vs_base_url') ? rtrim(vs_base_url(), '/') : '';
+    echo '<script src="' . vs_e($base) . '/assets/js/auth-csrf.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '</head>' . "\n";
     echo '<body>' . "\n";
 }

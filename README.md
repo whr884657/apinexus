@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.22-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.23-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -42,7 +42,7 @@
 | **GitHub** | [whr884657/apinexus](https://github.com/whr884657/apinexus) | 同步仓库 |
 | **发行版下载** | [Gitee Releases](https://gitee.com/xunjinlu/apinexus/releases) | 完整安装包 |
 
-压缩包命名：`apinexus{版本号}.zip`（如 `apinexus13.26.22.zip`）。完整版本历史见 **[更新记录.md](更新记录.md)**。
+压缩包命名：`apinexus{版本号}.zip`（如 `apinexus13.26.23.zip`）。完整版本历史见 **[更新记录.md](更新记录.md)**。
 
 ---
 
@@ -156,13 +156,12 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.22（2026-08-22）
+### v13.26.23（2026-08-23）
 
-- **密钥上限可配：** `apikey_max`（默认 3，范围 1～20）；降限不伤已有密钥
-- **超时未支付自动取消：** 待支付超 3 分钟 Redis 挂单 + 请求顺带弹出
-- **极验加载修复：** 入口 JS 本地化 + CSP 补齐；见 E271
-- **积分变动双栏：** 管理后台默认「账户变动」，可切「接口调用」；见 E272
-- **主题三：** 首页与公开页/认证页按首页视觉自研（`th3-*`）；用户中心仍占位，勿生产主推
+- **修复：** 管理后台「调用密钥」保存 CSRF 失效（`apikeySettingsForm` 漏登记 AJAX，E108）
+- **极验：** CSP 补 `api.geevisit.com`；`captcha.js`/`auth-csrf.js` 全站根目录统一调度（E275）
+- **修复：** 主题二（slate）用户中心：侧栏壳层恢复、顶栏调色盘移除、青绿配色对齐前台、侧栏折叠 `user-shell.js`
+- **主题三（three）：** 首页/页脚/登录/后台设置完善；页脚社交邮箱校验与内容长度限制
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

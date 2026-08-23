@@ -88,28 +88,37 @@
 
   /* ---- theme toggle ---- */
   var rootHtml = document.documentElement;
-  var themeToggle = $('themeToggle');
+  function refreshThemeToggles(mode) {
+    document.querySelectorAll('.js-th3-theme-toggle [data-lucide], #themeToggle [data-lucide]').forEach(function (knob) {
+      knob.setAttribute('data-lucide', mode === 'dark' ? 'moon' : 'sun');
+      window.threeIconsRefresh(knob.parentElement || knob);
+    });
+  }
   function applyTheme(mode) {
-    if (mode === 'dark') rootHtml.classList.add('dark');
-    else rootHtml.classList.remove('dark');
-    try { localStorage.setItem('th3-theme', mode); } catch (e) {}
-    if (themeToggle) {
-      var knob = themeToggle.querySelector('[data-lucide]');
-      if (knob) knob.setAttribute('data-lucide', mode === 'dark' ? 'moon' : 'sun');
-      window.threeIconsRefresh(themeToggle);
-    }
+    var isDark = mode === 'dark';
+    rootHtml.classList.toggle('dark', isDark);
+    rootHtml.setAttribute('data-theme', mode);
+    rootHtml.style.colorScheme = mode;
+    try {
+      localStorage.setItem('th3-theme', mode);
+      localStorage.setItem('theme', mode);
+    } catch (e) {}
+    refreshThemeToggles(mode);
   }
   try {
     var saved = localStorage.getItem('th3-theme');
+    if (saved !== 'dark' && saved !== 'light') {
+      saved = localStorage.getItem('theme');
+    }
     if (saved === 'dark' || saved === 'light') applyTheme(saved);
     else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('dark');
     else applyTheme('light');
   } catch (e) { applyTheme('light'); }
-  if (themeToggle) {
-    themeToggle.addEventListener('click', function () {
+  document.querySelectorAll('.js-th3-theme-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
       applyTheme(rootHtml.classList.contains('dark') ? 'light' : 'dark');
     });
-  }
+  });
 
   /* ---- mobile menu ---- */
   var menuToggle = $('menuToggle');
@@ -117,9 +126,18 @@
   var menuBackdrop = $('menuBackdrop');
   function setMenuOpen(open) {
     document.body.classList.toggle('menu-open', !!open);
-    if (mobileMenu) mobileMenu.classList.toggle('open', !!open);
-    if (menuBackdrop) menuBackdrop.classList.toggle('open', !!open);
+    document.body.style.overflow = open ? 'hidden' : '';
+    if (mobileMenu) {
+      mobileMenu.classList.toggle('open', !!open);
+      mobileMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
+    if (menuBackdrop) {
+      menuBackdrop.classList.toggle('show', !!open);
+      menuBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
     if (menuToggle) {
+      menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      menuToggle.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
       var ic = menuToggle.querySelector('[data-lucide]');
       if (ic) ic.setAttribute('data-lucide', open ? 'x' : 'menu');
       window.threeIconsRefresh(menuToggle);
@@ -248,13 +266,16 @@
       return;
     }
     function chip(a, tone) {
-      var name = escapeHtml(a.name || a.path || 'api');
-      var path = escapeHtml(a.call_path || a.endpoint || a.path || '');
+      var name = escapeHtml(a.name || 'api');
+      var calls = escapeHtml(formatCallsLabel(a.calls));
       var iconUrl = (a.icon || '').trim();
       var iconHtml = iconUrl
         ? '<img class="api-icon-img" src="' + escapeHtml(iconUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer" data-ext-icon="1">'
         : '<i data-lucide="activity"></i>';
-      return '<div class="api-chip ' + tone + '">' + iconHtml + name + (path ? ' · ' + path : '') + '</div>';
+      return '<div class="api-chip ' + tone + '">' + iconHtml
+        + '<span class="api-chip-name">' + name + '</span>'
+        + '<span class="api-chip-sep">·</span>'
+        + '<span class="api-chip-calls">' + calls + '</span></div>';
     }
     var tones = ['', 's', 't'];
     var html = '';
@@ -272,6 +293,15 @@
   }
 
   /* ---- stats ---- */
+  function formatCallsLabel(n) {
+    n = Math.max(0, Number(n) || 0);
+    var pack = formatCompact(n);
+    var num = pack.decimals > 0 ? pack.v.toFixed(pack.decimals) : String(Math.round(pack.v));
+    if (pack.decimals > 0) {
+      num = num.replace(/\.0$/, '');
+    }
+    return num + pack.suffix + ' 调用';
+  }
   function formatCompact(n) {
     n = Math.max(0, Number(n) || 0);
     if (n >= 1e8) return { v: (n / 1e8), suffix: '亿', decimals: 1 };
@@ -343,8 +373,7 @@
       chips.push('<span class="tag disabled">已禁用</span>');
     } else if (maintenance) {
       chips.push('<span class="tag hot">维护中</span>');
-    }
-    if (!disabled) {
+    } else {
       var points = parseFloat(a.points != null ? a.points : a.price) || 0;
       var label = String(a.billing_label || '').trim();
       if (!label) {
@@ -373,15 +402,12 @@
     return ['', 'green', 'yellow'][i % 3];
   }
   function cardHtml(a, i) {
-    var path = a.call_path || a.endpoint || ('#' + a.id);
     var href = vsBase + '/detail/' + encodeURIComponent(a.id);
     var iconUrl = String(a.icon || '').trim();
     var iconInner = iconUrl
       ? '<img class="api-icon-img" src="' + escapeHtml(iconUrl) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">'
       : '<span class="api-icon-fallback">' + escapeHtml(String(a.name || 'API').charAt(0)) + '</span>';
-    var method = '';
-    if (a.method) method = String(a.method);
-    else if (a.methods && a.methods.length) method = String(a.methods[0]);
+    var callsLabel = formatCallsLabel(a.calls);
     var chips = cardChipsHtml(a);
     var disabled = isApiFlagOn(a.disabled);
     var maintenance = isApiFlagOn(a.maintenance);
@@ -394,11 +420,10 @@
       + '<h3>' + escapeHtml(a.name || ('接口 #' + a.id)) + '</h3>'
       + chips
       + '</div>'
-      + '<div class="api-card-path">' + escapeHtml(path) + '</div>'
       + '</div></div>'
-      + '<p class="api-card-desc">' + escapeHtml(a.desc || '') + '</p>'
+      + '<p class="api-card-desc">' + escapeHtml(a.desc || a.description || '') + '</p>'
       + '<div class="api-card-foot">'
-      + '<span class="calls">' + escapeHtml(method ? method.toUpperCase() : 'API') + '</span>'
+      + '<span class="calls">' + escapeHtml(callsLabel) + '</span>'
       + '<i data-lucide="arrow-up-right" style="width:14px;height:14px;color:var(--muted);"></i>'
       + '</div></a>';
   }
@@ -442,91 +467,11 @@
       t = setTimeout(function () {
         searchQ = String(apiSearch.value || '').trim();
         renderApiCards();
-      }, 160);
+      }, 80);
     });
   }
 
-  /* ---- demo (visual; list from catalog) ---- */
-  var demoList = $('demoApiList');
-  var demoName = $('demoName');
-  var demoPath = $('demoPath');
-  var demoDesc = $('demoDesc');
-  var demoIconBox = $('demoIconBox');
-  var demoResponse = $('demoResponse');
-  var demoStatus = $('demoStatus');
-  var demoLatency = $('demoLatency');
-  var demoRun = $('demoRun');
-  var currentDemo = null;
-
-  function selectDemo(a) {
-    currentDemo = a;
-    if (demoName) demoName.textContent = a.name || '接口';
-    if (demoPath) demoPath.textContent = (a.method ? String(a.method).toUpperCase() + ' ' : '') + (a.call_path || a.endpoint || '');
-    if (demoDesc) demoDesc.textContent = a.desc || '';
-    if (demoIconBox) {
-      var url = String(a.icon || '').trim();
-      demoIconBox.innerHTML = url
-        ? '<img class="api-icon-img" src="' + escapeHtml(url) + '" alt="" referrerpolicy="no-referrer" data-ext-icon="1">'
-        : '<i data-lucide="zap"></i>';
-      window.threeIconsRefresh(demoIconBox);
-    }
-    if (demoResponse) demoResponse.textContent = '{\n  "code": 1,\n  "msg": "ready",\n  "data": {}\n}';
-    if (demoStatus) demoStatus.textContent = '就绪';
-    if (demoLatency) demoLatency.textContent = '—';
-    if (demoList) {
-      demoList.querySelectorAll('.demo-select-card').forEach(function (c) {
-        c.classList.toggle('active', String(c.getAttribute('data-id')) === String(a.id));
-      });
-    }
-  }
-  function renderDemoList(list) {
-    if (!demoList) return;
-    var items = (list || []).slice(0, 8);
-    if (!items.length) {
-      demoList.innerHTML = '<p class="text-muted" style="padding:12px;">暂无接口</p>';
-      return;
-    }
-    demoList.innerHTML = items.map(function (a, i) {
-      var url = String(a.icon || '').trim();
-      var icon = url
-        ? '<img class="api-icon-img" src="' + escapeHtml(url) + '" alt="" referrerpolicy="no-referrer" data-ext-icon="1">'
-        : '<i data-lucide="zap"></i>';
-      return '<button type="button" class="demo-select-card' + (i === 0 ? ' active' : '') + '" data-id="' + escapeHtml(a.id) + '">'
-        + '<div class="api-icon-box ' + colorClass(i) + '">' + icon + '</div>'
-        + '<div><div class="demo-tab">' + escapeHtml(a.name || '') + '</div>'
-        + '<div class="demo-tab-path">' + escapeHtml(a.call_path || a.endpoint || '') + '</div></div></button>';
-    }).join('');
-    window.threeIconsRefresh(demoList);
-    demoList.querySelectorAll('.demo-select-card').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var id = btn.getAttribute('data-id');
-        var found = items.filter(function (x) { return String(x.id) === String(id); })[0];
-        if (found) selectDemo(found);
-      });
-    });
-    selectDemo(items[0]);
-  }
-  if (demoRun) {
-    demoRun.addEventListener('click', function () {
-      if (!currentDemo) return;
-      if (demoStatus) demoStatus.textContent = '请求中…';
-      var t0 = performance.now();
-      setTimeout(function () {
-        var ms = Math.round(performance.now() - t0 + 20 + Math.random() * 40);
-        if (demoLatency) demoLatency.textContent = ms + ' ms';
-        if (demoStatus) demoStatus.textContent = '演示成功';
-        if (demoResponse) {
-          demoResponse.textContent = JSON.stringify({
-            code: 1,
-            msg: 'ok',
-            demo: true,
-            api: currentDemo.name,
-            tip: '完整在线测试请进入接口详情页'
-          }, null, 2);
-        }
-      }, 280);
-    });
-  }
+  /* ---- demo：真实调用见 assets/js/theme-playground.js ---- */
 
   /* ---- load catalog ---- */
   function bootCatalog() {
@@ -540,8 +485,11 @@
       renderApiCards();
       if (pageMode !== 'apis') {
         rebuildMarquee(catalogApis);
-        renderDemoList(catalogApis);
       }
+      window.TH3_CATALOG_APIS = catalogApis;
+      try {
+        document.dispatchEvent(new CustomEvent('th3:catalog', { detail: { apis: catalogApis } }));
+      } catch (e) { /* ignore */ }
     }
     if (!window.VS || typeof VS.fetchFrontCatalog !== 'function') {
       setTimeout(bootCatalog, 40);

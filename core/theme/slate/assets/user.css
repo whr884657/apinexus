@@ -1,35 +1,103 @@
 /**
- * 默认主题 · 用户中心增量样式
+ * 青绿平台（主题二）· 用户中心增量样式
  *
- * 壳层样式来自本主题 assets/shell/user-shell.css（与根目录 admin.css 隔离；见《主题资源隔离规范》）。
- * 本文件只放默认主题用户中心的差异覆盖。
- *
- * 默认主题：页面背景由调色盘写 --page-bg；英雄条由 theme-picker 派生 --vs-uc-hero-bg。
- * 禁止写死与调色盘无关的纯绿 / 纯蓝英雄条。
+ * 壳层布局见本主题 assets/shell/user-shell.css（vs-sidebar / vs-topbar）。
+ * 配色与前台 theme.css .st-root 对齐；用户中心固定青绿，无调色盘。
  */
 
-:root {
-    --vs-uc-accent: #111111;
-    --vs-uc-accent-soft: #d4d4d8;
-    --vs-uc-accent-bg: #f4f4f5;
-    --vs-uc-accent-ring: rgba(17, 17, 17, 0.12);
-    /* 无 JS 时的兜底：用 --page-bg 色相压暗（现代浏览器） */
-    --vs-uc-hero-bg: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--page-bg, #f8fafc) 18%, #0a0a0a) 0%,
-        color-mix(in srgb, var(--page-bg, #f8fafc) 40%, #1f2937) 52%,
-        color-mix(in srgb, var(--page-bg, #f8fafc) 55%, #334155) 100%
-    );
+body.st-uc-body {
+    --st-accent: #24a66a;
+    --st-accent-h: #168855;
+    --st-accent-bg: #e8f5ee;
+    --st-border: rgba(36, 166, 106, 0.18);
+    --st-line: #d7e5dd;
+    --st-fg: #1a1a2e;
+    --st-fg2: #555770;
+    --st-fg3: #8b8da3;
+    --st-bg: #eef6f1;
+    --st-bg-hi: #f4fbf7;
+    --st-bg-lo: #dff0e8;
+
+    --vs-primary: #24a66a;
+    --vs-primary-hover: #168855;
+    --vs-md-accent: #24a66a;
+    --vs-text: #1a1a2e;
+    --vs-text-secondary: #555770;
+    --vs-border: #d7e5dd;
+    --vs-bg: #eef6f1;
+    --page-bg: #eef6f1;
+
+    --vs-sidebar-bg: #ffffff;
+    --vs-topbar-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.97) 0%, rgba(240, 250, 245, 0.96) 100%);
+    --vs-content-bg: #eef6f1;
+
+    --vs-uc-accent: #24a66a;
+    --vs-uc-accent-soft: #b8e6ce;
+    --vs-uc-accent-bg: #e8f5ee;
+    --vs-uc-accent-ring: rgba(36, 166, 106, 0.24);
+    --vs-uc-hero-bg: linear-gradient(135deg, #15803d 0%, #24a66a 48%, #34c77b 100%);
     --vs-uc-hero-fg: #ffffff;
+
+    background: linear-gradient(165deg, var(--st-bg-hi) 0%, var(--st-bg) 42%, var(--st-bg-lo) 100%);
+    color: var(--st-fg);
 }
 
-/* 令牌 / 积分列表：默认主题保持中性黑描边 */
-.vs-admin-shell .vs-panel {
-    border: 1px solid #e5e7eb;
+body.st-uc-body.vs-admin-body {
+    background: transparent;
 }
 
-.vs-points-item__title {
-    color: #111;
+body.st-uc-body .vs-admin-main {
+    background: transparent;
+}
+
+body.st-uc-body .vs-sidebar__logo:not(.vs-site-logo-img) {
+    background: var(--st-accent);
+}
+
+body.st-uc-body .vs-sidebar__link:hover,
+body.st-uc-body .vs-sidebar__group-btn:hover {
+    color: var(--st-accent-h);
+    background: rgba(36, 166, 106, 0.06);
+}
+
+body.st-uc-body .vs-sidebar__link.is-active {
+    color: var(--st-accent-h);
+    background: rgba(36, 166, 106, 0.10);
+    border-left-color: var(--st-accent);
+}
+
+body.st-uc-body .vs-topbar__toggle:hover {
+    background: rgba(36, 166, 106, 0.08);
+}
+
+body.st-uc-body .vs-topbar {
+    border-bottom-color: var(--st-border);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+body.st-uc-body .vs-btn--primary {
+    background: var(--st-accent);
+    border-color: var(--st-accent);
+}
+
+body.st-uc-body .vs-btn--primary:hover {
+    background: var(--st-accent-h);
+    border-color: var(--st-accent-h);
+}
+
+body.st-uc-body .vs-btn--outline:hover {
+    border-color: var(--st-accent);
+    color: var(--st-accent-h);
+}
+
+/* 令牌 / 积分列表 */
+body.st-uc-body .vs-admin-shell .vs-panel {
+    border: 1px solid var(--st-line);
+    background: rgba(255, 255, 255, 0.94);
+}
+
+body.st-uc-body .vs-points-item__title {
+    color: var(--st-fg);
 }
 
 .vs-ledger-amount.is-inc {
@@ -204,8 +272,8 @@
 .uc-dash__kpi-card {
     padding: 10px 12px;
     border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
+    border: 1px solid var(--st-line);
+    background: rgba(255, 255, 255, 0.92);
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -214,21 +282,21 @@
 }
 .uc-dash__kpi-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-    border-color: #dbe3ee;
+    box-shadow: 0 8px 18px rgba(36, 166, 106, 0.10);
+    border-color: rgba(36, 166, 106, 0.35);
 }
 .uc-dash__kpi-card.is-pressed {
     transform: scale(0.985);
 }
 .uc-dash__kpi-label {
     font-size: 0.7rem;
-    color: #64748b;
+    color: var(--st-fg3);
     font-weight: 600;
 }
 .uc-dash__kpi-value {
     font-size: 1.2rem;
     font-weight: 800;
-    color: #111;
+    color: var(--st-fg);
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     line-height: 1.25;
@@ -251,15 +319,15 @@
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--st-line);
     border-radius: 10px;
-    background: #f8fafc;
+    background: rgba(255, 255, 255, 0.88);
     min-width: 0;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 .uc-dash__sys-item:hover {
-    background: #f1f5f9;
-    border-color: #e2e8f0;
+    background: var(--st-accent-bg);
+    border-color: rgba(36, 166, 106, 0.28);
 }
 .uc-dash__sys-dot {
     width: 8px;
@@ -395,7 +463,7 @@
 }
 .uc-dash__more {
     font-size: 0.8125rem;
-    color: #2563eb;
+    color: var(--st-accent-h);
     text-decoration: none;
     font-weight: 600;
 }
@@ -405,18 +473,18 @@
     flex: 0 0 auto;
     margin: 0;
     padding: 0;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--st-line);
     border-radius: 10px;
-    background: #f8fafc;
+    background: var(--st-accent-bg);
     cursor: pointer;
     line-height: 0;
     -webkit-tap-highlight-color: transparent;
 }
 .uc-dash__range-toggle:hover {
-    border-color: #cbd5e1;
+    border-color: rgba(36, 166, 106, 0.35);
 }
 .uc-dash__range-toggle:focus-visible {
-    outline: 2px solid var(--vs-uc-accent, #111111);
+    outline: 2px solid var(--vs-uc-accent);
     outline-offset: 2px;
 }
 .uc-dash__range-toggle__track {
@@ -457,7 +525,7 @@
     transition: color 0.18s ease;
 }
 .uc-dash__range-toggle__opt.is-on {
-    color: #0f172a;
+    color: var(--st-accent-h);
 }
 @media (prefers-reduced-motion: reduce) {
     .uc-dash__range-toggle__thumb {

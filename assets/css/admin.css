@@ -2991,6 +2991,111 @@ select.vs-input.vs-select {
     margin: 0;
 }
 
+/* 主题3：后台设置分组布局 */
+.vs-theme-config-form__body:has(.th3-admin-settings) {
+    display: block;
+}
+
+.th3-admin-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.th3-admin-settings__section {
+    padding: 16px 18px;
+    border: 1px solid var(--vs-border);
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.th3-admin-settings__title {
+    margin: 0 0 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vs-text);
+}
+
+.th3-admin-settings__hint {
+    margin: -6px 0 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--vs-text-secondary);
+}
+
+.th3-admin-settings__grid {
+    display: grid;
+    gap: 12px 20px;
+}
+
+.th3-admin-settings__grid--2 {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .th3-admin-settings__grid--2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.th3-admin-settings__checks {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px 24px;
+}
+
+@media (min-width: 640px) {
+    .th3-admin-settings__checks {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.th3-admin-settings__slots {
+    display: grid;
+    gap: 14px;
+}
+
+@media (min-width: 1100px) {
+    .th3-admin-settings__slots {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.th3-admin-settings__slot {
+    border: 1px solid var(--vs-border);
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.th3-admin-settings__slot-head {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vs-text-secondary);
+    border-bottom: 1px solid var(--vs-border);
+    background: #f1f5f9;
+}
+
+.th3-admin-settings__slot-body {
+    padding: 14px;
+}
+
+.th3-admin-settings__slot-body .vs-theme-config-field {
+    margin-bottom: 14px;
+}
+
+.th3-admin-settings__slot-body .vs-theme-config-field:last-child {
+    margin-bottom: 0;
+}
+
+.th3-admin-settings .vs-form-hint {
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--vs-text-secondary);
+}
+
 /* 接口分类管理 */
 .vs-api-cat-panel {
     display: flex;

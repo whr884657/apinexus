@@ -39,7 +39,13 @@
      */
     function postForm(form, extraFields, attempt) {
         attempt = attempt || 0;
+        if (global.VsCaptcha && typeof global.VsCaptcha.applyToForm === 'function') {
+            global.VsCaptcha.applyToForm(form);
+        }
         var body = new FormData(form);
+        if (global.VsCaptcha && typeof global.VsCaptcha.appendToFormData === 'function') {
+            global.VsCaptcha.appendToFormData(body);
+        }
         if (extraFields && typeof extraFields === 'object') {
             Object.keys(extraFields).forEach(function (k) {
                 body.set(k, extraFields[k]);

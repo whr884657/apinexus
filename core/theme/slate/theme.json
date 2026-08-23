@@ -1,9 +1,9 @@
 {
     "id": "slate",
-    "name": "第二个主题",
+    "name": "主题2",
     "version": "2.23.0",
     "author": "ApiNexus",
-    "description": "第二个主题",
+    "description": "主题2",
     "preview": "preview.png",
     "settings": [
         {

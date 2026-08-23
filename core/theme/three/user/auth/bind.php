@@ -1,6 +1,6 @@
 <?php
 /**
- * 主题三 · OAuth 绑定（居中单卡）
+ * 主题三 · OAuth 绑定（居中表单）
  *
  * @var string $vsBase
  * @var string $base

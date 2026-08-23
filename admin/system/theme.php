@@ -17,6 +17,16 @@ function vs_admin_render_theme_config_fields($themeId)
     $schema = ThemeManager::getSettingsSchema($themeId);
     $values = ThemeManager::readThemeData($themeId);
 
+    $customRenderer = ThemeManager::themeDir($themeId) . '/lib/admin-settings.php';
+    if (is_file($customRenderer)) {
+        require_once $customRenderer;
+        $renderFn = 'vs_theme_admin_render_settings_' . preg_replace('/[^a-z0-9_]/', '', $themeId);
+        if (function_exists($renderFn)) {
+            $renderFn($schema, $values);
+            return;
+        }
+    }
+
     if (empty($schema)) {
         echo '<p class="vs-theme-config-empty">当前主题暂无可调整的项目</p>';
         return;

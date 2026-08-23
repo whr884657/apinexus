@@ -40,9 +40,7 @@ function vs_captcha_field($scene, $only = null)
         return;
     }
     echo '<div class="field vs-captcha-field vs-captcha-field--gt" id="vsCaptchaBox" data-captcha-mode="'
-        . vs_e($mode) . '" aria-label="行为验证">'
-        . '<div class="vs-captcha-hint" role="status">验证组件加载中…</div>'
-        . '</div>' . "\n";
+        . vs_e($mode) . '" aria-label="行为验证"></div>' . "\n";
 }
 
 /**
@@ -65,11 +63,21 @@ function vs_captcha_js($scene = null)
     if ($mode === Captcha::MODE_GT3 || $mode === Captcha::MODE_GT4) {
         echo '<link rel="dns-prefetch" href="https://static.geetest.com">' . "\n";
         echo '<link rel="dns-prefetch" href="https://static.geevisit.com">' . "\n";
+        echo '<link rel="dns-prefetch" href="https://api.geetest.com">' . "\n";
+        echo '<link rel="dns-prefetch" href="https://api.geevisit.com">' . "\n";
+        echo '<link rel="dns-prefetch" href="https://monitor.geetest.com">' . "\n";
         echo '<link rel="preconnect" href="https://static.geetest.com" crossorigin>' . "\n";
         echo '<link rel="preconnect" href="https://static.geevisit.com" crossorigin>' . "\n";
+        echo '<link rel="preconnect" href="https://api.geetest.com" crossorigin>' . "\n";
+        echo '<link rel="preconnect" href="https://api.geevisit.com" crossorigin>' . "\n";
+        echo '<link rel="preconnect" href="https://monitor.geetest.com" crossorigin>' . "\n";
         if ($mode === Captcha::MODE_GT4) {
             echo '<link rel="dns-prefetch" href="https://gcaptcha4.geetest.com">' . "\n";
+            echo '<link rel="dns-prefetch" href="https://gcaptcha4.geevisit.com">' . "\n";
+            echo '<link rel="dns-prefetch" href="https://gcaptcha4.gsensebot.com">' . "\n";
             echo '<link rel="preconnect" href="https://gcaptcha4.geetest.com" crossorigin>' . "\n";
+            echo '<link rel="preconnect" href="https://gcaptcha4.geevisit.com" crossorigin>' . "\n";
+            echo '<link rel="preconnect" href="https://gcaptcha4.gsensebot.com" crossorigin>' . "\n";
             $localGt = $base . '/assets/js/geetest/gt4.js';
             if (is_file(VS_ROOT . '/assets/js/geetest/gt4.js')) {
                 echo '<link rel="preload" href="' . vs_e($localGt) . '" as="script">' . "\n";
@@ -84,14 +92,8 @@ function vs_captcha_js($scene = null)
     echo '<script>window.VS_CAPTCHA_BOOT='
         . json_encode($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         . ';</script>' . "\n";
-    // 前台/用户主题：优先主题包 shell；管理员等回落根目录 assets/js
-    $captchaSrc = '';
-    if (class_exists('ThemeManager')) {
-        $captchaSrc = ThemeManager::shellUrl('captcha.js');
-    }
-    if ($captchaSrc === '') {
-        $captchaSrc = $base . '/assets/js/captcha.js?v=' . VS_VERSION;
-    }
+    // 全站公共：验证码逻辑仅根目录 assets/js（管理员 + 三主题认证页统一加载）
+    $captchaSrc = $base . '/assets/js/captcha.js?v=' . VS_VERSION;
     echo '<script src="' . vs_e($captchaSrc) . '"></script>' . "\n";
 }
 

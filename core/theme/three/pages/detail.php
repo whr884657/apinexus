@@ -525,5 +525,6 @@ window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(rtrim($vsBase,
 <script src="<?php echo vs_e($vsSyntaxHref); ?>" defer></script>
 <?php endif; ?>
 <script src="<?php echo vs_e($vsBase); ?>/core/markdown/assets/js/markdown-render.js?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('three', 'assets/js/playground-response.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('three', 'assets/js/pages/detail-quickstart.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('three', 'assets/js/pages/detail.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

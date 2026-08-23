@@ -1,6 +1,6 @@
 <?php
 /**
- * 主题三 · 认证页布局（居中单卡，禁止 st-* / 左右分栏）
+ * 主题三 · 认证页布局（居中表单，无背景卡板）
  */
 
 /**
@@ -32,10 +32,8 @@ function vs_theme_auth_head($pageTitle)
     }
     echo '<link rel="stylesheet" href="' . vs_e(ThemeManager::assetUrl($themeId, 'assets/auth.css')) . '?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e(ThemeManager::assetUrl($themeId, 'assets/auth-captcha.css')) . '?v=' . VS_VERSION . '">' . "\n";
-    $csrf = ThemeManager::shellUrl('auth-csrf.js', $themeId);
-    if ($csrf !== '') {
-        echo '<script src="' . vs_e($csrf) . '"></script>' . "\n";
-    }
+    $base = function_exists('vs_base_url') ? rtrim(vs_base_url(), '/') : '';
+    echo '<script src="' . vs_e($base) . '/assets/js/auth-csrf.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '</head>' . "\n";
     echo '<body class="th3-auth-body">' . "\n";
 }
@@ -59,7 +57,7 @@ function th3_pw_toggle_html()
 }
 
 /**
- * 居中单卡 shell
+ * 居中单栏 shell（无白卡背景板）
  *
  * @param string $title
  * @param string $sub
@@ -69,7 +67,7 @@ function th3_auth_shell_start($title, $sub = '')
 {
     echo '<div class="th3-auth">' . "\n";
     echo '<div class="th3-auth__glow" aria-hidden="true"></div>' . "\n";
-    echo '<div class="th3-auth__card glass">' . "\n";
+    echo '<div class="th3-auth__card">' . "\n";
     echo '<p class="th3-auth__eyebrow font-mono">/ auth</p>' . "\n";
     echo '<h1 class="th3-auth__title font-display">' . vs_e($title) . '</h1>' . "\n";
     if ($sub !== '') {
@@ -105,6 +103,9 @@ function vs_theme_auth_foot($inlineJs = '')
     if (function_exists('vs_captcha_js')) {
         vs_captcha_js(null);
     }
-    vs_console_brand_script();
+    if (!function_exists('th3_emit_console_brand_script')) {
+        require_once dirname(__DIR__, 2) . '/lib/bootstrap.php';
+    }
+    th3_emit_console_brand_script();
     echo '</body></html>';
 }

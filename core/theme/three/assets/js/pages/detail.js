@@ -346,18 +346,64 @@
                 responseEl.textContent = '// 正在发送请求...';
                 setStatus('处理中', 'wait');
 
-                var req = buildRequest(endpoint, method, params, preferredAuthWay());
-                fetch(req.url, {
-                    method: req.method,
-                    headers: req.headers,
-                    body: req.body,
-                    credentials: 'omit'
+                var VsPR = window.VsPlaygroundResponse;
+                if (!VsPR || !VsPR.directRequest) {
+                    responseEl.textContent = '// 测试模块未加载，请刷新页面';
+                    setStatus('Error', 'err');
+                    return;
+                }
+
+                var keyways = Array.isArray(api.keyways) ? api.keyways : [];
+                var authWay = VsPR.resolvePlaygroundAuthWay
+                    ? VsPR.resolvePlaygroundAuthWay(keyways, preferredAuthWay())
+                    : preferredAuthWay();
+                var apiId = parseInt(api.id, 10) || 0;
+                var useRelay = (authWay === 'header' || authWay === 'bearer') && apiId > 0;
+                var start = performance.now();
+
+                if (useRelay && VsPR.relayRequest && VsPR.renderRelayPayload) {
+                    VsPR.relayRequest({
+                        apiId: apiId,
+                        method: method,
+                        params: params,
+                        authWay: authWay,
+                        keyways: keyways
+                    }).then(function (data) {
+                        var ms = Math.round(performance.now() - start);
+                        var ok = !!(data && (data.ok || data.code === 1));
+                        var http = data && data.http != null ? parseInt(data.http, 10) : 0;
+                        var label = ok ? ('OK ' + (http || 200)) : ((data && data.msg) ? String(data.msg) : 'Error');
+                        setStatus(label + ' ' + ms + 'ms', ok ? 'ok' : 'err');
+                        VsPR.renderRelayPayload(data, responseEl);
+                    }).catch(function (err) {
+                        setStatus('Error', 'err');
+                        var raw = err && err.message ? String(err.message) : 'network error';
+                        responseEl.textContent = '// 请求失败: ' + raw;
+                    });
+                    return;
+                }
+
+                VsPR.directRequest({
+                    endpoint: endpoint,
+                    method: method,
+                    params: params,
+                    authWay: authWay || 'query',
+                    keyways: keyways
                 }).then(function (res) {
-                    var ok = res.status >= 200 && res.status < 400;
-                    setStatus(String(res.status) + (ok ? ' OK' : ' Error'), ok ? 'ok' : 'err');
-                    return res.text();
-                }).then(function (text) {
-                    showResponseText(text);
+                    var ms = Math.round(performance.now() - start);
+                    var info = { ok: (res.status || 0) >= 200 && (res.status || 0) < 400, label: String(res.status || 0) };
+                    if (VsPR.inspectFetchStatus) {
+                        return VsPR.inspectFetchStatus(res).then(function (inf) {
+                            info = inf;
+                            return res;
+                        });
+                    }
+                    return res;
+                }).then(function (res) {
+                    var ms = Math.round(performance.now() - start);
+                    var ok = (res.status || 0) >= 200 && (res.status || 0) < 400;
+                    setStatus(String(res.status || 0) + (ok ? ' OK' : ' Error') + ' ' + ms + 'ms', ok ? 'ok' : 'err');
+                    return VsPR.renderFetchResponse(res, responseEl);
                 }).catch(function (err) {
                     setStatus('Error', 'err');
                     var raw = err && err.message ? String(err.message) : 'network error';

@@ -2,14 +2,19 @@
  * 文件：assets/js/captcha.js
  * 作用：认证页验证码（本地图 / 极验3 / 极验4）
  *
- * 依赖：window.VS_CAPTCHA_BOOT
- * 极验入口 JS：优先同源 assets/js/geetest/{gt4.js|gt.js}，失败再回落官方 CDN
+ * 官方接入（弹窗滑块）：
+ * - gt3：product=popup，appendTo 条内官方按钮 → 点击弹出 slide 滑块
+ * - gt4：product=popup，appendTo 条内官方按钮 → 点击弹出 popup 滑块
+ *
+ * 禁止：bind、提交时 showCaptcha、挂载点占位文案、自定义 nativeButton 尺寸
+ *
+ * @version 3.0.0
  */
 (function (global) {
     'use strict';
 
     var boot = global.VS_CAPTCHA_BOOT || { enabled: 0 };
-    var SCRIPT_TIMEOUT_MS = 20000;
+    var SCRIPT_TIMEOUT_MS = 30000;
     var state = {
         ready: false,
         loading: false,
@@ -24,8 +29,28 @@
     }
 
     function assetBase() {
-        var b = String(boot.assetBase || '').replace(/\/$/, '');
-        return b;
+        return String(boot.assetBase || '').replace(/\/$/, '');
+    }
+
+    function gtProduct() {
+        if (boot.product) {
+            return String(boot.product);
+        }
+        return 'popup';
+    }
+
+    function resolveForm(form) {
+        if (form) {
+            return form;
+        }
+        var box = $('vsCaptchaBox');
+        if (box) {
+            var f = box.closest('form');
+            if (f) {
+                return f;
+            }
+        }
+        return document.querySelector('form');
     }
 
     function ensureHidden(form, name, value) {
@@ -55,6 +80,19 @@
         });
     }
 
+    function isValidateComplete(result) {
+        if (!result || result === false || typeof result !== 'object') {
+            return false;
+        }
+        if (state.mode === 'gt3') {
+            return !!(result.geetest_validate && result.geetest_challenge && result.geetest_seccode);
+        }
+        if (state.mode === 'gt4') {
+            return !!(result.lot_number && result.captcha_output && result.pass_token && result.gen_time);
+        }
+        return false;
+    }
+
     function applyResultToForm(form) {
         if (!form || !state.result) {
             return;
@@ -72,22 +110,69 @@
         }
     }
 
-    function showBoxHint(box, text) {
+    function captureValidate(captcha, form) {
+        if (!captcha || typeof captcha.getValidate !== 'function') {
+            state.ready = false;
+            state.result = null;
+            return false;
+        }
+        var raw = captcha.getValidate();
+        if (!isValidateComplete(raw)) {
+            state.ready = false;
+            state.result = null;
+            clearFields(form);
+            return false;
+        }
+        state.result = raw;
+        state.ready = true;
+        applyResultToForm(form);
+        return true;
+    }
+
+    function showBoxError(box, text) {
         if (!box) {
             return;
         }
         box.innerHTML = '';
         var tip = document.createElement('div');
-        tip.className = 'vs-captcha-hint';
-        tip.setAttribute('role', 'status');
+        tip.className = 'vs-captcha-hint vs-captcha-hint--error';
+        tip.setAttribute('role', 'alert');
         tip.textContent = text;
-        tip.style.cssText = 'min-height:44px;display:flex;align-items:center;color:#6b7280;font-size:13px;';
         box.appendChild(tip);
     }
 
-    /**
-     * 加载脚本：优先本地，失败回落 CDN；已在加载中须等 onload，禁止立刻 resolve
-     */
+    function clearBox(box) {
+        if (box) {
+            box.innerHTML = '';
+        }
+    }
+
+    function wireCaptchaEvents(captcha, form) {
+        captcha.onSuccess(function () {
+            captureValidate(captcha, form);
+        });
+        captcha.onError(function () {
+            state.ready = false;
+            state.result = null;
+            clearFields(form);
+        });
+        if (typeof captcha.onFail === 'function') {
+            captcha.onFail(function () {
+                state.ready = false;
+                state.result = null;
+                clearFields(form);
+            });
+        }
+        if (typeof captcha.onClose === 'function') {
+            captcha.onClose(function () {
+                if (!captureValidate(captcha, form)) {
+                    state.result = null;
+                    state.ready = false;
+                }
+            });
+        }
+    }
+
     function loadScriptOnce(src) {
         return new Promise(function (resolve, reject) {
             var finished = false;
@@ -149,7 +234,6 @@
             var s = document.createElement('script');
             s.src = src;
             s.async = true;
-            // 勿 no-referrer：极验部分风控/资源依赖正常 Referer
             s.setAttribute('data-vs-gt-src', src);
             timer = setTimeout(function () {
                 fail(s, '验证脚本加载超时');
@@ -170,20 +254,35 @@
     }
 
     function appendCaptcha(captcha, box) {
-        if (!captcha || !box) {
+        if (!captcha || !box || typeof captcha.appendTo !== 'function') {
             return;
         }
-        // 官方示例为选择器字符串；DOM 节点作兼容回落
-        if (typeof captcha.appendTo === 'function') {
-            if (box.id) {
-                try {
-                    captcha.appendTo('#' + box.id);
-                    return;
-                } catch (e1) {
-                    // fallthrough
-                }
+        clearBox(box);
+        if (box.id) {
+            try {
+                captcha.appendTo('#' + box.id);
+                return;
+            } catch (e1) {
+                // fallthrough
             }
-            captcha.appendTo(box);
+        }
+        captcha.appendTo(box);
+    }
+
+    function waitCaptchaReady(captcha, readyTimer, settledRef, resolve, reject) {
+        if (typeof captcha.onReady === 'function') {
+            captcha.onReady(function () {
+                if (settledRef.done) {
+                    return;
+                }
+                settledRef.done = true;
+                clearTimeout(readyTimer);
+                resolve();
+            });
+        } else {
+            settledRef.done = true;
+            clearTimeout(readyTimer);
+            resolve();
         }
     }
 
@@ -191,7 +290,9 @@
         var base = assetBase();
         var localSrc = base ? (base + '/assets/js/geetest/gt4.js') : '';
         var cdnSrc = 'https://static.geetest.com/v4/gt4.js';
-        showBoxHint(box, '验证组件加载中…');
+        var form = resolveForm(null);
+        clearBox(box);
+
         return loadScriptWithFallback(localSrc, cdnSrc).then(function () {
             return new Promise(function (resolve, reject) {
                 if (typeof global.initGeetest4 !== 'function') {
@@ -203,57 +304,25 @@
                     reject(new Error('未配置验证 ID'));
                     return;
                 }
-                var settled = false;
+                var settledRef = { done: false };
                 var readyTimer = setTimeout(function () {
-                    if (!settled) {
-                        settled = true;
-                        reject(new Error('验证组件初始化超时'));
+                    if (!settledRef.done) {
+                        settledRef.done = true;
+                        reject(new Error('验证加载超时，请刷新重试'));
                     }
                 }, SCRIPT_TIMEOUT_MS);
 
                 global.initGeetest4({
                     captchaId: captchaId,
-                    product: boot.product || 'float',
+                    product: gtProduct(),
                     language: 'zho',
                     timeout: SCRIPT_TIMEOUT_MS,
-                    nativeButton: {
-                        width: '100%',
-                        height: '44px'
-                    }
+                    https: true
                 }, function (captcha) {
                     state.captchaObj = captcha;
-                    box.innerHTML = '';
                     appendCaptcha(captcha, box);
-
-                    if (typeof captcha.onReady === 'function') {
-                        captcha.onReady(function () {
-                            if (settled) {
-                                return;
-                            }
-                            settled = true;
-                            clearTimeout(readyTimer);
-                            resolve();
-                        });
-                    } else {
-                        settled = true;
-                        clearTimeout(readyTimer);
-                        resolve();
-                    }
-
-                    captcha.onSuccess(function () {
-                        state.result = captcha.getValidate() || {};
-                        state.ready = true;
-                        applyResultToForm(box.closest('form') || document.querySelector('form'));
-                    });
-                    captcha.onError(function () {
-                        state.ready = false;
-                        state.result = null;
-                    });
-                    if (typeof captcha.onClose === 'function') {
-                        captcha.onClose(function () {
-                            // 用户关闭弹层不视为失败
-                        });
-                    }
+                    wireCaptchaEvents(captcha, form);
+                    waitCaptchaReady(captcha, readyTimer, settledRef, resolve, reject);
                 });
             });
         });
@@ -264,7 +333,9 @@
         var localSrc = base ? (base + '/assets/js/geetest/gt.js') : '';
         var cdnSrc = 'https://static.geetest.com/static/tools/gt.js';
         var registerUrl = String(boot.register || '');
-        showBoxHint(box, '验证组件加载中…');
+        var form = resolveForm(null);
+        clearBox(box);
+
         return loadScriptWithFallback(localSrc, cdnSrc).then(function () {
             return new Promise(function (resolve, reject) {
                 if (typeof global.initGeetest !== 'function') {
@@ -284,11 +355,14 @@
                         return res.json();
                     })
                     .then(function (data) {
-                        var settled = false;
+                        if (!data || !data.gt || !data.challenge) {
+                            throw new Error('验证初始化数据无效');
+                        }
+                        var settledRef = { done: false };
                         var readyTimer = setTimeout(function () {
-                            if (!settled) {
-                                settled = true;
-                                reject(new Error('验证组件初始化超时'));
+                            if (!settledRef.done) {
+                                settledRef.done = true;
+                                reject(new Error('验证加载超时，请刷新重试'));
                             }
                         }, SCRIPT_TIMEOUT_MS);
 
@@ -297,38 +371,15 @@
                             challenge: data.challenge,
                             offline: !data.success,
                             new_captcha: data.new_captcha !== false,
-                            product: boot.product || 'float',
+                            product: gtProduct(),
                             width: '100%',
-                            https: true
+                            https: true,
+                            lang: 'zh-cn'
                         }, function (captcha) {
                             state.captchaObj = captcha;
-                            box.innerHTML = '';
                             appendCaptcha(captcha, box);
-
-                            if (typeof captcha.onReady === 'function') {
-                                captcha.onReady(function () {
-                                    if (settled) {
-                                        return;
-                                    }
-                                    settled = true;
-                                    clearTimeout(readyTimer);
-                                    resolve();
-                                });
-                            } else {
-                                settled = true;
-                                clearTimeout(readyTimer);
-                                resolve();
-                            }
-
-                            captcha.onSuccess(function () {
-                                state.result = captcha.getValidate() || {};
-                                state.ready = true;
-                                applyResultToForm(box.closest('form') || document.querySelector('form'));
-                            });
-                            captcha.onError(function () {
-                                state.ready = false;
-                                state.result = null;
-                            });
+                            wireCaptchaEvents(captcha, form);
+                            waitCaptchaReady(captcha, readyTimer, settledRef, resolve, reject);
                         });
                     })
                     .catch(function (err) {
@@ -417,7 +468,7 @@
             state.loading = false;
             mountPromise = null;
             state.captchaObj = null;
-            showBoxHint(box, (err && err.message) ? err.message : '验证加载失败，请刷新重试');
+            showBoxError(box, (err && err.message) ? err.message : '验证加载失败，请刷新重试');
             throw err;
         });
         return mountPromise;
@@ -427,6 +478,7 @@
         if (!boot.enabled) {
             return Promise.resolve(true);
         }
+        form = resolveForm(form);
         if (state.mode === 'local') {
             var input = form ? form.querySelector('[name="captcha_code"]') : $('captchaCode');
             var val = input ? String(input.value || '').trim() : '';
@@ -436,15 +488,19 @@
             return Promise.resolve(true);
         }
         return mount().then(function () {
-            if (state.ready && state.result) {
+            if (state.captchaObj && captureValidate(state.captchaObj, form)) {
+                return true;
+            }
+            if (state.ready && state.result && isValidateComplete(state.result)) {
                 applyResultToForm(form);
                 return true;
             }
-            return Promise.reject(new Error('请先完成行为验证'));
+            return Promise.reject(new Error('请先点击验证按钮并完成滑块验证'));
         });
     }
 
     function reset(form) {
+        form = resolveForm(form);
         if (state.mode === 'local') {
             refreshLocal();
             return;
@@ -462,6 +518,7 @@
     }
 
     function clearChallenge(form) {
+        form = resolveForm(form);
         if (state.mode === 'local') {
             return;
         }
@@ -475,7 +532,7 @@
                 // ignore
             }
         } else if (!state.captchaObj && !state.loading) {
-            mount().catch(function () { /* 文案已写在挂载点 */ });
+            mount().catch(function () { /* 错误已写入挂载点 */ });
         }
     }
 
@@ -489,6 +546,9 @@
                 fd.append('captcha_code', String(input.value).trim());
             }
             return fd;
+        }
+        if (state.captchaObj) {
+            captureValidate(state.captchaObj, resolveForm(null));
         }
         if (!state.result) {
             return fd;

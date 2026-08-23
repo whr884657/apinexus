@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.22**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.23**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -285,9 +285,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `UserDashHello.php` | 用户控制台按时段问候（24 个 1 小时槽；文案池随机；双主题共用） |
 | `SiteMedia.php` | 内置图片出站（`assets/img/` 物理文件；主题禁止手写路径；**v13.26.16** 同站返回根相对路径） |
 | `FrontendContributor.php` | 贡献者列表与公开个人主页（接口数 / 调用量 / 加入时间；`bio_custom` 标记是否自填简介；归属含绑定身份下历史 userid=0） |
-| `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据、全站 CSP（含极验域名白名单，v13.26.22） |
+| `AuthSecurity.php` | CSRF、限流、Session 安全、邮件票据、全站 CSP（极验含 `gcaptcha4.gsensebot.com`，v13.26.23 / E274） |
 | `Captcha.php` | 行为验证门面：分端 mode（管理员/用户可分别选）；`local` / `gt3` / `gt4`；场景 `SCENE_*`；`publicBoot` 含 `assetBase`；helper 提供 `vs_captcha_*`（preload/占位，见 `captcha/helper.php`） |
-| `captcha/*` | 本地图 `local.php`；极验3 `gt3/`；极验4 `gt4/`；挂载 `helper.php`；HTTP `image.php` / `register.php`；入口 JS 见 `assets/js/geetest/`（v13.26.22） |
+| `captcha/*` | 本地图 `local.php`；极验3 `gt3/`；极验4 `gt4/`；挂载 `helper.php`；HTTP `image.php` / `register.php`；入口 JS `assets/js/geetest/`；**gt4 `popup`+`appendTo`**（v13.26.23 / E274） |
 | `RateLimitStore.php` | 限流计数存储（MySQL） |
 | `AjaxResponse.php` | 后台 AJAX 统一 JSON 响应 |
 | `AdminUserBinding.php` | 管理员绑定用户身份（发布内容用） |
@@ -369,7 +369,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 
 ### 4.2 version.php
 
-**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.22**）。在线更新、关于页、`update.json` 均以此为准。
+**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.23**）。在线更新、关于页、`update.json` 均以此为准。
 
 **用法：**
 
@@ -646,7 +646,7 @@ $admin = Auth::user();
 | `requireAuthPost()` | POST 必须带合法 CSRF；失败 JSON 含新 `csrf` |
 | `sendSecurityHeaders()` | 认证/后台/用户中心：`no-store` + CDN 禁缓存 + **统一 CSP** |
 | `sendFrontendSecurityHeaders()` | 前台页 `private, no-store` + `Vary: Cookie` + CDN 禁缓存 + **统一 CSP**（E253 / E268） |
-| `sendContentSecurityPolicy()`（私有） | 全站 CSP：`default-src 'self'`、禁 object；极验放行 `static.geetest.com` / `geevisit` / `gcaptcha4.*` / `api.geetest.com`（script/style/font/frame/worker）；hitokoto；主题 SSR 保留 `'unsafe-inline'`（v13.26.22 补齐，见 E271） |
+| `sendContentSecurityPolicy()`（私有） | 全站 CSP；极验放行 `static.geetest.com` / `geevisit` / `gcaptcha4.*`（含 `gsensebot`）/ `api.geetest.com`（v13.26.23 / E274） |
 | `checkLoginAllowed($username)` | 登录是否被限流 |
 | `recordLoginFailure($username)` | 记录登录失败 |
 | `checkMailCodeAllowed($email)` | 发验证码是否允许 |
@@ -703,13 +703,11 @@ AuthSecurity::requireAuthPost();
 
 #### 前端
 
-三份 `captcha.js` **须保持同步**：
+**全站唯一：** `assets/js/captcha.js`（管理员 + 三主题认证页经 `vs_captcha_js()` 统一加载；**禁止**再放入主题 `shell/`）。
 
-1. `assets/js/captcha.js`（管理员等回落）  
-2. `core/theme/default/assets/shell/captcha.js`  
-3. `core/theme/slate/assets/shell/captcha.js`  
+**产品形态（`Captcha::publicBoot`）：** gt3 / gt4 均为 **`product: popup`**（条内官方按钮 → 点击 popup 弹窗滑块）；CSP `script-src` 须放行 gcaptcha4/api/monitor（E274）。
 
-极验 **入口 loader**（非整包）本地化于 `assets/js/geetest/gt4.js`、`gt.js`；`captcha.js` 优先同源加载，失败回落官方 CDN。二次弹层/字体仍走官方域，CSP 须放行（v13.26.22 / E271）。  
+极验 **入口 loader**（非整包）本地化于 `assets/js/geetest/gt4.js`、`gt.js`；`captcha.js` 优先同源加载，失败回落官方 CDN。二次弹层/字体仍走官方域，CSP 须放行（v13.26.23 / E274）。  
 
 本地图：**仅首次 focus** 验证码输入框时自动换图（属性 `data-focus-refreshed`）；主题勿另写一套换图逻辑。
 
@@ -1689,7 +1687,7 @@ $fb   = UserAvatar::defaultAvatar();
 - UI：`vs_captcha_field($scene)`、`vs_captcha_js($scene)`（定义于 **`core/captcha/helper.php`**，非 `helpers.php`）  
 - 场景常量（写全名）：`Captcha::SCENE_USER_LOGIN` / `Captcha::SCENE_USER_REGISTER` / `Captcha::SCENE_USER_FORGOT`  
 - 校验在入口：`Captcha::requireValid`（主题模板不负责验票）  
-- 本地图（v13.26.6）：校验不区分大小写；用户**首次聚焦**验证码输入框时自动换图（`data-focus-refreshed`；逻辑在三份同步的 `captcha.js`，主题勿另写一套）
+- 本地图（v13.26.6）：校验不区分大小写；用户**首次聚焦**验证码输入框时自动换图（`data-focus-refreshed`；逻辑在根目录 `assets/js/captcha.js`，主题勿另写一套）
 
 ---
 
