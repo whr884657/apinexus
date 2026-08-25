@@ -1,5 +1,14 @@
 {
     "versions": {
+        "13.26.26": {
+            "title": "ApiNexus 13.26.26",
+            "date": "2026-08-26",
+            "db_changes": false,
+            "changes": [
+                "站点信息：两槽绑定域名 + ICP + 公安备案（site_domain / site_domain1 等）",
+                "页脚按 HTTP_HOST 精确匹配展示；未绑定域名不显示备案（合规）"
+            ]
+        },
         "13.26.25": {
             "title": "ApiNexus 13.26.25",
             "date": "2026-08-24",

@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/SiteContext.php
- * 作用：站点展示信息（单域名，读取系统配置）
+ * 作用：站点展示信息（读取系统配置；备案号按访问 Host 匹配，最多两槽）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */
@@ -39,6 +39,23 @@ class SiteContext
         }
 
         return $host;
+    }
+
+    /**
+     * 后台保存用：规范化绑定域名（去 scheme/路径/端口，小写）
+     *
+     * @param string $input
+     * @return string
+     */
+    public static function normalizeDomainInput($input)
+    {
+        $host = trim((string) $input);
+        if ($host === '') {
+            return '';
+        }
+        $host = preg_replace('#^https?://#i', '', $host);
+        $host = preg_replace('#[/?#].*$#', '', $host);
+        return self::normalizeHost($host);
     }
 
     /**
@@ -312,18 +329,41 @@ class SiteContext
     }
 
     /**
-     * 获取当前域名备案信息
+     * 获取当前访问 Host 对应的备案信息（最多两槽；未绑定域名不展示）
      *
-     * @return array
+     * @return array{icp_number:string,icp_link:string,gongan_number:string,gongan_link:string}
      */
     public static function beianInfo()
     {
-        $ctx = self::resolve();
+        $host = self::currentHost();
+        $domain = self::normalizeDomainInput(Config::get('site_domain', ''));
+        $domain1 = self::normalizeDomainInput(Config::get('site_domain1', ''));
+        $icp = trim((string) Config::get('site_icp', ''));
+        $gongan = trim((string) Config::get('site_gongan', ''));
+        $icp1 = trim((string) Config::get('site_icp1', ''));
+        $gongan1 = trim((string) Config::get('site_gongan1', ''));
+
+        $hasDomainBinding = ($domain !== '' || $domain1 !== '');
+        $matchIcp = '';
+        $matchGongan = '';
+
+        if ($host !== '' && $domain !== '' && $host === $domain) {
+            $matchIcp = $icp;
+            $matchGongan = $gongan;
+        } elseif ($host !== '' && $domain1 !== '' && $host === $domain1) {
+            $matchIcp = $icp1;
+            $matchGongan = $gongan1;
+        } elseif (!$hasDomainBinding && ($icp !== '' || $gongan !== '')) {
+            // 升级兼容：未配置绑定域名时，仍全站展示原 site_icp / site_gongan
+            $matchIcp = $icp;
+            $matchGongan = $gongan;
+        }
+
         return array(
-            'icp_number'    => trim((string) $ctx['icp_number']),
+            'icp_number'    => $matchIcp,
             'icp_link'      => self::icpLink(),
-            'gongan_number' => trim((string) $ctx['gongan_number']),
-            'gongan_link'   => self::gonganLink($ctx['gongan_number']),
+            'gongan_number' => $matchGongan,
+            'gongan_link'   => self::gonganLink($matchGongan),
         );
     }
 }

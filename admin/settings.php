@@ -181,6 +181,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($copyrightUrl !== '' && !preg_match('#^https?://#i', $copyrightUrl)) {
                 AjaxResponse::error('版权链接须以 http:// 或 https:// 开头，也可留空');
             }
+            $siteDomain = SiteContext::normalizeDomainInput(isset($_POST['site_domain']) ? $_POST['site_domain'] : '');
+            $siteDomain1 = SiteContext::normalizeDomainInput(isset($_POST['site_domain1']) ? $_POST['site_domain1'] : '');
+            foreach (array($siteDomain, $siteDomain1) as $domainHost) {
+                if ($domainHost === '') {
+                    continue;
+                }
+                if (strlen($domainHost) > 253 || !preg_match('/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i', $domainHost)) {
+                    AjaxResponse::error('绑定域名格式不正确，请填写完整 Host（如 api.example.com），勿含 http:// 或路径');
+                }
+            }
+            if ($siteDomain !== '' && $siteDomain1 !== '' && $siteDomain === $siteDomain1) {
+                AjaxResponse::error('两个绑定域名不能相同');
+            }
             Config::setMany(array(
                 'site_name'        => $siteName,
                 'system_name'      => $systemName,
@@ -191,8 +204,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'site_keywords'    => trim(isset($_POST['site_keywords']) ? $_POST['site_keywords'] : ''),
                 'site_favicon'     => trim(isset($_POST['site_favicon']) ? $_POST['site_favicon'] : ''),
                 'site_logo'        => trim(isset($_POST['site_logo']) ? $_POST['site_logo'] : ''),
+                'site_domain'      => $siteDomain,
                 'site_icp'         => trim(isset($_POST['site_icp']) ? $_POST['site_icp'] : ''),
                 'site_gongan'      => trim(isset($_POST['site_gongan']) ? $_POST['site_gongan'] : ''),
+                'site_domain1'     => $siteDomain1,
+                'site_icp1'        => trim(isset($_POST['site_icp1']) ? $_POST['site_icp1'] : ''),
+                'site_gongan1'     => trim(isset($_POST['site_gongan1']) ? $_POST['site_gongan1'] : ''),
             ));
             SiteContext::clearCache();
             AjaxResponse::success('站点设置已保存');
@@ -666,7 +683,7 @@ vs_admin_layout_start('系统设置', 'settings');
 vs_admin_accordion_start(
     'settings-site',
     '站点信息',
-    '系统名称、浏览器标题、顶栏、版权、图标与备案'
+    '系统名称、浏览器标题、顶栏、版权、图标与备案（按访问域名）'
 );
 ?>
     <form method="post" action="" class="vs-form" id="siteForm" data-ajax="1">
@@ -733,6 +750,13 @@ vs_admin_accordion_start(
             <input type="text" name="site_keywords" class="vs-input"
                    value="<?php echo vs_e(Config::get('site_keywords', '')); ?>">
         </div>
+        <div class="vs-form-row">
+            <label class="vs-label">绑定域名（备案一）</label>
+            <input type="text" name="site_domain" class="vs-input" maxlength="253"
+                   value="<?php echo vs_e(Config::get('site_domain', '')); ?>"
+                   placeholder="例如 api-a.example.com（完整 Host，勿填 http://）">
+            <?php vs_render_notice('tip', '', '与下方 ICP / 公安备案号成对；访问 Host 完全一致时展示该组备案。', array('field' => true, 'compact' => true)); ?>
+        </div>
         <div class="vs-form-grid">
             <div class="vs-form-row">
                 <label class="vs-label">ICP 备案号</label>
@@ -747,6 +771,27 @@ vs_admin_accordion_start(
                        placeholder="例如 京公网安备11010802012345号">
             </div>
         </div>
+        <div class="vs-form-row">
+            <label class="vs-label">绑定域名（备案二）</label>
+            <input type="text" name="site_domain1" class="vs-input" maxlength="253"
+                   value="<?php echo vs_e(Config::get('site_domain1', '')); ?>"
+                   placeholder="例如 api-b.example.com">
+        </div>
+        <div class="vs-form-grid">
+            <div class="vs-form-row">
+                <label class="vs-label">ICP 备案号（备案二）</label>
+                <input type="text" name="site_icp1" class="vs-input"
+                       value="<?php echo vs_e(Config::get('site_icp1', '')); ?>"
+                       placeholder="例如 沪ICP备87654321号">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label">公安备案号（备案二）</label>
+                <input type="text" name="site_gongan1" class="vs-input"
+                       value="<?php echo vs_e(Config::get('site_gongan1', '')); ?>"
+                       placeholder="例如 沪公网安备31011502098765号">
+            </div>
+        </div>
+        <?php vs_render_notice('warning', '', '已配置绑定域名后，仅匹配 Host 展示对应备案；未绑定的访问域名<strong>不显示</strong> ICP / 公安备案（合规）。两槽均未填域名时，仍全站展示备案一（兼容旧站）。', array('allow_html' => true, 'compact' => true)); ?>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存站点设置</button>
         </div>

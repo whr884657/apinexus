@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.25**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.26**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -369,7 +369,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 
 ### 4.2 version.php
 
-**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.25**）。在线更新、关于页、`update.json` 均以此为准。
+**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.26**）。在线更新、关于页、`update.json` 均以此为准。
 
 **用法：**
 
@@ -512,12 +512,14 @@ Config::set('site_name', '我的 API 站');
 > **说明：** 旧版多域名类 `Domain.php` 已于 v1.2.0 移除；站点信息一律由本类从单站 `config` 读取。结构更新时 `DatabaseMigrator::purgeLegacyArtifacts()` 会清理残留的 `domain` 表与 `bound_domains` 等配置键。
 
 
-**作用：** 前台展示用的站点信息，从 Config 读取并缓存。
+**作用：** 前台展示用的站点信息，从 Config 读取并缓存。**备案号（v13.26.26）：** 最多两槽 `site_domain`+`site_icp`+`site_gongan` 与 `site_domain1`+`site_icp1`+`site_gongan1`；`beianInfo()` 按 `currentHost()` 精确匹配；未绑定域名不展示；两槽均未填域名时全站展示备案一（兼容旧站）。
 
 | 概念 | 配置键 | 方法 | 用途 |
 |------|--------|------|------|
 | **站点名称** | `site_name` | `siteName()` | 前台标题、SEO、Hero 默认文案 |
 | **系统名称** | `system_name` | `systemName()` | 后台侧栏/顶栏、关于页首行、管理员登录/忘记密码、用户中心壳层；缺省回落 `site_name` |
+| **备案绑定一** | `site_domain` / `site_icp` / `site_gongan` | `beianInfo()` | 访问 Host 匹配时展示 |
+| **备案绑定二** | `site_domain1` / `site_icp1` / `site_gongan1` | `beianInfo()` | 第二 CDN 节点域名 |
 
 | 方法 | 说明 |
 |------|------|
@@ -529,7 +531,9 @@ Config::set('site_name', '我的 API 站');
 | `siteRuntimeStart()` | 网站运行起点时间 |
 | `footerHtmlLeft/Center/Right()` | 自定义底栏三栏 HTML |
 | `footerQr1*` / `footerQr2*` | 页脚二维码启用、名称、图片地址 |
-| `currentHost()` | 当前访问 Host |
+| `currentHost()` | 当前访问 Host（小写、无端口） |
+| `normalizeDomainInput()` | 后台保存用：规范化绑定域名 |
+| `beianInfo()` | 当前 Host 对应 ICP / 公安备案（含官方链接） |
 
 **主题模板变量：** `ThemeManager::renderBody()` 会向模板注入 `$siteName`、`$siteDesc` 等；页脚扩展用 `vs_render_footer_custom_bar()` / `vs_render_footer_qrs()`。
 
