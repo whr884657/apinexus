@@ -1,5 +1,14 @@
 {
     "versions": {
+        "13.26.27": {
+            "title": "ApiNexus 13.26.27",
+            "date": "2026-08-26",
+            "db_changes": false,
+            "changes": [
+                "修复绑定域名无法保存入库（normalizeDomainInput 第 57 行 preg_replace 分隔符与 # 冲突）",
+                "修复页脚备案按域名切换无效（实为域名未写入触发的旧站兼容分支）"
+            ]
+        },
         "13.26.26": {
             "title": "ApiNexus 13.26.26",
             "date": "2026-08-26",

@@ -54,7 +54,7 @@ class SiteContext
             return '';
         }
         $host = preg_replace('#^https?://#i', '', $host);
-        $host = preg_replace('#[/?#].*$#', '', $host);
+        $host = preg_replace('~[/?#].*$~', '', $host);
         return self::normalizeHost($host);
     }
 

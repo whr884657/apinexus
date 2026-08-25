@@ -1,10 +1,10 @@
 {
-    "version": "13.26.26",
-    "title": "ApiNexus 13.26.26",
+    "version": "13.26.27",
+    "title": "ApiNexus 13.26.27",
     "release_date": "2026-08-26",
     "db_changes": false,
     "changes": [
-        "站点信息支持两槽「绑定域名 + ICP + 公安备案」；按访问 Host 精确匹配展示",
-        "未绑定域名的访问不显示备案号（合规）；未配置绑定域名时兼容旧站全站展示备案一"
+        "修复站点绑定域名保存失败：normalizeDomainInput 正则分隔符冲突导致 site_domain 始终写入空值",
+        "修复读取绑定域名时的 preg_replace Unknown modifier 警告"
     ]
 }
