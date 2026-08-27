@@ -238,6 +238,21 @@ class FrontendUser
     }
 
     /**
+     * 用户侧日志详情（强制本人；白名单字段）
+     *
+     * @param int $id
+     * @return array|null
+     */
+    public static function myLogDetail($id)
+    {
+        $user = self::current();
+        if (!$user || !class_exists('ApiLogManager')) {
+            return null;
+        }
+        return ApiLogManager::findByIdForUser((int) $id, (int) $user['id']);
+    }
+
+    /**
      * 调用排行补名称（仅读 api 表 id→name；覆盖 top / top_today / top_7d）
      *
      * @param array $stat7

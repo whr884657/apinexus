@@ -1,5 +1,16 @@
 {
     "versions": {
+        "13.26.28": {
+            "title": "ApiNexus 13.26.28",
+            "date": "2026-08-28",
+            "db_changes": true,
+            "changes": [
+                "用户控制台：普通用户隐藏「接口总数」KPI；仅开发者显示接口总数与发布被调用",
+                "三主题 dashboard 普通 6 卡 / 开发者 8 卡（.is-six / .is-eight）",
+                "积分不足调用邮件通知：mail_notify_points_insufficient；Redis 24h 去重；与归零通知独立",
+                "用户日志：精简详情弹窗（强制本人）；电脑「查看」、手机点卡片；无类型/用户/路径/UA 等"
+            ]
+        },
         "13.26.27": {
             "title": "ApiNexus 13.26.27",
             "date": "2026-08-26",

@@ -629,6 +629,15 @@ class RedisCache
                 'pattern' => true,
                 'chart_color' => '#f59e0b',
             ),
+            array(
+                'id' => 'notify_points_insufficient',
+                'label' => '积分不足邮件去重',
+                'desc' => '余额不足以调用接口时的邮件提醒标记（每用户）',
+                'key' => 'notify:points_insufficient:',
+                'ttl_hint' => '86400 秒（24 小时）',
+                'pattern' => true,
+                'chart_color' => '#ef4444',
+            ),
         );
 
         $rows = array();

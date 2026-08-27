@@ -93,6 +93,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_comment_admin', '1'),
 ('mail_notify_comment', '1'),
 ('mail_notify_points_zero', '1'),
+('mail_notify_points_insufficient', '1'),
 ('mail_notify_recharge_success', '1'),
 ('register_gift_enabled', '0'),
 ('register_gift_points', '100'),

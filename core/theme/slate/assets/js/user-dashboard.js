@@ -388,12 +388,14 @@
         setField('points_kpi', stats.points != null ? stats.points : '0');
         setField('points_spent', stats.points_spent != null ? stats.points_spent : '0');
         setField('key_calls', stats.key_calls != null ? parseInt(stats.key_calls, 10) || 0 : 0);
-        setField('api_total', stats.api_total != null ? parseInt(stats.api_total, 10) || 0 : 0);
-        setField(
-            'api_total_meta',
-            '已通过 ' + (stats.api_approved != null ? parseInt(stats.api_approved, 10) || 0 : 0)
-                + ' · 待审 ' + (stats.api_pending != null ? parseInt(stats.api_pending, 10) || 0 : 0)
-        );
+        if (page.querySelector('[data-field="api_total"]')) {
+            setField('api_total', stats.api_total != null ? parseInt(stats.api_total, 10) || 0 : 0);
+            setField(
+                'api_total_meta',
+                '已通过 ' + (stats.api_approved != null ? parseInt(stats.api_approved, 10) || 0 : 0)
+                    + ' · 待审 ' + (stats.api_pending != null ? parseInt(stats.api_pending, 10) || 0 : 0)
+            );
+        }
         if (page.querySelector('[data-field="api_calls"]')) {
             setField('api_calls', stats.api_calls != null ? parseInt(stats.api_calls, 10) || 0 : 0);
         }

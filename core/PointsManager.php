@@ -500,6 +500,13 @@ class PointsManager
             if ($direct === OrderManager::DIRECT_DEC) {
                 if ($cur + 0.0000001 < $amount) {
                     $pdo->rollBack();
+                    if (class_exists('PointsNotify')) {
+                        try {
+                            PointsNotify::notifyPointsInsufficient($userId, $cur, $amount);
+                        } catch (Exception $e) {
+                            // 发信失败不阻断主流程
+                        }
+                    }
                     return array('ok' => false, 'msg' => '积分余额不足');
                 }
                 $newBal = round($cur - $amount, 4);
@@ -556,6 +563,13 @@ class PointsManager
             $pdo->commit();
             if (class_exists('RedisCache')) {
                 RedisCache::invalidateOrders();
+            }
+            if ($direct === OrderManager::DIRECT_INC && class_exists('PointsNotify')) {
+                try {
+                    PointsNotify::clearInsufficientNoticeFlag($userId);
+                } catch (Exception $e) {
+                    // ignore
+                }
             }
             if ($direct === OrderManager::DIRECT_DEC
                 && $cur > 0.0000001

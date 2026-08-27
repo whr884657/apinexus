@@ -636,8 +636,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'mail_notify_feedback_admin'   => isset($_POST['mail_notify_feedback_admin']) ? '1' : '0',
                 'mail_notify_comment_admin'    => isset($_POST['mail_notify_comment_admin']) ? '1' : '0',
                 'mail_notify_comment'          => isset($_POST['mail_notify_comment']) ? '1' : '0',
-                'mail_notify_points_zero'      => isset($_POST['mail_notify_points_zero']) ? '1' : '0',
-                'mail_notify_recharge_success' => isset($_POST['mail_notify_recharge_success']) ? '1' : '0',
+                'mail_notify_points_zero'         => isset($_POST['mail_notify_points_zero']) ? '1' : '0',
+                'mail_notify_points_insufficient' => isset($_POST['mail_notify_points_insufficient']) ? '1' : '0',
+                'mail_notify_recharge_success'    => isset($_POST['mail_notify_recharge_success']) ? '1' : '0',
             ));
 
             AjaxResponse::success('邮箱设置已保存');
@@ -1665,6 +1666,10 @@ vs_admin_accordion_start(
             <label class="vs-checkbox" style="margin-top:8px;display:flex;">
                 <input type="checkbox" name="mail_notify_points_zero" value="1" <?php echo (!isset($vsCfg['mail_notify_points_zero']) || $vsCfg['mail_notify_points_zero'] === '1') ? 'checked' : ''; ?>>
                 <span>积分余额变为零时，通知用户</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="mail_notify_points_insufficient" value="1" <?php echo (!isset($vsCfg['mail_notify_points_insufficient']) || $vsCfg['mail_notify_points_insufficient'] === '1') ? 'checked' : ''; ?>>
+                <span>积分余额不足以调用接口时，通知用户（24 小时内仅一次）</span>
             </label>
             <label class="vs-checkbox" style="margin-top:8px;display:flex;">
                 <input type="checkbox" name="mail_notify_recharge_success" value="1" <?php echo (!isset($vsCfg['mail_notify_recharge_success']) || $vsCfg['mail_notify_recharge_success'] === '1') ? 'checked' : ''; ?>>

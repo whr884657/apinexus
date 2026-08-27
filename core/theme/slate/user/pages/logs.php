@@ -47,4 +47,21 @@ $detailEnabled = !empty($detailEnabled);
         <div class="vs-api-list-total" id="userLogsTotal"></div>
     </div>
 </div>
+
+<div class="vs-overlay vs-overlay--lg" id="userLogsDetailOverlay" hidden aria-hidden="true">
+    <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
+    <div class="vs-overlay__panel" role="dialog" aria-labelledby="userLogsDetailTitle" aria-modal="true">
+        <div class="vs-overlay__handle" aria-hidden="true"></div>
+        <header class="vs-overlay__head">
+            <h3 class="vs-overlay__title" id="userLogsDetailTitle">调用详情</h3>
+            <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
+        </header>
+        <div class="vs-overlay__body" id="userLogsDetailBody">
+            <?php vs_render_loading('正在加载详情', array('compact' => true)); ?>
+        </div>
+        <footer class="vs-overlay__foot">
+            <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">关闭</button>
+        </footer>
+    </div>
+</div>
 <?php endif; ?>

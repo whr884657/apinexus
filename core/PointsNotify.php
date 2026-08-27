@@ -1,11 +1,17 @@
 <?php
 /**
  * 文件：core/PointsNotify.php
- * 作用：积分相关邮件通知（余额归零 / 充值成功；失败不阻断主流程）
+ * 作用：积分相关邮件通知（余额归零 / 不足调用 / 充值成功；失败不阻断主流程）
  */
 
 class PointsNotify
 {
+    /** Redis 逻辑键前缀：积分不足调用提醒（24h 去重） */
+    const REDIS_KEY_INSUFFICIENT_PREFIX = 'notify:points_insufficient:';
+
+    /** 不足提醒去重 TTL（秒） */
+    const INSUFFICIENT_TTL = 86400;
+
     /**
      * 积分余额由正变为零时通知用户
      *
@@ -44,6 +50,96 @@ class PointsNotify
     }
 
     /**
+     * 积分不足以支付本次调用时通知用户（与归零通知独立；Redis 24h 去重）
+     *
+     * @param int   $userId
+     * @param float $balance 当前余额
+     * @param float $need     本次需要积分（可 0）
+     * @return array{ok:bool,sent:int,error:string}
+     */
+    public static function notifyPointsInsufficient($userId, $balance = 0.0, $need = 0.0)
+    {
+        if (!Config::isMailEnabled()) {
+            return array('ok' => false, 'sent' => 0, 'error' => '邮箱发信未配置');
+        }
+        if (Config::get('mail_notify_points_insufficient', '1') !== '1') {
+            return array('ok' => false, 'sent' => 0, 'error' => '已关闭积分不足调用通知邮件');
+        }
+
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return array('ok' => false, 'sent' => 0, 'error' => '用户无效');
+        }
+
+        // 去重依赖 Redis；不可用时跳过，避免连调刷信
+        if (!class_exists('RedisCache') || !RedisCache::enabled() || !class_exists('RedisService')) {
+            return array('ok' => false, 'sent' => 0, 'error' => '缓存不可用，已跳过不足提醒');
+        }
+        $redisKey = self::REDIS_KEY_INSUFFICIENT_PREFIX . $userId;
+        // 发信前原子占坑（SET NX），避免并发连调刷信
+        $claimed = false;
+        try {
+            $claimed = (bool) RedisService::withClient(function ($redis) use ($redisKey) {
+                $fullKey = RedisService::buildKey($redisKey);
+                // phpredis：NX + EX
+                return (bool) $redis->set($fullKey, '1', array('nx', 'ex' => self::INSUFFICIENT_TTL));
+            });
+        } catch (Exception $e) {
+            return array('ok' => false, 'sent' => 0, 'error' => '缓存不可用，已跳过不足提醒');
+        }
+        if (!$claimed) {
+            return array('ok' => true, 'sent' => 0, 'error' => '24小时内已提醒过');
+        }
+
+        $to = self::userEmail($userId);
+        if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            self::clearInsufficientNoticeFlag($userId);
+            return array('ok' => false, 'sent' => 0, 'error' => '用户邮箱无效');
+        }
+
+        $siteName = self::siteName();
+        $username = self::userName($userId);
+        $rechargeUrl = rtrim(vs_base_url(), '/') . '/user/recharge';
+
+        $subject = '【' . $siteName . '】积分余额已不支持调用该接口';
+        $body = '<p>您好' . ($username !== '' ? ('，' . self::e($username)) : '') . '：</p>';
+        $body .= '<p>您在「' . self::e($siteName) . '」的积分余额已不足以支付本次收费接口调用，请及时充值。</p>';
+        $body .= '<ul>';
+        $body .= '<li>当前余额：' . self::e(self::fmtPoints($balance)) . '</li>';
+        if ((float) $need > 0) {
+            $body .= '<li>本次需要：' . self::e(self::fmtPoints($need)) . '</li>';
+        }
+        $body .= '</ul>';
+        $body .= '<p><a href="' . self::e($rechargeUrl) . '">前往充值中心</a></p>';
+        $body .= '<p>本邮件由系统自动发送，如非本人操作请忽略。</p>';
+
+        $result = self::sendOne($to, $subject, $body);
+        if (empty($result['ok']) || (int) $result['sent'] <= 0) {
+            self::clearInsufficientNoticeFlag($userId);
+        }
+        return $result;
+    }
+
+    /**
+     * 清除「积分不足调用」24h 去重标记（充值/加分后可再次提醒）
+     *
+     * @param int $userId
+     * @return void
+     */
+    public static function clearInsufficientNoticeFlag($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0 || !class_exists('RedisCache') || !RedisCache::enabled()) {
+            return;
+        }
+        try {
+            RedisCache::forget(self::REDIS_KEY_INSUFFICIENT_PREFIX . $userId);
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
      * 用户充值到账成功后通知
      *
      * @param int    $userId
@@ -54,6 +150,8 @@ class PointsNotify
      */
     public static function notifyRechargeSuccess($userId, $amount, $balance, $orderno = '')
     {
+        self::clearInsufficientNoticeFlag($userId);
+
         if (!Config::isMailEnabled()) {
             return array('ok' => false, 'sent' => 0, 'error' => '邮箱发信未配置');
         }

@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.27**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.28**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -318,7 +318,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `PanelMonitor.php` | 宝塔 / 1Panel 面板监控客户端；控制台「服务器」卡片快照与测试连接（**v13.16.0**） |
 | `GeoCityCoords.php` | 大屏飞线全量城市坐标库；`resolveCityName` 地级优先 + 剥离运营商尾缀（v13.0.0 / **v13.2.0**） |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD；含 `pointsspent` 密钥累计消耗与 `adjustPointsspent` |
-| `ApiLogManager.php` | API 调用日志：keyset 翻页、热冷合并；管理端搜用户名先解析 `user.id`；`listPaged` 支持 `userid`；用户侧 `formatUserSafeRow`（含 IP/归属地）/ `listForUser` / `recentForUser`；LIKE 须转义+`ESCAPE`（E243） |
+| `ApiLogManager.php` | API 调用日志：keyset 翻页、热冷合并；管理端搜用户名先解析 `user.id`；`listPaged` 支持 `userid`；用户侧 `formatUserSafeRow` / `formatUserDetailRow` / `listForUser` / `findByIdForUser` / `recentForUser`；LIKE 须转义+`ESCAPE`（E243） |
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片；冷库搜索同步 `user_ids` 与 LIKE 转义 |
 | `ApiFeedbackManager.php` / `FrontendFeedback.php` / `FeedbackNotify.php` | 接口反馈后台 CRUD / 前台提交 / 邮件通知 |
 | `ContentManager.php` | 文章/公告内容 CRUD（kind 区分） |
@@ -341,9 +341,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `play/codeplay/CodePayClient.php` | 码支付下单/验签客户端（回调见同目录 `notify.php` / `return.php`） |
 | `RedisCache.php` | 业务数据缓存（前台/公开列表 + apilog + `cache:userapilog:*` + orders + 控制台 dashboard + statday）；`invalidateApiLog` 同步清用户日志缓存 |
 | `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0）；业务时区东八区（v10.6.1）；管理端 ledger 支持 `ledger_bucket=account|api` 两大类筛选（v13.26.22） |
-| `PointsManager.php` | 余额读写、扣费、充值完成/取消（回调不比对金额，见支付规范 §2.6）、`giftOnRegister` / `checkin`；列表走 OrderManager；扣至零 / 充值履约后触发 `PointsNotify`；创建/履约/取消联动 `PayPendingWatch` |
+| `PointsManager.php` | 余额读写、扣费、充值完成/取消（回调不比对金额，见支付规范 §2.6）、`giftOnRegister` / `checkin`；列表走 OrderManager；扣至零 / **余额不足** / 充值履约后触发 `PointsNotify`；创建/履约/取消联动 `PayPendingWatch` |
 | `PayPendingWatch.php` | 充值待支付超时（默认 180 秒）自动取消：Redis ZSET 挂单索引 + 登录页顺带弹出；无 Redis 时按用户维度降级；订单列表/状态查询惰性过期；禁止全表扫与独立计划任务 |
-| `PointsNotify.php` | 积分余额归零、充值成功邮件（`mail_notify_points_zero` / `mail_notify_recharge_success`；失败不阻断） |
+| `PointsNotify.php` | 积分余额归零、**不足调用（Redis 24h 去重）**、充值成功邮件（`mail_notify_points_zero` / `mail_notify_points_insufficient` / `mail_notify_recharge_success`；失败不阻断） |
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL；前台/用户中心壳与页 CSS·JS 清单 |
@@ -369,7 +369,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 
 ### 4.2 version.php
 
-**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.27**）。在线更新、关于页、`update.json` 均以此为准。
+**作用：** 定义常量 `VS_VERSION`（以 `core/version.php` 为准；本文档同步至 **13.26.28**）。在线更新、关于页、`update.json` 均以此为准。
 
 **用法：**
 
@@ -1754,7 +1754,7 @@ $html = Markdown::render($rawMarkdown);
 | 贡献者 | `FrontendContributor::listForTheme` |
 | 个人主页 | 入口注入或 `findProfile` |
 | 用户控制台 | `FrontendUser::current` + `dashboardStats` + `UserDashHello::pick` + `checkinBanner` |
-| 用户日志 | `FrontendUser::myLogsPaged` → `ApiLogManager::listForUser` |
+| 用户日志 | `FrontendUser::myLogsPaged` / `myLogDetail` → `ApiLogManager::listForUser` / `findByIdForUser` |
 
 **分类标签标准：**
 

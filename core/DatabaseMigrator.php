@@ -423,6 +423,14 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 13.26.28 积分不足调用邮件开关时跳过
+        if (!in_array('13.26.28', $applied, true)) {
+            $allCfgInsuf = Config::all();
+            if (isset($allCfgInsuf['mail_notify_points_insufficient'])) {
+                self::markApplied('13.26.28');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -1358,6 +1366,10 @@ class DatabaseMigrator
         if ($version === '13.26.22') {
             $all = Config::all();
             return isset($all['apikey_max']);
+        }
+        if ($version === '13.26.28') {
+            $all = Config::all();
+            return isset($all['mail_notify_points_insufficient']);
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

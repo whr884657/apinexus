@@ -1,10 +1,12 @@
 {
-    "version": "13.26.27",
-    "title": "ApiNexus 13.26.27",
-    "release_date": "2026-08-26",
-    "db_changes": false,
+    "version": "13.26.28",
+    "title": "ApiNexus 13.26.28",
+    "release_date": "2026-08-28",
+    "db_changes": true,
     "changes": [
-        "修复站点绑定域名保存失败：normalizeDomainInput 正则分隔符冲突导致 site_domain 始终写入空值",
-        "修复读取绑定域名时的 preg_replace Unknown modifier 警告"
+        "用户控制台：普通用户不再显示「接口总数」KPI（仅开发者显示接口总数 + 发布被调用）",
+        "三主题 dashboard 对齐：普通 6 卡 / 开发者 8 卡",
+        "积分不足调用邮件通知（独立开关；Redis 24 小时去重；与余额归零通知分离）",
+        "用户日志查询：精简调用详情弹窗（电脑查看 / 手机点卡片）；字段少于管理端"
     ]
 }

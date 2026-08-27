@@ -292,6 +292,7 @@ body.th3-uc-body .vs-recharge-card.is-selected {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
 }
+.uc-dash__kpi.is-six,
 .uc-dash__kpi.is-seven,
 .uc-dash__kpi.is-eight {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -730,21 +731,29 @@ body.th3-uc-body .vs-recharge-card.is-selected {
 }
 .uc-log-row {
     display: grid;
-    grid-template-columns: minmax(120px, 1.4fr) minmax(160px, 1.6fr) 72px minmax(132px, 1fr);
+    grid-template-columns: minmax(120px, 1.4fr) minmax(160px, 1.6fr) 72px minmax(132px, 1fr) 56px;
     gap: 8px 12px;
     align-items: center;
     padding: 10px 14px;
     border-bottom: 1px solid rgba(15, 23, 42, 0.06);
     font-size: 0.8125rem;
+    cursor: pointer;
 }
 .uc-log-row:last-child {
     border-bottom: 0;
+}
+.uc-log-row:hover {
+    background: rgba(37, 99, 235, 0.03);
 }
 .uc-log-row--head {
     background: #f8fafc;
     color: #94a3b8;
     font-weight: 600;
     font-size: 12px;
+    cursor: default;
+}
+.uc-log-row--head:hover {
+    background: #f8fafc;
 }
 .uc-log-row__name {
     font-weight: 600;
@@ -757,6 +766,13 @@ body.th3-uc-body .vs-recharge-card.is-selected {
     color: #64748b;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+}
+.uc-log-row__act {
+    text-align: right;
+}
+.uc-log-row:hover .vs-log-view {
+    border-color: #111;
+    color: #111;
 }
 .uc-log-ip {
     display: inline-flex;
@@ -807,12 +823,27 @@ body.th3-uc-body .vs-recharge-card.is-selected {
     background: #fff;
     animation: ucLogCardIn 0.35s ease both;
     animation-delay: var(--uc-log-delay, 0s);
+    cursor: pointer;
+}
+.uc-log-card:active {
+    background: #f8fafc;
 }
 .uc-log-card__top {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
+}
+.uc-log-card__badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.uc-log-card__badges .vs-log-method {
+    font-size: 11px;
+    line-height: 1.2;
+    padding: 2px 6px;
 }
 .uc-log-card__name {
     font-size: 0.9rem;
@@ -850,6 +881,22 @@ body.th3-uc-body .vs-recharge-card.is-selected {
     text-align: center;
     color: #94a3b8;
 }
+/* 用户日志详情：宽屏一行 6 卡；密钥单独通栏；完整路径在网络区通栏 */
+.vs-log-detail--user .vs-log-detail__grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.vs-log-detail--user .vs-log-detail__item--secret,
+.vs-log-detail--user .vs-log-detail__item--full {
+    grid-column: 1 / -1;
+}
+.vs-log-detail--user .vs-log-detail__item--full .vs-log-detail__value {
+    word-break: break-all;
+}
+@media (min-width: 1100px) {
+    .vs-log-detail--user .vs-log-detail__section:first-of-type .vs-log-detail__grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
 @keyframes ucLogCardIn {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
@@ -885,6 +932,7 @@ body.th3-uc-body .vs-recharge-card.is-selected {
 }
 @media (max-width: 1280px) {
     .uc-dash__kpi,
+    .uc-dash__kpi.is-six,
     .uc-dash__kpi.is-seven,
     .uc-dash__kpi.is-eight {
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -901,6 +949,7 @@ body.th3-uc-body .vs-recharge-card.is-selected {
 }
 @media (max-width: 960px) {
     .uc-dash__kpi,
+    .uc-dash__kpi.is-six,
     .uc-dash__kpi.is-seven,
     .uc-dash__kpi.is-eight {
         grid-template-columns: repeat(2, minmax(0, 1fr));

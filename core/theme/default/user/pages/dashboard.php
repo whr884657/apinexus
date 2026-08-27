@@ -72,7 +72,7 @@ $chartBoot = array(
     'fail_rate'    => array_map(function ($v) { return round((float) $v, 2); }, $failSeries),
 );
 $bootAttr = htmlspecialchars(json_encode($chartBoot, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
-$kpiClass = $isDeveloper ? ' is-eight' : ' is-seven';
+$kpiClass = $isDeveloper ? ' is-eight' : ' is-six';
 ?>
 
 <?php if (!empty($checkinBanner['show_banner'])): ?>
@@ -128,12 +128,12 @@ $kpiClass = $isDeveloper ? ' is-eight' : ' is-seven';
             <strong class="uc-dash__kpi-value" data-field="key_calls"><?php echo (int) (isset($dash['key_calls']) ? $dash['key_calls'] : 0); ?></strong>
             <span class="uc-dash__kpi-meta">令牌累计调用次数</span>
         </div>
+        <?php if ($isDeveloper): ?>
         <div class="uc-dash__kpi-card uc-motion" data-uc-press>
             <span class="uc-dash__kpi-label">接口总数</span>
             <strong class="uc-dash__kpi-value" data-field="api_total"><?php echo (int) (isset($dash['api_total']) ? $dash['api_total'] : 0); ?></strong>
             <span class="uc-dash__kpi-meta" data-field="api_total_meta">已通过 <?php echo (int) (isset($dash['api_approved']) ? $dash['api_approved'] : 0); ?> · 待审 <?php echo (int) (isset($dash['api_pending']) ? $dash['api_pending'] : 0); ?></span>
         </div>
-        <?php if ($isDeveloper): ?>
         <div class="uc-dash__kpi-card uc-motion" data-uc-press>
             <span class="uc-dash__kpi-label">发布被调用</span>
             <strong class="uc-dash__kpi-value" data-field="api_calls"><?php echo (int) (isset($dash['api_calls']) ? $dash['api_calls'] : 0); ?></strong>

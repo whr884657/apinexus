@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：user/logs.php
- * 作用：用户中心 · 本人调用日志（无详情；字段白名单；强制 userid）
+ * 作用：用户中心 · 本人调用日志（列表白名单 + 精简详情；强制 userid）
  */
 
 require_once __DIR__ . '/init.php';
@@ -16,26 +16,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::error('日志功能尚未就绪');
     }
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
-    if ($action !== 'list') {
-        AjaxResponse::error('无效操作', 400);
+
+    if ($action === 'list') {
+        // 禁止客户端传入 userid；一律当前会话
+        $okRaw = isset($_POST['ok']) ? $_POST['ok'] : '';
+        $ok = null;
+        if ($okRaw === '0' || $okRaw === '1' || $okRaw === 0 || $okRaw === 1) {
+            $ok = (int) $okRaw;
+        }
+        $data = FrontendUser::myLogsPaged(array(
+            'page'      => isset($_POST['page']) ? (int) $_POST['page'] : 1,
+            'pagesize'  => isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20,
+            'before_id' => isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0,
+            'ok'        => $ok,
+        ));
+        if ((int) UserAuth::id() !== $userId) {
+            AjaxResponse::error('会话已失效', 401);
+        }
+        AjaxResponse::success('ok', $data);
     }
-    // 禁止客户端传入 userid；一律当前会话
-    $okRaw = isset($_POST['ok']) ? $_POST['ok'] : '';
-    $ok = null;
-    if ($okRaw === '0' || $okRaw === '1' || $okRaw === 0 || $okRaw === 1) {
-        $ok = (int) $okRaw;
+
+    if ($action === 'detail') {
+        if (!$detailEnabled) {
+            AjaxResponse::error('管理员未开启调用明细');
+        }
+        $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+        $row = FrontendUser::myLogDetail($id);
+        if (!$row) {
+            AjaxResponse::error('记录不存在');
+        }
+        if ((int) UserAuth::id() !== $userId) {
+            AjaxResponse::error('会话已失效', 401);
+        }
+        AjaxResponse::success('ok', array('row' => $row));
     }
-    $data = FrontendUser::myLogsPaged(array(
-        'page'      => isset($_POST['page']) ? (int) $_POST['page'] : 1,
-        'pagesize'  => isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20,
-        'before_id' => isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0,
-        'ok'        => $ok,
-    ));
-    // 二次校验：绝不回传非本人痕迹（listForUser 已强制；此处防御）
-    if ((int) UserAuth::id() !== $userId) {
-        AjaxResponse::error('会话已失效', 401);
-    }
-    AjaxResponse::success('ok', $data);
+
+    AjaxResponse::error('无效操作', 400);
 }
 
 vs_user_render_page(

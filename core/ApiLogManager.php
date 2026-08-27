@@ -760,7 +760,7 @@ class ApiLogManager
     }
 
     /**
-     * 用户侧安全字段（接口名/时间/IP/归属地/成败；禁止 UA/Referer/参数/密钥全文）
+     * 用户侧列表安全字段（禁止 UA/Referer/密钥全文等）
      *
      * @param array $row 原始行或 formatRow 结果
      * @return array|null
@@ -772,15 +772,121 @@ class ApiLogManager
             return null;
         }
         return array(
-            'id'         => (int) $full['id'],
-            'apiname'    => (string) $full['apiname'],
-            'ip'         => (string) $full['ip'],
-            'iploc'      => (string) $full['iploc'],
-            'ok'         => (int) $full['ok'],
-            'ok_label'   => (string) $full['ok_label'],
-            'ok_class'   => (string) $full['ok_class'],
-            'createtime' => (string) $full['createtime'],
+            'id'           => (int) $full['id'],
+            'apiname'      => (string) $full['apiname'],
+            'method'       => (string) $full['method'],
+            'method_class' => (string) $full['method_class'],
+            'ip'           => (string) $full['ip'],
+            'iploc'        => (string) $full['iploc'],
+            'ok'           => (int) $full['ok'],
+            'ok_label'     => (string) $full['ok_label'],
+            'ok_class'     => (string) $full['ok_class'],
+            'createtime'   => (string) $full['createtime'],
         );
+    }
+
+    /**
+     * 用户侧详情白名单（相对管理端精简：无类型/用户/路径/完整URL/Referer/Origin/UA/来源域名）
+     *
+     * @param array $row 原始行或 formatRow 结果
+     * @return array|null
+     */
+    public static function formatUserDetailRow($row)
+    {
+        $full = self::formatRow($row);
+        if ($full === null) {
+            return null;
+        }
+        return array(
+            'id'             => (int) $full['id'],
+            'apiid'          => (int) $full['apiid'],
+            'apiname'        => (string) $full['apiname'],
+            'method'         => (string) $full['method'],
+            'method_class'   => (string) $full['method_class'],
+            'apikey'         => (string) $full['apikey'],
+            'apikey_masked'  => (string) $full['apikey_masked'],
+            'ip'             => (string) $full['ip'],
+            'iploc'          => (string) $full['iploc'],
+            'host'           => (string) $full['host'],
+            'path'           => (string) $full['path'],
+            'url'            => self::scrubUserVisibleUrl((string) $full['url']),
+            'ok'             => (int) $full['ok'],
+            'ok_label'       => (string) $full['ok_label'],
+            'ok_class'       => (string) $full['ok_class'],
+            'httpcode'       => (int) $full['httpcode'],
+            'httpcode_label' => (string) $full['httpcode_label'],
+            'http_class'     => (string) $full['http_class'],
+            'charged'        => (int) $full['charged'],
+            'charged_label'  => (string) $full['charged_label'],
+            'cost'           => (string) $full['cost'],
+            'createtime'     => (string) $full['createtime'],
+        );
+    }
+
+    /**
+     * 用户可见完整路径：query 中常见密钥参数打码，避免详情二次泄露
+     *
+     * @param string $url
+     * @return string
+     */
+    private static function scrubUserVisibleUrl($url)
+    {
+        $url = (string) $url;
+        if ($url === '' || strpos($url, '?') === false) {
+            return $url;
+        }
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['query'])) {
+            return $url;
+        }
+        $q = array();
+        parse_str((string) $parts['query'], $q);
+        if (!is_array($q) || $q === array()) {
+            return $url;
+        }
+        $sensitive = array('key', 'apikey', 'api_key', 'token', 'access_token', 'secret');
+        $changed = false;
+        foreach ($sensitive as $name) {
+            if (isset($q[$name]) && (string) $q[$name] !== '') {
+                $q[$name] = '***';
+                $changed = true;
+            }
+        }
+        if (!$changed) {
+            return $url;
+        }
+        $scheme = isset($parts['scheme']) ? ($parts['scheme'] . '://') : '';
+        $host = isset($parts['host']) ? $parts['host'] : '';
+        $port = isset($parts['port']) ? (':' . $parts['port']) : '';
+        $path = isset($parts['path']) ? $parts['path'] : '';
+        $frag = isset($parts['fragment']) ? ('#' . $parts['fragment']) : '';
+        $query = http_build_query($q);
+        // 无 host 时保留相对形态（仅 path?query）
+        if ($scheme === '' && $host === '') {
+            return $path . ($query !== '' ? ('?' . $query) : '') . $frag;
+        }
+        return $scheme . $host . $port . $path . ($query !== '' ? ('?' . $query) : '') . $frag;
+    }
+
+    /**
+     * 用户侧按 ID 取详情（强制本人 userid；冷热库）
+     *
+     * @param int $id
+     * @param int $userId
+     * @return array|null
+     */
+    public static function findByIdForUser($id, $userId)
+    {
+        $id = (int) $id;
+        $userId = (int) $userId;
+        if ($id <= 0 || $userId <= 0 || !self::detailEnabled()) {
+            return null;
+        }
+        $row = self::findById($id);
+        if ($row === null || (int) $row['userid'] !== $userId) {
+            return null;
+        }
+        return self::formatUserDetailRow($row);
     }
 
     /**
@@ -808,7 +914,7 @@ class ApiLogManager
     }
 
     /**
-     * 用户侧日志分页（强制本人 userid；字段白名单；无详情）
+     * 用户侧日志分页（强制本人 userid；列表字段白名单；详情另走 findByIdForUser）
      *
      * @param int   $userId 必须为正且与会话一致（由调用方保证）
      * @param array $opts   pagesize, before_id, ok(null|0|1)
@@ -844,7 +950,7 @@ class ApiLogManager
         }
 
         $cacheKey = 'cache:userapilog:page:' . md5(json_encode(array(
-            'v'         => 2,
+            'v'         => 3,
             'uid'       => $userId,
             'page'      => $page,
             'pagesize'  => $pagesize,
@@ -869,7 +975,7 @@ class ApiLogManager
                 }
                 $whereSql = implode(' AND ', $where);
 
-                $sql = 'SELECT l.`id`, l.`apiname`, l.`ip`, l.`iploc`, l.`ok`, l.`httpcode`, l.`createtime`
+                $sql = 'SELECT l.`id`, l.`apiname`, l.`method`, l.`ip`, l.`iploc`, l.`ok`, l.`httpcode`, l.`createtime`
                     FROM `' . self::table() . '` l
                     WHERE ' . $whereSql . '
                     ORDER BY l.`id` DESC
