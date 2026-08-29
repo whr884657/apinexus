@@ -431,6 +431,13 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 13.26.29 user.ipallow 时跳过
+        if (!in_array('13.26.29', $applied, true)) {
+            if (self::tableColumnExists('user', 'ipallow')) {
+                self::markApplied('13.26.29');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -1370,6 +1377,9 @@ class DatabaseMigrator
         if ($version === '13.26.28') {
             $all = Config::all();
             return isset($all['mail_notify_points_insufficient']);
+        }
+        if ($version === '13.26.29') {
+            return self::tableColumnExists('user', 'ipallow');
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

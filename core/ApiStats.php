@@ -460,6 +460,10 @@ class ApiStats
     /**
      * 按接口 needkey 识别并校验请求中的密钥
      *
+     * needkey=0 无需：可不传；传了有效启用密钥则绑定身份（日志/用户统计）；错误或禁用密钥不拒绝请求；不做 IP 白名单拦截
+     * needkey=2 可选：可不传；传了则必须有效，否则拒绝；有效密钥绑定身份，但仍可不带密钥以游客访问 → 不做 IP 白名单拦截
+     * needkey=1 必须：必须有效密钥；绑定后按所有者 IP 白名单硬拦（空名单=不限制）
+     *
      * @param array $row
      * @return true|array{errcode:int,msg:string}
      */
@@ -484,8 +488,9 @@ class ApiStats
             }
         }
 
-        // 无需密钥：忽略形似 key 的业务参数，避免误拦
+        // 无需密钥：软绑定身份（便于调用方自愿带密钥做用户侧统计；无 IP 白名单）
         if ($need === ApiManager::KEY_NONE) {
+            self::tryBindValidKeyIdentity($candidates);
             return self::evaluateBilling($row);
         }
 
@@ -504,6 +509,9 @@ class ApiStats
             return array('errcode' => ApiError::KEY_SYSTEM, 'msg' => '密钥校验暂不可用');
         }
 
+        // IP 白名单仅对「必须密钥」硬拦；可选接口允许游客，拦 IP 无意义
+        $enforceIpAllow = ($need === ApiManager::KEY_REQUIRED);
+
         // 多 keyways：任一通道的有效密钥即可（错误 query 不阻断正确 header/bearer）
         $sawDisabled = false;
         foreach ($candidates as $raw) {
@@ -515,12 +523,10 @@ class ApiStats
                 $sawDisabled = true;
                 continue;
             }
-            self::$keyCtx = array(
-                'raw'    => $raw,
-                'keyid'  => (int) $keyRow['id'],
-                'userid' => (int) $keyRow['userid'],
-                'valid'  => true,
-            );
+            $bound = self::applyValidKeyContext($raw, $keyRow, $enforceIpAllow);
+            if ($bound !== true) {
+                return $bound;
+            }
             return self::evaluateBilling($row);
         }
 
@@ -532,6 +538,56 @@ class ApiStats
             return array('errcode' => ApiError::AUTH_WAY, 'msg' => '鉴权方式错误，请按本接口支持的方式传递密钥');
         }
         return array('errcode' => ApiError::BAD_KEY, 'msg' => '密钥错误');
+    }
+
+    /**
+     * 无需密钥接口：尝试绑定有效密钥身份（失败不拒绝，仅跳过绑定；不做 IP 白名单）
+     *
+     * @param array<int,string> $candidates
+     * @return true
+     */
+    private static function tryBindValidKeyIdentity(array $candidates)
+    {
+        if ($candidates === array() || !ApiKeyManager::tableReady()) {
+            return true;
+        }
+        foreach ($candidates as $raw) {
+            $keyRow = ApiKeyManager::findBySecret($raw);
+            if (!$keyRow) {
+                continue;
+            }
+            if ((int) $keyRow['status'] !== ApiKeyManager::STATUS_ENABLED) {
+                continue;
+            }
+            self::applyValidKeyContext($raw, $keyRow, false);
+            return true;
+        }
+        return true;
+    }
+
+    /**
+     * 写入有效密钥上下文；仅当 $enforceIpAllow 为真时校验所有者 IP 白名单
+     *
+     * @param string $raw
+     * @param array  $keyRow
+     * @param bool   $enforceIpAllow 仅 needkey=必须 时为 true
+     * @return true|array{errcode:int,msg:string}
+     */
+    private static function applyValidKeyContext($raw, array $keyRow, $enforceIpAllow = false)
+    {
+        if ($enforceIpAllow && class_exists('UserIpAllow')) {
+            $ipOk = UserIpAllow::checkUser((int) $keyRow['userid']);
+            if ($ipOk !== true) {
+                return $ipOk;
+            }
+        }
+        self::$keyCtx = array(
+            'raw'    => (string) $raw,
+            'keyid'  => (int) $keyRow['id'],
+            'userid' => (int) $keyRow['userid'],
+            'valid'  => true,
+        );
+        return true;
     }
 
     /**

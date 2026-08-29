@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `pointsspent` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '累计消耗积分（已完成扣减流水合计）',
     `keycalls` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '累计密钥调用次数（成功且有效密钥）',
     `stat7` mediumtext NULL COMMENT '近7日调用聚合JSON（按日分桶，供用户控制台）',
+    `ipallow` varchar(2000) NOT NULL DEFAULT '' COMMENT '调用IP白名单（逗号分隔；空表示不限制）',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     `lastlogin` datetime DEFAULT NULL COMMENT '最后登录时间',
     PRIMARY KEY (`id`),

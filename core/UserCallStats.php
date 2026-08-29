@@ -213,6 +213,16 @@ class UserCallStats
                 $sawDisabled = true;
                 continue;
             }
+            // 个人调用统计接口本身为密钥必须；在此校验所有者 IP 白名单
+            if (class_exists('UserIpAllow')) {
+                $ipOk = UserIpAllow::checkUser((int) $row['userid']);
+                if ($ipOk !== true) {
+                    return array_merge($empty, array(
+                        'errcode' => isset($ipOk['errcode']) ? (int) $ipOk['errcode'] : ApiError::IP_DENY,
+                        'msg'     => isset($ipOk['msg']) ? (string) $ipOk['msg'] : '当前IP不在白名单内',
+                    ));
+                }
+            }
             return array(
                 'ok'     => true,
                 'userid' => (int) $row['userid'],

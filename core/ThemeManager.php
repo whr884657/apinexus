@@ -631,6 +631,7 @@ class ThemeManager
             array('id' => 'logs', 'title' => '日志查询', 'icon' => 'search', 'url' => vs_site_path('/user/logs')),
             array('id' => 'recharge', 'title' => '充值中心', 'icon' => 'archive', 'url' => vs_site_path('/user/recharge')),
             array('id' => 'points', 'title' => '积分变动', 'icon' => 'archive', 'url' => vs_site_path('/user/points')),
+            array('id' => 'ip', 'title' => 'IP 配置', 'icon' => 'setting', 'url' => vs_site_path('/user/ip')),
             array('id' => 'account', 'title' => '账号设置', 'icon' => 'user', 'url' => vs_site_path('/user/account')),
         );
 

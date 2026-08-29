@@ -312,7 +312,7 @@ class AiApiDoc
             $task = '【本任务】只写「## 错误响应示例」与「## 业务错误码说明」（含完整错误码表）。'
                 . '错误响应 JSON 必须为 {"code":0,"msg":"…","errcode":11001} 形态，禁止写 "http":401。'
                 . '业务错误码须完整列出（不得遗漏）：'
-                . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11018。')
+                . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11019。')
                 . '代理类接口也须写上 11013～11016 与 11017。不要写调用示例与注意事项。';
         } elseif ($sectionId === 'examples') {
             $task = '【本任务】只写「## 调用示例」。必须同时包含两段非空示例：'

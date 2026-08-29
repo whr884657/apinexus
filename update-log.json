@@ -1,5 +1,17 @@
 {
     "versions": {
+        "13.26.29": {
+            "title": "ApiNexus 13.26.29",
+            "date": "2026-08-30",
+            "db_changes": true,
+            "changes": [
+                "用户 IP 白名单：user.ipallow（逗号分隔；空=不限制）；用户中心「IP 配置」；IP 代理 Tab 占位",
+                "IP 硬拦仅针对密钥=必须的接口（含收费强制必须）；无需/可选不做 IP 拦截；不匹配返回 errcode 11019",
+                "IP 识别复用 AuthSecurity::clientIp（默认 REMOTE_ADDR；仅 trust_proxy=1 采信 XFF）",
+                "无需密钥接口：自愿携带有效密钥时绑定用户日志/统计；错误密钥不拒绝（E282）",
+                "迁移 13.26.29.sql；新装 database.sql 同步；ApiError 业务码扩至 11019"
+            ]
+        },
         "13.26.28": {
             "title": "ApiNexus 13.26.28",
             "date": "2026-08-28",

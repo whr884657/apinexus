@@ -45,9 +45,11 @@ class ApiError
     const SERVER = 11017;
     /** 请求方式不允许（不在接口声明的 GET/POST 内） */
     const BAD_METHOD = 11018;
+    /** 当前 IP 不在用户白名单内 */
+    const IP_DENY = 11019;
 
     /**
-     * 业务错误码 → 文案（11001～11018；不含传输层 200/302）
+     * 业务错误码 → 文案（11001～11019；不含传输层 200/302）
      *
      * @return array<int,string>
      */
@@ -72,6 +74,7 @@ class ApiError
             self::UPSTREAM_FAIL    => '上游请求失败',
             self::SERVER           => '服务暂不可用',
             self::BAD_METHOD       => '请求方式不允许',
+            self::IP_DENY          => '当前IP不在白名单内',
         );
     }
 
@@ -113,11 +116,11 @@ class ApiError
     public static function isKnown($errcode)
     {
         $code = (int) $errcode;
-        return $code === 200 || $code === 302 || ($code >= 11001 && $code <= 11018);
+        return $code === 200 || $code === 302 || ($code >= 11001 && $code <= 11019);
     }
 
     /**
-     * 是否为平台业务失败码（11001～11018；不含 200/302）
+     * 是否为平台业务失败码（11001～11019；不含 200/302）
      *
      * @param int $errcode
      * @return bool
@@ -125,7 +128,7 @@ class ApiError
     public static function isBusinessFailure($errcode)
     {
         $code = (int) $errcode;
-        return $code >= 11001 && $code <= 11018;
+        return $code >= 11001 && $code <= 11019;
     }
 
     /**

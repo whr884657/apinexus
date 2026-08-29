@@ -972,3 +972,83 @@ body.th3-uc-body .vs-recharge-card.is-selected {
     }
 }
 
+
+/* —— 用户 IP 配置 —— */
+.vs-user-ip .vs-tabs.vs-api-review-tabs {
+    margin-bottom: 16px;
+}
+.vs-user-ip__card,
+.vs-user-ip__list-wrap {
+    margin-top: 12px;
+}
+.vs-user-ip__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    margin-bottom: 16px;
+}
+.vs-user-ip__meta-label {
+    color: var(--vs-text-muted, #64748b);
+    font-size: 13px;
+}
+.vs-user-ip__meta-ip {
+    font-size: 13px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--vs-fill-muted, rgba(15, 23, 42, 0.04));
+}
+.vs-user-ip__add-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+.vs-user-ip__add-row .vs-input {
+    flex: 1;
+    min-width: 0;
+}
+.vs-user-ip__list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.vs-user-ip__list-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+.vs-user-ip__list-count {
+    font-size: 13px;
+    color: var(--vs-text-muted, #64748b);
+}
+.vs-user-ip__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.vs-user-ip__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--vs-border, rgba(15, 23, 42, 0.08));
+    border-radius: 10px;
+}
+.vs-user-ip__item-ip {
+    font-size: 13px;
+    word-break: break-all;
+}
+@media (max-width: 640px) {
+    .vs-user-ip__add-row {
+        flex-direction: column;
+    }
+    .vs-user-ip__meta {
+        align-items: flex-start;
+    }
+}

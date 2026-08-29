@@ -19,7 +19,7 @@
  *   - 若配置了 jsonrewrite：仅对合法 JSON 正文做字段级 set/del（见 ProxyJsonRewrite；TXT/二进制不改）
  *   - v13.25.0：剥离调用方 callback/jsonp 参数，禁止 JSONP 透传上游（JsonpGuard）
  *   - v13.25.0：出站 JSON 擦除 /admin 等敏感路径（ApiOutboundSanitize）
- *   - v13.25.2：业务错误体（errcode 11001～11018）禁止改写，并强制只保留 code/msg/errcode
+ *   - v13.25.2：业务错误体（errcode 11001～11019）禁止改写，并强制只保留 code/msg/errcode
  *   - 上游响应为 3xx + Location（如随机视频跳转）：校验公网后原样把跳转还给调用方（v13.4.1）
  *     禁止服务端跟随跳转去拉最终大文件（视频等）
  *   - 可配置上游认证、出站 User-Agent / Referer（见 ProxyClientProfile）
