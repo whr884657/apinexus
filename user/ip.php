@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // —— 出口代理 ——
-    if (in_array($action, array('proxy_list', 'proxy_save', 'proxy_delete', 'proxy_test', 'proxy_strategy'), true)) {
+    if (in_array($action, array('proxy_list', 'proxy_save', 'proxy_delete', 'proxy_test', 'proxy_strategy', 'proxy_toggle'), true)) {
         if (!$proxyReady) {
             AjaxResponse::error('出口代理尚未就绪，请联系管理员完成系统升级');
         }
@@ -83,6 +83,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'username' => isset($_POST['username']) ? (string) $_POST['username'] : '',
                 'extract'  => isset($_POST['extract']) ? (string) $_POST['extract'] : '',
                 'extfmt'   => isset($_POST['extfmt']) ? (int) $_POST['extfmt'] : 0,
+                'jsonhost' => isset($_POST['jsonhost']) ? (string) $_POST['jsonhost'] : '',
+                'jsonport' => isset($_POST['jsonport']) ? (string) $_POST['jsonport'] : '',
+                'ttlmin'   => isset($_POST['ttlmin']) ? (int) $_POST['ttlmin'] : 10,
                 'status'   => isset($_POST['status']) ? (int) $_POST['status'] : 1,
                 'sort'     => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
             );
@@ -101,6 +104,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'strategy' => UserIpProxy::strategyForUser($userId),
             ));
         }
+        if ($action === 'proxy_toggle') {
+            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            $status = isset($_POST['status']) ? (int) $_POST['status'] : 1;
+            $result = UserIpProxy::setStatus($userId, $id, $status);
+            if (empty($result['ok'])) {
+                AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '操作失败');
+            }
+            AjaxResponse::success($result['msg'], array(
+                'list'  => isset($result['list']) ? $result['list'] : array(),
+                'count' => isset($result['list']) ? count($result['list']) : 0,
+                'max'   => UserIpProxy::MAX_COUNT,
+            ));
+        }
         if ($action === 'proxy_delete') {
             $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
             $result = UserIpProxy::delete($userId, $id);
@@ -117,9 +133,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
             $result = UserIpProxy::testConnectivity($userId, $id);
             if (empty($result['ok'])) {
-                AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '测试失败');
+                AjaxResponse::json(array(
+                    'code'   => 0,
+                    'msg'    => isset($result['msg']) ? $result['msg'] : '测试失败',
+                    'logs'   => isset($result['logs']) ? $result['logs'] : array(),
+                    'detail' => isset($result['detail']) ? $result['detail'] : null,
+                ));
             }
             AjaxResponse::success($result['msg'], array(
+                'logs'   => isset($result['logs']) ? $result['logs'] : array(),
                 'detail' => isset($result['detail']) ? $result['detail'] : null,
             ));
         }

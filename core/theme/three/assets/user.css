@@ -1,122 +1,27 @@
 /**
- * 主题三 · 用户中心增量样式（奶油底 / 珊瑚橙）
+ * 默认主题 · 用户中心增量样式
+ *
+ * 壳层样式来自本主题 assets/shell/user-shell.css（与根目录 admin.css 隔离；见《主题资源隔离规范》）。
+ * 本文件只放默认主题用户中心的差异覆盖。
+ *
+ * 默认主题：页面背景由调色盘写 --page-bg；英雄条由 theme-picker 派生 --vs-uc-hero-bg。
+ * 禁止写死与调色盘无关的纯绿 / 纯蓝英雄条。
  */
 
-body.th3-uc-body {
-    --th3-uc-accent: #FF4D2D;
-    --th3-uc-accent-h: #E03E20;
-    --th3-uc-accent-soft: #FFE8E1;
-    --th3-uc-accent-bg: #FFF5F2;
-    --th3-uc-accent-ring: rgba(255, 77, 45, 0.22);
-    --th3-uc-border: #E8E3D8;
-    --th3-uc-bg: #FBFAF7;
-    --th3-uc-bg-hi: #FFFFFF;
-    --th3-uc-fg: #0B0B0B;
-    --th3-uc-fg2: #3A3A3A;
-
-    --vs-primary: var(--th3-uc-accent);
-    --vs-primary-hover: var(--th3-uc-accent-h);
-    --vs-md-accent: var(--th3-uc-accent);
-    --vs-text: var(--th3-uc-fg);
-    --vs-text-secondary: var(--th3-uc-fg2);
-    --vs-border: var(--th3-uc-border);
-    --vs-bg: var(--th3-uc-bg);
-    --page-bg: var(--th3-uc-bg);
-
-    --vs-sidebar-bg: #ffffff;
-    --vs-topbar-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(251, 250, 247, 0.96) 100%);
-    --vs-content-bg: var(--th3-uc-bg);
-
-    --vs-uc-accent: var(--th3-uc-accent);
-    --vs-uc-accent-soft: var(--th3-uc-accent-soft);
-    --vs-uc-accent-bg: var(--th3-uc-accent-bg);
-    --vs-uc-accent-ring: var(--th3-uc-accent-ring);
-    --vs-uc-hero-bg: linear-gradient(135deg, #E03E20 0%, #FF4D2D 48%, #FF6B4A 100%);
+:root {
+    --vs-uc-accent: #111111;
+    --vs-uc-accent-soft: #d4d4d8;
+    --vs-uc-accent-bg: #f4f4f5;
+    --vs-uc-accent-ring: rgba(17, 17, 17, 0.12);
+    /* 无 JS 时的兜底：用 --page-bg 色相压暗（现代浏览器） */
+    --vs-uc-hero-bg: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--page-bg, #f8fafc) 18%, #0a0a0a) 0%,
+        color-mix(in srgb, var(--page-bg, #f8fafc) 40%, #1f2937) 52%,
+        color-mix(in srgb, var(--page-bg, #f8fafc) 55%, #334155) 100%
+    );
     --vs-uc-hero-fg: #ffffff;
-
-    background: linear-gradient(165deg, #FFFFFF 0%, var(--th3-uc-bg) 42%, #F4F1EA 100%);
-    color: var(--th3-uc-fg);
 }
-
-body.th3-uc-body.vs-admin-body {
-    background: transparent;
-}
-
-body.th3-uc-body .vs-admin-main {
-    background: transparent;
-}
-
-body.th3-uc-body .vs-sidebar__logo:not(.vs-site-logo-img) {
-    background: var(--th3-uc-accent);
-}
-
-body.th3-uc-body .vs-sidebar__link:hover,
-body.th3-uc-body .vs-sidebar__group-btn:hover {
-    color: var(--th3-uc-accent-h);
-    background: rgba(255, 77, 45, 0.06);
-}
-
-body.th3-uc-body .vs-sidebar__link.is-active {
-    color: var(--th3-uc-accent-h);
-    background: rgba(255, 77, 45, 0.10);
-    border-left-color: var(--th3-uc-accent);
-}
-
-body.th3-uc-body .vs-topbar__toggle:hover {
-    background: rgba(255, 77, 45, 0.08);
-}
-
-body.th3-uc-body .vs-topbar {
-    border-bottom-color: var(--th3-uc-border);
-}
-
-body.th3-uc-body .vs-btn--primary {
-    background: var(--th3-uc-accent);
-    border-color: var(--th3-uc-accent);
-}
-
-body.th3-uc-body .vs-btn--primary:hover {
-    background: var(--th3-uc-accent-h);
-    border-color: var(--th3-uc-accent-h);
-}
-
-body.th3-uc-body .vs-btn--outline:hover {
-    border-color: var(--th3-uc-accent);
-    color: var(--th3-uc-accent-h);
-}
-
-body.th3-uc-body .vs-admin-shell .vs-panel {
-    border: 1px solid var(--th3-uc-border);
-    background: rgba(255, 255, 255, 0.94);
-}
-
-body.th3-uc-body .vs-points-item__title {
-    color: var(--th3-uc-fg);
-}
-
-body.th3-uc-body .uc-dash__kpi-card {
-    border-color: var(--th3-uc-border);
-    background: rgba(255, 255, 255, 0.92);
-}
-
-body.th3-uc-body .uc-dash__kpi-card:hover {
-    border-color: rgba(255, 77, 45, 0.35);
-    box-shadow: 0 8px 18px rgba(255, 77, 45, 0.10);
-}
-
-body.th3-uc-body .uc-dash__more {
-    color: var(--th3-uc-accent-h);
-}
-
-body.th3-uc-body .vs-recharge-card.is-hot {
-    border-color: var(--th3-uc-accent);
-    box-shadow: 0 0 0 2px var(--th3-uc-accent-ring);
-}
-
-body.th3-uc-body .vs-recharge-card.is-selected {
-    border-color: var(--th3-uc-accent);
-}
-
 
 /* 令牌 / 积分列表：默认主题保持中性黑描边 */
 .vs-admin-shell .vs-panel {
@@ -972,7 +877,6 @@ body.th3-uc-body .vs-recharge-card.is-selected {
     }
 }
 
-
 /* —— 用户 IP 配置 —— */
 .vs-user-ip .vs-tabs.vs-api-review-tabs {
     margin-bottom: 16px;
@@ -1049,14 +953,51 @@ body.th3-uc-body .vs-recharge-card.is-selected {
     display: flex;
     gap: 10px;
     align-items: stretch;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 .vs-user-ip__strategy-row .vs-select,
 .vs-user-ip__strategy-row .vs-input {
-    flex: 1;
-    min-width: 160px;
+    flex: 1 1 auto;
+    min-width: 0;
     width: auto;
-    max-width: 100%;
+    max-width: none;
+}
+.vs-user-ip__strategy-row .vs-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+.vs-user-ip__strategy-hint {
+    margin: 8px 0 0;
+}
+.vs-user-ip__test-log {
+    margin: 0;
+    padding: 12px 14px;
+    min-height: 220px;
+    max-height: min(52vh, 480px);
+    overflow: auto;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.vs-user-ip__test-log.is-running::after {
+    content: "▋";
+    animation: vs-user-ip-blink 1s step-end infinite;
+}
+@keyframes vs-user-ip-blink {
+    50% { opacity: 0; }
+}
+@media (max-width: 480px) {
+    .vs-user-ip__strategy-row {
+        gap: 8px;
+    }
+    .vs-user-ip__strategy-row .vs-btn {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
 }
 .vs-user-ip__form-grid {
     display: grid;

@@ -1079,6 +1079,8 @@ class Updater
             'config/database.php',
             'config/install.lock',
             'data',
+            // 本地接口 ID 由站长改写；升级覆盖会丢配置，故保留
+            'api/index.php',
         );
     }
 
@@ -1222,6 +1224,7 @@ class Updater
             'config/install.lock',
             'config/.htaccess',
             '.htaccess',
+            'api/index.php',
         );
         return in_array($relative, $immutable, true);
     }

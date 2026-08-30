@@ -195,6 +195,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (class_exists('Config')) {
                         Config::clearCache();
                     }
+                    if (class_exists('InstallChecker')) {
+                        InstallChecker::markInstalledInConfig();
+                    }
                     $redisPrefix = isset($_SESSION['vs_install_redis_prefix'])
                         ? (string) $_SESSION['vs_install_redis_prefix']
                         : RedisService::DEFAULT_PREFIX;

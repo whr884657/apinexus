@@ -445,12 +445,109 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 13.26.31 全量列时跳过
+        if (!in_array('13.26.31', $applied, true)) {
+            if (self::tableColumnExists('ipproxy', 'proxycode')
+                && self::tableColumnExists('ipproxy', 'jsonhost')
+                && self::tableColumnExists('ipproxy', 'ttlmin')) {
+                self::markApplied('13.26.31');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
         self::ensureCompatHotIndexes();
         // 13.26.7：用户七日窗 / 密钥消耗 / 用户日志索引（已 mark 仅含邮件开关的站点须补列）
         self::ensureUserDashStatSchema();
+        // 13.26.31：ipproxy 短码 / JSON 路径 / TTL 缓存列幂等补齐 + 短码回填
+        self::ensureIpProxySchema31();
+        // 13.26.31：安装完成库标记（与 install.lock 双保险）
+        self::ensureInstallDoneFlag();
+    }
+
+    /**
+     * 确保 config.install_done=1（幂等；已装站点升级补齐）
+     *
+     * @return void
+     */
+    private static function ensureInstallDoneFlag()
+    {
+        if (!self::tableExists('config')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('config');
+            $key = class_exists('InstallChecker')
+                ? InstallChecker::CONFIG_KEY_DONE
+                : 'install_done';
+            $stmt = $pdo->prepare(
+                'INSERT INTO `' . $table . '` (`key`, `value`) VALUES (?, ?)'
+                . ' ON DUPLICATE KEY UPDATE `value` = \'1\''
+            );
+            $stmt->execute(array($key, '1'));
+            if (class_exists('Config')) {
+                Config::clearCache();
+            }
+        } catch (Exception $e) {
+            // 幂等兜底失败不阻断升级
+        }
+    }
+
+    /**
+     * 确保出口代理表 13.26.31 列齐全并回填三位短码（幂等）
+     *
+     * @return void
+     */
+    private static function ensureIpProxySchema31()
+    {
+        if (!self::tableExists('ipproxy')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('ipproxy');
+            $cols = array(
+                'jsonhost'  => "ADD COLUMN `jsonhost` varchar(80) NOT NULL DEFAULT '' COMMENT 'JSON主机字段名或点路径（空=自动识别常见键）' AFTER `extfmt`",
+                'jsonport'  => "ADD COLUMN `jsonport` varchar(80) NOT NULL DEFAULT '' COMMENT 'JSON端口字段名或点路径（空=自动或主机内含端口）' AFTER `jsonhost`",
+                'proxycode' => "ADD COLUMN `proxycode` char(3) NOT NULL DEFAULT '' COMMENT '调用短码（三位随机；vsproxyid仅认此码）' AFTER `jsonport`",
+                'ttlmin'    => "ADD COLUMN `ttlmin` int(11) NOT NULL DEFAULT 10 COMMENT '提取节点缓存分钟（0=每次重新提取）' AFTER `proxycode`",
+                'cachehost' => "ADD COLUMN `cachehost` varchar(255) NOT NULL DEFAULT '' COMMENT '提取缓存主机' AFTER `ttlmin`",
+                'cacheport' => "ADD COLUMN `cacheport` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提取缓存端口' AFTER `cachehost`",
+                'cacheexp'  => "ADD COLUMN `cacheexp` datetime DEFAULT NULL COMMENT '提取缓存过期时间' AFTER `cacheport`",
+            );
+            foreach ($cols as $name => $ddl) {
+                if (!self::tableColumnExists('ipproxy', $name)) {
+                    self::execStatement($pdo, 'ALTER TABLE `' . $table . '` ' . $ddl);
+                }
+            }
+            if (class_exists('UserIpProxy') && method_exists('UserIpProxy', 'backfillMissingProxyCodes')) {
+                UserIpProxy::backfillMissingProxyCodes();
+            }
+            // 短码唯一：先回填再升 UNIQUE；兼容旧 idx_userid_code
+            try {
+                $hasUk = $pdo->query("SHOW INDEX FROM `{$table}` WHERE Key_name = 'uk_userid_code'");
+                if ($hasUk && $hasUk->rowCount() < 1) {
+                    try {
+                        $old = $pdo->query("SHOW INDEX FROM `{$table}` WHERE Key_name = 'idx_userid_code'");
+                        if ($old && $old->rowCount() > 0) {
+                            self::execStatement($pdo, 'ALTER TABLE `' . $table . '` DROP INDEX `idx_userid_code`');
+                        }
+                    } catch (Exception $eDrop) {
+                        // ignore
+                    }
+                    self::execStatement(
+                        $pdo,
+                        'ALTER TABLE `' . $table . '` ADD UNIQUE KEY `uk_userid_code` (`userid`, `proxycode`)'
+                    );
+                }
+            } catch (Exception $eIdx) {
+                // ignore（重复短码需人工清理后再升）
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
     }
 
     /**
@@ -946,7 +1043,8 @@ class DatabaseMigrator
             || $version === '13.26.22'
             || $version === '13.26.28'
             || $version === '13.26.29'
-            || $version === '13.26.30');
+            || $version === '13.26.30'
+            || $version === '13.26.31');
     }
 
     /**
@@ -1393,6 +1491,15 @@ class DatabaseMigrator
         }
         if ($version === '13.26.30') {
             return self::tableExists('ipproxy') && self::tableColumnExists('user', 'proxystrategy');
+        }
+        if ($version === '13.26.31') {
+            if (!self::tableColumnExists('ipproxy', 'proxycode')
+                || !self::tableColumnExists('ipproxy', 'jsonhost')
+                || !self::tableColumnExists('ipproxy', 'ttlmin')) {
+                return false;
+            }
+            // install_done 由 ensureInstallDoneFlag 幂等补；有列即可视为结构就绪
+            return true;
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

@@ -60,13 +60,21 @@ CREATE TABLE IF NOT EXISTS `{prefix}ipproxy` (
     `password` varchar(200) NOT NULL DEFAULT '' COMMENT '代理密码（仅服务端持有，界面不回显）',
     `extract` varchar(1000) NOT NULL DEFAULT '' COMMENT '提取API完整URL（mode=1时使用）',
     `extfmt` tinyint(1) NOT NULL DEFAULT 0 COMMENT '提取返回格式：0自动 1纯文本ip:port 2JSON',
+    `jsonhost` varchar(80) NOT NULL DEFAULT '' COMMENT 'JSON主机字段名或点路径（空=自动识别常见键）',
+    `jsonport` varchar(80) NOT NULL DEFAULT '' COMMENT 'JSON端口字段名或点路径（空=自动或主机内含端口）',
+    `proxycode` char(3) NOT NULL DEFAULT '' COMMENT '调用短码（三位随机；vsproxyid仅认此码，不认数字主键）',
+    `ttlmin` int(11) NOT NULL DEFAULT 10 COMMENT '提取节点缓存分钟（0=每次重新提取；隧道忽略）',
+    `cachehost` varchar(255) NOT NULL DEFAULT '' COMMENT '提取缓存主机',
+    `cacheport` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提取缓存端口',
+    `cacheexp` datetime DEFAULT NULL COMMENT '提取缓存过期时间',
     `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态：0禁用 1启用',
     `sort` int(11) NOT NULL DEFAULT 0 COMMENT '排序权重（越小越前；轮询顺序）',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updatetime` datetime DEFAULT NULL COMMENT '最后更新时间',
     PRIMARY KEY (`id`),
     KEY `idx_userid` (`userid`),
-    KEY `idx_userid_status` (`userid`, `status`)
+    KEY `idx_userid_status` (`userid`, `status`),
+    UNIQUE KEY `uk_userid_code` (`userid`, `proxycode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户自备出口IP代理配置（每用户最多5条）';
 
 -- 系统配置表
@@ -172,7 +180,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('panelmonitor_provider', ''),
 ('panelmonitor_baseurl', ''),
 ('panelmonitor_apikey', ''),
-('redis_prefix', 'apinexus:');
+('redis_prefix', 'apinexus:'),
+('install_done', '1');
 
 -- 邮箱验证码发信频率限制记录
 CREATE TABLE IF NOT EXISTS `{prefix}mailrate` (

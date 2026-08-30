@@ -260,7 +260,7 @@ class ApiProxy
     {
         $params = array();
         $egressWant = false;
-        $egressId = 0;
+        $egressCode = '';
         if (!empty($_GET) && is_array($_GET)) {
             foreach ($_GET as $k => $v) {
                 if (is_array($v)) {
@@ -273,7 +273,7 @@ class ApiProxy
                     continue;
                 }
                 if ($keyLower === 'vsproxyid') {
-                    $egressId = max(0, (int) $v);
+                    $egressCode = class_exists('UserIpProxy') ? UserIpProxy::normalizeProxyCode($v) : '';
                     continue;
                 }
                 if ($key === '' || $key === self::REWRITE_SLUG_PARAM
@@ -307,7 +307,7 @@ class ApiProxy
                 $egressWant = class_exists('UserIpProxy') && UserIpProxy::truthyFlag($_POST['vsproxy']);
             }
             if (isset($_POST['vsproxyid']) && !is_array($_POST['vsproxyid'])) {
-                $egressId = max(0, (int) $_POST['vsproxyid']);
+                $egressCode = class_exists('UserIpProxy') ? UserIpProxy::normalizeProxyCode($_POST['vsproxyid']) : '';
             }
         }
 
@@ -322,7 +322,7 @@ class ApiProxy
                     $egressWant = class_exists('UserIpProxy') && UserIpProxy::truthyFlag($peek['vsproxy']);
                 }
                 if (isset($peek['vsproxyid']) && !is_array($peek['vsproxyid'])) {
-                    $egressId = max(0, (int) $peek['vsproxyid']);
+                    $egressCode = class_exists('UserIpProxy') ? UserIpProxy::normalizeProxyCode($peek['vsproxyid']) : '';
                 }
             }
         }
@@ -354,9 +354,9 @@ class ApiProxy
             }
         }
 
-        if (class_exists('UserIpProxy') && ($egressWant || $egressId > 0
+        if (class_exists('UserIpProxy') && ($egressWant || $egressCode !== ''
             || isset($_GET['vsproxy']) || isset($_POST['vsproxy']))) {
-            UserIpProxy::noteRequestFlags($egressWant, $egressId);
+            UserIpProxy::noteRequestFlags($egressWant, $egressCode);
         }
 
         return array(

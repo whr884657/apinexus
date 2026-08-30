@@ -68,6 +68,15 @@ class Config
      */
     public static function set($key, $value)
     {
+        $key = (string) $key;
+        // 安装完成标记只允许置为 1，禁止经通用接口清除（防重装绕过）
+        if (class_exists('InstallChecker') && $key === InstallChecker::CONFIG_KEY_DONE) {
+            if (trim((string) $value) !== '1') {
+                throw new Exception('禁止修改或清除安装完成标记');
+            }
+            $value = '1';
+        }
+
         $pdo = Database::connect();
         $table = Database::table('config');
         $stmt = $pdo->prepare(

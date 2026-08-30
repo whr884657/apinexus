@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.30**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.31**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -312,7 +312,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；出站代理 `applyOutboundProxy`（`vsproxy=1`）；`keyContext()` 供本地接口读本请求密钥用户；**仅 needkey=必须**时经 `UserIpAllow` 硬拦 IP |
 | `UserIpAllow.php` | 用户调用 IP 白名单（`user.ipallow`；空=不限制）；**仅密钥必须接口**硬拦；配合 `AuthSecurity::clientIp`；不匹配 → errcode **11019** |
-| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；HTTP/HTTPS/SOCKS5/SOCKS4；`vsproxy=1` 启用；与 ApiProxy 上游中继无关 |
+| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；`proxycode` 三位短码（`vsproxyid` 仅认短码）；提取 JSON `jsonhost`/`jsonport` + `ttlmin` 缓存；`vsproxy=1` 启用；与 ApiProxy 上游中继无关 |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
 | `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser；含 calls/cost/success_rate） |
 | `UserCallStats.php` | 个人调用/积分/排行只读查询（`api/index.php`）；短字段含 `rank`/`rank7`；`parseFields` / `query` / `resolveUserFromRequest` |
@@ -437,14 +437,16 @@ echo vs_e(vs_site_path('/apis'));
 
 ### 4.4 InstallChecker.php
 
-**作用：** 判断系统是否已安装（`config/install.lock` + `config/database.php` 均存在）。
+**作用：** 判断系统是否已安装。须有 `config/database.php`；且 **`config/install.lock` 存在** 或 **`vs_config.install_done=1`** 任一成立即视为已装（删锁 alone 无法重进安装向导）。
 
 | 方法 | 说明 |
 |------|------|
-| `isInstalled()` | 是否已安装 |
+| `isInstalled()` | 是否已安装（文件锁 ∪ 库标记） |
+| `dbInstallFlagSet()` / `markInstalledInConfig()` | 查 / 写 `install_done` |
 | `requireInstalled()` | 未安装则跳转 `/install/` |
 | `requireNotInstalled()` | 已安装则禁止进入安装向导 |
-| `lockFile()` / `configFile()` | 路径常量 |
+| `lockFile()` / `configFile()` | 路径 |
+| `CONFIG_KEY_DONE` | 常量 `install_done` |
 
 ---
 

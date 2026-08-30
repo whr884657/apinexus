@@ -1,6 +1,6 @@
 <?php
 /**
- * 主题三 · 用户 IP 配置页（白名单 + 出口代理）
+ * 默认主题 · 用户 IP 配置页（白名单 + 出口代理）
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
@@ -88,7 +88,7 @@ $pageReady = $ready || $proxyReady;
         vs_render_notice(
             'info',
             '',
-            '平台不提供免费代理节点。调用时附加 vsproxy=1（可选 vsproxyid）并携带有效密钥后生效。',
+            '平台不提供免费节点。启用出口：密钥 + vsproxy=1。轮询/随机/首条：不要传 vsproxyid。固定某一条：再加 vsproxyid=三位短码（不认数字主键）。',
             array('compact' => true)
         );
         ?>
@@ -104,6 +104,7 @@ $pageReady = $ready || $proxyReady;
                     </select>
                     <button type="button" class="vs-btn vs-btn--outline" id="userProxyStrategySave">保存策略</button>
                 </div>
+                <p class="vs-form-hint vs-user-ip__strategy-hint">仅当请求带 vsproxy=1 且<strong>不带</strong> vsproxyid 时生效；带短码则固定该条。</p>
             </div>
         </div>
 
@@ -127,9 +128,10 @@ $pageReady = $ready || $proxyReady;
                 <?php foreach ($proxyList as $p): ?>
                     <?php
                     $pid = isset($p['id']) ? (int) $p['id'] : 0;
+                    $pcode = isset($p['proxycode']) ? (string) $p['proxycode'] : '';
                     $ptitle = isset($p['title']) ? (string) $p['title'] : '';
-                    $pmode = isset($p['mode_label']) ? (string) $p['mode_label'] : '';
-                    $pproto = isset($p['proto_label']) ? (string) $p['proto_label'] : '';
+                    $pmode = isset($p['modelabel']) ? (string) $p['modelabel'] : (isset($p['mode_label']) ? (string) $p['mode_label'] : '');
+                    $pproto = isset($p['protolabel']) ? (string) $p['protolabel'] : (isset($p['proto_label']) ? (string) $p['proto_label'] : '');
                     $phost = isset($p['host']) ? (string) $p['host'] : '';
                     $pport = isset($p['port']) ? (int) $p['port'] : 0;
                     $pextract = isset($p['extract']) ? (string) $p['extract'] : '';
@@ -138,10 +140,10 @@ $pageReady = $ready || $proxyReady;
                         ? $pextract
                         : ($phost !== '' ? ($phost . ':' . $pport) : '—');
                     ?>
-                    <li class="vs-user-ip__proxy-item" data-id="<?php echo $pid; ?>">
+                    <li class="vs-user-ip__proxy-item" data-id="<?php echo $pid; ?>" data-code="<?php echo vs_e($pcode); ?>">
                         <div class="vs-user-ip__proxy-main">
                             <div class="vs-user-ip__proxy-title-row">
-                                <strong class="vs-user-ip__proxy-title"><?php echo vs_e($ptitle !== '' ? $ptitle : ('#' . $pid)); ?></strong>
+                                <strong class="vs-user-ip__proxy-title"><?php echo vs_e($ptitle !== '' ? $ptitle : ('短码 ' . $pcode)); ?></strong>
                                 <span class="vs-user-ip__proxy-badge"><?php echo vs_e($pmode); ?></span>
                                 <span class="vs-user-ip__proxy-badge"><?php echo vs_e($pproto); ?></span>
                                 <span class="vs-user-ip__proxy-badge <?php echo $pstatus === 1 ? 'is-on' : 'is-off'; ?>">
@@ -149,10 +151,11 @@ $pageReady = $ready || $proxyReady;
                                 </span>
                             </div>
                             <code class="vs-user-ip__proxy-endpoint" title="<?php echo vs_e($endpoint); ?>"><?php echo vs_e($endpoint); ?></code>
-                            <p class="vs-user-ip__proxy-meta">ID <?php echo $pid; ?> · 调用可加 vsproxyid=<?php echo $pid; ?></p>
+                            <p class="vs-user-ip__proxy-meta">短码 <code><?php echo vs_e($pcode); ?></code> · 固定调用 vsproxy=1&amp;vsproxyid=<?php echo vs_e($pcode); ?></p>
                         </div>
                         <div class="vs-user-ip__proxy-actions">
                             <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-proxy-act="test" data-id="<?php echo $pid; ?>">测试</button>
+                            <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-proxy-act="toggle" data-id="<?php echo $pid; ?>" data-status="<?php echo $pstatus === 1 ? '0' : '1'; ?>"><?php echo $pstatus === 1 ? '禁用' : '启用'; ?></button>
                             <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-proxy-act="edit" data-id="<?php echo $pid; ?>">编辑</button>
                             <button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-btn--sm" data-proxy-act="delete" data-id="<?php echo $pid; ?>">删除</button>
                         </div>
@@ -260,6 +263,21 @@ $pageReady = $ready || $proxyReady;
                         <option value="1">纯文本 ip:port</option>
                         <option value="2">JSON</option>
                     </select>
+                    <p class="vs-form-hint">自动/JSON 会尝试常见键：ip、host、server、sever 与 port；字段名不同时请在下方填写。</p>
+                </div>
+                <div class="vs-form-row vs-user-ip__field-extract vs-user-ip__field-json">
+                    <label class="vs-label" for="userProxyJsonHost">JSON 主机字段（可选）</label>
+                    <input type="text" class="vs-input" id="userProxyJsonHost" name="jsonhost" maxlength="80" placeholder="例如 ip、sever、data.0.ip">
+                </div>
+                <div class="vs-form-row vs-user-ip__field-extract vs-user-ip__field-json">
+                    <label class="vs-label" for="userProxyJsonPort">JSON 端口字段（可选）</label>
+                    <input type="text" class="vs-input" id="userProxyJsonPort" name="jsonport" maxlength="80" placeholder="例如 port；主机已含 :端口 可留空">
+                    <p class="vs-form-hint">支持点路径（如 data.0.ip）。留空则按常见键自动识别。</p>
+                </div>
+                <div class="vs-form-row vs-user-ip__field-extract">
+                    <label class="vs-label" for="userProxyTtlmin">节点缓存（分钟）</label>
+                    <input type="number" class="vs-input" id="userProxyTtlmin" name="ttlmin" value="10" min="0" max="10080" placeholder="10">
+                    <p class="vs-form-hint">提取到的 IP 在有效期内复用；0 表示每次调用重新提取。</p>
                 </div>
                 <div class="vs-form-row">
                     <label class="vs-label" for="userProxySort">排序（越小越前）</label>
@@ -270,6 +288,24 @@ $pageReady = $ready || $proxyReady;
         <footer class="vs-overlay__foot">
             <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">取消</button>
             <button type="submit" form="userProxyForm" class="vs-btn vs-btn--primary" id="userProxySaveBtn">保存</button>
+        </footer>
+    </div>
+</div>
+
+<div class="vs-overlay vs-overlay--lg" id="userProxyTestOverlay" hidden aria-hidden="true">
+    <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
+    <div class="vs-overlay__panel" role="dialog" aria-labelledby="userProxyTestTitle" aria-modal="true">
+        <div class="vs-overlay__handle" aria-hidden="true"></div>
+        <header class="vs-overlay__head">
+            <h3 class="vs-overlay__title" id="userProxyTestTitle">出口代理测试</h3>
+            <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
+        </header>
+        <div class="vs-overlay__body">
+            <p class="vs-form-hint">以「经代理公网回显」为准核对出口 IP；本站探测仅验证经代理可达本站（不携带调用密钥）。</p>
+            <pre class="vs-user-ip__test-log" id="userProxyTestLog" aria-live="polite"></pre>
+        </div>
+        <footer class="vs-overlay__foot">
+            <button type="button" class="vs-btn vs-btn--primary" data-overlay-close="1">关闭</button>
         </footer>
     </div>
 </div>

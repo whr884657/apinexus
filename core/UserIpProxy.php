@@ -32,20 +32,120 @@ class UserIpProxy
     /** @var bool|null 由网关收集参数时注入，避免与 php://input 争用 */
     private static $wantOverride = null;
 
-    /** @var int|null */
-    private static $idOverride = null;
+    /** @var string|null 三位调用短码（空=按策略轮询） */
+    private static $codeOverride = null;
 
     /**
      * 网关 / 统计层注入本请求是否启用出口代理（优先于自行读参）
      *
-     * @param bool $want
-     * @param int  $proxyId
+     * @param bool   $want
+     * @param string $proxyCode 三位短码；空表示不指定（走策略）
      * @return void
      */
-    public static function noteRequestFlags($want, $proxyId = 0)
+    public static function noteRequestFlags($want, $proxyCode = '')
     {
         self::$wantOverride = (bool) $want;
-        self::$idOverride = max(0, (int) $proxyId);
+        $code = self::normalizeProxyCode($proxyCode);
+        self::$codeOverride = ($code !== '') ? $code : '';
+    }
+
+    /**
+     * 规范化调用短码：仅接受恰好 3 位 [0-9a-z]（小写）；拒绝纯数字主键用法
+     *
+     * @param mixed $raw
+     * @return string
+     */
+    public static function normalizeProxyCode($raw)
+    {
+        $s = strtolower(trim((string) $raw));
+        if ($s === '' || !preg_match('/^[0-9a-z]{3}$/', $s)) {
+            return '';
+        }
+        return $s;
+    }
+
+    /**
+     * 生成用户内唯一的三位随机短码
+     *
+     * @param int $userId
+     * @return string
+     */
+    public static function generateProxyCode($userId)
+    {
+        $userId = (int) $userId;
+        $chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+        $len = strlen($chars);
+        for ($attempt = 0; $attempt < 80; $attempt++) {
+            $code = '';
+            for ($i = 0; $i < 3; $i++) {
+                $code .= $chars[random_int(0, $len - 1)];
+            }
+            if ($userId <= 0 || !self::tableReady()) {
+                return $code;
+            }
+            try {
+                $pdo = Database::connect();
+                $stmt = $pdo->prepare(
+                    'SELECT 1 FROM `' . Database::table('ipproxy') . '` WHERE `userid` = ? AND `proxycode` = ? LIMIT 1'
+                );
+                $stmt->execute(array($userId, $code));
+                if (!$stmt->fetchColumn()) {
+                    return $code;
+                }
+            } catch (Exception $e) {
+                return $code;
+            }
+        }
+        // 极端碰撞：时间片后缀仍取 3 位
+        return substr(strtolower(base_convert((string) (time() % 46656), 10, 36) . '000'), 0, 3);
+    }
+
+    /**
+     * 为缺少短码的历史行回填（Migrator / 列表前调用）
+     *
+     * @return void
+     */
+    public static function backfillMissingProxyCodes()
+    {
+        if (!self::tableReady() || !self::tableColumnExistsLocal('proxycode')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query(
+                'SELECT `id`,`userid` FROM `' . Database::table('ipproxy') . '` WHERE `proxycode` = \'\' OR `proxycode` IS NULL'
+            );
+            $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : array();
+            if (!is_array($rows)) {
+                return;
+            }
+            $upd = $pdo->prepare(
+                'UPDATE `' . Database::table('ipproxy') . '` SET `proxycode` = ? WHERE `id` = ? AND `userid` = ?'
+            );
+            foreach ($rows as $row) {
+                $uid = isset($row['userid']) ? (int) $row['userid'] : 0;
+                $id = isset($row['id']) ? (int) $row['id'] : 0;
+                if ($uid <= 0 || $id <= 0) {
+                    continue;
+                }
+                $code = self::generateProxyCode($uid);
+                $upd->execute(array($code, $id, $uid));
+            }
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
+     * @param string $col
+     * @return bool
+     */
+    private static function tableColumnExistsLocal($col)
+    {
+        if (class_exists('DatabaseMigrator') && method_exists('DatabaseMigrator', 'tableColumnExists')) {
+            return DatabaseMigrator::tableColumnExists('ipproxy', $col);
+        }
+        return true;
     }
 
     /**
@@ -104,20 +204,29 @@ class UserIpProxy
     }
 
     /**
-     * 可选：指定代理配置主键
+     * 可选：指定代理配置短码（三位）；空=按用户策略在多条启用配置中轮询/随机/首条
      *
+     * @return string
+     */
+    public static function requestProxyCode()
+    {
+        if (self::$codeOverride !== null) {
+            return self::normalizeProxyCode(self::$codeOverride);
+        }
+        $v = self::readRequestValue('vsproxyid');
+        if ($v === null || $v === '') {
+            return '';
+        }
+        return self::normalizeProxyCode($v);
+    }
+
+    /**
+     * @deprecated 已改为短码；保留空壳避免旧调用致命错误
      * @return int
      */
     public static function requestProxyId()
     {
-        if (self::$idOverride !== null) {
-            return max(0, (int) self::$idOverride);
-        }
-        $v = self::readRequestValue('vsproxyid');
-        if ($v === null || $v === '') {
-            return 0;
-        }
-        return max(0, (int) $v);
+        return 0;
     }
 
     /**
@@ -223,10 +332,12 @@ class UserIpProxy
         if (!self::tableReady()) {
             return array('ok' => false, 'msg' => '出口代理尚未就绪，请联系管理员完成系统升级');
         }
+        self::backfillMissingProxyCodes();
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'SELECT `id`,`title`,`mode`,`proto`,`host`,`port`,`username`,`extract`,`extfmt`,`status`,`sort`,`createtime`,`updatetime`,'
+                'SELECT `id`,`title`,`mode`,`proto`,`host`,`port`,`username`,`extract`,`extfmt`,`jsonhost`,`jsonport`,'
+                . '`proxycode`,`ttlmin`,`cachehost`,`cacheport`,`cacheexp`,`status`,`sort`,`createtime`,`updatetime`,'
                 . ' CASE WHEN `password` = \'\' THEN 0 ELSE 1 END AS `haspass`'
                 . ' FROM `' . Database::table('ipproxy') . '`'
                 . ' WHERE `userid` = ? ORDER BY `sort` ASC, `id` ASC'
@@ -258,6 +369,13 @@ class UserIpProxy
      */
     public static function formatPublicRow(array $row)
     {
+        $ttlmin = isset($row['ttlmin']) ? (int) $row['ttlmin'] : 10;
+        if ($ttlmin < 0) {
+            $ttlmin = 0;
+        }
+        if ($ttlmin > 10080) {
+            $ttlmin = 10080;
+        }
         return array(
             'id'         => isset($row['id']) ? (int) $row['id'] : 0,
             'title'      => isset($row['title']) ? (string) $row['title'] : '',
@@ -268,6 +386,13 @@ class UserIpProxy
             'username'   => isset($row['username']) ? (string) $row['username'] : '',
             'extract'    => isset($row['extract']) ? (string) $row['extract'] : '',
             'extfmt'     => isset($row['extfmt']) ? (int) $row['extfmt'] : self::EXTFMT_AUTO,
+            'jsonhost'   => isset($row['jsonhost']) ? (string) $row['jsonhost'] : '',
+            'jsonport'   => isset($row['jsonport']) ? (string) $row['jsonport'] : '',
+            'proxycode'  => isset($row['proxycode']) ? (string) $row['proxycode'] : '',
+            'ttlmin'     => $ttlmin,
+            'cachehost'  => isset($row['cachehost']) ? (string) $row['cachehost'] : '',
+            'cacheport'  => isset($row['cacheport']) ? (int) $row['cacheport'] : 0,
+            'cacheexp'   => isset($row['cacheexp']) ? (string) $row['cacheexp'] : '',
             'status'     => isset($row['status']) ? (int) $row['status'] : 0,
             'sort'       => isset($row['sort']) ? (int) $row['sort'] : 0,
             'haspass'    => !empty($row['haspass']) || (isset($row['password']) && (string) $row['password'] !== ''),
@@ -342,11 +467,19 @@ class UserIpProxy
                 if ($password === null) {
                     $password = isset($old['password']) ? (string) $old['password'] : '';
                 }
-                $upd = $pdo->prepare(
-                    'UPDATE `' . $table . '` SET'
-                    . ' `title`=?,`mode`=?,`proto`=?,`host`=?,`port`=?,`username`=?,`password`=?,`extract`=?,`extfmt`=?,`status`=?,`sort`=?,`updatetime`=NOW()'
-                    . ' WHERE `id`=? AND `userid`=?'
+                $clearCache = (
+                    (string) (isset($old['extract']) ? $old['extract'] : '') !== (string) $data['extract']
+                    || (int) (isset($old['extfmt']) ? $old['extfmt'] : 0) !== (int) $data['extfmt']
+                    || (string) (isset($old['jsonhost']) ? $old['jsonhost'] : '') !== (string) $data['jsonhost']
+                    || (string) (isset($old['jsonport']) ? $old['jsonport'] : '') !== (string) $data['jsonport']
                 );
+                $sql = 'UPDATE `' . $table . '` SET'
+                    . ' `title`=?,`mode`=?,`proto`=?,`host`=?,`port`=?,`username`=?,`password`=?,`extract`=?,`extfmt`=?,`jsonhost`=?,`jsonport`=?,`ttlmin`=?,`status`=?,`sort`=?,`updatetime`=NOW()';
+                if ($clearCache) {
+                    $sql .= ',`cachehost`=\'\',`cacheport`=0,`cacheexp`=NULL';
+                }
+                $sql .= ' WHERE `id`=? AND `userid`=?';
+                $upd = $pdo->prepare($sql);
                 $upd->execute(array(
                     $data['title'],
                     $data['mode'],
@@ -357,6 +490,9 @@ class UserIpProxy
                     $password,
                     $data['extract'],
                     $data['extfmt'],
+                    $data['jsonhost'],
+                    $data['jsonport'],
+                    $data['ttlmin'],
                     $data['status'],
                     $data['sort'],
                     $id,
@@ -369,10 +505,11 @@ class UserIpProxy
                     return array('ok' => false, 'msg' => '每个账号最多保存 ' . self::MAX_COUNT . ' 条出口代理');
                 }
                 $password = $data['password'] === null ? '' : $data['password'];
+                $proxycode = self::generateProxyCode($userId);
                 $ins = $pdo->prepare(
                     'INSERT INTO `' . $table . '`'
-                    . ' (`userid`,`title`,`mode`,`proto`,`host`,`port`,`username`,`password`,`extract`,`extfmt`,`status`,`sort`,`createtime`)'
-                    . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
+                    . ' (`userid`,`title`,`mode`,`proto`,`host`,`port`,`username`,`password`,`extract`,`extfmt`,`jsonhost`,`jsonport`,`proxycode`,`ttlmin`,`status`,`sort`,`createtime`)'
+                    . ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())'
                 );
                 $ins->execute(array(
                     $userId,
@@ -385,6 +522,10 @@ class UserIpProxy
                     $password,
                     $data['extract'],
                     $data['extfmt'],
+                    $data['jsonhost'],
+                    $data['jsonport'],
+                    $proxycode,
+                    $data['ttlmin'],
                     $data['status'],
                     $data['sort'],
                 ));
@@ -522,6 +663,25 @@ class UserIpProxy
             $extfmt = self::EXTFMT_AUTO;
         }
 
+        $jsonhostRaw = isset($input['jsonhost']) ? trim((string) $input['jsonhost']) : '';
+        $jsonportRaw = isset($input['jsonport']) ? trim((string) $input['jsonport']) : '';
+        $jsonhost = '';
+        $jsonport = '';
+        if ($mode === self::MODE_EXTRACT && $extfmt !== self::EXTFMT_TEXT) {
+            if ($jsonhostRaw !== '') {
+                $jsonhost = self::sanitizeJsonPath($jsonhostRaw);
+                if ($jsonhost === false) {
+                    return array('ok' => false, 'msg' => 'JSON 主机字段格式无效（仅字母数字下划线与点路径，如 ip 或 data.0.ip）');
+                }
+            }
+            if ($jsonportRaw !== '') {
+                $jsonport = self::sanitizeJsonPath($jsonportRaw);
+                if ($jsonport === false) {
+                    return array('ok' => false, 'msg' => 'JSON 端口字段格式无效（仅字母数字下划线与点路径，如 port）');
+                }
+            }
+        }
+
         $status = isset($input['status']) ? (int) $input['status'] : 1;
         $status = $status === 0 ? 0 : 1;
 
@@ -532,6 +692,15 @@ class UserIpProxy
         if ($sort > 9999) {
             $sort = 9999;
         }
+
+        $ttlmin = array_key_exists('ttlmin', $input) ? (int) $input['ttlmin'] : 10;
+        if ($ttlmin < 0) {
+            $ttlmin = 0;
+        }
+        if ($ttlmin > 10080) {
+            $ttlmin = 10080;
+        }
+        // 隧道模式可保留 ttlmin，缓存字段不使用
 
         if ($mode === self::MODE_TUNNEL) {
             if ($host === '' || !self::isValidProxyHost($host)) {
@@ -544,6 +713,8 @@ class UserIpProxy
                 return array('ok' => false, 'msg' => '代理主机须为公网地址，禁止内网/保留地址');
             }
             $extract = '';
+            $jsonhost = '';
+            $jsonport = '';
         } else {
             if ($extract === '' || !preg_match('#^https?://#i', $extract)) {
                 return array('ok' => false, 'msg' => '请填写以 http:// 或 https:// 开头的提取 API 地址');
@@ -569,10 +740,76 @@ class UserIpProxy
                 'password' => $password,
                 'extract'  => $extract,
                 'extfmt'   => $extfmt,
+                'jsonhost' => $jsonhost,
+                'jsonport' => $jsonport,
+                'ttlmin'   => $ttlmin,
                 'status'   => $status,
                 'sort'     => $sort,
             ),
         );
+    }
+
+    /**
+     * 校验用户填写的 JSON 字段路径（厂商键名可含下划线；库列名仍无下划线）
+     *
+     * @param string $raw
+     * @return string|false 规范化路径；无效返回 false
+     */
+    public static function sanitizeJsonPath($raw)
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return '';
+        }
+        if (function_exists('mb_substr')) {
+            $raw = mb_substr($raw, 0, 80);
+        } else {
+            $raw = substr($raw, 0, 80);
+        }
+        if (!preg_match('/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$/', $raw)) {
+            return false;
+        }
+        $parts = explode('.', $raw);
+        if (count($parts) > 8) {
+            return false;
+        }
+        foreach ($parts as $p) {
+            if ($p === '' || strcasecmp($p, '__proto__') === 0 || strcasecmp($p, 'constructor') === 0) {
+                return false;
+            }
+        }
+        return $raw;
+    }
+
+    /**
+     * 按点路径读取 JSON 值（支持数字下标，如 data.0.ip）
+     *
+     * @param mixed  $data
+     * @param string $path
+     * @return mixed|null
+     */
+    public static function resolveJsonPath($data, $path)
+    {
+        $path = trim((string) $path);
+        if ($path === '' || !is_array($data)) {
+            return null;
+        }
+        $cur = $data;
+        foreach (explode('.', $path) as $seg) {
+            if (!is_array($cur)) {
+                return null;
+            }
+            if (array_key_exists($seg, $cur)) {
+                $cur = $cur[$seg];
+                continue;
+            }
+            if (ctype_digit($seg) && array_key_exists((int) $seg, $cur)) {
+                $cur = $cur[(int) $seg];
+                continue;
+            }
+            return null;
+        }
+        return $cur;
     }
 
     /**
@@ -696,14 +933,14 @@ class UserIpProxy
     /**
      * 挑选一条配置并解析为可应用的节点
      *
-     * @param int $userId
-     * @param int $forceId
+     * @param int    $userId
+     * @param string $forceCode 三位短码；空=按策略轮询
      * @return array{ok:bool,errcode?:int,msg?:string,endpoint?:array,row?:array}
      */
-    public static function resolveEndpoint($userId, $forceId = 0)
+    public static function resolveEndpoint($userId, $forceCode = '')
     {
         $userId = (int) $userId;
-        $forceId = (int) $forceId;
+        $forceCode = self::normalizeProxyCode($forceCode);
         if ($userId <= 0) {
             return array(
                 'ok'      => false,
@@ -722,11 +959,11 @@ class UserIpProxy
         try {
             $pdo = Database::connect();
             $table = Database::table('ipproxy');
-            if ($forceId > 0) {
+            if ($forceCode !== '') {
                 $stmt = $pdo->prepare(
-                    'SELECT * FROM `' . $table . '` WHERE `id` = ? AND `userid` = ? AND `status` = 1 LIMIT 1'
+                    'SELECT * FROM `' . $table . '` WHERE `userid` = ? AND `proxycode` = ? AND `status` = 1 LIMIT 1'
                 );
-                $stmt->execute(array($forceId, $userId));
+                $stmt->execute(array($userId, $forceCode));
                 $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 if (!$row) {
                     return array(
@@ -758,7 +995,7 @@ class UserIpProxy
             );
         }
 
-        $row = self::pickRow($userId, $rows, $forceId > 0);
+        $row = self::pickRow($userId, $rows, $forceCode !== '');
         $ep = self::materializeEndpoint($row);
         if (empty($ep['ok'])) {
             return array(
@@ -777,10 +1014,10 @@ class UserIpProxy
     /**
      * @param int   $userId
      * @param array $rows
-     * @param bool  $forced
+     * @param bool  $forced 是否已指定短码
      * @return array
      */
-    private static function pickRow($userId, array $rows, $forced)
+    private static function pickRow($userId, array $rows, $forced = false)
     {
         $n = count($rows);
         if ($n <= 1 || $forced) {
@@ -809,10 +1046,10 @@ class UserIpProxy
     }
 
     /**
-     * 将库行变为实际 host/port（提取模式会拉一次提取 API）
+     * 将库行变为实际 host/port（提取模式会拉一次提取 API；支持 TTL 缓存）
      *
      * @param array $row
-     * @return array{ok:bool,errcode?:int,msg?:string,endpoint?:array}
+     * @return array{ok:bool,errcode?:int,msg?:string,endpoint?:array,fromcache?:bool}
      */
     public static function materializeEndpoint(array $row)
     {
@@ -820,17 +1057,54 @@ class UserIpProxy
         $proto = isset($row['proto']) ? (int) $row['proto'] : self::PROTO_HTTP;
         $username = isset($row['username']) ? (string) $row['username'] : '';
         $password = isset($row['password']) ? (string) $row['password'] : '';
+        $fromcache = false;
+        $host = '';
+        $port = 0;
 
         if ($mode === self::MODE_EXTRACT) {
-            $pulled = self::pullFromExtract(
-                isset($row['extract']) ? (string) $row['extract'] : '',
-                isset($row['extfmt']) ? (int) $row['extfmt'] : self::EXTFMT_AUTO
-            );
-            if (empty($pulled['ok'])) {
-                return $pulled;
+            $ttlmin = isset($row['ttlmin']) ? (int) $row['ttlmin'] : 10;
+            if ($ttlmin < 0) {
+                $ttlmin = 0;
             }
-            $host = $pulled['host'];
-            $port = $pulled['port'];
+            if ($ttlmin > 10080) {
+                $ttlmin = 10080;
+            }
+            $cacheHost = isset($row['cachehost']) ? trim((string) $row['cachehost']) : '';
+            $cachePort = isset($row['cacheport']) ? (int) $row['cacheport'] : 0;
+            $cacheExp = isset($row['cacheexp']) ? trim((string) $row['cacheexp']) : '';
+            $rowId = isset($row['id']) ? (int) $row['id'] : 0;
+
+            $useCache = false;
+            if ($ttlmin > 0 && $cacheHost !== '' && $cachePort >= 1 && $cachePort <= 65535 && $cacheExp !== '') {
+                $expTs = strtotime($cacheExp);
+                if ($expTs !== false && $expTs > time() && self::isAllowedProxyEndpoint($cacheHost, $cachePort)) {
+                    $useCache = true;
+                    $host = $cacheHost;
+                    $port = $cachePort;
+                    $fromcache = true;
+                }
+            }
+
+            if (!$useCache) {
+                $pulled = self::pullFromExtract(
+                    isset($row['extract']) ? (string) $row['extract'] : '',
+                    isset($row['extfmt']) ? (int) $row['extfmt'] : self::EXTFMT_AUTO,
+                    isset($row['jsonhost']) ? (string) $row['jsonhost'] : '',
+                    isset($row['jsonport']) ? (string) $row['jsonport'] : ''
+                );
+                if (empty($pulled['ok'])) {
+                    return $pulled;
+                }
+                $host = $pulled['host'];
+                $port = $pulled['port'];
+                if ($rowId > 0) {
+                    if ($ttlmin > 0) {
+                        self::writeExtractCache($rowId, $host, $port, $ttlmin);
+                    } else {
+                        self::clearExtractCache($rowId);
+                    }
+                }
+            }
         } else {
             $host = isset($row['host']) ? (string) $row['host'] : '';
             $port = isset($row['port']) ? (int) $row['port'] : 0;
@@ -852,8 +1126,9 @@ class UserIpProxy
         }
 
         return array(
-            'ok'       => true,
-            'endpoint' => array(
+            'ok'        => true,
+            'fromcache' => $fromcache,
+            'endpoint'  => array(
                 'proto'    => $proto,
                 'host'     => $host,
                 'port'     => $port,
@@ -864,11 +1139,68 @@ class UserIpProxy
     }
 
     /**
+     * 写回提取节点缓存
+     *
+     * @param int    $id
+     * @param string $host
+     * @param int    $port
+     * @param int    $ttlmin
+     * @return void
+     */
+    private static function writeExtractCache($id, $host, $port, $ttlmin)
+    {
+        $id = (int) $id;
+        $ttlmin = (int) $ttlmin;
+        $host = trim((string) $host);
+        $port = (int) $port;
+        if ($id <= 0 || $ttlmin < 1 || $host === '' || $port < 1) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $exp = date('Y-m-d H:i:s', time() + ($ttlmin * 60));
+            $stmt = $pdo->prepare(
+                'UPDATE `' . Database::table('ipproxy') . '`'
+                . ' SET `cachehost`=?,`cacheport`=?,`cacheexp`=? WHERE `id`=?'
+            );
+            $stmt->execute(array($host, $port, $exp, $id));
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
+     * 清空提取节点缓存
+     *
+     * @param int $id
+     * @return void
+     */
+    private static function clearExtractCache($id)
+    {
+        $id = (int) $id;
+        if ($id <= 0) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . Database::table('ipproxy') . '`'
+                . ' SET `cachehost`=\'\',`cacheport`=0,`cacheexp`=NULL WHERE `id`=?'
+            );
+            $stmt->execute(array($id));
+        } catch (Exception $e) {
+            // ignore
+        }
+    }
+
+    /**
      * @param string $url
      * @param int    $extfmt
+     * @param string $jsonhost
+     * @param string $jsonport
      * @return array{ok:bool,errcode?:int,msg?:string,host?:string,port?:int}
      */
-    public static function pullFromExtract($url, $extfmt = 0)
+    public static function pullFromExtract($url, $extfmt = 0, $jsonhost = '', $jsonport = '')
     {
         $url = trim((string) $url);
         if ($url === '' || !preg_match('#^https?://#i', $url)) {
@@ -913,9 +1245,13 @@ class UserIpProxy
             return array('ok' => false, 'errcode' => ApiError::PROXY_FAIL, 'msg' => $vendorFail);
         }
 
-        $parsed = self::parseExtractBody((string) $body, (int) $extfmt);
+        $parsed = self::parseExtractBody((string) $body, (int) $extfmt, (string) $jsonhost, (string) $jsonport);
         if ($parsed === null) {
-            return array('ok' => false, 'errcode' => ApiError::PROXY_FAIL, 'msg' => '无法解析提取结果');
+            $hint = '';
+            if (trim((string) $jsonhost) !== '') {
+                $hint = '（请检查 JSON 主机/端口字段是否与返回一致）';
+            }
+            return array('ok' => false, 'errcode' => ApiError::PROXY_FAIL, 'msg' => '无法解析提取结果' . $hint);
         }
         if (!self::isAllowedProxyEndpoint($parsed['host'], $parsed['port'])) {
             return array('ok' => false, 'errcode' => ApiError::PROXY_FAIL, 'msg' => '提取到的代理地址不允许');
@@ -996,19 +1332,33 @@ class UserIpProxy
     /**
      * @param string $body
      * @param int    $extfmt
+     * @param string $jsonhost
+     * @param string $jsonport
      * @return array{host:string,port:int}|null
      */
-    public static function parseExtractBody($body, $extfmt = 0)
+    public static function parseExtractBody($body, $extfmt = 0, $jsonhost = '', $jsonport = '')
     {
         $body = trim((string) $body);
         if ($body === '') {
             return null;
         }
         $extfmt = (int) $extfmt;
+        $jsonhost = trim((string) $jsonhost);
+        $jsonport = trim((string) $jsonport);
 
         if ($extfmt === self::EXTFMT_JSON || ($extfmt === self::EXTFMT_AUTO && isset($body[0]) && ($body[0] === '{' || $body[0] === '['))) {
             $data = json_decode($body, true);
             if (is_array($data)) {
+                if ($jsonhost !== '') {
+                    $hit = self::endpointFromJsonPaths($data, $jsonhost, $jsonport);
+                    if ($hit !== null) {
+                        return $hit;
+                    }
+                    // 已指定字段却取不到：JSON 模式下不回退瞎扫，避免读错键
+                    if ($extfmt === self::EXTFMT_JSON) {
+                        return null;
+                    }
+                }
                 $hit = self::findIpPortInArray($data);
                 if ($hit !== null) {
                     return $hit;
@@ -1038,6 +1388,51 @@ class UserIpProxy
                     return array('host' => $host, 'port' => $port);
                 }
             }
+        }
+        return null;
+    }
+
+    /**
+     * 按用户指定的 JSON 路径取出 host/port
+     *
+     * @param array  $data
+     * @param string $jsonhost
+     * @param string $jsonport
+     * @return array{host:string,port:int}|null
+     */
+    private static function endpointFromJsonPaths(array $data, $jsonhost, $jsonport)
+    {
+        $jsonhost = trim((string) $jsonhost);
+        $jsonport = trim((string) $jsonport);
+        if ($jsonhost === '') {
+            return null;
+        }
+        $hv = self::resolveJsonPath($data, $jsonhost);
+        if ($hv === null) {
+            return null;
+        }
+        if (is_array($hv)) {
+            return self::findIpPortInArray($hv);
+        }
+        if (!is_string($hv) && !is_numeric($hv)) {
+            return null;
+        }
+        $host = trim((string) $hv);
+        $port = 0;
+        if ($jsonport !== '') {
+            $pv = self::resolveJsonPath($data, $jsonport);
+            if ($pv !== null && (is_int($pv) || (is_string($pv) && ctype_digit(trim($pv))))) {
+                $port = (int) $pv;
+            }
+        }
+        if ($host !== '' && strpos($host, ':') !== false && $port < 1) {
+            if (preg_match('/^(.+):(\d{1,5})$/', $host, $m)) {
+                $host = $m[1];
+                $port = (int) $m[2];
+            }
+        }
+        if ($host !== '' && $port >= 1 && $port <= 65535 && self::isValidProxyHost($host)) {
+            return array('host' => $host, 'port' => $port);
         }
         return null;
     }
@@ -1183,12 +1578,12 @@ class UserIpProxy
      *
      * @param resource|CurlHandle $ch
      * @param int                 $userId
-     * @param int                 $forceId
+     * @param string              $forceCode 三位短码；空=按策略
      * @return array{ok:bool,errcode?:int,msg?:string}
      */
-    public static function applyToCurl($ch, $userId, $forceId = 0)
+    public static function applyToCurl($ch, $userId, $forceCode = '')
     {
-        $resolved = self::resolveEndpoint($userId, $forceId);
+        $resolved = self::resolveEndpoint($userId, $forceCode);
         if (empty($resolved['ok'])) {
             return array(
                 'ok'      => false,
@@ -1207,26 +1602,108 @@ class UserIpProxy
     }
 
     /**
+     * 切换启用/禁用
+     *
+     * @param int $userId
+     * @param int $id
+     * @param int $status 0|1
+     * @return array{ok:bool,msg:string,list?:array}
+     */
+    public static function setStatus($userId, $id, $status)
+    {
+        $userId = (int) $userId;
+        $id = (int) $id;
+        $status = ((int) $status === 0) ? 0 : 1;
+        if ($userId <= 0 || $id <= 0) {
+            return array('ok' => false, 'msg' => '参数无效');
+        }
+        if (!self::tableReady()) {
+            return array('ok' => false, 'msg' => '出口代理尚未就绪，请联系管理员完成系统升级');
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . Database::table('ipproxy') . '`'
+                . ' SET `status`=?,`updatetime`=NOW() WHERE `id`=? AND `userid`=?'
+            );
+            $stmt->execute(array($status, $id, $userId));
+            if ($stmt->rowCount() < 1) {
+                // 可能值未变：确认归属
+                $chk = $pdo->prepare(
+                    'SELECT 1 FROM `' . Database::table('ipproxy') . '` WHERE `id`=? AND `userid`=? LIMIT 1'
+                );
+                $chk->execute(array($id, $userId));
+                if (!$chk->fetchColumn()) {
+                    return array('ok' => false, 'msg' => '记录不存在');
+                }
+            }
+            $listPack = self::listForUser($userId);
+            return array(
+                'ok'   => true,
+                'msg'  => $status === 1 ? '已启用' : '已禁用',
+                'list' => isset($listPack['list']) ? $listPack['list'] : array(),
+            );
+        } catch (Exception $e) {
+            return array('ok' => false, 'msg' => '操作失败，请稍后重试');
+        }
+    }
+
+    /**
+     * 拼本站 API 根探测 URL（不带密钥；仅验证经代理可达本站）
+     *
+     * @param string $proxyCode
+     * @return string
+     */
+    private static function buildSiteProbeUrl($proxyCode)
+    {
+        $proxyCode = self::normalizeProxyCode($proxyCode);
+        $base = '';
+        if (function_exists('vs_base_url')) {
+            $base = rtrim((string) vs_base_url(), '/');
+        }
+        if ($base === '' && class_exists('Config')) {
+            $domain = trim((string) Config::get('site_domain', ''));
+            if ($domain !== '') {
+                $domain = preg_replace('#^https?://#i', '', $domain);
+                $domain = rtrim($domain, '/');
+                if ($domain !== '') {
+                    $base = 'https://' . $domain;
+                }
+            }
+        }
+        if ($base === '') {
+            return '';
+        }
+        $q = 'vsproxy=1';
+        if ($proxyCode !== '') {
+            $q .= '&vsproxyid=' . rawurlencode($proxyCode);
+        }
+        return $base . '/api/index.php?' . $q;
+    }
+
+    /**
      * 在线连通性测试（用户中心）
      *
      * @param int $userId
      * @param int $id
-     * @return array{ok:bool,msg:string,detail?:array}
+     * @return array{ok:bool,msg:string,logs?:array,detail?:array}
      */
     public static function testConnectivity($userId, $id)
     {
         $userId = (int) $userId;
         $id = (int) $id;
+        $logs = array();
         if ($userId <= 0 || $id <= 0) {
-            return array('ok' => false, 'msg' => '参数无效');
+            return array('ok' => false, 'msg' => '参数无效', 'logs' => $logs);
         }
         if (!self::tableReady()) {
-            return array('ok' => false, 'msg' => '出口代理尚未就绪');
+            return array('ok' => false, 'msg' => '出口代理尚未就绪', 'logs' => $logs);
         }
         if (!function_exists('curl_init')) {
-            return array('ok' => false, 'msg' => '服务器未启用 curl，无法测试');
+            return array('ok' => false, 'msg' => '服务器未启用 curl，无法测试', 'logs' => $logs);
         }
 
+        $logs[] = '读取配置…';
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
@@ -1235,89 +1712,183 @@ class UserIpProxy
             $stmt->execute(array($id, $userId));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) {
-                return array('ok' => false, 'msg' => '记录不存在');
+                $logs[] = '配置不存在';
+                return array('ok' => false, 'msg' => '记录不存在', 'logs' => $logs);
             }
         } catch (Exception $e) {
-            return array('ok' => false, 'msg' => '读取失败');
+            $logs[] = '读取配置失败';
+            return array('ok' => false, 'msg' => '读取失败', 'logs' => $logs);
+        }
+
+        $title = isset($row['title']) ? (string) $row['title'] : '';
+        $mode = isset($row['mode']) ? (int) $row['mode'] : self::MODE_TUNNEL;
+        $proxyCode = self::normalizeProxyCode(isset($row['proxycode']) ? $row['proxycode'] : '');
+        $logs[] = '已读取「' . ($title !== '' ? $title : ('#' . $id)) . '」（'
+            . self::modeLabel($mode) . ' / ' . self::protoLabel(isset($row['proto']) ? (int) $row['proto'] : 0)
+            . ($proxyCode !== '' ? ' / 短码 ' . $proxyCode : '')
+            . '）';
+
+        if ($mode === self::MODE_EXTRACT) {
+            $ttlmin = isset($row['ttlmin']) ? (int) $row['ttlmin'] : 10;
+            $cacheHost = isset($row['cachehost']) ? trim((string) $row['cachehost']) : '';
+            $cachePort = isset($row['cacheport']) ? (int) $row['cacheport'] : 0;
+            $cacheExp = isset($row['cacheexp']) ? trim((string) $row['cacheexp']) : '';
+            $expTs = ($cacheExp !== '') ? strtotime($cacheExp) : false;
+            if ($ttlmin > 0 && $cacheHost !== '' && $cachePort >= 1 && $expTs !== false && $expTs > time()) {
+                $logs[] = '使用未过期提取缓存 ' . $cacheHost . ':' . $cachePort;
+            } else {
+                $logs[] = $ttlmin > 0 ? '提取缓存无效或已过期，正在拉取提取 API…' : 'TTL=0，每次重新提取…';
+            }
+        } else {
+            $logs[] = '隧道模式，使用配置主机端口';
         }
 
         $mat = self::materializeEndpoint($row);
         if (empty($mat['ok'])) {
-            return array('ok' => false, 'msg' => isset($mat['msg']) ? (string) $mat['msg'] : '无法解析代理节点');
+            $logs[] = '解析节点失败：' . (isset($mat['msg']) ? (string) $mat['msg'] : '不可用');
+            return array(
+                'ok'   => false,
+                'msg'  => isset($mat['msg']) ? (string) $mat['msg'] : '无法解析代理节点',
+                'logs' => $logs,
+            );
         }
         $ep = $mat['endpoint'];
+        if (!empty($mat['fromcache'])) {
+            $logs[] = '节点来自缓存';
+        } elseif ($mode === self::MODE_EXTRACT) {
+            $logs[] = '提取成功';
+        }
+        $logs[] = '节点 ' . $ep['host'] . ':' . (int) $ep['port'] . '（' . self::protoLabel($ep['proto']) . '）';
 
         $testUrl = self::TEST_URL;
         if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($testUrl)) {
             $testUrl = 'https://www.baidu.com/';
         }
+        $logs[] = '经代理请求公网回显…';
 
+        $exitHint = '';
+        $echoHttp = 0;
+        $echoOk = false;
         $ch = curl_init();
         if ($ch === false) {
-            return array('ok' => false, 'msg' => '无法初始化测试请求');
+            $logs[] = '无法初始化测试请求';
+            return array('ok' => false, 'msg' => '无法初始化测试请求', 'logs' => $logs);
         }
-        if (class_exists('LinkSiteMeta')) {
-            // 经代理出站时不强制钉死目标 DNS（代理侧解析）；仍校验 URL 形态
-            curl_setopt($ch, CURLOPT_URL, $testUrl);
-        } else {
-            curl_setopt($ch, CURLOPT_URL, $testUrl);
-        }
+        curl_setopt($ch, CURLOPT_URL, $testUrl);
         self::applyEndpointToCurl($ch, $ep);
         curl_setopt_array($ch, array(
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT        => 20,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_HTTPHEADER     => array('Accept: */*', 'User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
         ));
         $body = curl_exec($ch);
         $errno = curl_errno($ch);
-        $err = curl_error($ch);
-        $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $echoHttp = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($body === false || $errno) {
-            return array(
-                'ok'     => false,
-                'msg'    => '连通失败：无法经该代理访问测试地址',
-                'detail' => array(
-                    'http' => $http,
-                    // 不对用户暴露底层 curl 原文（规范：对外禁 curl 细节）
-                ),
-            );
-        }
-        if ($http > 0 && $http >= 400) {
-            return array(
-                'ok'     => false,
-                'msg'    => '连通异常：测试地址返回 HTTP ' . $http,
-                'detail' => array('http' => $http),
-            );
+            $logs[] = '公网回显失败（无法经该代理访问测试地址）';
+        } elseif ($echoHttp > 0 && $echoHttp >= 400) {
+            $logs[] = '公网回显异常：HTTP ' . $echoHttp;
+        } else {
+            $echoOk = true;
+            $trim = trim((string) $body);
+            if ($trim !== '' && isset($trim[0]) && $trim[0] === '{') {
+                $j = json_decode($trim, true);
+                if (is_array($j) && isset($j['ip']) && is_string($j['ip'])) {
+                    $exitHint = $j['ip'];
+                }
+            }
+            $logs[] = $exitHint !== ''
+                ? ('公网回显成功，出口 IP：' . $exitHint)
+                : ('公网回显成功（HTTP ' . $echoHttp . '）');
         }
 
-        $exitHint = '';
-        $trim = trim((string) $body);
-        if ($trim !== '' && isset($trim[0]) && $trim[0] === '{') {
-            $j = json_decode($trim, true);
-            if (is_array($j) && isset($j['ip']) && is_string($j['ip'])) {
-                $exitHint = $j['ip'];
+        // 本站探测：经同一代理访问本站 API，不携带任何密钥（防不可信代理盗钥）
+        $siteOk = false;
+        $siteHttp = 0;
+        $siteMsg = '';
+        $probeUrl = self::buildSiteProbeUrl($proxyCode);
+        if ($probeUrl === '') {
+            $logs[] = '本站探测跳过：无法拼站点根 URL';
+            $siteMsg = '未拼出本站 URL';
+        } elseif ($proxyCode === '') {
+            $logs[] = '本站探测跳过：缺少调用短码';
+            $siteMsg = '缺少短码';
+        } else {
+            $logs[] = '本站探测（vsproxy + 短码，不携带密钥）…';
+            $ch2 = curl_init();
+            if ($ch2 === false) {
+                $logs[] = '本站探测失败：无法初始化请求';
+                $siteMsg = '初始化失败';
+            } else {
+                curl_setopt($ch2, CURLOPT_URL, $probeUrl);
+                self::applyEndpointToCurl($ch2, $ep);
+                curl_setopt_array($ch2, array(
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_FOLLOWLOCATION => false,
+                    CURLOPT_CONNECTTIMEOUT => 10,
+                    CURLOPT_TIMEOUT        => 20,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYHOST => 2,
+                    CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                    CURLOPT_HTTPHEADER     => array(
+                        'Accept: */*',
+                        'User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1'),
+                    ),
+                ));
+                $siteBody = curl_exec($ch2);
+                $siteErrno = curl_errno($ch2);
+                $siteHttp = (int) curl_getinfo($ch2, CURLINFO_HTTP_CODE);
+                curl_close($ch2);
+                // 不暴露 curl_error；有 HTTP 码即视为通路可达（无密钥时业务码拒绝属预期）
+                if ($siteBody === false || $siteErrno) {
+                    $logs[] = '本站探测失败：无法经代理访问本站 API';
+                    $siteMsg = '请求失败';
+                } else {
+                    $siteOk = ($siteHttp > 0 && $siteHttp < 500);
+                    $logs[] = '本站探测 HTTP ' . $siteHttp . ($siteOk ? '（可达）' : '（异常）');
+                    $siteMsg = 'HTTP ' . $siteHttp;
+                }
             }
         }
 
-        return array(
-            'ok'     => true,
-            'msg'    => $exitHint !== ''
-                ? ('连通正常，出口 IP：' . $exitHint)
-                : '连通正常',
-            'detail' => array(
-                'http'   => $http,
-                'exitip' => $exitHint,
-                'host'   => $ep['host'],
-                'port'   => $ep['port'],
-                'proto'  => self::protoLabel($ep['proto']),
-            ),
+        $detail = array(
+            'http'     => $echoHttp,
+            'exitip'   => $exitHint,
+            'host'     => $ep['host'],
+            'port'     => $ep['port'],
+            'proto'    => self::protoLabel($ep['proto']),
+            'proxycode'=> $proxyCode,
+            'fromcache'=> !empty($mat['fromcache']),
+            'sitehttp' => $siteHttp,
+            'siteok'   => $siteOk,
         );
+
+        if ($echoOk) {
+            $msg = $exitHint !== ''
+                ? ('连通正常，出口 IP：' . $exitHint)
+                : '连通正常';
+            if (!$siteOk) {
+                $msg .= '；本站探测未完全成功（' . ($siteMsg !== '' ? $siteMsg : '失败') . '），以公网回显为准';
+            } else {
+                $msg .= '；本站探测成功';
+            }
+            return array('ok' => true, 'msg' => $msg, 'logs' => $logs, 'detail' => $detail);
+        }
+
+        $failMsg = '连通失败：无法经该代理访问测试地址';
+        if ($echoHttp >= 400) {
+            $failMsg = '连通异常：测试地址返回 HTTP ' . $echoHttp;
+        }
+        if ($siteOk) {
+            $failMsg .= '；本站探测可达但不作为成功依据';
+        }
+        return array('ok' => false, 'msg' => $failMsg, 'logs' => $logs, 'detail' => $detail);
     }
 }

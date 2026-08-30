@@ -172,20 +172,20 @@ class ApiStats
             return;
         }
         $want = false;
-        $pid = 0;
+        $code = '';
         if (isset($_GET['vsproxy']) && !is_array($_GET['vsproxy'])) {
             $want = UserIpProxy::truthyFlag($_GET['vsproxy']);
         } elseif (isset($_POST['vsproxy']) && !is_array($_POST['vsproxy'])) {
             $want = UserIpProxy::truthyFlag($_POST['vsproxy']);
         }
         if (isset($_GET['vsproxyid']) && !is_array($_GET['vsproxyid'])) {
-            $pid = max(0, (int) $_GET['vsproxyid']);
+            $code = UserIpProxy::normalizeProxyCode($_GET['vsproxyid']);
         } elseif (isset($_POST['vsproxyid']) && !is_array($_POST['vsproxyid'])) {
-            $pid = max(0, (int) $_POST['vsproxyid']);
+            $code = UserIpProxy::normalizeProxyCode($_POST['vsproxyid']);
         }
         // 仅当显式出现开关时写入，避免覆盖网关从 JSON 注入的 note
-        if ($want || $pid > 0 || isset($_GET['vsproxy']) || isset($_POST['vsproxy'])) {
-            UserIpProxy::noteRequestFlags($want, $pid);
+        if ($want || $code !== '' || isset($_GET['vsproxy']) || isset($_POST['vsproxy'])) {
+            UserIpProxy::noteRequestFlags($want, $code);
         }
     }
 
@@ -205,7 +205,7 @@ class ApiStats
         if (empty($ctx['valid']) || (int) $ctx['userid'] <= 0) {
             self::jsonExit(ApiError::PROXY_NEED, '启用出口代理须提供有效密钥');
         }
-        $applied = UserIpProxy::applyToCurl($ch, (int) $ctx['userid'], UserIpProxy::requestProxyId());
+        $applied = UserIpProxy::applyToCurl($ch, (int) $ctx['userid'], UserIpProxy::requestProxyCode());
         if (empty($applied['ok'])) {
             $err = isset($applied['errcode']) ? (int) $applied['errcode'] : ApiError::PROXY_FAIL;
             $msg = isset($applied['msg']) ? (string) $applied['msg'] : '出口代理不可用';
@@ -229,7 +229,7 @@ class ApiStats
         if (empty($ctx['valid']) || (int) $ctx['userid'] <= 0) {
             return array('errcode' => ApiError::PROXY_NEED, 'msg' => '启用出口代理须提供有效密钥');
         }
-        $applied = UserIpProxy::applyToCurl($ch, (int) $ctx['userid'], UserIpProxy::requestProxyId());
+        $applied = UserIpProxy::applyToCurl($ch, (int) $ctx['userid'], UserIpProxy::requestProxyCode());
         if (empty($applied['ok'])) {
             return array(
                 'errcode' => isset($applied['errcode']) ? (int) $applied['errcode'] : ApiError::PROXY_FAIL,

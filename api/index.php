@@ -5,6 +5,7 @@
  * 路径：/api/index.php
  * 后台挂载本地接口后，把下方 $vsUserStatsApiId 改成真实接口 ID；须密钥=必须。
  * 未改 ID 时接口直接返回「接口未配置」，不会跳过平台守卫。
+ * 在线升级不会覆盖本文件（Updater 保护），以免站点已填 ID 被冲掉；若发行包必须改本文件逻辑，会在更新说明里单独提示。
  *
  * 请求参数尽量少：key（必填）+ 可选 q（字母 a～i 与数字 1～9 等价；all / 0 = 全部）
  *   只带 key / q=0 / q=all → 全部
@@ -56,12 +57,12 @@ if (!class_exists('ApiManager') || !ApiManager::tableReady() || !ApiManager::fin
 }
 ApiStats::hit($vsUserStatsApiId);
 
-// 含积分余额：勿对任意站点放行；浏览器跨域请自建同源代理或改白名单
-header('Access-Control-Allow-Origin: *');
+// 含积分余额：禁止任意源 CORS（浏览器跨域请自建同源代理或改白名单）
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Accept, X-Requested-With, X-API-Key, Authorization, X-Authorization, X-Api-Bearer');
 header('Access-Control-Max-Age: 86400');
 header('X-Content-Type-Options: nosniff');
+// 不发送 Access-Control-Allow-Origin: *（敏感只读接口）
 
 if (isset($_SERVER['REQUEST_METHOD']) && strtoupper((string) $_SERVER['REQUEST_METHOD']) === 'OPTIONS') {
     http_response_code(204);

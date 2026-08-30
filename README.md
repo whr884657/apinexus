@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.30-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.31-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -156,13 +156,14 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.30（2026-08-30）
+### v13.26.31（2026-08-30）
 
-- **功能：** 用户自备出口 IP 代理（表 `ipproxy`，每账号最多 5 条）：隧道 / 提取 API；HTTP / HTTPS / SOCKS5 / SOCKS4；轮询 / 随机 / 优先首条
-- **启用：** 调用附加 `vsproxy=1`（可选 `vsproxyid`）且携带有效密钥；代理网关自动注入；本地接口一行 `ApiStats::applyOutboundProxy($ch)`
-- **产品边界：** 平台不提供免费代理节点；用户中心「IP 代理」Tab 支持保存 / 测试连通 / 编辑删除；密码不回显
-- **错误码：** 11020 / 11021 / 11022
-- **库：** `install/migrations/13.26.30.sql`；新装 `database.sql` 已含表与 `user.proxystrategy`
+- **短码：** 每条出口配置生成三位 `proxycode`；调用 `vsproxyid` **只认短码**，不认数字主键；不传短码时按策略在启用条目中轮询/随机/首条
+- **提取：** 可指定 JSON 主机/端口字段（`jsonhost` / `jsonport`，点路径如 `data.0.ip`）；留空仍自动识别常见键；`ttlmin` 缓存提取节点（默认 10 分钟，0=每次重提）
+- **界面：** 策略下拉与「保存策略」同行；卡片启停；测试弹窗分步日志（公网回显为准）
+- **安装：** `config.install_done=1` 与 `install.lock` 双保险；库探测失败 fail-closed；禁止经 Config 清除标记
+- **升级：** 在线更新**不覆盖** `api/index.php`；连通测试不带密钥且校验 TLS；短码 UNIQUE；取消 `api/index.php` CORS `*`
+- **库：** `install/migrations/13.26.31.sql`；新装 `database.sql` 同步
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

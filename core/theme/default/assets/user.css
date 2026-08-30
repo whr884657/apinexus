@@ -953,14 +953,51 @@
     display: flex;
     gap: 10px;
     align-items: stretch;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 .vs-user-ip__strategy-row .vs-select,
 .vs-user-ip__strategy-row .vs-input {
-    flex: 1;
-    min-width: 160px;
+    flex: 1 1 auto;
+    min-width: 0;
     width: auto;
-    max-width: 100%;
+    max-width: none;
+}
+.vs-user-ip__strategy-row .vs-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+.vs-user-ip__strategy-hint {
+    margin: 8px 0 0;
+}
+.vs-user-ip__test-log {
+    margin: 0;
+    padding: 12px 14px;
+    min-height: 220px;
+    max-height: min(52vh, 480px);
+    overflow: auto;
+    border-radius: 10px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.vs-user-ip__test-log.is-running::after {
+    content: "▋";
+    animation: vs-user-ip-blink 1s step-end infinite;
+}
+@keyframes vs-user-ip-blink {
+    50% { opacity: 0; }
+}
+@media (max-width: 480px) {
+    .vs-user-ip__strategy-row {
+        gap: 8px;
+    }
+    .vs-user-ip__strategy-row .vs-btn {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
 }
 .vs-user-ip__form-grid {
     display: grid;

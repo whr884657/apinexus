@@ -26,6 +26,8 @@
 
     var openProxyBtn = document.getElementById('userProxyOpenAdd');
     var proxyOverlay = document.getElementById('userProxyFormOverlay');
+    var proxyTestOverlay = document.getElementById('userProxyTestOverlay');
+    var proxyTestLog = document.getElementById('userProxyTestLog');
     var proxyForm = document.getElementById('userProxyForm');
     var proxyFormTitle = document.getElementById('userProxyFormTitle');
     var proxyMode = document.getElementById('userProxyMode');
@@ -44,6 +46,9 @@
     }
     if (proxyOverlay && proxyOverlay.parentNode !== document.body) {
         document.body.appendChild(proxyOverlay);
+    }
+    if (proxyTestOverlay && proxyTestOverlay.parentNode !== document.body) {
+        document.body.appendChild(proxyTestOverlay);
     }
 
     function escapeHtml(text) {
@@ -121,9 +126,14 @@
     }
     bindOverlayClose(allowOverlay);
     bindOverlayClose(proxyOverlay);
+    bindOverlayClose(proxyTestOverlay);
 
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') {
+            return;
+        }
+        if (proxyTestOverlay && proxyTestOverlay.classList.contains('is-open')) {
+            closeOverlay(proxyTestOverlay);
             return;
         }
         if (proxyOverlay && proxyOverlay.classList.contains('is-open')) {
@@ -303,6 +313,12 @@
         Array.prototype.forEach.call(root.querySelectorAll('.vs-user-ip__field-extract'), function (el) {
             el.hidden = !isExtract;
         });
+        var extfmtEl = document.getElementById('userProxyExtfmt');
+        var fmt = extfmtEl ? String(extfmtEl.value) : '0';
+        var showJson = isExtract && fmt !== '1';
+        Array.prototype.forEach.call(root.querySelectorAll('.vs-user-ip__field-json'), function (el) {
+            el.hidden = !showJson;
+        });
     }
 
     function findProxy(id) {
@@ -332,7 +348,8 @@
         proxyListEl.hidden = proxyCache.length === 0;
         proxyListEl.innerHTML = proxyCache.map(function (p) {
             var id = parseInt(p.id, 10) || 0;
-            var title = escapeHtml(p.title || ('#' + id));
+            var code = String(p.proxycode || '');
+            var title = escapeHtml(p.title || (code ? ('短码 ' + code) : ('#' + id)));
             var modeLabel = escapeHtml(p.modelabel || p.mode_label || '');
             var protoLabel = escapeHtml(p.protolabel || p.proto_label || '');
             var statusOn = parseInt(p.status, 10) === 1;
@@ -340,7 +357,8 @@
                 ? (p.extract || '—')
                 : ((p.host || '') + (p.port ? (':' + p.port) : ''));
             endpoint = escapeHtml(endpoint || '—');
-            return '<li class="vs-user-ip__proxy-item" data-id="' + id + '">'
+            var codeSafe = escapeHtml(code);
+            return '<li class="vs-user-ip__proxy-item" data-id="' + id + '" data-code="' + codeSafe + '">'
                 + '<div class="vs-user-ip__proxy-main">'
                 + '<div class="vs-user-ip__proxy-title-row">'
                 + '<strong class="vs-user-ip__proxy-title">' + title + '</strong>'
@@ -350,10 +368,13 @@
                 + (statusOn ? '启用' : '禁用') + '</span>'
                 + '</div>'
                 + '<code class="vs-user-ip__proxy-endpoint" title="' + endpoint + '">' + endpoint + '</code>'
-                + '<p class="vs-user-ip__proxy-meta">ID ' + id + ' · 调用可加 vsproxyid=' + id + '</p>'
+                + '<p class="vs-user-ip__proxy-meta">短码 <code>' + codeSafe + '</code> · 固定调用 vsproxy=1&amp;vsproxyid='
+                + codeSafe + '</p>'
                 + '</div>'
                 + '<div class="vs-user-ip__proxy-actions">'
                 + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-proxy-act="test" data-id="' + id + '">测试</button>'
+                + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-proxy-act="toggle" data-id="'
+                + id + '" data-status="' + (statusOn ? '0' : '1') + '">' + (statusOn ? '禁用' : '启用') + '</button>'
                 + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-proxy-act="edit" data-id="' + id + '">编辑</button>'
                 + '<button type="button" class="vs-btn vs-btn--outline vs-btn--outline-danger vs-btn--sm" data-proxy-act="delete" data-id="' + id + '">删除</button>'
                 + '</div></li>';
@@ -376,6 +397,18 @@
         var statusEl = document.getElementById('userProxyStatus');
         if (statusEl) {
             statusEl.value = '1';
+        }
+        var ttlEl = document.getElementById('userProxyTtlmin');
+        if (ttlEl) {
+            ttlEl.value = '10';
+        }
+        var jh = document.getElementById('userProxyJsonHost');
+        if (jh) {
+            jh.value = '';
+        }
+        var jp = document.getElementById('userProxyJsonPort');
+        if (jp) {
+            jp.value = '';
         }
         var passEl = document.getElementById('userProxyPass');
         if (passEl) {
@@ -404,6 +437,12 @@
         document.getElementById('userProxyUser').value = row.username || '';
         document.getElementById('userProxyExtract').value = row.extract || '';
         document.getElementById('userProxyExtfmt').value = String(row.extfmt != null ? row.extfmt : 0);
+        document.getElementById('userProxyJsonHost').value = row.jsonhost || '';
+        document.getElementById('userProxyJsonPort').value = row.jsonport || '';
+        var ttlEl = document.getElementById('userProxyTtlmin');
+        if (ttlEl) {
+            ttlEl.value = String(row.ttlmin != null ? row.ttlmin : 10);
+        }
         document.getElementById('userProxyStatus').value = String(row.status != null ? row.status : 1);
         document.getElementById('userProxySort').value = String(row.sort != null ? row.sort : 0);
         var passEl = document.getElementById('userProxyPass');
@@ -421,6 +460,10 @@
     if (proxyMode) {
         proxyMode.addEventListener('change', syncModeFields);
         syncModeFields();
+    }
+    var proxyExtfmt = document.getElementById('userProxyExtfmt');
+    if (proxyExtfmt) {
+        proxyExtfmt.addEventListener('change', syncModeFields);
     }
 
     postAction('proxy_list', {}).then(function (data) {
@@ -460,6 +503,9 @@
                 password: document.getElementById('userProxyPass').value || '',
                 extract: document.getElementById('userProxyExtract').value || '',
                 extfmt: document.getElementById('userProxyExtfmt').value || '0',
+                jsonhost: document.getElementById('userProxyJsonHost').value || '',
+                jsonport: document.getElementById('userProxyJsonPort').value || '',
+                ttlmin: (document.getElementById('userProxyTtlmin') || {}).value || '10',
                 status: document.getElementById('userProxyStatus').value || '1',
                 sort: document.getElementById('userProxySort').value || '0'
             };
@@ -523,15 +569,59 @@
                 return;
             }
             if (act === 'test') {
+                openOverlay(proxyTestOverlay);
+                if (proxyTestLog) {
+                    proxyTestLog.classList.add('is-running');
+                    proxyTestLog.textContent = '开始测试…\n';
+                }
                 setBusy(true);
-                window.VS.showMessage('正在测试连通性…', 'info');
                 postAction('proxy_test', { id: id }).then(function (data) {
                     setBusy(false);
+                    if (proxyTestLog) {
+                        proxyTestLog.classList.remove('is-running');
+                        var lines = [];
+                        var logs = (data && Array.isArray(data.logs)) ? data.logs : [];
+                        logs.forEach(function (item) {
+                            if (typeof item === 'string') {
+                                lines.push(item);
+                            } else if (item && item.msg) {
+                                lines.push((item.t ? ('[' + item.t + '] ') : '') + item.msg);
+                            }
+                        });
+                        if (lines.length === 0) {
+                            lines.push((data && data.msg) || '无详细日志');
+                        } else if (data && data.msg) {
+                            lines.push('——');
+                            lines.push(data.msg);
+                        }
+                        proxyTestLog.textContent = lines.join('\n');
+                    }
                     if (!data || data.code !== 1) {
                         window.VS.showMessage((data && data.msg) || '测试失败', 'error');
                         return;
                     }
-                    window.VS.showMessage(data.msg || '连通正常', 'success');
+                    window.VS.showMessage(data.msg || '测试完成', 'success');
+                }).catch(function () {
+                    setBusy(false);
+                    if (proxyTestLog) {
+                        proxyTestLog.classList.remove('is-running');
+                        proxyTestLog.textContent = (proxyTestLog.textContent || '') + '\n网络异常，请稍后重试';
+                    }
+                    window.VS.showMessage('网络异常，请稍后重试', 'error');
+                });
+                return;
+            }
+            if (act === 'toggle') {
+                var nextStatus = btn.getAttribute('data-status') || '1';
+                setBusy(true);
+                postAction('proxy_toggle', { id: id, status: nextStatus }).then(function (data) {
+                    setBusy(false);
+                    if (!data || data.code !== 1) {
+                        window.VS.showMessage((data && data.msg) || '操作失败', 'error');
+                        return;
+                    }
+                    window.VS.showMessage(data.msg || '已更新', 'success');
+                    renderProxyList(data.list);
                 }).catch(function () {
                     setBusy(false);
                     window.VS.showMessage('网络异常，请稍后重试', 'error');

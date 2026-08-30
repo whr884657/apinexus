@@ -1,12 +1,16 @@
 {
-    "version": "13.26.30",
-    "title": "ApiNexus 13.26.30",
+    "version": "13.26.31",
+    "title": "ApiNexus 13.26.31",
     "release_date": "2026-08-30",
     "db_changes": true,
     "changes": [
-        "用户自备出口 IP 代理：新表 ipproxy（每用户最多 5 条）；隧道/提取；HTTP/HTTPS/SOCKS5/SOCKS4；轮询/随机/优先首条",
-        "调用传 vsproxy=1（可选 vsproxyid）且有效密钥时注入出口代理；代理网关自动；本地 applyOutboundProxy 一行约定",
-        "平台不提供免费代理节点；用户中心 IP 代理 Tab 完整 CRUD + 在线连通测试；添加走规范弹窗；密码不回显",
-        "节点公网校验与钉死 IP、提取 SSL；errcode 11020～11022；迁移 13.26.30.sql；新装 database.sql 同步"
+        "出口代理：三位调用短码 proxycode；vsproxyid 仅认短码，不认数字主键；空短码按策略轮询/随机/首条",
+        "提取 API：JSON 可指定主机/端口字段（jsonhost / jsonport，支持点路径）；留空仍自动识别常见键",
+        "提取节点 TTL 缓存（ttlmin，默认 10 分钟；0=每次重提）；卡片启停；策略下拉与保存同行",
+        "测试弹窗分步日志：公网回显出口 IP 为准，本站 API 探测为辅",
+        "安装双保险：config.install_done=1 与 install.lock 并列；库探测失败 fail-closed；Config 禁止清除标记",
+        "在线升级不覆盖 api/index.php；连通测试不带调用密钥且校验证书；短码 UNIQUE(userid,proxycode)",
+        "api/index.php 取消 Access-Control-Allow-Origin:*（含积分敏感接口）",
+        "迁移 13.26.31.sql；新装 database.sql 同步；三主题 UI 同步"
     ]
 }
