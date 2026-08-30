@@ -8,7 +8,8 @@
  *   ApiStats::hit(14);   // 括号内为本接口在后台的数字 ID
  *   // 本地脚本再 curl 外网时：
  *   curl_setopt($ch, CURLOPT_HTTPHEADER, ApiStats::outboundHeaders());
- *   ApiStats::applyOutboundProxy($ch); // 调用方传 vsproxy 且已配出口代理时注入
+ *   // v13.26.33：hit 已按 vsproxy 请求级武装出口；下列显式注入更稳（可选但推荐）
+ *   ApiStats::applyOutboundProxy($ch);
  *
  * 代理：ApiProxy 网关内自动调用，勿在上游文件注入。
  *
@@ -107,11 +108,44 @@ class ApiStats
                 self::jsonExit($err, $gate['msg']);
             }
 
+            // 声明 vsproxy 时：在业务 curl 之前武装本请求默认出口（旧本地脚本无需改代码）
+            // 注意：tryArm 内 jsonExit 会 exit，不会被下方 catch 吞掉
+            self::tryArmRequestEgress($row, $id);
+
             self::write($row, true, 200);
             self::$done[$id] = true;
         } catch (Exception $e) {
-            // 统计失败不影响业务
+            // 统计失败不影响业务；代理武装失败走 jsonExit，不进入此处
         }
+    }
+
+    /**
+     * hit 守卫通过后：若请求声明 vsproxy，则武装请求级出口；失败则记失败并退出
+     *
+     * @param array $row
+     * @param int   $id
+     * @return void
+     */
+    private static function tryArmRequestEgress(array $row, $id)
+    {
+        if (!class_exists('UserIpProxy') || !UserIpProxy::requestWantsEgress()) {
+            return;
+        }
+        $ctx = self::keyContext();
+        if (empty($ctx['valid']) || (int) $ctx['userid'] <= 0) {
+            self::write($row, false, ApiError::PROXY_NEED);
+            self::$done[(int) $id] = true;
+            self::jsonExit(ApiError::PROXY_NEED, '启用出口代理须提供有效密钥');
+        }
+        $arm = UserIpProxy::armRequestEgress((int) $ctx['userid']);
+        if (!empty($arm['ok'])) {
+            return;
+        }
+        $err = isset($arm['errcode']) ? (int) $arm['errcode'] : ApiError::PROXY_FAIL;
+        $msg = isset($arm['msg']) ? (string) $arm['msg'] : '出口代理不可用';
+        self::write($row, false, $err);
+        self::$done[(int) $id] = true;
+        self::jsonExit($err, $msg);
     }
 
     /**
@@ -191,6 +225,8 @@ class ApiStats
     /**
      * 本地/自定义 curl：按调用方 vsproxy 注入用户自备出口代理
      * 须在 hit()/guardAccess 之后调用；未声明 vsproxy 时为 no-op。
+     * v13.26.33 起：hit() 成功且声明 vsproxy 时已请求级武装，多数旧脚本可不调本方法；
+     * 仍建议对关键 curl 显式调用（写入 CURLOPT_PROXY，不依赖环境变量）。
      *
      * @param resource|CurlHandle $ch
      * @return bool 是否已注入

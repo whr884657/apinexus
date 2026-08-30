@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.32-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.33-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -156,12 +156,11 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.32（2026-08-30）
+### v13.26.33（2026-08-30）
 
-- **调用：** 出口只传 `vsproxy`：三位短码=固定；`a`/`b`/`c`=轮询/随机/首条；`1` 兼容账号默认策略（废弃 `vsproxyid`）
-- **测试：** 公网百度→一言→腾讯；经代理探本站不带密钥；个人信息接口直连带钥（密钥不经出口代理）；终端色彩/滚动/复制
-- **界面：** 策略下拉加长，按钮「保存」；三主题同步
-- **安全：** 连通测试禁止经用户代理发送调用密钥
+- **本地接口：** `hit()` 识别 `vsproxy` 后自动武装本请求出口，旧业务 curl **无需改代码** 即可尽量走代理 IP
+- **纪律：** 未传 `vsproxy` 完全不影响；失败码 11020～11022；请求结束拆除，避免 FPM 串请求
+- **兼容：** 仍可用 `ApiStats::applyOutboundProxy($ch)` 显式注入（更稳）
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

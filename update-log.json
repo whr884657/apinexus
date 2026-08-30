@@ -1,5 +1,16 @@
 {
     "versions": {
+        "13.26.33": {
+            "title": "ApiNexus 13.26.33",
+            "date": "2026-08-30",
+            "db_changes": false,
+            "changes": [
+                "本地接口：hit() 识别 vsproxy 后请求级自动武装出口，旧业务 curl 无需改代码即可尽量走代理 IP",
+                "未声明 vsproxy 时完全 no-op；声明失败返回 11020～11022；请求结束拆除环境避免 FPM 污染",
+                "仍保留 ApiStats::applyOutboundProxy($ch) 显式注入（更稳，推荐关键出站继续调用）",
+                "无库表变更"
+            ]
+        },
         "13.26.32": {
             "title": "ApiNexus 13.26.32",
             "date": "2026-08-30",

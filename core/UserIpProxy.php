@@ -51,6 +51,18 @@ class UserIpProxy
     /** @var int|null 本请求策略覆盖；null=用账号已存策略 */
     private static $strategyOverride = null;
 
+    /** @var bool 本请求是否已武装默认出口（供本地脚本 curl 无改代码跟随） */
+    private static $egressArmed = false;
+
+    /** @var array|null 已武装的节点（host/port/proto/username/password） */
+    private static $armedEndpoint = null;
+
+    /** @var array<string,string|false> putenv 备份（false=原先不存在） */
+    private static $egressEnvBackup = array();
+
+    /** @var bool shutdown 是否已注册 */
+    private static $egressShutdownRegistered = false;
+
     /**
      * 解析 vsproxy 单参数
      *
@@ -1656,6 +1668,17 @@ class UserIpProxy
      */
     public static function applyToCurl($ch, $userId, $forceCode = '')
     {
+        // 本请求已在 hit 中武装过：优先套同一节点（显式 CURLOPT_PROXY，比仅环境变量更稳）
+        if (self::$egressArmed && is_array(self::$armedEndpoint)) {
+            if (!self::applyEndpointToCurl($ch, self::$armedEndpoint)) {
+                return array(
+                    'ok'      => false,
+                    'errcode' => ApiError::PROXY_FAIL,
+                    'msg'     => '出口代理配置无效',
+                );
+            }
+            return array('ok' => true);
+        }
         $resolved = self::resolveEndpoint($userId, $forceCode);
         if (empty($resolved['ok'])) {
             return array(
@@ -1672,6 +1695,192 @@ class UserIpProxy
             );
         }
         return array('ok' => true);
+    }
+
+    /**
+     * hit() 成功守卫后：为本请求武装默认出口（仅 putenv 代理环境变量）
+     * 未声明 vsproxy 时为 no-op。本地旧脚本无需改 curl 即可尽量跟随。
+     * 须先完成密钥校验；提取节点在写环境变量之前完成（提取请求不走用户代理）。
+     * 不写 $_SERVER/$_ENV（防账密进 phpinfo）；不用 stream_context_set_default（防 FPM 串请求）。
+     *
+     * @param int $userId
+     * @return array{ok:bool,errcode?:int,msg?:string}
+     */
+    public static function armRequestEgress($userId)
+    {
+        $userId = (int) $userId;
+        if (!self::requestWantsEgress()) {
+            return array('ok' => true);
+        }
+        if (self::$egressArmed) {
+            return array('ok' => true);
+        }
+        if ($userId <= 0) {
+            return array(
+                'ok'      => false,
+                'errcode' => ApiError::PROXY_NEED,
+                'msg'     => '启用出口代理须提供有效密钥',
+            );
+        }
+
+        $resolved = self::resolveEndpoint($userId, self::requestProxyCode());
+        if (empty($resolved['ok'])) {
+            return array(
+                'ok'      => false,
+                'errcode' => isset($resolved['errcode']) ? (int) $resolved['errcode'] : ApiError::PROXY_FAIL,
+                'msg'     => isset($resolved['msg']) ? (string) $resolved['msg'] : '出口代理不可用',
+            );
+        }
+        $ep = $resolved['endpoint'];
+        if (!is_array($ep)) {
+            return array(
+                'ok'      => false,
+                'errcode' => ApiError::PROXY_FAIL,
+                'msg'     => '出口代理配置无效',
+            );
+        }
+
+        $host = isset($ep['host']) ? (string) $ep['host'] : '';
+        $port = isset($ep['port']) ? (int) $ep['port'] : 0;
+        $pin = self::pinProxyEndpoint($host, $port);
+        if ($pin === null) {
+            return array(
+                'ok'      => false,
+                'errcode' => ApiError::PROXY_FAIL,
+                'msg'     => '出口代理地址不允许',
+            );
+        }
+
+        $proxyUrl = self::buildProxyEnvUrl($ep, $pin);
+        if ($proxyUrl === '') {
+            return array(
+                'ok'      => false,
+                'errcode' => ApiError::PROXY_FAIL,
+                'msg'     => '出口代理配置无效',
+            );
+        }
+
+        $envKeys = array(
+            'http_proxy', 'HTTP_PROXY',
+            'https_proxy', 'HTTPS_PROXY',
+            'all_proxy', 'ALL_PROXY',
+            'no_proxy', 'NO_PROXY',
+        );
+        self::$egressEnvBackup = array();
+        foreach ($envKeys as $ek) {
+            $cur = getenv($ek);
+            self::$egressEnvBackup[$ek] = ($cur === false) ? false : (string) $cur;
+        }
+
+        $noProxy = '127.0.0.1,localhost,::1,169.254.169.254';
+        self::writeEnvVar('no_proxy', $noProxy);
+        self::writeEnvVar('NO_PROXY', $noProxy);
+        self::writeEnvVar('http_proxy', $proxyUrl);
+        self::writeEnvVar('HTTP_PROXY', $proxyUrl);
+        self::writeEnvVar('https_proxy', $proxyUrl);
+        self::writeEnvVar('HTTPS_PROXY', $proxyUrl);
+        self::writeEnvVar('all_proxy', $proxyUrl);
+        self::writeEnvVar('ALL_PROXY', $proxyUrl);
+
+        // 不使用 stream_context_set_default：会跨 FPM 请求残留，且可能把站内/元数据 HTTP
+        // 误送进用户代理。本地主流出站为 curl，由环境变量 + 显式 applyOutboundProxy 覆盖。
+
+        // 钉死后的 IP 写入武装节点，后续 applyToCurl 与 CURLOPT 一致
+        $epArmed = $ep;
+        $epArmed['host'] = $pin['ip'];
+        $epArmed['port'] = (int) $pin['port'];
+        self::$armedEndpoint = $epArmed;
+        self::$egressArmed = true;
+
+        if (!self::$egressShutdownRegistered) {
+            self::$egressShutdownRegistered = true;
+            register_shutdown_function(array('UserIpProxy', 'disarmRequestEgress'));
+        }
+
+        return array('ok' => true);
+    }
+
+    /**
+     * 请求结束拆除默认出口，避免 PHP-FPM 工人进程污染下一请求
+     *
+     * @return void
+     */
+    public static function disarmRequestEgress()
+    {
+        if (!self::$egressArmed && self::$egressEnvBackup === array()) {
+            return;
+        }
+        foreach (self::$egressEnvBackup as $ek => $old) {
+            if ($old === false) {
+                putenv((string) $ek);
+                if (isset($_ENV[$ek])) {
+                    unset($_ENV[$ek]);
+                }
+                if (isset($_SERVER[$ek])) {
+                    unset($_SERVER[$ek]);
+                }
+            } else {
+                self::writeEnvVar((string) $ek, (string) $old);
+            }
+        }
+        self::$egressEnvBackup = array();
+        self::$armedEndpoint = null;
+        self::$egressArmed = false;
+    }
+
+    /**
+     * @return bool
+     */
+    public static function isRequestEgressArmed()
+    {
+        return self::$egressArmed;
+    }
+
+    /**
+     * @param array $endpoint
+     * @param array{ip:string,port:int} $pin
+     * @return string
+     */
+    private static function buildProxyEnvUrl(array $endpoint, array $pin)
+    {
+        $proto = isset($endpoint['proto']) ? (int) $endpoint['proto'] : self::PROTO_HTTP;
+        $user = isset($endpoint['username']) ? (string) $endpoint['username'] : '';
+        $pass = isset($endpoint['password']) ? (string) $endpoint['password'] : '';
+        $auth = '';
+        if ($user !== '' || $pass !== '') {
+            $auth = rawurlencode($user) . ':' . rawurlencode($pass) . '@';
+        }
+        $host = isset($pin['ip']) ? (string) $pin['ip'] : '';
+        $port = isset($pin['port']) ? (int) $pin['port'] : 0;
+        if ($host === '' || $port < 1 || $port > 65535) {
+            return '';
+        }
+        if (strpos($host, ':') !== false) {
+            $host = '[' . $host . ']';
+        }
+        $hp = $host . ':' . $port;
+        if ($proto === self::PROTO_SOCKS5) {
+            return 'socks5h://' . $auth . $hp;
+        }
+        if ($proto === self::PROTO_SOCKS4) {
+            return 'socks4a://' . $hp;
+        }
+        // HTTP / HTTPS 代理均用 http:// 代理 URL（TLS 由 CONNECT 完成）
+        return 'http://' . $auth . $hp;
+    }
+
+    /**
+     * @param string $name
+     * @param string $value
+     * @return void
+     */
+    private static function writeEnvVar($name, $value)
+    {
+        $name = (string) $name;
+        $value = (string) $value;
+        // 只写进程环境，供 libcurl 读取；禁止写入 $_SERVER / $_ENV
+        // （代理 URL 含账密，进入超全局后可能被 phpinfo / 错误转储泄露）
+        putenv($name . '=' . $value);
     }
 
     /**
