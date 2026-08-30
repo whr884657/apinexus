@@ -1,12 +1,12 @@
 {
-    "version": "13.26.29",
-    "title": "ApiNexus 13.26.29",
+    "version": "13.26.30",
+    "title": "ApiNexus 13.26.30",
     "release_date": "2026-08-30",
     "db_changes": true,
     "changes": [
-        "用户中心「IP 配置」：IP 白名单可增删（空=不限制）；IP 代理 Tab 占位",
-        "IP 硬拦仅「密钥=必须」接口（含收费强制必须）；无需/可选不做 IP 拦截；不匹配 errcode 11019",
-        "无需 KEY 接口自愿携带有效密钥时绑定用户日志/统计；错误密钥不拒绝",
-        "迁移 13.26.29.sql；新装 database.sql 同步"
+        "用户自备出口 IP 代理：新表 ipproxy（每用户最多 5 条）；隧道/提取；HTTP/HTTPS/SOCKS5/SOCKS4；轮询/随机/优先首条",
+        "调用传 vsproxy=1（可选 vsproxyid）且有效密钥时注入出口代理；代理网关自动；本地 applyOutboundProxy 一行约定",
+        "平台不提供免费代理节点；用户中心 IP 代理 Tab 完整 CRUD + 在线连通测试；添加走规范弹窗；密码不回显",
+        "节点公网校验与钉死 IP、提取 SSL；errcode 11020～11022；迁移 13.26.30.sql；新装 database.sql 同步"
     ]
 }

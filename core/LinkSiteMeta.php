@@ -183,16 +183,76 @@ class LinkSiteMeta
     }
 
     /**
+     * 公网可路由 IP（供提取 URL / 出口代理共用）
+     *
+     * 在 PHP FILTER_FLAG_NO_PRIV_RANGE|NO_RES_RANGE 之上，额外拒绝：
+     * - 100.64.0.0/10（CGNAT，常见云元数据旁路）
+     * - 198.18.0.0/15（基准测试网段）
+     *
+     * @param string $ip
+     * @return bool
+     */
+    public static function isPublicRoutableIp($ip)
+    {
+        $ip = trim((string) $ip);
+        if ($ip === '' || !filter_var($ip, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+        if (!filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        )) {
+            return false;
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $bin = @inet_pton($ip);
+            if ($bin === false || strlen($bin) !== 4) {
+                return false;
+            }
+            $parts = unpack('N', $bin);
+            $u = isset($parts[1]) ? (int) $parts[1] : 0;
+            // 处理 unpack 无符号：在 32 位 PHP 上可能为负，用位运算比较
+            $cgnStart = self::ipv4ToUint('100.64.0.0');
+            $cgnEnd = self::ipv4ToUint('100.127.255.255');
+            $benchStart = self::ipv4ToUint('198.18.0.0');
+            $benchEnd = self::ipv4ToUint('198.19.255.255');
+            $uu = $u < 0 ? ($u + 4294967296.0) : (float) $u;
+            if ($cgnStart !== null && $cgnEnd !== null && $uu >= $cgnStart && $uu <= $cgnEnd) {
+                return false;
+            }
+            if ($benchStart !== null && $benchEnd !== null && $uu >= $benchStart && $uu <= $benchEnd) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @param string $ip
+     * @return float|null
+     */
+    private static function ipv4ToUint($ip)
+    {
+        $bin = @inet_pton($ip);
+        if ($bin === false || strlen($bin) !== 4) {
+            return null;
+        }
+        $parts = unpack('N', $bin);
+        if (!isset($parts[1])) {
+            return null;
+        }
+        $v = (int) $parts[1];
+        return $v < 0 ? ($v + 4294967296.0) : (float) $v;
+    }
+
+    /**
      * @param string $ip
      * @return bool
      */
     private static function isPublicIp($ip)
     {
-        return (bool) filter_var(
-            $ip,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-        );
+        return self::isPublicRoutableIp($ip);
     }
 
     /**

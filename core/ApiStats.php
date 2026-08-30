@@ -8,6 +8,7 @@
  *   ApiStats::hit(14);   // 括号内为本接口在后台的数字 ID
  *   // 本地脚本再 curl 外网时：
  *   curl_setopt($ch, CURLOPT_HTTPHEADER, ApiStats::outboundHeaders());
+ *   ApiStats::applyOutboundProxy($ch); // 调用方传 vsproxy=1 且已配出口代理时注入
  *
  * 代理：ApiProxy 网关内自动调用，勿在上游文件注入。
  *
@@ -90,6 +91,9 @@ class ApiStats
             }
             self::$hitRow = $row;
 
+            // 尽早识别出口代理开关（Query/POST），供后续 applyOutboundProxy 使用
+            self::captureEgressProxyFlags();
+
             $id = (int) $row['id'];
             if (isset(self::$done[$id])) {
                 return;
@@ -155,6 +159,84 @@ class ApiStats
             return ProxyClientProfile::resolveReferer($row);
         }
         return '';
+    }
+
+    /**
+     * 从 Query/POST 捕获 vsproxy / vsproxyid（本地 hit、代理 guard 均可调用）
+     *
+     * @return void
+     */
+    public static function captureEgressProxyFlags()
+    {
+        if (!class_exists('UserIpProxy')) {
+            return;
+        }
+        $want = false;
+        $pid = 0;
+        if (isset($_GET['vsproxy']) && !is_array($_GET['vsproxy'])) {
+            $want = UserIpProxy::truthyFlag($_GET['vsproxy']);
+        } elseif (isset($_POST['vsproxy']) && !is_array($_POST['vsproxy'])) {
+            $want = UserIpProxy::truthyFlag($_POST['vsproxy']);
+        }
+        if (isset($_GET['vsproxyid']) && !is_array($_GET['vsproxyid'])) {
+            $pid = max(0, (int) $_GET['vsproxyid']);
+        } elseif (isset($_POST['vsproxyid']) && !is_array($_POST['vsproxyid'])) {
+            $pid = max(0, (int) $_POST['vsproxyid']);
+        }
+        // 仅当显式出现开关时写入，避免覆盖网关从 JSON 注入的 note
+        if ($want || $pid > 0 || isset($_GET['vsproxy']) || isset($_POST['vsproxy'])) {
+            UserIpProxy::noteRequestFlags($want, $pid);
+        }
+    }
+
+    /**
+     * 本地/自定义 curl：按调用方 vsproxy=1 注入用户自备出口代理
+     * 须在 hit()/guardAccess 之后调用；未声明 vsproxy 时为 no-op。
+     *
+     * @param resource|CurlHandle $ch
+     * @return bool 是否已注入
+     */
+    public static function applyOutboundProxy($ch)
+    {
+        if (!class_exists('UserIpProxy') || !UserIpProxy::requestWantsEgress()) {
+            return false;
+        }
+        $ctx = self::keyContext();
+        if (empty($ctx['valid']) || (int) $ctx['userid'] <= 0) {
+            self::jsonExit(ApiError::PROXY_NEED, '启用出口代理须提供有效密钥');
+        }
+        $applied = UserIpProxy::applyToCurl($ch, (int) $ctx['userid'], UserIpProxy::requestProxyId());
+        if (empty($applied['ok'])) {
+            $err = isset($applied['errcode']) ? (int) $applied['errcode'] : ApiError::PROXY_FAIL;
+            $msg = isset($applied['msg']) ? (string) $applied['msg'] : '出口代理不可用';
+            self::jsonExit($err, $msg);
+        }
+        return true;
+    }
+
+    /**
+     * 代理网关专用：注入失败时返回错误数组（由调用方 hitProxy + exit）
+     *
+     * @param resource|CurlHandle $ch
+     * @return true|array{errcode:int,msg:string}
+     */
+    public static function applyOutboundProxyForProxy($ch)
+    {
+        if (!class_exists('UserIpProxy') || !UserIpProxy::requestWantsEgress()) {
+            return true;
+        }
+        $ctx = self::keyContext();
+        if (empty($ctx['valid']) || (int) $ctx['userid'] <= 0) {
+            return array('errcode' => ApiError::PROXY_NEED, 'msg' => '启用出口代理须提供有效密钥');
+        }
+        $applied = UserIpProxy::applyToCurl($ch, (int) $ctx['userid'], UserIpProxy::requestProxyId());
+        if (empty($applied['ok'])) {
+            return array(
+                'errcode' => isset($applied['errcode']) ? (int) $applied['errcode'] : ApiError::PROXY_FAIL,
+                'msg'     => isset($applied['msg']) ? (string) $applied['msg'] : '出口代理不可用',
+            );
+        }
+        return true;
     }
 
     /**
@@ -326,6 +408,8 @@ class ApiStats
      */
     private static function lightGate(array $row)
     {
+        self::captureEgressProxyFlags();
+
         $status = ApiManager::normalizeStatus(isset($row['status']) ? $row['status'] : 0);
         if ($status === ApiManager::STATUS_DISABLED) {
             return array('errcode' => ApiError::DISABLED, 'msg' => '该接口已经被禁用');

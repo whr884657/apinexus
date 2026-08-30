@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.28**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.30**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -68,8 +68,8 @@ version.php
 → StatDayManager → UserStat7Manager → UserCallStats → ApiLogManager → ApiLogArchive → ApiKeyManager
 → ApiFeedbackManager → FrontendFeedback → FeedbackNotify
 → ApiCategoryManager
-→ PayConfig → OrderManager → PointsManager
-→ CodePayClient（core/play/codeplay/）
+→ PayConfig → OrderManager → PointsManager → PayPendingWatch → PointsNotify → UserIpAllow → UserIpProxy
+→ CodePayClient（core/play/codepay/）
 → FrontendCategory → FrontendApi → FrontendStats → GeoCityCoords → DashboardStats → PanelMonitor
 → LinkManager → LinkSiteMeta → LinkNotify
 → FrontendLink → FrontendPartner → FrontendSponsor → FrontendContributor
@@ -295,7 +295,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `UserAvatar.php` | 用户头像 URL 解析 |
 | `AboutCatalog.php` | 关于页「开发与维护 / 相关链接 / 技术栈」目录（本地 JSON 优先，缺则云端；三仓链接，无页面 note） |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
-| `ApiError.php` | 公开 API 业务错误码（11001～11019）；`businessLabelMap` / `aiDetailDocErrcodeClause` 供 AI 详细文档全量写入 |
+| `ApiError.php` | 公开 API 业务错误码（11001～11022）；`businessLabelMap` / `aiDetailDocErrcodeClause` 供 AI 详细文档全量写入 |
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型/单片超时/代码调度模式与并发） |
 | `AiClient.php` | OpenAI 兼容 Chat Completions / Responses；流式 `chatStreamWithConfig`；连通测试须先 `session_write_close`（v13.26.0） |
@@ -310,8 +310,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiOutboundSanitize.php` | 出站 JSON 擦除 `/admin` 等敏感路径（**v13.25.0**）；业务错误体收窄三字段（**v13.25.2**） |
 | `ApiProxy.php` | 外链网关：curl 中继上游；按 `upmethod` 选上游 GET/POST；可选 JSON 改写；剥离 JSONP 参数；出站消毒；3xx Location 透传；上游 TLS 不校验证书 |
 | `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
-| `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；`keyContext()` 供本地接口读本请求密钥用户；**仅 needkey=必须**时经 `UserIpAllow` 硬拦 IP |
+| `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；出站代理 `applyOutboundProxy`（`vsproxy=1`）；`keyContext()` 供本地接口读本请求密钥用户；**仅 needkey=必须**时经 `UserIpAllow` 硬拦 IP |
 | `UserIpAllow.php` | 用户调用 IP 白名单（`user.ipallow`；空=不限制）；**仅密钥必须接口**硬拦；配合 `AuthSecurity::clientIp`；不匹配 → errcode **11019** |
+| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；HTTP/HTTPS/SOCKS5/SOCKS4；`vsproxy=1` 启用；与 ApiProxy 上游中继无关 |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
 | `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser；含 calls/cost/success_rate） |
 | `UserCallStats.php` | 个人调用/积分/排行只读查询（`api/index.php`）；短字段含 `rank`/`rank7`；`parseFields` / `query` / `resolveUserFromRequest` |
@@ -889,7 +890,7 @@ VsPlaygroundResponse.directRequest({
 {"code":0,"msg":"请提供调用密钥","errcode":11001}
 ```
 
-传输层 HTTP 固定 **200**；业务看 `errcode`（`ApiError` **11001～11019 全套**，见 `businessLabelMap()`）。旧版 `http:401/403` 已废弃。AI 详细文档须用 `aiDetailDocErrcodeClause()` 写全，禁止只列子集。
+传输层 HTTP 固定 **200**；业务看 `errcode`（`ApiError` **11001～11022 全套**，见 `businessLabelMap()`）。旧版 `http:401/403` 已废弃。AI 详细文档须用 `aiDetailDocErrcodeClause()` 写全，禁止只列子集。
 
 **日志：** 成功/失败写 `api.calls`、`StatDayManager::recordHit`；详细日志开时写 `apilog`（`ok` / `apikey` / `httpcode`；含异步 `IpLocator` 回填 `iploc`）。大屏飞线按 `ok`+`apikey` 拆绿/黄/红。
 
@@ -921,7 +922,7 @@ VsPlaygroundResponse.directRequest({
 | 类 | 要点 |
 |----|------|
 | **JsonpGuard** | 回调名白名单 `^[A-Za-z_$][A-Za-z0-9_$]{0,63}$`；识别参数 `callback` / `jsonp` / `jsonpcallback` / `_callback` / `cb`；`stripCallbackParams` 在代理侧剥离，防 JSONP 注入 |
-| **ProxyJsonRewrite** | 仅对成功 JSON 做 set/del；若 `ApiError::looksLikeBusinessErrorPayload`（errcode **11001～11019**）则**整段不改写**；禁止 SET 写入含 `/admin` 等后台路径 |
+| **ProxyJsonRewrite** | 仅对成功 JSON 做 set/del；若 `ApiError::looksLikeBusinessErrorPayload`（errcode **11001～11022**）则**整段不改写**；禁止 SET 写入含 `/admin` 等后台路径 |
 | **ApiOutboundSanitize** | 出站擦除敏感路径字段；业务失败体经 `narrowBusinessErrorBody` **只保留 `code` / `msg` / `errcode`**，防止 `api_info` 等管理字段随错误响应泄露 |
 
 成功响应的 JSON 字段改写能力不变。专题规范见本地 `开发规范/JSONP与出站响应安全规范.md`、`代理JSON字段改写规范.md`。

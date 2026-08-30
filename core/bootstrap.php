@@ -71,6 +71,7 @@ require_once VS_ROOT . '/core/PointsManager.php';
 require_once VS_ROOT . '/core/PayPendingWatch.php';
 require_once VS_ROOT . '/core/PointsNotify.php';
 require_once VS_ROOT . '/core/UserIpAllow.php';
+require_once VS_ROOT . '/core/UserIpProxy.php';
 require_once VS_ROOT . '/core/play/codeplay/CodePayClient.php';
 require_once VS_ROOT . '/core/FrontendCategory.php';
 require_once VS_ROOT . '/core/FrontendApi.php';

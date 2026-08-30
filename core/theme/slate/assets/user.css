@@ -949,35 +949,12 @@ body.st-uc-body .vs-points-item__title {
 .vs-user-ip .vs-tabs.vs-api-review-tabs {
     margin-bottom: 16px;
 }
+.vs-user-ip__panel[hidden] {
+    display: none !important;
+}
 .vs-user-ip__card,
 .vs-user-ip__list-wrap {
     margin-top: 12px;
-}
-.vs-user-ip__meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 12px;
-    margin-bottom: 16px;
-}
-.vs-user-ip__meta-label {
-    color: var(--vs-text-muted, #64748b);
-    font-size: 13px;
-}
-.vs-user-ip__meta-ip {
-    font-size: 13px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    background: var(--vs-fill-muted, rgba(15, 23, 42, 0.04));
-}
-.vs-user-ip__add-row {
-    display: flex;
-    gap: 10px;
-    align-items: stretch;
-}
-.vs-user-ip__add-row .vs-input {
-    flex: 1;
-    min-width: 0;
 }
 .vs-user-ip__list-head {
     display: flex;
@@ -985,6 +962,12 @@ body.st-uc-body .vs-points-item__title {
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
+}
+.vs-user-ip__list-head-main {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
 }
 .vs-user-ip__list-title {
     margin: 0;
@@ -994,6 +977,24 @@ body.st-uc-body .vs-points-item__title {
 .vs-user-ip__list-count {
     font-size: 13px;
     color: var(--vs-text-muted, #64748b);
+}
+.vs-user-ip__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--vs-fill-muted, rgba(15, 23, 42, 0.04));
+}
+.vs-user-ip__meta-label {
+    color: var(--vs-text-muted, #64748b);
+    font-size: 13px;
+}
+.vs-user-ip__meta-ip {
+    font-size: 13px;
+    word-break: break-all;
 }
 .vs-user-ip__list {
     list-style: none;
@@ -1016,11 +1017,120 @@ body.st-uc-body .vs-points-item__title {
     font-size: 13px;
     word-break: break-all;
 }
+.vs-user-ip__strategy-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+.vs-user-ip__strategy-row .vs-select,
+.vs-user-ip__strategy-row .vs-input {
+    flex: 1;
+    min-width: 160px;
+    width: auto;
+    max-width: 100%;
+}
+.vs-user-ip__form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 14px;
+}
+.vs-user-ip__form-grid .vs-form-row {
+    margin: 0;
+}
+.vs-user-ip__form-grid .vs-input,
+.vs-user-ip__form-grid .vs-select {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.vs-user-ip__field-span {
+    grid-column: 1 / -1;
+}
+#userIpAllowOverlay .vs-form-row .vs-input,
+#userProxyFormOverlay .vs-form-row .vs-input,
+#userProxyFormOverlay .vs-form-row .vs-select,
+#userIpAllowOverlay .vs-input,
+#userProxyFormOverlay .vs-input,
+#userProxyFormOverlay .vs-select {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.vs-user-ip__proxy-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.vs-user-ip__proxy-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--vs-border, rgba(15, 23, 42, 0.08));
+    border-radius: 10px;
+}
+.vs-user-ip__proxy-main {
+    min-width: 0;
+    flex: 1;
+}
+.vs-user-ip__proxy-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    margin-bottom: 6px;
+}
+.vs-user-ip__proxy-title {
+    font-size: 14px;
+}
+.vs-user-ip__proxy-badge {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--vs-fill-muted, rgba(15, 23, 42, 0.06));
+    color: var(--vs-text-muted, #64748b);
+}
+.vs-user-ip__proxy-badge.is-on {
+    color: #15803d;
+    background: rgba(34, 197, 94, 0.12);
+}
+.vs-user-ip__proxy-badge.is-off {
+    color: #b45309;
+    background: rgba(245, 158, 11, 0.12);
+}
+.vs-user-ip__proxy-endpoint {
+    display: block;
+    font-size: 12px;
+    word-break: break-all;
+    color: var(--vs-text, #0f172a);
+}
+.vs-user-ip__proxy-meta {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--vs-text-muted, #64748b);
+}
+.vs-user-ip__proxy-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-shrink: 0;
+}
 @media (max-width: 640px) {
-    .vs-user-ip__add-row {
-        flex-direction: column;
-    }
     .vs-user-ip__meta {
         align-items: flex-start;
+    }
+    .vs-user-ip__form-grid {
+        grid-template-columns: 1fr;
+    }
+    .vs-user-ip__proxy-item {
+        flex-direction: column;
+    }
+    .vs-user-ip__list-head {
+        flex-wrap: wrap;
     }
 }

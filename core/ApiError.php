@@ -47,9 +47,15 @@ class ApiError
     const BAD_METHOD = 11018;
     /** 当前 IP 不在用户白名单内 */
     const IP_DENY = 11019;
+    /** 启用出口代理须提供有效密钥 */
+    const PROXY_NEED = 11020;
+    /** 未配置可用出口代理 */
+    const PROXY_NONE = 11021;
+    /** 出口代理不可用 / 提取失败 */
+    const PROXY_FAIL = 11022;
 
     /**
-     * 业务错误码 → 文案（11001～11019；不含传输层 200/302）
+     * 业务错误码 → 文案（11001～11022；不含传输层 200/302）
      *
      * @return array<int,string>
      */
@@ -75,6 +81,9 @@ class ApiError
             self::SERVER           => '服务暂不可用',
             self::BAD_METHOD       => '请求方式不允许',
             self::IP_DENY          => '当前IP不在白名单内',
+            self::PROXY_NEED       => '启用出口代理须提供有效密钥',
+            self::PROXY_NONE       => '未配置可用出口代理',
+            self::PROXY_FAIL       => '出口代理不可用',
         );
     }
 
@@ -116,11 +125,11 @@ class ApiError
     public static function isKnown($errcode)
     {
         $code = (int) $errcode;
-        return $code === 200 || $code === 302 || ($code >= 11001 && $code <= 11019);
+        return $code === 200 || $code === 302 || ($code >= 11001 && $code <= 11022);
     }
 
     /**
-     * 是否为平台业务失败码（11001～11019；不含 200/302）
+     * 是否为平台业务失败码（11001～11022；不含 200/302）
      *
      * @param int $errcode
      * @return bool
@@ -128,7 +137,7 @@ class ApiError
     public static function isBusinessFailure($errcode)
     {
         $code = (int) $errcode;
-        return $code >= 11001 && $code <= 11019;
+        return $code >= 11001 && $code <= 11022;
     }
 
     /**

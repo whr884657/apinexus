@@ -103,6 +103,8 @@ foreach ($apiList as $api) {
     $outHeaders[] = 'Accept-Language: zh-CN,zh;q=0.9';
     curl_setopt($ch, CURLOPT_HTTPHEADER, $outHeaders);
     curl_setopt($ch, CURLOPT_USERAGENT, ApiStats::outboundUa());
+    // 调用方传 vsproxy=1 且用户中心已配置出口代理时注入（平台不提供免费节点）
+    ApiStats::applyOutboundProxy($ch);
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

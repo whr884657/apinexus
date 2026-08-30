@@ -259,6 +259,8 @@ class ApiProxy
     private static function collectClientPayload()
     {
         $params = array();
+        $egressWant = false;
+        $egressId = 0;
         if (!empty($_GET) && is_array($_GET)) {
             foreach ($_GET as $k => $v) {
                 if (is_array($v)) {
@@ -266,6 +268,14 @@ class ApiProxy
                 }
                 $key = (string) $k;
                 $keyLower = strtolower($key);
+                if ($keyLower === 'vsproxy') {
+                    $egressWant = class_exists('UserIpProxy') && UserIpProxy::truthyFlag($v);
+                    continue;
+                }
+                if ($keyLower === 'vsproxyid') {
+                    $egressId = max(0, (int) $v);
+                    continue;
+                }
                 if ($key === '' || $key === self::REWRITE_SLUG_PARAM
                     || $keyLower === 'key' || $keyLower === 'api_key' || $keyLower === 'apikey') {
                     continue;
@@ -283,16 +293,39 @@ class ApiProxy
                 if (is_array($v)) {
                     continue;
                 }
+                $keyLower = strtolower((string) $k);
+                if ($keyLower === 'vsproxy') {
+                    // stripPlatform 已去掉，此处不会进；保留兼容
+                    continue;
+                }
                 if (class_exists('JsonpGuard') && JsonpGuard::isJsonpParamName((string) $k)) {
                     continue;
                 }
                 $params[(string) $k] = $v;
+            }
+            if (isset($_POST['vsproxy']) && !is_array($_POST['vsproxy'])) {
+                $egressWant = class_exists('UserIpProxy') && UserIpProxy::truthyFlag($_POST['vsproxy']);
+            }
+            if (isset($_POST['vsproxyid']) && !is_array($_POST['vsproxyid'])) {
+                $egressId = max(0, (int) $_POST['vsproxyid']);
             }
         }
 
         $contentType = isset($_SERVER['CONTENT_TYPE']) ? (string) $_SERVER['CONTENT_TYPE'] : '';
         $rawIn = file_get_contents('php://input');
         $rawBody = is_string($rawIn) ? $rawIn : '';
+        // 剥离前先识别 JSON 体内的出口代理开关（strip 后会去掉）
+        if ($rawBody !== '' && stripos($contentType, 'application/json') !== false) {
+            $peek = json_decode($rawBody, true);
+            if (is_array($peek)) {
+                if (isset($peek['vsproxy']) && !is_array($peek['vsproxy'])) {
+                    $egressWant = class_exists('UserIpProxy') && UserIpProxy::truthyFlag($peek['vsproxy']);
+                }
+                if (isset($peek['vsproxyid']) && !is_array($peek['vsproxyid'])) {
+                    $egressId = max(0, (int) $peek['vsproxyid']);
+                }
+            }
+        }
         if ($rawBody !== '') {
             $rawBody = self::stripPlatformKeyFieldsFromBody($rawBody, $contentType);
         }
@@ -307,7 +340,8 @@ class ApiProxy
                     }
                     $key = (string) $k;
                     $keyLower = strtolower($key);
-                    if ($key === '' || $keyLower === 'key' || $keyLower === 'api_key' || $keyLower === 'apikey') {
+                    if ($key === '' || $keyLower === 'key' || $keyLower === 'api_key' || $keyLower === 'apikey'
+                        || $keyLower === 'vsproxy' || $keyLower === 'vsproxyid') {
                         continue;
                     }
                     if (class_exists('JsonpGuard') && JsonpGuard::isJsonpParamName($key)) {
@@ -318,6 +352,11 @@ class ApiProxy
                     }
                 }
             }
+        }
+
+        if (class_exists('UserIpProxy') && ($egressWant || $egressId > 0
+            || isset($_GET['vsproxy']) || isset($_POST['vsproxy']))) {
+            UserIpProxy::noteRequestFlags($egressWant, $egressId);
         }
 
         return array(
@@ -506,6 +545,15 @@ class ApiProxy
         ));
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+
+        $proxyApply = ApiStats::applyOutboundProxyForProxy($ch);
+        if ($proxyApply !== true) {
+            curl_close($ch);
+            $errcode = isset($proxyApply['errcode']) ? (int) $proxyApply['errcode'] : ApiError::PROXY_FAIL;
+            $msg = isset($proxyApply['msg']) ? (string) $proxyApply['msg'] : '出口代理不可用';
+            ApiStats::hitProxy($row, false, $errcode);
+            vs_api_error_exit($errcode, $msg);
         }
 
         $raw = curl_exec($ch);
@@ -769,7 +817,8 @@ class ApiProxy
     public static function isPlatformKeyFieldName($name)
     {
         $n = strtolower(trim((string) $name));
-        return ($n === 'key' || $n === 'api_key' || $n === 'apikey');
+        return ($n === 'key' || $n === 'api_key' || $n === 'apikey'
+            || $n === 'vsproxy' || $n === 'vsproxyid');
     }
 
     /**
@@ -847,7 +896,7 @@ class ApiProxy
                     $kept[] = $part;
                     continue;
                 }
-                if (preg_match('/Content-Disposition:\s*[^\r\n]*\bname=(["\']?)(key|api_key|apikey)\1/i', $part)) {
+                if (preg_match('/Content-Disposition:\s*[^\r\n]*\bname=(["\']?)(key|api_key|apikey|vsproxy|vsproxyid)\1/i', $part)) {
                     continue;
                 }
                 $kept[] = $part;

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.29-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.30-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -156,12 +156,13 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.29（2026-08-30）
+### v13.26.30（2026-08-30）
 
-- **功能：** 用户中心「IP 配置」：IP 白名单可增删；空名单不限制；IP 代理 Tab 占位
-- **安全：** 仅「密钥 = 必须」的接口按所有者白名单校验来源 IP（`AuthSecurity::clientIp`）；不匹配 → errcode **11019**；无需/可选不做 IP 拦截
-- **修复：** 「无需 KEY」接口自愿带有效密钥时记入用户日志/统计（错误密钥不拦）
-- **库：** `user.ipallow`；`install/migrations/13.26.29.sql`
+- **功能：** 用户自备出口 IP 代理（表 `ipproxy`，每账号最多 5 条）：隧道 / 提取 API；HTTP / HTTPS / SOCKS5 / SOCKS4；轮询 / 随机 / 优先首条
+- **启用：** 调用附加 `vsproxy=1`（可选 `vsproxyid`）且携带有效密钥；代理网关自动注入；本地接口一行 `ApiStats::applyOutboundProxy($ch)`
+- **产品边界：** 平台不提供免费代理节点；用户中心「IP 代理」Tab 支持保存 / 测试连通 / 编辑删除；密码不回显
+- **错误码：** 11020 / 11021 / 11022
+- **库：** `install/migrations/13.26.30.sql`；新装 `database.sql` 已含表与 `user.proxystrategy`
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

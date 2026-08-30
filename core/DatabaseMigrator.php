@@ -438,6 +438,13 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 13.26.30 ipproxy / proxystrategy 时跳过
+        if (!in_array('13.26.30', $applied, true)) {
+            if (self::tableExists('ipproxy') && self::tableColumnExists('user', 'proxystrategy')) {
+                self::markApplied('13.26.30');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -936,7 +943,10 @@ class DatabaseMigrator
             || $version === '13.22.2'
             || $version === '13.22.5'
             || $version === '13.26.7'
-            || $version === '13.26.22');
+            || $version === '13.26.22'
+            || $version === '13.26.28'
+            || $version === '13.26.29'
+            || $version === '13.26.30');
     }
 
     /**
@@ -1380,6 +1390,9 @@ class DatabaseMigrator
         }
         if ($version === '13.26.29') {
             return self::tableColumnExists('user', 'ipallow');
+        }
+        if ($version === '13.26.30') {
+            return self::tableExists('ipproxy') && self::tableColumnExists('user', 'proxystrategy');
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {
