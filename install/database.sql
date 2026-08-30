@@ -253,6 +253,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}apilog` (
     `method` varchar(16) NOT NULL DEFAULT '' COMMENT 'HTTP方法',
     `ip` varchar(45) NOT NULL DEFAULT '' COMMENT '客户端IP',
     `iploc` varchar(120) NOT NULL DEFAULT '' COMMENT 'IP中文归属地（预留，后续可开启解析）',
+    `egress` varchar(64) NOT NULL DEFAULT '' COMMENT '出口节点（IP:端口；空=未走出口代理）',
     `host` varchar(255) NOT NULL DEFAULT '' COMMENT '请求Host',
     `path` varchar(500) NOT NULL DEFAULT '' COMMENT '请求路径',
     `url` varchar(1000) NOT NULL DEFAULT '' COMMENT '完整请求URL',

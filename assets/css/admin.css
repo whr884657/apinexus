@@ -6225,7 +6225,7 @@ select.vs-input.vs-select {
 }
 
 .vs-log-grid {
-    min-width: 920px;
+    min-width: 1020px;
 }
 
 .vs-log-row {
@@ -6235,6 +6235,7 @@ select.vs-input.vs-select {
         minmax(140px, 1.5fr)
         80px
         minmax(110px, 1.1fr)
+        minmax(120px, 1.1fr)
         minmax(96px, 1.2fr)
         64px
         minmax(120px, 1fr)
@@ -6467,7 +6468,7 @@ select.vs-input.vs-select {
 .vs-users-log-row {
     display: grid;
     /* 接口列封顶 → 方法贴接口；状态 max-content → 徽章随文字，禁止拉成长条 */
-    grid-template-columns: minmax(0, 200px) auto minmax(0, 1.4fr) max-content 44px 132px 40px;
+    grid-template-columns: minmax(0, 180px) auto minmax(0, 1.2fr) minmax(0, 1.1fr) max-content 44px 132px 40px;
     gap: 6px 8px;
     align-items: center;
     padding: 8px 12px;
@@ -6526,6 +6527,17 @@ select.vs-input.vs-select {
 }
 .vs-users-log-row__ip .vs-log-mono {
     margin-right: 6px;
+}
+.vs-users-log-row__egress {
+    min-width: 0;
+    font-size: 12px;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.vs-users-log-row__egress .vs-log-mono {
+    color: #0f172a;
 }
 .vs-users-log-row__status {
     width: max-content;
@@ -6767,6 +6779,20 @@ select.vs-input.vs-select {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 10px;
+}
+
+/* 管理端详情：短字段密铺；密钥与长字段通栏（对齐用户侧网格节奏） */
+.vs-log-detail--admin .vs-log-detail__grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.vs-log-detail--admin .vs-log-detail__item--secret,
+.vs-log-detail--admin .vs-log-detail__item--full {
+    grid-column: 1 / -1;
+}
+@media (min-width: 1100px) {
+    .vs-log-detail--admin .vs-log-detail__section:first-of-type .vs-log-detail__grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 
 .vs-log-detail__item {

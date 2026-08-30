@@ -132,6 +132,7 @@
             + '<div class="vs-log-cell">接口</div>'
             + '<div class="vs-log-cell">方法</div>'
             + '<div class="vs-log-cell">IP / 归属地</div>'
+            + '<div class="vs-log-cell">出口节点</div>'
             + '<div class="vs-log-cell">结果</div>'
             + '<div class="vs-log-cell">状态码</div>'
             + '<div class="vs-log-cell">时间</div>'
@@ -150,6 +151,9 @@
             + '<div class="vs-log-cell vs-log-c-ip">'
             + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
             + '<span class="vs-log-sub">' + escapeHtml(row.iploc !== undefined && row.iploc !== null && row.iploc !== '' ? row.iploc : '—') + '</span>'
+            + '</div>'
+            + '<div class="vs-log-cell vs-log-c-egress">'
+            + '<span class="vs-log-mono">' + escapeHtml(row.egress ? row.egress : '—') + '</span>'
             + '</div>'
             + '<div class="vs-log-cell vs-log-c-ok">' + statusBadge(row) + '</div>'
             + '<div class="vs-log-cell vs-log-c-code">' + httpBadge(row) + '</div>'
@@ -171,6 +175,9 @@
             + methodBadge(row)
             + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
             + '<span>' + escapeHtml(row.iploc !== undefined && row.iploc !== null && row.iploc !== '' ? row.iploc : '—') + '</span>'
+            + (row.egress
+                ? ('<span class="vs-log-mono" title="出口节点">' + escapeHtml(row.egress) + '</span>')
+                : '')
             + httpBadge(row)
             + '</div>'
             + '<div class="vs-log-card__foot">'
@@ -254,7 +261,7 @@
     }
 
     function detailHtml(row) {
-        return '<div class="vs-log-detail">'
+        return '<div class="vs-log-detail vs-log-detail--admin">'
             + '<div class="vs-log-detail__hero">'
             + '<span class="vs-log-detail__hero-name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</span>'
             + methodBadge(row)
@@ -269,16 +276,17 @@
             + detailItem('类型', row.apitype_label)
             + detailItem('时间', row.createtime)
             + detailItem('结果', row.ok_label)
-            + detailItem('状态码', httpcodeDisplay(row), true)
+            + detailItem('状态码', httpcodeDisplay(row))
             + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '匿名'))
-            + detailSecretItem('密钥', row.apikey, row.apikey_masked)
             + detailItem('扣费', (row.charged_label || '') + (row.charged ? (' · ' + row.cost) : ''))
+            + detailSecretItem('密钥', row.apikey, row.apikey_masked)
             + '</div></div>'
             + '<div class="vs-log-detail__section">'
             + '<h4 class="vs-log-detail__section-title">网络与来源</h4>'
             + '<div class="vs-log-detail__grid">'
             + detailItem('IP', row.ip)
             + detailItem('IP 归属地', row.iploc)
+            + detailItem('出口节点', row.egress)
             + detailItem('来源域名', row.domain)
             + detailItem('Host', row.host)
             + detailItem('路径', row.path, true)

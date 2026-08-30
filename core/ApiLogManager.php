@@ -43,6 +43,31 @@ class ApiLogManager
         }
     }
 
+    /** @var bool|null 请求内缓存：apilog.egress 是否已落地 */
+    private static $hasEgressCol = null;
+
+    /**
+     * apilog.egress 是否存在（升级窗口缺列时写/读降级，避免整页失败）
+     *
+     * @return bool
+     */
+    public static function hasEgressColumn()
+    {
+        if (self::$hasEgressCol !== null) {
+            return self::$hasEgressCol;
+        }
+        self::$hasEgressCol = false;
+        try {
+            if (class_exists('DatabaseMigrator')
+                && method_exists('DatabaseMigrator', 'tableColumnExists')) {
+                self::$hasEgressCol = DatabaseMigrator::tableColumnExists('apilog', 'egress');
+            }
+        } catch (Exception $e) {
+            self::$hasEgressCol = false;
+        }
+        return self::$hasEgressCol;
+    }
+
     /**
      * 后台列表默认查询天数
      *
@@ -223,6 +248,7 @@ class ApiLogManager
         $userid = (int) (isset($row['userid']) ? $row['userid'] : 0);
         $username = isset($row['username']) ? trim((string) $row['username']) : '';
         $iploc = isset($row['iploc']) ? trim((string) $row['iploc']) : '';
+        $egress = isset($row['egress']) ? trim((string) $row['egress']) : '';
         $httpLabel = self::httpcodeLabel($httpcode);
         // 列表角标：失败时带上原因（如「失败-上游网关错误」）
         $okLabel = '成功';
@@ -248,6 +274,7 @@ class ApiLogManager
             'method_class'   => self::methodClass($method),
             'ip'             => isset($row['ip']) ? (string) $row['ip'] : '',
             'iploc'          => $iploc,
+            'egress'         => $egress,
             'host'           => isset($row['host']) ? (string) $row['host'] : '',
             'path'           => isset($row['path']) ? (string) $row['path'] : '',
             'url'            => isset($row['url']) ? (string) $row['url'] : '',
@@ -778,6 +805,7 @@ class ApiLogManager
             'method_class' => (string) $full['method_class'],
             'ip'           => (string) $full['ip'],
             'iploc'        => (string) $full['iploc'],
+            'egress'       => (string) $full['egress'],
             'ok'           => (int) $full['ok'],
             'ok_label'     => (string) $full['ok_label'],
             'ok_class'     => (string) $full['ok_class'],
@@ -786,7 +814,7 @@ class ApiLogManager
     }
 
     /**
-     * 用户侧详情白名单（相对管理端精简：无类型/用户/路径/完整URL/Referer/Origin/UA/来源域名）
+     * 用户侧详情白名单（相对管理端精简：无类型/用户/Referer/Origin/UA/来源域名；含 path/url/host/出口节点）
      *
      * @param array $row 原始行或 formatRow 结果
      * @return array|null
@@ -807,9 +835,11 @@ class ApiLogManager
             'apikey_masked'  => (string) $full['apikey_masked'],
             'ip'             => (string) $full['ip'],
             'iploc'          => (string) $full['iploc'],
+            'egress'         => (string) $full['egress'],
             'host'           => (string) $full['host'],
             'path'           => (string) $full['path'],
-            'url'            => self::scrubUserVisibleUrl((string) $full['url']),
+            // 完整 URL 原文回传；密钥段由前端默认模糊、悬停明码（勿再 *** 替换）
+            'url'            => (string) $full['url'],
             'ok'             => (int) $full['ok'],
             'ok_label'       => (string) $full['ok_label'],
             'ok_class'       => (string) $full['ok_class'],
@@ -824,7 +854,8 @@ class ApiLogManager
     }
 
     /**
-     * 用户可见完整路径：query 中常见密钥参数打码，避免详情二次泄露
+     * @deprecated v13.26.34 起用户详情改由前端对密钥段模糊悬停，不再 *** 替换整段参数值
+     * 用户可见完整路径：query 中常见密钥参数打码（旧逻辑保留，勿再接入新出口）
      *
      * @param string $url
      * @return string
@@ -950,7 +981,7 @@ class ApiLogManager
         }
 
         $cacheKey = 'cache:userapilog:page:' . md5(json_encode(array(
-            'v'         => 3,
+            'v'         => 4,
             'uid'       => $userId,
             'page'      => $page,
             'pagesize'  => $pagesize,
@@ -975,7 +1006,9 @@ class ApiLogManager
                 }
                 $whereSql = implode(' AND ', $where);
 
-                $sql = 'SELECT l.`id`, l.`apiname`, l.`method`, l.`ip`, l.`iploc`, l.`ok`, l.`httpcode`, l.`createtime`
+                $egressCol = self::hasEgressColumn() ? ', l.`egress`' : '';
+                $sql = 'SELECT l.`id`, l.`apiname`, l.`method`, l.`ip`, l.`iploc`' . $egressCol
+                    . ', l.`ok`, l.`httpcode`, l.`createtime`
                     FROM `' . self::table() . '` l
                     WHERE ' . $whereSql . '
                     ORDER BY l.`id` DESC

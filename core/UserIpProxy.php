@@ -57,6 +57,9 @@ class UserIpProxy
     /** @var array|null 已武装的节点（host/port/proto/username/password） */
     private static $armedEndpoint = null;
 
+    /** @var string 本请求实际出口节点 IP:端口（仅日志；不含账密） */
+    private static $requestEgressHostPort = '';
+
     /** @var array<string,string|false> putenv 备份（false=原先不存在） */
     private static $egressEnvBackup = array();
 
@@ -1633,6 +1636,7 @@ class UserIpProxy
         }
         curl_setopt($ch, CURLOPT_PROXY, $proxyAddr);
         curl_setopt($ch, CURLOPT_PROXYPORT, $pin['port']);
+        self::rememberEgressHostPort($pin['ip'], (int) $pin['port']);
 
         $type = CURLPROXY_HTTP;
         if ($proto === self::PROTO_SOCKS5) {
@@ -1773,14 +1777,11 @@ class UserIpProxy
         }
 
         $noProxy = '127.0.0.1,localhost,::1,169.254.169.254';
-        self::writeEnvVar('no_proxy', $noProxy);
-        self::writeEnvVar('NO_PROXY', $noProxy);
-        self::writeEnvVar('http_proxy', $proxyUrl);
-        self::writeEnvVar('HTTP_PROXY', $proxyUrl);
-        self::writeEnvVar('https_proxy', $proxyUrl);
-        self::writeEnvVar('HTTPS_PROXY', $proxyUrl);
-        self::writeEnvVar('all_proxy', $proxyUrl);
-        self::writeEnvVar('ALL_PROXY', $proxyUrl);
+        // 成对写入：小写供 libcurl，大写兼容部分 Windows / 旧环境；同值一次算好
+        self::writeEnvPair('no_proxy', 'NO_PROXY', $noProxy);
+        self::writeEnvPair('http_proxy', 'HTTP_PROXY', $proxyUrl);
+        self::writeEnvPair('https_proxy', 'HTTPS_PROXY', $proxyUrl);
+        self::writeEnvPair('all_proxy', 'ALL_PROXY', $proxyUrl);
 
         // 不使用 stream_context_set_default：会跨 FPM 请求残留，且可能把站内/元数据 HTTP
         // 误送进用户代理。本地主流出站为 curl，由环境变量 + 显式 applyOutboundProxy 覆盖。
@@ -1791,6 +1792,7 @@ class UserIpProxy
         $epArmed['port'] = (int) $pin['port'];
         self::$armedEndpoint = $epArmed;
         self::$egressArmed = true;
+        self::rememberEgressHostPort($pin['ip'], (int) $pin['port']);
 
         if (!self::$egressShutdownRegistered) {
             self::$egressShutdownRegistered = true;
@@ -1826,6 +1828,7 @@ class UserIpProxy
         self::$egressEnvBackup = array();
         self::$armedEndpoint = null;
         self::$egressArmed = false;
+        self::$requestEgressHostPort = '';
     }
 
     /**
@@ -1834,6 +1837,35 @@ class UserIpProxy
     public static function isRequestEgressArmed()
     {
         return self::$egressArmed;
+    }
+
+    /**
+     * 本请求出口节点（IP:端口）；未走出口代理为空串。不含账密，仅供 apilog。
+     *
+     * @return string
+     */
+    public static function requestEgressHostPort()
+    {
+        return self::$requestEgressHostPort;
+    }
+
+    /**
+     * @param string $ip
+     * @param int    $port
+     * @return void
+     */
+    private static function rememberEgressHostPort($ip, $port)
+    {
+        $ip = trim((string) $ip);
+        $port = (int) $port;
+        if ($ip === '' || $port < 1 || $port > 65535) {
+            return;
+        }
+        if (strpos($ip, ':') !== false) {
+            self::$requestEgressHostPort = '[' . $ip . ']:' . $port;
+        } else {
+            self::$requestEgressHostPort = $ip . ':' . $port;
+        }
     }
 
     /**
@@ -1867,6 +1899,18 @@ class UserIpProxy
         }
         // HTTP / HTTPS 代理均用 http:// 代理 URL（TLS 由 CONNECT 完成）
         return 'http://' . $auth . $hp;
+    }
+
+    /**
+     * @param string $lower
+     * @param string $upper
+     * @param string $value
+     * @return void
+     */
+    private static function writeEnvPair($lower, $upper, $value)
+    {
+        self::writeEnvVar($lower, $value);
+        self::writeEnvVar($upper, $value);
     }
 
     /**

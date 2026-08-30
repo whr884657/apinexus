@@ -632,13 +632,15 @@ class ApiLogArchive
             if ($create || !self::sqliteTableReady($pdo)) {
                 self::initSqliteSchema($pdo);
             }
+            // 新装与旧分片均幂等补列（create=true 撞到旧库时也必须 ALTER）
+            self::ensureSqliteEgressColumn($pdo);
             $pdo->exec('PRAGMA synchronous = NORMAL');
             $pdo->beginTransaction();
             $sql = 'INSERT OR REPLACE INTO `log` (
-                `id`,`apiid`,`apiname`,`apitype`,`userid`,`apikey`,`method`,`ip`,`iploc`,
+                `id`,`apiid`,`apiname`,`apitype`,`userid`,`apikey`,`method`,`ip`,`iploc`,`egress`,
                 `host`,`path`,`url`,`referer`,`origin`,`domain`,`ua`,`ok`,`httpcode`,`charged`,`cost`,`createtime`
             ) VALUES (
-                :id,:apiid,:apiname,:apitype,:userid,:apikey,:method,:ip,:iploc,
+                :id,:apiid,:apiname,:apitype,:userid,:apikey,:method,:ip,:iploc,:egress,
                 :host,:path,:url,:referer,:origin,:domain,:ua,:ok,:httpcode,:charged,:cost,:createtime
             )';
             $stmt = $pdo->prepare($sql);
@@ -655,6 +657,7 @@ class ApiLogArchive
                     ':method'     => (string) $row['method'],
                     ':ip'         => (string) $row['ip'],
                     ':iploc'      => (string) $row['iploc'],
+                    ':egress'     => isset($row['egress']) ? (string) $row['egress'] : '',
                     ':host'       => (string) $row['host'],
                     ':path'       => (string) $row['path'],
                     ':url'        => (string) $row['url'],
@@ -692,6 +695,33 @@ class ApiLogArchive
     }
 
     /**
+     * 旧冷库分片补齐 egress 列（幂等）
+     *
+     * @param PDO $pdo
+     * @return void
+     */
+    private static function ensureSqliteEgressColumn(PDO $pdo)
+    {
+        try {
+            $has = false;
+            $cols = $pdo->query('PRAGMA table_info(`log`)');
+            if ($cols) {
+                while ($c = $cols->fetch(PDO::FETCH_ASSOC)) {
+                    if (isset($c['name']) && (string) $c['name'] === 'egress') {
+                        $has = true;
+                        break;
+                    }
+                }
+            }
+            if (!$has) {
+                $pdo->exec('ALTER TABLE `log` ADD COLUMN `egress` TEXT NOT NULL DEFAULT \'\'');
+            }
+        } catch (Exception $e) {
+            // 忽略：读旧分片时无列则 packRow 默认空串
+        }
+    }
+
+    /**
      * @param PDO $pdo
      * @return void
      */
@@ -708,6 +738,7 @@ class ApiLogArchive
                 `method` TEXT NOT NULL DEFAULT \'\',
                 `ip` TEXT NOT NULL DEFAULT \'\',
                 `iploc` TEXT NOT NULL DEFAULT \'\',
+                `egress` TEXT NOT NULL DEFAULT \'\',
                 `host` TEXT NOT NULL DEFAULT \'\',
                 `path` TEXT NOT NULL DEFAULT \'\',
                 `url` TEXT NOT NULL DEFAULT \'\',
@@ -747,6 +778,7 @@ class ApiLogArchive
             'method'     => isset($row['method']) ? (string) $row['method'] : '',
             'ip'         => isset($row['ip']) ? (string) $row['ip'] : '',
             'iploc'      => isset($row['iploc']) ? (string) $row['iploc'] : '',
+            'egress'     => isset($row['egress']) ? (string) $row['egress'] : '',
             'host'       => isset($row['host']) ? (string) $row['host'] : '',
             'path'       => isset($row['path']) ? (string) $row['path'] : '',
             'url'        => isset($row['url']) ? (string) $row['url'] : '',

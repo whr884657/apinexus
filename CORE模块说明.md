@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.33**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.34**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -310,9 +310,9 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiOutboundSanitize.php` | 出站 JSON 擦除 `/admin` 等敏感路径（**v13.25.0**）；业务错误体收窄三字段（**v13.25.2**） |
 | `ApiProxy.php` | 外链网关：curl 中继上游；按 `upmethod` 选上游 GET/POST；可选 JSON 改写；剥离 JSONP 参数；出站消毒；3xx Location 透传；上游 TLS 不校验证书 |
 | `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
-| `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；`hit` 成功且 `vsproxy` 时请求级武装出口（v13.26.33）；亦可显式 `applyOutboundProxy`；`keyContext()` 供本地接口读本请求密钥用户；**仅 needkey=必须**时经 `UserIpAllow` 硬拦 IP |
+| `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；`hit` 成功且 `vsproxy` 时请求级武装出口（v13.26.33）；亦可显式 `applyOutboundProxy`；写日志含 `egress` 出口节点（v13.26.34）；`keyContext()` 供本地接口读本请求密钥用户；**仅 needkey=必须**时经 `UserIpAllow` 硬拦 IP |
+| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；`proxycode` 三位短码；`vsproxy`：短码/`a`/`b`/`c`/`1`；提取 JSON `jsonhost`/`jsonport` + `ttlmin`；`armRequestEgress` 请求级武装（v13.26.33）；`requestEgressHostPort` 供日志（v13.26.34）；与 ApiProxy 上游中继无关 |
 | `UserIpAllow.php` | 用户调用 IP 白名单（`user.ipallow`；空=不限制）；**仅密钥必须接口**硬拦；配合 `AuthSecurity::clientIp`；不匹配 → errcode **11019** |
-| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；`proxycode` 三位短码；`vsproxy`：短码/`a`/`b`/`c`/`1`；提取 JSON `jsonhost`/`jsonport` + `ttlmin`；`armRequestEgress` 请求级武装（v13.26.33）；与 ApiProxy 上游中继无关 |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
 | `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser；含 calls/cost/success_rate） |
 | `UserCallStats.php` | 个人调用/积分/排行只读查询（`api/index.php`）；短字段含 `rank`/`rank7`；`parseFields` / `query` / `resolveUserFromRequest` |
@@ -320,8 +320,8 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `PanelMonitor.php` | 宝塔 / 1Panel 面板监控客户端；控制台「服务器」卡片快照与测试连接（**v13.16.0**） |
 | `GeoCityCoords.php` | 大屏飞线全量城市坐标库；`resolveCityName` 地级优先 + 剥离运营商尾缀（v13.0.0 / **v13.2.0**） |
 | `ApiKeyManager.php` | 用户 API 调用密钥 CRUD；含 `pointsspent` 密钥累计消耗与 `adjustPointsspent` |
-| `ApiLogManager.php` | API 调用日志：keyset 翻页、热冷合并；管理端搜用户名先解析 `user.id`；`listPaged` 支持 `userid`；用户侧 `formatUserSafeRow` / `formatUserDetailRow` / `listForUser` / `findByIdForUser` / `recentForUser`；LIKE 须转义+`ESCAPE`（E243） |
-| `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片；冷库搜索同步 `user_ids` 与 LIKE 转义 |
+| `ApiLogManager.php` | API 调用日志：keyset 翻页、热冷合并；含 `egress` 出口节点；管理端搜用户名先解析 `user.id`；`listPaged` 支持 `userid`；用户侧 `formatUserSafeRow` / `formatUserDetailRow` / `listForUser` / `findByIdForUser` / `recentForUser`；LIKE 须转义+`ESCAPE`（E243） |
+| `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（含 `egress`）；冷库搜索同步 `user_ids` 与 LIKE 转义 |
 | `ApiFeedbackManager.php` / `FrontendFeedback.php` / `FeedbackNotify.php` | 接口反馈后台 CRUD / 前台提交 / 邮件通知 |
 | `ContentManager.php` | 文章/公告内容 CRUD（kind 区分） |
 | `CommentManager.php` / `CommentNotify.php` / `FrontendComment.php` | 文章评论后台、通知、前台提交与列表 |

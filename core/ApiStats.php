@@ -809,45 +809,90 @@ class ApiStats
 
         // iploc 异步回填，避免外网解析阻塞接口响应
         $ctx['iploc'] = '';
+        // 出口节点：仅已武装/已应用到 curl 时有值；禁止写入代理账密
+        $ctx['egress'] = '';
+        if (class_exists('UserIpProxy')) {
+            $ctx['egress'] = mb_substr(UserIpProxy::requestEgressHostPort(), 0, 64, 'UTF-8');
+        }
 
         $apitype = ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0);
         $name = isset($row['name']) ? (string) $row['name'] : '';
+        $hasEgress = class_exists('ApiLogManager') && ApiLogManager::hasEgressColumn();
 
         $pdo = Database::connect();
-        $stmt = $pdo->prepare(
-            'INSERT INTO `' . Database::table('apilog') . '` (
-                `apiid`, `apiname`, `apitype`, `userid`, `apikey`,
-                `method`, `ip`, `iploc`, `host`, `path`, `url`,
-                `referer`, `origin`, `domain`, `ua`,
-                `ok`, `httpcode`, `charged`, `cost`, `createtime`
-            ) VALUES (
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?, NOW()
-            )'
-        );
-        $stmt->execute(array(
-            $id,
-            mb_substr($name, 0, 100, 'UTF-8'),
-            $apitype,
-            $ctx['userid'],
-            $ctx['apikey'],
-            $ctx['method'],
-            $ctx['ip'],
-            $ctx['iploc'],
-            $ctx['host'],
-            $ctx['path'],
-            $ctx['url'],
-            $ctx['referer'],
-            $ctx['origin'],
-            $ctx['domain'],
-            $ctx['ua'],
-            $ok ? 1 : 0,
-            (int) $http,
-            $charged,
-            $cost,
-        ));
+        if ($hasEgress) {
+            $stmt = $pdo->prepare(
+                'INSERT INTO `' . Database::table('apilog') . '` (
+                    `apiid`, `apiname`, `apitype`, `userid`, `apikey`,
+                    `method`, `ip`, `iploc`, `egress`, `host`, `path`, `url`,
+                    `referer`, `origin`, `domain`, `ua`,
+                    `ok`, `httpcode`, `charged`, `cost`, `createtime`
+                ) VALUES (
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, NOW()
+                )'
+            );
+            $stmt->execute(array(
+                $id,
+                mb_substr($name, 0, 100, 'UTF-8'),
+                $apitype,
+                $ctx['userid'],
+                $ctx['apikey'],
+                $ctx['method'],
+                $ctx['ip'],
+                $ctx['iploc'],
+                $ctx['egress'],
+                $ctx['host'],
+                $ctx['path'],
+                $ctx['url'],
+                $ctx['referer'],
+                $ctx['origin'],
+                $ctx['domain'],
+                $ctx['ua'],
+                $ok ? 1 : 0,
+                (int) $http,
+                $charged,
+                $cost,
+            ));
+        } else {
+            // 升级窗口：结构未落地时降级旧 INSERT，避免详情日志静默丢失
+            $stmt = $pdo->prepare(
+                'INSERT INTO `' . Database::table('apilog') . '` (
+                    `apiid`, `apiname`, `apitype`, `userid`, `apikey`,
+                    `method`, `ip`, `iploc`, `host`, `path`, `url`,
+                    `referer`, `origin`, `domain`, `ua`,
+                    `ok`, `httpcode`, `charged`, `cost`, `createtime`
+                ) VALUES (
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, NOW()
+                )'
+            );
+            $stmt->execute(array(
+                $id,
+                mb_substr($name, 0, 100, 'UTF-8'),
+                $apitype,
+                $ctx['userid'],
+                $ctx['apikey'],
+                $ctx['method'],
+                $ctx['ip'],
+                $ctx['iploc'],
+                $ctx['host'],
+                $ctx['path'],
+                $ctx['url'],
+                $ctx['referer'],
+                $ctx['origin'],
+                $ctx['domain'],
+                $ctx['ua'],
+                $ok ? 1 : 0,
+                (int) $http,
+                $charged,
+                $cost,
+            ));
+        }
         $logId = (int) $pdo->lastInsertId();
         // 仅清今日计数键；禁止热路径 SCAN 刷整页日志缓存
         if (class_exists('RedisCache')) {

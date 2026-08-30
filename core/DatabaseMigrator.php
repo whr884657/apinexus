@@ -454,6 +454,13 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 13.26.34 apilog.egress 时跳过
+        if (!in_array('13.26.34', $applied, true)) {
+            if (self::tableColumnExists('apilog', 'egress')) {
+                self::markApplied('13.26.34');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -462,6 +469,8 @@ class DatabaseMigrator
         self::ensureUserDashStatSchema();
         // 13.26.31：ipproxy 短码 / JSON 路径 / TTL 缓存列幂等补齐 + 短码回填
         self::ensureIpProxySchema31();
+        // 13.26.34：apilog.egress 幂等补齐
+        self::ensureApilogEgress34();
         // 13.26.31：安装完成库标记（与 install.lock 双保险）
         self::ensureInstallDoneFlag();
     }
@@ -545,6 +554,29 @@ class DatabaseMigrator
             } catch (Exception $eIdx) {
                 // ignore（重复短码需人工清理后再升）
             }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 确保 apilog.egress 列存在（13.26.34 幂等）
+     *
+     * @return void
+     */
+    private static function ensureApilogEgress34()
+    {
+        if (!self::tableExists('apilog') || self::tableColumnExists('apilog', 'egress')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('apilog');
+            self::execStatement(
+                $pdo,
+                'ALTER TABLE `' . $table . '` ADD COLUMN `egress` varchar(64) NOT NULL DEFAULT \'\' '
+                . 'COMMENT \'出口节点（IP:端口；空=未走出口代理）\' AFTER `iploc`'
+            );
         } catch (Exception $e) {
             // 下次结构更新重试
         }
@@ -1044,7 +1076,8 @@ class DatabaseMigrator
             || $version === '13.26.28'
             || $version === '13.26.29'
             || $version === '13.26.30'
-            || $version === '13.26.31');
+            || $version === '13.26.31'
+            || $version === '13.26.34');
     }
 
     /**
@@ -1500,6 +1533,9 @@ class DatabaseMigrator
             }
             // install_done 由 ensureInstallDoneFlag 幂等补；有列即可视为结构就绪
             return true;
+        }
+        if ($version === '13.26.34') {
+            return self::tableColumnExists('apilog', 'egress');
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

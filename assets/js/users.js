@@ -645,6 +645,7 @@
             var name = row.apiname || ('接口 #' + row.apiid);
             var ip = row.ip || '—';
             var loc = row.iploc || '';
+            var egress = row.egress || '';
             var ipLine = escapeHtml(ip) + (loc ? (' ' + escapeHtml(loc)) : '');
             var time = escapeHtml(row.createtime || '—');
             return '<article class="vs-users-log-card" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
@@ -655,6 +656,9 @@
                 + '<div class="vs-users-log-card__mid">'
                 + methodBadge(row)
                 + '<span class="vs-users-log-card__ip" title="' + escapeHtml(ip + (loc ? (' ' + loc) : '')) + '">' + ipLine + '</span>'
+                + (egress
+                    ? ('<span class="vs-log-mono vs-users-log-card__egress" title="出口节点">' + escapeHtml(egress) + '</span>')
+                    : '')
                 + '<time class="vs-users-log-card__time">' + time + '</time>'
                 + '</div>'
                 + '</article>';
@@ -664,6 +668,7 @@
             var name = row.apiname || ('接口 #' + row.apiid);
             var ip = row.ip || '—';
             var loc = row.iploc || '';
+            var egress = row.egress || '';
             return '<div class="vs-users-log-row" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
                 + '<div class="vs-users-log-row__name" title="' + escapeHtml(name) + '">'
                 + '<span class="vs-log-id">#' + escapeHtml(row.id) + '</span>'
@@ -673,6 +678,9 @@
                 + '<div class="vs-users-log-row__ip" title="' + escapeHtml(ip + (loc ? (' ' + loc) : '')) + '">'
                 + '<span class="vs-log-mono">' + escapeHtml(ip) + '</span>'
                 + (loc ? escapeHtml(loc) : '')
+                + '</div>'
+                + '<div class="vs-users-log-row__egress" title="' + escapeHtml(egress || '未走出口代理') + '">'
+                + '<span class="vs-log-mono">' + escapeHtml(egress || '—') + '</span>'
                 + '</div>'
                 + '<div class="vs-users-log-row__status">' + statusBadge(row) + '</div>'
                 + '<div class="vs-users-log-row__http">' + httpBadge(row) + '</div>'
@@ -687,7 +695,7 @@
                 return;
             }
             var head = '<div class="vs-users-log-row vs-users-log-row--head" role="presentation">'
-                + '<div>接口</div><div>方法</div><div>IP / 归属</div><div>状态</div><div>HTTP</div><div>时间</div><div></div>'
+                + '<div>接口</div><div>方法</div><div>IP / 归属</div><div>出口节点</div><div>状态</div><div>HTTP</div><div>时间</div><div></div>'
                 + '</div>';
             listEl.innerHTML = '<div class="vs-users-logs-desktop">' + head + list.map(desktopRowHtml).join('') + '</div>'
                 + '<div class="vs-users-logs-mobile">' + list.map(cardHtml).join('') + '</div>';
@@ -812,7 +820,7 @@
         }
 
         function detailHtml(row) {
-            return '<div class="vs-log-detail">'
+            return '<div class="vs-log-detail vs-log-detail--admin">'
                 + '<div class="vs-log-detail__hero">'
                 + '<span class="vs-log-detail__hero-name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</span>'
                 + methodBadge(row)
@@ -827,16 +835,17 @@
                 + detailItem('类型', row.apitype_label)
                 + detailItem('时间', row.createtime)
                 + detailItem('结果', row.ok_label)
-                + detailItem('状态码', httpcodeDisplay(row), true)
+                + detailItem('状态码', httpcodeDisplay(row))
                 + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '匿名'))
-                + detailSecretItem('密钥', row.apikey, row.apikey_masked)
                 + detailItem('扣费', (row.charged_label || '') + (row.charged ? (' · ' + row.cost) : ''))
+                + detailSecretItem('密钥', row.apikey, row.apikey_masked)
                 + '</div></div>'
                 + '<div class="vs-log-detail__section">'
                 + '<h4 class="vs-log-detail__section-title">网络与来源</h4>'
                 + '<div class="vs-log-detail__grid">'
                 + detailItem('IP', row.ip)
                 + detailItem('IP 归属地', row.iploc)
+                + detailItem('出口节点', row.egress)
                 + detailItem('来源域名', row.domain)
                 + detailItem('Host', row.host)
                 + detailItem('路径', row.path, true)

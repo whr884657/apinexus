@@ -1,12 +1,13 @@
 {
-    "version": "13.26.33",
-    "title": "ApiNexus 13.26.33",
+    "version": "13.26.34",
+    "title": "ApiNexus 13.26.34",
     "release_date": "2026-08-30",
-    "db_changes": false,
+    "db_changes": true,
     "changes": [
-        "本地接口：hit() 识别 vsproxy 后请求级自动武装出口，旧业务 curl 无需改代码即可尽量走代理 IP",
-        "未声明 vsproxy 时完全 no-op；声明失败返回 11020～11022；请求结束拆除环境避免 FPM 污染",
-        "仍保留 ApiStats::applyOutboundProxy($ch) 显式注入（更稳，推荐关键出站继续调用）",
-        "无库表变更"
+                "调用日志新增 egress 字段：记录本次出口节点 IP:端口（未走出口代理为空）",
+                "管理端系统日志、用户管理日志弹窗、用户中心日志列表与详情展示出口节点",
+                "管理端日志详情改为密铺网格：短字段并排，密钥与长字段通栏",
+                "用户日志完整路径：密钥参数默认模糊、悬停明码（其它参数原样；不再 *** 替换）",
+                "冷库 SQLite 归档同步 egress；迁移 13.26.34.sql；新装 database.sql 同步"
     ]
 }

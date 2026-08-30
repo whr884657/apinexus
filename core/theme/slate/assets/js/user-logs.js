@@ -93,11 +93,16 @@
     function ipLocHtml(row) {
         var ip = row.ip ? String(row.ip) : '—';
         var loc = row.iploc ? String(row.iploc) : '';
-        return '<span class="uc-log-ip" title="' + escapeHtml(ip + (loc ? (' ' + loc) : '')) + '">'
+        var egress = row.egress ? String(row.egress) : '';
+        var tip = ip + (loc ? (' ' + loc) : '') + (egress ? (' · 出口 ' + egress) : '');
+        return '<span class="uc-log-ip" title="' + escapeHtml(tip) + '">'
             + '<span class="uc-log-ip__addr">' + escapeHtml(ip) + '</span>'
             + (loc
                 ? ('<span class="uc-log-ip__loc">' + escapeHtml(loc) + '</span>')
                 : '<span class="uc-log-ip__loc is-empty">归属地暂无</span>')
+            + (egress
+                ? ('<span class="uc-log-ip__egress">' + escapeHtml(egress) + '</span>')
+                : '')
             + '</span>';
     }
 
@@ -139,6 +144,72 @@
             + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
             + '<span class="vs-log-detail__value">' + escapeHtml(v) + '</span>'
             + '</div>';
+    }
+
+    /** 已转义/含安全 HTML 的详情项（仅用于完整路径密钥模糊） */
+    function detailItemHtml(label, html, full) {
+        var body = (html == null || html === '') ? '—' : String(html);
+        return '<div class="vs-log-detail__item' + (full ? ' vs-log-detail__item--full' : '') + '">'
+            + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+            + '<span class="vs-log-detail__value">' + body + '</span>'
+            + '</div>';
+    }
+
+    /**
+     * 完整路径：其它参数原样；仅密钥类参数值默认模糊，悬停明码
+     * @param {string} url
+     * @return {string} 安全 HTML
+     */
+    function urlWithSecretBlur(url) {
+        url = url == null ? '' : String(url);
+        if (url === '') {
+            return '—';
+        }
+        var qPos = url.indexOf('?');
+        if (qPos < 0) {
+            return escapeHtml(url);
+        }
+        var hashPos = url.indexOf('#', qPos);
+        var base = url.slice(0, qPos);
+        var query = hashPos >= 0 ? url.slice(qPos + 1, hashPos) : url.slice(qPos + 1);
+        var hash = hashPos >= 0 ? url.slice(hashPos) : '';
+        var sensitive = {
+            key: 1,
+            apikey: 1,
+            api_key: 1,
+            token: 1,
+            access_token: 1,
+            secret: 1
+        };
+        var parts = query.split('&');
+        var out = [];
+        var i;
+        for (i = 0; i < parts.length; i++) {
+            var pair = parts[i];
+            if (pair === '') {
+                continue;
+            }
+            var eq = pair.indexOf('=');
+            var rawName = eq >= 0 ? pair.slice(0, eq) : pair;
+            var rawVal = eq >= 0 ? pair.slice(eq + 1) : '';
+            var nameKey = rawName;
+            try {
+                nameKey = decodeURIComponent(rawName.replace(/\+/g, ' '));
+            } catch (e) { /* keep raw */ }
+            nameKey = String(nameKey).toLowerCase();
+            if (sensitive[nameKey] && rawVal !== '') {
+                // 只包「参数值」；参数名与 =、& 留在盒外清晰显示，避免整段糊住
+                out.push(
+                    escapeHtml(rawName) + '='
+                    + '<span class="uc-log-url-secret" title="悬停显示密钥">'
+                    + escapeHtml(rawVal)
+                    + '</span>'
+                );
+            } else {
+                out.push(escapeHtml(pair));
+            }
+        }
+        return escapeHtml(base) + '?' + out.join('&') + escapeHtml(hash);
     }
 
     function eyeIconSvg(off) {
@@ -207,11 +278,11 @@
 
     /** 用户侧精简详情：无类型/用户/Referer/Origin/UA/来源域名；完整路径在「网络与来源」 */
     function detailHtml(row) {
-        var fullPath = '';
+        var fullPathHtml = '—';
         if (row && row.url) {
-            fullPath = String(row.url);
+            fullPathHtml = urlWithSecretBlur(String(row.url));
         } else if (row && row.path) {
-            fullPath = String(row.path);
+            fullPathHtml = escapeHtml(String(row.path));
         }
         return '<div class="vs-log-detail vs-log-detail--user">'
             + '<div class="vs-log-detail__hero">'
@@ -236,8 +307,9 @@
             + '<div class="vs-log-detail__grid">'
             + detailItem('IP', row.ip)
             + detailItem('IP 归属地', row.iploc)
+            + detailItem('出口节点', row.egress)
             + detailItem('Host', row.host)
-            + detailItem('完整路径', fullPath, true)
+            + detailItemHtml('完整路径', fullPathHtml, true)
             + '</div></div>'
             + '</div>';
     }
