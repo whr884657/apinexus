@@ -1,8 +1,9 @@
 <?php
 /**
  * 文件：core/UserIpProxy.php
- * 作用：用户自备出口 IP 代理（隧道 / 提取）；每用户最多 5 条；调用侧传 vsproxy=1 启用
+ * 作用：用户自备出口 IP 代理（隧道 / 提取）；每用户最多 5 条
  *
+ * 调用侧仅传 vsproxy：三位短码=固定该条；a=轮询；b=随机；c=优先首条；1/true=启用并按账号已存策略。
  * 与 ApiProxy（反向中继上游 URL）无关：本类只负责 CURLOPT_PROXY 出站换出口 IP。
  */
 
@@ -26,27 +27,87 @@ class UserIpProxy
     const EXTFMT_TEXT = 1;
     const EXTFMT_JSON = 2;
 
-    /** 连通性测试目标（公网、短响应） */
-    const TEST_URL = 'https://api.ipify.org/?format=json';
+    /** 公网连通性测试地址（知名站点，按序尝试） */
+    const TEST_URL = 'https://www.baidu.com/';
+
+    /**
+     * @return array<int, string>
+     */
+    public static function publicTestUrls()
+    {
+        return array(
+            'https://www.baidu.com/',
+            'https://v1.hitokoto.cn/',
+            'https://www.qq.com/',
+        );
+    }
 
     /** @var bool|null 由网关收集参数时注入，避免与 php://input 争用 */
     private static $wantOverride = null;
 
-    /** @var string|null 三位调用短码（空=按策略轮询） */
+    /** @var string|null 三位调用短码（空=按策略） */
     private static $codeOverride = null;
 
+    /** @var int|null 本请求策略覆盖；null=用账号已存策略 */
+    private static $strategyOverride = null;
+
     /**
-     * 网关 / 统计层注入本请求是否启用出口代理（优先于自行读参）
+     * 解析 vsproxy 单参数
      *
-     * @param bool   $want
-     * @param string $proxyCode 三位短码；空表示不指定（走策略）
+     * @param mixed $raw
+     * @return array{want:bool,code:string,strategy:int|null}
+     */
+    public static function parseVsproxyValue($raw)
+    {
+        if ($raw === null || is_array($raw)) {
+            return array('want' => false, 'code' => '', 'strategy' => null);
+        }
+        $s = strtolower(trim((string) $raw));
+        if ($s === '') {
+            return array('want' => false, 'code' => '', 'strategy' => null);
+        }
+        if ($s === 'a') {
+            return array('want' => true, 'code' => '', 'strategy' => self::STRATEGY_ROUND);
+        }
+        if ($s === 'b') {
+            return array('want' => true, 'code' => '', 'strategy' => self::STRATEGY_RANDOM);
+        }
+        if ($s === 'c') {
+            return array('want' => true, 'code' => '', 'strategy' => self::STRATEGY_FIRST);
+        }
+        $code = self::normalizeProxyCode($s);
+        if ($code !== '') {
+            return array('want' => true, 'code' => $code, 'strategy' => null);
+        }
+        if (self::truthyFlag($s)) {
+            return array('want' => true, 'code' => '', 'strategy' => null);
+        }
+        return array('want' => false, 'code' => '', 'strategy' => null);
+    }
+
+    /**
+     * 网关 / 统计层注入本请求出口意图
+     *
+     * @param bool     $want
+     * @param string   $proxyCode 三位短码；空表示不指定
+     * @param int|null $strategy  0/1/2 覆盖；null=用账号策略
      * @return void
      */
-    public static function noteRequestFlags($want, $proxyCode = '')
+    public static function noteRequestFlags($want, $proxyCode = '', $strategy = null)
     {
         self::$wantOverride = (bool) $want;
         $code = self::normalizeProxyCode($proxyCode);
         self::$codeOverride = ($code !== '') ? $code : '';
+        if ($strategy === null) {
+            self::$strategyOverride = null;
+        } else {
+            $n = (int) $strategy;
+            if ($n === self::STRATEGY_RANDOM || $n === self::STRATEGY_FIRST || $n === self::STRATEGY_ROUND) {
+                self::$strategyOverride = $n;
+            } else {
+                self::$strategyOverride = self::STRATEGY_ROUND;
+            }
+        }
     }
 
     /**
@@ -187,7 +248,7 @@ class UserIpProxy
     }
 
     /**
-     * 请求是否声明启用出口代理（优先 noteRequestFlags；否则 Query / POST）
+     * 请求是否声明启用出口代理（优先 noteRequestFlags；否则解析 vsproxy）
      *
      * @return bool
      */
@@ -196,15 +257,12 @@ class UserIpProxy
         if (self::$wantOverride !== null) {
             return self::$wantOverride;
         }
-        $v = self::readRequestValue('vsproxy');
-        if ($v === null || $v === '') {
-            return false;
-        }
-        return self::truthyFlag($v);
+        $p = self::parseVsproxyValue(self::readRequestValue('vsproxy'));
+        return !empty($p['want']);
     }
 
     /**
-     * 可选：指定代理配置短码（三位）；空=按用户策略在多条启用配置中轮询/随机/首条
+     * 可选：指定代理配置短码（三位）；空=按策略在多条启用配置中选用
      *
      * @return string
      */
@@ -213,11 +271,26 @@ class UserIpProxy
         if (self::$codeOverride !== null) {
             return self::normalizeProxyCode(self::$codeOverride);
         }
-        $v = self::readRequestValue('vsproxyid');
-        if ($v === null || $v === '') {
-            return '';
+        $p = self::parseVsproxyValue(self::readRequestValue('vsproxy'));
+        return isset($p['code']) ? (string) $p['code'] : '';
+    }
+
+    /**
+     * 本请求选用策略（a/b/c 覆盖；否则账号已存策略）
+     *
+     * @param int $userId
+     * @return int
+     */
+    public static function requestStrategy($userId)
+    {
+        if (self::$strategyOverride !== null) {
+            return (int) self::$strategyOverride;
         }
-        return self::normalizeProxyCode($v);
+        $p = self::parseVsproxyValue(self::readRequestValue('vsproxy'));
+        if (isset($p['strategy']) && $p['strategy'] !== null) {
+            return (int) $p['strategy'];
+        }
+        return self::strategyForUser($userId);
     }
 
     /**
@@ -1023,7 +1096,7 @@ class UserIpProxy
         if ($n <= 1 || $forced) {
             return $rows[0];
         }
-        $strategy = self::strategyForUser($userId);
+        $strategy = self::requestStrategy($userId);
         if ($strategy === self::STRATEGY_FIRST) {
             return $rows[0];
         }
@@ -1649,7 +1722,64 @@ class UserIpProxy
     }
 
     /**
-     * 拼本站 API 根探测 URL（不带密钥；仅验证经代理可达本站）
+     * 取用户第一条启用密钥（本站个人信息接口探测；勿写入 logs）
+     *
+     * @param int $userId
+     * @return string
+     */
+    private static function firstEnabledApiKeySecret($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return '';
+        }
+        try {
+            if (class_exists('DatabaseMigrator') && !DatabaseMigrator::tableExists('apikey')) {
+                return '';
+            }
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT `secret` FROM `' . Database::table('apikey') . '`'
+                . ' WHERE `userid`=? AND `status`=1 ORDER BY `id` ASC LIMIT 1'
+            );
+            $stmt->execute(array($userId));
+            $secret = $stmt->fetchColumn();
+            return is_string($secret) ? $secret : '';
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+
+    /**
+     * 追加结构化测试日志
+     *
+     * @param array  $logs
+     * @param string $type info|ok|err|req|res|warn
+     * @param string $msg
+     * @return void
+     */
+    private static function pushTestLog(array &$logs, $type, $msg)
+    {
+        static $allow = array(
+            'info' => 1,
+            'ok'   => 1,
+            'err'  => 1,
+            'req'  => 1,
+            'res'  => 1,
+            'warn' => 1,
+        );
+        $t = (string) $type;
+        if (!isset($allow[$t])) {
+            $t = 'info';
+        }
+        $logs[] = array(
+            't'   => $t,
+            'msg' => (string) $msg,
+        );
+    }
+
+    /**
+     * 拼本站个人信息接口探测 URL（vsproxy=短码；密钥走 Header）
      *
      * @param string $proxyCode
      * @return string
@@ -1674,9 +1804,9 @@ class UserIpProxy
         if ($base === '') {
             return '';
         }
-        $q = 'vsproxy=1';
+        $q = 'q=all';
         if ($proxyCode !== '') {
-            $q .= '&vsproxyid=' . rawurlencode($proxyCode);
+            $q .= '&vsproxy=' . rawurlencode($proxyCode);
         }
         return $base . '/api/index.php?' . $q;
     }
@@ -1694,16 +1824,19 @@ class UserIpProxy
         $id = (int) $id;
         $logs = array();
         if ($userId <= 0 || $id <= 0) {
+            self::pushTestLog($logs, 'err', '参数无效');
             return array('ok' => false, 'msg' => '参数无效', 'logs' => $logs);
         }
         if (!self::tableReady()) {
+            self::pushTestLog($logs, 'err', '出口代理尚未就绪');
             return array('ok' => false, 'msg' => '出口代理尚未就绪', 'logs' => $logs);
         }
         if (!function_exists('curl_init')) {
+            self::pushTestLog($logs, 'err', '服务器未启用 curl，无法测试');
             return array('ok' => false, 'msg' => '服务器未启用 curl，无法测试', 'logs' => $logs);
         }
 
-        $logs[] = '读取配置…';
+        self::pushTestLog($logs, 'info', '读取配置…');
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
@@ -1712,21 +1845,25 @@ class UserIpProxy
             $stmt->execute(array($id, $userId));
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) {
-                $logs[] = '配置不存在';
+                self::pushTestLog($logs, 'err', '配置不存在');
                 return array('ok' => false, 'msg' => '记录不存在', 'logs' => $logs);
             }
         } catch (Exception $e) {
-            $logs[] = '读取配置失败';
+            self::pushTestLog($logs, 'err', '读取配置失败');
             return array('ok' => false, 'msg' => '读取失败', 'logs' => $logs);
         }
 
         $title = isset($row['title']) ? (string) $row['title'] : '';
         $mode = isset($row['mode']) ? (int) $row['mode'] : self::MODE_TUNNEL;
         $proxyCode = self::normalizeProxyCode(isset($row['proxycode']) ? $row['proxycode'] : '');
-        $logs[] = '已读取「' . ($title !== '' ? $title : ('#' . $id)) . '」（'
+        self::pushTestLog(
+            $logs,
+            'ok',
+            '已读取「' . ($title !== '' ? $title : ('#' . $id)) . '」（'
             . self::modeLabel($mode) . ' / ' . self::protoLabel(isset($row['proto']) ? (int) $row['proto'] : 0)
             . ($proxyCode !== '' ? ' / 短码 ' . $proxyCode : '')
-            . '）';
+            . '）'
+        );
 
         if ($mode === self::MODE_EXTRACT) {
             $ttlmin = isset($row['ttlmin']) ? (int) $row['ttlmin'] : 10;
@@ -1735,17 +1872,21 @@ class UserIpProxy
             $cacheExp = isset($row['cacheexp']) ? trim((string) $row['cacheexp']) : '';
             $expTs = ($cacheExp !== '') ? strtotime($cacheExp) : false;
             if ($ttlmin > 0 && $cacheHost !== '' && $cachePort >= 1 && $expTs !== false && $expTs > time()) {
-                $logs[] = '使用未过期提取缓存 ' . $cacheHost . ':' . $cachePort;
+                self::pushTestLog($logs, 'info', '使用未过期提取缓存 ' . $cacheHost . ':' . $cachePort);
             } else {
-                $logs[] = $ttlmin > 0 ? '提取缓存无效或已过期，正在拉取提取 API…' : 'TTL=0，每次重新提取…';
+                self::pushTestLog(
+                    $logs,
+                    'warn',
+                    $ttlmin > 0 ? '提取缓存无效或已过期，正在拉取提取 API…' : 'TTL=0，每次重新提取…'
+                );
             }
         } else {
-            $logs[] = '隧道模式，使用配置主机端口';
+            self::pushTestLog($logs, 'info', '隧道模式，使用配置主机端口');
         }
 
         $mat = self::materializeEndpoint($row);
         if (empty($mat['ok'])) {
-            $logs[] = '解析节点失败：' . (isset($mat['msg']) ? (string) $mat['msg'] : '不可用');
+            self::pushTestLog($logs, 'err', '解析节点失败：' . (isset($mat['msg']) ? (string) $mat['msg'] : '不可用'));
             return array(
                 'ok'   => false,
                 'msg'  => isset($mat['msg']) ? (string) $mat['msg'] : '无法解析代理节点',
@@ -1754,82 +1895,101 @@ class UserIpProxy
         }
         $ep = $mat['endpoint'];
         if (!empty($mat['fromcache'])) {
-            $logs[] = '节点来自缓存';
+            self::pushTestLog($logs, 'ok', '节点来自缓存');
         } elseif ($mode === self::MODE_EXTRACT) {
-            $logs[] = '提取成功';
+            self::pushTestLog($logs, 'ok', '提取成功');
         }
-        $logs[] = '节点 ' . $ep['host'] . ':' . (int) $ep['port'] . '（' . self::protoLabel($ep['proto']) . '）';
+        self::pushTestLog(
+            $logs,
+            'info',
+            '节点 ' . $ep['host'] . ':' . (int) $ep['port'] . '（' . self::protoLabel($ep['proto']) . '）'
+        );
 
-        $testUrl = self::TEST_URL;
-        if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($testUrl)) {
-            $testUrl = 'https://www.baidu.com/';
-        }
-        $logs[] = '经代理请求公网回显…';
-
-        $exitHint = '';
+        // —— 公网知名站点连通（百度 → 一言 → 腾讯）——
+        self::pushTestLog($logs, 'info', '经代理请求公网站点（百度 / 一言 / 腾讯）…');
         $echoHttp = 0;
         $echoOk = false;
-        $ch = curl_init();
-        if ($ch === false) {
-            $logs[] = '无法初始化测试请求';
-            return array('ok' => false, 'msg' => '无法初始化测试请求', 'logs' => $logs);
-        }
-        curl_setopt($ch, CURLOPT_URL, $testUrl);
-        self::applyEndpointToCurl($ch, $ep);
-        curl_setopt_array($ch, array(
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_TIMEOUT        => 20,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_HTTPHEADER     => array('Accept: */*', 'User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
-        ));
-        $body = curl_exec($ch);
-        $errno = curl_errno($ch);
-        $echoHttp = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($body === false || $errno) {
-            $logs[] = '公网回显失败（无法经该代理访问测试地址）';
-        } elseif ($echoHttp > 0 && $echoHttp >= 400) {
-            $logs[] = '公网回显异常：HTTP ' . $echoHttp;
-        } else {
-            $echoOk = true;
-            $trim = trim((string) $body);
-            if ($trim !== '' && isset($trim[0]) && $trim[0] === '{') {
-                $j = json_decode($trim, true);
-                if (is_array($j) && isset($j['ip']) && is_string($j['ip'])) {
-                    $exitHint = $j['ip'];
-                }
+        $echoUrlUsed = '';
+        $echoSnippet = '';
+        $testUrls = self::publicTestUrls();
+        foreach ($testUrls as $tryUrl) {
+            if (class_exists('LinkSiteMeta') && !LinkSiteMeta::isAllowedFetchUrl($tryUrl)) {
+                self::pushTestLog($logs, 'warn', '跳过不允许的地址：' . $tryUrl);
+                continue;
             }
-            $logs[] = $exitHint !== ''
-                ? ('公网回显成功，出口 IP：' . $exitHint)
-                : ('公网回显成功（HTTP ' . $echoHttp . '）');
+            self::pushTestLog($logs, 'req', 'GET ' . $tryUrl);
+            $ch = curl_init();
+            if ($ch === false) {
+                self::pushTestLog($logs, 'err', '无法初始化公网测试请求');
+                return array('ok' => false, 'msg' => '无法初始化测试请求', 'logs' => $logs);
+            }
+            curl_setopt($ch, CURLOPT_URL, $tryUrl);
+            self::applyEndpointToCurl($ch, $ep);
+            curl_setopt_array($ch, array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_TIMEOUT        => 20,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                CURLOPT_HTTPHEADER     => array(
+                    'Accept: */*',
+                    'User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1'),
+                ),
+            ));
+            $body = curl_exec($ch);
+            $errno = curl_errno($ch);
+            $echoHttp = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($body === false || $errno) {
+                self::pushTestLog($logs, 'err', '请求失败（无法经代理访问）');
+                continue;
+            }
+            if ($echoHttp >= 400) {
+                self::pushTestLog($logs, 'err', 'HTTP ' . $echoHttp);
+                continue;
+            }
+            $echoOk = true;
+            $echoUrlUsed = $tryUrl;
+            $trim = trim((string) $body);
+            // 公网站点多为 HTML：只记长度，避免终端堆整页源码
+            $looksJson = ($trim !== '' && ($trim[0] === '{' || $trim[0] === '['));
+            if ($looksJson) {
+                $echoSnippet = function_exists('mb_substr')
+                    ? mb_substr($trim, 0, 240, 'UTF-8')
+                    : substr($trim, 0, 240);
+            } else {
+                $echoSnippet = '正文约 ' . strlen((string) $body) . ' 字节（非 JSON，已省略）';
+            }
+            self::pushTestLog($logs, 'ok', '公网可达 HTTP ' . $echoHttp . ' ← ' . $tryUrl);
+            if ($echoSnippet !== '') {
+                self::pushTestLog($logs, 'res', $echoSnippet);
+            }
+            break;
+        }
+        if (!$echoOk) {
+            self::pushTestLog($logs, 'err', '公网站点均未能经该代理访问');
         }
 
-        // 本站探测：经同一代理访问本站 API，不携带任何密钥（防不可信代理盗钥）
-        $siteOk = false;
-        $siteHttp = 0;
-        $siteMsg = '';
+        // —— 经代理：无密钥探本站可达（密钥不进不可信代理）——
+        $reachOk = false;
+        $reachHttp = 0;
         $probeUrl = self::buildSiteProbeUrl($proxyCode);
         if ($probeUrl === '') {
-            $logs[] = '本站探测跳过：无法拼站点根 URL';
-            $siteMsg = '未拼出本站 URL';
+            self::pushTestLog($logs, 'warn', '经代理探本站跳过：无法拼站点根 URL');
         } elseif ($proxyCode === '') {
-            $logs[] = '本站探测跳过：缺少调用短码';
-            $siteMsg = '缺少短码';
+            self::pushTestLog($logs, 'warn', '经代理探本站跳过：缺少调用短码');
         } else {
-            $logs[] = '本站探测（vsproxy + 短码，不携带密钥）…';
-            $ch2 = curl_init();
-            if ($ch2 === false) {
-                $logs[] = '本站探测失败：无法初始化请求';
-                $siteMsg = '初始化失败';
+            self::pushTestLog($logs, 'info', '经代理探本站可达（不携带密钥）…');
+            self::pushTestLog($logs, 'req', 'GET ' . $probeUrl);
+            $chR = curl_init();
+            if ($chR === false) {
+                self::pushTestLog($logs, 'err', '经代理探本站失败：无法初始化');
             } else {
-                curl_setopt($ch2, CURLOPT_URL, $probeUrl);
-                self::applyEndpointToCurl($ch2, $ep);
-                curl_setopt_array($ch2, array(
+                curl_setopt($chR, CURLOPT_URL, $probeUrl);
+                self::applyEndpointToCurl($chR, $ep);
+                curl_setopt_array($chR, array(
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_FOLLOWLOCATION => false,
                     CURLOPT_CONNECTTIMEOUT => 10,
@@ -1842,52 +2002,146 @@ class UserIpProxy
                         'User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1'),
                     ),
                 ));
+                $reachBody = curl_exec($chR);
+                $reachErrno = curl_errno($chR);
+                $reachHttp = (int) curl_getinfo($chR, CURLINFO_HTTP_CODE);
+                curl_close($chR);
+                if ($reachBody === false || $reachErrno) {
+                    self::pushTestLog($logs, 'err', '经代理无法访问本站');
+                } else {
+                    $reachOk = ($reachHttp > 0 && $reachHttp < 500);
+                    self::pushTestLog(
+                        $logs,
+                        $reachOk ? 'ok' : 'warn',
+                        '经代理本站 HTTP ' . $reachHttp . ($reachOk ? '（可达）' : '（异常）')
+                    );
+                }
+            }
+        }
+
+        // —— 直连：带启用密钥测个人信息接口（密钥不经出口代理，防第三方代理盗钥）——
+        $siteOk = false;
+        $siteHttp = 0;
+        $siteMsg = '';
+        $siteBodyShow = '';
+        $directUrl = self::buildSiteProbeUrl(''); // 无 vsproxy，仅 q=all
+        $apiKey = self::firstEnabledApiKeySecret($userId);
+        if ($directUrl === '') {
+            self::pushTestLog($logs, 'warn', '个人信息接口跳过：无法拼站点根 URL');
+            $siteMsg = '未拼出本站 URL';
+        } elseif ($apiKey === '') {
+            self::pushTestLog($logs, 'warn', '个人信息接口跳过：无启用中的调用密钥');
+            $siteMsg = '无启用密钥';
+        } else {
+            self::pushTestLog($logs, 'info', '直连个人信息接口（Header 鉴权；密钥不经出口代理、不展示）');
+            self::pushTestLog($logs, 'req', 'GET ' . $directUrl);
+            self::pushTestLog($logs, 'req', 'Header: X-API-Key: ****（已脱敏）');
+            $ch2 = curl_init();
+            if ($ch2 === false) {
+                self::pushTestLog($logs, 'err', '个人信息接口失败：无法初始化请求');
+                $siteMsg = '初始化失败';
+            } else {
+                // 故意不 applyEndpointToCurl：密钥不得进入用户代理信道
+                curl_setopt($ch2, CURLOPT_URL, $directUrl);
+                curl_setopt_array($ch2, array(
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_FOLLOWLOCATION => false,
+                    CURLOPT_CONNECTTIMEOUT => 10,
+                    CURLOPT_TIMEOUT        => 20,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYHOST => 2,
+                    CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+                    CURLOPT_HTTPHEADER     => array(
+                        'Accept: application/json',
+                        'X-API-Key: ' . $apiKey,
+                        'User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1'),
+                    ),
+                ));
                 $siteBody = curl_exec($ch2);
                 $siteErrno = curl_errno($ch2);
                 $siteHttp = (int) curl_getinfo($ch2, CURLINFO_HTTP_CODE);
                 curl_close($ch2);
-                // 不暴露 curl_error；有 HTTP 码即视为通路可达（无密钥时业务码拒绝属预期）
                 if ($siteBody === false || $siteErrno) {
-                    $logs[] = '本站探测失败：无法经代理访问本站 API';
+                    self::pushTestLog($logs, 'err', '个人信息接口请求失败');
                     $siteMsg = '请求失败';
                 } else {
-                    $siteOk = ($siteHttp > 0 && $siteHttp < 500);
-                    $logs[] = '本站探测 HTTP ' . $siteHttp . ($siteOk ? '（可达）' : '（异常）');
+                    $trimSite = trim((string) $siteBody);
+                    $decoded = json_decode($trimSite, true);
+                    if (is_array($decoded)) {
+                        $siteOk = (isset($decoded['code']) && (int) $decoded['code'] === 1);
+                        // 终端只展示摘要，避免全文积分等过度暴露到剪贴板
+                        $summary = array(
+                            'code' => isset($decoded['code']) ? $decoded['code'] : null,
+                            'msg'  => isset($decoded['msg']) ? $decoded['msg'] : null,
+                        );
+                        if (isset($decoded['data']) && is_array($decoded['data'])) {
+                            $keys = array_slice(array_keys($decoded['data']), 0, 12);
+                            $summary['data_keys'] = $keys;
+                            $dataBrief = array();
+                            foreach ($keys as $dk) {
+                                $dv = $decoded['data'][$dk];
+                                if (is_scalar($dv) || $dv === null) {
+                                    $dataBrief[$dk] = $dv;
+                                } else {
+                                    $dataBrief[$dk] = is_array($dv) ? '[object]' : '[…]';
+                                }
+                            }
+                            $summary['data'] = $dataBrief;
+                        }
+                        $pretty = json_encode($summary, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+                        $siteBodyShow = is_string($pretty) ? $pretty : '';
+                    } else {
+                        $siteOk = ($siteHttp > 0 && $siteHttp < 500);
+                        $siteBodyShow = function_exists('mb_substr')
+                            ? mb_substr($trimSite, 0, 400, 'UTF-8')
+                            : substr($trimSite, 0, 400);
+                    }
+                    self::pushTestLog(
+                        $logs,
+                        $siteOk ? 'ok' : 'warn',
+                        '个人信息接口 HTTP ' . $siteHttp . ($siteOk ? '（业务成功）' : '（已收到响应）')
+                    );
+                    if ($siteBodyShow !== '') {
+                        self::pushTestLog($logs, 'res', $siteBodyShow);
+                    }
                     $siteMsg = 'HTTP ' . $siteHttp;
                 }
             }
         }
 
         $detail = array(
-            'http'     => $echoHttp,
-            'exitip'   => $exitHint,
-            'host'     => $ep['host'],
-            'port'     => $ep['port'],
-            'proto'    => self::protoLabel($ep['proto']),
-            'proxycode'=> $proxyCode,
-            'fromcache'=> !empty($mat['fromcache']),
-            'sitehttp' => $siteHttp,
-            'siteok'   => $siteOk,
+            'http'      => $echoHttp,
+            'puburl'    => $echoUrlUsed,
+            'host'      => $ep['host'],
+            'port'      => $ep['port'],
+            'proto'     => self::protoLabel($ep['proto']),
+            'proxycode' => $proxyCode,
+            'fromcache' => !empty($mat['fromcache']),
+            'reachhttp' => $reachHttp,
+            'reachok'   => $reachOk,
+            'sitehttp'  => $siteHttp,
+            'siteok'    => $siteOk,
         );
 
         if ($echoOk) {
-            $msg = $exitHint !== ''
-                ? ('连通正常，出口 IP：' . $exitHint)
-                : '连通正常';
-            if (!$siteOk) {
-                $msg .= '；本站探测未完全成功（' . ($siteMsg !== '' ? $siteMsg : '失败') . '），以公网回显为准';
-            } else {
-                $msg .= '；本站探测成功';
+            $msg = '公网连通正常（' . ($echoUrlUsed !== '' ? $echoUrlUsed : '知名站点') . '）';
+            if ($reachOk) {
+                $msg .= '；经代理本站可达';
+            }
+            if ($siteOk) {
+                $msg .= '；个人信息接口成功';
+            } elseif ($siteMsg !== '') {
+                $msg .= '；个人信息接口未完全成功（' . $siteMsg . '）';
             }
             return array('ok' => true, 'msg' => $msg, 'logs' => $logs, 'detail' => $detail);
         }
 
-        $failMsg = '连通失败：无法经该代理访问测试地址';
+        $failMsg = '连通失败：无法经该代理访问公网测试站点';
         if ($echoHttp >= 400) {
-            $failMsg = '连通异常：测试地址返回 HTTP ' . $echoHttp;
+            $failMsg = '连通异常：公网测试返回 HTTP ' . $echoHttp;
         }
-        if ($siteOk) {
-            $failMsg .= '；本站探测可达但不作为成功依据';
+        if ($reachOk || $siteOk) {
+            $failMsg .= '；本站侧有响应但不作为成功依据';
         }
         return array('ok' => false, 'msg' => $failMsg, 'logs' => $logs, 'detail' => $detail);
     }

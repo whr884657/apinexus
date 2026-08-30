@@ -88,23 +88,23 @@ $pageReady = $ready || $proxyReady;
         vs_render_notice(
             'info',
             '',
-            '平台不提供免费节点。启用出口：密钥 + vsproxy=1。轮询/随机/首条：不要传 vsproxyid。固定某一条：再加 vsproxyid=三位短码（不认数字主键）。',
+            '平台不提供免费节点。启用出口只传一个参数 vsproxy：三位短码=固定该条；a=轮询；b=随机；c=优先首条（须有效密钥）。',
             array('compact' => true)
         );
         ?>
 
         <div class="vs-panel vs-user-ip__card">
             <div class="vs-user-ip__strategy">
-                <label class="vs-label" for="userProxyStrategy">多条启用时的选用策略</label>
+                <label class="vs-label" for="userProxyStrategy">多条启用时的默认策略</label>
                 <div class="vs-user-ip__strategy-row">
-                    <select class="vs-input vs-select" id="userProxyStrategy" data-vs-pick>
+                    <select class="vs-input vs-select vs-user-ip__strategy-select" id="userProxyStrategy" data-vs-pick>
                         <option value="0"<?php echo $proxyStrategy === 0 ? ' selected' : ''; ?>>轮询</option>
                         <option value="1"<?php echo $proxyStrategy === 1 ? ' selected' : ''; ?>>随机</option>
                         <option value="2"<?php echo $proxyStrategy === 2 ? ' selected' : ''; ?>>优先首条（按排序）</option>
                     </select>
-                    <button type="button" class="vs-btn vs-btn--outline" id="userProxyStrategySave">保存策略</button>
+                    <button type="button" class="vs-btn vs-btn--outline" id="userProxyStrategySave">保存</button>
                 </div>
-                <p class="vs-form-hint vs-user-ip__strategy-hint">仅当请求带 vsproxy=1 且<strong>不带</strong> vsproxyid 时生效；带短码则固定该条。</p>
+                <p class="vs-form-hint vs-user-ip__strategy-hint">账号默认策略：当调用传 <code>vsproxy=1</code> 时生效。单次调用也可用 <code>vsproxy=a|b|c</code> 覆盖。</p>
             </div>
         </div>
 
@@ -151,7 +151,7 @@ $pageReady = $ready || $proxyReady;
                                 </span>
                             </div>
                             <code class="vs-user-ip__proxy-endpoint" title="<?php echo vs_e($endpoint); ?>"><?php echo vs_e($endpoint); ?></code>
-                            <p class="vs-user-ip__proxy-meta">短码 <code><?php echo vs_e($pcode); ?></code> · 固定调用 vsproxy=1&amp;vsproxyid=<?php echo vs_e($pcode); ?></p>
+                            <p class="vs-user-ip__proxy-meta">短码 <code><?php echo vs_e($pcode); ?></code> · 固定调用 <code>vsproxy=<?php echo vs_e($pcode); ?></code></p>
                         </div>
                         <div class="vs-user-ip__proxy-actions">
                             <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-proxy-act="test" data-id="<?php echo $pid; ?>">测试</button>
@@ -292,7 +292,7 @@ $pageReady = $ready || $proxyReady;
     </div>
 </div>
 
-<div class="vs-overlay vs-overlay--lg" id="userProxyTestOverlay" hidden aria-hidden="true">
+<div class="vs-overlay vs-overlay--lg vs-user-ip__test-overlay" id="userProxyTestOverlay" hidden aria-hidden="true">
     <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
     <div class="vs-overlay__panel" role="dialog" aria-labelledby="userProxyTestTitle" aria-modal="true">
         <div class="vs-overlay__handle" aria-hidden="true"></div>
@@ -300,9 +300,13 @@ $pageReady = $ready || $proxyReady;
             <h3 class="vs-overlay__title" id="userProxyTestTitle">出口代理测试</h3>
             <button type="button" class="vs-overlay__close" data-overlay-close="1" aria-label="关闭">&times;</button>
         </header>
-        <div class="vs-overlay__body">
-            <p class="vs-form-hint">以「经代理公网回显」为准核对出口 IP；本站探测仅验证经代理可达本站（不携带调用密钥）。</p>
-            <pre class="vs-user-ip__test-log" id="userProxyTestLog" aria-live="polite"></pre>
+        <div class="vs-overlay__body vs-user-ip__test-body">
+            <p class="vs-form-hint vs-user-ip__test-hint">以经代理访问百度等公网站点为准；经代理仅探本站可达（不带密钥）。个人信息接口走直连鉴权，密钥不经出口代理；终端只展示摘要。</p>
+            <div class="vs-user-ip__test-toolbar">
+                <span class="vs-user-ip__test-toolbar-label">测试终端</span>
+                <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" id="userProxyTestCopy">复制全部</button>
+            </div>
+            <div class="vs-user-ip__test-term" id="userProxyTestLog" role="log" aria-live="polite"></div>
         </div>
         <footer class="vs-overlay__foot">
             <button type="button" class="vs-btn vs-btn--primary" data-overlay-close="1">关闭</button>

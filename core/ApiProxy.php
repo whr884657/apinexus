@@ -259,8 +259,8 @@ class ApiProxy
     private static function collectClientPayload()
     {
         $params = array();
-        $egressWant = false;
-        $egressCode = '';
+        $egressRaw = null;
+        $egressSeen = false;
         if (!empty($_GET) && is_array($_GET)) {
             foreach ($_GET as $k => $v) {
                 if (is_array($v)) {
@@ -269,11 +269,12 @@ class ApiProxy
                 $key = (string) $k;
                 $keyLower = strtolower($key);
                 if ($keyLower === 'vsproxy') {
-                    $egressWant = class_exists('UserIpProxy') && UserIpProxy::truthyFlag($v);
+                    $egressRaw = $v;
+                    $egressSeen = true;
                     continue;
                 }
+                // 废弃参数：仍剥离，不转上游
                 if ($keyLower === 'vsproxyid') {
-                    $egressCode = class_exists('UserIpProxy') ? UserIpProxy::normalizeProxyCode($v) : '';
                     continue;
                 }
                 if ($key === '' || $key === self::REWRITE_SLUG_PARAM
@@ -294,8 +295,7 @@ class ApiProxy
                     continue;
                 }
                 $keyLower = strtolower((string) $k);
-                if ($keyLower === 'vsproxy') {
-                    // stripPlatform 已去掉，此处不会进；保留兼容
+                if ($keyLower === 'vsproxy' || $keyLower === 'vsproxyid') {
                     continue;
                 }
                 if (class_exists('JsonpGuard') && JsonpGuard::isJsonpParamName((string) $k)) {
@@ -304,10 +304,8 @@ class ApiProxy
                 $params[(string) $k] = $v;
             }
             if (isset($_POST['vsproxy']) && !is_array($_POST['vsproxy'])) {
-                $egressWant = class_exists('UserIpProxy') && UserIpProxy::truthyFlag($_POST['vsproxy']);
-            }
-            if (isset($_POST['vsproxyid']) && !is_array($_POST['vsproxyid'])) {
-                $egressCode = class_exists('UserIpProxy') ? UserIpProxy::normalizeProxyCode($_POST['vsproxyid']) : '';
+                $egressRaw = $_POST['vsproxy'];
+                $egressSeen = true;
             }
         }
 
@@ -317,13 +315,9 @@ class ApiProxy
         // 剥离前先识别 JSON 体内的出口代理开关（strip 后会去掉）
         if ($rawBody !== '' && stripos($contentType, 'application/json') !== false) {
             $peek = json_decode($rawBody, true);
-            if (is_array($peek)) {
-                if (isset($peek['vsproxy']) && !is_array($peek['vsproxy'])) {
-                    $egressWant = class_exists('UserIpProxy') && UserIpProxy::truthyFlag($peek['vsproxy']);
-                }
-                if (isset($peek['vsproxyid']) && !is_array($peek['vsproxyid'])) {
-                    $egressCode = class_exists('UserIpProxy') ? UserIpProxy::normalizeProxyCode($peek['vsproxyid']) : '';
-                }
+            if (is_array($peek) && isset($peek['vsproxy']) && !is_array($peek['vsproxy'])) {
+                $egressRaw = $peek['vsproxy'];
+                $egressSeen = true;
             }
         }
         if ($rawBody !== '') {
@@ -354,9 +348,13 @@ class ApiProxy
             }
         }
 
-        if (class_exists('UserIpProxy') && ($egressWant || $egressCode !== ''
-            || isset($_GET['vsproxy']) || isset($_POST['vsproxy']))) {
-            UserIpProxy::noteRequestFlags($egressWant, $egressCode);
+        if (class_exists('UserIpProxy') && $egressSeen) {
+            $p = UserIpProxy::parseVsproxyValue($egressRaw);
+            UserIpProxy::noteRequestFlags(
+                !empty($p['want']),
+                isset($p['code']) ? (string) $p['code'] : '',
+                array_key_exists('strategy', $p) ? $p['strategy'] : null
+            );
         }
 
         return array(

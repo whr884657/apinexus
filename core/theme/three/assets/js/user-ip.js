@@ -28,7 +28,9 @@
     var proxyOverlay = document.getElementById('userProxyFormOverlay');
     var proxyTestOverlay = document.getElementById('userProxyTestOverlay');
     var proxyTestLog = document.getElementById('userProxyTestLog');
+    var proxyTestCopy = document.getElementById('userProxyTestCopy');
     var proxyForm = document.getElementById('userProxyForm');
+    var lastTestPlain = '';
     var proxyFormTitle = document.getElementById('userProxyFormTitle');
     var proxyMode = document.getElementById('userProxyMode');
     var proxyListEl = document.getElementById('userProxyList');
@@ -163,6 +165,69 @@
         if (strategySave) {
             strategySave.disabled = busy;
         }
+    }
+
+    function renderTestLog(logs, summaryMsg) {
+        if (!proxyTestLog) {
+            return;
+        }
+        var items = Array.isArray(logs) ? logs : [];
+        var plain = [];
+        var html = [];
+        items.forEach(function (item) {
+            var type = 'info';
+            var msg = '';
+            if (typeof item === 'string') {
+                msg = item;
+            } else if (item && item.msg) {
+                type = String(item.t || 'info');
+                if (['info', 'ok', 'err', 'req', 'res', 'warn'].indexOf(type) < 0) {
+                    type = 'info';
+                }
+                msg = String(item.msg);
+            }
+            if (!msg) {
+                return;
+            }
+            plain.push(('[' + type + '] ') + msg);
+            html.push(
+                '<span class="vs-user-ip__test-line is-' + escapeHtml(type) + '">'
+                + escapeHtml(msg)
+                + '</span>'
+            );
+        });
+        if (summaryMsg) {
+            plain.push('——');
+            plain.push(String(summaryMsg));
+            html.push('<span class="vs-user-ip__test-line is-info">——</span>');
+            html.push('<span class="vs-user-ip__test-line is-info">' + escapeHtml(String(summaryMsg)) + '</span>');
+        }
+        if (html.length === 0) {
+            html.push('<span class="vs-user-ip__test-line is-warn">无详细日志</span>');
+            plain.push('无详细日志');
+        }
+        lastTestPlain = plain.join('\n');
+        proxyTestLog.innerHTML = html.join('');
+        proxyTestLog.scrollTop = proxyTestLog.scrollHeight;
+    }
+
+    if (proxyTestCopy) {
+        proxyTestCopy.addEventListener('click', function () {
+            var text = lastTestPlain || (proxyTestLog ? proxyTestLog.innerText : '');
+            if (!text) {
+                window.VS.showMessage('暂无可复制内容', 'info');
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () {
+                    window.VS.showMessage('已复制测试日志', 'success');
+                }).catch(function () {
+                    window.VS.showMessage('复制失败，请手动选择', 'error');
+                });
+                return;
+            }
+            window.VS.showMessage('当前环境不支持一键复制', 'error');
+        });
     }
 
     function switchTab(name) {
@@ -368,8 +433,8 @@
                 + (statusOn ? '启用' : '禁用') + '</span>'
                 + '</div>'
                 + '<code class="vs-user-ip__proxy-endpoint" title="' + endpoint + '">' + endpoint + '</code>'
-                + '<p class="vs-user-ip__proxy-meta">短码 <code>' + codeSafe + '</code> · 固定调用 vsproxy=1&amp;vsproxyid='
-                + codeSafe + '</p>'
+                + '<p class="vs-user-ip__proxy-meta">短码 <code>' + codeSafe + '</code> · 固定调用 <code>vsproxy='
+                + codeSafe + '</code></p>'
                 + '</div>'
                 + '<div class="vs-user-ip__proxy-actions">'
                 + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-proxy-act="test" data-id="' + id + '">测试</button>'
@@ -570,32 +635,19 @@
             }
             if (act === 'test') {
                 openOverlay(proxyTestOverlay);
+                lastTestPlain = '';
                 if (proxyTestLog) {
                     proxyTestLog.classList.add('is-running');
-                    proxyTestLog.textContent = '开始测试…\n';
+                    renderTestLog([{ t: 'info', msg: '开始测试…' }]);
                 }
                 setBusy(true);
                 postAction('proxy_test', { id: id }).then(function (data) {
                     setBusy(false);
                     if (proxyTestLog) {
                         proxyTestLog.classList.remove('is-running');
-                        var lines = [];
-                        var logs = (data && Array.isArray(data.logs)) ? data.logs : [];
-                        logs.forEach(function (item) {
-                            if (typeof item === 'string') {
-                                lines.push(item);
-                            } else if (item && item.msg) {
-                                lines.push((item.t ? ('[' + item.t + '] ') : '') + item.msg);
-                            }
-                        });
-                        if (lines.length === 0) {
-                            lines.push((data && data.msg) || '无详细日志');
-                        } else if (data && data.msg) {
-                            lines.push('——');
-                            lines.push(data.msg);
-                        }
-                        proxyTestLog.textContent = lines.join('\n');
                     }
+                    var logs = (data && Array.isArray(data.logs)) ? data.logs : [];
+                    renderTestLog(logs, data && data.msg ? data.msg : '');
                     if (!data || data.code !== 1) {
                         window.VS.showMessage((data && data.msg) || '测试失败', 'error');
                         return;
@@ -605,8 +657,8 @@
                     setBusy(false);
                     if (proxyTestLog) {
                         proxyTestLog.classList.remove('is-running');
-                        proxyTestLog.textContent = (proxyTestLog.textContent || '') + '\n网络异常，请稍后重试';
                     }
+                    renderTestLog([{ t: 'err', msg: '网络异常，请稍后重试' }]);
                     window.VS.showMessage('网络异常，请稍后重试', 'error');
                 });
                 return;

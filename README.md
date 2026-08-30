@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.31-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.32-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -156,14 +156,12 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.31（2026-08-30）
+### v13.26.32（2026-08-30）
 
-- **短码：** 每条出口配置生成三位 `proxycode`；调用 `vsproxyid` **只认短码**，不认数字主键；不传短码时按策略在启用条目中轮询/随机/首条
-- **提取：** 可指定 JSON 主机/端口字段（`jsonhost` / `jsonport`，点路径如 `data.0.ip`）；留空仍自动识别常见键；`ttlmin` 缓存提取节点（默认 10 分钟，0=每次重提）
-- **界面：** 策略下拉与「保存策略」同行；卡片启停；测试弹窗分步日志（公网回显为准）
-- **安装：** `config.install_done=1` 与 `install.lock` 双保险；库探测失败 fail-closed；禁止经 Config 清除标记
-- **升级：** 在线更新**不覆盖** `api/index.php`；连通测试不带密钥且校验 TLS；短码 UNIQUE；取消 `api/index.php` CORS `*`
-- **库：** `install/migrations/13.26.31.sql`；新装 `database.sql` 同步
+- **调用：** 出口只传 `vsproxy`：三位短码=固定；`a`/`b`/`c`=轮询/随机/首条；`1` 兼容账号默认策略（废弃 `vsproxyid`）
+- **测试：** 公网百度→一言→腾讯；经代理探本站不带密钥；个人信息接口直连带钥（密钥不经出口代理）；终端色彩/滚动/复制
+- **界面：** 策略下拉加长，按钮「保存」；三主题同步
+- **安全：** 连通测试禁止经用户代理发送调用密钥
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

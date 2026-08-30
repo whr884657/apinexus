@@ -8,7 +8,7 @@
  *   ApiStats::hit(14);   // 括号内为本接口在后台的数字 ID
  *   // 本地脚本再 curl 外网时：
  *   curl_setopt($ch, CURLOPT_HTTPHEADER, ApiStats::outboundHeaders());
- *   ApiStats::applyOutboundProxy($ch); // 调用方传 vsproxy=1 且已配出口代理时注入
+ *   ApiStats::applyOutboundProxy($ch); // 调用方传 vsproxy 且已配出口代理时注入
  *
  * 代理：ApiProxy 网关内自动调用，勿在上游文件注入。
  *
@@ -162,7 +162,7 @@ class ApiStats
     }
 
     /**
-     * 从 Query/POST 捕获 vsproxy / vsproxyid（本地 hit、代理 guard 均可调用）
+     * 从 Query/POST 捕获 vsproxy（单参数：短码 / a|b|c / 1）
      *
      * @return void
      */
@@ -171,26 +171,25 @@ class ApiStats
         if (!class_exists('UserIpProxy')) {
             return;
         }
-        $want = false;
-        $code = '';
+        $raw = null;
         if (isset($_GET['vsproxy']) && !is_array($_GET['vsproxy'])) {
-            $want = UserIpProxy::truthyFlag($_GET['vsproxy']);
+            $raw = $_GET['vsproxy'];
         } elseif (isset($_POST['vsproxy']) && !is_array($_POST['vsproxy'])) {
-            $want = UserIpProxy::truthyFlag($_POST['vsproxy']);
+            $raw = $_POST['vsproxy'];
         }
-        if (isset($_GET['vsproxyid']) && !is_array($_GET['vsproxyid'])) {
-            $code = UserIpProxy::normalizeProxyCode($_GET['vsproxyid']);
-        } elseif (isset($_POST['vsproxyid']) && !is_array($_POST['vsproxyid'])) {
-            $code = UserIpProxy::normalizeProxyCode($_POST['vsproxyid']);
+        if ($raw === null && !isset($_GET['vsproxy']) && !isset($_POST['vsproxy'])) {
+            return;
         }
-        // 仅当显式出现开关时写入，避免覆盖网关从 JSON 注入的 note
-        if ($want || $code !== '' || isset($_GET['vsproxy']) || isset($_POST['vsproxy'])) {
-            UserIpProxy::noteRequestFlags($want, $code);
-        }
+        $p = UserIpProxy::parseVsproxyValue($raw);
+        UserIpProxy::noteRequestFlags(
+            !empty($p['want']),
+            isset($p['code']) ? (string) $p['code'] : '',
+            array_key_exists('strategy', $p) ? $p['strategy'] : null
+        );
     }
 
     /**
-     * 本地/自定义 curl：按调用方 vsproxy=1 注入用户自备出口代理
+     * 本地/自定义 curl：按调用方 vsproxy 注入用户自备出口代理
      * 须在 hit()/guardAccess 之后调用；未声明 vsproxy 时为 no-op。
      *
      * @param resource|CurlHandle $ch
