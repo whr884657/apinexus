@@ -37,10 +37,11 @@
     animation: vsModalIn 0.22s ease;
 }
 
-/* 大屏 / 许可协议 / 系统更新：可滚动正文 */
+/* 大屏 / 许可协议 / 系统更新 / 数据库维护：可滚动正文，高度随内容至上限 */
 .vs-modal.vs-modal--lg,
 .vs-modal.vs-modal--license,
-.vs-modal.vs-modal--update {
+.vs-modal.vs-modal--update,
+.vs-modal.vs-modal--dbmaintain {
     max-width: min(720px, calc(100vw - 40px));
     max-height: min(88vh, 840px);
     display: flex;
@@ -54,9 +55,17 @@
     width: 100%;
 }
 
+/* 数据库维护：宽度适中，高度随步骤内容自适应（不超过上限） */
+.vs-modal.vs-modal--dbmaintain {
+    max-width: min(520px, calc(100vw - 40px));
+    max-height: min(88vh, 720px);
+    height: auto;
+}
+
 .vs-modal--lg .vs-modal__body,
 .vs-modal--license .vs-modal__body,
-.vs-modal--update .vs-modal__body {
+.vs-modal--update .vs-modal__body,
+.vs-modal--dbmaintain .vs-modal__body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -65,8 +74,80 @@
 
 .vs-modal--lg .vs-modal__foot,
 .vs-modal--license .vs-modal__foot,
-.vs-modal--update .vs-modal__foot {
+.vs-modal--update .vs-modal__foot,
+.vs-modal--dbmaintain .vs-modal__foot {
     flex-shrink: 0;
+}
+
+.vs-modal--dbmaintain .vs-modal__foot {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.vs-modal--dbmaintain .vs-modal__foot .vs-btn {
+    min-width: 0;
+    flex: 0 1 auto;
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+/* 数据库维护文案强调 */
+.vs-db-maintain__lead,
+.vs-db-maintain__hint,
+.vs-db-maintain p {
+    margin: 0 0 10px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #4b5563;
+}
+
+.vs-db-maintain__list {
+    margin: 0 0 12px;
+    padding-left: 1.2em;
+    color: #4b5563;
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.vs-db-maintain__list li {
+    margin-bottom: 8px;
+}
+
+.vs-db-maintain__warn {
+    margin: 0;
+    font-size: 13px;
+    color: #b45309;
+    font-weight: 600;
+}
+
+.vs-db-maintain__empty,
+.vs-db-maintain__busy {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: #374151;
+}
+
+.vs-db-emph {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+.vs-db-emph--safe {
+    color: #047857;
+    text-decoration-color: #34d399;
+}
+
+.vs-db-emph--danger {
+    color: #b91c1c;
+    text-decoration-color: #f87171;
+}
+
+.vs-db-emph--key {
+    color: #1d4ed8;
+    text-decoration-color: #93c5fd;
 }
 
 /* 无按钮时隐藏脚（系统更新进度等）；不强制固定弹窗高度 */

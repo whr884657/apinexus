@@ -10,7 +10,7 @@ require_once __DIR__ . '/init.php';
 
 $action = isset($_REQUEST['action']) ? (string) $_REQUEST['action'] : '';
 
-if (in_array($action, array('check', 'history', 'apply', 'apply_step', 'migrate_schema', 'dismiss'), true)) {
+if (in_array($action, array('check', 'history', 'apply', 'apply_step', 'migrate_schema', 'migrate_schema_info', 'dismiss'), true)) {
     if (function_exists('ini_set')) {
         @ini_set('display_errors', '0');
     }
@@ -70,13 +70,14 @@ if ($action === 'apply') {
     @ini_set('memory_limit', '256M');
     vs_update_rate_limit('apply', 3, 600);
 
+    $result = null;
     try {
         $result = Updater::applyUpdate();
     } catch (Throwable $e) {
         AjaxResponse::error('更新异常，请稍后重试或查看服务器日志');
     }
 
-    if (empty($result['ok'])) {
+    if (!is_array($result) || empty($result['ok'])) {
         AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '更新失败');
     }
 
@@ -94,13 +95,14 @@ if ($action === 'apply_step') {
 
     $step = isset($_POST['step']) ? trim((string) $_POST['step']) : '';
 
+    $result = null;
     try {
         $result = Updater::applyUpdateStep($step);
     } catch (Throwable $e) {
         AjaxResponse::error('更新异常，请稍后重试或查看服务器日志');
     }
 
-    if (empty($result['ok'])) {
+    if (!is_array($result) || empty($result['ok'])) {
         AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '更新失败');
     }
 
@@ -114,20 +116,54 @@ if ($action === 'apply_step') {
     ));
 }
 
+if ($action === 'migrate_schema_info') {
+    vs_update_rate_limit('migrate_schema_info', 20, 600);
+    $result = null;
+    try {
+        $result = Updater::schemaMaintainInfo();
+    } catch (Throwable $e) {
+        AjaxResponse::error('获取数据库维护信息失败');
+    }
+    if (!is_array($result) || empty($result['ok'])) {
+        AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '获取失败');
+    }
+    AjaxResponse::success('ok', array(
+        'local_version' => isset($result['local_version']) ? $result['local_version'] : '',
+        'pending'       => isset($result['pending']) ? $result['pending'] : array(),
+    ));
+}
+
 if ($action === 'migrate_schema') {
     @set_time_limit(300);
     vs_update_rate_limit('migrate_schema', 5, 600);
+    $mode = isset($_POST['mode']) ? trim((string) $_POST['mode']) : 'version';
+    if ($mode !== 'full' && $mode !== 'version') {
+        AjaxResponse::error('未知维护模式', 400);
+    }
+    $result = null;
     try {
-        $result = Updater::runSchemaMigrateNow();
+        if ($mode === 'full') {
+            $result = Updater::runSchemaFullAlignNow();
+        } else {
+            $result = Updater::runSchemaMigrateNow();
+        }
     } catch (Throwable $e) {
-        AjaxResponse::error('结构更新异常，请稍后重试或查看服务器日志');
+        AjaxResponse::error($mode === 'full' ? '全量对齐异常，请稍后重试' : '版本升级异常，请稍后重试');
     }
-    if (empty($result['ok'])) {
-        AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '结构更新失败');
+    if (!is_array($result) || empty($result['ok'])) {
+        AjaxResponse::error(isset($result['msg']) ? $result['msg'] : ($mode === 'full' ? '全量对齐失败' : '版本升级失败'));
     }
-    AjaxResponse::success($result['msg'], array(
-        'applied' => isset($result['applied']) ? $result['applied'] : array(),
-    ));
+    $extra = array('mode' => $mode);
+    if ($mode === 'full') {
+        $extra['tables'] = isset($result['tables']) ? $result['tables'] : 0;
+        $extra['columns'] = isset($result['columns']) ? $result['columns'] : 0;
+        $extra['indexes'] = isset($result['indexes']) ? $result['indexes'] : 0;
+        $extra['defaults'] = isset($result['defaults']) ? $result['defaults'] : 0;
+        $extra['details'] = isset($result['details']) ? $result['details'] : array();
+    } else {
+        $extra['applied'] = isset($result['applied']) ? $result['applied'] : array();
+    }
+    AjaxResponse::success($result['msg'], $extra);
 }
 
 AjaxResponse::error('未知操作', 400);

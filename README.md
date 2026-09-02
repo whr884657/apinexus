@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.34-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.35-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -156,12 +156,11 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.34（2026-08-30）
+### v13.26.35（2026-09-02）
 
-- **日志：** `apilog.egress` 记录出口节点 `IP:端口`；管理端 / 用户中心日志列表与详情展示「出口节点」
-- **管理端详情：** 密铺网格（短字段并排，密钥与长字段通栏）
-- **用户完整路径：** 密钥段默认模糊、悬停明码（其它参数原样）
-- **库：** 迁移 `13.26.34.sql`；冷库归档同步
+- **数据库维护：**「执行数据库结构更新」同窗可选 **全量对齐**（对照 `database.sql` 只补不删、不改业务数据）与 **版本升级**（跑 pending 增量，可能含配置/数据）；白话说明、彩色强调、二次确认
+- **主题二：** 登录/注册/忘记密码标题静止，去掉字距脉冲动画
+- **出口短码：** 三位升**五位**（`0-9a-z`）；旧码重置；迁移 `13.26.35.sql`
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

@@ -26,6 +26,7 @@
     }
 }
 
+/* v13.26.35：标题不再使用脉冲动画，keyframes 保留无引用亦可删 */
 @keyframes stAuthTitlePulse {
     0%, 100% { opacity: 1; letter-spacing: 0.02em; }
     50% { opacity: 0.88; letter-spacing: 0.06em; }
@@ -115,7 +116,9 @@
     font-size: clamp(26px, 6vw, 34px);
     font-weight: 800;
     color: var(--st-auth-accent-h);
-    animation: stAuthTitlePulse 4s ease-in-out infinite;
+    /* v13.26.35：标题静止，禁止呼吸/字距脉冲（难看） */
+    animation: none;
+    letter-spacing: 0.02em;
     line-height: 1.2;
 }
 

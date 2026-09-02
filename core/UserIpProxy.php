@@ -3,13 +3,16 @@
  * 文件：core/UserIpProxy.php
  * 作用：用户自备出口 IP 代理（隧道 / 提取）；每用户最多 5 条
  *
- * 调用侧仅传 vsproxy：三位短码=固定该条；a=轮询；b=随机；c=优先首条；1/true=启用并按账号已存策略。
+ * 调用侧仅传 vsproxy：五位短码=固定该条；a=轮询；b=随机；c=优先首条；1/true=启用并按账号已存策略。
  * 与 ApiProxy（反向中继上游 URL）无关：本类只负责 CURLOPT_PROXY 出站换出口 IP。
  */
 
 class UserIpProxy
 {
     const MAX_COUNT = 5;
+
+    /** 调用短码长度（0-9a-z；v13.26.35 起由三位升级为五位） */
+    const PROXY_CODE_LEN = 5;
 
     const MODE_TUNNEL = 0;
     const MODE_EXTRACT = 1;
@@ -45,7 +48,7 @@ class UserIpProxy
     /** @var bool|null 由网关收集参数时注入，避免与 php://input 争用 */
     private static $wantOverride = null;
 
-    /** @var string|null 三位调用短码（空=按策略） */
+    /** @var string|null 五位调用短码（空=按策略） */
     private static $codeOverride = null;
 
     /** @var int|null 本请求策略覆盖；null=用账号已存策略 */
@@ -104,7 +107,7 @@ class UserIpProxy
      * 网关 / 统计层注入本请求出口意图
      *
      * @param bool     $want
-     * @param string   $proxyCode 三位短码；空表示不指定
+     * @param string   $proxyCode 五位短码；空表示不指定
      * @param int|null $strategy  0/1/2 覆盖；null=用账号策略
      * @return void
      */
@@ -126,7 +129,7 @@ class UserIpProxy
     }
 
     /**
-     * 规范化调用短码：仅接受恰好 3 位 [0-9a-z]（小写）；拒绝纯数字主键用法
+     * 规范化调用短码：仅接受恰好 5 位 [0-9a-z]（小写）；拒绝纯数字主键与旧三位短码
      *
      * @param mixed $raw
      * @return string
@@ -134,46 +137,75 @@ class UserIpProxy
     public static function normalizeProxyCode($raw)
     {
         $s = strtolower(trim((string) $raw));
-        if ($s === '' || !preg_match('/^[0-9a-z]{3}$/', $s)) {
+        $len = self::PROXY_CODE_LEN;
+        if ($s === '' || !preg_match('/^[0-9a-z]{' . $len . '}$/', $s)) {
             return '';
         }
         return $s;
     }
 
     /**
-     * 生成用户内唯一的三位随机短码
+     * 生成用户内唯一的五位随机短码
      *
      * @param int $userId
+     * @param int $excludeId 更新时排除自身主键，避免误判占用
      * @return string
      */
-    public static function generateProxyCode($userId)
+    public static function generateProxyCode($userId, $excludeId = 0)
     {
         $userId = (int) $userId;
+        $excludeId = (int) $excludeId;
         $chars = '0123456789abcdefghijklmnopqrstuvwxyz';
-        $len = strlen($chars);
-        for ($attempt = 0; $attempt < 80; $attempt++) {
+        $alphabetLen = strlen($chars);
+        $codeLen = self::PROXY_CODE_LEN;
+        for ($attempt = 0; $attempt < 120; $attempt++) {
             $code = '';
-            for ($i = 0; $i < 3; $i++) {
-                $code .= $chars[random_int(0, $len - 1)];
+            for ($i = 0; $i < $codeLen; $i++) {
+                $code .= $chars[random_int(0, $alphabetLen - 1)];
             }
             if ($userId <= 0 || !self::tableReady()) {
                 return $code;
             }
-            try {
-                $pdo = Database::connect();
-                $stmt = $pdo->prepare(
-                    'SELECT 1 FROM `' . Database::table('ipproxy') . '` WHERE `userid` = ? AND `proxycode` = ? LIMIT 1'
-                );
-                $stmt->execute(array($userId, $code));
-                if (!$stmt->fetchColumn()) {
-                    return $code;
-                }
-            } catch (Exception $e) {
+            if (self::isProxyCodeAvailable($userId, $code, $excludeId)) {
                 return $code;
             }
         }
-        // 极端碰撞：时间片后缀仍取 3 位
-        return substr(strtolower(base_convert((string) (time() % 46656), 10, 36) . '000'), 0, 3);
+        // 极端碰撞：继续查重直至可用
+        for ($i = 0; $i < 40; $i++) {
+            $n = random_int(0, 60466175);
+            $pad = str_pad(strtolower(base_convert((string) $n, 10, 36)), $codeLen, '0', STR_PAD_LEFT);
+            $code = substr($pad, -$codeLen);
+            if ($userId <= 0 || self::isProxyCodeAvailable($userId, $code, $excludeId)) {
+                return $code;
+            }
+        }
+        return substr(str_replace('.', '', uniqid('', true)), 0, $codeLen);
+    }
+
+    /**
+     * 短码在用户维度是否可用（排除指定行）
+     *
+     * @param int    $userId
+     * @param string $code
+     * @param int    $excludeId
+     * @return bool
+     */
+    private static function isProxyCodeAvailable($userId, $code, $excludeId = 0)
+    {
+        try {
+            $pdo = Database::connect();
+            $sql = 'SELECT `id` FROM `' . Database::table('ipproxy') . '` WHERE `userid` = ? AND `proxycode` = ? LIMIT 1';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array((int) $userId, (string) $code));
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                return true;
+            }
+            $hitId = isset($row['id']) ? (int) $row['id'] : 0;
+            return ($excludeId > 0 && $hitId === $excludeId);
+        } catch (Exception $e) {
+            return true;
+        }
     }
 
     /**
@@ -204,12 +236,71 @@ class UserIpProxy
                 if ($uid <= 0 || $id <= 0) {
                     continue;
                 }
-                $code = self::generateProxyCode($uid);
-                $upd->execute(array($code, $id, $uid));
+                $code = self::generateProxyCode($uid, $id);
+                try {
+                    $upd->execute(array($code, $id, $uid));
+                } catch (Exception $eDup) {
+                    $code = self::generateProxyCode($uid, $id);
+                    $upd->execute(array($code, $id, $uid));
+                }
             }
         } catch (Exception $e) {
             // ignore
         }
+    }
+
+    /**
+     * 将非五位/非法短码全部重置为新五位（v13.26.35；不保留旧三位）
+     *
+     * @return int 重置条数
+     */
+    public static function regenerateLegacyProxyCodesToFive()
+    {
+        if (!self::tableReady() || !self::tableColumnExistsLocal('proxycode')) {
+            return 0;
+        }
+        $changed = 0;
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('ipproxy');
+            $stmt = $pdo->query('SELECT `id`,`userid`,`proxycode` FROM `' . $table . '`');
+            $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : array();
+            if (!is_array($rows) || count($rows) === 0) {
+                return 0;
+            }
+            $upd = $pdo->prepare(
+                'UPDATE `' . $table . '` SET `proxycode` = ? WHERE `id` = ? AND `userid` = ?'
+            );
+            foreach ($rows as $row) {
+                $uid = isset($row['userid']) ? (int) $row['userid'] : 0;
+                $id = isset($row['id']) ? (int) $row['id'] : 0;
+                $old = isset($row['proxycode']) ? strtolower(trim((string) $row['proxycode'])) : '';
+                if ($uid <= 0 || $id <= 0) {
+                    continue;
+                }
+                if (self::normalizeProxyCode($old) !== '') {
+                    continue;
+                }
+                // 禁止先写空串（会撞 uk_userid_code）；直接一次更新为新五位
+                $ok = false;
+                for ($try = 0; $try < 8; $try++) {
+                    $code = self::generateProxyCode($uid, $id);
+                    try {
+                        $upd->execute(array($code, $id, $uid));
+                        $ok = true;
+                        break;
+                    } catch (Exception $eDup) {
+                        // 唯一冲突则换码重试
+                    }
+                }
+                if ($ok) {
+                    $changed++;
+                }
+            }
+        } catch (Exception $e) {
+            return $changed;
+        }
+        return $changed;
     }
 
     /**
@@ -277,7 +368,7 @@ class UserIpProxy
     }
 
     /**
-     * 可选：指定代理配置短码（三位）；空=按策略在多条启用配置中选用
+     * 可选：指定代理配置短码（五位）；空=按策略在多条启用配置中选用
      *
      * @return string
      */
@@ -420,6 +511,9 @@ class UserIpProxy
         if (!self::tableReady()) {
             return array('ok' => false, 'msg' => '出口代理尚未就绪，请联系管理员完成系统升级');
         }
+        if (class_exists('DatabaseMigrator') && method_exists('DatabaseMigrator', 'ensureIpProxyCodeFive')) {
+            DatabaseMigrator::ensureIpProxyCodeFive();
+        }
         self::backfillMissingProxyCodes();
         try {
             $pdo = Database::connect();
@@ -531,6 +625,9 @@ class UserIpProxy
         }
         if (!self::tableReady()) {
             return array('ok' => false, 'msg' => '出口代理尚未就绪，请联系管理员完成系统升级');
+        }
+        if (class_exists('DatabaseMigrator') && method_exists('DatabaseMigrator', 'ensureIpProxyCodeFive')) {
+            DatabaseMigrator::ensureIpProxyCodeFive();
         }
 
         $id = isset($input['id']) ? (int) $input['id'] : 0;
@@ -1022,7 +1119,7 @@ class UserIpProxy
      * 挑选一条配置并解析为可应用的节点
      *
      * @param int    $userId
-     * @param string $forceCode 三位短码；空=按策略轮询
+     * @param string $forceCode 五位短码；空=按策略轮询
      * @return array{ok:bool,errcode?:int,msg?:string,endpoint?:array,row?:array}
      */
     public static function resolveEndpoint($userId, $forceCode = '')
@@ -1667,7 +1764,7 @@ class UserIpProxy
      *
      * @param resource|CurlHandle $ch
      * @param int                 $userId
-     * @param string              $forceCode 三位短码；空=按策略
+     * @param string              $forceCode 五位短码；空=按策略
      * @return array{ok:bool,errcode?:int,msg?:string}
      */
     public static function applyToCurl($ch, $userId, $forceCode = '')

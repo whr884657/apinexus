@@ -533,7 +533,58 @@ class Updater
     }
 
     /**
-     * 手动执行数据库结构更新（不依赖是否有新版本；供已升级但漏跑迁移的站点）
+     * 数据库维护弹窗：待执行版本列表（增量路径预览）
+     *
+     * @return array
+     */
+    public static function schemaMaintainInfo()
+    {
+        $local = self::localVersion();
+        try {
+            DatabaseMigrator::pruneAppliedAboveCodeVersion($local);
+            $pending = array_keys(DatabaseMigrator::getPendingFiles($local));
+        } catch (Exception $e) {
+            return array(
+                'ok'            => false,
+                'msg'           => '获取数据库维护信息失败',
+                'local_version' => $local,
+                'pending'       => array(),
+            );
+        }
+
+        return array(
+            'ok'            => true,
+            'msg'           => 'ok',
+            'local_version' => $local,
+            'pending'       => array_values($pending),
+        );
+    }
+
+    /**
+     * 全量结构对齐：对照 install/database.sql，只补不删（不改业务数据）
+     *
+     * @return array
+     */
+    public static function runSchemaFullAlignNow()
+    {
+        try {
+            $result = SchemaFullAligner::align();
+        } catch (Throwable $e) {
+            return array(
+                'ok'      => false,
+                'msg'     => '全量对齐异常，请稍后重试',
+                'tables'  => 0,
+                'columns' => 0,
+                'indexes' => 0,
+                'defaults'=> 0,
+                'details' => array(),
+            );
+        }
+        return $result;
+    }
+
+    /**
+     * 手动执行版本增量迁移（结构 + 可能含配置/数据；供已升级但漏跑迁移的站点）
      *
      * @return array
      */
@@ -555,7 +606,7 @@ class Updater
                 if (empty($migration['ok'])) {
                     return array(
                         'ok'      => false,
-                        'msg'     => isset($migration['msg']) ? $migration['msg'] : '结构更新失败',
+                        'msg'     => isset($migration['msg']) ? $migration['msg'] : '版本升级失败',
                         'applied' => isset($migration['applied']) ? $migration['applied'] : array(),
                     );
                 }
@@ -568,20 +619,20 @@ class Updater
                 }
             }
         } catch (Exception $e) {
-            return array('ok' => false, 'msg' => $e->getMessage(), 'applied' => $applied);
+            return array('ok' => false, 'msg' => '版本升级失败，请稍后重试或查看服务器日志', 'applied' => $applied);
         }
 
         if (count($applied) > 0) {
             return array(
                 'ok'      => true,
-                'msg'     => '已同步数据库结构（' . implode('、', $applied) . '）',
+                'msg'     => '版本升级已完成。已执行版本：' . implode('、', $applied),
                 'applied' => $applied,
             );
         }
 
         return array(
             'ok'      => true,
-            'msg'     => '数据库结构已是最新',
+            'msg'     => '当前没有待执行的版本升级。',
             'applied' => array(),
         );
     }

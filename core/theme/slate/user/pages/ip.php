@@ -88,7 +88,7 @@ $pageReady = $ready || $proxyReady;
         vs_render_notice(
             'info',
             '',
-            '平台不提供免费节点。启用出口只传一个参数 vsproxy：三位短码=固定该条；a=轮询；b=随机；c=优先首条（须有效密钥）。',
+            '平台不提供免费节点。启用出口只传一个参数 vsproxy：五位短码=固定该条；a=轮询；b=随机；c=优先首条（须有效密钥）。',
             array('compact' => true)
         );
         ?>

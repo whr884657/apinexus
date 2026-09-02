@@ -51,6 +51,7 @@
             modalEl.classList.remove('vs-modal--lg');
             modalEl.classList.remove('vs-modal--license');
             modalEl.classList.remove('vs-modal--update');
+            modalEl.classList.remove('vs-modal--dbmaintain');
         }
         if (footEl) {
             footEl.hidden = false;
@@ -83,9 +84,19 @@
         allowEscapeClose = options.closeOnEscape !== false;
 
         if (modalEl) {
-            modalEl.classList.toggle('vs-modal--lg', options.size === 'lg' || options.size === 'license');
-            modalEl.classList.toggle('vs-modal--license', options.size === 'license');
-            modalEl.classList.toggle('vs-modal--update', options.size === 'update');
+            modalEl.classList.remove('vs-modal--lg', 'vs-modal--license', 'vs-modal--update', 'vs-modal--dbmaintain');
+            if (options.size === 'lg' || options.size === 'license') {
+                modalEl.classList.add('vs-modal--lg');
+            }
+            if (options.size === 'license') {
+                modalEl.classList.add('vs-modal--license');
+            }
+            if (options.size === 'update') {
+                modalEl.classList.add('vs-modal--update');
+            }
+            if (options.size === 'dbmaintain') {
+                modalEl.classList.add('vs-modal--dbmaintain');
+            }
         }
 
         titleEl.textContent = title || '提示';

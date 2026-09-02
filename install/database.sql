@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}ipproxy` (
     `extfmt` tinyint(1) NOT NULL DEFAULT 0 COMMENT '提取返回格式：0自动 1纯文本ip:port 2JSON',
     `jsonhost` varchar(80) NOT NULL DEFAULT '' COMMENT 'JSON主机字段名或点路径（空=自动识别常见键）',
     `jsonport` varchar(80) NOT NULL DEFAULT '' COMMENT 'JSON端口字段名或点路径（空=自动或主机内含端口）',
-    `proxycode` char(3) NOT NULL DEFAULT '' COMMENT '调用短码（三位随机；vsproxyid仅认此码，不认数字主键）',
+    `proxycode` char(5) NOT NULL DEFAULT '' COMMENT '调用短码（五位随机0-9a-z；vsproxy仅认此码，不认数字主键）',
     `ttlmin` int(11) NOT NULL DEFAULT 10 COMMENT '提取节点缓存分钟（0=每次重新提取；隧道忽略）',
     `cachehost` varchar(255) NOT NULL DEFAULT '' COMMENT '提取缓存主机',
     `cacheport` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提取缓存端口',

@@ -11,7 +11,7 @@ class AjaxResponse
     /**
      * @param array $data
      * @param int   $httpCode
-     * @return void
+     * @return never
      */
     public static function json(array $data, $httpCode = 200)
     {
@@ -42,7 +42,7 @@ class AjaxResponse
     /**
      * @param string $msg
      * @param array  $extra
-     * @return void
+     * @return never
      */
     public static function success($msg, array $extra = array())
     {
@@ -52,7 +52,7 @@ class AjaxResponse
     /**
      * @param string $msg
      * @param int    $httpCode
-     * @return void
+     * @return never
      */
     public static function error($msg, $httpCode = 200)
     {

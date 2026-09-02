@@ -1,6 +1,6 @@
 /**
  * 文件：assets/js/upgrade.js
- * 作用：系统升级页面交互
+ * 作用：系统升级页面交互（含数据库维护：全量对齐 / 版本升级）
  */
 
 (function () {
@@ -12,6 +12,7 @@
     var migrateBtn = document.getElementById('upgradeMigrateBtn');
     var versionEl = document.getElementById('upgradeVersionDisplay');
     var lastCheck = null;
+    var pendingCache = null;
 
     function escapeHtml(text) {
         return String(text)
@@ -109,71 +110,225 @@
         });
     }
 
-    function runMigrateSchema() {
-        migrateBtn.disabled = true;
-        setStatus('正在执行数据库结构更新…', 'info');
+    function postUpdate(action, fields) {
         var body = new FormData();
-        body.append('action', 'migrate_schema');
+        body.append('action', action);
         body.append('csrf_token', window.VS_CSRF_TOKEN || '');
-        fetch((window.VS_BASE_URL || '') + '/admin/update.php', {
+        if (fields) {
+            Object.keys(fields).forEach(function (k) {
+                body.append(k, fields[k]);
+            });
+        }
+        return fetch((window.VS_BASE_URL || '') + '/admin/update.php', {
             method: 'POST',
             body: body,
             credentials: 'same-origin',
-        })
-            .then(function (res) { return res.json(); })
+        }).then(function (res) { return res.json(); });
+    }
+
+    function fetchPendingVersions() {
+        return postUpdate('migrate_schema_info').then(function (res) {
+            if (res && res.code === 1 && Array.isArray(res.pending)) {
+                pendingCache = res.pending;
+                return pendingCache;
+            }
+            pendingCache = [];
+            return pendingCache;
+        }).catch(function () {
+            pendingCache = [];
+            return pendingCache;
+        });
+    }
+
+    function chooserHtml() {
+        return (
+            '<div class="vs-db-maintain">' +
+            '<p class="vs-db-maintain__lead">本页提供两种处理方式，请先选择，不要两个都乱点：</p>' +
+            '<ul class="vs-db-maintain__list">' +
+            '<li><strong>全量对齐</strong>：对照完整标准库表，' +
+            '<span class="vs-db-emph vs-db-emph--safe">只补缺失的表/字段</span>，' +
+            '<span class="vs-db-emph vs-db-emph--safe">不修改业务数据</span>，' +
+            '<span class="vs-db-emph vs-db-emph--safe">不删除</span>已有内容。</li>' +
+            '<li><strong>版本升级</strong>：按系统版本执行' +
+            '<span class="vs-db-emph vs-db-emph--key">尚未完成</span>的数据库升级；' +
+            '<span class="vs-db-emph vs-db-emph--danger">可能修改结构，也可能修改配置或数据</span>。</li>' +
+            '</ul>' +
+            '<p class="vs-db-maintain__hint">不确定时：有「某版本数据库未执行」→ 选' +
+            '<strong>版本升级</strong>；只是缺字段报错 → 选<strong>全量对齐</strong>。</p>' +
+            '</div>'
+        );
+    }
+
+    function fullConfirmHtml() {
+        return (
+            '<div class="vs-db-maintain">' +
+            '<p><strong>即将对照安装包内的完整标准库表进行结构补齐。</strong></p>' +
+            '<ul class="vs-db-maintain__list">' +
+            '<li><strong>会做：</strong>补缺失的表、字段、必要默认值等</li>' +
+            '<li><strong>不会做：</strong>' +
+            '<span class="vs-db-emph vs-db-emph--safe">不修改业务数据</span>；' +
+            '不按版本跑升级脚本；' +
+            '<span class="vs-db-emph vs-db-emph--safe">不删除</span>线上多出来的表/字段</li>' +
+            '</ul>' +
+            '<p class="vs-db-maintain__warn">请确认已备份数据库后再执行。</p>' +
+            '</div>'
+        );
+    }
+
+    function versionConfirmHtml(pending) {
+        var listHtml;
+        if (!pending || pending.length === 0) {
+            listHtml = '<p class="vs-db-maintain__empty">当前<strong>没有</strong>待执行的版本升级。</p>';
+        } else {
+            listHtml =
+                '<p><strong>待执行版本：</strong> ' +
+                pending.map(function (v) {
+                    return '<span class="vs-db-emph vs-db-emph--key">' + escapeHtml(v) + '</span>';
+                }).join('、') +
+                '</p>';
+        }
+        return (
+            '<div class="vs-db-maintain">' +
+            '<p><strong>即将按版本顺序执行尚未完成的数据库升级。</strong></p>' +
+            listHtml +
+            '<ul class="vs-db-maintain__list">' +
+            '<li><strong>会做：</strong>执行上述版本附带的库脚本（结构变更' +
+            '<span class="vs-db-emph vs-db-emph--danger">和/或配置、数据修正</span>）</li>' +
+            '<li><strong>请注意：</strong>' +
+            '<span class="vs-db-emph vs-db-emph--danger">本操作可能修改配置或业务相关数据</span>，请确认后再执行</li>' +
+            '</ul>' +
+            '<p class="vs-db-maintain__warn">请确认已备份数据库后再执行。</p>' +
+            '</div>'
+        );
+    }
+
+    function openDbChooser() {
+        if (!window.VsModal || !window.VsModal.open) {
+            window.alert('弹窗组件不可用');
+            return;
+        }
+        VsModal.open({
+            title: '数据库维护',
+            html: chooserHtml(),
+            size: 'dbmaintain',
+            closeOnOverlay: false,
+            buttons: [
+                {
+                    text: '取消',
+                    action: function () { VsModal.close(false); },
+                },
+                {
+                    text: '全量对齐',
+                    action: function () { openFullConfirm(); },
+                },
+                {
+                    text: '版本升级',
+                    primary: true,
+                    action: function () {
+                        fetchPendingVersions().then(function (pending) {
+                            openVersionConfirm(pending);
+                        });
+                    },
+                },
+            ],
+        });
+    }
+
+    function openFullConfirm() {
+        VsModal.open({
+            title: '全量对齐 · 确认',
+            html: fullConfirmHtml(),
+            size: 'dbmaintain',
+            closeOnOverlay: false,
+            buttons: [
+                {
+                    text: '返回',
+                    action: function () { openDbChooser(); },
+                },
+                {
+                    text: '确认执行',
+                    primary: true,
+                    action: function () { runMaintain('full'); },
+                },
+            ],
+        });
+    }
+
+    function openVersionConfirm(pending) {
+        var hasPending = pending && pending.length > 0;
+        VsModal.open({
+            title: '版本升级 · 确认',
+            html: versionConfirmHtml(pending || []),
+            size: 'dbmaintain',
+            closeOnOverlay: false,
+            buttons: [
+                {
+                    text: '返回',
+                    action: function () { openDbChooser(); },
+                },
+                {
+                    text: '确认执行',
+                    primary: true,
+                    danger: true,
+                    disabled: !hasPending,
+                    action: function () {
+                        if (!hasPending) {
+                            return;
+                        }
+                        runMaintain('version');
+                    },
+                },
+            ],
+        });
+    }
+
+    function runMaintain(mode) {
+        if (migrateBtn) {
+            migrateBtn.disabled = true;
+        }
+        var doing = mode === 'full' ? '正在全量对齐，请勿关闭…' : '正在执行版本升级，请勿关闭…';
+        setStatus(doing, 'info');
+        VsModal.open({
+            title: mode === 'full' ? '全量对齐' : '版本升级',
+            html: '<div class="vs-db-maintain"><p class="vs-db-maintain__busy">' + escapeHtml(doing) + '</p></div>',
+            size: 'dbmaintain',
+            closeOnOverlay: false,
+            closeOnEscape: false,
+            buttons: [],
+        });
+
+        postUpdate('migrate_schema', { mode: mode })
             .then(function (res) {
                 if (res && res.code === 1) {
-                    setStatus(res.msg || '结构更新完成', 'success');
+                    var okMsg = res.msg || (mode === 'full' ? '全量对齐已完成' : '版本升级已完成');
+                    setStatus(okMsg, 'success');
                     if (window.VsModal && window.VsModal.alert) {
-                        VsModal.alert(res.msg || '数据库结构更新已完成。', '结构更新完成');
+                        VsModal.alert(okMsg, mode === 'full' ? '全量对齐完成' : '版本升级完成');
                     }
                 } else {
-                    var errMsg = (res && res.msg) || '结构更新失败';
+                    var errMsg = (res && res.msg) || (mode === 'full' ? '全量对齐失败' : '版本升级失败');
                     setStatus(errMsg, 'error');
                     if (window.VsModal && window.VsModal.alert) {
-                        VsModal.alert(errMsg, '结构更新失败');
+                        VsModal.alert(errMsg, mode === 'full' ? '全量对齐失败' : '版本升级失败');
                     }
                 }
             })
             .catch(function () {
                 setStatus('网络异常，请稍后重试', 'error');
                 if (window.VsModal && window.VsModal.alert) {
-                    VsModal.alert('网络异常，请稍后重试', '结构更新失败');
+                    VsModal.alert('网络异常，请稍后重试', '操作失败');
                 }
             })
             .finally(function () {
-                migrateBtn.disabled = false;
+                if (migrateBtn) {
+                    migrateBtn.disabled = false;
+                }
             });
-    }
-
-    function confirmMigrateSchema() {
-        var html =
-            '<div class="vs-update-modal">' +
-            '<p>此按钮是<strong>手动兜底</strong>：在「安装更新」之后，若本版需要改数据库结构，但自动结构更新失败，或后台提示库结构尚未就绪时，再单独点一次补跑结构更新。</p>' +
-            '<p>正常安装更新时，若本版含数据库变更，系统会在更新流程里自动执行，<strong>平时不必点此按钮</strong>，以免误触。</p>' +
-            '<p>继续前请确认：已备份数据库；且确因更新后库结构异常才使用本操作。</p>' +
-            '</div>';
-
-        if (window.VsModal && window.VsModal.confirm) {
-            return VsModal.confirm('', '执行数据库结构更新？', {
-                html: html,
-                confirmText: '确认执行',
-                cancelText: '取消',
-                closeOnOverlay: false,
-            });
-        }
-        return Promise.resolve(window.confirm(
-            '此按钮用于安装更新后数据库结构失败时的手动兜底，平时不必点击。确定继续执行吗？'
-        ));
     }
 
     if (migrateBtn) {
         migrateBtn.addEventListener('click', function () {
-            confirmMigrateSchema().then(function (ok) {
-                if (ok) {
-                    runMigrateSchema();
-                }
-            });
+            openDbChooser();
         });
     }
 

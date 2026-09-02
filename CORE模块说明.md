@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.34**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.35**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -274,6 +274,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `Database.php` | PDO 连接、表名前缀 |
 | `DatabaseInstaller.php` | 安装向导执行 `database.sql` |
 | `DatabaseMigrator.php` | 版本迁移 SQL（含清理旧系统残留） |
+| `SchemaFullAligner.php` | 对照 `install/database.sql` 全量结构对齐（只补不删，v13.26.35） |
 | `Config.php` | 系统配置读写（`vs_config` 表） |
 | `SiteContext.php` | 站点名称（前台）、系统名称（后台壳层）、描述、Logo 等展示信息 |
 | `RegisterPolicy.php` | 注册开放/邮箱验证/后缀策略（`CONFIG_KEY=register_policy`） |
@@ -311,7 +312,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiProxy.php` | 外链网关：curl 中继上游；按 `upmethod` 选上游 GET/POST；可选 JSON 改写；剥离 JSONP 参数；出站消毒；3xx Location 透传；上游 TLS 不校验证书 |
 | `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；`hit` 成功且 `vsproxy` 时请求级武装出口（v13.26.33）；亦可显式 `applyOutboundProxy`；写日志含 `egress` 出口节点（v13.26.34）；`keyContext()` 供本地接口读本请求密钥用户；**仅 needkey=必须**时经 `UserIpAllow` 硬拦 IP |
-| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；`proxycode` 三位短码；`vsproxy`：短码/`a`/`b`/`c`/`1`；提取 JSON `jsonhost`/`jsonport` + `ttlmin`；`armRequestEgress` 请求级武装（v13.26.33）；`requestEgressHostPort` 供日志（v13.26.34）；与 ApiProxy 上游中继无关 |
+| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；`proxycode` 五位短码；`vsproxy`：短码/`a`/`b`/`c`/`1`；提取 JSON `jsonhost`/`jsonport` + `ttlmin`；`armRequestEgress` 请求级武装（v13.26.33）；`requestEgressHostPort` 供日志（v13.26.34）；与 ApiProxy 上游中继无关 |
 | `UserIpAllow.php` | 用户调用 IP 白名单（`user.ipallow`；空=不限制）；**仅密钥必须接口**硬拦；配合 `AuthSecurity::clientIp`；不匹配 → errcode **11019** |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
 | `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser；含 calls/cost/success_rate） |
@@ -351,7 +352,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL；前台/用户中心壳与页 CSS·JS 清单 |
 | `Sitemap.php` | 前台 SEO 站点地图（静态页 + 公开接口详情 + 已发布文章）；入口 `sitemap.php` → `Sitemap::emit()` / `/sitemap.xml` |
 | `SystemInfo.php` | 关于页环境信息 |
-| `Updater.php` | 云端在线更新检测与安装；安全解压；覆盖后按废弃清单清理文件 |
+| `Updater.php` | 云端在线更新检测与安装；安全解压；覆盖后按废弃清单清理文件；数据库维护全量对齐/版本升级（v13.26.35） |
 | `UpdateLog.php` | 版本更新记录读取 |
 | `oauth/*` | QQ / Gitee 第三方登录 |
 

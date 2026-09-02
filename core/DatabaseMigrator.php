@@ -461,6 +461,13 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已是五位 proxycode 且无旧三位残留时跳过 13.26.35
+        if (!in_array('13.26.35', $applied, true)) {
+            if (self::proxyCodeColumnIsFive() && self::proxyCodesAllFiveReady()) {
+                self::markApplied('13.26.35');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -469,10 +476,22 @@ class DatabaseMigrator
         self::ensureUserDashStatSchema();
         // 13.26.31：ipproxy 短码 / JSON 路径 / TTL 缓存列幂等补齐 + 短码回填
         self::ensureIpProxySchema31();
+        // 13.26.35：proxycode 升为五位并重置旧三位
+        self::ensureProxyCodeFive35();
         // 13.26.34：apilog.egress 幂等补齐
         self::ensureApilogEgress34();
         // 13.26.31：安装完成库标记（与 install.lock 双保险）
         self::ensureInstallDoneFlag();
+    }
+
+    /**
+     * 对外：确保出口短码为五位并重置旧三位（用户中心列表/保存前可调用）
+     *
+     * @return void
+     */
+    public static function ensureIpProxyCodeFive()
+    {
+        self::ensureProxyCodeFive35();
     }
 
     /**
@@ -505,7 +524,7 @@ class DatabaseMigrator
     }
 
     /**
-     * 确保出口代理表 13.26.31 列齐全并回填三位短码（幂等）
+     * 确保出口代理表 13.26.31 列齐全并回填短码（幂等；列宽以 ensureProxyCodeFive35 为准）
      *
      * @return void
      */
@@ -520,7 +539,7 @@ class DatabaseMigrator
             $cols = array(
                 'jsonhost'  => "ADD COLUMN `jsonhost` varchar(80) NOT NULL DEFAULT '' COMMENT 'JSON主机字段名或点路径（空=自动识别常见键）' AFTER `extfmt`",
                 'jsonport'  => "ADD COLUMN `jsonport` varchar(80) NOT NULL DEFAULT '' COMMENT 'JSON端口字段名或点路径（空=自动或主机内含端口）' AFTER `jsonhost`",
-                'proxycode' => "ADD COLUMN `proxycode` char(3) NOT NULL DEFAULT '' COMMENT '调用短码（三位随机；vsproxyid仅认此码）' AFTER `jsonport`",
+                'proxycode' => "ADD COLUMN `proxycode` char(5) NOT NULL DEFAULT '' COMMENT '调用短码（五位随机0-9a-z；vsproxy仅认此码）' AFTER `jsonport`",
                 'ttlmin'    => "ADD COLUMN `ttlmin` int(11) NOT NULL DEFAULT 10 COMMENT '提取节点缓存分钟（0=每次重新提取）' AFTER `proxycode`",
                 'cachehost' => "ADD COLUMN `cachehost` varchar(255) NOT NULL DEFAULT '' COMMENT '提取缓存主机' AFTER `ttlmin`",
                 'cacheport' => "ADD COLUMN `cacheport` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '提取缓存端口' AFTER `cachehost`",
@@ -556,6 +575,93 @@ class DatabaseMigrator
             }
         } catch (Exception $e) {
             // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 确保 ipproxy.proxycode 为 char(5)，并将旧三位/非法短码重置为五位（13.26.35 幂等）
+     *
+     * @return void
+     */
+    private static function ensureProxyCodeFive35()
+    {
+        if (!self::tableExists('ipproxy') || !self::tableColumnExists('ipproxy', 'proxycode')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('ipproxy');
+            if (!self::proxyCodeColumnIsFive()) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . $table . '` MODIFY COLUMN `proxycode` char(5) NOT NULL DEFAULT \'\' '
+                    . 'COMMENT \'调用短码（五位随机0-9a-z；vsproxy仅认此码，不认数字主键）\''
+                );
+            }
+            // 列已五位且无非法残留时只补空码，避免用户请求反复全表扫描
+            $needRegen = !self::proxyCodesAllFiveReady();
+            if ($needRegen
+                && class_exists('UserIpProxy')
+                && method_exists('UserIpProxy', 'regenerateLegacyProxyCodesToFive')) {
+                UserIpProxy::regenerateLegacyProxyCodesToFive();
+            }
+            if (class_exists('UserIpProxy') && method_exists('UserIpProxy', 'backfillMissingProxyCodes')) {
+                UserIpProxy::backfillMissingProxyCodes();
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * proxycode 列最大长度是否已 ≥5
+     *
+     * @return bool
+     */
+    private static function proxyCodeColumnIsFive()
+    {
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('ipproxy');
+            $dbName = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+            if ($dbName === '') {
+                return false;
+            }
+            $stmt = $pdo->prepare(
+                'SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1'
+            );
+            $stmt->execute(array($dbName, $table, 'proxycode'));
+            $len = $stmt->fetchColumn();
+            return $len !== false && (int) $len >= 5;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 是否已无「非空且非合法五位」的短码残留
+     *
+     * @return bool
+     */
+    private static function proxyCodesAllFiveReady()
+    {
+        if (!self::tableExists('ipproxy') || !self::tableColumnExists('ipproxy', 'proxycode')) {
+            return false;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('ipproxy');
+            // 非空且不是恰好 5 位 0-9a-z
+            $sql = 'SELECT 1 FROM `' . $table . '` WHERE `proxycode` <> \'\' AND `proxycode` IS NOT NULL'
+                . ' AND `proxycode` NOT REGEXP \'^[0-9a-z]{5}$\' LIMIT 1';
+            $stmt = $pdo->query($sql);
+            if ($stmt && $stmt->fetch(PDO::FETCH_NUM)) {
+                return false;
+            }
+            return true;
+        } catch (Exception $e) {
+            return false;
         }
     }
 
@@ -1077,7 +1183,8 @@ class DatabaseMigrator
             || $version === '13.26.29'
             || $version === '13.26.30'
             || $version === '13.26.31'
-            || $version === '13.26.34');
+            || $version === '13.26.34'
+            || $version === '13.26.35');
     }
 
     /**
@@ -1536,6 +1643,9 @@ class DatabaseMigrator
         }
         if ($version === '13.26.34') {
             return self::tableColumnExists('apilog', 'egress');
+        }
+        if ($version === '13.26.35') {
+            return self::proxyCodeColumnIsFive() && self::proxyCodesAllFiveReady();
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {
