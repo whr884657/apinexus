@@ -19,6 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::error('无效操作', 400);
     }
 
+    $clientIp = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
+    if (class_exists('AuthSecurity') && !AuthSecurity::rateLimitAllow('front_applylink_ip:' . $clientIp, 8, 600, true)) {
+        AjaxResponse::error('提交过于频繁，请稍后再试', 429);
+    }
+
     $result = LinkManager::apply(array(
         'name'        => isset($_POST['name']) ? (string) $_POST['name'] : '',
         'siteurl'     => isset($_POST['siteurl']) ? (string) $_POST['siteurl'] : '',
@@ -35,9 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         LinkNotify::notifyAdminsPending($result);
     }
 
-    AjaxResponse::success('申请已提交，请等待站长审核', array(
-        'link' => $result,
-    ));
+    // 公开响应仅回业务提示，不回传联系方式等完整记录（防整页误提交时信息暴露）
+    AjaxResponse::success('申请已提交，请等待站长审核');
 }
 
 vs_frontend_page('applylink', '申请友链', array(

@@ -1,8 +1,10 @@
 <?php
 /**
  * 文件：core/UpdateLog.php
- * 作用：读取版本更新记录（优先从云端 update-log.json）
+ * 作用：读取版本更新记录（升级页「更新记录」等）
  *
+ * 加载顺序（v13.26.36）：本地 update-log.json 优先 → 仅本地缺失/无效时再串行拉云端
+ * （Gitee → GitCode → GitHub）。对齐 AboutCatalog「有本地用本地」。
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */
 
@@ -34,7 +36,7 @@ class UpdateLog
     }
 
     /**
-     * 读取本地 update-log.json（仅作云端不可用时的回退）
+     * 读取本地 update-log.json（展示优先源）
      *
      * @return array|null
      */
@@ -45,8 +47,25 @@ class UpdateLog
             return null;
         }
 
-        $data = json_decode(file_get_contents($path), true);
+        $raw = @file_get_contents($path);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+        $data = json_decode($raw, true);
         return is_array($data) ? $data : null;
+    }
+
+    /**
+     * 本地 JSON 是否可作为更新记录源（须含 versions）
+     *
+     * @param array|null $data
+     * @return bool
+     */
+    public static function isValidLogPayload($data)
+    {
+        return is_array($data)
+            && !empty($data['versions'])
+            && is_array($data['versions']);
     }
 
     /**
@@ -156,7 +175,7 @@ class UpdateLog
     }
 
     /**
-     * 加载更新记录（优先云端，失败时回退本地）
+     * 加载更新记录（本地优先；本地缺失/无效再云端三源串行兜底）
      *
      * @return array{data: array|null, source: string}
      */
@@ -166,16 +185,16 @@ class UpdateLog
             return self::$resolvedPayload;
         }
 
-        $resolved = self::resolveRepoBranch();
-        $remote = self::fetchRemote($resolved['repo'], $resolved['branch']);
-        if ($remote !== null) {
-            self::$resolvedPayload = array('data' => $remote, 'source' => 'remote');
+        $local = self::loadLocal();
+        if (self::isValidLogPayload($local)) {
+            self::$resolvedPayload = array('data' => $local, 'source' => 'local');
             return self::$resolvedPayload;
         }
 
-        $local = self::loadLocal();
-        if ($local !== null && !empty($local['versions']) && is_array($local['versions'])) {
-            self::$resolvedPayload = array('data' => $local, 'source' => 'local');
+        $resolved = self::resolveRepoBranch();
+        $remote = self::fetchRemote($resolved['repo'], $resolved['branch']);
+        if (self::isValidLogPayload($remote)) {
+            self::$resolvedPayload = array('data' => $remote, 'source' => 'remote');
             return self::$resolvedPayload;
         }
 

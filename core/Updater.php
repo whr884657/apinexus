@@ -141,8 +141,9 @@ class Updater
             'changes'              => isset($manifest['changes']) && is_array($manifest['changes']) ? $manifest['changes'] : array(),
             'has_db_changes'       => UpdateLog::versionHasDbChanges($remote)
                 || DatabaseMigrator::hasPendingMigrations(),
-            'repo'                 => isset($manifest['repo']) ? $manifest['repo'] : self::DEFAULT_REPO,
-            'branch'               => isset($manifest['branch']) ? $manifest['branch'] : self::DEFAULT_BRANCH,
+            // 下载包固定走默认主仓链路，不随检测成功的镜像 repo 改道
+            'repo'                 => self::DEFAULT_REPO,
+            'branch'               => self::DEFAULT_BRANCH,
             'error'                => '',
         );
     }
@@ -237,8 +238,8 @@ class Updater
         }
 
         foreach (self::buildUpdatePackageUrls(
-            $check['repo'],
-            $check['branch'],
+            self::DEFAULT_REPO,
+            self::DEFAULT_BRANCH,
             $check['remote_version'],
             $ctx['manifest']
         ) as $item) {
@@ -773,7 +774,12 @@ class Updater
     }
 
     /**
-     * 更新源列表（顺序：Gitee → GitCode → GitHub，仅表示拉取兜底顺序，仓库本身无主次）
+     * 更新源列表（顺序：Gitee → GitCode → GitHub）
+     *
+     * 用途拆分（v13.26.36）：
+     * - 检测更新：串行读各源 update.json / version.php（fetchRemoteManifest）
+     * - 更新记录：UpdateLog 本地优先，再按此序读 update-log.json
+     * - 下载 ZIP：buildUpdatePackageUrls 固定从 Gitee 发行包起，与检测成功源无关
      *
      * @return array
      */
@@ -808,7 +814,10 @@ class Updater
     }
 
     /**
-     * 拉取远程 update.json（Gitee → GitCode → GitHub；失败再试各源 version.php）
+     * 拉取远程 update.json（检测更新专用；与 ZIP 下载源解耦）
+     *
+     * 串行：Gitee → GitCode → GitHub；某一源清单成功即返回，不因此锁定下载源。
+     * 下载包见 buildUpdatePackageUrls / updateStepDownload，固定从 Gitee 发行包起试。
      *
      * @return array|null
      */
@@ -820,15 +829,18 @@ class Updater
                 continue;
             }
             $data = json_decode($body, true);
-            if (is_array($data) && !empty($data['version'])) {
-                if (empty($data['repo'])) {
-                    $data['repo'] = $mirror['repo'];
-                }
-                if (empty($data['branch'])) {
-                    $data['branch'] = self::DEFAULT_BRANCH;
-                }
-                return $data;
+            if (!is_array($data) || empty($data['version'])) {
+                continue;
             }
+            // 检测成功源仅作备注；下载不绑定此 repo
+            $data['_detect_mirror'] = isset($mirror['id']) ? (string) $mirror['id'] : '';
+            if (empty($data['repo'])) {
+                $data['repo'] = self::DEFAULT_REPO;
+            }
+            if (empty($data['branch'])) {
+                $data['branch'] = self::DEFAULT_BRANCH;
+            }
+            return $data;
         }
 
         foreach (self::updateMirrors() as $mirror) {
@@ -836,19 +848,64 @@ class Updater
             if ($versionBody === false || $versionBody === '') {
                 continue;
             }
-            if (preg_match("/define\s*\(\s*'VS_VERSION'\s*,\s*'([^']+)'\s*\)/", $versionBody, $matches)) {
-                return array(
-                    'version'      => $matches[1],
-                    'title'        => '版本更新',
-                    'release_date' => '',
-                    'changes'      => array('检测到新版本，建议立即更新'),
-                    'repo'         => $mirror['repo'],
-                    'branch'       => self::DEFAULT_BRANCH,
-                );
+            $remoteVersion = self::parseVersionPhpDefine($versionBody);
+            if ($remoteVersion === null) {
+                continue;
             }
+            $fallback = array();
+            $fallback['version'] = $remoteVersion;
+            $fallback['title'] = '版本更新';
+            $fallback['release_date'] = '';
+            $fallback['changes'] = array('检测到新版本,建议立即更新');
+            $fallback['repo'] = self::DEFAULT_REPO;
+            $fallback['branch'] = self::DEFAULT_BRANCH;
+            $fallback['_detect_mirror'] = isset($mirror['id']) ? (string) $mirror['id'] : '';
+            return $fallback;
         }
 
         return null;
+    }
+
+    /**
+     * 从 version.php 源码中解析 VS_VERSION
+     *
+     * @param string $source
+     * @return string|null
+     */
+    private static function parseVersionPhpDefine($source)
+    {
+        // 单引号正则：避免双引号 + \x22 被 IDE 语言服务误判为字符串提前结束
+        if (!preg_match('/define\s*\(\s*[\'"]VS_VERSION[\'"]\s*,\s*[\'"]([^\'"]+)[\'"]\s*\)/', $source, $matches)) {
+            return null;
+        }
+        $ver = trim((string) $matches[1]);
+        return $ver !== '' ? $ver : null;
+    }
+
+    /**
+     * 是否允许把自定义 owner/repo 用于 Gitee 发行包直链（排除镜像仓与外链形态）
+     *
+     * @param mixed $repo
+     * @return bool
+     */
+    private static function isAllowedCustomGiteeRepo($repo)
+    {
+        if (!is_string($repo) || $repo === '' || strpos($repo, '/') === false) {
+            return false;
+        }
+        if (stripos($repo, 'github.com') !== false) {
+            return false;
+        }
+        if (stripos($repo, 'gitcode') !== false) {
+            return false;
+        }
+        if (stripos($repo, 'whr884657') !== false) {
+            return false;
+        }
+        if ($repo === self::GITCODE_REPO || $repo === self::GITHUB_REPO) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -874,12 +931,9 @@ class Updater
 
         $tag = 'v' . $ver;
         $fileName = 'apinexus' . $ver . '.zip';
+        // 下载链与检测成功源解耦：Gitee 发行包始终用默认主仓，不随清单里的镜像 repo 改道
         $giteeRepo = self::DEFAULT_REPO;
-        if (is_string($repo) && $repo !== '' && strpos($repo, '/') !== false
-            && stripos($repo, 'github.com') === false
-            && stripos($repo, 'gitcode') === false
-            && stripos($repo, 'whr884657') === false
-        ) {
+        if (self::isAllowedCustomGiteeRepo($repo)) {
             $giteeRepo = $repo;
         }
 
@@ -982,12 +1036,41 @@ class Updater
     }
 
     /**
+     * 解析可用的 CA 根证书包路径（php.ini / 常见路径）
+     *
+     * @return string|null
+     */
+    public static function resolveCaBundlePath()
+    {
+        $candidates = array(
+            (string) ini_get('curl.cainfo'),
+            (string) ini_get('openssl.cafile'),
+        );
+        if (defined('VS_ROOT')) {
+            $candidates[] = VS_ROOT . '/data/cacert.pem';
+            $candidates[] = VS_ROOT . '/config/cacert.pem';
+        }
+        $candidates[] = 'C:/php/extras/ssl/cacert.pem';
+        $candidates[] = '/etc/ssl/certs/ca-certificates.crt';
+        $candidates[] = '/etc/pki/tls/certs/ca-bundle.crt';
+
+        foreach ($candidates as $path) {
+            $path = trim(str_replace('\\', '/', $path));
+            if ($path !== '' && is_file($path) && is_readable($path)) {
+                return $path;
+            }
+        }
+        return null;
+    }
+
+    /**
      * 为 cURL 配置 SSL
      *
-     * 云端发行源使用 HTTPS 直连下载，不绑定本地 cacert.pem：
-     * - 站点 HTTPS 证书与「出站访问云端更新源」无关
-     * - 本地 CA 根证书包会随时间过时，且受 open_basedir 限制
-     * - 仅对白名单域名放宽链校验，下载后仍校验 ZIP 文件头
+     * 策略：
+     * - 若环境有可用 CA 包：始终校验证书（CURLOPT_CAINFO）
+     * - 若无 CA（常见于 Windows 精简 PHP / 部分面板 open_basedir）：
+     *   仅对 TRUSTED_UPDATE_HOSTS 白名单放宽链校验，下载后仍校验 ZIP 文件头
+     * - 非白名单域名：始终要求校验（无 CA 则请求会失败，避免误放宽）
      *
      * @param resource|\CurlHandle $ch
      * @param string               $url
@@ -995,7 +1078,21 @@ class Updater
      */
     public static function configureCurlSsl($ch, $url = '')
     {
-        // 始终校验证书；不再对「信任域名」关闭 TLS（防供应链 MITM）
+        $ca = self::resolveCaBundlePath();
+        if ($ca !== null) {
+            curl_setopt($ch, CURLOPT_CAINFO, $ca);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+            return;
+        }
+
+        if ($url !== '' && self::isTrustedUpdateUrl($url)) {
+            // 无 CA 包时的白名单兜底（与历史设计一致）；ZIP 魔数仍在 download 后校验
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            return;
+        }
+
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
     }
@@ -1037,6 +1134,13 @@ class Updater
             'verify_peer'      => true,
             'verify_peer_name' => true,
         );
+        $ca = self::resolveCaBundlePath();
+        if ($ca !== null) {
+            $sslOptions['cafile'] = $ca;
+        } elseif (self::isTrustedUpdateUrl($url)) {
+            $sslOptions['verify_peer'] = false;
+            $sslOptions['verify_peer_name'] = false;
+        }
 
         $context = stream_context_create(array(
             'http' => array(

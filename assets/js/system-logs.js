@@ -169,10 +169,12 @@
             + idBadge(row)
             + '<strong class="vs-log-card__name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</strong>'
             + '</div>'
+            + '<div class="vs-log-card__badges">'
+            + methodBadge(row)
             + statusBadge(row)
             + '</div>'
+            + '</div>'
             + '<div class="vs-log-card__meta">'
-            + methodBadge(row)
             + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
             + '<span>' + escapeHtml(row.iploc !== undefined && row.iploc !== null && row.iploc !== '' ? row.iploc : '—') + '</span>'
             + (row.egress

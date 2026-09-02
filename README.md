@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.35-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.36-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -156,11 +156,13 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.35（2026-09-02）
+### v13.26.36（2026-09-03）
 
-- **数据库维护：**「执行数据库结构更新」同窗可选 **全量对齐**（对照 `database.sql` 只补不删、不改业务数据）与 **版本升级**（跑 pending 增量，可能含配置/数据）；白话说明、彩色强调、二次确认
-- **主题二：** 登录/注册/忘记密码标题静止，去掉字距脉冲动画
-- **出口短码：** 三位升**五位**（`0-9a-z`）；旧码重置；迁移 `13.26.35.sql`
+- **更新记录：** 升级页「更新记录」优先读本机 `update-log.json`；仅本地缺失/无效时再串行回退云端
+- **在线更新：** 检测清单与下载资源包解耦——某一云端认出有更新后，下载仍从主仓发行包起试再兜底
+- **日志卡片：** 管理端收起态右上角并排请求方式与成败状态
+- **友链申请：** 修复主题二提交后裸 JSON；去掉重复申请按钮
+- **全量对齐：** 片段禁分号；失败固定提示（E293）
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

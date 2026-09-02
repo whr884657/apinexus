@@ -274,7 +274,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `Database.php` | PDO 连接、表名前缀 |
 | `DatabaseInstaller.php` | 安装向导执行 `database.sql` |
 | `DatabaseMigrator.php` | 版本迁移 SQL（含清理旧系统残留） |
-| `SchemaFullAligner.php` | 对照 `install/database.sql` 全量结构对齐（只补不删，v13.26.35） |
+| `SchemaFullAligner.php` | 对照 `install/database.sql` 全量结构对齐（只补不删；片段禁 `;`、失败固定句，v13.26.35 / E293） |
 | `Config.php` | 系统配置读写（`vs_config` 表） |
 | `SiteContext.php` | 站点名称（前台）、系统名称（后台壳层）、描述、Logo 等展示信息 |
 | `RegisterPolicy.php` | 注册开放/邮箱验证/后缀策略（`CONFIG_KEY=register_policy`） |
@@ -352,8 +352,8 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL；前台/用户中心壳与页 CSS·JS 清单 |
 | `Sitemap.php` | 前台 SEO 站点地图（静态页 + 公开接口详情 + 已发布文章）；入口 `sitemap.php` → `Sitemap::emit()` / `/sitemap.xml` |
 | `SystemInfo.php` | 关于页环境信息 |
-| `Updater.php` | 云端在线更新检测与安装；安全解压；覆盖后按废弃清单清理文件；数据库维护全量对齐/版本升级（v13.26.35） |
-| `UpdateLog.php` | 版本更新记录读取 |
+| `Updater.php` | 云端在线更新检测与安装；检测清单与下载 ZIP 解耦（v13.26.36）；安全解压；覆盖后按废弃清单清理文件；数据库维护全量对齐/版本升级（v13.26.35） |
+| `UpdateLog.php` | 版本更新记录读取（本地 `update-log.json` 优先，缺失再三源兜底，v13.26.36） |
 | `oauth/*` | QQ / Gitee 第三方登录 |
 
 ---
@@ -1304,7 +1304,7 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 ### 4.29 UpdateLog.php
 
-**作用：** 读取版本历史（优先云端 `update-log.json`：Gitee → GitCode → GitHub，失败读本地）。
+**作用：** 读取版本历史（**本地** `update-log.json` 优先；缺失/无效再 Gitee → GitCode → GitHub；v13.26.36）。
 
 | 方法 | 说明 |
 |------|------|

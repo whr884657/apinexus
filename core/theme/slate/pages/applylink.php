@@ -83,4 +83,3 @@ $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
 window.VS_LINK_META_URL = <?php echo json_encode($metaUrl, JSON_UNESCAPED_UNICODE); ?>;
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE); ?>;
 </script>
-<script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/js/pages/applylink.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

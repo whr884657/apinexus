@@ -1187,6 +1187,37 @@ class ThemeManager
     }
 
     /**
+     * 非 default 主题 · 前台页脚本（挂在壳 common.js 之后，避免 mid-body 抢先执行）
+     *
+     * @param string $pageKey
+     * @return array<int,string>
+     */
+    public static function frontendPageJsHrefs($pageKey)
+    {
+        $themeId = self::activeId();
+        if ($themeId === 'default') {
+            return array();
+        }
+        $pageKey = preg_replace('/[^a-z0-9_-]/i', '', (string) $pageKey);
+        $map = array(
+            'applylink' => array('assets/js/pages/applylink.js'),
+            'links'     => array('assets/js/pages/links-page.js'),
+        );
+        if (!isset($map[$pageKey])) {
+            return array();
+        }
+        $out = array();
+        foreach ($map[$pageKey] as $rel) {
+            $path = self::themeDir($themeId) . '/' . $rel;
+            if (!is_file($path)) {
+                continue;
+            }
+            $out[] = self::assetUrl($themeId, $rel) . '?v=' . VS_VERSION;
+        }
+        return $out;
+    }
+
+    /**
      * 渲染前台主题页面（header + pages/{pageKey} + footer）
      *
      * @param string $pageKey   页面键（仅允许字母数字下划线与连字符）

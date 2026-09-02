@@ -103,11 +103,20 @@
             if (window.VS && typeof VS.postForm === 'function') {
                 chain = VS.postForm(form, action);
             } else {
+                var body = new FormData(form);
+                var csrfFb = (typeof window.VS_CSRF_TOKEN === 'string') ? window.VS_CSRF_TOKEN : '';
+                if (csrfFb && !body.get('csrf_token')) {
+                    body.append('csrf_token', csrfFb);
+                }
+                var headersFb = { 'Accept': 'application/json' };
+                if (csrfFb) {
+                    headersFb['X-CSRF-Token'] = csrfFb;
+                }
                 chain = fetch(action, {
                     method: 'POST',
-                    body: new FormData(form),
+                    body: body,
                     credentials: 'same-origin',
-                    headers: { 'Accept': 'application/json' }
+                    headers: headersFb
                 }).then(function (res) {
                     return res.text().then(function (text) {
                         try { return text ? JSON.parse(text) : null; } catch (err) { return null; }

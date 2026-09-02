@@ -16,10 +16,6 @@ $applyUrl = $vsBase . '/applylink';
             <h1 class="st-page-title">友情链接</h1>
             <p class="st-page-desc">与优质站点互相推荐，共同成长</p>
         </div>
-        <a class="st-links-apply-btn" href="<?php echo vs_e($applyUrl); ?>">
-            <span aria-hidden="true">+</span>
-            申请友链
-        </a>
     </div>
 
     <?php if ($linksTruncated): ?>
@@ -30,7 +26,6 @@ $applyUrl = $vsBase . '/applylink';
     <div class="st-card st-links-empty">
         <div class="st-card__title">暂无友情链接</div>
         <div class="st-card__desc">欢迎交换友链。请先在贵站添加本站信息，再提交申请。</div>
-        <a class="st-links-apply-btn" href="<?php echo vs_e($applyUrl); ?>">申请友链</a>
     </div>
     <?php else: ?>
     <div class="st-links-grid">

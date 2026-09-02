@@ -23,7 +23,6 @@ $applyUrl = $vsBase . '/applylink';
         <h1 class="font-display font-bold tracking-tight th3-page__title">友情链接</h1>
         <p class="th3-page__lead text-fg-2">与优质站点互相推荐，共同成长</p>
       </div>
-      <a class="btn-primary justify-center" href="<?php echo vs_e($applyUrl); ?>">申请友链 <i data-lucide="arrow-up-right" style="width:14px;height:14px;"></i></a>
     </div>
 
     <?php if ($linksTruncated): ?>
@@ -33,8 +32,7 @@ $applyUrl = $vsBase . '/applylink';
     <?php if (count($friendLinks) === 0): ?>
     <div class="th3-panel card">
       <h2 class="font-display font-semibold text-lg m-0 mb-2">暂无友情链接</h2>
-      <p class="text-fg-2 m-0 mb-4">欢迎交换友链。请先在贵站添加本站信息，再提交申请。</p>
-      <a class="btn-ghost" href="<?php echo vs_e($applyUrl); ?>">申请友链</a>
+      <p class="text-fg-2 m-0 mb-0">欢迎交换友链。请先在贵站添加本站信息，再通过下方入口提交申请。</p>
     </div>
     <?php else: ?>
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

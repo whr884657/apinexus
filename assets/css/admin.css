@@ -6710,7 +6710,22 @@ select.vs-input.vs-select {
 
 .vs-log-card__top .vs-log-status {
     flex-shrink: 0;
-    max-width: 46%;
+    max-width: none;
+}
+
+.vs-log-card__badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+    max-width: 52%;
+}
+
+.vs-log-card__badges .vs-log-method,
+.vs-log-card__badges .vs-log-status {
+    flex-shrink: 0;
 }
 
 .vs-log-card__meta {

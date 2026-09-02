@@ -5,6 +5,8 @@
  *
  * 规则：缺表 CREATE；缺列 ADD；缺索引 ADD；NOT NULL 无默认值且模板有可移植字面量 DEFAULT 时仅 ALTER COLUMN SET DEFAULT。
  * 禁止 DROP / 禁止整列 MODIFY / 禁止执行非 CREATE TABLE / 不处理业务数据与配置种子。
+ * 列定义 / 索引片段若含分号「;」则中止（防夹带第二条语句；表末尾整句分号不在此片段内）。
+ * 异常对外固定句，细节仅写服务器日志。
  */
 
 class SchemaFullAligner
@@ -84,23 +86,34 @@ class SchemaFullAligner
                 $prevCol = null;
                 foreach ($parsed['columns'] as $col) {
                     $name = $col['name'];
+                    $definition = isset($col['definition']) ? (string) $col['definition'] : '';
+                    if (self::fragmentHasStatementSeparator($definition)) {
+                        return self::unsafeTemplateAbort(
+                            $createdTables,
+                            $addedColumns,
+                            $addedIndexes,
+                            $fixedDefaults,
+                            $details,
+                            '表 ' . $short . ' 字段 ' . $name . ' 定义含分号，已中止'
+                        );
+                    }
                     if (!isset($liveCols[$name])) {
                         $after = ($prevCol !== null && isset($liveCols[$prevCol]))
                             ? (' AFTER `' . str_replace('`', '``', $prevCol) . '`')
                             : '';
                         $ddl = 'ALTER TABLE `' . str_replace('`', '``', $fullTable) . '`'
-                            . ' ADD COLUMN ' . $col['definition'] . $after;
+                            . ' ADD COLUMN ' . $definition . $after;
                         DatabaseMigrator::execStatement($pdo, $ddl);
                         $addedColumns++;
                         $details[] = '表 ' . $short . ' 新增字段 ' . $name;
                         $liveCols[$name] = array(
                             'Field' => $name,
-                            'Null' => (stripos($col['definition'], 'NOT NULL') !== false) ? 'NO' : 'YES',
+                            'Null' => (stripos($definition, 'NOT NULL') !== false) ? 'NO' : 'YES',
                             'Default' => null,
                             'Extra' => '',
                         );
-                    } elseif (self::needsDefaultFix($liveCols[$name], $col['definition'])) {
-                        $defaultExpr = self::extractDefaultExpression($col['definition']);
+                    } elseif (self::needsDefaultFix($liveCols[$name], $definition)) {
+                        $defaultExpr = self::extractDefaultExpression($definition);
                         if ($defaultExpr === null) {
                             $details[] = '表 ' . $short . ' 字段 ' . $name . ' 需补默认值但未能安全解析，已跳过';
                         } else {
@@ -119,19 +132,30 @@ class SchemaFullAligner
                 $liveIndexes = self::listLiveIndexNames($pdo, $fullTable);
                 foreach ($parsed['indexes'] as $idx) {
                     $keyName = $idx['name'];
+                    $columnsSql = isset($idx['columns_sql']) ? (string) $idx['columns_sql'] : '';
+                    if (self::fragmentHasStatementSeparator($columnsSql)) {
+                        return self::unsafeTemplateAbort(
+                            $createdTables,
+                            $addedColumns,
+                            $addedIndexes,
+                            $fixedDefaults,
+                            $details,
+                            '表 ' . $short . ' 索引 ' . $keyName . ' 片段含分号，已中止'
+                        );
+                    }
                     if ($keyName === 'PRIMARY') {
                         if (isset($liveIndexes['PRIMARY'])) {
                             continue;
                         }
                         $ddl = 'ALTER TABLE `' . str_replace('`', '``', $fullTable) . '`'
-                            . ' ADD PRIMARY KEY ' . $idx['columns_sql'];
+                            . ' ADD PRIMARY KEY ' . $columnsSql;
                     } else {
                         if (isset($liveIndexes[$keyName])) {
                             continue;
                         }
                         $ddl = 'ALTER TABLE `' . str_replace('`', '``', $fullTable) . '`'
                             . ' ADD ' . $idx['kind'] . ' `' . str_replace('`', '``', $keyName) . '` '
-                            . $idx['columns_sql'];
+                            . $columnsSql;
                     }
                     DatabaseMigrator::execStatement($pdo, $ddl);
                     $addedIndexes++;
@@ -417,21 +441,60 @@ class SchemaFullAligner
     }
 
     /**
-     * 对外错误文案脱敏（避免把完整 SQL / 路径甩给浏览器）
+     * 列定义 / 索引列清单片段是否含语句分隔符（分号）
+     * 说明：检查的是括号内切出的片段，不是 CREATE TABLE 整句末尾的分号。
+     *
+     * @param string $fragment
+     * @return bool
+     */
+    private static function fragmentHasStatementSeparator($fragment)
+    {
+        return strpos((string) $fragment, ';') !== false;
+    }
+
+    /**
+     * 模板片段不安全时中止（对外固定句；细节进 details + 日志）
+     *
+     * @param int    $tables
+     * @param int    $columns
+     * @param int    $indexes
+     * @param int    $defaults
+     * @param array  $details
+     * @param string $detailLine
+     * @return array
+     */
+    private static function unsafeTemplateAbort($tables, $columns, $indexes, $defaults, array $details, $detailLine)
+    {
+        $details[] = $detailLine;
+        @error_log('[SchemaFullAligner] ' . $detailLine);
+        return array(
+            'ok' => false,
+            'msg' => '全量对齐失败，请查看服务器日志',
+            'tables' => (int) $tables,
+            'columns' => (int) $columns,
+            'indexes' => (int) $indexes,
+            'defaults' => (int) $defaults,
+            'details' => $details,
+        );
+    }
+
+    /**
+     * 对外固定失败句；原始异常只写服务器日志（避免 SQL / 表名进浏览器）
      *
      * @param Throwable $e
      * @return string
      */
     private static function safeErrorMessage(Throwable $e)
     {
-        $msg = trim($e->getMessage());
-        if ($msg === '') {
-            return '全量对齐失败，请查看服务器日志';
+        $raw = trim($e->getMessage());
+        if ($raw !== '') {
+            if (strlen($raw) > 500) {
+                $raw = substr($raw, 0, 500) . '…';
+            }
+            @error_log('[SchemaFullAligner] ' . $raw);
+        } else {
+            @error_log('[SchemaFullAligner] ' . get_class($e) . ' (empty message)');
         }
-        // 保留简短可读信息；过长或含多句 SQL 时截断
-        if (strlen($msg) > 240) {
-            $msg = substr($msg, 0, 240) . '…';
-        }
-        return '全量对齐失败：' . $msg;
+        return '全量对齐失败，请查看服务器日志';
     }
 }

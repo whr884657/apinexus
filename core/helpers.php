@@ -1904,6 +1904,10 @@ function vs_frontend_page($pageKey, $pageTitle, array $pageData = array())
         if ($jsHref !== '') {
             $extraJs[] = $jsHref;
         }
+        // 页脚壳 JS（含 common.js / VS.postForm）之后再挂页面脚本，避免页中 mid-body 提前执行（友链申请裸 JSON，E292）
+        foreach (ThemeManager::frontendPageJsHrefs($pageKey) as $pageJsHref) {
+            $extraJs[] = $pageJsHref;
+        }
     }
 
     $GLOBALS['vs_front_shell_loaded'] = true;
