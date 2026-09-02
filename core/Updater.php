@@ -1036,41 +1036,12 @@ class Updater
     }
 
     /**
-     * 解析可用的 CA 根证书包路径（php.ini / 常见路径）
-     *
-     * @return string|null
-     */
-    public static function resolveCaBundlePath()
-    {
-        $candidates = array(
-            (string) ini_get('curl.cainfo'),
-            (string) ini_get('openssl.cafile'),
-        );
-        if (defined('VS_ROOT')) {
-            $candidates[] = VS_ROOT . '/data/cacert.pem';
-            $candidates[] = VS_ROOT . '/config/cacert.pem';
-        }
-        $candidates[] = 'C:/php/extras/ssl/cacert.pem';
-        $candidates[] = '/etc/ssl/certs/ca-certificates.crt';
-        $candidates[] = '/etc/pki/tls/certs/ca-bundle.crt';
-
-        foreach ($candidates as $path) {
-            $path = trim(str_replace('\\', '/', $path));
-            if ($path !== '' && is_file($path) && is_readable($path)) {
-                return $path;
-            }
-        }
-        return null;
-    }
-
-    /**
      * 为 cURL 配置 SSL
      *
-     * 策略：
-     * - 若环境有可用 CA 包：始终校验证书（CURLOPT_CAINFO）
-     * - 若无 CA（常见于 Windows 精简 PHP / 部分面板 open_basedir）：
-     *   仅对 TRUSTED_UPDATE_HOSTS 白名单放宽链校验，下载后仍校验 ZIP 文件头
-     * - 非白名单域名：始终要求校验（无 CA 则请求会失败，避免误放宽）
+     * 云端发行源使用 HTTPS 直连下载，不探测、不绑定本地 / 系统 CA 路径（v13.26.37 起恢复 13.26.35 行为）：
+     * - 站点 HTTPS 证书与「出站访问云端更新源」无关
+     * - 探测 /etc/ssl、/etc/pki 等会在面板 open_basedir 下触发 Warning（E294）
+     * - 交由 PHP/cURL 默认 CA 处理；下载后仍校验 ZIP 文件头
      *
      * @param resource|\CurlHandle $ch
      * @param string               $url
@@ -1078,21 +1049,7 @@ class Updater
      */
     public static function configureCurlSsl($ch, $url = '')
     {
-        $ca = self::resolveCaBundlePath();
-        if ($ca !== null) {
-            curl_setopt($ch, CURLOPT_CAINFO, $ca);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-            return;
-        }
-
-        if ($url !== '' && self::isTrustedUpdateUrl($url)) {
-            // 无 CA 包时的白名单兜底（与历史设计一致）；ZIP 魔数仍在 download 后校验
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-            return;
-        }
-
+        // 始终校验证书；不扫描系统 CA 路径，避免 open_basedir 报错
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
     }
@@ -1134,13 +1091,6 @@ class Updater
             'verify_peer'      => true,
             'verify_peer_name' => true,
         );
-        $ca = self::resolveCaBundlePath();
-        if ($ca !== null) {
-            $sslOptions['cafile'] = $ca;
-        } elseif (self::isTrustedUpdateUrl($url)) {
-            $sslOptions['verify_peer'] = false;
-            $sslOptions['verify_peer_name'] = false;
-        }
 
         $context = stream_context_create(array(
             'http' => array(

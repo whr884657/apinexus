@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.36-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.37-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -164,13 +164,10 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.36（2026-09-03）
+### v13.26.37（2026-09-03）
 
-- **更新记录：** 升级页「更新记录」优先读本机 `update-log.json`；仅本地缺失/无效时再串行回退云端
-- **在线更新：** 检测清单与下载资源包解耦——某一云端认出有更新后，下载仍从主仓发行包起试再兜底
-- **日志卡片：** 管理端收起态右上角并排请求方式与成败状态
-- **友链申请：** 修复主题二提交后裸 JSON；去掉重复申请按钮
-- **全量对齐：** 片段禁分号；失败固定提示（E293）
+- **热修：** 去掉升级器对系统 CA 路径的探测，避免 `open_basedir` Warning（E294）；SSL 恢复 13.26.35 行为
+- **保留：** 更新记录本地优先、检测与下载解耦
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

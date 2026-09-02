@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.35**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.37**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -352,7 +352,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL；前台/用户中心壳与页 CSS·JS 清单 |
 | `Sitemap.php` | 前台 SEO 站点地图（静态页 + 公开接口详情 + 已发布文章）；入口 `sitemap.php` → `Sitemap::emit()` / `/sitemap.xml` |
 | `SystemInfo.php` | 关于页环境信息 |
-| `Updater.php` | 云端在线更新检测与安装；检测清单与下载 ZIP 解耦（v13.26.36）；安全解压；覆盖后按废弃清单清理文件；数据库维护全量对齐/版本升级（v13.26.35） |
+| `Updater.php` | 云端在线更新检测与安装；检测清单与下载 ZIP 解耦（v13.26.36）；SSL 不探测系统 CA（v13.26.37 / E294）；安全解压；覆盖后按废弃清单清理文件；数据库维护全量对齐/版本升级（v13.26.35） |
 | `UpdateLog.php` | 版本更新记录读取（本地 `update-log.json` 优先，缺失再三源兜底，v13.26.36） |
 | `oauth/*` | QQ / Gitee 第三方登录 |
 
@@ -1282,15 +1282,18 @@ $rows = SystemInfo::collect(); // [['label'=>'PHP 版本','value'=>'8.2'], ...]
 
 **作用：** 检测新版本、下载 `apinexus{版本}.zip`、安全解压覆盖（保护 `config/`、`data/`），并按清单清理废弃文件。
 
-**更新源顺序（三重兜底）：** Gitee → GitCode → GitHub（拉取兜底顺序，仓库无主次）。`update.json` / `version.php` / 更新包均按此顺序尝试；可信域名单含 gitee / gitcode / github 相关主机。
+**更新源顺序（三重兜底）：** Gitee → GitCode → GitHub。检测清单与下载 ZIP **解耦**（v13.26.36）：检测可在任一源成功；下载仍从 Gitee 发行包起试。更新记录由 `UpdateLog` 本地优先。
+
+**SSL（v13.26.37 / E294）：** `configureCurlSsl` 只开证书校验，**禁止** `is_file` 探测 `/etc/ssl`、`/etc/pki` 等系统 CA（面板 `open_basedir` 会 Warning）；不绑定站点内 cacert.pem。
 
 | 方法 | 说明 |
 |------|------|
 | `updateMirrors()` | 三源镜像配置（清单 / version / update-log URL） |
 | `localVersion()` | 本地版本 |
 | `checkForUpdate()` | 检测是否有新版本 |
-| `fetchRemoteManifest()` | 按镜像顺序拉取 `update.json`（失败再试 `version.php`） |
+| `fetchRemoteManifest()` | 按镜像顺序拉取 `update.json`（失败再试 `version.php`）；不锁定下载源 |
 | `buildUpdatePackageUrls()` | 构建下载链（Gitee 发行包 → GitCode 归档 → GitHub 发行/归档） |
+| `configureCurlSsl()` | cURL SSL；不探测系统 CA 路径 |
 | `isSafeZipEntryName()` | Zip Slip：拒绝 `..` / 绝对路径等危险条目（v10.8.0） |
 | `copyFileSafe()` | 安全写入：chmod / 删旧 / copy / file_put_contents |
 | `isOptionalUpdatePath()` | 发行说明等非关键路径，写入失败可跳过 |

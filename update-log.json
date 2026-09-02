@@ -1,5 +1,15 @@
 {
     "versions": {
+        "13.26.37": {
+            "title": "ApiNexus 13.26.37",
+            "date": "2026-09-03",
+            "db_changes": false,
+            "changes": [
+                "修复升级检测在 open_basedir 下探测系统 CA 路径触发 Warning（恢复 13.26.35 SSL 配置，去掉 resolveCaBundlePath）",
+                "保留 13.26.36：更新记录本地优先、检测清单与下载 ZIP 解耦",
+                "无数据库结构变更"
+            ]
+        },
         "13.26.36": {
             "title": "ApiNexus 13.26.36",
             "date": "2026-09-03",
