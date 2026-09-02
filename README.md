@@ -29,6 +29,14 @@
 - 积分充值与订单；前台双主题；后台控制台与数据大屏
 - 行为验证、AI 文档辅助、云端在线更新
 
+**交流群（ApiNexus）：** 可扫码进群，或 [点击加入 QQ 群【ApiNexus】](https://qun.qq.com/universal-share/share?ac=1&authKey=yhMY3qiE6Ufjv88K9x%2FF8P5v31Z1opjuObsuYaBnlcOvBxAHjxYD7nUbgnoZiuo3&busi_data=eyJncm91cENvZGUiOiIxMDQ1MDQzOTEyIiwidG9rZW4iOiJpYUpvZ1I0eFErUnUzV1lWSjhRa3lVdDV3azdWRDZIRlNmb2tSemNMaWZGN2pNb0J0MkpQRWVkZXFPclVnTEhPIiwidWluIjoiMjEwMzUzMzI0MiJ9&data=7K-u63-GNFAvGtgmEUXX5j9cR9CkAwohTEEJ9d8h_mLV7LKKXbuU5b7CaK_8WuaZLVWvO63Ptl4-MGbqaFvo2A&svctype=4&tempid=h5_group_info)。
+
+<p align="center">
+  <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=yhMY3qiE6Ufjv88K9x%2FF8P5v31Z1opjuObsuYaBnlcOvBxAHjxYD7nUbgnoZiuo3&busi_data=eyJncm91cENvZGUiOiIxMDQ1MDQzOTEyIiwidG9rZW4iOiJpYUpvZ1I0eFErUnUzV1lWSjhRa3lVdDV3azdWRDZIRlNmb2tSemNMaWZGN2pNb0J0MkpQRWVkZXFPclVnTEhPIiwidWluIjoiMjEwMzUzMzI0MiJ9&data=7K-u63-GNFAvGtgmEUXX5j9cR9CkAwohTEEJ9d8h_mLV7LKKXbuU5b7CaK_8WuaZLVWvO63Ptl4-MGbqaFvo2A&svctype=4&tempid=h5_group_info" title="点击加入 QQ 群【ApiNexus】">
+    <img src="https://img.cdn1.vip/i/6a983f66cc841_1788362598.png" alt="ApiNexus QQ 群二维码" width="220">
+  </a>
+</p>
+
 更多界面与交互约定见仓库内开发规范文档。
 
 ---
