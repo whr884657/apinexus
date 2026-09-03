@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.37-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.38-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -164,10 +164,10 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.37（2026-09-03）
+### v13.26.38（2026-09-03）
 
-- **热修：** 去掉升级器对系统 CA 路径的探测，避免 `open_basedir` Warning（E294）；SSL 恢复 13.26.35 行为
-- **保留：** 更新记录本地优先、检测与下载解耦
+- **热修：** 修复 VS64 短串无 padding 误判，文章/公告/免责声明不再以 `VS64B:` 乱码入库（E295）
+- **传输：** 文章/公告正文、免责声明、接口描述改为明文；接口文档/代码示例仍 VS64 防 WAF
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

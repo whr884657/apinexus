@@ -230,7 +230,9 @@ class ContentManager
             'kind_label'    => self::kindLabel($kind),
             'title'         => isset($row['title']) ? trim((string) $row['title']) : '',
             'summary'       => isset($row['summary']) ? trim((string) $row['summary']) : '',
-            'body'          => isset($row['body']) ? (string) $row['body'] : '',
+            'body'          => isset($row['body'])
+                ? vs_ensure_plaintext_field($row['body'])
+                : '',
             'cover'         => isset($row['cover']) ? trim((string) $row['cover']) : '',
             'coverlayout'   => self::normalizeCoverLayout(isset($row['coverlayout']) ? $row['coverlayout'] : self::COVER_LEFT),
             'coverlayout_label' => self::coverLayoutLabel(isset($row['coverlayout']) ? $row['coverlayout'] : self::COVER_LEFT),

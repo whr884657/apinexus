@@ -179,8 +179,8 @@ function vs_api_docs_ctx(array $row)
     $id = (int) (isset($row['id']) ? $row['id'] : 0);
     $name = trim((string) (isset($row['name']) ? $row['name'] : ''));
     $desc = trim((string) (isset($row['description']) ? $row['description'] : ''));
-    if ($desc !== '' && function_exists('vs_decode_transport_field')) {
-        $desc = trim(vs_decode_transport_field($desc));
+    if ($desc !== '' && function_exists('vs_ensure_plaintext_field')) {
+        $desc = trim(vs_ensure_plaintext_field($desc));
     }
     $cat = trim((string) (isset($row['category']) ? $row['category'] : ''));
     if ($cat === '') {

@@ -40,6 +40,9 @@ class FrontendAbout
         }
         $title = trim((string) (isset($row['title']) ? $row['title'] : ''));
         $body = isset($row['body']) ? (string) $row['body'] : '';
+        if (function_exists('vs_ensure_plaintext_field')) {
+            $body = vs_ensure_plaintext_field($body);
+        }
         if ($title === '' && $body === '') {
             return null;
         }

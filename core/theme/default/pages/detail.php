@@ -466,7 +466,9 @@ if (!$notFound) {
     $disclaimerEnabled = class_exists('Config') && Config::get('api_disclaimer_on', '0') === '1';
     $disclaimerThemeOn = class_exists('ThemeManager') && ThemeManager::themeSettingBool('show_api_disclaimer', true);
     $disclaimerBody = ($disclaimerEnabled && $disclaimerThemeOn)
-        ? trim((string) Config::get('api_disclaimer', ''))
+        ? trim(function_exists('vs_ensure_plaintext_field')
+            ? vs_ensure_plaintext_field(Config::get('api_disclaimer', ''))
+            : (string) Config::get('api_disclaimer', ''))
         : '';
     if ($disclaimerBody !== ''):
     ?>

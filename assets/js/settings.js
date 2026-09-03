@@ -711,9 +711,6 @@
             siteExtra.addEventListener('submit', function (e) {
                 e.preventDefault();
                 var fd = new FormData(siteExtra);
-                if (window.VS && window.VS.encodeTransportField && fd.has('api_disclaimer')) {
-                    fd.set('api_disclaimer', window.VS.encodeTransportField(String(fd.get('api_disclaimer') || '')));
-                }
                 var submitBtn = siteExtra.querySelector('[type="submit"]');
                 if (submitBtn) submitBtn.disabled = true;
                 window.VS.postForm(fd)

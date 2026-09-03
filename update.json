@@ -1,11 +1,12 @@
 {
-    "version": "13.26.37",
-    "title": "ApiNexus 13.26.37",
+    "version": "13.26.38",
+    "title": "ApiNexus 13.26.38",
     "release_date": "2026-09-03",
     "db_changes": false,
     "changes": [
-                "修复升级检测在 open_basedir 下探测系统 CA 路径触发 Warning（恢复 13.26.35 SSL 配置，去掉 resolveCaBundlePath）",
-                "保留 13.26.36：更新记录本地优先、检测清单与下载 ZIP 解耦",
-                "无数据库结构变更"
+        "修复 VS64 短 Base64 无 padding 误判导致文章/公告/免责声明正文以 VS64B 包装串入库乱码（E295）",
+        "文章 body、公告 body、接口免责声明 api_disclaimer、接口 description 改为明文 POST 与明文入库，不再 VS64 编码",
+        "doc/aidoc/params/response/jsonrewrite 仍保留 VS64B 传输防 WAF",
+        "无数据库结构变更"
     ]
 }

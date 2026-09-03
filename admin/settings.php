@@ -449,7 +449,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'home_footer_links'  => isset($_POST['home_footer_links']) ? '1' : '0',
                 'api_disclaimer_on'  => isset($_POST['api_disclaimer_on']) ? '1' : '0',
                 'api_disclaimer'     => isset($_POST['api_disclaimer'])
-                    ? vs_decode_transport_field((string) $_POST['api_disclaimer'])
+                    ? vs_ensure_plaintext_field((string) $_POST['api_disclaimer'])
                     : '',
             ));
             SiteContext::clearCache();
@@ -1243,7 +1243,12 @@ vs_admin_accordion_start(
         <div class="vs-form-row">
             <label class="vs-label" for="apiDisclaimer">免责声明正文（支持 Markdown）</label>
             <textarea class="vs-input vs-textarea" name="api_disclaimer" id="apiDisclaimer" rows="5" data-vs-md="off"
-                      placeholder="本站接口由第三方或平台用户提供，调用后果由调用方自行承担……"><?php echo vs_e(Config::get('api_disclaimer', '')); ?></textarea>
+                      placeholder="本站接口由第三方或平台用户提供，调用后果由调用方自行承担……"><?php
+                $disclaimerRaw = Config::get('api_disclaimer', '');
+                echo vs_e(function_exists('vs_ensure_plaintext_field')
+                    ? vs_ensure_plaintext_field($disclaimerRaw)
+                    : (string) $disclaimerRaw);
+            ?></textarea>
         </div>
 
         <div class="vs-form-actions">

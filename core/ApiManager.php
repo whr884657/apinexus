@@ -1479,9 +1479,9 @@ class ApiManager
         }
 
         $description = isset($row['description']) ? (string) $row['description'] : '';
-        // 兼容历史误把描述 VS64 入库：读取时还原明文
-        if ($description !== '' && function_exists('vs_decode_transport_field')) {
-            $description = vs_decode_transport_field($description);
+        // 接口描述保持明文；历史误带 VS64 前缀则读取时还原
+        if ($description !== '' && function_exists('vs_ensure_plaintext_field')) {
+            $description = vs_ensure_plaintext_field($description);
         }
 
         return array(
@@ -1743,8 +1743,8 @@ class ApiManager
 
         $description = trim((string) (isset($data['description']) ? $data['description'] : ''));
         // 接口描述保持明文；若客户端误带 VS64 前缀则入库前还原
-        if ($description !== '' && function_exists('vs_decode_transport_field')) {
-            $description = trim(vs_decode_transport_field($description));
+        if ($description !== '' && function_exists('vs_ensure_plaintext_field')) {
+            $description = trim(vs_ensure_plaintext_field($description));
         }
         if (mb_strlen($description, 'UTF-8') > 5000) {
             return '接口描述过长';
