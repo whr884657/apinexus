@@ -498,8 +498,8 @@ class ApiKeyManager
                 $stmt->execute(array($remark, $quota, $quotafallback, $expiretime, $id));
             }
 
-            // 配额抬高、改为不限，或不再处于耗尽态时，清掉配额耗尽通知去重标记
-            if ($quota <= 0 || $quota > $oldQuota || $quota > $oldUsed) {
+            // 仅抬高配额或改为不限时，才允许再次发「配额用尽」邮件
+            if ($quota <= 0 || $quota > $oldQuota) {
                 self::clearQuotaNoticeFlag($id);
             }
 

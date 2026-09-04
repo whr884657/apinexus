@@ -214,9 +214,13 @@ class PointsNotify
         $redisKey = ApiKeyManager::REDIS_KEY_QUOTA_NOTICE_PREFIX . $keyId;
         $claimed = false;
         try {
+            // 必须用 setNx / ['nx']；array('nx'=>true) 在 phpredis 下不生效，会每次覆盖并发信
             $claimed = (bool) RedisService::withClient(function ($redis) use ($redisKey) {
                 $fullKey = RedisService::buildKey($redisKey);
-                return (bool) $redis->set($fullKey, '1', array('nx' => true));
+                if (method_exists($redis, 'setNx')) {
+                    return (bool) $redis->setNx($fullKey, '1');
+                }
+                return (bool) $redis->set($fullKey, '1', array('nx'));
             });
         } catch (Exception $e) {
             return array('ok' => false, 'sent' => 0, 'error' => '缓存不可用，已跳过配额提醒');
