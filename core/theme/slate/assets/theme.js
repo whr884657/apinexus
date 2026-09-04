@@ -1,5 +1,5 @@
 /**
- * 主题二 · 抽屉 / FAB 导航 / 首页 / 返回顶部
+ * 主题二 · 抽屉 / FAB 导航 / 首页
  */
 (function () {
     'use strict';
@@ -165,26 +165,6 @@
     initDrawerNav();
     initFabNav();
     initHeroTypewriter();
-
-    var backTop = document.getElementById('stBackTop');
-    if (backTop) {
-        backTop.hidden = false;
-        var scrollTicking = false;
-        function syncBackTop() {
-            backTop.classList.toggle('is-show', window.scrollY > 400);
-            scrollTicking = false;
-        }
-        window.addEventListener('scroll', function () {
-            if (!scrollTicking) {
-                scrollTicking = true;
-                requestAnimationFrame(syncBackTop);
-            }
-        }, { passive: true });
-        syncBackTop();
-        backTop.addEventListener('click', function () {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-    }
 
     function formatStatNumber(num, format) {
         num = Math.max(0, Math.round(Number(num) || 0));

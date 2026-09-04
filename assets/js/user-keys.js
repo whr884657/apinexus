@@ -33,6 +33,16 @@
             .replace(/"/g, '&quot;');
     }
 
+    /** 密钥累计消耗展示（与服务端 PayConfig::fmtPoints 观感接近） */
+    function fmtSpent(v) {
+        var n = parseFloat(v);
+        if (isNaN(n) || n < 0) n = 0;
+        if (Math.abs(n - Math.round(n)) < 0.00005) {
+            return String(Math.round(n));
+        }
+        return (Math.round(n * 10000) / 10000).toString();
+    }
+
     function postAction(action, payload) {
         var fd = new FormData();
         fd.append('action', action);
@@ -73,6 +83,17 @@
         return listEl ? listEl.querySelectorAll('.vs-token-row').length : 0;
     }
 
+    function applyMaxFromResponse(data) {
+        if (!data || data.max == null) {
+            return;
+        }
+        var n = parseInt(String(data.max), 10);
+        if (!isFinite(n) || n < 1) {
+            return;
+        }
+        maxTokens = n;
+        page.setAttribute('data-token-max', String(n));
+    }
     function syncEmptyAndStats() {
         var count = tokenCount();
         page.setAttribute('data-token-count', String(count));
@@ -98,18 +119,6 @@
         }
     }
 
-    function applyMaxFromResponse(data) {
-        if (!data || data.max == null) {
-            return;
-        }
-        var n = parseInt(String(data.max), 10);
-        if (!isFinite(n) || n < 1) {
-            return;
-        }
-        maxTokens = n;
-        page.setAttribute('data-token-max', String(n));
-    }
-
     function listBody() {
         if (!listEl) {
             return null;
@@ -126,10 +135,12 @@
         html += '<div class="vs-api-item__icon vs-token-row__icon" aria-hidden="true"><span class="vs-token-row__icon-mark">SK</span></div>';
         html += '<div class="vs-api-item__title">';
         html += '<span class="vs-api-item__name" data-field="remark">' + escapeHtml(token.remark || '') + '</span>';
-        html += '<span class="vs-api-item__id">#' + id + '</span>';
         html += '</div>';
         html += '<div class="vs-api-item__endpoint vs-token-row__secret">';
-        html += '<code class="vs-token-row__code vs-key-copy" data-field="secret" data-copy="' + escapeHtml(token.secret || '') + '" title="点击复制" role="button" tabindex="0">' + escapeHtml(token.secret || '') + '</code>';
+        html += '<code class="vs-token-row__code vs-key-copy uc-token-secret" data-field="secret" data-copy="'
+            + escapeHtml(token.secret || '')
+            + '" title="悬停查看明文，点击复制" role="button" tabindex="0">'
+            + escapeHtml(token.secret || '') + '</code>';
         html += '</div>';
         html += '<div class="vs-api-item__tags">';
         html += '<span class="vs-api-tag vs-api-tag--status ' + statusClass + '" data-field="status_label">' + escapeHtml(token.status_label || '') + '</span>';

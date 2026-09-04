@@ -818,6 +818,7 @@
  * - 选择器挂在 .vs-log-detail--user 下，不污染全站
  * - inline-block + overflow:hidden：高斯模糊外溢裁在本段盒内，避免糊到 key= / 相邻参数
  * - 不改父级 filter（避免新建大范围 stacking context 影响弹窗/fixed）
+ * - 用户令牌列表密钥同款见 #userTokenPage .uc-token-secret（user-shell.css，v13.26.39）
  */
 .vs-log-detail--user .uc-log-url-secret {
     display: inline-block;

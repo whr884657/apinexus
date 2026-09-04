@@ -233,6 +233,66 @@ class LinkManager
     }
 
     /**
+     * 待审核友情链接数量（侧边栏红点；不含合作伙伴）
+     *
+     * @return int
+     */
+    public static function countPendingFriend()
+    {
+        if (!self::tableReady()) {
+            return 0;
+        }
+        try {
+            $stmt = Database::connect()->prepare(
+                'SELECT COUNT(*) FROM `' . self::table() . '` WHERE `kind` = ? AND `status` = ?'
+            );
+            $stmt->execute(array(self::KIND_FRIEND, self::STATUS_PENDING));
+            return max(0, (int) $stmt->fetchColumn());
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * @deprecated v13.26.39 顶栏铃铛仅摘要，不再调用（E301）
+     *
+     * @param int $limit
+     * @return array<int,array{name:string,siteurl:string}>
+     */
+    public static function listPendingFriendBrief($limit = 3)
+    {
+        $limit = max(1, min(10, (int) $limit));
+        if (!self::tableReady()) {
+            return array();
+        }
+        try {
+            $stmt = Database::connect()->prepare(
+                'SELECT `name`, `siteurl` FROM `' . self::table() . '`'
+                . ' WHERE `kind` = ? AND `status` = ?'
+                . ' ORDER BY `id` DESC LIMIT ' . $limit
+            );
+            $stmt->execute(array(self::KIND_FRIEND, self::STATUS_PENDING));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $out = array();
+            if (!is_array($rows)) {
+                return $out;
+            }
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $out[] = array(
+                    'name'    => isset($row['name']) ? trim((string) $row['name']) : '',
+                    'siteurl' => isset($row['siteurl']) ? trim((string) $row['siteurl']) : '',
+                );
+            }
+            return $out;
+        } catch (Exception $e) {
+            return array();
+        }
+    }
+
+    /**
      * @param int|null $status null=全部（审核态）
      * @param int|null $kind   null=全部类型
      * @return array<int, array>

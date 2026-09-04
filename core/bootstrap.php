@@ -89,6 +89,7 @@ require_once VS_ROOT . '/core/FrontendSponsor.php';
 require_once VS_ROOT . '/core/FrontendContributor.php';
 require_once VS_ROOT . '/core/ContentManager.php';
 require_once VS_ROOT . '/core/CommentManager.php';
+require_once VS_ROOT . '/core/AdminNotify.php';
 require_once VS_ROOT . '/core/CommentNotify.php';
 require_once VS_ROOT . '/core/FrontendComment.php';
 require_once VS_ROOT . '/core/CheckinManager.php';

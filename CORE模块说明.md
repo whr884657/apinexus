@@ -73,7 +73,7 @@ version.php
 → FrontendCategory → FrontendApi → FrontendStats → GeoCityCoords → DashboardStats → PanelMonitor
 → LinkManager → LinkSiteMeta → LinkNotify
 → FrontendLink → FrontendPartner → FrontendSponsor → FrontendContributor
-→ ContentManager → CommentManager → CommentNotify → FrontendComment
+→ ContentManager → CommentManager → AdminNotify → CommentNotify → FrontendComment
 → CheckinManager
 → Markdown（core/markdown/）
 → FrontendAnnouncement → FrontendArticle → FrontendAbout
@@ -312,8 +312,8 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiProxy.php` | 外链网关：curl 中继上游；按 `upmethod` 选上游 GET/POST；可选 JSON 改写；剥离 JSONP 参数；出站消毒；3xx Location 透传；上游 TLS 不校验证书 |
 | `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
 | `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；`hit` 成功且 `vsproxy` 时请求级武装出口（v13.26.33）；亦可显式 `applyOutboundProxy`；写日志含 `egress` 出口节点（v13.26.34）；`keyContext()` 供本地接口读本请求密钥用户；**仅 needkey=必须**时经 `UserIpAllow` 硬拦 IP |
-| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；`proxycode` 五位短码；`vsproxy`：短码/`a`/`b`/`c`/`1`；提取 JSON `jsonhost`/`jsonport` + `ttlmin`；`armRequestEgress` 请求级武装（v13.26.33）；`requestEgressHostPort` 供日志（v13.26.34）；与 ApiProxy 上游中继无关 |
-| `UserIpAllow.php` | 用户调用 IP 白名单（`user.ipallow`；空=不限制）；**仅密钥必须接口**硬拦；配合 `AuthSecurity::clientIp`；不匹配 → errcode **11019** |
+| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；`proxycode` 五位短码；`vsproxy`：短码/`a`/`b`/`c`/`1`；提取 JSON `jsonhost`/`jsonport` + `ttlmin`；`armRequestEgress` 请求级武装（v13.26.33）；`requestEgressHostPort` 供日志（v13.26.34）；与 ApiProxy 上游中继无关；管理端总览页 `admin/system/ip.php`（v13.26.39，`formatPublicRow` 不含密码） |
+| `UserIpAllow.php` | 用户调用 IP 白名单（`user.ipallow`；空=不限制）；**仅密钥必须接口**硬拦；配合 `AuthSecurity::clientIp`；不匹配 → errcode **11019**；`adminOverview` 供管理端「IP 配置」概览（v13.26.39） |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
 | `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser；含 calls/cost/success_rate） |
 | `UserCallStats.php` | 个人调用/积分/排行只读查询（`api/index.php`）；短字段含 `rank`/`rank7`；`parseFields` / `query` / `resolveUserFromRequest` |
@@ -352,7 +352,8 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL；前台/用户中心壳与页 CSS·JS 清单 |
 | `Sitemap.php` | 前台 SEO 站点地图（静态页 + 公开接口详情 + 已发布文章）；入口 `sitemap.php` → `Sitemap::emit()` / `/sitemap.xml` |
 | `SystemInfo.php` | 关于页环境信息 |
-| `Updater.php` | 云端在线更新检测与安装；检测清单与下载 ZIP 解耦（v13.26.36）；SSL 不探测系统 CA（v13.26.37 / E294）；安全解压；覆盖后按废弃清单清理文件；数据库维护全量对齐/版本升级（v13.26.35） |
+| `Updater.php` | 云端在线更新检测与安装；检测清单与下载 ZIP 解耦（v13.26.36）；SSL 不探测系统 CA（v13.26.37 / E294）；安全解压；覆盖后按废弃清单清理文件；数据库维护全量对齐/版本升级（v13.26.35）；检测结果请求内+会话缓存（v13.26.39，供顶栏铃铛） |
+| `AdminNotify.php` | 管理端顶栏待办铃铛汇总：接口审核/反馈、友链、评论、系统升级（v13.26.39） |
 | `UpdateLog.php` | 版本更新记录读取（本地 `update-log.json` 优先，缺失再三源兜底，v13.26.36） |
 | `oauth/*` | QQ / Gitee 第三方登录 |
 

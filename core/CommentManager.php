@@ -234,6 +234,71 @@ class CommentManager
     }
 
     /**
+     * 待审核评论数量（侧边栏红点）
+     *
+     * @return int
+     */
+    public static function countPending()
+    {
+        if (!self::tableReady()) {
+            return 0;
+        }
+        try {
+            $stmt = Database::connect()->prepare(
+                'SELECT COUNT(*) FROM `' . self::table() . '` WHERE `status` = ?'
+            );
+            $stmt->execute(array(self::STATUS_PENDING));
+            return max(0, (int) $stmt->fetchColumn());
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * @deprecated v13.26.39 顶栏铃铛仅摘要，不再调用（E301）
+     *
+     * @param int $limit
+     * @return array<int,array{snippet:string}>
+     */
+    public static function listPendingBrief($limit = 3)
+    {
+        $limit = max(1, min(10, (int) $limit));
+        if (!self::tableReady()) {
+            return array();
+        }
+        try {
+            $stmt = Database::connect()->prepare(
+                'SELECT `body`, `nickname` FROM `' . self::table() . '`'
+                . ' WHERE `status` = ?'
+                . ' ORDER BY `id` DESC LIMIT ' . $limit
+            );
+            $stmt->execute(array(self::STATUS_PENDING));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $out = array();
+            if (!is_array($rows)) {
+                return $out;
+            }
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $nick = isset($row['nickname']) ? trim((string) $row['nickname']) : '';
+                $excerpt = self::excerptBody(isset($row['body']) ? $row['body'] : '', 40);
+                if ($nick !== '' && $excerpt !== '') {
+                    $out[] = array('snippet' => $nick . '：' . $excerpt);
+                } elseif ($excerpt !== '') {
+                    $out[] = array('snippet' => $excerpt);
+                } elseif ($nick !== '') {
+                    $out[] = array('snippet' => $nick);
+                }
+            }
+            return $out;
+        } catch (Exception $e) {
+            return array();
+        }
+    }
+
+    /**
      * @return array
      */
     public static function listAll()

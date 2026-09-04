@@ -317,7 +317,7 @@
                         return;
                     }
                     postAction('set_status', { token_id: tid, status: nextStatus }).then(function (res) {
-                        if (!res || !res.ok) {
+                        if (!res || Number(res.code) !== 1) {
                             window.VS.toast((res && res.msg) || '操作失败', 'error');
                             return;
                         }
@@ -338,12 +338,15 @@
                         return;
                     }
                     postAction('reset', { token_id: rid }).then(function (res) {
-                        if (!res || !res.ok || !res.data || !res.data.token) {
+                        var token = res && res.token
+                            ? res.token
+                            : (res && res.data && res.data.token ? res.data.token : null);
+                        if (!res || Number(res.code) !== 1 || !token) {
                             window.VS.toast((res && res.msg) || '重置失败', 'error');
                             return;
                         }
                         window.VS.toast(res.msg || '已重置', 'success');
-                        updatePairSecret(getPair(rid), res.data.token.secret || '');
+                        updatePairSecret(getPair(rid), token.secret || '');
                         applyView();
                     });
                 });
@@ -359,7 +362,7 @@
                         return;
                     }
                     postAction('delete', { token_id: did }).then(function (res) {
-                        if (!res || !res.ok) {
+                        if (!res || Number(res.code) !== 1) {
                             window.VS.toast((res && res.msg) || '删除失败', 'error');
                             return;
                         }

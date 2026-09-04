@@ -611,6 +611,22 @@ class UserIpProxy
     }
 
     /**
+     * @param int $strategy
+     * @return string
+     */
+    public static function strategyLabel($strategy)
+    {
+        $n = (int) $strategy;
+        if ($n === self::STRATEGY_RANDOM) {
+            return '随机';
+        }
+        if ($n === self::STRATEGY_FIRST) {
+            return '优先首条';
+        }
+        return '轮询';
+    }
+
+    /**
      * 新增或更新
      *
      * @param int   $userId

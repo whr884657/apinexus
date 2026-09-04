@@ -68,7 +68,7 @@
         refreshLayout();
 
         initSidebarGroups();
-        bootReviewBadges();
+        bootSidebarBadges();
     }
 
     function initSidebarGroups() {
@@ -98,6 +98,9 @@
                 if (gid === 'api') {
                     refreshReviewBadgePlacement();
                 }
+                if (gid === 'content') {
+                    refreshContentBadgePlacement();
+                }
             });
         });
     }
@@ -123,8 +126,30 @@
         }
     }
 
-    function bootReviewBadges() {
+    function refreshContentBadgePlacement() {
+        var groupBadge = document.getElementById('vsContentBadgeGroup');
+        var linkItem = document.getElementById('vsLinkBadgeItem');
+        var commentItem = document.getElementById('vsCommentBadgeItem');
+        var contentGroup = document.querySelector('.vs-sidebar__group[data-group="content"]');
+        if (!groupBadge) {
+            return;
+        }
+        var groupActive = groupBadge.getAttribute('data-active') === '1';
+        var linkActive = linkItem && linkItem.getAttribute('data-active') === '1';
+        var commentActive = commentItem && commentItem.getAttribute('data-active') === '1';
+        var isOpen = !!(contentGroup && contentGroup.classList.contains('is-open'));
+        groupBadge.hidden = !(groupActive && !isOpen);
+        if (linkItem) {
+            linkItem.hidden = !(linkActive && isOpen);
+        }
+        if (commentItem) {
+            commentItem.hidden = !(commentActive && isOpen);
+        }
+    }
+
+    function bootSidebarBadges() {
         refreshReviewBadgePlacement();
+        refreshContentBadgePlacement();
     }
 
     /**

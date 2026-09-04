@@ -132,10 +132,9 @@ function vs_render_user_token_item(array $row)
         </div>
         <div class="vs-api-item__title">
             <span class="vs-api-item__name" data-field="remark"><?php echo vs_e($token['remark']); ?></span>
-            <span class="vs-api-item__id">#<?php echo $id; ?></span>
         </div>
         <div class="vs-api-item__endpoint vs-token-row__secret">
-            <code class="vs-token-row__code vs-key-copy" data-field="secret" data-copy="<?php echo vs_e($token['secret']); ?>" title="点击复制" role="button" tabindex="0"><?php echo vs_e($token['secret']); ?></code>
+            <code class="vs-token-row__code vs-key-copy uc-token-secret" data-field="secret" data-copy="<?php echo vs_e($token['secret']); ?>" title="悬停查看明文，点击复制" role="button" tabindex="0"><?php echo vs_e($token['secret']); ?></code>
         </div>
         <div class="vs-api-item__tags">
             <span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($token['status_label']); ?></span>

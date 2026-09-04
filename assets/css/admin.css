@@ -336,6 +336,280 @@
     flex-shrink: 0;
 }
 
+/* ---- 顶栏待办铃铛（v13.26.39） ---- */
+.vs-topbar__notify {
+    position: relative;
+    flex-shrink: 0;
+}
+.vs-notify-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.96);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
+}
+.vs-notify-btn:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
+}
+.vs-notify-btn:active,
+.vs-notify-btn.is-open {
+    transform: translateY(0);
+}
+.vs-topbar__notify.has-pending .vs-notify-btn,
+.vs-notify-btn.is-emphasis {
+    border-color: #fecaca;
+    background: #fef2f2;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+.vs-topbar__notify.has-pending .vs-notify-btn:hover,
+.vs-notify-btn.is-emphasis:hover {
+    border-color: #f87171;
+}
+.vs-notify-btn .vs-icon--bell {
+    width: 18px;
+    height: 18px;
+}
+.vs-notify-btn__dot {
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #dc2626;
+    border: 2px solid #fff;
+    box-sizing: content-box;
+}
+.vs-notify-btn__count {
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    box-sizing: border-box;
+}
+.vs-notify-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(360px, calc(100vw - 24px));
+    max-height: min(70vh, 420px);
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+    overflow: hidden;
+    z-index: 1200;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.vs-notify-panel.is-open,
+.vs-notify-panel:not([hidden]) {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+.vs-notify-panel[hidden] {
+    display: none !important;
+}
+.vs-notify-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #eef2f7;
+    background: #f8fafc;
+}
+.vs-notify-panel__title {
+    font-size: 0.9rem;
+    color: #0f172a;
+}
+.vs-notify-panel__meta {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+.vs-notify-panel__list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.vs-notify-panel__empty {
+    padding: 28px 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+.vs-notify-panel__empty p {
+    margin: 0;
+}
+.vs-notify-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px 10px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.vs-notify-item:hover {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+.vs-notify-item.is-warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+.vs-notify-item.is-danger {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+.vs-notify-item.is-info {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+}
+.vs-notify-item__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    flex-shrink: 0;
+}
+.vs-notify-item__icon .vs-icon {
+    width: 16px;
+    height: 16px;
+}
+.vs-notify-item__body {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.vs-notify-item__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.vs-notify-item__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+.vs-notify-item__badge {
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+.vs-notify-item__desc {
+    font-size: 0.78rem;
+    color: #475569;
+    line-height: 1.45;
+}
+/* 手机端遮罩 + 底部抽屉（对齐 Overlay：height 与 max-height 同为 85vh） */
+.vs-notify-mask {
+    display: none;
+}
+body.vs-notify-drawer-open {
+    overflow: hidden;
+}
+@media (max-width: 768px) {
+    .vs-notify-mask {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 5200;
+        background: rgba(15, 23, 42, 0.45);
+    }
+    .vs-notify-mask[hidden] {
+        display: none !important;
+    }
+    .vs-notify-panel.is-drawer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        max-width: none;
+        /* 与 .vs-overlay__panel 手机抽屉一致：固定 85vh，禁止仅 max-height 随内容变矮 */
+        height: 85vh;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        border-radius: 20px 20px 0 0;
+        border: none;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+        z-index: 5201;
+        opacity: 1;
+        transform: translateY(100%);
+        pointer-events: auto;
+        overflow: hidden;
+        transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        box-sizing: border-box;
+    }
+    .vs-notify-panel.is-drawer.is-drawer-open {
+        transform: translateY(0);
+    }
+    .vs-notify-panel.is-drawer .vs-notify-panel__head {
+        flex-shrink: 0;
+    }
+    .vs-notify-panel.is-drawer .vs-notify-panel__list {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .vs-notify-panel.is-drawer .vs-notify-panel__empty {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
 .vs-topbar__user {
     font-size: 14px;
     color: var(--vs-text-secondary);
@@ -11336,6 +11610,180 @@ select.vs-input.vs-select {
         transition: none !important;
         transform: none !important;
         animation: none !important;
+    }
+}
+
+/* ---- admin IP 配置（v13.26.39） ---- */
+#adminIpPage .content-author-cell,
+.admin-ip-detail .content-author-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#adminIpPage .content-author-cell__avatar,
+#adminIpPage .content-author-cell__fallback,
+.admin-ip-detail .content-author-cell__avatar,
+.admin-ip-detail .content-author-cell__fallback {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+#adminIpPage .content-author-cell__fallback,
+.admin-ip-detail .content-author-cell__fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e2e8f0;
+    font-size: 12px;
+    color: #475569;
+}
+#adminIpPage .vs-admin-ip-preview {
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: var(--vs-text-secondary, #6b7280);
+    word-break: break-all;
+}
+#adminIpPage .vs-admin-ip-strategy {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 0.75rem;
+    color: var(--vs-text-secondary, #6b7280);
+}
+#adminIpPage .mobile-admin-ip-cards {
+    display: none;
+}
+#adminIpPage .admin-ip-card {
+    padding: 12px 14px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--vs-surface, #fff);
+}
+#adminIpPage .admin-ip-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+#adminIpPage .admin-ip-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+#adminIpPage .admin-ip-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 0.8125rem;
+    color: var(--vs-text-secondary, #6b7280);
+    word-break: break-all;
+}
+#adminIpPage .admin-ip-card__actions {
+    margin-top: 10px;
+}
+@media (min-width: 769px) {
+    #adminIpPage .vs-api-list-table-wrap {
+        display: block;
+    }
+    #adminIpPage .mobile-admin-ip-cards {
+        display: none !important;
+    }
+}
+@media (max-width: 768px) {
+    #adminIpPage .vs-api-list-table-wrap {
+        display: none !important;
+    }
+    #adminIpPage .mobile-admin-ip-cards:not([hidden]) {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+.admin-ip-detail__user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.admin-ip-detail__name {
+    font-weight: 600;
+}
+.admin-ip-detail__email {
+    font-size: 0.8125rem;
+    color: var(--vs-text-secondary, #6b7280);
+}
+.admin-ip-detail__section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--vs-border, #e5e7eb);
+}
+.admin-ip-detail__section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.admin-ip-detail__section-head h3 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+.admin-ip-allow-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.admin-ip-allow-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 8px;
+}
+.admin-ip-proxy-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.admin-ip-proxy-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 8px;
+}
+.admin-ip-proxy-item__title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.admin-ip-proxy-item__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+.admin-ip-proxy-item__endpoint,
+.admin-ip-proxy-item__code {
+    font-size: 0.8125rem;
+    color: var(--vs-text-secondary, #6b7280);
+    word-break: break-all;
+}
+@media (max-width: 640px) {
+    .admin-ip-proxy-item {
+        flex-direction: column;
+    }
+    .admin-ip-proxy-item__actions {
+        width: 100%;
     }
 }
 

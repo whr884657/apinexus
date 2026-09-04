@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.38-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.39-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -164,10 +164,14 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.38（2026-09-03）
+### v13.26.39（2026-09-04）
 
-- **热修：** 修复 VS64 短串无 padding 误判，文章/公告/免责声明不再以 `VS64B:` 乱码入库（E295）
-- **传输：** 文章/公告正文、免责声明、接口描述改为明文；接口文档/代码示例仍 VS64 防 WAF
+- **侧栏红点：** 友情链接待审、评论待审；折叠亮「内容运营」，展开亮子项
+- **管理端：** 系统管理新增「IP 配置」，可管用户白名单与出口代理（不展示密码）
+- **用户令牌：** 去掉 `#ID`；电脑端列间距收紧；密钥模糊悬停明码
+- **主题二：** 公告弹窗不再被页脚盖住；去掉返回顶部（主题三公告同步挂 body）
+- **顶栏铃铛：** 待办下拉（审核/反馈/友链/评论/升级）+ 轮询；电脑有待办自动展开一次；仅摘要不列明细；手机点开为底部抽屉
+- **热修：** IP 配置 / 令牌 / 接口文档 Ajax 扁平响应误读（E302）；手机铃铛抽屉固定 85vh
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

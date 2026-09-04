@@ -138,6 +138,110 @@ class UserIpAllow
     }
 
     /**
+     * 管理员：有白名单和/或出口代理的用户概览（不含代理密码）
+     *
+     * @param int $limit
+     * @return array{ok:bool,msg:string,list?:array,truncated?:bool}
+     */
+    public static function adminOverview($limit = 500)
+    {
+        $limit = max(1, min(1000, (int) $limit));
+        if (!self::columnReady()) {
+            return array('ok' => false, 'msg' => 'IP 白名单尚未就绪');
+        }
+        $proxyReady = class_exists('UserIpProxy') && UserIpProxy::tableReady();
+        try {
+            $pdo = Database::connect();
+            $userTable = Database::table('user');
+            $proxyCountExpr = '0';
+            if ($proxyReady) {
+                $proxyTable = Database::table('ipproxy');
+                $proxyCountExpr = '(SELECT COUNT(*) FROM `' . $proxyTable . '` p WHERE p.`userid` = u.`id`)';
+            }
+            $sql = 'SELECT u.`id`, u.`username`, u.`email`, u.`avatar`, u.`ipallow`'
+                . ($proxyReady && class_exists('UserIpProxy') && UserIpProxy::strategyColumnReady()
+                    ? ', u.`proxystrategy`'
+                    : ', 0 AS `proxystrategy`')
+                . ', ' . $proxyCountExpr . ' AS `proxycount`'
+                . ' FROM `' . $userTable . '` u'
+                . ' WHERE ('
+                . ' (u.`ipallow` IS NOT NULL AND TRIM(u.`ipallow`) <> \'\')'
+                . ($proxyReady ? ' OR ' . $proxyCountExpr . ' > 0' : '')
+                . ' )'
+                . ' ORDER BY u.`id` DESC'
+                . ' LIMIT ' . ((int) $limit + 1);
+            $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+            if (!is_array($rows)) {
+                $rows = array();
+            }
+            $truncated = count($rows) > $limit;
+            if ($truncated) {
+                $rows = array_slice($rows, 0, $limit);
+            }
+            $list = array();
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $uid = (int) (isset($row['id']) ? $row['id'] : 0);
+                $raw = isset($row['ipallow']) ? trim((string) $row['ipallow']) : '';
+                $allowList = self::parseList($raw);
+                $proxyCount = (int) (isset($row['proxycount']) ? $row['proxycount'] : 0);
+                $strategy = (int) (isset($row['proxystrategy']) ? $row['proxystrategy'] : 0);
+                $username = isset($row['username']) ? trim((string) $row['username']) : '';
+                if ($username === '') {
+                    $username = '用户#' . $uid;
+                }
+                $list[] = array(
+                    'userid'         => $uid,
+                    'username'       => $username,
+                    'email'          => isset($row['email']) ? trim((string) $row['email']) : '',
+                    'avatar'         => class_exists('UserAvatar')
+                        ? UserAvatar::resolve($row)
+                        : '',
+                    'allow_count'    => count($allowList),
+                    'allow_preview'  => count($allowList) > 0
+                        ? implode(', ', array_slice($allowList, 0, 3))
+                            . (count($allowList) > 3 ? '…' : '')
+                        : '—',
+                    'proxy_count'    => $proxyCount,
+                    'strategy'       => $strategy,
+                    'strategy_label' => self::proxyStrategyLabel($strategy),
+                );
+            }
+            return array(
+                'ok'         => true,
+                'msg'        => 'ok',
+                'list'       => $list,
+                'truncated'  => $truncated,
+            );
+        } catch (Exception $e) {
+            return array('ok' => false, 'msg' => '读取失败，请稍后重试');
+        }
+    }
+
+    /**
+     * 代理策略文案（委托 UserIpProxy，避免静态分析误报未定义方法）
+     *
+     * @param int $strategy
+     * @return string
+     */
+    private static function proxyStrategyLabel($strategy)
+    {
+        if (class_exists('UserIpProxy') && is_callable(array('UserIpProxy', 'strategyLabel'))) {
+            return (string) call_user_func(array('UserIpProxy', 'strategyLabel'), $strategy);
+        }
+        $n = (int) $strategy;
+        if ($n === 1) {
+            return '随机';
+        }
+        if ($n === 2) {
+            return '优先首条';
+        }
+        return '轮询';
+    }
+
+    /**
      * 密钥必须接口的守卫：用户白名单是否放行当前客户端 IP
      *
      * 注意：调用方应仅在 needkey=必须（含收费强制必须）时调用本方法。

@@ -18,6 +18,13 @@ class Updater
     /** GitCode 仓库 */
     const GITCODE_REPO = 'xunjinlu/apinexus';
 
+    /** 检测结果会话缓存 TTL（秒）；顶栏铃铛轮询勿每次打云端 */
+    const CHECK_CACHE_TTL = 120;
+    const CHECK_CACHE_SESSION_KEY = 'vs_update_check_cache';
+
+    /** @var array|null 请求内检测结果缓存 */
+    private static $checkForUpdateCache = null;
+
     /** 云端更新可信域名（直连 HTTPS，不依赖本地 CA 证书包） */
     const TRUSTED_UPDATE_HOSTS = array(
         'gitee.com',
@@ -88,13 +95,29 @@ class Updater
      *
      * @return array
      */
-    public static function checkForUpdate()
+    /**
+     * @param bool $forceRefresh true 时跳过请求内/会话缓存（升级步骤等）
+     * @return array
+     */
+    public static function checkForUpdate($forceRefresh = false)
     {
+        $forceRefresh = (bool) $forceRefresh;
+        if (!$forceRefresh && self::$checkForUpdateCache !== null) {
+            return self::$checkForUpdateCache;
+        }
+        if (!$forceRefresh) {
+            $fromSession = self::readCheckCacheFromSession();
+            if ($fromSession !== null) {
+                self::$checkForUpdateCache = $fromSession;
+                return self::$checkForUpdateCache;
+            }
+        }
+
         $local = self::localVersion();
         $manifest = self::fetchRemoteManifest();
 
         if ($manifest === null) {
-            return array(
+            $fail = array(
                 'ok'               => false,
                 'local_version'    => $local,
                 'remote_version'   => '',
@@ -102,6 +125,8 @@ class Updater
                 'ahead_of_remote'  => false,
                 'error'            => '无法连接云端获取版本信息，请稍后重试',
             );
+            self::storeCheckCache($fail);
+            return $fail;
         }
 
         $latestRemote = isset($manifest['version']) ? trim($manifest['version']) : '';
@@ -128,7 +153,7 @@ class Updater
 
         $pendingUpdates = UpdateLog::countVersionsAfter($local);
 
-        return array(
+        $ok = array(
             'ok'                   => true,
             'local_version'        => $local,
             'remote_version'       => $remote,
@@ -146,6 +171,57 @@ class Updater
             'branch'               => self::DEFAULT_BRANCH,
             'error'                => '',
         );
+        self::storeCheckCache($ok);
+        return $ok;
+    }
+
+    /**
+     * @return array|null
+     */
+    private static function readCheckCacheFromSession()
+    {
+        if (!isset($_SESSION) || !is_array($_SESSION)) {
+            return null;
+        }
+        $cached = isset($_SESSION[self::CHECK_CACHE_SESSION_KEY])
+            ? $_SESSION[self::CHECK_CACHE_SESSION_KEY]
+            : null;
+        if (!is_array($cached) || !isset($cached['at'], $cached['result']) || !is_array($cached['result'])) {
+            return null;
+        }
+        if ((time() - (int) $cached['at']) >= self::CHECK_CACHE_TTL) {
+            return null;
+        }
+        return $cached['result'];
+    }
+
+    /**
+     * @param array $result
+     * @return void
+     */
+    private static function storeCheckCache(array $result)
+    {
+        self::$checkForUpdateCache = $result;
+        if (!isset($_SESSION) || !is_array($_SESSION)) {
+            return;
+        }
+        $_SESSION[self::CHECK_CACHE_SESSION_KEY] = array(
+            'at'     => time(),
+            'result' => $result,
+        );
+    }
+
+    /**
+     * 清除检测缓存（升级成功后调用）
+     *
+     * @return void
+     */
+    public static function clearCheckCache()
+    {
+        self::$checkForUpdateCache = null;
+        if (isset($_SESSION) && is_array($_SESSION)) {
+            unset($_SESSION[self::CHECK_CACHE_SESSION_KEY]);
+        }
     }
 
     /**
@@ -187,7 +263,7 @@ class Updater
             return array('ok' => false, 'msg' => '服务器未启用 ZipArchive 扩展，无法解压更新包');
         }
 
-        $check = self::checkForUpdate();
+        $check = self::checkForUpdate(true);
         if (!$check['ok']) {
             return array('ok' => false, 'msg' => $check['error']);
         }
@@ -719,6 +795,7 @@ class Updater
         }
 
         unset($_SESSION['vs_update_dismiss']);
+        self::clearCheckCache();
 
         return array(
             'ok'      => true,

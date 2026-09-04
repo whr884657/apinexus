@@ -12,6 +12,11 @@
     var LS_DISMISS_PREFIX = 'feer_announcement_dismiss_';
     var annDataCache = null;
 
+    /* 挂到 body，避免困在 .st-wrap { z-index:1 } 层叠上下文下被页脚盖住（对齐默认主题） */
+    if (modalHome && modalHome.parentNode !== document.body) {
+        document.body.appendChild(modalHome);
+    }
+
     function getAnnData() {
         if (annDataCache) return annDataCache;
         if (!dataEl) return null;

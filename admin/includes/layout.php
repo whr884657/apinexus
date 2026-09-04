@@ -76,6 +76,7 @@ function vs_admin_menu_groups()
             'icon'     => 'setting',
             'children' => array(
                 array('id' => 'users', 'title' => '用户管理', 'url' => '/admin/users'),
+                array('id' => 'ip', 'title' => 'IP 配置', 'url' => '/admin/system/ip'),
                 array('id' => 'account', 'title' => '账号设置', 'url' => '/admin/account'),
                 array('id' => 'settings', 'title' => '系统设置', 'url' => '/admin/settings'),
                 array('id' => 'theme', 'title' => '主题设置', 'url' => '/admin/system/theme'),
@@ -141,6 +142,8 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     }
     $showReviewSidebarBadge = false;
     $showFeedbackSidebarBadge = false;
+    $showLinkSidebarBadge = false;
+    $showCommentSidebarBadge = false;
     if (InstallChecker::isInstalled()) {
         if (class_exists('ApiManager')) {
             $showReviewSidebarBadge = ApiManager::countPendingReview() > 0;
@@ -148,8 +151,27 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
         if (class_exists('ApiFeedbackManager')) {
             $showFeedbackSidebarBadge = ApiFeedbackManager::countPending() > 0;
         }
+        if (class_exists('LinkManager')) {
+            $showLinkSidebarBadge = LinkManager::countPendingFriend() > 0;
+        }
+        if (class_exists('CommentManager')) {
+            $showCommentSidebarBadge = CommentManager::countPending() > 0;
+        }
     }
     $showApiSidebarBadge = $showReviewSidebarBadge || $showFeedbackSidebarBadge;
+    $showContentSidebarBadge = $showLinkSidebarBadge || $showCommentSidebarBadge;
+    $notifyInbox = class_exists('AdminNotify')
+        ? AdminNotify::inbox()
+        : array('ok' => true, 'total' => 0, 'has_pending' => false, 'items' => array());
+    $notifyTotal = isset($notifyInbox['total']) ? (int) $notifyInbox['total'] : 0;
+    $notifyHasPending = !empty($notifyInbox['has_pending']);
+    $notifyItemsJson = json_encode(
+        isset($notifyInbox['items']) && is_array($notifyInbox['items']) ? $notifyInbox['items'] : array(),
+        JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS
+    );
+    if ($notifyItemsJson === false) {
+        $notifyItemsJson = '[]';
+    }
 
     echo '<!DOCTYPE html>' . "\n";
     echo '<html lang="zh-CN">' . "\n";
@@ -195,6 +217,9 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
             if ($group['id'] === 'api' && $showApiSidebarBadge && !$isOpen) {
                 $badgeOnGroup = true;
             }
+            if ($group['id'] === 'content' && $showContentSidebarBadge && !$isOpen) {
+                $badgeOnGroup = true;
+            }
             echo '<div class="vs-sidebar__group' . ($isOpen ? ' is-open' : '') . '" data-group="' . vs_e($group['id']) . '">' . "\n";
             echo '<button type="button" class="vs-sidebar__group-btn' . ($groupActive ? ' is-active' : '') . '" aria-expanded="' . ($isOpen ? 'true' : 'false') . '">';
             echo '<i class="vs-icon vs-icon--' . vs_e($group['icon']) . '"></i>';
@@ -209,6 +234,12 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
                 echo '<span class="vs-sidebar__badge" id="vsReviewBadgeGroup" aria-hidden="true"'
                     . ' data-active="' . ($showApiSidebarBadge ? '1' : '0') . '"';
                 echo ($showApiSidebarBadge && !$isOpen) ? '>' : ' hidden>';
+                echo '</span>';
+            }
+            if ($group['id'] === 'content') {
+                echo '<span class="vs-sidebar__badge" id="vsContentBadgeGroup" aria-hidden="true"'
+                    . ' data-active="' . ($showContentSidebarBadge ? '1' : '0') . '"';
+                echo ($showContentSidebarBadge && !$isOpen) ? '>' : ' hidden>';
                 echo '</span>';
             }
             echo '</span>';
@@ -234,6 +265,18 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
                     echo '<span class="vs-sidebar__badge" id="vsFeedbackBadgeItem" aria-hidden="true"'
                         . ' data-active="' . ($showFeedbackSidebarBadge ? '1' : '0') . '"';
                     echo ($showFeedbackSidebarBadge && $isOpen) ? '>' : ' hidden>';
+                    echo '</span>';
+                }
+                if ($group['id'] === 'content' && $child['id'] === 'links') {
+                    echo '<span class="vs-sidebar__badge" id="vsLinkBadgeItem" aria-hidden="true"'
+                        . ' data-active="' . ($showLinkSidebarBadge ? '1' : '0') . '"';
+                    echo ($showLinkSidebarBadge && $isOpen) ? '>' : ' hidden>';
+                    echo '</span>';
+                }
+                if ($group['id'] === 'content' && $child['id'] === 'comments') {
+                    echo '<span class="vs-sidebar__badge" id="vsCommentBadgeItem" aria-hidden="true"'
+                        . ' data-active="' . ($showCommentSidebarBadge ? '1' : '0') . '"';
+                    echo ($showCommentSidebarBadge && $isOpen) ? '>' : ' hidden>';
                     echo '</span>';
                 }
                 echo '</a>' . "\n";
@@ -273,6 +316,40 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     echo '</div>' . "\n";
     echo '<div class="vs-topbar__right">' . "\n";
     echo '<div class="vs-topbar__theme" id="vsThemePickerMount"></div>' . "\n";
+    echo '<div class="vs-topbar__notify' . ($notifyHasPending ? ' has-pending' : '') . '"'
+        . ' id="vsAdminNotify"'
+        . ' data-has-pending="' . ($notifyHasPending ? '1' : '0') . '"'
+        . ' data-total="' . (int) $notifyTotal . '"'
+        . ' data-endpoint="' . vs_e($base . '/admin/notify') . '">' . "\n";
+    echo '<button type="button" class="vs-notify-btn" id="vsAdminNotifyBtn"'
+        . ' aria-label="待办通知"'
+        . ' aria-expanded="false"'
+        . ' aria-controls="vsAdminNotifyPanel"'
+        . ' title="待办通知">' . "\n";
+    echo '<i class="vs-icon vs-icon--bell" aria-hidden="true"></i>' . "\n";
+    echo '<span class="vs-notify-btn__dot" id="vsAdminNotifyDot"'
+        . ($notifyHasPending ? '' : ' hidden')
+        . ' aria-hidden="true"></span>' . "\n";
+    echo '<span class="vs-notify-btn__count" id="vsAdminNotifyCount"'
+        . ($notifyHasPending ? '' : ' hidden') . '>'
+        . ($notifyTotal > 99 ? '99+' : (int) $notifyTotal)
+        . '</span>' . "\n";
+    echo '</button>' . "\n";
+    echo '<div class="vs-notify-panel" id="vsAdminNotifyPanel" role="dialog" aria-label="待办通知" hidden>' . "\n";
+    echo '<div class="vs-notify-panel__head">' . "\n";
+    echo '<strong class="vs-notify-panel__title">待办通知</strong>' . "\n";
+    echo '<span class="vs-notify-panel__meta" id="vsAdminNotifyMeta">'
+        . ($notifyHasPending ? ('共 ' . (int) $notifyTotal . ' 项') : '暂无待办')
+        . '</span>' . "\n";
+    echo '</div>' . "\n";
+    echo '<div class="vs-notify-panel__list" id="vsAdminNotifyList"></div>' . "\n";
+    echo '<div class="vs-notify-panel__empty" id="vsAdminNotifyEmpty"'
+        . ($notifyHasPending ? ' hidden' : '') . '>' . "\n";
+    echo '<p>当前没有待处理事项</p>' . "\n";
+    echo '</div>' . "\n";
+    echo '</div>' . "\n";
+    echo '<script type="application/json" id="vsAdminNotifyBoot">' . $notifyItemsJson . '</script>' . "\n";
+    echo '</div>' . "\n";
     if ($admin) {
         $avatarUrl = UserAvatar::resolve($admin);
         echo '<a href="' . vs_e($base) . '/admin/account" class="vs-topbar__avatar-link" title="账号设置">' . "\n";
@@ -321,6 +398,7 @@ function vs_admin_layout_end(array $extraScripts = array())
     echo '<script src="' . vs_e($vsBase) . '/assets/js/vs-pick.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/theme-picker.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/admin.js?v=' . VS_VERSION . '"></script>' . "\n";
+    echo '<script src="' . vs_e($vsBase) . '/assets/js/admin-notify.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/update-check.js?v=' . VS_VERSION . '"></script>' . "\n";
     foreach ($extraScripts as $js) {
         if ($js === 'vs-pick.js' || $js === 'common.js' || $js === 'modal.js') {

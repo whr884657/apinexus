@@ -54,6 +54,58 @@ class ApiFeedbackManager
     }
 
     /**
+     * @deprecated v13.26.39 顶栏铃铛仅摘要，不再调用（E301）
+     *
+     * @param int $limit
+     * @return array<int,array{api_name:string,snippet:string}>
+     */
+    public static function listPendingBrief($limit = 3)
+    {
+        $limit = max(1, min(10, (int) $limit));
+        if (!self::tableReady()) {
+            return array();
+        }
+        try {
+            $pdo = Database::connect();
+            $fbTable = Database::table('feedback');
+            $apiTable = Database::table('api');
+            $stmt = $pdo->prepare(
+                'SELECT f.`content`, a.`name` AS `api_name`
+                 FROM `' . $fbTable . '` f
+                 LEFT JOIN `' . $apiTable . '` a ON a.`id` = f.`apiid`
+                 WHERE f.`status` = ?
+                 ORDER BY f.`id` DESC
+                 LIMIT ' . $limit
+            );
+            $stmt->execute(array(self::STATUS_PENDING));
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $out = array();
+            if (!is_array($rows)) {
+                return $out;
+            }
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $content = isset($row['content']) ? trim((string) $row['content']) : '';
+                $snippet = $content;
+                if (function_exists('mb_substr') && mb_strlen($snippet, 'UTF-8') > 36) {
+                    $snippet = mb_substr($snippet, 0, 36, 'UTF-8') . '…';
+                } elseif (strlen($snippet) > 36) {
+                    $snippet = substr($snippet, 0, 36) . '…';
+                }
+                $out[] = array(
+                    'api_name' => isset($row['api_name']) ? trim((string) $row['api_name']) : '',
+                    'snippet'  => $snippet,
+                );
+            }
+            return $out;
+        } catch (Exception $e) {
+            return array();
+        }
+    }
+
+    /**
      * 管理员列表：含用户名与接口名
      *
      * @return array

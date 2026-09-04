@@ -5280,13 +5280,42 @@ select.vs-input.vs-select {
     cursor: pointer;
     border-radius: 4px;
     padding: 2px 4px;
-    transition: background 0.15s ease, box-shadow 0.15s ease;
+    transition: background 0.15s ease, box-shadow 0.15s ease, filter 0.12s ease;
 }
 .vs-token-row__code.vs-key-copy:hover,
 .vs-token-row__code.vs-key-copy:focus {
     background: rgba(22, 163, 74, 0.1);
     outline: none;
     box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.25);
+}
+/*
+ * 令牌 Key 默认模糊（对齐用户日志完整路径密钥：.uc-log-url-secret）
+ * 悬停/聚焦明文；无悬停设备保持模糊，点击仍可复制 data-copy
+ */
+#userTokenPage .vs-token-row__code.uc-token-secret {
+    display: inline-block;
+    vertical-align: baseline;
+    max-width: 100%;
+    overflow: hidden;
+    filter: blur(3.5px);
+    user-select: none;
+    -webkit-user-select: none;
+    padding: 2px 5px;
+    margin: 0 -1px;
+}
+#userTokenPage .vs-token-row__code.uc-token-secret:hover,
+#userTokenPage .vs-token-row__code.uc-token-secret:focus,
+#userTokenPage .vs-token-row__code.uc-token-secret:focus-visible {
+    filter: none;
+    user-select: text;
+    -webkit-user-select: text;
+}
+@media (hover: none) {
+    #userTokenPage .vs-token-row__code.uc-token-secret:hover {
+        filter: blur(3.5px);
+        user-select: none;
+        -webkit-user-select: none;
+    }
 }
 .vs-token-row.is-token-disabled {
     opacity: 0.72;
@@ -5305,17 +5334,19 @@ select.vs-input.vs-select {
 }
 
 @media (min-width: 901px) {
+    /* 名称按内容收缩，Key/状态前移；调用/消耗用 max-content 防重叠 */
     .vs-api-item.vs-token-row {
         grid-template-columns:
             32px
-            minmax(88px, 0.9fr)
-            minmax(180px, 1.8fr)
-            auto
-            72px
-            72px
-            minmax(110px, 0.9fr)
+            fit-content(148px)
+            minmax(148px, 1.35fr)
+            max-content
+            max-content
+            max-content
+            max-content
             auto !important;
         grid-template-areas: "icon title endpoint tags calls spent author actions" !important;
+        gap: 8px 10px !important;
         align-items: center;
         padding: 10px 14px !important;
         border-radius: 0 !important;
@@ -5323,6 +5354,17 @@ select.vs-input.vs-select {
         border-bottom: 1px solid var(--vs-border) !important;
         box-shadow: none !important;
         background: var(--vs-content-bg) !important;
+    }
+    .vs-api-item.vs-token-row .vs-api-item__title {
+        min-width: 0;
+        max-width: 148px;
+    }
+    .vs-api-item.vs-token-row .vs-api-item__endpoint {
+        min-width: 0;
+    }
+    .vs-api-item.vs-token-row .vs-api-item__tags {
+        justify-self: start !important;
+        white-space: nowrap;
     }
     .vs-api-item.vs-token-row .vs-api-item__calls,
     .vs-api-item.vs-token-row .vs-token-row__calls {
@@ -5339,6 +5381,7 @@ select.vs-input.vs-select {
         white-space: nowrap;
         font-size: 12px;
         color: #64748b;
+        justify-self: start !important;
     }
     .vs-api-item.vs-token-row .vs-api-item__author {
         grid-area: author !important;

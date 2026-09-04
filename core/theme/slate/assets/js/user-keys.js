@@ -135,10 +135,12 @@
         html += '<div class="vs-api-item__icon vs-token-row__icon" aria-hidden="true"><span class="vs-token-row__icon-mark">SK</span></div>';
         html += '<div class="vs-api-item__title">';
         html += '<span class="vs-api-item__name" data-field="remark">' + escapeHtml(token.remark || '') + '</span>';
-        html += '<span class="vs-api-item__id">#' + id + '</span>';
         html += '</div>';
         html += '<div class="vs-api-item__endpoint vs-token-row__secret">';
-        html += '<code class="vs-token-row__code vs-key-copy" data-field="secret" data-copy="' + escapeHtml(token.secret || '') + '" title="点击复制" role="button" tabindex="0">' + escapeHtml(token.secret || '') + '</code>';
+        html += '<code class="vs-token-row__code vs-key-copy uc-token-secret" data-field="secret" data-copy="'
+            + escapeHtml(token.secret || '')
+            + '" title="悬停查看明文，点击复制" role="button" tabindex="0">'
+            + escapeHtml(token.secret || '') + '</code>';
         html += '</div>';
         html += '<div class="vs-api-item__tags">';
         html += '<span class="vs-api-tag vs-api-tag--status ' + statusClass + '" data-field="status_label">' + escapeHtml(token.status_label || '') + '</span>';

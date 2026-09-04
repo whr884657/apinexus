@@ -206,13 +206,15 @@
                 if (typeof window.VS.setLoading === 'function') {
                     window.VS.setLoading(false);
                 }
-                if (!res || res.code !== 1 || !res.data) {
+                if (!res || res.code !== 1) {
                     if (window.VS.showMessage) {
                         window.VS.showMessage((res && res.msg) || '加载失败', 'error');
                     }
                     return;
                 }
-                var d = res.data;
+                var d = (res.data && typeof res.data === 'object' && res.data.api_id !== undefined)
+                    ? res.data
+                    : res;
                 if (editId) {
                     editId.value = String(d.api_id || id);
                 }
@@ -436,7 +438,9 @@
                         }
                         return;
                     }
-                    applySavedSlots(payload.api_id, res.data || {});
+                    applySavedSlots(payload.api_id, (res.data && typeof res.data === 'object' && res.data.params_html !== undefined)
+                        ? res.data
+                        : res);
                     closeOverlay();
                     if (window.VS.showMessage) {
                         window.VS.showMessage(res.msg || '文档已保存', 'success');

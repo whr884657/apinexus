@@ -669,6 +669,39 @@ class ApiManager
     }
 
     /**
+     * @deprecated v13.26.39 顶栏铃铛仅摘要，不再调用（E301）
+     *
+     * @param int $limit
+     * @return array<int,array{id:int,name:string}>
+     */
+    public static function listPendingReviewBrief($limit = 3)
+    {
+        $limit = max(1, min(10, (int) $limit));
+        if (!self::tableReady() || !self::hasAuditColumn()) {
+            return array();
+        }
+        $rows = self::listFiltered(array(
+            'user_submitted' => true,
+            'audit'          => self::AUDIT_PENDING,
+            'limit'          => $limit,
+        ));
+        $out = array();
+        if (!is_array($rows)) {
+            return $out;
+        }
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $out[] = array(
+                'id'   => isset($row['id']) ? (int) $row['id'] : 0,
+                'name' => isset($row['name']) ? trim((string) $row['name']) : '',
+            );
+        }
+        return $out;
+    }
+
+    /**
      * 某用户投稿的接口列表
      *
      * @param int $userId
