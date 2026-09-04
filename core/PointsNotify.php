@@ -186,6 +186,87 @@ class PointsNotify
     }
 
     /**
+     * 令牌配额用尽（或开始改扣总积分）时通知用户；Redis 去重至配额抬高后清除
+     *
+     * @param int $userId
+     * @param int $keyId
+     * @return array{ok:bool,sent:int,error:string}
+     */
+    public static function notifyKeyQuotaExhausted($userId, $keyId)
+    {
+        if (!Config::isMailEnabled()) {
+            return array('ok' => false, 'sent' => 0, 'error' => '邮箱发信未配置');
+        }
+        if (Config::get('mail_notify_key_quota', '1') !== '1') {
+            return array('ok' => false, 'sent' => 0, 'error' => '已关闭令牌配额用尽通知邮件');
+        }
+
+        $userId = (int) $userId;
+        $keyId = (int) $keyId;
+        if ($userId <= 0 || $keyId <= 0) {
+            return array('ok' => false, 'sent' => 0, 'error' => '参数无效');
+        }
+
+        if (!class_exists('RedisCache') || !RedisCache::enabled() || !class_exists('RedisService')) {
+            return array('ok' => false, 'sent' => 0, 'error' => '缓存不可用，已跳过配额提醒');
+        }
+
+        $redisKey = ApiKeyManager::REDIS_KEY_QUOTA_NOTICE_PREFIX . $keyId;
+        $claimed = false;
+        try {
+            $claimed = (bool) RedisService::withClient(function ($redis) use ($redisKey) {
+                $fullKey = RedisService::buildKey($redisKey);
+                return (bool) $redis->set($fullKey, '1', array('nx' => true));
+            });
+        } catch (Exception $e) {
+            return array('ok' => false, 'sent' => 0, 'error' => '缓存不可用，已跳过配额提醒');
+        }
+        if (!$claimed) {
+            return array('ok' => true, 'sent' => 0, 'error' => '已提醒过');
+        }
+
+        $to = self::userEmail($userId);
+        if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            ApiKeyManager::clearQuotaNoticeFlag($keyId);
+            return array('ok' => false, 'sent' => 0, 'error' => '用户邮箱无效');
+        }
+
+        $keyRow = ApiKeyManager::findById($keyId);
+        $remark = is_array($keyRow) && isset($keyRow['remark']) ? trim((string) $keyRow['remark']) : '';
+        if ($remark === '') {
+            $remark = '令牌#' . $keyId;
+        }
+        $quota = is_array($keyRow) && isset($keyRow['quota']) ? (float) $keyRow['quota'] : 0.0;
+        $fallback = is_array($keyRow) && !empty($keyRow['quotafallback']);
+
+        $siteName = self::siteName();
+        $username = self::userName($userId);
+        $keysUrl = rtrim(vs_base_url(), '/') . '/user/keys';
+
+        $subject = '【' . $siteName . '】令牌配额已用尽';
+        $body = '<p>您好' . ($username !== '' ? ('，' . self::e($username)) : '') . '：</p>';
+        $body .= '<p>您在「' . self::e($siteName) . '」的调用令牌「' . self::e($remark) . '」所分配的积分配额已用尽。</p>';
+        $body .= '<ul>';
+        if ($quota > 0) {
+            $body .= '<li>分配配额：' . self::e(self::fmtPoints($quota)) . '</li>';
+        }
+        if ($fallback) {
+            $body .= '<li>后续调用将消耗您的<strong>账户总积分</strong>（已开启配额回落）。</li>';
+        } else {
+            $body .= '<li>在提高该令牌配额或开启「配额用尽后改用总积分」之前，使用该令牌的收费调用将无法继续。</li>';
+        }
+        $body .= '</ul>';
+        $body .= '<p><a href="' . self::e($keysUrl) . '">前往令牌管理</a></p>';
+        $body .= '<p>本邮件由系统自动发送，如非本人操作请忽略。</p>';
+
+        $result = self::sendOne($to, $subject, $body);
+        if (empty($result['ok']) || (int) $result['sent'] <= 0) {
+            ApiKeyManager::clearQuotaNoticeFlag($keyId);
+        }
+        return $result;
+    }
+
+    /**
      * @param string $to
      * @param string $subject
      * @param string $body

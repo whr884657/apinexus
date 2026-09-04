@@ -5333,22 +5333,191 @@ select.vs-input.vs-select {
     margin-top: 12px;
 }
 
+/* 令牌行：去掉全局「请求」伪元素，仅保留 HTML「调用」 */
+#userTokenPage .vs-token-row .vs-api-item__calls::before,
+#userTokenPage .vs-token-row .vs-token-row__calls::before {
+    content: none !important;
+}
+
+#userTokenPage .vs-token-row .vs-api-item__title {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 2px !important;
+    min-width: 0 !important;
+}
+
+#userTokenPage .vs-token-row .vs-token-row__created {
+    font-size: 11px;
+    font-weight: 500;
+    color: #94a3b8;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+#userTokenPage .vs-token-row .vs-token-row__quota,
+#userTokenPage .vs-token-row .vs-token-row__expire {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 令牌有效期：嵌套选择器内日历（z-index 走 .vs-nested-picker--viewport=4900） */
+.vs-datetime__trigger {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+.vs-datetime-picker-body .vs-datetime__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.vs-datetime-picker-body .vs-datetime__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vs-text, #0f172a);
+}
+.vs-datetime-picker-body .vs-datetime__nav {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--vs-text, #0f172a);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+}
+.vs-datetime-picker-body .vs-datetime__nav:hover {
+    background: rgba(15, 23, 42, 0.06);
+}
+.vs-datetime-picker-body .vs-datetime__weekdays,
+.vs-datetime-picker-body .vs-datetime__days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.vs-datetime-picker-body .vs-datetime__weekdays {
+    margin-bottom: 4px;
+}
+.vs-datetime-picker-body .vs-datetime__weekdays span {
+    text-align: center;
+    font-size: 11px;
+    color: #94a3b8;
+    padding: 4px 0;
+}
+.vs-datetime-picker-body .vs-datetime__day {
+    height: 36px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--vs-text, #0f172a);
+    cursor: pointer;
+    font-size: 13px;
+}
+.vs-datetime-picker-body .vs-datetime__day.is-empty {
+    pointer-events: none;
+}
+.vs-datetime-picker-body .vs-datetime__day:hover:not(.is-empty) {
+    background: rgba(15, 23, 42, 0.06);
+}
+.vs-datetime-picker-body .vs-datetime__day.is-selected {
+    background: var(--vs-primary, #2563eb);
+    color: #fff;
+}
+.vs-datetime-picker-body .vs-datetime__hm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+.vs-datetime-picker-body .vs-datetime__hm .vs-pick,
+.vs-datetime-picker-body .vs-datetime__hm .vs-select {
+    flex: 1;
+    min-width: 0;
+}
+.vs-datetime-picker-body .vs-datetime__hm-sep {
+    color: #94a3b8;
+    font-weight: 600;
+}
+.vs-datetime-fallback {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+#userTokenPage .vs-api-tag--fallback,
+.vs-token-row .vs-api-tag--fallback {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+}
+#userTokenPage .vs-token-row__lbl {
+    color: #94a3b8;
+    font-weight: 500;
+    margin-right: 2px;
+}
+
+/* 密钥 + 复制图标（对齐管理端） */
+#userTokenPage .vs-token-row__secret {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    min-width: 0;
+    width: auto;
+    vertical-align: middle;
+}
+#userTokenPage .vs-token-row__secret .vs-token-row__code {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#userTokenPage .vs-token-row__copy {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--vs-border, #e2e8f0);
+    border-radius: 8px;
+    background: #fff;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+}
+#userTokenPage .vs-token-row__copy:hover {
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+#userTokenPage .vs-token-copy-btn {
+    display: none !important;
+}
+
 @media (min-width: 901px) {
-    /* 名称按内容收缩，Key/状态前移；调用/消耗用 max-content 防重叠 */
+    /* 固定列宽保证跨行垂直对齐；密钥列吃剩余空间 */
     .vs-api-item.vs-token-row {
         grid-template-columns:
             32px
-            fit-content(148px)
-            minmax(148px, 1.35fr)
-            max-content
-            max-content
-            max-content
-            max-content
+            minmax(100px, 0.9fr)
+            minmax(160px, 1.5fr)
+            112px
+            148px
+            96px
+            108px
+            72px
             auto !important;
-        grid-template-areas: "icon title endpoint tags calls spent author actions" !important;
+        grid-template-areas: "icon title endpoint quota expire calls spent tags actions" !important;
         gap: 8px 10px !important;
         align-items: center;
-        padding: 10px 14px !important;
+        padding: 12px 14px !important;
         border-radius: 0 !important;
         border: 0 !important;
         border-bottom: 1px solid var(--vs-border) !important;
@@ -5356,13 +5525,40 @@ select.vs-input.vs-select {
         background: var(--vs-content-bg) !important;
     }
     .vs-api-item.vs-token-row .vs-api-item__title {
+        grid-area: title !important;
         min-width: 0;
-        max-width: 148px;
+        max-width: none;
+        overflow: hidden;
+    }
+    .vs-api-item.vs-token-row .vs-api-item__name {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .vs-api-item.vs-token-row .vs-api-item__endpoint {
+        grid-area: endpoint !important;
         min-width: 0;
+        width: 100%;
+    }
+    .vs-api-item.vs-token-row .vs-token-row__quota {
+        grid-area: quota !important;
+        justify-self: stretch !important;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .vs-api-item.vs-token-row .vs-token-row__expire {
+        grid-area: expire !important;
+        justify-self: stretch !important;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .vs-api-item.vs-token-row .vs-api-item__tags {
+        grid-area: tags !important;
         justify-self: start !important;
         white-space: nowrap;
     }
@@ -5373,7 +5569,10 @@ select.vs-input.vs-select {
         font-size: 12px;
         color: #64748b;
         text-align: left !important;
-        justify-self: start !important;
+        justify-self: stretch !important;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .vs-api-item.vs-token-row .vs-api-item__spent,
     .vs-api-item.vs-token-row .vs-token-row__spent {
@@ -5381,18 +5580,19 @@ select.vs-input.vs-select {
         white-space: nowrap;
         font-size: 12px;
         color: #64748b;
-        justify-self: start !important;
-    }
-    .vs-api-item.vs-token-row .vs-api-item__author {
-        grid-area: author !important;
-        white-space: nowrap;
-        font-size: 12px;
-        color: #64748b;
+        justify-self: stretch !important;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .vs-api-item.vs-token-row .vs-api-item__calls strong,
     .vs-api-item.vs-token-row .vs-api-item__spent strong {
         color: #0f172a;
         font-weight: 700;
+    }
+    .vs-api-item.vs-token-row .vs-api-item__actions {
+        grid-area: actions !important;
+        justify-self: end !important;
     }
     .vs-user-token-list {
         border: 1px solid var(--vs-border);
@@ -5403,16 +5603,54 @@ select.vs-input.vs-select {
 }
 
 @media (max-width: 900px) {
+    #userTokenPage .vs-token-row__copy {
+        display: none !important;
+    }
+    #userTokenPage .vs-token-copy-btn {
+        display: inline-flex !important;
+    }
     .vs-api-item.vs-token-row {
-        /* 4 列：避免「调用/消耗」落在 28px 图标列上叠字 */
+        /* 紧凑卡：名称+状态 / Key / 配额·有效期 / 调用·消耗 / 操作右对齐 */
         grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) auto !important;
         grid-template-areas:
             "icon title title tags"
             "endpoint endpoint endpoint endpoint"
-            ". calls spent author"
+            ". quota expire expire"
+            ". calls spent ."
             "actions actions actions actions" !important;
-        gap: 8px 10px !important;
+        gap: 6px 8px !important;
         padding: 12px !important;
+    }
+    .vs-api-item.vs-token-row .vs-api-item__title {
+        grid-area: title !important;
+    }
+    .vs-api-item.vs-token-row .vs-api-item__endpoint {
+        grid-area: endpoint !important;
+    }
+    .vs-api-item.vs-token-row .vs-api-item__tags {
+        grid-area: tags !important;
+        justify-self: end !important;
+    }
+    .vs-api-item.vs-token-row .vs-token-row__quota {
+        grid-area: quota !important;
+        font-size: 12px;
+        color: #64748b;
+        white-space: nowrap;
+        min-width: 0;
+    }
+    .vs-api-item.vs-token-row .vs-token-row__quota::after {
+        content: " ·";
+        color: #cbd5e1;
+        margin-left: 2px;
+    }
+    .vs-api-item.vs-token-row .vs-token-row__expire {
+        grid-area: expire !important;
+        font-size: 12px;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
     }
     .vs-api-item.vs-token-row .vs-api-item__calls,
     .vs-api-item.vs-token-row .vs-token-row__calls {
@@ -5431,13 +5669,6 @@ select.vs-input.vs-select {
         color: #64748b;
         white-space: nowrap;
         min-width: 0;
-    }
-    .vs-api-item.vs-token-row .vs-api-item__author {
-        grid-area: author !important;
-        font-size: 12px;
-        color: #94a3b8;
-        text-align: right;
-        white-space: nowrap;
     }
     .vs-api-item.vs-token-row .vs-api-item__actions {
         grid-area: actions !important;

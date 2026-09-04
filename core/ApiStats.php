@@ -346,7 +346,7 @@ class ApiStats
         }
         $id = isset($row['id']) ? (int) $row['id'] : 0;
         $remark = '调用接口：' . (isset($row['name']) ? (string) $row['name'] : ('#' . $id));
-        $deduct = PointsManager::deductApiCall(
+        $deduct = self::deductWithKeyQuota(
             (int) self::$keyCtx['userid'],
             $price,
             $id,
@@ -355,16 +355,17 @@ class ApiStats
         );
         if (empty($deduct['ok'])) {
             return array(
-                'errcode' => ApiError::NO_POINTS,
+                'errcode' => isset($deduct['errcode']) ? (int) $deduct['errcode'] : ApiError::NO_POINTS,
                 'msg'     => isset($deduct['msg']) ? (string) $deduct['msg'] : '积分余额不足',
             );
         }
         self::$proxyPrepaid = array(
-            'userid' => (int) self::$keyCtx['userid'],
-            'keyid'  => (int) self::$keyCtx['keyid'],
-            'apiid'  => $id,
-            'amount' => $price,
-            'remark' => $remark,
+            'userid'    => (int) self::$keyCtx['userid'],
+            'keyid'     => (int) self::$keyCtx['keyid'],
+            'apiid'     => $id,
+            'amount'    => $price,
+            'remark'    => $remark,
+            'use_quota' => !empty($deduct['use_quota']),
         );
         return true;
     }
@@ -379,13 +380,18 @@ class ApiStats
             return;
         }
         $p = self::$proxyPrepaid;
-        PointsManager::refundApiCall(
+        $refund = PointsManager::refundApiCall(
             (int) $p['userid'],
             (float) $p['amount'],
             (int) $p['apiid'],
             (int) $p['keyid'],
             $remark !== '' ? $remark : '上游失败退回'
         );
+        // 仅退积分成功时回滚 quotaused，避免「积分未退却少记配额」
+        if (!empty($refund['ok']) && !empty($p['use_quota']) && class_exists('ApiKeyManager')
+            && method_exists('ApiKeyManager', 'adjustQuotaused')) {
+            ApiKeyManager::adjustQuotaused((int) $p['keyid'], -((float) $p['amount']));
+        }
         self::$proxyPrepaid = null;
     }
 
@@ -700,6 +706,9 @@ class ApiStats
                 return $ipOk;
             }
         }
+        if (class_exists('ApiKeyManager') && ApiKeyManager::isExpired($keyRow)) {
+            return array('errcode' => ApiError::KEY_EXPIRED, 'msg' => '密钥已过期');
+        }
         self::$keyCtx = array(
             'raw'    => (string) $raw,
             'keyid'  => (int) $keyRow['id'],
@@ -707,6 +716,96 @@ class ApiStats
             'valid'  => true,
         );
         return true;
+    }
+
+    /**
+     * 收费扣费：先配额判定，再扣账户；配额内成功则累加 quotaused
+     *
+     * @param int    $userId
+     * @param float  $amount
+     * @param int    $apiId
+     * @param int    $keyId
+     * @param string $remark
+     * @return array{ok:bool,msg:string,errcode?:int,use_quota?:bool,balance?:float,orderno?:string,amount?:float}
+     */
+    private static function deductWithKeyQuota($userId, $amount, $apiId, $keyId, $remark)
+    {
+        $prep = array('ok' => true, 'use_quota' => false, 'crossed_exhausted' => false);
+        if (class_exists('ApiKeyManager') && method_exists('ApiKeyManager', 'prepareCharge')) {
+            $prep = ApiKeyManager::prepareCharge((int) $keyId, (float) $amount);
+        }
+        if (empty($prep['ok'])) {
+            $failCode = isset($prep['errcode']) ? (int) $prep['errcode'] : ApiError::KEY_QUOTA;
+            // 硬拦配额也发一次用尽提醒（Redis 去重）
+            if ($failCode === ApiError::KEY_QUOTA && class_exists('PointsNotify')) {
+                try {
+                    PointsNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
+                } catch (Exception $e) {
+                    // 发信失败不阻断
+                }
+            }
+            return array(
+                'ok'      => false,
+                'errcode' => $failCode,
+                'msg'     => isset($prep['msg']) ? (string) $prep['msg'] : '令牌分配积分不足',
+            );
+        }
+        $deduct = PointsManager::deductApiCall(
+            (int) $userId,
+            (float) $amount,
+            (int) $apiId,
+            (int) $keyId,
+            (string) $remark
+        );
+        if (empty($deduct['ok'])) {
+            return array(
+                'ok'      => false,
+                'errcode' => ApiError::NO_POINTS,
+                'msg'     => isset($deduct['msg']) ? (string) $deduct['msg'] : '积分余额不足',
+            );
+        }
+        $useQuota = !empty($prep['use_quota']);
+        if ($useQuota && class_exists('ApiKeyManager') && method_exists('ApiKeyManager', 'adjustQuotaused')) {
+            $quotaOk = ApiKeyManager::adjustQuotaused((int) $keyId, (float) $amount, null, true);
+            if (!$quotaOk) {
+                // 并发下条件更新失败：回退刚扣的账户积分，避免超配额记账
+                PointsManager::refundApiCall(
+                    (int) $userId,
+                    (float) $amount,
+                    (int) $apiId,
+                    (int) $keyId,
+                    '令牌配额并发冲突退回'
+                );
+                if (class_exists('PointsNotify')) {
+                    try {
+                        PointsNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
+                    } catch (Exception $e) {
+                        // ignore
+                    }
+                }
+                return array(
+                    'ok'      => false,
+                    'errcode' => ApiError::KEY_QUOTA,
+                    'msg'     => '令牌分配积分不足',
+                );
+            }
+            if (!empty($prep['crossed_exhausted']) && class_exists('PointsNotify')) {
+                try {
+                    PointsNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
+                } catch (Exception $e) {
+                    // 发信失败不阻断
+                }
+            }
+        } elseif (!empty($prep['crossed_exhausted']) && class_exists('PointsNotify')) {
+            // 配额不足走回落总积分时也提醒
+            try {
+                PointsNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
+            } catch (Exception $e) {
+                // ignore
+            }
+        }
+        $deduct['use_quota'] = $useQuota;
+        return $deduct;
     }
 
     /**
@@ -762,7 +861,7 @@ class ApiStats
             $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
             if ($charge === ApiManager::CHARGE_PAID && $price > 0
                 && !empty(self::$keyCtx['valid']) && !empty(self::$keyCtx['userid'])) {
-                $deduct = PointsManager::deductApiCall(
+                $deduct = self::deductWithKeyQuota(
                     (int) self::$keyCtx['userid'],
                     $price,
                     $id,
@@ -770,7 +869,8 @@ class ApiStats
                     '调用接口：' . (isset($row['name']) ? (string) $row['name'] : ('#' . $id))
                 );
                 if (!$deduct['ok']) {
-                    self::jsonExit(ApiError::NO_POINTS, isset($deduct['msg']) ? $deduct['msg'] : '积分余额不足');
+                    $err = isset($deduct['errcode']) ? (int) $deduct['errcode'] : ApiError::NO_POINTS;
+                    self::jsonExit($err, isset($deduct['msg']) ? $deduct['msg'] : '积分余额不足');
                 }
                 $charged = 1;
                 $cost = $price;

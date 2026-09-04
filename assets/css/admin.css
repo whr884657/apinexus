@@ -9045,6 +9045,36 @@ select.vs-input.vs-select {
     min-width: 0;
 }
 
+#apiKeysPage .key-cell--stack {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+#apiKeysPage .key-cell__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+#apiKeysPage .key-cell__sub {
+    font-size: 11px;
+    color: var(--vs-text-secondary, #6b7280);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+#apiKeysPage .remark-cell {
+    display: inline-block;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
 #apiKeysPage .key-cell__code {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12px;
@@ -9228,6 +9258,14 @@ select.vs-input.vs-select {
     min-width: 0;
 }
 
+#apiKeysPage .key-card__remark {
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 #apiKeysPage .key-card__meta {
     display: flex;
     align-items: center;
@@ -9238,6 +9276,14 @@ select.vs-input.vs-select {
     color: var(--vs-text-secondary, #6b7280);
 }
 
+#apiKeysPage .key-card__quota-expire {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 #apiKeysPage .key-card__time {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -9246,6 +9292,7 @@ select.vs-input.vs-select {
 #apiKeysPage .key-card__metrics {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    margin-left: auto;
 }
 
 #apiKeysPage .key-card__metrics strong {
@@ -9257,6 +9304,13 @@ select.vs-input.vs-select {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     font-size: 13px;
+}
+
+#apiKeysPage .key-card__time {
+    display: block;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    margin-bottom: 4px;
 }
 
 #apiKeysPage .key-card__actions {
@@ -11613,25 +11667,45 @@ select.vs-input.vs-select {
     }
 }
 
-/* ---- admin IP 配置（v13.26.39） ---- */
-#adminIpPage .content-author-cell,
-.admin-ip-detail .content-author-cell {
+/* ---- admin IP 配置（v13.26.40：扁平双 Tab / 多列代理） ---- */
+#adminIpPage .vs-admin-ip-tabs {
+    margin-bottom: 16px;
+}
+#adminIpPage .vs-admin-ip-tabs .vs-badge {
+    margin-left: 4px;
+}
+/* 页级徽章配色（规范：须挂本页作用域，否则无色标签） */
+#adminIpPage .vs-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 9999px;
+    white-space: nowrap;
+    line-height: 1.25;
+}
+#adminIpPage .vs-badge--success { background: #f0faf5; color: #15803d; }
+#adminIpPage .vs-badge--warning { background: #fff7e8; color: #e37318; }
+#adminIpPage .vs-badge--info { background: #eff6ff; color: #1d4ed8; }
+#adminIpPage .vs-badge--error { background: #fff0f0; color: #dc2626; }
+#adminIpPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+
+#adminIpPage .content-author-cell {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
 }
 #adminIpPage .content-author-cell__avatar,
-#adminIpPage .content-author-cell__fallback,
-.admin-ip-detail .content-author-cell__avatar,
-.admin-ip-detail .content-author-cell__fallback {
+#adminIpPage .content-author-cell__fallback {
     width: 28px;
     height: 28px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
 }
-#adminIpPage .content-author-cell__fallback,
-.admin-ip-detail .content-author-cell__fallback {
+#adminIpPage .content-author-cell__fallback {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -11639,17 +11713,40 @@ select.vs-input.vs-select {
     font-size: 12px;
     color: #475569;
 }
+#adminIpPage .content-author-cell__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+#adminIpPage .content-author-cell__name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 #adminIpPage .vs-admin-ip-preview {
     margin-top: 4px;
     font-size: 0.75rem;
     color: var(--vs-text-secondary, #6b7280);
     word-break: break-all;
 }
-#adminIpPage .vs-admin-ip-strategy {
+#adminIpPage .vs-admin-ip-endpoint {
     display: inline-block;
-    margin-left: 6px;
-    font-size: 0.75rem;
-    color: var(--vs-text-secondary, #6b7280);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+#adminIpPage .vs-admin-ip-proxy-table .action-btns,
+#adminIpPage .vs-content-actions-cell .action-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
 }
 #adminIpPage .mobile-admin-ip-cards {
     display: none;
@@ -11660,29 +11757,69 @@ select.vs-input.vs-select {
     border-radius: 10px;
     background: var(--vs-surface, #fff);
 }
+#adminIpPage .admin-ip-card--allow {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+#adminIpPage .admin-ip-card--proxy {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 #adminIpPage .admin-ip-card__header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 10px;
 }
-#adminIpPage .admin-ip-card__tags {
+#adminIpPage .admin-ip-card__header > .vs-badge {
+    flex-shrink: 0;
+}
+#adminIpPage .admin-ip-card__title-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    justify-content: flex-end;
+    align-items: center;
+    gap: 6px 8px;
+}
+#adminIpPage .admin-ip-card__title {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+    color: var(--vs-text, #0f172a);
+}
+#adminIpPage .admin-ip-card__endpoint {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--vs-text-secondary, #64748b);
+    word-break: break-all;
 }
 #adminIpPage .admin-ip-card__meta {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-top: 8px;
-    font-size: 0.8125rem;
+    margin: 0;
+    font-size: 0.75rem;
     color: var(--vs-text-secondary, #6b7280);
     word-break: break-all;
 }
+#adminIpPage .admin-ip-card__meta code {
+    font-size: inherit;
+}
 #adminIpPage .admin-ip-card__actions {
-    margin-top: 10px;
+    margin-top: 2px;
+}
+#adminIpPage .admin-ip-card__actions--end {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--vs-border, #e5e7eb);
+}
+#adminIpPage .admin-ip-card__actions .vs-btn--sm {
+    padding: 4px 8px;
+    font-size: 12px;
 }
 @media (min-width: 769px) {
     #adminIpPage .vs-api-list-table-wrap {
@@ -11702,88 +11839,60 @@ select.vs-input.vs-select {
         gap: 10px;
     }
 }
-.admin-ip-detail__user {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
+
+/* 编辑表单网格 */
+.vs-admin-ip-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 14px;
 }
-.admin-ip-detail__name {
-    font-weight: 600;
-}
-.admin-ip-detail__email {
-    font-size: 0.8125rem;
-    color: var(--vs-text-secondary, #6b7280);
-}
-.admin-ip-detail__section {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--vs-border, #e5e7eb);
-}
-.admin-ip-detail__section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-.admin-ip-detail__section-head h3 {
+.vs-admin-ip-form-grid .vs-form-row {
     margin: 0;
-    font-size: 0.95rem;
 }
-.admin-ip-allow-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+.vs-admin-ip-form-grid .vs-input,
+.vs-admin-ip-form-grid .vs-select {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
-.admin-ip-allow-list li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 8px 10px;
-    border: 1px solid var(--vs-border, #e5e7eb);
-    border-radius: 8px;
-}
-.admin-ip-proxy-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.admin-ip-proxy-item {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 12px;
-    border: 1px solid var(--vs-border, #e5e7eb);
-    border-radius: 8px;
-}
-.admin-ip-proxy-item__title {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-.admin-ip-proxy-item__meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 6px;
-}
-.admin-ip-proxy-item__endpoint,
-.admin-ip-proxy-item__code {
-    font-size: 0.8125rem;
-    color: var(--vs-text-secondary, #6b7280);
-    word-break: break-all;
+.vs-admin-ip-field-span {
+    grid-column: 1 / -1;
 }
 @media (max-width: 640px) {
-    .admin-ip-proxy-item {
-        flex-direction: column;
-    }
-    .admin-ip-proxy-item__actions {
-        width: 100%;
+    .vs-admin-ip-form-grid {
+        grid-template-columns: 1fr;
     }
 }
+
+/* 测试终端 */
+.vs-admin-ip-test-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 0.8125rem;
+    color: var(--vs-text-secondary, #6b7280);
+}
+.vs-admin-ip-test-term {
+    min-height: 200px;
+    max-height: min(52vh, 420px);
+    overflow: auto;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.vs-admin-ip-test-line.is-info { color: #94a3b8; }
+.vs-admin-ip-test-line.is-ok { color: #4ade80; }
+.vs-admin-ip-test-line.is-err { color: #f87171; }
+.vs-admin-ip-test-line.is-warn { color: #fbbf24; }
+.vs-admin-ip-test-line.is-req { color: #38bdf8; }
+.vs-admin-ip-test-line.is-res { color: #c4b5fd; }
 

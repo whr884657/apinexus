@@ -468,6 +468,19 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 13.26.40 令牌配额列 + 邮件开关时跳过
+        if (!in_array('13.26.40', $applied, true)) {
+            if (self::tableColumnExists('apikey', 'quota')
+                && self::tableColumnExists('apikey', 'quotaused')
+                && self::tableColumnExists('apikey', 'quotafallback')
+                && self::tableColumnExists('apikey', 'expiretime')) {
+                $allCfg40 = Config::all();
+                if (isset($allCfg40['mail_notify_key_quota'])) {
+                    self::markApplied('13.26.40');
+                }
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -1184,7 +1197,8 @@ class DatabaseMigrator
             || $version === '13.26.30'
             || $version === '13.26.31'
             || $version === '13.26.34'
-            || $version === '13.26.35');
+            || $version === '13.26.35'
+            || $version === '13.26.40');
     }
 
     /**
@@ -1646,6 +1660,16 @@ class DatabaseMigrator
         }
         if ($version === '13.26.35') {
             return self::proxyCodeColumnIsFive() && self::proxyCodesAllFiveReady();
+        }
+        if ($version === '13.26.40') {
+            if (!self::tableColumnExists('apikey', 'quota')
+                || !self::tableColumnExists('apikey', 'quotaused')
+                || !self::tableColumnExists('apikey', 'quotafallback')
+                || !self::tableColumnExists('apikey', 'expiretime')) {
+                return false;
+            }
+            $all = Config::all();
+            return isset($all['mail_notify_key_quota']);
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

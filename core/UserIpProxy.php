@@ -546,6 +546,137 @@ class UserIpProxy
     }
 
     /**
+     * 管理员：全站出口代理扁平列表（含归属用户；不含密码）
+     *
+     * @param int $limit
+     * @return array{ok:bool,msg:string,list?:array,truncated?:bool}
+     */
+    public static function adminFlatList($limit = 2000)
+    {
+        $limit = max(1, min(5000, (int) $limit));
+        if (!self::tableReady()) {
+            return array('ok' => false, 'msg' => '出口代理尚未就绪');
+        }
+        if (class_exists('DatabaseMigrator') && method_exists('DatabaseMigrator', 'ensureIpProxyCodeFive')) {
+            DatabaseMigrator::ensureIpProxyCodeFive();
+        }
+        self::backfillMissingProxyCodes();
+        try {
+            $pdo = Database::connect();
+            $proxyTable = Database::table('ipproxy');
+            $userTable = Database::table('user');
+            $hasStrategy = self::strategyColumnReady();
+            $sql = 'SELECT p.`id`, p.`userid`, p.`title`, p.`mode`, p.`proto`, p.`host`, p.`port`,'
+                . ' p.`extract`, p.`proxycode`, p.`status`,'
+                . ' CASE WHEN p.`password` = \'\' THEN 0 ELSE 1 END AS `haspass`,'
+                . ' u.`username` AS `ownername`, u.`email` AS `owneremail`, u.`avatar` AS `owneravatar`'
+                . ($hasStrategy ? ', u.`proxystrategy`' : ', 0 AS `proxystrategy`')
+                . ' FROM `' . $proxyTable . '` p'
+                . ' LEFT JOIN `' . $userTable . '` u ON u.`id` = p.`userid`'
+                . ' ORDER BY p.`id` DESC'
+                . ' LIMIT ' . ((int) $limit + 1);
+            $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+            if (!is_array($rows)) {
+                $rows = array();
+            }
+            $truncated = count($rows) > $limit;
+            if ($truncated) {
+                $rows = array_slice($rows, 0, $limit);
+            }
+            $list = array();
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                // 管理端扁平列表只投影 UI 字段：可含 extract（节点/链接列截断展示）；禁止回传 username/password/缓存节点
+                $uid = (int) (isset($row['userid']) ? $row['userid'] : 0);
+                $owner = isset($row['ownername']) ? trim((string) $row['ownername']) : '';
+                if ($owner === '') {
+                    $owner = '用户#' . $uid;
+                }
+                $ownerEmail = isset($row['owneremail']) ? trim((string) $row['owneremail']) : '';
+                $ownerAvatar = '';
+                if (class_exists('UserAvatar')) {
+                    $ownerAvatar = UserAvatar::resolve(array(
+                        'id'       => $uid,
+                        'avatar'   => isset($row['owneravatar']) ? $row['owneravatar'] : '',
+                        'username' => $owner,
+                        'email'    => $ownerEmail,
+                    ));
+                }
+                $strategy = (int) (isset($row['proxystrategy']) ? $row['proxystrategy'] : 0);
+                $mode = isset($row['mode']) ? (int) $row['mode'] : self::MODE_TUNNEL;
+                $list[] = array(
+                    'id'             => isset($row['id']) ? (int) $row['id'] : 0,
+                    'userid'         => $uid,
+                    'title'          => isset($row['title']) ? (string) $row['title'] : '',
+                    'mode'           => $mode,
+                    'host'           => isset($row['host']) ? (string) $row['host'] : '',
+                    'port'           => isset($row['port']) ? (int) $row['port'] : 0,
+                    'extract'        => isset($row['extract']) ? (string) $row['extract'] : '',
+                    'proxycode'      => isset($row['proxycode']) ? (string) $row['proxycode'] : '',
+                    'status'         => isset($row['status']) ? (int) $row['status'] : 0,
+                    'haspass'        => !empty($row['haspass']) ? 1 : 0,
+                    'modelabel'      => self::modeLabel($mode),
+                    'protolabel'     => self::protoLabel(isset($row['proto']) ? (int) $row['proto'] : 0),
+                    'strategy'       => $strategy,
+                    'strategy_label' => self::strategyLabel($strategy),
+                    'ownername'      => $owner,
+                    'owneremail'     => $ownerEmail,
+                    'owneravatar'    => $ownerAvatar,
+                );
+            }
+            return array(
+                'ok'        => true,
+                'msg'       => 'ok',
+                'list'      => $list,
+                'truncated' => $truncated,
+            );
+        } catch (Exception $e) {
+            return array('ok' => false, 'msg' => '读取失败，请稍后重试');
+        }
+    }
+
+    /**
+     * 单条代理（归属校验；formatPublicRow，不含密码）
+     *
+     * @param int $userId
+     * @param int $id
+     * @return array{ok:bool,msg:string,row?:array}
+     */
+    public static function findForUser($userId, $id)
+    {
+        $userId = (int) $userId;
+        $id = (int) $id;
+        if ($userId <= 0 || $id <= 0) {
+            return array('ok' => false, 'msg' => '参数无效');
+        }
+        if (!self::tableReady()) {
+            return array('ok' => false, 'msg' => '出口代理尚未就绪');
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT `id`,`title`,`mode`,`proto`,`host`,`port`,`username`,`extract`,`extfmt`,`jsonhost`,`jsonport`,'
+                . '`proxycode`,`ttlmin`,`cachehost`,`cacheport`,`cacheexp`,`status`,`sort`,`createtime`,`updatetime`,'
+                . ' CASE WHEN `password` = \'\' THEN 0 ELSE 1 END AS `haspass`'
+                . ' FROM `' . Database::table('ipproxy') . '`'
+                . ' WHERE `id` = ? AND `userid` = ? LIMIT 1'
+            );
+            $stmt->execute(array($id, $userId));
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($row)) {
+                return array('ok' => false, 'msg' => '记录不存在');
+            }
+            $pub = self::formatPublicRow($row);
+            $pub['userid'] = $userId;
+            return array('ok' => true, 'msg' => 'ok', 'row' => $pub);
+        } catch (Exception $e) {
+            return array('ok' => false, 'msg' => '读取失败，请稍后重试');
+        }
+    }
+
+    /**
      * @param array $row
      * @return array
      */

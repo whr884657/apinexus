@@ -51,6 +51,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tokens = $tableReady ? ApiKeyManager::listAll() : array();
 
 /**
+ * 配额展示：不限 或 剩余/上限
+ *
+ * @param array $token
+ * @return string
+ */
+function vs_admin_key_quota_label(array $token)
+{
+    $quota = isset($token['quota']) ? (float) $token['quota'] : 0.0;
+    if ($quota <= 0) {
+        return '不限';
+    }
+    $left = isset($token['quotaleft']) && $token['quotaleft'] !== null
+        ? (float) $token['quotaleft']
+        : max(0.0, round($quota - (isset($token['quotaused']) ? (float) $token['quotaused'] : 0.0), 4));
+    $fmt = function ($n) {
+        return class_exists('PayConfig') ? PayConfig::fmtPoints($n) : (string) $n;
+    };
+    return $fmt($left) . '/' . $fmt($quota);
+}
+
+/**
  * @param array $row
  * @return array
  */
@@ -78,9 +99,13 @@ function vs_admin_key_row_ctx(array $row)
     if ($time !== '' && strlen($time) >= 16) {
         $time = substr($time, 0, 16);
     }
-    $search = mb_strtolower($token['secret'] . ' ' . $username . ' ' . $token['remark'] . ' #' . $id, 'UTF-8');
+    $search = mb_strtolower(
+        $token['secret'] . ' ' . $username . ' ' . $token['remark'] . ' #' . $id,
+        'UTF-8'
+    );
     $spent = isset($token['pointsspent']) ? (float) $token['pointsspent'] : 0.0;
     $spentFmt = class_exists('PayConfig') ? PayConfig::fmtPoints($spent) : (string) $spent;
+    $expireLabel = isset($token['expire_label']) ? (string) $token['expire_label'] : '永不过期';
 
     return array(
         'id'              => $id,
@@ -94,6 +119,8 @@ function vs_admin_key_row_ctx(array $row)
         'pointsspent'     => $spent,
         'pointsspent_fmt' => $spentFmt,
         'remark'          => $token['remark'],
+        'quota_label'     => vs_admin_key_quota_label($token),
+        'expire_label'    => $expireLabel,
         'search'          => $search,
         'status'          => (int) $token['status'],
     );
@@ -137,11 +164,16 @@ function vs_render_admin_key_desktop_row(array $ctx)
     <tr<?php echo $attrs; ?>>
         <td>
             <div class="key-cell">
-                <code class="key-cell__code" data-field="secret" data-copy="<?php echo vs_e($ctx['secret']); ?>"><?php echo vs_e($ctx['secret']); ?></code>
-                <button type="button" class="key-cell__copy vs-key-copy" data-copy="<?php echo vs_e($ctx['secret']); ?>" title="复制" aria-label="复制令牌">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                </button>
+                <div class="key-cell__row">
+                    <code class="key-cell__code" data-field="secret" data-copy="<?php echo vs_e($ctx['secret']); ?>"><?php echo vs_e($ctx['secret']); ?></code>
+                    <button type="button" class="key-cell__copy vs-key-copy" data-copy="<?php echo vs_e($ctx['secret']); ?>" title="复制" aria-label="复制令牌">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                </div>
             </div>
+        </td>
+        <td class="vs-api-keys-stat-cell">
+            <span data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span>
         </td>
         <td>
             <div class="user-cell">
@@ -153,7 +185,9 @@ function vs_render_admin_key_desktop_row(array $ctx)
                 <span class="user-cell__name" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
             </div>
         </td>
-        <td><span class="time-cell" data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span></td>
+        <td><span class="remark-cell" data-field="remark" title="<?php echo vs_e($ctx['remark']); ?>"><?php echo vs_e($ctx['remark'] !== '' ? $ctx['remark'] : '—'); ?></span></td>
+        <td class="vs-api-keys-stat-cell"><span data-field="quota_label"><?php echo vs_e($ctx['quota_label']); ?></span></td>
+        <td class="vs-api-keys-stat-cell"><span data-field="expire_label"><?php echo vs_e($ctx['expire_label']); ?></span></td>
         <td class="vs-api-keys-stat-cell"><span data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></span></td>
         <td class="vs-api-keys-stat-cell"><span data-field="pointsspent"><?php echo vs_e($ctx['pointsspent_fmt']); ?></span></td>
         <td>
@@ -196,8 +230,16 @@ function vs_render_admin_key_mobile_card(array $ctx)
             </span>
         </div>
         <code class="key-card__key" data-field="secret" data-copy="<?php echo vs_e($ctx['secret']); ?>"><?php echo vs_e($ctx['secret']); ?></code>
+        <?php if ($ctx['remark'] !== ''): ?>
+            <div class="key-card__remark" data-field="remark"><?php echo vs_e($ctx['remark']); ?></div>
+        <?php endif; ?>
         <div class="key-card__meta">
             <span class="key-card__time" data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span>
+            <span class="key-card__quota-expire">
+                配额 <span data-field="quota_label"><?php echo vs_e($ctx['quota_label']); ?></span>
+                ·
+                有效期 <span data-field="expire_label"><?php echo vs_e($ctx['expire_label']); ?></span>
+            </span>
             <span class="key-card__metrics" aria-label="调用与消耗">
                 调用 <strong data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></strong>
                 · 消耗 <strong data-field="pointsspent"><?php echo vs_e($ctx['pointsspent_fmt']); ?></strong>
@@ -258,11 +300,14 @@ vs_admin_layout_start('令牌管理', 'api-keys', $headerActions);
                 <table class="vs-table vs-api-keys-table">
                     <thead>
                         <tr>
-                            <th>令牌 Key</th>
-                            <th>所属用户</th>
+                            <th>Key</th>
                             <th>创建时间</th>
+                            <th>归属</th>
+                            <th>备注</th>
+                            <th>配额</th>
+                            <th>有效期</th>
                             <th>调用</th>
-                            <th>积分消耗</th>
+                            <th>消耗</th>
                             <th>状态</th>
                             <th>操作</th>
                         </tr>
@@ -295,7 +340,7 @@ vs_admin_layout_start('令牌管理', 'api-keys', $headerActions);
                 </label>
                 <div class="vs-api-pager__navs" id="adminKeyPagerNav">
                     <button type="button" class="vs-api-pager__nav" id="adminKeyPrevBtn" aria-label="上一页">上一页</button>
-                    <div class="vs-api-pager__nums" id="adminKeyPagerNums" role="navigation" aria-label="页码"></div>
+                    <span class="vs-api-pager__info" id="adminKeyPagerInfo">1</span>
                     <button type="button" class="vs-api-pager__nav" id="adminKeyNextBtn" aria-label="下一页">下一页</button>
                 </div>
             </div>

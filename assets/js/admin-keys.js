@@ -28,7 +28,8 @@
         var statusFilter = document.getElementById('adminKeyStatusFilter');
         var pageSizeEl = document.getElementById('adminKeyPageSize');
         var footerEl = document.getElementById('adminKeyFooter');
-        var pagerNumsEl = document.getElementById('adminKeyPagerNums');
+        var pagerNavEl = document.getElementById('adminKeyPagerNav');
+        var pagerInfoEl = document.getElementById('adminKeyPagerInfo');
         var statsEl = document.getElementById('adminKeyStats');
         var prevBtn = document.getElementById('adminKeyPrevBtn');
         var nextBtn = document.getElementById('adminKeyNextBtn');
@@ -111,26 +112,22 @@
             return filtered;
         }
 
-        function renderPagerNums(totalPages) {
-            if (!pagerNumsEl) {
-                return;
+        /** E257：上一页 / 当前页 / 下一页 */
+        function renderPagerNav(totalPages, matchedLen) {
+            var canPrev = currentPage > 1;
+            var canNext = matchedLen > 0 && currentPage < totalPages;
+            if (prevBtn) {
+                prevBtn.disabled = !canPrev;
             }
-            if (totalPages <= 1) {
-                pagerNumsEl.innerHTML = '';
-                return;
+            if (nextBtn) {
+                nextBtn.disabled = !canNext;
             }
-            // 中间最多 3 个页码：当前页尽量居中（首尾贴边）
-            var start = Math.max(1, currentPage - 1);
-            var end = Math.min(totalPages, start + 2);
-            start = Math.max(1, end - 2);
-            var html = '';
-            var i;
-            for (i = start; i <= end; i += 1) {
-                html += '<button type="button" class="vs-api-pager__num'
-                    + (i === currentPage ? ' is-active' : '')
-                    + '" data-page="' + i + '">' + i + '</button>';
+            if (pagerInfoEl) {
+                pagerInfoEl.textContent = String(matchedLen === 0 ? 1 : currentPage);
             }
-            pagerNumsEl.innerHTML = html;
+            if (pagerNavEl) {
+                pagerNavEl.hidden = false;
+            }
         }
 
         function applyView() {
@@ -195,13 +192,7 @@
                 statsEl.textContent = '共 ' + matched.length + ' 条'
                     + (hasAny && filtered ? ('（全部 ' + totalAll + '）') : '');
             }
-            if (prevBtn) {
-                prevBtn.disabled = currentPage <= 1;
-            }
-            if (nextBtn) {
-                nextBtn.disabled = currentPage >= totalPages || matched.length === 0;
-            }
-            renderPagerNums(matched.length === 0 ? 0 : totalPages);
+            renderPagerNav(matched.length === 0 ? 1 : totalPages, matched.length);
         }
 
         function buildActions(id, enabled) {
@@ -263,8 +254,6 @@
                         node.setAttribute('data-copy', secret);
                     }
                 });
-                var hay = (el.getAttribute('data-search') || '');
-                // refresh search with new secret prefix kept simple
                 var user = el.querySelector('[data-field="username"]');
                 var uname = user ? user.textContent : '';
                 el.setAttribute('data-search', (secret + ' ' + uname + ' #' + el.getAttribute('data-token-row')).toLowerCase());
@@ -373,16 +362,6 @@
             }
         });
 
-        if (pagerNumsEl) {
-            pagerNumsEl.addEventListener('click', function (e) {
-                var btn = e.target.closest('.vs-api-pager__num');
-                if (!btn) {
-                    return;
-                }
-                currentPage = parseInt(btn.getAttribute('data-page') || '1', 10) || 1;
-                applyView();
-            });
-        }
         if (prevBtn) {
             prevBtn.addEventListener('click', function () {
                 currentPage -= 1;

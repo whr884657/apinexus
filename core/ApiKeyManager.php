@@ -1,7 +1,8 @@
 <?php
 /**
  * 文件：core/ApiKeyManager.php
- * 作用：用户 API 调用密钥 CRUD（每用户上限由系统设置 apikey_max 配置，默认 3、最大 20）
+ * 作用：用户 API 调用密钥 CRUD（每用户上限由系统设置 apikey_max 配置，默认 3、最大 20）；
+ *       含 pointsspent 累计消耗、配额 quota/quotaused/quotafallback、到期 expiretime
  */
 
 class ApiKeyManager
@@ -244,26 +245,83 @@ class ApiKeyManager
         $status = ((int) $row['status'] === self::STATUS_ENABLED)
             ? self::STATUS_ENABLED
             : self::STATUS_DISABLED;
+        $quota = isset($row['quota']) ? (float) $row['quota'] : 0.0;
+        $quotaused = isset($row['quotaused']) ? (float) $row['quotaused'] : 0.0;
+        $expireRaw = isset($row['expiretime']) ? $row['expiretime'] : null;
+        if ($expireRaw === '' || $expireRaw === null) {
+            $expiretime = null;
+        } else {
+            $expiretime = (string) $expireRaw;
+        }
         return array(
-            'id'           => (int) $row['id'],
-            'userid'       => (int) $row['userid'],
-            'remark'       => (string) $row['remark'],
-            'secret'       => (string) $row['secret'],
-            'status'       => $status,
-            'status_label' => self::statusLabel($status),
-            'calls'        => isset($row['calls']) ? (int) $row['calls'] : 0,
-            'pointsspent'  => isset($row['pointsspent']) ? (float) $row['pointsspent'] : 0.0,
-            'createtime'   => isset($row['createtime']) ? (string) $row['createtime'] : '',
-            'username'     => isset($row['username']) ? (string) $row['username'] : '',
+            'id'            => (int) $row['id'],
+            'userid'        => (int) $row['userid'],
+            'remark'        => (string) $row['remark'],
+            'secret'        => (string) $row['secret'],
+            'status'        => $status,
+            'status_label'  => self::statusLabel($status),
+            'calls'         => isset($row['calls']) ? (int) $row['calls'] : 0,
+            'pointsspent'   => isset($row['pointsspent']) ? (float) $row['pointsspent'] : 0.0,
+            'quota'         => $quota,
+            'quotaused'     => $quotaused,
+            'quotafallback' => isset($row['quotafallback']) ? (((int) $row['quotafallback'] === 1) ? 1 : 0) : 0,
+            'expiretime'    => $expiretime,
+            'quotaleft'     => ($quota > 0) ? max(0.0, round($quota - $quotaused, 4)) : null,
+            'expire_label'  => self::expireLabel($expiretime),
+            'createtime'    => isset($row['createtime']) ? (string) $row['createtime'] : '',
+            'username'      => isset($row['username']) ? (string) $row['username'] : '',
         );
+    }
+
+    /**
+     * 到期文案：null/空=永不过期；已到期=已过期；否则原时间
+     *
+     * @param string|null $expiretime
+     * @return string
+     */
+    public static function expireLabel($expiretime)
+    {
+        if ($expiretime === null || $expiretime === '') {
+            return '永不过期';
+        }
+        $ts = strtotime((string) $expiretime);
+        if ($ts === false) {
+            return (string) $expiretime;
+        }
+        if ($ts <= time()) {
+            return '已过期';
+        }
+        return (string) $expiretime;
+    }
+
+    /**
+     * 是否已过期（expiretime 为空则永不过期）
+     *
+     * @param array|null $row
+     * @return bool
+     */
+    public static function isExpired($row)
+    {
+        if (!is_array($row)) {
+            return false;
+        }
+        if (!isset($row['expiretime']) || $row['expiretime'] === null || $row['expiretime'] === '') {
+            return false;
+        }
+        $ts = strtotime((string) $row['expiretime']);
+        if ($ts === false) {
+            return false;
+        }
+        return $ts <= time();
     }
 
     /**
      * @param int    $userId
      * @param string $remark
+     * @param array  $extra 可选 quota / quotafallback / expiretime
      * @return array|string 成功返回 formatRow，失败返回错误文案
      */
-    public static function create($userId, $remark)
+    public static function create($userId, $remark, $extra = array())
     {
         $userId = (int) $userId;
         $remark = self::normalizeRemark($remark);
@@ -295,6 +353,35 @@ class ApiKeyManager
             );
             $stmt->execute(array($userId, $remark, $secret, self::STATUS_ENABLED));
             $id = (int) $pdo->lastInsertId();
+
+            if (self::hasQuotaColumns() && is_array($extra) && $extra !== array()) {
+                $settings = array('remark' => $remark);
+                if (array_key_exists('quota', $extra)) {
+                    $settings['quota'] = $extra['quota'];
+                }
+                if (array_key_exists('quotafallback', $extra)) {
+                    $settings['quotafallback'] = $extra['quotafallback'];
+                }
+                if (array_key_exists('expiretime', $extra)) {
+                    $settings['expiretime'] = $extra['expiretime'];
+                }
+                if (count($settings) > 1) {
+                    $saved = self::saveSettings($id, $userId, $settings);
+                    if ($saved !== true) {
+                        // INSERT 已成功：配额写入失败须删掉孤儿令牌，避免占满名额却不可见
+                        try {
+                            $del = $pdo->prepare(
+                                'DELETE FROM `' . $table . '` WHERE `id` = ? AND `userid` = ? LIMIT 1'
+                            );
+                            $del->execute(array($id, $userId));
+                        } catch (Exception $eDel) {
+                            // 删除失败仍返回原错误，便于排查
+                        }
+                        return is_string($saved) ? $saved : '创建失败';
+                    }
+                }
+            }
+
             $row = self::findById($id);
             $formatted = self::formatRow($row);
             return $formatted ? $formatted : '创建失败';
@@ -304,16 +391,18 @@ class ApiKeyManager
     }
 
     /**
-     * @param int    $id
-     * @param int    $userId 0=管理员不校验归属
-     * @param string $remark
+     * 保存令牌设置（名称 / 配额 / 回退 / 到期）
+     *
+     * @param int   $id
+     * @param int   $userId 0=管理员不校验归属
+     * @param array $input  remark(必填)；quota / quotafallback / expiretime 可选（缺省保留原值）
      * @return true|string
      */
-    public static function updateRemark($id, $userId, $remark)
+    public static function saveSettings($id, $userId, array $input)
     {
         $id = (int) $id;
         $userId = (int) $userId;
-        $remark = self::normalizeRemark($remark);
+        $remark = self::normalizeRemark(isset($input['remark']) ? $input['remark'] : '');
         if ($id <= 0) {
             return '无效令牌';
         }
@@ -328,15 +417,107 @@ class ApiKeyManager
             return '无权操作该令牌';
         }
 
+        if (!self::hasQuotaColumns()) {
+            $wantsQuota = array_key_exists('quota', $input)
+                || array_key_exists('quotafallback', $input)
+                || array_key_exists('expiretime', $input);
+            if ($wantsQuota) {
+                return '令牌配额功能尚未就绪，请先完成数据库结构更新';
+            }
+            try {
+                $pdo = Database::connect();
+                $table = Database::table('apikey');
+                $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `remark` = ? WHERE `id` = ? LIMIT 1');
+                $stmt->execute(array($remark, $id));
+                return true;
+            } catch (Exception $e) {
+                return '保存失败，请稍后重试';
+            }
+        }
+
+        $oldQuota = isset($row['quota']) ? (float) $row['quota'] : 0.0;
+        $oldUsed = isset($row['quotaused']) ? (float) $row['quotaused'] : 0.0;
+
+        if (array_key_exists('quota', $input)) {
+            if ($input['quota'] === '' || $input['quota'] === null || !is_numeric($input['quota'])) {
+                return '分配积分无效';
+            }
+            $quota = round((float) $input['quota'], 4);
+        } else {
+            $quota = $oldQuota;
+        }
+        if ($quota < 0) {
+            return '分配积分不能为负数';
+        }
+        if ($quota > 999999999) {
+            return '分配积分过大';
+        }
+
+        if (array_key_exists('quotafallback', $input)) {
+            $quotafallback = ((int) $input['quotafallback'] === 1) ? 1 : 0;
+        } else {
+            $quotafallback = isset($row['quotafallback']) ? (((int) $row['quotafallback'] === 1) ? 1 : 0) : 0;
+        }
+
+        if (array_key_exists('expiretime', $input)) {
+            $rawExpire = $input['expiretime'];
+            if ($rawExpire === null || $rawExpire === '') {
+                $expiretime = null;
+            } else {
+                $expiretime = self::normalizeExpiretime($rawExpire);
+                if ($expiretime === false) {
+                    return '到期时间格式无效，请使用 Y-m-d H:i:s 或 Y-m-d H:i';
+                }
+            }
+        } else {
+            $expireRaw = isset($row['expiretime']) ? $row['expiretime'] : null;
+            $expiretime = ($expireRaw === null || $expireRaw === '') ? null : (string) $expireRaw;
+        }
+
+        $resetUsed = ($quota == 0.0);
+        if ($resetUsed) {
+            $quotafallback = 0;
+        }
+
         try {
             $pdo = Database::connect();
             $table = Database::table('apikey');
-            $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `remark` = ? WHERE `id` = ? LIMIT 1');
-            $stmt->execute(array($remark, $id));
+            if ($resetUsed) {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . $table . '`
+                     SET `remark` = ?, `quota` = ?, `quotaused` = 0, `quotafallback` = ?, `expiretime` = ?
+                     WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($remark, $quota, $quotafallback, $expiretime, $id));
+            } else {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . $table . '`
+                     SET `remark` = ?, `quota` = ?, `quotafallback` = ?, `expiretime` = ?
+                     WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($remark, $quota, $quotafallback, $expiretime, $id));
+            }
+
+            // 配额抬高、改为不限，或不再处于耗尽态时，清掉配额耗尽通知去重标记
+            if ($quota <= 0 || $quota > $oldQuota || $quota > $oldUsed) {
+                self::clearQuotaNoticeFlag($id);
+            }
+
             return true;
         } catch (Exception $e) {
             return '保存失败，请稍后重试';
         }
+    }
+
+    /**
+     * @param int    $id
+     * @param int    $userId 0=管理员不校验归属
+     * @param string $remark
+     * @return true|string
+     */
+    public static function updateRemark($id, $userId, $remark)
+    {
+        return self::saveSettings($id, $userId, array('remark' => $remark));
     }
 
     /**
@@ -550,6 +731,34 @@ class ApiKeyManager
     }
 
     /**
+     * 规范化到期时间：支持 Y-m-d H:i:s / Y-m-d H:i；非法返回 false
+     *
+     * @param mixed $raw
+     * @return string|false|null
+     */
+    private static function normalizeExpiretime($raw)
+    {
+        if ($raw === null) {
+            return null;
+        }
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return null;
+        }
+        // 有效期提交为 Y-m-d H:i 或带 T 的变体，统一为空格分隔
+        $raw = str_replace('T', ' ', $raw);
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $raw)) {
+            $ts = strtotime($raw);
+            return ($ts !== false) ? date('Y-m-d H:i:s', $ts) : false;
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $raw)) {
+            $ts = strtotime($raw . ':00');
+            return ($ts !== false) ? date('Y-m-d H:i:s', $ts) : false;
+        }
+        return false;
+    }
+
+    /**
      * @return string 失败返回空串
      */
     private static function makeUniqueSecret()
@@ -564,7 +773,7 @@ class ApiKeyManager
     }
 
     /**
-     * SELECT 列清单（兼容未迁移站点无 pointsspent）
+     * SELECT 列清单（兼容未迁移站点无 pointsspent / quota 列）
      *
      * @param string $alias 表别名，空则无前缀
      * @return string
@@ -577,11 +786,18 @@ class ApiKeyManager
         if (self::hasPointsspentColumn()) {
             $cols .= ', ' . $p . '`pointsspent`';
         }
+        if (self::hasQuotaColumns()) {
+            $cols .= ', ' . $p . '`quota`, ' . $p . '`quotaused`, '
+                . $p . '`quotafallback`, ' . $p . '`expiretime`';
+        }
         return $cols;
     }
 
     /** @var bool|null */
     private static $hasPointsspentCol = null;
+
+    /** @var bool|null */
+    private static $hasQuotaCol = null;
 
     /**
      * @return bool
@@ -609,6 +825,171 @@ class ApiKeyManager
     public static function resetPointsspentColumnCache()
     {
         self::$hasPointsspentCol = null;
+    }
+
+    /**
+     * 是否已具备配额相关列（以 quota 列为探测代表）
+     *
+     * @return bool
+     */
+    public static function hasQuotaColumns()
+    {
+        if (self::$hasQuotaCol !== null) {
+            return self::$hasQuotaCol;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query(
+                'SHOW COLUMNS FROM `' . Database::table('apikey') . '` LIKE ' . $pdo->quote('quota')
+            );
+            self::$hasQuotaCol = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            self::$hasQuotaCol = false;
+        }
+        return self::$hasQuotaCol;
+    }
+
+    /**
+     * @return void
+     */
+    public static function resetQuotaColumnCache()
+    {
+        self::$hasQuotaCol = null;
+    }
+
+    /**
+     * 扣费前配额判定（不写库）
+     *
+     * @param int   $keyId
+     * @param float $amount
+     * @return array{ok:bool,use_quota:bool,msg:string,crossed_exhausted:bool,errcode?:int}
+     */
+    public static function prepareCharge($keyId, $amount)
+    {
+        $out = array(
+            'ok'                => true,
+            'use_quota'         => false,
+            'msg'               => '',
+            'crossed_exhausted' => false,
+        );
+        $keyId = (int) $keyId;
+        $amount = round((float) $amount, 4);
+        if ($amount < 0) {
+            $amount = 0.0;
+        }
+        if ($keyId <= 0 || !self::hasQuotaColumns()) {
+            return $out;
+        }
+        $row = self::findById($keyId);
+        if (!$row) {
+            return $out;
+        }
+
+        $quota = isset($row['quota']) ? (float) $row['quota'] : 0.0;
+        if ($quota <= 0) {
+            return $out;
+        }
+
+        $quotaused = isset($row['quotaused']) ? (float) $row['quotaused'] : 0.0;
+        $quotafallback = isset($row['quotafallback']) ? (int) $row['quotafallback'] : 0;
+        $epsilon = 0.00005;
+        $after = $quotaused + $amount;
+
+        if ($after <= $quota + $epsilon) {
+            $out['use_quota'] = true;
+            $out['crossed_exhausted'] = ($quotaused < $quota) && ($after >= $quota);
+            return $out;
+        }
+
+        if ($quotafallback === 1) {
+            // 回退账号积分扣费：不计入 quotaused；首次走回落时提醒（Redis 去重）
+            $out['crossed_exhausted'] = true;
+            return $out;
+        }
+
+        $out['ok'] = false;
+        $out['errcode'] = class_exists('ApiError', false) ? ApiError::KEY_QUOTA : 11024;
+        $out['msg'] = '令牌分配积分不足';
+        return $out;
+    }
+
+    /**
+     * 密钥配额已用量加减（正数累加 / 负数不低于 0）
+     *
+     * @param int      $keyId
+     * @param float    $delta
+     * @param PDO|null $pdo 传入则加入外层事务；独立调用失败静默并返回 false
+     * @param bool     $respectQuota 为正增量时要求 quotaused+delta ≤ quota，防止并发超用
+     * @return bool 是否写库成功（respectQuota 时 rowCount=0 亦为 false）
+     */
+    public static function adjustQuotaused($keyId, $delta, $pdo = null, $respectQuota = false)
+    {
+        $keyId = (int) $keyId;
+        $delta = round((float) $delta, 4);
+        if ($keyId <= 0 || $delta == 0.0 || !self::tableReady() || !self::hasQuotaColumns()) {
+            return $delta == 0.0;
+        }
+        $own = ($pdo === null);
+        try {
+            if ($own) {
+                $pdo = Database::connect();
+            }
+            if ($delta > 0) {
+                if ($respectQuota) {
+                    $stmt = $pdo->prepare(
+                        'UPDATE `' . Database::table('apikey') . '`
+                         SET `quotaused` = `quotaused` + ?
+                         WHERE `id` = ?
+                           AND `quota` > 0
+                           AND (`quotaused` + ?) <= (`quota` + 0.00005)
+                         LIMIT 1'
+                    );
+                    $stmt->execute(array($delta, $keyId, $delta));
+                    return $stmt->rowCount() > 0;
+                }
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . Database::table('apikey') . '`
+                     SET `quotaused` = `quotaused` + ?
+                     WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($delta, $keyId));
+            } else {
+                $stmt = $pdo->prepare(
+                    'UPDATE `' . Database::table('apikey') . '`
+                     SET `quotaused` = GREATEST(0, `quotaused` + ?)
+                     WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($delta, $keyId));
+            }
+            return true;
+        } catch (Exception $e) {
+            if (!$own) {
+                throw $e;
+            }
+            return false;
+        }
+    }
+
+    /** Redis 逻辑键前缀：令牌配额耗尽通知去重 */
+    const REDIS_KEY_QUOTA_NOTICE_PREFIX = 'notify:key_quota:';
+
+    /**
+     * 清除令牌配额耗尽通知去重标记（配额抬高后可再次提醒）
+     *
+     * @param int $keyId
+     * @return void
+     */
+    public static function clearQuotaNoticeFlag($keyId)
+    {
+        $keyId = (int) $keyId;
+        if ($keyId <= 0 || !class_exists('RedisCache') || !RedisCache::enabled()) {
+            return;
+        }
+        try {
+            RedisCache::forget(self::REDIS_KEY_QUOTA_NOTICE_PREFIX . $keyId);
+        } catch (Exception $e) {
+            // ignore
+        }
     }
 
     /**

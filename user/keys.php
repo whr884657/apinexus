@@ -9,6 +9,50 @@ require_once __DIR__ . '/init.php';
 $userId = (int) UserAuth::id();
 $tableReady = ApiKeyManager::tableReady();
 
+/**
+ * 从 POST 组装配额/到期字段（无下划线字段名）
+ *
+ * @return array
+ */
+function vs_keys_extra_from_post()
+{
+    $extra = array();
+    if (array_key_exists('quota', $_POST)) {
+        $extra['quota'] = $_POST['quota'];
+    }
+    if (array_key_exists('quotafallback', $_POST)) {
+        $extra['quotafallback'] = ((int) $_POST['quotafallback'] === 1) ? 1 : 0;
+    } else {
+        $extra['quotafallback'] = 0;
+    }
+    if (array_key_exists('expiretime', $_POST)) {
+        $raw = trim((string) $_POST['expiretime']);
+        $extra['expiretime'] = ($raw === '') ? '' : str_replace('T', ' ', $raw);
+    }
+    return $extra;
+}
+
+/**
+ * 配额展示：不限 或 剩余/上限
+ *
+ * @param array $token formatRow 结果
+ * @return string
+ */
+function vs_token_quota_label(array $token)
+{
+    $quota = isset($token['quota']) ? (float) $token['quota'] : 0.0;
+    if ($quota <= 0) {
+        return '不限';
+    }
+    $left = isset($token['quotaleft']) && $token['quotaleft'] !== null
+        ? (float) $token['quotaleft']
+        : max(0.0, round($quota - (isset($token['quotaused']) ? (float) $token['quotaused'] : 0.0), 4));
+    $fmt = function ($n) {
+        return class_exists('PayConfig') ? PayConfig::fmtPoints($n) : (string) $n;
+    };
+    return $fmt($left) . '/' . $fmt($quota);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
 
@@ -31,7 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create') {
         $remark = isset($_POST['remark']) ? (string) $_POST['remark'] : '';
-        $result = ApiKeyManager::create($userId, $remark);
+        $extra = vs_keys_extra_from_post();
+        $result = ApiKeyManager::create($userId, $remark, $extra);
         if (!is_array($result)) {
             AjaxResponse::error($result);
         }
@@ -49,12 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error($owned);
         }
         $remark = isset($_POST['remark']) ? (string) $_POST['remark'] : '';
-        $result = ApiKeyManager::updateRemark($id, $userId, $remark);
+        $input = array_merge(array('remark' => $remark), vs_keys_extra_from_post());
+        $result = ApiKeyManager::saveSettings($id, $userId, $input);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
         $row = ApiKeyManager::formatRow(ApiKeyManager::findById($id));
-        AjaxResponse::success('备注已更新', array('token' => $row));
+        AjaxResponse::success('令牌已更新', array('token' => $row));
     }
 
     if ($action === 'reset') {
@@ -123,29 +169,52 @@ function vs_render_user_token_item(array $row)
     $id = (int) $token['id'];
     $enabled = (int) $token['status'] === ApiKeyManager::STATUS_ENABLED;
     $statusClass = $enabled ? 'is-enabled' : 'is-disabled';
+    $quota = isset($token['quota']) ? (float) $token['quota'] : 0.0;
+    $quotaused = isset($token['quotaused']) ? (float) $token['quotaused'] : 0.0;
+    $quotafallback = !empty($token['quotafallback']) ? 1 : 0;
+    $expireRaw = isset($token['expiretime']) && $token['expiretime'] !== null ? (string) $token['expiretime'] : '';
+    $quotaLabel = vs_token_quota_label($token);
+    $expireLabel = isset($token['expire_label']) ? (string) $token['expire_label'] : '永不过期';
+    $createShort = (string) $token['createtime'];
+    if ($createShort !== '' && strlen($createShort) >= 16) {
+        $createShort = substr($createShort, 0, 16);
+    }
     ?>
     <div class="vs-api-item vs-token-row<?php echo $enabled ? '' : ' is-token-disabled'; ?>"
          data-token-row="<?php echo $id; ?>"
-         data-token-status="<?php echo (int) $token['status']; ?>">
+         data-token-status="<?php echo (int) $token['status']; ?>"
+         data-quota="<?php echo vs_e((string) $quota); ?>"
+         data-quotaused="<?php echo vs_e((string) $quotaused); ?>"
+         data-quotafallback="<?php echo $quotafallback; ?>"
+         data-expiretime="<?php echo vs_e($expireRaw); ?>">
         <div class="vs-api-item__icon vs-token-row__icon" aria-hidden="true">
             <span class="vs-token-row__icon-mark">SK</span>
         </div>
         <div class="vs-api-item__title">
             <span class="vs-api-item__name" data-field="remark"><?php echo vs_e($token['remark']); ?></span>
+            <span class="vs-token-row__created" data-field="createtime" title="创建时间"><?php echo vs_e($createShort !== '' ? $createShort : '—'); ?></span>
         </div>
         <div class="vs-api-item__endpoint vs-token-row__secret">
-            <code class="vs-token-row__code vs-key-copy uc-token-secret" data-field="secret" data-copy="<?php echo vs_e($token['secret']); ?>" title="悬停查看明文，点击复制" role="button" tabindex="0"><?php echo vs_e($token['secret']); ?></code>
+            <code class="vs-token-row__code uc-token-secret" data-field="secret" title="悬停查看明文"><?php echo vs_e($token['secret']); ?></code>
+            <button type="button" class="vs-token-row__copy vs-key-copy" data-copy="<?php echo vs_e($token['secret']); ?>" title="复制" aria-label="复制令牌">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
         </div>
-        <div class="vs-api-item__tags">
-            <span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($token['status_label']); ?></span>
-        </div>
+        <div class="vs-token-row__quota" data-field="quota_label" title="配额（剩余/上限）"><span class="vs-token-row__lbl">配额</span> <?php echo vs_e($quotaLabel); ?></div>
+        <div class="vs-token-row__expire" data-field="expire_label" title="有效期"><span class="vs-token-row__lbl">有效期</span> <?php echo vs_e($expireLabel); ?></div>
         <div class="vs-api-item__calls vs-token-row__calls" title="调用次数">调用 <strong data-field="calls"><?php echo (int) $token['calls']; ?></strong></div>
         <div class="vs-api-item__spent vs-token-row__spent" title="累计消耗积分">消耗 <strong data-field="pointsspent"><?php
             $spent = isset($token['pointsspent']) ? (float) $token['pointsspent'] : 0.0;
             echo vs_e(class_exists('PayConfig') ? PayConfig::fmtPoints($spent) : (string) $spent);
         ?></strong></div>
-        <div class="vs-api-item__author vs-token-row__time" data-field="createtime" title="创建时间"><?php echo vs_e($token['createtime']); ?></div>
+        <div class="vs-api-item__tags">
+            <span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($token['status_label']); ?></span>
+            <?php if ($quota > 0 && $quotafallback === 1): ?>
+                <span class="vs-api-tag vs-api-tag--fallback" data-field="fallback_label" title="配额用尽后改用账户总积分">回落</span>
+            <?php endif; ?>
+        </div>
         <div class="vs-api-item__actions vs-token-row__actions">
+            <button type="button" class="vs-btn vs-btn--outline vs-token-copy-btn vs-key-copy" data-copy="<?php echo vs_e($token['secret']); ?>">复制</button>
             <button type="button" class="vs-btn vs-btn--outline vs-token-edit" data-token-id="<?php echo $id; ?>">编辑</button>
             <button type="button" class="vs-btn vs-btn--outline vs-token-reset" data-token-id="<?php echo $id; ?>">重置</button>
             <button type="button" class="vs-btn vs-btn--outline vs-token-toggle" data-token-id="<?php echo $id; ?>" data-status="<?php echo $enabled ? '0' : '1'; ?>">

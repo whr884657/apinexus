@@ -221,6 +221,80 @@ class UserIpAllow
     }
 
     /**
+     * 管理员：全站白名单扁平列表（每行一条 IP + 归属用户；空名单用户不出现）
+     *
+     * @param int $limit 最多返回行数
+     * @return array{ok:bool,msg:string,list?:array,truncated?:bool}
+     */
+    public static function adminFlatAllowList($limit = 2000)
+    {
+        $limit = max(1, min(5000, (int) $limit));
+        if (!self::columnReady()) {
+            return array('ok' => false, 'msg' => 'IP 白名单尚未就绪');
+        }
+        try {
+            $pdo = Database::connect();
+            $userTable = Database::table('user');
+            // 先取有白名单的用户，再展开；用户上限 = limit，展开后可能截断
+            $userLimit = min(1000, $limit);
+            $sql = 'SELECT u.`id`, u.`username`, u.`email`, u.`avatar`, u.`ipallow`'
+                . ' FROM `' . $userTable . '` u'
+                . ' WHERE u.`ipallow` IS NOT NULL AND TRIM(u.`ipallow`) <> \'\''
+                . ' ORDER BY u.`id` DESC'
+                . ' LIMIT ' . ((int) $userLimit + 1);
+            $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+            if (!is_array($rows)) {
+                $rows = array();
+            }
+            $moreUsers = count($rows) > $userLimit;
+            if ($moreUsers) {
+                $rows = array_slice($rows, 0, $userLimit);
+            }
+            $list = array();
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $uid = (int) (isset($row['id']) ? $row['id'] : 0);
+                $allowList = self::parseList(isset($row['ipallow']) ? $row['ipallow'] : '');
+                if (count($allowList) === 0) {
+                    continue;
+                }
+                $username = isset($row['username']) ? trim((string) $row['username']) : '';
+                if ($username === '') {
+                    $username = '用户#' . $uid;
+                }
+                $email = isset($row['email']) ? trim((string) $row['email']) : '';
+                $avatar = class_exists('UserAvatar') ? UserAvatar::resolve($row) : '';
+                foreach ($allowList as $ip) {
+                    $ip = trim((string) $ip);
+                    if ($ip === '') {
+                        continue;
+                    }
+                    $list[] = array(
+                        'userid'   => $uid,
+                        'username' => $username,
+                        'email'    => $email,
+                        'avatar'   => $avatar,
+                        'ip'       => $ip,
+                    );
+                    if (count($list) >= $limit) {
+                        break 2;
+                    }
+                }
+            }
+            return array(
+                'ok'        => true,
+                'msg'       => 'ok',
+                'list'      => $list,
+                'truncated' => count($list) >= $limit || $moreUsers,
+            );
+        } catch (Exception $e) {
+            return array('ok' => false, 'msg' => '读取失败，请稍后重试');
+        }
+    }
+
+    /**
      * 代理策略文案（委托 UserIpProxy，避免静态分析误报未定义方法）
      *
      * @param int $strategy

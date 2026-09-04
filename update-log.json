@@ -1,5 +1,28 @@
 {
     "versions": {
+        "13.26.40": {
+            "title": "ApiNexus 13.26.40",
+            "date": "2026-09-05",
+            "db_changes": true,
+            "changes": [
+                "管理端「IP 配置」改为双 Tab 扁平列表：全站用户白名单 IP 与全站出口代理（对齐用户中心双 Tab 交互）",
+                "归属仅头像+用户名（不展示邮箱）；桌面表格、手机紧凑卡片；支持按用户/IP/代理搜索",
+                "出口代理桌面多列：备注名称（短码副行）/对接模式/协议/节点或链接/状态；徽章分色；操作：测试/启停/编辑/删除",
+                "白名单与出口代理双 Tab 各自规范底部分页：表格卡外 footer；每页 10/20/30/50 + vs-pick sheet；上一页/当前页/下一页；共 N 条",
+                "管理端编辑/测试 overlay：proxy_get、proxy_save（UserIpProxy::save，空密码不改）、proxy_test；不可代用户新增",
+                "标题行搜索后接规范图标刷新（vs_admin_refresh_btn_html + VsRefreshBtn）；可移除白名单",
+                "修复出口代理归属头像：UserAvatar::resolve 须传用户 id；列表可含 mode/extract 供节点列，不含 username/password",
+                "新增 UserIpAllow::adminFlatAllowList、UserIpProxy::adminFlatList / findForUser；重写 admin/system/ip.php 与 admin-ip.js",
+                "令牌配额：apikey 增 quota/quotaused/quotafallback/expiretime；pointsspent 仍为全盘累计；quotaused 记配额内消耗",
+                "配额用尽硬停或 quotafallback 回落总积分；过期→11023；配额不足→11024；邮件 mail_notify_key_quota",
+                "用户中心令牌：创建/编辑支持配额、有效期、回落开关；列表展示配额与有效期；创建时间置于名称副行",
+                "用户令牌列表收紧列宽；调用仅标「调用」；手机卡紧凑；管理端令牌增配额/有效期列（只读）",
+                "审计热修：去表单过度 hint；有效期改自定义 vs-datetime（禁 datetime-local）；硬拦发信；配额条件写防并发；创建失败删孤儿",
+                "令牌 UI：弹窗 vs-overlay--lg、有效期嵌套选择窗防挡层；列表列对齐+复制图标/手机复制钮；管理端创建时间列",
+                "热修：密钥旁复制按钮紧贴密钥文字（三主题 inline-flex）；未迁库提交配额字段明确提示结构更新",
+                "库变更：install/migrations/13.26.40.sql"
+            ]
+        },
         "13.26.39": {
             "title": "ApiNexus 13.26.39",
             "date": "2026-09-04",

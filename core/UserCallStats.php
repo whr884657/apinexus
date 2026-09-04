@@ -213,6 +213,12 @@ class UserCallStats
                 $sawDisabled = true;
                 continue;
             }
+            if (ApiKeyManager::isExpired($row)) {
+                return array_merge($empty, array(
+                    'errcode' => ApiError::KEY_EXPIRED,
+                    'msg'     => '密钥已过期',
+                ));
+            }
             // 个人调用统计接口本身为密钥必须；在此校验所有者 IP 白名单
             if (class_exists('UserIpAllow')) {
                 $ipOk = UserIpAllow::checkUser((int) $row['userid']);

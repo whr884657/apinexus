@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **适用读者：** 主题开发者、二次开发者、维护者  
-> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.37**）  
+> **当前版本：** 以 `core/version.php` 中 `VS_VERSION` 为准（本文档同步至 **13.26.40**）  
 >  
 > **主题开发请先读：** [**§六、主题开发对接指南（完整 API）**](#六主题开发对接指南完整-api) — 入口管道、目录结构、全部 `Frontend*` 方法与返回字段、禁止事项与 Checklist。主题 **禁止直连数据库**，只对接 core。
 
@@ -172,7 +172,7 @@ core/
 |----------|--------|------------|------------|------------|------|
 | 接口分类 | `ApiCategoryManager` | `FrontendCategory` | `admin/api/categories.php` | ✅ 是 | **已完成** |
 | 公开 API 接口 | `ApiManager` / `ApiNotify` / `ApiProxy` / `PlaygroundRelay` / `ApiStats` | `FrontendApi` / `FrontendStats` | `admin/api/list.php`、`review.php`、`user/api-manage.php`、`apis.php`、`detail.php`、**`core/front/catalog.php`** | ✅ 是 | **已完成**（本地/外链、详情 `/detail/{id}`、多选 method、**keyways**、needkey/qpm/charge、审核三态、统计、在线测试浏览器直连、双端 UI；**v13.26.16** 首页/apis 经 catalog 异步目录，`listForCatalog`/`slimForCatalog`） |
-| 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号上限由 `config.apikey_max` 配置（默认 3、最大 20）；`sk-`+32；本地/代理校验与计数；页面勿用 `tokens` 命名） |
+| 用户调用密钥 | `ApiKeyManager` | —（统计内校验） | `user/keys.php`、`admin/api/keys.php` | 用户中心/后台 | **已完成**（表 `apikey`；每账号上限 `config.apikey_max`（默认 3、最大 20）；`sk-`+32；**v13.26.40** 配额 `quota`/`quotaused`/`quotafallback`/`expiretime` 与全盘 `pointsspent` 分账；过期 11023 / 配额不足 11024；管理端只读配额；页面勿用 `tokens` 命名） |
 | 积分与支付 | `PointsManager` / `PointsNotify` / `OrderManager` / `PayPendingWatch` / `CheckinManager` / `PayConfig` / `CodePayClient` | `FrontendUser`（余额 / 签到 / 控制台） | `admin/finance/*`、`admin/settings`、`user/recharge`、`user/points`、`user/index`、`core/play/codeplay/notify.php` / `return.php` | 用户中心/后台 | **已完成**（充值扣费；注册赠送 / 每日签到；积分归零/充值成功邮件；表 `orders` + `checkin`；待支付超 3 分钟自动取消） |
 | 站点信息 | `Config` / `SiteContext` | `SiteContext` | `admin/settings.php` | ✅ 是 | **已完成** |
 | 用户认证 | `UserAuth` / `UserManager` / `Auth` | `UserAuth` + `FrontendUser`；管理员 `Auth::loginById` | `user/`、`admin/login.php`、`admin/users.php` | ✅ 是 | **已完成**（含角色；**13.26.7** 双端邮箱验证码登录） |
@@ -296,7 +296,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `UserAvatar.php` | 用户头像 URL 解析 |
 | `AboutCatalog.php` | 关于页「开发与维护 / 相关链接 / 技术栈」目录（本地 JSON 优先，缺则云端；三仓链接，无页面 note） |
 | `ApiManager.php` | API 接口数据与审核状态（后台 / 用户投稿） |
-| `ApiError.php` | 公开 API 业务错误码（11001～11022）；`businessLabelMap` / `aiDetailDocErrcodeClause` 供 AI 详细文档全量写入 |
+| `ApiError.php` | 公开 API 业务错误码（11001～11024）；`businessLabelMap` / `aiDetailDocErrcodeClause` 供 AI 详细文档全量写入；**v13.26.40** 增 11023 密钥过期 / 11024 令牌配额不足 |
 | `ApiQuickstart.php` | 从 `aidoc` 解析 `:::qs lang=… auth=…` 多语言快速上手（v10.15.0；auth v10.17.0） |
 | `AiConfig.php` | 站点 AI 配置（启用/服务商/根地址/密钥/模型/单片超时/代码调度模式与并发） |
 | `AiClient.php` | OpenAI 兼容 Chat Completions / Responses；流式 `chatStreamWithConfig`；连通测试须先 `session_write_close`（v13.26.0） |
@@ -311,16 +311,16 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `ApiOutboundSanitize.php` | 出站 JSON 擦除 `/admin` 等敏感路径（**v13.25.0**）；业务错误体收窄三字段（**v13.25.2**） |
 | `ApiProxy.php` | 外链网关：curl 中继上游；按 `upmethod` 选上游 GET/POST；可选 JSON 改写；剥离 JSONP 参数；出站消毒；3xx Location 透传；上游 TLS 不校验证书 |
 | `PlaygroundRelay.php` | 在线测试同源中继；上游方法/TLS/JSONP 剥离/出站消毒与 ApiProxy 一致 |
-| `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；`hit` 成功且 `vsproxy` 时请求级武装出口（v13.26.33）；亦可显式 `applyOutboundProxy`；写日志含 `egress` 出口节点（v13.26.34）；`keyContext()` 供本地接口读本请求密钥用户；**仅 needkey=必须**时经 `UserIpAllow` 硬拦 IP |
-| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；`proxycode` 五位短码；`vsproxy`：短码/`a`/`b`/`c`/`1`；提取 JSON `jsonhost`/`jsonport` + `ttlmin`；`armRequestEgress` 请求级武装（v13.26.33）；`requestEgressHostPort` 供日志（v13.26.34）；与 ApiProxy 上游中继无关；管理端总览页 `admin/system/ip.php`（v13.26.39，`formatPublicRow` 不含密码） |
-| `UserIpAllow.php` | 用户调用 IP 白名单（`user.ipallow`；空=不限制）；**仅密钥必须接口**硬拦；配合 `AuthSecurity::clientIp`；不匹配 → errcode **11019**；`adminOverview` 供管理端「IP 配置」概览（v13.26.39） |
+| `ApiStats.php` | 本地/代理调用统计与守卫；本地须 `hit(接口ID)`；本地出站头 `outboundHeaders` / `outboundUa` / `outboundReferer`；`hit` 成功且 `vsproxy` 时请求级武装出口（v13.26.33）；亦可显式 `applyOutboundProxy`；写日志含 `egress` 出口节点（v13.26.34）；`keyContext()` 供本地接口读本请求密钥用户；**仅 needkey=必须**时经 `UserIpAllow` 硬拦 IP；扣费走 `deductWithKeyQuota`（配额账 + 过期守卫，v13.26.40） |
+| `UserIpProxy.php` | 用户自备出口 IP 代理（表 `ipproxy`，每用户最多 5 条）；隧道/提取；`proxycode` 五位短码；`vsproxy`：短码/`a`/`b`/`c`/`1`；提取 JSON `jsonhost`/`jsonport` + `ttlmin`；`armRequestEgress` 请求级武装（v13.26.33）；`requestEgressHostPort` 供日志（v13.26.34）；与 ApiProxy 上游中继无关；管理端 `adminFlatList`（可含 `mode`/`extract` 供节点列，不含密码/username）；`findForUser` 供管理端编辑（v13.26.40） |
+| `UserIpAllow.php` | 用户调用 IP 白名单（`user.ipallow`；空=不限制）；**仅密钥必须接口**硬拦；配合 `AuthSecurity::clientIp`；不匹配 → errcode **11019**；管理端扁平列表 `adminFlatAllowList`（v13.26.40；`adminOverview` 仍保留） |
 | `StatDayManager.php` | 控制台日聚合表 `statday` |
 | `UserStat7Manager.php` | 用户近 7 日聚合 `user.stat7`（写入静默；读经 FrontendUser；含 calls/cost/success_rate） |
 | `UserCallStats.php` | 个人调用/积分/排行只读查询（`api/index.php`）；短字段含 `rank`/`rank7`；`parseFields` / `query` / `resolveUserFromRequest` |
 | `DashboardStats.php` | 控制台/大屏 KPI·趋势·TOP·live（含 TOP live / 服务器监控快照，**v13.4.0 / v13.16.0**）；geo 飞线三色 |
 | `PanelMonitor.php` | 宝塔 / 1Panel 面板监控客户端；控制台「服务器」卡片快照与测试连接（**v13.16.0**） |
 | `GeoCityCoords.php` | 大屏飞线全量城市坐标库；`resolveCityName` 地级优先 + 剥离运营商尾缀（v13.0.0 / **v13.2.0**） |
-| `ApiKeyManager.php` | 用户 API 调用密钥 CRUD；含 `pointsspent` 密钥累计消耗与 `adjustPointsspent` |
+| `ApiKeyManager.php` | 用户 API 调用密钥 CRUD；含全盘 `pointsspent`（`adjustPointsspent`）与配额账 `quota`/`quotaused`/`quotafallback`/`expiretime`（`prepareCharge` / `adjustQuotaused` / `saveSettings` / `isExpired`；v13.26.40） |
 | `ApiLogManager.php` | API 调用日志：keyset 翻页、热冷合并；含 `egress` 出口节点；管理端搜用户名先解析 `user.id`；`listPaged` 支持 `userid`；用户侧 `formatUserSafeRow` / `formatUserDetailRow` / `listForUser` / `findByIdForUser` / `recentForUser`；LIKE 须转义+`ESCAPE`（E243） |
 | `ApiLogArchive.php` | 调用日志冷热归档：开关、三层索引、SQLite 分片（含 `egress`）；冷库搜索同步 `user_ids` 与 LIKE 转义 |
 | `ApiFeedbackManager.php` / `FrontendFeedback.php` / `FeedbackNotify.php` | 接口反馈后台 CRUD / 前台提交 / 邮件通知 |
@@ -346,7 +346,7 @@ foreach (FrontendCategory::listTags() as $tag) {
 | `OrderManager.php` | 积分/充值订单：按每页条数 + keyset 翻页（无时间窗、无全表 COUNT）；写入后 `invalidateOrders`；kind 含注册赠送/每日签到；搜索先解析用户/类型再精确过滤 + `kind_class`（v10.6.0）；业务时区东八区（v10.6.1）；管理端 ledger 支持 `ledger_bucket=account|api` 两大类筛选（v13.26.22） |
 | `PointsManager.php` | 余额读写、扣费、充值完成/取消（回调不比对金额，见支付规范 §2.6）、`giftOnRegister` / `checkin`；列表走 OrderManager；扣至零 / **余额不足** / 充值履约后触发 `PointsNotify`；创建/履约/取消联动 `PayPendingWatch` |
 | `PayPendingWatch.php` | 充值待支付超时（默认 180 秒）自动取消：Redis ZSET 挂单索引 + 登录页顺带弹出；无 Redis 时按用户维度降级；订单列表/状态查询惰性过期；禁止全表扫与独立计划任务 |
-| `PointsNotify.php` | 积分余额归零、**不足调用（Redis 24h 去重）**、充值成功邮件（`mail_notify_points_zero` / `mail_notify_points_insufficient` / `mail_notify_recharge_success`；失败不阻断） |
+| `PointsNotify.php` | 积分余额归零、**不足调用（Redis 24h 去重）**、充值成功、**令牌配额用尽**邮件（`mail_notify_points_zero` / `mail_notify_points_insufficient` / `mail_notify_recharge_success` / `mail_notify_key_quota`；配额去重 Redis NX 至抬高配额；失败不阻断） |
 | `CheckinManager.php` | 每日签到表：同用户同日唯一、横幅状态、失败回滚占位 |
 | `RedisService.php` | Redis 连接、监控快照、运行时长格式化（天/时/分/秒）与限流键清理（**后台向**） |
 | `ThemeManager.php` | 主题发现、切换、模板渲染、主题内资源 URL；前台/用户中心壳与页 CSS·JS 清单 |
@@ -867,7 +867,7 @@ VsPlaygroundResponse.directRequest({
 
 **本地认人（强制）：** 必须传后台接口数字 ID；`0`/省略不记账；**不再**按脚本路径匹配 `endpoint`。站长说明见 `api/统计代码使用说明.md`。
 
-**守卫链 `guardAccess`：** 状态/审核 → QPM（`RateLimitStore`）→ 密钥（`needkey` + keyways）→ 收费扣积分。
+**守卫链 `guardAccess`：** 状态/审核 → QPM（`RateLimitStore`）→ 密钥（`needkey` + keyways）→ 收费扣积分（`deductWithKeyQuota`：过期 **11023** / 配额硬停 **11024** / 回落总积分，v13.26.40）。
 
 **needkey 与统计身份（v13.26.29）：**
 
@@ -895,7 +895,7 @@ VsPlaygroundResponse.directRequest({
 {"code":0,"msg":"请提供调用密钥","errcode":11001}
 ```
 
-传输层 HTTP 固定 **200**；业务看 `errcode`（`ApiError` **11001～11022 全套**，见 `businessLabelMap()`）。旧版 `http:401/403` 已废弃。AI 详细文档须用 `aiDetailDocErrcodeClause()` 写全，禁止只列子集。
+传输层 HTTP 固定 **200**；业务看 `errcode`（`ApiError` **11001～11024 全套**，见 `businessLabelMap()`）。旧版 `http:401/403` 已废弃。AI 详细文档须用 `aiDetailDocErrcodeClause()` 写全，禁止只列子集。
 
 **日志：** 成功/失败写 `api.calls`、`StatDayManager::recordHit`；详细日志开时写 `apilog`（`ok` / `apikey` / `httpcode`；含异步 `IpLocator` 回填 `iploc`）。大屏飞线按 `ok`+`apikey` 拆绿/黄/红。
 
@@ -927,7 +927,7 @@ VsPlaygroundResponse.directRequest({
 | 类 | 要点 |
 |----|------|
 | **JsonpGuard** | 回调名白名单 `^[A-Za-z_$][A-Za-z0-9_$]{0,63}$`；识别参数 `callback` / `jsonp` / `jsonpcallback` / `_callback` / `cb`；`stripCallbackParams` 在代理侧剥离，防 JSONP 注入 |
-| **ProxyJsonRewrite** | 仅对成功 JSON 做 set/del；若 `ApiError::looksLikeBusinessErrorPayload`（errcode **11001～11022**）则**整段不改写**；禁止 SET 写入含 `/admin` 等后台路径 |
+| **ProxyJsonRewrite** | 仅对成功 JSON 做 set/del；若 `ApiError::looksLikeBusinessErrorPayload`（errcode **11001～11024**）则**整段不改写**；禁止 SET 写入含 `/admin` 等后台路径 |
 | **ApiOutboundSanitize** | 出站擦除敏感路径字段；业务失败体经 `narrowBusinessErrorBody` **只保留 `code` / `msg` / `errcode`**，防止 `api_info` 等管理字段随错误响应泄露 |
 
 成功响应的 JSON 字段改写能力不变。专题规范见本地 `开发规范/JSONP与出站响应安全规范.md`、`代理JSON字段改写规范.md`。

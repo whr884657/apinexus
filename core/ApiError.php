@@ -5,6 +5,7 @@
  *
  * 对外 JSON：{ "code": 0, "msg": "…", "errcode": 11001 }
  * HTTP 传输层固定 200，业务成败看 code / errcode。
+ * 业务失败码范围：11001～11024
  */
 
 class ApiError
@@ -53,9 +54,13 @@ class ApiError
     const PROXY_NONE = 11021;
     /** 出口代理不可用 / 提取失败 */
     const PROXY_FAIL = 11022;
+    /** 密钥已过期 */
+    const KEY_EXPIRED = 11023;
+    /** 令牌分配积分不足 */
+    const KEY_QUOTA = 11024;
 
     /**
-     * 业务错误码 → 文案（11001～11022；不含传输层 200/302）
+     * 业务错误码 → 文案（11001～11024；不含传输层 200/302）
      *
      * @return array<int,string>
      */
@@ -84,6 +89,8 @@ class ApiError
             self::PROXY_NEED       => '启用出口代理须提供有效密钥',
             self::PROXY_NONE       => '未配置可用出口代理',
             self::PROXY_FAIL       => '出口代理不可用',
+            self::KEY_EXPIRED      => '密钥已过期',
+            self::KEY_QUOTA        => '令牌分配积分不足',
         );
     }
 
@@ -125,11 +132,11 @@ class ApiError
     public static function isKnown($errcode)
     {
         $code = (int) $errcode;
-        return $code === 200 || $code === 302 || ($code >= 11001 && $code <= 11022);
+        return $code === 200 || $code === 302 || ($code >= 11001 && $code <= 11024);
     }
 
     /**
-     * 是否为平台业务失败码（11001～11022；不含 200/302）
+     * 是否为平台业务失败码（11001～11024；不含 200/302）
      *
      * @param int $errcode
      * @return bool
@@ -137,7 +144,7 @@ class ApiError
     public static function isBusinessFailure($errcode)
     {
         $code = (int) $errcode;
-        return $code >= 11001 && $code <= 11022;
+        return $code >= 11001 && $code <= 11024;
     }
 
     /**
