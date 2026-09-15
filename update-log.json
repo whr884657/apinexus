@@ -1,5 +1,36 @@
 {
     "versions": {
+        "13.26.41": {
+            "title": "ApiNexus 13.26.41",
+            "date": "2026-09-15",
+            "db_changes": true,
+            "changes": [
+                "管理端令牌管理：修复标题行搜索框与「全部状态」下拉重叠（.vs-api-list-toolbar 内 .vs-pick 改为 width:auto，E306）",
+                "管理端积分变动：小搜索框移至标题行刷新按钮左侧（同排靠右）；内容区仅保留账户/接口分段筛选",
+                "积分变动双按钮改为 .vs-points-seg 分段控件，不再用两大块主按钮",
+                "主题三：清理已下线首页在线演示残留（删除 theme-playground.js；清 theme.css 中 #playground/.demo-* 死样式；theme.js 空注释；obsolete-files 登记，E307）",
+                "前台目录 VS.fetchFrontCatalog：CSRF/来源失败回填后自动再 POST 一次；偶发 invalid_json/网络毛刺亦重试一次；主题三失败不再静默空列表，明示「目录加载失败，请刷新重试」；壳未就绪短轮询等 VS（E308）",
+                "数据库维护（upgrade.js）：版本升级检查对齐检测更新（Toast：检查中/发现待执行/无待执行/失败）；确认执行对齐安装更新（忙等弹窗+结果弹窗+Toast）；无待执行仍可确认并由后端回文，不再禁用静默（E309）",
+                "用户注册：register_enabled 单键数字模式（1全开/2全关/3仅用户/4仅开发者）；后台仍三勾选但只落一键；仅开一种时藏身份分段并固定 role；服务端 assertRoleAllowed（E310/E311）",
+                "调用日志冷热归档：写冷库成功后必须删 MySQL 并校验残留；计划任务 ApiLogArchive::run 多轮排空；禁止冷热双留（E312）",
+                "接口目录排序：config.apiorder（0 随机/1 按分类权重）；Redis 只缓存有序底稿；同权重先按分类 id 聚拢；三主题首页精选均认 apiorder（E313）",
+                "详情推荐：三主题纯随机一条（含维护、不含禁用、不含当前）；FrontendApi::pickRandomRecommend（E313）",
+                "管理端列表表头对齐：.vs-col-actions / .vs-col-num，操作列 th/td 同向右对齐（E313）",
+                "库变更：install/migrations/13.26.41.sql（合并旧 register_allow_* 并删除；旧 0→2；INSERT IGNORE apiorder）；database.sql 注释同步",
+                "CORE模块说明.md：整份改为 core=API / 主题=客户端 对接文档（分册+逐文件附录，13.26.41）",
+                "OpenAPI 导出：新增 core/OpenApiBuilder，由 api.params + 接口元数据派生 OpenAPI 3.1.1；不新增库字段、禁止主题手写拼装（E314）",
+                "详情页请求参数：三主题表格/JSON/OpenAPI 三模式；仅 OpenAPI 模式复制完整文档；openapi_json 仅详情注入",
+                "管理端/文档编辑/开发者投稿：参数编辑器增 OpenAPI 只读预览（action=openapi_preview，CSRF）；保存仍只写 params",
+                "详情在线测试：三主题非媒体响应（JSON/文本/HTML）右上角一键复制；图片/音视频/二进制不显示复制（E315）",
+                "详情请求参数：JSON/OpenAPI 最大约16行区内滚动（表格不限）；返回示例最大约20行区内滚动；仅上限无固定最小高度（E315）",
+                "主题二公告弹窗重构：结构/边距对齐主题一；修复挂 body 后白底白字；主按钮走 slate 青绿（E316）",
+                "安装第1步伪静态：灰底代码框、框内右上角复制（规则正文不变，E236/E317）",
+                "安装第3步：Redis 密码/库号0～15数字框/前缀；单按钮同时测 MySQL+Redis；有密必填前缀（E317）",
+                "系统设置「缓存键前缀」改为「Redis 设置」：主机/端口/密码/库号/前缀；空密保留、清密勾选、不回显；测连+冲突+保存（E317）",
+                "RedisService：normalizeDatabase、normalizeHost、testDraftConnection、saveConnectionSettings；库号钳制 0～15；设置页测连按管理员限流（E317）",
+                "库变更补充：database.sql 与 13.26.41 迁移 INSERT IGNORE redis_host/port/password/database（E311/E317）"
+            ]
+        },
         "13.26.40": {
             "title": "ApiNexus 13.26.40",
             "date": "2026-09-05",

@@ -61,6 +61,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('ok', array('api' => ApiManager::formatRow($row)));
     }
 
+    if ($action === 'openapi_preview') {
+        $rate = OpenApiBuilder::assertPreviewRateLimit();
+        if ($rate !== true) {
+            AjaxResponse::error($rate);
+        }
+        $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
+        $base = $id > 0 ? ApiManager::findById($id) : null;
+        $post = $payloadFromPost();
+        $json = OpenApiBuilder::jsonFromPreviewRequest($post, is_array($base) ? $base : null, true);
+        AjaxResponse::success('ok', array('openapi_json' => $json));
+    }
+
     if ($action === 'create') {
         $data = $payloadFromPost();
         $publishUid = AdminUserBinding::publishUserId((int) Auth::id());
@@ -762,7 +774,7 @@ function vs_render_api_list_desktop_row(array $ctx)
         <td class="vs-api-list-qpm-cell" data-field="qpm_cell"><?php echo vs_api_list_qpm_cell_html(isset($ctx['api']['qpm']) ? $ctx['api']['qpm'] : 0); ?></td>
         <td><span class="vs-badge <?php echo vs_e($ctx['statusBadgeClass']); ?>" data-field="status_label"><?php echo vs_e($ctx['statusText']); ?></span></td>
         <td class="vs-api-list-calls-cell"><span data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></span></td>
-        <td><?php echo vs_api_list_action_buttons_html($ctx['apiId'], $ctx['status']); ?></td>
+        <td class="vs-col-actions"><?php echo vs_api_list_action_buttons_html($ctx['apiId'], $ctx['status']); ?></td>
     </tr>
     <?php
 }
@@ -911,7 +923,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                             <th>QPM</th>
                             <th>状态</th>
                             <th>调用次数</th>
-                            <th>操作</th>
+                            <th class="vs-col-actions">操作</th>
                         </tr>
                     </thead>
                     <tbody id="apiListBody">

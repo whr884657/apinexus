@@ -132,12 +132,26 @@
                 pendingCache = res.pending;
                 return pendingCache;
             }
-            pendingCache = [];
-            return pendingCache;
-        }).catch(function () {
-            pendingCache = [];
-            return pendingCache;
+            var fail = new Error((res && res.msg) || '检查待执行版本失败');
+            fail.userMsg = (res && res.msg) || '检查待执行版本失败，请稍后重试';
+            throw fail;
         });
+    }
+
+    /** 执行结束弹窗标题：与系统安装更新「完成 / 失败」一致；无需动作为「无需执行」 */
+    function maintainResultTitle(mode, ok, msg) {
+        if (!ok) {
+            return mode === 'full' ? '全量对齐失败' : '版本升级失败';
+        }
+        var text = String(msg || '');
+        if (
+            text.indexOf('无需') !== -1 ||
+            text.indexOf('没有待执行') !== -1 ||
+            text.indexOf('已与标准模板一致') !== -1
+        ) {
+            return '无需执行';
+        }
+        return mode === 'full' ? '全量对齐完成' : '版本升级完成';
     }
 
     function chooserHtml() {
@@ -225,9 +239,27 @@
                     text: '版本升级',
                     primary: true,
                     action: function () {
-                        fetchPendingVersions().then(function (pending) {
-                            openVersionConfirm(pending);
-                        });
+                        // A 点：对齐「检测更新」——检查中 / 发现待执行 / 已无待执行 / 失败均走 Toast
+                        setStatus('正在检查是否有待执行的版本升级…', 'info');
+                        fetchPendingVersions()
+                            .then(function (pending) {
+                                if (!pending || pending.length === 0) {
+                                    setStatus('当前没有待执行的版本升级', 'success');
+                                } else {
+                                    setStatus(
+                                        '发现 ' + pending.length + ' 个待执行的版本升级，请确认后执行',
+                                        'warning'
+                                    );
+                                }
+                                openVersionConfirm(pending);
+                            })
+                            .catch(function (err) {
+                                var msg = (err && err.userMsg) || '检查待执行版本失败，请稍后重试';
+                                setStatus(msg, 'error');
+                                if (window.VsModal && window.VsModal.alert) {
+                                    VsModal.alert(msg, '检查失败');
+                                }
+                            });
                     },
                 },
             ],
@@ -269,12 +301,10 @@
                 {
                     text: '确认执行',
                     primary: true,
-                    danger: true,
-                    disabled: !hasPending,
+                    // 有待执行时高亮危险色；无待执行仍可确认（走 B 点，由后端回「没有待执行」）
+                    danger: !!hasPending,
                     action: function () {
-                        if (!hasPending) {
-                            return;
-                        }
+                        // B 点：对齐「安装更新」——进行中弹窗 + 结束结果弹窗 + Toast，禁止静默无反馈
                         runMaintain('version');
                     },
                 },
@@ -287,6 +317,7 @@
             migrateBtn.disabled = true;
         }
         var doing = mode === 'full' ? '正在全量对齐，请勿关闭…' : '正在执行版本升级，请勿关闭…';
+        // B 点：进行中 Toast（同检测条）+ 忙等弹窗（同安装更新进度窗）
         setStatus(doing, 'info');
         VsModal.open({
             title: mode === 'full' ? '全量对齐' : '版本升级',
@@ -303,13 +334,13 @@
                     var okMsg = res.msg || (mode === 'full' ? '全量对齐已完成' : '版本升级已完成');
                     setStatus(okMsg, 'success');
                     if (window.VsModal && window.VsModal.alert) {
-                        VsModal.alert(okMsg, mode === 'full' ? '全量对齐完成' : '版本升级完成');
+                        VsModal.alert(okMsg, maintainResultTitle(mode, true, okMsg));
                     }
                 } else {
                     var errMsg = (res && res.msg) || (mode === 'full' ? '全量对齐失败' : '版本升级失败');
                     setStatus(errMsg, 'error');
                     if (window.VsModal && window.VsModal.alert) {
-                        VsModal.alert(errMsg, mode === 'full' ? '全量对齐失败' : '版本升级失败');
+                        VsModal.alert(errMsg, maintainResultTitle(mode, false, errMsg));
                     }
                 }
             })

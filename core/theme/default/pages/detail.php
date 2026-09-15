@@ -31,7 +31,10 @@ $callsLabel = !$notFound ? number_format((int) (isset($api['calls']) ? $api['cal
 $paramsList = (!$notFound && isset($api['params_list']) && is_array($api['params_list'])) ? $api['params_list'] : array();
 $paramsRaw = (!$notFound && isset($api['params'])) ? (string) $api['params'] : '';
 $paramsPretty = $paramsRaw !== '' ? FrontendApi::prettyParamsJson($paramsRaw) : '';
+$openapiJson = (!$notFound && isset($api['openapi_json'])) ? (string) $api['openapi_json'] : '';
 $hasParamsTable = count($paramsList) > 0;
+$hasOpenApi = $openapiJson !== '';
+$paramsCopyDefault = $paramsPretty !== '' ? $paramsPretty : $paramsRaw;
 $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey_label'] : '无需 KEY';
 $authWayLabel = '无需密钥';
 if (!$notFound) {
@@ -59,37 +62,7 @@ $endpointBlurText = '••••••••••••/•••••••�
 $recommendApi = null;
 $pageApiSnapshot = (!$notFound && $api !== array()) ? $api : null;
 if (!$notFound) {
-    $pool = FrontendApi::listForTheme();
-    $candidates = array();
-    $curId = (int) $api['id'];
-    $curCat = isset($api['category']) ? (string) $api['category'] : '';
-    foreach ($pool as $item) {
-        if (!is_array($item)) {
-            continue;
-        }
-        if ((int) (isset($item['id']) ? $item['id'] : 0) === $curId) {
-            continue;
-        }
-        $candidates[] = $item;
-    }
-    if ($candidates !== array()) {
-        $sameCat = array();
-        foreach ($candidates as $item) {
-            if ($curCat !== '' && (string) (isset($item['category']) ? $item['category'] : '') === $curCat) {
-                $sameCat[] = $item;
-            }
-        }
-        $pickPool = $sameCat !== array() ? $sameCat : $candidates;
-        usort($pickPool, function ($a, $b) {
-            $ca = isset($a['calls']) ? (int) $a['calls'] : 0;
-            $cb = isset($b['calls']) ? (int) $b['calls'] : 0;
-            if ($ca !== $cb) {
-                return $cb - $ca;
-            }
-            return (int) (isset($b['id']) ? $b['id'] : 0) - (int) (isset($a['id']) ? $a['id'] : 0);
-        });
-        $recommendApi = $pickPool[0];
-    }
+    $recommendApi = FrontendApi::pickRandomRecommend((int) $api['id']);
 }
 ?>
 <main class="main-wrapper container mx-auto px-4 detail-page" id="apiDetailPage"
@@ -269,8 +242,15 @@ if (!$notFound) {
                 <?php if ($hasParamsTable): ?>
                 <button type="button" class="btn-mode is-active" data-params-mode="table">表格</button>
                 <button type="button" class="btn-mode" data-params-mode="json">JSON</button>
+                <?php elseif ($hasOpenApi): ?>
+                <button type="button" class="btn-mode is-active" data-params-mode="json">JSON</button>
                 <?php endif; ?>
-                <button type="button" class="btn-copy" data-copy="<?php echo vs_e($paramsPretty !== '' ? $paramsPretty : $paramsRaw); ?>">复制</button>
+                <?php if ($hasOpenApi): ?>
+                <button type="button" class="btn-mode" data-params-mode="openapi">OpenAPI</button>
+                <?php endif; ?>
+                <button type="button" class="btn-copy" id="paramsCopyBtn"
+                        data-copy="<?php echo vs_e($paramsCopyDefault); ?>"
+                        data-copy-json="<?php echo vs_e($paramsCopyDefault); ?>">复制</button>
             </div>
         </div>
         <?php if ($hasParamsTable): ?>
@@ -302,8 +282,13 @@ if (!$notFound) {
             <pre class="code-content font-mono json-hl" id="paramsJsonCode"><?php echo vs_e($paramsPretty); ?></pre>
         </div>
         <?php else: ?>
-        <div class="code-block">
+        <div class="code-block" id="paramsJsonMode">
             <pre class="code-content font-mono json-hl"><?php echo vs_e($paramsRaw); ?></pre>
+        </div>
+        <?php endif; ?>
+        <?php if ($hasOpenApi): ?>
+        <div class="code-block" id="paramsOpenApiMode" hidden>
+            <pre class="code-content font-mono json-hl" id="paramsOpenApiCode"><?php echo vs_e($openapiJson); ?></pre>
         </div>
         <?php endif; ?>
     </section>
@@ -533,7 +518,10 @@ if (!$notFound) {
             <div class="playground-pane">
                 <div class="playground-response-head">
                     <span class="playground-label" style="margin:0;">Response</span>
-                    <span class="status-badge" id="pgStatus">等待中</span>
+                    <div class="playground-response-meta">
+                        <button type="button" class="btn-copy" id="pgCopyBtn" hidden disabled aria-hidden="true">复制</button>
+                        <span class="status-badge" id="pgStatus">等待中</span>
+                    </div>
                 </div>
                 <div class="response-container">
                     <pre class="response-pre font-mono" id="pgResponse">// 结果将在此处显示</pre>

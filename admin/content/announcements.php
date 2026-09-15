@@ -142,7 +142,7 @@ echo Markdown::renderAssetsHtml();
                         <th>发布时间</th>
                         <th>置顶</th>
                         <th>弹窗</th>
-                        <th>操作</th>
+                        <th class="vs-col-actions">操作</th>
                     </tr>
                 </thead>
                 <tbody id="contentBody">

@@ -171,9 +171,30 @@
      * @param {HTMLElement} outputEl
      * @returns {Promise<void>}
      */
+
+    function setPgCopyState(outputEl, text) {
+        if (!outputEl) {
+            return;
+        }
+        var copyable = text != null && String(text) !== '';
+        outputEl._vsPgCopyText = copyable ? String(text) : '';
+        outputEl.setAttribute('data-pg-copyable', copyable ? '1' : '0');
+        var btn = document.getElementById('pgCopyBtn');
+        if (btn) {
+            btn.hidden = !copyable;
+            btn.disabled = !copyable;
+            btn.setAttribute('aria-hidden', copyable ? 'false' : 'true');
+        }
+    }
+
+    function clearPgCopyState(outputEl) {
+        setPgCopyState(outputEl, null);
+    }
+
     function renderFetchResponse(response, outputEl) {
         if (!outputEl) return Promise.resolve();
         revokeBlobUrls();
+        clearPgCopyState(outputEl);
 
         var ct = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
 
@@ -184,6 +205,7 @@
             if (kind === 'image' || kind === 'audio' || kind === 'video') {
                 if (buf.byteLength > 40 * 1024 * 1024) {
                     outputEl.innerHTML = '<div class="pg-media-wrap pg-media-wrap--hint"><p>媒体文件过大（&gt;40MB），请直接访问接口地址。</p></div>';
+                    clearPgCopyState(outputEl);
                     return;
                 }
                 var blobType = ct;
@@ -193,6 +215,7 @@
                 var mediaBlob = new Blob([buf], { type: blobType || 'application/octet-stream' });
                 var mediaUrl = trackBlob(URL.createObjectURL(mediaBlob));
                 outputEl.innerHTML = renderMediaHtml(kind, mediaUrl, kind.toUpperCase() + ' · ' + Math.round(mediaBlob.size / 1024) + ' KB');
+                clearPgCopyState(outputEl);
                 return;
             }
 
@@ -200,6 +223,7 @@
                 var binBlob = new Blob([buf], { type: ct || 'application/octet-stream' });
                 var binUrl = trackBlob(URL.createObjectURL(binBlob));
                 outputEl.innerHTML = renderBinaryHint(ct, binUrl);
+                clearPgCopyState(outputEl);
                 return;
             }
 
@@ -212,6 +236,7 @@
             if (isProbablyBinary(ct, text)) {
                 var hintBlob = new Blob([buf], { type: ct || 'application/octet-stream' });
                 outputEl.innerHTML = renderBinaryHint(ct || 'binary', trackBlob(URL.createObjectURL(hintBlob)));
+                clearPgCopyState(outputEl);
                 return;
             }
             var display = text || '';
@@ -229,15 +254,18 @@
                 }
                 outputEl.innerHTML = syntaxHighlight(pretty)
                     + (truncated ? '\n<span class="json-null">// …已截断</span>' : '');
+                setPgCopyState(outputEl, pretty + (truncated ? '\n// …已截断' : ''));
             } catch (e) {
                 if (/html/.test(ct)) {
                     var safeDoc = escapeHtml(display.slice(0, 80000));
                     outputEl.innerHTML = '<div class="pg-media-tip">// HTML 响应（沙箱预览）</div>'
                         + '<iframe class="pg-html-frame" sandbox="" srcdoc="' + safeDoc.replace(/"/g, '&quot;') + '"></iframe>';
+                    setPgCopyState(outputEl, display);
                     return;
                 }
                 outputEl.innerHTML = '<pre class="response-pre">' + escapeHtml(display)
                     + (truncated ? '\n// …已截断' : '') + '</pre>';
+                setPgCopyState(outputEl, display + (truncated ? '\n// …已截断' : ''));
             }
         });
     }
@@ -405,6 +433,7 @@
         var k = String(kind || '').toLowerCase();
         if (k !== 'image' && k !== 'audio' && k !== 'video') return false;
         outputEl.innerHTML = renderMediaHtml(k, url, '流式加载');
+        clearPgCopyState(outputEl);
         return true;
     }
 
@@ -416,6 +445,7 @@
     function renderRelayPayload(data, outputEl) {
         if (!outputEl || !data) return;
         revokeBlobUrls();
+        clearPgCopyState(outputEl);
         var encoding = String(data.encoding || 'text');
         var ct = String(data.contentType || '').split(';')[0].trim().toLowerCase();
         var body = data.body == null ? '' : String(data.body);
@@ -423,6 +453,7 @@
         if (encoding === 'omit') {
             var tip = (data.msg && String(data.msg)) || '媒体体积较大，在线预览已跳过，请直接访问接口地址';
             outputEl.innerHTML = '<div class="pg-media-wrap pg-media-wrap--hint"><p>' + escapeHtml(tip) + '</p></div>';
+            clearPgCopyState(outputEl);
             return;
         }
 
@@ -432,9 +463,11 @@
             if (!kindUrl) {
                 // url 模式无魔数，按 contentType；仍未知则给可打开链接，勿默认当图片
                 outputEl.innerHTML = renderBinaryHint(ct || 'binary', mediaUrl);
+                clearPgCopyState(outputEl);
                 return;
             }
             outputEl.innerHTML = renderMediaHtml(kindUrl, mediaUrl, kindUrl.toUpperCase() + ' 预览');
+            clearPgCopyState(outputEl);
             return;
         }
 
@@ -455,6 +488,7 @@
                 var blob = new Blob([bytes], { type: blobType || 'application/octet-stream' });
                 if (blob.size > 40 * 1024 * 1024) {
                     outputEl.innerHTML = '<div class="pg-media-wrap pg-media-wrap--hint"><p>媒体文件过大，请直接访问接口地址。</p></div>';
+                    clearPgCopyState(outputEl);
                     return;
                 }
                 var url = trackBlob(URL.createObjectURL(blob));
@@ -463,14 +497,17 @@
                 } else {
                     outputEl.innerHTML = renderBinaryHint(ct || 'binary', url);
                 }
+                clearPgCopyState(outputEl);
             } catch (e) {
                 outputEl.innerHTML = renderBinaryHint(ct || 'binary', '');
+                clearPgCopyState(outputEl);
             }
             return;
         }
 
         if (isProbablyBinary(ct, body)) {
             outputEl.innerHTML = renderBinaryHint(ct || 'binary', '');
+            clearPgCopyState(outputEl);
             return;
         }
 
@@ -489,15 +526,18 @@
             }
             outputEl.innerHTML = syntaxHighlight(pretty)
                 + (truncated ? '\n<span class="json-null">// …已截断</span>' : '');
+            setPgCopyState(outputEl, pretty + (truncated ? '\n// …已截断' : ''));
         } catch (e2) {
             if (/html/.test(ct)) {
                 var safeDoc = escapeHtml(display.slice(0, 80000));
                 outputEl.innerHTML = '<div class="pg-media-tip">// HTML 响应（沙箱预览）</div>'
                     + '<iframe class="pg-html-frame" sandbox="" srcdoc="' + safeDoc.replace(/"/g, '&quot;') + '"></iframe>';
+                setPgCopyState(outputEl, display);
                 return;
             }
             outputEl.innerHTML = '<pre class="response-pre">' + escapeHtml(display)
                 + (truncated ? '\n// …已截断' : '') + '</pre>';
+            setPgCopyState(outputEl, display + (truncated ? '\n// …已截断' : ''));
         }
     }
 
@@ -578,6 +618,8 @@
         inspectFetchStatus: inspectFetchStatus,
         renderDirectMedia: renderDirectMedia,
         renderRelayPayload: renderRelayPayload,
+        setPgCopyState: setPgCopyState,
+        clearPgCopyState: clearPgCopyState,
         directRequest: directRequest,
         playgroundRequest: playgroundRequest,
         resolvePlaygroundAuthWay: resolvePlaygroundAuthWay,

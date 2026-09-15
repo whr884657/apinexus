@@ -31,7 +31,10 @@ $callsLabel = !$notFound ? number_format((int) (isset($api['calls']) ? $api['cal
 $paramsList = (!$notFound && isset($api['params_list']) && is_array($api['params_list'])) ? $api['params_list'] : array();
 $paramsRaw = (!$notFound && isset($api['params'])) ? (string) $api['params'] : '';
 $paramsPretty = $paramsRaw !== '' ? FrontendApi::prettyParamsJson($paramsRaw) : '';
+$openapiJson = (!$notFound && isset($api['openapi_json'])) ? (string) $api['openapi_json'] : '';
 $hasParamsTable = count($paramsList) > 0;
+$hasOpenApi = $openapiJson !== '';
+$paramsCopyDefault = $paramsPretty !== '' ? $paramsPretty : $paramsRaw;
 $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey_label'] : '无需 KEY';
 $authWayLabel = '无需密钥';
 if (!$notFound) {
@@ -57,6 +60,7 @@ $endpointDisplay = ($endpointRaw !== '' && !$isDisabled) ? vs_call_url_host_path
 $endpointBlurText = '••••••••••••/••••••••••••';
 
 $pageApiSnapshot = (!$notFound && $api !== array()) ? $api : null;
+$recommendApi = (!$notFound) ? FrontendApi::pickRandomRecommend((int) $api['id']) : null;
 
 $disclaimerEnabled = class_exists('Config') && Config::get('api_disclaimer_on', '0') === '1';
 $disclaimerThemeOn = class_exists('ThemeManager') && ThemeManager::themeSettingBool('show_api_disclaimer', true);
@@ -281,8 +285,15 @@ $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
                     <?php if ($hasParamsTable): ?>
                     <button type="button" class="btn-mode is-active" data-params-mode="table">表格</button>
                     <button type="button" class="btn-mode" data-params-mode="json">JSON</button>
+                    <?php elseif ($hasOpenApi): ?>
+                    <button type="button" class="btn-mode is-active" data-params-mode="json">JSON</button>
                     <?php endif; ?>
-                    <button type="button" class="btn-copy" data-copy="<?php echo vs_e($paramsPretty !== '' ? $paramsPretty : $paramsRaw); ?>">复制</button>
+                    <?php if ($hasOpenApi): ?>
+                    <button type="button" class="btn-mode" data-params-mode="openapi">OpenAPI</button>
+                    <?php endif; ?>
+                    <button type="button" class="btn-copy" id="paramsCopyBtn"
+                            data-copy="<?php echo vs_e($paramsCopyDefault); ?>"
+                            data-copy-json="<?php echo vs_e($paramsCopyDefault); ?>">复制</button>
                 </div>
             </div>
             <?php if ($hasParamsTable): ?>
@@ -314,8 +325,13 @@ $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
                 <pre class="code-content font-mono json-hl" id="paramsJsonCode"><?php echo vs_e($paramsPretty); ?></pre>
             </div>
             <?php else: ?>
-            <div class="code-block">
+            <div class="code-block" id="paramsJsonMode">
                 <pre class="code-content font-mono json-hl"><?php echo vs_e($paramsRaw); ?></pre>
+            </div>
+            <?php endif; ?>
+            <?php if ($hasOpenApi): ?>
+            <div class="code-block" id="paramsOpenApiMode" hidden>
+                <pre class="code-content font-mono json-hl" id="paramsOpenApiCode"><?php echo vs_e($openapiJson); ?></pre>
             </div>
             <?php endif; ?>
         </div>
@@ -475,7 +491,10 @@ $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
                 <div class="playground-pane">
                     <div class="playground-response-head">
                         <span class="playground-label" style="margin:0;">Response</span>
-                        <span class="status-badge" id="pgStatus">等待中</span>
+                        <div class="playground-response-meta">
+                            <button type="button" class="btn-copy" id="pgCopyBtn" hidden disabled aria-hidden="true">复制</button>
+                            <span class="status-badge" id="pgStatus">等待中</span>
+                        </div>
                     </div>
                     <div class="response-container">
                         <pre class="response-pre font-mono" id="pgResponse">// 结果将在此处显示</pre>
@@ -516,6 +535,21 @@ $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
             <h2 class="st-detail__h">免责声明</h2>
             <div class="markdown-body vs-md-body st-md detail-md is-parsed detail-disclaimer__body">
                 <?php echo slate_md_render($disclaimerBody); ?>
+            </div>
+        </section>
+        <?php endif; ?>
+
+        <?php if ($recommendApi !== null): ?>
+        <section class="st-detail__panel detail-recommend" id="detailRecommend">
+            <h2 class="st-detail__h">推荐接口</h2>
+            <div class="st-api-grid st-api-grid--recommend">
+                <?php
+                $apiData = array($recommendApi);
+                include __DIR__ . '/../partials/api-cards-html.php';
+                if (is_array($pageApiSnapshot)) {
+                    $api = $pageApiSnapshot;
+                }
+                ?>
             </div>
         </section>
         <?php endif; ?>

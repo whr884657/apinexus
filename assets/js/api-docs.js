@@ -39,7 +39,31 @@
         var saving = false;
 
         if (window.VsParamsEditor && paramsEditor) {
-            window.VsParamsEditor.mount(paramsEditor, { hiddenId: 'apiDocsEditParams' });
+            window.VsParamsEditor.mount(paramsEditor, {
+                hiddenId: 'apiDocsEditParams',
+                openapiMeta: function () {
+                    return {
+                        api_id: editId ? String(editId.value || '') : ''
+                    };
+                },
+                openapiPreview: function (meta) {
+                    var fd = new FormData();
+                    fd.append('action', 'openapi_preview');
+                    fd.append('api_id', meta.api_id || '');
+                    fd.append('params', meta.params || '');
+                    if (window.VS.encodeTransportFields) {
+                        var enc = { params: meta.params || '' };
+                        window.VS.encodeTransportFields(enc, ['params']);
+                        fd.set('params', enc.params);
+                    }
+                    return window.VS.postForm(fd).then(function (data) {
+                        if (!data || data.code !== 1) {
+                            throw new Error((data && data.msg) ? data.msg : 'OpenAPI 预览失败');
+                        }
+                        return data.openapi_json || '';
+                    });
+                }
+            });
         }
 
         function setSelectedTitle(name) {

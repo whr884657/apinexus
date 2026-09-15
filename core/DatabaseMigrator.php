@@ -481,6 +481,13 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已是 register_enabled 单键 1～4 且无旧子开关时跳过 13.26.41
+        if (!in_array('13.26.41', $applied, true)) {
+            if (self::registerModeReady41()) {
+                self::markApplied('13.26.41');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -1198,7 +1205,8 @@ class DatabaseMigrator
             || $version === '13.26.31'
             || $version === '13.26.34'
             || $version === '13.26.35'
-            || $version === '13.26.40');
+            || $version === '13.26.40'
+            || $version === '13.26.41');
     }
 
     /**
@@ -1671,11 +1679,44 @@ class DatabaseMigrator
             $all = Config::all();
             return isset($all['mail_notify_key_quota']);
         }
+        if ($version === '13.26.41') {
+            return self::registerModeReady41() && self::apiorderReady41();
+        }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {
             return true;
         }
         return in_array($version, self::getAppliedVersions(), true);
+    }
+
+    /**
+     * 13.26.41：register_enabled 已是 1～4 且无旧身份子开关
+     *
+     * @return bool
+     */
+    private static function registerModeReady41()
+    {
+        $all = Config::all();
+        if (isset($all['register_allow_user']) || isset($all['register_allow_developer'])) {
+            return false;
+        }
+        $mode = isset($all['register_enabled']) ? (string) $all['register_enabled'] : '';
+        return $mode === '1' || $mode === '2' || $mode === '3' || $mode === '4';
+    }
+
+    /**
+     * 13.26.41：apiorder 配置键已落地（0/1）
+     *
+     * @return bool
+     */
+    private static function apiorderReady41()
+    {
+        $all = Config::all();
+        if (!isset($all['apiorder'])) {
+            return false;
+        }
+        $v = (string) $all['apiorder'];
+        return $v === '0' || $v === '1';
     }
 
     /**

@@ -76,6 +76,7 @@
   var previewLimit = (pageMode === 'apis') ? 99999 : (parseInt(cfg.previewLimit, 10) || 12);
   var vsBase = cfg.vsBase || '';
   var catalogApis = [];
+  var catalogLoadFailed = false;
   var activeCat = 'all';
   var searchQ = '';
 
@@ -432,9 +433,23 @@
     if (a.category != null && a.category !== '') return String(a.category);
     return '';
   }
+  function shuffleCopy(arr) {
+    var list = (arr || []).slice();
+    for (var i = list.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = list[i];
+      list[i] = list[j];
+      list[j] = t;
+    }
+    return list;
+  }
   function renderApiCards() {
     var grid = $('apiGrid');
     if (!grid) return;
+    if (catalogLoadFailed && (!catalogApis || !catalogApis.length)) {
+      grid.innerHTML = '<p class="text-muted col-span-full" style="padding:24px;text-align:center;">目录加载失败，请刷新重试</p>';
+      return;
+    }
     var filtered = catalogApis.filter(function (a) {
       if (activeCat !== 'all' && catOf(a) !== activeCat) return false;
       if (!searchQ) return true;
@@ -442,7 +457,11 @@
       var blob = [a.name, a.desc, a.call_path, a.endpoint, a.method].join(' ').toLowerCase();
       return blob.indexOf(q) >= 0;
     });
-    var show = filtered.slice(0, previewLimit);
+    // 首页精选：有序取前 N；随机再洗一次后取 N（apis 页 previewLimit 极大，等同全量）
+    var source = (pageMode !== 'apis' && Number(window.VS_APIORDER) !== 1)
+      ? shuffleCopy(filtered)
+      : filtered;
+    var show = source.slice(0, previewLimit);
     if (!show.length) {
       grid.innerHTML = '<p class="text-muted col-span-full" style="padding:24px;text-align:center;">暂无匹配的接口</p>';
       return;
@@ -471,11 +490,12 @@
     });
   }
 
-  /* ---- demo：真实调用见 assets/js/theme-playground.js ---- */
-
   /* ---- load catalog ---- */
-  function bootCatalog() {
+  function bootCatalog(waitTry) {
+    waitTry = Number(waitTry) || 0;
+    var grid = $('apiGrid');
     function apply(list) {
+      catalogLoadFailed = false;
       catalogApis = list || [];
       var totalLabel = $('th3ApiTotalLabel');
       if (totalLabel) totalLabel.textContent = String(cfg.apiCount || catalogApis.length);
@@ -491,16 +511,31 @@
         document.dispatchEvent(new CustomEvent('th3:catalog', { detail: { apis: catalogApis } }));
       } catch (e) { /* ignore */ }
     }
+    function failCatalog() {
+      catalogLoadFailed = true;
+      catalogApis = [];
+      if (grid) {
+        grid.innerHTML = '<p class="text-muted col-span-full" style="padding:24px;text-align:center;">目录加载失败，请刷新重试</p>';
+      }
+    }
+    if (grid && window.VS && typeof VS.setLoading === 'function') {
+      VS.setLoading(grid, '正在加载接口');
+    }
     if (!window.VS || typeof VS.fetchFrontCatalog !== 'function') {
-      setTimeout(bootCatalog, 40);
+      if (waitTry < 50) {
+        setTimeout(function () { bootCatalog(waitTry + 1); }, 40);
+        return;
+      }
+      failCatalog();
       return;
     }
     VS.fetchFrontCatalog({}).then(function (data) {
+      window.VS_APIORDER = Number(data && data.apiorder) === 1 ? 1 : 0;
       var list = (data && (data.apiData || data.list || data.apis || data.items)) || [];
       if (!Array.isArray(list)) list = [];
       apply(list);
     }).catch(function () {
-      apply([]);
+      failCatalog();
     });
   }
 

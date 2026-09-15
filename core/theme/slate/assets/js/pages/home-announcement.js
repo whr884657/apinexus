@@ -1,5 +1,5 @@
 /**
- * 主题二首页公告：跑马灯 + 弹窗（逻辑对齐 default，样式用 st-announce-*）
+ * 主题二首页公告：跑马灯 + 弹窗（结构对齐 default，配色走 slate）
  */
 (function () {
     var wrap = document.getElementById('homeAnnouncementWrap');
@@ -11,11 +11,38 @@
 
     var LS_DISMISS_PREFIX = 'feer_announcement_dismiss_';
     var annDataCache = null;
+    var TOKEN_KEYS = [
+        '--st-accent', '--st-accent-h', '--st-fg', '--st-fg2',
+        '--st-line', '--st-card', '--st-bg-alt'
+    ];
 
-    /* 挂到 body，避免困在 .st-wrap { z-index:1 } 层叠上下文下被页脚盖住（对齐默认主题） */
+    /**
+     * 弹窗挂 body 后脱离 .st-root，从当前主题根同步 CSS 变量（含调色盘）
+     */
+    function syncAnnounceModalTokens() {
+        if (!modalHome) return;
+        var src = document.querySelector('.st-root');
+        if (!src) return;
+        var cs = window.getComputedStyle(src);
+        TOKEN_KEYS.forEach(function (key) {
+            var val = (cs.getPropertyValue(key) || '').trim();
+            if (val) {
+                modalHome.style.setProperty(key, val);
+            }
+        });
+        var alt = (cs.getPropertyValue('--st-bg-alt') || '').trim();
+        if (alt) {
+            modalHome.style.setProperty('--st-footer-bg', alt);
+        }
+    }
+
+    window.stSyncAnnounceModalTokens = syncAnnounceModalTokens;
+
+    /* 挂到 body，避免困在 .st-wrap { z-index:1 } 层叠上下文下被页脚盖住（E299） */
     if (modalHome && modalHome.parentNode !== document.body) {
         document.body.appendChild(modalHome);
     }
+    syncAnnounceModalTokens();
 
     function getAnnData() {
         if (annDataCache) return annDataCache;
@@ -77,6 +104,7 @@
 
     function openModal(el) {
         if (!el) return;
+        syncAnnounceModalTokens();
         hydrateAnnouncementModals();
         el.removeAttribute('inert');
         el.classList.add('is-open');

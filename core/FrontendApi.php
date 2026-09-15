@@ -61,7 +61,7 @@ class FrontendApi
             $endpoint = '';
         }
 
-        return array(
+        $out = array(
             'id'          => $id,
             'name'        => $name,
             'desc'        => trim((string) (isset($row['description']) ? $row['description'] : '')),
@@ -102,6 +102,20 @@ class FrontendApi
             'params_list' => self::parseParamsList(isset($row['params']) ? (string) $row['params'] : ''),
             'author'      => $withAuthor ? self::authorForTheme(isset($row['userid']) ? (int) $row['userid'] : 0) : null,
         );
+        // OpenAPI 仅详情需要；列表缓存禁止灌入大文档
+        if ($forDetail && class_exists('OpenApiBuilder')) {
+            $buildRow = $row;
+            if ($disabled) {
+                // 禁用详情不暴露真实调用地址；文档 path 用占位，禁止伪造 /api/{id}
+                $buildRow['endpoint'] = '';
+                $buildRow['proxyslug'] = '';
+                $buildRow['apitype'] = ApiManager::APITYPE_LOCAL;
+                $buildRow['openapi_unavailable'] = 1;
+            }
+            // 详情 HTML 嵌入用紧凑 JSON，减小源码体积
+            $out['openapi_json'] = OpenApiBuilder::jsonForApiRow($buildRow, false);
+        }
+        return $out;
     }
 
     /**
@@ -397,6 +411,8 @@ class FrontendApi
                     $apiData[] = $item;
                 }
             }
+            // Redis 只缓存按分类权重的有序底稿，随机模式在取出后临时打乱
+            self::sortByCategoryWeight($apiData);
             return $apiData;
         };
         if (class_exists('RedisCache')) {
@@ -407,6 +423,66 @@ class FrontendApi
             return self::bindRequestHostToList($cached);
         }
         return self::bindRequestHostToList($factory());
+    }
+
+    /**
+     * 按所属分类 sort 升序；同权重按分类 id 聚拢，再按接口 id
+     *
+     * @param array $list
+     * @return void
+     */
+    public static function sortByCategoryWeight(array &$list)
+    {
+        if (count($list) < 2) {
+            return;
+        }
+        $weightMap = class_exists('FrontendCategory') ? FrontendCategory::nameToSortMap() : array();
+        usort($list, function ($a, $b) use ($weightMap) {
+            $na = is_array($a) && isset($a['category_name']) ? trim((string) $a['category_name']) : '';
+            $nb = is_array($b) && isset($b['category_name']) ? trim((string) $b['category_name']) : '';
+            $sa = ($na !== '' && isset($weightMap[$na])) ? (int) $weightMap[$na] : 999999;
+            $sb = ($nb !== '' && isset($weightMap[$nb])) ? (int) $weightMap[$nb] : 999999;
+            if ($sa !== $sb) {
+                return $sa < $sb ? -1 : 1;
+            }
+            // 同权重：先按分类 id 聚拢，再按接口 id（避免不同分类插花）
+            $ca = is_array($a) && isset($a['category']) ? (string) $a['category'] : '';
+            $cb = is_array($b) && isset($b['category']) ? (string) $b['category'] : '';
+            if ($ca !== $cb) {
+                if ($ca !== '' && $cb !== '' && ctype_digit($ca) && ctype_digit($cb)) {
+                    $ia = (int) $ca;
+                    $ib = (int) $cb;
+                    if ($ia !== $ib) {
+                        return $ia < $ib ? -1 : 1;
+                    }
+                } else {
+                    $cmp = strcmp($ca, $cb);
+                    if ($cmp !== 0) {
+                        return $cmp < 0 ? -1 : 1;
+                    }
+                }
+            }
+            $ida = is_array($a) && isset($a['id']) ? (int) $a['id'] : 0;
+            $idb = is_array($b) && isset($b['id']) ? (int) $b['id'] : 0;
+            if ($ida === $idb) {
+                return 0;
+            }
+            return $ida < $idb ? -1 : 1;
+        });
+    }
+
+    /**
+     * 目录展示顺序：有序底稿上，随机模式再临时 shuffle
+     *
+     * @param array $list
+     * @return void
+     */
+    public static function applyCatalogDisplayOrder(array &$list)
+    {
+        self::sortByCategoryWeight($list);
+        if (class_exists('FrontendCategory') && FrontendCategory::isRandomOrder() && count($list) > 1) {
+            shuffle($list);
+        }
     }
 
     /**
@@ -424,7 +500,7 @@ class FrontendApi
     /**
      * 前台目录接口专用列表（listForTheme + slim，减少泄露与响应体积）
      *
-     * @return array<int, array<string, mixed>>
+     * @return array
      */
     public static function listForCatalog()
     {
@@ -435,6 +511,7 @@ class FrontendApi
             }
             $out[] = self::slimForCatalog($item);
         }
+        self::applyCatalogDisplayOrder($out);
         return $out;
     }
 
@@ -464,5 +541,32 @@ class FrontendApi
     public static function countForTheme()
     {
         return ApiManager::countPublic();
+    }
+
+    /**
+     * 详情页「推荐接口」：公开目录中纯随机一条（含维护中；不含禁用；不含当前接口）
+     * 不考虑 apiorder / 分类权重 / 调用量
+     *
+     * @param int $excludeId 当前详情接口 id
+     * @return array|null
+     */
+    public static function pickRandomRecommend($excludeId = 0)
+    {
+        $excludeId = (int) $excludeId;
+        $pool = array();
+        foreach (self::listForTheme() as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $id = isset($item['id']) ? (int) $item['id'] : 0;
+            if ($id <= 0 || ($excludeId > 0 && $id === $excludeId)) {
+                continue;
+            }
+            $pool[] = $item;
+        }
+        if ($pool === array()) {
+            return null;
+        }
+        return $pool[array_rand($pool)];
     }
 }

@@ -485,7 +485,7 @@ class StatDayManager
             return;
         }
         try {
-            RedisService::withClient(function (Redis $redis) use ($day, $apiId) {
+            RedisService::withClient(function ($redis) use ($day, $apiId) {
                 $key = RedisService::buildKey(self::KEY_TOPMAP_PREFIX . $day);
                 $redis->hIncrBy($key, (string) (int) $apiId, 1);
                 $redis->expire($key, 86400 * 2);
@@ -550,7 +550,7 @@ class StatDayManager
             return;
         }
         try {
-            $map = RedisService::withClient(function (Redis $redis) use ($day) {
+            $map = RedisService::withClient(function ($redis) use ($day) {
                 $key = RedisService::buildKey(self::KEY_TOPMAP_PREFIX . $day);
                 $all = $redis->hGetAll($key);
                 return is_array($all) ? $all : array();

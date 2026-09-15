@@ -37,10 +37,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tableReady = OrderManager::tableReady();
 $headerActions = '';
 if ($tableReady) {
-    // 与订单管理一致：标题行仅刷新图标，手机端仍靠右上角
-    $headerActions = '<div class="vs-finance-head-actions vs-finance-head-actions--simple">'
-        . vs_admin_refresh_btn_html('pointsRefreshBtn')
-        . '</div>';
+    // 标题行：小搜索 + 刷新同排靠右（v13.26.41）
+    ob_start();
+    ?>
+    <div class="vs-finance-head-actions vs-finance-head-actions--with-search">
+        <div class="vs-finance-search vs-points-head-search">
+            <input type="search" class="vs-input vs-finance-search__input" id="pointsSearchInput"
+                   placeholder="搜索用户 / 邮箱 / 类型…" autocomplete="off" aria-label="搜索积分变动">
+            <button type="button" class="vs-btn vs-btn--primary" id="pointsSearchBtn">搜索</button>
+        </div>
+        <?php echo vs_admin_refresh_btn_html('pointsRefreshBtn'); ?>
+    </div>
+    <?php
+    $headerActions = ob_get_clean();
 }
 
 vs_admin_layout_start('积分变动', 'points', $headerActions);
@@ -48,16 +57,10 @@ vs_admin_layout_start('积分变动', 'points', $headerActions);
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先完成系统升级以同步订单数据。', array('compact' => true)); ?>
 <?php else: ?>
-<?php /* 财务工具栏结构对齐订单管理；筛选按钮样式对齐日志查询（vs-finance-filters） */ ?>
 <div class="vs-finance-toolbar vs-points-toolbar" id="pointsToolbar">
-    <div class="vs-finance-search">
-        <input type="search" class="vs-input vs-finance-search__input" id="pointsSearchInput"
-               placeholder="搜索用户 / 邮箱 / 类型 / 说明…" autocomplete="off">
-        <button type="button" class="vs-btn vs-btn--primary" id="pointsSearchBtn">搜索</button>
-    </div>
-    <div class="vs-finance-filters" role="group" aria-label="积分变动大类">
-        <button type="button" class="vs-btn vs-btn--primary vs-points-filter is-active" data-bucket="account">账户变动</button>
-        <button type="button" class="vs-btn vs-btn--default vs-points-filter" data-bucket="api">接口调用</button>
+    <div class="vs-points-seg" role="group" aria-label="积分变动大类">
+        <button type="button" class="vs-points-seg__btn is-active" data-bucket="account">账户变动</button>
+        <button type="button" class="vs-points-seg__btn" data-bucket="api">接口调用</button>
     </div>
 </div>
 
@@ -82,4 +85,4 @@ vs_admin_layout_start('积分变动', 'points', $headerActions);
     <div class="vs-api-list-total" id="pointsTotal"></div>
 </div>
 <?php endif; ?>
-<?php vs_admin_layout_end($tableReady ? array('finance-points.js') : array()); ?>
+<?php vs_admin_layout_end($tableReady ? array('vs-pick.js', 'finance-points.js') : array()); ?>

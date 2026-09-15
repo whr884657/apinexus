@@ -132,6 +132,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $confirm = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
         $role = isset($_POST['role']) ? (string) $_POST['role'] : UserRole::ROLE_USER;
         $role = UserRole::normalize($role);
+        $fixedRole = RegisterPolicy::fixedRegisterRole();
+        if ($fixedRole !== null) {
+            $role = $fixedRole;
+        }
+        $roleDenied = RegisterPolicy::assertRoleAllowed($role);
+        if ($roleDenied !== null) {
+            vs_auth_json(array('code' => 0, 'msg' => $roleDenied));
+        }
 
         if ($username === '' || $email === '') {
             vs_auth_json(array('code' => 0, 'msg' => '请完整填写注册信息'));
@@ -190,6 +198,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 // 开放且「需邮箱验证」时依赖发信；免验证时未配邮箱也可注册
 $formEnabled = $registerOpen && (!$emailVerify || $mailEnabled);
+$showRoleSegment = RegisterPolicy::shouldShowRoleSegment();
+$fixedRole = RegisterPolicy::fixedRegisterRole();
+$registerRole = $fixedRole !== null ? $fixedRole : UserRole::ROLE_USER;
 
 ThemeManager::renderAuthPage('register', '用户注册', array(
     'base'                 => $base,
@@ -201,4 +212,7 @@ ThemeManager::renderAuthPage('register', '用户注册', array(
     'registerClosedMsg'    => $registerClosedMsg,
     'registerClosedSub'    => $registerClosedSub,
     'registerClosedDetail' => $registerClosedDetail,
+    'showRoleSegment'      => $showRoleSegment,
+    'fixedRole'            => $fixedRole,
+    'registerRole'         => $registerRole,
 ));

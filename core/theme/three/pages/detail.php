@@ -39,7 +39,10 @@ $callsLabel = !$notFound ? number_format((int) (isset($api['calls']) ? $api['cal
 $paramsList = (!$notFound && isset($api['params_list']) && is_array($api['params_list'])) ? $api['params_list'] : array();
 $paramsRaw = (!$notFound && isset($api['params'])) ? (string) $api['params'] : '';
 $paramsPretty = $paramsRaw !== '' ? FrontendApi::prettyParamsJson($paramsRaw) : '';
+$openapiJson = (!$notFound && isset($api['openapi_json'])) ? (string) $api['openapi_json'] : '';
 $hasParamsTable = count($paramsList) > 0;
+$hasOpenApi = $openapiJson !== '';
+$paramsCopyDefault = $paramsPretty !== '' ? $paramsPretty : $paramsRaw;
 $keyLabel = !$notFound && !empty($api['needkey_label']) ? (string) $api['needkey_label'] : '无需 KEY';
 $authWayLabel = '无需密钥';
 if (!$notFound) {
@@ -64,6 +67,7 @@ $endpointDisplay = ($endpointRaw !== '' && !$isDisabled) ? vs_call_url_host_path
 $endpointBlurText = '••••••••••••/••••••••••••';
 
 $pageApiSnapshot = (!$notFound && $api !== array()) ? $api : null;
+$recommendApi = (!$notFound) ? FrontendApi::pickRandomRecommend((int) $api['id']) : null;
 
 $disclaimerEnabled = class_exists('Config') && Config::get('api_disclaimer_on', '0') === '1';
 $disclaimerThemeOn = class_exists('ThemeManager') && ThemeManager::themeSettingBool('show_api_disclaimer', true);
@@ -263,8 +267,15 @@ if (!$notFound) {
               <?php if ($hasParamsTable): ?>
                 <button type="button" class="th3-pill is-active" data-params-mode="table">表格</button>
                 <button type="button" class="th3-pill" data-params-mode="json">JSON</button>
+              <?php elseif ($hasOpenApi): ?>
+                <button type="button" class="th3-pill is-active" data-params-mode="json">JSON</button>
               <?php endif; ?>
-              <button type="button" class="btn-ghost text-sm" data-copy="<?php echo vs_e($paramsPretty !== '' ? $paramsPretty : $paramsRaw); ?>">复制</button>
+              <?php if ($hasOpenApi): ?>
+                <button type="button" class="th3-pill" data-params-mode="openapi">OpenAPI</button>
+              <?php endif; ?>
+              <button type="button" class="btn-ghost text-sm" id="paramsCopyBtn"
+                      data-copy="<?php echo vs_e($paramsCopyDefault); ?>"
+                      data-copy-json="<?php echo vs_e($paramsCopyDefault); ?>">复制</button>
             </div>
           </div>
           <?php if ($hasParamsTable): ?>
@@ -290,8 +301,13 @@ if (!$notFound) {
               <pre class="font-mono" id="paramsJsonCode"><?php echo vs_e($paramsPretty); ?></pre>
             </div>
           <?php else: ?>
-            <div class="th3-code mt-4">
+            <div class="th3-code mt-4" id="paramsJsonMode">
               <pre class="font-mono"><?php echo vs_e($paramsRaw); ?></pre>
+            </div>
+          <?php endif; ?>
+          <?php if ($hasOpenApi): ?>
+            <div class="th3-code mt-4" id="paramsOpenApiMode" hidden>
+              <pre class="font-mono" id="paramsOpenApiCode"><?php echo vs_e($openapiJson); ?></pre>
             </div>
           <?php endif; ?>
         </div>
@@ -303,7 +319,7 @@ if (!$notFound) {
             <h2 class="font-display font-semibold text-lg m-0">返回示例</h2>
             <button type="button" class="btn-ghost text-sm" data-copy="<?php echo vs_e($api['response']); ?>">复制</button>
           </div>
-          <div class="th3-code mt-4">
+          <div class="th3-code mt-4" id="responseSampleWrap">
             <pre class="font-mono" id="responseSample"><?php echo vs_e($api['response']); ?></pre>
           </div>
         </div>
@@ -446,7 +462,10 @@ if (!$notFound) {
               <div class="th3-pg-pane">
                 <div class="th3-pg-resp-head">
                   <span class="th3-field-label" style="margin:0;">Response</span>
-                  <span class="tag" id="pgStatus">等待中</span>
+                  <div class="th3-pg-resp-meta">
+                    <button type="button" class="btn-ghost text-sm" id="pgCopyBtn" hidden disabled aria-hidden="true">复制</button>
+                    <span class="tag" id="pgStatus">等待中</span>
+                  </div>
                 </div>
                 <pre class="th3-code font-mono mt-3" id="pgResponse">// 结果将在此处显示</pre>
               </div>
@@ -485,6 +504,68 @@ if (!$notFound) {
           <h2 class="font-display font-semibold text-lg m-0 mb-4">免责声明</h2>
           <div class="markdown-body vs-md-body th3-md">
             <?php echo th3_md_render($disclaimerBody); ?>
+          </div>
+        </section>
+      <?php endif; ?>
+
+      <?php if ($recommendApi !== null): ?>
+        <section class="th3-panel card mt-8" id="detailRecommend">
+          <h2 class="font-display font-semibold text-lg m-0 mb-4">推荐接口</h2>
+          <div class="api-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
+            <?php
+            $r = $recommendApi;
+            $rId = (int) (isset($r['id']) ? $r['id'] : 0);
+            $rName = trim((string) (isset($r['name']) ? $r['name'] : ''));
+            $rDesc = trim((string) (isset($r['desc']) ? $r['desc'] : ''));
+            $rUrl = !empty($r['detail_url']) ? (string) $r['detail_url'] : ($rId > 0 ? vs_api_detail_url($rId) : ($vsBase . '/apis'));
+            $rIcon = trim((string) (isset($r['icon']) ? $r['icon'] : ''));
+            $rMaint = !empty($r['maintenance']);
+            $rPoints = isset($r['points']) ? (float) $r['points'] : 0;
+            $rBilling = trim((string) (isset($r['billing_label']) ? $r['billing_label'] : ''));
+            if ($rBilling === '') {
+                $rBilling = $rPoints > 0
+                    ? (rtrim(rtrim(number_format($rPoints, 4, '.', ''), '0'), '.') . '积分/次')
+                    : '免费';
+            }
+            $rPaid = $rPoints > 0 || ($rBilling !== '免费' && strcasecmp($rBilling, 'free') !== 0);
+            $rNeed = isset($r['needkey']) ? (int) $r['needkey'] : 0;
+            $rCalls = isset($r['calls']) ? (int) $r['calls'] : 0;
+            $rCallsLabel = number_format($rCalls);
+            $stateCls = $rMaint ? ' is-maintenance' : '';
+            ?>
+            <a class="api-card reveal visible<?php echo $stateCls; ?>" href="<?php echo vs_e($rUrl); ?>" style="text-decoration:none;color:inherit;display:block;">
+              <div class="api-card-top">
+                <div class="api-icon-box">
+                  <?php if ($rIcon !== ''): ?>
+                    <img class="api-icon-img" src="<?php echo vs_e($rIcon); ?>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
+                  <?php else: ?>
+                    <span class="api-icon-fallback"><?php echo vs_e($rName !== '' ? mb_substr($rName, 0, 1, 'UTF-8') : 'A'); ?></span>
+                  <?php endif; ?>
+                </div>
+                <div class="api-card-main">
+                  <div class="api-card-title-row">
+                    <h3><?php echo vs_e($rName !== '' ? $rName : ('接口 #' . $rId)); ?></h3>
+                    <span class="api-card-chips" aria-label="接口标签">
+                      <?php if ($rMaint): ?>
+                        <span class="tag hot">维护中</span>
+                      <?php elseif ($rPaid): ?>
+                        <span class="tag points"><?php echo vs_e($rBilling); ?></span>
+                      <?php else: ?>
+                        <span class="tag free">免费</span>
+                      <?php endif; ?>
+                      <?php if (!$rMaint && $rNeed === 1): ?><span class="tag key">KEY必填</span><?php endif; ?>
+                      <?php if (!$rMaint && $rNeed === 2): ?><span class="tag key">KEY可选</span><?php endif; ?>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <?php if ($rDesc !== ''): ?>
+                <p class="api-card-desc"><?php echo vs_e($rDesc); ?></p>
+              <?php endif; ?>
+              <div class="api-card-foot">
+                <span class="calls"><?php echo vs_e($rCallsLabel); ?> 次</span>
+              </div>
+            </a>
           </div>
         </section>
       <?php endif; ?>

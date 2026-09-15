@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.40-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.41-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -164,15 +164,15 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.40（2026-09-05）
+### v13.26.41（2026-09-15）
 
-- **管理端 IP 配置：** 双 Tab 扁平列表；归属仅头像+用户名；出口代理多列 + 测试/启停/编辑/删除；双 Tab 底部分页
-- **令牌配额：** 可为密钥单独分配积分上限与失效时间；全盘消耗 `pointsspent` 与配额已用 `quotaused` 分账；用尽可硬停或回落账户总积分
-- **错误码：** 密钥过期 **11023**；令牌分配积分不足 **11024**
-- **邮件：** `mail_notify_key_quota` 配额用尽通知用户
-- **UI：** 用户/管理端令牌列表收紧；复制按钮紧贴密钥；有效期自定义嵌套窗；管理端配额只读
-- **热修：** 配额用尽邮件连调只发一封（Redis `setNx` 去重）
-- **库：** `install/migrations/13.26.40.sql`（须执行数据库结构更新）
+- 令牌搜索/状态下拉重叠修复；积分变动 UI 与分段筛选
+- 注册开关单键 `1/2/3/4`；冷热归档写后必删；目录 `apiorder` 与详情随机推荐
+- OpenAPI 由 `params` 派生；详情三模式（E314）
+- 在线测试非媒体一键复制；JSON/OpenAPI≈16 行、返回示例≈20 行区内滚动（E315）
+- 主题二公告弹窗结构对齐主题一；修复白底白字（E316）
+- 安装：伪静态灰底框内复制；第 3 步 Redis 密码/库号 + 单测双连；设置「Redis 设置」（含测连限流）（E317）
+- 主题三清首页演示残留；目录加载重试；库迁移与 CORE 文档
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

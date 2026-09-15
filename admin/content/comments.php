@@ -217,7 +217,7 @@ function vs_render_cmt_desktop_row(array $ctx)
         </td>
         <td><span data-field="createtime"><?php echo vs_e($ctx['createtime_short'] !== '' ? $ctx['createtime_short'] : '—'); ?></span></td>
         <td><?php echo vs_admin_cmt_status_badge($ctx); ?></td>
-        <td class="vs-cmt-actions-cell" data-field="actions"><?php echo vs_admin_cmt_actions_html($ctx); ?></td>
+        <td class="vs-col-actions vs-cmt-actions-cell" data-field="actions"><?php echo vs_admin_cmt_actions_html($ctx); ?></td>
     </tr>
     <?php
 }
@@ -321,7 +321,7 @@ vs_admin_layout_start('评论管理', 'comments', $headerActions);
                         <th>评论者</th>
                         <th>时间</th>
                         <th>状态</th>
-                        <th>操作</th>
+                        <th class="vs-col-actions">操作</th>
                     </tr>
                 </thead>
                 <tbody id="adminCmtBody">

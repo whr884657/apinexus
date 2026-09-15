@@ -34,6 +34,7 @@
         var formEl = document.getElementById('apiCategoryForm');
         var formId = document.getElementById('apiCatFormId');
         var formName = document.getElementById('apiCatFormName');
+        var formSort = document.getElementById('apiCatFormSort');
         var formDesc = document.getElementById('apiCatFormDesc');
         var formTitle = document.getElementById('apiCategoryFormTitle');
         var formSubmitBtn = document.getElementById('apiCatFormSubmitBtn');
@@ -284,6 +285,10 @@
             var catId = row.id;
             var enabled = parseInt(row.status, 10) === 1;
             var apiCount = parseInt(row.api_count, 10) || 0;
+            var sort = parseInt(row.sort, 10);
+            if (isNaN(sort)) {
+                sort = 0;
+            }
             var icon = safeIconUrl(row.icon);
             var desc = row.description || '';
             var name = row.name || '';
@@ -294,12 +299,13 @@
             html += '<td><div class="cat-name-cell"><div class="cat-icon"><img src="'
                 + escapeHtml(icon) + '" alt="" width="32" height="32" loading="lazy" referrerpolicy="no-referrer" data-field="icon"></div>'
                 + '<span class="cat-name-text" data-field="name">' + escapeHtml(name) + '</span></div></td>';
+            html += '<td class="vs-col-num"><span class="cat-sort" data-field="sort">' + sort + '</span></td>';
             html += '<td><span class="cat-desc" data-field="description">'
                 + (desc ? escapeHtml(desc) : '—') + '</span></td>';
-            html += '<td><span class="cat-count" data-field="api_count">' + apiCount + '</span></td>';
+            html += '<td class="vs-col-num"><span class="cat-count" data-field="api_count">' + apiCount + '</span></td>';
             html += '<td><span class="vs-badge ' + (enabled ? 'vs-badge--success' : 'vs-badge--default')
                 + '" data-field="status_label">' + (enabled ? '启用' : '禁用') + '</span></td>';
-            html += '<td class="vs-api-cat-actions-cell" data-field="actions">'
+            html += '<td class="vs-col-actions vs-api-cat-actions-cell" data-field="actions">'
                 + buildActionButtons(catId, enabled, apiCount) + '</td>';
             html += '</tr>';
             return html;
@@ -309,6 +315,10 @@
             var catId = row.id;
             var enabled = parseInt(row.status, 10) === 1;
             var apiCount = parseInt(row.api_count, 10) || 0;
+            var sort = parseInt(row.sort, 10);
+            if (isNaN(sort)) {
+                sort = 0;
+            }
             var icon = safeIconUrl(row.icon);
             var desc = row.description || '';
             var name = row.name || '';
@@ -323,7 +333,9 @@
                 + escapeHtml(name) + '</span><span class="vs-badge '
                 + (enabled ? 'vs-badge--success' : 'vs-badge--default')
                 + '" data-field="status_label">' + (enabled ? '启用' : '禁用') + '</span></div></div>'
-                + '<span class="cat-card__count"><span data-field="api_count">' + apiCount + '</span> 个</span></div>';
+                + '<span class="cat-card__metrics"><span class="cat-card__count"><span data-field="api_count">'
+                + apiCount + '</span> 个</span><span class="cat-card__sort">权重 <span data-field="sort">'
+                + sort + '</span></span></span></div>';
             html += '<div class="cat-card__desc" data-field="description">'
                 + (desc ? escapeHtml(desc) : '暂无描述') + '</div>';
             html += '<div class="cat-card__actions" data-field="actions">'
@@ -373,6 +385,13 @@
                     el.querySelectorAll('[data-cat-action="delete"]').forEach(function (btn) {
                         btn.setAttribute('data-api-count', String(apiCount));
                     });
+                }
+                if (row && row.sort != null) {
+                    var sortEl = el.querySelector('[data-field="sort"]');
+                    if (sortEl) {
+                        var sv = parseInt(row.sort, 10);
+                        sortEl.textContent = String(isNaN(sv) ? 0 : sv);
+                    }
                 }
             });
         }
@@ -507,6 +526,11 @@
                 descText = '';
             }
             formDesc.value = descText.trim();
+            var sortEl = el.querySelector('[data-field="sort"]');
+            if (formSort) {
+                var sv = sortEl ? parseInt(sortEl.textContent, 10) : 0;
+                formSort.value = String(isNaN(sv) ? 0 : sv);
+            }
             var img = el.querySelector('[data-field="icon"]');
             setIconPickerSelection(img ? img.getAttribute('src') : '');
         }
@@ -518,6 +542,9 @@
             }
             if (formName) {
                 formName.value = '';
+            }
+            if (formSort) {
+                formSort.value = '0';
             }
             if (formDesc) {
                 formDesc.value = '';
@@ -609,10 +636,18 @@
                 window.VS.showMessage('请填写分类名称', 'error');
                 return;
             }
+            var sortVal = 0;
+            if (formSort) {
+                sortVal = parseInt(formSort.value, 10);
+                if (isNaN(sortVal)) {
+                    sortVal = 0;
+                }
+            }
             var payload = {
                 name: name,
                 icon: getSelectedIconUrl(),
-                description: formDesc ? formDesc.value.trim() : ''
+                description: formDesc ? formDesc.value.trim() : '',
+                sort: String(sortVal)
             };
             var action = formMode === 'edit' ? 'update' : 'create';
             if (formMode === 'edit') {
@@ -628,30 +663,10 @@
                 }
                 window.VS.showMessage(data.msg || '操作成功', 'success');
                 closeFormOverlay();
-                var cat = data.category || {};
-                if (formMode === 'edit') {
-                    updatePairFields(getRowPair(cat.id), cat, data.api_count);
-                    allCategories = allCategories.map(function (c) {
-                        if (parseInt(c.id, 10) === parseInt(cat.id, 10)) {
-                            return {
-                                id: cat.id,
-                                name: cat.name || '',
-                                api_count: typeof data.api_count === 'number' ? data.api_count : c.api_count
-                            };
-                        }
-                        return c;
-                    });
-                    page.setAttribute('data-categories', JSON.stringify(allCategories));
-                    applyView();
-                } else {
-                    appendItem(Object.assign({ api_count: data.api_count || 0, status: 1 }, cat));
-                    allCategories.unshift({
-                        id: cat.id,
-                        name: cat.name || '',
-                        api_count: data.api_count || 0
-                    });
-                    page.setAttribute('data-categories', JSON.stringify(allCategories));
-                }
+                // 权重变更后需按 sort 重排列表
+                window.setTimeout(function () {
+                    window.location.reload();
+                }, 400);
             }).catch(function () {
                 window.VS.showMessage('网络异常，请稍后重试', 'error');
             }).finally(function () {

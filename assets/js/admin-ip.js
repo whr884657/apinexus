@@ -205,7 +205,7 @@
       return '<tr data-allow-row data-user-id="' + esc(owner.userid) + '" data-ip="' + esc(ip) + '" data-search="' + esc(search) + '">'
         + '<td>' + ownerCellHtml(owner) + '</td>'
         + '<td><code class="vs-log-mono">' + esc(ip) + '</code></td>'
-        + '<td class="vs-content-actions-cell">'
+        + '<td class="vs-col-actions vs-content-actions-cell">'
         + '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-btn--outline-danger vs-admin-ip-remove-allow"'
         + ' data-user-id="' + esc(owner.userid) + '" data-ip="' + esc(ip) + '">移除</button>'
         + '</td></tr>';
@@ -293,7 +293,7 @@
         + esc(p.ep.short) + '</code></td>'
         + '<td><span class="vs-badge ' + (p.statusOn ? 'vs-badge--success' : 'vs-badge--default') + '">'
         + (p.statusOn ? '启用' : '禁用') + '</span></td>'
-        + '<td class="vs-content-actions-cell"><div class="action-btns">'
+        + '<td class="vs-col-actions vs-content-actions-cell"><div class="action-btns">'
         + proxyActBtns(p.owner, p.pid, p.statusOn)
         + '</div></td></tr>';
     }

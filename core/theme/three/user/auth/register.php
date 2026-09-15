@@ -32,6 +32,8 @@ $registerClosedSub = isset($registerClosedSub) && (string) $registerClosedSub !=
 $registerClosedDetail = isset($registerClosedDetail) && (string) $registerClosedDetail !== ''
     ? (string) $registerClosedDetail
     : '本站已暂停开放新用户注册。如有账号问题或合作需求，请联系站点管理员。请勿通过篡改地址或重复提交尝试绕过。';
+$showRoleSegment = !isset($showRoleSegment) || !empty($showRoleSegment);
+$registerRole = isset($registerRole) && (string) $registerRole === 'developer' ? 'developer' : 'user';
 $subTitle = $emailVerify ? '使用邮箱验证注册，完成验证后即可使用' : '填写账号信息即可注册';
 $dis = $formEnabled ? '' : 'disabled';
 
@@ -59,6 +61,7 @@ if ($registerOpen) {
     <?php if ($emailVerify): ?>
         <?php vs_auth_mail_ticket_field(AuthSecurity::MAIL_PURPOSE_USER_REGISTER); ?>
     <?php endif; ?>
+    <?php if ($showRoleSegment): ?>
     <div class="th3-auth__field th3-auth__role">
         <div class="th3-auth__role-track" id="roleSegmentTrack" data-role="user" role="radiogroup" aria-label="账号类型">
             <span class="th3-auth__role-thumb" aria-hidden="true"></span>
@@ -67,6 +70,9 @@ if ($registerOpen) {
         </div>
         <input type="hidden" name="role" id="roleInput" value="user" <?php echo $dis; ?>>
     </div>
+    <?php else: ?>
+    <input type="hidden" name="role" id="roleInput" value="<?php echo vs_e($registerRole); ?>" <?php echo $dis; ?>>
+    <?php endif; ?>
     <div class="th3-auth__field">
         <input class="th3-auth__input" id="username" name="username" type="text" placeholder="用户名（3～50 个字符）" autocomplete="username" maxlength="50" required aria-label="用户名" <?php echo $dis; ?>>
     </div>

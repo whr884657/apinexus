@@ -195,7 +195,7 @@ function vs_render_admin_key_desktop_row(array $ctx)
                 <?php echo $ctx['enabled'] ? '正常' : '已禁用'; ?>
             </span>
         </td>
-        <td class="vs-api-keys-actions-cell" data-field="actions">
+        <td class="vs-col-actions vs-api-keys-actions-cell" data-field="actions">
             <?php echo vs_admin_key_actions_html($ctx); ?>
         </td>
     </tr>
@@ -309,7 +309,7 @@ vs_admin_layout_start('令牌管理', 'api-keys', $headerActions);
                             <th>调用</th>
                             <th>消耗</th>
                             <th>状态</th>
-                            <th>操作</th>
+                            <th class="vs-col-actions">操作</th>
                         </tr>
                     </thead>
                     <tbody id="adminKeyBody">

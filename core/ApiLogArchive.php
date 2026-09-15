@@ -3,10 +3,12 @@
  * 文件：core/ApiLogArchive.php
  * 作用：调用日志冷热分层——热数据留 MySQL；冷数据三层索引 + SQLite 分片（多读少写）
  *
+ * 归档成功后：对应行从 MySQL 删除（不可逆），仅保留本机冷库；禁止冷热双留。
+ *
  * 目录结构（三层分离）：
  *   data/apilog/catalog/catalog.json     ← 总索引（日期 / ID 段 → 哪一天）
  *   data/apilog/days/YYYY-MM-DD/index.json ← 日索引（ID 段 → 哪个 .db）
- *   data/apilog/shards/YYYY-MM-DD/s0001.db ← 日志正文（SQLite，约 1000 条/片）
+ *   data/apilog/shards/YYYY-MM-DD/s0001.db ← 日志正文（SQLite；每片条数见后台「每个分片条数」，默认 5000）
  */
 
 class ApiLogArchive
@@ -17,7 +19,6 @@ class ApiLogArchive
     const DEFAULT_SHARD_ROWS = 5000;
     const MIN_SHARD_ROWS = 100;
     const MAX_SHARD_ROWS = 50000;
-    const BATCH_ROWS = 5000;
     const LOCK_TTL = 1800;
     const CATALOG_VERSION = 2;
 
@@ -225,10 +226,92 @@ class ApiLogArchive
     }
 
     /**
-     * @param int|null $limit
+     * 计划任务入口：持锁多轮跑到本轮无冷数据或达上限（单次 runOnce 有条数上限）
+     *
+     * @param int $maxRounds
      * @return array{ok:bool,msg:string,archived:int,days:array,deleted:int}
      */
-    public static function runOnce($limit = null)
+    public static function run($maxRounds = 50)
+    {
+        $empty = array('ok' => false, 'msg' => '', 'archived' => 0, 'days' => array(), 'deleted' => 0);
+        if (!self::isEnabled()) {
+            $empty['ok'] = true;
+            $empty['msg'] = '冷热归档未开启，跳过';
+            return $empty;
+        }
+        if (!self::sqliteAvailable()) {
+            $empty['msg'] = '服务器未启用 PDO SQLite，无法写入冷库';
+            return $empty;
+        }
+        if (!self::ensureStorage()) {
+            $empty['msg'] = '归档目录不可写';
+            return $empty;
+        }
+        if (!self::acquireLock()) {
+            $empty['msg'] = '已有归档任务在执行';
+            return $empty;
+        }
+
+        $maxRounds = max(1, min(200, (int) $maxRounds));
+        $archived = 0;
+        $deleted = 0;
+        $days = array();
+        $lastMsg = '';
+
+        try {
+            for ($i = 0; $i < $maxRounds; $i++) {
+                $result = self::runOnce(null, true);
+                if (empty($result['ok'])) {
+                    $result['archived'] = $archived + (isset($result['archived']) ? (int) $result['archived'] : 0);
+                    $result['deleted'] = $deleted + (isset($result['deleted']) ? (int) $result['deleted'] : 0);
+                    if (!empty($days) || !empty($result['days'])) {
+                        $result['days'] = array_values(array_unique(array_merge(
+                            $days,
+                            isset($result['days']) && is_array($result['days']) ? $result['days'] : array()
+                        )));
+                    }
+                    return $result;
+                }
+
+                $batchArchived = isset($result['archived']) ? (int) $result['archived'] : 0;
+                $batchDeleted = isset($result['deleted']) ? (int) $result['deleted'] : 0;
+                $archived += $batchArchived;
+                $deleted += $batchDeleted;
+                $lastMsg = isset($result['msg']) ? (string) $result['msg'] : '';
+                if (!empty($result['days']) && is_array($result['days'])) {
+                    foreach ($result['days'] as $d) {
+                        $days[] = (string) $d;
+                    }
+                }
+                if ($batchArchived <= 0) {
+                    break;
+                }
+            }
+        } finally {
+            self::releaseLock();
+        }
+
+        if ($archived > 0 && class_exists('RedisCache')) {
+            RedisCache::invalidateApiLog();
+        }
+
+        return array(
+            'ok'       => true,
+            'msg'      => $archived > 0 ? '归档完成' : $lastMsg,
+            'archived' => $archived,
+            'days'     => array_values(array_unique($days)),
+            'deleted'  => $deleted,
+        );
+    }
+
+    /**
+     * 单批归档：冷库写入成功后必须从 MySQL 删除对应行（不可逆）；删除后校验残留
+     *
+     * @param int|null $limit
+     * @param bool     $alreadyLocked 多轮 run() 时首轮已持锁则传 true
+     * @return array{ok:bool,msg:string,archived:int,days:array,deleted:int}
+     */
+    public static function runOnce($limit = null, $alreadyLocked = false)
     {
         $empty = array('ok' => false, 'msg' => '', 'archived' => 0, 'days' => array(), 'deleted' => 0);
         if (!self::isEnabled()) {
@@ -248,30 +331,32 @@ class ApiLogArchive
             $empty['msg'] = '归档目录不可写';
             return $empty;
         }
-        if (!self::acquireLock()) {
+        if (!$alreadyLocked && !self::acquireLock()) {
             $empty['msg'] = '已有归档任务在执行';
             return $empty;
         }
 
-        $limit = $limit === null ? self::BATCH_ROWS : max(100, min(20000, (int) $limit));
+        $limit = $limit === null ? self::shardRows() : self::clampShardRows((int) $limit);
         $hotDays = self::hotDays();
         $archived = 0;
         $deleted = 0;
         $dayTouched = array();
+        $release = !$alreadyLocked;
 
         try {
             $pdo = Database::connect();
             $table = Database::table('apilog');
-            $stmt = $pdo->prepare(
-                'SELECT * FROM `' . $table . '`
-                 WHERE `createtime` < DATE_SUB(NOW(), INTERVAL ? DAY)
+            // INTERVAL 天数内联为整数，避免部分环境下占位符绑定异常
+            $sql = 'SELECT * FROM `' . $table . '`
+                 WHERE `createtime` < DATE_SUB(NOW(), INTERVAL ' . (int) $hotDays . ' DAY)
                  ORDER BY `createtime` ASC, `id` ASC
-                 LIMIT ' . (int) $limit
-            );
-            $stmt->execute(array($hotDays));
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                 LIMIT ' . (int) $limit;
+            $stmt = $pdo->query($sql);
+            $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : array();
             if (empty($rows)) {
-                self::releaseLock();
+                if ($release) {
+                    self::releaseLock();
+                }
                 return array(
                     'ok'       => true,
                     'msg'      => '没有需要归档的冷数据',
@@ -293,29 +378,26 @@ class ApiLogArchive
                 $byDay[$day][] = $row;
             }
 
-            $idsToDelete = array();
+            // 按日写入冷库，写成功立即从热库删除并校验（禁止冷热双留）
             foreach ($byDay as $day => $dayRows) {
                 $writtenIds = self::appendDayRows($day, $dayRows);
                 $n = count($writtenIds);
                 if ($n <= 0) {
-                    continue;
+                    throw new Exception('冷库写入失败：' . $day);
                 }
                 $archived += $n;
                 $dayTouched[] = $day;
-                foreach ($writtenIds as $wid) {
-                    $idsToDelete[] = (int) $wid;
-                }
+                $deleted += self::deleteIdsVerified($pdo, $table, $writtenIds);
             }
 
-            if (!empty($idsToDelete)) {
-                $deleted = self::deleteIds($pdo, $table, $idsToDelete);
-                if (class_exists('RedisCache')) {
-                    RedisCache::invalidateApiLog();
-                }
+            if ($archived > 0 && class_exists('RedisCache') && $release) {
+                RedisCache::invalidateApiLog();
             }
 
             self::touchCatalogMeta();
-            self::releaseLock();
+            if ($release) {
+                self::releaseLock();
+            }
 
             return array(
                 'ok'       => true,
@@ -325,8 +407,16 @@ class ApiLogArchive
                 'deleted'  => $deleted,
             );
         } catch (Exception $e) {
-            self::releaseLock();
+            if ($release) {
+                self::releaseLock();
+            }
+            if (function_exists('error_log')) {
+                error_log('ApiLogArchive: ' . $e->getMessage());
+            }
             $empty['msg'] = '归档失败，请稍后重试或查看服务器日志';
+            $empty['archived'] = $archived;
+            $empty['deleted'] = $deleted;
+            $empty['days'] = $dayTouched;
             return $empty;
         }
     }
@@ -676,6 +766,15 @@ class ApiLogArchive
             $pdo->commit();
             return $ids;
         } catch (Exception $e) {
+            if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+                try {
+                    $pdo->rollBack();
+                } catch (Exception $ignore) {
+                }
+            }
+            if (function_exists('error_log')) {
+                error_log('ApiLogArchive sqlite: ' . $e->getMessage());
+            }
             return array();
         }
     }
@@ -795,6 +894,78 @@ class ApiLogArchive
     }
 
     /**
+     * 规范化日志 ID 列表（字符串数字，兼容 bigint）
+     *
+     * @param array $ids
+     * @return string[]
+     */
+    private static function normalizeIdList(array $ids)
+    {
+        $out = array();
+        foreach ($ids as $id) {
+            if (is_int($id) || (is_float($id) && $id == (int) $id)) {
+                $id = (string) (int) $id;
+            } else {
+                $id = preg_replace('/\D+/', '', (string) $id);
+            }
+            if ($id === '' || $id === '0') {
+                continue;
+            }
+            $out[$id] = $id;
+        }
+        return array_values($out);
+    }
+
+    /**
+     * 冷库写成功后删除热库行并校验无残留（失败抛异常，供上层回失败态）
+     *
+     * @param PDO    $pdo
+     * @param string $table
+     * @param array  $ids
+     * @return int 应删除条数
+     * @throws Exception
+     */
+    private static function deleteIdsVerified(PDO $pdo, $table, array $ids)
+    {
+        $ids = self::normalizeIdList($ids);
+        if (empty($ids)) {
+            return 0;
+        }
+        self::deleteIds($pdo, $table, $ids);
+        $left = self::countIdsPresent($pdo, $table, $ids);
+        if ($left > 0) {
+            self::deleteIds($pdo, $table, $ids);
+            $left = self::countIdsPresent($pdo, $table, $ids);
+            if ($left > 0) {
+                throw new Exception('冷库已写入但在线库仍残留 ' . $left . ' 条未删除');
+            }
+        }
+        return count($ids);
+    }
+
+    /**
+     * @param PDO    $pdo
+     * @param string $table
+     * @param array  $ids
+     * @return int
+     */
+    private static function countIdsPresent(PDO $pdo, $table, array $ids)
+    {
+        $ids = self::normalizeIdList($ids);
+        if (empty($ids)) {
+            return 0;
+        }
+        $total = 0;
+        foreach (array_chunk($ids, 500) as $chunk) {
+            $place = implode(',', array_fill(0, count($chunk), '?'));
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM `' . $table . '` WHERE `id` IN (' . $place . ')');
+            $stmt->execute($chunk);
+            $total += (int) $stmt->fetchColumn();
+        }
+        return $total;
+    }
+
+    /**
      * @param PDO    $pdo
      * @param string $table
      * @param array  $ids
@@ -802,7 +973,7 @@ class ApiLogArchive
      */
     private static function deleteIds(PDO $pdo, $table, array $ids)
     {
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        $ids = self::normalizeIdList($ids);
         if (empty($ids)) {
             return 0;
         }

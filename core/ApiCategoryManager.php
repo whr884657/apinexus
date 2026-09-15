@@ -167,6 +167,7 @@ class ApiCategoryManager
             'icon'        => self::resolveIconUrl($iconRaw),
             'icon_raw'    => $iconRaw,
             'description' => isset($row['description']) ? (string) $row['description'] : '',
+            'sort'        => isset($row['sort']) ? (int) $row['sort'] : 0,
             'status'      => (int) $row['status'],
         );
     }
@@ -186,7 +187,7 @@ class ApiCategoryManager
             $sql = 'SELECT c.*,
                     (SELECT COUNT(*) FROM `' . $apiTable . '` AS a WHERE a.`category` = c.`name`) AS api_count
                     FROM `' . self::table() . '` AS c
-                    ORDER BY c.`id` DESC';
+                    ORDER BY c.`sort` ASC, c.`id` ASC';
             $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
             return is_array($rows) ? $rows : array();
         } catch (Exception $e) {
@@ -266,9 +267,10 @@ class ApiCategoryManager
      * @param string $name
      * @param string $icon
      * @param string $description
+     * @param int    $sort
      * @return array|string
      */
-    public static function create($name, $icon = '', $description = '')
+    public static function create($name, $icon = '', $description = '', $sort = 0)
     {
         if (!self::tableReady()) {
             return '分类表未就绪，请先执行系统升级';
@@ -295,13 +297,15 @@ class ApiCategoryManager
             return '分类描述不能超过 255 个字符';
         }
 
+        $sort = self::normalizeSort($sort);
+
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
                 'INSERT INTO `' . self::table() . '` (`name`, `icon`, `description`, `sort`, `status`, `createtime`)
-                 VALUES (?, ?, ?, 0, 1, NOW())'
+                 VALUES (?, ?, ?, ?, 1, NOW())'
             );
-            $stmt->execute(array($name, $iconStored, $description));
+            $stmt->execute(array($name, $iconStored, $description, $sort));
             $id = (int) $pdo->lastInsertId();
             RedisCache::invalidateFrontend();
             return self::formatRow(array(
@@ -309,6 +313,7 @@ class ApiCategoryManager
                 'name'        => $name,
                 'icon'        => $iconStored,
                 'description' => $description,
+                'sort'        => $sort,
                 'status'      => 1,
             ));
         } catch (Exception $e) {
@@ -321,9 +326,10 @@ class ApiCategoryManager
      * @param string $name
      * @param string $icon
      * @param string $description
+     * @param int    $sort
      * @return true|string
      */
-    public static function update($id, $name, $icon = '', $description = '')
+    public static function update($id, $name, $icon = '', $description = '', $sort = 0)
     {
         $id = (int) $id;
         $row = self::findById($id);
@@ -354,6 +360,7 @@ class ApiCategoryManager
             return '分类描述不能超过 255 个字符';
         }
 
+        $sort = self::normalizeSort($sort);
         $oldName = (string) $row['name'];
 
         try {
@@ -362,10 +369,10 @@ class ApiCategoryManager
 
             $stmt = $pdo->prepare(
                 'UPDATE `' . self::table() . '`
-                 SET `name` = ?, `icon` = ?, `description` = ?, `updatetime` = NOW()
+                 SET `name` = ?, `icon` = ?, `description` = ?, `sort` = ?, `updatetime` = NOW()
                  WHERE `id` = ?'
             );
-            $stmt->execute(array($name, $iconStored, $description, $id));
+            $stmt->execute(array($name, $iconStored, $description, $sort, $id));
 
             if ($oldName !== $name) {
                 $apiStmt = $pdo->prepare(
@@ -430,7 +437,7 @@ class ApiCategoryManager
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'SELECT * FROM `' . self::table() . '` WHERE `id` != ? ORDER BY `id` DESC'
+                'SELECT * FROM `' . self::table() . '` WHERE `id` != ? ORDER BY `sort` ASC, `id` ASC'
             );
             $stmt->execute(array($excludeId));
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -586,6 +593,22 @@ class ApiCategoryManager
         }
 
         return false;
+    }
+
+    /**
+     * @param mixed $sort
+     * @return int
+     */
+    private static function normalizeSort($sort)
+    {
+        $sort = (int) $sort;
+        if ($sort < -999999) {
+            $sort = -999999;
+        }
+        if ($sort > 999999) {
+            $sort = 999999;
+        }
+        return $sort;
     }
 
     /**

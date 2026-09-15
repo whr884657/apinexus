@@ -183,15 +183,20 @@
         window.scrollTo({ top: container.offsetTop - 80, behavior: 'smooth' });
     };
 
-    function bootCatalog() {
+    function bootCatalog(waitTry) {
+        waitTry = Number(waitTry) || 0;
         if (!window.VS || typeof VS.fetchFrontCatalog !== 'function') {
+            if (waitTry < 50) {
+                setTimeout(function () { bootCatalog(waitTry + 1); }, 40);
+                return;
+            }
             container.innerHTML = '<div class="col-span-full text-center py-8" style="color: var(--text-muted);">目录加载失败，请刷新重试</div>';
             return;
         }
         if (window.VS.setLoading) {
             VS.setLoading(container, '正在加载接口');
         }
-        VS.fetchFrontCatalog({ shuffle: true }).then(function (data) {
+        VS.fetchFrontCatalog({}).then(function (data) {
             apiData = Array.isArray(data.apiData) ? data.apiData : [];
             catalogReady = true;
             if (totalCountEl && typeof data.apiCount !== 'undefined') {

@@ -72,7 +72,30 @@
     };
 
     if (window.VsParamsEditor && fields.paramsEditor) {
-        window.VsParamsEditor.mount(fields.paramsEditor, { hiddenId: 'apiListFormParams' });
+        window.VsParamsEditor.mount(fields.paramsEditor, {
+            hiddenId: 'apiListFormParams',
+            openapiMeta: function () {
+                return {
+                    api_id: formId ? String(formId.value || '') : '',
+                    name: fields.name ? fields.name.value.trim() : '',
+                    description: fields.description ? fields.description.value.trim() : '',
+                    endpoint: fields.endpoint ? fields.endpoint.value.trim() : '',
+                    method: getSelectedMethods().join(','),
+                    keyways: getSelectedKeyways().join(','),
+                    apitype: fields.apitype ? String(parseInt(fields.apitype.value, 10) === 1 ? 1 : 0) : '0',
+                    proxyslug: fields.proxyslug ? fields.proxyslug.value.trim() : '',
+                    needkey: fields.requireKey ? String(parseInt(fields.requireKey.value, 10) || 0) : '0'
+                };
+            },
+            openapiPreview: function (meta) {
+                return postAction('openapi_preview', meta).then(function (data) {
+                    if (!data || data.code !== 1) {
+                        throw new Error((data && data.msg) ? data.msg : 'OpenAPI 预览失败');
+                    }
+                    return data.openapi_json || '';
+                });
+            }
+        });
     }
 
     var typeHint = document.getElementById('apiListTypeHint');
@@ -1113,7 +1136,7 @@
         html += '<td><span class="vs-badge ' + statusBadgeClass(api.status) + '" data-field="status_label">'
             + escapeHtml(displayStatusLabel(api.status)) + '</span></td>';
         html += '<td class="vs-api-list-calls-cell"><span data-field="calls">' + formatCalls(api.calls) + '</span></td>';
-        html += '<td>' + buildActionButtons(api) + '</td>';
+        html += '<td class="vs-col-actions">' + buildActionButtons(api) + '</td>';
         html += '</tr>';
         return html;
     }

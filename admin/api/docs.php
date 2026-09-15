@@ -27,6 +27,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ));
     }
 
+    if ($action === 'openapi_preview') {
+        $rate = OpenApiBuilder::assertPreviewRateLimit();
+        if ($rate !== true) {
+            AjaxResponse::error($rate);
+        }
+        $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
+        $base = $id > 0 ? ApiManager::findById($id) : null;
+        if ($id > 0 && !is_array($base)) {
+            AjaxResponse::error('接口不存在');
+        }
+        $params = isset($_POST['params']) ? (string) $_POST['params'] : '';
+        $decoded = vs_decode_transport_fields(array('params' => $params), array('params'));
+        $post = array('params' => isset($decoded['params']) ? (string) $decoded['params'] : $params);
+        $json = OpenApiBuilder::jsonFromPreviewRequest($post, is_array($base) ? $base : null, true);
+        AjaxResponse::success('ok', array('openapi_json' => $json));
+    }
+
     if ($action === 'save_docs') {
         $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
         $data = array(

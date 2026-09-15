@@ -777,7 +777,36 @@
 
     var paramsEditor = document.getElementById('userApiParamsEditor');
     if (window.VsParamsEditor && paramsEditor) {
-        window.VsParamsEditor.mount(paramsEditor, { hiddenId: 'userApiFormParams' });
+        window.VsParamsEditor.mount(paramsEditor, {
+            hiddenId: 'userApiFormParams',
+            openapiMeta: function () {
+                var apitypeEl = document.getElementById('userApiFormApiType');
+                var endpointEl = document.getElementById('userApiFormEndpoint');
+                var slugEl = document.getElementById('userApiFormProxySlug');
+                var nameEl = document.getElementById('userApiFormName');
+                var descEl = document.getElementById('userApiFormDesc');
+                var needEl = document.getElementById('userApiFormNeedkey');
+                return {
+                    api_id: formId ? String(formId.value || '') : '',
+                    name: nameEl ? nameEl.value.trim() : '',
+                    description: descEl ? descEl.value.trim() : '',
+                    endpoint: endpointEl ? endpointEl.value.trim() : '',
+                    method: getSelectedMethods().join(','),
+                    keyways: getSelectedKeyways().join(','),
+                    apitype: apitypeEl ? String(parseInt(apitypeEl.value, 10) === 1 ? 1 : 0) : '0',
+                    proxyslug: slugEl ? slugEl.value.trim() : '',
+                    needkey: needEl ? String(parseInt(needEl.value, 10) || 0) : '0'
+                };
+            },
+            openapiPreview: function (meta) {
+                return postAction('openapi_preview', meta).then(function (data) {
+                    if (!data || data.code !== 1) {
+                        throw new Error((data && data.msg) ? data.msg : 'OpenAPI 预览失败');
+                    }
+                    return data.openapi_json || '';
+                });
+            }
+        });
     }
 
     function syncUserKeyParam() {

@@ -95,7 +95,7 @@ class RateLimitStore
     {
         if (RedisCache::enabled()) {
             try {
-                return RedisService::withClient(function (Redis $redis) use ($bucket, $windowSeconds) {
+                return RedisService::withClient(function ($redis) use ($bucket, $windowSeconds) {
                     $key = RedisService::buildKey(self::redisWindowKey($bucket, $windowSeconds));
                     return (int) $redis->get($key);
                 });
@@ -128,7 +128,7 @@ class RateLimitStore
     {
         if (RedisCache::enabled()) {
             try {
-                return RedisService::withClient(function (Redis $redis) use ($bucket) {
+                return RedisService::withClient(function ($redis) use ($bucket) {
                     $key = RedisService::buildKey(self::redisLastKey($bucket));
                     $last = (int) $redis->get($key);
                     if ($last <= 0) {
@@ -190,7 +190,7 @@ class RateLimitStore
     {
         if (RedisCache::enabled()) {
             try {
-                RedisService::withClient(function (Redis $redis) use ($bucket, $windowSeconds) {
+                RedisService::withClient(function ($redis) use ($bucket, $windowSeconds) {
                     $windowSeconds = max(1, (int) $windowSeconds);
                     $winKey = RedisService::buildKey(self::redisWindowKey($bucket, $windowSeconds));
                     $lastKey = RedisService::buildKey(self::redisLastKey($bucket));

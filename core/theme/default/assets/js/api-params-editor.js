@@ -464,35 +464,96 @@
     }
 
     function setMode(root, mode) {
-        var isJson = mode === 'json';
-        root.setAttribute('data-mode', isJson ? 'json' : 'table');
+        if (mode !== 'json' && mode !== 'openapi') {
+            mode = 'table';
+        }
+        root.setAttribute('data-mode', mode);
         var tableWrap = root.querySelector('[data-params-table]');
         var jsonWrap = root.querySelector('[data-params-json]');
+        var openapiWrap = root.querySelector('[data-params-openapi]');
+        var addBtn = root.querySelector('[data-params-add]');
         var tabTable = root.querySelector('[data-params-mode="table"]');
         var tabJson = root.querySelector('[data-params-mode="json"]');
+        var tabOpenapi = root.querySelector('[data-params-mode="openapi"]');
+
         if (tableWrap) {
-            tableWrap.hidden = isJson;
+            tableWrap.hidden = mode !== 'table';
         }
         if (jsonWrap) {
-            jsonWrap.hidden = !isJson;
+            jsonWrap.hidden = mode !== 'json';
+        }
+        if (openapiWrap) {
+            openapiWrap.hidden = mode !== 'openapi';
+        }
+        if (addBtn) {
+            addBtn.hidden = mode === 'openapi';
         }
         if (tabTable) {
-            tabTable.classList.toggle('is-active', !isJson);
+            tabTable.classList.toggle('is-active', mode === 'table');
         }
         if (tabJson) {
-            tabJson.classList.toggle('is-active', isJson);
+            tabJson.classList.toggle('is-active', mode === 'json');
         }
-        if (isJson) {
+        if (tabOpenapi) {
+            tabOpenapi.classList.toggle('is-active', mode === 'openapi');
+        }
+
+        if (mode === 'json') {
             var ta = root.querySelector('[data-params-json-input]');
             if (ta) {
                 ta.value = rowsToJson(collectRows(root)) || '[]';
             }
-        } else {
+        } else if (mode === 'table') {
             var parsed = parseParamsJson((root.querySelector('[data-params-json-input]') || {}).value || '');
             if (parsed.ok) {
                 renderTable(root, parsed.rows);
             }
+        } else if (mode === 'openapi') {
+            refreshOpenApiPreview(root);
         }
+    }
+
+    function currentParamsJson(root) {
+        if (root.getAttribute('data-mode') === 'json') {
+            var ta = root.querySelector('[data-params-json-input]');
+            var parsed = parseParamsJson(ta ? ta.value : '');
+            if (parsed.ok) {
+                return rowsToJson(parsed.rows) || '[]';
+            }
+            return ta ? String(ta.value || '') : '[]';
+        }
+        return rowsToJson(collectRows(root)) || '[]';
+    }
+
+    function refreshOpenApiPreview(root) {
+        var out = root.querySelector('[data-params-openapi-output]');
+        if (!out) {
+            return;
+        }
+        var previewFn = root._openapiPreview;
+        if (typeof previewFn !== 'function') {
+            out.value = '未配置 OpenAPI 预览接口。';
+            return;
+        }
+        out.value = '正在生成 OpenAPI…';
+        var meta = {};
+        if (typeof root._openapiMeta === 'function') {
+            try {
+                meta = root._openapiMeta() || {};
+            } catch (e) {
+                meta = {};
+            }
+        }
+        meta.params = currentParamsJson(root);
+        Promise.resolve(previewFn(meta)).then(function (text) {
+            out.value = String(text || '');
+        }).catch(function (err) {
+            var msg = (err && err.message) ? err.message : 'OpenAPI 预览失败';
+            out.value = msg;
+            if (global.VS && global.VS.showMessage) {
+                global.VS.showMessage(msg, 'error');
+            }
+        });
     }
 
     function applyJsonText(root, text, showError) {
@@ -519,12 +580,21 @@
         var hiddenId = options.hiddenId || root.getAttribute('data-hidden-id') || '';
         var hidden = hiddenId ? document.getElementById(hiddenId) : root.querySelector('textarea[name="params"]');
         root._paramsHidden = hidden;
+        root._openapiPreview = typeof options.openapiPreview === 'function' ? options.openapiPreview : null;
+        root._openapiMeta = typeof options.openapiMeta === 'function' ? options.openapiMeta : null;
+        var enableOpenapi = !!root._openapiPreview;
+
+        var tabsHtml = ''
+            + '<button type="button" class="vs-params-editor__tab is-active" data-params-mode="table">表格填写</button>'
+            + '<button type="button" class="vs-params-editor__tab" data-params-mode="json">JSON 数组</button>';
+        if (enableOpenapi) {
+            tabsHtml += '<button type="button" class="vs-params-editor__tab" data-params-mode="openapi">OpenAPI</button>';
+        }
 
         root.innerHTML = ''
             + '<div class="vs-params-editor__bar">'
             + '<div class="vs-params-editor__tabs" role="tablist">'
-            + '<button type="button" class="vs-params-editor__tab is-active" data-params-mode="table">表格填写</button>'
-            + '<button type="button" class="vs-params-editor__tab" data-params-mode="json">JSON 数组</button>'
+            + tabsHtml
             + '</div>'
             + '<button type="button" class="vs-btn vs-btn--outline vs-params-editor__add" data-params-add>添加参数</button>'
             + '</div>'
@@ -542,7 +612,14 @@
             + '<textarea class="vs-input vs-textarea vs-api-list-code" data-params-json-input rows="10" spellcheck="false"'
             + ' placeholder=\'[{"name":"key","type":"string","required":false,"description":"…","example":"…"}]\'></textarea>'
             + '<p class="vs-form-hint">粘贴或编辑后失焦将自动同步到表格；提交时以表格/JSON 互转结果为准。</p>'
-            + '</div>';
+            + '</div>'
+            + (enableOpenapi
+                ? ('<div class="vs-params-editor__json-wrap" data-params-openapi hidden>'
+                    + '<textarea class="vs-input vs-textarea vs-api-list-code" data-params-openapi-output rows="14" spellcheck="false" readonly></textarea>'
+                    + '<p class="vs-form-hint">OpenAPI 由参数表自动生成，供 Apifox / Hoppscotch / Postman 等导入；请以表格为准。保存时只写入参数表，不单独存 OpenAPI。</p>'
+                    + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-params-openapi-refresh>重新生成预览</button>'
+                    + '</div>')
+                : '');
 
         var initial = hidden ? String(hidden.value || '') : '';
         var parsed = parseParamsJson(initial);
@@ -561,15 +638,23 @@
                 openTypePicker(typeOpen);
                 return;
             }
+            var refreshBtn = e.target.closest('[data-params-openapi-refresh]');
+            if (refreshBtn && root.contains(refreshBtn)) {
+                e.preventDefault();
+                refreshOpenApiPreview(root);
+                return;
+            }
             var modeBtn = e.target.closest('[data-params-mode]');
             if (modeBtn && root.contains(modeBtn)) {
-                if (modeBtn.getAttribute('data-params-mode') === 'table') {
+                var nextMode = modeBtn.getAttribute('data-params-mode') || 'table';
+                var curMode = root.getAttribute('data-mode') || 'table';
+                if ((nextMode === 'table' || nextMode === 'openapi') && curMode === 'json') {
                     var jsonTa = root.querySelector('[data-params-json-input]');
                     if (jsonTa && !applyJsonText(root, jsonTa.value, true)) {
                         return;
                     }
                 }
-                setMode(root, modeBtn.getAttribute('data-params-mode'));
+                setMode(root, nextMode);
                 return;
             }
             if (e.target.closest('[data-params-add]') && root.contains(e.target)) {

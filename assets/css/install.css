@@ -256,18 +256,29 @@
     margin: 0 auto;
 }
 
-.vs-nginx-toolbar {
-    display: flex;
-    justify-content: flex-end;
-    margin: 12px 0 8px;
+.vs-nginx-code-wrap {
+    position: relative;
+    margin: 0 0 16px;
+}
+
+.vs-nginx-copy {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 12px;
 }
 
 .vs-nginx-code {
-    margin: 0 0 20px;
+    margin: 0;
     padding: 14px 16px;
+    padding-top: 44px;
     border-radius: 10px;
-    background: #0f172a;
-    color: #e2e8f0;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    background: #f3f4f6;
+    color: #1f2937;
     font-size: 13px;
     line-height: 1.55;
     overflow-x: auto;

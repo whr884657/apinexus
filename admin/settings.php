@@ -35,6 +35,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'save_apiorder') {
+        try {
+            $mode = isset($_POST['apiorder']) && (string) $_POST['apiorder'] === '1' ? '1' : '0';
+            Config::set('apiorder', $mode);
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateFrontend();
+            }
+            AjaxResponse::success('接口目录排序已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
     if ($action === 'save_dashboard') {
         try {
             $interval = isset($_POST['dashboard_live_interval'])
@@ -72,25 +85,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if ($action === 'save_redis_prefix') {
+    if ($action === 'test_redis_connection') {
         try {
-            $raw = isset($_POST['redis_prefix']) ? (string) $_POST['redis_prefix'] : '';
-            $force = isset($_POST['force']) && (string) $_POST['force'] === '1';
-            $result = RedisService::savePrefixConfig($raw, $force);
-            if (!empty($result['need_confirm'])) {
-                AjaxResponse::json(array(
-                    'code' => 0,
-                    'msg' => $result['msg'],
-                    'need_confirm' => 1,
-                    'prefix' => $result['prefix'],
-                ));
+            // 对齐面板测连：管理员会话被滥用时降低内网 Redis 探测频率（E193 / 本版审计）
+            $admin = Auth::user();
+            $aid = ($admin && isset($admin['id'])) ? (int) $admin['id'] : 0;
+            if (class_exists('RateLimitStore')
+                && !RateLimitStore::allow('admin:redis:test:' . $aid, 60, 8, true)
+            ) {
+                AjaxResponse::error('操作过于频繁，请稍后再试');
             }
+            if (function_exists('session_write_close')) {
+                @session_write_close();
+            }
+            $clearPassword = isset($_POST['clear_password']) && (string) $_POST['clear_password'] === '1';
+            $passwordIn = isset($_POST['redis_password']) ? (string) $_POST['redis_password'] : '';
+            if ($clearPassword) {
+                $password = '';
+            } elseif ($passwordIn !== '') {
+                $password = $passwordIn;
+            } else {
+                $password = (string) Config::get(RedisService::CONFIG_PASSWORD, '');
+            }
+            $hostNorm = RedisService::normalizeHost(isset($_POST['redis_host']) ? $_POST['redis_host'] : '127.0.0.1');
+            if ($hostNorm === false) {
+                AjaxResponse::error('Redis 主机无效');
+            }
+            $result = RedisService::testDraftConnection(array(
+                'host' => $hostNorm,
+                'port' => isset($_POST['redis_port']) ? $_POST['redis_port'] : 6379,
+                'password' => $password,
+                'database' => isset($_POST['redis_database']) ? $_POST['redis_database'] : 0,
+            ));
             if (empty($result['ok'])) {
-                AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '保存失败');
+                AjaxResponse::error(isset($result['msg']) ? $result['msg'] : 'Redis 连接失败');
             }
-            AjaxResponse::success($result['msg'], array(
+            AjaxResponse::success(isset($result['msg']) ? $result['msg'] : 'Redis 连接成功');
+        } catch (Exception $e) {
+            AjaxResponse::error('检测失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_redis_settings') {
+        try {
+            $rawPrefix = isset($_POST['redis_prefix']) ? (string) $_POST['redis_prefix'] : '';
+            $force = isset($_POST['force']) && (string) $_POST['force'] === '1';
+            $passwordIn = isset($_POST['redis_password']) ? (string) $_POST['redis_password'] : '';
+            $clearPassword = isset($_POST['clear_password']) && (string) $_POST['clear_password'] === '1';
+            $willHavePassword = $clearPassword
+                ? false
+                : ($passwordIn !== '' || trim((string) Config::get(RedisService::CONFIG_PASSWORD, '')) !== '');
+            if ($willHavePassword && trim($rawPrefix) === '') {
+                AjaxResponse::error('已设置 Redis 密码时，必须填写缓存键前缀');
+            }
+
+            $normalizedPrefix = RedisService::normalizePrefix($rawPrefix, true);
+            if ($normalizedPrefix === false) {
+                AjaxResponse::error('前缀格式无效：仅允许字母、数字、下划线、连字符，并以冒号结尾');
+            }
+            if (!$force) {
+                $conflict = RedisService::detectPrefixConflict($normalizedPrefix);
+                if (!empty($conflict['conflict'])) {
+                    AjaxResponse::json(array(
+                        'code' => 0,
+                        'msg' => $conflict['message'],
+                        'need_confirm' => 1,
+                        'prefix' => $normalizedPrefix,
+                    ));
+                }
+            }
+
+            $hostNorm = RedisService::normalizeHost(isset($_POST['redis_host']) ? $_POST['redis_host'] : '127.0.0.1');
+            if ($hostNorm === false) {
+                AjaxResponse::error('Redis 主机无效');
+            }
+
+            $conn = RedisService::saveConnectionSettings(array(
+                'host' => $hostNorm,
+                'port' => isset($_POST['redis_port']) ? $_POST['redis_port'] : 6379,
+                'database' => isset($_POST['redis_database']) ? $_POST['redis_database'] : 0,
+                'password' => $passwordIn,
+                'clear_password' => $clearPassword,
+            ));
+            if (empty($conn['ok'])) {
+                AjaxResponse::error(isset($conn['msg']) ? $conn['msg'] : '连接参数保存失败');
+            }
+
+            $result = RedisService::savePrefixConfig($rawPrefix, true);
+            if (empty($result['ok'])) {
+                AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '前缀保存失败（连接参数已更新）');
+            }
+            $cfg = RedisService::connectionConfig();
+            AjaxResponse::success('Redis 设置已保存', array(
                 'prefix' => $result['prefix'],
                 'deleted' => (int) $result['deleted'],
+                'host' => $cfg['host'],
+                'port' => $cfg['port'],
+                'database' => $cfg['database'],
+                'has_password' => !empty($cfg['has_password']) ? 1 : 0,
             ));
         } catch (Exception $e) {
             AjaxResponse::error('保存失败，请稍后重试');
@@ -362,8 +454,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($giftPoints > 1000000) {
                 $giftPoints = 1000000;
             }
+            $allowUser = isset($_POST['register_allow_user']);
+            $allowDeveloper = isset($_POST['register_allow_developer']);
+            // 总闸勾选 = 全选两种；若只传总闸未点子项，以总闸为准
+            if (isset($_POST['register_enabled'])) {
+                $allowUser = true;
+                $allowDeveloper = true;
+            }
+            RegisterPolicy::saveRoleAllows($allowUser, $allowDeveloper);
             Config::setMany(array(
-                'register_enabled'      => isset($_POST['register_enabled']) ? '1' : '0',
                 'register_email_verify' => isset($_POST['register_email_verify']) ? '1' : '0',
                 'register_gift_enabled' => isset($_POST['register_gift_enabled']) ? '1' : '0',
                 'register_gift_points'  => (string) $giftPoints,
@@ -804,7 +903,7 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-register',
     '用户注册',
-    '开放注册、邮箱验证与邮箱后缀白名单'
+    '开放注册（全选）、按身份开放、邮箱验证与后缀白名单'
 );
 ?>
     <form method="post" action="" class="vs-form" id="registerForm" data-ajax="1">
@@ -813,18 +912,38 @@ vs_admin_accordion_start(
         vs_render_notice(
             'info',
             '注册策略',
-            '<p>关闭「开放注册」后，登录页注册入口隐藏，强访注册页仅提示，服务端拒绝注册请求。</p><p>关闭「注册需邮箱验证」后，注册不再发送/校验邮箱验证码，仍须填写邮箱；未配置发信时也可注册。开启时须完成邮箱验证码（未配置发信则无法注册）。</p>',
+            '<p>「开放注册」为<strong>全选</strong>：勾选后普通用户与开发者均可注册；取消勾选则两种都关闭。</p>'
+            . '<p>也可单独勾选「开放普通用户注册」或「开放开发者注册」。仅开放一种时，注册页<strong>不显示</strong>身份选择滑块，账号固定为该身份。</p>'
+            . '<p>以上勾选落库为单一配置项（四种模式），无需多个开关键。</p>'
+            . '<p>关闭「注册需邮箱验证」后，注册不再发送/校验邮箱验证码，仍须填写邮箱；未配置发信时也可注册。开启时须完成邮箱验证码（未配置发信则无法注册）。</p>',
             array('allow_html' => true, 'compact' => true)
         );
+        $allowUserChecked = RegisterPolicy::allowsUserRole();
+        $allowDevChecked = RegisterPolicy::allowsDeveloperRole();
+        $fullyOpenChecked = RegisterPolicy::isFullyOpen();
         ?>
-        <div class="vs-form-row">
+        <div class="vs-form-row vs-form-row--check">
             <label class="vs-checkbox">
-                <input type="checkbox" name="register_enabled" value="1" <?php echo RegisterPolicy::isOpen() ? 'checked' : ''; ?>>
+                <input type="checkbox" name="register_enabled" id="registerEnabledMaster" value="1" <?php echo $fullyOpenChecked ? 'checked' : ''; ?>>
                 <span>开放注册</span>
             </label>
-            <p class="vs-form-hint">关闭后用户无法注册；登录页注册入口隐藏；强访注册页仅提示。</p>
+            <p class="vs-form-hint">全选：勾选=同时开放普通用户与开发者；取消=两种都关闭。仅开放其中一种时本项为未勾选。</p>
         </div>
-        <div class="vs-form-row">
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_allow_user" id="registerAllowUser" value="1" <?php echo $allowUserChecked ? 'checked' : ''; ?>>
+                <span>开放普通用户注册</span>
+            </label>
+            <p class="vs-form-hint">关闭后无法注册为普通用户；若仍开放开发者，注册页不显示身份滑块。</p>
+        </div>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_allow_developer" id="registerAllowDeveloper" value="1" <?php echo $allowDevChecked ? 'checked' : ''; ?>>
+                <span>开放开发者注册</span>
+            </label>
+            <p class="vs-form-hint">关闭后无法注册为开发者；若仍开放普通用户，注册页不显示身份滑块。</p>
+        </div>
+        <div class="vs-form-row vs-form-row--check">
             <label class="vs-checkbox">
                 <input type="checkbox" name="register_email_verify" value="1" <?php echo RegisterPolicy::requiresEmailVerify() ? 'checked' : ''; ?>>
                 <span>注册需邮箱验证</span>
@@ -1377,33 +1496,71 @@ vs_admin_accordion_start(
 
 <?php
 vs_admin_accordion_start(
-    'settings-redis-prefix',
-    '缓存键前缀',
-    '同机多站共用 Redis 时隔离缓存，避免站点数据串读'
+    'settings-redis',
+    'Redis 设置',
+    '连接参数与缓存键前缀；同机多站共用 Redis 时须隔离前缀'
 );
-$redisPrefixCfg = RedisService::connectionConfig()['prefix'];
+$redisCfg = RedisService::connectionConfig();
+$redisHasPassword = !empty($redisCfg['has_password']);
 ?>
-    <form method="post" action="" class="vs-form vs-settings-form" id="redisPrefixForm" data-ajax="1">
-        <input type="hidden" name="action" value="save_redis_prefix">
+    <form method="post" action="" class="vs-form vs-settings-form" id="redisSettingsForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_redis_settings">
         <input type="hidden" name="force" id="redisPrefixForce" value="0">
         <?php vs_render_notice(
             'tip',
             '',
-            '同一台服务器部署多套本系统并共用 Redis 时，必须为每套填写互不相同的键前缀。仅部署一套时可使用默认值。保存时会清空本站旧缓存，随后按新前缀重新写入。',
+            '同一台服务器部署多套本系统并共用 Redis 时，必须为每套填写互不相同的键前缀。保存前缀变更时会清空本站旧缓存，随后按新前缀重新写入。密码留空表示不修改已保存密码。',
             array('field' => true, 'compact' => true)
         ); ?>
         <div class="vs-form-row">
-            <label class="vs-label" for="settings_redis_prefix">键前缀</label>
+            <label class="vs-label" for="settings_redis_host">主机</label>
+            <input type="text" class="vs-input" id="settings_redis_host" name="redis_host"
+                   value="<?php echo vs_e($redisCfg['host'] !== '' ? $redisCfg['host'] : '127.0.0.1'); ?>"
+                   placeholder="127.0.0.1"
+                   autocomplete="off">
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="settings_redis_port">端口</label>
+            <input type="number" class="vs-input" id="settings_redis_port" name="redis_port"
+                   value="<?php echo vs_e((string) (int) $redisCfg['port']); ?>"
+                   min="1" max="65535" step="1" inputmode="numeric"
+                   placeholder="6379"
+                   autocomplete="off">
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="settings_redis_password">密码</label>
+            <input type="password" class="vs-input" id="settings_redis_password" name="redis_password"
+                   value=""
+                   placeholder="<?php echo $redisHasPassword ? '已设置，留空不修改' : '无密码请留空'; ?>"
+                   autocomplete="new-password">
+            <p class="vs-form-hint">界面不回显已保存密码。填写新密码后保存即覆盖；勾选下方可清除密码。</p>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="clear_password" id="settings_redis_clear_password" value="1">
+                <span>清除已保存的 Redis 密码</span>
+            </label>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="settings_redis_database">库号</label>
+            <input type="number" class="vs-input" id="settings_redis_database" name="redis_database"
+                   value="<?php echo vs_e((string) (int) $redisCfg['database']); ?>"
+                   min="0" max="15" step="1" inputmode="numeric"
+                   placeholder="0"
+                   autocomplete="off">
+            <p class="vs-form-hint">填写数字 0～15（共 16 个库），默认 0。不使用下拉选择。</p>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="settings_redis_prefix">缓存键前缀</label>
             <input type="text" class="vs-input" id="settings_redis_prefix" name="redis_prefix"
-                   value="<?php echo vs_e($redisPrefixCfg); ?>"
+                   value="<?php echo vs_e($redisCfg['prefix']); ?>"
                    placeholder="例 site_a: 或 apinexus:"
                    autocomplete="off">
-            <p class="vs-form-hint" id="redisPrefixHint">仅允许字母、数字、下划线、连字符；保存时自动补齐末尾冒号。留空则使用默认前缀。</p>
+            <p class="vs-form-hint" id="redisPrefixHint">仅允许字母、数字、下划线、连字符；保存时自动补齐末尾冒号。已设密码时必填。</p>
             <p class="vs-form-hint" id="redisPrefixConflict" hidden></p>
         </div>
         <div class="vs-form-actions">
+            <button type="button" class="vs-btn vs-btn--default" id="redisTestBtn">测试连接</button>
             <button type="button" class="vs-btn vs-btn--default" id="redisPrefixCheckBtn">检测冲突</button>
-            <button type="submit" class="vs-btn vs-btn--primary">保存键前缀</button>
+            <button type="submit" class="vs-btn vs-btn--primary">保存 Redis 设置</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>
@@ -1509,6 +1666,30 @@ $pmHasKey = $pmApiKey !== '';
 
 <?php
 vs_admin_accordion_start(
+    'settings-apiorder',
+    '接口目录排序',
+    '前台首页与接口列表的展示顺序'
+);
+    $apiorderMode = isset($vsCfg['apiorder']) && (string) $vsCfg['apiorder'] === '1' ? '1' : '0';
+    ?>
+    <form method="post" action="" class="vs-form" id="apiorderForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_apiorder">
+        <?php vs_render_notice('tip', '', '随机：每次请求临时打乱（缓存仍存有序底稿）。按分类权重：权重越小的分类越靠前，同分类内按接口 ID。可在「接口管理 → 接口分类」设置各分类排序权重。', array('field' => true)); ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="apiorderSelect">展示方式</label>
+            <select class="vs-input vs-select" id="apiorderSelect" name="apiorder" data-vs-pick="sheet">
+                <option value="0" <?php echo $apiorderMode === '0' ? 'selected' : ''; ?>>随机展示</option>
+                <option value="1" <?php echo $apiorderMode === '1' ? 'selected' : ''; ?>>按分类排序权重</option>
+            </select>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存排序设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
     'settings-apilog',
     '调用日志',
     '详细记录、冷热归档与计划任务'
@@ -1537,13 +1718,13 @@ vs_admin_accordion_start(
                 <input type="checkbox" name="apilog_archive_enabled" id="apilog_archive_enabled" value="1" <?php echo $archiveOn ? 'checked' : ''; ?>>
                 <span>启用调用日志冷热归档</span>
             </label>
-            <?php vs_render_notice('tip', '', '低配或日志量很大的站点建议开启，把超过热数据天数的日志归档到本机，减轻在线库压力且日志全部保留。若服务器性能足够强（大核数、大内存、磁盘充足），自认可长期扛住全量日志在线查询，可以关闭本项，不必做冷热分离。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '低配或日志量很大的站点建议开启：超过热数据天数的日志归档到本机后，会从在线库删除对应行（不可逆），减轻库压力且历史仍可查。服务器足够强时可关闭，不必做冷热分离。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row" id="apilogHotDaysRow"<?php echo $archiveOn ? '' : ' hidden'; ?>>
             <label class="vs-label" for="apilog_hot_days">热数据天数</label>
             <input type="number" class="vs-input" id="apilog_hot_days" name="apilog_hot_days" min="1" max="<?php echo (int) ApiLogArchive::MAX_HOT_DAYS; ?>"
                    value="<?php echo (int) $cfgHotDays; ?>">
-            <?php vs_render_notice('tip', '', '超过该天数的日志由计划任务归档到本机，不会丢弃。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '仅在线库保留最近 N 天；更早的日志由计划任务写入本机后从在线库删除（不可逆），查询时自动合并冷库。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row" id="apilogShardRowsRow"<?php echo $archiveOn ? '' : ' hidden'; ?>>
             <label class="vs-label" for="apilog_shard_rows">每个分片条数</label>
@@ -1565,7 +1746,7 @@ vs_admin_accordion_start(
         <div class="vs-form-row">
             <label class="vs-label">冷热归档计划任务</label>
             <input type="text" class="vs-input" id="apilogCronUrl" readonly value="<?php echo vs_e($cronUrl); ?>" placeholder="请先生成密钥">
-            <?php vs_render_notice('tip', '', '启用冷热归档后，请在服务器计划任务中配置每日凌晨调用（须带密钥）。示例：0 2 * * * curl -fsS 「上方链接」', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '启用后请在服务器配置每日凌晨调用（须带密钥）。单次任务会多轮归档直到赶完或达上限。示例：0 2 * * * curl -fsS 「上方链接」', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row">
             <label class="vs-label">任务密钥</label>

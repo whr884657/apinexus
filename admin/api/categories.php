@@ -15,7 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = isset($_POST['name']) ? (string) $_POST['name'] : '';
         $icon = isset($_POST['icon']) ? (string) $_POST['icon'] : '';
         $description = isset($_POST['description']) ? (string) $_POST['description'] : '';
-        $result = ApiCategoryManager::create($name, $icon, $description);
+        $sort = isset($_POST['sort']) ? (int) $_POST['sort'] : 0;
+        $result = ApiCategoryManager::create($name, $icon, $description, $sort);
         if (!is_array($result)) {
             AjaxResponse::error($result);
         }
@@ -31,7 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = isset($_POST['name']) ? (string) $_POST['name'] : '';
         $icon = isset($_POST['icon']) ? (string) $_POST['icon'] : '';
         $description = isset($_POST['description']) ? (string) $_POST['description'] : '';
-        $result = ApiCategoryManager::update($id, $name, $icon, $description);
+        $sort = isset($_POST['sort']) ? (int) $_POST['sort'] : 0;
+        $result = ApiCategoryManager::update($id, $name, $icon, $description, $sort);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
@@ -109,12 +111,14 @@ function vs_api_cat_row_context(array $row)
     $icon = ApiCategoryManager::resolveIconUrl(isset($row['icon']) ? (string) $row['icon'] : '');
     $desc = trim((string) (isset($row['description']) ? $row['description'] : ''));
     $name = (string) $row['name'];
+    $sort = isset($row['sort']) ? (int) $row['sort'] : 0;
     $searchHay = mb_strtolower($name . ' ' . $desc . ' #' . $catId, 'UTF-8');
 
     return array(
         'catId'    => $catId,
         'enabled'  => $enabled,
         'apiCount' => $apiCount,
+        'sort'     => $sort,
         'icon'     => $icon,
         'desc'     => $desc,
         'name'     => $name,
@@ -167,18 +171,19 @@ function vs_render_api_cat_desktop_row(array $ctx)
                 <span class="cat-name-text" data-field="name"><?php echo vs_e($ctx['name']); ?></span>
             </div>
         </td>
+        <td class="vs-col-num"><span class="cat-sort" data-field="sort"><?php echo (int) $ctx['sort']; ?></span></td>
         <td>
             <span class="cat-desc" data-field="description"><?php
                 echo $ctx['desc'] !== '' ? vs_e($ctx['desc']) : '—';
             ?></span>
         </td>
-        <td><span class="cat-count" data-field="api_count"><?php echo (int) $ctx['apiCount']; ?></span></td>
+        <td class="vs-col-num"><span class="cat-count" data-field="api_count"><?php echo (int) $ctx['apiCount']; ?></span></td>
         <td>
             <span class="vs-badge <?php echo $ctx['enabled'] ? 'vs-badge--success' : 'vs-badge--default'; ?>" data-field="status_label">
                 <?php echo $ctx['enabled'] ? '启用' : '禁用'; ?>
             </span>
         </td>
-        <td class="vs-api-cat-actions-cell" data-field="actions">
+        <td class="vs-col-actions vs-api-cat-actions-cell" data-field="actions">
             <?php echo vs_api_cat_action_buttons_html($ctx['enabled'], $ctx['catId'], $ctx['apiCount']); ?>
         </td>
     </tr>
@@ -208,7 +213,10 @@ function vs_render_api_cat_mobile_card(array $ctx)
                     </span>
                 </div>
             </div>
-            <span class="cat-card__count"><span data-field="api_count"><?php echo (int) $ctx['apiCount']; ?></span> 个</span>
+            <span class="cat-card__metrics">
+                <span class="cat-card__count"><span data-field="api_count"><?php echo (int) $ctx['apiCount']; ?></span> 个</span>
+                <span class="cat-card__sort">权重 <span data-field="sort"><?php echo (int) $ctx['sort']; ?></span></span>
+            </span>
         </div>
         <div class="cat-card__desc" data-field="description"><?php
             echo $ctx['desc'] !== '' ? vs_e($ctx['desc']) : '暂无描述';
@@ -270,11 +278,12 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
                 <table class="vs-table vs-api-cat-table">
                     <thead>
                         <tr>
-                            <th>分类名称</th>
+                            <th>名称</th>
+                            <th class="vs-col-num">排序</th>
                             <th>描述</th>
-                            <th>接口数量</th>
+                            <th class="vs-col-num">数量</th>
                             <th>状态</th>
-                            <th>操作</th>
+                            <th class="vs-col-actions">操作</th>
                         </tr>
                     </thead>
                     <tbody id="apiCategoryBody">
@@ -332,6 +341,12 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
                 <label class="vs-label" for="apiCatFormName">分类名称</label>
                 <input type="text" class="vs-input" id="apiCatFormName" name="name" maxlength="50" required
                        placeholder="例如：图片、工具、娱乐">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label" for="apiCatFormSort">排序权重</label>
+                <input type="number" class="vs-input" id="apiCatFormSort" name="sort" value="0" step="1"
+                       min="-999999" max="999999" placeholder="数字越小越靠前">
+                <p class="vs-form-hint">前台开启「按分类排序」时生效；越小越靠前，默认 0</p>
             </div>
             <div class="vs-form-row">
                 <label class="vs-label" for="apiCatFormDesc">分类描述</label>

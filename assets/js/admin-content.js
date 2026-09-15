@@ -393,7 +393,7 @@
                 html += '<td><span class="vs-badge ' + statusBadgeClass(item.status)
                     + '" data-field="status_label">' + esc(item.status_label || '已发布') + '</span></td>';
             }
-            html += '<td class="vs-content-actions-cell" data-field="actions">' + actionsHtml(item) + '</td></tr>';
+            html += '<td class="vs-col-actions vs-content-actions-cell" data-field="actions">' + actionsHtml(item) + '</td></tr>';
             return html;
         }
 

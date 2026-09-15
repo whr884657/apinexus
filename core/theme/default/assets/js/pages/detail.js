@@ -94,21 +94,27 @@
         });
     }
 
-    /* ---- 参数表格 / JSON ---- */
+    /* ---- 参数表格 / JSON / OpenAPI ---- */
     var tableMode = document.getElementById('paramsTableMode');
     var jsonMode = document.getElementById('paramsJsonMode');
+    var openApiMode = document.getElementById('paramsOpenApiMode');
+    var paramsCopyBtn = document.getElementById('paramsCopyBtn');
     page.querySelectorAll('[data-params-mode]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            var mode = btn.getAttribute('data-params-mode');
+            var mode = btn.getAttribute('data-params-mode') || 'table';
             page.querySelectorAll('[data-params-mode]').forEach(function (b) {
                 b.classList.toggle('is-active', b === btn);
             });
-            if (mode === 'json') {
-                if (tableMode) tableMode.hidden = true;
-                if (jsonMode) jsonMode.hidden = false;
-            } else {
-                if (tableMode) tableMode.hidden = false;
-                if (jsonMode) jsonMode.hidden = true;
+            if (tableMode) tableMode.hidden = mode !== 'table';
+            if (jsonMode) jsonMode.hidden = mode !== 'json';
+            if (openApiMode) openApiMode.hidden = mode !== 'openapi';
+            if (paramsCopyBtn) {
+                if (mode === 'openapi') {
+                    var oaPre = document.getElementById('paramsOpenApiCode');
+                    paramsCopyBtn.setAttribute('data-copy', oaPre ? (oaPre.textContent || '') : '');
+                } else {
+                    paramsCopyBtn.setAttribute('data-copy', paramsCopyBtn.getAttribute('data-copy-json') || '');
+                }
             }
         });
     });
@@ -152,6 +158,44 @@
         if (!statusEl) return;
         statusEl.textContent = text;
         statusEl.className = 'status-badge' + (kind ? ' is-' + kind : '');
+    }
+
+    function setPgBody(text, copyable) {
+        if (!responseEl) return;
+        var body = text == null ? '' : String(text);
+        responseEl.textContent = body;
+        if (VsPR && typeof VsPR.setPgCopyState === 'function') {
+            VsPR.setPgCopyState(responseEl, copyable ? body : null);
+        }
+    }
+
+    function clearPgCopy() {
+        if (VsPR && typeof VsPR.clearPgCopyState === 'function') {
+            VsPR.clearPgCopyState(responseEl);
+        } else if (responseEl) {
+            responseEl._vsPgCopyText = '';
+            responseEl.setAttribute('data-pg-copyable', '0');
+            var btn = document.getElementById('pgCopyBtn');
+            if (btn) {
+                btn.hidden = true;
+                btn.disabled = true;
+                btn.setAttribute('aria-hidden', 'true');
+            }
+        }
+    }
+
+    var pgCopyBtn = document.getElementById('pgCopyBtn');
+    if (pgCopyBtn && responseEl) {
+        pgCopyBtn.addEventListener('click', function () {
+            if (responseEl.getAttribute('data-pg-copyable') !== '1') return;
+            var text = responseEl._vsPgCopyText != null ? String(responseEl._vsPgCopyText) : '';
+            if (!text) return;
+            copyText(text).then(function () {
+                showToast('已复制');
+            }).catch(function () {
+                showToast('复制失败');
+            });
+        });
     }
 
     function getMethod() {
@@ -284,7 +328,7 @@
                 pageApi = { id: pageId, endpoint: page.getAttribute('data-endpoint') || '' };
             }
             if (!pageApi || !pageApi.id) {
-                responseEl.textContent = '接口无效';
+                setPgBody('接口无效', true);
                 setStatus('Error', 'err');
                 return;
             }
@@ -295,7 +339,7 @@
             api = pageApi;
 
             if (page.getAttribute('data-maintenance') === '1' || api.maintenance) {
-                responseEl.textContent = '维护中，暂不可测试';
+                setPgBody('维护中，暂不可测试', true);
                 setStatus('维护中', 'err');
                 return;
             }
@@ -323,7 +367,7 @@
                 });
             }
             if (hasFiles) {
-                responseEl.textContent = '// 含文件上传的请求暂不支持在线调试';
+                setPgBody('// 含文件上传的请求暂不支持在线调试', true);
                 setStatus('Skip', 'wait');
                 return;
             }
@@ -333,7 +377,8 @@
                 urlPreview.textContent = endpointHostPath(api.endpoint || page.getAttribute('data-endpoint') || '');
             }
 
-            responseEl.textContent = '// 正在发送请求...';
+            setPgBody('// 正在发送请求...', false);
+            clearPgCopy();
             setStatus('处理中', 'wait');
 
             if (pgAbort) {
@@ -341,14 +386,14 @@
             }
 
             if (!VsPR || !VsPR.directRequest || !VsPR.renderFetchResponse) {
-                responseEl.textContent = '// 测试模块未加载，请刷新页面';
+                setPgBody('// 测试模块未加载，请刷新页面', true);
                 setStatus('Error', 'err');
                 return;
             }
 
             var endpoint = String(api.endpoint || page.getAttribute('data-endpoint') || '').trim();
             if (!endpoint) {
-                responseEl.textContent = '// 缺少接口地址';
+                setPgBody('// 缺少接口地址', true);
                 setStatus('Error', 'err');
                 return;
             }
@@ -384,7 +429,7 @@
                 }).catch(function (err) {
                     setStatus('Error', 'err');
                     var raw = err && err.message ? String(err.message) : 'network error';
-                    responseEl.textContent = '// 请求失败: ' + raw;
+                    setPgBody('// 请求失败: ' + raw, true);
                 });
                 return;
             }
@@ -415,7 +460,7 @@
                 var msg = /failed to fetch|networkerror|load failed/i.test(raw)
                     ? '请求失败（浏览器无法完成，常见于跨域或上游未允许跨域）'
                     : raw;
-                responseEl.textContent = '// 请求失败: ' + msg;
+                setPgBody('// 请求失败: ' + msg, true);
             });
             });
         });

@@ -352,6 +352,17 @@
         var currentSearch = '';
         var catalogReady = false;
 
+        function shuffleCopy(arr) {
+            var list = arr.slice();
+            for (var i = list.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var t = list[i];
+                list[i] = list[j];
+                list[j] = t;
+            }
+            return list;
+        }
+
         function render() {
             if (!catalogReady) {
                 return;
@@ -371,7 +382,9 @@
                 }
                 return true;
             });
-            var slice = filtered.slice(0, limit);
+            // apiorder=1：按服务端有序取前 N；随机：首页精选再临时打乱后取 N（数量用主题自身 limit）
+            var ordered = Number(window.VS_APIORDER) === 1 ? filtered : shuffleCopy(filtered);
+            var slice = ordered.slice(0, limit);
             var moreWrap = document.getElementById('stApiMoreWrap');
             if (moreWrap) {
                 moreWrap.hidden = filtered.length <= limit;
@@ -403,20 +416,30 @@
         if (window.VS && typeof VS.setLoading === 'function') {
             VS.setLoading(grid, '正在加载接口');
         }
-        if (!window.VS || typeof VS.fetchFrontCatalog !== 'function') {
-            grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">目录加载失败，请刷新重试</p></div>';
-            return;
+        function loadHomeCatalog(waitTry) {
+            waitTry = Number(waitTry) || 0;
+            if (!window.VS || typeof VS.fetchFrontCatalog !== 'function') {
+                if (waitTry < 50) {
+                    setTimeout(function () { loadHomeCatalog(waitTry + 1); }, 40);
+                    return;
+                }
+                grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">目录加载失败，请刷新重试</p></div>';
+                return;
+            }
+            VS.fetchFrontCatalog({}).then(function (data) {
+                window.VS_APIORDER = Number(data.apiorder) === 1 ? 1 : 0;
+                window.stApiPayload = {
+                    apiData: Array.isArray(data.apiData) ? data.apiData : [],
+                    categoryNames: data.categoryNames || {},
+                    apiorder: window.VS_APIORDER
+                };
+                catalogReady = true;
+                render();
+            }).catch(function () {
+                grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">目录加载失败，请刷新重试</p></div>';
+            });
         }
-        VS.fetchFrontCatalog({}).then(function (data) {
-            window.stApiPayload = {
-                apiData: Array.isArray(data.apiData) ? data.apiData : [],
-                categoryNames: data.categoryNames || {}
-            };
-            catalogReady = true;
-            render();
-        }).catch(function () {
-            grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">目录加载失败，请刷新重试</p></div>';
-        });
+        loadHomeCatalog();
     }
 
     function initApisPage() {
@@ -521,24 +544,32 @@
         if (window.VS && typeof VS.setLoading === 'function') {
             VS.setLoading(grid, '正在加载接口');
         }
-        if (!window.VS || typeof VS.fetchFrontCatalog !== 'function') {
-            grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">目录加载失败，请刷新重试</p></div>';
-            return;
-        }
-        VS.fetchFrontCatalog({ shuffle: true }).then(function (data) {
-            apiData = Array.isArray(data.apiData) ? data.apiData : [];
-            window.stApiPayload = {
-                apiData: apiData,
-                categoryNames: data.categoryNames || {}
-            };
-            catalogReady = true;
-            if (totalEl && typeof data.apiCount !== 'undefined') {
-                totalEl.textContent = String(data.apiCount);
+        function loadApisCatalog(waitTry) {
+            waitTry = Number(waitTry) || 0;
+            if (!window.VS || typeof VS.fetchFrontCatalog !== 'function') {
+                if (waitTry < 50) {
+                    setTimeout(function () { loadApisCatalog(waitTry + 1); }, 40);
+                    return;
+                }
+                grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">目录加载失败，请刷新重试</p></div>';
+                return;
             }
-            applyFilter();
-        }).catch(function () {
-            grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">目录加载失败，请刷新重试</p></div>';
-        });
+            VS.fetchFrontCatalog({}).then(function (data) {
+                apiData = Array.isArray(data.apiData) ? data.apiData : [];
+                window.stApiPayload = {
+                    apiData: apiData,
+                    categoryNames: data.categoryNames || {}
+                };
+                catalogReady = true;
+                if (totalEl && typeof data.apiCount !== 'undefined') {
+                    totalEl.textContent = String(data.apiCount);
+                }
+                applyFilter();
+            }).catch(function () {
+                grid.innerHTML = '<div class="st-api-empty st-api-empty--inline"><p class="st-api-empty__title">目录加载失败，请刷新重试</p></div>';
+            });
+        }
+        loadApisCatalog();
     }
 
     var home = document.getElementById('stHome');

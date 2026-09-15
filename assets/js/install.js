@@ -286,7 +286,7 @@
                     .then(function (res) { return res.json(); })
                     .then(function (data) {
                         if (data.code === 1) {
-                            showDbMessage(data.msg || '数据库连接成功！', 'success');
+                            showDbMessage(data.msg || 'MySQL 与 Redis 均已连接成功', 'success');
                             if (nextBtn) nextBtn.style.display = '';
                         } else {
                             showDbMessage(data.msg || '连接失败', 'error');

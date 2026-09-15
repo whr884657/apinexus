@@ -442,7 +442,7 @@ vs_admin_layout_start('IP 配置', 'ip', $headerActions);
                                 <tr>
                                     <th>归属</th>
                                     <th>IP</th>
-                                    <th>操作</th>
+                                    <th class="vs-col-actions">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="adminIpAllowTableBody">
@@ -457,7 +457,7 @@ vs_admin_layout_start('IP 配置', 'ip', $headerActions);
                                         data-search="<?php echo vs_e($search); ?>">
                                         <td><?php echo vs_admin_ip_owner_cell_html($owner); ?></td>
                                         <td><code class="vs-log-mono"><?php echo vs_e($ip); ?></code></td>
-                                        <td class="vs-content-actions-cell">
+                                        <td class="vs-col-actions vs-content-actions-cell">
                                             <button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-btn--outline-danger vs-admin-ip-remove-allow"
                                                     data-user-id="<?php echo (int) $owner['userid']; ?>"
                                                     data-ip="<?php echo vs_e($ip); ?>">移除</button>
@@ -539,7 +539,7 @@ vs_admin_layout_start('IP 配置', 'ip', $headerActions);
                                     <th>协议</th>
                                     <th>节点 / 链接</th>
                                     <th>状态</th>
-                                    <th>操作</th>
+                                    <th class="vs-col-actions">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="adminIpProxyTableBody">
@@ -587,7 +587,7 @@ vs_admin_layout_start('IP 配置', 'ip', $headerActions);
                                                 <?php echo $statusOn ? '启用' : '禁用'; ?>
                                             </span>
                                         </td>
-                                        <td class="vs-content-actions-cell">
+                                        <td class="vs-col-actions vs-content-actions-cell">
                                             <div class="action-btns">
                                                 <button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-admin-ip-proxy-test"
                                                         data-user-id="<?php echo (int) $owner['userid']; ?>"

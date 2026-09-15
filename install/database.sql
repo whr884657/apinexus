@@ -104,7 +104,10 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('site_icp1', ''),
 ('site_gongan1', ''),
 ('register_policy', '{"email_suffixes":[]}'),
+-- register_enabled：1全部开启 2全部关闭 3仅普通用户 4仅开发者
 ('register_enabled', '1'),
+-- apiorder：0随机（默认）1按分类排序权重
+('apiorder', '0'),
 ('register_email_verify', '1'),
 ('oauth_config', '{"qq":{"enabled":false,"app_id":"","app_key":""},"gitee":{"enabled":false,"client_id":"","client_secret":""}}'),
 ('mail_enabled', '0'),
@@ -181,6 +184,10 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('panelmonitor_provider', ''),
 ('panelmonitor_baseurl', ''),
 ('panelmonitor_apikey', ''),
+('redis_host', '127.0.0.1'),
+('redis_port', '6379'),
+('redis_password', ''),
+('redis_database', '0'),
 ('redis_prefix', 'apinexus:'),
 ('install_done', '1');
 

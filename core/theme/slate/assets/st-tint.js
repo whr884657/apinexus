@@ -137,6 +137,23 @@
         document.querySelectorAll('.st-tint__swatch').forEach(function (el) {
             el.classList.toggle('is-on', el.getAttribute('data-tint') === preset.id);
         });
+
+        /* 公告弹窗挂 body，须同步 accent 等变量（E316） */
+        document.querySelectorAll('.st-announce-modal').forEach(function (modal) {
+            modal.style.setProperty('--st-accent', preset.accent);
+            modal.style.setProperty('--st-accent-h', preset.accentH);
+            modal.style.setProperty('--st-line', preset.border);
+            modal.style.setProperty('--st-card', '#ffffff');
+            modal.style.setProperty('--st-footer-bg', preset.bgHi || '#f4faf7');
+        });
+        /* 公共 VsModal 主按钮：写到 html，避免挂 body 后仍吃到壳层黑主色 */
+        if (!isUserCenter) {
+            document.documentElement.style.setProperty('--vs-primary', preset.accent);
+            document.documentElement.style.setProperty('--vs-primary-hover', preset.accentH);
+        }
+        if (typeof window.stSyncAnnounceModalTokens === 'function') {
+            try { window.stSyncAnnounceModalTokens(); } catch (e) { /* ignore */ }
+        }
     }
 
     function currentId() {

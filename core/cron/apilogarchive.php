@@ -31,8 +31,8 @@ if (!ApiLogArchive::validateCronKey($key)) {
     exit;
 }
 
-@set_time_limit(300);
-$result = ApiLogArchive::runOnce();
+@set_time_limit(600);
+$result = ApiLogArchive::run();
 $code = !empty($result['ok']) ? 1 : 0;
 if ($code !== 1) {
     http_response_code(500);

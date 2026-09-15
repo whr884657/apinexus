@@ -585,15 +585,21 @@
         });
     }
 
-    function bindRedisPrefixForm() {
-        var form = document.getElementById('redisPrefixForm');
+    function bindRedisSettingsForm() {
+        var form = document.getElementById('redisSettingsForm');
         if (!form) {
             return;
         }
         var forceEl = document.getElementById('redisPrefixForce');
         var conflictEl = document.getElementById('redisPrefixConflict');
         var checkBtn = document.getElementById('redisPrefixCheckBtn');
+        var testBtn = document.getElementById('redisTestBtn');
         var input = document.getElementById('settings_redis_prefix');
+        var pwdInput = document.getElementById('settings_redis_password');
+        var clearEl = document.getElementById('settings_redis_clear_password');
+        var hostEl = document.getElementById('settings_redis_host');
+        var portEl = document.getElementById('settings_redis_port');
+        var dbEl = document.getElementById('settings_redis_database');
 
         function setConflictTip(text, isBad) {
             if (!conflictEl) {
@@ -607,6 +613,16 @@
             conflictEl.hidden = false;
             conflictEl.textContent = text;
             conflictEl.style.color = isBad ? '#b91c1c' : '';
+        }
+
+        function appendConnFields(fd) {
+            fd.append('redis_host', hostEl ? hostEl.value : '127.0.0.1');
+            fd.append('redis_port', portEl ? portEl.value : '6379');
+            fd.append('redis_database', dbEl ? dbEl.value : '0');
+            fd.append('redis_password', pwdInput ? pwdInput.value : '');
+            if (clearEl && clearEl.checked) {
+                fd.append('clear_password', '1');
+            }
         }
 
         function runCheck() {
@@ -623,11 +639,35 @@
             });
         }
 
+        function runTest() {
+            var fd = new FormData();
+            fd.append('action', 'test_redis_connection');
+            appendConnFields(fd);
+            return window.VS.postForm(fd);
+        }
+
         if (checkBtn) {
             checkBtn.addEventListener('click', function () {
                 checkBtn.disabled = true;
                 runCheck().finally(function () {
                     checkBtn.disabled = false;
+                });
+            });
+        }
+
+        if (testBtn) {
+            testBtn.addEventListener('click', function () {
+                testBtn.disabled = true;
+                runTest().then(function (data) {
+                    if (data.code === 1) {
+                        showFlash(data.msg || 'Redis 连接成功', 'success');
+                    } else {
+                        showFlash(data.msg || 'Redis 连接失败', 'error');
+                    }
+                }).catch(function () {
+                    showFlash('网络异常，请稍后重试', 'error');
+                }).finally(function () {
+                    testBtn.disabled = false;
                 });
             });
         }
@@ -642,6 +682,24 @@
                     showFlash(data.msg || '已保存', 'success');
                     if (input && data.prefix) {
                         input.value = data.prefix;
+                    }
+                    if (pwdInput) {
+                        pwdInput.value = '';
+                        pwdInput.placeholder = data.has_password
+                            ? '已设置，留空不修改'
+                            : '无密码请留空';
+                    }
+                    if (clearEl) {
+                        clearEl.checked = false;
+                    }
+                    if (hostEl && data.host) {
+                        hostEl.value = data.host;
+                    }
+                    if (portEl && data.port) {
+                        portEl.value = String(data.port);
+                    }
+                    if (dbEl && typeof data.database !== 'undefined') {
+                        dbEl.value = String(data.database);
                     }
                     setConflictTip('', false);
                     return;
@@ -670,6 +728,15 @@
                                 if (input && data2.prefix) {
                                     input.value = data2.prefix;
                                 }
+                                if (pwdInput) {
+                                    pwdInput.value = '';
+                                    pwdInput.placeholder = data2.has_password
+                                        ? '已设置，留空不修改'
+                                        : '无密码请留空';
+                                }
+                                if (clearEl) {
+                                    clearEl.checked = false;
+                                }
                                 setConflictTip('', false);
                             } else {
                                 showFlash(data2.msg || '保存失败', 'error');
@@ -690,13 +757,50 @@
         });
     }
 
+    /**
+     * 注册策略：总闸「开放注册」= 全选普通用户 + 开发者
+     */
+    function bindRegisterRoleSelectAll() {
+        var master = document.getElementById('registerEnabledMaster');
+        var allowUser = document.getElementById('registerAllowUser');
+        var allowDev = document.getElementById('registerAllowDeveloper');
+        if (!master || !allowUser || !allowDev) {
+            return;
+        }
+
+        var syncing = false;
+
+        function syncMasterFromChildren() {
+            if (syncing) {
+                return;
+            }
+            syncing = true;
+            master.checked = allowUser.checked && allowDev.checked;
+            syncing = false;
+        }
+
+        master.addEventListener('change', function () {
+            if (syncing) {
+                return;
+            }
+            syncing = true;
+            allowUser.checked = master.checked;
+            allowDev.checked = master.checked;
+            syncing = false;
+        });
+
+        allowUser.addEventListener('change', syncMasterFromChildren);
+        allowDev.addEventListener('change', syncMasterFromChildren);
+        syncMasterFromChildren();
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
 
-        ['siteForm', 'registerForm', 'apikeySettingsForm', 'captchaForm', 'checkinForm', 'oauthForm', 'mailForm', 'testMailForm', 'apilogForm', 'dashboardForm', 'aiForm', 'iplocForm'].forEach(function (id) {
+        ['siteForm', 'registerForm', 'apikeySettingsForm', 'captchaForm', 'checkinForm', 'oauthForm', 'mailForm', 'testMailForm', 'apilogForm', 'apiorderForm', 'dashboardForm', 'aiForm', 'iplocForm'].forEach(function (id) {
             bindAjaxForm(document.getElementById(id));
         });
-        bindRedisPrefixForm();
+        bindRedisSettingsForm();
         bindApilogCron();
         bindAiProvider();
         bindAiListModels();
@@ -705,6 +809,7 @@
         bindIplocExtras();
         bindPanelMonitorTest();
         bindCopyButtons();
+        bindRegisterRoleSelectAll();
 
         var siteExtra = document.getElementById('siteExtraForm');
         if (siteExtra) {

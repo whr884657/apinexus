@@ -18,6 +18,146 @@ class RedisService
     /** 前缀最大长度（含末尾冒号） */
     const PREFIX_MAX_LEN = 48;
 
+    /** Redis 逻辑库号上限（含）：0～15 共 16 个 */
+    const DATABASE_MAX = 15;
+
+    /**
+     * 规范化 Redis 库号：仅允许 0～15 的整数；空串视为 0
+     *
+     * @param mixed $raw
+     * @return int|false
+     */
+    public static function normalizeDatabase($raw)
+    {
+        if ($raw === null) {
+            return 0;
+        }
+        $s = trim((string) $raw);
+        if ($s === '') {
+            return 0;
+        }
+        if (!preg_match('/^\d+$/', $s)) {
+            return false;
+        }
+        $n = (int) $s;
+        if ($n < 0 || $n > self::DATABASE_MAX) {
+            return false;
+        }
+        return $n;
+    }
+
+    /**
+     * 规范化 Redis 主机：主机名或 IP；拒绝 URL/空白/控制字符
+     *
+     * @param mixed $raw
+     * @return string|false
+     */
+    public static function normalizeHost($raw)
+    {
+        $host = trim((string) $raw);
+        if ($host === '') {
+            return '127.0.0.1';
+        }
+        if (strlen($host) > 253) {
+            return false;
+        }
+        // 禁止写成 redis:// 或带路径；仅主机名/IP
+        if (preg_match('#[:/\\\\\\s\\x00-\\x1f\\x7f]#', $host)) {
+            return false;
+        }
+        return $host;
+    }
+
+    /**
+     * 用草稿参数测连 Redis（不写 Config；供安装向导 / 设置页）
+     *
+     * @param array $draft host? port? password? database?
+     * @return array{ok:bool,msg:string,database?:int}
+     */
+    public static function testDraftConnection(array $draft)
+    {
+        if (!self::extensionLoaded()) {
+            return array('ok' => false, 'msg' => 'PHP Redis 扩展未安装');
+        }
+
+        $host = self::normalizeHost(isset($draft['host']) ? $draft['host'] : '127.0.0.1');
+        if ($host === false) {
+            return array('ok' => false, 'msg' => 'Redis 主机无效');
+        }
+        $port = (int) (isset($draft['port']) ? $draft['port'] : 6379);
+        if ($port <= 0 || $port > 65535) {
+            return array('ok' => false, 'msg' => 'Redis 端口无效');
+        }
+        $database = self::normalizeDatabase(isset($draft['database']) ? $draft['database'] : 0);
+        if ($database === false) {
+            return array('ok' => false, 'msg' => 'Redis 库号须为 0～15 的整数');
+        }
+        $password = isset($draft['password']) ? (string) $draft['password'] : '';
+
+        try {
+            $redis = self::openClient($host, $port, $password, $database);
+            $pong = $redis->ping();
+            try {
+                $redis->close();
+            } catch (Exception $eClose) {
+                // ignore
+            }
+            $ok = ($pong === true || $pong === '+PONG' || $pong === 'PONG');
+            if (!$ok) {
+                return array('ok' => false, 'msg' => 'Redis 已连接但 PING 异常');
+            }
+            return array(
+                'ok' => true,
+                'msg' => 'Redis 连接成功（db' . $database . '）',
+                'database' => $database,
+            );
+        } catch (Exception $e) {
+            $raw = $e->getMessage();
+            // 勿把密码拼进对外文案
+            if (stripos($raw, 'auth') !== false || stripos($raw, 'NOAUTH') !== false || stripos($raw, 'invalid password') !== false) {
+                return array('ok' => false, 'msg' => 'Redis 认证失败，请检查密码');
+            }
+            return array('ok' => false, 'msg' => 'Redis 连接失败：' . $raw);
+        }
+    }
+
+    /**
+     * 保存 Redis 连接相关配置（前缀仍走 savePrefixConfig）
+     *
+     * @param array $input host, port, database, password?, clear_password?
+     * @return array{ok:bool,msg:string}
+     */
+    public static function saveConnectionSettings(array $input)
+    {
+        $host = self::normalizeHost(isset($input['host']) ? $input['host'] : '');
+        if ($host === false) {
+            return array('ok' => false, 'msg' => 'Redis 主机无效');
+        }
+        $port = (int) (isset($input['port']) ? $input['port'] : 6379);
+        if ($port <= 0 || $port > 65535) {
+            return array('ok' => false, 'msg' => 'Redis 端口无效');
+        }
+        $database = self::normalizeDatabase(isset($input['database']) ? $input['database'] : 0);
+        if ($database === false) {
+            return array('ok' => false, 'msg' => 'Redis 库号须为 0～15 的整数');
+        }
+
+        $clearPassword = !empty($input['clear_password']);
+        $passwordIn = isset($input['password']) ? (string) $input['password'] : '';
+        if ($clearPassword) {
+            Config::set(self::CONFIG_PASSWORD, '');
+        } elseif ($passwordIn !== '') {
+            Config::set(self::CONFIG_PASSWORD, $passwordIn);
+        }
+        // 密码留空且未勾选清除 → 保持原值
+
+        Config::set(self::CONFIG_HOST, $host);
+        Config::set(self::CONFIG_PORT, (string) $port);
+        Config::set(self::CONFIG_DATABASE, (string) $database);
+
+        return array('ok' => true, 'msg' => 'Redis 连接参数已保存');
+    }
+
     /**
      * @return bool
      */
@@ -78,7 +218,7 @@ class RedisService
 
         $limit = max(1, min(500, (int) $limit));
         try {
-            $count = (int) self::withClient(function (Redis $redis) use ($prefix, $limit) {
+            $count = (int) self::withClient(function ($redis) use ($prefix, $limit) {
                 $n = 0;
                 $it = null;
                 $pattern = $prefix . '*';
@@ -182,7 +322,7 @@ class RedisService
         }
 
         try {
-            $deleted = (int) self::withClient(function (Redis $redis) use ($space) {
+            $deleted = (int) self::withClient(function ($redis) use ($space) {
                 $n = 0;
                 $it = null;
                 $pattern = $space . '*';
@@ -281,7 +421,7 @@ class RedisService
         }
 
         try {
-            return self::withClient(function (Redis $redis) {
+            return self::withClient(function ($redis) {
                 $pong = $redis->ping();
                 return ($pong === true || $pong === '+PONG' || $pong === 'PONG');
             });
@@ -291,7 +431,7 @@ class RedisService
     }
 
     /**
-     * @param callable $callback function(Redis $redis)
+     * @param callable $callback function(object $redis)
      * @return mixed
      */
     public static function withClient($callback)
@@ -393,8 +533,8 @@ class RedisService
             $port = 6379;
         }
 
-        $database = (int) Config::get(self::CONFIG_DATABASE, '0');
-        if ($database < 0) {
+        $database = self::normalizeDatabase(Config::get(self::CONFIG_DATABASE, '0'));
+        if ($database === false) {
             $database = 0;
         }
 
@@ -426,7 +566,7 @@ class RedisService
         }
 
         try {
-            $version = self::withClient(function (Redis $redis) {
+            $version = self::withClient(function ($redis) {
                 $info = $redis->info();
                 return is_array($info) && isset($info['redis_version']) ? (string) $info['redis_version'] : '';
             });
@@ -478,7 +618,7 @@ class RedisService
         RedisCache::maintainKeyspace();
 
         try {
-            self::withClient(function (Redis $redis) use (&$snapshot, $config) {
+            self::withClient(function ($redis) use (&$snapshot, $config) {
                 $snapshot['connected'] = true;
                 $snapshot['ok'] = true;
 
@@ -526,11 +666,11 @@ class RedisService
     }
 
     /**
-     * @param Redis  $redis
+     * @param object $redis
      * @param string $pattern
      * @return array{count:int,bytes:int}
      */
-    private static function scanKeyStats(Redis $redis, $pattern)
+    private static function scanKeyStats($redis, $pattern)
     {
         $count = 0;
         $bytes = 0;
@@ -560,11 +700,11 @@ class RedisService
     /**
      * 清理过期限流键并在超出上限时淘汰最旧键
      *
-     * @param Redis $redis
-     * @param int   $maxKeys
+     * @param object $redis
+     * @param int    $maxKeys
      * @return int 删除数量
      */
-    public static function pruneRateLimitKeys(Redis $redis, $maxKeys)
+    public static function pruneRateLimitKeys($redis, $maxKeys)
     {
         $maxKeys = max(100, (int) $maxKeys);
         $space = self::keyspacePrefix(null);
@@ -634,36 +774,64 @@ class RedisService
     }
 
     /**
-     * @return Redis
+     * @param string $host
+     * @param int    $port
+     * @param string $password
+     * @param int    $database
+     * @return object phpredis 客户端（勿在签名写死 Redis，见 E226）
      * @throws Exception
      */
-    private static function connectClient()
+    private static function openClient($host, $port, $password, $database)
     {
         if (!self::extensionLoaded()) {
             throw new Exception('PHP Redis 扩展未安装');
         }
 
-        $config = self::connectionConfig();
-        $host = $config['host'] !== '' ? $config['host'] : '127.0.0.1';
-
-        $redis = new Redis();
-        $connected = @$redis->connect($host, $config['port'], 2.0);
-        if (!$connected) {
-            throw new Exception('无法连接 Redis（' . $host . ':' . $config['port'] . '）');
+        $host = self::normalizeHost($host);
+        if ($host === false) {
+            throw new Exception('Redis 主机无效');
+        }
+        $port = (int) $port;
+        if ($port <= 0 || $port > 65535) {
+            $port = 6379;
+        }
+        $database = self::normalizeDatabase($database);
+        if ($database === false) {
+            throw new Exception('Redis 库号须为 0～15 的整数');
         }
 
-        $password = trim((string) Config::get(self::CONFIG_PASSWORD, ''));
+        // 动态类名：避免 IDE 假 stub / 硬类型 Redis 触发 class_exists 误判（E226）
+        $redisClass = 'Redis';
+        $redis = new $redisClass();
+        $connected = @$redis->connect($host, $port, 2.0);
+        if (!$connected) {
+            throw new Exception('无法连接 Redis（' . $host . ':' . $port . '）');
+        }
+
+        $password = (string) $password;
         if ($password !== '') {
             if (!$redis->auth($password)) {
                 throw new Exception('Redis 认证失败');
             }
         }
 
-        if (!$redis->select($config['database'])) {
-            throw new Exception('无法选择 Redis 数据库 db' . $config['database']);
+        if (!$redis->select($database)) {
+            throw new Exception('无法选择 Redis 数据库 db' . $database);
         }
 
         return $redis;
+    }
+
+    /**
+     * @return object
+     * @throws Exception
+     */
+    private static function connectClient()
+    {
+        $config = self::connectionConfig();
+        $host = $config['host'] !== '' ? $config['host'] : '127.0.0.1';
+        $password = trim((string) Config::get(self::CONFIG_PASSWORD, ''));
+        return self::openClient($host, $config['port'], $password, $config['database']);
     }
 
     /**

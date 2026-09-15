@@ -1828,6 +1828,18 @@ select.vs-input.vs-select {
     color: var(--vs-text-secondary);
 }
 
+/* 表头与单元格对齐：数量列居中、操作列右对齐（th/td 同向，避免「操作」左对齐而按钮右贴） */
+.vs-table .vs-col-num {
+    text-align: center;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.vs-table .vs-col-actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
 .vs-table__actions {
     display: flex;
     align-items: center;
@@ -5828,13 +5840,135 @@ select.vs-input.vs-select {
     line-height: 30px !important;
     box-sizing: border-box !important;
 }
-/* 积分变动：搜索下一行两大类（电脑/手机同构；按钮样式同日志筛选） */
-.vs-points-toolbar {
-    flex-direction: column;
-    align-items: stretch;
+/* 积分变动：标题行小搜索 + 内容区分段筛选（v13.26.41） */
+.vs-content__head:has(.vs-finance-head-actions--with-search) {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+}
+.vs-content__head:has(.vs-finance-head-actions--with-search) .vs-content__title {
+    flex: 0 0 auto;
+}
+.vs-content__head:has(.vs-finance-head-actions--with-search) .vs-content__actions {
+    flex: 0 1 auto;
+    margin-left: auto;
+    min-width: 0;
+    max-width: min(420px, 72%);
+}
+.vs-finance-head-actions--with-search {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
     gap: 8px;
+    max-width: 100%;
+    min-width: 0;
+}
+.vs-finance-head-actions--with-search .vs-points-head-search {
+    flex: 0 1 auto;
+    min-width: 0;
+    width: auto;
+    max-width: 240px;
+}
+.vs-finance-head-actions--with-search .vs-points-head-search .vs-finance-search__input {
+    flex: 1 1 auto;
+    width: 148px;
+    min-width: 110px;
+    max-width: 168px;
+}
+.vs-finance-head-actions--with-search .vs-refresh-btn {
+    flex: 0 0 26px;
 }
 
+.vs-points-toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+.vs-points-seg {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: var(--vs-btn-radius, 10px);
+    overflow: hidden;
+    background: #f8fafc;
+}
+.vs-points-seg__btn {
+    appearance: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--vs-text, #0f172a);
+    height: 32px;
+    min-height: 32px;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 32px;
+    cursor: pointer;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+.vs-points-seg__btn + .vs-points-seg__btn {
+    border-left: 1px solid var(--vs-border, #e5e7eb);
+}
+.vs-points-seg__btn:hover {
+    background: rgba(15, 23, 42, 0.04);
+}
+.vs-points-seg__btn.is-active {
+    background: #111;
+    color: #fff;
+}
+.vs-points-seg__btn.is-active:hover {
+    background: #111;
+}
+.vs-points-seg__btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+@media (min-width: 901px) {
+    .vs-points-toolbar {
+        margin-top: 0;
+    }
+}
+
+@media (max-width: 900px) {
+    .vs-content__head:has(.vs-finance-head-actions--with-search) .vs-content__actions {
+        max-width: 100%;
+        width: 100%;
+        margin-left: 0;
+    }
+    .vs-finance-head-actions--with-search {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .vs-finance-head-actions--with-search .vs-points-head-search {
+        flex: 1 1 auto;
+        max-width: none;
+    }
+    .vs-finance-head-actions--with-search .vs-points-head-search .vs-finance-search__input {
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+    .vs-points-seg {
+        width: 100%;
+    }
+    .vs-points-seg__btn {
+        flex: 1 1 0;
+        text-align: center;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+}
+
+/* 旧版两大类满宽按钮（保留类名以免其它页误伤；积分页已改用 .vs-points-seg） */
 .vs-points-toolbar .vs-finance-search {
     flex: 1 1 auto;
     width: 100%;
@@ -5860,7 +5994,6 @@ select.vs-input.vs-select {
 }
 
 @media (min-width: 901px) {
-    /* 宽屏两大类不必拉满整行，保持分段控件观感 */
     .vs-points-toolbar .vs-finance-filters {
         max-width: 420px;
     }
@@ -7302,7 +7435,7 @@ select.vs-input.vs-select {
     }
 }
 
-/* 积分变动手机端：两大类按钮满宽均分（覆盖财务通用规则） */
+/* 积分变动手机端：分段满宽均分 */
 @media (max-width: 900px) {
     .vs-points-toolbar .vs-finance-filters {
         max-width: none;
@@ -7729,7 +7862,7 @@ select.vs-input.vs-select {
 
 /* 标题行工具栏（搜索 + 添加）— 挂在 .vs-content__actions */
 .vs-content__actions:has(.vs-api-list-toolbar) {
-    max-width: min(520px, 62%);
+    max-width: min(560px, 68%);
     min-width: 0;
 }
 
@@ -7755,8 +7888,8 @@ select.vs-input.vs-select {
     position: relative;
     flex: 1 1 auto;
     min-width: 0;
-    width: min(280px, 100%);
-    max-width: 320px;
+    width: auto;
+    max-width: 240px;
 }
 
 .vs-api-list-toolbar .vs-search-bar__input-wrap svg {
@@ -7785,10 +7918,24 @@ select.vs-input.vs-select {
     white-space: nowrap;
 }
 
-/* 状态/类型筛选：电脑显示，手机隐藏（空间紧，搜索足够；v9.1.0） */
+/* 状态/类型筛选：电脑显示；勿用 .vs-pick{width:100%} 盖住搜索（E306） */
 .vs-api-list-toolbar .vs-toolbar-filter,
-.vs-api-list-toolbar .vs-pick:has(.vs-toolbar-filter) {
+.vs-api-list-toolbar .vs-pick:has(.vs-toolbar-filter),
+.vs-content__actions .vs-api-list-toolbar .vs-pick {
+    flex: 0 0 auto;
     flex-shrink: 0;
+    width: auto !important;
+    min-width: 112px;
+    max-width: 148px;
+    position: relative;
+    z-index: 1;
+}
+
+.vs-api-list-toolbar .vs-pick .vs-pick__btn {
+    height: 36px;
+    min-height: 36px;
+    box-sizing: border-box;
+    font-size: 13px;
 }
 
 #apiListPage .method-badge {
@@ -8856,6 +9003,22 @@ select.vs-input.vs-select {
     color: var(--vs-text, #111);
     white-space: nowrap;
     flex-shrink: 0;
+}
+
+#apiCategoriesPage .cat-card__metrics {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+#apiCategoriesPage .cat-card__sort {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--vs-text-secondary, #6b7280);
+    white-space: nowrap;
 }
 
 #apiCategoriesPage .cat-card__desc {

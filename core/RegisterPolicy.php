@@ -1,9 +1,17 @@
 <?php
 /**
  * 文件：core/RegisterPolicy.php
- * 作用：用户注册策略（开放开关、邮箱验证、邮箱后缀限制等）
+ * 作用：用户注册策略（单键模式、按身份开放、邮箱验证、邮箱后缀限制）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
+ *
+ * register_enabled 单键数字：
+ *   1 = 全部开启（普通用户 + 开发者）
+ *   2 = 全部关闭
+ *   3 = 仅普通用户
+ *   4 = 仅开发者
+ *
+ * 后台「开放注册」勾选态 = 模式 1（全选）；仅开一种时总闸未勾选但仍可注册该身份。
  */
 
 class RegisterPolicy
@@ -12,14 +20,117 @@ class RegisterPolicy
     const KEY_ENABLED = 'register_enabled';
     const KEY_EMAIL_VERIFY = 'register_email_verify';
 
+    /** 全部开启 */
+    const MODE_ALL_OPEN = '1';
+    /** 全部关闭 */
+    const MODE_ALL_CLOSED = '2';
+    /** 仅普通用户 */
+    const MODE_USER_ONLY = '3';
+    /** 仅开发者 */
+    const MODE_DEVELOPER_ONLY = '4';
+
     /**
-     * 是否开放用户注册（默认开放）
+     * 当前注册模式（1～4）
+     *
+     * @return string
+     */
+    public static function getMode()
+    {
+        $raw = (string) Config::get(self::KEY_ENABLED, self::MODE_ALL_OPEN);
+        if ($raw === '0') {
+            return self::MODE_ALL_CLOSED;
+        }
+        if ($raw === self::MODE_ALL_OPEN
+            || $raw === self::MODE_ALL_CLOSED
+            || $raw === self::MODE_USER_ONLY
+            || $raw === self::MODE_DEVELOPER_ONLY) {
+            return $raw;
+        }
+        return self::MODE_ALL_OPEN;
+    }
+
+    /**
+     * 是否至少开放一种身份注册（登录页「立即注册」、强访注册页用此判断）
      *
      * @return bool
      */
     public static function isOpen()
     {
-        return Config::get(self::KEY_ENABLED, '1') === '1';
+        return self::getMode() !== self::MODE_ALL_CLOSED;
+    }
+
+    /**
+     * 两种身份是否都开放（后台总闸勾选态）
+     *
+     * @return bool
+     */
+    public static function isFullyOpen()
+    {
+        return self::getMode() === self::MODE_ALL_OPEN;
+    }
+
+    /**
+     * 是否允许注册为普通用户
+     *
+     * @return bool
+     */
+    public static function allowsUserRole()
+    {
+        $mode = self::getMode();
+        return $mode === self::MODE_ALL_OPEN || $mode === self::MODE_USER_ONLY;
+    }
+
+    /**
+     * 是否允许注册为开发者
+     *
+     * @return bool
+     */
+    public static function allowsDeveloperRole()
+    {
+        $mode = self::getMode();
+        return $mode === self::MODE_ALL_OPEN || $mode === self::MODE_DEVELOPER_ONLY;
+    }
+
+    /**
+     * 指定身份是否允许注册
+     *
+     * @param string $role user|developer
+     * @return bool
+     */
+    public static function allowsRole($role)
+    {
+        $role = UserRole::normalize($role);
+        if ($role === UserRole::ROLE_DEVELOPER) {
+            return self::allowsDeveloperRole();
+        }
+        return self::allowsUserRole();
+    }
+
+    /**
+     * 注册页是否显示身份分段滑块（仅两种都开放时）
+     *
+     * @return bool
+     */
+    public static function shouldShowRoleSegment()
+    {
+        return self::getMode() === self::MODE_ALL_OPEN;
+    }
+
+    /**
+     * 仅开放一种身份时返回固定 role；两种都开或都关返回 null
+     *
+     * @return string|null user|developer|null
+     */
+    public static function fixedRegisterRole()
+    {
+        $mode = self::getMode();
+        if ($mode === self::MODE_USER_ONLY) {
+            return UserRole::ROLE_USER;
+        }
+        if ($mode === self::MODE_DEVELOPER_ONLY) {
+            return UserRole::ROLE_DEVELOPER;
+        }
+        return null;
     }
 
     /**
@@ -43,6 +154,16 @@ class RegisterPolicy
     }
 
     /**
+     * 某类身份未开放时的对外文案
+     *
+     * @return string
+     */
+    public static function roleClosedMessage()
+    {
+        return '当前未开放此类账号注册';
+    }
+
+    /**
      * 开放注册时返回 null；关闭时返回错误文案
      *
      * @return string|null
@@ -50,6 +171,58 @@ class RegisterPolicy
     public static function assertOpen()
     {
         return self::isOpen() ? null : self::closedMessage();
+    }
+
+    /**
+     * 指定身份允许时返回 null；否则返回错误文案（含总关闭）
+     *
+     * @param string $role
+     * @return string|null
+     */
+    public static function assertRoleAllowed($role)
+    {
+        $closed = self::assertOpen();
+        if ($closed !== null) {
+            return $closed;
+        }
+        if (!self::allowsRole($role)) {
+            return self::roleClosedMessage();
+        }
+        return null;
+    }
+
+    /**
+     * 由两个身份勾选推导模式并写入单键 register_enabled
+     *
+     * @param bool $allowUser
+     * @param bool $allowDeveloper
+     * @return void
+     * @throws Exception
+     */
+    public static function saveRoleAllows($allowUser, $allowDeveloper)
+    {
+        Config::set(self::KEY_ENABLED, self::modeFromAllows($allowUser, $allowDeveloper));
+    }
+
+    /**
+     * 勾选态 → 模式数字
+     *
+     * @param bool $allowUser
+     * @param bool $allowDeveloper
+     * @return string 1|2|3|4
+     */
+    public static function modeFromAllows($allowUser, $allowDeveloper)
+    {
+        if ($allowUser && $allowDeveloper) {
+            return self::MODE_ALL_OPEN;
+        }
+        if ($allowUser) {
+            return self::MODE_USER_ONLY;
+        }
+        if ($allowDeveloper) {
+            return self::MODE_DEVELOPER_ONLY;
+        }
+        return self::MODE_ALL_CLOSED;
     }
 
     /**

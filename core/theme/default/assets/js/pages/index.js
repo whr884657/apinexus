@@ -392,15 +392,17 @@ function escapeApiModalText(s) {
 
 function renderAPI(data) {
     const container = document.getElementById('api-list');
-    // 首页接口目录：纯随机展示（禁止按调用量排序）
-    const shuffled = data.slice();
-    for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        const tmp = shuffled[i];
-        shuffled[i] = shuffled[j];
-        shuffled[j] = tmp;
+    // apiorder=1：按服务端有序底稿取前 8；否则首页精选再临时打乱
+    let displaySource = data.slice();
+    if (Number(window.VS_APIORDER) !== 1) {
+        for (let i = displaySource.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const tmp = displaySource[i];
+            displaySource[i] = displaySource[j];
+            displaySource[j] = tmp;
+        }
     }
-    const displayData = shuffled.slice(0, 8);
+    const displayData = displaySource.slice(0, 8);
 
     if (displayData.length === 0) {
         container.innerHTML = `<div class="col-span-full text-center py-12" style="color: var(--text-muted);">没有找到相关接口</div>`;
@@ -543,13 +545,18 @@ function renderHomePartners(list) {
     }).join('');
 }
 
-function bootHomeCatalog() {
+function bootHomeCatalog(waitTry) {
+    waitTry = Number(waitTry) || 0;
     var listEl = document.getElementById('api-list');
     if (listEl && window.VS && typeof VS.setLoading === 'function') {
         VS.setLoading(listEl, '正在加载接口');
     }
     var needPartners = !!document.getElementById('home-partners');
     if (!window.VS || typeof VS.fetchFrontCatalog !== 'function') {
+        if (waitTry < 50) {
+            setTimeout(function () { bootHomeCatalog(waitTry + 1); }, 40);
+            return;
+        }
         if (listEl) {
             listEl.innerHTML = '<div class="col-span-full text-center py-12" style="color: var(--text-muted);">目录加载失败，请刷新重试</div>';
         }
@@ -558,6 +565,7 @@ function bootHomeCatalog() {
     VS.fetchFrontCatalog({ partners: needPartners }).then(function (data) {
         apiData = Array.isArray(data.apiData) ? data.apiData : [];
         categoryNames = data.categoryNames && typeof data.categoryNames === 'object' ? data.categoryNames : {};
+        window.VS_APIORDER = Number(data.apiorder) === 1 ? 1 : 0;
         applyFilters();
         if (needPartners) {
             renderHomePartners(data.partners || []);
@@ -806,7 +814,12 @@ function renderModalList() {
             groups[api.category].push(api);
         });
 
-        Object.keys(groups).sort().forEach(catKey => {
+        // 有序模式：保持接口出现顺序（分类权重）；随机模式：分类名按字母排
+        let catKeys = Object.keys(groups);
+        if (Number(window.VS_APIORDER) !== 1) {
+            catKeys = catKeys.sort();
+        }
+        catKeys.forEach(catKey => {
             const titleDiv = document.createElement('div');
             titleDiv.className = 'api-group-title';
             titleDiv.textContent = categoryNames[catKey] || catKey;

@@ -70,7 +70,7 @@ if (!$licenseAccepted) {
     }
 }
 
-// ── POST：测试数据库（AJAX，不刷新页面）────────────────────
+// ── POST：测试 MySQL + Redis（同一按钮、同一请求）────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'test_db') {
     $dbConfig = array(
         'host'     => trim(isset($_POST['host']) ? $_POST['host'] : 'localhost'),
@@ -86,26 +86,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         AjaxResponse::error('请填写数据库用户名和数据库名');
     }
 
+    $redisPassword = isset($_POST['redis_password']) ? (string) $_POST['redis_password'] : '';
+    // 不回显密码：输入框留空时沿用本会话已测通的密码（与设置页空密保留策略一致）
+    if ($redisPassword === '' && isset($_SESSION['vs_install_redis_password'])) {
+        $redisPassword = (string) $_SESSION['vs_install_redis_password'];
+    }
+    $redisDbRaw = isset($_POST['redis_database']) ? $_POST['redis_database'] : '0';
+    $redisDatabase = RedisService::normalizeDatabase($redisDbRaw);
+    if ($redisDatabase === false) {
+        AjaxResponse::error('Redis 库号须为 0～15 的整数');
+    }
+
     $prefixRaw = isset($_POST['redis_prefix']) ? (string) $_POST['redis_prefix'] : '';
-    if (trim($prefixRaw) === '') {
-        $_SESSION['vs_install_redis_prefix'] = RedisService::DEFAULT_PREFIX;
-    } else {
-        $norm = RedisService::normalizePrefix($prefixRaw, true);
-        if ($norm === false) {
+    $hasRedisPassword = (trim($redisPassword) !== '');
+    if ($hasRedisPassword) {
+        if (trim($prefixRaw) === '') {
+            AjaxResponse::error('已填写 Redis 密码时，必须填写缓存键前缀');
+        }
+        $norm = RedisService::normalizePrefix($prefixRaw, false);
+        if ($norm === false || $norm === '') {
             AjaxResponse::error('缓存键前缀格式无效：仅允许字母、数字、下划线、连字符，并以冒号结尾');
         }
-        $_SESSION['vs_install_redis_prefix'] = $norm;
+    } else {
+        if (trim($prefixRaw) === '') {
+            $norm = RedisService::DEFAULT_PREFIX;
+        } else {
+            $norm = RedisService::normalizePrefix($prefixRaw, true);
+            if ($norm === false) {
+                AjaxResponse::error('缓存键前缀格式无效：仅允许字母、数字、下划线、连字符，并以冒号结尾');
+            }
+        }
     }
 
     try {
         Database::testConnection($dbConfig);
-        $_SESSION['vs_install_db'] = $dbConfig;
-        $_SESSION['vs_db_tested'] = true;
-        AjaxResponse::success('数据库连接成功！');
     } catch (Exception $e) {
         $_SESSION['vs_db_tested'] = false;
-        AjaxResponse::error($e->getMessage());
+        AjaxResponse::error('MySQL 连接失败：' . $e->getMessage());
     }
+
+    if (function_exists('session_write_close')) {
+        @session_write_close();
+    }
+
+    $redisTest = RedisService::testDraftConnection(array(
+        'host' => '127.0.0.1',
+        'port' => 6379,
+        'password' => $redisPassword,
+        'database' => $redisDatabase,
+    ));
+    if (empty($redisTest['ok'])) {
+        if (function_exists('session_status') && session_status() !== PHP_SESSION_ACTIVE) {
+            @session_start();
+        }
+        $_SESSION['vs_db_tested'] = false;
+        AjaxResponse::error(isset($redisTest['msg']) ? $redisTest['msg'] : 'Redis 连接失败');
+    }
+
+    if (function_exists('session_status') && session_status() !== PHP_SESSION_ACTIVE) {
+        @session_start();
+    }
+
+    $_SESSION['vs_install_db'] = $dbConfig;
+    $_SESSION['vs_install_redis_prefix'] = $norm;
+    $_SESSION['vs_install_redis_password'] = $redisPassword;
+    $_SESSION['vs_install_redis_database'] = $redisDatabase;
+    $_SESSION['vs_db_tested'] = true;
+    AjaxResponse::success('MySQL 与 Redis 均已连接成功');
 }
 
 // ── POST 处理 ──────────────────────────────────────────────
@@ -207,6 +254,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     Config::set(RedisService::CONFIG_PREFIX, $normPrefix);
 
+                    $redisPass = isset($_SESSION['vs_install_redis_password'])
+                        ? (string) $_SESSION['vs_install_redis_password']
+                        : '';
+                    Config::set(RedisService::CONFIG_PASSWORD, $redisPass);
+
+                    $redisDb = isset($_SESSION['vs_install_redis_database'])
+                        ? RedisService::normalizeDatabase($_SESSION['vs_install_redis_database'])
+                        : 0;
+                    if ($redisDb === false) {
+                        $redisDb = 0;
+                    }
+                    Config::set(RedisService::CONFIG_DATABASE, (string) $redisDb);
+                    Config::set(RedisService::CONFIG_HOST, '127.0.0.1');
+                    Config::set(RedisService::CONFIG_PORT, '6379');
+
                     if (class_exists('DatabaseMigrator') && defined('VS_VERSION')) {
                         DatabaseMigrator::seedAppliedUpTo(VS_VERSION);
                     }
@@ -219,6 +281,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['vs_db_tested'],
                     $_SESSION['vs_tables_created'],
                     $_SESSION['vs_install_redis_prefix'],
+                    $_SESSION['vs_install_redis_password'],
+                    $_SESSION['vs_install_redis_database'],
                     $_SESSION['vs_nginx_ack']
                 );
 
@@ -409,6 +473,12 @@ $dbTested = !empty($_SESSION['vs_db_tested']);
 $redisPrefixValue = isset($_SESSION['vs_install_redis_prefix'])
     ? (string) $_SESSION['vs_install_redis_prefix']
     : '';
+$redisPasswordValue = isset($_SESSION['vs_install_redis_password'])
+    ? (string) $_SESSION['vs_install_redis_password']
+    : '';
+$redisDatabaseValue = isset($_SESSION['vs_install_redis_database'])
+    ? (string) (int) $_SESSION['vs_install_redis_database']
+    : '0';
 $envChecks = ($step === 2) ? runEnvironmentCheck() : array();
 $envAllPass = true;
 foreach ($envChecks as $c) {
@@ -477,11 +547,10 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                     <div class="vs-alert vs-alert--warning" id="licenseGateHint">请先完成弹窗中的开源许可阅读与确认，方可继续安装。</div>
                 <?php endif; ?>
                 <div id="installNginxPanel"<?php echo $licenseAccepted ? '' : ' hidden'; ?>>
-                    <div class="vs-alert vs-alert--info">复制整段规则到站点伪静态配置中（推荐整站使用本段）。</div>
-                    <div class="vs-nginx-toolbar">
-                        <button type="button" class="vs-btn vs-btn--primary" id="nginxCopyBtn">一键复制</button>
+                    <div class="vs-nginx-code-wrap">
+                        <button type="button" class="vs-btn vs-btn--default vs-nginx-copy" id="nginxCopyBtn">复制</button>
+                        <pre class="vs-nginx-code" id="nginxSnippetPre"><?php echo vs_e($nginxSnippet); ?></pre>
                     </div>
-                    <pre class="vs-nginx-code" id="nginxSnippetPre"><?php echo vs_e($nginxSnippet); ?></pre>
                     <form method="post" action="" class="vs-form" id="nginxAckForm">
                         <input type="hidden" name="step" value="1">
                         <input type="hidden" name="action" value="next_step">
@@ -524,7 +593,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
 
             <?php elseif ($step === 3): ?>
                 <h2 class="vs-card-title">第三步：数据库配置</h2>
-                <p class="vs-card-desc">请填写 MySQL 数据库连接信息，然后测试连接。数据表前缀固定为 <code>vs_</code>，无需配置。</p>
+                <p class="vs-card-desc">请填写 MySQL 与 Redis 信息，点击「测试连接」将<strong>同时</strong>检测两者。数据表前缀固定为 <code>vs_</code>；Redis 默认连接 <code>127.0.0.1:6379</code>。</p>
                 <form method="post" action="" class="vs-form" id="dbForm">
                     <input type="hidden" name="step" value="3">
                     <div class="vs-form-grid">
@@ -542,23 +611,38 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                         </div>
                         <div class="vs-form-row">
                             <label class="vs-label">数据库密码</label>
-                            <input type="password" name="password" class="vs-input" value="<?php echo vs_e($dbConfig['password']); ?>" placeholder="数据库密码">
+                            <input type="password" name="password" class="vs-input" value="<?php echo vs_e($dbConfig['password']); ?>" placeholder="数据库密码" autocomplete="new-password">
                         </div>
                         <div class="vs-form-row">
                             <label class="vs-label">数据库名</label>
                             <input type="text" name="dbname" class="vs-input" value="<?php echo vs_e($dbConfig['dbname']); ?>" placeholder="apinexus" required>
                         </div>
                         <div class="vs-form-row">
-                            <label class="vs-label" for="redis_prefix">缓存键前缀（可选）</label>
+                            <label class="vs-label" for="redis_password">Redis 密码</label>
+                            <input type="password" name="redis_password" id="redis_password" class="vs-input"
+                                   value=""
+                                   placeholder="无密码请留空" autocomplete="new-password">
+                            <p class="vs-form-hint">Redis 未设置密码时留空；若已设置密码则必填，且须同时填写下方缓存键前缀。</p>
+                        </div>
+                        <div class="vs-form-row">
+                            <label class="vs-label" for="redis_database">Redis 库号</label>
+                            <input type="number" name="redis_database" id="redis_database" class="vs-input"
+                                   value="<?php echo vs_e($redisDatabaseValue); ?>"
+                                   min="0" max="15" step="1" inputmode="numeric"
+                                   placeholder="0">
+                            <p class="vs-form-hint">填写数字 0～15（共 16 个库），默认 0。不使用下拉选择。</p>
+                        </div>
+                        <div class="vs-form-row">
+                            <label class="vs-label" for="redis_prefix">缓存键前缀</label>
                             <input type="text" name="redis_prefix" id="redis_prefix" class="vs-input"
                                    value="<?php echo vs_e($redisPrefixValue === RedisService::DEFAULT_PREFIX ? '' : $redisPrefixValue); ?>"
                                    placeholder="默认 apinexus: ，例 site_a:">
-                            <p class="vs-form-hint">同一台服务器部署<strong>多套</strong>本系统且共用 Redis 时<strong>必须</strong>填写互不相同的前缀，否则站点数据会串缓存。仅部署一套时可留空使用默认值。</p>
+                            <p class="vs-form-hint">无 Redis 密码时可留空用默认前缀；有密码时必填。同机多套系统共用 Redis 时须互不相同。</p>
                         </div>
                     </div>
                     <div id="dbTestMessage" class="vs-alert" role="alert" hidden></div>
                     <div class="vs-form-actions" id="dbFormActions">
-                        <button type="button" class="vs-btn vs-btn--primary" id="testDbBtn">测试数据库连接</button>
+                        <button type="button" class="vs-btn vs-btn--primary" id="testDbBtn">测试连接</button>
                         <a href="?step=4" class="vs-btn vs-btn--primary" id="dbNextBtn" style="<?php echo $dbTested ? '' : 'display:none;'; ?>">下一步</a>
                     </div>
                 </form>

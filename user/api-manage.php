@@ -87,6 +87,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('ok', array('api' => ApiManager::formatRow($row)));
     }
 
+    if ($action === 'openapi_preview') {
+        $rate = OpenApiBuilder::assertPreviewRateLimit();
+        if ($rate !== true) {
+            AjaxResponse::error($rate);
+        }
+        $id = isset($_POST['api_id']) ? (int) $_POST['api_id'] : 0;
+        $base = null;
+        if ($id > 0) {
+            $owned = $assertOwner($id);
+            if (!is_array($owned)) {
+                AjaxResponse::error($owned);
+            }
+            $base = $owned;
+        }
+        $post = $payloadFromPost();
+        $json = OpenApiBuilder::jsonFromPreviewRequest($post, $base, true);
+        AjaxResponse::success('ok', array('openapi_json' => $json));
+    }
+
     if ($action === 'create') {
         if (!ApiManager::hasAuditColumn() || !ApiManager::hasRejectReasonColumn() || !ApiManager::hasProxyColumns()) {
             AjaxResponse::error('请先联系管理员完成系统升级后再提交接口');

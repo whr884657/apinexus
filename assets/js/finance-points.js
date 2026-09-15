@@ -44,11 +44,10 @@
     }
 
     function syncFilterButtons() {
-        document.querySelectorAll('.vs-points-filter').forEach(function (btn) {
+        document.querySelectorAll('.vs-points-seg__btn').forEach(function (btn) {
             var on = btn.getAttribute('data-bucket') === ledgerBucket;
             btn.classList.toggle('is-active', on);
-            btn.classList.toggle('vs-btn--primary', on);
-            btn.classList.toggle('vs-btn--default', !on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
     }
 
@@ -67,7 +66,7 @@
         if (searchBtn) searchBtn.disabled = !!disabled;
         if (searchInput) searchInput.disabled = !!disabled;
         if (pageSizeEl) pageSizeEl.disabled = !!disabled;
-        document.querySelectorAll('.vs-points-filter').forEach(function (btn) {
+        document.querySelectorAll('.vs-points-seg__btn').forEach(function (btn) {
             btn.disabled = !!disabled;
         });
     }
@@ -230,7 +229,7 @@
         });
     }
 
-    document.querySelectorAll('.vs-points-filter').forEach(function (btn) {
+    document.querySelectorAll('.vs-points-seg__btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var next = btn.getAttribute('data-bucket') === 'api' ? 'api' : 'account';
             if (next === ledgerBucket) {

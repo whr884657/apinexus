@@ -36,6 +36,12 @@
     font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
+/* 公共 VsModal / vs-btn 挂在 body：主色对齐主题二青绿（结构仍走 shell/modal.css） */
+body.vs-body:has(.st-root) {
+    --vs-primary: #24a66a;
+    --vs-primary-hover: #168855;
+}
+
 .st-root::before {
     content: '';
     position: fixed;
@@ -3452,6 +3458,19 @@ a.donate-sponsor-card:hover {
     word-break: break-word;
 }
 
+/* 请求参数 JSON / OpenAPI：最多约 16 行；表格不受限；无最小高度 */
+.st-detail-page #paramsJsonMode .code-content,
+.st-detail-page #paramsOpenApiMode .code-content {
+    max-height: calc(1.65em * 16 + 24px);
+    overflow: auto;
+}
+
+/* 返回示例：最多约 20 行；无最小高度 */
+.st-detail-page #responseSample {
+    max-height: calc(1.65em * 20 + 24px);
+    overflow: auto;
+}
+
 .st-detail-page .detail-empty-hint {
     margin: 0;
     color: var(--st-fg3);
@@ -3669,6 +3688,17 @@ a.donate-sponsor-card:hover {
     margin-bottom: 8px;
 }
 
+.st-detail-page .playground-response-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.st-detail-page #pgCopyBtn[hidden] {
+    display: none !important;
+}
+
 .st-detail-page .status-badge {
     font-size: 11px;
     padding: 2px 8px;
@@ -3835,57 +3865,74 @@ a.donate-sponsor-card:hover {
     font-weight: 600;
 }
 .st-announce-modal {
+    /* 挂到 body 后脱离 .st-root，须自带 token（防白底白字，E316） */
+    --st-accent: #24a66a;
+    --st-accent-h: #168855;
+    --st-fg: #1a1a2e;
+    --st-fg2: #555770;
+    --st-line: #d7e5dd;
+    --st-card: #ffffff;
+    --st-footer-bg: #f4faf7;
     display: none;
     position: fixed;
     inset: 0;
-    /* 对齐默认主题 home-announcement-modal；须高于页脚/顶栏，且勿困在 .st-wrap(z-index:1) 内 */
+    /* 对齐默认主题 home-announcement-modal z-index:500；须挂 body（E299） */
     z-index: 500;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    /* 对齐主题一：边距由卡片 width 承担，根层不加 padding */
+    padding: 0;
 }
 .st-announce-modal.is-open { display: flex; }
 body.st-announce-modal-open { overflow: hidden; }
 .st-announce-modal__mask {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, .58);
+    background: rgba(0, 0, 0, 0.65);
 }
 .st-announce-modal__card {
     position: relative;
-    z-index: 1;
     width: min(760px, calc(100% - 24px));
-    max-height: calc(85vh - 32px);
-    max-height: calc(85dvh - 32px);
+    background: var(--st-card, #ffffff);
+    border: 1px solid var(--st-line, #d7e5dd);
+    border-radius: 12px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: #fff;
-    border: 1px solid var(--st-line);
-    border-radius: 14px;
-    box-shadow: 0 22px 56px rgba(15, 23, 42, .28);
-    overflow: hidden;
-    isolation: isolate;
+    max-height: calc(85vh - 32px);
+    max-height: calc(85dvh - 32px);
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
 }
 .st-announce-modal__head {
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--st-line, #d7e5dd);
+    background: var(--st-card, #ffffff);
+    flex-shrink: 0;
     gap: 12px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--st-line);
-    background: #fff;
-    flex: 0 0 auto;
 }
-.st-announce-modal__title { margin: 0; font-size: 1rem; font-weight: 700; }
+.st-announce-modal__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--st-fg, #1a1a2e);
+}
 .st-announce-modal__close {
-    border: 1px solid var(--st-line);
-    border-radius: 8px;
+    border: 1px solid var(--st-line, #d7e5dd);
+    border-radius: 6px;
     background: transparent;
-    color: var(--st-fg2);
-    cursor: pointer;
+    color: var(--st-fg2, #555770);
+    padding: 0.35rem 0.65rem;
     font: inherit;
-    font-size: 13px;
-    padding: 4px 10px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.st-announce-modal__close:hover {
+    border-color: var(--st-accent, #24a66a);
+    color: var(--st-accent, #24a66a);
 }
 .st-announce-modal__body {
     flex: 1 1 auto;
@@ -3893,41 +3940,83 @@ body.st-announce-modal-open { overflow: hidden; }
     max-height: min(55vh, calc(100vh - 11rem));
     max-height: min(55vh, calc(100dvh - 11rem));
     overflow: auto;
-    padding: 16px;
-    font-size: 14px;
+    padding: 1rem;
     line-height: 1.75;
-    background: #fff;
-    color: var(--st-fg);
+    font-size: 14px;
+    color: var(--st-fg, #1a1a2e);
+    background: var(--st-card, #ffffff);
+    white-space: normal;
     word-break: break-word;
     -webkit-overflow-scrolling: touch;
 }
+.st-announce-modal__body h1,
+.st-announce-modal__body h2,
+.st-announce-modal__body h3,
+.st-announce-modal__body h4 {
+    margin: 0.75rem 0 0.45rem;
+    line-height: 1.45;
+    font-weight: 700;
+    color: var(--st-fg, #1a1a2e);
+}
+.st-announce-modal__body p { margin: 0.45rem 0; }
+.st-announce-modal__body ul,
+.st-announce-modal__body ol {
+    margin: 0.45rem 0;
+    padding-left: 1.1rem;
+}
+.st-announce-modal__body a {
+    color: var(--st-accent, #24a66a);
+    text-decoration: underline;
+}
+.st-announce-modal__body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 0.5rem 0;
+    display: block;
+}
 .st-announce-modal__footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--st-line, #d7e5dd);
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    padding: 12px 16px;
-    border-top: 1px solid var(--st-line);
-    background: #f8faf9;
-    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    background: var(--st-footer-bg, #f4faf7);
+    flex-shrink: 0;
 }
+/* 结构对齐主题一按钮尺寸；配色走 slate 青绿（强制实色回退，防变量失效） */
 .st-announce-btn {
-    min-height: 34px;
-    padding: 0 14px;
-    border-radius: 999px;
-    border: 1px solid var(--st-line);
-    background: #fff;
-    color: var(--st-fg);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
     cursor: pointer;
+    border-radius: 8px;
+    padding: 0.5rem 1.1rem;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    min-height: 0;
+    line-height: 1.25;
+}
+.st-announce-btn--ghost {
+    border: 1px solid var(--st-line, #d7e5dd) !important;
+    background: #ffffff !important;
+    color: var(--st-fg, #1a1a2e) !important;
+}
+.st-announce-btn--ghost:hover {
+    border-color: var(--st-accent, #24a66a) !important;
+    color: var(--st-accent, #24a66a) !important;
+    background: #ffffff !important;
 }
 .st-announce-btn--primary {
-    background: var(--st-accent);
-    border-color: var(--st-accent);
-    color: #fff;
+    border: none !important;
+    background: var(--st-accent, #24a66a) !important;
+    color: #ffffff !important;
 }
-.st-announce-btn--ghost:hover { border-color: var(--st-accent); color: var(--st-accent); }
+.st-announce-btn--primary:hover {
+    background: var(--st-accent-h, #168855) !important;
+    color: #ffffff !important;
+    filter: brightness(1.02);
+}
 
 .st-hero__actions {
     display: none;
@@ -4174,17 +4263,34 @@ body.st-announce-modal-open { overflow: hidden; }
     border-radius: 4px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .st-announce__action { display: none; }
+    /* 对齐主题一：左右合计 16px，根层无额外 padding */
     .st-announce-modal__card {
-        width: min(760px, calc(100% - 20px));
-        max-height: calc(88vh - 16px);
-        max-height: calc(88dvh - 16px);
-        border-radius: 14px;
+        width: calc(100% - 16px);
+        margin: 0 auto;
+        max-height: calc(100svh - 4rem);
+        transform: translateY(-3%);
+        border-radius: 12px;
     }
     .st-announce-modal__body {
-        max-height: min(52vh, calc(100dvh - 10rem));
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        max-height: none;
     }
+    .st-announce-modal__head {
+        padding: 0.65rem 0.75rem;
+    }
+    .st-announce-modal__title {
+        font-size: 0.92rem;
+    }
+    .st-announce-modal__footer {
+        padding: 0.6rem 0.75rem;
+    }
+}
+
+@media (max-width: 640px) {
     .st-home-play__row { flex-direction: column; align-items: stretch; }
     .st-detail-page .detail-ai-split { width: 100%; justify-content: space-between; }
 }

@@ -118,20 +118,31 @@
         });
     });
 
-    /* —— 参数表 / JSON —— */
+    /* —— 参数表 / JSON / OpenAPI —— */
     (function initParamsMode() {
         var tableMode = document.getElementById('paramsTableMode');
         var jsonMode = document.getElementById('paramsJsonMode');
-        if (!tableMode || !jsonMode) return;
+        var openApiMode = document.getElementById('paramsOpenApiMode');
+        var paramsCopyBtn = document.getElementById('paramsCopyBtn');
         var modeBtns = page.querySelectorAll('[data-params-mode]');
+        if (!modeBtns.length) return;
         Array.prototype.forEach.call(modeBtns, function (btn) {
             btn.addEventListener('click', function () {
-                var mode = btn.getAttribute('data-params-mode');
+                var mode = btn.getAttribute('data-params-mode') || 'table';
                 Array.prototype.forEach.call(modeBtns, function (b) {
                     b.classList.toggle('is-active', b === btn);
                 });
-                tableMode.hidden = mode !== 'table';
-                jsonMode.hidden = mode !== 'json';
+                if (tableMode) tableMode.hidden = mode !== 'table';
+                if (jsonMode) jsonMode.hidden = mode !== 'json';
+                if (openApiMode) openApiMode.hidden = mode !== 'openapi';
+                if (paramsCopyBtn) {
+                    if (mode === 'openapi') {
+                        var oaPre = document.getElementById('paramsOpenApiCode');
+                        paramsCopyBtn.setAttribute('data-copy', oaPre ? (oaPre.textContent || '') : '');
+                    } else {
+                        paramsCopyBtn.setAttribute('data-copy', paramsCopyBtn.getAttribute('data-copy-json') || '');
+                    }
+                }
             });
         });
     })();
@@ -150,6 +161,46 @@
         if (!statusEl) return;
         statusEl.textContent = label || '';
         statusEl.className = 'tag' + (kind === 'ok' ? ' free' : (kind === 'err' ? ' disabled' : ''));
+    }
+
+    function setPgBody(text, copyable) {
+        if (!responseEl) return;
+        var body = text == null ? '' : String(text);
+        responseEl.textContent = body;
+        var VsPR = window.VsPlaygroundResponse;
+        if (VsPR && typeof VsPR.setPgCopyState === 'function') {
+            VsPR.setPgCopyState(responseEl, copyable ? body : null);
+        }
+    }
+
+    function clearPgCopy() {
+        var VsPR = window.VsPlaygroundResponse;
+        if (VsPR && typeof VsPR.clearPgCopyState === 'function') {
+            VsPR.clearPgCopyState(responseEl);
+        } else if (responseEl) {
+            responseEl._vsPgCopyText = '';
+            responseEl.setAttribute('data-pg-copyable', '0');
+            var btn = document.getElementById('pgCopyBtn');
+            if (btn) {
+                btn.hidden = true;
+                btn.disabled = true;
+                btn.setAttribute('aria-hidden', 'true');
+            }
+        }
+    }
+
+    var pgCopyBtn = document.getElementById('pgCopyBtn');
+    if (pgCopyBtn && responseEl) {
+        pgCopyBtn.addEventListener('click', function () {
+            if (responseEl.getAttribute('data-pg-copyable') !== '1') return;
+            var text = responseEl._vsPgCopyText != null ? String(responseEl._vsPgCopyText) : '';
+            if (!text) return;
+            copyText(text).then(function () {
+                toast('已复制', 'success');
+            }).catch(function () {
+                toast('复制失败', 'error');
+            });
+        });
     }
 
     function getMethod() {
@@ -279,10 +330,10 @@
         var raw = String(text == null ? '' : text);
         try {
             var obj = JSON.parse(raw);
-            responseEl.textContent = JSON.stringify(obj, null, 2);
+            setPgBody(JSON.stringify(obj, null, 2), true);
             return;
         } catch (e) { /* plain */ }
-        responseEl.textContent = raw || '(空响应)';
+        setPgBody(raw || '(空响应)', true);
     }
 
     if (sendBtn && responseEl) {
@@ -293,19 +344,19 @@
                 pageApi = { id: pageId, endpoint: page.getAttribute('data-endpoint') || '' };
             }
             if (!pageApi || !pageApi.id) {
-                responseEl.textContent = '接口无效';
+                setPgBody('接口无效', true);
                 setStatus('Error', 'err');
                 return;
             }
             api = pageApi;
 
             if (page.getAttribute('data-maintenance') === '1' || api.maintenance) {
-                responseEl.textContent = '维护中，暂不可测试';
+                setPgBody('维护中，暂不可测试', true);
                 setStatus('维护中', 'err');
                 return;
             }
             if (page.getAttribute('data-disabled') === '1' || api.disabled) {
-                responseEl.textContent = '接口已禁用';
+                setPgBody('接口已禁用', true);
                 setStatus('已禁用', 'err');
                 return;
             }
@@ -317,7 +368,7 @@
                 });
             }
             if (hasFiles) {
-                responseEl.textContent = '// 含文件上传的请求暂不支持在线调试';
+                setPgBody('// 含文件上传的请求暂不支持在线调试', true);
                 setStatus('Skip', 'wait');
                 return;
             }
@@ -337,18 +388,19 @@
 
                 var endpoint = String(api.endpoint || page.getAttribute('data-endpoint') || '').trim();
                 if (!endpoint) {
-                    responseEl.textContent = '// 缺少接口地址';
+                    setPgBody('// 缺少接口地址', true);
                     setStatus('Error', 'err');
                     return;
                 }
 
                 if (urlPreview) urlPreview.textContent = hostPath(endpoint);
-                responseEl.textContent = '// 正在发送请求...';
+                setPgBody('// 正在发送请求...', false);
+                clearPgCopy();
                 setStatus('处理中', 'wait');
 
                 var VsPR = window.VsPlaygroundResponse;
                 if (!VsPR || !VsPR.directRequest) {
-                    responseEl.textContent = '// 测试模块未加载，请刷新页面';
+                    setPgBody('// 测试模块未加载，请刷新页面', true);
                     setStatus('Error', 'err');
                     return;
                 }
@@ -378,7 +430,7 @@
                     }).catch(function (err) {
                         setStatus('Error', 'err');
                         var raw = err && err.message ? String(err.message) : 'network error';
-                        responseEl.textContent = '// 请求失败: ' + raw;
+                        setPgBody('// 请求失败: ' + raw, true);
                     });
                     return;
                 }
@@ -410,7 +462,7 @@
                     var msg = /failed to fetch|networkerror|load failed/i.test(raw)
                         ? '请求失败（常见于跨域或上游未允许跨域）'
                         : raw;
-                    responseEl.textContent = '// 请求失败: ' + msg;
+                    setPgBody('// 请求失败: ' + msg, true);
                 });
             });
         });

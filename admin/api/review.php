@@ -244,7 +244,7 @@ function vs_render_api_review_desktop_row(array $ctx, $listEditBase)
                 <?php echo vs_e($ctx['reason'] !== '' ? ('原因：' . $ctx['reason']) : ''); ?>
             </div>
         </td>
-        <td class="vs-api-review-actions-cell" data-field="actions">
+        <td class="vs-col-actions vs-api-review-actions-cell" data-field="actions">
             <?php echo vs_api_review_action_buttons_html($ctx['audit'], $ctx['apiId'], $listEditBase); ?>
         </td>
     </tr>
@@ -368,7 +368,7 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
                             <th>开发者</th>
                             <th>提交时间</th>
                             <th>状态</th>
-                            <th>操作</th>
+                            <th class="vs-col-actions">操作</th>
                         </tr>
                     </thead>
                     <tbody id="apiReviewBody">

@@ -162,7 +162,7 @@ function vs_render_admin_fb_desktop_row(array $ctx)
                 <?php echo $ctx['pending'] ? '待处理' : '已处理'; ?>
             </span>
         </td>
-        <td class="vs-api-fb-actions-cell" data-field="actions">
+        <td class="vs-col-actions vs-api-fb-actions-cell" data-field="actions">
             <?php echo vs_admin_fb_actions_html($ctx); ?>
         </td>
     </tr>
@@ -289,7 +289,7 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
                             <th>提交用户</th>
                             <th>提交时间</th>
                             <th>状态</th>
-                            <th>操作</th>
+                            <th class="vs-col-actions">操作</th>
                         </tr>
                     </thead>
                     <tbody id="adminFbBody">

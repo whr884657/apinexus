@@ -559,6 +559,19 @@ body.vs-body.feer-front .main-wrapper.container.detail-page,
     color: var(--text-main);
 }
 
+/* 请求参数 JSON / OpenAPI：最多约 16 行，超出区内滚动；表格模式不受限；无最小高度 */
+#paramsJsonMode .code-content,
+#paramsOpenApiMode .code-content {
+    max-height: calc(1.55em * 16 + 1.7rem);
+    overflow: auto;
+}
+
+/* 返回示例：最多约 20 行，超出区内滚动；无最小高度 */
+#responseSample {
+    max-height: calc(1.55em * 20 + 1.7rem);
+    overflow: auto;
+}
+
 .detail-md {
     color: var(--text-muted);
     font-size: 0.88rem;
@@ -909,6 +922,17 @@ body.vs-body.feer-front .main-wrapper.container.detail-page,
     align-items: center;
     justify-content: space-between;
     margin-bottom: 0.5rem;
+}
+
+.playground-response-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+#pgCopyBtn[hidden] {
+    display: none !important;
 }
 
 .status-badge {

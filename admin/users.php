@@ -353,7 +353,7 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                             <th>调用数量</th>
                             <th>第三方绑定</th>
                             <th>最后登录</th>
-                            <th>操作</th>
+                            <th class="vs-col-actions">操作</th>
                         </tr>
                     </thead>
                     <tbody id="usersBody">
@@ -395,7 +395,7 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                             <td class="vs-users-num-cell" data-field="call_count"><?php echo vs_e(vs_users_fmt_count($callCount)); ?></td>
                             <td class="vs-users-oauth-cell"><?php echo $oauthHtml; ?></td>
                             <td class="vs-users-login-cell"><?php echo vs_e(vs_users_format_time(isset($row['lastlogin']) ? $row['lastlogin'] : null)); ?></td>
-                            <td>
+                            <td class="vs-col-actions">
                                 <?php echo vs_users_action_group($uid, $active, $row); ?>
                             </td>
                         </tr>

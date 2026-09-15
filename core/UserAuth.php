@@ -309,14 +309,14 @@ class UserAuth
      */
     public static function register($username, $email, $password, $role = UserRole::ROLE_USER)
     {
-        $closedMsg = RegisterPolicy::assertOpen();
+        $role = UserRole::normalize($role);
+        $closedMsg = RegisterPolicy::assertRoleAllowed($role);
         if ($closedMsg !== null) {
             return $closedMsg;
         }
 
         $username = trim((string) $username);
         $email = trim((string) $email);
-        $role = UserRole::normalize($role);
 
         if ($username === '') {
             return '用户名不能为空';

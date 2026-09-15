@@ -186,7 +186,7 @@ function vs_render_content_desktop_row(array $ctx, $announcement = true)
                 </span>
             </td>
         <?php endif; ?>
-        <td class="vs-content-actions-cell" data-field="actions">
+        <td class="vs-col-actions vs-content-actions-cell" data-field="actions">
             <?php echo vs_content_actions_html($ctx, $announcement); ?>
         </td>
     </tr>

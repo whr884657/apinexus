@@ -499,34 +499,6 @@
     padding-left: 40px;
   }
 
-  .demo-tab {
-    display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px;
-    cursor: pointer; border: 1px solid transparent; min-height: 48px;
-    max-width: 100%; min-width: 0; box-sizing: border-box;
-    color: var(--fg);
-    transition: transform .25s var(--ease-out), background-color .25s, border-color .25s, box-shadow .25s;
-  }
-  button.demo-tab {
-    width: 100%;
-    margin: 0;
-    font: inherit;
-    text-align: left;
-    background: transparent;
-    appearance: none;
-    -webkit-appearance: none;
-  }
-  .demo-tab .text-sm { color: var(--fg); }
-  .demo-tab:hover { background: var(--bg-2); }
-  .demo-tab:active { transform: scale(0.985); }
-  .demo-tab.active {
-    background: var(--card);
-    border-color: var(--border);
-    box-shadow: var(--shadow);
-  }
-  .demo-tab .dot {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); flex-shrink: 0;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 20%, transparent);
-  }
 
   .input {
     width: 100%; background: var(--bg-2); border: 1px solid transparent; border-radius: 12px;
@@ -539,143 +511,7 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
   }
 
-  .json-block {
-    font-family: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace; font-size: 13px; line-height: 1.7;
-    color: var(--fg-2); white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
-    max-width: 100%; margin: 0;
-  }
-  .json-key { color: var(--accent); }
-  .json-string { color: var(--accent-2); }
-  .json-number { color: var(--accent-3); }
-  .json-bool { color: #EC4899; }
-  .json-punct { color: var(--muted); }
-  .json-comment { color: var(--muted); font-style: italic; }
 
-  .code-tabs {
-    display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; max-width: 100%; min-width: 0;
-  }
-  .code-tabs::-webkit-scrollbar { display: none; }
-  .code-tab {
-    padding: 8px 14px; border-radius: 8px; font-family: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
-    font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; flex-shrink: 0;
-    min-height: 36px;
-    transition: transform .2s var(--ease-out), background-color .2s, color .2s;
-  }
-  .code-tab:hover { color: var(--fg); background: color-mix(in srgb, var(--fg) 4%, transparent); }
-  .code-tab:active { transform: scale(0.96); }
-  .code-tab.active { background: var(--bg-2); color: var(--fg); }
-
-  /* 在线演示区：防止子项把整页撑出横向滚动 */
-  #playground { overflow-x: hidden; width: 100%; max-width: 100vw; }
-  #playground .playground-grid { width: 100%; max-width: 100%; }
-  #playground .playground-grid > * { min-width: 0; max-width: 100%; }
-  #playground .card {
-    max-width: 100%;
-    min-width: 0;
-    overflow: hidden;
-  }
-  #playground .btn-primary,
-  #playground .btn-ghost {
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-  #playground .input {
-    max-width: 100%;
-    min-width: 0;
-  }
-  .demo-panel { width: 100%; max-width: 100%; min-width: 0; }
-  .demo-select-card {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    gap: 8px;
-  }
-  .demo-api-search-wrap {
-    position: relative;
-    width: 100%;
-    min-width: 0;
-    padding: 0 2px;
-  }
-  .demo-api-search-wrap .demo-search-icon {
-    position: absolute;
-    left: 14px;
-    top: 0;
-    bottom: 0;
-    width: 16px;
-    height: 16px;
-    margin: auto 0;
-    color: var(--muted);
-    pointer-events: none;
-    z-index: 1;
-  }
-  .demo-api-search-wrap .demo-search-icon svg {
-    width: 16px;
-    height: 16px;
-    display: block;
-  }
-  .demo-api-search-wrap .input {
-    padding-left: 42px !important;
-    padding-top: 10px;
-    padding-bottom: 10px;
-    font-size: 14px;
-  }
-  .demo-api-scroll {
-    display: flex; flex-direction: column; gap: 4px;
-    width: 100%; max-width: 100%; min-width: 0;
-  }
-  .demo-api-empty {
-    padding: 16px 12px;
-    text-align: center;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  @media (min-width: 1024px) {
-    .playground-grid {
-      align-items: stretch;
-    }
-    .demo-select-card {
-      height: 100%;
-      max-height: 560px;
-      overflow: hidden;
-    }
-    .demo-api-scroll {
-      flex: 1 1 auto;
-      min-height: 0;
-      max-height: none;
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding-right: 2px;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: thin;
-      scrollbar-color: var(--border) transparent;
-    }
-    .demo-api-scroll::-webkit-scrollbar { width: 6px; }
-    .demo-api-scroll::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 999px;
-    }
-  }
-  .demo-response-pane {
-    min-height: 200px;
-    max-height: 360px;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-  }
-  .demo-code-pane {
-    max-height: 320px;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-  }
 
   .feature-card {
     position: relative; background: var(--card); border: 1px solid var(--border);
@@ -1056,70 +892,6 @@
     .price-card { padding: 20px 18px; border-radius: 16px; }
     .price-card.featured { transform: none; }
     .price-card.featured:hover { transform: none; }
-    .json-block { font-size: 12px; line-height: 1.55; }
-    .demo-response-pane { min-height: 160px; max-height: 240px; }
-    .demo-code-pane { max-height: 220px; }
-    /* 手机：选择 API 两列网格 + 限高滚动；电脑端保持单列列表 */
-    .demo-api-scroll {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      max-height: 220px;
-      overflow-y: auto;
-      overflow-x: hidden;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
-      padding-right: 2px;
-      width: 100%;
-      max-width: 100%;
-    }
-    .demo-api-scroll .demo-tab {
-      flex: none;
-      min-width: 0;
-      width: 100%;
-      max-width: 100%;
-      padding: 8px 10px;
-      background: var(--bg-2);
-      gap: 8px;
-    }
-    .demo-api-scroll .demo-tab.active {
-      background: var(--card);
-      border-color: var(--border);
-    }
-    .demo-api-scroll .demo-tab .api-icon-box {
-      width: 26px !important;
-      height: 26px !important;
-      border-radius: 8px !important;
-    }
-    .demo-api-scroll .demo-tab-path {
-      display: none;
-    }
-    .demo-api-scroll .demo-tab .text-sm {
-      font-size: 12px;
-    }
-    .demo-tab .dot { display: none; }
-    #playground .playground-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .demo-select-card {
-      gap: 6px;
-      padding: 12px !important;
-    }
-    #playground .demo-panel > .card {
-      border-radius: 16px;
-    }
-    #playground .demo-panel:nth-child(2) .card {
-      padding: 14px !important;
-    }
-    #playground #demoDesc {
-      font-size: 13px;
-      margin-bottom: 12px !important;
-    }
-    #playground #demoForm {
-      margin-bottom: 12px !important;
-    }
     .api-chip { padding: 8px 12px; font-size: 13px; }
     html.js-enabled .reveal { transform: translateY(18px); }
   }
@@ -1188,10 +960,6 @@
   display: block;
 }
 .api-card .api-icon-box img.api-icon-img {
-  width: 18px !important;
-  height: 18px !important;
-}
-.demo-select-card .api-icon-box img.api-icon-img {
   width: 18px !important;
   height: 18px !important;
 }
@@ -2104,6 +1872,20 @@ html.dark .th3-footer__beian {
   white-space: pre-wrap;
   word-break: break-word;
 }
+/* 请求参数 JSON / OpenAPI：最多约 16 行；表格不受限；无最小高度 */
+#paramsJsonMode.th3-code,
+#paramsOpenApiMode.th3-code {
+  max-height: calc(1.55em * 16 + 1.8rem);
+  overflow: auto;
+}
+/* 返回示例：最多约 20 行；无最小高度 */
+#responseSampleWrap.th3-code {
+  max-height: calc(1.55em * 20 + 1.8rem);
+  overflow: auto;
+}
+#responseSampleWrap #responseSample {
+  margin: 0;
+}
 .th3-qs-auth,
 .th3-qs-tabs {
   display: flex;
@@ -2147,6 +1929,15 @@ html.dark .th3-footer__beian {
   justify-content: space-between;
   gap: 0.5rem;
 }
+.th3-pg-resp-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+#pgCopyBtn[hidden] {
+  display: none !important;
+}
 .th3-pg-key-hint {
   margin: 0 0 0.5rem;
   font-size: 0.8rem;
@@ -2175,18 +1966,13 @@ html.dark .hero-grid { opacity: 0.3; }
 html.dark .card,
 html.dark .api-card,
 html.dark .feature-card,
-html.dark .price-card,
-html.dark .demo-select-card {
+html.dark .price-card {
   background: var(--card);
   border-color: var(--border);
 }
 html.dark .btn-ghost:hover {
   background: var(--bg-2);
   border-color: color-mix(in srgb, var(--border) 80%, var(--fg));
-}
-html.dark .json-block {
-  background: var(--bg-2);
-  color: var(--fg-2);
 }
 html.dark .api-chip {
   background: var(--card);
@@ -2260,24 +2046,6 @@ html.dark .th3-api-search .input {
 }
 html.dark .input::placeholder {
   color: var(--muted);
-}
-html.dark .demo-tab.active {
-  background: var(--card);
-  border-color: var(--border);
-}
-html.dark button.demo-tab:not(.active) {
-  background: transparent;
-}
-@media (max-width: 1023px) {
-  .demo-api-scroll .demo-tab .text-sm.truncate {
-    white-space: normal;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    line-height: 1.35;
-    word-break: break-word;
-  }
 }
 
 .th3-announce-bundle + section.relative,

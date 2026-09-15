@@ -27,10 +27,9 @@ if ($action !== 'list') {
     AjaxResponse::error('无效操作', 400);
 }
 
+// 展示顺序由 config.apiorder 决定（0 随机临时打乱 / 1 按分类权重）；忽略客户端 shuffle
 $apiData = FrontendApi::listForCatalog();
-if (!empty($_POST['shuffle']) && is_array($apiData) && count($apiData) > 1) {
-    shuffle($apiData);
-}
+$orderMode = FrontendCategory::orderMode();
 
 $out = array(
     'code'          => 1,
@@ -38,6 +37,7 @@ $out = array(
     'apiData'       => $apiData,
     'categoryNames' => FrontendCategory::nameMap(),
     'apiCount'      => is_array($apiData) ? count($apiData) : 0,
+    'apiorder'      => $orderMode,
 );
 
 if (!empty($_POST['partners']) && class_exists('FrontendPartner')) {
