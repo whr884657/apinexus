@@ -567,6 +567,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save_site_extra') {
         try {
             Config::setMany(array(
+                'site_mourning'      => isset($_POST['site_mourning']) ? '1' : '0',
                 'site_runtime_start' => trim(isset($_POST['site_runtime_start']) ? $_POST['site_runtime_start'] : ''),
                 'profile_wallpaper'  => trim(isset($_POST['profile_wallpaper']) ? $_POST['profile_wallpaper'] : ''),
                 'footer_html_left'   => isset($_POST['footer_html_left']) ? (string) $_POST['footer_html_left'] : '',
@@ -581,14 +582,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'sponsor_qr_alipay'  => trim(isset($_POST['sponsor_qr_alipay']) ? $_POST['sponsor_qr_alipay'] : ''),
                 'sponsor_qr_wechat'  => trim(isset($_POST['sponsor_qr_wechat']) ? $_POST['sponsor_qr_wechat'] : ''),
                 'sponsor_qr_qq'      => trim(isset($_POST['sponsor_qr_qq']) ? $_POST['sponsor_qr_qq'] : ''),
-                'home_footer_links'  => isset($_POST['home_footer_links']) ? '1' : '0',
                 'api_disclaimer_on'  => isset($_POST['api_disclaimer_on']) ? '1' : '0',
                 'api_disclaimer'     => isset($_POST['api_disclaimer'])
                     ? vs_ensure_plaintext_field((string) $_POST['api_disclaimer'])
                     : '',
             ));
             SiteContext::clearCache();
-            AjaxResponse::success('站点扩展设置已保存');
+            AjaxResponse::success('展示与自定义设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('操作失败，请稍后重试');
         }
@@ -1255,12 +1255,30 @@ vs_admin_accordion_start(
 <?php
 vs_admin_accordion_start(
     'settings-site-extra',
-    '页脚与展示',
-    '运行时间、页脚自定义栏、二维码、赞助收款码与免责声明'
+    '展示与自定义',
+    '页脚、二维码、赞助、免责声明与全局哀悼模式'
 );
 ?>
     <form method="post" action="" class="vs-form" id="siteExtraForm" data-ajax="1">
         <input type="hidden" name="action" value="save_site_extra">
+
+        <h4 class="vs-form-subtitle">全局哀悼模式</h4>
+        <?php
+        vs_render_notice(
+            'tip',
+            '',
+            '勾选后，全站所有网页（前台任意主题、用户中心、管理后台、登录注册等）强制灰白。不修改主题文件；第三方自研主题只要走系统引导同样生效。安装向导除外。',
+            array('compact' => true)
+        );
+        ?>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="site_mourning" value="1" <?php echo Config::get('site_mourning', '0') === '1' ? 'checked' : ''; ?>>
+                <span>启用全局哀悼模式（全站灰白）</span>
+            </label>
+        </div>
+
+        <hr class="vs-divider">
 
         <h4 class="vs-form-subtitle">网站运行时间</h4>
         <?php
@@ -1375,16 +1393,6 @@ vs_admin_accordion_start(
             <input type="text" name="sponsor_qr_qq" id="sponsorQrQq" class="vs-input"
                    value="<?php echo vs_e(Config::get('sponsor_qr_qq', '')); ?>"
                    placeholder="/upload/qq.png 或 https://…">
-        </div>
-
-        <hr class="vs-divider">
-
-        <h4 class="vs-form-subtitle">默认主题 · 首页页脚</h4>
-        <div class="vs-form-row">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="home_footer_links" value="1" <?php echo Config::get('home_footer_links', '1') !== '0' ? 'checked' : ''; ?>>
-                <span>显示友情链接板块（默认开启；关闭后仍可在侧栏进入友链页）</span>
-            </label>
         </div>
 
         <hr class="vs-divider">

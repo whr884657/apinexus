@@ -180,9 +180,9 @@ MySQL / Redis
 
 | 文件 | 一句话 |
 |------|--------|
-| `bootstrap.php` | 系统引导：按序加载全部核心类 + Session/CSRF |
-| `version.php` | 定义 `VS_VERSION`（当前 **13.26.42**） |
-| `helpers.php` | 全局函数：转义、路径、SEO、前台渲染、`vs_require_secure_post` 等 |
+| `bootstrap.php` | 系统引导：按序加载全部核心类 + Session/CSRF；末尾可注册全局哀悼输出缓冲（v13.26.43） |
+| `version.php` | 定义 `VS_VERSION`（当前 **13.26.43**） |
+| `helpers.php` | 全局函数：转义、路径、SEO、前台渲染、`vs_require_secure_post`、全局哀悼注入等 |
 | `InstallChecker.php` | 是否已安装；未安装跳转安装向导 |
 | `Database.php` | PDO 连接、表前缀 |
 | `DatabaseInstaller.php` | 安装时执行 `install/database.sql` |
@@ -396,6 +396,9 @@ version → helpers → 时区
 | `vs_copyright_html` / `vs_site_runtime_start` | 版权 / 运行时长 |
 | `vs_is_allowed_http_url` / `vs_safe_embed_url` | URL 安全 |
 | `vs_console_brand_script()` | 挂载全站控制台品牌外链 JS |
+| `vs_site_mourning_on()` / `vs_mourning_boot()` | 全局哀悼是否开启；在 bootstrap 注册输出缓冲（主题无关，E335） |
+
+> **全局哀悼（v13.26.43）：** 主题**不要**自己写灰白 CSS。后台「展示与自定义」勾选后，核心自动给任意主题 HTML 注入 `html.vs-mourning`。
 
 页脚 / `vs_render_foot` 会注入浏览器全局变量，主题壳脚本依赖：
 

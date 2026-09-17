@@ -121,8 +121,9 @@ function vs_auth_head($title)
     $systemName = SiteContext::systemName();
     $favicon = SiteContext::siteFavicon();
 
+    $htmlClass = (function_exists('vs_site_mourning_on') && vs_site_mourning_on()) ? ' class="vs-mourning"' : '';
     echo '<!DOCTYPE html>' . "\n";
-    echo '<html lang="zh">' . "\n";
+    echo '<html lang="zh"' . $htmlClass . '>' . "\n";
     echo '<head>' . "\n";
     echo '<meta charset="utf-8">' . "\n";
     vs_render_seo_meta(vs_seo_defaults(array(
@@ -135,6 +136,9 @@ function vs_auth_head($title)
     echo '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">' . "\n";
     vs_render_site_icons($favicon, vs_seo_share_image());
     vs_auth_bg_script();
+    if (function_exists('vs_site_mourning_on') && vs_site_mourning_on()) {
+        echo '<style id="vs-mourning-css">html.vs-mourning{-webkit-filter:grayscale(100%);filter:grayscale(100%)}</style>' . "\n";
+    }
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/auth-login.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/theme-picker.css?v=' . VS_VERSION . '">' . "\n";

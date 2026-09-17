@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.42-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.43-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -164,13 +164,13 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.42（2026-09-17）
+### v13.26.43（2026-09-18）
 
-- 主题卡 `developer`（E328）；主题设置 `VSPick`（E327）；令牌紧急操作 `VsModal`（E326）
-- 主题二公告/页脚（E318/E319）；主题三一轮完善（E277·E320～E325）
-- 积分卡密：表（含已发放）+ 管理端 + 充值双 Tab + 对接 API generate/stock/take/void/query（E329～E332）
-- 热修：Markdown 复制钮（E331）；评论 `[hidden]`（E09）；three → 0.1.12，fifth → 0.1.2
-- 系统密钥独立；卡密 API / 调用日志各自设置；外部 API 统一 `core/api/`（E333/E334）；`db_changes: true`
+- **展示与自定义：** 系统设置原「页脚与展示」更名；新增「全局哀悼模式」开关（`config.site_mourning`）
+- **全站灰白：** `core/bootstrap` 输出缓冲注入 `html.vs-mourning`；官方与第三方自研主题均生效（E335）
+- **页脚友链：** 系统键 `home_footer_links` 删除；迁入默认主题设置 `show_footer_friend_links`
+- **审计热修：** 哀悼注入幂等作用域收紧；迁移先补 `themesettings` 行
+- **库变更：** `install/migrations/13.26.43.sql`（发版前须跑结构更新）
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

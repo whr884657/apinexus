@@ -1,5 +1,18 @@
 {
     "versions": {
+        "13.26.43": {
+            "title": "ApiNexus 13.26.43",
+            "date": "2026-09-18",
+            "db_changes": true,
+            "changes": [
+                "系统设置「页脚与展示」更名为「展示与自定义」；新增全局哀悼模式开关（config.site_mourning）",
+                "全局哀悼：bootstrap 输出缓冲注入 html.vs-mourning + 灰白滤镜；不改主题包；官方/第三方主题均生效（E335）",
+                "覆盖管理后台、认证页、前台壳、404；安装向导与 JSON/API 响应不注入",
+                "页脚友链开关：系统设置移除 home_footer_links；迁入默认主题 show_footer_friend_links（default 1.9.1）",
+                "审计热修：哀悼幂等仅认 html/head；Content-Type 拒名单扩；迁移先保证 themesettings 行再迁友链键",
+                "库变更：install/migrations/13.26.43.sql（哀悼种子；友链键迁入 themesettings 后删除）；database.sql 同步终态"
+            ]
+        },
         "13.26.42": {
             "title": "ApiNexus 13.26.42",
             "date": "2026-09-17",

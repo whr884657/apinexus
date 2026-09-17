@@ -889,3 +889,9 @@ a:hover {
         width: 100%;
     }
 }
+
+/* 全局哀悼模式（html.vs-mourning；主题无关，由 bootstrap 输出缓冲注入 class） */
+html.vs-mourning {
+    -webkit-filter: grayscale(100%);
+    filter: grayscale(100%);
+}

@@ -10,7 +10,7 @@ $beian = SiteContext::beianInfo();
 $showRuntime = ThemeManager::themeSettingBool('show_runtime', true);
 $hasRuntime = vs_site_has_runtime();
 $runtimeStart = vs_site_runtime_start();
-$showFriendLinks = Config::get('home_footer_links', '1') !== '0';
+$showFriendLinks = ThemeManager::themeSettingBool('show_footer_friend_links', true);
 $footerLinksDisplay = ThemeManager::themeSettingStr('footer_friend_links_display', 'limit8');
 $footerLinksLimit = 8;
 if ($footerLinksDisplay === 'all') {

@@ -1,7 +1,7 @@
 {
     "id": "default",
     "name": "默认主题",
-    "version": "1.9.0",
+    "version": "1.9.1",
     "developer": "尋鯨錄",
     "author": "尋鯨錄",
     "description": "默认主题",
@@ -68,6 +68,12 @@
         {
             "key": "show_partners",
             "label": "显示合作伙伴区",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_footer_friend_links",
+            "label": "显示页脚友情链接板块",
             "type": "checkbox",
             "default": true
         },

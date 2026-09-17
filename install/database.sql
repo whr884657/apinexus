@@ -139,6 +139,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('checkin_points_max', '30'),
 ('frontend_theme', 'default'),
 ('themesettings', '{}'),
+('site_mourning', '0'),
 ('site_runtime_start', ''),
 ('profile_wallpaper', 'https://picsum.photos/1600/600'),
 ('footer_html_left', ''),

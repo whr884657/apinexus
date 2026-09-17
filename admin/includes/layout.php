@@ -174,8 +174,9 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
         $notifyItemsJson = '[]';
     }
 
+    $htmlClass = (function_exists('vs_site_mourning_on') && vs_site_mourning_on()) ? ' class="vs-mourning"' : '';
     echo '<!DOCTYPE html>' . "\n";
-    echo '<html lang="zh-CN">' . "\n";
+    echo '<html lang="zh-CN"' . $htmlClass . '>' . "\n";
     echo '<head>' . "\n";
     echo '<meta charset="UTF-8">' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
@@ -188,6 +189,9 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     echo '<title>' . vs_e(vs_page_title($pageTitle, $siteName)) . '</title>' . "\n";
     vs_render_site_icons($favicon, vs_seo_share_image());
     vs_theme_bg_preload_script();
+    if (function_exists('vs_site_mourning_on') && vs_site_mourning_on()) {
+        echo '<style id="vs-mourning-css">html.vs-mourning{-webkit-filter:grayscale(100%);filter:grayscale(100%)}</style>' . "\n";
+    }
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/common.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/modal.css?v=' . VS_VERSION . '">' . "\n";

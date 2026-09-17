@@ -124,3 +124,8 @@ if (InstallChecker::isInstalled()) {
         // 安装/库异常时忽略，不影响正常请求
     }
 }
+
+// 全局哀悼：输出缓冲注入 html.vs-mourning（主题无关，官方/第三方主题均生效）
+if (function_exists('vs_mourning_boot')) {
+    vs_mourning_boot();
+}

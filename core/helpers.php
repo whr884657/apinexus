@@ -1730,6 +1730,199 @@ function vs_render_theme_seo_block(array $seo = array())
 }
 
 /**
+ * 全局哀悼模式是否开启（vs_config.site_mourning = 1）
+ *
+ * @return bool
+ */
+function vs_site_mourning_on()
+{
+    if (!class_exists('InstallChecker') || !InstallChecker::isInstalled()) {
+        return false;
+    }
+    if (!class_exists('Config')) {
+        return false;
+    }
+    try {
+        return Config::get('site_mourning', '0') === '1';
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * 注册输出缓冲：任意主题/后台 HTML 统一注入 html.vs-mourning（不改主题包）
+ *
+ * 官方主题与第三方自研主题只要走 core/bootstrap，启用后即可全站灰白。
+ *
+ * @return void
+ */
+function vs_mourning_boot()
+{
+    static $started = false;
+    if ($started) {
+        return;
+    }
+    if (PHP_SAPI === 'cli') {
+        return;
+    }
+    if (!vs_site_mourning_on()) {
+        return;
+    }
+    $script = isset($_SERVER['SCRIPT_NAME']) ? str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']) : '';
+    if ($script !== '' && strpos($script, '/install') !== false) {
+        return;
+    }
+    $started = true;
+    ob_start('vs_mourning_ob_rewrite');
+}
+
+/**
+ * 判断缓冲内容是否像 HTML 文档（JSON / SSE / 片段跳过）
+ *
+ * @param string $html
+ * @return bool
+ */
+function vs_mourning_buffer_looks_html($html)
+{
+    foreach (headers_list() as $h) {
+        if (stripos($h, 'Content-Type:') !== 0) {
+            continue;
+        }
+        if (stripos($h, 'text/html') !== false) {
+            return true;
+        }
+        if (stripos($h, 'application/json') !== false
+            || stripos($h, 'text/event-stream') !== false
+            || stripos($h, 'application/javascript') !== false
+            || stripos($h, 'text/javascript') !== false
+            || stripos($h, 'text/css') !== false
+            || stripos($h, 'image/') !== false
+            || stripos($h, 'font/') !== false
+            || stripos($h, 'application/pdf') !== false
+            || stripos($h, 'application/octet-stream') !== false
+            || stripos($h, 'application/xml') !== false
+            || stripos($h, 'text/xml') !== false
+            || stripos($h, 'application/zip') !== false
+            || stripos($h, 'multipart/') !== false
+        ) {
+            return false;
+        }
+    }
+    $t = ltrim((string) $html);
+    if ($t === '') {
+        return false;
+    }
+    $c0 = $t[0];
+    if ($c0 === '{' || $c0 === '[') {
+        return false;
+    }
+    return (bool) preg_match('/^<(!DOCTYPE|html)\b/i', $t);
+}
+
+/**
+ * 首个 &lt;html&gt; 标签是否已带 vs-mourning（仅看该标签，不扫正文）
+ *
+ * @param string $html
+ * @return bool
+ */
+function vs_mourning_html_tag_has_class($html)
+{
+    if (!preg_match('/<html(\s[^>]*)?>/i', $html, $m)) {
+        return false;
+    }
+    $attrs = isset($m[1]) ? $m[1] : '';
+    return (bool) preg_match('/\bclass\s*=\s*([\'"])[^\'"]*\bvs-mourning\b/i', $attrs);
+}
+
+/**
+ * &lt;head&gt;…&lt;/head&gt; 内是否已有 vs-mourning-css（不扫正文）
+ *
+ * @param string $html
+ * @return bool
+ */
+function vs_mourning_head_has_style($html)
+{
+    if (!preg_match('/<head\b[^>]*>(.*)<\/head>/is', $html, $m)) {
+        return false;
+    }
+    $head = $m[1];
+    return stripos($head, 'id="vs-mourning-css"') !== false
+        || stripos($head, "id='vs-mourning-css'") !== false;
+}
+
+/**
+ * 给 &lt;html&gt; 追加 class="vs-mourning"（幂等；只认首个 html 标签）
+ *
+ * @param string $html
+ * @return string
+ */
+function vs_mourning_inject_html_class($html)
+{
+    if (vs_mourning_html_tag_has_class($html)) {
+        return $html;
+    }
+    $out = preg_replace_callback(
+        '/<html(\s[^>]*)?>/i',
+        function ($m) {
+            $attrs = isset($m[1]) ? $m[1] : '';
+            if (preg_match('/\bclass\s*=\s*([\'"])(.*?)\1/i', $attrs, $cm)) {
+                $quote = $cm[1];
+                $classes = trim($cm[2] . ' vs-mourning');
+                $attrs = preg_replace(
+                    '/\bclass\s*=\s*([\'"])(.*?)\1/i',
+                    'class=' . $quote . $classes . $quote,
+                    $attrs,
+                    1
+                );
+            } else {
+                $attrs = rtrim($attrs) . ' class="vs-mourning"';
+            }
+            return '<html' . $attrs . '>';
+        },
+        $html,
+        1
+    );
+    return is_string($out) ? $out : $html;
+}
+
+/**
+ * 在 &lt;/head&gt; 前注入哀悼灰白样式（幂等；仅检查 head 内，不依赖主题 common.css）
+ *
+ * @param string $html
+ * @return string
+ */
+function vs_mourning_inject_style($html)
+{
+    if (vs_mourning_head_has_style($html)) {
+        return $html;
+    }
+    $style = '<style id="vs-mourning-css">html.vs-mourning{-webkit-filter:grayscale(100%);filter:grayscale(100%)}</style>';
+    if (stripos($html, '</head>') !== false) {
+        $out = preg_replace('/<\/head>/i', $style . '</head>', $html, 1);
+        return is_string($out) ? $out : $html;
+    }
+    return $html;
+}
+
+/**
+ * 输出缓冲回调：全站哀悼注入
+ *
+ * @param string $html
+ * @return string
+ */
+function vs_mourning_ob_rewrite($html)
+{
+    if (!is_string($html) || $html === '') {
+        return $html;
+    }
+    if (!vs_mourning_buffer_looks_html($html)) {
+        return $html;
+    }
+    $html = vs_mourning_inject_html_class($html);
+    return vs_mourning_inject_style($html);
+}
+
+/**
  * 渲染页面头部
  *
  * @param string $title
@@ -1789,14 +1982,18 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
         $seo['title'] = $pageTitle;
     }
 
+    $htmlClass = vs_site_mourning_on() ? ' class="vs-mourning"' : '';
     echo '<!DOCTYPE html>' . "\n";
-    echo '<html lang="zh-CN">' . "\n";
+    echo '<html lang="zh-CN"' . $htmlClass . '>' . "\n";
     echo '<head>' . "\n";
     echo '<meta charset="UTF-8">' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
     vs_render_seo_meta($seo);
     echo '<title>' . vs_e($pageTitle) . '</title>' . "\n";
     vs_render_site_icons($favicon, $ogImage);
+    if (vs_site_mourning_on()) {
+        echo '<style id="vs-mourning-css">html.vs-mourning{-webkit-filter:grayscale(100%);filter:grayscale(100%)}</style>' . "\n";
+    }
     if ($loadRootShell) {
         echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/common.css?v=' . VS_VERSION . '">' . "\n";
         echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/toast.css?v=' . VS_VERSION . '">' . "\n";
@@ -2138,10 +2335,14 @@ function vs_render_404_page()
         $siteName = SiteContext::siteName();
     }
 
+    $htmlClass = vs_site_mourning_on() ? ' class="vs-mourning"' : '';
     echo '<!DOCTYPE html>' . "\n";
-    echo '<html lang="zh-CN"><head><meta charset="UTF-8">' . "\n";
+    echo '<html lang="zh-CN"' . $htmlClass . '><head><meta charset="UTF-8">' . "\n";
     echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
     echo '<title>' . vs_e(vs_page_title('页面不存在', $siteName)) . '</title>' . "\n";
+    if (vs_site_mourning_on()) {
+        echo '<style id="vs-mourning-css">html.vs-mourning{-webkit-filter:grayscale(100%);filter:grayscale(100%)}</style>' . "\n";
+    }
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/common.css?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e($base) . '/assets/css/error.css?v=' . VS_VERSION . '">' . "\n";
     echo '</head><body class="vs-body vs-error-body">' . "\n";
