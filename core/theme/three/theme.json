@@ -1,8 +1,9 @@
 {
     "id": "three",
     "name": "主题3",
-    "version": "0.1.0",
-    "author": "ApiNexus",
+    "version": "0.1.12",
+    "developer": "尋鯨錄",
+    "author": "尋鯨錄",
     "description": "主题3",
     "preview": "preview.png",
     "settings": [

@@ -65,7 +65,7 @@ vs_admin_layout_start('日志查询', 'logs', $headerActions);
 <div class="vs-log-toolbar" id="logsToolbar">
     <div class="vs-log-search">
         <input type="search" class="vs-input vs-log-search__input" id="logsSearchInput"
-               placeholder="搜索用户名 / 密钥 / 接口名 / IP / 路径…" autocomplete="off">
+               placeholder="搜索日志编号 / 用户名 / 密钥 / 接口名 / IP / 路径…" autocomplete="off">
         <button type="button" class="vs-btn vs-btn--primary" id="logsSearchBtn">搜索</button>
     </div>
     <div class="vs-finance-filters" role="group" aria-label="调用结果">
@@ -91,7 +91,9 @@ vs_admin_layout_start('日志查询', 'logs', $headerActions);
                 <option value="50">50</option>
             </select>
         </label>
-        <div class="vs-api-pager__navs" id="logsPagerNav"></div>
+        <button type="button" class="vs-api-pager__nav" id="logsPrevBtn" aria-label="上一页">上一页</button>
+        <div class="vs-api-pager__nums" id="logsPagerNums" role="navigation" aria-label="页码"></div>
+        <button type="button" class="vs-api-pager__nav" id="logsNextBtn" aria-label="下一页">下一页</button>
     </div>
     <div class="vs-api-list-total" id="logsTotal"></div>
 </div>

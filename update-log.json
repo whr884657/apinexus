@@ -1,5 +1,26 @@
 {
     "versions": {
+        "13.26.42": {
+            "title": "ApiNexus 13.26.42",
+            "date": "2026-09-17",
+            "db_changes": true,
+            "changes": [
+                "主题包 theme.json 新增 developer；后台主题卡展示 v版本 · 开发者（123=尋鯨錄，fifth=慕名）；完善主题5（E328）",
+                "管理端主题设置：切主题后点「主题设置」误报网络异常 → VSPick.init(容器) + refresh 非 SELECT 降级（E327）",
+                "管理端令牌管理：紧急禁用/启用/重置/删除点击无效 → 改用 VsModal.confirm + VS.showMessage（E326）",
+                "主题二：公告弹窗手机端照搬主题一运行规则修贴顶（E318）；页脚法律信息分行照搬主题一（E319）；slate → 2.25.1",
+                "新增本地《首页公告弹窗规范》；纠正 E316 把主题一「手机未写 max-height」误写成 none",
+                "主题三：页脚二维码防溢（E320）；首页文案与推荐卡暗色反色（E321）；登录顺序/圆角/OpenAPI/Response 框/公开页自研与安全债/详情 .th3-copy（E277·E322～E324）；公开页内容栏限宽两侧留白（E325）；评论 JSON_HEX + 头像 data-ext-icon；hitokoto 归 three 包；主页限宽",
+                "积分卡密：表 cardkey（状态1未使用/2已使用/3作废/4已发放；20位）；CardKeyManager 生成/列表/库存出库/作废/兑换（FOR UPDATE）；KIND_CARDKEY=5",
+                "卡密前后台：管理端「卡密管理」（含已发放双标签）；充值中心双 Tab；四主题 recharge 同步（E329/E330）",
+                "热修 E331：Markdown 代码块复制钮钉定宽外壳 + .vs-md-pre-scroll 独立横滚；E09 评论 [hidden]；three → 0.1.12，fifth → 0.1.2",
+                "系统密钥：config.system_api_key；设置「系统密钥」仅生成/复制；「卡密对接 API」「调用日志」各自独立手风琴（E332）",
+                "卡密对接 API：generate/stock/take/void/query；库存与出库；Bearer/Header/Query/JSON 鉴权；安全审计 SEC-101～107 修复",
+                "日志清理：冷热归档与过期删除二选一；计划任务/卡密 API 须后台开关；任务链接默认不含密钥（E333）",
+                "系统级外部 API 统一 core/api/；删除旧 core/cron/apilogarchive.php（obsolete-files）；《系统级外部API规范》（E334）",
+                "库变更：install/migrations/13.26.42.sql；database.sql 同步终态"
+            ]
+        },
         "13.26.41": {
             "title": "ApiNexus 13.26.41",
             "date": "2026-09-15",

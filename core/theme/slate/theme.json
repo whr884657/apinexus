@@ -1,8 +1,9 @@
 {
     "id": "slate",
     "name": "主题2",
-    "version": "2.24.0",
-    "author": "ApiNexus",
+    "version": "2.25.1",
+    "developer": "尋鯨錄",
+    "author": "尋鯨錄",
     "description": "主题2",
     "preview": "preview.png",
     "settings": [

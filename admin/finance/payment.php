@@ -106,6 +106,7 @@ if (!$cfg['ready']) {
                         <input type="checkbox" class="vs-pay-method-input" name="methods[]" value="<?php echo vs_e($code); ?>"<?php echo $on ? ' checked' : ''; ?> hidden>
                     <?php endforeach; ?>
                 </div>
+                <p class="vs-form-hint">支付宝、微信、QQ 三种均未启用时，用户端充值中心将只显示「卡密兑换」。</p>
             </div>
         </div>
 

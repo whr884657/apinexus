@@ -90,11 +90,18 @@ class ThemeManager
                 continue;
             }
             $meta = self::readMeta($id);
+            $developer = '';
+            if (!empty($meta['developer'])) {
+                $developer = trim((string) $meta['developer']);
+            } elseif (!empty($meta['author'])) {
+                $developer = trim((string) $meta['author']);
+            }
             $themes[] = array(
                 'id'          => $id,
                 'name'        => isset($meta['name']) ? (string) $meta['name'] : $id,
                 'description' => isset($meta['description']) ? (string) $meta['description'] : '',
                 'version'     => isset($meta['version']) ? (string) $meta['version'] : '',
+                'developer'   => $developer,
                 'author'      => isset($meta['author']) ? (string) $meta['author'] : '',
                 'preview_url' => self::previewUrl($id),
             );

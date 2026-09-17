@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：user/recharge.php
- * 作用：用户充值中心
+ * 作用：用户充值中心（含卡密兑换）
  */
 
 require_once __DIR__ . '/init.php';
@@ -9,14 +9,35 @@ require_once __DIR__ . '/init.php';
 $userId = (int) UserAuth::id();
 $ready = OrderManager::tableReady() && PointsManager::hasPointsColumn();
 $payReady = PayConfig::isReady();
+$cardkeyReady = CardKeyManager::tableReady();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
 
+    if ($action === 'redeem') {
+        if (!$ready || !$cardkeyReady) {
+            AjaxResponse::error('积分系统未就绪');
+        }
+        $code = isset($_POST['code']) ? trim((string) $_POST['code']) : '';
+        $result = CardKeyManager::redeem($userId, $code);
+        if (empty($result['ok'])) {
+            AjaxResponse::error(isset($result['msg']) ? $result['msg'] : '兑换失败');
+        }
+        AjaxResponse::success($result['msg'], array(
+            'points'  => isset($result['points']) ? (int) $result['points'] : 0,
+            'balance' => isset($result['balance'])
+                ? PayConfig::fmtPoints($result['balance'])
+                : PayConfig::fmtPoints(PointsManager::balance($userId)),
+        ));
+    }
+
     if ($action === 'create') {
         if (!$ready) {
             AjaxResponse::error('积分系统未就绪');
+        }
+        if (!$payReady) {
+            AjaxResponse::error('充值暂未开放');
         }
         $payType = isset($_POST['paytype']) ? (string) $_POST['paytype'] : '';
         $packageId = isset($_POST['package_id']) ? (string) $_POST['package_id'] : '';
@@ -75,19 +96,25 @@ $payIcons = array(
     'qqpay'  => PayConfig::iconHtml('qqpay'),
 );
 
+$scripts = array();
+if ($ready) {
+    $scripts[] = 'user-recharge.js';
+}
+
 vs_user_render_page(
     'recharge',
     '充值中心',
     'recharge',
     array(
-        'ready'    => $ready,
-        'payReady' => $payReady,
-        'balance'  => $balance,
-        'packages' => $packages,
-        'methods'  => $methods,
-        'rate'     => $rate,
-        'payIcons' => $payIcons,
+        'ready'        => $ready,
+        'payReady'     => $payReady,
+        'cardkeyReady' => $cardkeyReady,
+        'balance'      => $balance,
+        'packages'     => $packages,
+        'methods'      => $methods,
+        'rate'         => $rate,
+        'payIcons'     => $payIcons,
     ),
     '',
-    ($ready && $payReady) ? array('user-recharge.js') : array()
+    $scripts
 );

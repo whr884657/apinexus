@@ -326,7 +326,7 @@
     global.VS.bindExternalImgFallback = function (root) {
         var scope = root && root.querySelectorAll ? root : document;
         var imgs = scope.querySelectorAll
-            ? scope.querySelectorAll('img[data-ext-icon], img.link-avatar, .vs-link-row__icon img, .donate-sponsor-card__avatar, .partner-tile img, .partners-grid img')
+            ? scope.querySelectorAll('img[data-ext-icon], img.link-avatar, .vs-link-row__icon img, .donate-sponsor-card__avatar, .th3-sponsor-card__avatar, .th3-contrib-card__avatar, .th3-cmt-avatar, .partner-tile img, .partners-grid img')
             : [];
         Array.prototype.forEach.call(imgs, function (img) {
             if (!img || img.getAttribute('data-ext-bound') === '1') {

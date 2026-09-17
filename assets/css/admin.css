@@ -3076,11 +3076,39 @@ select.vs-input.vs-select {
     color: var(--vs-text);
 }
 
-.vs-theme-card__version {
+.vs-theme-card__meta {
     margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
     font-size: 12px;
     color: var(--vs-text-secondary);
     font-weight: 500;
+}
+
+.vs-theme-card__version {
+    margin-top: 0;
+    font-size: inherit;
+    color: inherit;
+    font-weight: inherit;
+}
+
+.vs-theme-card__developer {
+    font-size: inherit;
+    color: inherit;
+    font-weight: inherit;
+}
+
+.vs-theme-card__developer::before {
+    content: '·';
+    margin-right: 10px;
+    opacity: 0.55;
+}
+
+.vs-theme-card__meta > .vs-theme-card__developer:first-child::before {
+    content: none;
+    margin: 0;
 }
 
 /* 接口审核 / 接口反馈 Tab（底部描边，禁止按钮框样式） */
@@ -3376,6 +3404,111 @@ select.vs-input.vs-select {
 }
 
 .th3-admin-settings .vs-form-hint {
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--vs-text-secondary);
+}
+
+/* 主题5：后台设置分组布局（与 th3 同结构，class 前缀 th5） */
+.vs-theme-config-form__body:has(.th5-admin-settings) {
+    display: block;
+}
+
+.th5-admin-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.th5-admin-settings__section {
+    padding: 16px 18px;
+    border: 1px solid var(--vs-border);
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.th5-admin-settings__title {
+    margin: 0 0 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vs-text);
+}
+
+.th5-admin-settings__hint {
+    margin: -6px 0 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--vs-text-secondary);
+}
+
+.th5-admin-settings__grid {
+    display: grid;
+    gap: 12px 20px;
+}
+
+.th5-admin-settings__grid--2 {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .th5-admin-settings__grid--2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.th5-admin-settings__checks {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px 24px;
+}
+
+@media (min-width: 640px) {
+    .th5-admin-settings__checks {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.th5-admin-settings__slots {
+    display: grid;
+    gap: 14px;
+}
+
+@media (min-width: 1100px) {
+    .th5-admin-settings__slots {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.th5-admin-settings__slot {
+    border: 1px solid var(--vs-border);
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.th5-admin-settings__slot-head {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vs-text-secondary);
+    border-bottom: 1px solid var(--vs-border);
+    background: #f1f5f9;
+}
+
+.th5-admin-settings__slot-body {
+    padding: 14px;
+}
+
+.th5-admin-settings__slot-body .vs-theme-config-field {
+    margin-bottom: 14px;
+}
+
+.th5-admin-settings__slot-body .vs-theme-config-field:last-child {
+    margin-bottom: 0;
+}
+
+.th5-admin-settings .vs-form-hint {
     margin: 6px 0 0;
     font-size: 12px;
     line-height: 1.5;
@@ -5931,6 +6064,315 @@ select.vs-input.vs-select {
     cursor: not-allowed;
 }
 
+/* 卡密管理（列表/复制钮对齐令牌管理） */
+.vs-cardkey-toolbar {
+    gap: 10px 12px;
+}
+.vs-cardkey-stats {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.vs-cardkey-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: var(--vs-muted, #64748b);
+    font-size: 12px;
+    line-height: 1;
+}
+.vs-cardkey-stat strong {
+    color: var(--vs-text, #0f172a);
+    font-weight: 700;
+}
+.vs-cardkey-bulk {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-left: auto;
+}
+.vs-cardkey-bulk .vs-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.vs-cardkey-head-actions .vs-btn,
+.vs-cardkey-head-actions .vs-btn--primary {
+    flex: 0 0 auto;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 14px !important;
+    font-size: 12px !important;
+    line-height: 32px !important;
+    box-sizing: border-box;
+}
+
+#cardkeyPage .vs-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+#cardkeyPage .vs-badge--success { background: #f0faf5; color: #15803d; }
+#cardkeyPage .vs-badge--warning { background: #fff7e8; color: #e37318; }
+#cardkeyPage .vs-badge--error { background: #fff0f0; color: #dc2626; }
+#cardkeyPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+#cardkeyPage .vs-cardkey-status-tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+#cardkeyPage .vs-cardkey-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+#cardkeyPage .vs-cardkey-table th,
+#cardkeyPage .vs-cardkey-table td {
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--vs-border, #e5e7eb);
+    font-size: 13px;
+}
+#cardkeyPage .vs-cardkey-table th {
+    font-size: 12px;
+    color: var(--vs-muted, #64748b);
+    font-weight: 600;
+    background: #f8fafc;
+}
+#cardkeyPage .vs-cardkey-th-check,
+#cardkeyPage .vs-cardkey-td-check {
+    width: 40px;
+    text-align: center !important;
+}
+#cardkeyPage .key-cell__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+}
+#cardkeyPage .key-cell__code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    background: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 260px;
+}
+/* 卡密默认模糊（对齐用户中心令牌 / 密钥悬停明文） */
+#cardkeyPage .vs-cardkey-secret {
+    filter: blur(3.5px);
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+}
+#cardkeyPage .vs-cardkey-secret:hover,
+#cardkeyPage .vs-cardkey-secret:focus,
+#cardkeyPage .vs-cardkey-secret:focus-visible {
+    filter: none;
+    user-select: text;
+    -webkit-user-select: text;
+    outline: none;
+}
+@media (hover: none) {
+    #cardkeyPage .vs-cardkey-secret:hover {
+        filter: blur(3.5px);
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    #cardkeyPage .vs-cardkey-secret:focus,
+    #cardkeyPage .vs-cardkey-secret:focus-visible {
+        filter: none;
+        user-select: text;
+        -webkit-user-select: text;
+    }
+}
+#cardkeyPage .key-cell__copy {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 8px;
+    background: #fff;
+    color: #64748b;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+#cardkeyPage .key-cell__copy:hover {
+    color: #111;
+    border-color: #94a3b8;
+}
+#cardkeyPage .key-cell__copy svg {
+    display: block;
+}
+#cardkeyPage .vs-cardkey-stat-cell,
+#cardkeyPage .time-cell {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+}
+#cardkeyPage .vs-cardkey-user {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 120px;
+    display: inline-block;
+}
+#cardkeyPage .action-btns {
+    display: inline-flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.vs-cardkey-gen-result {
+    margin-top: 12px;
+}
+.vs-cardkey-gen-result__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+.vs-cardkey-gen-codes {
+    width: 100%;
+    min-height: 140px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    resize: vertical;
+}
+
+#cardkeyPage .vs-cardkey-mobile {
+    display: none;
+}
+#cardkeyPage .vs-cardkey-mcard {
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+#cardkeyPage .vs-cardkey-mcard + .vs-cardkey-mcard {
+    margin-top: 8px;
+}
+#cardkeyPage .vs-cardkey-mcard__top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+#cardkeyPage .vs-cardkey-mcard__code {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    background: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.35;
+}
+#cardkeyPage .vs-cardkey-mcard__pts {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+}
+#cardkeyPage .vs-cardkey-mcard__top .vs-badge {
+    flex-shrink: 0;
+}
+#cardkeyPage .vs-cardkey-mcard__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+#cardkeyPage .vs-cardkey-mcard__time {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#cardkeyPage .vs-cardkey-mcard__actions {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+#cardkeyPage .vs-cardkey-mcard__actions .vs-btn {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+/* 生成弹窗：关闭/生成同高（覆盖全局 .vs-btn--outline 的 28px） */
+#cardkeyFormOverlay .vs-overlay__foot .vs-btn {
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    min-width: 100px;
+    padding: 0 20px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    box-sizing: border-box;
+    border-radius: var(--vs-btn-radius, 10px) !important;
+}
+
+@media (max-width: 768px) {
+    #cardkeyPage .vs-cardkey-desktop {
+        display: none !important;
+    }
+    #cardkeyPage .vs-cardkey-mobile {
+        display: block;
+    }
+    .vs-cardkey-bulk {
+        display: none !important;
+    }
+    .vs-cardkey-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .vs-cardkey-stats {
+        width: 100%;
+    }
+}
+
 @media (min-width: 901px) {
     .vs-points-toolbar {
         margin-top: 0;
@@ -6423,6 +6865,21 @@ select.vs-input.vs-select {
     font-size: 14px;
     font-weight: 600;
     color: #0f172a;
+}
+.vs-recharge-cardkey__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.vs-recharge-cardkey__row .vs-input {
+    flex: 1 1 180px;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.04em;
+}
+.vs-recharge-cardkey__row .vs-btn {
+    flex: 0 0 auto;
 }
 .vs-recharge-grid {
     display: grid;
@@ -9248,6 +9705,17 @@ select.vs-input.vs-select {
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 280px;
+    filter: blur(3.5px);
+    user-select: none;
+    -webkit-user-select: none;
+}
+#apiKeysPage .key-cell__code:hover,
+#apiKeysPage .key-cell__code:focus,
+#apiKeysPage .key-cell__code:focus-visible {
+    filter: none;
+    user-select: text;
+    -webkit-user-select: text;
+    outline: none;
 }
 
 #apiKeysPage .key-cell__copy {
@@ -9419,6 +9887,33 @@ select.vs-input.vs-select {
     word-break: break-all;
     display: block;
     min-width: 0;
+    filter: blur(3.5px);
+    user-select: none;
+    -webkit-user-select: none;
+}
+#apiKeysPage .key-card__key:hover,
+#apiKeysPage .key-card__key:focus,
+#apiKeysPage .key-card__key:focus-visible {
+    filter: none;
+    user-select: text;
+    -webkit-user-select: text;
+    outline: none;
+}
+@media (hover: none) {
+    #apiKeysPage .key-cell__code:hover,
+    #apiKeysPage .key-card__key:hover {
+        filter: blur(3.5px);
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    #apiKeysPage .key-cell__code:focus,
+    #apiKeysPage .key-cell__code:focus-visible,
+    #apiKeysPage .key-card__key:focus,
+    #apiKeysPage .key-card__key:focus-visible {
+        filter: none;
+        user-select: text;
+        -webkit-user-select: text;
+    }
 }
 
 #apiKeysPage .key-card__remark {

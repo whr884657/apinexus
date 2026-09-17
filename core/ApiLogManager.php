@@ -371,8 +371,9 @@ class ApiLogManager
     }
 
     /**
-     * 分页列表：仅按底部「每页条数」+ before_id keyset 取最新记录。
-     * 禁止「近 N 天」时间窗、禁止深页 OFFSET；筛选总数短 TTL 缓存后供底栏「共 N 条」。
+     * 分页列表：底部「每页条数」翻页。
+     * 无 before_id 时按 page+OFFSET（管理端页码跳转）；有 before_id 仍走 keyset。
+     * 禁止「近 N 天」时间窗；筛选总数短 TTL 缓存后供底栏「共 N 条」。
      *
      * @param array $opts page, pagesize, q, ok(null|0|1), apiid, before_id
      * @return array{list:array,total:int,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool,total_approx:bool}
@@ -430,7 +431,17 @@ class ApiLogManager
                     $pdo = Database::connect();
                     self::applyQueryTimeout($pdo);
 
-                    $filters = self::buildFilters($q, $ok, $apiid, $beforeId, $userid);
+                    // 管理端页码跳转：无 before_id 时用 OFFSET；有 before_id 仍走 keyset
+                    $useOffset = ($beforeId <= 0);
+                    $offset = 0;
+                    if ($useOffset) {
+                        $offset = ($page - 1) * $pagesize;
+                        if ($offset < 0) {
+                            $offset = 0;
+                        }
+                    }
+
+                    $filters = self::buildFilters($q, $ok, $apiid, $useOffset ? 0 : $beforeId, $userid);
                     $userIdsForCold = isset($filters['userIds']) ? $filters['userIds'] : array();
                     if ($userid > 0) {
                         $userIdsForCold = array($userid);
@@ -439,9 +450,16 @@ class ApiLogManager
                     // 列表始终 LEFT JOIN user，保证卡片/表格能显示用户名（禁止仅搜索时才带 username）
                     $from = '`' . self::table() . '` l'
                         . ' LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`';
-                    $sql = 'SELECT l.*, u.`username` FROM ' . $from
-                        . ' WHERE ' . $filters['whereSql']
-                        . ' ORDER BY l.`id` DESC LIMIT ' . ((int) $pagesize + 1);
+                    if ($useOffset) {
+                        $sql = 'SELECT l.*, u.`username` FROM ' . $from
+                            . ' WHERE ' . $filters['whereSql']
+                            . ' ORDER BY l.`id` DESC LIMIT ' . (int) $pagesize
+                            . ' OFFSET ' . (int) $offset;
+                    } else {
+                        $sql = 'SELECT l.*, u.`username` FROM ' . $from
+                            . ' WHERE ' . $filters['whereSql']
+                            . ' ORDER BY l.`id` DESC LIMIT ' . ((int) $pagesize + 1);
+                    }
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute($filters['bind']);
                     $hotRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -454,7 +472,8 @@ class ApiLogManager
                         }
                     }
 
-                    $needMore = ($pagesize + 1) - count($merged);
+                    // OFFSET 深页不再混补冷库（冷库无独立 keyset，页码会对不齐）
+                    $needMore = $useOffset ? 0 : (($pagesize + 1) - count($merged));
                     if ($needMore > 0 && class_exists('ApiLogArchive')) {
                         $cold = ApiLogArchive::listInQueryWindow(array(
                             'days'      => 0,
@@ -487,9 +506,30 @@ class ApiLogManager
                         return ((int) $b['id']) - ((int) $a['id']);
                     });
 
-                    $hasMore = count($merged) > $pagesize;
-                    if ($hasMore) {
-                        $merged = array_slice($merged, 0, $pagesize);
+                    // skip_total：轻量预览（如管理端用户弹窗）只取页内数据，避免海量日志 COUNT
+                    $totalApprox = false;
+                    if ($skipTotal) {
+                        if ($useOffset) {
+                            $hasMore = count($merged) >= $pagesize;
+                            $total = $offset + count($merged) + ($hasMore ? 1 : 0);
+                        } else {
+                            $hasMore = count($merged) > $pagesize;
+                            if ($hasMore) {
+                                $merged = array_slice($merged, 0, $pagesize);
+                            }
+                            $total = count($merged) + ($hasMore ? 1 : 0);
+                        }
+                        $totalApprox = true;
+                    } else {
+                        $total = self::countFilteredCached($q, $ok, $apiid, $userid);
+                        if ($useOffset) {
+                            $hasMore = ($offset + count($merged)) < $total;
+                        } else {
+                            $hasMore = count($merged) > $pagesize;
+                            if ($hasMore) {
+                                $merged = array_slice($merged, 0, $pagesize);
+                            }
+                        }
                     }
 
                     self::hydrateUsernames($merged);
@@ -497,15 +537,6 @@ class ApiLogManager
                     $nextBefore = 0;
                     if (!empty($merged)) {
                         $nextBefore = (int) $merged[count($merged) - 1]['id'];
-                    }
-
-                    // skip_total：轻量预览（如管理端用户弹窗）只取页内数据，避免海量日志 COUNT
-                    $totalApprox = false;
-                    if ($skipTotal) {
-                        $total = count($merged) + ($hasMore ? 1 : 0);
-                        $totalApprox = true;
-                    } else {
-                        $total = self::countFilteredCached($q, $ok, $apiid, $userid);
                     }
 
                     return array(
@@ -731,37 +762,51 @@ class ApiLogManager
         }
 
         if ($q !== '') {
-            $like = function_exists('vs_sql_like_contains')
-                ? vs_sql_like_contains($q)
-                : ('%' . addcslashes($q, "\\%_") . '%');
-            // 强制 userid 过滤时，搜索解析出的用户 ID 不得覆盖/放宽范围
-            if ($userid <= 0) {
-                $userIds = self::resolveSearchUserIds($q);
+            $qTrim = trim($q);
+            // 显式日志编号：#123 / 编号:123 / 日志编号 123 → 只按主键精确查
+            $logIdOnly = 0;
+            if (preg_match('/^#(\d+)$/', $qTrim, $mId)) {
+                $logIdOnly = (int) $mId[1];
+            } elseif (preg_match('/^(?:日志编号|编号|日志\s*id|日志\s*ID|id|ID)\s*[:：#]?\s*(\d+)$/u', $qTrim, $mId)) {
+                $logIdOnly = (int) $mId[1];
             }
-            $parts = array(
-                'l.`apiname` LIKE ? ESCAPE \'\\\\\'',
-                'l.`path` LIKE ? ESCAPE \'\\\\\'',
-                'l.`ip` LIKE ? ESCAPE \'\\\\\'',
-                'l.`url` LIKE ? ESCAPE \'\\\\\'',
-                'l.`apikey` LIKE ? ESCAPE \'\\\\\'',
-                'l.`domain` LIKE ? ESCAPE \'\\\\\'',
-                'l.`iploc` LIKE ? ESCAPE \'\\\\\'',
-            );
-            $bind = array_merge($bind, array($like, $like, $like, $like, $like, $like, $like));
-            // 记录 ID 精确匹配（搜 #123 或纯数字时也能命中日志主键）
-            if (ctype_digit($q)) {
-                $parts[] = 'l.`id` = ?';
-                $bind[] = (int) $q;
-            }
-            if ($userid <= 0 && $userIds !== array()) {
-                $ph = implode(',', array_fill(0, count($userIds), '?'));
-                $parts[] = 'l.`userid` IN (' . $ph . ')';
-                foreach ($userIds as $uid) {
-                    $bind[] = (int) $uid;
+            if ($logIdOnly > 0) {
+                $where[] = 'l.`id` = ?';
+                $bind[] = $logIdOnly;
+                $hasExtra = true;
+            } else {
+                $like = function_exists('vs_sql_like_contains')
+                    ? vs_sql_like_contains($q)
+                    : ('%' . addcslashes($q, "\\%_") . '%');
+                // 强制 userid 过滤时，搜索解析出的用户 ID 不得覆盖/放宽范围
+                if ($userid <= 0) {
+                    $userIds = self::resolveSearchUserIds($q);
                 }
+                $parts = array(
+                    'l.`apiname` LIKE ? ESCAPE \'\\\\\'',
+                    'l.`path` LIKE ? ESCAPE \'\\\\\'',
+                    'l.`ip` LIKE ? ESCAPE \'\\\\\'',
+                    'l.`url` LIKE ? ESCAPE \'\\\\\'',
+                    'l.`apikey` LIKE ? ESCAPE \'\\\\\'',
+                    'l.`domain` LIKE ? ESCAPE \'\\\\\'',
+                    'l.`iploc` LIKE ? ESCAPE \'\\\\\'',
+                );
+                $bind = array_merge($bind, array($like, $like, $like, $like, $like, $like, $like));
+                // 纯数字：同时匹配日志主键（编号）与用户 id 解析结果
+                if (ctype_digit($qTrim)) {
+                    $parts[] = 'l.`id` = ?';
+                    $bind[] = (int) $qTrim;
+                }
+                if ($userid <= 0 && $userIds !== array()) {
+                    $ph = implode(',', array_fill(0, count($userIds), '?'));
+                    $parts[] = 'l.`userid` IN (' . $ph . ')';
+                    foreach ($userIds as $uid) {
+                        $bind[] = (int) $uid;
+                    }
+                }
+                $where[] = '(' . implode(' OR ', $parts) . ')';
+                $hasExtra = true;
             }
-            $where[] = '(' . implode(' OR ', $parts) . ')';
-            $hasExtra = true;
         }
         if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
             $where[] = 'l.`ok` = ?';

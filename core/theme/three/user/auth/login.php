@@ -59,11 +59,6 @@ th3_auth_shell_start('欢迎回来', '登录后继续使用平台能力');
         </div>
     </div>
 
-    <div class="th3-auth__row">
-        <button type="button" class="th3-auth__mode-toggle" id="toggleLoginMode">验证码登录</button>
-        <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
-    </div>
-
     <?php vs_captcha_field(Captcha::SCENE_USER_LOGIN); ?>
 
     <div id="modeCodeCode" data-mode-panel="code" hidden>
@@ -73,6 +68,12 @@ th3_auth_shell_start('欢迎回来', '登录后继续使用平台能力');
                 <button type="button" class="th3-auth__code-btn" id="sendCodeBtn" <?php echo $mailEnabled ? '' : 'disabled'; ?>>获取验证码</button>
             </div>
         </div>
+    </div>
+
+    <?php /* 观感抄本=主题1/2：切换行在人机验证下方；防 E277 用 button + z-index，禁止动 captcha.js/CSP */ ?>
+    <div class="th3-auth__row">
+        <button type="button" class="th3-auth__mode-toggle" id="toggleLoginMode">验证码登录</button>
+        <a href="<?php echo vs_e($base); ?>/user/forgot">忘记密码？</a>
     </div>
 
     <button type="submit" class="th3-auth__submit" id="loginBtn">登 录</button>

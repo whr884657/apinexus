@@ -1,0 +1,156 @@
+{
+    "id": "fifth",
+    "name": "主题5",
+    "version": "0.1.2",
+    "developer": "慕名",
+    "author": "慕名",
+    "description": "主题5 · 七牛云式浅色企业蓝 SaaS",
+    "preview": "preview.png",
+    "settings": [
+        {
+            "key": "stats_num_format",
+            "label": "累计调用次数显示",
+            "type": "select",
+            "default": "compact",
+            "options": [
+                {
+                    "value": "full",
+                    "label": "完整数字"
+                },
+                {
+                    "value": "compact",
+                    "label": "单位转换（K / W）"
+                }
+            ]
+        },
+        {
+            "key": "home_preview_limit",
+            "label": "首页 API 预览条数",
+            "type": "select",
+            "default": "12",
+            "options": [
+                {
+                    "value": "8",
+                    "label": "8"
+                },
+                {
+                    "value": "12",
+                    "label": "12"
+                },
+                {
+                    "value": "16",
+                    "label": "16"
+                },
+                {
+                    "value": "24",
+                    "label": "24"
+                }
+            ]
+        },
+        {
+            "key": "show_home_announce",
+            "label": "首页公告条与弹窗",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "show_runtime",
+            "label": "显示网站运行时间",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "footer_social_1_type",
+            "label": "页脚社交图标 1 · 类型",
+            "type": "select",
+            "default": "",
+            "options": [
+                { "value": "", "label": "不显示" },
+                { "value": "wechat", "label": "微信（二维码）" },
+                { "value": "qq", "label": "QQ" },
+                { "value": "email", "label": "邮箱" },
+                { "value": "github", "label": "GitHub" },
+                { "value": "gitee", "label": "Gitee" },
+                { "value": "twitter", "label": "推特" }
+            ]
+        },
+        {
+            "key": "footer_social_1_qq_mode",
+            "label": "页脚社交图标 1 · QQ 方式",
+            "type": "select",
+            "default": "link",
+            "options": [
+                { "value": "link", "label": "链接跳转" },
+                { "value": "qrcode", "label": "二维码悬停" }
+            ]
+        },
+        {
+            "key": "footer_social_1_value",
+            "label": "页脚社交图标 1 · 内容",
+            "type": "text",
+            "placeholder": "链接 / 邮箱 / 二维码图片地址"
+        },
+        {
+            "key": "footer_social_2_type",
+            "label": "页脚社交图标 2 · 类型",
+            "type": "select",
+            "default": "",
+            "options": [
+                { "value": "", "label": "不显示" },
+                { "value": "wechat", "label": "微信（二维码）" },
+                { "value": "qq", "label": "QQ" },
+                { "value": "email", "label": "邮箱" },
+                { "value": "github", "label": "GitHub" },
+                { "value": "gitee", "label": "Gitee" },
+                { "value": "twitter", "label": "推特" }
+            ]
+        },
+        {
+            "key": "footer_social_2_qq_mode",
+            "label": "页脚社交图标 2 · QQ 方式",
+            "type": "select",
+            "default": "link",
+            "options": [
+                { "value": "link", "label": "链接跳转" },
+                { "value": "qrcode", "label": "二维码悬停" }
+            ]
+        },
+        {
+            "key": "footer_social_2_value",
+            "label": "页脚社交图标 2 · 内容",
+            "type": "text",
+            "placeholder": "链接 / 邮箱 / 二维码图片地址"
+        },
+        {
+            "key": "footer_social_3_type",
+            "label": "页脚社交图标 3 · 类型",
+            "type": "select",
+            "default": "",
+            "options": [
+                { "value": "", "label": "不显示" },
+                { "value": "wechat", "label": "微信（二维码）" },
+                { "value": "qq", "label": "QQ" },
+                { "value": "email", "label": "邮箱" },
+                { "value": "github", "label": "GitHub" },
+                { "value": "gitee", "label": "Gitee" },
+                { "value": "twitter", "label": "推特" }
+            ]
+        },
+        {
+            "key": "footer_social_3_qq_mode",
+            "label": "页脚社交图标 3 · QQ 方式",
+            "type": "select",
+            "default": "link",
+            "options": [
+                { "value": "link", "label": "链接跳转" },
+                { "value": "qrcode", "label": "二维码悬停" }
+            ]
+        },
+        {
+            "key": "footer_social_3_value",
+            "label": "页脚社交图标 3 · 内容",
+            "type": "text",
+            "placeholder": "链接 / 邮箱 / 二维码图片地址"
+        }
+    ]
+}

@@ -1,0 +1,572 @@
+/**
+ * 主题 five · 认证页（Cyber Terminal 霓虹终端：深空网格 / 青色发光 / 玻璃卡）
+ * 原创 th5-auth，禁止 st-* / 左右分栏壳。
+ */
+:root {
+  --th5-auth-bg: #FFFFFF;
+  --th5-auth-bg2: #F6F8FC;
+  --th5-auth-card: #FFFFFF;
+  --th5-auth-fg: #0F172A;
+  --th5-auth-fg2: #334155;
+  --th5-auth-muted: #64748B;
+  --th5-auth-border: #E3E9F3;
+  --th5-auth-accent: #1B6BFF;
+  --th5-auth-accent-soft: #E8F0FE;
+  --th5-auth-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 24px 60px -16px rgba(15, 23, 42, 0.14);
+  --th5-auth-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.dark {
+  --th5-auth-bg: #070A12;
+  --th5-auth-bg2: #0B101C;
+  --th5-auth-card: #101726;
+  --th5-auth-fg: #E6EDF8;
+  --th5-auth-fg2: #A9B7CF;
+  --th5-auth-muted: #5F6E8A;
+  --th5-auth-border: rgba(139,158,196,0.16);
+  --th5-auth-accent: #5B8DEF;
+  --th5-auth-accent-soft: rgba(34,211,238,0.14);
+  --th5-auth-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 24px 60px -16px rgba(0,0,0,0.7);
+}
+
+.th5-auth-body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  background:
+    radial-gradient(ellipse 70% 50% at 80% -10%, color-mix(in srgb, var(--th5-auth-accent) 18%, transparent), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 10% 110%, color-mix(in srgb, #0D9488 12%, transparent), transparent 50%),
+    var(--th5-auth-bg);
+  color: var(--th5-auth-fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.th5-auth-body .font-display {
+  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.th5-auth-body .font-mono {
+  font-family: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+}
+
+.th5-auth {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+}
+
+.th5-auth__glow {
+  position: absolute;
+  width: min(420px, 70vw);
+  height: min(420px, 70vw);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--th5-auth-accent) 22%, transparent);
+  filter: blur(80px);
+  opacity: 0.45;
+  pointer-events: none;
+  top: 12%;
+  right: 8%;
+  z-index: 0;
+}
+
+.th5-auth__card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.th5-auth__card.glass {
+  background: transparent;
+}
+
+.th5-auth__eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--th5-auth-muted);
+}
+
+.th5-auth__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--th5-auth-fg);
+}
+
+.th5-auth__sub {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--th5-auth-fg2);
+}
+
+.th5-auth__msg {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  border: 1px solid var(--th5-auth-border);
+  background: var(--th5-auth-bg2);
+  color: var(--th5-auth-fg2);
+}
+
+.th5-auth__msg--error {
+  background: color-mix(in srgb, #ef4444 8%, var(--th5-auth-card));
+  border-color: color-mix(in srgb, #ef4444 28%, var(--th5-auth-border));
+  color: #b91c1c;
+}
+
+.th5-auth__msg--success {
+  background: color-mix(in srgb, #0D9488 10%, var(--th5-auth-card));
+  border-color: color-mix(in srgb, #0D9488 30%, var(--th5-auth-border));
+  color: #0f766e;
+}
+
+.th5-auth__msg--info {
+  background: var(--th5-auth-accent-soft);
+  border-color: color-mix(in srgb, var(--th5-auth-accent) 28%, var(--th5-auth-border));
+  color: var(--th5-auth-fg2);
+}
+
+.th5-auth__msg a {
+  color: var(--th5-auth-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.th5-auth__msg a:hover {
+  text-decoration: underline;
+}
+
+.th5-auth form {
+  margin-top: 1.25rem;
+}
+
+.th5-auth__field {
+  margin-bottom: 0.85rem;
+}
+
+.th5-auth__input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.85rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--th5-auth-bg2);
+  color: var(--th5-auth-fg);
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.25s var(--th5-auth-ease), background 0.25s, box-shadow 0.25s var(--th5-auth-ease);
+}
+
+.th5-auth__input::placeholder {
+  color: var(--th5-auth-muted);
+}
+
+.th5-auth__input:focus {
+  border-color: var(--th5-auth-accent);
+  background: var(--th5-auth-card);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--th5-auth-accent) 18%, transparent);
+}
+
+.th5-auth__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.th5-auth__pw-wrap {
+  position: relative;
+}
+
+.th5-auth__pw-wrap .th5-auth__input {
+  padding-right: 2.75rem;
+}
+
+.th5-auth__pw-toggle {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--th5-auth-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.th5-auth__pw-toggle:hover {
+  color: var(--th5-auth-fg);
+  background: color-mix(in srgb, var(--th5-auth-fg) 5%, transparent);
+}
+
+.th5-auth__pw-toggle svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.th5-auth__group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.th5-auth__group .th5-auth__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.th5-auth__code-btn {
+  flex: 0 0 auto;
+  padding: 0 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--th5-auth-border);
+  background: var(--th5-auth-card);
+  color: var(--th5-auth-fg);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.25s, border-color 0.25s, color 0.25s, transform 0.2s var(--th5-auth-ease);
+}
+
+.th5-auth__code-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--th5-auth-accent) 45%, var(--th5-auth-border));
+  color: var(--th5-auth-accent);
+}
+
+.th5-auth__code-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.th5-auth__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.15rem 0 0.85rem;
+  font-size: 0.875rem;
+  position: relative;
+  z-index: 3;
+}
+
+.th5-auth__row a,
+.th5-auth__mode-toggle {
+  color: var(--th5-auth-fg2);
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 6px 0;
+  margin: 0;
+  font: inherit;
+  line-height: 1.4;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.th5-auth__row a:hover,
+.th5-auth__mode-toggle:hover {
+  color: var(--th5-auth-accent);
+}
+
+.th5-auth__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.9rem 1.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--th5-auth-fg);
+  color: var(--th5-auth-bg);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.3s var(--th5-auth-ease), background 0.25s, box-shadow 0.3s var(--th5-auth-ease);
+}
+
+.th5-auth__submit:hover:not(:disabled) {
+  background: var(--th5-auth-accent);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--th5-auth-accent) 55%, transparent);
+}
+
+.th5-auth__submit:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.th5-auth__submit:disabled,
+.th5-auth__submit.is-loading {
+  opacity: 0.7;
+  cursor: wait;
+  transform: none;
+}
+
+.th5-auth__oauth {
+  margin-top: 1.35rem;
+  text-align: center;
+}
+
+.th5-auth__oauth-label {
+  font-size: 0.75rem;
+  color: var(--th5-auth-muted);
+  margin-bottom: 0.65rem;
+}
+
+.th5-auth__oauth-icons {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.th5-auth__oauth-icons a {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--th5-auth-border);
+  background: var(--th5-auth-card);
+  transition: transform 0.25s var(--th5-auth-ease), border-color 0.25s, box-shadow 0.25s;
+}
+
+.th5-auth__oauth-icons a:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--th5-auth-accent) 40%, var(--th5-auth-border));
+  box-shadow: 0 8px 20px -12px rgba(11, 11, 11, 0.25);
+}
+
+.th5-auth__oauth-icons img {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.th5-auth__foot {
+  margin-top: 1.15rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--th5-auth-fg2);
+}
+
+.th5-auth__foot a {
+  color: var(--th5-auth-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.th5-auth__foot a:hover {
+  text-decoration: underline;
+}
+
+/* 角色分段 */
+.th5-auth__role {
+  margin-bottom: 0.85rem;
+}
+
+.th5-auth__role-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--th5-auth-bg2);
+  border: 1px solid var(--th5-auth-border);
+}
+
+.th5-auth__role-btn {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.65rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--th5-auth-muted);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.th5-auth__role-btn.is-active {
+  color: var(--th5-auth-fg);
+}
+
+.th5-auth__role-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  border-radius: 999px;
+  background: var(--th5-auth-card);
+  box-shadow: 0 1px 4px rgba(11, 11, 11, 0.08);
+  transition: transform 0.28s var(--th5-auth-ease);
+  pointer-events: none;
+}
+
+.th5-auth__role-track[data-role="developer"] .th5-auth__role-thumb {
+  transform: translateX(100%);
+}
+
+.th5-auth__card.is-shake {
+  animation: TH5AuthShake 0.42s var(--th5-auth-ease);
+}
+
+@keyframes TH5AuthShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .th5-auth__submit:hover:not(:disabled),
+  .th5-auth__oauth-icons a:hover {
+    transform: none;
+  }
+  .th5-auth__card.is-shake {
+    animation: none;
+  }
+}
+/* ═══════════════════════════════════════════════════════════
+   Theme five · Cyber Terminal 认证页覆盖层
+   深空网格 · 玻璃表单卡 · 青色发光焦点
+   ═══════════════════════════════════════════════════════════ */
+
+/* 网格背景（暗色主视觉） */
+html.dark .th5-auth-body {
+  background:
+    radial-gradient(ellipse 60% 45% at 85% -10%, rgba(34,211,238,0.16), transparent 60%),
+    radial-gradient(ellipse 45% 40% at 5% 110%, rgba(167,139,250,0.14), transparent 55%),
+    linear-gradient(rgba(148,163,184,0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,0.055) 1px, transparent 1px),
+    #070A12;
+  background-size: auto, auto, 44px 44px, 44px 44px, auto;
+}
+html.dark .th5-auth__glow {
+  background: color-mix(in srgb, var(--th5-auth-accent) 24%, transparent);
+  opacity: 0.5;
+}
+
+/* 玻璃表单卡（暗色） */
+html.dark .th5-auth__card {
+  background: rgba(16,23,38,0.72);
+  border: 1px solid rgba(139,158,196,0.18);
+  border-radius: 18px;
+  padding: 2rem;
+  box-shadow: 0 0 0 1px rgba(34,211,238,0.08), 0 24px 70px -20px rgba(0,0,0,0.7);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+
+/* 输入框霓虹焦点 */
+html.dark .th5-auth__input {
+  background: rgba(7,10,18,0.6);
+  border-color: rgba(139,158,196,0.2);
+  color: var(--th5-auth-fg);
+}
+html.dark .th5-auth__input:focus {
+  border-color: var(--th5-auth-accent);
+  box-shadow: 0 0 0 3px rgba(34,211,238,0.12), 0 0 18px -6px rgba(34,211,238,0.5);
+}
+html.dark .th5-auth__input::placeholder { color: var(--th5-auth-muted); }
+
+/* 提交按钮霓虹渐变 */
+html.dark .th5-auth__submit {
+  background: linear-gradient(135deg, #22D3EE 0%, #A78BFA 100%);
+  color: #051018;
+  border: none;
+  box-shadow: 0 6px 24px -8px rgba(34,211,238,0.5);
+}
+html.dark .th5-auth__submit:hover {
+  box-shadow: 0 8px 32px -8px rgba(34,211,238,0.65), 0 0 0 1px rgba(34,211,238,0.35);
+  color: #fff;
+}
+
+/* 标题青色发光 */
+html.dark .th5-auth__title {
+  color: var(--th5-auth-fg);
+  text-shadow: 0 0 28px rgba(34,211,238,0.25);
+}
+
+/* 角色切换 / 模式切换滑块 */
+html.dark .th5-auth__role-track {
+  background: rgba(7,10,18,0.7);
+  border: 1px solid rgba(139,158,196,0.16);
+}
+html.dark .th5-auth__role-thumb {
+  background: linear-gradient(135deg, #22D3EE, #A78BFA);
+  box-shadow: 0 0 14px -2px rgba(34,211,238,0.6);
+}
+html.dark .th5-auth__role-btn.is-active { color: #051018; }
+
+/* OAuth 图标按钮 */
+html.dark .th5-auth__oauth-icons a,
+html.dark .th5-auth__oauth-btn {
+  border-color: rgba(139,158,196,0.18);
+  background: rgba(16,23,38,0.6);
+  color: var(--th5-auth-fg);
+}
+html.dark .th5-auth__oauth-icons a:hover {
+  border-color: rgba(34,211,238,0.5);
+  box-shadow: 0 0 14px -4px rgba(34,211,238,0.4);
+}
+
+/* 链接 */
+html.dark .th5-auth a {
+  color: var(--th5-auth-accent);
+}
+html.dark .th5-auth a:hover { text-shadow: 0 0 12px rgba(34,211,238,0.5); }
+
+/* 提示条 */
+html.dark .th5-auth__msg {
+  background: rgba(34,211,238,0.07);
+  border-color: rgba(34,211,238,0.22);
+  color: var(--th5-auth-fg);
+}
+html.dark .th5-auth__msg--error {
+  background: rgba(248,113,113,0.08);
+  border-color: rgba(248,113,113,0.3);
+  color: #FCA5A5;
+}
+html.dark .th5-auth__msg--success {
+  background: rgba(52,211,153,0.08);
+  border-color: rgba(52,211,153,0.3);
+  color: #6EE7B7;
+}
+
+/* 小屏适配 */
+@media (max-width: 480px) {
+  html.dark .th5-auth__card { padding: 1.4rem; }
+}

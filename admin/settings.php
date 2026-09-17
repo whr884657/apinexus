@@ -8,6 +8,11 @@
 
 require_once __DIR__ . '/init.php';
 
+// 旧 apilog_cron_key → system_api_key（幂等）
+if (class_exists('SystemApiKey')) {
+    SystemApiKey::migrateFromLegacy();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
     $action = isset($_POST['action']) ? $_POST['action'] : '';
@@ -23,13 +28,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hotDays = ApiLogArchive::MAX_HOT_DAYS;
             }
             $shardRows = ApiLogArchive::clampShardRows($shardRows);
+            $archiveOn = isset($_POST['apilog_archive_enabled']) ? '1' : '0';
+            $purgeOn = isset($_POST['apilog_purge_enabled']) ? '1' : '0';
+            if ($archiveOn === '1' && $purgeOn === '1') {
+                AjaxResponse::error('冷热归档与过期直接删除不可同时启用，请只选其一');
+            }
             Config::setMany(array(
                 'apilog_detail'           => isset($_POST['apilog_detail']) ? '1' : '0',
-                'apilog_archive_enabled'  => isset($_POST['apilog_archive_enabled']) ? '1' : '0',
+                'apilog_archive_enabled'  => $archiveOn,
+                'apilog_purge_enabled'    => $purgeOn,
                 'apilog_hot_days'         => (string) $hotDays,
                 'apilog_shard_rows'       => (string) $shardRows,
             ));
             AjaxResponse::success('日志设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_cardkey_api') {
+        try {
+            Config::set('cardkey_api_enabled', isset($_POST['cardkey_api_enabled']) ? '1' : '0');
+            AjaxResponse::success('卡密对接 API 设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败，请稍后重试');
         }
@@ -238,13 +258,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success(isset($result['msg']) ? (string) $result['msg'] : '连接成功');
     }
 
-    if ($action === 'generate_apilog_cron_key') {
+    if ($action === 'generate_system_api_key') {
         try {
-            $key = ApiLogArchive::generateCronKey();
-            Config::set('apilog_cron_key', $key);
-            AjaxResponse::success('计划任务密钥已生成', array(
-                'cron_key' => $key,
-                'cron_url' => ApiLogArchive::cronUrl(),
+            $key = SystemApiKey::generate();
+            SystemApiKey::set($key);
+            AjaxResponse::success('系统密钥已生成', array(
+                'system_api_key' => $key,
+                'cron_url'       => ApiLogArchive::cronUrl(),
+                'cardkey_api'    => rtrim(vs_base_url(), '/') . '/core/api/cardkey.php',
+            ));
+        } catch (Exception $e) {
+            AjaxResponse::error('生成失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'generate_apilog_cron_key') {
+        // 兼容旧前端：改走系统密钥
+        try {
+            $key = SystemApiKey::generate();
+            SystemApiKey::set($key);
+            AjaxResponse::success('系统密钥已生成', array(
+                'cron_key'       => $key,
+                'system_api_key' => $key,
+                'cron_url'       => ApiLogArchive::cronUrl(),
             ));
         } catch (Exception $e) {
             AjaxResponse::error('生成失败，请稍后重试');
@@ -1690,9 +1726,74 @@ vs_admin_accordion_start(
 
 <?php
 vs_admin_accordion_start(
+    'settings-system-key',
+    '系统密钥',
+    '机器调用共用密钥；请妥善保管'
+);
+    $systemApiKey = SystemApiKey::get();
+    ?>
+    <div class="vs-form" id="systemKeyBox">
+        <div class="vs-form-row">
+            <label class="vs-label">系统密钥</label>
+            <input type="text" class="vs-input" id="systemApiKeyInput" readonly value="<?php echo vs_e($systemApiKey); ?>" placeholder="尚未生成">
+            <?php vs_render_notice('tip', '', '供调用日志清理、卡密对接等系统级外部 API 鉴权使用。重置后旧密钥立即失效。推荐用 Header（Authorization: Bearer 或 X-Api-Key）传钥，避免密钥写入访问日志。各功能须在对应设置中单独开启，仅有密钥不够。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-actions">
+            <button type="button" class="vs-btn vs-btn--default" id="systemApiKeyGenBtn">生成 / 重置密钥</button>
+            <button type="button" class="vs-btn vs-btn--default" id="systemApiKeyCopyBtn">复制密钥</button>
+        </div>
+    </div>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-cardkey-api',
+    '卡密对接 API',
+    '商城对接：生成 / 库存 / 出库 / 作废 / 查询；须系统密钥'
+);
+    $cardkeyApiUrl = rtrim(vs_base_url(), '/') . '/core/api/cardkey.php';
+    $cardkeyApiOn = isset($vsCfg['cardkey_api_enabled']) && $vsCfg['cardkey_api_enabled'] === '1';
+    ?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="cardkeyApiForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_cardkey_api">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="cardkey_api_enabled" id="cardkey_api_enabled" value="1" <?php echo $cardkeyApiOn ? 'checked' : ''; ?>>
+                <span>启用卡密对接 API</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用 /core/api/cardkey.php 也会返回错误。请先在「系统密钥」生成密钥。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">接口地址</label>
+            <input type="text" class="vs-input" id="cardkeyApiUrlInput" readonly value="<?php echo vs_e($cardkeyApiUrl); ?>">
+            <?php vs_render_notice('tip', '', '鉴权与系统密钥相同：Bearer · Header（X-Api-Key / Api-Key / Apikey）· Query/POST/JSON（key 或 apikey）。推荐 Header，少用 Query。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">接口说明</label>
+            <div class="vs-notice vs-notice--tip vs-notice--compact" style="margin:0">
+                <p class="vs-notice__text" style="margin:0 0 0.5rem">GET 或 POST，参数可用 Query / Form / JSON。</p>
+                <ul style="margin:0;padding-left:1.2rem;font-size:0.8125rem;line-height:1.55;color:var(--vs-text-secondary,#6b7280)">
+                    <li><code>action=generate</code> · <code>count</code>（1～100）· <code>points</code>（单张积分）· 实时生成</li>
+                    <li><code>action=stock</code> · 可选 <code>points</code> · 查未使用库存数量（不含已作废/已使用/已发放）</li>
+                    <li><code>action=take</code> · <code>count</code>（1～100）· 可选 <code>points</code>（指定面额）· 从库存随机出库并标为「已发放」</li>
+                    <li><code>action=void</code> · <code>codes</code>（卡密，逗号分隔或数组）或 <code>code</code>（单张）；可作废未使用/已发放</li>
+                    <li><code>action=query</code> · <code>code</code>（单张）；返回 status / used / voided / issued 等</li>
+                </ul>
+                <p class="vs-notice__text" style="margin:0.65rem 0 0">示例：<code>curl -H "Authorization: Bearer 密钥" "<?php echo vs_e($cardkeyApiUrl); ?>?action=query&amp;code=卡密"</code></p>
+            </div>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存卡密 API 设置</button>
+            <button type="button" class="vs-btn vs-btn--default" id="cardkeyApiCopyUrlBtn">复制 API 地址</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
     'settings-apilog',
     '调用日志',
-    '详细记录、冷热归档与计划任务'
+    '详细记录、冷热归档 / 过期删除与计划任务'
 );
     $cfgHotDays = isset($vsCfg['apilog_hot_days']) ? (int) $vsCfg['apilog_hot_days'] : ApiLogArchive::DEFAULT_HOT_DAYS;
     if ($cfgHotDays < 1) {
@@ -1700,10 +1801,16 @@ vs_admin_accordion_start(
     }
     $cfgShardRows = isset($vsCfg['apilog_shard_rows']) ? (int) $vsCfg['apilog_shard_rows'] : ApiLogArchive::DEFAULT_SHARD_ROWS;
     $cfgShardRows = ApiLogArchive::clampShardRows($cfgShardRows);
-    $archiveOn = !isset($vsCfg['apilog_archive_enabled']) || $vsCfg['apilog_archive_enabled'] !== '0';
-    $cronKey = isset($vsCfg['apilog_cron_key']) ? (string) $vsCfg['apilog_cron_key'] : '';
+    $archiveOn = isset($vsCfg['apilog_archive_enabled']) ? ($vsCfg['apilog_archive_enabled'] === '1') : true;
+    $purgeOn = isset($vsCfg['apilog_purge_enabled']) && $vsCfg['apilog_purge_enabled'] === '1';
+    if ($archiveOn && $purgeOn) {
+        // 历史脏数据：优先归档
+        $purgeOn = false;
+    }
+    $cleanupOn = $archiveOn || $purgeOn;
     $cronUrl = ApiLogArchive::cronUrl();
     $sqliteOk = ApiLogArchive::sqliteAvailable();
+    $hasSystemKey = SystemApiKey::get() !== '';
     ?>
     <form method="post" action="" class="vs-form" id="apilogForm" data-ajax="1">
         <input type="hidden" name="action" value="save_apilog">
@@ -1715,16 +1822,23 @@ vs_admin_accordion_start(
         </div>
         <div class="vs-form-row">
             <label class="vs-checkbox">
-                <input type="checkbox" name="apilog_archive_enabled" id="apilog_archive_enabled" value="1" <?php echo $archiveOn ? 'checked' : ''; ?>>
+                <input type="checkbox" name="apilog_archive_enabled" id="apilog_archive_enabled" value="1" <?php echo $archiveOn ? 'checked' : ''; ?> data-apilog-mode="archive">
                 <span>启用调用日志冷热归档</span>
             </label>
-            <?php vs_render_notice('tip', '', '低配或日志量很大的站点建议开启：超过热数据天数的日志归档到本机后，会从在线库删除对应行（不可逆），减轻库压力且历史仍可查。服务器足够强时可关闭，不必做冷热分离。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '超过保留天数的日志先写入本机冷库，再从在线库删除（不可逆），历史仍可查。与「过期直接删除」二选一；未开启时即使密钥正确，计划任务也会拒绝执行。', array('field' => true, 'compact' => true)); ?>
         </div>
-        <div class="vs-form-row" id="apilogHotDaysRow"<?php echo $archiveOn ? '' : ' hidden'; ?>>
-            <label class="vs-label" for="apilog_hot_days">热数据天数</label>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="apilog_purge_enabled" id="apilog_purge_enabled" value="1" <?php echo $purgeOn ? 'checked' : ''; ?> data-apilog-mode="purge">
+                <span>启用过期日志直接删除（不缓存到本地）</span>
+            </label>
+            <?php vs_render_notice('tip', '', '只删除超过保留天数的在线库日志，不写冷库。适合不需要历史冷数据、只想控制库体积的站点。与冷热归档二选一。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row" id="apilogHotDaysRow"<?php echo $cleanupOn ? '' : ' hidden'; ?>>
+            <label class="vs-label" for="apilog_hot_days" id="apilogHotDaysLabel"><?php echo $purgeOn ? '保留天数' : '热数据天数'; ?></label>
             <input type="number" class="vs-input" id="apilog_hot_days" name="apilog_hot_days" min="1" max="<?php echo (int) ApiLogArchive::MAX_HOT_DAYS; ?>"
                    value="<?php echo (int) $cfgHotDays; ?>">
-            <?php vs_render_notice('tip', '', '仅在线库保留最近 N 天；更早的日志由计划任务写入本机后从在线库删除（不可逆），查询时自动合并冷库。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '在线库仅保留最近 N 天日志；更早的由计划任务按上方所选模式归档到冷库或直接删除。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row" id="apilogShardRowsRow"<?php echo $archiveOn ? '' : ' hidden'; ?>>
             <label class="vs-label" for="apilog_shard_rows">每个分片条数</label>
@@ -1732,28 +1846,23 @@ vs_admin_accordion_start(
                    min="<?php echo (int) ApiLogArchive::MIN_SHARD_ROWS; ?>"
                    max="<?php echo (int) ApiLogArchive::MAX_SHARD_ROWS; ?>"
                    value="<?php echo (int) $cfgShardRows; ?>">
-            <?php vs_render_notice('tip', '', '每个本机分片文件写入多少条日志。默认 5000；机器性能更好可适当调大，磁盘更省文件数。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('tip', '', '仅冷热归档模式有效：每个本机分片文件写入多少条日志。默认 5000。', array('field' => true, 'compact' => true)); ?>
         </div>
         <?php if (!$sqliteOk): ?>
-            <?php vs_render_notice('warning', '', '当前 PHP 未启用 PDO SQLite。开启冷热归档前请先安装并启用该扩展，否则计划任务无法写入冷库。', array('compact' => true)); ?>
+            <?php vs_render_notice('warning', '', '当前 PHP 未启用 PDO SQLite。若要使用冷热归档，请先安装并启用该扩展；「过期直接删除」不依赖 SQLite。', array('compact' => true)); ?>
         <?php endif; ?>
         <?php vs_render_notice('tip', '', '关闭详细日志后仍会计入各接口与密钥调用次数，适合带宽或性能有限的小站点。', array('compact' => true)); ?>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存日志设置</button>
         </div>
     </form>
-    <div class="vs-form" style="margin-top:16px" id="apilogCronBox"<?php echo $archiveOn ? '' : ' hidden'; ?>>
+    <div class="vs-form" style="margin-top:16px" id="apilogCronBox"<?php echo $cleanupOn ? '' : ' hidden'; ?>>
         <div class="vs-form-row">
-            <label class="vs-label">冷热归档计划任务</label>
-            <input type="text" class="vs-input" id="apilogCronUrl" readonly value="<?php echo vs_e($cronUrl); ?>" placeholder="请先生成密钥">
-            <?php vs_render_notice('tip', '', '启用后请在服务器配置每日凌晨调用（须带密钥）。单次任务会多轮归档直到赶完或达上限。示例：0 2 * * * curl -fsS 「上方链接」', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">任务密钥</label>
-            <input type="text" class="vs-input" id="apilogCronKey" readonly value="<?php echo vs_e($cronKey); ?>" placeholder="尚未生成">
+            <label class="vs-label">日志清理计划任务</label>
+            <input type="text" class="vs-input" id="apilogCronUrl" readonly value="<?php echo vs_e($cronUrl); ?>" placeholder="<?php echo $hasSystemKey ? '' : '请先在「系统密钥」生成密钥'; ?>">
+            <?php vs_render_notice('tip', '', '须先开启冷热归档或过期删除之一，并配置系统密钥。链接默认不含密钥（避免进访问日志）。示例：0 2 * * * curl -fsS -H "Authorization: Bearer 系统密钥" 「上方链接」。若面板只能拼 URL，可自行在链接后加 ?key=密钥。未开开关时调用将返回错误。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-actions">
-            <button type="button" class="vs-btn vs-btn--default" id="apilogGenCronKeyBtn">生成 / 重置密钥</button>
             <button type="button" class="vs-btn vs-btn--default" id="apilogCopyCronUrlBtn">复制任务链接</button>
         </div>
     </div>

@@ -59,17 +59,57 @@ class ApiLogArchive
     }
 
     /**
-     * 是否启用冷热归档（关闭后计划任务不归档，日志全留库）
+     * 是否启用冷热归档（与「直接删除」互斥；关闭后计划任务拒跑）
      *
      * @return bool
      */
     public static function isEnabled()
     {
+        return self::isArchiveEnabled();
+    }
+
+    /**
+     * @return bool
+     */
+    public static function isArchiveEnabled()
+    {
         try {
-            return trim((string) Config::get('apilog_archive_enabled', '1')) !== '0';
+            return trim((string) Config::get('apilog_archive_enabled', '1')) === '1';
         } catch (Exception $e) {
-            return true;
+            return false;
         }
+    }
+
+    /**
+     * 是否启用过期日志直接删除（不写冷库；与归档互斥）
+     *
+     * @return bool
+     */
+    public static function isPurgeEnabled()
+    {
+        try {
+            return trim((string) Config::get('apilog_purge_enabled', '0')) === '1';
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 当前清理模式：archive | purge | off
+     *
+     * @return string
+     */
+    public static function cleanupMode()
+    {
+        $archive = self::isArchiveEnabled();
+        $purge = self::isPurgeEnabled();
+        if ($archive && !$purge) {
+            return 'archive';
+        }
+        if ($purge && !$archive) {
+            return 'purge';
+        }
+        return 'off';
     }
 
     /**
@@ -143,11 +183,7 @@ class ApiLogArchive
      */
     public static function cronKey()
     {
-        try {
-            return trim((string) Config::get('apilog_cron_key', ''));
-        } catch (Exception $e) {
-            return '';
-        }
+        return SystemApiKey::get();
     }
 
     /**
@@ -155,11 +191,7 @@ class ApiLogArchive
      */
     public static function generateCronKey()
     {
-        try {
-            return bin2hex(random_bytes(32));
-        } catch (Exception $e) {
-            return sha1(uniqid((string) mt_rand(), true) . microtime(true));
-        }
+        return SystemApiKey::generate();
     }
 
     /**
@@ -168,23 +200,23 @@ class ApiLogArchive
      */
     public static function validateCronKey($key)
     {
-        $expected = self::cronKey();
-        if ($expected === '' || $key === '') {
-            return false;
-        }
-        return hash_equals($expected, (string) $key);
+        return SystemApiKey::validate($key);
     }
 
     /**
+     * 计划任务 URL（默认不含密钥，避免进访问日志；需要 Query 传钥时传 $withKey=true）
+     *
+     * @param bool $withKey
      * @return string
      */
-    public static function cronUrl()
+    public static function cronUrl($withKey = false)
     {
-        $base = rtrim(vs_base_url(), '/');
-        $key = self::cronKey();
-        $url = $base . '/core/cron/apilogarchive.php';
-        if ($key !== '') {
-            $url .= '?key=' . rawurlencode($key);
+        $url = rtrim(vs_base_url(), '/') . '/core/api/apilogarchive.php';
+        if ($withKey) {
+            $key = SystemApiKey::get();
+            if ($key !== '') {
+                $url .= '?key=' . rawurlencode($key);
+            }
         }
         return $url;
     }
@@ -226,6 +258,120 @@ class ApiLogArchive
     }
 
     /**
+     * 计划任务统一入口（按后台开关分流；未启用则失败）
+     *
+     * @param int $maxRounds
+     * @return array{ok:bool,msg:string,archived:int,days:array,deleted:int,mode?:string}
+     */
+    public static function runScheduled($maxRounds = 50)
+    {
+        $mode = self::cleanupMode();
+        if ($mode === 'off') {
+            return array(
+                'ok'       => false,
+                'msg'      => '日志清理未启用（请先在系统设置开启冷热归档或过期删除）',
+                'archived' => 0,
+                'days'     => array(),
+                'deleted'  => 0,
+                'mode'     => 'off',
+            );
+        }
+        if ($mode === 'purge') {
+            $result = self::runPurge($maxRounds);
+            $result['mode'] = 'purge';
+            return $result;
+        }
+        $result = self::run($maxRounds);
+        $result['mode'] = 'archive';
+        return $result;
+    }
+
+    /**
+     * 过期日志直接删除（不写冷库）
+     *
+     * @param int $maxRounds
+     * @return array{ok:bool,msg:string,archived:int,days:array,deleted:int}
+     */
+    public static function runPurge($maxRounds = 50)
+    {
+        $empty = array('ok' => false, 'msg' => '', 'archived' => 0, 'days' => array(), 'deleted' => 0);
+        if (!self::isPurgeEnabled() || self::isArchiveEnabled()) {
+            $empty['msg'] = '过期日志删除未启用或与归档冲突';
+            return $empty;
+        }
+        if (!class_exists('ApiLogManager') || !ApiLogManager::tableReady()) {
+            $empty['msg'] = '日志表未就绪';
+            return $empty;
+        }
+        if (!self::acquireLock()) {
+            $empty['msg'] = '已有日志清理任务在执行';
+            return $empty;
+        }
+
+        $maxRounds = max(1, min(200, (int) $maxRounds));
+        $batch = self::shardRows();
+        $hotDays = self::hotDays();
+        $deleted = 0;
+        $lastMsg = '';
+
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('apilog');
+            for ($i = 0; $i < $maxRounds; $i++) {
+                $sql = 'SELECT `id` FROM `' . $table . '`
+                     WHERE `createtime` < DATE_SUB(NOW(), INTERVAL ' . (int) $hotDays . ' DAY)
+                     ORDER BY `id` ASC
+                     LIMIT ' . (int) $batch;
+                $stmt = $pdo->query($sql);
+                $ids = array();
+                if ($stmt) {
+                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                        $ids[] = (int) $row['id'];
+                    }
+                }
+                if ($ids === array()) {
+                    $lastMsg = $deleted > 0 ? '删除完成' : '没有超过保留天数的日志';
+                    break;
+                }
+                $n = self::deleteIds($pdo, $table, $ids);
+                $deleted += $n;
+                $lastMsg = '已删除 ' . $deleted . ' 条';
+                if ($n <= 0) {
+                    return array(
+                        'ok'       => false,
+                        'msg'      => '删除失败，请稍后重试',
+                        'archived' => 0,
+                        'days'     => array(),
+                        'deleted'  => $deleted,
+                    );
+                }
+            }
+        } catch (Exception $e) {
+            return array(
+                'ok'       => false,
+                'msg'      => '删除失败，请稍后重试',
+                'archived' => 0,
+                'days'     => array(),
+                'deleted'  => $deleted,
+            );
+        } finally {
+            self::releaseLock();
+        }
+
+        if ($deleted > 0 && class_exists('RedisCache')) {
+            RedisCache::invalidateApiLog();
+        }
+
+        return array(
+            'ok'       => true,
+            'msg'      => $deleted > 0 ? '删除完成' : $lastMsg,
+            'archived' => 0,
+            'days'     => array(),
+            'deleted'  => $deleted,
+        );
+    }
+
+    /**
      * 计划任务入口：持锁多轮跑到本轮无冷数据或达上限（单次 runOnce 有条数上限）
      *
      * @param int $maxRounds
@@ -234,9 +380,8 @@ class ApiLogArchive
     public static function run($maxRounds = 50)
     {
         $empty = array('ok' => false, 'msg' => '', 'archived' => 0, 'days' => array(), 'deleted' => 0);
-        if (!self::isEnabled()) {
-            $empty['ok'] = true;
-            $empty['msg'] = '冷热归档未开启，跳过';
+        if (!self::isArchiveEnabled() || self::isPurgeEnabled()) {
+            $empty['msg'] = '冷热归档未启用或与过期删除冲突';
             return $empty;
         }
         if (!self::sqliteAvailable()) {
@@ -314,9 +459,9 @@ class ApiLogArchive
     public static function runOnce($limit = null, $alreadyLocked = false)
     {
         $empty = array('ok' => false, 'msg' => '', 'archived' => 0, 'days' => array(), 'deleted' => 0);
-        if (!self::isEnabled()) {
-            $empty['ok'] = true;
-            $empty['msg'] = '冷热归档未开启，跳过';
+        if (!self::isArchiveEnabled() || self::isPurgeEnabled()) {
+            $empty['ok'] = false;
+            $empty['msg'] = '冷热归档未启用或与过期删除冲突';
             return $empty;
         }
         if (!self::sqliteAvailable()) {
@@ -1123,26 +1268,38 @@ class ApiLogArchive
             if ($q !== '' || $userIds !== array()) {
                 // q 与 userid 必须 AND：禁止 OR 导致「搜到别的用户」串读
                 if ($q !== '') {
-                    $qParts = array(
-                        '`apiname` LIKE ? ESCAPE \'\\\\\'',
-                        '`path` LIKE ? ESCAPE \'\\\\\'',
-                        '`ip` LIKE ? ESCAPE \'\\\\\'',
-                        '`url` LIKE ? ESCAPE \'\\\\\'',
-                        '`apikey` LIKE ? ESCAPE \'\\\\\'',
-                        '`domain` LIKE ? ESCAPE \'\\\\\'',
-                        '`iploc` LIKE ? ESCAPE \'\\\\\'',
-                    );
-                    $like = function_exists('vs_sql_like_contains')
-                        ? vs_sql_like_contains($q)
-                        : ('%' . addcslashes($q, "\\%_") . '%');
-                    for ($i = 0; $i < 7; $i++) {
-                        $bind[] = $like;
+                    $qTrim = trim((string) $q);
+                    $logIdOnly = 0;
+                    if (preg_match('/^#(\d+)$/', $qTrim, $mId)) {
+                        $logIdOnly = (int) $mId[1];
+                    } elseif (preg_match('/^(?:日志编号|编号|日志\s*id|日志\s*ID|id|ID)\s*[:：#]?\s*(\d+)$/u', $qTrim, $mId)) {
+                        $logIdOnly = (int) $mId[1];
                     }
-                    if (ctype_digit($q)) {
-                        $qParts[] = '`id` = ?';
-                        $bind[] = (int) $q;
+                    if ($logIdOnly > 0) {
+                        $where[] = '`id` = ?';
+                        $bind[] = $logIdOnly;
+                    } else {
+                        $qParts = array(
+                            '`apiname` LIKE ? ESCAPE \'\\\\\'',
+                            '`path` LIKE ? ESCAPE \'\\\\\'',
+                            '`ip` LIKE ? ESCAPE \'\\\\\'',
+                            '`url` LIKE ? ESCAPE \'\\\\\'',
+                            '`apikey` LIKE ? ESCAPE \'\\\\\'',
+                            '`domain` LIKE ? ESCAPE \'\\\\\'',
+                            '`iploc` LIKE ? ESCAPE \'\\\\\'',
+                        );
+                        $like = function_exists('vs_sql_like_contains')
+                            ? vs_sql_like_contains($q)
+                            : ('%' . addcslashes($q, "\\%_") . '%');
+                        for ($i = 0; $i < 7; $i++) {
+                            $bind[] = $like;
+                        }
+                        if (ctype_digit($qTrim)) {
+                            $qParts[] = '`id` = ?';
+                            $bind[] = (int) $qTrim;
+                        }
+                        $where[] = '(' . implode(' OR ', $qParts) . ')';
                     }
-                    $where[] = '(' . implode(' OR ', $qParts) . ')';
                 }
                 if ($userIds !== array()) {
                     $ph = implode(',', array_fill(0, count($userIds), '?'));

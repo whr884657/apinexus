@@ -1,6 +1,6 @@
 <?php
 /**
- * 主题 three · 友情链接（首页视觉语言自研）
+ * 主题 three · 友情链接（自研 th3）
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
@@ -16,48 +16,44 @@ $linksTruncated = !empty($pagePack['truncated']);
 $applyUrl = $vsBase . '/applylink';
 ?>
 <section class="th3-page">
-  <div class="th3-page__inner max-w-7xl mx-auto px-4 sm:px-5 lg:px-8">
-    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-      <div>
-        <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ 友情链接</div>
-        <h1 class="font-display font-bold tracking-tight th3-page__title">友情链接</h1>
-        <p class="th3-page__lead text-fg-2">与优质站点互相推荐，共同成长</p>
-      </div>
-    </div>
+  <div class="th3-page__inner th3-page__inner--links mx-auto px-4 sm:px-5 lg:px-8">
+    <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ 友情链接</div>
+    <h1 class="font-display font-bold tracking-tight th3-page__title">友情链接</h1>
+    <p class="th3-page__lead text-fg-2">与优质站点互相推荐，共同成长</p>
 
     <?php if ($linksTruncated): ?>
-    <p class="th3-notice text-sm text-fg-2 mb-6">当前共 <?php echo (int) $linksTotal; ?> 条，本页仅展示前 <?php echo (int) $pagePack['limit']; ?> 条。</p>
+    <p class="th3-notice text-sm text-fg-2 mt-6 mb-0">当前共 <?php echo (int) $linksTotal; ?> 条，本页仅展示前 <?php echo (int) $pagePack['limit']; ?> 条。</p>
     <?php endif; ?>
 
     <?php if (count($friendLinks) === 0): ?>
-    <div class="th3-panel card">
-      <h2 class="font-display font-semibold text-lg m-0 mb-2">暂无友情链接</h2>
-      <p class="text-fg-2 m-0 mb-0">欢迎交换友链。请先在贵站添加本站信息，再通过下方入口提交申请。</p>
+    <div class="th3-empty mt-8">
+      <p class="m-0 mb-1 font-semibold">暂无友情链接</p>
+      <p class="m-0 text-sm">欢迎交换友链。请先在贵站添加本站信息，再通过下方入口提交申请。</p>
     </div>
     <?php else: ?>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="th3-link-grid mt-8">
       <?php foreach ($friendLinks as $item): ?>
         <a class="th3-link-card card" href="<?php echo vs_e($item['siteurl']); ?>" target="_blank" rel="noopener noreferrer" data-friend-link="1">
           <?php if (!empty($item['icon'])): ?>
-            <img class="th3-link-card__avatar" src="<?php echo vs_e($item['icon']); ?>" alt="" width="44" height="44" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
+            <img class="th3-link-card__avatar" src="<?php echo vs_e($item['icon']); ?>" alt="" width="56" height="56" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
           <?php else: ?>
             <span class="th3-link-card__avatar th3-link-card__avatar--text"><?php
               echo vs_e(!empty($item['initial']) ? $item['initial'] : (function_exists('mb_substr') ? mb_substr($item['name'], 0, 1, 'UTF-8') : substr($item['name'], 0, 1)));
             ?></span>
           <?php endif; ?>
           <div class="th3-link-card__body">
-            <strong><?php echo vs_e($item['name']); ?></strong>
+            <strong class="th3-link-card__name"><?php echo vs_e($item['name']); ?></strong>
             <?php if (!empty($item['description'])): ?>
-            <p><?php echo vs_e($item['description']); ?></p>
+            <p class="th3-link-card__desc"><?php echo vs_e($item['description']); ?></p>
             <?php endif; ?>
-            <span class="font-mono text-xs text-muted"><?php echo vs_e(!empty($item['host']) ? $item['host'] : $item['siteurl']); ?></span>
+            <span class="th3-link-card__url font-mono"><?php echo vs_e(!empty($item['host']) ? $item['host'] : $item['siteurl']); ?></span>
           </div>
         </a>
       <?php endforeach; ?>
     </div>
     <?php endif; ?>
 
-    <div class="th3-cta-band card mt-10">
+    <div class="th3-link-apply mt-10">
       <div>
         <h2 class="font-display font-semibold text-lg m-0 mb-1">申请友链</h2>
         <p class="text-fg-2 text-sm m-0">请先在贵站添加本站信息，再提交申请。</p>

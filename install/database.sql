@@ -164,8 +164,10 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('apilog_query_days', '7'),
 ('apilog_hot_days', '30'),
 ('apilog_archive_enabled', '1'),
+('apilog_purge_enabled', '0'),
 ('apilog_shard_rows', '5000'),
-('apilog_cron_key', ''),
+('system_api_key', ''),
+('cardkey_api_enabled', '0'),
 ('captcha_mode', 'local'),
 ('captcha_mode_admin', 'local'),
 ('captcha_mode_user', 'local'),
@@ -362,7 +364,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}orders` (
     `orderno` varchar(64) NOT NULL COMMENT '订单号（全局唯一）',
     `userid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联用户ID（对应user.id）',
     `direct` tinyint(1) NOT NULL COMMENT '方向：0减少 1增加',
-    `kind` tinyint(1) NOT NULL COMMENT '类型：增加时0用户充值1管理员加款2注册赠送3每日签到；减少时0API调用1管理员扣款2AI调用(预留)',
+    `kind` tinyint(1) NOT NULL COMMENT '类型：增加时0用户充值1管理员加款2注册赠送3每日签到4调用退回5卡密兑换；减少时0API调用1管理员扣款2AI调用(预留)',
     `amount` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '变动积分（正数）',
     `balance` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '变动后积分余额',
     `money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '实付金额（元，充值订单）',
@@ -399,6 +401,24 @@ CREATE TABLE IF NOT EXISTS `{prefix}checkin` (
   UNIQUE KEY `uk_userid_date` (`userid`, `checkindate`),
   KEY `idx_checkindate` (`checkindate`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户每日签到记录';
+
+-- 积分卡密
+CREATE TABLE IF NOT EXISTS `{prefix}cardkey` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `code` char(20) NOT NULL COMMENT '卡密串（20位字母数字大小写）',
+  `points` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '兑换积分数量',
+  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态：1未使用(库存) 2已使用 3作废 4已发放(API出库,仍可兑)',
+  `userid` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '兑换用户ID；未兑为0',
+  `adminid` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '生成管理员ID',
+  `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '生成时间',
+  `usetime` datetime DEFAULT NULL COMMENT '兑换时间；未兑为空',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_code` (`code`),
+  KEY `idx_status_id` (`status`, `id`),
+  KEY `idx_status_points` (`status`, `points`, `id`),
+  KEY `idx_createtime_id` (`createtime`, `id`),
+  KEY `idx_userid_id` (`userid`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='积分卡密';
 
 -- 友情链接与合作伙伴（共用表，kind 区分）
 CREATE TABLE IF NOT EXISTS `{prefix}link` (

@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **文档性质：** 主题开发对接文档（按文件 / 能力分段，**不按版本号分章**）  
-> **当前版本：** **13.26.41**（与 `core/version.php` 中 `VS_VERSION` 一致）  
+> **当前版本：** **13.26.42**（与 `core/version.php` 中 `VS_VERSION` 一致）  
 > **适用读者：** 自研主题、二次开发、维护者  
 
 **铁律（全文最重要的一句）：**  
@@ -181,7 +181,7 @@ MySQL / Redis
 | 文件 | 一句话 |
 |------|--------|
 | `bootstrap.php` | 系统引导：按序加载全部核心类 + Session/CSRF |
-| `version.php` | 定义 `VS_VERSION`（当前 **13.26.41**） |
+| `version.php` | 定义 `VS_VERSION`（当前 **13.26.42**） |
 | `helpers.php` | 全局函数：转义、路径、SEO、前台渲染、`vs_require_secure_post` 等 |
 | `InstallChecker.php` | 是否已安装；未安装跳转安装向导 |
 | `Database.php` | PDO 连接、表前缀 |
@@ -286,6 +286,8 @@ MySQL / Redis
 | `PayPendingWatch.php` | 待支付超时自动取消 |
 | `PointsNotify.php` | 积分相关邮件 |
 | `CheckinManager.php` | 每日签到表 |
+| `CardKeyManager.php` | 积分卡密生成 / 列表 / 兑换（防并发）/ 按码查询与作废 |
+| `SystemApiKey.php` | 系统密钥（归档、卡密对接 API 等） |
 
 ### 3.6 AI 文档
 
@@ -310,7 +312,8 @@ MySQL / Redis
 | `play/codeplay/*` | 码支付客户端 + `notify.php` / `return.php` |
 | `playground/relay.php` **HTTP** | 在线测试中继入口 |
 | `playground/media.php` **HTTP** | 测试媒体短时预览 |
-| `cron/apilogarchive.php` **HTTP** | 日志归档计划任务（密钥） |
+| `api/apilogarchive.php` **HTTP** | 日志清理（归档/删除；系统密钥 + 开关） |
+| `api/cardkey.php` **HTTP** | 卡密对接 API（系统密钥；generate/stock/take/void/query） |
 
 ---
 
@@ -354,7 +357,7 @@ version → helpers → 时区
 → LinkManager → LinkSiteMeta → LinkNotify
 → FrontendLink → FrontendPartner → FrontendSponsor → FrontendContributor
 → ContentManager → CommentManager → AdminNotify → CommentNotify → FrontendComment
-→ CheckinManager → Markdown
+→ CheckinManager → CardKeyManager → Markdown
 → FrontendAnnouncement → FrontendArticle → FrontendAbout
 → PlaygroundRelay → ThemeManager → Sitemap
 → oauth/*
@@ -1047,17 +1050,19 @@ $showPartners = ThemeManager::themeSettingBool('show_partners', true);
 | **主题怎么用** | 一般不直接调；注册/找回由入口发信。 |
 | **禁止什么** | 主题批量发信；绕过限流票据。 |
 
-### 8.2 积分与支付：`PayConfig` / `OrderManager` / `PointsManager` / `PayPendingWatch` / `PointsNotify` / `CheckinManager` / `CodePayClient`
+### 8.2 积分与支付：`PayConfig` / `OrderManager` / `PointsManager` / `PayPendingWatch` / `PointsNotify` / `CheckinManager` / `CardKeyManager` / `CodePayClient`
 
 | | |
 |--|--|
-| **干什么** | 充值套餐、下单、码支付回调履约、余额扣费、注册赠送、每日签到、待支付超时取消、积分邮件。 |
-| **主题怎么用** | 用户中心充值/积分页走入口与 `FrontendUser`（余额、签到横幅）；收款码展示用 `FrontendSponsor::paymentQrs` 或 PayConfig 图标辅助（用户中心）。 |
-| **禁止什么** | 主题伪造履约；自己验签回调；绕过 `PayPendingWatch`。 |
+| **干什么** | 充值套餐、下单、码支付回调履约、余额扣费、注册赠送、每日签到、积分卡密兑换、待支付超时取消、积分邮件。 |
+| **主题怎么用** | 用户中心充值/积分页走入口与 `FrontendUser`（余额、签到横幅）；充值页可展示卡密兑换框（入口注入 `cardkeyReady`）；收款码展示用 `FrontendSponsor::paymentQrs` 或 PayConfig 图标辅助（用户中心）。 |
+| **禁止什么** | 主题伪造履约；自己验签回调；绕过 `PayPendingWatch`；主题直读 `cardkey` 表。 |
 
 码支付 HTTP：`core/play/codeplay/notify.php`（异步）、`return.php`（浏览器回跳，履约以 notify 为准）。
 
 签到展示：`FrontendUser::checkinBanner()` / `doCheckin()`（内部 `PointsManager` + `CheckinManager`）。
+
+卡密：管理端 `/admin/finance/cardkey`；用户兑换走 `user/recharge.php` `action=redeem` → `CardKeyManager::redeem`（事务 + `FOR UPDATE`）。商城对接：`/core/api/cardkey.php`（系统密钥；generate / stock / take / void / query）。
 
 ### 8.3 `Captcha.php` 与 `captcha/*`
 
@@ -1165,13 +1170,14 @@ HTTP：`captcha/image.php`（出图）、`captcha/register.php`（极验 registe
 
 类 `PlaygroundRelay::execute(...)` 供中继内部使用；**勿在主题写 apilog**。
 
-### 10.7 `core/cron/`
+### 10.7 `core/api/`
 
 | 文件 | 干什么 |
 |------|--------|
-| `apilogarchive.php` | 日志冷归档任务；密钥校验 |
+| `apilogarchive.php` | 日志清理（系统密钥 + 后台开关；归档或过期删除） |
+| `cardkey.php` | 卡密对接（generate / stock / take / void / query；系统密钥 + 开关） |
 
-主题无关。
+主题无关；见《系统级外部API规范》。旧 `core/cron/` 已废弃删除，勿再新增。
 
 ### 10.8 `core/ping.php`
 
@@ -1232,7 +1238,7 @@ HTTP：`captcha/image.php`（出图）、`captcha/register.php`（极验 registe
 
 ---
 
-**文档版本标注：** 13.26.41  
+**文档版本标注：** 13.26.42
 **维护约定：** 新增 `Frontend*` 或主题可见 HTTP 窗口时，同步更新本文件对应分册与总目录表；说明以「干什么 / 主题怎么用 / 禁止什么」三块书写，避免按版本号堆章节。
 
 ---
@@ -1488,6 +1494,36 @@ HTTP：`captcha/image.php`（出图）、`captcha/register.php`（极验 registe
 **主题：** 一般**不要**在主题里直接调用；由入口/后台使用
 
 **公开方法：** `table` · `tableReady` · `today` · `hasCheckedInToday` · `record` · `deleteToday` · `bannerState`
+
+---
+
+### `core/CardKeyManager.php` · `CardKeyManager`
+
+**干什么：** 积分卡密生成、库存查询、出库（已发放）、列表（keyset）、统计、作废、兑换（事务锁行防并发双兑）
+
+**主题：** 一般**不要**在主题里直接调用；充值页只渲染入口注入的兑换 UI，POST 由 `user/recharge.php` 处理
+
+**公开方法：** `table` · `tableReady` · `statusLabel` · `isRedeemableStatus` · `isValidCodeFormat` · `formatRow` · `generate` · `stats` · `stock` · `takeFromStock` · `listPaged` · `redeem` · `voidUnused` · `voidUnusedByCodes` · `findByCode`
+
+---
+
+### `core/SystemApiKey.php` · `SystemApiKey`
+
+**干什么：** 系统级密钥（`config.system_api_key`）；归档计划任务与卡密对接 API 等机器调用共用；支持 Bearer / Header / Query 提取与 `hash_equals` 校验
+
+**主题：** **禁止**调用
+
+**公开方法：** `migrateFromLegacy` · `get` · `generate` · `set` · `validate` · `requestBody` · `extractFromRequest` · `requireAuthorized` · `requireRateLimit` · `jsonExit`
+
+---
+
+### `core/api/cardkey.php`
+
+**干什么：** 卡密对接 HTTP API（`action=generate|stock|take|void|query`）；须系统密钥；库存查询与出库；按码作废/查询；限流
+
+**主题：** **禁止**调用；由商城/外部系统 HTTPS 调用
+
+**公开方法：** （入口脚本）
 
 ---
 
@@ -1857,7 +1893,7 @@ HTTP：`captcha/image.php`（出图）、`captcha/register.php`（极验 registe
 
 **主题：** 一般**不要**在主题里直接调用；由入口/后台使用
 
-**公开方法：** `balance` · `hasPointsColumn` · `hasSpentColumn` · `spentTotal` · `deductApiCall` · `refundApiCall` · `adminAdjust` · `createRecharge` · `completeRecharge` · `cancelPending` · `giftOnRegister` · `checkin`
+**公开方法：** `balance` · `hasPointsColumn` · `hasSpentColumn` · `spentTotal` · `deductApiCall` · `refundApiCall` · `adminAdjust` · `creditCardKey` · `createRecharge` · `completeRecharge` · `cancelPending` · `giftOnRegister` · `checkin`
 
 ---
 
@@ -2201,13 +2237,15 @@ HTTP：`captcha/image.php`（出图）、`captcha/register.php`（极验 registe
 
 ---
 
-### `core/cron/apilogarchive.php`
+### `core/api/apilogarchive.php`
 
-**干什么：** 调用日志冷热归档计划任务入口（须携带系统设置中生成的密钥）；内部调用 `ApiLogArchive::run()` 多轮排空
+**干什么：** 调用日志清理 HTTP API（冷热归档或过期直接删除；须系统密钥 + 后台开关）；内部 `ApiLogArchive::runScheduled()`
 
-**主题：** 一般**不要**在主题里直接调用；由入口/后台使用
+**主题：** **禁止**调用；由 crontab / 运维 HTTPS 调用
 
-**公开方法：** （入口脚本或无 public API）
+**正式 URL：** `/core/api/apilogarchive.php`（旧 `/core/cron/apilogarchive.php` 已删除；升级后由 `obsolete-files` 清理）
+
+**公开方法：** （入口脚本）
 
 ---
 

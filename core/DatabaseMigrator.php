@@ -802,13 +802,16 @@ class DatabaseMigrator
     }
 
     /**
-     * 确保调用日志冷热归档配置存在（幂等）
+     * 确保调用日志冷热归档配置存在（幂等）；顺带迁移系统密钥
      *
      * @return void
      */
     private static function ensureApilogArchiveConfig()
     {
         try {
+            if (class_exists('SystemApiKey')) {
+                SystemApiKey::migrateFromLegacy();
+            }
             $all = Config::all();
             $hot = isset($all['apilog_hot_days']) ? trim((string) $all['apilog_hot_days']) : '';
             if ($hot === '' || (int) $hot < 1) {
@@ -818,14 +821,40 @@ class DatabaseMigrator
                 }
                 Config::set('apilog_hot_days', (string) $fromKeep);
             }
-            if (!array_key_exists('apilog_cron_key', $all)) {
-                Config::set('apilog_cron_key', '');
+            if (!array_key_exists('system_api_key', $all) && class_exists('SystemApiKey')) {
+                // migrateFromLegacy 已尽量写入；仍缺则补空
+                if (SystemApiKey::get() === '' && !array_key_exists('system_api_key', Config::all())) {
+                    Config::set('system_api_key', '');
+                }
             }
             if (!array_key_exists('apilog_archive_enabled', $all)) {
                 Config::set('apilog_archive_enabled', '1');
             }
+            if (!array_key_exists('apilog_purge_enabled', $all)) {
+                Config::set('apilog_purge_enabled', '0');
+            }
+            // 互斥：若脏数据双开，保留归档、关删除
+            $arch = isset($all['apilog_archive_enabled']) ? trim((string) $all['apilog_archive_enabled']) : '1';
+            $purge = isset($all['apilog_purge_enabled']) ? trim((string) $all['apilog_purge_enabled']) : '0';
+            if ($arch === '1' && $purge === '1') {
+                Config::set('apilog_purge_enabled', '0');
+            }
             if (!array_key_exists('apilog_shard_rows', $all)) {
                 Config::set('apilog_shard_rows', '5000');
+            }
+            if (!array_key_exists('cardkey_api_enabled', $all)) {
+                Config::set('cardkey_api_enabled', '0');
+            }
+            if (self::tableExists('cardkey') && !self::tableIndexExists('cardkey', 'idx_status_points')) {
+                try {
+                    $pdo = Database::connect();
+                    self::execStatement(
+                        $pdo,
+                        'ALTER TABLE `' . Database::table('cardkey') . '` ADD KEY `idx_status_points` (`status`, `points`, `id`)'
+                    );
+                } catch (Exception $e) {
+                    // 留待下次结构更新重试
+                }
             }
             if (array_key_exists('apilog_keep_days', $all)) {
                 $pdo = Database::connect();

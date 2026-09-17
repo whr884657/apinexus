@@ -1,0 +1,87 @@
+<?php
+/**
+ * 主题四 · OAuth 绑定（居中表单）
+ *
+ * @var string $vsBase
+ * @var string $base
+ * @var string $providerLabel
+ * @var string $displayName
+ * @var string $provider
+ * @var bool   $registerOpen
+ */
+if (!defined('VS_THEME_RENDER')) { exit; }
+$vsBase = isset($vsBase) ? (string) $vsBase : vs_site_base_path();
+$base = (isset($base) && (string) $base !== '') ? (string) $base : $vsBase;
+$providerLabel = isset($providerLabel) ? (string) $providerLabel : '';
+$displayName = isset($displayName) ? (string) $displayName : '';
+$provider = isset($provider) ? (string) $provider : '';
+$registerOpen = !isset($registerOpen) || !empty($registerOpen);
+
+ThemeManager::renderThemeAuthHead('绑定' . $providerLabel);
+TH5_auth_shell_start('绑定' . $providerLabel . '账号', '请使用已注册账号验证身份');
+?>
+
+<?php if ($registerOpen): ?>
+<div class="th5-auth__msg th5-auth__msg--info">仅支持已注册用户。请使用本站用户名/邮箱与密码完成绑定；未注册请先 <a href="<?php echo vs_e($base); ?>/user/register">注册</a>。</div>
+<?php else: ?>
+<div class="th5-auth__msg th5-auth__msg--info">仅支持已注册用户。请使用本站已有账号完成绑定；本站当前已停止开放新用户注册。</div>
+<?php endif; ?>
+
+<?php if ($displayName !== ''): ?>
+    <div class="th5-auth__msg th5-auth__msg--info"><?php echo vs_e($providerLabel); ?> 账号：<?php echo vs_e($displayName); ?></div>
+<?php endif; ?>
+
+<div id="formMessage" class="th5-auth__msg" role="alert" hidden></div>
+
+<form id="bindForm" method="post" action="" novalidate>
+    <?php vs_auth_csrf_field(); ?>
+    <div class="th5-auth__field">
+        <input class="th5-auth__input" id="username" name="username" type="text" placeholder="已注册账号" autocomplete="username" maxlength="64" required aria-label="用户名或邮箱">
+    </div>
+    <div class="th5-auth__field">
+        <div class="th5-auth__pw-wrap">
+            <input class="th5-auth__input" id="password" name="password" type="password" placeholder="密码" autocomplete="current-password" maxlength="64" required aria-label="密码">
+            <?php echo TH5_pw_toggle_html(); ?>
+        </div>
+    </div>
+    <button type="submit" class="th5-auth__submit" id="bindBtn">确认绑定并登录</button>
+    <div class="th5-auth__foot"><a href="<?php echo vs_e($base); ?>/user/login">返回登录</a></div>
+</form>
+
+<?php TH5_auth_shell_end(); ?>
+
+<script>
+(function () {
+    'use strict';
+    var form = document.getElementById('bindForm');
+    var messageEl = document.getElementById('formMessage');
+    var bindBtn = document.getElementById('bindBtn');
+    if (!form) return;
+
+    function showMessage(text, type) {
+        if (text && window.VsToast) { VsToast.show(text, type === 'error' ? 'error' : 'success'); if (messageEl) messageEl.hidden = true; return; }
+        if (!messageEl) return;
+        messageEl.textContent = text;
+        messageEl.className = 'th5-auth__msg th5-auth__msg--' + type;
+        messageEl.hidden = false;
+        if (type === 'error' && window.TH5AuthShake) window.TH5AuthShake();
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (window.TH5AuthSetLoading) window.TH5AuthSetLoading(bindBtn, true);
+        fetch(window.location.href, { method: 'POST', body: new FormData(form), credentials: 'same-origin' })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data.code === 1) {
+                    showMessage(data.msg || '绑定成功', 'success');
+                    if (data.url) setTimeout(function () { window.location.href = data.url; }, 800);
+                } else showMessage(data.msg || '绑定失败', 'error');
+            })
+            .catch(function () { showMessage('网络异常，请稍后重试', 'error'); })
+            .finally(function () { if (window.TH5AuthSetLoading) window.TH5AuthSetLoading(bindBtn, false); });
+    });
+})();
+</script>
+
+<?php ThemeManager::renderThemeAuthFoot(); ?>

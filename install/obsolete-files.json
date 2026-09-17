@@ -33,6 +33,7 @@
         "core/theme/default/assets/vendor/tailwind.min.js",
         "core/theme/three/assets/js/theme-playground.js",
         "robots.txt",
-        "core/ConsoleBrand.php"
+        "core/ConsoleBrand.php",
+        "core/cron/apilogarchive.php"
     ]
 }

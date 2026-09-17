@@ -6226,6 +6226,49 @@ select.vs-input.vs-select {
     font-weight: 600;
     color: #0f172a;
 }
+.vs-recharge-tabs {
+    display: flex;
+    gap: 0;
+    margin: 0 0 16px;
+    border-bottom: 1px solid #e2e8f0;
+    overflow-x: auto;
+}
+.vs-recharge-tabs .vs-tabs__btn,
+.vs-recharge-tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+}
+.vs-recharge-tab.is-active {
+    color: #0f172a;
+    border-bottom-color: #111;
+}
+.vs-recharge-pane[hidden] {
+    display: none !important;
+}
+.vs-recharge-cardkey__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.vs-recharge-cardkey__row .vs-input {
+    flex: 1 1 180px;
+    min-width: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.04em;
+}
+.vs-recharge-cardkey__row .vs-btn {
+    flex: 0 0 auto;
+}
 .vs-recharge-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));

@@ -165,11 +165,37 @@
             if (!pre || pre.getAttribute('data-vs-md-copy') === '1') {
                 return;
             }
+            // 已在滚动壳内
+            if (pre.closest && pre.closest('.vs-md-pre-wrap')) {
+                pre.setAttribute('data-vs-md-copy', '1');
+                return;
+            }
+            if (pre.parentNode && pre.parentNode.classList
+                && pre.parentNode.classList.contains('vs-md-pre-scroll')) {
+                pre.setAttribute('data-vs-md-copy', '1');
+                return;
+            }
             pre.setAttribute('data-vs-md-copy', '1');
             pre.classList.add('vs-md-pre');
-            if (window.getComputedStyle(pre).position === 'static') {
-                pre.style.position = 'relative';
+
+            /*
+             * 结构：
+             * .vs-md-pre-wrap（定宽 + 钉复制钮）
+             *   .vs-md-pre-scroll（唯一横向滚动层）
+             *     pre
+             *   button.vs-md-copy-btn
+             * 禁止：钮做 pre 子节点；禁止外壳被长代码撑破宽度导致父级 .markdown-body 横向滚。
+             */
+            var wrap = document.createElement('div');
+            wrap.className = 'vs-md-pre-wrap';
+            var scroll = document.createElement('div');
+            scroll.className = 'vs-md-pre-scroll';
+            if (pre.parentNode) {
+                pre.parentNode.insertBefore(wrap, pre);
             }
+            scroll.appendChild(pre);
+            wrap.appendChild(scroll);
+
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'vs-md-copy-btn';
@@ -196,7 +222,7 @@
                     }, 1600);
                 }).catch(function () {});
             });
-            pre.appendChild(btn);
+            wrap.appendChild(btn);
             if (global.VsSyntax && typeof global.VsSyntax.highlightElement === 'function') {
                 var codeEl = pre.querySelector('code');
                 if (codeEl) {

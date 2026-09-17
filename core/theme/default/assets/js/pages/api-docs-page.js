@@ -82,8 +82,21 @@
                 });
             }
             
-            // 为所有代码块添加复制按钮
+            // 为所有代码块添加复制按钮（与 VsMarkdown 同构：定宽外壳 + 独立滚动层）
             document.querySelectorAll('.markdown-body pre').forEach(pre => {
+                if (pre.closest && (pre.closest('.code-block-wrapper') || pre.closest('.vs-md-pre-wrap'))) {
+                    return;
+                }
+                const wrap = document.createElement('div');
+                wrap.className = 'code-block-wrapper';
+                const scroll = document.createElement('div');
+                scroll.className = 'code-block-scroll';
+                if (pre.parentNode) {
+                    pre.parentNode.insertBefore(wrap, pre);
+                }
+                scroll.appendChild(pre);
+                wrap.appendChild(scroll);
+
                 // 创建复制按钮
                 const copyBtn = document.createElement('button');
                 copyBtn.className = 'copy-code-btn';
@@ -154,6 +167,6 @@
                     }
                 });
                 
-                pre.appendChild(copyBtn);
+                wrap.appendChild(copyBtn);
             });
         });

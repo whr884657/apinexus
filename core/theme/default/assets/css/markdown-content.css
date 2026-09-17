@@ -6,7 +6,11 @@
 .page-content,
 .markdown-content,
 .markdown-body {
+    /* 宽表仍可滚；代码块须自带 .vs-md-pre-scroll，禁止靠撑破本容器带动复制钮 */
     overflow-x: auto;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .article-content table,
@@ -176,9 +180,17 @@ html[data-theme="light"] .feer-md-parse-error {
     border-radius: 8px;
     overflow-x: auto;
     position: relative;
+    max-width: 100%;
+}
+/* 已被 VsMarkdown 包进滚动壳时，滚动交给 .vs-md-pre-scroll */
+.vs-md-pre-wrap .vs-md-pre-scroll > pre,
+.vs-md-pre-wrap > .vs-md-pre-scroll > pre {
+    overflow: visible !important;
+    position: static !important;
+    max-width: none;
 }
 
-/* 代码块语言标记 */
+/* 代码块语言标记（未包壳时）；包进 .vs-md-pre-wrap 后由 markdown-render 关掉，避免跟复制钮抢位 */
 .article-content pre::before,
 .page-content pre::before,
 .markdown-content pre::before,
@@ -195,6 +207,11 @@ html[data-theme="light"] .feer-md-parse-error {
     text-transform: uppercase;
     letter-spacing: 0.03em;
     font-family: 'JetBrains Mono', monospace;
+}
+.vs-md-pre-wrap pre::before,
+.code-block-wrapper pre::before {
+    content: none !important;
+    display: none !important;
 }
 
 /* 文章页面的代码块增强 */

@@ -1,6 +1,6 @@
 <?php
 /**
- * 主题 three · 贡献者（首页视觉语言自研）
+ * 主题 three · 贡献者（版式自研 th3；数据契约 FrontendContributor）
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
@@ -14,29 +14,47 @@ if (!is_array($contributors)) {
 }
 ?>
 <section class="th3-page">
-  <div class="th3-page__inner max-w-7xl mx-auto px-4 sm:px-5 lg:px-8">
+  <div class="th3-page__inner th3-page__inner--contrib mx-auto px-4 sm:px-5 lg:px-8">
     <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ 贡献者</div>
     <h1 class="font-display font-bold tracking-tight th3-page__title">贡献者</h1>
     <p class="th3-page__lead text-fg-2">感谢每一位发布接口的开发者 · 共 <?php echo count($contributors); ?> 位</p>
 
+    <div class="th3-contrib-intro" role="note">
+      <p class="th3-contrib-intro__text">下列开发者已公开分享接口。点击卡片可进入个人主页，查看其已发布的接口与调用数据。</p>
+    </div>
+
     <?php if (count($contributors) === 0): ?>
-    <div class="th3-panel card mt-8">暂无贡献者。</div>
+    <div class="th3-empty mt-6">暂无公开贡献者，欢迎注册成为开发者并发布接口。</div>
     <?php else: ?>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
-      <?php foreach ($contributors as $c): ?>
+    <div class="th3-contrib-grid mt-8">
+      <?php foreach ($contributors as $c):
+          $bioCustom = !empty($c['bio_custom']);
+          $bioText = isset($c['bio']) ? (string) $c['bio'] : '';
+      ?>
         <a class="th3-contrib-card card" href="<?php echo vs_e($c['profile_url']); ?>">
           <?php if (!empty($c['avatar'])): ?>
-            <img class="th3-contrib-card__avatar" src="<?php echo vs_e($c['avatar']); ?>" alt="" width="48" height="48" loading="lazy">
+            <img class="th3-contrib-card__avatar" src="<?php echo vs_e($c['avatar']); ?>"
+                 alt="<?php echo vs_e($c['letter']); ?>" width="80" height="80" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                 data-ext-icon="1">
           <?php else: ?>
             <span class="th3-contrib-card__avatar th3-contrib-card__avatar--text"><?php echo vs_e($c['letter']); ?></span>
           <?php endif; ?>
-          <div class="th3-contrib-card__main">
-            <strong><?php echo vs_e($c['username']); ?></strong>
-            <p class="th3-contrib-card__bio"><?php echo !empty($c['bio_custom']) ? vs_e($c['bio']) : ''; ?></p>
-            <div class="th3-contrib-card__stats">
-              <span><b><?php echo (int) $c['apicount']; ?></b> 接口</span>
-              <span><b><?php echo vs_e($c['calls_label']); ?></b> 调用</span>
-              <span><b><?php echo vs_e($c['join_label']); ?></b> 加入</span>
+          <strong class="th3-contrib-card__name"><?php echo vs_e($c['username']); ?></strong>
+          <p class="th3-contrib-card__bio"<?php echo $bioCustom ? '' : ' data-vs-hitokoto="1"'; ?>><?php
+              echo $bioCustom ? vs_e($bioText) : '';
+          ?></p>
+          <div class="th3-contrib-card__stats">
+            <div class="th3-contrib-stat">
+              <div class="th3-contrib-stat__value"><?php echo (int) $c['apicount']; ?></div>
+              <div class="th3-contrib-stat__label">接口数</div>
+            </div>
+            <div class="th3-contrib-stat">
+              <div class="th3-contrib-stat__value"><?php echo vs_e($c['calls_label']); ?></div>
+              <div class="th3-contrib-stat__label">调用次数</div>
+            </div>
+            <div class="th3-contrib-stat">
+              <div class="th3-contrib-stat__value"><?php echo vs_e($c['join_label']); ?></div>
+              <div class="th3-contrib-stat__label">加入时间</div>
             </div>
           </div>
         </a>
@@ -49,7 +67,13 @@ if (!is_array($contributors)) {
         <h2 class="font-display font-semibold text-lg m-0 mb-1">想加入贡献者？</h2>
         <p class="text-fg-2 text-sm m-0">注册开发者并发布接口后，即可出现在本页。</p>
       </div>
-      <a class="btn-primary" href="<?php echo vs_e($authUrl); ?>">立即登录</a>
+      <a class="btn-primary" href="<?php echo vs_e($authUrl); ?>">立即注册</a>
     </div>
   </div>
 </section>
+<?php
+$hitokotoSrc = ThemeManager::assetUrl('three', 'assets/js/pages/hitokoto-bio.js');
+if ($hitokotoSrc !== ''):
+?>
+<script src="<?php echo vs_e($hitokotoSrc); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<?php endif; ?>

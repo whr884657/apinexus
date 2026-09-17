@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.41-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.42-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -164,15 +164,13 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.41（2026-09-15）
+### v13.26.42（2026-09-17）
 
-- 令牌搜索/状态下拉重叠修复；积分变动 UI 与分段筛选
-- 注册开关单键 `1/2/3/4`；冷热归档写后必删；目录 `apiorder` 与详情随机推荐
-- OpenAPI 由 `params` 派生；详情三模式（E314）
-- 在线测试非媒体一键复制；JSON/OpenAPI≈16 行、返回示例≈20 行区内滚动（E315）
-- 主题二公告弹窗结构对齐主题一；修复白底白字（E316）
-- 安装：伪静态灰底框内复制；第 3 步 Redis 密码/库号 + 单测双连；设置「Redis 设置」（含测连限流）（E317）
-- 主题三清首页演示残留；目录加载重试；库迁移与 CORE 文档
+- 主题卡 `developer`（E328）；主题设置 `VSPick`（E327）；令牌紧急操作 `VsModal`（E326）
+- 主题二公告/页脚（E318/E319）；主题三一轮完善（E277·E320～E325）
+- 积分卡密：表（含已发放）+ 管理端 + 充值双 Tab + 对接 API generate/stock/take/void/query（E329～E332）
+- 热修：Markdown 复制钮（E331）；评论 `[hidden]`（E09）；three → 0.1.12，fifth → 0.1.2
+- 系统密钥独立；卡密 API / 调用日志各自设置；外部 API 统一 `core/api/`（E333/E334）；`db_changes: true`
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

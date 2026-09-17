@@ -207,8 +207,19 @@ vs_admin_layout_start('主题设置', 'theme');
                                     </div>
                                     <div class="vs-theme-card__body">
                                         <div class="vs-theme-card__name"><?php echo vs_e($theme['name']); ?></div>
-                                        <?php if ($theme['version'] !== ''): ?>
-                                            <div class="vs-theme-card__version">v<?php echo vs_e($theme['version']); ?></div>
+                                        <?php
+                                        $ver = isset($theme['version']) ? trim((string) $theme['version']) : '';
+                                        $dev = isset($theme['developer']) ? trim((string) $theme['developer']) : '';
+                                        if ($ver !== '' || $dev !== ''):
+                                        ?>
+                                            <div class="vs-theme-card__meta">
+                                                <?php if ($ver !== ''): ?>
+                                                    <span class="vs-theme-card__version">v<?php echo vs_e($ver); ?></span>
+                                                <?php endif; ?>
+                                                <?php if ($dev !== ''): ?>
+                                                    <span class="vs-theme-card__developer"><?php echo vs_e($dev); ?></span>
+                                                <?php endif; ?>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                 </label>

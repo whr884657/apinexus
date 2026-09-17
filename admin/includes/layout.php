@@ -68,6 +68,7 @@ function vs_admin_menu_groups()
                 array('id' => 'orders', 'title' => '订单管理', 'url' => '/admin/finance/orders'),
                 array('id' => 'sponsor', 'title' => '赞助管理', 'url' => '/admin/finance/sponsor'),
                 array('id' => 'points', 'title' => '积分变动', 'url' => '/admin/finance/points'),
+                array('id' => 'cardkey', 'title' => '卡密管理', 'url' => '/admin/finance/cardkey'),
             ),
         ),
         array(

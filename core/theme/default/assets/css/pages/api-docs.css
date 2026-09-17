@@ -88,12 +88,35 @@
         .markdown-body h2 { font-size: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; }
         .markdown-body h3 { font-size: 0.9rem; }
         .markdown-body p { margin-bottom: 0.75rem; }
-        .markdown-body pre { background: var(--bg-code); padding: 0.75rem; border-radius: 6px; overflow-x: auto; margin: 0.75rem 0; border: 1px solid var(--border-color); font-size: 0.75rem; position: relative; }
+        .markdown-body pre { background: var(--bg-code); padding: 0.75rem; border-radius: 6px; overflow-x: auto; margin: 0.75rem 0; border: 1px solid var(--border-color); font-size: 0.75rem; }
         .markdown-body code { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
         .markdown-body pre code { background: none; padding: 0; }
         
-        /* 代码复制按钮 */
-        .code-block-wrapper { position: relative; }
+        /* 代码复制：定宽外壳钉钮 + 独立滚动层（与 markdown-render / E331 同构） */
+        .code-block-wrapper {
+            position: relative;
+            margin: 0.75rem 0;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            contain: inline-size;
+        }
+        .code-block-scroll {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .code-block-wrapper > .code-block-scroll > pre {
+            margin: 0;
+            overflow: visible;
+            width: max-content;
+            min-width: 100%;
+            box-sizing: border-box;
+        }
         .copy-code-btn {
             position: absolute;
             top: 0.5rem;
@@ -111,8 +134,9 @@
             align-items: center;
             gap: 0.3rem;
             z-index: 10;
+            pointer-events: auto;
         }
-        .markdown-body pre:hover .copy-code-btn,
+        .code-block-wrapper:hover .copy-code-btn,
         .copy-code-btn:hover {
             opacity: 1;
         }

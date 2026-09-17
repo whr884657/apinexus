@@ -1,6 +1,7 @@
 /**
  * 主题三 · 认证页（奶油底 / 珊瑚橙 / 居中表单无背景卡）
  * 原创 th3-auth，禁止 st-* / 左右分栏壳。
+ * 圆角：统一 --th3-radius / --th3-auth-radius（见《主题三圆角规范》）
  */
 :root {
   --th3-auth-bg: #FBFAF7;
@@ -14,6 +15,11 @@
   --th3-auth-accent-soft: #FFE8E1;
   --th3-auth-shadow: 0 1px 2px rgba(11, 11, 11, 0.04), 0 24px 60px -16px rgba(11, 11, 11, 0.14);
   --th3-auth-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* 认证表单控件统一圆角（全主题令牌见《主题三圆角规范》） */
+  --th3-radius: 10px;
+  --th3-radius-inner: 6px;
+  --th3-auth-radius: var(--th3-radius);
+  --th3-auth-radius-inner: var(--th3-radius-inner);
 }
 
 .th3-auth-body {
@@ -105,7 +111,7 @@
 .th3-auth__msg {
   margin: 1rem 0 0;
   padding: 0.75rem 1rem;
-  border-radius: 14px;
+  border-radius: var(--th3-auth-radius);
   font-size: 0.875rem;
   line-height: 1.45;
   border: 1px solid var(--th3-auth-border);
@@ -155,7 +161,7 @@
   box-sizing: border-box;
   padding: 0.85rem 1rem;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: var(--th3-auth-radius);
   background: var(--th3-auth-bg2);
   color: var(--th3-auth-fg);
   font-size: 16px;
@@ -198,7 +204,7 @@
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--th3-auth-radius);
   background: transparent;
   color: var(--th3-auth-muted);
   cursor: pointer;
@@ -229,7 +235,7 @@
 .th3-auth__code-btn {
   flex: 0 0 auto;
   padding: 0 1rem;
-  border-radius: 999px;
+  border-radius: var(--th3-auth-radius);
   border: 1px solid var(--th3-auth-border);
   background: var(--th3-auth-card);
   color: var(--th3-auth-fg);
@@ -250,15 +256,17 @@
   cursor: not-allowed;
 }
 
+/* 人机验证下方切换行：须压过极验条透明占位（E277）；禁止改 captcha.js / CSP 修点击 */
 .th3-auth__row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  margin: 0.15rem 0 0.85rem;
+  margin: 0.35rem 0 0.85rem;
   font-size: 0.875rem;
   position: relative;
-  z-index: 3;
+  z-index: 5;
+  isolation: isolate;
 }
 
 .th3-auth__row a,
@@ -289,7 +297,7 @@
   margin-top: 0.25rem;
   padding: 0.9rem 1.25rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--th3-auth-radius);
   background: var(--th3-auth-fg);
   color: var(--th3-auth-bg);
   font-size: 0.95rem;
@@ -340,7 +348,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--th3-auth-radius);
   border: 1px solid var(--th3-auth-border);
   background: var(--th3-auth-card);
   transition: transform 0.25s var(--th3-auth-ease), border-color 0.25s, box-shadow 0.25s;
@@ -386,7 +394,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 0;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: var(--th3-auth-radius);
   background: var(--th3-auth-bg2);
   border: 1px solid var(--th3-auth-border);
 }
@@ -396,7 +404,7 @@
   z-index: 1;
   border: 0;
   background: transparent;
-  border-radius: 999px;
+  border-radius: var(--th3-auth-radius);
   padding: 0.65rem 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -415,7 +423,7 @@
   left: 4px;
   width: calc(50% - 4px);
   height: calc(100% - 8px);
-  border-radius: 999px;
+  border-radius: var(--th3-auth-radius);
   background: var(--th3-auth-card);
   box-shadow: 0 1px 4px rgba(11, 11, 11, 0.08);
   transition: transform 0.28s var(--th3-auth-ease);

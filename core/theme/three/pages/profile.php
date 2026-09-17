@@ -15,7 +15,7 @@ $pingUrl = isset($pingUrl) ? (string) $pingUrl : ($vsBase . '/core/ping.php');
 $apis = (!$notFound && isset($profile['apis']) && is_array($profile['apis'])) ? $profile['apis'] : array();
 ?>
 <section class="th3-page" id="profilePage" data-ping-url="<?php echo vs_e($pingUrl); ?>">
-  <div class="th3-page__inner max-w-5xl mx-auto px-4 sm:px-5 lg:px-8">
+  <div class="th3-page__inner th3-page__inner--profile mx-auto px-4 sm:px-5 lg:px-8">
     <?php if ($notFound): ?>
       <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ 主页</div>
       <h1 class="font-display font-bold th3-page__title">用户不存在</h1>

@@ -280,8 +280,17 @@
         init: init,
         enhance: enhance,
         close: closeAll,
+        /**
+         * 刷新单个 <select> 的面板选项/文案。
+         * 动态插入的整块容器请用 init(root)，禁止把 div 传给 refresh（E327）。
+         */
         refresh: function (select) {
             if (!select) {
+                return;
+            }
+            // 误传容器时降级为 init，避免 TypeError 被业务 .catch 误报「网络异常」
+            if (!select.tagName || String(select.tagName).toUpperCase() !== 'SELECT') {
+                init(select);
                 return;
             }
             var wrap = select.closest ? select.closest('.vs-pick') : null;

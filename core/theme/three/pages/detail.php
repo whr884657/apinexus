@@ -40,6 +40,16 @@ $paramsList = (!$notFound && isset($api['params_list']) && is_array($api['params
 $paramsRaw = (!$notFound && isset($api['params'])) ? (string) $api['params'] : '';
 $paramsPretty = $paramsRaw !== '' ? FrontendApi::prettyParamsJson($paramsRaw) : '';
 $openapiJson = (!$notFound && isset($api['openapi_json'])) ? (string) $api['openapi_json'] : '';
+/* 核心注入多为紧凑 JSON；主题三展示须美化（《主题三圆角规范》§四） */
+if ($openapiJson !== '') {
+    $oaDecoded = json_decode($openapiJson, true);
+    if (is_array($oaDecoded)) {
+        $openapiJson = (string) json_encode(
+            $oaDecoded,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+        );
+    }
+}
 $hasParamsTable = count($paramsList) > 0;
 $hasOpenApi = $openapiJson !== '';
 $paramsCopyDefault = $paramsPretty !== '' ? $paramsPretty : $paramsRaw;
@@ -176,7 +186,7 @@ if (!$notFound) {
             <?php elseif ($isMaintenance): ?>
               <span class="tag hot">维护中</span>
             <?php endif; ?>
-            <button type="button" class="btn-ghost text-sm" id="detailCopyMdBtn">复制 Markdown</button>
+            <button type="button" class="th3-copy" id="detailCopyMdBtn">复制 Markdown</button>
           </div>
         </div>
         <?php if (!empty($api['desc'])): ?>
@@ -273,7 +283,7 @@ if (!$notFound) {
               <?php if ($hasOpenApi): ?>
                 <button type="button" class="th3-pill" data-params-mode="openapi">OpenAPI</button>
               <?php endif; ?>
-              <button type="button" class="btn-ghost text-sm" id="paramsCopyBtn"
+              <button type="button" class="th3-copy" id="paramsCopyBtn"
                       data-copy="<?php echo vs_e($paramsCopyDefault); ?>"
                       data-copy-json="<?php echo vs_e($paramsCopyDefault); ?>">复制</button>
             </div>
@@ -317,7 +327,7 @@ if (!$notFound) {
         <div class="th3-panel card" data-th3-panel="response" role="tabpanel"<?php echo $th3FirstTab === 'response' ? '' : ' hidden'; ?>>
           <div class="th3-panel__tools">
             <h2 class="font-display font-semibold text-lg m-0">返回示例</h2>
-            <button type="button" class="btn-ghost text-sm" data-copy="<?php echo vs_e($api['response']); ?>">复制</button>
+            <button type="button" class="th3-copy" data-copy="<?php echo vs_e($api['response']); ?>">复制</button>
           </div>
           <div class="th3-code mt-4" id="responseSampleWrap">
             <pre class="font-mono" id="responseSample"><?php echo vs_e($api['response']); ?></pre>
@@ -375,7 +385,7 @@ if (!$notFound) {
                 <?php endforeach; ?>
               </div>
               <div class="th3-qs-panel mt-4">
-                <button type="button" class="btn-ghost text-sm th3-qs-copy" id="detailQsCopy">复制</button>
+                <button type="button" class="th3-copy th3-qs-copy" id="detailQsCopy">复制</button>
                 <pre class="th3-code font-mono" id="detailQsCode"><code class="language-<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>" data-vs-syn="<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>" data-vs-plain="<?php echo vs_e(isset($qsSamples[0]['code']) ? $qsSamples[0]['code'] : ''); ?>"><?php echo vs_e(isset($qsSamples[0]['code']) ? $qsSamples[0]['code'] : ''); ?></code></pre>
               </div>
             </div>
@@ -463,11 +473,13 @@ if (!$notFound) {
                 <div class="th3-pg-resp-head">
                   <span class="th3-field-label" style="margin:0;">Response</span>
                   <div class="th3-pg-resp-meta">
-                    <button type="button" class="btn-ghost text-sm" id="pgCopyBtn" hidden disabled aria-hidden="true">复制</button>
+                    <button type="button" class="th3-copy" id="pgCopyBtn" hidden disabled aria-hidden="true">复制</button>
                     <span class="tag" id="pgStatus">等待中</span>
                   </div>
                 </div>
-                <pre class="th3-code font-mono mt-3" id="pgResponse">// 结果将在此处显示</pre>
+                <div class="th3-pg-response" id="pgResponseBox">
+                  <div class="th3-pg-response__body font-mono" id="pgResponse">// 结果将在此处显示</div>
+                </div>
               </div>
             </div>
           <?php endif; ?>

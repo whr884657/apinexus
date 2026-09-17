@@ -192,6 +192,20 @@ class PointsManager
     }
 
     /**
+     * @deprecated 禁止绕过 CardKeyManager::redeem；保留方法签名以免旧调用静默入账
+     *
+     * @param int    $userId
+     * @param float  $amount
+     * @param string $remark
+     * @return array{ok:bool,msg:string}
+     */
+    public static function creditCardKey($userId, $amount, $remark = '')
+    {
+        unset($userId, $amount, $remark);
+        return array('ok' => false, 'msg' => '请使用 CardKeyManager::redeem 兑换卡密');
+    }
+
+    /**
      * 创建待支付充值单并拉起码支付
      *
      * @param int    $userId

@@ -1,0 +1,176 @@
+<?php
+/**
+ * 主题5 后台设置面板（分组布局）
+ */
+
+if (!defined('VS_IN_ADMIN') && !defined('VS_ROOT')) {
+    exit;
+}
+
+/**
+ * @param array<int, array<string, mixed>> $schema
+ * @param array<string, mixed> $values
+ * @return void
+ */
+function vs_theme_admin_render_settings_fifth($schema, $values)
+{
+    $fields = array();
+    foreach ($schema as $field) {
+        if (!empty($field['key'])) {
+            $fields[(string) $field['key']] = $field;
+        }
+    }
+
+    $val = function ($key) use ($fields, $values) {
+        if (array_key_exists($key, $values)) {
+            return $values[$key];
+        }
+        if (isset($fields[$key]['default'])) {
+            return $fields[$key]['default'];
+        }
+        return '';
+    };
+
+    $renderSelect = function ($key) use ($fields, $val) {
+        if (!isset($fields[$key])) {
+            return;
+        }
+        $field = $fields[$key];
+        $current = $val($key);
+        $label = isset($field['label']) ? (string) $field['label'] : $key;
+        echo '<div class="vs-theme-config-field">';
+        echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';
+        echo '<select class="vs-input vs-select" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']" data-vs-pick>';
+        $options = !empty($field['options']) && is_array($field['options']) ? $field['options'] : array();
+        foreach ($options as $opt) {
+            if (!is_array($opt) || !isset($opt['value'])) {
+                continue;
+            }
+            $optVal = (string) $opt['value'];
+            $optLabel = isset($opt['label']) ? (string) $opt['label'] : $optVal;
+            $selected = ((string) $current === $optVal) ? ' selected' : '';
+            echo '<option value="' . vs_e($optVal) . '"' . $selected . '>' . vs_e($optLabel) . '</option>';
+        }
+        echo '</select>';
+        if ($key === 'stats_num_format') {
+            echo '<p class="vs-form-hint">完整数字：实时有多少显示多少；单位转换：达到千/万后显示为 K+、W+</p>';
+        }
+        echo '</div>';
+    };
+
+    $renderCheckbox = function ($key) use ($fields, $val) {
+        if (!isset($fields[$key])) {
+            return;
+        }
+        $field = $fields[$key];
+        $current = $val($key);
+        $label = isset($field['label']) ? (string) $field['label'] : $key;
+        $checked = $current === true || $current === 1 || $current === '1' || $current === 'true';
+        echo '<div class="vs-theme-config-field vs-theme-config-field--check">';
+        echo '<label class="vs-theme-config-check">';
+        echo '<input type="checkbox" name="settings[' . vs_e($key) . ']" value="1"' . ($checked ? ' checked' : '') . '>';
+        echo '<span>' . vs_e($label) . '</span></label>';
+        echo '</div>';
+    };
+
+    $renderText = function ($key, $shortLabel = '') use ($fields, $val) {
+        if (!isset($fields[$key])) {
+            return;
+        }
+        $field = $fields[$key];
+        $current = $val($key);
+        $label = $shortLabel !== '' ? $shortLabel : (isset($field['label']) ? (string) $field['label'] : $key);
+        $placeholder = isset($field['placeholder']) ? (string) $field['placeholder'] : '';
+        echo '<div class="vs-theme-config-field">';
+        echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';
+        echo '<input type="text" class="vs-input" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']" value="' . vs_e($current === null ? '' : (string) $current) . '" placeholder="' . vs_e($placeholder) . '"';
+        if (preg_match('/^footer_social_\d+_value$/', $key)) {
+            echo ' maxlength="512"';
+        }
+        echo '>';
+        if (preg_match('/^footer_social_\d+_value$/', $key)) {
+            echo '<p class="vs-form-hint">最多 512 个字符（链接、邮箱或二维码图片地址）</p>';
+        }
+        echo '</div>';
+    };
+
+    $socialTypes = isset($fields['footer_social_1_type']['options']) ? $fields['footer_social_1_type']['options'] : array();
+    $qqModes = isset($fields['footer_social_1_qq_mode']['options']) ? $fields['footer_social_1_qq_mode']['options'] : array();
+
+    echo '<div class="th5-admin-settings">';
+
+    echo '<section class="th5-admin-settings__section">';
+    echo '<h3 class="th5-admin-settings__title">首页展示</h3>';
+    echo '<div class="th5-admin-settings__grid th5-admin-settings__grid--2">';
+    $renderSelect('stats_num_format');
+    $renderSelect('home_preview_limit');
+    echo '</div>';
+    echo '</section>';
+
+    echo '<section class="th5-admin-settings__section">';
+    echo '<h3 class="th5-admin-settings__title">功能开关</h3>';
+    echo '<div class="th5-admin-settings__checks">';
+    $renderCheckbox('show_home_announce');
+    $renderCheckbox('show_runtime');
+    echo '</div>';
+    echo '</section>';
+
+    echo '<section class="th5-admin-settings__section">';
+    echo '<h3 class="th5-admin-settings__title">页脚社交图标</h3>';
+    echo '<p class="th5-admin-settings__hint">最多配置 3 个图标。微信填二维码图片地址；邮箱填地址；其它类型填跳转链接。QQ 类型可选链接跳转或二维码悬停。</p>';
+    echo '<div class="th5-admin-settings__slots">';
+
+    for ($slot = 1; $slot <= 3; $slot++) {
+        $typeKey = 'footer_social_' . $slot . '_type';
+        $modeKey = 'footer_social_' . $slot . '_qq_mode';
+        $valueKey = 'footer_social_' . $slot . '_value';
+        if (!isset($fields[$typeKey])) {
+            continue;
+        }
+
+        $typeVal = (string) $val($typeKey);
+        $modeVal = (string) $val($modeKey);
+        $contentVal = $val($valueKey);
+
+        echo '<div class="th5-admin-settings__slot">';
+        echo '<div class="th5-admin-settings__slot-head">图标 ' . $slot . '</div>';
+        echo '<div class="th5-admin-settings__slot-body">';
+
+        echo '<div class="vs-theme-config-field">';
+        echo '<label class="vs-label" for="ts_' . vs_e($typeKey) . '">类型</label>';
+        echo '<select class="vs-input vs-select" id="ts_' . vs_e($typeKey) . '" name="settings[' . vs_e($typeKey) . ']" data-vs-pick>';
+        foreach ($socialTypes as $opt) {
+            if (!is_array($opt) || !isset($opt['value'])) {
+                continue;
+            }
+            $optVal = (string) $opt['value'];
+            $optLabel = isset($opt['label']) ? (string) $opt['label'] : $optVal;
+            $selected = ($typeVal === $optVal) ? ' selected' : '';
+            echo '<option value="' . vs_e($optVal) . '"' . $selected . '>' . vs_e($optLabel) . '</option>';
+        }
+        echo '</select></div>';
+
+        echo '<div class="vs-theme-config-field">';
+        echo '<label class="vs-label" for="ts_' . vs_e($modeKey) . '">QQ 方式</label>';
+        echo '<select class="vs-input vs-select" id="ts_' . vs_e($modeKey) . '" name="settings[' . vs_e($modeKey) . ']" data-vs-pick>';
+        foreach ($qqModes as $opt) {
+            if (!is_array($opt) || !isset($opt['value'])) {
+                continue;
+            }
+            $optVal = (string) $opt['value'];
+            $optLabel = isset($opt['label']) ? (string) $opt['label'] : $optVal;
+            $selected = ($modeVal === $optVal) ? ' selected' : '';
+            echo '<option value="' . vs_e($optVal) . '"' . $selected . '>' . vs_e($optLabel) . '</option>';
+        }
+        echo '</select>';
+        echo '<p class="vs-form-hint">仅在选择 QQ 类型时生效</p>';
+        echo '</div>';
+
+        $renderText($valueKey, '内容');
+
+        echo '</div></div>';
+    }
+
+    echo '</div></section>';
+    echo '</div>';
+}

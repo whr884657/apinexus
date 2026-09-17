@@ -78,7 +78,7 @@
             ? '<a class="th3-cmt-name" href="' + esc(website) + '" target="_blank" rel="noopener noreferrer">' + esc(name) + '</a>'
             : '<span class="th3-cmt-name">' + esc(name) + '</span>';
         var avatarInner = avatar
-            ? '<img class="th3-cmt-avatar" src="' + esc(avatar) + '" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer">'
+            ? '<img class="th3-cmt-avatar" src="' + esc(avatar) + '" alt="' + esc(name.charAt(0) || '?') + '" width="40" height="40" loading="lazy" referrerpolicy="no-referrer" data-ext-icon="1">'
             : '<span class="th3-cmt-avatar th3-cmt-avatar--letter">' + esc(name.charAt(0)) + '</span>';
         var avatarWrap = website
             ? '<a class="th3-cmt-avatar-wrap" href="' + esc(website) + '" target="_blank" rel="noopener noreferrer">' + avatarInner + '</a>'
@@ -118,6 +118,9 @@
         if (countEl) countEl.textContent = String(cfg.count);
         var el = document.getElementById('cmt-' + c.id);
         if (el) {
+            if (window.VS && typeof window.VS.bindExternalImgFallback === 'function') {
+                window.VS.bindExternalImgFallback(el);
+            }
             el.classList.add('is-flash');
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(function () { el.classList.remove('is-flash'); }, 1400);

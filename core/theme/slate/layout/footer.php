@@ -39,17 +39,22 @@ $beian = SiteContext::beianInfo();
             <span id="runtime-display" class="st-foot__runtime-text"></span>
         </div>
         <?php endif; ?>
-        <div class="st-foot__copy">
-            <span><?php echo function_exists('vs_copyright_html') ? vs_copyright_html() : (vs_e($siteName) . ' &copy; ' . vs_e($year)); ?></span>
-            <?php if ($beian['icp_number'] !== ''): ?>
-                <a href="<?php echo vs_e($beian['icp_link']); ?>" target="_blank" rel="noopener noreferrer"><?php echo vs_e($beian['icp_number']); ?></a>
-            <?php endif; ?>
-            <?php if ($beian['gongan_number'] !== ''): ?>
-                <a href="<?php echo vs_e($beian['gongan_link']); ?>" target="_blank" rel="noopener noreferrer" class="st-foot__gongan">
-                    <img src="<?php echo vs_e(SiteMedia::imgUrl('gov.png')); ?>" alt="公安备案" width="16" height="16" loading="lazy" decoding="async">
-                    <span><?php echo vs_e($beian['gongan_number']); ?></span>
-                </a>
-            <?php endif; ?>
+        <?php /* 法律信息区：结构/断点照搬主题一（手机上下分行；电脑版权左、备案右）E319 */ ?>
+        <div class="st-foot__legal">
+            <div class="st-foot__copy">
+                <span><?php echo function_exists('vs_copyright_html') ? vs_copyright_html() : (vs_e($siteName) . ' &copy; ' . vs_e($year)); ?></span>
+            </div>
+            <div class="st-foot__beian">
+                <?php if ($beian['icp_number'] !== ''): ?>
+                    <a href="<?php echo vs_e($beian['icp_link']); ?>" target="_blank" rel="noopener noreferrer" class="st-foot__beian-link"><?php echo vs_e($beian['icp_number']); ?></a>
+                <?php endif; ?>
+                <?php if ($beian['gongan_number'] !== ''): ?>
+                    <a href="<?php echo vs_e($beian['gongan_link']); ?>" target="_blank" rel="noopener noreferrer" class="st-foot__gongan">
+                        <img src="<?php echo vs_e(SiteMedia::imgUrl('gov.png')); ?>" alt="公安备案" width="16" height="16" loading="lazy" decoding="async">
+                        <span><?php echo vs_e($beian['gongan_number']); ?></span>
+                    </a>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </footer>

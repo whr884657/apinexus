@@ -67,41 +67,45 @@
         });
     }
 
-    function bindApilogCron() {
-        var genBtn = document.getElementById('apilogGenCronKeyBtn');
-        var copyBtn = document.getElementById('apilogCopyCronUrlBtn');
-        var keyInput = document.getElementById('apilogCronKey');
-        var urlInput = document.getElementById('apilogCronUrl');
-        var archiveChk = document.getElementById('apilog_archive_enabled');
-        var hotRow = document.getElementById('apilogHotDaysRow');
-        var shardRow = document.getElementById('apilogShardRowsRow');
-        var cronBox = document.getElementById('apilogCronBox');
+    function copyText(text, okMsg) {
+        text = String(text || '').trim();
+        if (!text) {
+            showFlash('暂无可复制内容', 'error');
+            return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+                showFlash(okMsg || '已复制', 'success');
+            }).catch(function () {
+                showFlash('复制失败，请手动选中复制', 'error');
+            });
+            return;
+        }
+        showFlash('复制失败，请手动选中复制', 'error');
+    }
 
-        function syncArchiveUi() {
-            var on = !!(archiveChk && archiveChk.checked);
-            if (hotRow) hotRow.hidden = !on;
-            if (shardRow) shardRow.hidden = !on;
-            if (cronBox) cronBox.hidden = !on;
-        }
-        if (archiveChk) {
-            archiveChk.addEventListener('change', syncArchiveUi);
-            syncArchiveUi();
-        }
+    function bindSystemApiKey() {
+        var genBtn = document.getElementById('systemApiKeyGenBtn');
+        var copyKeyBtn = document.getElementById('systemApiKeyCopyBtn');
+        var keyInput = document.getElementById('systemApiKeyInput');
+        var cronUrlInput = document.getElementById('apilogCronUrl');
+        var copyApiBtn = document.getElementById('cardkeyApiCopyUrlBtn');
+        var apiUrlInput = document.getElementById('cardkeyApiUrlInput');
 
         if (genBtn) {
             genBtn.addEventListener('click', function () {
-                if (!window.confirm('生成新密钥后，旧的计划任务链接将立即失效，是否继续？')) {
+                if (!window.confirm('生成新系统密钥后，旧密钥立即失效（日志清理任务与卡密对接 API 均须更新），是否继续？')) {
                     return;
                 }
                 genBtn.disabled = true;
                 var fd = new FormData();
-                fd.append('action', 'generate_apilog_cron_key');
+                fd.append('action', 'generate_system_api_key');
                 window.VS.postForm(fd, window.location.href)
                     .then(function (data) {
                         if (data.code === 1) {
-                            if (keyInput) keyInput.value = data.cron_key || '';
-                            if (urlInput) urlInput.value = data.cron_url || '';
-                            showFlash(data.msg || '密钥已生成', 'success');
+                            if (keyInput) keyInput.value = data.system_api_key || '';
+                            if (cronUrlInput) cronUrlInput.value = data.cron_url || '';
+                            showFlash(data.msg || '系统密钥已生成', 'success');
                         } else {
                             showFlash((data && data.msg) || '生成失败', 'error');
                         }
@@ -115,28 +119,81 @@
             });
         }
 
+        if (copyKeyBtn) {
+            copyKeyBtn.addEventListener('click', function () {
+                var key = keyInput ? String(keyInput.value || '').trim() : '';
+                if (!key) {
+                    showFlash('请先生成系统密钥', 'error');
+                    return;
+                }
+                copyText(key, '系统密钥已复制');
+            });
+        }
+
+        if (copyApiBtn) {
+            copyApiBtn.addEventListener('click', function () {
+                var url = apiUrlInput ? String(apiUrlInput.value || '').trim() : '';
+                copyText(url, 'API 地址已复制');
+            });
+        }
+    }
+
+    function bindApilogCron() {
+        var archiveChk = document.getElementById('apilog_archive_enabled');
+        var purgeChk = document.getElementById('apilog_purge_enabled');
+        var copyBtn = document.getElementById('apilogCopyCronUrlBtn');
+        var urlInput = document.getElementById('apilogCronUrl');
+        var hotRow = document.getElementById('apilogHotDaysRow');
+        var hotLabel = document.getElementById('apilogHotDaysLabel');
+        var shardRow = document.getElementById('apilogShardRowsRow');
+        var cronBox = document.getElementById('apilogCronBox');
+        var syncing = false;
+
+        function syncCleanupUi() {
+            var archiveOn = !!(archiveChk && archiveChk.checked);
+            var purgeOn = !!(purgeChk && purgeChk.checked);
+            var cleanupOn = archiveOn || purgeOn;
+            if (hotRow) hotRow.hidden = !cleanupOn;
+            if (shardRow) shardRow.hidden = !archiveOn;
+            if (cronBox) cronBox.hidden = !cleanupOn;
+            if (hotLabel) {
+                hotLabel.textContent = purgeOn && !archiveOn ? '保留天数' : '热数据天数';
+            }
+        }
+
+        function onModeChange(changed) {
+            if (syncing) return;
+            syncing = true;
+            if (changed === 'archive' && archiveChk && archiveChk.checked && purgeChk) {
+                purgeChk.checked = false;
+            }
+            if (changed === 'purge' && purgeChk && purgeChk.checked && archiveChk) {
+                archiveChk.checked = false;
+            }
+            syncing = false;
+            syncCleanupUi();
+        }
+
+        if (archiveChk) {
+            archiveChk.addEventListener('change', function () { onModeChange('archive'); });
+        }
+        if (purgeChk) {
+            purgeChk.addEventListener('change', function () { onModeChange('purge'); });
+        }
+        syncCleanupUi();
+
         if (copyBtn) {
             copyBtn.addEventListener('click', function () {
                 var url = urlInput ? String(urlInput.value || '').trim() : '';
                 if (!url || url.indexOf('key=') < 0) {
-                    showFlash('请先生成密钥', 'error');
+                    showFlash('请先在「系统密钥」生成密钥', 'error');
                     return;
                 }
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(url).then(function () {
-                        showFlash('任务链接已复制', 'success');
-                    }).catch(function () {
-                        showFlash('复制失败，请手动选中复制', 'error');
-                    });
-                } else if (urlInput) {
-                    urlInput.select();
-                    try {
-                        document.execCommand('copy');
-                        showFlash('任务链接已复制', 'success');
-                    } catch (e) {
-                        showFlash('复制失败，请手动选中复制', 'error');
-                    }
+                if (!(archiveChk && archiveChk.checked) && !(purgeChk && purgeChk.checked)) {
+                    showFlash('请先启用冷热归档或过期删除', 'error');
+                    return;
                 }
+                copyText(url, '任务链接已复制');
             });
         }
     }
@@ -801,6 +858,7 @@
             bindAjaxForm(document.getElementById(id));
         });
         bindRedisSettingsForm();
+        bindSystemApiKey();
         bindApilogCron();
         bindAiProvider();
         bindAiListModels();

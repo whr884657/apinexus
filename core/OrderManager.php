@@ -19,6 +19,8 @@ class OrderManager
     const KIND_CHECKIN = 3;
     /** 增加：调用失败退回 */
     const KIND_REFUND = 4;
+    /** 增加：卡密兑换 */
+    const KIND_CARDKEY = 5;
 
     /** 减少：API 调用 */
     const KIND_API = 0;
@@ -90,6 +92,9 @@ class OrderManager
             if ($kind === self::KIND_REFUND) {
                 return '调用退回';
             }
+            if ($kind === self::KIND_CARDKEY) {
+                return '卡密兑换';
+            }
             return '用户充值';
         }
         if ($kind === self::KIND_ADMIN_SUB) {
@@ -124,6 +129,9 @@ class OrderManager
             }
             if ($kind === self::KIND_REFUND) {
                 return 'is-refund';
+            }
+            if ($kind === self::KIND_CARDKEY) {
+                return 'is-cardkey';
             }
             return 'is-recharge';
         }
@@ -482,7 +490,8 @@ class OrderManager
                 . (int) self::KIND_RECHARGE . ','
                 . (int) self::KIND_ADMIN_ADD . ','
                 . (int) self::KIND_REGISTER . ','
-                . (int) self::KIND_CHECKIN
+                . (int) self::KIND_CHECKIN . ','
+                . (int) self::KIND_CARDKEY
                 . ')) OR (o.`direct` = ' . (int) self::DIRECT_DEC
                 . ' AND o.`kind` = ' . (int) self::KIND_ADMIN_SUB . '))';
         }
@@ -747,6 +756,7 @@ class OrderManager
             array(self::DIRECT_INC, self::KIND_REGISTER, array('注册', '赠送', '注册赠送', '注册赠送积分')),
             array(self::DIRECT_INC, self::KIND_CHECKIN, array('签到', '每日签到')),
             array(self::DIRECT_INC, self::KIND_REFUND, array('退回', '调用退回', '上游失败退回')),
+            array(self::DIRECT_INC, self::KIND_CARDKEY, array('卡密', '卡密兑换', '兑换卡密')),
             array(self::DIRECT_DEC, self::KIND_API, array('API调用', '接口调用', '调用接口')),
             array(self::DIRECT_DEC, self::KIND_ADMIN_SUB, array('扣款', '管理员扣款')),
             array(self::DIRECT_DEC, self::KIND_AI, array('AI调用')),

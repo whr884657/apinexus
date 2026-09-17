@@ -1,6 +1,6 @@
 /**
  * 主题三 · 认证页验证码（与 th3-auth 输入框风格协调）
- * 勿拉伸极验 logo；仅撑满挂载条外层。
+ * 圆角统一 --th3-radius（见《主题三圆角规范》）；勿拉伸极验 logo。
  */
 .th3-auth .vs-captcha-field {
   width: 100%;
@@ -67,7 +67,7 @@
   height: 46px;
   padding: 0 1rem;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: var(--th3-radius, var(--th3-auth-radius, 10px));
   font-size: 16px;
   outline: none;
   background: var(--th3-auth-bg2, #F4F1EA);
@@ -96,7 +96,7 @@
   max-width: 128px;
   padding: 0 6px;
   border: 1px solid var(--th3-auth-border, #E8E3D8);
-  border-radius: 14px;
+  border-radius: var(--th3-radius, var(--th3-auth-radius, 10px));
   background: var(--th3-auth-card, #fff);
   cursor: pointer;
   overflow: hidden;
@@ -113,7 +113,7 @@
   display: block;
   width: 108px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--th3-radius-inner, var(--th3-auth-radius-inner, 6px));
   background: color-mix(in srgb, var(--th3-auth-card, #fff) 70%, transparent);
 }
 

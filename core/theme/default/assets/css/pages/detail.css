@@ -578,6 +578,9 @@ body.vs-body.feer-front .main-wrapper.container.detail-page,
     line-height: 1.75;
     white-space: pre-wrap;
     word-break: break-word;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .detail-md.is-parsed {

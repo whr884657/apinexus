@@ -1432,13 +1432,36 @@ body.st-drawer-open {
 }
 
 .st-foot__bottom {
-    padding: 16px;
-    border-top: 1px solid #eceef2;
+    padding: 24px 16px 16px;
+    border-top: 1px solid var(--st-line, #eceef2);
+    /* 照搬主题一底部信息区：纵向堆叠 + gap（自定义栏 / 运行时间 / 法律信息）E319 */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--st-fg3);
+}
+
+/* 自定义三栏：走壳 site-footer.css；本主题只补配色，禁止改三栏栅格运行规则 */
+.st-foot__bottom .vs-foot-custom {
+    width: 100%;
+    margin: 0;
+    color: var(--st-fg2);
+}
+.st-foot__bottom .vs-foot-custom a {
+    color: var(--st-fg2);
+    text-decoration: none;
+}
+.st-foot__bottom .vs-foot-custom a:hover {
+    color: var(--st-accent);
 }
 
 .st-foot__runtime {
+    width: 100%;
+    display: flex;
+    justify-content: center;
     text-align: center;
-    margin-bottom: 10px;
+    margin: 0;
 }
 
 .st-foot__runtime-text {
@@ -1447,31 +1470,86 @@ body.st-drawer-open {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.st-foot__copy {
-    padding: 0;
-    font-size: 12px;
-    color: var(--st-fg3);
-    text-align: center;
+/* 法律信息：默认手机上下分行（版权 / ICP / 公安各成行） */
+.st-foot__legal {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 16px;
+    width: 100%;
+    text-align: center;
 }
 
-.st-foot__copy a {
+.st-foot__copy,
+.st-foot__beian {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+
+.st-foot__copy span {
+    color: var(--st-fg3);
+}
+
+.st-foot__beian-link,
+.st-foot__gongan {
     color: var(--st-fg2);
     text-decoration: none;
 }
 
-.st-foot__copy a:hover {
+.st-foot__beian-link:hover,
+.st-foot__gongan:hover {
     color: var(--st-accent);
 }
 
 .st-foot__gongan {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
+}
+
+.st-foot__gongan img {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* ≥768px：照搬主题一 md:flex-row — 版权左、备案右；备案区内 ICP 与公安横排 */
+@media (min-width: 768px) {
+    .st-foot__legal {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        text-align: left;
+    }
+
+    .st-foot__copy {
+        width: auto;
+        flex: 1 1 auto;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .st-foot__beian {
+        width: auto;
+        flex: 0 1 auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        text-align: right;
+        gap: 16px;
+    }
 }
 
 @media (max-width: 900px) {
@@ -2987,6 +3065,7 @@ a.donate-sponsor-card:hover {
     color: var(--st-fg2);
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     min-height: 2.4em;
@@ -4265,19 +4344,18 @@ body.st-announce-modal-open { overflow: hidden; }
 
 @media (max-width: 768px) {
     .st-announce__action { display: none; }
-    /* 对齐主题一：左右合计 16px，根层无额外 padding */
+    /* 公告弹窗：照搬主题一手机覆盖（E318）；禁止清掉正文 max-height */
     .st-announce-modal__card {
         width: calc(100% - 16px);
         margin: 0 auto;
         max-height: calc(100svh - 4rem);
         transform: translateY(-3%);
-        border-radius: 12px;
     }
     .st-announce-modal__body {
         flex: 1 1 auto;
         min-height: 0;
         overflow: auto;
-        max-height: none;
+        /* 不写 max-height：继续沿用桌面 min(55vh, …)，长公告正文区内滚动、整卡居中（与主题一一致） */
     }
     .st-announce-modal__head {
         padding: 0.65rem 0.75rem;

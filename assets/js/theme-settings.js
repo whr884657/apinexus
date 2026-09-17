@@ -112,8 +112,8 @@
 
         window.VS.postForm(fd, window.location.href)
             .then(function (data) {
-                if (data.code !== 1) {
-                    window.VS.showMessage(data.msg || '加载失败', 'error');
+                if (!data || Number(data.code) !== 1) {
+                    window.VS.showMessage((data && data.msg) || '加载失败', 'error');
                     return;
                 }
                 var payload = pickPayload(data);
@@ -122,15 +122,22 @@
                 }
                 configBody.innerHTML = payload.html || '<p class="vs-theme-config-empty">当前主题暂无可调整的项目</p>';
                 configBody.removeAttribute('data-needs-reload');
-                if (window.VSPick && typeof window.VSPick.refresh === 'function') {
-                    window.VSPick.refresh(configBody);
+                // E327：整块容器须 VSPick.init；refresh 仅接受单个 <select>
+                if (window.VSPick && typeof window.VSPick.init === 'function') {
+                    window.VSPick.init(configBody);
                 }
                 if (configSaveBtn) {
                     configSaveBtn.disabled = !payload.has_schema;
                 }
             })
-            .catch(function () {
-                window.VS.showMessage('网络异常，请稍后重试', 'error');
+            .catch(function (err) {
+                var msg = '网络异常，请稍后重试';
+                if (err && err.name === 'TypeError') {
+                    msg = '页面脚本异常，请刷新后重试';
+                } else if (err && err.message === 'invalid_json') {
+                    msg = '响应解析失败，请刷新页面后重试';
+                }
+                window.VS.showMessage(msg, 'error');
             });
     }
 

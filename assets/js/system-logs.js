@@ -8,7 +8,9 @@
     var pageRoot = document.getElementById('logsPage');
     var body = document.getElementById('logsListBody');
     var footer = document.getElementById('logsFooter');
-    var pagerNav = document.getElementById('logsPagerNav');
+    var pagerNums = document.getElementById('logsPagerNums');
+    var prevBtn = document.getElementById('logsPrevBtn');
+    var nextBtn = document.getElementById('logsNextBtn');
     var totalEl = document.getElementById('logsTotal');
     var pageSizeEl = document.getElementById('logsPageSize');
     var searchInput = document.getElementById('logsSearchInput');
@@ -20,10 +22,9 @@
     var page = 1;
     var okFilter = '';
     var q = '';
-    /** 每页进入时的 before_id；第 1 页为 0 */
-    var cursorStack = [0];
-    var nextBeforeId = 0;
     var hasMore = false;
+    var totalCount = 0;
+    var totalPages = 1;
     var loadSeq = 0;
     var listAbort = null;
     var returnFocusEl = null;
@@ -69,11 +70,10 @@
         });
     }
 
-    function resetCursors() {
+    function resetList() {
         page = 1;
-        cursorStack = [0];
-        nextBeforeId = 0;
         hasMore = false;
+        totalPages = 1;
     }
 
     function methodBadge(row) {
@@ -348,18 +348,49 @@
         });
     }
 
+    function renderPagerNums() {
+        if (!pagerNums) {
+            return;
+        }
+        if (totalPages <= 1) {
+            pagerNums.innerHTML = '';
+            return;
+        }
+        // 中间最多 3 个页码：当前尽量居中（首尾贴边）
+        var start = Math.max(1, page - 1);
+        var end = Math.min(totalPages, start + 2);
+        start = Math.max(1, end - 2);
+        var html = '';
+        var i;
+        for (i = start; i <= end; i += 1) {
+            html += '<button type="button" class="vs-api-pager__num'
+                + (i === page ? ' is-active' : '')
+                + '" data-page="' + i + '">' + i + '</button>';
+        }
+        pagerNums.innerHTML = html;
+    }
+
     function renderPager(total, pagesize) {
         if (footer) {
             footer.hidden = false;
         }
+        totalCount = parseInt(total, 10) || 0;
+        var ps = pagesize || getPageSize();
+        totalPages = Math.max(1, Math.ceil(totalCount / ps) || 1);
+        if (page > totalPages) {
+            page = totalPages;
+        }
+        hasMore = page < totalPages;
         if (totalEl) {
-            totalEl.textContent = '共 ' + (parseInt(total, 10) || 0) + ' 条';
+            totalEl.textContent = '共 ' + totalCount + ' 条';
         }
-        if (pagerNav) {
-            pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
-                + '<span class="vs-api-pager__info">' + page + '</span>'
-                + '<button type="button" class="vs-api-pager__nav" data-p="1"' + (!hasMore ? ' disabled' : '') + '>下一页</button>';
+        if (prevBtn) {
+            prevBtn.disabled = page <= 1;
         }
+        if (nextBtn) {
+            nextBtn.disabled = !hasMore;
+        }
+        renderPagerNums();
     }
 
     function renderList(list, total, pagesize) {
@@ -380,7 +411,6 @@
     }
 
     function applyListPayload(data, pagesize) {
-        nextBeforeId = parseInt(data.next_before_id, 10) || 0;
         hasMore = !!data.has_more;
         renderList(data.list || [], parseInt(data.total, 10) || 0, pagesize);
     }
@@ -403,12 +433,11 @@
         listAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
 
         if (isRefresh) {
-            resetCursors();
+            resetList();
         }
 
         var seq = ++loadSeq;
         var pagesize = getPageSize();
-        var beforeId = cursorStack[page - 1] || 0;
         setControlsDisabled(true);
         if (VS.setLoading) {
             VS.setLoading(body, isRefresh ? '正在刷新日志' : '正在加载日志');
@@ -417,7 +446,7 @@
         fd.append('action', 'list');
         fd.append('page', String(page));
         fd.append('pagesize', String(pagesize));
-        fd.append('before_id', String(beforeId));
+        fd.append('before_id', '0');
         if (isRefresh) {
             fd.append('refresh', '1');
         }
@@ -454,7 +483,7 @@
 
     function doSearch() {
         q = searchInput ? String(searchInput.value || '').trim() : '';
-        resetCursors();
+        resetList();
         load();
     }
 
@@ -479,30 +508,44 @@
         });
     }
 
-    if (pagerNav) {
-        pagerNav.addEventListener('click', function (e) {
-            var btn = e.target.closest('[data-p]');
-            if (!btn || btn.disabled) {
+    function goPage(target) {
+        var p = parseInt(target, 10);
+        if (!p || p < 1) {
+            return;
+        }
+        if (p === page) {
+            return;
+        }
+        if (totalPages > 0 && p > totalPages) {
+            return;
+        }
+        page = p;
+        load();
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            if (prevBtn.disabled) {
                 return;
             }
-            var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
-            if (delta > 0) {
-                if (!hasMore || !nextBeforeId) {
-                    return;
-                }
-                cursorStack[page] = nextBeforeId;
-                page += 1;
-                load();
+            goPage(page - 1);
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            if (nextBtn.disabled) {
                 return;
             }
-            if (delta < 0) {
-                if (page <= 1) {
-                    return;
-                }
-                page -= 1;
-                cursorStack.length = page;
-                load();
+            goPage(page + 1);
+        });
+    }
+    if (pagerNums) {
+        pagerNums.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-page]');
+            if (!btn) {
+                return;
             }
+            goPage(btn.getAttribute('data-page'));
         });
     }
 
@@ -514,7 +557,7 @@
                 el.classList.toggle('vs-btn--default', el !== btn);
             });
             okFilter = btn.getAttribute('data-ok') || '';
-            resetCursors();
+            resetList();
             load();
         });
     });
@@ -533,7 +576,7 @@
 
     if (pageSizeEl) {
         pageSizeEl.addEventListener('change', function () {
-            resetCursors();
+            resetList();
             load();
         });
     }

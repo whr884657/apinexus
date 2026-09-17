@@ -129,7 +129,9 @@
 }
 .vs-md-music audio { width: 100%; margin-top: 0.4rem; }
 .vs-md-body pre,
-.vs-md-preview pre {
+.vs-md-preview pre,
+.markdown-body pre,
+.detail-md pre {
     position: relative;
     border-radius: 10px;
     overflow-x: auto;
@@ -141,7 +143,75 @@
     margin: 0.85rem 0;
 }
 .vs-md-body pre::before,
-.vs-md-preview pre::before {
+.vs-md-preview pre::before,
+.markdown-body pre::before,
+.detail-md pre::before {
+    content: none !important;
+    display: none !important;
+}
+/*
+ * 代码块三层结构（E331）：
+ * wrap = 定宽 + 钉复制钮；scroll = 唯一横向滚动；pre = 内容。
+ * 必须锁住 wrap 宽度，否则长代码撑破 .markdown-body（其 overflow-x:auto）整页横滑，钮跟着跑。
+ */
+.vs-md-body,
+.vs-md-preview,
+.markdown-body,
+.detail-md {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.vs-md-pre-wrap {
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    margin: 0.85rem 0;
+    border-radius: 10px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+    background: #ffffff;
+    color: #1e293b;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    overflow: visible;
+    contain: inline-size;
+}
+.vs-md-pre-scroll {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+.vs-md-pre-wrap > .vs-md-pre-scroll > pre,
+.vs-md-body .vs-md-pre-wrap > .vs-md-pre-scroll > pre,
+.vs-md-preview .vs-md-pre-wrap > .vs-md-pre-scroll > pre,
+.markdown-body .vs-md-pre-wrap > .vs-md-pre-scroll > pre,
+.detail-md .vs-md-pre-wrap > .vs-md-pre-scroll > pre,
+.vs-md-pre-wrap > pre,
+.vs-md-body .vs-md-pre-wrap > pre,
+.vs-md-preview .vs-md-pre-wrap > pre,
+.markdown-body .vs-md-pre-wrap > pre,
+.detail-md .vs-md-pre-wrap > pre {
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    position: static !important;
+    overflow: visible !important;
+    max-width: none;
+    width: max-content;
+    min-width: 100%;
+    box-sizing: border-box;
+    padding: 2.1rem 1rem 0.85rem !important;
+}
+.vs-md-pre-wrap pre::before {
     content: none !important;
     display: none !important;
 }
@@ -149,7 +219,7 @@
     position: absolute;
     top: 0.45rem;
     right: 0.45rem;
-    z-index: 2;
+    z-index: 5;
     padding: 0.18rem 0.55rem;
     font-size: 0.7rem;
     line-height: 1.4;
@@ -159,6 +229,7 @@
     color: var(--text-muted, #64748b);
     cursor: pointer;
     font-family: inherit;
+    pointer-events: auto;
 }
 .vs-md-copy-btn:hover {
     color: var(--text-main, #111111);

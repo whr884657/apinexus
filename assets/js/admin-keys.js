@@ -46,6 +46,24 @@
             return window.VS.postForm(fd);
         }
 
+        /** E326：确认框用 VsModal；禁止调用不存在的 VS.confirm */
+        function askConfirm(message, title, options) {
+            if (window.VsModal && typeof window.VsModal.confirm === 'function') {
+                return window.VsModal.confirm(message, title || '操作确认', options || {});
+            }
+            return Promise.resolve(window.confirm(message));
+        }
+
+        function notify(message, type) {
+            if (window.VS && typeof window.VS.showMessage === 'function') {
+                window.VS.showMessage(message, type);
+                return;
+            }
+            if (window.VsToast && typeof window.VsToast.show === 'function') {
+                window.VsToast.show(message, type === 'error' ? 'error' : 'success');
+            }
+        }
+
         function escapeHtml(text) {
             return String(text)
                 .replace(/&/g, '&amp;')
@@ -278,13 +296,13 @@
             }
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(t).then(function () {
-                    window.VS.toast('已复制令牌', 'success');
+                    notify('已复制令牌', 'success');
                 }).catch(function () {
-                    window.VS.toast('复制失败', 'error');
+                    notify('复制失败', 'error');
                 });
                 return;
             }
-            window.VS.toast('已复制令牌', 'success');
+            notify('已复制令牌', 'success');
         }
 
         page.addEventListener('click', function (e) {
@@ -300,20 +318,24 @@
                 e.preventDefault();
                 var tid = toggleBtn.getAttribute('data-token-id');
                 var nextStatus = parseInt(toggleBtn.getAttribute('data-status') || '0', 10);
-                var tip = nextStatus === 1 ? '确定启用该令牌？' : '确定紧急禁用该令牌？禁用后调用将失败。';
-                window.VS.confirm(tip).then(function (ok) {
+                var isEnable = nextStatus === 1;
+                var tip = isEnable ? '确定启用该令牌？' : '确定紧急禁用该令牌？禁用后调用将失败。';
+                var title = isEnable ? '启用令牌' : '紧急禁用';
+                askConfirm(tip, title, { danger: !isEnable }).then(function (ok) {
                     if (!ok) {
                         return;
                     }
-                    postAction('set_status', { token_id: tid, status: nextStatus }).then(function (res) {
+                    return postAction('set_status', { token_id: tid, status: nextStatus }).then(function (res) {
                         if (!res || Number(res.code) !== 1) {
-                            window.VS.toast((res && res.msg) || '操作失败', 'error');
+                            notify((res && res.msg) || '操作失败', 'error');
                             return;
                         }
-                        window.VS.toast(res.msg || '已更新', 'success');
-                        setPairStatus(getPair(tid), nextStatus === 1);
+                        notify(res.msg || '已更新', 'success');
+                        setPairStatus(getPair(tid), isEnable);
                         applyView();
                     });
+                }).catch(function () {
+                    notify('网络异常，请稍后重试', 'error');
                 });
                 return;
             }
@@ -322,22 +344,24 @@
             if (resetBtn) {
                 e.preventDefault();
                 var rid = resetBtn.getAttribute('data-token-id');
-                window.VS.confirm('确定重置该令牌密钥？旧密钥将立即失效。').then(function (ok) {
+                askConfirm('确定重置该令牌密钥？旧密钥将立即失效。', '重置令牌', { danger: true }).then(function (ok) {
                     if (!ok) {
                         return;
                     }
-                    postAction('reset', { token_id: rid }).then(function (res) {
+                    return postAction('reset', { token_id: rid }).then(function (res) {
                         var token = res && res.token
                             ? res.token
                             : (res && res.data && res.data.token ? res.data.token : null);
                         if (!res || Number(res.code) !== 1 || !token) {
-                            window.VS.toast((res && res.msg) || '重置失败', 'error');
+                            notify((res && res.msg) || '重置失败', 'error');
                             return;
                         }
-                        window.VS.toast(res.msg || '已重置', 'success');
+                        notify(res.msg || '已重置', 'success');
                         updatePairSecret(getPair(rid), token.secret || '');
                         applyView();
                     });
+                }).catch(function () {
+                    notify('网络异常，请稍后重试', 'error');
                 });
                 return;
             }
@@ -346,18 +370,20 @@
             if (delBtn) {
                 e.preventDefault();
                 var did = delBtn.getAttribute('data-token-id');
-                window.VS.confirm('确定删除该令牌？此操作不可恢复。').then(function (ok) {
+                askConfirm('确定删除该令牌？此操作不可恢复。', '删除令牌', { danger: true }).then(function (ok) {
                     if (!ok) {
                         return;
                     }
-                    postAction('delete', { token_id: did }).then(function (res) {
+                    return postAction('delete', { token_id: did }).then(function (res) {
                         if (!res || Number(res.code) !== 1) {
-                            window.VS.toast((res && res.msg) || '删除失败', 'error');
+                            notify((res && res.msg) || '删除失败', 'error');
                             return;
                         }
-                        window.VS.toast(res.msg || '已删除', 'success');
+                        notify(res.msg || '已删除', 'success');
                         removePair(did);
                     });
+                }).catch(function () {
+                    notify('网络异常，请稍后重试', 'error');
                 });
             }
         });

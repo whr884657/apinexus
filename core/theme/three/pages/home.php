@@ -318,7 +318,7 @@ window.TH3_HOME = {
       <h2 class="font-display font-bold tracking-tight" style="font-size: clamp(1.75rem, 5vw, 3rem);">
         不仅是聚合，<br>更是<span class="gradient-text">工程化升级</span>
       </h2>
-      <p class="mt-3 text-fg-2 text-base sm:text-lg">从鉴权到监控，从限流到容灾，ApiNexus 替你处理掉所有繁琐的细节。</p>
+      <p class="mt-3 text-fg-2 text-base sm:text-lg">从鉴权到监控，从限流到容灾，替你处理掉所有繁琐的细节。</p>
     </div>
 
     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -327,7 +327,7 @@ window.TH3_HOME = {
           <div class="api-icon-box"><i data-lucide="key-round"></i></div>
           <h3 class="font-display">统一鉴权</h3>
         </div>
-        <p>一个 API Key 调用全部接口。支持 HMAC 签名、OAuth2、JWT 多种认证方式，权限粒度到单个接口。</p>
+        <p>统一 API Key 鉴权，支持多种传参方式，权限可按接口配置。</p>
       </div>
       <div class="reveal reveal-delay-1 feature-card">
         <div class="feature-card-head">

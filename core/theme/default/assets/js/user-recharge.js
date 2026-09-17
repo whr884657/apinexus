@@ -334,4 +334,71 @@
     }
 
     updatePayBtn();
+
+    /* 充值方式 Tab：积分充值 / 卡密兑换 */
+    function setRechargeTab(name) {
+        document.querySelectorAll('.vs-recharge-tab').forEach(function (btn) {
+            var on = btn.getAttribute('data-tab') === name;
+            btn.classList.toggle('is-active', on);
+            btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        document.querySelectorAll('.vs-recharge-pane').forEach(function (pane) {
+            var on = pane.getAttribute('data-pane') === name;
+            pane.hidden = !on;
+        });
+    }
+    var tabs = document.getElementById('rechargeTabs');
+    if (tabs) {
+        tabs.addEventListener('click', function (e) {
+            var btn = e.target.closest('.vs-recharge-tab');
+            if (!btn) return;
+            setRechargeTab(btn.getAttribute('data-tab') || 'pay');
+        });
+        var def = app ? (app.getAttribute('data-default-tab') || 'pay') : 'pay';
+        setRechargeTab(def);
+    }
+
+    var cardkeyInput = document.getElementById('cardkeyCodeInput');
+    var cardkeyBtn = document.getElementById('cardkeyRedeemBtn');
+    function doRedeem() {
+        if (!cardkeyInput || !cardkeyBtn) {
+            return;
+        }
+        var code = String(cardkeyInput.value || '').trim();
+        if (!/^[A-Za-z0-9]{20}$/.test(code)) {
+            if (VS.showMessage) VS.showMessage('请输入 20 位字母数字卡密', 'warning');
+            return;
+        }
+        cardkeyBtn.disabled = true;
+        var fd = new FormData();
+        fd.append('action', 'redeem');
+        fd.append('code', code);
+        VS.postForm(fd, window.location.href).then(function (data) {
+            cardkeyBtn.disabled = false;
+            if (!data || data.code !== 1) {
+                if (VS.showMessage) VS.showMessage((data && data.msg) || '兑换失败', 'error');
+                return;
+            }
+            if (VS.showMessage) VS.showMessage(data.msg || '兑换成功', 'success');
+            cardkeyInput.value = '';
+            var bal = document.getElementById('rechargeBalance');
+            if (bal && data.balance != null) {
+                bal.textContent = String(data.balance);
+            }
+        }).catch(function () {
+            cardkeyBtn.disabled = false;
+            if (VS.showMessage) VS.showMessage('网络异常', 'error');
+        });
+    }
+    if (cardkeyBtn) {
+        cardkeyBtn.addEventListener('click', doRedeem);
+    }
+    if (cardkeyInput) {
+        cardkeyInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                doRedeem();
+            }
+        });
+    }
 })();
