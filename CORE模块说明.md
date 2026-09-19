@@ -2,7 +2,7 @@
 
 > **文档位置：** 项目根目录 `CORE模块说明.md`  
 > **文档性质：** 主题开发对接文档（按文件 / 能力分段，**不按版本号分章**）  
-> **当前版本：** **13.26.42**（与 `core/version.php` 中 `VS_VERSION` 一致）  
+> **当前版本：** **13.26.44**（与 `core/version.php` 中 `VS_VERSION` 一致）  
 > **适用读者：** 自研主题、二次开发、维护者  
 
 **铁律（全文最重要的一句）：**  
@@ -136,11 +136,12 @@ if (!defined('VS_THEME_RENDER')) {
 ```text
 core/theme/{id}/
   theme.json                 ← 必须（id 与目录名一致）
+  主题规范.md                ← 本主题自己的界面规范（自定义这个包时先读）
   preview.png                ← 推荐
   layout/header.php          ← 前台必须
   layout/footer.php          ← 强烈推荐
   pages/                     ← home / apis / detail / …
-  assets/shell/              ← common.js 等（须含 VS.fetchFrontCatalog）
+  assets/shell/              ← 样式与界面脚本（modal / vs-pick 等）。不要放 common.js
   assets/theme.css|js        ← 非 default 主资源
   user/layout.php
   user/auth/{login,register,forgot,bind}.php
@@ -152,7 +153,7 @@ core/theme/{id}/
 
 1. `Database::connect()` / 任何 SQL / 表名 / 字段名出现在主题  
 2. 用 `*Manager` **渲染或取展示数据**（统计请走 `FrontendStats`）  
-3. 手写 `/assets/img/...`；引用根目录 `/assets/css|js` 作前台/用户中心壳  
+3. 手写 `/assets/img/...`；把根目录 `/assets/css|js` 当主题皮肤来引（**例外**：系统固定加载 `assets/js/common.js`，认证页 `auth-csrf.js`，验证码 `captcha.js`）  
 4. `include` / `assetUrl` 指向**其它主题**  
 5. 调用后台专用类：`DashboardStats`、`GeoCityCoords`、`PanelMonitor` 等  
 6. 首页 / apis 首屏 `json_encode` 全量 `FrontendApi::listForTheme()`（必须走 catalog 窗口）  
@@ -181,7 +182,7 @@ MySQL / Redis
 | 文件 | 一句话 |
 |------|--------|
 | `bootstrap.php` | 系统引导：按序加载全部核心类 + Session/CSRF；末尾可注册全局哀悼输出缓冲（v13.26.43） |
-| `version.php` | 定义 `VS_VERSION`（当前 **13.26.43**） |
+| `version.php` | 定义 `VS_VERSION`（当前 **13.26.44**） |
 | `helpers.php` | 全局函数：转义、路径、SEO、前台渲染、`vs_require_secure_post`、全局哀悼注入等 |
 | `InstallChecker.php` | 是否已安装；未安装跳转安装向导 |
 | `Database.php` | PDO 连接、表前缀 |
@@ -384,6 +385,7 @@ version → helpers → 时区
 | 函数 | 用途 |
 |------|------|
 | `vs_e($v)` | HTML 转义 |
+| `vs_curl_close($ch)` | 关闭 curl：PHP 7.4 调用 `curl_close`；PHP 8.0+ 不调用（避免 8.5 弃用警告） |
 | `vs_base_url()` | 站点根**绝对** URL（SEO / 邮件） |
 | `vs_site_base_path()` / `vs_site_path($path)` | 同站路径前缀 / 根相对路径（导航、资源、catalog） |
 | `vs_api_detail_url($id)` / `vs_profile_url($id)` | 详情 / 个人主页链接 |
@@ -700,7 +702,7 @@ POST `register` 时入口逻辑：若 `fixedRegisterRole()` 非空则**覆盖**�
 #### （6）浏览器三件套（主题必须具备）
 
 1. 页脚有 `window.VS_FRONT_CATALOG = ".../core/front/catalog.php"`  
-2. 壳 `assets/shell/common.js` 提供 `VS.fetchFrontCatalog({ partners? })`  
+2. 根目录 `assets/js/common.js` 提供 `VS.fetchFrontCatalog({ partners? })`（系统级，主题包不必、也不许再带一份）  
 3. 页面 JS 拉完后渲染卡片（搜索/分类/分页在浏览器内存做）；有序模式勿再客户端 `shuffle` / 按字母重排分类组
 
 自研主题最短接法：对照 `default` / `slate` / `three` 抄；**不要**另造 `/theme/api/xxx` 目录接口。
@@ -1197,7 +1199,7 @@ HTTP：`captcha/image.php`（出图）、`captcha/register.php`（极验 registe
 - [ ] `core/theme/{id}/theme.json`（`id` 与目录名一致，符合命名规则）  
 - [ ] `layout/header.php` + `footer.php`  
 - [ ] 公开 `pages/`：至少 `home` / `apis` / `detail`（及其它站点已启用的页面）  
-- [ ] `assets/shell/` 齐备，含 `VS.fetchFrontCatalog`  
+- [ ] `assets/shell/` 放本主题样式和界面脚本即可；**不必**自带 `common.js`（系统加载根目录 `assets/js/common.js`，内含 `VS.fetchFrontCatalog`）  
 - [ ] 非 default：提供 `theme.css` / `theme.js`  
 - [ ] `user/layout.php` + `user/auth/*`（含 **register** 支持 `$showRoleSegment` / `$registerRole`）+ `user/pages/*`  
 
@@ -1210,7 +1212,7 @@ HTTP：`captcha/image.php`（出图）、`captcha/register.php`（极验 registe
 - [ ] 注册页：尊重 `$registerOpen` / `$showRoleSegment` / `$registerRole`；关闭时展示注入文案  
 - [ ] 用户内容 `vs_e()`；写操作 CSRF + `vs_require_secure_post`  
 - [ ] 图标 `SiteMedia`；头像走 Frontend\* / `UserAvatar`  
-- [ ] 不引用其它主题与根目录前台 CSS/JS  
+- [ ] 不引用其它主题与根目录前台 CSS/JS（系统级 `common.js` / `captcha.js` / `auth-csrf.js` 除外）  
 - [ ] Playground：**无** KEY SSR；按需 `playground-key.php`  
 
 ### 11.3 走查

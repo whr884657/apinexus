@@ -1,0 +1,163 @@
+/* 主题4顶栏：结构与主题1一致，色板跟主题1，不依赖 feer-front */
+body.vs-body {
+    padding-top: 60px;
+}
+
+.nav-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 460;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.98);
+    color: #111111;
+    border-bottom: 1px solid rgba(17, 17, 17, 0.12);
+    backdrop-filter: blur(12px);
+    --text-muted: #6b7280;
+    --text-main: #111111;
+    --accent-primary: #111111;
+    --border-color: rgba(17, 17, 17, 0.12);
+    --bg-panel: rgba(255, 255, 255, 0.98);
+}
+
+.feer-brand {
+    text-decoration: none;
+    color: inherit;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feer-brand__img {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.feer-brand__fallback {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(17, 17, 17, 0.08);
+    flex-shrink: 0;
+    position: relative;
+}
+
+.feer-brand__fallback::after {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 3px;
+    background: #111111;
+}
+
+.feer-nav-link {
+    color: #6b7280;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.feer-nav-link:hover,
+.feer-nav-link.is-active {
+    color: #111111;
+}
+
+.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.w-5 { width: 1.25rem; }
+.h-5 { height: 1.25rem; }
+.mt-auto { margin-top: auto; }
+.top-3 { top: 0.75rem; }
+.right-3 { right: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.p-1 { padding: 0.25rem; }
+
+.btn-geek {
+    background: transparent;
+    border: 1px solid #111111;
+    color: #111111;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    box-sizing: border-box;
+}
+
+.nav-bar .auth-entry-btn--nav { display: none; }
+.nav-menu-mobile { display: inline-flex; align-items: center; }
+
+@media (min-width: 768px) {
+    .nav-bar .auth-entry-btn--nav { display: inline-flex !important; }
+    .nav-menu-mobile { display: none !important; }
+}
+
+.auth-entry-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.auth-entry-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 468;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.sidebar-overlay.active { opacity: 1; visibility: visible; }
+
+.mobile-sidebar {
+    position: fixed;
+    top: 0;
+    right: -280px;
+    left: auto;
+    width: 280px;
+    height: 100%;
+    background: #fff;
+    border-left: 1px solid rgba(17, 17, 17, 0.12);
+    border-right: none;
+    z-index: 470;
+    padding: 1.5rem;
+    transition: right 0.3s;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.mobile-sidebar.open { right: 0; left: auto; }
+
+.mobile-sidebar .auth-entry-btn {
+    width: 100%;
+}
+
+.mobile-sidebar .auth-entry-avatar {
+    width: 22px;
+    height: 22px;
+}
+
+#shader-canvas,
+.grid-overlay {
+    display: none;
+}

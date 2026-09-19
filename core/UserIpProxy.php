@@ -1550,7 +1550,7 @@ class UserIpProxy
             return array('ok' => false, 'errcode' => ApiError::PROXY_FAIL, 'msg' => '无法发起提取请求');
         }
         if (!class_exists('LinkSiteMeta') || !LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
-            curl_close($ch);
+            vs_curl_close($ch);
             return array('ok' => false, 'errcode' => ApiError::PROXY_FAIL, 'msg' => '提取地址不允许');
         }
         curl_setopt_array($ch, array(
@@ -1566,7 +1566,7 @@ class UserIpProxy
         $body = curl_exec($ch);
         $errno = curl_errno($ch);
         $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        vs_curl_close($ch);
 
         if ($body === false || $errno || $http >= 400) {
             return array('ok' => false, 'errcode' => ApiError::PROXY_FAIL, 'msg' => '提取代理失败');
@@ -2438,7 +2438,7 @@ class UserIpProxy
             $body = curl_exec($ch);
             $errno = curl_errno($ch);
             $echoHttp = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            vs_curl_close($ch);
             if ($body === false || $errno) {
                 self::pushTestLog($logs, 'err', '请求失败（无法经代理访问）');
                 continue;
@@ -2502,7 +2502,7 @@ class UserIpProxy
                 $reachBody = curl_exec($chR);
                 $reachErrno = curl_errno($chR);
                 $reachHttp = (int) curl_getinfo($chR, CURLINFO_HTTP_CODE);
-                curl_close($chR);
+                vs_curl_close($chR);
                 if ($reachBody === false || $reachErrno) {
                     self::pushTestLog($logs, 'err', '经代理无法访问本站');
                 } else {
@@ -2557,7 +2557,7 @@ class UserIpProxy
                 $siteBody = curl_exec($ch2);
                 $siteErrno = curl_errno($ch2);
                 $siteHttp = (int) curl_getinfo($ch2, CURLINFO_HTTP_CODE);
-                curl_close($ch2);
+                vs_curl_close($ch2);
                 if ($siteBody === false || $siteErrno) {
                     self::pushTestLog($logs, 'err', '个人信息接口请求失败');
                     $siteMsg = '请求失败';

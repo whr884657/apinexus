@@ -110,7 +110,7 @@ foreach ($apiList as $api) {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
     $error = curl_error($ch);
-    curl_close($ch);
+    vs_curl_close($ch);
     
     // 成功则跳出循环
     if ($httpCode == 200 && $response !== false) {

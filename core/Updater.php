@@ -1154,7 +1154,7 @@ class Updater
             $body = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
-            curl_close($ch);
+            vs_curl_close($ch);
             if ($body !== false && $code >= 200 && $code < 300) {
                 return $body;
             }
@@ -1215,7 +1215,7 @@ class Updater
             $ok = curl_exec($ch) !== false;
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
-            curl_close($ch);
+            vs_curl_close($ch);
             fclose($fp);
             if (!$ok || $code < 200 || $code >= 300) {
                 if ($error !== '') {

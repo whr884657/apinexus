@@ -55,6 +55,9 @@ function vs_theme_admin_render_settings_three($schema, $values)
         if ($key === 'stats_num_format') {
             echo '<p class="vs-form-hint">完整数字：实时有多少显示多少；单位转换：达到千/万后显示为 K+、W+</p>';
         }
+        if ($key === 'footer_friend_links_display') {
+            echo '<p class="vs-form-hint">仅在勾选「底部友情链接」时生效</p>';
+        }
         echo '</div>';
     };
 
@@ -94,6 +97,25 @@ function vs_theme_admin_render_settings_three($schema, $values)
         echo '</div>';
     };
 
+    $renderTextarea = function ($key) use ($fields, $val) {
+        if (!isset($fields[$key])) {
+            return;
+        }
+        $field = $fields[$key];
+        $current = $val($key);
+        $label = isset($field['label']) ? (string) $field['label'] : $key;
+        $placeholder = isset($field['placeholder']) ? (string) $field['placeholder'] : '';
+        echo '<div class="vs-theme-config-field">';
+        echo '<label class="vs-label" for="ts_' . vs_e($key) . '">' . vs_e($label) . '</label>';
+        echo '<textarea class="vs-textarea" id="ts_' . vs_e($key) . '" name="settings[' . vs_e($key) . ']" rows="4" placeholder="' . vs_e($placeholder) . '">';
+        echo vs_e($current === null ? '' : (string) $current);
+        echo '</textarea>';
+        if ($key === 'hero_lead') {
+            echo '<p class="vs-form-hint">显示在首页大标题「全网接口一站调用」下方。留空则用默认介绍文案。</p>';
+        }
+        echo '</div>';
+    };
+
     $socialTypes = isset($fields['footer_social_1_type']['options']) ? $fields['footer_social_1_type']['options'] : array();
     $qqModes = isset($fields['footer_social_1_qq_mode']['options']) ? $fields['footer_social_1_qq_mode']['options'] : array();
 
@@ -105,6 +127,7 @@ function vs_theme_admin_render_settings_three($schema, $values)
     $renderSelect('stats_num_format');
     $renderSelect('home_preview_limit');
     echo '</div>';
+    $renderTextarea('hero_lead');
     echo '</section>';
 
     echo '<section class="th3-admin-settings__section">';
@@ -112,12 +135,18 @@ function vs_theme_admin_render_settings_three($schema, $values)
     echo '<div class="th3-admin-settings__checks">';
     $renderCheckbox('show_home_announce');
     $renderCheckbox('show_runtime');
+    $renderCheckbox('show_footer_friend_links');
+    $renderCheckbox('show_footer_qr');
     echo '</div>';
+    echo '<div class="th3-admin-settings__grid th3-admin-settings__grid--2" style="margin-top:12px;">';
+    $renderSelect('footer_friend_links_display');
+    echo '</div>';
+    echo '<p class="th3-admin-settings__hint">勾选「底部友情链接」后，页脚站名与描述整块换成友链；取消勾选则恢复站名与描述。</p>';
     echo '</section>';
 
     echo '<section class="th3-admin-settings__section">';
     echo '<h3 class="th3-admin-settings__title">页脚社交图标</h3>';
-    echo '<p class="th3-admin-settings__hint">最多配置 3 个图标。微信填二维码图片地址；邮箱填地址；其它类型填跳转链接。QQ 类型可选链接跳转或二维码悬停。</p>';
+    echo '<p class="th3-admin-settings__hint">最多配置 3 个图标。微信填二维码图片地址；邮箱填地址；其它类型填跳转链接。QQ 类型可选链接跳转或二维码悬停。系统设置里的「页脚二维码」由上方「显示页脚二维码」控制，与这里的社交槽不是同一套。</p>';
     echo '<div class="th3-admin-settings__slots">';
 
     for ($slot = 1; $slot <= 3; $slot++) {

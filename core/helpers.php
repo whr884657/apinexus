@@ -18,6 +18,22 @@ function vs_e($value)
 }
 
 /**
+ * 关闭 curl 句柄。
+ * PHP 8.0 起句柄随对象释放，curl_close 没有作用；PHP 8.5 起再调用会出弃用警告。
+ * PHP 7.4 仍是资源，必须关掉。
+ *
+ * @param resource|object|false|null $ch
+ * @return void
+ */
+function vs_curl_close($ch)
+{
+    if (!$ch || PHP_VERSION_ID >= 80000) {
+        return;
+    }
+    curl_close($ch);
+}
+
+/**
  * 全站控制台品牌信息（系统级外链 JS，主题/后台不可改）
  *
  * @return void

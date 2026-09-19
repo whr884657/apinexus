@@ -1367,7 +1367,7 @@ class PanelMonitor
             $raw = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $err = curl_error($ch);
-            curl_close($ch);
+            vs_curl_close($ch);
             if ($raw === false || $code >= 400 || $code === 0) {
                 throw new Exception($err !== '' ? $err : 'http ' . $code);
             }

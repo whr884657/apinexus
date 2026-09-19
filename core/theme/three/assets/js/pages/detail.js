@@ -279,6 +279,47 @@
         return keyFetchPromise;
     }
 
+    function autofillKey() {
+        if (!paramsWrap || !api) {
+            return Promise.resolve();
+        }
+        var need = parseInt(api.needkey, 10) || 0;
+        if (need !== 1 && need !== 2) {
+            return Promise.resolve();
+        }
+        var ctx = window.playgroundKeyContext || {};
+        var input = null;
+        Array.prototype.forEach.call(paramsWrap.querySelectorAll('.param-input[data-param]'), function (el) {
+            var n = String(el.getAttribute('data-param') || '').toLowerCase();
+            if (n === 'key' || n === 'api_key' || n === 'apikey') input = el;
+        });
+        return ensureApiKey().then(function (keyVal) {
+            if (keyVal && input && !String(input.value || '').trim()) {
+                input.value = keyVal;
+            }
+            var old = paramsWrap.querySelector('.playground-key-hint');
+            if (old) old.remove();
+            var hint = document.createElement('p');
+            hint.className = 'playground-key-hint';
+            if (ctx.loggedIn && keyVal) {
+                hint.innerHTML = '已填入可用 KEY，可直接测试。管理见 <a href="' + (ctx.userCenterUrl || '#') + '">用户中心</a>。';
+            } else if (ctx.loggedIn) {
+                hint.innerHTML = '账户暂无 KEY，请至 <a href="' + (ctx.userCenterUrl || '#') + '">用户中心</a> 创建。';
+            } else if (need === 1) {
+                hint.innerHTML = '需 KEY：请先 <a href="' + (ctx.loginUrl || '#') + '">登录</a> 后在用户中心创建。';
+            } else {
+                hint.innerHTML = '可选 KEY：登录后可在用户中心创建。';
+            }
+            paramsWrap.insertBefore(hint, paramsWrap.firstChild);
+        });
+    }
+
+    if (document.readyState === 'complete') {
+        autofillKey();
+    } else {
+        document.addEventListener('DOMContentLoaded', autofillKey);
+    }
+
     function preferredAuthWay() {
         var preferred = (typeof window.detailQsActiveAuth === 'string' && window.detailQsActiveAuth)
             ? String(window.detailQsActiveAuth).toLowerCase()

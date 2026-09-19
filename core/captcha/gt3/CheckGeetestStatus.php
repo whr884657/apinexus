@@ -61,7 +61,7 @@ class CheckGeetestStatus
             curl_setopt($ch, CURLOPT_TIMEOUT, self::HTTP_TIMEOUT_DEFAULT);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             $body = (string) curl_exec($ch);
-            curl_close($ch);
+            vs_curl_close($ch);
         } else {
             $ctx = stream_context_create(array(
                 'http' => array('timeout' => self::HTTP_TIMEOUT_DEFAULT),

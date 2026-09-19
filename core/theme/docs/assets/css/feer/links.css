@@ -1,0 +1,224 @@
+/**
+ * 友情链接列表（默认主题）
+ */
+
+/* 顶距：须盖过 feer-compat「.main-wrapper.container { padding-top:0 }」，并与 apis 页一致用内联 88px */
+body.vs-body.feer-front .main-wrapper.container.links-page,
+.links-page {
+    padding-top: 88px;
+    padding-bottom: 2.5rem;
+    max-width: 960px;
+    position: relative;
+    z-index: 10;
+}
+
+.links-page .page-header,
+.links-page .page-header--compact {
+    margin-bottom: 0;
+    padding: 0;
+    border-bottom: none;
+}
+
+.links-page .section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 2rem;
+    display: flex;
+    align-items: center;
+    color: var(--text-main);
+}
+
+/* 双斜线标记：HTML 实体 + CSS，避免被 Tailwind preflight 清掉 ::before */
+.links-page .section-title__mark {
+    color: var(--accent-primary);
+    margin-right: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.links-page .section-title::before {
+    content: none;
+    display: none;
+}
+
+.links-lead {
+    margin: -1.25rem 0 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: 1rem;
+}
+
+.link-card {
+    background: var(--bg-panel, #fff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 12px;
+    padding: 1.15rem;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+}
+
+.link-card:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-2px);
+}
+
+.link-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg-code);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.link-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.link-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-main);
+    display: block;
+}
+
+.link-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    max-height: 2.9em;
+}
+
+.link-url {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin: 0.25rem 0 0;
+    font-family: 'JetBrains Mono', monospace;
+    word-break: break-all;
+}
+
+.apply-section {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.apply-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    color: var(--text-main);
+}
+
+.apply-hint {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0 0 1rem;
+    line-height: 1.6;
+}
+
+.apply-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.25rem;
+    background: transparent;
+    border: 1px solid var(--accent-primary);
+    color: var(--accent-primary);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    align-self: flex-end;
+}
+
+.apply-btn:hover {
+    background: var(--accent-primary);
+    color: #fff;
+}
+
+[data-theme="dark"] .apply-btn:hover {
+    color: #0b0d12;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1.25rem;
+    color: var(--text-muted);
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+    body.vs-body.feer-front .main-wrapper.container.links-page,
+    .links-page {
+        padding-top: 88px;
+    }
+
+    .links-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .link-card {
+        padding: 0.95rem 1rem;
+        border-width: 1px;
+        border-style: solid;
+        border-color: var(--border-color, #d1d5db);
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+        align-items: flex-start;
+    }
+
+    .link-avatar {
+        width: 48px;
+        height: 48px;
+    }
+
+    .link-desc {
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        max-height: 2.9em;
+    }
+
+    .link-url {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: normal;
+    }
+
+    .apply-section .apply-btn {
+        align-self: flex-end;
+        width: auto;
+    }
+}

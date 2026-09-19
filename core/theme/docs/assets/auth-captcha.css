@@ -1,0 +1,125 @@
+/**
+ * 默认主题 · 认证页验证码（与 .field input 同系圆角描边）
+ * 仅本主题包引用，勿与主题二共用。
+ */
+.vs-captcha-field {
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+}
+
+.vs-captcha-field--gt {
+    width: 100%;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+/* 仅撑满挂载条外层；禁止 width:100% 落到 .geetest_btn/.geetest_box（会拉爆弹层滑块） */
+.vs-captcha-field--gt .geetest_holder,
+.vs-captcha-field--gt .geetest_wind {
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.vs-captcha-field--gt img,
+.vs-captcha-field--gt svg,
+.vs-captcha-field--gt canvas,
+.vs-captcha-field--gt .geetest_logo,
+.vs-captcha-field--gt [class*="logo"],
+.vs-captcha-field--gt [class*="Logo"] {
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    object-fit: contain !important;
+    transform: none !important;
+}
+
+/* 三代/四代拼图弹层：滑块把手保持官方小按钮（弹层可能挂在 field 内或 body） */
+.geetest_slider_button,
+.geetest_panel .geetest_slider_button,
+.geetest_popup .geetest_slider_button,
+.geetest_panel_box .geetest_slider_button,
+.geetest_box .geetest_slider_button,
+.vs-captcha-field--gt .geetest_slider_button,
+.geetest_slider .geetest_btn,
+.geetest_panel .geetest_slider .geetest_btn,
+.vs-captcha-field--gt .geetest_slider .geetest_btn {
+    width: 40px !important;
+    max-width: 48px !important;
+    min-width: 36px !important;
+    flex: 0 0 auto !important;
+    box-sizing: border-box !important;
+}
+
+.vs-captcha-local {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+}
+
+.vs-captcha-local__input {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    padding: 0 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    background: #fff;
+    color: #111;
+    text-transform: none;
+    font-variant: normal;
+    transition: border-color 0.2s;
+}
+
+.vs-captcha-local__input:focus {
+    border-color: #111;
+}
+
+.vs-captcha-local__input::placeholder {
+    color: #9ca3af;
+}
+
+.vs-captcha-local__refresh {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    height: 48px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    overflow: hidden;
+    line-height: 0;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.vs-captcha-local__refresh:hover {
+    border-color: #111;
+    background: #f9fafb;
+}
+
+.vs-captcha-local__refresh img {
+    display: block;
+    width: 112px;
+    height: 40px;
+    border-radius: 4px;
+}
+
+
+/* 极验挂载占位：表单其它字段就绪时先显示，避免空白等待 */
+.vs-captcha-hint {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    color: #6b7280;
+    font-size: 13px;
+    line-height: 1.4;
+    box-sizing: border-box;
+}

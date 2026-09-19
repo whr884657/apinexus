@@ -301,7 +301,7 @@ class AiApiDoc
                 . '不要写调用地址、参数表、错误码、示例代码。';
         } elseif ($sectionId === 'call') {
             $task = '【本任务】只写三节：## 调用地址、## 请求方式、## 鉴权说明。'
-                . '调用地址用资料中的对外地址；鉴权只写首选一种。不要写参数表、响应、错误码、示例。';
+                . '调用地址必须原样抄资料中的调用地址（已含站点域名），禁止写成你的域名、your-api-host、example.com，禁止只写路径。鉴权只写首选一种。不要写参数表、响应、错误码、示例。';
         } elseif ($sectionId === 'params') {
             $task = '【本任务】只写「## 请求参数」：用表格列出参数名、类型、必填、说明；必要时补充参数取值说明。'
                 . '不要写成功/错误响应、错误码、调用示例。';
@@ -319,7 +319,8 @@ class AiApiDoc
                 . '①「### 终端 curl（bash）」下至少一段可运行 curl；'
                 . '②「### PHP」下至少一段可运行 PHP（禁止空代码块）。'
                 . '禁止输出 Python / Java / Go / JavaScript / TypeScript / C++ / Rust / 浏览器 fetch 等其它语言。'
-                . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。每种语言一个简短示例即可。不要写错误码表与注意事项。';
+                . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。每种语言一个简短示例即可。'
+                . '示例里的请求链接必须原样使用资料中的调用地址（站点域名），禁止你的域名、your-api-host、example.com。不要写错误码表与注意事项。';
         } elseif ($sectionId === 'notes') {
             $task = '【本任务】只写「## 注意事项」。结合本接口实际情况撰写（如密钥安全保管、勿泄露到前端、频率限制、'
                 . 'HTTPS、参数取值注意等），条目不固定，禁止空泛套话堆砌。不要再写其它章节。';
@@ -373,6 +374,7 @@ class AiApiDoc
             . '【调用示例强制】仅允许放在业务错误码章节之后；文档内调用代码只允许两种：① 终端 curl（bash）；② PHP。'
             . '禁止输出 Python / Java / Go / JavaScript / TypeScript / C++ / Rust / 浏览器 fetch 等其它语言示例。'
             . 'PHP 示例禁止输出 <?php 与 ?> 标签；用注释标明语言即可。'
+            . '调用地址与示例请求链接必须原样使用资料中的调用地址（已含站点域名），禁止你的域名、your-api-host、example.com，禁止只写路径。'
             . '【注意事项强制】全文最后一节必须是「注意事项」，结合本接口实际情况撰写（如密钥安全保管、勿泄露到前端、频率限制、'
             . 'HTTPS、参数取值注意等），条目不固定，禁止空泛套话堆砌。'
             . '若接口有多种参数组合，用表格说明典型取值。';
@@ -830,7 +832,7 @@ class AiApiDoc
             . $authHowLine
             . '【极简强制】代码只要能演示一次调用即可，禁止完整 SDK、多函数、大段错误处理、日志框架、CLI 参数解析、多余 import。'
             . '正文目标：约 8～20 行、不超过约 400 字符（含注释）；最多 2～3 行简短中文注释。'
-            . '密钥用 YOUR_API_KEY；使用对外调用地址与给定参数名。'
+            . '密钥用 YOUR_API_KEY。请求链接必须原样使用资料里的调用地址，域名就是当前站点域名，禁止改成 https://你的域名、https://your-api-host、example.com，也禁止只写路径。参数名用资料给定的名字。'
             . '本站成功响应为 code=0：错误处理最多一行（如 if ($data[\'code\'] != 0) echo \'error\';），禁止按 code!=1 判断，不要 try/catch 长链、不要打印完整响应字段说明。'
             . '严禁 emoji、颜文字、图标、HTML/CSS/vs-syn、上游地址、代理、密钥明文、User-Agent、Referer、「全部支持」。'
             . $langHint
@@ -1345,6 +1347,12 @@ class AiApiDoc
         } elseif ($apitype === 1 && $endpoint === '' && !empty($api['callurl'])) {
             $endpoint = trim((string) $api['callurl']);
         }
+        if ($endpoint !== '' && !preg_match('#^https?://#i', $endpoint) && function_exists('vs_call_url_absolute')) {
+            $absolute = vs_call_url_absolute($endpoint);
+            if ($absolute !== '') {
+                $endpoint = $absolute;
+            }
+        }
 
         $keyways = ApiManager::normalizeKeyways(
             isset($api['keyways']) ? $api['keyways'] : ApiManager::KEYWAY_QUERY
@@ -1396,7 +1404,7 @@ class AiApiDoc
         $lines = array(
             '- 名称：' . $safe['name'],
             '- 描述：' . $safe['description'],
-            '- 调用地址：' . $safe['endpoint'],
+            '- 调用地址：' . $safe['endpoint'] . '（必须原样使用，域名即当前站点域名）',
             '- 请求方式：' . (is_array($safe['method']) ? implode(',', $safe['method']) : (string) $safe['method']),
             '- 密钥要求：' . $needLabel,
             '- 首选鉴权：' . ($need === 0 ? '无需密钥' : $primaryLabel),
@@ -1418,6 +1426,7 @@ class AiApiDoc
     private static function sanitizeOutput($text)
     {
         $text = (string) $text;
+        $text = self::pinExampleSiteDomain($text);
         if (class_exists('ApiQuickstart')) {
             $text = ApiQuickstart::scrubHighlightLeak($text);
         } else {
@@ -1441,5 +1450,29 @@ class AiApiDoc
             $text = ApiQuickstart::stripEmoji($text);
         }
         return trim($text);
+    }
+
+    /**
+     * 示例里的占位域名一律换成当前站点根地址。
+     *
+     * @param string $text
+     * @return string
+     */
+    private static function pinExampleSiteDomain($text)
+    {
+        $text = (string) $text;
+        if ($text === '' || !function_exists('vs_base_url')) {
+            return $text;
+        }
+        $base = rtrim((string) vs_base_url(), '/');
+        if ($base === '' || !preg_match('#^https?://#i', $base)) {
+            return $text;
+        }
+        $pinned = preg_replace(
+            '#https?://(?:你的域名|your-api-host|your\.api\.host)#iu',
+            $base,
+            $text
+        );
+        return is_string($pinned) ? $pinned : $text;
     }
 }

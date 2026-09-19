@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.43-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.44-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -65,7 +65,7 @@
 
 ## 环境要求
 
-- **PHP** 7.4 / 8.0 / 8.2（推荐 8.0+）
+- **PHP** 7.4 / 8.0 / 8.2 / 8.5（推荐 8.0+）
 - **MySQL** 5.7+ 或 MariaDB 10.3+
 - **PHP 扩展**：pdo、pdo_mysql、**redis**、mbstring、json、session、curl、openssl、zip
 - **目录权限**：`config/`、`data/` 可写；安装后自动生成 `config/database.php`
@@ -164,13 +164,17 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.43（2026-09-18）
+### v13.26.44（2026-09-19）
 
-- **展示与自定义：** 系统设置原「页脚与展示」更名；新增「全局哀悼模式」开关（`config.site_mourning`）
-- **全站灰白：** `core/bootstrap` 输出缓冲注入 `html.vs-mourning`；官方与第三方自研主题均生效（E335）
-- **页脚友链：** 系统键 `home_footer_links` 删除；迁入默认主题设置 `show_footer_friend_links`
-- **审计热修：** 哀悼注入幂等作用域收紧；迁移先补 `themesettings` 行
-- **库变更：** `install/migrations/13.26.43.sql`（发版前须跑结构更新）
+- **安全脚本归系统：** `common.js` 只留根目录一份（VS64、CSRF、目录拉取）。四个主题包不再自带，写主题不必复制（E338）
+- **热修：** 系统设置「卡密对接 API」保存补上通行证，不再报凭证失效（E339）
+- **首页公告：** 没发布公告就不显示欢迎占位滚动条和弹窗（E340）
+- **主题规范：** 四个主题的界面规范已分开，主题包内各有 `主题规范.md`
+- **新增主题4：** 首页是文档简介；文档页对齐管理端；顶栏菜单跟主题一；不要底部栏。公告弹窗按主题一，可以关闭。主题3在线测试登录后自动填 KEY。AI 示例请求链接固定为站点域名。主题4脚本里的公告和文档数据已转义尖括号
+- **主题3页脚：** 接入系统设置页脚二维码；主题设置可开「用友情链接替换站名与描述」（默认关）。设置面板已画出这些开关；首页标题下方描述可自定义
+- **下线主题五：** 删除 fifth 包；官方主题含主题6 muming。docs / muming 配图由维护者自行完善
+- **PHP：** 安装检测写明兼容 8.5。PHP 8.0 起不再调用 `curl_close`
+- **无数据库结构变更**
 - **更多：** 见 [`更新记录.md`](更新记录.md)
 
 

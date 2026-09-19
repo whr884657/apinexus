@@ -240,7 +240,7 @@ class GeetestLib
         //curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         $res = curl_exec($ch);
-        curl_close($ch);
+        vs_curl_close($ch);
         return $res;
     }
 
@@ -260,7 +260,7 @@ class GeetestLib
         curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-type:application/x-www-form-urlencoded"]);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         $res = curl_exec($ch);
-        curl_close($ch);
+        vs_curl_close($ch);
         return $res;
     }
 

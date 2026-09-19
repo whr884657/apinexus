@@ -37,6 +37,13 @@ if ($homePreviewLimit > 24) {
     $homePreviewLimit = 24;
 }
 
+$heroLeadDefault = '天气、IP、物流、翻译、识别、短信、汇率 ——市面可见的接口，全部聚合到一个平台。统一鉴权、积分计费、统一监控，告别在数十家供应商间来回切换。';
+$heroLead = trim((string) ThemeManager::themeSettingStr('hero_lead', ''));
+if ($heroLead === '') {
+    $heroLead = $heroLeadDefault;
+}
+$heroLeadHtml = nl2br(vs_e($heroLead));
+
 $rechargePackages = PayConfig::packages();
 $rechargeFeatured = -1;
 foreach ($rechargePackages as $i => $pkg) {
@@ -54,9 +61,10 @@ require_once dirname(__DIR__) . '/lib/bootstrap.php';
 $showAnnounce = ThemeManager::themeSettingBool('show_home_announce', true);
 $announceList = ($showAnnounce && class_exists('FrontendAnnouncement')) ? FrontendAnnouncement::listForTheme() : array();
 $announcePopup = ($showAnnounce && class_exists('FrontendAnnouncement')) ? FrontendAnnouncement::listPopups() : array();
-$announceMarquee = '欢迎使用 ' . $siteName . '，当前版本 v' . VS_VERSION . ' 已上线！';
-$announceTitle = '网站公告';
-$announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p><p>系统版本 v' . vs_e(VS_VERSION) . ' 已上线，欢迎体验。</p>';
+$hasAnnounce = count($announceList) > 0;
+$announceMarquee = '';
+$announceTitle = '公告';
+$announceHtml = '';
 if (count($announceList) > 0) {
     $first = $announceList[0];
     $announceMarquee = isset($first['preview']) && $first['preview'] !== '' ? $first['preview'] : $first['title'];
@@ -95,7 +103,7 @@ window.TH3_HOME = {
 
 <p class="vs-seo-fallback-desc"><?php echo vs_e($siteDesc !== '' ? $siteDesc : ($siteName . ' API 聚合平台')); ?></p>
 
-<?php if ($showAnnounce): ?>
+<?php if ($hasAnnounce): ?>
 <div class="th3-announce-bundle">
 <section class="th3-announce-wrap th3-announce-wrap--pending" id="homeAnnouncementWrap">
   <button type="button" class="th3-announce-bar" id="homeAnnouncementBtn" aria-label="查看公告详情">
@@ -111,7 +119,7 @@ window.TH3_HOME = {
         'autopopup' => count($announcePopup) > 0,
         'popup_key' => $announcePopupKey,
     ),
-), JSON_UNESCAPED_UNICODE); ?></script>
+), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?></script>
 <div class="th3-announce-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true" inert>
   <div class="th3-announce-modal__mask" data-close-announcement="1"></div>
   <div class="th3-announce-modal__card" role="dialog" aria-modal="true" aria-labelledby="th3AnnounceModalTitle">
@@ -130,7 +138,7 @@ window.TH3_HOME = {
 </div>
 <?php endif; ?>
 
-<section class="th3-hero-section relative pt-28 sm:pt-32 lg:pt-40 pb-14 sm:pb-20 overflow-hidden<?php echo $showAnnounce ? ' th3-hero--with-announce' : ''; ?>">
+<section class="th3-hero-section relative pt-28 sm:pt-32 lg:pt-40 pb-14 sm:pb-20 overflow-hidden<?php echo $hasAnnounce ? ' th3-hero--with-announce' : ''; ?>">
   <div class="hero-bg">
     <div class="hero-grid"></div>
     <div class="hero-blob blob-1"></div>
@@ -150,7 +158,7 @@ window.TH3_HOME = {
           全网接口<span class="gradient-text">一站调用</span>
         </h1>
         <p class="hero-lead reveal reveal-delay-2 mt-5 sm:mt-6 text-base sm:text-lg text-fg-2 leading-relaxed max-w-xl">
-          天气、IP、物流、翻译、识别、短信、汇率 ——市面可见的接口，全部聚合到一个平台。统一鉴权、积分计费、统一监控，告别在数十家供应商间来回切换。
+          <?php echo $heroLeadHtml; ?>
         </p>
         <div class="hero-actions reveal reveal-delay-3 mt-7 sm:mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
           <a href="#market" class="btn-primary justify-center lg:justify-start">
@@ -443,6 +451,6 @@ window.TH3_HOME = {
   </div>
 </section>
 
-<?php if ($showAnnounce): ?>
+<?php if ($hasAnnounce): ?>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('three', 'assets/js/pages/home-announcement.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <?php endif; ?>

@@ -445,7 +445,7 @@ class PlaygroundRelay
         }
         if (class_exists('LinkSiteMeta')) {
             if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
-                curl_close($ch);
+                vs_curl_close($ch);
                 return self::fail('上游地址不允许指向内网或非公网主机', ApiError::UPSTREAM_BLOCKED);
             }
         } else {
@@ -486,7 +486,7 @@ class PlaygroundRelay
         $err = curl_error($ch);
         $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        curl_close($ch);
+        vs_curl_close($ch);
 
         if ($raw === false || $errno) {
             return self::fail($err !== '' ? ('请求失败：' . $err) : '请求失败');
@@ -513,7 +513,7 @@ class PlaygroundRelay
         }
         if (class_exists('LinkSiteMeta')) {
             if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
-                curl_close($ch);
+                vs_curl_close($ch);
                 return self::fail('上游地址不允许指向内网或非公网主机', ApiError::UPSTREAM_BLOCKED);
             }
         } else {
@@ -564,7 +564,7 @@ class PlaygroundRelay
         $err = curl_error($ch);
         $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        curl_close($ch);
+        vs_curl_close($ch);
 
         if ($raw === false || $errno) {
             return self::fail($err !== '' ? ('请求失败：' . $err) : '请求失败');
@@ -608,7 +608,7 @@ class PlaygroundRelay
             }
             if (class_exists('LinkSiteMeta')) {
                 if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
-                    curl_close($ch);
+                    vs_curl_close($ch);
                     return self::fail('上游重定向目标不允许', ApiError::UPSTREAM_BLOCKED);
                 }
             } else {
@@ -631,7 +631,7 @@ class PlaygroundRelay
             $err = curl_error($ch);
             $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-            curl_close($ch);
+            vs_curl_close($ch);
             if ($raw === false || $errno) {
                 return self::fail($err !== '' ? ('请求失败：' . $err) : '请求失败');
             }

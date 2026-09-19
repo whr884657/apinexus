@@ -393,6 +393,70 @@
     };
 
     /**
+     * 前台公开接口目录（POST + CSRF；首屏不灌大包）
+     * 凭证/来源失败或偶发网络毛刺时自动重试一次（对齐登录页 VsAuthCsrf，E308）
+     *
+     * @param {{partners?: boolean}} [opts]
+     * @param {number} [attempt]
+     * @returns {Promise<object>}
+     */
+    global.VS.fetchFrontCatalog = function (opts, attempt) {
+        opts = opts || {};
+        attempt = Number(attempt) || 0;
+        var url = global.VS_FRONT_CATALOG
+            || ((global.VS_BASE_URL || '') + '/core/front/catalog.php');
+
+        function buildBody() {
+            var fd = new FormData();
+            fd.append('action', 'list');
+            if (opts.partners) {
+                fd.append('partners', '1');
+            }
+            return fd;
+        }
+
+        function isCredFail(data) {
+            if (!data || typeof data !== 'object' || Number(data.code) === 1) {
+                return false;
+            }
+            if (data.csrf) {
+                return true;
+            }
+            var msg = String(data.msg || '');
+            return /凭证|csrf|刷新页面|来源无效/i.test(msg);
+        }
+
+        function isTransientErr(err) {
+            if (!err) {
+                return false;
+            }
+            var m = String(err.message || '');
+            return m === 'invalid_json'
+                || m === 'Failed to fetch'
+                || m === 'NetworkError when attempting to fetch resource.'
+                || err.name === 'TypeError';
+        }
+
+        return global.VS.postForm(buildBody(), url).then(function (data) {
+            if (data && data.csrf) {
+                global.VS_CSRF_TOKEN = data.csrf;
+            }
+            if (data && Number(data.code) === 1) {
+                return data;
+            }
+            if (attempt < 1 && isCredFail(data)) {
+                return global.VS.fetchFrontCatalog(opts, attempt + 1);
+            }
+            throw new Error((data && data.msg) ? data.msg : '目录加载失败');
+        }).catch(function (err) {
+            if (attempt < 1 && isTransientErr(err)) {
+                return global.VS.fetchFrontCatalog(opts, attempt + 1);
+            }
+            throw err;
+        });
+    };
+
+    /**
      * 数据加载动效 HTML（列表 / 详情面板统一用）
      *
      * @param {string} [label]

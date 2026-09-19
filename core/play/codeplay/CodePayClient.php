@@ -101,7 +101,7 @@ class CodePayClient
         ));
         $raw = curl_exec($ch);
         $err = curl_error($ch);
-        curl_close($ch);
+        vs_curl_close($ch);
 
         if ($raw === false || $raw === '') {
             return array('ok' => false, 'msg' => '支付网关无响应' . ($err !== '' ? ('：' . $err) : ''));

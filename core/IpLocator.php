@@ -476,12 +476,12 @@ class IpLocator
             }
             if (class_exists('LinkSiteMeta')) {
                 if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
-                    curl_close($ch);
+                    vs_curl_close($ch);
                     return '';
                 }
             } else {
                 if (!self::assertPublicHttpUrl($url)) {
-                    curl_close($ch);
+                    vs_curl_close($ch);
                     return '';
                 }
                 curl_setopt($ch, CURLOPT_URL, $url);
@@ -508,7 +508,7 @@ class IpLocator
             }
             $body = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            vs_curl_close($ch);
             if ($body === false || $code < 200 || $code >= 300) {
                 return '';
             }

@@ -58,17 +58,18 @@ $homeHeroConfig = array(
 
 $announceList = class_exists('FrontendAnnouncement') ? FrontendAnnouncement::listForTheme() : array();
 $announcePopup = class_exists('FrontendAnnouncement') ? FrontendAnnouncement::listPopups() : array();
-$announceMarquee = '欢迎使用 ' . $siteName . '，当前版本 v' . VS_VERSION . ' 已上线！';
-$announceTitle = '网站公告';
-$announceHtml = '<p>欢迎使用 <strong>' . vs_e($siteName) . '</strong>！</p><p>系统版本 v' . vs_e(VS_VERSION) . ' 已上线，欢迎体验。</p>';
-if (count($announceList) > 0) {
+$hasAnnounce = count($announceList) > 0;
+$announceMarquee = '';
+$announceTitle = '公告';
+$announceHtml = '';
+$announcePopupKey = '';
+if ($hasAnnounce) {
     $first = $announceList[0];
     $announceMarquee = isset($first['preview']) && $first['preview'] !== '' ? $first['preview'] : $first['title'];
     $announceTitle = $first['title'];
-    $announceHtml = isset($first['body_html']) ? $first['body_html'] : $announceHtml;
+    $announceHtml = isset($first['body_html']) ? $first['body_html'] : '';
 }
-$announcePopupKey = '';
-if (count($announcePopup) > 0) {
+if ($hasAnnounce && count($announcePopup) > 0) {
     $pop = $announcePopup[0];
     $announceTitle = $pop['title'];
     $announceHtml = isset($pop['body_html']) ? $pop['body_html'] : $announceHtml;
@@ -85,6 +86,7 @@ if (count($announcePopup) > 0) {
     $announcePopupKey = implode('-', $ids);
 }
 ?>
+<?php if ($hasAnnounce): ?>
 <div class="home-announcement-bundle">
 <section class="home-announcement-wrap home-announcement-wrap--ready container mx-auto px-4" id="homeAnnouncementWrap">
     <button type="button" class="home-announcement-bar" id="homeAnnouncementBtn" aria-label="查看公告详情">
@@ -100,7 +102,7 @@ if (count($announcePopup) > 0) {
         'autopopup' => count($announcePopup) > 0,
         'popup_key' => $announcePopupKey,
     ),
-), JSON_UNESCAPED_UNICODE); ?></script>
+), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?></script>
 <div class="home-announcement-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true" inert>
     <div class="home-announcement-modal__mask" data-close-announcement="1"></div>
     <div class="home-announcement-modal__card" role="dialog" aria-modal="true">
@@ -114,6 +116,7 @@ if (count($announcePopup) > 0) {
 </div>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
 </div>
+<?php endif; ?>
 <div class="home-page-body-stack">
 <main class="main-wrapper container mx-auto px-4">
     <section class="hero-section">
@@ -228,4 +231,6 @@ window.VS_CSRF_TOKEN = <?php echo json_encode($pgCtx['csrf'], JSON_UNESCAPED_UNI
 window.VS_PLAY_URL = <?php echo json_encode($pgCtx['playUrl'], JSON_UNESCAPED_UNICODE); ?>;
 window.VS_FRONT_CATALOG = <?php echo json_encode(vs_site_path('/core/front/catalog.php'), JSON_UNESCAPED_UNICODE); ?>;
 </script>
+<?php if ($hasAnnounce): ?>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('default', 'assets/js/pages/home-announcement.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<?php endif; ?>

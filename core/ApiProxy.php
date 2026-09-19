@@ -520,7 +520,7 @@ class ApiProxy
         }
         if (class_exists('LinkSiteMeta')) {
             if (!LinkSiteMeta::curlPreparePinnedUrl($ch, $url)) {
-                curl_close($ch);
+                vs_curl_close($ch);
                 ApiStats::hitProxy($row, false, ApiError::UPSTREAM_BLOCKED);
                 vs_api_error_exit(ApiError::UPSTREAM_BLOCKED, '上游地址不允许指向内网或非公网主机');
             }
@@ -547,7 +547,7 @@ class ApiProxy
 
         $proxyApply = ApiStats::applyOutboundProxyForProxy($ch);
         if ($proxyApply !== true) {
-            curl_close($ch);
+            vs_curl_close($ch);
             $errcode = isset($proxyApply['errcode']) ? (int) $proxyApply['errcode'] : ApiError::PROXY_FAIL;
             $msg = isset($proxyApply['msg']) ? (string) $proxyApply['msg'] : '出口代理不可用';
             ApiStats::hitProxy($row, false, $errcode);
@@ -558,7 +558,7 @@ class ApiProxy
         $errno = curl_errno($ch);
         $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        curl_close($ch);
+        vs_curl_close($ch);
 
         if ($raw === false || $errno) {
             ApiStats::hitProxy($row, false, ApiError::UPSTREAM_FAIL);

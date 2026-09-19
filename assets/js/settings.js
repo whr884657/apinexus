@@ -33,6 +33,8 @@
 
     function bindAjaxForm(form) {
         if (!form || form.getAttribute('data-ajax') !== '1') return;
+        if (form.getAttribute('data-ajax-bound') === '1') return;
+        form.setAttribute('data-ajax-bound', '1');
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -387,6 +389,7 @@
         if (!form || !main || form.getAttribute('data-ajax') !== '1') {
             return;
         }
+        form.setAttribute('data-ajax-bound', '1');
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             var submitBtn = form.querySelector('[type="submit"]');
@@ -647,6 +650,7 @@
         if (!form) {
             return;
         }
+        form.setAttribute('data-ajax-bound', '1');
         var forceEl = document.getElementById('redisPrefixForce');
         var conflictEl = document.getElementById('redisPrefixConflict');
         var checkBtn = document.getElementById('redisPrefixCheckBtn');
@@ -853,10 +857,6 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
-
-        ['siteForm', 'registerForm', 'apikeySettingsForm', 'captchaForm', 'checkinForm', 'oauthForm', 'mailForm', 'testMailForm', 'apilogForm', 'apiorderForm', 'dashboardForm', 'aiForm', 'iplocForm'].forEach(function (id) {
-            bindAjaxForm(document.getElementById(id));
-        });
         bindRedisSettingsForm();
         bindSystemApiKey();
         bindApilogCron();
@@ -871,6 +871,7 @@
 
         var siteExtra = document.getElementById('siteExtraForm');
         if (siteExtra) {
+            siteExtra.setAttribute('data-ajax-bound', '1');
             siteExtra.addEventListener('submit', function (e) {
                 e.preventDefault();
                 var fd = new FormData(siteExtra);
@@ -892,5 +893,9 @@
                     });
             });
         }
+
+        document.querySelectorAll('form[data-ajax="1"]').forEach(function (form) {
+            bindAjaxForm(form);
+        });
     });
 })();

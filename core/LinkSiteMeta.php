@@ -272,7 +272,7 @@ class LinkSiteMeta
                 return null;
             }
             if (!self::curlPreparePinnedUrl($ch, $current)) {
-                curl_close($ch);
+                vs_curl_close($ch);
                 return null;
             }
             curl_setopt_array($ch, array(
@@ -291,7 +291,7 @@ class LinkSiteMeta
             $raw = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-            curl_close($ch);
+            vs_curl_close($ch);
             if (!is_string($raw) || $raw === '') {
                 return null;
             }

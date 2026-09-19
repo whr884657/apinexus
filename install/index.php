@@ -369,7 +369,7 @@ function runEnvironmentCheck()
     $phpOk = version_compare(PHP_VERSION, '7.4.0', '>=');
     $checks[] = array(
         'name'  => 'PHP 版本',
-        'need'  => '>= 7.4（兼容 8.0 / 8.2）',
+        'need'  => '>= 7.4（兼容 8.0 / 8.2 / 8.5）',
         'value' => PHP_VERSION,
         'pass'  => $phpOk,
     );

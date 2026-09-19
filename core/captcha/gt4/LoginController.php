@@ -141,7 +141,7 @@ class Geetest4Login
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
             $result = curl_exec($ch);
             $responsecode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            vs_curl_close($ch);
             if ($result === false || $responsecode !== 200) {
                 return null;
             }

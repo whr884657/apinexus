@@ -919,7 +919,7 @@ class AiClient
         if ($httpOut <= 0) {
             $httpOut = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         }
-        curl_close($ch);
+        vs_curl_close($ch);
         if ($errno) {
             return array('_error' => '网络错误：' . ($err !== '' ? $err : ('#' . $errno)), '_http' => $httpOut);
         }
@@ -974,7 +974,7 @@ class AiClient
         $errno = curl_errno($ch);
         $err = curl_error($ch);
         $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        vs_curl_close($ch);
         if ($errno) {
             return array('_error' => '网络错误：' . ($err !== '' ? $err : ('#' . $errno)), '_http' => $http);
         }

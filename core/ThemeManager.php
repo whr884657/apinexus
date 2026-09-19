@@ -962,7 +962,26 @@ class ThemeManager
     }
 
     /**
+     * 系统级脚本 URL（根目录 assets/js，与主题包无关）
+     *
+     * 安全协议只维护这一份。主题包即使还留着同名文件，也不从主题包加载。
+     *
+     * @param string $file 目前仅 common.js
+     * @return string
+     */
+    public static function systemJsUrl($file)
+    {
+        $file = basename(str_replace('\\', '/', (string) $file));
+        if ($file !== 'common.js') {
+            return '';
+        }
+        return vs_site_path('/assets/js/' . $file) . '?v=' . VS_VERSION;
+    }
+
+    /**
      * 主题包 shell 资源 URL（仅本主题 assets/shell/，供前台/用户中心隔离加载）
+     *
+     * common.js 例外：永远返回根目录系统脚本，不读主题包副本（v13.26.44 / E338）。
      *
      * @param string      $file    如 common.css、modal.js、user-shell.css
      * @param string|null $themeId
@@ -974,6 +993,9 @@ class ThemeManager
         $file = basename(str_replace('\\', '/', (string) $file));
         if ($file === '' || !self::isValidTheme($themeId)) {
             return '';
+        }
+        if ($file === 'common.js') {
+            return self::systemJsUrl($file);
         }
         $path = self::themeDir($themeId) . '/assets/shell/' . $file;
         if (!is_file($path)) {
@@ -1022,7 +1044,7 @@ class ThemeManager
     }
 
     /**
-     * 前台公共壳 JS
+     * 前台公共壳 JS。common.js 由 shellUrl 转到根目录系统脚本，不读主题包。
      *
      * @return array<int,string>
      */
@@ -1063,7 +1085,7 @@ class ThemeManager
     }
 
     /**
-     * 用户中心壳 JS（主题包内）
+     * 用户中心壳 JS（modal / vs-pick 仍在主题包；common.js 为系统脚本）
      *
      * @param bool $withThemePicker
      * @return array<int,string>
@@ -1210,6 +1232,21 @@ class ThemeManager
             'applylink' => array('assets/js/pages/applylink.js'),
             'links'     => array('assets/js/pages/links-page.js'),
         );
+        if ($themeId === 'docs') {
+            $map['apis'] = array('assets/js/pages/apis-page.js');
+            $map['articles'] = array('assets/js/pages/articles-page.js');
+            $map['about'] = array('assets/js/pages/about-page.js');
+            $map['contributors'] = array(
+                'assets/js/pages/hitokoto-bio.js',
+                'assets/js/pages/contributors-page.js',
+            );
+            $map['profile'] = array(
+                'assets/js/pages/hitokoto-bio.js',
+                'assets/js/pages/profile.js',
+                'assets/js/pages/profile-search.js',
+            );
+            $map['sponsor'] = array('assets/js/pages/donate.js');
+        }
         if (!isset($map[$pageKey])) {
             return array();
         }
