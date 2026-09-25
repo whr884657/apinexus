@@ -298,12 +298,16 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
 
     echo '</nav>' . "\n";
 
-    $logoutUrl = $base . '/admin/login?action=logout';
+    $logoutAction = $base . '/admin/login';
     echo '<div class="vs-sidebar__foot">' . "\n";
-    echo '<a href="' . vs_e($logoutUrl) . '" class="vs-sidebar__logout">' . "\n";
+    echo '<form method="post" action="' . vs_e($logoutAction) . '" class="vs-sidebar__logout-form">' . "\n";
+    echo '<input type="hidden" name="action" value="logout">' . "\n";
+    echo '<input type="hidden" name="csrf_token" value="' . vs_e(AuthSecurity::csrfToken()) . '">' . "\n";
+    echo '<button type="submit" class="vs-sidebar__logout">' . "\n";
     echo '<i class="vs-icon vs-icon--logout"></i>' . "\n";
     echo '<span class="vs-sidebar__text">退出登录</span>' . "\n";
-    echo '</a>' . "\n";
+    echo '</button>' . "\n";
+    echo '</form>' . "\n";
     echo '</div>' . "\n";
 
     echo '</aside>' . "\n";

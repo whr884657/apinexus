@@ -98,7 +98,7 @@ if (!empty($pageSeo) && is_array($pageSeo) && function_exists('vs_render_theme_s
   </div>
 
   <div id="menuBackdrop" class="menu-backdrop lg:hidden" aria-hidden="true"></div>
-  <div id="mobileMenu" class="mobile-menu th5-mobile-menu lg:hidden absolute left-0 right-0 z-50" aria-hidden="true" aria-label="站点菜单">
+  <div id="mobileMenu" class="mobile-menu th5-mobile-menu lg:hidden absolute left-0 right-0" aria-hidden="true" aria-label="站点菜单">
     <div class="px-5 py-6 flex flex-col gap-1">
       <?php foreach ($navItems as $item): ?>
         <?php

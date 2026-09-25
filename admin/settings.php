@@ -546,6 +546,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_oauth') {
         try {
+            $aggItemsRaw = isset($_POST['agg_items_json']) ? (string) $_POST['agg_items_json'] : '[]';
+            $aggItems = json_decode($aggItemsRaw, true);
+            if (!is_array($aggItems)) {
+                $aggItems = array();
+            }
             OAuthConfig::save(
                 array(
                     'enabled' => isset($_POST['qq_enabled']) ? '1' : '',
@@ -556,11 +561,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'enabled'       => isset($_POST['gitee_enabled']) ? '1' : '',
                     'client_id'     => isset($_POST['gitee_client_id']) ? $_POST['gitee_client_id'] : '',
                     'client_secret' => isset($_POST['gitee_client_secret']) ? $_POST['gitee_client_secret'] : '',
+                ),
+                array(
+                    'enabled' => isset($_POST['agg_enabled']) ? '1' : '',
+                    'apiurl'  => isset($_POST['agg_apiurl']) ? $_POST['agg_apiurl'] : '',
+                    'app_id'  => isset($_POST['agg_app_id']) ? $_POST['agg_app_id'] : '',
+                    'app_key' => isset($_POST['agg_app_key']) ? $_POST['agg_app_key'] : '',
+                    'items'   => $aggItems,
                 )
             );
             AjaxResponse::success('OAuth 设置已保存');
         } catch (Exception $e) {
-            AjaxResponse::error('保存失败，请稍后重试');
+            $msg = trim($e->getMessage());
+            AjaxResponse::error($msg !== '' ? $msg : '保存失败，请稍后重试');
         }
     }
 
@@ -743,6 +756,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'captcha_on_user_login'     => isset($_POST['captcha_on_user_login']) ? '1' : '0',
                 'captcha_on_user_register'  => isset($_POST['captcha_on_user_register']) ? '1' : '0',
                 'captcha_on_user_forgot'    => isset($_POST['captcha_on_user_forgot']) ? '1' : '0',
+                'captcha_on_comment'        => isset($_POST['captcha_on_comment']) ? '1' : '0',
+                'captcha_on_applylink'      => isset($_POST['captcha_on_applylink']) ? '1' : '0',
             );
             Config::setMany($payload);
             AjaxResponse::success('验证码设置已保存');
@@ -774,6 +789,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'mail_notify_points_zero'         => isset($_POST['mail_notify_points_zero']) ? '1' : '0',
                 'mail_notify_points_insufficient' => isset($_POST['mail_notify_points_insufficient']) ? '1' : '0',
                 'mail_notify_recharge_success'    => isset($_POST['mail_notify_recharge_success']) ? '1' : '0',
+                'mail_notify_order_admin'         => isset($_POST['mail_notify_order_admin']) ? '1' : '0',
                 'mail_notify_key_quota'           => isset($_POST['mail_notify_key_quota']) ? '1' : '0',
             ));
 
@@ -809,6 +825,19 @@ $registerSuffixes = RegisterPolicy::formatSuffixInput(RegisterPolicy::getPolicy(
 $oauthCfg = OAuthConfig::getAll();
 $oauthQqCallback = OAuthConfig::callbackUrl('qq');
 $oauthGiteeCallback = OAuthConfig::callbackUrl('gitee');
+$oauthAggCallback = OAuthConfig::callbackUrl('agg');
+$oauthAggItems = isset($oauthCfg['agg']['items']) && is_array($oauthCfg['agg']['items'])
+    ? $oauthCfg['agg']['items']
+    : OAuthConfig::builtinAggItems();
+foreach ($oauthAggItems as &$oauthAggItemRef) {
+    if (!is_array($oauthAggItemRef)) {
+        continue;
+    }
+    $oauthAggItemRef['icon_url'] = OAuthConfig::resolveIconUrl(
+        isset($oauthAggItemRef['icon']) ? $oauthAggItemRef['icon'] : ''
+    );
+}
+unset($oauthAggItemRef);
 $captchaCfg = Captcha::forAdminForm();
 
 vs_admin_layout_start('系统设置', 'settings');
@@ -1050,8 +1079,8 @@ vs_admin_accordion_start(
 <?php
 vs_admin_accordion_start(
     'settings-captcha',
-    '登录验证',
-    '管理员与用户可分端选择本站图形或行为验证（三代 / 四代）'
+    '人机验证',
+    '登录、注册、评论、友链等场景；管理端与用户端可分选本站图形或行为验证'
 );
 ?>
     <form method="post" action="" class="vs-form" id="captchaForm" data-ajax="1">
@@ -1060,7 +1089,7 @@ vs_admin_accordion_start(
         vs_render_notice(
             'info',
             '配置说明',
-            '<p>管理员后台与用户端可各自选择验证方式。例如用户侧用行为验证，管理员改用本站图形，可避免第三方服务异常时管理员无法登录。</p><p>三代与四代的验证 ID / 密钥可同时保存；登录在提交时校验；忘记密码在发送邮箱验证码时校验；用户注册在「需邮箱验证」时验发码，关闭邮箱验证时验注册提交。</p>',
+            '<p>管理员后台与用户端可各自选择验证方式。例如用户侧用行为验证，管理员改用本站图形，可避免第三方服务异常时管理员无法登录。</p><p>三代与四代的验证 ID / 密钥可同时保存。场景开关默认：登录/注册/忘记密码开启；文章评论、申请友链默认关闭（开启后走用户侧验证方式）。未开启的场景仍有一次性提交小票与短冷却。</p>',
             array('allow_html' => true, 'compact' => true)
         );
         ?>
@@ -1080,7 +1109,7 @@ vs_admin_accordion_start(
                 <option value="gt4" <?php echo $captchaCfg['mode_user'] === 'gt4' ? 'selected' : ''; ?>>行为验证第四代</option>
                 <option value="gt3" <?php echo $captchaCfg['mode_user'] === 'gt3' ? 'selected' : ''; ?>>行为验证第三代</option>
             </select>
-            <p class="vs-form-hint">作用于用户登录、注册、忘记密码。</p>
+            <p class="vs-form-hint">作用于用户登录、注册、忘记密码、文章评论、申请友链（以后两者勾选为准）。</p>
         </div>
         <div class="vs-form-row">
             <label class="vs-label">第三代 · 验证 ID</label>
@@ -1132,6 +1161,14 @@ vs_admin_accordion_start(
                 <input type="checkbox" name="captcha_on_user_forgot" value="1" <?php echo $captchaCfg['user_forgot'] ? 'checked' : ''; ?>>
                 <span>用户忘记密码（发送邮箱验证码时）</span>
             </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="captcha_on_comment" value="1" <?php echo !empty($captchaCfg['comment']) ? 'checked' : ''; ?>>
+                <span>文章评论</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="captcha_on_applylink" value="1" <?php echo !empty($captchaCfg['applylink']) ? 'checked' : ''; ?>>
+                <span>申请友链</span>
+            </label>
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存验证码设置</button>
@@ -1177,16 +1214,17 @@ vs_admin_accordion_start(
 vs_admin_accordion_start(
     'settings-oauth',
     '第三方登录',
-    'QQ / Gitee 聚合登录（仅用户端）'
+    'QQ 互联、Gitee、聚合登录（仅用户端）'
 );
 ?>
     <form method="post" action="" class="vs-form vs-settings-form" id="oauthForm" data-ajax="1">
         <input type="hidden" name="action" value="save_oauth">
+        <input type="hidden" name="agg_items_json" id="aggItemsJson" value="">
         <?php
         vs_render_notice(
             'info',
             '使用说明',
-            '用户须先完成邮箱注册，首次使用第三方登录时需验证已有账号密码完成绑定。请将下方回调地址原样填入 QQ 互联 / Gitee 应用配置。',
+            '用户须先完成邮箱注册，首次使用第三方登录时需验证已有账号密码完成绑定。请将下方回调地址原样填入对应平台应用配置。聚合登录的「接口对应值」因各聚合商文档而异，可点胶囊右侧齿轮修改。',
             array('compact' => true)
         );
         ?>
@@ -1204,6 +1242,14 @@ vs_admin_accordion_start(
                 <input type="text" class="vs-input" id="oauthGiteeCallback" readonly
                        value="<?php echo vs_e($oauthGiteeCallback); ?>">
                 <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthGiteeCallback">复制</button>
+            </div>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="oauthAggCallback">聚合登录回调地址</label>
+            <div class="vs-copy-row">
+                <input type="text" class="vs-input" id="oauthAggCallback" readonly
+                       value="<?php echo vs_e($oauthAggCallback); ?>">
+                <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthAggCallback">复制</button>
             </div>
         </div>
 
@@ -1243,6 +1289,65 @@ vs_admin_accordion_start(
             <div class="vs-form-row">
                 <label class="vs-label">Client Secret</label>
                 <input type="text" name="gitee_client_secret" class="vs-input" value="<?php echo vs_e($oauthCfg['gitee']['client_secret']); ?>">
+            </div>
+        </div>
+
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">聚合登录</h4>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="agg_enabled" value="1" <?php echo !empty($oauthCfg['agg']['enabled']) ? 'checked' : ''; ?>>
+                <span>启用聚合登录</span>
+            </label>
+        </div>
+        <?php
+        vs_render_notice(
+            'tip',
+            '',
+            '不是所有聚合平台都支持全部登录方式。前半段点击启用/停用；右侧齿轮修改「接口对应值」。改完点「应用」写入本页，再点底部「保存 OAuth 设置」提交。',
+            array('compact' => true, 'field' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="aggApiurl">网关地址</label>
+            <input type="text" class="vs-input" id="aggApiurl" name="agg_apiurl"
+                   placeholder="如 https://u.example.com/"
+                   value="<?php echo vs_e(isset($oauthCfg['agg']['apiurl']) ? $oauthCfg['agg']['apiurl'] : ''); ?>">
+            <p class="vs-form-hint">填聚合平台根地址即可（勿写死某一家）；系统会自动拼接 connect.php。</p>
+        </div>
+        <div class="vs-form-grid">
+            <div class="vs-form-row">
+                <label class="vs-label" for="aggAppId">App ID</label>
+                <input type="text" class="vs-input" id="aggAppId" name="agg_app_id"
+                       value="<?php echo vs_e(isset($oauthCfg['agg']['app_id']) ? $oauthCfg['agg']['app_id'] : ''); ?>">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label" for="aggAppKey">App Key</label>
+                <input type="text" class="vs-input" id="aggAppKey" name="agg_app_key"
+                       value="<?php echo vs_e(isset($oauthCfg['agg']['app_key']) ? $oauthCfg['agg']['app_key'] : ''); ?>">
+            </div>
+        </div>
+
+        <div class="vs-agg-block" id="aggPillRoot"
+             data-items="<?php echo vs_e(json_encode($oauthAggItems, JSON_UNESCAPED_UNICODE)); ?>">
+            <p class="vs-label">内置登录方式</p>
+            <div class="vs-agg-pills" id="aggPillsBuiltin" aria-label="内置登录方式"></div>
+            <p class="vs-label vs-agg-custom-label">自定义登录方式</p>
+            <div class="vs-agg-pills vs-agg-pills--custom" id="aggPillsCustom" aria-label="自定义登录方式"></div>
+            <div class="vs-agg-custom-add">
+                <input type="text" class="vs-input" id="aggCustomName" placeholder="名称" maxlength="32">
+                <input type="text" class="vs-input" id="aggCustomType" placeholder="接口对应值" maxlength="64">
+                <input type="text" class="vs-input" id="aggCustomIcon" placeholder="图标链接 https://…" maxlength="500">
+                <button type="button" class="vs-btn vs-btn--default" id="aggCustomAddBtn">添加</button>
+            </div>
+            <div class="vs-agg-edit" id="aggEditSlot" hidden>
+                <div class="vs-agg-edit__head">正在编辑：<strong id="aggEditName">—</strong></div>
+                <div class="vs-agg-edit__row">
+                    <input type="text" class="vs-input" id="aggEditType" maxlength="64" placeholder="接口对应值">
+                    <button type="button" class="vs-btn vs-btn--primary" id="aggEditApplyBtn">应用</button>
+                </div>
+                <p class="vs-form-hint" id="aggEditHint">此为请求聚合接口时的 type 参数。默认已按常见平台填写；若你的聚合文档不同，修改后点「应用」，再点底部保存。</p>
             </div>
         </div>
 
@@ -1978,6 +2083,10 @@ vs_admin_accordion_start(
             <label class="vs-checkbox" style="margin-top:8px;display:flex;">
                 <input type="checkbox" name="mail_notify_recharge_success" value="1" <?php echo (!isset($vsCfg['mail_notify_recharge_success']) || $vsCfg['mail_notify_recharge_success'] === '1') ? 'checked' : ''; ?>>
                 <span>积分充值成功到账时，通知用户</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="mail_notify_order_admin" value="1" <?php echo (!isset($vsCfg['mail_notify_order_admin']) || $vsCfg['mail_notify_order_admin'] === '1') ? 'checked' : ''; ?>>
+                <span>用户充值订单支付成功时，通知管理员（含本单收入与今日累计）</span>
             </label>
             <label class="vs-checkbox" style="margin-top:8px;display:flex;">
                 <input type="checkbox" name="mail_notify_key_quota" value="1" <?php echo (!isset($vsCfg['mail_notify_key_quota']) || $vsCfg['mail_notify_key_quota'] === '1') ? 'checked' : ''; ?>>

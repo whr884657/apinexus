@@ -256,8 +256,12 @@ class PointsManager
             if ($moneyVal < 0.01) {
                 return array('ok' => false, 'msg' => '请选择套餐或输入有效金额');
             }
-            $points = round($moneyVal * PayConfig::rate(), 4);
+            $calc = PayConfig::customPoints($moneyVal);
+            $points = (float) $calc['points'];
             $pkgName = '自定义充值';
+            if (!empty($calc['percent'])) {
+                $pkgName .= '（赠' . (int) $calc['percent'] . '%）';
+            }
         }
         if ($points <= 0) {
             return array('ok' => false, 'msg' => '积分数量无效');
@@ -337,7 +341,8 @@ class PointsManager
                 'points'     => PayConfig::fmtPoints($points),
                 'paytype'    => $payType,
                 'pay_label'  => PayConfig::methodLabel($payType),
-                'qrcode'     => $data['qrcode'],
+                'qrcode'     => isset($data['qrcode']) ? $data['qrcode'] : '',
+                'qr_kind'    => isset($data['qr_kind']) ? $data['qr_kind'] : 'content',
                 'payurl'     => $data['payurl'],
                 'expire_sec' => class_exists('PayPendingWatch') ? PayPendingWatch::ttlSeconds() : 180,
             ),
@@ -389,7 +394,7 @@ class PointsManager
                 return false;
             }
 
-            // 码支付：禁止用回调 money 与本地订单 money 比对（见《支付开发规范》§2.6）。
+            // 码支付：禁止用回调 money 与本地订单 money 比对（见《码支付开发规范》§2.6）。
             // 履约只认：验签通过 + 支付成功态 + out_trade_no 命中本站 orderno；积分以本地订单 amount 为准。
 
             $userId = (int) $order['userid'];
@@ -434,6 +439,14 @@ class PointsManager
             if (class_exists('PointsNotify')) {
                 try {
                     PointsNotify::notifyRechargeSuccess($userId, $amount, $newBal, $orderno);
+                } catch (Exception $e) {
+                    // 发信失败不阻断充值履约
+                }
+                try {
+                    $paidMoney = $money !== '' && is_numeric($money)
+                        ? (float) $money
+                        : (float) (isset($order['money']) ? $order['money'] : 0);
+                    PointsNotify::notifyAdminsOrderPaid($orderno, $userId, $paidMoney, $amount);
                 } catch (Exception $e) {
                     // 发信失败不阻断充值履约
                 }
@@ -682,7 +695,7 @@ class PointsManager
             ? random_int($min, $max)
             : mt_rand($min, $max));
 
-        // 先占位当日唯一记录，防止并发重复发放
+        // 先占位 lastcheckin=今日，防止并发重复发放
         $saved = CheckinManager::record($userId, $amount);
         if ($saved !== true) {
             return array('ok' => false, 'msg' => is_string($saved) ? $saved : '今日已签到');

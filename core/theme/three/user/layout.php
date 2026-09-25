@@ -42,6 +42,9 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     foreach (ThemeManager::userStylesheetHrefs() as $href) {
         echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
     }
+    foreach (ThemeManager::userExtraCssHrefs() as $href) {
+        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
+    }
     echo '</head>' . "\n";
     echo '<body class="vs-body vs-admin-body th3-uc-body" data-theme-picker="off">' . "\n";
     echo '<div class="vs-admin-shell" id="vsAdminShell">' . "\n";
@@ -63,12 +66,16 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
 
     echo '</nav>' . "\n";
 
-    $logoutUrl = $base . '/user/login?action=logout';
+    $logoutAction = $base . '/user/login';
     echo '<div class="vs-sidebar__foot">' . "\n";
-    echo '<a href="' . vs_e($logoutUrl) . '" class="vs-sidebar__logout">' . "\n";
+    echo '<form method="post" action="' . vs_e($logoutAction) . '" class="vs-sidebar__logout-form">' . "\n";
+    echo '<input type="hidden" name="action" value="logout">' . "\n";
+    echo '<input type="hidden" name="csrf_token" value="' . vs_e(AuthSecurity::csrfToken()) . '">' . "\n";
+    echo '<button type="submit" class="vs-sidebar__logout">' . "\n";
     echo '<i class="vs-icon vs-icon--logout"></i>' . "\n";
     echo '<span class="vs-sidebar__text">退出登录</span>' . "\n";
-    echo '</a>' . "\n";
+    echo '</button>' . "\n";
+    echo '</form>' . "\n";
     echo '</div>' . "\n";
     echo '</aside>' . "\n";
 

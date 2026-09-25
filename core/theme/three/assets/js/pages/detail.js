@@ -73,10 +73,7 @@
             Array.prototype.forEach.call(panels, function (p) {
                 p.hidden = p.getAttribute('data-th3-panel') !== id;
             });
-            try {
-                if (history.replaceState) history.replaceState(null, '', '#' + id);
-                else location.hash = id;
-            } catch (e) { /* ignore */ }
+            // 禁止改写地址栏 hash（E358）：切换 Tab 不得往 URL 追加 #params/#playground 等碎片
         }
 
         Array.prototype.forEach.call(tabs, function (t) {
@@ -85,9 +82,17 @@
             });
         });
 
+        // 仅首次进入时认 hash 深链；之后切 Tab 不再回写 URL
         var hash = (location.hash || '').replace(/^#/, '').toLowerCase();
         if (hash === 'play' || hash === 'test') hash = 'playground';
-        if (hash) show(hash);
+        if (hash) {
+            show(hash);
+            try {
+                if (history.replaceState) {
+                    history.replaceState(null, '', window.location.pathname + window.location.search);
+                }
+            } catch (e) { /* ignore */ }
+        }
     })();
 
     /* —— 复制 Markdown —— */

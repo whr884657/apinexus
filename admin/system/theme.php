@@ -33,11 +33,14 @@ function vs_admin_render_theme_config_fields($themeId)
     }
 
     $statKeys = array();
+    $navKeys = array();
     $otherFields = array();
     foreach ($schema as $field) {
         $key = $field['key'];
         if ($field['type'] === 'checkbox' && strpos($key, 'show_stat_') === 0) {
             $statKeys[] = $field;
+        } elseif ($field['type'] === 'checkbox' && strpos($key, 'nav_show_') === 0) {
+            $navKeys[] = $field;
         } else {
             $otherFields[] = $field;
         }
@@ -85,6 +88,17 @@ function vs_admin_render_theme_config_fields($themeId)
         }
         echo '</div>';
     };
+
+    if (count($navKeys) > 0) {
+        echo '<div class="vs-theme-config-group">';
+        echo '<p class="vs-theme-config-group__title">主导航显示</p>';
+        echo '<p class="vs-form-hint">关闭后仅隐藏顶栏/侧栏入口，页面仍可直达，不影响 SEO 收录。默认全部开启。</p>';
+        echo '<div class="vs-theme-config-checks">';
+        foreach ($navKeys as $nf) {
+            $renderField($nf);
+        }
+        echo '</div></div>';
+    }
 
     foreach ($otherFields as $field) {
         if ($field['key'] === 'show_stats' && count($statKeys) > 0) {

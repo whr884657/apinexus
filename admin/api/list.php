@@ -1201,14 +1201,14 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     </div>
                     <div></div>
                 </div>
-                <p class="vs-form-hint">「无需 KEY」与「KEY 可选」调用规则相同；选「无需 KEY」时前台通常不展示密钥填写框，「KEY 可选」会展示可空输入。QPM 填 0 不限制；大于 0 为每分钟最大请求数（无需/可选密钥按 IP，必填密钥按 IP+密钥）。本页发布的接口默认审核通过。收费接口调用时须提供有效密钥且余额足够。</p>
+                <p class="vs-form-hint">「无需 KEY」与「KEY 可选」调用规则相同；选「无需 KEY」时前台通常不展示密钥填写框，「KEY 可选」会展示可空输入。QPM 填 0 不限制；大于 0 为每分钟最大请求数（无需/可选密钥按 IP；必填密钥或收费强制密钥按密钥，同密钥换 IP 共用额度）。本页发布的接口默认审核通过。收费接口调用时须提供有效密钥且余额足够。</p>
                 <div class="vs-form-row">
                     <label class="vs-label">接口图标</label>
                     <div class="vs-api-cat-icon-picker" id="apiListIconPicker" role="listbox" aria-label="选择本地 SVG 图标"></div>
                     <label class="vs-label vs-api-cat-icon-url-label" for="apiListIconUrl">或填写图标链接</label>
                     <input type="url" class="vs-input" id="apiListIconUrl" name="icon"
                            placeholder="https://example.com/icon.png" maxlength="255">
-                    <p class="vs-form-hint">点选下方图标，或填写图片链接地址。自定义本地图标：把 <code>.svg</code> 文件放到站点目录 <code>assets/img/category-icons/</code>（建议用数字文件名，如 <code>99.svg</code>），刷新本页后会自动出现在可选列表中。</p>
+                    <p class="vs-form-hint">点选下方图标，或填写图片链接地址。自定义本地图标：把 <code>.svg</code> 文件放到站点目录 <code>assets/img/category-icons/</code>（文件名可用数字或字母，如 <code>99.svg</code>、<code>weather.svg</code>），刷新本页后会自动出现在可选列表中。</p>
                 </div>
             </div>
 

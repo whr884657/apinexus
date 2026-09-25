@@ -2,7 +2,7 @@
 /**
  * 文件：install/index.php
  * 作用：ApiNexus Web 六步安装向导（伪静态 → 环境 → 数据库 → 建表 → 管理员 → 完成）
- * @version 13.26.22
+ * @version 13.26.45
  */
 
 define('VS_ROOT', dirname(__DIR__));
@@ -22,7 +22,7 @@ $step    = max(1, min(6, $step));
  */
 function vs_install_nginx_rewrite_snippet()
 {
-    return "location ~ ^/(config|data)/ {\n"
+    return "location ~ ^/(config|data|core/data)/ {\n"
         . "    deny all;\n"
         . "    return 403;\n"
         . "}\n"
@@ -272,6 +272,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (class_exists('DatabaseMigrator') && defined('VS_VERSION')) {
                         DatabaseMigrator::seedAppliedUpTo(VS_VERSION);
                     }
+                    if (class_exists('ThemeSettingsStore')) {
+                        ThemeSettingsStore::ensureBuiltinDirs();
+                        ThemeSettingsStore::migrateFromMysql(false);
+                    }
                 } catch (Exception $seedEx) {
                     // 播种失败不阻断安装
                 }
@@ -358,6 +362,33 @@ function writeInstallLock()
 }
 
 /**
+ * 探测目录是否可实际写入（mkdir + 探针文件）
+ *
+ * @param string $absolutePath
+ * @return bool
+ */
+function vs_install_dir_writable($absolutePath)
+{
+    $absolutePath = rtrim((string) $absolutePath, '/\\');
+    if ($absolutePath === '') {
+        return false;
+    }
+    if (!is_dir($absolutePath)) {
+        @mkdir($absolutePath, 0755, true);
+    }
+    if (!is_dir($absolutePath) || !is_writable($absolutePath)) {
+        return false;
+    }
+    $probe = $absolutePath . '/.vs_write_probe_' . str_replace('.', '', uniqid('', true));
+    $written = @file_put_contents($probe, '1');
+    if ($written === false) {
+        return false;
+    }
+    @unlink($probe);
+    return true;
+}
+
+/**
  * 环境检测（合并同类项，减少检测页纵向长度）
  *
  * @return array 每项含 name/need/value/pass，可选 tags（子项标签）
@@ -377,6 +408,7 @@ function runEnvironmentCheck()
     $extensions = array(
         array('name' => 'pdo', 'tag' => 'pdo', 'label' => 'PDO'),
         array('name' => 'pdo_mysql', 'tag' => 'pdo_mysql', 'label' => 'PDO MySQL'),
+        array('name' => 'pdo_sqlite', 'tag' => 'pdo_sqlite', 'label' => 'PDO SQLite'),
         array('name' => 'redis', 'tag' => 'redis', 'label' => 'Redis'),
         array('name' => 'mbstring', 'tag' => 'mbstring', 'label' => 'mbstring'),
         array('name' => 'json', 'tag' => 'json', 'label' => 'json'),
@@ -400,33 +432,60 @@ function runEnvironmentCheck()
     if (!$gdUsable) {
         $extMissing[] = 'GD 绘图（imagecreatetruecolor）';
     }
+    // PDO 驱动层：扩展已装仍可能未注册 sqlite/mysql 驱动
+    $pdoDrivers = class_exists('PDO') ? PDO::getAvailableDrivers() : array();
+    if (!is_array($pdoDrivers)) {
+        $pdoDrivers = array();
+    }
+    $mysqlDriverOk = in_array('mysql', $pdoDrivers, true);
+    $sqliteDriverOk = in_array('sqlite', $pdoDrivers, true);
+    $extTags[] = array('label' => 'PDO驱动mysql', 'pass' => $mysqlDriverOk);
+    $extTags[] = array('label' => 'PDO驱动sqlite', 'pass' => $sqliteDriverOk);
+    if (!$mysqlDriverOk) {
+        $extMissing[] = 'PDO 驱动 mysql';
+    }
+    if (!$sqliteDriverOk) {
+        $extMissing[] = 'PDO 驱动 sqlite（主题配置 / 调用日志冷归档）';
+    }
     $extPass = count($extMissing) === 0;
     $checks[] = array(
         'name'  => 'PHP 扩展（必选）',
-        'need'  => 'pdo / pdo_mysql / redis / mbstring / json / session / curl / openssl / zip / gd（含绘图）',
+        'need'  => 'pdo / pdo_mysql / pdo_sqlite / redis / mbstring / json / session / curl / openssl / zip / gd（含绘图）',
         'value' => $extPass ? '全部已安装' : ('缺少：' . implode('、', $extMissing)),
         'pass'  => $extPass,
         'tags'  => $extTags,
     );
 
-    $writableDirs = array('config', 'data');
+    // 预建主题本地配置骨架（不阻断；可写检测紧随其后）
+    if (class_exists('ThemeSettingsStore')) {
+        try {
+            ThemeSettingsStore::ensureBuiltinDirs();
+        } catch (Exception $e) {
+            // 由下方可写检测暴露
+        }
+    }
+
+    $writableDirs = array(
+        array('rel' => 'config', 'tag' => 'config/'),
+        array('rel' => 'data', 'tag' => 'data/'),
+        array('rel' => 'data/playground', 'tag' => 'data/playground/'),
+        array('rel' => 'core/data', 'tag' => 'core/data/'),
+        array('rel' => 'core/data/default', 'tag' => 'core/data/default/'),
+    );
     $writeTags = array();
     $writeFail = array();
     foreach ($writableDirs as $dir) {
-        $path = VS_ROOT . '/' . $dir;
-        if (!is_dir($path)) {
-            @mkdir($path, 0755, true);
-        }
-        $writable = is_dir($path) && is_writable($path);
-        $writeTags[] = array('label' => $dir . '/', 'pass' => $writable);
+        $path = VS_ROOT . '/' . $dir['rel'];
+        $writable = vs_install_dir_writable($path);
+        $writeTags[] = array('label' => $dir['tag'], 'pass' => $writable);
         if (!$writable) {
-            $writeFail[] = $dir . '/';
+            $writeFail[] = $dir['tag'];
         }
     }
     $writePass = count($writeFail) === 0;
     $checks[] = array(
         'name'  => '目录可写（部署必选）',
-        'need'  => 'config/、data/ 可写',
+        'need'  => 'config/、data/、data/playground/、core/data/（含主题子目录）可写；含探针写入',
         'value' => $writePass ? '全部可写' : ('不可写：' . implode('、', $writeFail)),
         'pass'  => $writePass,
         'tags'  => $writeTags,
@@ -434,10 +493,16 @@ function runEnvironmentCheck()
 
     $structureItems = array(
         array('path' => 'core', 'tag' => 'core/', 'kind' => 'dir'),
+        array('path' => 'core/data', 'tag' => 'core/data/', 'kind' => 'dir'),
+        array('path' => 'core/theme', 'tag' => 'core/theme/', 'kind' => 'dir'),
+        array('path' => 'core/ThemeManager.php', 'tag' => 'ThemeManager.php', 'kind' => 'file'),
+        array('path' => 'core/ThemeSettingsStore.php', 'tag' => 'ThemeSettingsStore.php', 'kind' => 'file'),
         array('path' => 'assets/css', 'tag' => 'assets/css/', 'kind' => 'dir'),
         array('path' => 'assets/js', 'tag' => 'assets/js/', 'kind' => 'dir'),
         array('path' => 'assets/img', 'tag' => 'assets/img/', 'kind' => 'dir'),
         array('path' => 'install/database.sql', 'tag' => 'database.sql', 'kind' => 'file'),
+        array('path' => 'core/data/.htaccess', 'tag' => 'core/data/.htaccess', 'kind' => 'file'),
+        array('path' => 'data/.htaccess', 'tag' => 'data/.htaccess', 'kind' => 'file'),
     );
     $structTags = array();
     $structFail = array();
@@ -456,7 +521,7 @@ function runEnvironmentCheck()
     $structPass = count($structFail) === 0;
     $checks[] = array(
         'name'  => '目录与安装文件',
-        'need'  => 'core/、assets/* 可读；install/database.sql 可读',
+        'need'  => 'core/、core/data/、core/theme/、assets/*、ThemeSettingsStore、database.sql、deny htaccess 可读',
         'value' => $structPass ? '结构正常' : ('异常：' . implode('、', $structFail)),
         'pass'  => $structPass,
         'tags'  => $structTags,
@@ -562,7 +627,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
 
             <?php elseif ($step === 2): ?>
                 <h2 class="vs-card-title">第二步：环境检测</h2>
-                <p class="vs-card-desc">检测服务器环境是否满足运行要求。须安装 <strong>MySQL（pdo_mysql）</strong>、<strong>Redis</strong>、<strong>GD</strong>（本地验证码）扩展，且 <code>config/</code>、<code>data/</code> 目录可写。同类项已合并展示，缺项见标签红色。</p>
+                <p class="vs-card-desc">检测服务器环境是否满足运行要求。须安装 <strong>MySQL（pdo_mysql）</strong>、<strong>SQLite（pdo_sqlite）</strong>（主题本地配置与调用日志冷归档）、<strong>Redis</strong>、<strong>GD</strong>（本地验证码）扩展，且 <code>config/</code>、<code>data/</code>、<code>core/data/</code> 目录可写。同类项已合并展示，缺项见标签红色。</p>
                 <div class="vs-check-list" id="installEnvChecks">
                     <?php foreach ($envChecks as $check): ?>
                         <div class="vs-check-item<?php echo $check['pass'] ? ' is-pass' : ' is-fail'; ?><?php echo !empty($check['tags']) ? ' vs-check-item--group' : ''; ?>">

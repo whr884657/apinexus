@@ -36,14 +36,12 @@ class PointsNotify
 
         $siteName = self::siteName();
         $username = self::userName($userId);
-        $rechargeUrl = rtrim(vs_base_url(), '/') . '/user/recharge';
 
         $subject = '【' . $siteName . '】积分余额已用尽';
         $body = '<p>您好' . ($username !== '' ? ('，' . self::e($username)) : '') . '：</p>';
         $body .= '<p>您在「' . self::e($siteName) . '」的积分余额已变为 <strong>0</strong>。';
         $body .= '收费接口将暂时无法继续调用，请及时充值。</p>';
         $body .= '<p>当前余额：' . self::e(self::fmtPoints($balance)) . '</p>';
-        $body .= '<p><a href="' . self::e($rechargeUrl) . '">前往充值中心</a></p>';
         $body .= '<p>本邮件由系统自动发送，如非本人操作请忽略。</p>';
 
         return self::sendOne($to, $subject, $body);
@@ -99,7 +97,6 @@ class PointsNotify
 
         $siteName = self::siteName();
         $username = self::userName($userId);
-        $rechargeUrl = rtrim(vs_base_url(), '/') . '/user/recharge';
 
         $subject = '【' . $siteName . '】积分余额已不支持调用该接口';
         $body = '<p>您好' . ($username !== '' ? ('，' . self::e($username)) : '') . '：</p>';
@@ -110,7 +107,6 @@ class PointsNotify
             $body .= '<li>本次需要：' . self::e(self::fmtPoints($need)) . '</li>';
         }
         $body .= '</ul>';
-        $body .= '<p><a href="' . self::e($rechargeUrl) . '">前往充值中心</a></p>';
         $body .= '<p>本邮件由系统自动发送，如非本人操作请忽略。</p>';
 
         $result = self::sendOne($to, $subject, $body);
@@ -167,7 +163,6 @@ class PointsNotify
 
         $siteName = self::siteName();
         $username = self::userName($userId);
-        $pointsUrl = rtrim(vs_base_url(), '/') . '/user/points';
 
         $subject = '【' . $siteName . '】积分充值成功';
         $body = '<p>您好' . ($username !== '' ? ('，' . self::e($username)) : '') . '：</p>';
@@ -179,7 +174,6 @@ class PointsNotify
             $body .= '<li>订单号：' . self::e($orderno) . '</li>';
         }
         $body .= '</ul>';
-        $body .= '<p><a href="' . self::e($pointsUrl) . '">查看积分变动</a></p>';
         $body .= '<p>本邮件由系统自动发送。</p>';
 
         return self::sendOne($to, $subject, $body);
@@ -245,7 +239,6 @@ class PointsNotify
 
         $siteName = self::siteName();
         $username = self::userName($userId);
-        $keysUrl = rtrim(vs_base_url(), '/') . '/user/keys';
 
         $subject = '【' . $siteName . '】令牌配额已用尽';
         $body = '<p>您好' . ($username !== '' ? ('，' . self::e($username)) : '') . '：</p>';
@@ -260,7 +253,6 @@ class PointsNotify
             $body .= '<li>在提高该令牌配额或开启「配额用尽后改用总积分」之前，使用该令牌的收费调用将无法继续。</li>';
         }
         $body .= '</ul>';
-        $body .= '<p><a href="' . self::e($keysUrl) . '">前往令牌管理</a></p>';
         $body .= '<p>本邮件由系统自动发送，如非本人操作请忽略。</p>';
 
         $result = self::sendOne($to, $subject, $body);
@@ -268,6 +260,134 @@ class PointsNotify
             ApiKeyManager::clearQuotaNoticeFlag($keyId);
         }
         return $result;
+    }
+
+    /**
+     * 用户充值订单首次支付成功后，通知全体可用管理员（收入明细 + 今日累计）
+     *
+     * @param string $orderno
+     * @param int    $userId
+     * @param float  $money   本单实付金额（元）
+     * @param float  $points  本单到账积分
+     * @return array{ok:bool,sent:int,error:string}
+     */
+    public static function notifyAdminsOrderPaid($orderno, $userId, $money, $points = 0.0)
+    {
+        if (!Config::isMailEnabled()) {
+            return array('ok' => false, 'sent' => 0, 'error' => '邮箱发信未配置');
+        }
+        if (Config::get('mail_notify_order_admin', '1') !== '1') {
+            return array('ok' => false, 'sent' => 0, 'error' => '已关闭充值订单成功通知管理员邮件');
+        }
+
+        $emails = self::adminEmails();
+        if (count($emails) === 0) {
+            return array('ok' => false, 'sent' => 0, 'error' => '未找到管理员邮箱');
+        }
+
+        $orderno = trim((string) $orderno);
+        $userId = (int) $userId;
+        $money = round((float) $money, 2);
+        $points = (float) $points;
+        $username = self::userName($userId);
+        $todayTotal = self::todayRechargeIncome();
+        $siteName = self::siteName();
+
+        $subject = '【' . $siteName . '】有新的充值订单到账';
+        $body = '<p>您好，站长：</p>';
+        $body .= '<p>站点「' . self::e($siteName) . '」新增一笔充值订单，支付已成功。</p>';
+        $body .= '<ul>';
+        if ($orderno !== '') {
+            $body .= '<li>订单号：' . self::e($orderno) . '</li>';
+        }
+        $body .= '<li>用户：' . self::e($username !== '' ? $username : ('用户#' . $userId)) . '</li>';
+        $body .= '<li>本单收入：¥' . self::e(number_format($money, 2, '.', '')) . '</li>';
+        if ($points > 0) {
+            $body .= '<li>到账积分：' . self::e(self::fmtPoints($points)) . '</li>';
+        }
+        $body .= '<li>今日累计充值收入：¥' . self::e(number_format($todayTotal, 2, '.', '')) . '</li>';
+        $body .= '</ul>';
+        $body .= '<p>本邮件由系统自动发送。</p>';
+
+        return self::sendToMany($emails, $subject, $body);
+    }
+
+    /**
+     * 今日已完成充值订单的 money 合计（元）
+     *
+     * @return float
+     */
+    private static function todayRechargeIncome()
+    {
+        if (!class_exists('OrderManager') || !OrderManager::tableReady()) {
+            return 0.0;
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query(
+                'SELECT COALESCE(SUM(`money`), 0) FROM `' . OrderManager::table() . '`
+                 WHERE `direct` = ' . (int) OrderManager::DIRECT_INC
+                . ' AND `kind` = ' . (int) OrderManager::KIND_RECHARGE
+                . ' AND `status` = ' . (int) OrderManager::STATUS_DONE
+                . ' AND `paytime` IS NOT NULL AND DATE(`paytime`) = CURDATE()'
+            );
+            if (!$stmt) {
+                return 0.0;
+            }
+            return round((float) $stmt->fetchColumn(), 2);
+        } catch (Exception $e) {
+            return 0.0;
+        }
+    }
+
+    /**
+     * @return array
+     */
+    private static function adminEmails()
+    {
+        $list = array();
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query(
+                'SELECT `email` FROM `' . Database::table('admin') . '`
+                 WHERE `status` = 1 AND `email` IS NOT NULL AND `email` <> \'\''
+            );
+            $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : array();
+            foreach ($rows as $row) {
+                $email = isset($row['email']) ? trim((string) $row['email']) : '';
+                if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $list[$email] = $email;
+                }
+            }
+        } catch (Exception $e) {
+            return array();
+        }
+        return array_values($list);
+    }
+
+    /**
+     * @param array  $emails
+     * @param string $subject
+     * @param string $body
+     * @return array{ok:bool,sent:int,error:string}
+     */
+    private static function sendToMany(array $emails, $subject, $body)
+    {
+        $sent = 0;
+        $lastError = '';
+        foreach ($emails as $email) {
+            try {
+                Mailer::send($email, $subject, $body);
+                $sent++;
+            } catch (Exception $e) {
+                $lastError = $e->getMessage();
+            }
+        }
+        return array(
+            'ok'    => $sent > 0,
+            'sent'  => $sent,
+            'error' => $sent > 0 ? '' : $lastError,
+        );
     }
 
     /**

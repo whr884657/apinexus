@@ -12,6 +12,8 @@ class AuthSecurity
 {
     const CSRF_SESSION_KEY = 'vs_csrf_token';
     const MAIL_TICKET_SESSION_KEY = 'vs_mail_tickets';
+    /** 公开表单一次性提交小票（评论 / 友链等） */
+    const SUBMIT_TICKET_SESSION_KEY = 'vs_submit_tickets';
 
     /** 管理端会话 Cookie 名（与前台隔离） */
     const SESSION_NAME_ADMIN = 'VSADMINSESSID';
@@ -29,8 +31,19 @@ class AuthSecurity
     /** 用户邮箱验证码登录发信 */
     const MAIL_PURPOSE_USER_LOGIN = 'user_login';
 
+    /** 文章评论提交小票用途 */
+    const SUBMIT_PURPOSE_COMMENT = 'comment';
+    /** 申请友链提交小票用途 */
+    const SUBMIT_PURPOSE_APPLYLINK = 'applylink';
+
     /** 发信一次性票据有效期（秒） */
     const MAIL_TICKET_TTL = 600;
+    /** 公开提交小票有效期（秒） */
+    const SUBMIT_TICKET_TTL = 1800;
+    /** 评论短冷却（秒）· 同一会话或 IP · 同一文章 */
+    const COMMENT_COOL_SEC = 20;
+    /** 友链申请短冷却（秒）· 同一会话或 IP */
+    const APPLYLINK_COOL_SEC = 20;
 
     /** 登录：单 IP 15 分钟内最多失败次数 */
     const LOGIN_IP_MAX = 10;
@@ -361,8 +374,8 @@ class AuthSecurity
         // 现代浏览器已忽略 XSS 过滤器；保留以满足合规扫描对响应头完整性的检测
         header('X-XSS-Protection: 1; mode=block');
         header('Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()');
-        // 封装 APP / 弱 WebView：声明业务常用请求头，降低预检与头过滤导致的异常
-        header('Access-Control-Allow-Headers: *');
+        // 封装 APP / 弱 WebView：仅声明业务常用请求头（禁止 *；无 ACAO 时不构成跨域读）
+        header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, X-Requested-With, Accept');
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     }
 
@@ -628,6 +641,155 @@ class AuthSecurity
     {
         $data['mail_ticket'] = self::issueMailTicket($purpose);
         return $data;
+    }
+
+    /**
+     * 签发公开表单一次性小票（页面加载写入；提交时消耗）
+     *
+     * @param string $purpose comment|applylink
+     * @return string
+     */
+    public static function issueSubmitTicket($purpose)
+    {
+        $purpose = self::normalizeSubmitPurpose($purpose);
+        $token = bin2hex(random_bytes(16));
+        if (!isset($_SESSION[self::SUBMIT_TICKET_SESSION_KEY]) || !is_array($_SESSION[self::SUBMIT_TICKET_SESSION_KEY])) {
+            $_SESSION[self::SUBMIT_TICKET_SESSION_KEY] = array();
+        }
+        $_SESSION[self::SUBMIT_TICKET_SESSION_KEY][$purpose] = array(
+            'token'   => $token,
+            'expires' => time() + self::SUBMIT_TICKET_TTL,
+        );
+        return $token;
+    }
+
+    /**
+     * 校验并消耗公开提交小票（一次性，防同会话抓包重放）
+     *
+     * @param string $purpose
+     * @param string $token
+     * @return bool
+     */
+    public static function validateAndConsumeSubmitTicket($purpose, $token)
+    {
+        $purpose = self::normalizeSubmitPurpose($purpose);
+        if (!is_string($token) || $token === '') {
+            return false;
+        }
+        if (!isset($_SESSION[self::SUBMIT_TICKET_SESSION_KEY][$purpose])
+            || !is_array($_SESSION[self::SUBMIT_TICKET_SESSION_KEY][$purpose])
+        ) {
+            return false;
+        }
+        $saved = $_SESSION[self::SUBMIT_TICKET_SESSION_KEY][$purpose];
+        unset($_SESSION[self::SUBMIT_TICKET_SESSION_KEY][$purpose]);
+        if (!isset($saved['token'], $saved['expires'])) {
+            return false;
+        }
+        if ((int) $saved['expires'] < time()) {
+            return false;
+        }
+        return hash_equals((string) $saved['token'], $token);
+    }
+
+    /**
+     * JSON 成功响应附加新小票
+     *
+     * @param string $purpose
+     * @param array  $data
+     * @return array
+     */
+    public static function withSubmitTicket($purpose, array $data)
+    {
+        $data['submit_ticket'] = self::issueSubmitTicket($purpose);
+        return $data;
+    }
+
+    /**
+     * 评论短冷却是否允许（会话 + IP，同一文章）
+     *
+     * @param int $contentid
+     * @return string|null 错误文案或 null
+     */
+    public static function checkCommentCoolDown($contentid)
+    {
+        $contentid = (int) $contentid;
+        $sid = session_id();
+        $ip = self::clientIp();
+        $win = self::COMMENT_COOL_SEC;
+        if ($sid !== ''
+            && !self::rateLimitAllow('comment_cool_sess:' . $sid . ':' . $contentid, $win, 1, false)
+        ) {
+            return '评论过于频繁，请稍后再试';
+        }
+        if (!self::rateLimitAllow('comment_cool_ip:' . $ip . ':' . $contentid, $win, 1, false)) {
+            return '评论过于频繁，请稍后再试';
+        }
+        return null;
+    }
+
+    /**
+     * 记录评论短冷却命中（仅成功写入后调用）
+     *
+     * @param int $contentid
+     * @return void
+     */
+    public static function recordCommentCoolDown($contentid)
+    {
+        $contentid = (int) $contentid;
+        $sid = session_id();
+        $ip = self::clientIp();
+        $win = self::COMMENT_COOL_SEC;
+        if ($sid !== '') {
+            self::rateLimitAllow('comment_cool_sess:' . $sid . ':' . $contentid, $win, 1, true);
+        }
+        self::rateLimitAllow('comment_cool_ip:' . $ip . ':' . $contentid, $win, 1, true);
+    }
+
+    /**
+     * 友链申请短冷却是否允许（会话 + IP）
+     *
+     * @return string|null
+     */
+    public static function checkApplyLinkCoolDown()
+    {
+        $sid = session_id();
+        $ip = self::clientIp();
+        $win = self::APPLYLINK_COOL_SEC;
+        if ($sid !== '' && !self::rateLimitAllow('applylink_cool_sess:' . $sid, $win, 1, false)) {
+            return '提交过于频繁，请稍后再试';
+        }
+        if (!self::rateLimitAllow('applylink_cool_ip:' . $ip, $win, 1, false)) {
+            return '提交过于频繁，请稍后再试';
+        }
+        return null;
+    }
+
+    /**
+     * @return void
+     */
+    public static function recordApplyLinkCoolDown()
+    {
+        $sid = session_id();
+        $ip = self::clientIp();
+        $win = self::APPLYLINK_COOL_SEC;
+        if ($sid !== '') {
+            self::rateLimitAllow('applylink_cool_sess:' . $sid, $win, 1, true);
+        }
+        self::rateLimitAllow('applylink_cool_ip:' . $ip, $win, 1, true);
+    }
+
+    /**
+     * @param string $purpose
+     * @return string
+     */
+    private static function normalizeSubmitPurpose($purpose)
+    {
+        $allowed = array(
+            self::SUBMIT_PURPOSE_COMMENT,
+            self::SUBMIT_PURPOSE_APPLYLINK,
+        );
+        return in_array($purpose, $allowed, true) ? $purpose : self::SUBMIT_PURPOSE_COMMENT;
     }
 
     /**

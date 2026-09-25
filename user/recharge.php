@@ -89,6 +89,20 @@ $cfg = PayConfig::all();
 $packages = $cfg['packages'];
 $methods = $cfg['methods'];
 $rate = PayConfig::fmtPoints($cfg['rate']);
+$customBonus = isset($cfg['custom_bonus']) && is_array($cfg['custom_bonus']) ? $cfg['custom_bonus'] : array();
+$customBonusJson = json_encode($customBonus, JSON_UNESCAPED_UNICODE);
+if ($customBonusJson === false) {
+    $customBonusJson = '[]';
+}
+
+$tipPackage = isset($cfg['tip_package']) ? (string) $cfg['tip_package'] : '';
+$tipCustom = isset($cfg['tip_custom']) ? (string) $cfg['tip_custom'] : '';
+$tipCardkey = isset($cfg['tip_cardkey']) ? (string) $cfg['tip_cardkey'] : '';
+$tipHtml = array(
+    'package' => ($tipPackage !== '' && class_exists('Markdown')) ? Markdown::render($tipPackage) : '',
+    'custom'  => ($tipCustom !== '' && class_exists('Markdown')) ? Markdown::render($tipCustom) : '',
+    'cardkey' => ($tipCardkey !== '' && class_exists('Markdown')) ? Markdown::render($tipCardkey) : '',
+);
 
 $payIcons = array(
     'alipay' => PayConfig::iconHtml('alipay'),
@@ -113,7 +127,10 @@ vs_user_render_page(
         'packages'     => $packages,
         'methods'      => $methods,
         'rate'         => $rate,
+        'customBonus'  => $customBonus,
+        'customBonusJson' => $customBonusJson,
         'payIcons'     => $payIcons,
+        'tipHtml'      => $tipHtml,
     ),
     '',
     $scripts

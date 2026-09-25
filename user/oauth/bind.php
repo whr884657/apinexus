@@ -15,21 +15,13 @@ $base = vs_base_url();
 $pending = OAuthService::getBindPending();
 
 if ($pending === null) {
-    vs_redirect($base . '/user/login.php?oauth_error=' . rawurlencode('绑定会话已过期，请重新发起第三方登录'));
+    vs_redirect_flash($base . '/user/login.php', 'error', '绑定会话已过期，请重新发起第三方登录');
 }
 
 $provider = $pending['provider'];
-$providerLabel = $provider === 'qq' ? 'QQ' : 'Gitee';
 $identity = $pending['identity'];
-$displayName = '';
-if ($provider === 'qq') {
-    $displayName = isset($identity['nickname']) ? trim((string) $identity['nickname']) : '';
-} else {
-    $displayName = isset($identity['name']) ? trim((string) $identity['name']) : '';
-    if ($displayName === '' && isset($identity['login'])) {
-        $displayName = (string) $identity['login'];
-    }
-}
+$providerLabel = OAuthService::providerDisplayLabel($provider, is_array($identity) ? $identity : array());
+$displayName = OAuthService::identityDisplayName($provider, is_array($identity) ? $identity : array());
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_auth_require_post();

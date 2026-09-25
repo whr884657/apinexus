@@ -60,6 +60,10 @@ class FrontendComment
         }
 
         if (class_exists('AuthSecurity')) {
+            $coolErr = AuthSecurity::checkCommentCoolDown((int) $contentid);
+            if ($coolErr !== null) {
+                return $coolErr;
+            }
             $ip = AuthSecurity::clientIp();
             $emailKey = function_exists('vs_normalize_email')
                 ? vs_normalize_email($email)
@@ -86,6 +90,7 @@ class FrontendComment
         ));
 
         if (is_array($result) && class_exists('AuthSecurity')) {
+            AuthSecurity::recordCommentCoolDown((int) $contentid);
             $ip = AuthSecurity::clientIp();
             $emailKey = function_exists('vs_normalize_email')
                 ? vs_normalize_email($email)

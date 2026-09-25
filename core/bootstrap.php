@@ -101,6 +101,7 @@ require_once VS_ROOT . '/core/FrontendAnnouncement.php';
 require_once VS_ROOT . '/core/FrontendArticle.php';
 require_once VS_ROOT . '/core/FrontendAbout.php';
 require_once VS_ROOT . '/core/PlaygroundRelay.php';
+require_once VS_ROOT . '/core/ThemeSettingsStore.php';
 require_once VS_ROOT . '/core/ThemeManager.php';
 require_once VS_ROOT . '/core/Sitemap.php';
 require_once VS_ROOT . '/core/oauth/HttpClient.php';
@@ -109,6 +110,7 @@ require_once VS_ROOT . '/core/oauth/OAuthState.php';
 require_once VS_ROOT . '/core/oauth/OAuthService.php';
 require_once VS_ROOT . '/core/oauth/qq/QQOAuth.php';
 require_once VS_ROOT . '/core/oauth/gitee/GiteeOAuth.php';
+require_once VS_ROOT . '/core/oauth/agg/AggOAuth.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     AuthSecurity::configureSessionCookies();

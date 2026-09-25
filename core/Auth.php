@@ -169,7 +169,7 @@ class Auth
     {
         if (!empty($_SESSION[self::SESSION_KEY]) && self::isSessionExpired()) {
             self::logout();
-            vs_redirect(vs_base_url() . '/admin/login?expired=1');
+            vs_redirect_flash(vs_base_url() . '/admin/login', 'error', '登录已超时，请重新登录');
         }
 
         if (!self::check()) {

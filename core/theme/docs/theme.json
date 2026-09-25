@@ -1,12 +1,54 @@
 {
     "id": "docs",
     "name": "主题4",
-    "version": "1.0.0",
+    "version": "1.0.7",
     "developer": "尋鯨錄",
     "author": "尋鯨錄",
     "description": "Docs · 接口文档阅读",
     "preview": "preview.png",
     "settings": [
+        {
+            "key": "nav_show_home",
+            "label": "导航显示 · 首页",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_apis",
+            "label": "导航显示 · 全部接口",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_articles",
+            "label": "导航显示 · 文章",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_contributors",
+            "label": "导航显示 · 贡献者",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_links",
+            "label": "导航显示 · 友情链接",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_sponsor",
+            "label": "导航显示 · 赞助",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_about",
+            "label": "导航显示 · 关于",
+            "type": "checkbox",
+            "default": true
+        },
         {
             "key": "stats_num_format",
             "label": "累计调用次数显示",

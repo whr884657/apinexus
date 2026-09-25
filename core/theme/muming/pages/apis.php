@@ -10,6 +10,18 @@ $siteName = SiteContext::siteName();
 $vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
 $apiCount = FrontendStats::approvedApiCount();
 $catTags = FrontendCategory::listTags();
+
+/* 接口列表排序（default=系统 apiorder / time=按上架时间 / calls=按调用量） */
+$apiSort = trim((string) ThemeManager::themeSetting('api_sort', 'default'));
+if (!in_array($apiSort, array('default', 'time', 'calls'), true)) {
+    $apiSort = 'default';
+}
+
+/* 「上新」标签天数：接口创建 N 天内显示上新 */
+$apiNewDays = (int) ThemeManager::themeSetting('api_new_days', 7);
+if ($apiNewDays < 1) {
+    $apiNewDays = 7;
+}
 ?>
 <script>
 window.TH5_HOME = {
@@ -17,7 +29,9 @@ window.TH5_HOME = {
   previewLimit: 99999,
   apiCount: <?php echo (int) $apiCount; ?>,
   statsFormat: 'compact',
-  vsBase: <?php echo json_encode($vsBase, JSON_UNESCAPED_UNICODE); ?>
+  vsBase: <?php echo json_encode($vsBase, JSON_UNESCAPED_UNICODE); ?>,
+  apiSort: <?php echo json_encode($apiSort, JSON_UNESCAPED_UNICODE); ?>,
+  newDays: <?php echo (int) $apiNewDays; ?>
 };
 </script>
 
@@ -29,11 +43,32 @@ window.TH5_HOME = {
       <p class="th5-section-head-q__sub" style="margin:0;">共 <span id="TH5ApiTotalLabel"><?php echo (int) $apiCount; ?></span> 个 API 接口，按分类浏览或搜索。</p>
     </div>
 
+    <?php if (count($catTags) > 0): ?>
+    <!-- 分类横条（横向滚动，与左侧分类目录联动） -->
+    <div class="th5-catbar reveal" data-th5-catbar>
+      <button type="button" class="th5-catbar__arrow" data-th5-catbar-prev aria-label="向前滚动分类"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div class="th5-catbar__scroll" data-th5-catbar-scroll role="tablist" aria-label="接口分类（横向）">
+        <button class="th5-catbar__chip is-active" data-cat="all" type="button">全部接口</button>
+        <button class="th5-catbar__chip" data-cat="new" type="button">最近上新</button>
+        <?php foreach ($catTags as $tag): ?>
+          <?php
+            $cid = isset($tag['id']) ? (string) $tag['id'] : '';
+            $clabel = isset($tag['name']) ? (string) $tag['name'] : '';
+            if ($cid === '' || $cid === 'all' || $clabel === '') { continue; }
+          ?>
+          <button class="th5-catbar__chip" data-cat="<?php echo vs_e($cid); ?>" type="button"><?php echo vs_e($clabel); ?></button>
+        <?php endforeach; ?>
+      </div>
+      <button type="button" class="th5-catbar__arrow" data-th5-catbar-next aria-label="向后滚动分类"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+    <?php endif; ?>
+
     <div class="th5-market-q__layout">
       <aside class="th5-cat-q reveal">
         <div class="th5-cat-q__title">接口分类</div>
         <div class="th5-cat-q__list" id="TH5CatScroll" role="tablist" aria-label="接口分类">
           <button class="cat-tab active" data-cat="all" type="button">全部接口</button>
+          <button class="cat-tab" data-cat="new" type="button">最近上新</button>
           <?php foreach ($catTags as $tag): ?>
             <?php
               $cid = isset($tag['id']) ? (string) $tag['id'] : '';

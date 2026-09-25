@@ -508,7 +508,8 @@ class ApiStats
 
     /**
      * QPM 限流：0 不限；>0 为每分钟上限。
-     * needkey=必须 → IP+密钥；无需/可选 → 仅 IP。
+     * needkey=必须（含收费强制必须）→ **仅密钥**（同密钥换 IP 共用额度，防绕过）；
+     * 无需/可选 → **仅 IP**。
      *
      * @param array $row
      * @return true|array{errcode:int,msg:string}
@@ -529,7 +530,6 @@ class ApiStats
         if ($apiId <= 0) {
             return true;
         }
-        $ip = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
         $need = ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : ApiManager::KEY_NONE);
         if (ApiManager::hasChargeColumns()) {
             $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
@@ -543,8 +543,10 @@ class ApiStats
             if ($keyId <= 0) {
                 return array('errcode' => ApiError::NO_KEY, 'msg' => '请提供调用密钥');
             }
-            $bucket = 'apiqpm:' . $apiId . ':ip:' . $ip . ':key:' . $keyId;
+            // 仅按密钥计桶：禁止同密钥轮换 IP 放大 QPM（E371）
+            $bucket = 'apiqpm:' . $apiId . ':key:' . $keyId;
         } else {
+            $ip = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
             $bucket = 'apiqpm:' . $apiId . ':ip:' . $ip;
         }
         if (!RateLimitStore::allow($bucket, 60, $qpm, true)) {
@@ -887,7 +889,7 @@ class ApiStats
         // 日聚合：与 api.calls 同步写入（不依赖调用详情开关）
         if (class_exists('StatDayManager')) {
             $hasKey = trim((string) $ctx['apikey']) !== '';
-            StatDayManager::recordHit($id, (bool) $ok, (int) $charged, $hasKey);
+            StatDayManager::recordHit($id, (bool) $ok, (int) $charged, $hasKey, (float) $cost);
         }
 
         // 用户近 7 日窗：仅有效密钥归属用户（与 keycalls /「我的调用」口径一致；勿用登录 Cookie 回退污染）

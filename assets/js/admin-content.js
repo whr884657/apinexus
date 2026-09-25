@@ -348,10 +348,14 @@
                     + (Number(item.ispinned) === 1 ? '取消置顶' : '置顶') + '</button>';
                 html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-content-act" data-act="popup">'
                     + (Number(item.ispopup) === 1 ? '取消弹窗' : '设为弹窗') + '</button>';
-            } else if (Number(item.status) === 1) {
-                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-content-act" data-act="hide">隐藏</button>';
             } else {
-                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success vs-content-act" data-act="show">显示</button>';
+                html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning vs-content-act" data-act="pin">'
+                    + (Number(item.ispinned) === 1 ? '取消置顶' : '置顶') + '</button>';
+                if (Number(item.status) === 1) {
+                    html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-content-act" data-act="hide">隐藏</button>';
+                } else {
+                    html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success vs-content-act" data-act="show">显示</button>';
+                }
             }
             html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger vs-content-act" data-act="delete">删除</button>';
             html += '</div>';
@@ -363,6 +367,9 @@
             html += '<span class="content-title-cell__text" data-field="title">' + esc(item.title) + '</span>';
             if (!isAnnouncement && Number(item.bindpage) === 1) {
                 html += '<span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
+            }
+            if (!isAnnouncement && Number(item.ispinned) === 1) {
+                html += '<span class="vs-badge vs-badge--warning" data-field="pin_label">置顶</span>';
             }
             html += '</div>';
             return html;
@@ -406,6 +413,9 @@
             html += '<div class="' + cls + '__tags">';
             if (!isAnnouncement && Number(item.bindpage) === 1) {
                 html += '<span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
+            }
+            if (!isAnnouncement && Number(item.ispinned) === 1) {
+                html += '<span class="vs-badge vs-badge--warning" data-field="pin_label">置顶</span>';
             }
             if (isAnnouncement) {
                 if (Number(item.ispinned) === 1) {
@@ -576,8 +586,12 @@
                     if (!ok(res)) {
                         throw new Error(msg(res, '操作失败'));
                     }
-                    data.ispinned = nextPin;
-                    upsertRow(data);
+                    if (res.item) {
+                        upsertRow(res.item);
+                    } else {
+                        data.ispinned = nextPin;
+                        upsertRow(data);
+                    }
                     window.VS.showMessage(msg(res, '已更新'), 'success');
                 }).catch(function (err) {
                     window.VS.showMessage((err && err.message) ? err.message : '操作失败', 'error');

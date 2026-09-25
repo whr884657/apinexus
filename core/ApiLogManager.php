@@ -388,6 +388,7 @@ class ApiLogManager
         } elseif (strlen($q) > 128) {
             $q = substr($q, 0, 128);
         }
+        $qField = self::normalizeQField(isset($opts['q_field']) ? $opts['q_field'] : 'id');
         $ok = array_key_exists('ok', $opts) ? $opts['ok'] : null;
         $apiid = isset($opts['apiid']) ? (int) $opts['apiid'] : 0;
         $userid = isset($opts['userid']) ? (int) $opts['userid'] : 0;
@@ -419,6 +420,7 @@ class ApiLogManager
             'page'       => $page,
             'pagesize'   => $pagesize,
             'q'          => $q,
+            'q_field'    => $qField,
             'ok'         => $ok,
             'apiid'      => $apiid,
             'userid'     => $userid,
@@ -426,7 +428,7 @@ class ApiLogManager
             'skip_total' => $skipTotal,
         ));
 
-        $loader = function () use ($page, $pagesize, $q, $ok, $apiid, $userid, $beforeId, $skipTotal, $empty) {
+        $loader = function () use ($page, $pagesize, $q, $qField, $ok, $apiid, $userid, $beforeId, $skipTotal, $empty) {
                 try {
                     $pdo = Database::connect();
                     self::applyQueryTimeout($pdo);
@@ -441,7 +443,7 @@ class ApiLogManager
                         }
                     }
 
-                    $filters = self::buildFilters($q, $ok, $apiid, $useOffset ? 0 : $beforeId, $userid);
+                    $filters = self::buildFilters($q, $qField, $ok, $apiid, $useOffset ? 0 : $beforeId, $userid);
                     $userIdsForCold = isset($filters['userIds']) ? $filters['userIds'] : array();
                     if ($userid > 0) {
                         $userIdsForCold = array($userid);
@@ -480,6 +482,7 @@ class ApiLogManager
                             'before_id' => $beforeId,
                             'pagesize'  => $needMore,
                             'q'         => $q,
+                            'q_field'   => $qField,
                             'ok'        => $ok,
                             'apiid'     => $apiid,
                             'user_ids'  => $userIdsForCold,
@@ -521,7 +524,7 @@ class ApiLogManager
                         }
                         $totalApprox = true;
                     } else {
-                        $total = self::countFilteredCached($q, $ok, $apiid, $userid);
+                        $total = self::countFilteredCached($q, $qField, $ok, $apiid, $userid);
                         if ($useOffset) {
                             $hasMore = ($offset + count($merged)) < $total;
                         } else {
@@ -580,18 +583,20 @@ class ApiLogManager
      * 当前筛选条件下热库总数（短 TTL 缓存；不含 before_id）
      *
      * @param string $q
+     * @param string $qField
      * @param mixed  $ok
      * @param int    $apiid
      * @param int    $userid
      * @return int
      */
-    private static function countFilteredCached($q, $ok, $apiid, $userid = 0)
+    private static function countFilteredCached($q, $qField, $ok, $apiid, $userid = 0)
     {
-        $factory = function () use ($q, $ok, $apiid, $userid) {
+        $qField = self::normalizeQField($qField);
+        $factory = function () use ($q, $qField, $ok, $apiid, $userid) {
             try {
                 $pdo = Database::connect();
                 self::applyQueryTimeout($pdo);
-                $filters = self::buildFilters($q, $ok, $apiid, 0, $userid);
+                $filters = self::buildFilters($q, $qField, $ok, $apiid, 0, $userid);
                 // COUNT 禁止 JOIN user（见《数据统计与性能规范》）；搜索用户走 userid IN / EXISTS
                 $sql = 'SELECT COUNT(*) FROM `' . self::table() . '` l WHERE ' . $filters['whereSql'];
                 $stmt = $pdo->prepare($sql);
@@ -605,10 +610,11 @@ class ApiLogManager
         if (class_exists('RedisCache')) {
             return (int) RedisCache::remember(
                 RedisCache::apilogFilterTotalKey(array(
-                    'q'      => $q,
-                    'userid' => $userid,
-                    'ok'    => $ok,
-                    'apiid' => $apiid,
+                    'q'       => $q,
+                    'q_field' => $qField,
+                    'userid'  => $userid,
+                    'ok'      => $ok,
+                    'apiid'   => $apiid,
                 )),
                 RedisCache::TTL_APILOG_RANGE_TOTAL,
                 $factory
@@ -739,20 +745,77 @@ class ApiLogManager
     }
 
     /**
+     * 搜索字段白名单（默认日志编号）
+     *
+     * @param mixed $field
+     * @return string id|apiid|username|apiname|ip|apikey
+     */
+    public static function normalizeQField($field)
+    {
+        $field = strtolower(trim((string) $field));
+        $allow = array('id', 'apiid', 'username', 'apiname', 'ip', 'apikey');
+        if (!in_array($field, $allow, true)) {
+            return 'id';
+        }
+        return $field;
+    }
+
+    /**
+     * 用户侧搜索字段（禁止 username：仅本人日志，无跨用户检索）
+     *
+     * @param mixed $field
+     * @return string id|apiid|apiname|ip|apikey
+     */
+    public static function normalizeQFieldForUser($field)
+    {
+        $field = self::normalizeQField($field);
+        if ($field === 'username') {
+            return 'id';
+        }
+        return $field;
+    }
+
+    /**
+     * 从输入解析正整数（支持 #123 / 编号:123）
+     *
      * @param string $q
+     * @return int 0=无效
+     */
+    private static function parsePositiveIntToken($q)
+    {
+        $q = trim((string) $q);
+        if ($q === '') {
+            return 0;
+        }
+        if (preg_match('/^#(\d+)$/', $q, $m)) {
+            return (int) $m[1];
+        }
+        if (preg_match('/^(?:日志编号|编号|日志\s*id|日志\s*ID|接口\s*id|接口\s*ID|id|ID)\s*[:：#]?\s*(\d+)$/u', $q, $m)) {
+            return (int) $m[1];
+        }
+        if (ctype_digit($q)) {
+            return (int) $q;
+        }
+        return 0;
+    }
+
+    /**
+     * @param string $q
+     * @param string $qField
      * @param mixed  $ok
      * @param int    $apiid
      * @param int    $beforeId
      * @param int    $userid 指定用户（管理员按用户筛日志）
      * @return array{whereSql:string,bind:array,hasExtra:bool,userIds:int[]}
      */
-    private static function buildFilters($q, $ok, $apiid, $beforeId, $userid = 0)
+    private static function buildFilters($q, $qField, $ok, $apiid, $beforeId, $userid = 0)
     {
         $where = array('1=1');
         $bind = array();
         $hasExtra = false;
         $userIds = array();
         $userid = (int) $userid;
+        $qField = self::normalizeQField($qField);
 
         if ($userid > 0) {
             $where[] = 'l.`userid` = ?';
@@ -763,48 +826,63 @@ class ApiLogManager
 
         if ($q !== '') {
             $qTrim = trim($q);
-            // 显式日志编号：#123 / 编号:123 / 日志编号 123 → 只按主键精确查
-            $logIdOnly = 0;
-            if (preg_match('/^#(\d+)$/', $qTrim, $mId)) {
-                $logIdOnly = (int) $mId[1];
-            } elseif (preg_match('/^(?:日志编号|编号|日志\s*id|日志\s*ID|id|ID)\s*[:：#]?\s*(\d+)$/u', $qTrim, $mId)) {
-                $logIdOnly = (int) $mId[1];
-            }
-            if ($logIdOnly > 0) {
-                $where[] = 'l.`id` = ?';
-                $bind[] = $logIdOnly;
+            if ($qField === 'id') {
+                $logId = self::parsePositiveIntToken($qTrim);
+                if ($logId > 0) {
+                    $where[] = 'l.`id` = ?';
+                    $bind[] = $logId;
+                } else {
+                    // 非数字：无匹配
+                    $where[] = '1=0';
+                }
                 $hasExtra = true;
-            } else {
-                $like = function_exists('vs_sql_like_contains')
-                    ? vs_sql_like_contains($q)
-                    : ('%' . addcslashes($q, "\\%_") . '%');
-                // 强制 userid 过滤时，搜索解析出的用户 ID 不得覆盖/放宽范围
-                if ($userid <= 0) {
-                    $userIds = self::resolveSearchUserIds($q);
+            } elseif ($qField === 'apiid') {
+                $aid = self::parsePositiveIntToken($qTrim);
+                if ($aid > 0) {
+                    $where[] = 'l.`apiid` = ?';
+                    $bind[] = $aid;
+                } else {
+                    $where[] = '1=0';
                 }
-                $parts = array(
-                    'l.`apiname` LIKE ? ESCAPE \'\\\\\'',
-                    'l.`path` LIKE ? ESCAPE \'\\\\\'',
-                    'l.`ip` LIKE ? ESCAPE \'\\\\\'',
-                    'l.`url` LIKE ? ESCAPE \'\\\\\'',
-                    'l.`apikey` LIKE ? ESCAPE \'\\\\\'',
-                    'l.`domain` LIKE ? ESCAPE \'\\\\\'',
-                    'l.`iploc` LIKE ? ESCAPE \'\\\\\'',
-                );
-                $bind = array_merge($bind, array($like, $like, $like, $like, $like, $like, $like));
-                // 纯数字：同时匹配日志主键（编号）与用户 id 解析结果
-                if (ctype_digit($qTrim)) {
-                    $parts[] = 'l.`id` = ?';
-                    $bind[] = (int) $qTrim;
-                }
-                if ($userid <= 0 && $userIds !== array()) {
-                    $ph = implode(',', array_fill(0, count($userIds), '?'));
-                    $parts[] = 'l.`userid` IN (' . $ph . ')';
-                    foreach ($userIds as $uid) {
-                        $bind[] = (int) $uid;
+                $hasExtra = true;
+            } elseif ($qField === 'username') {
+                if ($userid > 0) {
+                    // 已限定用户时再搜用户名无意义，忽略 q
+                } else {
+                    $userIds = self::resolveSearchUserIds($qTrim);
+                    if ($userIds === array()) {
+                        $where[] = '1=0';
+                    } else {
+                        $ph = implode(',', array_fill(0, count($userIds), '?'));
+                        $where[] = 'l.`userid` IN (' . $ph . ')';
+                        foreach ($userIds as $uid) {
+                            $bind[] = (int) $uid;
+                        }
                     }
+                    $hasExtra = true;
                 }
-                $where[] = '(' . implode(' OR ', $parts) . ')';
+            } elseif ($qField === 'apiname') {
+                // 前缀匹配以走 idx_apiname / idx_userid_apiname（禁止前置 %）
+                $like = function_exists('vs_sql_like_prefix')
+                    ? vs_sql_like_prefix($qTrim)
+                    : (addcslashes($qTrim, "\\%_") . '%');
+                $where[] = 'l.`apiname` LIKE ? ESCAPE \'\\\\\'';
+                $bind[] = $like;
+                $hasExtra = true;
+            } elseif ($qField === 'ip') {
+                $like = function_exists('vs_sql_like_prefix')
+                    ? vs_sql_like_prefix($qTrim)
+                    : (addcslashes($qTrim, "\\%_") . '%');
+                $where[] = 'l.`ip` LIKE ? ESCAPE \'\\\\\'';
+                $bind[] = $like;
+                $hasExtra = true;
+            } elseif ($qField === 'apikey') {
+                // 前缀匹配以走 idx_apikey（禁止前置 %）
+                $like = function_exists('vs_sql_like_prefix')
+                    ? vs_sql_like_prefix($qTrim)
+                    : (addcslashes($qTrim, "\\%_") . '%');
+                $where[] = 'l.`apikey` LIKE ? ESCAPE \'\\\\\'';
+                $bind[] = $like;
                 $hasExtra = true;
             }
         }
@@ -844,17 +922,22 @@ class ApiLogManager
             return null;
         }
         return array(
-            'id'           => (int) $full['id'],
-            'apiname'      => (string) $full['apiname'],
-            'method'       => (string) $full['method'],
-            'method_class' => (string) $full['method_class'],
-            'ip'           => (string) $full['ip'],
-            'iploc'        => (string) $full['iploc'],
-            'egress'       => (string) $full['egress'],
-            'ok'           => (int) $full['ok'],
-            'ok_label'     => (string) $full['ok_label'],
-            'ok_class'     => (string) $full['ok_class'],
-            'createtime'   => (string) $full['createtime'],
+            'id'             => (int) $full['id'],
+            'apiid'          => (int) $full['apiid'],
+            'apiname'        => (string) $full['apiname'],
+            'path'           => (string) $full['path'],
+            'method'         => (string) $full['method'],
+            'method_class'   => (string) $full['method_class'],
+            'ip'             => (string) $full['ip'],
+            'iploc'          => (string) $full['iploc'],
+            'egress'         => (string) $full['egress'],
+            'ok'             => (int) $full['ok'],
+            'ok_label'       => (string) $full['ok_label'],
+            'ok_class'       => (string) $full['ok_class'],
+            'httpcode'       => (int) $full['httpcode'],
+            'httpcode_label' => (string) $full['httpcode_label'],
+            'http_class'     => (string) $full['http_class'],
+            'createtime'     => (string) $full['createtime'],
         );
     }
 
@@ -990,10 +1073,10 @@ class ApiLogManager
     }
 
     /**
-     * 用户侧日志分页（强制本人 userid；列表字段白名单；详情另走 findByIdForUser）
+     * 用户侧日志分页（强制本人 userid；单字段 q/q_field；列表白名单；详情另走 findByIdForUser）
      *
      * @param int   $userId 必须为正且与会话一致（由调用方保证）
-     * @param array $opts   pagesize, before_id, ok(null|0|1)
+     * @param array $opts   page, pagesize, before_id, ok, q, q_field
      * @return array{list:array,total:int,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool,detail_enabled:bool}
      */
     public static function listForUser($userId, array $opts = array())
@@ -1006,17 +1089,24 @@ class ApiLogManager
             $beforeId = 0;
         }
         $ok = array_key_exists('ok', $opts) ? $opts['ok'] : null;
+        $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
+        if (function_exists('mb_substr')) {
+            $q = mb_substr($q, 0, 128, 'UTF-8');
+        } elseif (strlen($q) > 128) {
+            $q = substr($q, 0, 128);
+        }
+        $qField = self::normalizeQFieldForUser(isset($opts['q_field']) ? $opts['q_field'] : 'id');
 
         $empty = array(
-            'list'            => array(),
-            'total'           => 0,
-            'page'            => $page,
-            'pagesize'        => $pagesize,
-            'before_id'       => $beforeId,
-            'next_before_id'  => 0,
-            'has_more'        => false,
-            'detail_enabled'  => self::detailEnabled(),
-            'total_approx'    => false,
+            'list'           => array(),
+            'total'          => 0,
+            'page'           => $page,
+            'pagesize'       => $pagesize,
+            'before_id'      => $beforeId,
+            'next_before_id' => 0,
+            'has_more'       => false,
+            'detail_enabled' => self::detailEnabled(),
+            'total_approx'   => false,
         );
         if ($userId <= 0 || !self::tableReady()) {
             return $empty;
@@ -1026,40 +1116,45 @@ class ApiLogManager
         }
 
         $cacheKey = 'cache:userapilog:page:' . md5(json_encode(array(
-            'v'         => 4,
+            'v'         => 5,
             'uid'       => $userId,
             'page'      => $page,
             'pagesize'  => $pagesize,
             'ok'        => $ok,
+            'q'         => $q,
+            'q_field'   => $qField,
             'before_id' => $beforeId,
         )));
 
-        $loader = function () use ($userId, $page, $pagesize, $beforeId, $ok, $empty) {
+        $loader = function () use ($userId, $page, $pagesize, $beforeId, $ok, $q, $qField, $empty) {
             try {
                 $pdo = Database::connect();
                 self::applyQueryTimeout($pdo);
 
-                $where = array('l.`userid` = ?');
-                $bind = array($userId);
-                if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
-                    $where[] = 'l.`ok` = ?';
-                    $bind[] = (int) $ok;
+                // 与管理端一致：无 before_id 用 OFFSET 页码；有 before_id 走 keyset
+                $useOffset = ($beforeId <= 0);
+                $offset = 0;
+                if ($useOffset) {
+                    $offset = ($page - 1) * $pagesize;
+                    if ($offset < 0) {
+                        $offset = 0;
+                    }
                 }
-                if ($beforeId > 0) {
-                    $where[] = 'l.`id` < ?';
-                    $bind[] = $beforeId;
-                }
-                $whereSql = implode(' AND ', $where);
 
-                $egressCol = self::hasEgressColumn() ? ', l.`egress`' : '';
-                $sql = 'SELECT l.`id`, l.`apiname`, l.`method`, l.`ip`, l.`iploc`' . $egressCol
-                    . ', l.`ok`, l.`httpcode`, l.`createtime`
-                    FROM `' . self::table() . '` l
-                    WHERE ' . $whereSql . '
-                    ORDER BY l.`id` DESC
-                    LIMIT ' . ((int) $pagesize + 1);
+                $filters = self::buildFilters($q, $qField, $ok, 0, $useOffset ? 0 : $beforeId, $userId);
+
+                if ($useOffset) {
+                    $sql = 'SELECT l.* FROM `' . self::table() . '` l'
+                        . ' WHERE ' . $filters['whereSql']
+                        . ' ORDER BY l.`id` DESC LIMIT ' . (int) $pagesize
+                        . ' OFFSET ' . (int) $offset;
+                } else {
+                    $sql = 'SELECT l.* FROM `' . self::table() . '` l'
+                        . ' WHERE ' . $filters['whereSql']
+                        . ' ORDER BY l.`id` DESC LIMIT ' . ((int) $pagesize + 1);
+                }
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute($bind);
+                $stmt->execute($filters['bind']);
                 $hotRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 $merged = array();
@@ -1070,13 +1165,14 @@ class ApiLogManager
                     }
                 }
 
-                $needMore = ($pagesize + 1) - count($merged);
+                $needMore = $useOffset ? 0 : (($pagesize + 1) - count($merged));
                 if ($needMore > 0 && class_exists('ApiLogArchive')) {
                     $cold = ApiLogArchive::listInQueryWindow(array(
                         'days'      => 0,
                         'before_id' => $beforeId,
                         'pagesize'  => $needMore,
-                        'q'         => '',
+                        'q'         => $q,
+                        'q_field'   => $qField,
                         'ok'        => $ok,
                         'apiid'     => 0,
                         'user_ids'  => array($userId),
@@ -1103,23 +1199,25 @@ class ApiLogManager
                     return ((int) $b['id']) - ((int) $a['id']);
                 });
 
-                $hasMore = count($merged) > $pagesize;
-                if ($hasMore) {
-                    $merged = array_slice($merged, 0, $pagesize);
+                $total = self::countForUserCached($userId, $ok, $q, $qField);
+                $totalApprox = false;
+                if ($useOffset) {
+                    $hasMore = ($offset + count($merged)) < $total;
+                } else {
+                    $hasMore = count($merged) > $pagesize;
+                    if ($hasMore) {
+                        $merged = array_slice($merged, 0, $pagesize);
+                    }
+                }
+                $listCount = count($merged);
+                if ($total < $listCount) {
+                    $total = $listCount + ($hasMore ? 1 : 0);
+                    $totalApprox = true;
                 }
 
                 $nextBefore = 0;
                 if (!empty($merged)) {
                     $nextBefore = (int) $merged[count($merged) - 1]['id'];
-                }
-
-                $total = self::countForUserCached($userId, $ok);
-                // 热库 COUNT 不含冷库；冷补后若总数偏小，至少不低于本页可见规模（避免「共 0 条」却有列表）
-                $listCount = count($merged);
-                $totalApprox = false;
-                if ($total < $listCount) {
-                    $total = $listCount + ($hasMore ? 1 : 0);
-                    $totalApprox = true;
                 }
 
                 return array(
@@ -1150,33 +1248,38 @@ class ApiLogManager
     }
 
     /**
-     * @param int   $userId
-     * @param mixed $ok
+     * @param int    $userId
+     * @param mixed  $ok
+     * @param string $q
+     * @param string $qField
      * @return int
      */
-    private static function countForUserCached($userId, $ok)
+    private static function countForUserCached($userId, $ok, $q = '', $qField = 'id')
     {
         $userId = (int) $userId;
-        $factory = function () use ($userId, $ok) {
+        $q = trim((string) $q);
+        $qField = self::normalizeQFieldForUser($qField);
+        $factory = function () use ($userId, $ok, $q, $qField) {
             try {
                 $pdo = Database::connect();
                 self::applyQueryTimeout($pdo);
-                $where = array('`userid` = ?');
-                $bind = array($userId);
-                if ($ok === 0 || $ok === 1 || $ok === '0' || $ok === '1') {
-                    $where[] = '`ok` = ?';
-                    $bind[] = (int) $ok;
-                }
-                $sql = 'SELECT COUNT(*) FROM `' . self::table() . '` WHERE ' . implode(' AND ', $where);
+                $filters = self::buildFilters($q, $qField, $ok, 0, 0, $userId);
+                $sql = 'SELECT COUNT(*) FROM `' . self::table() . '` l WHERE ' . $filters['whereSql'];
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute($bind);
+                $stmt->execute($filters['bind']);
                 return max(0, (int) $stmt->fetchColumn());
             } catch (Exception $e) {
                 return 0;
             }
         };
         if (class_exists('RedisCache')) {
-            $key = 'cache:userapilog:total:' . md5(json_encode(array('uid' => $userId, 'ok' => $ok)));
+            $key = 'cache:userapilog:total:' . md5(json_encode(array(
+                'v'       => 5,
+                'uid'     => $userId,
+                'ok'      => $ok,
+                'q'       => $q,
+                'q_field' => $qField,
+            )));
             return (int) RedisCache::remember($key, RedisCache::TTL_APILOG_RANGE_TOTAL, $factory);
         }
         return (int) call_user_func($factory);

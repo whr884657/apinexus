@@ -8,6 +8,9 @@ $siteCard = isset($siteCard) && is_array($siteCard) ? $siteCard : (class_exists(
     'icon' => '',
 ));
 $csrf = class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '';
+$submitTicket = class_exists('AuthSecurity')
+    ? AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK)
+    : '';
 $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
 ?>
 <main class="st-main"><div class="st-wrap">
@@ -35,6 +38,7 @@ $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
     <form id="applyLinkForm" method="post" action="<?php echo vs_e($vsBase); ?>/applylink" data-ajax="1" class="st-card st-form">
         <input type="hidden" name="csrf_token" value="<?php echo vs_e($csrf); ?>">
         <input type="hidden" name="action" value="apply">
+            <input type="hidden" name="submit_ticket" id="applyLinkTicket" value="<?php echo vs_e($submitTicket); ?>">
 
         <div class="st-form-field">
             <label class="st-label" for="applyUrl">网站链接 *</label>
@@ -63,7 +67,8 @@ $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
             <input class="st-input" type="text" id="applyContact" name="contact" placeholder="建议填写邮箱，审核通过后可收到通知" maxlength="100">
         </div>
 
-        <button type="submit" class="st-btn" id="applySubmitBtn">提交申请</button>
+                    <?php if (function_exists('vs_captcha_field')) { vs_captcha_field(Captcha::SCENE_APPLYLINK); } ?>
+<button type="submit" class="st-btn" id="applySubmitBtn">提交申请</button>
     </form>
 
     <div class="st-card st-apply-tips">
@@ -79,6 +84,7 @@ $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
     <p class="st-apply-back"><a href="<?php echo vs_e($vsBase); ?>/links">← 返回友情链接</a></p>
 </section>
 </div></main>
+<?php if (function_exists('vs_captcha_js')) { vs_captcha_js(Captcha::SCENE_APPLYLINK); } ?>
 <script>
 window.VS_LINK_META_URL = <?php echo json_encode($metaUrl, JSON_UNESCAPED_UNICODE); ?>;
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE); ?>;

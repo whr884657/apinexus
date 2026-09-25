@@ -9,7 +9,7 @@
 class ThemeManager
 {
     const CONFIG_KEY = 'frontend_theme';
-    /** 全站主题设置总表（JSON：{ "default": {...}, "slate": {...} }） */
+    /** @deprecated 13.26.45 起权威在 core/data/{id}/theme.db；本键仅遗留迁出后保持 {} */
     const SETTINGS_CONFIG_KEY = 'themesettings';
     const DEFAULT_THEME = 'default';
 
@@ -29,6 +29,13 @@ class ThemeManager
 
     public static function activeId()
     {
+        // 首访对齐：补齐在用主题段 + 剔除已删主题桶（含 fifth 等下线残留）
+        static $aligned = false;
+        if (!$aligned) {
+            $aligned = true;
+            self::syncThemesettingsEntries();
+        }
+
         $id = trim((string) Config::get(self::CONFIG_KEY, self::DEFAULT_THEME));
         if ($id === '' || !self::isValidTheme($id)) {
             return self::DEFAULT_THEME;
@@ -117,7 +124,7 @@ class ThemeManager
             return strcmp($a['name'], $b['name']);
         });
 
-        // 扫描主题包后，确保 MySQL themesettings 中每个主题都有独立配置段
+        // 扫描主题包后，对齐本地 core/data 配置目录（补齐 / 清孤儿）
         self::syncThemesettingsEntries($themes);
 
         return $themes;
@@ -202,7 +209,7 @@ class ThemeManager
     }
 
     /**
-     * 历史磁盘路径（仅一次性迁移读取，v5.3.0 起不再写入）
+     * 历史磁盘路径（仅一次性迁移读取，v5.3.0 起不再写入；v13.26.45 起权威为 core/data SQLite）
      *
      * @param string $themeId
      * @param string $filename
@@ -221,62 +228,58 @@ class ThemeManager
     }
 
     /**
-     * 读取 themesettings 总表（Config）
+     * 读取全部主题设置（扫磁盘有效主题 → 各本地 theme.db）
      *
      * @return array<string, array>
      */
     public static function readAllThemesettings()
     {
-        $raw = Config::get(self::SETTINGS_CONFIG_KEY, '{}');
-        if (!is_string($raw) || trim($raw) === '') {
-            return array();
-        }
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            return array();
-        }
         $out = array();
-        foreach ($decoded as $themeId => $payload) {
-            $themeId = trim((string) $themeId);
-            if ($themeId === '' || !is_array($payload)) {
+        $root = self::themesRoot();
+        if (!is_dir($root)) {
+            return $out;
+        }
+        $dirs = glob($root . '/*', GLOB_ONLYDIR);
+        if (!is_array($dirs)) {
+            return $out;
+        }
+        foreach ($dirs as $dir) {
+            $id = basename($dir);
+            if (!self::isValidTheme($id)) {
                 continue;
             }
-            $out[$themeId] = $payload;
+            $out[$id] = self::readThemeData($id);
         }
         return $out;
     }
 
     /**
-     * 写回 themesettings 总表
+     * 写回各主题设置到本地 SQLite（不再写入 MySQL themesettings）
      *
      * @param array<string, array> $all
      * @return true|string
      */
     public static function writeAllThemesettings(array $all)
     {
-        $clean = array();
         foreach ($all as $themeId => $payload) {
             $themeId = trim((string) $themeId);
             if ($themeId === '' || !preg_match('/^[a-z0-9][a-z0-9_-]{0,31}$/i', $themeId)) {
                 continue;
             }
-            $clean[$themeId] = is_array($payload) ? $payload : array();
-        }
-        $encoded = json_encode($clean, JSON_UNESCAPED_UNICODE);
-        if ($encoded === false) {
-            return '主题设置编码失败';
-        }
-        try {
-            Config::set(self::SETTINGS_CONFIG_KEY, $encoded);
-        } catch (Exception $e) {
-            return '写入主题设置失败';
+            if (!self::isValidTheme($themeId)) {
+                continue;
+            }
+            $result = ThemeSettingsStore::write($themeId, is_array($payload) ? $payload : array());
+            if ($result !== true) {
+                return $result;
+            }
         }
         self::clearThemeSettingCache();
         return true;
     }
 
     /**
-     * 扫描主题包后，为缺失主题自动补齐空配置段；并一次性迁入旧 settings.json
+     * 扫描主题包后：补齐本地目录；剔除已删主题的本地数据；非法 frontend_theme 写回默认
      *
      * @param array|null $themes listThemes() 结果；null 时自行扫描
      * @return void
@@ -285,6 +288,14 @@ class ThemeManager
     {
         if (!class_exists('Config') || !class_exists('InstallChecker') || !InstallChecker::isInstalled()) {
             return;
+        }
+        if (!class_exists('ThemeSettingsStore')) {
+            return;
+        }
+
+        // 升级首访：库内分桶强制迁入本地
+        if (!ThemeSettingsStore::isMigratedToLocal()) {
+            ThemeSettingsStore::migrateFromMysql(false);
         }
 
         if ($themes === null) {
@@ -304,30 +315,44 @@ class ThemeManager
             }
         }
 
-        $all = self::readAllThemesettings();
-        $changed = false;
-
+        $alive = array();
         foreach ($themes as $theme) {
             $id = isset($theme['id']) ? trim((string) $theme['id']) : '';
             if ($id === '' || !self::isValidTheme($id)) {
                 continue;
             }
-            if (!isset($all[$id]) || !is_array($all[$id])) {
-                $migrated = self::readLegacyThemeDataFile($id);
-                $all[$id] = is_array($migrated) ? $migrated : array();
-                $changed = true;
-            } elseif ($all[$id] === array()) {
-                // 库中为空对象时，尝试迁入磁盘遗留配置（仅一次有数据才写）
+            $alive[$id] = true;
+            ThemeSettingsStore::ensureLocalDir($id);
+            // 空本地且仍有旧版 theme 包内 settings.json → 一次性迁入
+            $local = ThemeSettingsStore::read($id);
+            if ($local === array()) {
                 $migrated = self::readLegacyThemeDataFile($id);
                 if (!empty($migrated)) {
-                    $all[$id] = $migrated;
-                    $changed = true;
+                    ThemeSettingsStore::write($id, $migrated);
                 }
             }
         }
 
-        if ($changed) {
-            self::writeAllThemesettings($all);
+        ThemeSettingsStore::ensureBuiltinDirs();
+
+        // 孤儿：core/data 有目录但主题包已删
+        foreach (ThemeSettingsStore::listLocalThemeIds() as $storedId) {
+            if (isset($alive[$storedId])) {
+                continue;
+            }
+            // 内置骨架目录在主题包仍在时才会进 alive；包删则清本地
+            ThemeSettingsStore::removeThemeLocal($storedId);
+        }
+
+        // 启用主题指向已删包时，持久化回落默认（勿只在内存里假装 default）
+        $active = trim((string) Config::get(self::CONFIG_KEY, self::DEFAULT_THEME));
+        if ($active === '' || !self::isValidTheme($active)) {
+            try {
+                Config::set(self::CONFIG_KEY, self::DEFAULT_THEME);
+            } catch (Exception $e) {
+                // 写回失败不阻断前台回落
+            }
+            self::clearThemeSettingCache();
         }
     }
 
@@ -348,7 +373,7 @@ class ThemeManager
     }
 
     /**
-     * 读取指定主题的设置（来自 MySQL config.themesettings）
+     * 读取指定主题的设置（core/data/{id}/theme.db）
      *
      * @param string $themeId
      * @param string $filename 保留参数兼容旧调用，仅 settings.json 有效
@@ -365,18 +390,33 @@ class ThemeManager
             return array();
         }
 
-        $all = self::readAllThemesettings();
-        if (!isset($all[$themeId]) || !is_array($all[$themeId])) {
-            $migrated = self::readLegacyThemeDataFile($themeId);
-            $all[$themeId] = $migrated;
-            self::writeAllThemesettings($all);
+        if (!class_exists('ThemeSettingsStore')) {
+            return array();
+        }
+
+        $data = ThemeSettingsStore::read($themeId);
+        if ($data !== array()) {
+            return $data;
+        }
+
+        // 本地空：尝试旧 json，再尝试尚未迁完的 MySQL 桶（仅未标记 local 时）
+        $migrated = self::readLegacyThemeDataFile($themeId);
+        if (!empty($migrated)) {
+            ThemeSettingsStore::write($themeId, $migrated);
             return $migrated;
         }
-        return $all[$themeId];
+        if (!ThemeSettingsStore::isMigratedToLocal()) {
+            $buckets = ThemeSettingsStore::readLegacyMysqlBuckets();
+            if (isset($buckets[$themeId]) && is_array($buckets[$themeId]) && $buckets[$themeId] !== array()) {
+                ThemeSettingsStore::write($themeId, $buckets[$themeId]);
+                return $buckets[$themeId];
+            }
+        }
+        return array();
     }
 
     /**
-     * 写入指定主题的设置到 MySQL（themesettings 中以主题 ID 为键）
+     * 写入指定主题的设置到本地 SQLite（不再写入 MySQL themesettings）
      *
      * @param string $themeId
      * @param array<string, mixed> $data
@@ -393,10 +433,15 @@ class ThemeManager
         if ($filename !== '' && strtolower($filename) !== 'settings.json') {
             return '不支持的配置文件';
         }
+        if (!class_exists('ThemeSettingsStore')) {
+            return '主题配置存储未加载';
+        }
 
-        $all = self::readAllThemesettings();
-        $all[$themeId] = $data;
-        return self::writeAllThemesettings($all);
+        $result = ThemeSettingsStore::write($themeId, $data);
+        if ($result === true) {
+            self::clearThemeSettingCache();
+        }
+        return $result;
     }
 
     /**
@@ -408,6 +453,7 @@ class ThemeManager
     {
         self::$themeSettingCache = null;
         self::$themeSettingSchemaDefaults = null;
+        self::$navCache = null;
     }
 
     /**
@@ -595,6 +641,20 @@ class ThemeManager
                     $value = substr($value, 0, 512);
                 }
             }
+            if (preg_match('/^home_price_\d+_(name|money|points)$/', $key) && $value !== '') {
+                if (function_exists('mb_substr')) {
+                    $value = mb_substr($value, 0, 64, 'UTF-8');
+                } else {
+                    $value = substr($value, 0, 64);
+                }
+            }
+            if (preg_match('/^home_price_\d+_(desc|features)$/', $key) && $value !== '') {
+                if (function_exists('mb_substr')) {
+                    $value = mb_substr($value, 0, 500, 'UTF-8');
+                } else {
+                    $value = substr($value, 0, 500);
+                }
+            }
             $out[$key] = $value;
         }
         return $out;
@@ -602,6 +662,8 @@ class ThemeManager
 
     /**
      * 前台导航（统一排序，各主题自行渲染）
+     * 按当前主题 settings 的 nav_show_{id} 过滤；缺省/未配置视为显示（默认全开）
+     * 仅隐藏入口链接，不改页面可达性与 sitemap（SEO 仍可收录直达 URL）
      *
      * @return array<int, array<string, string>>
      */
@@ -611,7 +673,7 @@ class ThemeManager
             return self::$navCache;
         }
 
-        self::$navCache = array(
+        $all = array(
             array('id' => 'home', 'label' => '首页', 'url' => vs_site_path('/')),
             array('id' => 'apis', 'label' => '全部接口', 'url' => vs_site_path('/apis')),
             array('id' => 'articles', 'label' => '文章', 'url' => vs_site_path('/articles')),
@@ -621,7 +683,38 @@ class ThemeManager
             array('id' => 'about', 'label' => '关于', 'url' => vs_site_path('/about')),
         );
 
+        $out = array();
+        foreach ($all as $item) {
+            $id = isset($item['id']) ? (string) $item['id'] : '';
+            if ($id === '') {
+                continue;
+            }
+            if (!self::themeSettingBool('nav_show_' . $id, true)) {
+                continue;
+            }
+            $out[] = $item;
+        }
+
+        self::$navCache = $out;
         return self::$navCache;
+    }
+
+    /**
+     * 主导航显隐配置键与文案（主题 settings / 后台面板共用）
+     *
+     * @return array<int, array{id:string,key:string,label:string}>
+     */
+    public static function navShowSettingDefs()
+    {
+        return array(
+            array('id' => 'home', 'key' => 'nav_show_home', 'label' => '导航显示 · 首页'),
+            array('id' => 'apis', 'key' => 'nav_show_apis', 'label' => '导航显示 · 全部接口'),
+            array('id' => 'articles', 'key' => 'nav_show_articles', 'label' => '导航显示 · 文章'),
+            array('id' => 'contributors', 'key' => 'nav_show_contributors', 'label' => '导航显示 · 贡献者'),
+            array('id' => 'links', 'key' => 'nav_show_links', 'label' => '导航显示 · 友情链接'),
+            array('id' => 'sponsor', 'key' => 'nav_show_sponsor', 'label' => '导航显示 · 赞助'),
+            array('id' => 'about', 'key' => 'nav_show_about', 'label' => '导航显示 · 关于'),
+        );
     }
 
     /**
@@ -935,10 +1028,12 @@ class ThemeManager
             $pageData
         );
 
+        self::prepareUserPageExtraCss($pageKey, $extraScripts);
         self::renderUserLayoutStart($pageTitle, $activeMenu, $headerActions);
         extract($ctx, EXTR_SKIP);
         require $viewFile;
         self::renderUserLayoutEnd($extraScripts);
+        self::$userExtraCssHrefs = array();
     }
 
     /**
@@ -961,21 +1056,79 @@ class ThemeManager
         return vs_site_path('/core/theme/' . rawurlencode($themeId) . '/' . $relative);
     }
 
+    /** @var array<int,string> 当前用户页额外系统 CSS（renderUserPage 注入） */
+    private static $userExtraCssHrefs = array();
+
     /**
      * 系统级脚本 URL（根目录 assets/js，与主题包无关）
      *
-     * 安全协议只维护这一份。主题包即使还留着同名文件，也不从主题包加载。
+     * 安全协议 / 用户日志列表只维护这一份。主题包即使还留着同名文件，也不从主题包加载。
      *
-     * @param string $file 目前仅 common.js
+     * @param string $file common.js | user-logs.js
      * @return string
      */
     public static function systemJsUrl($file)
     {
         $file = basename(str_replace('\\', '/', (string) $file));
-        if ($file !== 'common.js') {
+        $allow = array('common.js', 'user-logs.js');
+        if (!in_array($file, $allow, true)) {
             return '';
         }
         return vs_site_path('/assets/js/' . $file) . '?v=' . VS_VERSION;
+    }
+
+    /**
+     * 系统级 CSS URL（根目录 assets/css）
+     *
+     * @param string $file 目前仅 user-logs.css
+     * @return string
+     */
+    public static function systemCssUrl($file)
+    {
+        $file = basename(str_replace('\\', '/', (string) $file));
+        if ($file !== 'user-logs.css') {
+            return '';
+        }
+        $path = VS_ROOT . '/assets/css/' . $file;
+        if (!is_file($path)) {
+            return '';
+        }
+        return vs_site_path('/assets/css/' . $file) . '?v=' . VS_VERSION;
+    }
+
+    /**
+     * 用户中心页额外系统 CSS（布局 head 输出）
+     *
+     * @return array<int,string>
+     */
+    public static function userExtraCssHrefs()
+    {
+        return self::$userExtraCssHrefs;
+    }
+
+    /**
+     * @param string $pageKey
+     * @param array  $extraScripts
+     * @return void
+     */
+    private static function prepareUserPageExtraCss($pageKey, array $extraScripts)
+    {
+        self::$userExtraCssHrefs = array();
+        $needLogs = ($pageKey === 'logs');
+        if (!$needLogs) {
+            foreach ($extraScripts as $js) {
+                if (basename(str_replace('\\', '/', (string) $js)) === 'user-logs.js') {
+                    $needLogs = true;
+                    break;
+                }
+            }
+        }
+        if ($needLogs) {
+            $href = self::systemCssUrl('user-logs.css');
+            if ($href !== '') {
+                self::$userExtraCssHrefs[] = $href;
+            }
+        }
     }
 
     /**
@@ -1015,7 +1168,14 @@ class ThemeManager
     {
         $themeId = $themeId !== null ? $themeId : self::activeId();
         $file = basename(str_replace('\\', '/', (string) $file));
-        if ($file === '' || !self::isValidTheme($themeId)) {
+        if ($file === '') {
+            return '';
+        }
+        // 用户日志列表：系统级脚本（对齐管理端 system-logs.js），不读主题包副本
+        if ($file === 'user-logs.js') {
+            return self::systemJsUrl($file);
+        }
+        if (!self::isValidTheme($themeId)) {
             return '';
         }
         $path = self::themeDir($themeId) . '/assets/js/' . $file;

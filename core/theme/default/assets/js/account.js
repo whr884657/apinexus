@@ -152,9 +152,14 @@
                         var actionEl = item.querySelector('.vs-oauth-bind-item__action');
                         if (actionEl && window.VS_BASE_URL) {
                             var provider = data.provider;
-                            var label = provider === 'qq' ? 'QQ' : 'Gitee';
-                            actionEl.innerHTML = '<a href="' + window.VS_BASE_URL + '/user/oauth/start?provider='
-                                + encodeURIComponent(provider) + '&amp;intent=bind" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>';
+                            var itemId = data.item_id ? String(data.item_id) : '';
+                            var href = window.VS_BASE_URL + '/user/oauth/start?provider='
+                                + encodeURIComponent(provider);
+                            if (provider === 'agg' && itemId !== '') {
+                                href += '&id=' + encodeURIComponent(itemId);
+                            }
+                            href += '&intent=bind';
+                            actionEl.innerHTML = '<a href="' + href + '" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>';
                             item.setAttribute('data-oauth-bound', '0');
                         }
                     }

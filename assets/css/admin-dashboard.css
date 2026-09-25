@@ -22,7 +22,7 @@
 
 #adminDashPage .dash-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 16px;
 }
@@ -718,7 +718,7 @@
 }
 
 @media (max-width: 1100px) {
-    /* 平板/手机：2 列；5 卡自然排成 3 行（末行仅成功率） */
+    /* 平板/手机：2 列；6 卡自然排成 3 行 */
     #adminDashPage .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #adminDashPage .dash-grid-trend,
     #adminDashPage .dash-grid-bars,
@@ -741,7 +741,7 @@
     }
 }
 @media (max-width: 560px) {
-    /* 手机端 KPI：一行两个，禁止单列拉满；5 卡 → 3 行 */
+    /* 手机端 KPI：一行两个，禁止单列拉满；6 卡 → 3 行 */
     #adminDashPage .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     #adminDashPage .dash-kpi { padding: 12px; }
     #adminDashPage .dash-kpi__value { font-size: 1.25rem; }

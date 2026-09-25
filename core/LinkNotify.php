@@ -68,12 +68,10 @@ class LinkNotify
 
         $siteName = self::siteName();
         $name = isset($link['name']) ? (string) $link['name'] : '';
-        $linksUrl = rtrim(vs_base_url(), '/') . '/links';
 
         $subject = '【' . $siteName . '】您的友情链接申请已通过';
         $body = '<p>您好：</p>';
-        $body .= '<p>您申请的友情链接「' . self::e($name) . '」已审核<strong>通过</strong>，可在站点友链页查看：</p>';
-        $body .= '<p><a href="' . self::e($linksUrl) . '">' . self::e($linksUrl) . '</a></p>';
+        $body .= '<p>您申请的友情链接「' . self::e($name) . '」已审核<strong>通过</strong>，可在站点友链页查看。</p>';
         $body .= '<p>本邮件由系统自动发送。</p>';
 
         try {

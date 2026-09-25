@@ -100,6 +100,20 @@ function vs_theme_admin_render_settings_docs($schema, $values)
     echo '<div class="th5-admin-settings">';
 
     echo '<section class="th5-admin-settings__section">';
+    echo '<h3 class="th5-admin-settings__title">主导航显示</h3>';
+    echo '<p class="th5-admin-settings__hint">控制顶栏 / 侧栏 / 抽屉里是否显示对应入口。关闭后仅隐藏入口，页面 URL 仍可直接访问（不影响 SEO 收录）。默认全部开启。</p>';
+    echo '<div class="th5-admin-settings__checks">';
+    $renderCheckbox('nav_show_home');
+    $renderCheckbox('nav_show_apis');
+    $renderCheckbox('nav_show_articles');
+    $renderCheckbox('nav_show_contributors');
+    $renderCheckbox('nav_show_links');
+    $renderCheckbox('nav_show_sponsor');
+    $renderCheckbox('nav_show_about');
+    echo '</div>';
+    echo '</section>';
+
+    echo '<section class="th5-admin-settings__section">';
     echo '<h3 class="th5-admin-settings__title">首页展示</h3>';
     echo '<div class="th5-admin-settings__grid th5-admin-settings__grid--2">';
     $renderSelect('stats_num_format');

@@ -204,11 +204,16 @@ if (!$notFound) {
         <h2 class="font-display font-semibold text-lg m-0 mb-4">接口信息</h2>
         <?php if ($endpointDisplay !== '' || $isDisabled): ?>
           <div class="th3-endpoint font-mono text-sm mb-5">
-            <span class="tag free"><?php echo vs_e(isset($api['method_label']) ? $api['method_label'] : strtoupper($primaryMethod)); ?></span>
-            <?php if ($isDisabled): ?>
-              <span id="detailEndpoint" class="th3-endpoint__mask" title="接口已禁用"><?php echo vs_e($endpointBlurText); ?></span>
-            <?php else: ?>
-              <span id="detailEndpoint" class="break-all"><?php echo vs_e($endpointDisplay); ?></span>
+            <div class="th3-endpoint__text">
+              <span class="tag free"><?php echo vs_e(isset($api['method_label']) ? $api['method_label'] : strtoupper($primaryMethod)); ?></span>
+              <?php if ($isDisabled): ?>
+                <span id="detailEndpoint" class="th3-endpoint__mask" title="接口已禁用"><?php echo vs_e($endpointBlurText); ?></span>
+              <?php else: ?>
+                <span id="detailEndpoint" class="break-all"><?php echo vs_e($endpointDisplay); ?></span>
+              <?php endif; ?>
+            </div>
+            <?php if (!$isDisabled && $endpointCopy !== ''): ?>
+              <button type="button" class="th3-copy th3-endpoint__copy" data-copy="<?php echo vs_e($endpointCopy); ?>">复制</button>
             <?php endif; ?>
           </div>
         <?php endif; ?>
@@ -297,11 +302,11 @@ if (!$notFound) {
                 <tbody>
                   <?php foreach ($paramsList as $p): ?>
                   <tr>
-                    <td class="font-mono"><?php echo vs_e($p['name']); ?></td>
-                    <td class="font-mono"><?php echo vs_e($p['type']); ?></td>
-                    <td><?php echo !empty($p['required']) ? '<span class="tag hot">是</span>' : '<span class="text-muted">否</span>'; ?></td>
-                    <td><?php echo vs_e($p['description']); ?></td>
-                    <td class="font-mono"><?php echo vs_e($p['example']); ?></td>
+                    <td class="font-mono th3-table__name"><?php echo vs_e($p['name']); ?></td>
+                    <td class="font-mono th3-table__type"><?php echo vs_e($p['type']); ?></td>
+                    <td class="th3-table__req"><?php echo !empty($p['required']) ? '<span class="tag hot">是</span>' : '<span class="text-muted">否</span>'; ?></td>
+                    <td class="th3-table__desc"><?php echo vs_e($p['description']); ?></td>
+                    <td class="font-mono th3-table__example"><?php echo vs_e($p['example']); ?></td>
                   </tr>
                   <?php endforeach; ?>
                 </tbody>
@@ -498,10 +503,10 @@ if (!$notFound) {
               <input type="hidden" name="action" value="submit_feedback">
               <input type="hidden" name="apiid" value="<?php echo (int) $api['id']; ?>">
               <label class="th3-field" for="detailFeedbackContent">
-                <span>问题描述</span>
                 <textarea class="input th3-textarea" id="detailFeedbackContent" name="content"
                           rows="4" maxlength="500"
                           placeholder="请描述遇到的问题或改进建议（5～500 字）"
+                          aria-label="问题描述"
                           <?php echo empty($playground['loggedIn']) ? '' : 'required'; ?>></textarea>
               </label>
               <button type="submit" class="btn-primary mt-4" id="detailFeedbackBtn">提交反馈</button>

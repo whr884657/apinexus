@@ -6,7 +6,7 @@
 > **权威同步（四处必须一致）：**  
 > ① 本文「情况 A」　② 安装向导 `install/index.php` → `vs_install_nginx_rewrite_snippet()`　③ 根目录 `.htaccess`　④ 根目录 `README.md`「伪静态」节  
 > 另：站点地图为 `/sitemap.xml`（伪静态）。**v13.26.16 起不再提供根目录 `robots.txt`**（Disallow 会暴露目录结构，见易错点 E250）。改伪静态规则时勿只改一处（见易错点 E236）。  
-> **v13.21.0+：** 安装向导第 1 步默认提供情况 A 全文并支持一键复制。**v13.26.5+：** 含 `/sitemap.xml` 与 `config|data` 合并 deny。
+> **v13.21.0+：** 安装向导第 1 步默认提供情况 A 全文并支持一键复制。**v13.26.5+：** 含 `/sitemap.xml` 与 `config|data` 合并 deny。**v13.26.45+：** deny 扩含 `core/data`（主题本地 SQLite 配置）。
 
 ---
 
@@ -33,7 +33,7 @@ location / {
 整段复制下面：
 
 ```nginx
-location ~ ^/(config|data)/ {
+location ~ ^/(config|data|core/data)/ {
     deny all;
     return 403;
 }
@@ -56,7 +56,7 @@ location / {
 **只复制**下面几段，并保证它们出现在原来的 `location /` **上面**（写在文件更靠前的位置）：
 
 ```nginx
-location ~ ^/(config|data)/ {
+location ~ ^/(config|data|core/data)/ {
     deny all;
     return 403;
 }
@@ -71,7 +71,7 @@ location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
 }
 ```
 
-> **重要：** Nginx **不读** `.htaccess`。务必加上面的 `/config/`、`/data/` 合并 deny（须写在其它 `location ~` **之前**），否则运行时日志与数据库配置文件可能被直链下载。
+> **重要：** Nginx **不读** `.htaccess`。务必加上面的 `/config/`、`/data/`、`/core/data/` 合并 deny（须写在其它 `location ~` **之前**），否则运行时日志、数据库配置与主题本地 `theme.db` 可能被直链下载。
 
 若站点**已有**旧的「仅 detail」单页规则，请**删掉**那条，改用上面的**通用**第二段。
 
@@ -79,7 +79,7 @@ location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
 
 | 顺序 | 规则 | 作用 |
 |------|------|------|
-| 1（必须在上） | `config` 与 `data` 合并 deny | **禁止直链**配置与运行时目录 |
+| 1（必须在上） | `config` / `data` / `core/data` 合并 deny | **禁止直链**配置、运行时目录与主题本地库 |
 | 2 | `/apis/{短码}` | **代理网关**（特殊：内部 `_vs_slug`，不是 `?id=`） |
 | 3 | `/sitemap.xml` | **站点地图** → `sitemap.php` |
 | 4 | `/{页面名}/{数字ID}` | **通用路径式资源**：落到 `/{页面名}.php?id={数字ID}` |

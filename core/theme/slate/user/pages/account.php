@@ -21,8 +21,29 @@ $avatarPreview = isset($avatarPreview) ? (string) $avatarPreview : '';
 $roleLabel = isset($roleLabel) ? (string) $roleLabel : '普通用户';
 $oauthProviders = isset($oauthProviders) && is_array($oauthProviders) ? $oauthProviders : array('qq' => false, 'gitee' => false);
 $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindings : array('qq' => false, 'gitee' => false);
-$oauthBindQq = $vsBase . '/user/oauth/start?provider=qq&intent=bind';
-$oauthBindGitee = $vsBase . '/user/oauth/start?provider=gitee&intent=bind';
+$oauthButtons = isset($oauthButtons) && is_array($oauthButtons) ? $oauthButtons : array();
+if (empty($oauthButtons)) {
+    if (!empty($oauthProviders['qq'])) {
+        $oauthButtons[] = array(
+            'provider' => 'qq',
+            'item_id'  => '',
+            'label'    => 'QQ',
+            'icon'     => SiteMedia::imgUrl('oauth/qq.svg'),
+            'bound'    => !empty($oauthBindings['qq']),
+            'bind_url' => $vsBase . '/user/oauth/start?provider=qq&intent=bind',
+        );
+    }
+    if (!empty($oauthProviders['gitee'])) {
+        $oauthButtons[] = array(
+            'provider' => 'gitee',
+            'item_id'  => '',
+            'label'    => 'Gitee',
+            'icon'     => SiteMedia::imgUrl('oauth/gitee.svg'),
+            'bound'    => !empty($oauthBindings['gitee']),
+            'bind_url' => $vsBase . '/user/oauth/start?provider=gitee&intent=bind',
+        );
+    }
+}
 ?>
 
 <div class="vs-panel">
@@ -130,57 +151,46 @@ $oauthBindGitee = $vsBase . '/user/oauth/start?provider=gitee&intent=bind';
         </div>
     </form>
 
-    <?php if ($oauthProviders['qq'] || $oauthProviders['gitee']): ?>
+    <?php if (!empty($oauthButtons)): ?>
     <div class="vs-form-section vs-oauth-bind-section">
         <h3 class="vs-form-section__title">第三方账号</h3>
-        <?php vs_render_notice('info', '', '绑定后可在登录页使用第三方快捷登录；解绑后需重新验证账号密码才能再次绑定', array('compact' => true)); ?>
+        <?php vs_render_notice('info', '', '绑定后可在登录页使用第三方快捷登录；解绑后可在本页直接重新绑定', array('compact' => true)); ?>
         <div class="vs-oauth-bind-list">
-            <?php if ($oauthProviders['qq']): ?>
-            <div class="vs-oauth-bind-item">
+            <?php foreach ($oauthButtons as $btn): ?>
+                <?php
+                $btnProvider = isset($btn['provider']) ? (string) $btn['provider'] : '';
+                $btnItemId = isset($btn['item_id']) ? (string) $btn['item_id'] : '';
+                $btnLabel = isset($btn['label']) ? (string) $btn['label'] : '';
+                $btnIcon = isset($btn['icon']) ? (string) $btn['icon'] : '';
+                $btnBound = !empty($btn['bound']);
+                $btnBindUrl = isset($btn['bind_url']) ? (string) $btn['bind_url'] : '';
+                if ($btnProvider === '' || $btnLabel === '') {
+                    continue;
+                }
+                ?>
+            <div class="vs-oauth-bind-item" data-oauth-bound="<?php echo $btnBound ? '1' : '0'; ?>">
                 <div class="vs-oauth-bind-item__info">
-                    <img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="QQ" class="vs-oauth-bind-item__icon" width="24" height="24">
+                    <img src="<?php echo vs_e($btnIcon); ?>" alt="<?php echo vs_e($btnLabel); ?>" class="vs-oauth-bind-item__icon" width="24" height="24">
                     <div>
-                        <div class="vs-oauth-bind-item__name">QQ</div>
-                        <div class="vs-oauth-bind-item__status"><?php echo $oauthBindings['qq'] ? '已绑定' : '未绑定'; ?></div>
+                        <div class="vs-oauth-bind-item__name"><?php echo vs_e($btnLabel); ?></div>
+                        <div class="vs-oauth-bind-item__status"><?php echo $btnBound ? '已绑定' : '未绑定'; ?></div>
                     </div>
                 </div>
                 <div class="vs-oauth-bind-item__action">
-                    <?php if ($oauthBindings['qq']): ?>
+                    <?php if ($btnBound): ?>
                         <form method="post" action="" class="vs-oauth-unbind-form" data-ajax="1">
                             <input type="hidden" name="action" value="oauth_unbind">
-                            <input type="hidden" name="provider" value="qq">
+                            <input type="hidden" name="provider" value="<?php echo vs_e($btnProvider); ?>">
+                            <input type="hidden" name="item_id" value="<?php echo vs_e($btnItemId); ?>">
                             <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
                             <button type="submit" class="vs-btn vs-btn--text vs-btn--oauth-action">解绑</button>
                         </form>
                     <?php else: ?>
-                        <a href="<?php echo vs_e($oauthBindQq); ?>" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>
+                        <a href="<?php echo vs_e($btnBindUrl); ?>" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>
                     <?php endif; ?>
                 </div>
             </div>
-            <?php endif; ?>
-            <?php if ($oauthProviders['gitee']): ?>
-            <div class="vs-oauth-bind-item">
-                <div class="vs-oauth-bind-item__info">
-                    <img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="Gitee" class="vs-oauth-bind-item__icon" width="24" height="24">
-                    <div>
-                        <div class="vs-oauth-bind-item__name">Gitee</div>
-                        <div class="vs-oauth-bind-item__status"><?php echo $oauthBindings['gitee'] ? '已绑定' : '未绑定'; ?></div>
-                    </div>
-                </div>
-                <div class="vs-oauth-bind-item__action">
-                    <?php if ($oauthBindings['gitee']): ?>
-                        <form method="post" action="" class="vs-oauth-unbind-form" data-ajax="1">
-                            <input type="hidden" name="action" value="oauth_unbind">
-                            <input type="hidden" name="provider" value="gitee">
-                            <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
-                            <button type="submit" class="vs-btn vs-btn--text vs-btn--oauth-action">解绑</button>
-                        </form>
-                    <?php else: ?>
-                        <a href="<?php echo vs_e($oauthBindGitee); ?>" class="vs-btn vs-btn--default vs-btn--oauth-action">绑定</a>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </div>
     </div>
     <?php endif; ?>

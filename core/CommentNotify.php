@@ -32,8 +32,6 @@ class CommentNotify
         $bodyText = isset($comment['body']) ? trim((string) $comment['body']) : '';
         $id = isset($comment['id']) ? (int) $comment['id'] : 0;
         $parentid = isset($comment['parentid']) ? (int) $comment['parentid'] : 0;
-        $articleUrl = self::articleUrl(isset($comment['contentid']) ? (int) $comment['contentid'] : 0);
-        $adminUrl = self::adminCommentsUrl();
 
         $subject = '【' . $siteName . '】有新的文章评论';
         if ($parentid > 0) {
@@ -58,12 +56,6 @@ class CommentNotify
             $html .= '<p>评论内容：</p>';
             $html .= '<p style="padding:12px;background:#f8fafc;border-radius:8px;">'
                 . nl2br(self::e($bodyText)) . '</p>';
-        }
-        if ($articleUrl !== '') {
-            $html .= '<p>文章链接：<a href="' . self::e($articleUrl) . '">' . self::e($articleUrl) . '</a></p>';
-        }
-        if ($adminUrl !== '') {
-            $html .= '<p>后台评论管理：<a href="' . self::e($adminUrl) . '">' . self::e($adminUrl) . '</a></p>';
         }
         $html .= '<p>本邮件由系统自动发送。</p>';
 
@@ -101,7 +93,6 @@ class CommentNotify
         $quoter = self::commentNickname($comment);
         $quoteBody = isset($comment['body']) ? trim((string) $comment['body']) : '';
         $origBody = isset($parentComment['body']) ? trim((string) $parentComment['body']) : '';
-        $articleUrl = self::articleUrl(isset($comment['contentid']) ? (int) $comment['contentid'] : 0);
 
         $subject = '【' . $siteName . '】您的评论被引用了';
         $html = '<p>您好：</p>';
@@ -116,9 +107,6 @@ class CommentNotify
             $html .= '<p>对方评论：</p>';
             $html .= '<p style="padding:12px;background:#f8fafc;border-radius:8px;">'
                 . nl2br(self::e($quoteBody)) . '</p>';
-        }
-        if ($articleUrl !== '') {
-            $html .= '<p>查看文章：<a href="' . self::e($articleUrl) . '">' . self::e($articleUrl) . '</a></p>';
         }
         $html .= '<p>本邮件由系统自动发送。</p>';
 
@@ -158,7 +146,6 @@ class CommentNotify
         $siteName = self::siteName();
         $title = self::articleTitle($comment);
         $bodyText = isset($comment['body']) ? trim((string) $comment['body']) : '';
-        $articleUrl = self::articleUrl(isset($comment['contentid']) ? (int) $comment['contentid'] : 0);
 
         $subject = '【' . $siteName . '】您的评论收到了管理员回复';
         $html = '<p>您好：</p>';
@@ -171,9 +158,6 @@ class CommentNotify
         $html .= '<p>管理员回复：</p>';
         $html .= '<p style="padding:12px;background:#f8fafc;border-radius:8px;">'
             . nl2br(self::e($reply)) . '</p>';
-        if ($articleUrl !== '') {
-            $html .= '<p>查看文章：<a href="' . self::e($articleUrl) . '">' . self::e($articleUrl) . '</a></p>';
-        }
         $html .= '<p>本邮件由系统自动发送。</p>';
 
         try {
@@ -276,30 +260,6 @@ class CommentNotify
         }
         $id = isset($comment['contentid']) ? (int) $comment['contentid'] : 0;
         return $id > 0 ? ('文章#' . $id) : '相关文章';
-    }
-
-    /**
-     * @param int $contentid
-     * @return string
-     */
-    private static function articleUrl($contentid)
-    {
-        $contentid = (int) $contentid;
-        if ($contentid <= 0 || !function_exists('vs_base_url')) {
-            return '';
-        }
-        return rtrim(vs_base_url(), '/') . '/articles/' . $contentid;
-    }
-
-    /**
-     * @return string
-     */
-    private static function adminCommentsUrl()
-    {
-        if (!function_exists('vs_base_url')) {
-            return '';
-        }
-        return rtrim(vs_base_url(), '/') . '/admin/content/comments';
     }
 
     /**

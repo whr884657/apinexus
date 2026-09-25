@@ -130,14 +130,30 @@
             var action = form.getAttribute('action') || window.location.href;
             postApply(action)
                 .then(function (data) {
+                    if (data && data.submit_ticket) {
+                        var tIn = form.querySelector('input[name="submit_ticket"]');
+                        if (tIn) tIn.value = data.submit_ticket;
+                    }
                     if (!data || !data.code) {
+                        if (window.VsCaptcha && typeof window.VsCaptcha.reset === 'function') {
+                            window.VsCaptcha.reset(form);
+                        }
                         throw new Error((data && data.msg) || '提交失败');
                     }
                     showAlert('success', data.msg || '申请已提交，请等待审核');
                     if (window.VS && typeof VS.showMessage === 'function') {
                         VS.showMessage(data.msg || '申请已提交', 'success');
                     }
+                    var newTicket = data.submit_ticket || '';
+                    var csrfKeep = (typeof window.VS_CSRF_TOKEN === 'string') ? window.VS_CSRF_TOKEN : '';
                     form.reset();
+                    var ticketInput = form.querySelector('input[name="submit_ticket"]');
+                    if (ticketInput && newTicket) ticketInput.value = newTicket;
+                    var csrfInput = form.querySelector('input[name="csrf_token"]');
+                    if (csrfInput && csrfKeep) csrfInput.value = csrfKeep;
+                    if (window.VsCaptcha && typeof window.VsCaptcha.reset === 'function') {
+                        window.VsCaptcha.reset(form);
+                    }
                     setFetchStatus('', '');
                 })
                 .catch(function (err) {

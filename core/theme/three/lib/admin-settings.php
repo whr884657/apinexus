@@ -58,6 +58,9 @@ function vs_theme_admin_render_settings_three($schema, $values)
         if ($key === 'footer_friend_links_display') {
             echo '<p class="vs-form-hint">仅在勾选「底部友情链接」时生效</p>';
         }
+        if ($key === 'home_price_featured') {
+            echo '<p class="vs-form-hint">首页三张展示卡中哪一张用推荐高亮样式；与真实充值套餐「荐」无关</p>';
+        }
         echo '</div>';
     };
 
@@ -113,6 +116,12 @@ function vs_theme_admin_render_settings_three($schema, $values)
         if ($key === 'hero_lead') {
             echo '<p class="vs-form-hint">显示在首页大标题「全网接口一站调用」下方。留空则用默认介绍文案。</p>';
         }
+        if (preg_match('/^home_price_\d+_features$/', $key)) {
+            echo '<p class="vs-form-hint">每行一条卖点，最多取前 5 条显示在卡片底部。</p>';
+        }
+        if (preg_match('/^home_price_\d+_desc$/', $key)) {
+            echo '<p class="vs-form-hint">显示在「到账积分」下方的说明文案，可写活动赠送等纯展示信息。</p>';
+        }
         echo '</div>';
     };
 
@@ -122,12 +131,47 @@ function vs_theme_admin_render_settings_three($schema, $values)
     echo '<div class="th3-admin-settings">';
 
     echo '<section class="th3-admin-settings__section">';
+    echo '<h3 class="th3-admin-settings__title">主导航显示</h3>';
+    echo '<p class="th3-admin-settings__hint">控制顶栏 / 侧栏 / 抽屉里是否显示对应入口。关闭后仅隐藏入口，页面 URL 仍可直接访问（不影响 SEO 收录）。默认全部开启。</p>';
+    echo '<div class="th3-admin-settings__checks">';
+    $renderCheckbox('nav_show_home');
+    $renderCheckbox('nav_show_apis');
+    $renderCheckbox('nav_show_articles');
+    $renderCheckbox('nav_show_contributors');
+    $renderCheckbox('nav_show_links');
+    $renderCheckbox('nav_show_sponsor');
+    $renderCheckbox('nav_show_about');
+    echo '</div>';
+    echo '</section>';
+
+    echo '<section class="th3-admin-settings__section">';
     echo '<h3 class="th3-admin-settings__title">首页展示</h3>';
     echo '<div class="th3-admin-settings__grid th3-admin-settings__grid--2">';
     $renderSelect('stats_num_format');
     $renderSelect('home_preview_limit');
     echo '</div>';
     $renderTextarea('hero_lead');
+    echo '</section>';
+
+    echo '<section class="th3-admin-settings__section">';
+    echo '<h3 class="th3-admin-settings__title">首页充值展示卡</h3>';
+    echo '<p class="th3-admin-settings__hint">仅用于首页营销展示，与系统「充值套餐」完全独立，互不影响。按钮仍跳转用户中心充值页。名称、价格、积分、描述、卖点均可自定义。</p>';
+    echo '<div class="th3-admin-settings__grid th3-admin-settings__grid--2">';
+    $renderSelect('home_price_featured');
+    echo '</div>';
+    for ($slot = 1; $slot <= 3; $slot++) {
+        echo '<div class="th3-admin-settings__slot" style="margin-top:12px;">';
+        echo '<div class="th3-admin-settings__slot-head">展示卡 ' . $slot . '</div>';
+        echo '<div class="th3-admin-settings__slot-body">';
+        echo '<div class="th3-admin-settings__grid th3-admin-settings__grid--2">';
+        $renderText('home_price_' . $slot . '_name');
+        $renderText('home_price_' . $slot . '_money');
+        $renderText('home_price_' . $slot . '_points');
+        echo '</div>';
+        $renderTextarea('home_price_' . $slot . '_desc');
+        $renderTextarea('home_price_' . $slot . '_features');
+        echo '</div></div>';
+    }
     echo '</section>';
 
     echo '<section class="th3-admin-settings__section">';

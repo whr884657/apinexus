@@ -1633,28 +1633,14 @@ span.th3-sponsor-card__avatar:not(img) {
 .th3-footer__brand-block {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
   width: 100%;
   max-width: none;
-}
-.th3-footer__links-row {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  width: 100%;
-  max-width: 100%;
-}
-@media (min-width: 768px) {
-  .th3-footer__links-row {
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1.5rem;
-  }
 }
 .th3-footer__links {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 .th3-footer__links-title {
   margin: 0 0 0.75rem;
@@ -1681,26 +1667,31 @@ span.th3-sponsor-card__avatar:not(img) {
 .th3-footer__link--apply {
   color: var(--accent);
 }
+/* 社交左 + 系统页脚二维码右：同一底行，二维码下沉贴齐（省掉上下大块空白） */
+.th3-footer__dock {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.65rem 1.25rem;
+  width: 100%;
+  margin-top: 0.15rem;
+}
+.th3-footer__dock .th3-footer-social {
+  margin-top: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .th3-footer__qr {
   flex-shrink: 0;
-  width: 100%;
-  margin-left: 0;
+  width: auto;
+  margin-left: auto;
   justify-content: flex-end;
   align-items: flex-end;
 }
-@media (min-width: 768px) {
-  .th3-footer__links-row .th3-footer__qr {
-    width: auto;
-    margin-left: auto;
-  }
-}
-.th3-footer__qr--solo {
-  width: 100%;
-  justify-content: flex-end;
-  margin-left: 0;
-}
 .th3-footer__qr .vs-foot-qr {
-  width: 100%;
+  width: auto;
   justify-content: flex-end;
 }
 .th3-footer .vs-foot-qr__img {
@@ -1762,7 +1753,7 @@ span.th3-sponsor-card__avatar:not(img) {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 0.25rem;
+  margin-top: 0;
 }
 .th3-social-item {
   position: relative;
@@ -2037,6 +2028,17 @@ html.dark .th3-article-card__bg img { opacity: 0.28; }
   margin: 0 0 0.4rem;
 }
 .th3-article-card__title:hover { color: var(--accent); }
+.th3-article-pin {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.08rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: middle;
+  color: #9a3412;
+  background: rgba(251, 146, 60, 0.2);
+  border-radius: 999px;
+}
 .th3-article-card__excerpt {
   margin: 0 0 0.55rem;
   font-size: 0.85rem;
@@ -2084,6 +2086,16 @@ html.dark .th3-article-card__bg img { opacity: 0.28; }
 }
 .th3-article-detail__body {
   margin-top: 0.25rem;
+}
+/* Markdown 正文图：保留原始比例（禁止被拉成正方形） */
+.th3-md img,
+.th3-article-detail__body img,
+.th3-about-content img {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--th3-radius);
 }
 .th3-cmt {
   margin-top: 2.5rem;
@@ -2339,32 +2351,117 @@ span.th3-cmt-avatar:not(img) {
 }
 .th3-endpoint {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.55rem;
   padding: 0.75rem 0.9rem;
+  margin-bottom: 1.25rem;
   border-radius: var(--th3-radius);
   background: var(--bg-2);
   border: 1px solid var(--border);
   word-break: break-all;
 }
+@media (max-width: 640px) {
+  .th3-endpoint {
+    flex-wrap: wrap;
+  }
+  .th3-endpoint__copy {
+    margin-left: 0;
+  }
+}
+.th3-endpoint__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+.th3-endpoint__copy {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;
+}
 .th3-endpoint__mask { letter-spacing: 0.08em; color: var(--muted); filter: blur(2px); }
 .th3-info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem 1rem;
+  gap: 0.65rem;
 }
 @media (min-width: 768px) {
   .th3-info-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-.th3-info-label {
-  font-size: 0.75rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 0.2rem;
+.th3-info-item {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--th3-radius);
+  background: var(--card);
+  min-width: 0;
 }
-.th3-info-value { font-size: 0.95rem; font-weight: 500; }
+.th3-info-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  margin-bottom: 0.28rem;
+}
+.th3-info-value {
+  font-size: 0.9rem;
+  font-weight: 560;
+  color: var(--fg);
+  line-height: 1.4;
+  word-break: break-word;
+}
+.th3-info-value a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.th3-info-value a:hover { text-decoration: underline; }
+
+/* 首页市场：标题行与分类胶囊间距（mb-6 工具类兜底，防 compat 再漏） */
+.th3-sec--market > .max-w-7xl > .flex.flex-col {
+  margin-bottom: 1.5rem;
+}
+@media (min-width: 640px) {
+  .th3-sec--market > .max-w-7xl > .flex.flex-col {
+    margin-bottom: 2rem;
+  }
+}
+/* 首页工程化升级：导语块与能力卡间距 */
+.th3-sec--features > .max-w-7xl > .max-w-2xl {
+  margin-bottom: 1.5rem;
+}
+@media (min-width: 640px) {
+  .th3-sec--features > .max-w-7xl > .max-w-2xl {
+    margin-bottom: 2rem;
+  }
+}
+
+/* 首页区块：收紧纵向空白，接口少时不再撑出大片空隙 */
+.th3-sec {
+  padding-top: 2.75rem;
+  padding-bottom: 2.75rem;
+}
+@media (min-width: 640px) {
+  .th3-sec {
+    padding-top: 3.25rem;
+    padding-bottom: 3.25rem;
+  }
+}
+@media (min-width: 1024px) {
+  .th3-sec {
+    padding-top: 3.75rem;
+    padding-bottom: 3.75rem;
+  }
+}
+.th3-sec--market { padding-bottom: 2.25rem; }
+@media (min-width: 1024px) {
+  .th3-sec--market { padding-bottom: 2.75rem; }
+}
+.th3-sec--features { padding-top: 2.25rem; }
+@media (min-width: 1024px) {
+  .th3-sec--features { padding-top: 2.75rem; }
+}
+#apiGrid:empty { min-height: 0; }
 .th3-panel__tools {
   display: flex;
   flex-wrap: wrap;
@@ -2425,11 +2522,20 @@ span.th3-cmt-avatar:not(img) {
 .th3-pg-resp-meta .th3-copy {
   order: -1;
 }
-.th3-table-wrap { overflow-x: auto; }
+/* 参数表：说明过长不得撑破详情栏（对齐主题1 overflow + 定宽换行，E372） */
+.th3-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--th3-radius);
+}
 .th3-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
+  min-width: 520px;
 }
 .th3-table th,
 .th3-table td {
@@ -2443,6 +2549,41 @@ span.th3-cmt-avatar:not(img) {
   color: var(--muted);
   font-weight: 600;
   white-space: nowrap;
+  background: var(--bg-2);
+}
+.th3-table tr:last-child td {
+  border-bottom: 0;
+}
+/* 请求参数五列：定宽 + 说明/示例强制换行，禁止长文把整页横向拉开 */
+#paramsTableMode .th3-table {
+  table-layout: fixed;
+}
+#paramsTableMode .th3-table th:nth-child(1),
+#paramsTableMode .th3-table td:nth-child(1) { width: 16%; }
+#paramsTableMode .th3-table th:nth-child(2),
+#paramsTableMode .th3-table td:nth-child(2) { width: 12%; }
+#paramsTableMode .th3-table th:nth-child(3),
+#paramsTableMode .th3-table td:nth-child(3) { width: 8%; }
+#paramsTableMode .th3-table th:nth-child(4),
+#paramsTableMode .th3-table td:nth-child(4) { width: 44%; }
+#paramsTableMode .th3-table th:nth-child(5),
+#paramsTableMode .th3-table td:nth-child(5) { width: 20%; }
+#paramsTableMode .th3-table__name,
+#paramsTableMode .th3-table__type,
+#paramsTableMode .th3-table__example {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+#paramsTableMode .th3-table__desc {
+  color: var(--fg-2);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.th3-detail .th3-panel,
+.th3-detail .th3-page__inner {
+  min-width: 0;
+  max-width: 100%;
 }
 .th3-code {
   margin: 0;
@@ -2633,6 +2774,10 @@ html.dark .hero-grid { opacity: 0.3; }
 html.dark .card,
 html.dark .api-card,
 html.dark .feature-card,
+html.dark .th3-info-item {
+  background: var(--card);
+  border-color: var(--border);
+}
 html.dark .price-card:not(.featured) {
   background: var(--card);
   border-color: var(--border);

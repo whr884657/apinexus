@@ -41,7 +41,23 @@ class ApiCategoryManager
     }
 
     /**
-     * 系统内置分类图标（相对 assets 路径；自动扫描图标库）
+     * 图标库文件名是否合法（防路径穿越；允许数字/字母名，不限纯数字）
+     *
+     * @param string $name 如 1.svg、weather.svg、api-icon_2.svg
+     * @return bool
+     */
+    public static function isValidIconLibraryName($name)
+    {
+        $name = (string) $name;
+        if ($name === '' || strpos($name, '..') !== false || strpos($name, '/') !== false || strpos($name, '\\') !== false) {
+            return false;
+        }
+        // 仅允许安全文件名的 .svg（含中文以外的常见标识符）
+        return (bool) preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\.svg$/i', $name);
+    }
+
+    /**
+     * 系统内置分类图标（相对 assets 路径；自动扫描图标库全部合法 SVG）
      *
      * @return array<int, string>
      */
@@ -53,7 +69,7 @@ class ApiCategoryManager
         }
 
         $dir = self::iconLibraryDir();
-        $nums = array();
+        $names = array();
         if (is_dir($dir)) {
             $list = scandir($dir);
             if (is_array($list)) {
@@ -61,18 +77,23 @@ class ApiCategoryManager
                     if (!is_string($name) || $name === '.' || $name === '..') {
                         continue;
                     }
-                    // 仅数字文件名 SVG（手工去重后的图标库）；禁止英文名图标
-                    if (!preg_match('/^(\d+)\.svg$/i', $name, $m)) {
+                    if (!self::isValidIconLibraryName($name)) {
                         continue;
                     }
-                    $nums[(int) $m[1]] = strtolower($name);
+                    $full = $dir . DIRECTORY_SEPARATOR . $name;
+                    if (!is_file($full)) {
+                        continue;
+                    }
+                    $names[] = $name;
                 }
             }
         }
-        ksort($nums, SORT_NUMERIC);
+        $names = array_values(array_unique($names));
+        natcasesort($names);
+        $names = array_values($names);
 
         $paths = array();
-        foreach ($nums as $name) {
+        foreach ($names as $name) {
             if (class_exists('SiteMedia')) {
                 $paths[] = SiteMedia::imgWebPath('category-icons/' . $name);
             } else {
@@ -119,7 +140,10 @@ class ApiCategoryManager
             return isset($defaults[0]) ? $defaults[0] : '';
         }
 
-        if (preg_match('#^/assets/img/category-icons/\d+\.svg$#i', $icon)) {
+        if (preg_match('#^/assets/img/category-icons/([^/\\\\]+)$#i', $icon, $m)
+            && self::isValidIconLibraryName($m[1])
+            && is_file(self::iconLibraryDir() . DIRECTORY_SEPARATOR . $m[1])
+        ) {
             if (class_exists('SiteMedia')) {
                 $u = SiteMedia::resolve($icon);
                 if ($u !== '') {
@@ -584,8 +608,11 @@ class ApiCategoryManager
             $icon = substr($icon, strlen($base));
         }
 
-        if (preg_match('#^/assets/img/category-icons/\d+\.svg$#i', $icon)) {
-            return $icon;
+        if (preg_match('#^/assets/img/category-icons/([^/\\\\]+)$#i', $icon, $m)
+            && self::isValidIconLibraryName($m[1])
+            && is_file(self::iconLibraryDir() . DIRECTORY_SEPARATOR . $m[1])
+        ) {
+            return '/assets/img/category-icons/' . $m[1];
         }
 
         if (preg_match('#^https?://#i', $icon)) {

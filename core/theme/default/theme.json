@@ -1,12 +1,54 @@
 {
     "id": "default",
     "name": "默认主题",
-    "version": "1.9.1",
+    "version": "1.9.8",
     "developer": "尋鯨錄",
     "author": "尋鯨錄",
     "description": "默认主题",
     "preview": "preview.png",
     "settings": [
+        {
+            "key": "nav_show_home",
+            "label": "导航显示 · 首页",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_apis",
+            "label": "导航显示 · 全部接口",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_articles",
+            "label": "导航显示 · 文章",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_contributors",
+            "label": "导航显示 · 贡献者",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_links",
+            "label": "导航显示 · 友情链接",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_sponsor",
+            "label": "导航显示 · 赞助",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_about",
+            "label": "导航显示 · 关于",
+            "type": "checkbox",
+            "default": true
+        },
         {
             "key": "hero_title",
             "label": "首页第1行 · 主标题（打字机第一行）",

@@ -267,7 +267,7 @@ $canLocal = !empty($canLocal);
                 <div>
                     <label class="vs-label" for="userApiFormQpm">QPM 每分钟上限</label>
                     <input type="number" class="vs-input" id="userApiFormQpm" name="qpm" min="0" max="1000000" step="1" value="0" placeholder="0 表示不限制">
-                    <p class="vs-form-hint">0 不限制；大于 0 为每分钟最大请求数。</p>
+                    <p class="vs-form-hint">0 不限制；大于 0 为每分钟最大请求数（无需/可选密钥按 IP；必填或收费强制密钥按密钥，同密钥换 IP 共用额度）。</p>
                 </div>
                 <div>
                     <label class="vs-label" for="userApiFormCharge">是否收费</label>

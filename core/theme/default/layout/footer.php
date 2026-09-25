@@ -24,13 +24,6 @@ if ($footerLinksDisplay === 'all') {
         $footerLinksLimit = 10;
     }
 }
-$footerLinksPick = ($showFriendLinks && class_exists('FrontendLink'))
-    ? FrontendLink::pickForFooter($footerLinksLimit)
-    : array('items' => array(), 'has_more' => false, 'total' => 0, 'limit' => $footerLinksLimit);
-$footerLinks = isset($footerLinksPick['items']) && is_array($footerLinksPick['items'])
-    ? $footerLinksPick['items']
-    : array();
-$footerLinksHasMore = !empty($footerLinksPick['has_more']);
 $applyUrl = $vsBase . '/applylink';
 $linksPageUrl = $vsBase . '/links';
 $isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
@@ -43,21 +36,17 @@ $isLinksPage = (isset($pageKey) && $pageKey === 'links');
             <div class="flex flex-col md:flex-row gap-6 md:items-start md:justify-between">
                 <div class="flex-1" style="min-width: 0;">
                     <h4 class="font-bold text-sm mb-4 font-mono" style="color: var(--accent-primary);">// 友情链接</h4>
-                    <div class="flex flex-wrap gap-3 footer-links text-sm" id="friendLinks">
-                        <?php foreach ($footerLinks as $item): ?>
-                            <a href="<?php echo vs_e($item['siteurl']); ?>"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               class="footer-link-item"
-                               data-friend-link="1"><?php echo vs_e($item['name']); ?></a>
-                        <?php endforeach; ?>
-                        <?php if ($footerLinksHasMore && !$isLinksPage): ?>
-                            <a href="<?php echo vs_e($linksPageUrl); ?>" class="footer-link-item footer-link-item--more">查看更多</a>
-                        <?php endif; ?>
+                    <div class="flex flex-wrap gap-3 footer-links text-sm" id="friendLinks"
+                         data-vs-footer-links="1"
+                         data-limit="<?php echo (int) $footerLinksLimit; ?>"
+                         data-link-class="footer-link-item"
+                         data-more-class="footer-link-item footer-link-item--more"
+                         data-links-url="<?php echo vs_e($linksPageUrl); ?>"
+                         data-on-links="<?php echo $isLinksPage ? '1' : '0'; ?>">
                         <?php if ($isApplyPage): ?>
-                            <a href="<?php echo vs_e($linksPageUrl); ?>" class="footer-link-item">友情链接</a>
+                            <a href="<?php echo vs_e($linksPageUrl); ?>" class="footer-link-item" data-footer-links-anchor="1">友情链接</a>
                         <?php else: ?>
-                            <a href="<?php echo vs_e($applyUrl); ?>" class="footer-link-item footer-link-item--apply">申请友链</a>
+                            <a href="<?php echo vs_e($applyUrl); ?>" class="footer-link-item footer-link-item--apply" data-footer-links-anchor="1">申请友链</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -106,6 +95,7 @@ window.VS_BASE_URL = <?php echo json_encode(vs_site_base_path()); ?>;
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode(AuthSecurity::csrfToken()); ?>;
 window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(vs_site_path('/core/playground/relay.php')); ?>;
 window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php')); ?>;
+window.VS_FRONT_LINKS = window.VS_FRONT_LINKS || <?php echo json_encode(vs_site_path('/core/front/links.php')); ?>;
 </script>
 <?php
 // 壳 toast/common 已由 vs_frontend_page 逐文件加载，页脚不再重复拉取

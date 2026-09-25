@@ -434,9 +434,6 @@ function renderAPI(data) {
             </div>
             <h3 class="font-bold">${escapeApiModalText(api.name)}</h3>
             <p style="color: var(--text-muted);">${escapeApiModalText(api.desc)}</p>
-            <div class="endpoint-box font-mono">
-                ${escapeApiModalText(api.endpoint)}
-            </div>
             <a href="${escapeApiModalText(safeDetailHref(api))}" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>
         </div>
     `}).join('');
@@ -836,13 +833,11 @@ function renderModalList() {
                     ? '<span class="api-chip api-chip--maintenance">维护中</span>'
                     : '';
                 const tagsRowHtml = `${methodsHtml}${maintHtml}${metaParts.join('')}`;
-                const pathRaw = api.endpoint || '';
                 const nameRaw = api.name || '';
 
                 itemDiv.innerHTML = `
                     <div class="api-item-body">
                         <div class="api-item-tags">${tagsRowHtml}</div>
-                        <div class="api-item-path">${escapeApiModalText(pathRaw)}</div>
                         <div class="api-item-name">${escapeApiModalText(nameRaw)}</div>
                     </div>
                 `;

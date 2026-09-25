@@ -263,6 +263,7 @@ class RedisCache
             'page'       => (int) (isset($opts['page']) ? $opts['page'] : 1),
             'pagesize'   => (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20),
             'q'          => isset($opts['q']) ? (string) $opts['q'] : '',
+            'q_field'    => isset($opts['q_field']) ? (string) $opts['q_field'] : 'id',
             'ok'         => array_key_exists('ok', $opts) ? $opts['ok'] : null,
             'apiid'      => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
             'userid'     => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
@@ -309,10 +310,11 @@ class RedisCache
     public static function apilogFilterTotalKey(array $opts)
     {
         $norm = array(
-            'q'      => isset($opts['q']) ? (string) $opts['q'] : '',
-            'ok'     => array_key_exists('ok', $opts) ? $opts['ok'] : null,
-            'apiid'  => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
-            'userid' => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
+            'q'       => isset($opts['q']) ? (string) $opts['q'] : '',
+            'q_field' => isset($opts['q_field']) ? (string) $opts['q_field'] : 'id',
+            'ok'      => array_key_exists('ok', $opts) ? $opts['ok'] : null,
+            'apiid'   => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
+            'userid'  => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
         );
         return self::KEY_APILOG_RANGE_TOTAL_PREFIX . 'f:' . md5(json_encode($norm));
     }

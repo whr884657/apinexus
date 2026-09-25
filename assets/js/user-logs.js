@@ -1,0 +1,719 @@
+/**
+ * 文件：assets/js/user-logs.js
+ * 作用：用户中心本人调用日志（对齐管理端 UI；强制会话用户；精简详情）
+ */
+(function () {
+    'use strict';
+
+    var pageRoot = document.getElementById('logsPage');
+    var body = document.getElementById('logsListBody');
+    var footer = document.getElementById('logsFooter');
+    var pagerNums = document.getElementById('logsPagerNums');
+    var prevBtn = document.getElementById('logsPrevBtn');
+    var nextBtn = document.getElementById('logsNextBtn');
+    var totalEl = document.getElementById('logsTotal');
+    var pageSizeEl = document.getElementById('logsPageSize');
+    var searchInput = document.getElementById('logsSearchInput');
+    var searchFieldEl = document.getElementById('logsSearchField');
+    var overlay = document.getElementById('logsDetailOverlay');
+    var detailBody = document.getElementById('logsDetailBody');
+    var refreshBtn = document.getElementById('logsRefreshBtn');
+    var searchBtn = document.getElementById('logsSearchBtn');
+
+    var page = 1;
+    var okFilter = '';
+    var q = '';
+    var qField = 'id';
+    var hasMore = false;
+    var totalCount = 0;
+    var totalPages = 1;
+    var loadSeq = 0;
+    var listAbort = null;
+    var returnFocusEl = null;
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function isMobile() {
+        return window.matchMedia('(max-width: 900px)').matches;
+    }
+
+    function getPageSize() {
+        var n = pageSizeEl ? parseInt(pageSizeEl.value, 10) : 20;
+        if (!n || n < 1) {
+            n = 20;
+        }
+        return Math.min(50, n);
+    }
+
+    function setControlsDisabled(disabled) {
+        if (refreshBtn) {
+            if (disabled) {
+                refreshBtn.setAttribute('aria-disabled', 'true');
+            } else if (window.VsRefreshBtn) {
+                VsRefreshBtn.stop(refreshBtn);
+            } else {
+                refreshBtn.disabled = false;
+                refreshBtn.classList.remove('is-spinning');
+                refreshBtn.removeAttribute('aria-disabled');
+            }
+        }
+        if (searchBtn) {
+            searchBtn.disabled = !!disabled;
+        }
+        if (pageSizeEl) {
+            pageSizeEl.disabled = !!disabled;
+        }
+        if (searchFieldEl) {
+            searchFieldEl.disabled = !!disabled;
+        }
+        document.querySelectorAll('.vs-log-filter').forEach(function (btn) {
+            btn.disabled = !!disabled;
+        });
+    }
+
+    var SEARCH_PLACEHOLDERS = {
+        id: '输入日志编号…',
+        apiid: '输入接口 ID…',
+        apiname: '输入接口名称…',
+        ip: '输入 IP…',
+        apikey: '输入密钥…'
+    };
+
+    function getSearchField() {
+        var v = searchFieldEl ? String(searchFieldEl.value || '').trim() : 'id';
+        if (!SEARCH_PLACEHOLDERS[v]) {
+            return 'id';
+        }
+        return v;
+    }
+
+    function syncSearchPlaceholder() {
+        if (!searchInput) {
+            return;
+        }
+        var field = getSearchField();
+        searchInput.placeholder = SEARCH_PLACEHOLDERS[field] || SEARCH_PLACEHOLDERS.id;
+    }
+
+    function resetList() {
+        page = 1;
+        hasMore = false;
+        totalPages = 1;
+    }
+
+    function methodBadge(row) {
+        return '<span class="vs-log-method ' + escapeHtml(row.method_class || 'is-other') + '">'
+            + escapeHtml(row.method || '—') + '</span>';
+    }
+
+    function httpBadge(row) {
+        return '<span class="vs-log-http ' + escapeHtml(row.http_class || '') + '">'
+            + escapeHtml(row.httpcode) + '</span>';
+    }
+
+    function httpcodeDisplay(row) {
+        var code = row && row.httpcode != null ? String(row.httpcode) : '';
+        var label = row && row.httpcode_label ? String(row.httpcode_label) : '';
+        if (code === '' && !label) {
+            return '—';
+        }
+        if (label) {
+            return code + ' · ' + label;
+        }
+        return code;
+    }
+
+    function statusBadge(row) {
+        var label = row && row.ok_label ? String(row.ok_label) : '—';
+        return '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '" title="'
+            + escapeHtml(label) + '">' + escapeHtml(label) + '</span>';
+    }
+
+    function idBadge(row) {
+        var id = row && row.id != null ? String(row.id) : '';
+        if (id === '' || id === '0') {
+            return '<span class="vs-log-id">—</span>';
+        }
+        var user = '';
+        if (row && parseInt(row.userid, 10) > 0) {
+            if (row.username) {
+                user = String(row.username);
+            } else if (row.user_label && String(row.user_label) !== '匿名') {
+                user = String(row.user_label);
+            }
+        }
+        var title = user !== '' ? ('记录 #' + id + ' · ' + user) : ('记录 ID #' + id);
+        var html = '<span class="vs-log-id" title="' + escapeHtml(title) + '">#' + escapeHtml(id);
+        if (user !== '') {
+            html += ' <span class="vs-log-id__user">' + escapeHtml(user) + '</span>';
+        }
+        html += '</span>';
+        return html;
+    }
+
+    function headHtml() {
+        return '<div class="vs-log-row vs-log-row--head" aria-hidden="true">'
+            + '<div class="vs-log-cell">ID / 用户</div>'
+            + '<div class="vs-log-cell">接口</div>'
+            + '<div class="vs-log-cell">方法</div>'
+            + '<div class="vs-log-cell">IP / 归属地</div>'
+            + '<div class="vs-log-cell">出口节点</div>'
+            + '<div class="vs-log-cell">结果</div>'
+            + '<div class="vs-log-cell">状态码</div>'
+            + '<div class="vs-log-cell">时间</div>'
+            + '<div class="vs-log-cell">操作</div>'
+            + '</div>';
+    }
+
+    function rowHtml(row) {
+        return '<article class="vs-log-row" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
+            + '<div class="vs-log-cell vs-log-c-id">' + idBadge(row) + '</div>'
+            + '<div class="vs-log-cell vs-log-c-name">'
+            + '<strong>' + escapeHtml(row.apiname || ('#' + row.apiid)) + '</strong>'
+            + '<span class="vs-log-sub">' + escapeHtml(row.path || '') + '</span>'
+            + '</div>'
+            + '<div class="vs-log-cell vs-log-c-method">' + methodBadge(row) + '</div>'
+            + '<div class="vs-log-cell vs-log-c-ip">'
+            + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
+            + '<span class="vs-log-sub">' + escapeHtml(row.iploc !== undefined && row.iploc !== null && row.iploc !== '' ? row.iploc : '—') + '</span>'
+            + '</div>'
+            + '<div class="vs-log-cell vs-log-c-egress">'
+            + '<span class="vs-log-mono">' + escapeHtml(row.egress ? row.egress : '—') + '</span>'
+            + '</div>'
+            + '<div class="vs-log-cell vs-log-c-ok">' + statusBadge(row) + '</div>'
+            + '<div class="vs-log-cell vs-log-c-code">' + httpBadge(row) + '</div>'
+            + '<div class="vs-log-cell vs-log-c-time">' + escapeHtml(row.createtime || '—') + '</div>'
+            + '<div class="vs-log-cell vs-log-c-act"><span class="vs-log-view">查看</span></div>'
+            + '</article>';
+    }
+
+    function cardHtml(row) {
+        return '<article class="vs-log-card" data-id="' + escapeHtml(row.id) + '" tabindex="0" role="button">'
+            + '<div class="vs-log-card__top">'
+            + '<div class="vs-log-card__title">'
+            + idBadge(row)
+            + '<strong class="vs-log-card__name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</strong>'
+            + '</div>'
+            + '<div class="vs-log-card__badges">'
+            + methodBadge(row)
+            + statusBadge(row)
+            + '</div>'
+            + '</div>'
+            + '<div class="vs-log-card__meta">'
+            + '<span class="vs-log-mono">' + escapeHtml(row.ip || '—') + '</span>'
+            + '<span>' + escapeHtml(row.iploc !== undefined && row.iploc !== null && row.iploc !== '' ? row.iploc : '—') + '</span>'
+            + (row.egress
+                ? ('<span class="vs-log-mono" title="出口节点">' + escapeHtml(row.egress) + '</span>')
+                : '')
+            + httpBadge(row)
+            + '</div>'
+            + '<div class="vs-log-card__foot">'
+            + '<span class="vs-log-card__time">' + escapeHtml(row.createtime || '—') + '</span>'
+            + '<span class="vs-log-view">查看详情</span>'
+            + '</div>'
+            + '</article>';
+    }
+
+    function detailItem(label, value, full) {
+        var v = value == null || value === '' ? '—' : String(value);
+        return '<div class="vs-log-detail__item' + (full ? ' vs-log-detail__item--full' : '') + '">'
+            + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+            + '<span class="vs-log-detail__value">' + escapeHtml(v) + '</span>'
+            + '</div>';
+    }
+
+    function detailItemHtml(label, valueHtml, full) {
+        var v = valueHtml == null || valueHtml === '' ? '—' : String(valueHtml);
+        return '<div class="vs-log-detail__item' + (full ? ' vs-log-detail__item--full' : '') + '">'
+            + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+            + '<span class="vs-log-detail__value">' + v + '</span>'
+            + '</div>';
+    }
+
+    /** 完整路径：仅密钥类参数值默认模糊，悬停明码 */
+    function urlWithSecretBlur(url) {
+        url = url == null ? '' : String(url);
+        if (url === '') {
+            return '—';
+        }
+        var qPos = url.indexOf('?');
+        if (qPos < 0) {
+            return escapeHtml(url);
+        }
+        var hashPos = url.indexOf('#', qPos);
+        var base = url.slice(0, qPos);
+        var query = hashPos >= 0 ? url.slice(qPos + 1, hashPos) : url.slice(qPos + 1);
+        var hash = hashPos >= 0 ? url.slice(hashPos) : '';
+        var sensitive = {
+            key: 1, apikey: 1, api_key: 1, token: 1, access_token: 1, secret: 1
+        };
+        var parts = query.split('&');
+        var out = [];
+        var i;
+        for (i = 0; i < parts.length; i++) {
+            var pair = parts[i];
+            if (pair === '') {
+                continue;
+            }
+            var eq = pair.indexOf('=');
+            var rawName = eq >= 0 ? pair.slice(0, eq) : pair;
+            var rawVal = eq >= 0 ? pair.slice(eq + 1) : '';
+            var nameKey = rawName;
+            try {
+                nameKey = decodeURIComponent(rawName.replace(/\+/g, ' '));
+            } catch (e) { /* keep */ }
+            nameKey = String(nameKey).toLowerCase();
+            if (sensitive[nameKey] && rawVal !== '') {
+                out.push(
+                    escapeHtml(rawName) + '='
+                    + '<span class="uc-log-url-secret" title="悬停显示密钥">'
+                    + escapeHtml(rawVal)
+                    + '</span>'
+                );
+            } else {
+                out.push(escapeHtml(pair));
+            }
+        }
+        return escapeHtml(base) + '?' + out.join('&') + escapeHtml(hash);
+    }
+
+    function eyeIconSvg(off) {
+        if (off) {
+            return '<svg class="vs-log-secret__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">'
+                + '<path fill="currentColor" d="M12 7a5 5 0 0 1 5 5c0 .7-.15 1.36-.4 1.96l1.48 1.48A9.8 9.8 0 0 0 21 12c-1.73-4.39-6-7.5-9-7.5-1.1 0-2.16.3-3.12.82l1.5 1.5c.5-.2 1.05-.32 1.62-.32zm-7.03-.61 1.66 1.66A9.8 9.8 0 0 0 3 12c1.73 4.39 6 7.5 9 7.5 1.55 0 3.03-.45 4.3-1.22l1.7 1.7 1.27-1.27L5.24 4.12 3.97 5.39zm5.5 5.5 3.25 3.25A3 3 0 0 1 9 12c0-.2.02-.4.06-.58l1.41 1.41zM12 9a3 3 0 0 1 2.83 4.01l-3.84-3.84c.32-.1.66-.17 1.01-.17z"/>'
+                + '</svg>';
+        }
+        return '<svg class="vs-log-secret__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">'
+            + '<path fill="currentColor" d="M12 5c-5 0-9.27 3.11-11 7 1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 .001 6.001A3 3 0 0 0 12 9z"/>'
+            + '</svg>';
+    }
+
+    function detailSecretItem(label, fullKey, maskedKey) {
+        var full = fullKey == null ? '' : String(fullKey);
+        var masked = maskedKey == null || maskedKey === '' ? '' : String(maskedKey);
+        if (full === '' && masked === '') {
+            return detailItem(label, '—');
+        }
+        if (masked === '') {
+            masked = full;
+        }
+        // 已是打码入库的旧数据：无明文可揭，只展示
+        var canReveal = full !== '' && full !== masked;
+        var show = canReveal ? masked : (full || masked);
+        var btn = canReveal
+            ? ('<button type="button" class="vs-log-secret__toggle" aria-label="显示密钥" aria-pressed="false" title="显示/隐藏密钥">'
+                + eyeIconSvg(false) + '</button>')
+            : '';
+        return '<div class="vs-log-detail__item vs-log-detail__item--secret">'
+            + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+            + '<div class="vs-log-secret" data-revealed="0"'
+            + ' data-full="' + escapeHtml(full) + '"'
+            + ' data-masked="' + escapeHtml(masked) + '">'
+            + '<span class="vs-log-detail__value vs-log-secret__text">' + escapeHtml(show) + '</span>'
+            + btn
+            + '</div></div>';
+    }
+
+    function bindSecretToggles(root) {
+        if (!root) {
+            return;
+        }
+        root.querySelectorAll('.vs-log-secret__toggle').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var wrap = btn.closest('.vs-log-secret');
+                if (!wrap) {
+                    return;
+                }
+                var text = wrap.querySelector('.vs-log-secret__text');
+                var on = wrap.getAttribute('data-revealed') === '1';
+                var next = !on;
+                wrap.setAttribute('data-revealed', next ? '1' : '0');
+                if (text) {
+                    text.textContent = next
+                        ? (wrap.getAttribute('data-full') || '')
+                        : (wrap.getAttribute('data-masked') || '');
+                }
+                btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+                btn.setAttribute('aria-label', next ? '隐藏密钥' : '显示密钥');
+                btn.innerHTML = eyeIconSvg(next);
+            });
+        });
+    }
+
+    function detailHtml(row) {
+        var fullPathHtml = '—';
+        if (row && row.url) {
+            fullPathHtml = urlWithSecretBlur(String(row.url));
+        } else if (row && row.path) {
+            fullPathHtml = escapeHtml(String(row.path));
+        }
+        return '<div class="vs-log-detail vs-log-detail--user">'
+            + '<div class="vs-log-detail__hero">'
+            + '<span class="vs-log-detail__hero-name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</span>'
+            + methodBadge(row)
+            + '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '">' + escapeHtml(row.ok_label) + '</span>'
+            + httpBadge(row)
+            + '</div>'
+            + '<div class="vs-log-detail__section">'
+            + '<h4 class="vs-log-detail__section-title">调用信息</h4>'
+            + '<div class="vs-log-detail__grid">'
+            + detailItem('记录 ID', row.id)
+            + detailItem('接口 ID', row.apiid)
+            + detailItem('时间', row.createtime)
+            + detailItem('结果', row.ok_label)
+            + detailItem('状态码', httpcodeDisplay(row))
+            + detailItem('扣费', (row.charged_label || '') + (row.charged ? (' · ' + row.cost) : ''))
+            + detailSecretItem('密钥', row.apikey, row.apikey_masked)
+            + '</div></div>'
+            + '<div class="vs-log-detail__section">'
+            + '<h4 class="vs-log-detail__section-title">网络与来源</h4>'
+            + '<div class="vs-log-detail__grid">'
+            + detailItem('IP', row.ip)
+            + detailItem('IP 归属地', row.iploc)
+            + detailItem('出口节点', row.egress)
+            + detailItem('Host', row.host)
+            + detailItemHtml('完整路径', fullPathHtml, true)
+            + '</div></div>'
+            + '</div>';
+    }
+
+    function openOverlay() {
+        if (!overlay) {
+            return;
+        }
+        returnFocusEl = document.activeElement;
+        overlay.hidden = false;
+        overlay.setAttribute('aria-hidden', 'false');
+        overlay.classList.add('is-open');
+        document.body.classList.add('is-overlay-open');
+    }
+
+    function closeOverlay() {
+        if (!overlay) {
+            return;
+        }
+        overlay.hidden = true;
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.classList.remove('is-open');
+        document.body.classList.remove('is-overlay-open');
+        if (returnFocusEl && returnFocusEl.focus) {
+            returnFocusEl.focus();
+        }
+        returnFocusEl = null;
+    }
+
+    function openDetail(id) {
+        if (!detailBody || !window.VS) {
+            return;
+        }
+        detailBody.innerHTML = (window.VS && VS.loadingHtml)
+            ? VS.loadingHtml('正在加载详情', true)
+            : '<p class="vs-empty">正在加载</p>';
+        openOverlay();
+        var fd = new FormData();
+        fd.append('action', 'detail');
+        fd.append('id', String(id));
+        VS.postForm(fd).then(function (data) {
+            if (!data || data.code !== 1 || !data.row) {
+                detailBody.innerHTML = '<p class="vs-empty">' + escapeHtml((data && data.msg) || '加载失败') + '</p>';
+                return;
+            }
+            detailBody.innerHTML = detailHtml(data.row);
+            bindSecretToggles(detailBody);
+        }).catch(function () {
+            detailBody.innerHTML = '<p class="vs-empty">网络异常</p>';
+        });
+    }
+
+    function renderPagerNums() {
+        if (!pagerNums) {
+            return;
+        }
+        if (totalPages <= 1) {
+            pagerNums.innerHTML = '';
+            return;
+        }
+        // 中间最多 3 个页码：当前尽量居中（首尾贴边）
+        var start = Math.max(1, page - 1);
+        var end = Math.min(totalPages, start + 2);
+        start = Math.max(1, end - 2);
+        var html = '';
+        var i;
+        for (i = start; i <= end; i += 1) {
+            html += '<button type="button" class="vs-api-pager__num'
+                + (i === page ? ' is-active' : '')
+                + '" data-page="' + i + '">' + i + '</button>';
+        }
+        pagerNums.innerHTML = html;
+    }
+
+    function renderPager(total, pagesize) {
+        if (footer) {
+            footer.hidden = false;
+        }
+        totalCount = parseInt(total, 10) || 0;
+        var ps = pagesize || getPageSize();
+        totalPages = Math.max(1, Math.ceil(totalCount / ps) || 1);
+        if (page > totalPages) {
+            page = totalPages;
+        }
+        hasMore = page < totalPages;
+        if (totalEl) {
+            totalEl.textContent = '共 ' + totalCount + ' 条';
+        }
+        if (prevBtn) {
+            prevBtn.disabled = page <= 1;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = !hasMore;
+        }
+        renderPagerNums();
+    }
+
+    function renderList(list, total, pagesize) {
+        if (!body) {
+            return;
+        }
+        if (!list.length) {
+            body.innerHTML = '<p class="vs-empty vs-finance-empty">暂无调用记录</p>';
+        } else if (isMobile()) {
+            body.innerHTML = '<div class="vs-log-cards">' + list.map(cardHtml).join('') + '</div>';
+        } else {
+            body.innerHTML = '<div class="vs-log-table-wrap"><div class="vs-log-grid">'
+                + headHtml()
+                + list.map(rowHtml).join('')
+                + '</div></div>';
+        }
+        renderPager(total, pagesize);
+    }
+
+    function applyListPayload(data, pagesize) {
+        hasMore = !!data.has_more;
+        renderList(data.list || [], parseInt(data.total, 10) || 0, pagesize);
+    }
+
+    function load(opts) {
+        opts = opts || {};
+        var isRefresh = !!opts.refresh;
+        if (!body) {
+            return;
+        }
+        if (!window.VS || typeof VS.postForm !== 'function') {
+            setTimeout(function () { load(opts); }, 40);
+            return;
+        }
+        if (listAbort) {
+            try {
+                listAbort.abort();
+            } catch (e) { /* ignore */ }
+        }
+        listAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+
+        if (isRefresh) {
+            resetList();
+        }
+
+        var seq = ++loadSeq;
+        var pagesize = getPageSize();
+        setControlsDisabled(true);
+        if (VS.setLoading) {
+            VS.setLoading(body, isRefresh ? '正在刷新日志' : '正在加载日志');
+        }
+        var fd = new FormData();
+        fd.append('action', 'list');
+        fd.append('page', String(page));
+        fd.append('pagesize', String(pagesize));
+        fd.append('before_id', '0');
+        if (isRefresh) {
+            fd.append('refresh', '1');
+        }
+        if (q) {
+            fd.append('q', q);
+            fd.append('q_field', qField || 'id');
+        }
+        if (okFilter !== '') {
+            fd.append('ok', okFilter);
+        }
+        var opts = listAbort ? { signal: listAbort.signal } : {};
+        VS.postForm(fd, window.location.href, opts).then(function (data) {
+            if (seq !== loadSeq) {
+                return;
+            }
+            setControlsDisabled(false);
+            if (!data || data.code !== 1) {
+                body.innerHTML = '<p class="vs-empty vs-finance-empty">' + escapeHtml((data && data.msg) || '加载失败') + '</p>';
+                return;
+            }
+            applyListPayload(data, pagesize);
+        }).catch(function (err) {
+            if (seq !== loadSeq) {
+                return;
+            }
+            // 被更新请求中止时不改 UI；若仍是当前 seq 的 Abort，复位加载态（E77）
+            if (err && err.name === 'AbortError') {
+                setControlsDisabled(false);
+                return;
+            }
+            setControlsDisabled(false);
+            body.innerHTML = '<p class="vs-empty vs-finance-empty">网络异常</p>';
+        });
+    }
+
+    function doSearch() {
+        q = searchInput ? String(searchInput.value || '').trim() : '';
+        qField = getSearchField();
+        resetList();
+        load();
+    }
+
+    if (body) {
+        body.addEventListener('click', function (e) {
+            var item = e.target.closest('[data-id]');
+            if (!item || !body.contains(item)) {
+                return;
+            }
+            openDetail(item.getAttribute('data-id'));
+        });
+        body.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') {
+                return;
+            }
+            var item = e.target.closest('[data-id]');
+            if (!item || !body.contains(item)) {
+                return;
+            }
+            e.preventDefault();
+            openDetail(item.getAttribute('data-id'));
+        });
+    }
+
+    function goPage(target) {
+        var p = parseInt(target, 10);
+        if (!p || p < 1) {
+            return;
+        }
+        if (p === page) {
+            return;
+        }
+        if (totalPages > 0 && p > totalPages) {
+            return;
+        }
+        page = p;
+        load();
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            if (prevBtn.disabled) {
+                return;
+            }
+            goPage(page - 1);
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            if (nextBtn.disabled) {
+                return;
+            }
+            goPage(page + 1);
+        });
+    }
+    if (pagerNums) {
+        pagerNums.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-page]');
+            if (!btn) {
+                return;
+            }
+            goPage(btn.getAttribute('data-page'));
+        });
+    }
+
+    document.querySelectorAll('.vs-log-filter').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.vs-log-filter').forEach(function (el) {
+                el.classList.toggle('is-active', el === btn);
+                el.classList.toggle('vs-btn--primary', el === btn);
+                el.classList.toggle('vs-btn--default', el !== btn);
+            });
+            okFilter = btn.getAttribute('data-ok') || '';
+            resetList();
+            load();
+        });
+    });
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', doSearch);
+    }
+    if (searchFieldEl) {
+        searchFieldEl.addEventListener('change', function () {
+            syncSearchPlaceholder();
+            // 切换字段后若已有关键词，按新字段重搜
+            if (searchInput && String(searchInput.value || '').trim() !== '') {
+                doSearch();
+            }
+        });
+        syncSearchPlaceholder();
+    }
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                doSearch();
+            }
+        });
+    }
+
+    if (pageSizeEl) {
+        pageSizeEl.addEventListener('change', function () {
+            resetList();
+            load();
+        });
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function () {
+            if (window.VsRefreshBtn && VsRefreshBtn.isBusy(refreshBtn)) {
+                return;
+            }
+            if (window.VsRefreshBtn) {
+                VsRefreshBtn.start(refreshBtn);
+            }
+            load({ refresh: true });
+        });
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', function (e) {
+            if (e.target.closest('[data-overlay-close]')) {
+                closeOverlay();
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+                closeOverlay();
+            }
+        });
+    }
+
+    var lastMobile = isMobile();
+    window.addEventListener('resize', function () {
+        var now = isMobile();
+        if (now !== lastMobile) {
+            lastMobile = now;
+            if (body && body.querySelector('[data-id]')) {
+                load();
+            }
+        }
+    });
+
+    // 首屏只走 AJAX（与积分/订单一致），避免 data-boot 过大解析失败导致一直加载中（E77）
+    if (body) {
+        load();
+    }
+})();

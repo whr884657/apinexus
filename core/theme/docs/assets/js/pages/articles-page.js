@@ -244,6 +244,15 @@
         window.VS.postForm(form, cfg.postUrl || form.action).then(function (res) {
             if (!res || !res.code) {
                 toast((res && res.msg) || '发送失败', 'error');
+                if (res && res.submit_ticket) {
+                    var failTicket = form.querySelector('input[name="submit_ticket"]');
+                    if (failTicket) {
+                        failTicket.value = res.submit_ticket;
+                    }
+                }
+                if (window.VsCaptcha && typeof window.VsCaptcha.reset === 'function') {
+                    window.VsCaptcha.reset(form);
+                }
                 return;
             }
             toast(res.msg || '评论已发布', 'success');
@@ -263,6 +272,15 @@
                 if (csrfInput) {
                     csrfInput.value = res.csrf;
                 }
+            }
+            if (res.submit_ticket) {
+                var ticketInput = form.querySelector('input[name="submit_ticket"]');
+                if (ticketInput) {
+                    ticketInput.value = res.submit_ticket;
+                }
+            }
+            if (window.VsCaptcha && typeof window.VsCaptcha.reset === 'function') {
+                window.VsCaptcha.reset(form);
             }
         }).catch(function () {
             toast('网络异常，请稍后重试', 'error');

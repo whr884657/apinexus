@@ -88,6 +88,7 @@ window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(vs_site_base_p
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode(AuthSecurity::csrfToken()); ?>;
 window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(vs_site_path('/core/playground/relay.php')); ?>;
 window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php')); ?>;
+window.VS_FRONT_LINKS = window.VS_FRONT_LINKS || <?php echo json_encode(vs_site_path('/core/front/links.php')); ?>;
 </script>
 <?php endif; ?>
 </div>

@@ -304,7 +304,7 @@ class ContentManager
                 $sql .= ' AND c.`status` = ?';
                 $params[] = self::normalizeStatus($status);
             }
-            $sql .= ' ORDER BY c.`sort` ASC, c.`id` DESC';
+            $sql .= ' ORDER BY c.`ispinned` DESC, c.`sort` ASC, c.`id` DESC';
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -372,7 +372,7 @@ class ContentManager
             }
 
             $sql = 'SELECT * FROM `' . self::table() . '` WHERE ' . implode(' AND ', $where)
-                . ' ORDER BY `id` DESC LIMIT ' . ((int) $pagesize + 1);
+                . ' ORDER BY `ispinned` DESC, `id` DESC LIMIT ' . ((int) $pagesize + 1);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($bind);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -681,6 +681,9 @@ class ContentManager
                 'UPDATE `' . self::table() . '` SET `ispinned` = ?, `updatetime` = NOW() WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array($ispinned, $id));
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateFrontend();
+            }
             return true;
         } catch (Exception $e) {
             return '操作失败';
@@ -705,6 +708,9 @@ class ContentManager
                 'UPDATE `' . self::table() . '` SET `ispopup` = ?, `updatetime` = NOW() WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array($ispopup, $id));
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateFrontend();
+            }
             return true;
         } catch (Exception $e) {
             return '操作失败';

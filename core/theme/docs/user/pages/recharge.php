@@ -1,6 +1,6 @@
 <?php
 /**
- * 主题五 · 用户充值中心（积分充值 / 卡密兑换双 Tab）
+ * 主题四 docs · 用户充值中心（积分充值 / 卡密兑换；说明区与赠%角标）
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
@@ -13,14 +13,28 @@ $balance = isset($balance) ? $balance : 0;
 $packages = isset($packages) && is_array($packages) ? $packages : array();
 $methods = isset($methods) && is_array($methods) ? $methods : array();
 $rate = isset($rate) ? (string) $rate : '0';
+$customBonusJson = isset($customBonusJson) ? (string) $customBonusJson : '[]';
 $payIcons = isset($payIcons) && is_array($payIcons) ? $payIcons : array();
+$tipHtml = isset($tipHtml) && is_array($tipHtml) ? $tipHtml : array();
 $showTabs = $payReady || $cardkeyReady;
 $defaultTab = $payReady ? 'pay' : 'cardkey';
+
+$tipOrder = array('package', 'custom', 'cardkey');
+$hasTips = false;
+foreach ($tipOrder as $tk) {
+    if (!empty($tipHtml[$tk])) {
+        $hasTips = true;
+        break;
+    }
+}
 ?>
 <?php if (!$ready): ?>
     <?php vs_render_notice('warning', '', '积分功能尚未就绪，请联系管理员。', array('compact' => true)); ?>
 <?php else: ?>
-<div class="vs-recharge" id="rechargeApp" data-rate="<?php echo vs_e($rate); ?>" data-default-tab="<?php echo vs_e($defaultTab); ?>">
+<?php if ($hasTips): ?>
+<link rel="stylesheet" href="<?php echo vs_e(vs_site_path('/core/markdown/assets/css/markdown-render.css')); ?>?v=<?php echo vs_e(VS_VERSION); ?>">
+<?php endif; ?>
+<div class="vs-recharge" id="rechargeApp" data-rate="<?php echo vs_e($rate); ?>" data-custom-bonus="<?php echo vs_e($customBonusJson); ?>" data-default-tab="<?php echo vs_e($defaultTab); ?>">
     <div class="vs-recharge-hero">
         <div class="vs-recharge-hero__label">当前积分</div>
         <div class="vs-recharge-hero__value" id="rechargeBalance"><?php echo vs_e(PayConfig::fmtPoints($balance)); ?></div>
@@ -49,21 +63,48 @@ $defaultTab = $payReady ? 'pay' : 'cardkey';
         <div class="vs-recharge-section">
             <div class="vs-recharge-section__title">选择套餐</div>
             <div class="vs-recharge-grid" id="rechargePackages">
-                <?php foreach ($packages as $pkg): ?>
-                    <button type="button" class="vs-recharge-card<?php echo !empty($pkg['hot']) ? ' is-hot' : ''; ?>"
+                <?php foreach ($packages as $pkg):
+                    $gift = isset($pkg['gift']) ? (int) $pkg['gift'] : PayConfig::giftPercent(
+                        isset($pkg['money']) ? $pkg['money'] : 0,
+                        isset($pkg['points']) ? $pkg['points'] : 0,
+                        $rate
+                    );
+                    $hasGift = $gift >= 1;
+                    $isHot = !empty($pkg['hot']);
+                    $cardClass = 'vs-recharge-card';
+                    if ($isHot) {
+                        $cardClass .= ' is-hot';
+                    }
+                    if ($hasGift) {
+                        $cardClass .= ' has-gift';
+                    }
+                    if ($isHot || $hasGift) {
+                        $cardClass .= ' has-badge';
+                    }
+                    ?>
+                    <button type="button" class="<?php echo vs_e($cardClass); ?>"
                             data-pkg="<?php echo vs_e($pkg['id']); ?>"
                             data-money="<?php echo vs_e($pkg['money']); ?>"
                             data-points="<?php echo vs_e($pkg['points']); ?>">
-                        <?php if (!empty($pkg['hot'])): ?><span class="vs-recharge-card__badge">荐</span><?php endif; ?>
+                        <?php if ($isHot || $hasGift): ?>
+                        <span class="vs-recharge-card__badges" aria-hidden="true">
+                            <?php if ($isHot): ?><span class="vs-recharge-card__badge vs-recharge-card__badge--hot">荐</span><?php endif; ?>
+                            <?php if ($hasGift): ?><span class="vs-recharge-card__badge vs-recharge-card__badge--gift">赠<?php echo (int) $gift; ?>%</span><?php endif; ?>
+                        </span>
+                        <?php endif; ?>
                         <div class="vs-recharge-card__name"><?php echo vs_e($pkg['name']); ?></div>
                         <div class="vs-recharge-card__money">¥<?php echo vs_e($pkg['money']); ?></div>
-                        <div class="vs-recharge-card__points"><?php echo vs_e($pkg['points']); ?> 积分</div>
+                        <div class="vs-notice vs-notice--tip vs-notice--compact vs-recharge-card__pts-tip" role="status">
+                            <div class="vs-notice__text"><strong><?php echo vs_e($pkg['points']); ?></strong> 积分</div>
+                        </div>
                     </button>
                 <?php endforeach; ?>
                 <button type="button" class="vs-recharge-card vs-recharge-card--custom" id="rechargeCustomCard" data-pkg="">
                     <div class="vs-recharge-card__name">自定义金额</div>
                     <div class="vs-recharge-card__money">自选</div>
-                    <div class="vs-recharge-card__points">按比例兑换</div>
+                    <div class="vs-notice vs-notice--tip vs-notice--compact vs-recharge-card__pts-tip" role="status">
+                        <div class="vs-notice__text">按比例兑换</div>
+                    </div>
                 </button>
             </div>
         </div>
@@ -104,6 +145,22 @@ $defaultTab = $payReady ? 'pay' : 'cardkey';
         </div>
     </div>
     <?php endif; ?>
+
+    <?php if ($hasTips): ?>
+    <div class="vs-recharge-tips<?php echo $defaultTab === 'cardkey' ? ' is-cardkey-first' : ''; ?>" id="rechargeTips">
+        <?php foreach ($tipOrder as $tk):
+            if (empty($tipHtml[$tk])) {
+                continue;
+            }
+            ?>
+            <div class="vs-recharge-tip" data-tip="<?php echo vs_e($tk); ?>">
+                <div class="vs-notice vs-notice--tip vs-recharge-tip__notice">
+                    <div class="vs-notice__text"><?php echo $tipHtml[$tk]; ?></div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 </div>
 
 <?php if ($payReady): ?>
@@ -120,7 +177,9 @@ $defaultTab = $payReady ? 'pay' : 'cardkey';
                 <label class="vs-label" for="rechargeMoney">充值金额（元）</label>
                 <input type="number" class="vs-input" id="rechargeMoney" min="0.01" step="0.01" placeholder="如 10.00">
             </div>
-            <p class="vs-form-hint" id="rechargeCustomHint">预计到账 — 积分</p>
+            <div class="vs-notice vs-notice--tip vs-notice--compact vs-notice--field" id="rechargeCustomHint" role="status">
+                <div class="vs-notice__text">预计到账 <strong id="rechargeCustomHintPts">—</strong> 积分<span id="rechargeCustomHintGift"></span></div>
+            </div>
         </div>
         <footer class="vs-overlay__foot">
             <button type="button" class="vs-btn vs-btn--outline" data-custom-close="1">取消</button>

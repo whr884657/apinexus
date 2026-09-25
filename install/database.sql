@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `wallpaper` varchar(500) NOT NULL DEFAULT '' COMMENT '个人主页背景图链接（空则用全站默认）',
     `qqopenid` varchar(64) NOT NULL DEFAULT '' COMMENT 'QQ登录OpenID',
     `giteeid` varchar(64) NOT NULL DEFAULT '' COMMENT 'Gitee登录用户ID',
+    `aggmap` text COMMENT '聚合登录绑定JSON（键为内部id，值为social_uid）',
     `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '账号状态：0禁用 1启用',
     `role` varchar(16) NOT NULL DEFAULT 'user' COMMENT '用户角色：user普通用户 developer开发者',
     `points` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '积分余额',
@@ -41,6 +42,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `proxystrategy` tinyint(1) NOT NULL DEFAULT 0 COMMENT '出口代理选用策略：0轮询 1随机 2优先首条启用',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     `lastlogin` datetime DEFAULT NULL COMMENT '最后登录时间',
+    `lastcheckin` date DEFAULT NULL COMMENT '最近签到日期（空表示从未签到；与服务器当日比较判定今日是否已签）',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_username` (`username`),
     UNIQUE KEY `uk_email` (`email`),
@@ -109,7 +111,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 -- apiorder：0随机（默认）1按分类排序权重
 ('apiorder', '0'),
 ('register_email_verify', '1'),
-('oauth_config', '{"qq":{"enabled":false,"app_id":"","app_key":""},"gitee":{"enabled":false,"client_id":"","client_secret":""}}'),
+('oauth_config', '{"qq":{"enabled":false,"app_id":"","app_key":""},"gitee":{"enabled":false,"client_id":"","client_secret":""},"agg":{"enabled":false,"apiurl":"","app_id":"","app_key":"","items":[]}}'),
 ('mail_enabled', '0'),
 ('mail_smtp_host', ''),
 ('mail_smtp_port', '465'),
@@ -131,6 +133,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_points_insufficient', '1'),
 ('mail_notify_key_quota', '1'),
 ('mail_notify_recharge_success', '1'),
+('mail_notify_order_admin', '1'),
 ('register_gift_enabled', '0'),
 ('register_gift_points', '100'),
 ('apikey_max', '3'),
@@ -138,7 +141,9 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('checkin_points_min', '10'),
 ('checkin_points_max', '30'),
 ('frontend_theme', 'default'),
+-- 遗留键：权威已迁至 core/data/{themeId}/theme.db（v13.26.45+）；保持 {}，禁止再写入分桶
 ('themesettings', '{}'),
+('themesettings_storage', 'local'),
 ('site_mourning', '0'),
 ('site_runtime_start', ''),
 ('profile_wallpaper', 'https://picsum.photos/1600/600'),
@@ -161,6 +166,10 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('pay_methods', '["alipay","wxpay"]'),
 ('pay_rate', '1000'),
 ('pay_packages', '[{"id":"base1","name":"体验包","money":"1.00","points":"1000","hot":0},{"id":"base10","name":"常用包","money":"10.00","points":"11000","hot":1},{"id":"base50","name":"超值包","money":"50.00","points":"60000","hot":0}]'),
+('pay_custom_bonus', '[]'),
+('pay_tip_package', ''),
+('pay_tip_custom', ''),
+('pay_tip_cardkey', ''),
 ('apilog_detail', '1'),
 ('apilog_query_days', '7'),
 ('apilog_hot_days', '30'),
@@ -182,6 +191,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('captcha_on_user_login', '1'),
 ('captcha_on_user_register', '1'),
 ('captcha_on_user_forgot', '1'),
+('captcha_on_comment', '0'),
+('captcha_on_applylink', '0'),
 ('dashboard_live_interval', '10'),
 ('panelmonitor_enabled', '0'),
 ('panelmonitor_provider', ''),
@@ -288,7 +299,12 @@ CREATE TABLE IF NOT EXISTS `{prefix}apilog` (
     KEY `idx_createtime_apiname` (`createtime`, `apiname`),
     KEY `idx_createtime_iploc` (`createtime`, `iploc`(64)),
     KEY `idx_userid_id` (`userid`, `id`),
-    KEY `idx_userid_createtime` (`userid`, `createtime`)
+    KEY `idx_userid_createtime` (`userid`, `createtime`),
+    KEY `idx_apiname` (`apiname`),
+    KEY `idx_apikey` (`apikey`(64)),
+    KEY `idx_userid_apiid` (`userid`, `apiid`),
+    KEY `idx_userid_ip` (`userid`, `ip`),
+    KEY `idx_userid_apiname` (`userid`, `apiname`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API调用日志';
 
 -- 控制台按日调用聚合（滚动固定 30 天）
@@ -301,6 +317,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}statday` (
   `guestcalls` int unsigned NOT NULL DEFAULT 0 COMMENT '当日游客调用（无密钥且未扣积分）',
   `keycalls` int unsigned NOT NULL DEFAULT 0 COMMENT '当日密钥调用（有密钥未扣积分）',
   `pointscalls` int unsigned NOT NULL DEFAULT 0 COMMENT '当日积分调用（已扣积分）',
+  `pointscost` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '当日积分消耗合计（已扣积分金额）',
   `topjson` mediumtext COMMENT '当日TOP接口JSON：[{apiid,rank,calls},...]',
   `updatetime` datetime DEFAULT NULL COMMENT '最后刷新时间',
   PRIMARY KEY (`id`),
@@ -390,18 +407,6 @@ CREATE TABLE IF NOT EXISTS `{prefix}orders` (
     KEY `idx_status_id` (`status`, `id`),
     KEY `idx_remark_prefix` (`remark`(32))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='积分与支付订单';
-
--- 用户每日签到
-CREATE TABLE IF NOT EXISTS `{prefix}checkin` (
-  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `userid` int unsigned NOT NULL DEFAULT 0 COMMENT '用户ID',
-  `checkindate` date NOT NULL COMMENT '签到日期（按天唯一）',
-  `points` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '本次签到获得积分',
-  `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '签到时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_userid_date` (`userid`, `checkindate`),
-  KEY `idx_checkindate` (`checkindate`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户每日签到记录';
 
 -- 积分卡密
 CREATE TABLE IF NOT EXISTS `{prefix}cardkey` (

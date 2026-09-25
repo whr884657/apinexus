@@ -215,7 +215,7 @@ class FrontendUser
     /**
      * 用户侧日志分页（强制当前登录用户；主题禁止直查库）
      *
-     * @param array $opts pagesize / before_id / ok / page
+     * @param array $opts pagesize / before_id / ok / page / q / q_field
      * @return array
      */
     public static function myLogsPaged(array $opts = array())

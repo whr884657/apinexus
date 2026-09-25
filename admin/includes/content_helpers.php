@@ -113,6 +113,9 @@ function vs_content_title_html(array $ctx, $announcement = true)
     if (!$announcement && (int) $ctx['bindpage'] === ContentManager::BIND_ABOUT) {
         $html .= '<span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>';
     }
+    if (!$announcement && (int) $ctx['ispinned'] === 1) {
+        $html .= '<span class="vs-badge vs-badge--warning" data-field="pin_label">置顶</span>';
+    }
     $html .= '</div>';
     return $html;
 }
@@ -132,6 +135,8 @@ function vs_content_actions_html(array $ctx, $announcement = true)
         $html .= '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-content-act" data-act="popup">'
             . ((int) $ctx['ispopup'] === 1 ? '取消弹窗' : '设为弹窗') . '</button>';
     } else {
+        $html .= '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning vs-content-act" data-act="pin">'
+            . ((int) $ctx['ispinned'] === 1 ? '取消置顶' : '置顶') . '</button>';
         if ((int) $ctx['status'] === ContentManager::STATUS_PUBLISHED) {
             $html .= '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-content-act" data-act="hide">隐藏</button>';
         } else {
@@ -209,6 +214,9 @@ function vs_render_content_mobile_card(array $ctx, $announcement = true)
             <div class="<?php echo $cardClass; ?>__tags">
                 <?php if (!$announcement && (int) $ctx['bindpage'] === ContentManager::BIND_ABOUT): ?>
                     <span class="vs-badge vs-badge--info" data-field="bind_label">关于</span>
+                <?php endif; ?>
+                <?php if (!$announcement && (int) $ctx['ispinned'] === 1): ?>
+                    <span class="vs-badge vs-badge--warning" data-field="pin_label">置顶</span>
                 <?php endif; ?>
                 <?php if ($announcement): ?>
                     <?php if ((int) $ctx['ispinned'] === 1): ?>

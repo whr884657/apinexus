@@ -1,21 +1,24 @@
 <?php
 /**
  * 文件：core/oauth/OAuthState.php
- * 作用：OAuth state 防 CSRF（HMAC 签名，不依赖 Session 存取）
+ * 作用：OAuth state 防 CSRF
  *
- * 说明：OAuth 回调为跨站跳转，SameSite=Strict 时 Session 可能丢失；
- *       state 使用服务端密钥签名，回调时可直接校验。
+ * 策略：
+ * - 对外只传短 token（32 hex），完整 payload 存服务端（Redis 优先，文件兜底）
+ * - 聚合网关常不回传 / 截断超长 state（官方文档回调示例仅 type+code）；短 token + redirect_uri 上的 ost= 双通道
+ * - 仍兼容旧版「base64.hmac」内联 state（升级瞬间在途请求）
  */
 
 class OAuthState
 {
     const TTL = 600;
     const SESSION_USED_KEY = 'vs_oauth_state_used';
+    const REDIS_PREFIX = 'cache:oauth:state:';
 
     /**
      * @param string $provider
-     * @param array  $context intent: login|bind, user_id: int
-     * @return string
+     * @param array  $context intent: login|bind, user_id: int, item_id: string
+     * @return string 短 token（写入上游 state / 本站 ost）
      */
     public static function create($provider, array $context = array())
     {
@@ -30,27 +33,39 @@ class OAuthState
             $userId = 0;
         }
 
+        $itemId = isset($context['item_id']) ? trim((string) $context['item_id']) : '';
+        if ($itemId !== '' && !preg_match('/^[a-z][a-z0-9_]{0,31}$/', $itemId)) {
+            $itemId = '';
+        }
+
         $payload = array(
             'p' => (string) $provider,
             'i' => $intent,
             'u' => $userId,
+            'm' => $itemId,
             'e' => time() + self::TTL,
             'n' => bin2hex(random_bytes(8)),
         );
 
-        return self::encode($payload);
+        $token = bin2hex(random_bytes(16));
+        if (!self::storePayload($token, $payload)) {
+            // 极端：存储失败时退回签名内联（可能被聚合网关截断，仅兜底）
+            return self::encodeInline($payload);
+        }
+
+        return $token;
     }
 
     /**
-     * 仅解析 state（不消费、不校验 nonce），用于错误页跳转判断
+     * 仅解析 state（不消费），用于错误页跳转判断
      *
      * @param string $provider
      * @param string $state
-     * @return array{intent: string, user_id: int}|false
+     * @return array{intent: string, user_id: int, item_id: string}|false
      */
     public static function peek($provider, $state)
     {
-        $payload = self::decode($state);
+        $payload = self::loadPayload($state, false);
         if ($payload === false || $payload['p'] !== $provider) {
             return false;
         }
@@ -58,6 +73,7 @@ class OAuthState
         return array(
             'intent'  => $payload['i'],
             'user_id' => $payload['u'],
+            'item_id' => isset($payload['m']) ? (string) $payload['m'] : '',
         );
     }
 
@@ -68,7 +84,7 @@ class OAuthState
      */
     public static function consume($provider, $state)
     {
-        $payload = self::decode($state);
+        $payload = self::loadPayload($state, true);
         if ($payload === false) {
             return false;
         }
@@ -90,14 +106,170 @@ class OAuthState
             'provider' => $payload['p'],
             'intent'   => $payload['i'],
             'user_id'  => $payload['u'],
+            'item_id'  => isset($payload['m']) ? (string) $payload['m'] : '',
         );
+    }
+
+    /**
+     * @param string $token
+     * @param array  $payload
+     * @return bool
+     */
+    private static function storePayload($token, array $payload)
+    {
+        $token = preg_replace('/[^a-f0-9]/i', '', (string) $token);
+        if (strlen($token) < 16) {
+            return false;
+        }
+
+        $ttl = self::TTL;
+        if (class_exists('RedisCache') && method_exists('RedisCache', 'enabled') && RedisCache::enabled()) {
+            try {
+                RedisCache::put(self::REDIS_PREFIX . $token, $payload, $ttl);
+                return true;
+            } catch (Exception $e) {
+                // fall through
+            }
+        }
+
+        $dir = self::fileDir();
+        if ($dir === '' || !is_dir($dir)) {
+            return false;
+        }
+        $path = $dir . '/' . $token . '.json';
+        $raw = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        if ($raw === false) {
+            return false;
+        }
+        $ok = @file_put_contents($path, $raw, LOCK_EX);
+        if ($ok === false) {
+            return false;
+        }
+        @chmod($path, 0640);
+        return true;
+    }
+
+    /**
+     * @param string $state
+     * @param bool   $consume 短 token 读后删除
+     * @return array{p: string, i: string, u: int, m: string, e: int, n: string}|false
+     */
+    private static function loadPayload($state, $consume)
+    {
+        $state = trim((string) $state);
+        if ($state === '') {
+            return false;
+        }
+
+        // 短 token：仅十六进制
+        if (preg_match('/^[a-f0-9]{32}$/i', $state)) {
+            $token = strtolower($state);
+            $payload = null;
+
+            if (class_exists('RedisCache') && method_exists('RedisCache', 'enabled') && RedisCache::enabled()) {
+                try {
+                    $payload = RedisCache::get(self::REDIS_PREFIX . $token);
+                    if ($consume && is_array($payload)) {
+                        RedisCache::forget(self::REDIS_PREFIX . $token);
+                    }
+                } catch (Exception $e) {
+                    $payload = null;
+                }
+            }
+
+            if (!is_array($payload)) {
+                $path = self::fileDir() . '/' . $token . '.json';
+                if (is_file($path)) {
+                    $json = @file_get_contents($path);
+                    $payload = is_string($json) ? json_decode($json, true) : null;
+                    if ($consume) {
+                        @unlink($path);
+                    }
+                }
+            }
+
+            return self::normalizePayload($payload);
+        }
+
+        // 旧版内联 HMAC
+        return self::decodeInline($state);
+    }
+
+    /**
+     * @param mixed $payload
+     * @return array{p: string, i: string, u: int, m: string, e: int, n: string}|false
+     */
+    private static function normalizePayload($payload)
+    {
+        if (!is_array($payload) || empty($payload['p']) || empty($payload['n']) || empty($payload['e'])) {
+            return false;
+        }
+
+        $intent = isset($payload['i']) && $payload['i'] === 'bind' ? 'bind' : 'login';
+        $itemId = isset($payload['m']) ? trim((string) $payload['m']) : '';
+        if ($itemId !== '' && !preg_match('/^[a-z][a-z0-9_]{0,31}$/', $itemId)) {
+            $itemId = '';
+        }
+
+        return array(
+            'p' => (string) $payload['p'],
+            'i' => $intent,
+            'u' => isset($payload['u']) ? (int) $payload['u'] : 0,
+            'm' => $itemId,
+            'e' => (int) $payload['e'],
+            'n' => (string) $payload['n'],
+        );
+    }
+
+    /**
+     * @return string
+     */
+    private static function fileDir()
+    {
+        $dir = VS_ROOT . '/data/cache/oauth_state';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0750, true);
+            if (is_dir($dir) && !is_file($dir . '/.htaccess')) {
+                @file_put_contents($dir . '/.htaccess', "Require all denied\n");
+            }
+            if (is_dir($dir) && !is_file($dir . '/index.html')) {
+                @file_put_contents($dir . '/index.html', '');
+            }
+        }
+        if (!is_dir($dir) || !is_writable($dir)) {
+            return '';
+        }
+        // 偶发清理过期文件（最多扫 40 个）
+        static $cleaned = false;
+        if (!$cleaned) {
+            $cleaned = true;
+            $files = @scandir($dir);
+            if (is_array($files)) {
+                $n = 0;
+                foreach ($files as $f) {
+                    if ($n >= 40) {
+                        break;
+                    }
+                    if (!preg_match('/^[a-f0-9]{32}\.json$/i', $f)) {
+                        continue;
+                    }
+                    $path = $dir . '/' . $f;
+                    $mtime = @filemtime($path);
+                    if ($mtime !== false && $mtime < time() - self::TTL - 60) {
+                        @unlink($path);
+                        $n++;
+                    }
+                }
+            }
+        }
+        return $dir;
     }
 
     /**
      * @param array $payload
      * @return string
      */
-    private static function encode(array $payload)
+    private static function encodeInline(array $payload)
     {
         $json = json_encode($payload, JSON_UNESCAPED_UNICODE);
         $sig = hash_hmac('sha256', $json, self::signingKey());
@@ -107,9 +279,9 @@ class OAuthState
 
     /**
      * @param string $state
-     * @return array{p: string, i: string, u: int, e: int, n: string}|false
+     * @return array{p: string, i: string, u: int, m: string, e: int, n: string}|false
      */
-    private static function decode($state)
+    private static function decodeInline($state)
     {
         $state = trim((string) $state);
         if ($state === '' || strpos($state, '.') === false) {
@@ -132,19 +304,7 @@ class OAuthState
         }
 
         $data = json_decode($json, true);
-        if (!is_array($data) || empty($data['p']) || empty($data['n']) || empty($data['e'])) {
-            return false;
-        }
-
-        $intent = isset($data['i']) && $data['i'] === 'bind' ? 'bind' : 'login';
-
-        return array(
-            'p' => (string) $data['p'],
-            'i' => $intent,
-            'u' => isset($data['u']) ? (int) $data['u'] : 0,
-            'e' => (int) $data['e'],
-            'n' => (string) $data['n'],
-        );
+        return self::normalizePayload($data);
     }
 
     /**
@@ -168,6 +328,7 @@ class OAuthState
                 $oauth = OAuthConfig::getAll();
                 $parts[] = isset($oauth['gitee']['client_secret']) ? (string) $oauth['gitee']['client_secret'] : '';
                 $parts[] = isset($oauth['qq']['app_key']) ? (string) $oauth['qq']['app_key'] : '';
+                $parts[] = isset($oauth['agg']['app_key']) ? (string) $oauth['agg']['app_key'] : '';
             }
         } catch (Exception $e) {
             // ignore

@@ -1,20 +1,14 @@
 <?php
 /**
  * 文件：core/CheckinManager.php
- * 作用：每日签到记录（同用户同日唯一；主题经 FrontendUser / PointsManager 调用）
+ * 作用：每日签到（user.lastcheckin；同用户同日唯一；主题经 FrontendUser / PointsManager 调用）
  */
 
 class CheckinManager
 {
     /**
-     * @return string
-     */
-    public static function table()
-    {
-        return Database::table('checkin');
-    }
-
-    /**
+     * user.lastcheckin 列是否可用（取代旧 checkin 表探测）
+     *
      * @return bool
      */
     public static function tableReady()
@@ -24,13 +18,37 @@ class CheckinManager
             return $ready;
         }
         try {
-            $pdo = Database::connect();
-            $stmt = $pdo->query('SHOW TABLES LIKE ' . $pdo->quote(self::table()));
-            $ready = (bool) $stmt->fetchColumn();
+            $ready = class_exists('DatabaseMigrator')
+                ? DatabaseMigrator::tableColumnExists('user', 'lastcheckin')
+                : self::probeLastcheckinColumn();
         } catch (Exception $e) {
             $ready = false;
         }
         return $ready;
+    }
+
+    /**
+     * @return bool
+     */
+    private static function probeLastcheckinColumn()
+    {
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query('SHOW COLUMNS FROM `' . Database::table('user') . '` LIKE ' . $pdo->quote('lastcheckin'));
+            return (bool) ($stmt && $stmt->fetch(PDO::FETCH_ASSOC));
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 清除静态探测缓存（迁移后可选调用）
+     *
+     * @return void
+     */
+    public static function resetReadyCache()
+    {
+        // tableReady 用 static $ready；通过反射无法轻易清，重载进程即可。保留空方法供对称调用。
     }
 
     /**
@@ -54,51 +72,55 @@ class CheckinManager
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'SELECT `id` FROM `' . self::table() . '`
-                 WHERE `userid` = ? AND `checkindate` = ? LIMIT 1'
+                'SELECT `lastcheckin` FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1'
             );
-            $stmt->execute(array($userId, self::today()));
-            return (bool) $stmt->fetchColumn();
+            $stmt->execute(array($userId));
+            $d = $stmt->fetchColumn();
+            if ($d === false || $d === null || $d === '') {
+                return false;
+            }
+            return substr((string) $d, 0, 10) === self::today();
         } catch (Exception $e) {
             return false;
         }
     }
 
     /**
+     * 占位：把 lastcheckin 更新为今日（仅当尚未是今日）
+     *
      * @param int   $userId
-     * @param float $points
+     * @param float $points 保留参数兼容旧调用；积分以 orders 为准，不写入 user
      * @return true|string
      */
-    public static function record($userId, $points)
+    public static function record($userId, $points = 0)
     {
         $userId = (int) $userId;
-        $points = round((float) $points, 4);
-        if ($userId <= 0 || $points <= 0) {
+        if ($userId <= 0) {
             return '参数无效';
         }
         if (!self::tableReady()) {
-            return '签到表未就绪';
+            return '签到功能尚未就绪';
         }
         try {
             $pdo = Database::connect();
+            $today = self::today();
             $stmt = $pdo->prepare(
-                'INSERT INTO `' . self::table() . '`
-                 (`userid`, `checkindate`, `points`, `createtime`)
-                 VALUES (?, ?, ?, NOW())'
+                'UPDATE `' . Database::table('user') . '`
+                 SET `lastcheckin` = ?
+                 WHERE `id` = ? AND (`lastcheckin` IS NULL OR `lastcheckin` < ?)'
             );
-            $stmt->execute(array($userId, self::today(), $points));
-            return true;
-        } catch (Exception $e) {
-            // 唯一键冲突 = 今日已签
-            if (stripos($e->getMessage(), 'Duplicate') !== false) {
+            $stmt->execute(array($today, $userId, $today));
+            if ((int) $stmt->rowCount() < 1) {
                 return '今日已签到';
             }
+            return true;
+        } catch (Exception $e) {
             return '签到记录失败';
         }
     }
 
     /**
-     * 积分入账失败时回滚当日占位
+     * 积分入账失败时回滚「今日已签」占位
      *
      * @param int $userId
      * @return void
@@ -112,7 +134,9 @@ class CheckinManager
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'DELETE FROM `' . self::table() . '` WHERE `userid` = ? AND `checkindate` = ? LIMIT 1'
+                'UPDATE `' . Database::table('user') . '`
+                 SET `lastcheckin` = NULL
+                 WHERE `id` = ? AND `lastcheckin` = ?'
             );
             $stmt->execute(array($userId, self::today()));
         } catch (Exception $e) {

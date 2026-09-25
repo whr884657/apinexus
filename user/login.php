@@ -12,7 +12,9 @@ InstallChecker::requireInstalled();
 
 $base = vs_base_url();
 
-if (isset($_GET['action']) && $_GET['action'] === 'logout') {
+// 退出须在「已登录则跳转」之前处理
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && (string) $_POST['action'] === 'logout') {
+    vs_auth_require_post();
     UserAuth::logout();
     vs_redirect($base . '/user/login.php');
 }
@@ -22,16 +24,33 @@ UserAuth::redirectIfLoggedIn();
 $siteName = SiteContext::siteName();
 $mailEnabled = Config::isMailEnabled();
 $codeTtl = 300;
-$loginRedirect = vs_safe_login_redirect(
-    isset($_GET['redirect']) ? $_GET['redirect'] : (isset($_POST['redirect']) ? $_POST['redirect'] : '')
-);
+
+// 回跳地址进 Session，禁止长期挂在 ?redirect=（§2.4 / E369）
+if (isset($_GET['redirect'])) {
+    $fromGet = vs_safe_login_redirect((string) $_GET['redirect']);
+    if ($fromGet !== '') {
+        $_SESSION['vs_login_redirect'] = $fromGet;
+    }
+    vs_redirect($base . '/user/login.php');
+}
+$loginRedirect = '';
+if (isset($_SESSION['vs_login_redirect'])) {
+    $loginRedirect = vs_safe_login_redirect((string) $_SESSION['vs_login_redirect']);
+}
+if ($loginRedirect === '' && isset($_POST['redirect'])) {
+    $loginRedirect = vs_safe_login_redirect((string) $_POST['redirect']);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     vs_auth_require_post();
     $action = (string) $_POST['action'];
-    $loginRedirect = vs_safe_login_redirect(
-        isset($_POST['redirect']) ? $_POST['redirect'] : $loginRedirect
-    );
+    if (isset($_POST['redirect'])) {
+        $postGo = vs_safe_login_redirect((string) $_POST['redirect']);
+        if ($postGo !== '') {
+            $loginRedirect = $postGo;
+            $_SESSION['vs_login_redirect'] = $postGo;
+        }
+    }
 
     if ($action === 'send_code') {
         $mailPurpose = AuthSecurity::MAIL_PURPOSE_USER_LOGIN;
@@ -138,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         AuthSecurity::clearOtpSession('user_login');
         $go = $loginRedirect !== '' ? $loginRedirect : ($base . '/user/index');
+        unset($_SESSION['vs_login_redirect']);
         vs_auth_json(array(
             'code' => 1,
             'msg'  => '登录成功',
@@ -165,6 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if (UserAuth::login($username, $password)) {
             $go = $loginRedirect !== '' ? $loginRedirect : ($base . '/user/index');
+            unset($_SESSION['vs_login_redirect']);
             vs_auth_json(array(
                 'code' => 1,
                 'msg'  => '登录成功',
@@ -183,15 +204,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     vs_auth_json(array('code' => 0, 'msg' => '未知操作'), 400);
 }
 
-$expiredMsg = (isset($_GET['expired']) && $_GET['expired'] === '1') ? '登录已超时，请重新登录' : '';
-$oauthError = isset($_GET['oauth_error']) ? trim((string) $_GET['oauth_error']) : '';
+$expiredMsg = '';
+$oauthError = '';
+$flash = vs_flash_take();
+if (is_array($flash) && $flash['msg'] !== '') {
+    $oauthError = $flash['msg'];
+}
 $oauthProviders = OAuthService::enabledProviders();
+$oauthButtons = OAuthService::loginButtons();
 
 ThemeManager::renderAuthPage('login', '用户登录', array(
     'base'           => $base,
     'expiredMsg'     => $expiredMsg,
     'oauthError'     => $oauthError,
     'oauthProviders' => $oauthProviders,
+    'oauthButtons'   => $oauthButtons,
     'loginRedirect'  => $loginRedirect,
     'registerOpen'   => RegisterPolicy::isOpen(),
     'mailEnabled'    => $mailEnabled,

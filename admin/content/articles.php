@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：admin/content/articles.php
- * 作用：文章管理（桌面表格 + 手机卡片；发布 / 编辑 / 隐藏 / 删除）
+ * 作用：文章管理（桌面表格 + 手机卡片；发布 / 编辑 / 置顶 / 隐藏 / 删除）
  */
 
 require_once dirname(__DIR__) . '/init.php';
@@ -25,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'body'        => isset($_POST['body']) ? vs_ensure_plaintext_field((string) $_POST['body']) : '',
             'cover'       => isset($_POST['cover']) ? (string) $_POST['cover'] : '',
             'coverlayout' => isset($_POST['coverlayout']) ? (int) $_POST['coverlayout'] : ContentManager::COVER_LEFT,
-            'ispinned'    => 0,
             'ispopup'     => 0,
             'status'      => ContentManager::STATUS_PUBLISHED,
             'bindpage'    => isset($_POST['bindpage']) ? (int) $_POST['bindpage'] : ContentManager::BIND_NONE,
@@ -33,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'sort'        => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
         );
         if ($action === 'create') {
+            $payload['ispinned'] = 0;
             $result = ContentManager::create($payload);
             if (!is_array($result)) {
                 AjaxResponse::error($result);
@@ -55,6 +55,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('文章已保存', array(
             'item'        => is_array($row) ? ContentManager::formatRow($row) : null,
             'about_bound' => ContentManager::isAboutBound() ? 1 : 0,
+        ));
+    }
+
+    if ($action === 'set_pinned') {
+        $id = isset($_POST['content_id']) ? (int) $_POST['content_id'] : 0;
+        $flag = isset($_POST['ispinned']) ? (int) $_POST['ispinned'] : 0;
+        $row = ContentManager::findById($id);
+        if (!$row || ContentManager::normalizeKind($row['kind']) !== $kind) {
+            AjaxResponse::error('文章不存在');
+        }
+        $result = ContentManager::setPinned($id, $flag);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        $row = ContentManager::findById($id);
+        AjaxResponse::success($flag ? '已置顶' : '已取消置顶', array(
+            'content_id' => $id,
+            'ispinned'   => ContentManager::normalizeFlag($flag),
+            'item'       => is_array($row) ? ContentManager::formatRow($row) : null,
         ));
     }
 

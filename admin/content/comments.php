@@ -381,7 +381,7 @@ vs_admin_layout_start('评论管理', 'comments', $headerActions);
                 <span class="cmt-reply-modal__avatar cmt-reply-modal__avatar--fallback" id="adminCmtReplyAvatarFallback" hidden>—</span>
                 <div class="cmt-reply-modal__author-meta">
                     <div class="cmt-reply-modal__name" id="adminCmtReplyName">—</div>
-                    <a class="cmt-reply-modal__email" id="adminCmtReplyEmailView" href="#">—</a>
+                    <a class="cmt-reply-modal__email" id="adminCmtReplyEmailView" href="javascript:void(0)">—</a>
                     <div class="cmt-reply-modal__time" id="adminCmtReplyTime">—</div>
                 </div>
             </div>

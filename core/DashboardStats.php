@@ -213,6 +213,7 @@ class DashboardStats
                 'fail_rate'     => round($fail * 100 / $total, 2),
                 'success_count' => $ok,
                 'fail_count'    => $fail,
+                'pointscost'    => self::pointscostDay(date('Y-m-d')),
             ),
             'recent'        => self::recentCallsCompact(),
             'sys_overview'  => self::sysOverviewLive($ttl),
@@ -379,6 +380,7 @@ class DashboardStats
             $userCount = self::countUsers();
             $userToday = self::countUsersCreatedSince(date('Y-m-d 00:00:00'));
             $spark7 = self::sparkFromDaily(7);
+            $costSpark7 = self::sparkFromPointscost(7);
 
             $todayOk = (int) $okFail['ok'];
             $todayFail = (int) $okFail['fail'];
@@ -391,6 +393,9 @@ class DashboardStats
             $yTotal = max(1, $yOk + $yFail);
             $yRate = round($yOk * 100 / $yTotal, 2);
             $yFailRate = round($yFail * 100 / $yTotal, 2);
+
+            $todayCost = self::pointscostDay(date('Y-m-d'));
+            $yCost = self::pointscostDay(date('Y-m-d', strtotime('-1 day')));
 
             return array(
                 'api_total'       => $apiCount,
@@ -410,6 +415,9 @@ class DashboardStats
                 'fail_count'      => $todayFail,
                 'total_calls'     => $total,
                 'total_delta'     => self::pctDelta($total, $weekAgoTotal),
+                'pointscost'      => $todayCost,
+                'pointscost_delta'=> round($todayCost - $yCost, 4),
+                'pointscost_spark'=> $costSpark7,
             );
         });
     }
@@ -1710,6 +1718,47 @@ class DashboardStats
             $out[] = isset($map[$d]) ? (int) $map[$d] : 0;
         }
         return $out;
+    }
+
+    /**
+     * 近 N 日积分消耗火花线（读 statday.pointscost；禁止扫 apilog）
+     *
+     * @param int $days
+     * @return float[]
+     */
+    private static function sparkFromPointscost($days)
+    {
+        $days = max(1, min(31, (int) $days));
+        $out = array();
+        $map = array();
+        if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
+            foreach (StatDayManager::mapLastDays($days) as $d => $row) {
+                $map[$d] = isset($row['pointscost']) ? round((float) $row['pointscost'], 4) : 0.0;
+            }
+        }
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $d = date('Y-m-d', strtotime('-' . $i . ' day'));
+            $out[] = isset($map[$d]) ? (float) $map[$d] : 0.0;
+        }
+        return $out;
+    }
+
+    /**
+     * 指定日积分消耗合计（读日表；无行/无列则 0）
+     *
+     * @param string $day Y-m-d
+     * @return float
+     */
+    private static function pointscostDay($day)
+    {
+        if (!class_exists('StatDayManager') || !StatDayManager::tableReady()) {
+            return 0.0;
+        }
+        $row = StatDayManager::getDay($day);
+        if (!$row || !isset($row['pointscost'])) {
+            return 0.0;
+        }
+        return round((float) $row['pointscost'], 4);
     }
 
     /**

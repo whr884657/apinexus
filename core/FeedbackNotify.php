@@ -46,7 +46,6 @@ class FeedbackNotify
         $userId = $submitterId;
         $content = isset($feedback['content']) ? trim((string) $feedback['content']) : '';
         $id = isset($feedback['id']) ? (int) $feedback['id'] : 0;
-        $detailUrl = $apiId > 0 ? vs_api_detail_url($apiId) : '';
 
         $subject = '【' . $siteName . '】有新的接口反馈待处理';
         $body = '<p>您好：</p>';
@@ -60,9 +59,6 @@ class FeedbackNotify
             $body .= '<p>反馈内容：</p>';
             $body .= '<p style="padding:12px;background:#f8fafc;border-radius:8px;">'
                 . nl2br(self::e($content)) . '</p>';
-        }
-        if ($detailUrl !== '') {
-            $body .= '<p>接口详情：<a href="' . self::e($detailUrl) . '">' . self::e($detailUrl) . '</a></p>';
         }
         $body .= '<p>管理员可在后台「接口反馈」中处理；开发者后续也可在用户中心处理自有接口反馈。</p>';
         $body .= '<p>本邮件由系统自动发送。</p>';
@@ -100,8 +96,6 @@ class FeedbackNotify
         }
         $content = isset($feedback['content']) ? trim((string) $feedback['content']) : '';
         $reply = isset($feedback['reply']) ? trim((string) $feedback['reply']) : '';
-        $apiId = isset($feedback['apiid']) ? (int) $feedback['apiid'] : 0;
-        $detailUrl = $apiId > 0 ? vs_api_detail_url($apiId) : '';
 
         $subject = '【' . $siteName . '】您的接口反馈已处理';
         $body = '<p>您好：</p>';
@@ -117,9 +111,6 @@ class FeedbackNotify
                 . nl2br(self::e($reply)) . '</p>';
         } else {
             $body .= '<p>管理员已标记处理完成（未填写文字回复）。</p>';
-        }
-        if ($detailUrl !== '') {
-            $body .= '<p>接口详情：<a href="' . self::e($detailUrl) . '">' . self::e($detailUrl) . '</a></p>';
         }
         $body .= '<p>本邮件由系统自动发送。</p>';
 

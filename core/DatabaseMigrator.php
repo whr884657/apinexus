@@ -340,10 +340,12 @@ class DatabaseMigrator
             }
         }
 
-        // 新装已含 10.4.0 签到表与积分赠送配置时跳过
-        if (!in_array('10.4.0', $applied, true) && self::tableExists('checkin')) {
+        // 新装已含 10.4.0 签到能力时跳过（旧：checkin 表；新：user.lastcheckin + 配置）
+        if (!in_array('10.4.0', $applied, true)) {
             $allCfg4 = Config::all();
-            if (isset($allCfg4['register_gift_enabled']) && isset($allCfg4['checkin_enabled'])) {
+            if (isset($allCfg4['register_gift_enabled']) && isset($allCfg4['checkin_enabled'])
+                && (self::tableExists('checkin') || self::tableColumnExists('user', 'lastcheckin'))
+            ) {
                 self::markApplied('10.4.0');
             }
         }
@@ -488,6 +490,19 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 13.26.45：user.lastcheckin + aggmap + 无 checkin 表 + 订单管理员邮件开关 + statday.pointscost
+        if (!in_array('13.26.45', $applied, true)) {
+            $allCfg45 = Config::all();
+            if (self::tableColumnExists('user', 'lastcheckin')
+                && self::tableColumnExists('user', 'aggmap')
+                && !self::tableExists('checkin')
+                && isset($allCfg45['mail_notify_order_admin'])
+                && self::tableColumnExists('statday', 'pointscost')
+            ) {
+                self::markApplied('13.26.45');
+            }
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -502,6 +517,14 @@ class DatabaseMigrator
         self::ensureApilogEgress34();
         // 13.26.31：安装完成库标记（与 install.lock 双保险）
         self::ensureInstallDoneFlag();
+        // 13.26.45：聚合登录 aggmap 列幂等补齐
+        self::ensureUserAggmap45();
+        // 13.26.45：statday.pointscost 幂等补齐（已 mark 旧版 45 缺列的站点）
+        self::ensureStatdayPointscost45();
+        // 13.26.45：调用日志单字段搜索索引
+        self::ensureApilogSearchIndexes45();
+        // 13.26.45：主题设置 MySQL 分桶 → core/data/{id}/theme.db
+        self::ensureThemeSettingsLocal45();
     }
 
     /**
@@ -512,6 +535,109 @@ class DatabaseMigrator
     public static function ensureIpProxyCodeFive()
     {
         self::ensureProxyCodeFive35();
+    }
+
+    /**
+     * 13.26.45：user.aggmap 幂等补齐（已 mark 仅含签到迁移的站点须补列）
+     *
+     * @return void
+     */
+    private static function ensureUserAggmap45()
+    {
+        if (!self::tableExists('user') || self::tableColumnExists('user', 'aggmap')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('user');
+            $pdo->exec(
+                'ALTER TABLE `' . $table . '` '
+                . 'ADD COLUMN `aggmap` text COMMENT \'聚合登录绑定JSON（键为内部id，值为social_uid）\' AFTER `giteeid`'
+            );
+        } catch (Exception $e) {
+            // 幂等
+        }
+    }
+
+    /**
+     * 13.26.45：apilog 单字段搜索索引幂等补齐
+     *
+     * @return void
+     */
+    private static function ensureApilogSearchIndexes45()
+    {
+        if (!self::tableExists('apilog')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $checks = array(
+                array('idx_apiname', 'ADD KEY `idx_apiname` (`apiname`)'),
+                array('idx_apikey', 'ADD KEY `idx_apikey` (`apikey`(64))'),
+                array('idx_userid_apiid', 'ADD KEY `idx_userid_apiid` (`userid`, `apiid`)'),
+                array('idx_userid_ip', 'ADD KEY `idx_userid_ip` (`userid`, `ip`)'),
+                array('idx_userid_apiname', 'ADD KEY `idx_userid_apiname` (`userid`, `apiname`)'),
+            );
+            $table = Database::table('apilog');
+            foreach ($checks as $row) {
+                if (self::tableIndexExists('apilog', $row[0])) {
+                    continue;
+                }
+                self::execStatement($pdo, 'ALTER TABLE `' . $table . '` ' . $row[1]);
+            }
+        } catch (Exception $e) {
+            // 留待下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.45：statday.pointscost 幂等补齐（已 mark 旧版 45 缺列的站点）
+     *
+     * @return void
+     */
+    private static function ensureStatdayPointscost45()
+    {
+        if (!self::tableExists('statday') || self::tableColumnExists('statday', 'pointscost')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('statday');
+            $pdo->exec(
+                'ALTER TABLE `' . $table . '` '
+                . 'ADD COLUMN `pointscost` decimal(14,4) NOT NULL DEFAULT 0.0000 '
+                . 'COMMENT \'当日积分消耗合计（已扣积分金额）\' AFTER `pointscalls`'
+            );
+            if (class_exists('StatDayManager')) {
+                StatDayManager::resetReadyCache();
+                StatDayManager::backfillLastDays(30);
+            }
+        } catch (Exception $e) {
+            // 幂等
+        }
+    }
+
+    /**
+     * 13.26.45：主题设置迁入 core/data/{id}/theme.db（强制覆盖后清空 MySQL 分桶）
+     *
+     * @return void
+     */
+    private static function ensureThemeSettingsLocal45()
+    {
+        if (!class_exists('ThemeSettingsStore')) {
+            $path = VS_ROOT . '/core/ThemeSettingsStore.php';
+            if (is_file($path)) {
+                require_once $path;
+            }
+        }
+        if (!class_exists('ThemeSettingsStore')) {
+            return;
+        }
+        try {
+            ThemeSettingsStore::migrateFromMysql(false);
+        } catch (Exception $e) {
+            // 幂等；无 sqlite 时 migrate 返回字符串，不抛
+        }
     }
 
     /**
@@ -1235,7 +1361,8 @@ class DatabaseMigrator
             || $version === '13.26.34'
             || $version === '13.26.35'
             || $version === '13.26.40'
-            || $version === '13.26.41');
+            || $version === '13.26.41'
+            || $version === '13.26.45');
     }
 
     /**
@@ -1711,6 +1838,14 @@ class DatabaseMigrator
         if ($version === '13.26.41') {
             return self::registerModeReady41() && self::apiorderReady41();
         }
+        if ($version === '13.26.45') {
+            $all = Config::all();
+            return self::tableColumnExists('user', 'lastcheckin')
+                && self::tableColumnExists('user', 'aggmap')
+                && !self::tableExists('checkin')
+                && isset($all['mail_notify_order_admin'])
+                && self::tableColumnExists('statday', 'pointscost');
+        }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {
             return true;
@@ -1783,6 +1918,15 @@ class DatabaseMigrator
         if ($version === '10.12.0' && class_exists('StatDayManager')) {
             StatDayManager::resetReadyCache();
             StatDayManager::backfillLastDays(30);
+        }
+
+        // 13.26.45：含 pointscost 时从 apilog 回填近 30 日
+        if ($version === '13.26.45' && class_exists('StatDayManager')) {
+            StatDayManager::resetReadyCache();
+            StatDayManager::backfillLastDays(30);
+        }
+        if ($version === '13.26.45') {
+            self::ensureThemeSettingsLocal45();
         }
 
         if (!self::versionSchemaReady($version)) {

@@ -367,8 +367,12 @@
 
 .st-auth__oauth-icons {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
-    gap: 14px;
+    gap: 10px 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .st-auth__oauth-icons a {

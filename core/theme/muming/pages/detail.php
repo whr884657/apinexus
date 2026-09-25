@@ -40,6 +40,16 @@ $paramsList = (!$notFound && isset($api['params_list']) && is_array($api['params
 $paramsRaw = (!$notFound && isset($api['params'])) ? (string) $api['params'] : '';
 $paramsPretty = $paramsRaw !== '' ? FrontendApi::prettyParamsJson($paramsRaw) : '';
 $openapiJson = (!$notFound && isset($api['openapi_json'])) ? (string) $api['openapi_json'] : '';
+/* 核心注入多为紧凑 JSON；详情展示须美化（对齐主题三） */
+if ($openapiJson !== '') {
+    $oaDecoded = json_decode($openapiJson, true);
+    if (is_array($oaDecoded)) {
+        $openapiJson = (string) json_encode(
+            $oaDecoded,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+        );
+    }
+}
 $hasParamsTable = count($paramsList) > 0;
 $hasOpenApi = $openapiJson !== '';
 $paramsCopyDefault = $paramsPretty !== '' ? $paramsPretty : $paramsRaw;
@@ -220,7 +230,6 @@ if (!$notFound) {
         <div class="th5-detail-q__panel-title"><span class="th5-detail-q__panel-icon"><i data-lucide="server" style="width:17px;height:17px;"></i></span><span>接口信息</span></div>
         <?php if ($endpointDisplay !== '' || $isDisabled): ?>
           <div class="th5-detail-q__endpoint">
-            <span class="th5-detail-q__endpoint-prompt" aria-hidden="true">$</span>
             <span class="th5-detail-q__endpoint-method<?php
               $mCls = strtolower($primaryMethod);
               if ($mCls === 'post') { echo ' m-post'; }
@@ -234,7 +243,7 @@ if (!$notFound) {
               <span id="detailEndpoint" class="th5-detail-q__endpoint-path break-all"><?php echo vs_e($endpointDisplay); ?></span>
             <?php endif; ?>
             <?php if (!$isDisabled && $endpointCopy !== ''): ?>
-              <button type="button" class="th5-detail-q__endpoint-copy" data-copy="<?php echo vs_e($endpointCopy); ?>" aria-label="复制端点">复制</button>
+              <button type="button" class="th5-copy-btn th5-detail-q__endpoint-copy" data-copy="<?php echo vs_e($endpointCopy); ?>" aria-label="复制端点">复制</button>
             <?php endif; ?>
           </div>
         <?php endif; ?>
@@ -309,7 +318,7 @@ if (!$notFound) {
               <?php if ($hasOpenApi): ?>
                 <button type="button" class="th5-pill" data-params-mode="openapi">OpenAPI</button>
               <?php endif; ?>
-              <button type="button" class="btn-ghost text-sm" id="paramsCopyBtn"
+              <button type="button" class="th5-copy-btn" id="paramsCopyBtn"
                       data-copy="<?php echo vs_e($paramsCopyDefault); ?>"
                       data-copy-json="<?php echo vs_e($paramsCopyDefault); ?>">复制</button>
             </div>
@@ -353,7 +362,7 @@ if (!$notFound) {
         <div class="th5-panel card" data-th5-panel="response" role="tabpanel"<?php echo $TH5FirstTab === 'response' ? '' : ' hidden'; ?>>
           <div class="th5-panel__tools">
             <h2 class="font-display font-semibold text-lg m-0">返回示例</h2>
-            <button type="button" class="btn-ghost text-sm" data-copy="<?php echo vs_e($api['response']); ?>">复制</button>
+            <button type="button" class="th5-copy-btn" data-copy="<?php echo vs_e($api['response']); ?>">复制</button>
           </div>
           <div class="th5-code mt-4" id="responseSampleWrap">
             <pre class="font-mono" id="responseSample"><?php echo vs_e($api['response']); ?></pre>
@@ -411,7 +420,7 @@ if (!$notFound) {
                 <?php endforeach; ?>
               </div>
               <div class="th5-qs-panel mt-4">
-                <button type="button" class="btn-ghost text-sm th5-qs-copy" id="detailQsCopy">复制</button>
+                <button type="button" class="th5-copy-btn th5-qs-copy" id="detailQsCopy">复制</button>
                 <pre class="th5-code font-mono" id="detailQsCode"><code class="language-<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>" data-vs-syn="<?php echo vs_e(isset($qsSamples[0]['syn']) ? $qsSamples[0]['syn'] : 'bash'); ?>" data-vs-plain="<?php echo vs_e(isset($qsSamples[0]['code']) ? $qsSamples[0]['code'] : ''); ?>"><?php echo vs_e(isset($qsSamples[0]['code']) ? $qsSamples[0]['code'] : ''); ?></code></pre>
               </div>
             </div>
@@ -499,7 +508,7 @@ if (!$notFound) {
                 <div class="th5-pg-resp-head">
                   <span class="th5-field-label" style="margin:0;">Response</span>
                   <div class="th5-pg-resp-meta">
-                    <button type="button" class="btn-ghost text-sm" id="pgCopyBtn" hidden disabled aria-hidden="true">复制</button>
+                    <button type="button" class="th5-copy-btn" id="pgCopyBtn" hidden disabled aria-hidden="true">复制</button>
                     <span class="tag" id="pgStatus">等待中</span>
                   </div>
                 </div>

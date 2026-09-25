@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
         $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
         $q = isset($_POST['q']) ? trim((string) $_POST['q']) : '';
+        $qField = isset($_POST['q_field']) ? trim((string) $_POST['q_field']) : 'id';
         $ok = array_key_exists('ok', $_POST) && $_POST['ok'] !== '' ? (int) $_POST['ok'] : null;
         $apiid = isset($_POST['apiid']) ? (int) $_POST['apiid'] : 0;
         $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
@@ -32,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'page'      => $page,
             'pagesize'  => $pagesize,
             'q'         => $q,
+            'q_field'   => $qField,
             'ok'        => $ok,
             'apiid'     => $apiid,
             'before_id' => $beforeId,
@@ -64,8 +66,18 @@ vs_admin_layout_start('日志查询', 'logs', $headerActions);
 <?php else: ?>
 <div class="vs-log-toolbar" id="logsToolbar">
     <div class="vs-log-search">
+        <label class="vs-log-search__field" for="logsSearchField">
+            <select class="vs-input vs-select vs-log-search__field-select" id="logsSearchField" data-vs-pick aria-label="搜索字段">
+                <option value="id" selected>日志编号</option>
+                <option value="apiid">接口 ID</option>
+                <option value="username">用户名</option>
+                <option value="apiname">接口名称</option>
+                <option value="ip">IP</option>
+                <option value="apikey">密钥</option>
+            </select>
+        </label>
         <input type="search" class="vs-input vs-log-search__input" id="logsSearchInput"
-               placeholder="搜索日志编号 / 用户名 / 密钥 / 接口名 / IP / 路径…" autocomplete="off">
+               placeholder="输入日志编号…" autocomplete="off">
         <button type="button" class="vs-btn vs-btn--primary" id="logsSearchBtn">搜索</button>
     </div>
     <div class="vs-finance-filters" role="group" aria-label="调用结果">

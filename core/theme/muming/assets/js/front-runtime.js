@@ -1,5 +1,6 @@
 /**
- * 主题四 · 网站运行时间计数（仅本主题使用；依赖 window.runtimeStartDate）
+ * 主题6 · 网站运行时间计数（仅本主题使用；依赖 window.runtimeStartDate）
+ * 增强：Heo 式实时跳动（天/时/分/秒）+ 心跳点缀，tabular-nums 对齐
  */
 
 (function () {
@@ -50,6 +51,13 @@
         parts.push(pad2(seconds) + '秒');
 
         el.textContent = '网站已运行: ' + parts.join('');
+        if (!el.querySelector('.rt-heart')) {
+            var heart = document.createElement('span');
+            heart.className = 'rt-heart';
+            heart.textContent = '❤';
+            heart.setAttribute('aria-hidden', 'true');
+            el.appendChild(heart);
+        }
     }
 
     updateRuntime();

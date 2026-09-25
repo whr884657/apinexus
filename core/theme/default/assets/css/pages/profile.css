@@ -211,3 +211,26 @@
     min-width: 0;
     padding: 1.35rem 1.25rem;
 }
+/* 分页样式对齐全部接口页 */
+.profile-api-pagination {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+.profile-api-pagination a,
+.profile-api-pagination span {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.profile-api-pagination a:hover,
+.profile-api-pagination span.active {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}

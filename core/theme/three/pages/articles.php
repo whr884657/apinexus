@@ -9,6 +9,9 @@ if (!defined('VS_THEME_RENDER')) {
 $vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
 $articleId = function_exists('vs_resolve_path_id') ? (int) vs_resolve_path_id('id') : (isset($_GET['id']) ? (int) $_GET['id'] : 0);
 $csrf = class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '';
+$submitTicket = class_exists('AuthSecurity')
+    ? AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_COMMENT)
+    : '';
 $currentUser = class_exists('FrontendUser') ? FrontendUser::current() : null;
 $prefillName = is_array($currentUser) && !empty($currentUser['username']) ? (string) $currentUser['username'] : '';
 $prefillEmail = is_array($currentUser) && !empty($currentUser['email']) ? (string) $currentUser['email'] : '';
@@ -91,6 +94,7 @@ if ($articleId > 0) {
             <input type="hidden" name="action" value="submit_comment">
             <input type="hidden" name="contentid" value="<?php echo (int) $articleId; ?>">
             <input type="hidden" name="parentid" id="articleCmtParentId" value="0">
+                    <input type="hidden" name="submit_ticket" id="articleCmtTicket" value="<?php echo vs_e($submitTicket); ?>">
 
             <div class="th3-cmt-fields">
               <label class="th3-field">
@@ -111,6 +115,7 @@ if ($articleId > 0) {
               <span>评论内容</span>
               <textarea class="input th3-textarea" id="articleCmtBody" name="body" rows="4" maxlength="1000" placeholder="说点什么…" required></textarea>
             </label>
+                        <?php if (function_exists('vs_captcha_field')) { vs_captcha_field(Captcha::SCENE_COMMENT); } ?>
             <div class="th3-cmt-toolbar">
               <div class="th3-cmt-emoji-wrap">
                 <button type="button" class="btn-ghost text-sm" id="articleCmtEmojiBtn" aria-expanded="false" aria-controls="articleCmtEmojiPanel">表情</button>
@@ -199,6 +204,7 @@ window.VS_ARTICLE_COMMENT = {
   count: <?php echo (int) $commentCount; ?>
 };
 </script>
+<?php if (function_exists('vs_captcha_js')) { vs_captcha_js(Captcha::SCENE_COMMENT); } ?>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('three', 'assets/js/pages/articles-page.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
     <?php
     return;
@@ -246,7 +252,7 @@ $articles = FrontendArticle::listForTheme(30);
                 <img class="th3-article-card__cover th3-article-card__cover--left" src="<?php echo vs_e($a['cover']); ?>" alt="<?php echo vs_e($a['title']); ?>" width="200" height="140" loading="lazy" decoding="async" referrerpolicy="no-referrer">
               <?php endif; ?>
               <div class="th3-article-card__body">
-                <a class="th3-article-card__title font-display" href="<?php echo vs_e($href); ?>"><?php echo vs_e($a['title']); ?></a>
+                <a class="th3-article-card__title font-display" href="<?php echo vs_e($href); ?>"><?php echo vs_e($a['title']); ?><?php if (!empty($a['ispinned'])): ?> <span class="th3-article-pin" title="置顶">置顶</span><?php endif; ?></a>
                 <?php if (!empty($a['summary'])): ?>
                   <p class="th3-article-card__excerpt"><?php echo vs_e($a['summary']); ?></p>
                 <?php endif; ?>

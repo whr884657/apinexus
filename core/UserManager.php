@@ -18,7 +18,7 @@ class UserManager
                 ? ', `points`'
                 : '';
             $stmt = $pdo->query(
-                'SELECT `id`, `username`, `email`, `avatar`, `qqopenid`, `giteeid`,
+                'SELECT `id`, `username`, `email`, `avatar`, `qqopenid`, `giteeid`, `aggmap`,
                         `status`, `role`' . $pointsCol . ', `createtime`, `lastlogin`
                  FROM `' . $table . '`
                  ORDER BY `id` DESC'

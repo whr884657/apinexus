@@ -1,21 +1,15 @@
 <?php
 /**
- * 主题 five · 友情链接（首页视觉语言自研）
+ * 主题 five · 友情链接（列表 POST 异步，不灌 SSR）
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
 }
 
 $vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
-$pagePack = class_exists('FrontendLink')
-    ? FrontendLink::listForThemePage()
-    : array('items' => array(), 'total' => 0, 'truncated' => false, 'limit' => 120);
-$friendLinks = isset($pagePack['items']) && is_array($pagePack['items']) ? $pagePack['items'] : array();
-$linksTotal = isset($pagePack['total']) ? (int) $pagePack['total'] : count($friendLinks);
-$linksTruncated = !empty($pagePack['truncated']);
 $applyUrl = $vsBase . '/applylink';
 ?>
-<section class="th5-page">
+<section class="th5-page" data-vs-links-page="1" data-layout="muming">
   <div class="th5-page__inner max-w-7xl mx-auto px-4 sm:px-5 lg:px-8">
     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
       <div>
@@ -25,37 +19,14 @@ $applyUrl = $vsBase . '/applylink';
       </div>
     </div>
 
-    <?php if ($linksTruncated): ?>
-    <p class="th5-notice text-sm text-fg-2 mb-6">当前共 <?php echo (int) $linksTotal; ?> 条，本页仅展示前 <?php echo (int) $pagePack['limit']; ?> 条。</p>
-    <?php endif; ?>
+    <p class="th5-notice text-sm text-fg-2 mb-6" data-vs-links-loading="1">正在加载友链…</p>
+    <p class="th5-notice text-sm text-fg-2 mb-6" data-vs-links-truncated="1" hidden><span data-vs-links-trunc-text></span></p>
 
-    <?php if (count($friendLinks) === 0): ?>
-    <div class="th5-panel card">
+    <div class="th5-panel card" data-vs-links-empty="1" hidden>
       <h2 class="font-display font-semibold text-lg m-0 mb-2">暂无友情链接</h2>
       <p class="text-fg-2 m-0 mb-0">欢迎交换友链。请先在贵站添加本站信息，再通过下方入口提交申请。</p>
     </div>
-    <?php else: ?>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <?php foreach ($friendLinks as $item): ?>
-        <a class="th5-link-card card" href="<?php echo vs_e($item['siteurl']); ?>" target="_blank" rel="noopener noreferrer" data-friend-link="1">
-          <?php if (!empty($item['icon'])): ?>
-            <img class="th5-link-card__avatar" src="<?php echo vs_e($item['icon']); ?>" alt="" width="44" height="44" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
-          <?php else: ?>
-            <span class="th5-link-card__avatar th5-link-card__avatar--text"><?php
-              echo vs_e(!empty($item['initial']) ? $item['initial'] : (function_exists('mb_substr') ? mb_substr($item['name'], 0, 1, 'UTF-8') : substr($item['name'], 0, 1)));
-            ?></span>
-          <?php endif; ?>
-          <div class="th5-link-card__body">
-            <strong><?php echo vs_e($item['name']); ?></strong>
-            <?php if (!empty($item['description'])): ?>
-            <p><?php echo vs_e($item['description']); ?></p>
-            <?php endif; ?>
-            <span class="font-mono text-xs text-muted"><?php echo vs_e(!empty($item['host']) ? $item['host'] : $item['siteurl']); ?></span>
-          </div>
-        </a>
-      <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-vs-links-grid="1" hidden></div>
 
     <div class="th5-cta-band card mt-10">
       <div>

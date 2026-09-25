@@ -19,9 +19,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::error('无效操作', 400);
     }
 
-    $clientIp = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
-    if (class_exists('AuthSecurity') && !AuthSecurity::rateLimitAllow('front_applylink_ip:' . $clientIp, 8, 600, true)) {
-        AjaxResponse::error('提交过于频繁，请稍后再试', 429);
+    $captchaErr = Captcha::requireValid(Captcha::SCENE_APPLYLINK, $_POST);
+    // requireValid 成功返回 true，失败返回文案字符串（对齐 login.php；禁止用 !== null）
+    if ($captchaErr !== true) {
+        AjaxResponse::json(array(
+            'code'          => 0,
+            'msg'           => $captchaErr,
+            'submit_ticket' => AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK),
+        ));
+    }
+
+    $ticket = isset($_POST['submit_ticket']) ? (string) $_POST['submit_ticket'] : '';
+    if (!AuthSecurity::validateAndConsumeSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK, $ticket)) {
+        AjaxResponse::json(array(
+            'code'          => 0,
+            'msg'           => '提交凭证已失效，请刷新页面后重试',
+            'submit_ticket' => AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK),
+        ));
+    }
+
+    $coolErr = AuthSecurity::checkApplyLinkCoolDown();
+    if ($coolErr !== null) {
+        AjaxResponse::json(array(
+            'code'          => 0,
+            'msg'           => $coolErr,
+            'submit_ticket' => AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK),
+        ), 429);
+    }
+
+    $clientIp = AuthSecurity::clientIp();
+    if (!AuthSecurity::rateLimitAllow('front_applylink_ip:' . $clientIp, 3600, 20, false)) {
+        AjaxResponse::json(array(
+            'code'          => 0,
+            'msg'           => '提交过于频繁，请稍后再试',
+            'submit_ticket' => AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK),
+        ), 429);
     }
 
     $result = LinkManager::apply(array(
@@ -33,15 +65,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ));
 
     if (!is_array($result)) {
-        AjaxResponse::error($result);
+        AjaxResponse::json(array(
+            'code'          => 0,
+            'msg'           => is_string($result) ? $result : '申请失败',
+            'submit_ticket' => AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK),
+        ));
     }
+
+    AuthSecurity::recordApplyLinkCoolDown();
+    AuthSecurity::rateLimitAllow('front_applylink_ip:' . $clientIp, 3600, 20, true);
 
     if (class_exists('LinkNotify')) {
         LinkNotify::notifyAdminsPending($result);
     }
 
-    // 公开响应仅回业务提示，不回传联系方式等完整记录（防整页误提交时信息暴露）
-    AjaxResponse::success('申请已提交，请等待站长审核');
+    AjaxResponse::success(
+        '申请已提交，请等待站长审核',
+        AuthSecurity::withSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK, array())
+    );
 }
 
 vs_frontend_page('applylink', '申请友链', array(

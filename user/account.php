@@ -16,12 +16,15 @@ $avatarPreview = is_array($vsUserProfile) ? $vsUserProfile['avatar'] : UserAvata
 $roleLabel = is_array($vsUserProfile) ? $vsUserProfile['role_label'] : UserRole::label(UserRole::ROLE_USER);
 $oauthProviders = OAuthService::enabledProviders();
 $oauthBindings = OAuthService::bindingsForUser((int) $vsUser['id']);
+$oauthButtons = OAuthService::accountButtons((int) $vsUser['id']);
 
-if (isset($_GET['oauth_error']) && trim((string) $_GET['oauth_error']) !== '') {
-    $error = trim((string) $_GET['oauth_error']);
-}
-if (isset($_GET['oauth_success']) && trim((string) $_GET['oauth_success']) !== '') {
-    $success = trim((string) $_GET['oauth_success']);
+$flash = vs_flash_take();
+if (is_array($flash)) {
+    if ($flash['type'] === 'success') {
+        $success = $flash['msg'];
+    } else {
+        $error = $flash['msg'];
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -30,11 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'oauth_unbind') {
         $provider = isset($_POST['provider']) ? (string) $_POST['provider'] : '';
-        $result = OAuthService::unbindUser((int) $vsUser['id'], $provider);
+        $itemId = isset($_POST['item_id']) ? (string) $_POST['item_id'] : '';
+        $result = OAuthService::unbindUser((int) $vsUser['id'], $provider, $itemId);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
-        AjaxResponse::success('第三方账号已解绑', array('provider' => $provider));
+        AjaxResponse::success('第三方账号已解绑', array(
+            'provider' => $provider,
+            'item_id'  => $itemId,
+        ));
     }
 
     $username = trim(isset($_POST['username']) ? $_POST['username'] : '');
@@ -90,6 +97,7 @@ vs_user_render_page(
         'roleLabel'      => $roleLabel,
         'oauthProviders' => $oauthProviders,
         'oauthBindings'  => $oauthBindings,
+        'oauthButtons'   => $oauthButtons,
     ),
     '',
     array('account.js')

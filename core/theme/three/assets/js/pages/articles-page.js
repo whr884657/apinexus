@@ -212,6 +212,15 @@
         var done = function (res) {
             if (!res || !res.code) {
                 toast((res && res.msg) || '发送失败', 'error');
+                if (res && res.submit_ticket) {
+                    var failTicket = form.querySelector('input[name="submit_ticket"]');
+                    if (failTicket) {
+                        failTicket.value = res.submit_ticket;
+                    }
+                }
+                if (window.VsCaptcha && typeof window.VsCaptcha.reset === 'function') {
+                    window.VsCaptcha.reset(form);
+                }
                 return;
             }
             toast(res.msg || '评论已发布', 'success');

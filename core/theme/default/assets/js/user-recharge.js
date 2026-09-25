@@ -17,6 +17,15 @@
     var customOverlay = document.getElementById('rechargeCustomOverlay');
     var app = document.getElementById('rechargeApp');
     var rate = app ? parseFloat(app.getAttribute('data-rate') || '1000') : 1000;
+    var customBonus = [];
+    try {
+        customBonus = app ? JSON.parse(app.getAttribute('data-custom-bonus') || '[]') : [];
+        if (!Array.isArray(customBonus)) {
+            customBonus = [];
+        }
+    } catch (eBonus) {
+        customBonus = [];
+    }
     var icons = {};
     try {
         var iconEl = document.getElementById('rechargePayIcons');
@@ -57,6 +66,28 @@
     function qrUrl(content) {
         return 'https://api.2dcode.biz/v1/create-qr-code?data='
             + encodeURIComponent(content) + '&size=220x220';
+    }
+
+    /**
+     * 支付码展示：image（data URI / 图片 URL）直接出图；content 再交 2dcode 编码
+     * 兼容上游 B64 美化折行（空白/换行）与无 data 前缀的裸 B64（后端已归一化时前端仍做兜底）
+     */
+    function resolvePayQrSrc(qrcode, qrKind) {
+        var s = String(qrcode || '').trim();
+        if (!s) {
+            return '';
+        }
+        var kind = String(qrKind || '').toLowerCase();
+        if (kind === 'image' || /^data:image\//i.test(s)) {
+            if (/^data:image\//i.test(s)) {
+                var comma = s.indexOf(',');
+                if (comma > 0) {
+                    s = s.slice(0, comma + 1) + s.slice(comma + 1).replace(/\s+/g, '');
+                }
+            }
+            return s;
+        }
+        return qrUrl(s);
     }
 
     function updatePayBtn() {
@@ -127,18 +158,59 @@
         });
     }
 
+    function matchCustomBonus(money) {
+        money = Math.round(money * 100) / 100;
+        if (!(money >= 0.01)) {
+            return null;
+        }
+        for (var i = 0; i < customBonus.length; i++) {
+            var tier = customBonus[i] || {};
+            var min = parseFloat(tier.min);
+            var max = parseFloat(tier.max);
+            var percent = parseInt(tier.percent, 10) || 0;
+            if (!(min >= 0) || percent < 1) {
+                continue;
+            }
+            if (money < min) {
+                continue;
+            }
+            if (max > 0 && money >= max) {
+                continue;
+            }
+            return { min: min, max: max, percent: percent };
+        }
+        return null;
+    }
+
+    function calcCustomPoints(money) {
+        var base = Math.round(money * rate * 10000) / 10000;
+        var tier = matchCustomBonus(money);
+        var percent = tier ? tier.percent : 0;
+        var points = percent > 0
+            ? Math.round(base * (1 + percent / 100) * 10000) / 10000
+            : base;
+        return { points: points, percent: percent, base: base };
+    }
+
     function updateCustomHint() {
         var moneyEl = document.getElementById('rechargeMoney');
-        var hint = document.getElementById('rechargeCustomHint');
-        if (!moneyEl || !hint) {
+        var ptsEl = document.getElementById('rechargeCustomHintPts');
+        var giftEl = document.getElementById('rechargeCustomHintGift');
+        if (!moneyEl || !ptsEl) {
             return;
         }
         var m = parseFloat(moneyEl.value || '0');
         if (m > 0) {
-            var pts = Math.round(m * rate * 10000) / 10000;
-            hint.textContent = '预计到账 ' + pts + ' 积分';
+            var calc = calcCustomPoints(m);
+            ptsEl.textContent = String(calc.points);
+            if (giftEl) {
+                giftEl.textContent = calc.percent >= 1 ? ('（含赠 ' + calc.percent + '%）') : '';
+            }
         } else {
-            hint.textContent = '预计到账 — 积分';
+            ptsEl.textContent = '—';
+            if (giftEl) {
+                giftEl.textContent = '';
+            }
         }
     }
 
@@ -188,7 +260,7 @@
             document.getElementById('payPoints').textContent = data.points || '';
             var img = document.getElementById('payQrImg');
             if (img && data.qrcode) {
-                img.src = qrUrl(data.qrcode);
+                img.src = resolvePayQrSrc(data.qrcode, data.qr_kind);
             }
             var logo = document.getElementById('payQrLogo');
             if (logo) {
@@ -346,6 +418,10 @@
             var on = pane.getAttribute('data-pane') === name;
             pane.hidden = !on;
         });
+        var tips = document.getElementById('rechargeTips');
+        if (tips) {
+            tips.classList.toggle('is-cardkey-first', name === 'cardkey');
+        }
     }
     var tabs = document.getElementById('rechargeTabs');
     if (tabs) {

@@ -32,45 +32,35 @@ if ($footerLinksDisplay === 'all') {
         $footerLinksLimit = 10;
     }
 }
-$footerLinksPick = ($showFriendLinks && class_exists('FrontendLink'))
-    ? FrontendLink::pickForFooter($footerLinksLimit)
-    : array('items' => array(), 'has_more' => false, 'total' => 0, 'limit' => $footerLinksLimit);
-$footerLinks = isset($footerLinksPick['items']) && is_array($footerLinksPick['items'])
-    ? $footerLinksPick['items']
-    : array();
-$footerLinksHasMore = !empty($footerLinksPick['has_more']);
 $applyUrl = $vsBase . '/applylink';
 $linksPageUrl = $vsBase . '/links';
 $isApplyPage = (isset($pageKey) && $pageKey === 'applylink');
 $isLinksPage = (isset($pageKey) && $pageKey === 'links');
+
+$hasSocial = function_exists('th3_footer_social_items') && count(th3_footer_social_items()) > 0;
+$hasFooterQr = ThemeManager::themeSettingBool('show_footer_qr', true)
+    && function_exists('vs_footer_enabled_qrs')
+    && vs_footer_enabled_qrs() !== array();
+$showDock = $hasSocial || $hasFooterQr;
 ?>
 <footer class="site-footer th3-footer" style="border-top: 1px solid var(--border);">
   <div class="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8 th3-footer__inner">
     <div class="th3-footer__brand-block">
       <?php if ($showFriendLinks): ?>
-      <div class="th3-footer__links-row">
-        <div class="th3-footer__links">
-          <h4 class="th3-footer__links-title">友情链接</h4>
-          <div class="th3-footer__links-list footer-links" id="friendLinks">
-            <?php foreach ($footerLinks as $item): ?>
-              <a href="<?php echo vs_e($item['siteurl']); ?>"
-                 target="_blank"
-                 rel="noopener noreferrer"
-                 class="th3-footer__link"
-                 data-friend-link="1"><?php echo vs_e($item['name']); ?></a>
-            <?php endforeach; ?>
-            <?php if ($footerLinksHasMore && !$isLinksPage): ?>
-              <a href="<?php echo vs_e($linksPageUrl); ?>" class="th3-footer__link th3-footer__link--more">查看更多</a>
-            <?php endif; ?>
-            <?php if ($isApplyPage): ?>
-              <a href="<?php echo vs_e($linksPageUrl); ?>" class="th3-footer__link">友情链接</a>
-            <?php else: ?>
-              <a href="<?php echo vs_e($applyUrl); ?>" class="th3-footer__link th3-footer__link--apply">申请友链</a>
-            <?php endif; ?>
-          </div>
-        </div>
-        <div class="vs-foot-qr-wrap th3-footer__qr">
-          <?php vs_render_footer_qrs(); ?>
+      <div class="th3-footer__links">
+        <h4 class="th3-footer__links-title">友情链接</h4>
+        <div class="th3-footer__links-list footer-links" id="friendLinks"
+             data-vs-footer-links="1"
+             data-limit="<?php echo (int) $footerLinksLimit; ?>"
+             data-link-class="th3-footer__link"
+             data-more-class="th3-footer__link th3-footer__link--more"
+             data-links-url="<?php echo vs_e($linksPageUrl); ?>"
+             data-on-links="<?php echo $isLinksPage ? '1' : '0'; ?>">
+          <?php if ($isApplyPage): ?>
+            <a href="<?php echo vs_e($linksPageUrl); ?>" class="th3-footer__link" data-footer-links-anchor="1">友情链接</a>
+          <?php else: ?>
+            <a href="<?php echo vs_e($applyUrl); ?>" class="th3-footer__link th3-footer__link--apply" data-footer-links-anchor="1">申请友链</a>
+          <?php endif; ?>
         </div>
       </div>
       <?php else: ?>
@@ -85,11 +75,18 @@ $isLinksPage = (isset($pageKey) && $pageKey === 'links');
         <span class="font-display font-bold text-base th3-footer__name"><?php echo vs_e($navName); ?></span>
       </div>
       <p class="text-sm text-fg-2 th3-footer__desc"><?php echo vs_e($siteDesc !== '' ? $siteDesc : '全网 API 一站式聚合平台，让接口调用变得轻盈、可靠、可观测。'); ?></p>
-      <div class="vs-foot-qr-wrap th3-footer__qr th3-footer__qr--solo">
-        <?php vs_render_footer_qrs(); ?>
+      <?php endif; ?>
+
+      <?php if ($showDock): ?>
+      <div class="th3-footer__dock">
+        <?php th3_render_footer_social(); ?>
+        <?php if ($hasFooterQr): ?>
+        <div class="vs-foot-qr-wrap th3-footer__qr">
+          <?php vs_render_footer_qrs(); ?>
+        </div>
+        <?php endif; ?>
       </div>
       <?php endif; ?>
-      <?php th3_render_footer_social(); ?>
     </div>
 
     <div class="th3-footer__meta">

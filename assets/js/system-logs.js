@@ -14,6 +14,7 @@
     var totalEl = document.getElementById('logsTotal');
     var pageSizeEl = document.getElementById('logsPageSize');
     var searchInput = document.getElementById('logsSearchInput');
+    var searchFieldEl = document.getElementById('logsSearchField');
     var overlay = document.getElementById('logsDetailOverlay');
     var detailBody = document.getElementById('logsDetailBody');
     var refreshBtn = document.getElementById('logsRefreshBtn');
@@ -22,6 +23,7 @@
     var page = 1;
     var okFilter = '';
     var q = '';
+    var qField = 'id';
     var hasMore = false;
     var totalCount = 0;
     var totalPages = 1;
@@ -65,9 +67,37 @@
         if (pageSizeEl) {
             pageSizeEl.disabled = !!disabled;
         }
+        if (searchFieldEl) {
+            searchFieldEl.disabled = !!disabled;
+        }
         document.querySelectorAll('.vs-log-filter').forEach(function (btn) {
             btn.disabled = !!disabled;
         });
+    }
+
+    var SEARCH_PLACEHOLDERS = {
+        id: '输入日志编号…',
+        apiid: '输入接口 ID…',
+        username: '输入用户名…',
+        apiname: '输入接口名称…',
+        ip: '输入 IP…',
+        apikey: '输入密钥…'
+    };
+
+    function getSearchField() {
+        var v = searchFieldEl ? String(searchFieldEl.value || '').trim() : 'id';
+        if (!SEARCH_PLACEHOLDERS[v]) {
+            return 'id';
+        }
+        return v;
+    }
+
+    function syncSearchPlaceholder() {
+        if (!searchInput) {
+            return;
+        }
+        var field = getSearchField();
+        searchInput.placeholder = SEARCH_PLACEHOLDERS[field] || SEARCH_PLACEHOLDERS.id;
     }
 
     function resetList() {
@@ -452,6 +482,7 @@
         }
         if (q) {
             fd.append('q', q);
+            fd.append('q_field', qField || 'id');
         }
         if (okFilter !== '') {
             fd.append('ok', okFilter);
@@ -483,6 +514,7 @@
 
     function doSearch() {
         q = searchInput ? String(searchInput.value || '').trim() : '';
+        qField = getSearchField();
         resetList();
         load();
     }
@@ -564,6 +596,16 @@
 
     if (searchBtn) {
         searchBtn.addEventListener('click', doSearch);
+    }
+    if (searchFieldEl) {
+        searchFieldEl.addEventListener('change', function () {
+            syncSearchPlaceholder();
+            // 切换字段后若已有关键词，按新字段重搜
+            if (searchInput && String(searchInput.value || '').trim() !== '') {
+                doSearch();
+            }
+        });
+        syncSearchPlaceholder();
     }
     if (searchInput) {
         searchInput.addEventListener('keydown', function (e) {

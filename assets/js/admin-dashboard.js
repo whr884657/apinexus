@@ -90,6 +90,16 @@
         return n.toLocaleString('zh-CN');
     }
 
+    /** 积分消耗：最多 4 位小数，去尾零 */
+    function fmtPoints(n) {
+        n = parseFloat(n);
+        if (isNaN(n)) n = 0;
+        var fixed = n.toFixed(4).replace(/\.?0+$/, '');
+        var parts = fixed.split('.');
+        parts[0] = Number(parts[0]).toLocaleString('zh-CN');
+        return parts.length > 1 ? parts[0] + '.' + parts[1] : parts[0];
+    }
+
     function deltaHtml(v, suffix) {
         if (v == null || v === '') {
             return '<span class="dash-kpi__delta">—</span>';
@@ -238,6 +248,23 @@
             return best;
         }
 
+        /** 屏幕 clientX → viewBox X（兼容 meet 留边 / 浏览器缩放，E349） */
+        function clientToViewBoxX(clientX) {
+            var ctm = svg.getScreenCTM();
+            if (ctm) {
+                try {
+                    var inv = ctm.inverse();
+                    var pt = svg.createSVGPoint();
+                    pt.x = clientX;
+                    pt.y = 0;
+                    return pt.matrixTransform(inv).x;
+                } catch (ignore) { /* fall through */ }
+            }
+            var rect = svg.getBoundingClientRect();
+            if (!rect.width) return 0;
+            return ((clientX - rect.left) / rect.width) * w;
+        }
+
         function hideTip() {
             tip.hidden = true;
             if (guide) guide.setAttribute('opacity', '0');
@@ -285,7 +312,7 @@
         svg.addEventListener('mousemove', function (e) {
             var rect = svg.getBoundingClientRect();
             if (!rect.width) return;
-            var px = ((e.clientX - rect.left) / rect.width) * w;
+            var px = clientToViewBoxX(e.clientX);
             if (px < L - 8 || px > w - R + 8) {
                 hideTip();
                 return;
@@ -299,7 +326,7 @@
         var grid = document.getElementById('dashKpiGrid');
         if (!grid) return;
         var i, html = '';
-        for (i = 0; i < 5; i++) {
+        for (i = 0; i < 6; i++) {
             html += '<article class="dash-kpi dash-kpi--loading" aria-busy="true">'
                 + '<div class="dash-kpi__skeleton dash-kpi__skeleton--label"></div>'
                 + '<div class="dash-kpi__skeleton dash-kpi__skeleton--value"></div>'
@@ -344,6 +371,13 @@
                 value: fmtNum(kpi.total_calls),
                 delta: deltaHtml(kpi.total_delta, '% 较上周'),
                 spark: sparkSvg(kpi.today_spark, '#0d9488'),
+                meta: ''
+            },
+            {
+                label: '今日积分消耗',
+                value: fmtPoints(kpi.pointscost),
+                delta: deltaHtml(kpi.pointscost_delta, ' 较昨日'),
+                spark: sparkSvg(kpi.pointscost_spark, '#f59e0b'),
                 meta: ''
             },
             {

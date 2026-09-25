@@ -116,7 +116,8 @@ class CodePayClient
         $qrcode = isset($resp['qrcode']) ? (string) $resp['qrcode'] : '';
         $payurl = isset($resp['payurl']) ? (string) $resp['payurl'] : '';
         $urlscheme = isset($resp['urlscheme']) ? (string) $resp['urlscheme'] : '';
-        $qr = $qrcode !== '' ? $qrcode : $payurl;
+        $qrRaw = $qrcode !== '' ? $qrcode : $payurl;
+        $normalized = self::normalizeQrPayload($qrRaw);
         $actualMoney = isset($resp['money']) && is_numeric($resp['money'])
             ? number_format((float) $resp['money'], 2, '.', '')
             : $money;
@@ -127,11 +128,77 @@ class CodePayClient
             'data' => array(
                 'trade_no'  => isset($resp['trade_no']) ? (string) $resp['trade_no'] : '',
                 'money'     => $actualMoney,
-                'qrcode'    => $qr,
+                'qrcode'    => $normalized['qrcode'],
+                'qr_kind'   => $normalized['qr_kind'],
                 'payurl'    => $payurl,
                 'urlscheme' => $urlscheme,
                 'raw'       => $resp,
             ),
         );
+    }
+
+    /**
+     * 归一化上游二维码字段：区分「已是图片」与「待编码内容」
+     * - JSON pretty / 压缩均可（json_decode 之后再处理字符串）
+     * - data URI 或裸 B64 中的空白/换行（美化折行）一律去掉
+     *
+     * @param string $raw
+     * @return array{qrcode:string,qr_kind:string} qr_kind = image|content
+     */
+    public static function normalizeQrPayload($raw)
+    {
+        $s = trim((string) $raw);
+        if ($s === '') {
+            return array('qrcode' => '', 'qr_kind' => 'content');
+        }
+
+        // data:image/...;base64,...（payload 可能含换行/空格）
+        if (stripos($s, 'data:image/') === 0) {
+            $comma = strpos($s, ',');
+            if ($comma !== false) {
+                $header = trim(substr($s, 0, $comma));
+                $payload = preg_replace('/\s+/', '', substr($s, $comma + 1));
+                if ($payload !== '' && $payload !== null
+                    && preg_match('/^data:image\/[a-z0-9.+-]+;base64$/i', $header)
+                ) {
+                    return array(
+                        'qrcode'  => $header . ',' . $payload,
+                        'qr_kind' => 'image',
+                    );
+                }
+            }
+        }
+
+        // 裸 base64：去空白后按魔数推断 MIME（无魔数则不当图片，避免误伤长串）
+        $compact = preg_replace('/\s+/', '', $s);
+        if ($compact !== '' && $compact !== null
+            && strlen($compact) >= 64
+            && preg_match('/^[A-Za-z0-9+\/]+=*$/', $compact)
+            && strpos($compact, '://') === false
+        ) {
+            $mime = '';
+            if (strpos($compact, '/9j/') === 0) {
+                $mime = 'jpeg';
+            } elseif (strpos($compact, 'iVBOR') === 0) {
+                $mime = 'png';
+            } elseif (strpos($compact, 'R0lGOD') === 0) {
+                $mime = 'gif';
+            } elseif (strpos($compact, 'UklGR') === 0) {
+                $mime = 'webp';
+            }
+            if ($mime !== '') {
+                return array(
+                    'qrcode'  => 'data:image/' . $mime . ';base64,' . $compact,
+                    'qr_kind' => 'image',
+                );
+            }
+        }
+
+        // 少数网关直接返回图片文件 URL
+        if (preg_match('/^https?:\/\/.+\.(png|jpe?g|gif|webp)(\?|#|$)/i', $s)) {
+            return array('qrcode' => $s, 'qr_kind' => 'image');
+        }
+
+        return array('qrcode' => $s, 'qr_kind' => 'content');
     }
 }

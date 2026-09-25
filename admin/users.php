@@ -168,7 +168,14 @@ function vs_users_oauth_badges(array $row)
     if (trim((string) $row['giteeid']) !== '') {
         $badges[] = '<span class="vs-oauth-badge vs-oauth-badge--gitee" title="已绑定 Gitee">Gitee</span>';
     }
-    // 未绑定：不显示
+    $aggRaw = isset($row['aggmap']) ? trim((string) $row['aggmap']) : '';
+    if ($aggRaw !== '') {
+        $map = json_decode($aggRaw, true);
+        if (is_array($map) && count($map) > 0) {
+            $badges[] = '<span class="vs-oauth-badge vs-oauth-badge--agg" title="已绑定聚合登录">聚合×'
+                . (int) count($map) . '</span>';
+        }
+    }
     return implode(' ', $badges);
 }
 
@@ -180,13 +187,41 @@ function vs_users_oauth_badges(array $row)
 function vs_users_oauth_icons(array $row, $base)
 {
     $icons = array();
+    $qqIcon = class_exists('SiteMedia') ? SiteMedia::imgUrl('oauth/qq.svg') : '';
+    $giteeIcon = class_exists('SiteMedia') ? SiteMedia::imgUrl('oauth/gitee.svg') : '';
+    if ($qqIcon === '') {
+        $qqIcon = rtrim((string) $base, '/') . '/assets/img/oauth/qq.svg';
+    }
+    if ($giteeIcon === '') {
+        $giteeIcon = rtrim((string) $base, '/') . '/assets/img/oauth/gitee.svg';
+    }
     if (trim((string) $row['qqopenid']) !== '') {
-        $icons[] = '<img src="' . vs_e($base) . '/assets/img/QQ.svg" alt="QQ" title="已绑定 QQ" class="vs-user-oauth-icon" width="18" height="18">';
+        $icons[] = '<img src="' . vs_e($qqIcon) . '" alt="QQ" title="已绑定 QQ" class="vs-user-oauth-icon" width="18" height="18">';
     }
     if (trim((string) $row['giteeid']) !== '') {
-        $icons[] = '<img src="' . vs_e($base) . '/assets/img/gitee.svg" alt="Gitee" title="已绑定 Gitee" class="vs-user-oauth-icon" width="18" height="18">';
+        $icons[] = '<img src="' . vs_e($giteeIcon) . '" alt="Gitee" title="已绑定 Gitee" class="vs-user-oauth-icon" width="18" height="18">';
     }
-    // 未绑定：不显示
+    $aggRaw = isset($row['aggmap']) ? trim((string) $row['aggmap']) : '';
+    if ($aggRaw !== '') {
+        $map = json_decode($aggRaw, true);
+        if (is_array($map)) {
+            foreach ($map as $itemId => $uid) {
+                if (trim((string) $uid) === '') {
+                    continue;
+                }
+                $item = class_exists('OAuthConfig') ? OAuthConfig::aggItem((string) $itemId) : null;
+                $label = ($item && isset($item['name'])) ? (string) $item['name'] : (string) $itemId;
+                $icon = ($item && isset($item['icon']))
+                    ? OAuthConfig::resolveIconUrl($item['icon'])
+                    : '';
+                if ($icon === '') {
+                    continue;
+                }
+                $icons[] = '<img src="' . vs_e($icon) . '" alt="' . vs_e($label) . '" title="聚合·'
+                    . vs_e($label) . '" class="vs-user-oauth-icon" width="18" height="18">';
+            }
+        }
+    }
     return implode('', $icons);
 }
 

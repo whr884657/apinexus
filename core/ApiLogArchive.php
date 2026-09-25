@@ -599,6 +599,18 @@ class ApiLogArchive
         $beforeId = isset($opts['before_id']) ? (int) $opts['before_id'] : 0;
         $pagesize = max(1, min(50, (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20)));
         $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
+        $qField = 'id';
+        if (class_exists('ApiLogManager')) {
+            $qField = ApiLogManager::normalizeQField(isset($opts['q_field']) ? $opts['q_field'] : 'id');
+        } else {
+            $qf = strtolower(trim((string) (isset($opts['q_field']) ? $opts['q_field'] : 'id')));
+            $allow = array('id', 'apiid', 'username', 'apiname', 'ip', 'apikey');
+            $qField = in_array($qf, $allow, true) ? $qf : 'id';
+        }
+        // 用户名搜索：冷库无 username 列，只按已解析的 userid 过滤
+        if ($qField === 'username') {
+            $q = '';
+        }
         $ok = array_key_exists('ok', $opts) ? $opts['ok'] : null;
         $apiid = isset($opts['apiid']) ? (int) $opts['apiid'] : 0;
         $userIds = array();
@@ -645,7 +657,7 @@ class ApiLogArchive
             if (count($out) >= $need) {
                 break;
             }
-            $chunk = self::readDayFiltered($day, $beforeId, $need - count($out), $q, $ok, $apiid, $userIds);
+            $chunk = self::readDayFiltered($day, $beforeId, $need - count($out), $q, $qField, $ok, $apiid, $userIds);
             foreach ($chunk as $row) {
                 $out[] = $row;
                 if (count($out) >= $need) {
@@ -1137,12 +1149,13 @@ class ApiLogArchive
      * @param int    $beforeId
      * @param int    $limit
      * @param string $q
+     * @param string $qField
      * @param mixed  $ok
      * @param int    $apiid
      * @param int[]  $userIds
      * @return array
      */
-    private static function readDayFiltered($day, $beforeId, $limit, $q, $ok, $apiid, array $userIds = array())
+    private static function readDayFiltered($day, $beforeId, $limit, $q, $qField, $ok, $apiid, array $userIds = array())
     {
         if (!self::sqliteAvailable()) {
             return array();
@@ -1177,7 +1190,7 @@ class ApiLogArchive
             if (!is_file($path)) {
                 continue;
             }
-            $rows = self::querySqliteShard($path, $beforeId, $limit - count($out), $q, $ok, $apiid, $userIds);
+            $rows = self::querySqliteShard($path, $beforeId, $limit - count($out), $q, $qField, $ok, $apiid, $userIds);
             foreach ($rows as $r) {
                 $out[] = $r;
                 if (count($out) >= $limit) {
@@ -1240,14 +1253,18 @@ class ApiLogArchive
      * @param int    $beforeId
      * @param int    $limit
      * @param string $q
+     * @param string $qField
      * @param mixed  $ok
      * @param int    $apiid
      * @param int[]  $userIds
      * @return array
      */
-    private static function querySqliteShard($path, $beforeId, $limit, $q, $ok, $apiid, array $userIds = array())
+    private static function querySqliteShard($path, $beforeId, $limit, $q, $qField, $ok, $apiid, array $userIds = array())
     {
         $limit = max(1, (int) $limit);
+        $qField = class_exists('ApiLogManager')
+            ? ApiLogManager::normalizeQField($qField)
+            : 'id';
         try {
             $pdo = new PDO('sqlite:' . $path);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -1265,48 +1282,63 @@ class ApiLogArchive
                 $where[] = '`ok` = ?';
                 $bind[] = (int) $ok;
             }
-            if ($q !== '' || $userIds !== array()) {
-                // q 与 userid 必须 AND：禁止 OR 导致「搜到别的用户」串读
-                if ($q !== '') {
-                    $qTrim = trim((string) $q);
-                    $logIdOnly = 0;
+            if ($q !== '') {
+                $qTrim = trim((string) $q);
+                if ($qField === 'id') {
+                    $logId = 0;
                     if (preg_match('/^#(\d+)$/', $qTrim, $mId)) {
-                        $logIdOnly = (int) $mId[1];
+                        $logId = (int) $mId[1];
                     } elseif (preg_match('/^(?:日志编号|编号|日志\s*id|日志\s*ID|id|ID)\s*[:：#]?\s*(\d+)$/u', $qTrim, $mId)) {
-                        $logIdOnly = (int) $mId[1];
+                        $logId = (int) $mId[1];
+                    } elseif (ctype_digit($qTrim)) {
+                        $logId = (int) $qTrim;
                     }
-                    if ($logIdOnly > 0) {
+                    if ($logId > 0) {
                         $where[] = '`id` = ?';
-                        $bind[] = $logIdOnly;
+                        $bind[] = $logId;
                     } else {
-                        $qParts = array(
-                            '`apiname` LIKE ? ESCAPE \'\\\\\'',
-                            '`path` LIKE ? ESCAPE \'\\\\\'',
-                            '`ip` LIKE ? ESCAPE \'\\\\\'',
-                            '`url` LIKE ? ESCAPE \'\\\\\'',
-                            '`apikey` LIKE ? ESCAPE \'\\\\\'',
-                            '`domain` LIKE ? ESCAPE \'\\\\\'',
-                            '`iploc` LIKE ? ESCAPE \'\\\\\'',
-                        );
-                        $like = function_exists('vs_sql_like_contains')
-                            ? vs_sql_like_contains($q)
-                            : ('%' . addcslashes($q, "\\%_") . '%');
-                        for ($i = 0; $i < 7; $i++) {
-                            $bind[] = $like;
-                        }
-                        if (ctype_digit($qTrim)) {
-                            $qParts[] = '`id` = ?';
-                            $bind[] = (int) $qTrim;
-                        }
-                        $where[] = '(' . implode(' OR ', $qParts) . ')';
+                        $where[] = '1=0';
                     }
+                } elseif ($qField === 'apiid') {
+                    $aid = 0;
+                    if (preg_match('/^#(\d+)$/', $qTrim, $mId)) {
+                        $aid = (int) $mId[1];
+                    } elseif (ctype_digit($qTrim)) {
+                        $aid = (int) $qTrim;
+                    } elseif (preg_match('/^(?:接口\s*id|接口\s*ID|id|ID)\s*[:：#]?\s*(\d+)$/u', $qTrim, $mId)) {
+                        $aid = (int) $mId[1];
+                    }
+                    if ($aid > 0) {
+                        $where[] = '`apiid` = ?';
+                        $bind[] = $aid;
+                    } else {
+                        $where[] = '1=0';
+                    }
+                } elseif ($qField === 'apiname') {
+                    $like = function_exists('vs_sql_like_contains')
+                        ? vs_sql_like_contains($qTrim)
+                        : ('%' . addcslashes($qTrim, "\\%_") . '%');
+                    $where[] = '`apiname` LIKE ? ESCAPE \'\\\\\'';
+                    $bind[] = $like;
+                } elseif ($qField === 'ip') {
+                    $like = function_exists('vs_sql_like_prefix')
+                        ? vs_sql_like_prefix($qTrim)
+                        : (addcslashes($qTrim, "\\%_") . '%');
+                    $where[] = '`ip` LIKE ? ESCAPE \'\\\\\'';
+                    $bind[] = $like;
+                } elseif ($qField === 'apikey') {
+                    $like = function_exists('vs_sql_like_contains')
+                        ? vs_sql_like_contains($qTrim)
+                        : ('%' . addcslashes($qTrim, "\\%_") . '%');
+                    $where[] = '`apikey` LIKE ? ESCAPE \'\\\\\'';
+                    $bind[] = $like;
                 }
-                if ($userIds !== array()) {
-                    $ph = implode(',', array_fill(0, count($userIds), '?'));
-                    $where[] = '`userid` IN (' . $ph . ')';
-                    foreach ($userIds as $uid) {
-                        $bind[] = (int) $uid;
-                    }
+            }
+            if ($userIds !== array()) {
+                $ph = implode(',', array_fill(0, count($userIds), '?'));
+                $where[] = '`userid` IN (' . $ph . ')';
+                foreach ($userIds as $uid) {
+                    $bind[] = (int) $uid;
                 }
             }
             $sql = 'SELECT * FROM `log` WHERE ' . implode(' AND ', $where) . ' ORDER BY `id` DESC LIMIT ' . $limit;

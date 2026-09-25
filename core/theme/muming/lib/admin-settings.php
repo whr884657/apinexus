@@ -100,11 +100,28 @@ function vs_theme_admin_render_settings_muming($schema, $values)
     echo '<div class="th5-admin-settings">';
 
     echo '<section class="th5-admin-settings__section">';
+    echo '<h3 class="th5-admin-settings__title">主导航显示</h3>';
+    echo '<p class="th5-admin-settings__hint">控制顶栏 / 侧栏 / 抽屉 / 页脚导航列是否显示对应入口。关闭后仅隐藏入口，页面 URL 仍可直接访问（不影响 SEO 收录）。默认全部开启。</p>';
+    echo '<div class="th5-admin-settings__checks">';
+    $renderCheckbox('nav_show_home');
+    $renderCheckbox('nav_show_apis');
+    $renderCheckbox('nav_show_articles');
+    $renderCheckbox('nav_show_contributors');
+    $renderCheckbox('nav_show_links');
+    $renderCheckbox('nav_show_sponsor');
+    $renderCheckbox('nav_show_about');
+    echo '</div>';
+    echo '</section>';
+
+    echo '<section class="th5-admin-settings__section">';
     echo '<h3 class="th5-admin-settings__title">首页展示</h3>';
     echo '<div class="th5-admin-settings__grid th5-admin-settings__grid--2">';
     $renderSelect('stats_num_format');
     $renderSelect('home_preview_limit');
+    $renderSelect('api_sort');
+    $renderSelect('api_new_days');
     echo '</div>';
+    echo '<p class="vs-form-hint">接口列表排序：系统默认=跟随后台 apiorder（随机/分类权重）；按上架时间=最新在前；按调用量=最多在前。「上新」标签按接口创建时间自动判断，仅创建 N 天内的接口显示。</p>';
     echo '</section>';
 
     echo '<section class="th5-admin-settings__section">';
@@ -112,6 +129,17 @@ function vs_theme_admin_render_settings_muming($schema, $values)
     echo '<div class="th5-admin-settings__checks">';
     $renderCheckbox('show_home_announce');
     $renderCheckbox('show_runtime');
+    // 看板娘开关兜底：即使平台缓存了旧版 theme.json schema（$fields 缺 mascot_enabled），
+    // 也先按 theme.json 定义补注册，保证设置面板必然渲染该开关且保存后生效
+    if (!isset($fields['mascot_enabled'])) {
+        $fields['mascot_enabled'] = array(
+            'key'     => 'mascot_enabled',
+            'label'   => '显示看板娘助手（二次元形象，随机推荐接口）',
+            'type'    => 'checkbox',
+            'default' => true,
+        );
+    }
+    $renderCheckbox('mascot_enabled');
     echo '</div>';
     echo '</section>';
 

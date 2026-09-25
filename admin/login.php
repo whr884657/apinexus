@@ -14,7 +14,9 @@ InstallChecker::requireInstalled();
 
 $base = vs_base_url();
 
-if (isset($_GET['action']) && $_GET['action'] === 'logout') {
+// 退出须在「已登录则跳转」之前处理，否则 POST 无法落到本页
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && (string) $_POST['action'] === 'logout') {
+    vs_auth_require_post();
     Auth::logout();
     vs_redirect($base . '/admin/login');
 }
@@ -180,10 +182,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     vs_auth_json(array('code' => 0, 'msg' => '未知操作'), 400);
 }
 
-if (isset($_GET['expired']) && $_GET['expired'] === '1') {
-    $expiredMsg = '登录已超时，请重新登录';
-} else {
-    $expiredMsg = '';
+$expiredMsg = '';
+$flash = vs_flash_take();
+if (is_array($flash) && $flash['msg'] !== '') {
+    $expiredMsg = $flash['msg'];
 }
 
 vs_auth_head('登录');
@@ -231,7 +233,7 @@ vs_auth_head('登录');
                 </div>
 
                 <div class="row">
-                    <a href="#" id="toggleLoginMode" role="button">验证码登录</a>
+                    <a href="javascript:void(0)" id="toggleLoginMode" role="button">验证码登录</a>
                     <a href="<?php echo vs_e($base); ?>/admin/forgot">忘记密码？</a>
                 </div>
 

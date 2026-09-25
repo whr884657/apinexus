@@ -589,7 +589,38 @@ window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(rtrim($vsBase,
 </script>
 <script type="application/json" id="detailPageMarkdownJson"><?php echo json_encode(isset($detailPageMarkdown) ? (string) $detailPageMarkdown : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
 <script>
-(function(){var root=document.getElementById('apiDetailPage');if(!root)return;var tabs=root.querySelectorAll('[data-st-tab]');var panels=root.querySelectorAll('[data-st-panel]');function show(id){if(!id)return;var ok=false;tabs.forEach(function(t){if(t.getAttribute('data-st-tab')===id)ok=true;});if(!ok)return;tabs.forEach(function(t){var on=t.getAttribute('data-st-tab')===id;t.classList.toggle('is-active',on);t.setAttribute('aria-selected',on?'true':'false');});panels.forEach(function(p){p.hidden=p.getAttribute('data-st-panel')!==id;});try{if(history.replaceState){history.replaceState(null,'','#'+id);}else{location.hash=id;}}catch(e){}}tabs.forEach(function(t){t.addEventListener('click',function(){show(t.getAttribute('data-st-tab'));});});var hash=(location.hash||'').replace(/^#/,'').toLowerCase();if(hash==='play'||hash==='test')hash='playground';if(hash)show(hash);})();
+(function(){
+    var root=document.getElementById('apiDetailPage');
+    if(!root)return;
+    var tabs=root.querySelectorAll('[data-st-tab]');
+    var panels=root.querySelectorAll('[data-st-panel]');
+    function show(id){
+        if(!id)return;
+        var ok=false;
+        tabs.forEach(function(t){if(t.getAttribute('data-st-tab')===id)ok=true;});
+        if(!ok)return;
+        tabs.forEach(function(t){
+            var on=t.getAttribute('data-st-tab')===id;
+            t.classList.toggle('is-active',on);
+            t.setAttribute('aria-selected',on?'true':'false');
+        });
+        panels.forEach(function(p){p.hidden=p.getAttribute('data-st-panel')!==id;});
+        // E358/E368：禁止往地址栏写 #tab
+    }
+    tabs.forEach(function(t){
+        t.addEventListener('click',function(){show(t.getAttribute('data-st-tab'));});
+    });
+    var hash=(location.hash||'').replace(/^#/,'').toLowerCase();
+    if(hash==='play'||hash==='test')hash='playground';
+    if(hash){
+        show(hash);
+        try{
+            if(history.replaceState){
+                history.replaceState(null,'',window.location.pathname+window.location.search);
+            }
+        }catch(e){}
+    }
+})();
 </script>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
 <?php $vsSyntaxHref = ThemeManager::pageScriptUrl('vs-syntax.js'); if ($vsSyntaxHref !== ''): ?>

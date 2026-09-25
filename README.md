@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.44-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.45-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -107,14 +107,14 @@ flowchart LR
 
 ### Apache
 
-项目根目录 `.htaccess` 已含：禁止直链 `config/`、`data/`；`/apis/{短码}` 代理；`/sitemap.xml`；通用 `/{页面}/{数字ID}` → `/{页面}.php?id=`。启用 `mod_rewrite` 即可。
+项目根目录 `.htaccess` 已含：禁止直链 `config/`、`data/`、`core/data/`；`/apis/{短码}` 代理；`/sitemap.xml`；通用 `/{页面}/{数字ID}` → `/{页面}.php?id=`。启用 `mod_rewrite` 即可。
 
 ### Nginx（宝塔「伪静态」请只粘贴英文规则，不要带中文注释）
 
 **推荐整段粘贴（情况 A，与安装向导默认一致）：**
 
 ```nginx
-location ~ ^/(config|data)/ {
+location ~ ^/(config|data|core/data)/ {
     deny all;
     return 403;
 }
@@ -134,7 +134,7 @@ location / {
 
 | 顺序 | 规则 | 作用 |
 |------|------|------|
-| 1 | `config` + `data` 合并 deny | 禁止直链配置与运行时目录 |
+| 1 | `config` + `data` + `core/data` 合并 deny | 禁止直链配置、运行时目录与主题本地库 |
 | 2 | `/apis/{短码}` | 代理网关 |
 | 3 | `/sitemap.xml` | 站点地图 |
 | 4 | `/{页面}/{数字}` | 路径式资源 → `?id=` |
@@ -164,18 +164,23 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.44（2026-09-19）
+### v13.26.45（2026-09-25）
 
-- **安全脚本归系统：** `common.js` 只留根目录一份（VS64、CSRF、目录拉取）。四个主题包不再自带，写主题不必复制（E338）
-- **热修：** 系统设置「卡密对接 API」保存补上通行证，不再报凭证失效（E339）
-- **首页公告：** 没发布公告就不显示欢迎占位滚动条和弹窗（E340）
-- **主题规范：** 四个主题的界面规范已分开，主题包内各有 `主题规范.md`
-- **新增主题4：** 首页是文档简介；文档页对齐管理端；顶栏菜单跟主题一；不要底部栏。公告弹窗按主题一，可以关闭。主题3在线测试登录后自动填 KEY。AI 示例请求链接固定为站点域名。主题4脚本里的公告和文档数据已转义尖括号
-- **主题3页脚：** 接入系统设置页脚二维码；主题设置可开「用友情链接替换站名与描述」（默认关）。设置面板已画出这些开关；首页标题下方描述可自定义
-- **下线主题五：** 删除 fifth 包；官方主题含主题6 muming。docs / muming 配图由维护者自行完善
-- **PHP：** 安装检测写明兼容 8.5。PHP 8.0 起不再调用 `curl_close`
-- **无数据库结构变更**
-- **更多：** 见 [`更新记录.md`](更新记录.md)
+- 文章置顶；默认主题去路径、主页随机分页（E343/E344）
+- 码支付二维码分流；业务邮件去站内链；签到改 lastcheckin（E345/E346/E107）
+- 充值/支付 UI、自定义优惠、支付配置三 Tab（E347/E351～E353）
+- 聚合登录与慕名对接；短 state 修回调失效（E348/E365）
+- 评论友链防刷；折线悬停对焦（E349/E350）
+- 主题导航显隐、友链异步、今日积分消耗 KPI（E354～E356）
+- 主题设置迁 SQLite；装机检测 pdo_sqlite（E360/E361）
+- 日志字段搜索与索引；用户日志对齐管理端（E362/E363）
+- 主题三 UI/间距/参数表等（E357～E359/E364/E372）
+- OAuth 与全站 URL 安全：Flash、禁 Hash、POST 退出（E367～E369）
+- QPM 必填仅按密钥；验证码判断热修（E370/E371）
+- 分类图标全扫描；品牌脚本路径热修（E366/E261）
+- 有库变更：migrations/13.26.45.sql
+- 完整历史见 [`更新记录.md`](更新记录.md)
+
 
 
 ---

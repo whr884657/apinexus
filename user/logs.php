@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：user/logs.php
- * 作用：用户中心 · 本人调用日志（列表白名单 + 精简详情；强制 userid）
+ * 作用：用户中心 · 本人调用日志（列表白名单 + 精简详情；强制 userid；单字段搜索对齐管理端）
  */
 
 require_once __DIR__ . '/init.php';
@@ -24,11 +24,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($okRaw === '0' || $okRaw === '1' || $okRaw === 0 || $okRaw === 1) {
             $ok = (int) $okRaw;
         }
+        $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+        $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
+        $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
+        $q = isset($_POST['q']) ? trim((string) $_POST['q']) : '';
+        $qField = isset($_POST['q_field']) ? trim((string) $_POST['q_field']) : 'id';
+        // 刷新：清列表缓存后从最新重拉
+        if (!empty($_POST['refresh']) && (string) $_POST['refresh'] === '1') {
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateApiLog();
+            }
+            $page = 1;
+            $beforeId = 0;
+        }
         $data = FrontendUser::myLogsPaged(array(
-            'page'      => isset($_POST['page']) ? (int) $_POST['page'] : 1,
-            'pagesize'  => isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20,
-            'before_id' => isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0,
+            'page'      => $page,
+            'pagesize'  => $pagesize,
+            'before_id' => $beforeId,
             'ok'        => $ok,
+            'q'         => $q,
+            'q_field'   => $qField,
         ));
         if ((int) UserAuth::id() !== $userId) {
             AjaxResponse::error('会话已失效', 401);
@@ -54,14 +69,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     AjaxResponse::error('无效操作', 400);
 }
 
+$headerActions = ($tableReady && $detailEnabled) ? vs_user_refresh_btn_html('logsRefreshBtn') : '';
 vs_user_render_page(
     'logs',
     '日志查询',
     'logs',
     array(
-        'tableReady'     => $tableReady,
-        'detailEnabled'  => $detailEnabled,
+        'tableReady'    => $tableReady,
+        'detailEnabled' => $detailEnabled,
     ),
-    '',
+    $headerActions,
     ($tableReady && $detailEnabled) ? array('user-logs.js') : array()
 );

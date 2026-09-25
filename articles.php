@@ -23,6 +23,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::error('评论功能尚未就绪');
     }
 
+    $captchaErr = Captcha::requireValid(Captcha::SCENE_COMMENT, $_POST);
+    // requireValid 成功返回 true，失败返回文案字符串（对齐 login.php；禁止用 !== null）
+    if ($captchaErr !== true) {
+        AjaxResponse::json(array(
+            'code'          => 0,
+            'msg'           => $captchaErr,
+            'submit_ticket' => AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_COMMENT),
+        ));
+    }
+
+    $ticket = isset($_POST['submit_ticket']) ? (string) $_POST['submit_ticket'] : '';
+    if (!AuthSecurity::validateAndConsumeSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_COMMENT, $ticket)) {
+        AjaxResponse::json(array(
+            'code'          => 0,
+            'msg'           => '提交凭证已失效，请刷新页面后重试',
+            'submit_ticket' => AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_COMMENT),
+        ));
+    }
+
     $result = FrontendComment::submit(
         isset($_POST['contentid']) ? (int) $_POST['contentid'] : 0,
         isset($_POST['email']) ? (string) $_POST['email'] : '',
@@ -33,12 +52,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     );
 
     if (!is_array($result)) {
-        AjaxResponse::error($result);
+        AjaxResponse::json(array(
+            'code'          => 0,
+            'msg'           => is_string($result) ? $result : '评论失败',
+            'submit_ticket' => AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_COMMENT),
+        ));
     }
 
-    AjaxResponse::success('评论已发布', array(
-        'comment' => $result,
-    ));
+    AjaxResponse::success(
+        '评论已发布',
+        AuthSecurity::withSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_COMMENT, array(
+            'comment' => $result,
+        ))
+    );
 }
 
 $articleId = vs_resolve_path_id('id');

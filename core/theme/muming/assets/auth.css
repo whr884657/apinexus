@@ -241,7 +241,7 @@ html.dark {
 .th5-auth__code-btn {
   flex: 0 0 auto;
   padding: 0 1rem;
-  border-radius: 999px;
+  border-radius: 14px;
   border: 1px solid var(--th5-auth-border);
   background: var(--th5-auth-card);
   color: var(--th5-auth-fg);
@@ -341,9 +341,13 @@ html.dark {
 }
 
 .th5-auth__oauth-icons {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .th5-auth__oauth-icons a {

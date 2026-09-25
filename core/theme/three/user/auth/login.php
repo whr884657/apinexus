@@ -8,6 +8,7 @@
  * @var string $expiredMsg
  * @var string $oauthError
  * @var array  $oauthProviders
+ * @var array  $oauthButtons
  * @var string $loginRedirect
  * @var bool   $registerOpen
  * @var bool   $mailEnabled
@@ -24,6 +25,23 @@ $oauthError = isset($oauthError) ? (string) $oauthError : '';
 $oauthProviders = isset($oauthProviders) && is_array($oauthProviders)
     ? $oauthProviders
     : array('qq' => false, 'gitee' => false);
+$oauthButtons = isset($oauthButtons) && is_array($oauthButtons) ? $oauthButtons : array();
+if (empty($oauthButtons)) {
+    if (!empty($oauthProviders['qq'])) {
+        $oauthButtons[] = array(
+            'label' => 'QQ',
+            'icon'  => SiteMedia::imgUrl('oauth/qq.svg'),
+            'url'   => $base . '/user/oauth/start?provider=qq',
+        );
+    }
+    if (!empty($oauthProviders['gitee'])) {
+        $oauthButtons[] = array(
+            'label' => 'Gitee',
+            'icon'  => SiteMedia::imgUrl('oauth/gitee.svg'),
+            'url'   => $base . '/user/oauth/start?provider=gitee',
+        );
+    }
+}
 $loginRedirect = isset($loginRedirect) ? (string) $loginRedirect : '';
 $registerOpen = !isset($registerOpen) || !empty($registerOpen);
 $mailEnabled = !isset($mailEnabled) || !empty($mailEnabled);
@@ -78,16 +96,21 @@ th3_auth_shell_start('欢迎回来', '登录后继续使用平台能力');
 
     <button type="submit" class="th3-auth__submit" id="loginBtn">登 录</button>
 
-    <?php if (!empty($oauthProviders['qq']) || !empty($oauthProviders['gitee'])): ?>
+    <?php if (!empty($oauthButtons)): ?>
     <div class="th3-auth__oauth">
         <div class="th3-auth__oauth-label">第三方登录</div>
         <div class="th3-auth__oauth-icons">
-            <?php if (!empty($oauthProviders['qq'])): ?>
-                <a href="<?php echo vs_e($base); ?>/user/oauth/start?provider=qq" title="QQ 登录"><img src="<?php echo vs_e(SiteMedia::imgUrl('QQ.svg')); ?>" alt="QQ" width="22" height="22"></a>
-            <?php endif; ?>
-            <?php if (!empty($oauthProviders['gitee'])): ?>
-                <a href="<?php echo vs_e($base); ?>/user/oauth/start?provider=gitee" title="Gitee 登录"><img src="<?php echo vs_e(SiteMedia::imgUrl('gitee.svg')); ?>" alt="Gitee" width="22" height="22"></a>
-            <?php endif; ?>
+            <?php foreach ($oauthButtons as $btn): ?>
+                <?php
+                $btnUrl = isset($btn['url']) ? (string) $btn['url'] : '';
+                $btnLabel = isset($btn['label']) ? (string) $btn['label'] : '';
+                $btnIcon = isset($btn['icon']) ? (string) $btn['icon'] : '';
+                if ($btnUrl === '' || $btnLabel === '') {
+                    continue;
+                }
+                ?>
+                <a href="<?php echo vs_e($btnUrl); ?>" title="<?php echo vs_e($btnLabel); ?> 登录" aria-label="<?php echo vs_e($btnLabel); ?> 登录"><img src="<?php echo vs_e($btnIcon); ?>" alt="<?php echo vs_e($btnLabel); ?>" width="22" height="22"></a>
+            <?php endforeach; ?>
         </div>
     </div>
     <?php endif; ?>

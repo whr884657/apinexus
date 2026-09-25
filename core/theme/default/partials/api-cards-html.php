@@ -48,7 +48,6 @@ foreach ($apis as $cardApi):
     $cat = (string) (isset($cardApi['category']) ? $cardApi['category'] : '');
     $methods = isset($cardApi['methods']) && is_array($cardApi['methods']) ? $cardApi['methods'] : array('GET');
     list($showMethods, $methodExtra) = $vsSplitMethods($methods);
-    $endpoint = trim((string) (isset($cardApi['endpoint']) ? $cardApi['endpoint'] : ''));
     $nameKey = function_exists('mb_strtolower') ? mb_strtolower($name, 'UTF-8') : strtolower($name);
     $descKey = function_exists('mb_strtolower') ? mb_strtolower($desc, 'UTF-8') : strtolower($desc);
     $maintenance = !empty($cardApi['maintenance']);
@@ -95,9 +94,6 @@ foreach ($apis as $cardApi):
     <h3 class="font-bold text-sm mb-1"><?php echo vs_e($name); ?></h3>
     <?php if ($desc !== ''): ?>
     <p class="text-xs mb-2" style="color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?php echo vs_e($desc); ?></p>
-    <?php endif; ?>
-    <?php if ($endpoint !== ''): ?>
-    <div class="endpoint-box font-mono"><?php echo vs_e($endpoint); ?></div>
     <?php endif; ?>
     <?php if ($showDetailBtn): ?>
     <a href="<?php echo vs_e($detailUrl); ?>" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>

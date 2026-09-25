@@ -39,6 +39,10 @@ if (!$notFound && is_array($profile)) {
     $pfApiCount = isset($profile['apicount']) ? (int) $profile['apicount'] : 0;
     $pfJoinLabel = isset($profile['join_label']) ? (string) $profile['join_label'] : '';
     $apis = isset($profile['apis']) && is_array($profile['apis']) ? $profile['apis'] : array();
+    // 默认「随机」：首屏 PHP 先打乱，避免仅按 id 倒序；前端再按按钮可重排
+    if (count($apis) > 1) {
+        shuffle($apis);
+    }
     $totalCalls = isset($profile['calls_label']) ? (string) $profile['calls_label'] : '0';
 }
 ?>
@@ -178,8 +182,7 @@ if (!$notFound && is_array($profile)) {
                                 </div>
                                 <h3 class="text-base font-semibold upf-accent mb-1"><?php echo vs_e($api['name']); ?></h3>
                                 <p class="upf-text-muted text-sm mb-3 line-clamp-2"><?php echo vs_e(isset($api['desc']) ? $api['desc'] : ''); ?></p>
-                                <div class="flex justify-between items-center text-xs upf-text-muted">
-                                    <span class="font-mono truncate max-w-[60%]"><?php echo vs_e(isset($api['endpoint']) ? $api['endpoint'] : ''); ?></span>
+                                <div class="flex justify-end items-center text-xs upf-text-muted">
                                     <span class="api-latency flex items-center gap-1"><svg class="spin-icon" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> 检测中</span>
                                 </div>
                                 <div class="flex justify-between items-center text-xs upf-text-muted mt-2 pt-2" style="border-top: 1px solid var(--border-color);">
@@ -190,6 +193,7 @@ if (!$notFound && is_array($profile)) {
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
+                <div id="profileApiPagination" class="pagination profile-api-pagination" style="display:none;" aria-label="接口分页"></div>
             </div>
         <?php endif; ?>
     </div>

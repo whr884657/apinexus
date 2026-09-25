@@ -3,8 +3,8 @@
  * 文件：core/StatDayManager.php
  * 作用：控制台按日调用聚合（statday，滚动固定 30 天）
  *
- * 写入：ApiStats 每次记账成功后 recordHit（与 apilog / api.calls 三写）
- * 读取：DashboardStats 今日 KPI、趋势、TOP 优先读本表
+ * 写入：ApiStats 每次记账成功后 recordHit（与 apilog / api.calls 三写；可传本次积分 cost）
+ * 读取：DashboardStats 今日 KPI、趋势、TOP、今日积分消耗优先读本表
  */
 
 class StatDayManager
@@ -57,13 +57,14 @@ class StatDayManager
     /**
      * 单次调用写入日表（失败静默，不影响业务）
      *
-     * @param int  $apiId
-     * @param bool $ok
-     * @param int  $charged 1=积分调用
-     * @param bool $hasKey  是否带有效/明文密钥（与趋势口径一致：非空 apikey）
+     * @param int   $apiId
+     * @param bool  $ok
+     * @param int   $charged 1=积分调用
+     * @param bool  $hasKey  是否带有效/明文密钥（与趋势口径一致：非空 apikey）
+     * @param float $cost    本次扣除积分（仅 charged=1 时累加；代理失败已退回则传 0）
      * @return void
      */
-    public static function recordHit($apiId, $ok, $charged, $hasKey)
+    public static function recordHit($apiId, $ok, $charged, $hasKey, $cost = 0.0)
     {
         if (!self::tableReady()) {
             return;
@@ -80,8 +81,10 @@ class StatDayManager
             $guestInc = 0;
             $keyInc = 0;
             $pointsInc = 0;
+            $costInc = 0.0;
             if ((int) $charged === 1) {
                 $pointsInc = 1;
+                $costInc = max(0.0, (float) $cost);
             } elseif ($hasKey) {
                 $keyInc = 1;
             } else {
@@ -96,10 +99,11 @@ class StatDayManager
                     `guestcalls` = `guestcalls` + ?,
                     `keycalls` = `keycalls` + ?,
                     `pointscalls` = `pointscalls` + ?,
+                    `pointscost` = `pointscost` + ?,
                     `updatetime` = NOW()
                  WHERE `statdate` = ?'
             );
-            $stmt->execute(array($okInc, $failInc, $guestInc, $keyInc, $pointsInc, $day));
+            $stmt->execute(array($okInc, $failInc, $guestInc, $keyInc, $pointsInc, $costInc, $day));
             self::bumpTopMap($day, $apiId);
             // TOP JSON 不必每次刷库：约 1/8 请求刷一次，降低写放大
             if (mt_rand(1, 8) === 1) {
@@ -131,8 +135,8 @@ class StatDayManager
         $pdo = Database::connect();
         $stmt = $pdo->prepare(
             'INSERT IGNORE INTO `' . self::table() . '`
-                (`statdate`, `calls`, `okcount`, `failcount`, `guestcalls`, `keycalls`, `pointscalls`, `topjson`, `updatetime`)
-             VALUES (?, 0, 0, 0, 0, 0, 0, ?, NOW())'
+                (`statdate`, `calls`, `okcount`, `failcount`, `guestcalls`, `keycalls`, `pointscalls`, `pointscost`, `topjson`, `updatetime`)
+             VALUES (?, 0, 0, 0, 0, 0, 0, 0, ?, NOW())'
         );
         $stmt->execute(array($day, '[]'));
         if ($stmt->rowCount() > 0) {
@@ -189,6 +193,7 @@ class StatDayManager
                     SUM(CASE WHEN `ok` = 1 THEN 1 ELSE 0 END) AS ok_c,
                     SUM(CASE WHEN `ok` = 0 THEN 1 ELSE 0 END) AS fail_c,
                     SUM(CASE WHEN `charged` = 1 THEN 1 ELSE 0 END) AS points_c,
+                    SUM(CASE WHEN `charged` = 1 THEN `cost` ELSE 0 END) AS points_cost,
                     SUM(CASE WHEN `charged` = 0 AND `apikey` <> \'\' THEN 1 ELSE 0 END) AS key_c,
                     SUM(CASE WHEN `charged` = 0 AND (`apikey` = \'\' OR `apikey` IS NULL) THEN 1 ELSE 0 END) AS guest_c
                  FROM `' . Database::table('apilog') . '`
@@ -206,6 +211,7 @@ class StatDayManager
                     'guestcalls'  => (int) $r['guest_c'],
                     'keycalls'    => (int) $r['key_c'],
                     'pointscalls' => (int) $r['points_c'],
+                    'pointscost'  => round((float) $r['points_cost'], 4),
                 );
             }
             $topStmt = $pdo->prepare(
@@ -221,6 +227,7 @@ class StatDayManager
                 $row = isset($byDay[$day]) ? $byDay[$day] : array(
                     'calls' => 0, 'okcount' => 0, 'failcount' => 0,
                     'guestcalls' => 0, 'keycalls' => 0, 'pointscalls' => 0,
+                    'pointscost' => 0.0,
                 );
                 $topStmt->execute(array($day . ' 00:00:00', $day . ' 23:59:59'));
                 $top = array();
@@ -243,8 +250,8 @@ class StatDayManager
                 }
                 $up = $pdo->prepare(
                     'INSERT INTO `' . self::table() . '`
-                        (`statdate`, `calls`, `okcount`, `failcount`, `guestcalls`, `keycalls`, `pointscalls`, `topjson`, `updatetime`)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                        (`statdate`, `calls`, `okcount`, `failcount`, `guestcalls`, `keycalls`, `pointscalls`, `pointscost`, `topjson`, `updatetime`)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                      ON DUPLICATE KEY UPDATE
                         `calls` = VALUES(`calls`),
                         `okcount` = VALUES(`okcount`),
@@ -252,6 +259,7 @@ class StatDayManager
                         `guestcalls` = VALUES(`guestcalls`),
                         `keycalls` = VALUES(`keycalls`),
                         `pointscalls` = VALUES(`pointscalls`),
+                        `pointscost` = VALUES(`pointscost`),
                         `topjson` = VALUES(`topjson`),
                         `updatetime` = NOW()'
                 );
@@ -263,6 +271,7 @@ class StatDayManager
                     $row['guestcalls'],
                     $row['keycalls'],
                     $row['pointscalls'],
+                    $row['pointscost'],
                     $json,
                 ));
                 $filled++;
@@ -352,6 +361,7 @@ class StatDayManager
                 'guestcalls'  => 0,
                 'keycalls'    => 0,
                 'pointscalls' => 0,
+                'pointscost'  => 0.0,
                 'topjson'     => '[]',
             );
         }
@@ -377,6 +387,7 @@ class StatDayManager
                     'guestcalls'  => (int) $r['guestcalls'],
                     'keycalls'    => (int) $r['keycalls'],
                     'pointscalls' => (int) $r['pointscalls'],
+                    'pointscost'  => isset($r['pointscost']) ? round((float) $r['pointscost'], 4) : 0.0,
                     'topjson'     => isset($r['topjson']) ? (string) $r['topjson'] : '[]',
                 );
             }

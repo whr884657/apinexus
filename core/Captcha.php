@@ -21,6 +21,10 @@ class Captcha
     const SCENE_USER_LOGIN = 'user_login';
     const SCENE_USER_REGISTER = 'user_register';
     const SCENE_USER_FORGOT = 'user_forgot';
+    /** 文章评论（用户侧验证方式；配置键 captcha_on_comment） */
+    const SCENE_COMMENT = 'comment';
+    /** 申请友链（用户侧验证方式；配置键 captcha_on_applylink） */
+    const SCENE_APPLYLINK = 'applylink';
 
     const SESSION_GT3_SERVER = 'vs_gt3_server';
     const SESSION_GT3_CHALLENGE = 'vs_gt3_challenge';
@@ -533,6 +537,8 @@ class Captcha
             self::SCENE_USER_LOGIN,
             self::SCENE_USER_REGISTER,
             self::SCENE_USER_FORGOT,
+            self::SCENE_COMMENT,
+            self::SCENE_APPLYLINK,
         );
     }
 
@@ -556,6 +562,8 @@ class Captcha
             'user_login'    => Config::get('captcha_on_user_login', Config::get('geetest_on_user_login', '1')) === '1',
             'user_register' => Config::get('captcha_on_user_register', Config::get('geetest_on_user_register', '1')) === '1',
             'user_forgot'   => Config::get('captcha_on_user_forgot', Config::get('geetest_on_user_forgot', '1')) === '1',
+            'comment'       => Config::get('captcha_on_comment', '0') === '1',
+            'applylink'     => Config::get('captcha_on_applylink', '0') === '1',
         );
     }
 }

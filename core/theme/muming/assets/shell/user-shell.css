@@ -111,6 +111,21 @@
     border-left: 3px solid transparent;
 }
 
+.vs-sidebar__logout-form {
+    margin: 0;
+    width: 100%;
+}
+
+button.vs-sidebar__logout {
+    width: 100%;
+    border: none;
+    border-left: 3px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+
 .vs-sidebar__logout:hover {
     color: var(--vs-danger);
     background: rgba(220, 38, 38, 0.06);
@@ -698,7 +713,7 @@ button.vs-refresh-btn.is-spinning svg {
 
 .vs-redis-charts {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 16px;
     margin-top: 20px;
 }
@@ -1395,13 +1410,14 @@ button.vs-refresh-btn.is-spinning svg {
     }
 
     .vs-oauth-bind-section {
-        grid-column: 1;
+        grid-column: 1 / -1;
         grid-row: 2;
         align-self: start;
+        max-width: 100%;
     }
 
     .vs-admin-bind-section {
-        grid-column: 1;
+        grid-column: 1 / -1;
         grid-row: 2;
         align-self: start;
     }
@@ -1416,7 +1432,7 @@ button.vs-refresh-btn.is-spinning svg {
 
     .vs-account-form__main {
         grid-column: 2;
-        grid-row: 1 / span 2;
+        grid-row: 1;
     }
 
     .vs-form-row--account {
@@ -2524,9 +2540,12 @@ select.vs-input.vs-select {
 }
 
 .vs-oauth-bind-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 8px;
+    max-height: min(360px, 45vh);
+    overflow-y: auto;
+    padding-right: 2px;
 }
 
 .vs-oauth-bind-item {
@@ -2818,6 +2837,7 @@ select.vs-input.vs-select {
     max-width: 100%;
     min-width: 0;
     overflow-x: auto;
+    overflow-y: hidden; /* E351：禁止 Tab 栏竖滚动条 */
     -webkit-overflow-scrolling: touch;
 }
 
@@ -6231,7 +6251,10 @@ select.vs-input.vs-select {
     gap: 0;
     margin: 0 0 16px;
     border-bottom: 1px solid #e2e8f0;
+    /* 仅横滚；须配 overflow-y:hidden，否则浏览器把 visible 算成 auto 出竖滚动条（E351） */
     overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 .vs-recharge-tabs .vs-tabs__btn,
 .vs-recharge-tab {
@@ -6253,6 +6276,37 @@ select.vs-input.vs-select {
 }
 .vs-recharge-pane[hidden] {
     display: none !important;
+}
+.vs-recharge-tips {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+    align-items: start;
+}
+.vs-recharge-tip {
+    min-width: 0;
+}
+.vs-recharge-tips [data-tip="package"] { order: 1; }
+.vs-recharge-tips [data-tip="custom"] { order: 2; }
+.vs-recharge-tips [data-tip="cardkey"] { order: 3; }
+.vs-recharge-tips.is-cardkey-first [data-tip="cardkey"] { order: 1; }
+.vs-recharge-tips.is-cardkey-first [data-tip="package"] { order: 2; }
+.vs-recharge-tips.is-cardkey-first [data-tip="custom"] { order: 3; }
+.vs-recharge-tip__notice {
+    margin: 0;
+    height: 100%;
+}
+.vs-recharge-tip__notice .vs-md-body,
+.vs-recharge-tip__notice .markdown-body {
+    max-width: 100%;
+    min-width: 0;
+    font-size: 13px;
+}
+@media (max-width: 900px) {
+    .vs-recharge-tips {
+        grid-template-columns: 1fr;
+    }
 }
 .vs-recharge-cardkey__row {
     display: flex;
@@ -6283,6 +6337,16 @@ select.vs-input.vs-select {
     background: #fff;
     cursor: pointer;
     transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    overflow: hidden; /* 角标贴右上圆角更干净 */
+}
+/* 角标与名称同一顶行：名称完整显示，勿 nowrap+ellipsis（窄卡会被挤成一字） */
+.vs-recharge-card.has-badge .vs-recharge-card__name {
+    padding-right: 4.25rem; /* 仅避开右上角标宽度 */
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+    line-height: 1.35;
 }
 .vs-recharge-card:hover {
     border-color: var(--vs-uc-accent-soft, #d4d4d8);
@@ -6300,19 +6364,42 @@ select.vs-input.vs-select {
     border-style: dashed;
     background: #f8fafc;
 }
-.vs-recharge-card__badge {
+/* 荐 + 赠：贴卡片右上角，与名称同一水平带 */
+.vs-recharge-card__badges {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    display: inline-flex;
+    align-items: stretch;
+    overflow: hidden;
+    border-radius: 0 14px 0 8px;
+    line-height: 1.3;
+}
+.vs-recharge-card__badge {
+    position: static;
+    top: auto;
+    right: auto;
+    left: auto;
     font-size: 11px;
-    padding: 1px 6px;
-    border-radius: 6px;
+    padding: 2px 7px;
+    border-radius: 0;
     background: var(--vs-uc-accent, #111);
     color: #fff;
+    z-index: auto;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+.vs-recharge-card__badge--gift {
+    background: #0f766e;
+}
+.vs-recharge-card__badges .vs-recharge-card__badge + .vs-recharge-card__badge {
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.28);
 }
 .vs-recharge-card__name {
     font-weight: 600;
     color: #0f172a;
+    line-height: 1.35;
 }
 .vs-recharge-card__money {
     margin-top: 10px;
@@ -6324,6 +6411,19 @@ select.vs-input.vs-select {
     margin-top: 4px;
     font-size: 12px;
     color: #64748b;
+}
+.vs-recharge-card__pts-tip {
+    margin: 10px 0 0;
+    text-align: left;
+    pointer-events: none;
+}
+.vs-recharge-card__pts-tip .vs-notice__text {
+    font-size: 12px;
+    line-height: 1.45;
+}
+.vs-recharge-card__pts-tip strong {
+    font-weight: 700;
+    color: #0f172a;
 }
 .vs-recharge-actions {
     margin-top: 8px;
@@ -6383,6 +6483,27 @@ select.vs-input.vs-select {
     flex: 1 1 0;
     min-width: 0;
     min-height: 44px;
+}
+/* 自定义金额弹窗：取消/确认并支付同高（覆盖 .vs-btn--outline 28px，E347） */
+#rechargeCustomOverlay .vs-overlay__foot .vs-btn {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    min-width: 120px;
+    padding: 0 24px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    box-sizing: border-box;
+    border-radius: var(--vs-btn-radius, 10px) !important;
+}
+#rechargeCustomOverlay #rechargeCustomHint {
+    margin-top: 4px;
+    margin-bottom: 0;
+}
+#rechargeCustomOverlay #rechargeCustomHintPts {
+    font-weight: 700;
+    color: var(--vs-text, #0f172a);
 }
 .vs-points-list {
     padding: 4px 0;

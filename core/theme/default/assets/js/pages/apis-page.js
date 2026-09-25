@@ -51,7 +51,6 @@
         var desc = String(api.desc || '').trim();
         var cat = String(api.category || '');
         var methods = splitMethods(api.methods);
-        var endpoint = String(api.endpoint || '').trim();
         var nameKey = name.toLowerCase();
         var descKey = desc.toLowerCase();
         var maintenance = !!(api.maintenance == 1 || api.maintenance === '1' || api.maintenance === true);
@@ -92,7 +91,6 @@
             + '<div class="flex justify-start items-start mb-2 flex-wrap gap-1">' + methodHtml + '</div>'
             + '<h3 class="font-bold text-sm mb-1">' + escapeHtml(name) + '</h3>'
             + (desc ? '<p class="text-xs mb-2" style="color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">' + escapeHtml(desc) + '</p>' : '')
-            + (endpoint ? '<div class="endpoint-box font-mono">' + escapeHtml(endpoint) + '</div>' : '')
             + '<a href="' + escapeHtml(detailUrl) + '" class="btn-geek w-full mt-2 text-center text-xs block">查看详情</a>'
             + '</div>';
     }

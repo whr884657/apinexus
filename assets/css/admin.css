@@ -111,6 +111,21 @@
     border-left: 3px solid transparent;
 }
 
+.vs-sidebar__logout-form {
+    margin: 0;
+    width: 100%;
+}
+
+button.vs-sidebar__logout {
+    width: 100%;
+    border: none;
+    border-left: 3px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+
 .vs-sidebar__logout:hover {
     color: var(--vs-danger);
     background: rgba(220, 38, 38, 0.06);
@@ -3121,6 +3136,7 @@ select.vs-input.vs-select {
     max-width: 100%;
     min-width: 0;
     overflow-x: auto;
+    overflow-y: hidden; /* E351 / 《Tab页面规范》：禁止 Tab 栏竖滚动条 */
     -webkit-overflow-scrolling: touch;
 }
 
@@ -6354,6 +6370,20 @@ select.vs-input.vs-select {
     border-radius: var(--vs-btn-radius, 10px) !important;
 }
 
+/* 支付配置·添加套餐弹窗：取消/确定同高（覆盖 .vs-btn--outline 28px，E347） */
+#payPkgOverlay .vs-overlay__foot .vs-btn {
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    min-width: 100px;
+    padding: 0 20px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    box-sizing: border-box;
+    border-radius: var(--vs-btn-radius, 10px) !important;
+}
+
 @media (max-width: 768px) {
     #cardkeyPage .vs-cardkey-desktop {
         display: none !important;
@@ -6461,6 +6491,57 @@ select.vs-input.vs-select {
 
 .vs-pay-config-panel {
     padding: 0 !important;
+}
+.vs-pay-config-page .vs-pay-config-tabs {
+    margin: 0 0 12px;
+}
+.vs-pay-config-panel-pane[hidden] {
+    display: none !important;
+}
+.vs-pay-tips-lead {
+    margin: 0 0 16px;
+}
+.vs-pay-tip-block {
+    margin-bottom: 20px;
+    padding-bottom: 4px;
+}
+.vs-pay-tip-block:last-child {
+    margin-bottom: 0;
+}
+.vs-pay-tip-block__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+.vs-pay-tip-block__title {
+    margin: 0;
+}
+.vs-pay-tip-block__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.vs-pay-tip-preview {
+    margin: 0;
+}
+.vs-pay-tip-preview--empty .vs-notice__text {
+    color: #64748b;
+}
+.vs-pay-tip-preview .vs-md-body,
+.vs-pay-tip-preview .markdown-body {
+    max-width: 100%;
+    min-width: 0;
+}
+.vs-pay-tip-preview__raw {
+    margin: 0;
+    white-space: pre-wrap;
+    font: inherit;
+}
+.vs-pay-tip-block__editor .vs-textarea {
+    min-height: 180px;
 }
 .vs-pay-config-panel > .vs-panel__body {
     padding: 24px 28px;
@@ -6756,6 +6837,7 @@ select.vs-input.vs-select {
     gap: 10px;
 }
 .vs-pkg-card {
+    position: relative;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 14px;
@@ -6765,11 +6847,27 @@ select.vs-input.vs-select {
     border-color: #a1a1aa;
     background: #fafafa;
 }
+.vs-pkg-card__gift {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: #0f766e;
+    color: #fff;
+    font-weight: 600;
+    line-height: 1.4;
+}
 .vs-pkg-card__name {
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
+    padding-right: 52px;
+}
+.vs-pkg-card.has-gift .vs-pkg-card__name {
+    padding-right: 64px;
 }
 .vs-pkg-card__badge {
     font-size: 11px;
@@ -6802,6 +6900,50 @@ select.vs-input.vs-select {
     padding: 20px !important;
     text-align: center;
     color: #94a3b8;
+}
+.vs-bonus-editor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.vs-bonus-empty {
+    margin: 0;
+    padding: 12px 0;
+    color: #64748b;
+    font-size: 13px;
+}
+.vs-bonus-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #fff;
+}
+.vs-bonus-card__range {
+    font-weight: 600;
+    color: #111;
+}
+.vs-bonus-card__pct {
+    margin-top: 4px;
+    font-size: 13px;
+    color: #64748b;
+}
+.vs-bonus-card__actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+@media (max-width: 640px) {
+    .vs-bonus-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .vs-bonus-card__actions {
+        justify-content: flex-end;
+    }
 }
 .vs-api-pager__navs {
     display: inline-flex;
@@ -7057,7 +7199,38 @@ select.vs-input.vs-select {
     align-items: center;
     gap: 8px;
     min-width: 0;
-    flex: 1 1 220px;
+    flex: 1 1 280px;
+}
+
+.vs-log-search__field {
+    flex: 0 0 auto;
+    margin: 0;
+    min-width: 0;
+}
+
+/* 工具栏内 vs-pick 勿 width:100% 盖住搜索框（对齐 E306） */
+.vs-log-search .vs-pick,
+.vs-log-toolbar .vs-log-search .vs-pick {
+    width: auto !important;
+    flex: 0 0 auto;
+    min-width: 108px;
+    max-width: 132px;
+    position: relative;
+    z-index: 2;
+}
+
+.vs-log-search .vs-pick .vs-pick__btn {
+    height: 32px;
+    min-height: 32px;
+    box-sizing: border-box;
+    font-size: 12px;
+    padding: 0 28px 0 10px;
+}
+
+.vs-log-search__field-select {
+    width: 120px;
+    height: 32px !important;
+    font-size: 12px;
 }
 
 .vs-log-search__input {
@@ -7750,10 +7923,17 @@ select.vs-input.vs-select {
     .vs-log-search {
         flex: 1 1 auto;
         width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .vs-log-search .vs-pick,
+    .vs-log-toolbar .vs-log-search .vs-pick {
+        max-width: 140px;
     }
 
     .vs-log-search__input {
         max-width: none;
+        flex: 1 1 140px;
     }
 
     .vs-log-toolbar .vs-finance-filters {
@@ -12553,4 +12733,130 @@ select.vs-input.vs-select {
 .vs-admin-ip-test-line.is-warn { color: #fbbf24; }
 .vs-admin-ip-test-line.is-req { color: #38bdf8; }
 .vs-admin-ip-test-line.is-res { color: #c4b5fd; }
+
+/* 聚合登录：两段胶囊 + 共用编辑槽（E348） */
+.vs-agg-block {
+    margin-top: 8px;
+}
+.vs-agg-custom-label {
+    margin-top: 14px;
+}
+.vs-agg-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin: 8px 0 4px;
+}
+.vs-agg-pill {
+    display: inline-flex;
+    align-items: stretch;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    overflow: hidden;
+    max-width: 100%;
+}
+.vs-agg-pill.is-on {
+    border-color: #0f172a;
+    background: #f8fafc;
+}
+.vs-agg-pill--custom {
+    border-style: dashed;
+    background: #fafafa;
+}
+.vs-agg-pill--custom.is-on {
+    background: #f1f5f9;
+}
+.vs-agg-pill__main {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    background: transparent;
+    padding: 0 10px 0 12px;
+    cursor: pointer;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+}
+.vs-agg-pill.is-on .vs-agg-pill__main {
+    color: #0f172a;
+    font-weight: 600;
+}
+.vs-agg-pill__icon {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+.vs-agg-pill__icon img {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+.vs-agg-pill__name {
+    white-space: nowrap;
+    max-width: 7em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vs-agg-pill__gear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    border: 0;
+    border-left: 1px dashed #cbd5e1;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+.vs-agg-pill__gear:hover {
+    color: #0f172a;
+    background: rgba(15, 23, 42, 0.04);
+}
+.vs-agg-custom-add {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    gap: 8px;
+    margin: 10px 0 4px;
+    align-items: center;
+}
+.vs-agg-edit {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+.vs-agg-edit__head {
+    font-size: 13px;
+    color: #475569;
+    margin-bottom: 8px;
+}
+.vs-agg-edit__row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.vs-agg-edit__row .vs-input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.vs-agg-edit__row .vs-btn {
+    flex: 0 0 auto;
+}
+@media (max-width: 768px) {
+    .vs-agg-custom-add {
+        grid-template-columns: 1fr;
+    }
+    .vs-agg-edit__row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
 

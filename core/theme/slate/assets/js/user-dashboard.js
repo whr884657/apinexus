@@ -202,6 +202,41 @@
             return best;
         }
 
+        /** 屏幕 clientX → viewBox X（兼容 meet 留边 / 浏览器缩放，E349） */
+        function clientToViewBoxX(clientX) {
+            var ctm = svg.getScreenCTM();
+            if (ctm) {
+                try {
+                    var inv = ctm.inverse();
+                    var pt = svg.createSVGPoint();
+                    pt.x = clientX;
+                    pt.y = 0;
+                    return pt.matrixTransform(inv).x;
+                } catch (ignore) { /* fall through */ }
+            }
+            var rect = svg.getBoundingClientRect();
+            if (!rect.width) return 0;
+            return ((clientX - rect.left) / rect.width) * w;
+        }
+
+        /** viewBox X → 画布 CSS left（tip 定位，禁止 viewBox×等比当像素） */
+        function viewBoxXToCanvasLeft(svgX) {
+            var canvas = el.querySelector('.uc-dash__chart-canvas') || el;
+            var box = canvas.getBoundingClientRect();
+            var ctm = svg.getScreenCTM();
+            if (ctm) {
+                try {
+                    var pt = svg.createSVGPoint();
+                    pt.x = svgX;
+                    pt.y = 0;
+                    return pt.matrixTransform(ctm).x - box.left;
+                } catch (ignore) { /* fall through */ }
+            }
+            var rect = svg.getBoundingClientRect();
+            if (!rect.width) return 0;
+            return (svgX / w) * rect.width + (rect.left - box.left);
+        }
+
         function hideTip() {
             tip.hidden = true;
             if (guide) guide.setAttribute('opacity', '0');
@@ -212,7 +247,6 @@
             var lb = chartLabels[idx] != null ? chartLabels[idx] : '';
             var x = xAt(idx);
             var rect = svg.getBoundingClientRect();
-            var scaleX = rect.width > 0 ? (rect.width / w) : 1;
             var rowsHtml = '';
             var dotsHtml = '';
             seriesList.forEach(function (s) {
@@ -227,7 +261,7 @@
             tip.hidden = false;
             tip.innerHTML = '<div class="uc-dash__chart-tip-title">' + esc(lb) + '</div>' + rowsHtml;
             var tipW = tip.offsetWidth || 100;
-            var leftPx = (x * scaleX) - (tipW / 2);
+            var leftPx = viewBoxXToCanvasLeft(x) - (tipW / 2);
             leftPx = Math.max(4, Math.min(leftPx, Math.max(4, rect.width - tipW - 4)));
             tip.style.left = leftPx + 'px';
             tip.style.top = '8px';
@@ -242,7 +276,7 @@
         svg.addEventListener('mousemove', function (ev) {
             var rect = svg.getBoundingClientRect();
             if (!rect.width) return;
-            var px = ((ev.clientX - rect.left) / rect.width) * w;
+            var px = clientToViewBoxX(ev.clientX);
             showAt(nearestIndex(px));
         });
         svg.addEventListener('mouseleave', hideTip);
@@ -250,7 +284,7 @@
             if (!ev.touches || !ev.touches[0]) return;
             var rect = svg.getBoundingClientRect();
             if (!rect.width) return;
-            var px = ((ev.touches[0].clientX - rect.left) / rect.width) * w;
+            var px = clientToViewBoxX(ev.touches[0].clientX);
             showAt(nearestIndex(px));
         }, { passive: true });
     }

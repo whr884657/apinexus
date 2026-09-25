@@ -897,5 +897,198 @@
         document.querySelectorAll('form[data-ajax="1"]').forEach(function (form) {
             bindAjaxForm(form);
         });
+
+        initAggPills();
     });
+
+    function initAggPills() {
+        var root = document.getElementById('aggPillRoot');
+        var form = document.getElementById('oauthForm');
+        var hidden = document.getElementById('aggItemsJson');
+        if (!root || !form || !hidden) {
+            return;
+        }
+
+        var items = [];
+        try {
+            items = JSON.parse(root.getAttribute('data-items') || '[]');
+        } catch (e) {
+            items = [];
+        }
+        if (!Array.isArray(items)) {
+            items = [];
+        }
+
+        var builtinEl = document.getElementById('aggPillsBuiltin');
+        var customEl = document.getElementById('aggPillsCustom');
+        var editSlot = document.getElementById('aggEditSlot');
+        var editName = document.getElementById('aggEditName');
+        var editType = document.getElementById('aggEditType');
+        var editApply = document.getElementById('aggEditApplyBtn');
+        var editingId = '';
+
+        var gearSvg = '<svg class="vs-agg-pill__gear-icon" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.59.24-1.13.55-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.43.34.68.22l2.39-.96c.5.39 1.04.7 1.63.94l.36 2.54c.05.24.25.42.49.42h3.8c.24 0 .44-.18.49-.42l.36-2.54c.59-.24 1.13-.55 1.63-.94l2.39.96c.25.1.54 0 .68-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
+
+        function syncHidden() {
+            hidden.value = JSON.stringify(items);
+        }
+
+        function findItem(id) {
+            for (var i = 0; i < items.length; i++) {
+                if (items[i] && items[i].id === id) {
+                    return items[i];
+                }
+            }
+            return null;
+        }
+
+        function closeEdit() {
+            editingId = '';
+            if (editSlot) {
+                editSlot.hidden = true;
+            }
+        }
+
+        function openEdit(id) {
+            var item = findItem(id);
+            if (!item || !editSlot || !editName || !editType) {
+                return;
+            }
+            editingId = id;
+            editName.textContent = item.name || id;
+            editType.value = item.type || '';
+            editSlot.hidden = false;
+            editType.focus();
+        }
+
+        function renderPills() {
+            if (!builtinEl || !customEl) {
+                return;
+            }
+            builtinEl.innerHTML = '';
+            customEl.innerHTML = '';
+            items.forEach(function (item) {
+                if (!item || !item.id) {
+                    return;
+                }
+                var kind = item.kind === 'custom' ? 'custom' : 'builtin';
+                var pill = document.createElement('div');
+                pill.className = 'vs-agg-pill' + (item.on ? ' is-on' : '') + (kind === 'custom' ? ' vs-agg-pill--custom' : '');
+                pill.setAttribute('data-id', item.id);
+
+                var main = document.createElement('button');
+                main.type = 'button';
+                main.className = 'vs-agg-pill__main';
+                main.setAttribute('aria-pressed', item.on ? 'true' : 'false');
+                main.title = (item.on ? '停用' : '启用') + ' ' + (item.name || '');
+
+                var iconWrap = document.createElement('span');
+                iconWrap.className = 'vs-agg-pill__icon';
+                if (item.icon_url) {
+                    var img = document.createElement('img');
+                    img.src = item.icon_url;
+                    img.alt = '';
+                    img.width = 16;
+                    img.height = 16;
+                    iconWrap.appendChild(img);
+                }
+                main.appendChild(iconWrap);
+
+                var label = document.createElement('span');
+                label.className = 'vs-agg-pill__name';
+                label.textContent = item.name || item.id;
+                main.appendChild(label);
+
+                main.addEventListener('click', function () {
+                    item.on = !item.on;
+                    syncHidden();
+                    renderPills();
+                });
+
+                var gear = document.createElement('button');
+                gear.type = 'button';
+                gear.className = 'vs-agg-pill__gear';
+                gear.setAttribute('aria-label', '修改接口对应值');
+                gear.innerHTML = gearSvg;
+                gear.addEventListener('click', function (ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    if (editingId === item.id && editSlot && !editSlot.hidden) {
+                        closeEdit();
+                    } else {
+                        openEdit(item.id);
+                    }
+                });
+
+                pill.appendChild(main);
+                pill.appendChild(gear);
+                (kind === 'custom' ? customEl : builtinEl).appendChild(pill);
+            });
+            syncHidden();
+        }
+
+        if (editApply && editType) {
+            editApply.addEventListener('click', function () {
+                var item = findItem(editingId);
+                if (!item) {
+                    return;
+                }
+                var type = String(editType.value || '').trim();
+                if (!/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(type)) {
+                    showFlash('接口对应值须为字母开头的英文/数字/下划线', 'error');
+                    return;
+                }
+                item.type = type;
+                syncHidden();
+                showFlash('已应用到「' + (item.name || item.id) + '」，请再点底部「保存 OAuth 设置」', 'success');
+                closeEdit();
+            });
+        }
+
+        var addBtn = document.getElementById('aggCustomAddBtn');
+        var nameEl = document.getElementById('aggCustomName');
+        var typeEl = document.getElementById('aggCustomType');
+        var iconEl = document.getElementById('aggCustomIcon');
+        if (addBtn) {
+            addBtn.addEventListener('click', function () {
+                var name = String(nameEl && nameEl.value || '').trim();
+                var type = String(typeEl && typeEl.value || '').trim();
+                var icon = String(iconEl && iconEl.value || '').trim();
+                if (name === '') {
+                    showFlash('请填写自定义名称', 'error');
+                    return;
+                }
+                if (!/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(type)) {
+                    showFlash('接口对应值须为字母开头的英文/数字/下划线', 'error');
+                    return;
+                }
+                if (icon !== '' && !/^https?:\/\//i.test(icon)) {
+                    showFlash('图标请使用 http(s) 链接', 'error');
+                    return;
+                }
+                var id = 'c' + String(Date.now()).slice(-8);
+                items.push({
+                    id: id,
+                    name: name.slice(0, 32),
+                    type: type,
+                    icon: icon,
+                    icon_url: icon,
+                    on: true,
+                    kind: 'custom'
+                });
+                if (nameEl) nameEl.value = '';
+                if (typeEl) typeEl.value = '';
+                if (iconEl) iconEl.value = '';
+                syncHidden();
+                renderPills();
+                showFlash('已添加自定义方式，请再点底部保存', 'success');
+            });
+        }
+
+        form.addEventListener('submit', function () {
+            syncHidden();
+        });
+
+        renderPills();
+    }
 })();

@@ -44,16 +44,33 @@ if ($heroLead === '') {
 }
 $heroLeadHtml = nl2br(vs_e($heroLead));
 
-$rechargePackages = PayConfig::packages();
-$rechargeFeatured = -1;
-foreach ($rechargePackages as $i => $pkg) {
-    if (!empty($pkg['hot'])) {
-        $rechargeFeatured = (int) $i;
-        break;
+/* 首页充值展示卡：主题设置独立配置，禁止读 PayConfig::packages */
+$homePriceFeatured = (int) ThemeManager::themeSetting('home_price_featured', 2);
+$homePriceCards = array();
+for ($pi = 1; $pi <= 3; $pi++) {
+    $featRaw = (string) ThemeManager::themeSetting('home_price_' . $pi . '_features', '');
+    $featLines = preg_split('/\r\n|\r|\n/', $featRaw);
+    $features = array();
+    if (is_array($featLines)) {
+        foreach ($featLines as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                continue;
+            }
+            $features[] = $line;
+            if (count($features) >= 5) {
+                break;
+            }
+        }
     }
-}
-if ($rechargeFeatured < 0 && count($rechargePackages) >= 2) {
-    $rechargeFeatured = 1;
+    $homePriceCards[] = array(
+        'name'     => trim((string) ThemeManager::themeSetting('home_price_' . $pi . '_name', '')),
+        'money'    => trim((string) ThemeManager::themeSetting('home_price_' . $pi . '_money', '')),
+        'points'   => trim((string) ThemeManager::themeSetting('home_price_' . $pi . '_points', '')),
+        'desc'     => trim((string) ThemeManager::themeSetting('home_price_' . $pi . '_desc', '')),
+        'features' => $features,
+        'featured' => ($homePriceFeatured === $pi),
+    );
 }
 
 require_once dirname(__DIR__) . '/lib/bootstrap.php';
@@ -161,7 +178,7 @@ window.TH3_HOME = {
           <?php echo $heroLeadHtml; ?>
         </p>
         <div class="hero-actions reveal reveal-delay-3 mt-7 sm:mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
-          <a href="#market" class="btn-primary justify-center lg:justify-start">
+          <a href="<?php echo vs_e($vsBase); ?>/apis" class="btn-primary justify-center lg:justify-start">
             浏览 API 市场
             <i data-lucide="arrow-up-right" style="width:16px;height:16px;"></i>
           </a>
@@ -277,11 +294,10 @@ window.TH3_HOME = {
 </section>
 
 <!-- ============ API 市场 ============ -->
-<section id="market" class="py-16 sm:py-20 lg:py-28">
+<section id="market" class="th3-sec th3-sec--market">
   <div class="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8">
-    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 sm:mb-10">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-6 sm:mb-8">
       <div class="reveal">
-        <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ API 市场</div>
         <h2 class="font-display font-bold tracking-tight" style="font-size: clamp(1.75rem, 5vw, 3rem);">
           海量接口，<span class="gradient-text-2">按需接入</span>
         </h2>
@@ -309,7 +325,7 @@ window.TH3_HOME = {
 
     <div id="apiGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
 
-    <div class="reveal mt-10 text-center">
+    <div class="reveal mt-6 text-center">
       <a href="<?php echo vs_e($vsBase); ?>/apis" class="btn-ghost" id="th3ViewAllApis">
         查看全部 <span id="th3ApiTotalLabel"><?php echo (int) $apiCount; ?></span> 个 API
         <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
@@ -319,10 +335,9 @@ window.TH3_HOME = {
 </section>
 
 <!-- ============ 核心能力 ============ -->
-<section id="features" class="py-16 sm:py-20 lg:py-28">
+<section id="features" class="th3-sec th3-sec--features">
   <div class="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8">
-    <div class="reveal mb-8 sm:mb-10 max-w-2xl">
-      <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ 核心能力</div>
+    <div class="reveal mb-6 sm:mb-8 max-w-2xl">
       <h2 class="font-display font-bold tracking-tight" style="font-size: clamp(1.75rem, 5vw, 3rem);">
         不仅是聚合，<br>更是<span class="gradient-text">工程化升级</span>
       </h2>
@@ -377,10 +392,9 @@ window.TH3_HOME = {
 </section>
 
 <!-- ============ 积分充值 ============ -->
-<section id="pricing" class="py-16 sm:py-20 lg:py-28 bg-bg-2">
+<section id="pricing" class="th3-sec th3-sec--pricing bg-bg-2">
   <div class="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8">
-    <div class="reveal text-center mb-10 sm:mb-12">
-      <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ 积分充值</div>
+    <div class="reveal text-center mb-8 sm:mb-10">
       <h2 class="font-display font-bold tracking-tight" style="font-size: clamp(1.75rem, 5vw, 3rem);">
         积分充值，<span class="gradient-text">用多少扣多少</span>
       </h2>
@@ -388,46 +402,45 @@ window.TH3_HOME = {
     </div>
 
     <div class="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-      <?php if (count($rechargePackages) > 0): ?>
-        <?php foreach (array_slice($rechargePackages, 0, 3) as $i => $pkg): ?>
-          <?php
-            $isFeatured = ((int) $i === $rechargeFeatured);
-            $money = isset($pkg['money']) ? (string) $pkg['money'] : '0';
-            $points = isset($pkg['points']) ? (string) $pkg['points'] : '0';
-            $pkgName = isset($pkg['name']) ? (string) $pkg['name'] : '套餐';
-          ?>
+      <?php foreach ($homePriceCards as $i => $pkg): ?>
+        <?php
+          $isFeatured = !empty($pkg['featured']);
+          $money = isset($pkg['money']) ? (string) $pkg['money'] : '';
+          $points = isset($pkg['points']) ? (string) $pkg['points'] : '';
+          $pkgName = isset($pkg['name']) ? (string) $pkg['name'] : '套餐';
+          $pkgDesc = isset($pkg['desc']) ? (string) $pkg['desc'] : '';
+          $pkgFeatures = isset($pkg['features']) && is_array($pkg['features']) ? $pkg['features'] : array();
+        ?>
           <div class="reveal<?php echo $i > 0 ? ' reveal-delay-' . min($i, 3) : ''; ?> price-card<?php echo $isFeatured ? ' featured' : ''; ?>">
-            <div class="text-sm font-medium<?php echo $isFeatured ? ' opacity-70' : ' text-muted'; ?> mb-1"><?php echo vs_e($pkgName); ?></div>
+            <div class="text-sm font-medium<?php echo $isFeatured ? ' opacity-70' : ' text-muted'; ?> mb-1"><?php echo vs_e($pkgName !== '' ? $pkgName : '套餐'); ?></div>
             <div class="flex items-baseline gap-1 mb-1">
-              <span class="font-display font-bold text-4xl">¥<?php echo vs_e($money); ?></span>
+              <span class="font-display font-bold text-4xl">¥<?php echo vs_e($money !== '' ? $money : '0'); ?></span>
             </div>
-            <div class="text-xs<?php echo $isFeatured ? ' opacity-70' : ' text-muted'; ?> mb-1">到账 <span style="font-weight: 600;<?php echo $isFeatured ? '' : ' color: var(--accent-2);'; ?>"><?php echo vs_e($points); ?></span> 积分</div>
-            <div class="text-xs<?php echo $isFeatured ? ' opacity-70' : ' text-muted'; ?> price-desc">积分永久有效，用多少扣多少</div>
+            <div class="text-xs<?php echo $isFeatured ? ' opacity-70' : ' text-muted'; ?> mb-1">到账 <span style="font-weight: 600;<?php echo $isFeatured ? '' : ' color: var(--accent-2);'; ?>"><?php echo vs_e($points !== '' ? $points : '0'); ?></span> 积分</div>
+            <?php if ($pkgDesc !== ''): ?>
+            <div class="text-xs<?php echo $isFeatured ? ' opacity-70' : ' text-muted'; ?> price-desc"><?php echo vs_e($pkgDesc); ?></div>
+            <?php endif; ?>
             <a href="<?php echo vs_e($vsBase); ?>/user/recharge" class="<?php echo $isFeatured ? 'w-full inline-flex justify-center items-center gap-2 py-3 rounded-full font-medium price-cta' : 'btn-ghost w-full justify-center price-cta'; ?>"<?php echo $isFeatured ? ' style="background: var(--bg); color: var(--fg);"' : ''; ?>>
               立即充值
               <?php if ($isFeatured): ?>
                 <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
               <?php endif; ?>
             </a>
+            <?php if (count($pkgFeatures) > 0): ?>
             <ul class="text-sm">
-              <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent<?php echo $isFeatured ? '' : '-2'; ?>);"></i>积分永久有效</li>
-              <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent<?php echo $isFeatured ? '' : '-2'; ?>);"></i>全部 API 可调用</li>
-              <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent<?php echo $isFeatured ? '' : '-2'; ?>);"></i>余额随时可查</li>
+              <?php foreach ($pkgFeatures as $feat): ?>
+              <li class="flex items-center gap-2"><i data-lucide="check" style="width:16px;height:16px;color:var(--accent<?php echo $isFeatured ? '' : '-2'; ?>);"></i><?php echo vs_e($feat); ?></li>
+              <?php endforeach; ?>
             </ul>
+            <?php endif; ?>
           </div>
-        <?php endforeach; ?>
-      <?php else: ?>
-        <div class="reveal price-card md:col-span-3 text-center">
-          <p class="text-muted">充值套餐暂未配置，请前往用户中心充值页查看。</p>
-          <a href="<?php echo vs_e($vsBase); ?>/user/recharge" class="btn-primary inline-flex mt-4">前往充值</a>
-        </div>
-      <?php endif; ?>
+      <?php endforeach; ?>
     </div>
   </div>
 </section>
 
 <!-- ============ CTA ============ -->
-<section class="py-16 sm:py-20 lg:py-28">
+<section class="th3-sec th3-sec--cta">
   <div class="max-w-5xl mx-auto px-4 sm:px-5 lg:px-8">
     <div class="reveal relative rounded-3xl overflow-hidden p-8 sm:p-10 lg:p-16" style="background: var(--fg); color: var(--bg);">
       <div class="absolute inset-0 opacity-30" style="background: radial-gradient(circle at 20% 30%, var(--accent), transparent 50%), radial-gradient(circle at 80% 70%, var(--accent-2), transparent 50%);"></div>

@@ -1,146 +1,153 @@
-<?php
-/**
- * 青绿平台 · 用户中心布局（左侧栏 + 顶栏；壳层样式见 assets/shell/user-shell.css）
- */
-if (!defined('VS_THEME_RENDER') && !function_exists('vs_theme_user_layout_start')) {
-    // 由 ThemeManager 加载
-}
-
-/**
- * @param string $pageTitle
- * @param string $activeMenu
- * @param string $headerActions
- * @return void
- */
-function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions = '')
-{
-    global $vsBase, $vsUser, $vsUserProfile, $vsSiteName, $vsSystemName;
-
-    $base = $vsBase;
-    $siteName = $vsSiteName;
-    $systemName = isset($vsSystemName) ? $vsSystemName : SiteContext::systemName();
-    $userProfile = is_array($vsUserProfile) ? $vsUserProfile : FrontendUser::current();
-    $favicon = SiteContext::siteFavicon();
-    $menuGroups = ThemeManager::userMenuGroups();
-
-    echo '<!DOCTYPE html>' . "\n";
-    echo '<html lang="zh-CN">' . "\n";
-    echo '<head>' . "\n";
-    echo '<meta charset="UTF-8">' . "\n";
-    echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
-    vs_render_seo_meta(vs_seo_defaults(array(
-        'title'       => vs_page_title($pageTitle, $siteName),
-        'description' => vs_seo_site_description($siteName . ' 用户中心'),
-        'robots'      => 'noindex,nofollow',
-        'site_name'   => $siteName,
-    )));
-    echo '<title>' . vs_e(vs_page_title($pageTitle, $siteName)) . '</title>' . "\n";
-    vs_render_site_icons($favicon, vs_seo_share_image());
-    foreach (ThemeManager::userShellCssHrefs(false) as $href) {
-        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
-    }
-    foreach (ThemeManager::userStylesheetHrefs() as $href) {
-        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
-    }
-    echo '</head>' . "\n";
-    echo '<body class="vs-body vs-admin-body st-uc-body" data-theme-picker="off">' . "\n";
-    echo '<div class="vs-admin-shell" id="vsAdminShell">' . "\n";
-
-    echo '<aside class="vs-sidebar" id="vsSidebar">' . "\n";
-    echo '<div class="vs-sidebar__head">' . "\n";
-    vs_render_site_logo('vs-sidebar__logo');
-    echo '<span class="vs-sidebar__name">' . vs_e($systemName) . '</span>' . "\n";
-    echo '</div>' . "\n";
-    echo '<nav class="vs-sidebar__nav">' . "\n";
-
-    foreach ($menuGroups as $group) {
-        $linkActive = isset($group['id']) && $group['id'] === $activeMenu ? ' is-active' : '';
-        echo '<a href="' . vs_e($group['url']) . '" class="vs-sidebar__link' . $linkActive . '">';
-        echo '<i class="vs-icon vs-icon--' . vs_e($group['icon']) . '"></i>';
-        echo '<span class="vs-sidebar__text">' . vs_e($group['title']) . '</span>';
-        echo '</a>' . "\n";
-    }
-
-    echo '</nav>' . "\n";
-
-    $logoutUrl = $base . '/user/login?action=logout';
-    echo '<div class="vs-sidebar__foot">' . "\n";
-    echo '<a href="' . vs_e($logoutUrl) . '" class="vs-sidebar__logout">' . "\n";
-    echo '<i class="vs-icon vs-icon--logout"></i>' . "\n";
-    echo '<span class="vs-sidebar__text">退出登录</span>' . "\n";
-    echo '</a>' . "\n";
-    echo '</div>' . "\n";
-    echo '</aside>' . "\n";
-
-    echo '<div class="vs-sidebar-mask" id="vsSidebarMask"></div>' . "\n";
-    echo '<div class="vs-admin-main">' . "\n";
-    echo '<header class="vs-topbar">' . "\n";
-    echo '<div class="vs-topbar__left">' . "\n";
-    echo '<button type="button" class="vs-topbar__toggle" id="vsSidebarToggle" aria-label="展开或收缩菜单">';
-    echo '<i class="vs-icon vs-icon--menu"></i>';
-    echo '</button>' . "\n";
-    echo '<span class="vs-topbar__title">' . vs_e($siteName) . ' · 用户中心</span>' . "\n";
-    echo '</div>' . "\n";
-    echo '<div class="vs-topbar__right">' . "\n";
-
-    if ($userProfile) {
-        $avatarUrl = $userProfile['avatar'];
-        echo '<a href="' . vs_e($base) . '/user/account" class="vs-topbar__avatar-link" title="账号设置">' . "\n";
-        echo '<img src="' . vs_e($avatarUrl) . '" alt="用户头像" class="vs-topbar__avatar" width="32" height="32">' . "\n";
-        echo '</a>' . "\n";
-    }
-    echo '</div>' . "\n";
-    echo '</header>' . "\n";
-    echo '<main class="vs-content">' . "\n";
-    echo '<div class="vs-content__head">' . "\n";
-    echo '<h1 class="vs-content__title">' . vs_e($pageTitle) . '</h1>' . "\n";
-    if ($headerActions !== '') {
-        echo '<div class="vs-content__actions">' . $headerActions . '</div>' . "\n";
-    }
-    echo '</div>' . "\n";
-    echo '<div class="vs-content__body">' . "\n";
-}
-
-/**
- * @param array $extraScripts
- * @return void
- */
-function vs_theme_user_layout_end(array $extraScripts = array())
-{
-    global $vsBase;
-
-    echo '</div>' . "\n";
-    echo '</main>' . "\n";
-    echo '</div>' . "\n";
-    echo '</div>' . "\n";
-
-    if (function_exists('vs_render_modal_shell')) {
-        vs_render_modal_shell();
-    }
-
-    echo '<script>window.VS_BASE_URL = ' . json_encode($vsBase) . ';</script>' . "\n";
-    echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
-    foreach (ThemeManager::userShellJsHrefs(false) as $href) {
-        echo '<script src="' . vs_e($href) . '" defer></script>' . "\n";
-    }
-    $ucShellJs = ThemeManager::shellUrl('user-shell.js');
-    if ($ucShellJs !== '') {
-        echo '<script src="' . vs_e($ucShellJs) . '" defer></script>' . "\n";
-    }
-    $userJs = ThemeManager::userScriptHref();
-    if ($userJs !== '') {
-        echo '<script src="' . vs_e($userJs) . '" defer></script>' . "\n";
-    }
-    foreach ($extraScripts as $js) {
-        $js = basename(str_replace('\\', '/', (string) $js));
-        if ($js === '' || $js === 'modal.js' || $js === 'vs-pick.js' || $js === 'common.js') {
-            continue;
-        }
-        $pageJs = ThemeManager::pageScriptUrl($js);
-        if ($pageJs !== '') {
-            echo '<script src="' . vs_e($pageJs) . '" defer></script>' . "\n";
-        }
-    }
-    vs_console_brand_script();
-    echo '</body></html>';
-}
+<?php
+/**
+ * 青绿平台 · 用户中心布局（左侧栏 + 顶栏；壳层样式见 assets/shell/user-shell.css）
+ */
+if (!defined('VS_THEME_RENDER') && !function_exists('vs_theme_user_layout_start')) {
+    // 由 ThemeManager 加载
+}
+
+/**
+ * @param string $pageTitle
+ * @param string $activeMenu
+ * @param string $headerActions
+ * @return void
+ */
+function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions = '')
+{
+    global $vsBase, $vsUser, $vsUserProfile, $vsSiteName, $vsSystemName;
+
+    $base = $vsBase;
+    $siteName = $vsSiteName;
+    $systemName = isset($vsSystemName) ? $vsSystemName : SiteContext::systemName();
+    $userProfile = is_array($vsUserProfile) ? $vsUserProfile : FrontendUser::current();
+    $favicon = SiteContext::siteFavicon();
+    $menuGroups = ThemeManager::userMenuGroups();
+
+    echo '<!DOCTYPE html>' . "\n";
+    echo '<html lang="zh-CN">' . "\n";
+    echo '<head>' . "\n";
+    echo '<meta charset="UTF-8">' . "\n";
+    echo '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
+    vs_render_seo_meta(vs_seo_defaults(array(
+        'title'       => vs_page_title($pageTitle, $siteName),
+        'description' => vs_seo_site_description($siteName . ' 用户中心'),
+        'robots'      => 'noindex,nofollow',
+        'site_name'   => $siteName,
+    )));
+    echo '<title>' . vs_e(vs_page_title($pageTitle, $siteName)) . '</title>' . "\n";
+    vs_render_site_icons($favicon, vs_seo_share_image());
+    foreach (ThemeManager::userShellCssHrefs(false) as $href) {
+        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
+    }
+    foreach (ThemeManager::userStylesheetHrefs() as $href) {
+        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
+    }
+    foreach (ThemeManager::userExtraCssHrefs() as $href) {
+        echo '<link rel="stylesheet" href="' . vs_e($href) . '">' . "\n";
+    }
+    echo '</head>' . "\n";
+    echo '<body class="vs-body vs-admin-body st-uc-body" data-theme-picker="off">' . "\n";
+    echo '<div class="vs-admin-shell" id="vsAdminShell">' . "\n";
+
+    echo '<aside class="vs-sidebar" id="vsSidebar">' . "\n";
+    echo '<div class="vs-sidebar__head">' . "\n";
+    vs_render_site_logo('vs-sidebar__logo');
+    echo '<span class="vs-sidebar__name">' . vs_e($systemName) . '</span>' . "\n";
+    echo '</div>' . "\n";
+    echo '<nav class="vs-sidebar__nav">' . "\n";
+
+    foreach ($menuGroups as $group) {
+        $linkActive = isset($group['id']) && $group['id'] === $activeMenu ? ' is-active' : '';
+        echo '<a href="' . vs_e($group['url']) . '" class="vs-sidebar__link' . $linkActive . '">';
+        echo '<i class="vs-icon vs-icon--' . vs_e($group['icon']) . '"></i>';
+        echo '<span class="vs-sidebar__text">' . vs_e($group['title']) . '</span>';
+        echo '</a>' . "\n";
+    }
+
+    echo '</nav>' . "\n";
+
+    $logoutAction = $base . '/user/login';
+    echo '<div class="vs-sidebar__foot">' . "\n";
+    echo '<form method="post" action="' . vs_e($logoutAction) . '" class="vs-sidebar__logout-form">' . "\n";
+    echo '<input type="hidden" name="action" value="logout">' . "\n";
+    echo '<input type="hidden" name="csrf_token" value="' . vs_e(AuthSecurity::csrfToken()) . '">' . "\n";
+    echo '<button type="submit" class="vs-sidebar__logout">' . "\n";
+    echo '<i class="vs-icon vs-icon--logout"></i>' . "\n";
+    echo '<span class="vs-sidebar__text">退出登录</span>' . "\n";
+    echo '</button>' . "\n";
+    echo '</form>' . "\n";
+    echo '</div>' . "\n";
+    echo '</aside>' . "\n";
+
+    echo '<div class="vs-sidebar-mask" id="vsSidebarMask"></div>' . "\n";
+    echo '<div class="vs-admin-main">' . "\n";
+    echo '<header class="vs-topbar">' . "\n";
+    echo '<div class="vs-topbar__left">' . "\n";
+    echo '<button type="button" class="vs-topbar__toggle" id="vsSidebarToggle" aria-label="展开或收缩菜单">';
+    echo '<i class="vs-icon vs-icon--menu"></i>';
+    echo '</button>' . "\n";
+    echo '<span class="vs-topbar__title">' . vs_e($siteName) . ' · 用户中心</span>' . "\n";
+    echo '</div>' . "\n";
+    echo '<div class="vs-topbar__right">' . "\n";
+
+    if ($userProfile) {
+        $avatarUrl = $userProfile['avatar'];
+        echo '<a href="' . vs_e($base) . '/user/account" class="vs-topbar__avatar-link" title="账号设置">' . "\n";
+        echo '<img src="' . vs_e($avatarUrl) . '" alt="用户头像" class="vs-topbar__avatar" width="32" height="32">' . "\n";
+        echo '</a>' . "\n";
+    }
+    echo '</div>' . "\n";
+    echo '</header>' . "\n";
+    echo '<main class="vs-content">' . "\n";
+    echo '<div class="vs-content__head">' . "\n";
+    echo '<h1 class="vs-content__title">' . vs_e($pageTitle) . '</h1>' . "\n";
+    if ($headerActions !== '') {
+        echo '<div class="vs-content__actions">' . $headerActions . '</div>' . "\n";
+    }
+    echo '</div>' . "\n";
+    echo '<div class="vs-content__body">' . "\n";
+}
+
+/**
+ * @param array $extraScripts
+ * @return void
+ */
+function vs_theme_user_layout_end(array $extraScripts = array())
+{
+    global $vsBase;
+
+    echo '</div>' . "\n";
+    echo '</main>' . "\n";
+    echo '</div>' . "\n";
+    echo '</div>' . "\n";
+
+    if (function_exists('vs_render_modal_shell')) {
+        vs_render_modal_shell();
+    }
+
+    echo '<script>window.VS_BASE_URL = ' . json_encode($vsBase) . ';</script>' . "\n";
+    echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
+    foreach (ThemeManager::userShellJsHrefs(false) as $href) {
+        echo '<script src="' . vs_e($href) . '" defer></script>' . "\n";
+    }
+    $ucShellJs = ThemeManager::shellUrl('user-shell.js');
+    if ($ucShellJs !== '') {
+        echo '<script src="' . vs_e($ucShellJs) . '" defer></script>' . "\n";
+    }
+    $userJs = ThemeManager::userScriptHref();
+    if ($userJs !== '') {
+        echo '<script src="' . vs_e($userJs) . '" defer></script>' . "\n";
+    }
+    foreach ($extraScripts as $js) {
+        $js = basename(str_replace('\\', '/', (string) $js));
+        if ($js === '' || $js === 'modal.js' || $js === 'vs-pick.js' || $js === 'common.js') {
+            continue;
+        }
+        $pageJs = ThemeManager::pageScriptUrl($js);
+        if ($pageJs !== '') {
+            echo '<script src="' . vs_e($pageJs) . '" defer></script>' . "\n";
+        }
+    }
+    vs_console_brand_script();
+    echo '</body></html>';
+}

@@ -40,6 +40,18 @@ if ($homePreviewLimit > 24) {
     $homePreviewLimit = 24;
 }
 
+/* 接口列表排序（default=系统 apiorder / time=按上架时间 / calls=按调用量） */
+$apiSort = trim((string) ThemeManager::themeSetting('api_sort', 'default'));
+if (!in_array($apiSort, array('default', 'time', 'calls'), true)) {
+    $apiSort = 'default';
+}
+
+/* 「上新」标签天数：接口创建 N 天内显示上新 */
+$apiNewDays = (int) ThemeManager::themeSetting('api_new_days', 7);
+if ($apiNewDays < 1) {
+    $apiNewDays = 7;
+}
+
 $rechargePackages = PayConfig::packages();
 $rechargeFeatured = -1;
 foreach ($rechargePackages as $i => $pkg) {
@@ -92,7 +104,9 @@ window.TH5_HOME = {
   apiCount: <?php echo (int) $apiCount; ?>,
   statsFormat: <?php echo json_encode($statsNumFormat, JSON_UNESCAPED_UNICODE); ?>,
   vsBase: <?php echo json_encode($vsBase, JSON_UNESCAPED_UNICODE); ?>,
-  heroTerminalLines: 6
+  heroTerminalLines: 6,
+  apiSort: <?php echo json_encode($apiSort, JSON_UNESCAPED_UNICODE); ?>,
+  newDays: <?php echo (int) $apiNewDays; ?>
 };
 </script>
 
@@ -157,7 +171,7 @@ window.TH5_HOME = {
         统一鉴权、积分计费、统一监控，告别在数十家供应商间来回切换。
       </p>
       <div class="th5-hero-q__actions">
-        <a href="#market" class="btn-primary justify-center lg:justify-start">
+        <a href="<?php echo vs_e($vsBase); ?>/apis" class="btn-primary justify-center lg:justify-start">
           浏览 API 市场
           <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
         </a>
@@ -228,29 +242,37 @@ window.TH5_HOME = {
     </div>
     <div class="th5-steps__grid">
       <div class="th5-step-card reveal">
-        <div class="th5-step-card__num font-mono" aria-hidden="true">01</div>
-        <div class="th5-step-card__icon"><i data-lucide="user-plus" style="width:20px;height:20px;"></i></div>
+        <div class="th5-step-card__top">
+          <div class="th5-step-card__num font-mono" aria-hidden="true">01</div>
+          <div class="th5-step-card__icon"><i data-lucide="user-plus" style="width:20px;height:20px;"></i></div>
+        </div>
         <h3 class="th5-step-card__title">注册登录</h3>
         <p class="th5-step-card__desc">完成账号注册或登录，进入控制台准备开通服务。</p>
         <a href="<?php echo vs_e($vsBase); ?>/user/register" class="th5-step-card__link">立即注册/登录<i data-lucide="arrow-right" style="width:14px;height:14px;"></i></a>
       </div>
       <div class="th5-step-card reveal reveal-delay-1">
-        <div class="th5-step-card__num font-mono" aria-hidden="true">02</div>
-        <div class="th5-step-card__icon"><i data-lucide="key-round" style="width:20px;height:20px;"></i></div>
+        <div class="th5-step-card__top">
+          <div class="th5-step-card__num font-mono" aria-hidden="true">02</div>
+          <div class="th5-step-card__icon"><i data-lucide="key-round" style="width:20px;height:20px;"></i></div>
+        </div>
         <h3 class="th5-step-card__title">创建 API Key</h3>
         <p class="th5-step-card__desc">在控制台创建 API Key，用于后续服务鉴权和调用。</p>
         <a href="<?php echo vs_e($vsBase); ?>/user/keys" class="th5-step-card__link">创建 API Key<i data-lucide="arrow-right" style="width:14px;height:14px;"></i></a>
       </div>
       <div class="th5-step-card reveal reveal-delay-2">
-        <div class="th5-step-card__num font-mono" aria-hidden="true">03</div>
-        <div class="th5-step-card__icon"><i data-lucide="database" style="width:20px;height:20px;"></i></div>
+        <div class="th5-step-card__top">
+          <div class="th5-step-card__num font-mono" aria-hidden="true">03</div>
+          <div class="th5-step-card__icon"><i data-lucide="database" style="width:20px;height:20px;"></i></div>
+        </div>
         <h3 class="th5-step-card__title">选购接口</h3>
         <p class="th5-step-card__desc">浏览接口市场，按需选择需要的接口与计费方式。</p>
-        <a href="#market" class="th5-step-card__link">浏览接口<i data-lucide="arrow-right" style="width:14px;height:14px;"></i></a>
+        <a href="<?php echo vs_e($vsBase); ?>/apis" class="th5-step-card__link">浏览接口<i data-lucide="arrow-right" style="width:14px;height:14px;"></i></a>
       </div>
       <div class="th5-step-card reveal reveal-delay-3">
-        <div class="th5-step-card__num font-mono" aria-hidden="true">04</div>
-        <div class="th5-step-card__icon"><i data-lucide="terminal" style="width:20px;height:20px;"></i></div>
+        <div class="th5-step-card__top">
+          <div class="th5-step-card__num font-mono" aria-hidden="true">04</div>
+          <div class="th5-step-card__icon"><i data-lucide="terminal" style="width:20px;height:20px;"></i></div>
+        </div>
         <h3 class="th5-step-card__title">调用 API</h3>
         <p class="th5-step-card__desc">参考接入文档完成接口调用，快速接入业务应用。</p>
         <a href="<?php echo vs_e($vsBase); ?>/articles" class="th5-step-card__link">查看文档<i data-lucide="arrow-right" style="width:14px;height:14px;"></i></a>
@@ -453,12 +475,33 @@ $adChevR = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="no
       </a>
     </div>
 
+    <?php if (count($catTags) > 0): ?>
+    <!-- 分类横条（横向滚动，与左侧分类目录联动） -->
+    <div class="th5-catbar reveal" data-th5-catbar>
+      <button type="button" class="th5-catbar__arrow" data-th5-catbar-prev aria-label="向前滚动分类"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div class="th5-catbar__scroll" data-th5-catbar-scroll role="tablist" aria-label="接口分类（横向）">
+        <button class="th5-catbar__chip is-active" data-cat="all" type="button">全部接口</button>
+        <button class="th5-catbar__chip" data-cat="new" type="button">最近上新</button>
+        <?php foreach ($catTags as $tag): ?>
+          <?php
+            $cid = isset($tag['id']) ? (string) $tag['id'] : '';
+            $clabel = isset($tag['name']) ? (string) $tag['name'] : '';
+            if ($cid === '' || $cid === 'all' || $clabel === '') { continue; }
+          ?>
+          <button class="th5-catbar__chip" data-cat="<?php echo vs_e($cid); ?>" type="button"><?php echo vs_e($clabel); ?></button>
+        <?php endforeach; ?>
+      </div>
+      <button type="button" class="th5-catbar__arrow" data-th5-catbar-next aria-label="向后滚动分类"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+    <?php endif; ?>
+
     <div class="th5-market-q__layout">
       <!-- 左：分类目录 -->
       <aside class="th5-cat-q reveal">
         <div class="th5-cat-q__title">接口分类</div>
         <div class="th5-cat-q__list" id="TH5CatScroll" role="tablist" aria-label="接口分类">
           <button class="cat-tab active" data-cat="all" type="button">全部接口</button>
+          <button class="cat-tab" data-cat="new" type="button">最近上新</button>
           <?php foreach ($catTags as $tag): ?>
             <?php
               $cid = isset($tag['id']) ? (string) $tag['id'] : '';
@@ -482,7 +525,7 @@ $adChevR = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="no
         </div>
         <div id="apiGrid" class="th5-api-grid-q"></div>
         <div class="th5-market-q__foot reveal">
-          <a href="<?php echo vs_e($vsBase); ?>/apis" class="btn-ghost">
+          <a href="<?php echo vs_e($vsBase); ?>/apis" class="th5-market-q__all">
             查看全部接口
             <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
           </a>

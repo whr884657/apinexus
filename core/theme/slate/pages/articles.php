@@ -3,6 +3,9 @@
 $vsBase = isset($vsBase) ? $vsBase : vs_site_base_path();
 $articleId = function_exists('vs_resolve_path_id') ? (int) vs_resolve_path_id('id') : (isset($_GET['id']) ? (int) $_GET['id'] : 0);
 $csrf = class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '';
+$submitTicket = class_exists('AuthSecurity')
+    ? AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_COMMENT)
+    : '';
 $currentUser = class_exists('FrontendUser') ? FrontendUser::current() : null;
 $prefillName = is_array($currentUser) && !empty($currentUser['username']) ? (string) $currentUser['username'] : '';
 $prefillEmail = is_array($currentUser) && !empty($currentUser['email']) ? (string) $currentUser['email'] : '';
@@ -73,6 +76,7 @@ if ($articleId > 0) {
                     <input type="hidden" name="action" value="submit_comment">
                     <input type="hidden" name="contentid" value="<?php echo (int) $articleId; ?>">
                     <input type="hidden" name="parentid" id="articleCmtParentId" value="0">
+                    <input type="hidden" name="submit_ticket" id="articleCmtTicket" value="<?php echo vs_e($submitTicket); ?>">
 
                     <div class="article-cmt-fields st-form-row st-form-row--3">
                         <div class="article-cmt-field st-form-field">
@@ -91,7 +95,8 @@ if ($articleId > 0) {
 
                     <div class="article-cmt-editor st-form-field">
                         <textarea class="st-input st-input--area" id="articleCmtBody" name="body" rows="4" maxlength="1000" placeholder="说点什么…" required></textarea>
-                        <div class="article-cmt-toolbar">
+                                    <?php if (function_exists('vs_captcha_field')) { vs_captcha_field(Captcha::SCENE_COMMENT); } ?>
+            <div class="article-cmt-toolbar">
                             <div class="article-cmt-emoji-wrap">
                                 <button type="button" class="article-cmt-emoji-btn st-btn st-btn--ghost" id="articleCmtEmojiBtn" aria-expanded="false" aria-controls="articleCmtEmojiPanel">表情</button>
                                 <div class="article-cmt-emoji-panel" id="articleCmtEmojiPanel" hidden role="listbox" aria-label="基础表情"></div>
@@ -179,6 +184,7 @@ window.VS_ARTICLE_COMMENT = {
     count: <?php echo (int) $commentCount; ?>
 };
 </script>
+<?php if (function_exists('vs_captcha_js')) { vs_captcha_js(Captcha::SCENE_COMMENT); } ?>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/js/pages/articles-page.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
     <?php
     return;
@@ -219,7 +225,7 @@ $articles = FrontendArticle::listForTheme(30);
                         <img class="st-article-card__cover" src="<?php echo vs_e($a['cover']); ?>" alt="<?php echo vs_e($a['title']); ?>" width="280" height="160" loading="lazy" decoding="async" referrerpolicy="no-referrer">
                     <?php endif; ?>
                     <div class="st-article-card__body">
-                        <div class="st-card__title"><?php echo vs_e($a['title']); ?></div>
+                        <div class="st-card__title"><?php echo vs_e($a['title']); ?><?php if (!empty($a['ispinned'])): ?> <span class="st-article-pin" title="置顶">置顶</span><?php endif; ?></div>
                         <div class="st-card__meta"><?php echo vs_e($a['createtime']); ?> · 阅读 <?php echo vs_e($a['views_label']); ?></div>
                         <?php if ($a['summary'] !== ''): ?>
                             <div class="st-card__desc"><?php echo vs_e($a['summary']); ?></div>

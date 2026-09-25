@@ -11,6 +11,9 @@ $siteCard = isset($siteCard) && is_array($siteCard)
     ? $siteCard
     : (class_exists('FrontendLink') ? FrontendLink::siteCard() : array());
 $csrf = class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '';
+$submitTicket = class_exists('AuthSecurity')
+    ? AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK)
+    : '';
 $metaUrl = $vsBase . '/core/theme/three/api/sitemeta.php';
 ?>
 <section class="th3-page">
@@ -42,6 +45,7 @@ $metaUrl = $vsBase . '/core/theme/three/api/sitemeta.php';
       <form id="applyLinkForm" class="th3-form" method="post" action="<?php echo vs_e($vsBase); ?>/applylink" data-ajax="1" novalidate>
         <input type="hidden" name="csrf_token" value="<?php echo vs_e($csrf); ?>">
         <input type="hidden" name="action" value="apply">
+            <input type="hidden" name="submit_ticket" id="applyLinkTicket" value="<?php echo vs_e($submitTicket); ?>">
 
         <label class="th3-field">
           <span>网站链接 *</span>
@@ -70,7 +74,8 @@ $metaUrl = $vsBase . '/core/theme/three/api/sitemeta.php';
           <input class="input" id="applyContact" name="contact" type="text" maxlength="100" placeholder="建议填写邮箱，审核通过后可收到通知">
         </label>
 
-        <button type="submit" class="btn-primary w-full justify-center" id="applySubmitBtn">提交申请</button>
+                    <?php if (function_exists('vs_captcha_field')) { vs_captcha_field(Captcha::SCENE_APPLYLINK); } ?>
+<button type="submit" class="btn-primary w-full justify-center" id="applySubmitBtn">提交申请</button>
       </form>
 
       <div class="th3-apply-tips">
@@ -89,6 +94,7 @@ $metaUrl = $vsBase . '/core/theme/three/api/sitemeta.php';
     </div>
   </div>
 </section>
+<?php if (function_exists('vs_captcha_js')) { vs_captcha_js(Captcha::SCENE_APPLYLINK); } ?>
 <script>
 window.VS_CSRF_TOKEN = <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
 window.VS_LINK_META_URL = <?php echo json_encode($metaUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;

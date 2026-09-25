@@ -1,12 +1,54 @@
 {
     "id": "three",
     "name": "主题3",
-    "version": "0.1.14",
+    "version": "0.1.25",
     "developer": "尋鯨錄",
     "author": "尋鯨錄",
     "description": "主题3",
     "preview": "preview.png",
     "settings": [
+        {
+            "key": "nav_show_home",
+            "label": "导航显示 · 首页",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_apis",
+            "label": "导航显示 · 全部接口",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_articles",
+            "label": "导航显示 · 文章",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_contributors",
+            "label": "导航显示 · 贡献者",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_links",
+            "label": "导航显示 · 友情链接",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_sponsor",
+            "label": "导航显示 · 赞助",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "nav_show_about",
+            "label": "导航显示 · 关于",
+            "type": "checkbox",
+            "default": true
+        },
         {
             "key": "stats_num_format",
             "label": "累计调用次数显示",
@@ -53,6 +95,108 @@
             "type": "textarea",
             "default": "天气、IP、物流、翻译、识别、短信、汇率 ——市面可见的接口，全部聚合到一个平台。统一鉴权、积分计费、统一监控，告别在数十家供应商间来回切换。",
             "placeholder": "写在「全网接口一站调用」标题下面的介绍文案"
+        },
+        {
+            "key": "home_price_featured",
+            "label": "首页充值卡 · 推荐高亮",
+            "type": "select",
+            "default": "2",
+            "options": [
+                { "value": "1", "label": "第 1 张" },
+                { "value": "2", "label": "第 2 张" },
+                { "value": "3", "label": "第 3 张" },
+                { "value": "0", "label": "不高亮" }
+            ]
+        },
+        {
+            "key": "home_price_1_name",
+            "label": "首页充值卡1 · 名称",
+            "type": "text",
+            "default": "体验包"
+        },
+        {
+            "key": "home_price_1_money",
+            "label": "首页充值卡1 · 价格展示",
+            "type": "text",
+            "default": "9.9"
+        },
+        {
+            "key": "home_price_1_points",
+            "label": "首页充值卡1 · 积分展示",
+            "type": "text",
+            "default": "1000"
+        },
+        {
+            "key": "home_price_1_desc",
+            "label": "首页充值卡1 · 描述",
+            "type": "textarea",
+            "default": "适合尝鲜试用，积分永久有效"
+        },
+        {
+            "key": "home_price_1_features",
+            "label": "首页充值卡1 · 卖点（每行一条）",
+            "type": "textarea",
+            "default": "积分永久有效\n全部 API 可调用\n余额随时可查"
+        },
+        {
+            "key": "home_price_2_name",
+            "label": "首页充值卡2 · 名称",
+            "type": "text",
+            "default": "标准包"
+        },
+        {
+            "key": "home_price_2_money",
+            "label": "首页充值卡2 · 价格展示",
+            "type": "text",
+            "default": "49"
+        },
+        {
+            "key": "home_price_2_points",
+            "label": "首页充值卡2 · 积分展示",
+            "type": "text",
+            "default": "6000"
+        },
+        {
+            "key": "home_price_2_desc",
+            "label": "首页充值卡2 · 描述",
+            "type": "textarea",
+            "default": "部分套餐享受充值赠送 10% 到 100% 的活动"
+        },
+        {
+            "key": "home_price_2_features",
+            "label": "首页充值卡2 · 卖点（每行一条）",
+            "type": "textarea",
+            "default": "积分永久有效\n全部 API 可调用\n余额随时可查"
+        },
+        {
+            "key": "home_price_3_name",
+            "label": "首页充值卡3 · 名称",
+            "type": "text",
+            "default": "专业包"
+        },
+        {
+            "key": "home_price_3_money",
+            "label": "首页充值卡3 · 价格展示",
+            "type": "text",
+            "default": "99"
+        },
+        {
+            "key": "home_price_3_points",
+            "label": "首页充值卡3 · 积分展示",
+            "type": "text",
+            "default": "15000"
+        },
+        {
+            "key": "home_price_3_desc",
+            "label": "首页充值卡3 · 描述",
+            "type": "textarea",
+            "default": "大额调用更划算，积分永久有效"
+        },
+        {
+            "key": "home_price_3_features",
+            "label": "首页充值卡3 · 卖点（每行一条）",
+            "type": "textarea",
+            "default": "积分永久有效\n全部 API 可调用\n余额随时可查"
         },
         {
             "key": "show_home_announce",
@@ -112,13 +256,34 @@
             "type": "select",
             "default": "",
             "options": [
-                { "value": "", "label": "不显示" },
-                { "value": "wechat", "label": "微信（二维码）" },
-                { "value": "qq", "label": "QQ" },
-                { "value": "email", "label": "邮箱" },
-                { "value": "github", "label": "GitHub" },
-                { "value": "gitee", "label": "Gitee" },
-                { "value": "twitter", "label": "推特" }
+                {
+                    "value": "",
+                    "label": "不显示"
+                },
+                {
+                    "value": "wechat",
+                    "label": "微信（二维码）"
+                },
+                {
+                    "value": "qq",
+                    "label": "QQ"
+                },
+                {
+                    "value": "email",
+                    "label": "邮箱"
+                },
+                {
+                    "value": "github",
+                    "label": "GitHub"
+                },
+                {
+                    "value": "gitee",
+                    "label": "Gitee"
+                },
+                {
+                    "value": "twitter",
+                    "label": "推特"
+                }
             ]
         },
         {
@@ -127,8 +292,14 @@
             "type": "select",
             "default": "link",
             "options": [
-                { "value": "link", "label": "链接跳转" },
-                { "value": "qrcode", "label": "二维码悬停" }
+                {
+                    "value": "link",
+                    "label": "链接跳转"
+                },
+                {
+                    "value": "qrcode",
+                    "label": "二维码悬停"
+                }
             ]
         },
         {
@@ -143,13 +314,34 @@
             "type": "select",
             "default": "",
             "options": [
-                { "value": "", "label": "不显示" },
-                { "value": "wechat", "label": "微信（二维码）" },
-                { "value": "qq", "label": "QQ" },
-                { "value": "email", "label": "邮箱" },
-                { "value": "github", "label": "GitHub" },
-                { "value": "gitee", "label": "Gitee" },
-                { "value": "twitter", "label": "推特" }
+                {
+                    "value": "",
+                    "label": "不显示"
+                },
+                {
+                    "value": "wechat",
+                    "label": "微信（二维码）"
+                },
+                {
+                    "value": "qq",
+                    "label": "QQ"
+                },
+                {
+                    "value": "email",
+                    "label": "邮箱"
+                },
+                {
+                    "value": "github",
+                    "label": "GitHub"
+                },
+                {
+                    "value": "gitee",
+                    "label": "Gitee"
+                },
+                {
+                    "value": "twitter",
+                    "label": "推特"
+                }
             ]
         },
         {
@@ -158,8 +350,14 @@
             "type": "select",
             "default": "link",
             "options": [
-                { "value": "link", "label": "链接跳转" },
-                { "value": "qrcode", "label": "二维码悬停" }
+                {
+                    "value": "link",
+                    "label": "链接跳转"
+                },
+                {
+                    "value": "qrcode",
+                    "label": "二维码悬停"
+                }
             ]
         },
         {
@@ -174,13 +372,34 @@
             "type": "select",
             "default": "",
             "options": [
-                { "value": "", "label": "不显示" },
-                { "value": "wechat", "label": "微信（二维码）" },
-                { "value": "qq", "label": "QQ" },
-                { "value": "email", "label": "邮箱" },
-                { "value": "github", "label": "GitHub" },
-                { "value": "gitee", "label": "Gitee" },
-                { "value": "twitter", "label": "推特" }
+                {
+                    "value": "",
+                    "label": "不显示"
+                },
+                {
+                    "value": "wechat",
+                    "label": "微信（二维码）"
+                },
+                {
+                    "value": "qq",
+                    "label": "QQ"
+                },
+                {
+                    "value": "email",
+                    "label": "邮箱"
+                },
+                {
+                    "value": "github",
+                    "label": "GitHub"
+                },
+                {
+                    "value": "gitee",
+                    "label": "Gitee"
+                },
+                {
+                    "value": "twitter",
+                    "label": "推特"
+                }
             ]
         },
         {
@@ -189,8 +408,14 @@
             "type": "select",
             "default": "link",
             "options": [
-                { "value": "link", "label": "链接跳转" },
-                { "value": "qrcode", "label": "二维码悬停" }
+                {
+                    "value": "link",
+                    "label": "链接跳转"
+                },
+                {
+                    "value": "qrcode",
+                    "label": "二维码悬停"
+                }
             ]
         },
         {

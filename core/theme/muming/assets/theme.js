@@ -80,6 +80,9 @@
   var cfg = window.TH5_HOME || {};
   var pageMode = cfg.page || 'home';
   var previewLimit = (pageMode === 'apis') ? 99999 : (parseInt(cfg.previewLimit, 10) || 12);
+  var apiSort = (cfg.apiSort === 'time' || cfg.apiSort === 'calls') ? cfg.apiSort : 'default';
+  var newDays = parseInt(cfg.newDays, 10);
+  if (!newDays || newDays < 1) newDays = 7;
   var vsBase = cfg.vsBase || '';
   var catalogApis = [];
   var catalogLoadFailed = false;
@@ -450,7 +453,7 @@
     if (a.category_name) catLabel = escapeHtml(String(a.category_name));
     return '<a class="th5-api-card-q reveal visible' + stateCls + '" href="' + escapeHtml(href) + '" style="transition-delay:' + (i * 0.04) + 's;text-decoration:none;color:inherit;display:flex;">'
       + '<div class="th5-api-card-q__head">'
-      + '<span class="th5-api-card-q__tag' + (i < 2 ? ' th5-api-card-q__tag--new' : '') + '">' + (i < 2 ? '<i data-lucide="sparkles" style="width:11px;height:11px;"></i>上新' : (catLabel !== '' ? escapeHtml(catLabel) : '接口')) + '</span>'
+      + '<span class="th5-api-card-q__tag' + (isNewApi(a) ? ' th5-api-card-q__tag--new' : '') + '">' + (isNewApi(a) ? '<i data-lucide="sparkles" style="width:11px;height:11px;"></i>上新' : (catLabel !== '' ? escapeHtml(catLabel) : '接口')) + '</span>'
       + '<span class="th5-api-card-q__method m-' + tone + '">' + escapeHtml(m) + '</span>'
       + '</div>'
       + '<div class="th5-api-card-q__name">' + iconInner + escapeHtml(a.name || ('接口 #' + a.id)) + '</div>'
@@ -460,6 +463,18 @@
       + chips
       + '<i data-lucide="arrow-up-right" class="th5-api-card-q__arrow" style="width:15px;height:15px;color:var(--muted);"></i>'
       + '</div></a>';
+  }
+  function parseApiTime(raw) {
+    var s = String(raw || '').trim();
+    if (!s) return null;
+    var v = new Date(s.indexOf('-') >= 0 ? s.replace(/-/g, '/') : s);
+    return isNaN(v.getTime()) ? null : v;
+  }
+  function isNewApi(a) {
+    var d = parseApiTime(a && a.createtime);
+    if (!d) return false;
+    var age = Date.now() - d.getTime();
+    return age >= 0 && age <= newDays * 86400000;
   }
   function catOf(a) {
     if (a.category_id != null && a.category_id !== '') return String(a.category_id);
@@ -484,6 +499,7 @@
       return;
     }
     var filtered = catalogApis.filter(function (a) {
+      if (activeCat === 'new') return isNewApi(a);
       if (activeCat !== 'all' && catOf(a) !== activeCat) return false;
       if (!searchQ) return true;
       var q = searchQ.toLowerCase();
@@ -491,7 +507,7 @@
       return blob.indexOf(q) >= 0;
     });
     // 首页精选：有序取前 N；随机再洗一次后取 N（apis 页 previewLimit 极大，等同全量）
-    var source = (pageMode !== 'apis' && Number(window.VS_APIORDER) !== 1)
+    var source = (apiSort === 'default' && pageMode !== 'apis' && Number(window.VS_APIORDER) !== 1)
       ? shuffleCopy(filtered)
       : filtered;
     var show = source.slice(0, previewLimit);
@@ -530,6 +546,16 @@
     function apply(list) {
       catalogLoadFailed = false;
       catalogApis = list || [];
+      if (apiSort === 'time' || apiSort === 'calls') {
+        catalogApis = catalogApis.slice().sort(function (x, y) {
+          if (apiSort === 'time') {
+            var tx = parseApiTime(x && x.createtime);
+            var ty = parseApiTime(y && y.createtime);
+            return (ty ? ty.getTime() : 0) - (tx ? tx.getTime() : 0);
+          }
+          return (Number(y && y.calls) || 0) - (Number(x && x.calls) || 0);
+        });
+      }
       var totalLabel = $('TH5ApiTotalLabel');
       if (totalLabel) totalLabel.textContent = String(cfg.apiCount || catalogApis.length);
       if (apiSearch && apiSearch.getAttribute('data-ph-tpl')) {
@@ -593,4 +619,316 @@
 
   window.fiveIconsRefresh(document);
   bootCatalog();
+})();
+
+
+/* ============================================================
+   主题6 · 特效增强（借鉴 Heo 式交互语言，独立实现）
+   1. 顶部加载进度条  2. Loading 进场页  3. Hero 悬浮粒子
+   4. 返回顶部按钮    5. 分类横条联动    6. 控制台光标
+   7. 按钮指针跟随光晕
+   ============================================================ */
+(function () {
+  'use strict';
+
+  function ready(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn);
+    } else {
+      fn();
+    }
+  }
+
+  function prefersReduced() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function isFront() {
+    return !!document.querySelector('.th5-root');
+  }
+
+  ready(function () {
+    if (!isFront()) {
+      return;
+    }
+
+    /* 1. 顶部加载进度条（页面资源加载期间匀速推进，load 后收尾） */
+    (function () {
+      var bar = document.createElement('div');
+      bar.id = 'th5-top-progress';
+      bar.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(bar);
+      var progress = 0;
+      var done = false;
+      var timer = null;
+      function step() {
+        if (done) return;
+        progress += Math.random() * 9 + 4;
+        if (progress > 92) progress = 92;
+        bar.style.width = progress + '%';
+        timer = setTimeout(step, 200 + Math.random() * 180);
+      }
+      function finish() {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        bar.style.width = '100%';
+        setTimeout(function () {
+          bar.classList.remove('is-running');
+          setTimeout(function () { bar.style.width = '0%'; }, 380);
+        }, 280);
+      }
+      bar.classList.add('is-running');
+      step();
+      if (document.readyState === 'complete') {
+        finish();
+      } else {
+        window.addEventListener('load', finish);
+      }
+      setTimeout(finish, 5000);
+    })();
+
+    /* 2. Loading 进场页（品牌徽标呼吸 + 进度条滑条，加载完成后淡出移除） */
+    (function () {
+      var el = document.createElement('div');
+      el.id = 'th5-loading';
+      var mark = document.createElement('div');
+      mark.id = 'th5-loading__mark';
+      var logo = document.querySelector('.th5-brand-logo img, .th5-brand-img');
+      if (logo && logo.getAttribute('src')) {
+        var img = document.createElement('img');
+        img.src = logo.getAttribute('src');
+        img.alt = '';
+        mark.appendChild(img);
+      } else {
+        var nameEl = document.querySelector('.th5-header__name');
+        mark.textContent = ((nameEl && nameEl.textContent ? nameEl.textContent.trim() : '') || 'API').charAt(0).toUpperCase() || 'A';
+      }
+      var bar = document.createElement('div');
+      bar.id = 'th5-loading__bar';
+      bar.innerHTML = '<i></i>';
+      el.appendChild(mark);
+      el.appendChild(bar);
+      document.body.insertBefore(el, document.body.firstChild);
+      var hidden = false;
+      function hide() {
+        if (hidden) return;
+        hidden = true;
+        el.classList.add('is-done');
+        setTimeout(function () {
+          if (el.parentNode) el.parentNode.removeChild(el);
+        }, 600);
+      }
+      window.addEventListener('load', function () { setTimeout(hide, 420); });
+      setTimeout(hide, 3200);
+    })();
+
+    /* 3. Hero 悬浮粒子（轻量 canvas 连接网络，无外部依赖） */
+    (function () {
+      if (prefersReduced()) return;
+      var hero = document.querySelector('.th5-hero-q');
+      if (!hero || !window.requestAnimationFrame) return;
+      var canvas = document.createElement('canvas');
+      canvas.className = 'th5-hero-q__canvas';
+      canvas.setAttribute('aria-hidden', 'true');
+      var inner = hero.querySelector('.th5-hero-q__inner');
+      if (inner) hero.insertBefore(canvas, inner);
+      else hero.appendChild(canvas);
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var w = 0;
+      var h = 0;
+      var pts = [];
+      var raf = 0;
+      var running = true;
+      var accent = '#1B6BFF';
+      try {
+        var c = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+        if (c) accent = c;
+      } catch (e) { /* ignore */ }
+      function hexRgba(hex, a) {
+        var m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+        if (!m) return 'rgba(27,107,255,' + a + ')';
+        var n = parseInt(m[1], 16);
+        return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+      }
+      var dotColor = hexRgba(accent, 0.5);
+      var lineColor = hexRgba(accent, 0.1);
+      function resize() {
+        var rect = hero.getBoundingClientRect();
+        w = Math.max(1, rect.width);
+        h = Math.max(1, rect.height);
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        var count = Math.min(64, Math.max(22, Math.round(w / 20)));
+        pts = [];
+        for (var i = 0; i < count; i++) {
+          pts.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            vx: (Math.random() - 0.5) * 0.32,
+            vy: (Math.random() - 0.5) * 0.32,
+            r: Math.random() * 1.6 + 0.7
+          });
+        }
+      }
+      function tick() {
+        if (!running) return;
+        ctx.clearRect(0, 0, w, h);
+        var i, j, p;
+        for (i = 0; i < pts.length; i++) {
+          p = pts[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < -10) p.x = w + 10; else if (p.x > w + 10) p.x = -10;
+          if (p.y < -10) p.y = h + 10; else if (p.y > h + 10) p.y = -10;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = dotColor;
+          ctx.fill();
+        }
+        for (i = 0; i < pts.length; i++) {
+          for (j = i + 1; j < pts.length; j++) {
+            var dx = pts[i].x - pts[j].x;
+            var dy = pts[i].y - pts[j].y;
+            var d2 = dx * dx + dy * dy;
+            if (d2 < 120 * 120) {
+              ctx.beginPath();
+              ctx.moveTo(pts[i].x, pts[i].y);
+              ctx.lineTo(pts[j].x, pts[j].y);
+              ctx.strokeStyle = lineColor;
+              ctx.lineWidth = 1;
+              ctx.stroke();
+            }
+          }
+        }
+        raf = requestAnimationFrame(tick);
+      }
+      var rsT = null;
+      window.addEventListener('resize', function () {
+        clearTimeout(rsT);
+        rsT = setTimeout(resize, 180);
+      }, { passive: true });
+      resize();
+      tick();
+    })();
+
+    /* 4. 返回顶部按钮（滚动超过一屏出现） */
+    (function () {
+      var btn = document.createElement('button');
+      btn.id = 'th5-to-top';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', '回到顶部');
+      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>';
+      document.body.appendChild(btn);
+      function onScroll() {
+        btn.classList.toggle('show', (window.scrollY || window.pageYOffset) > 480);
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+      btn.addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: prefersReduced() ? 'auto' : 'smooth' });
+      });
+    })();
+
+    /* 5. 分类横条：箭头滚动 + 与侧栏分类联动 */
+    (function () {
+      var bar = document.querySelector('[data-th5-catbar]');
+      if (!bar) return;
+      var scrollEl = bar.querySelector('[data-th5-catbar-scroll]');
+      var prev = bar.querySelector('[data-th5-catbar-prev]');
+      var next = bar.querySelector('[data-th5-catbar-next]');
+      if (!scrollEl) return;
+      function updateArrows() {
+        if (prev) prev.classList.toggle('is-hidden', scrollEl.scrollLeft <= 2);
+        if (next) next.classList.toggle('is-hidden', scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 2);
+      }
+      if (prev) {
+        prev.addEventListener('click', function () {
+          scrollEl.scrollBy({ left: -260, behavior: prefersReduced() ? 'auto' : 'smooth' });
+        });
+      }
+      if (next) {
+        next.addEventListener('click', function () {
+          scrollEl.scrollBy({ left: 260, behavior: prefersReduced() ? 'auto' : 'smooth' });
+        });
+      }
+      scrollEl.addEventListener('scroll', updateArrows, { passive: true });
+      window.addEventListener('resize', updateArrows, { passive: true });
+      updateArrows();
+
+      function findTab(cat) {
+        var tabs = document.querySelectorAll('.cat-tab');
+        for (var i = 0; i < tabs.length; i++) {
+          if (String(tabs[i].getAttribute('data-cat') || '') === String(cat)) return tabs[i];
+        }
+        return null;
+      }
+      function syncChips(cat) {
+        var chips = bar.querySelectorAll('.th5-catbar__chip');
+        var activeChip = null;
+        for (var i = 0; i < chips.length; i++) {
+          var on = String(chips[i].getAttribute('data-cat') || '') === String(cat);
+          chips[i].classList.toggle('is-active', on);
+          if (on && !activeChip) activeChip = chips[i];
+        }
+        if (activeChip && activeChip.scrollIntoView) {
+          try {
+            activeChip.scrollIntoView({ behavior: prefersReduced() ? 'auto' : 'smooth', inline: 'center', block: 'nearest' });
+          } catch (e) {
+            activeChip.scrollIntoView(true);
+          }
+        }
+      }
+      var chips = bar.querySelectorAll('.th5-catbar__chip');
+      for (var c = 0; c < chips.length; c++) {
+        (function (chip) {
+          chip.addEventListener('click', function () {
+            var cat = chip.getAttribute('data-cat') || 'all';
+            syncChips(cat);
+            var tab = findTab(cat);
+            if (tab) tab.click();
+          });
+        })(chips[c]);
+      }
+      var tabs = document.querySelectorAll('.cat-tab');
+      for (var t = 0; t < tabs.length; t++) {
+        (function (tab) {
+          tab.addEventListener('click', function () {
+            syncChips(tab.getAttribute('data-cat') || 'all');
+          });
+        })(tabs[t]);
+      }
+    })();
+
+    /* 6. Hero 控制台光标（闪烁方块） */
+    (function () {
+      var code = document.querySelector('.th5-hero-console__code');
+      if (code) {
+        var cur = document.createElement('span');
+        cur.className = 'th5-hero-console__cursor';
+        cur.setAttribute('aria-hidden', 'true');
+        code.appendChild(cur);
+      }
+    })();
+
+    /* 7. 按钮指针跟随光晕（补全 CSS 变量 --mx/--my） */
+    (function () {
+      var targets = document.querySelectorAll('.btn-primary, .btn-ghost');
+      for (var i = 0; i < targets.length; i++) {
+        (function (el) {
+          el.addEventListener('pointermove', function (e) {
+            var r = el.getBoundingClientRect();
+            if (!r.width || !r.height) return;
+            el.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+            el.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+          });
+        })(targets[i]);
+      }
+    })();
+  });
 })();

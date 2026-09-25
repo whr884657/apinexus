@@ -59,6 +59,7 @@ class FrontendArticle
             'cover'             => trim((string) (isset($row['cover']) ? $row['cover'] : '')),
             'coverlayout'       => $coverlayout,
             'coverlayout_label' => ContentManager::coverLayoutLabel($coverlayout),
+            'ispinned'          => ContentManager::normalizeFlag(isset($row['ispinned']) ? $row['ispinned'] : 0),
             'views'             => $views,
             'views_label'       => number_format($views),
             'createtime'        => isset($row['createtime']) ? (string) $row['createtime'] : '',
@@ -73,7 +74,7 @@ class FrontendArticle
     }
 
     /**
-     * 首页摘要：已发布文章，按 sort 升序、id 降序
+     * 首页摘要：已发布文章，置顶优先，再按 sort 升序、id 降序
      *
      * @param int $limit
      * @return array<int, array>
@@ -89,7 +90,7 @@ class FrontendArticle
                 $pdo = Database::connect();
                 $sql = 'SELECT * FROM `' . ContentManager::table() . '`
                 WHERE `kind` = ? AND `status` = ? AND `bindpage` = ?
-                ORDER BY `sort` ASC, `id` DESC
+                ORDER BY `ispinned` DESC, `sort` ASC, `id` DESC
                 LIMIT ' . (int) $limit;
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute(array(

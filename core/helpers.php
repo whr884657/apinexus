@@ -46,7 +46,8 @@ function vs_console_brand_script()
     $GLOBALS['vs_console_brand_emitted'] = true;
 
     $ver = defined('VS_VERSION') ? (string) VS_VERSION : '';
-    $src = rtrim(vs_base_url(), '/') . '/assets/js/console-brand.js';
+    // 同站脚本必须用根相对路径，禁止 vs_base_url() 写出 https://域名（E252 / 《前端页面渲染与源码规范》§3.2）
+    $src = vs_site_path('/assets/js/console-brand.js');
     if ($ver !== '') {
         $src .= '?v=' . rawurlencode($ver);
     }
@@ -797,6 +798,72 @@ function vs_redirect($url)
 }
 
 /**
+ * 写入一次性会话提示（禁止把业务文案拼进 URL Query）
+ *
+ * @param string $type success|error|info|warning
+ * @param string $msg
+ * @return void
+ */
+function vs_flash_set($type, $msg)
+{
+    $type = strtolower(trim((string) $type));
+    if (!in_array($type, array('success', 'error', 'info', 'warning'), true)) {
+        $type = 'info';
+    }
+    $msg = trim((string) $msg);
+    if ($msg === '') {
+        return;
+    }
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
+    $_SESSION['vs_flash'] = array(
+        'type' => $type,
+        'msg'  => $msg,
+    );
+}
+
+/**
+ * 取出并清除一次性会话提示
+ *
+ * @return array{type: string, msg: string}|null
+ */
+function vs_flash_take()
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return null;
+    }
+    if (!isset($_SESSION['vs_flash']) || !is_array($_SESSION['vs_flash'])) {
+        return null;
+    }
+    $flash = $_SESSION['vs_flash'];
+    unset($_SESSION['vs_flash']);
+    $type = isset($flash['type']) ? strtolower(trim((string) $flash['type'])) : 'info';
+    $msg = isset($flash['msg']) ? trim((string) $flash['msg']) : '';
+    if ($msg === '') {
+        return null;
+    }
+    if (!in_array($type, array('success', 'error', 'info', 'warning'), true)) {
+        $type = 'info';
+    }
+    return array('type' => $type, 'msg' => $msg);
+}
+
+/**
+ * 设置 Flash 后重定向到干净 URL（无业务 Query）
+ *
+ * @param string $url
+ * @param string $type
+ * @param string $msg
+ * @return never
+ */
+function vs_redirect_flash($url, $type, $msg)
+{
+    vs_flash_set($type, $msg);
+    vs_redirect($url);
+}
+
+/**
  * 校验登录后回跳地址（仅允许本站绝对 URL 或以 / 开头的站内路径）
  *
  * @param string $candidate
@@ -1203,7 +1270,27 @@ function vs_render_footer_qrs($modifier = '')
 
     echo '<div class="' . vs_e(implode(' ', $classes)) . '">' . "\n";
     foreach ($qrs as $qr) {
-        $href = vs_favicon_href($qr['url']);
+        // 页脚图：同站根相对；外链 http(s) 原样。本域绝对 URL 收成路径（E252）
+        $raw = isset($qr['url']) ? trim((string) $qr['url']) : '';
+        if ($raw === '') {
+            continue;
+        }
+        if (preg_match('#^https?://#i', $raw)) {
+            $href = $raw;
+            $siteHost = parse_url(rtrim(vs_base_url(), '/'), PHP_URL_HOST);
+            $uHost = parse_url($raw, PHP_URL_HOST);
+            $uPath = parse_url($raw, PHP_URL_PATH);
+            if ($siteHost && $uHost && strcasecmp((string) $siteHost, (string) $uHost) === 0 && is_string($uPath) && $uPath !== '') {
+                $href = vs_site_path($uPath);
+            } else {
+                $href = vs_seo_prefer_https($raw);
+            }
+        } else {
+            if ($raw[0] !== '/') {
+                $raw = '/' . $raw;
+            }
+            $href = vs_site_path($raw);
+        }
         if ($href === '') {
             continue;
         }
@@ -2063,6 +2150,7 @@ function vs_render_foot(array $jsFiles = array(), array $extraJsHrefs = array(),
         echo 'window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || ' . json_encode(class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '') . ';' . "\n";
         echo 'window.VS_PLAY_URL = window.VS_PLAY_URL || ' . json_encode(vs_site_path('/core/playground/relay.php')) . ';' . "\n";
         echo 'window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || ' . json_encode(vs_site_path('/core/front/catalog.php')) . ';' . "\n";
+        echo 'window.VS_FRONT_LINKS = window.VS_FRONT_LINKS || ' . json_encode(vs_site_path('/core/front/links.php')) . ';' . "\n";
         echo '</script>' . "\n";
     }
     if ($loadRootShell) {

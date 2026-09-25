@@ -457,6 +457,424 @@
     };
 
     /**
+     * 前台友情链接（POST + CSRF；页脚/友链页不灌 SSR 列表，E355）
+     *
+     * @param {{action?: 'footer'|'page', limit?: number}} [opts]
+     * @param {number} [attempt]
+     * @returns {Promise<object>}
+     */
+    global.VS.fetchFrontLinks = function (opts, attempt) {
+        opts = opts || {};
+        attempt = Number(attempt) || 0;
+        var url = global.VS_FRONT_LINKS
+            || ((global.VS_BASE_URL || '') + '/core/front/links.php');
+        var action = opts.action === 'page' ? 'page' : 'footer';
+
+        function buildBody() {
+            var fd = new FormData();
+            fd.append('action', action);
+            if (action === 'footer' && opts.limit != null) {
+                fd.append('limit', String(opts.limit));
+            }
+            return fd;
+        }
+
+        function isCredFail(data) {
+            if (!data || typeof data !== 'object' || Number(data.code) === 1) {
+                return false;
+            }
+            if (data.csrf) {
+                return true;
+            }
+            var msg = String(data.msg || '');
+            return /凭证|csrf|刷新页面|来源无效/i.test(msg);
+        }
+
+        function isTransientErr(err) {
+            if (!err) {
+                return false;
+            }
+            var m = String(err.message || '');
+            return m === 'invalid_json'
+                || m === 'Failed to fetch'
+                || m === 'NetworkError when attempting to fetch resource.'
+                || err.name === 'TypeError';
+        }
+
+        return global.VS.postForm(buildBody(), url).then(function (data) {
+            if (data && data.csrf) {
+                global.VS_CSRF_TOKEN = data.csrf;
+            }
+            if (data && Number(data.code) === 1) {
+                return data;
+            }
+            if (attempt < 1 && isCredFail(data)) {
+                return global.VS.fetchFrontLinks(opts, attempt + 1);
+            }
+            throw new Error((data && data.msg) ? data.msg : '友链加载失败');
+        }).catch(function (err) {
+            if (attempt < 1 && isTransientErr(err)) {
+                return global.VS.fetchFrontLinks(opts, attempt + 1);
+            }
+            throw err;
+        });
+    };
+
+    function vsSafeHttpUrl(raw) {
+        var u = String(raw == null ? '' : raw).trim();
+        if (!/^https?:\/\//i.test(u)) {
+            return '';
+        }
+        return u;
+    }
+
+    /**
+     * 页脚 #friendLinks：异步填充友链项（保留已有「申请友链」等静态锚点）
+     *
+     * @param {HTMLElement} el
+     */
+    global.VS.mountFooterFriendLinks = function (el) {
+        if (!el || el.getAttribute('data-vs-mounted') === '1') {
+            return;
+        }
+        el.setAttribute('data-vs-mounted', '1');
+        var limit = parseInt(el.getAttribute('data-limit') || '8', 10);
+        if (isNaN(limit) || limit < 0) {
+            limit = 8;
+        }
+        if (limit > 10) {
+            limit = 10;
+        }
+        var linkClass = el.getAttribute('data-link-class') || 'footer-link-item';
+        var moreClass = el.getAttribute('data-more-class') || (linkClass + ' footer-link-item--more');
+        var linksUrl = el.getAttribute('data-links-url') || '';
+        var onLinks = el.getAttribute('data-on-links') === '1';
+
+        global.VS.fetchFrontLinks({ action: 'footer', limit: limit }).then(function (data) {
+            var items = (data && Array.isArray(data.items)) ? data.items : [];
+            var frag = document.createDocumentFragment();
+            items.forEach(function (item) {
+                if (!item || typeof item !== 'object') {
+                    return;
+                }
+                var href = vsSafeHttpUrl(item.siteurl);
+                var name = String(item.name == null ? '' : item.name).trim();
+                if (!href || !name) {
+                    return;
+                }
+                var a = document.createElement('a');
+                a.href = href;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.className = linkClass;
+                a.setAttribute('data-friend-link', '1');
+                a.textContent = name;
+                frag.appendChild(a);
+            });
+            if (data && data.has_more && linksUrl && !onLinks) {
+                var more = document.createElement('a');
+                more.href = linksUrl;
+                more.className = moreClass;
+                more.textContent = '查看更多';
+                frag.appendChild(more);
+            }
+            var anchor = el.querySelector('[data-footer-links-anchor]');
+            if (anchor) {
+                el.insertBefore(frag, anchor);
+            } else {
+                el.appendChild(frag);
+            }
+        }).catch(function () {
+            /* 静默：页脚友链失败不打断整页 */
+        });
+    };
+
+    /**
+     * 友链页网格异步填充（按 data-layout 适配各主题卡片结构）
+     *
+     * @param {HTMLElement} root
+     */
+    global.VS.mountLinksPage = function (root) {
+        if (!root || root.getAttribute('data-vs-mounted') === '1') {
+            return;
+        }
+        root.setAttribute('data-vs-mounted', '1');
+        var layout = root.getAttribute('data-layout') || 'default';
+        var grid = root.querySelector('[data-vs-links-grid]');
+        var emptyEl = root.querySelector('[data-vs-links-empty]');
+        var truncEl = root.querySelector('[data-vs-links-truncated]');
+        var loadingEl = root.querySelector('[data-vs-links-loading]');
+        if (loadingEl) {
+            loadingEl.hidden = false;
+        }
+        if (emptyEl) {
+            emptyEl.hidden = true;
+        }
+        if (truncEl) {
+            truncEl.hidden = true;
+        }
+        if (grid) {
+            grid.innerHTML = '';
+            grid.hidden = true;
+        }
+
+        function buildCard(item) {
+            var href = vsSafeHttpUrl(item.siteurl);
+            var name = String(item.name == null ? '' : item.name).trim();
+            if (!href || !name) {
+                return null;
+            }
+            var initial = String(item.initial || name.charAt(0) || '?');
+            var icon = String(item.icon == null ? '' : item.icon).trim();
+            var hasIcon = icon && /^https?:\/\//i.test(icon);
+            var desc = String(item.description == null ? '' : item.description).trim();
+            var host = String(item.host || item.siteurl || '');
+            var a = document.createElement('a');
+            a.href = href;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.setAttribute('data-friend-link', '1');
+
+            if (layout === 'slate') {
+                a.className = 'st-link-card';
+                if (hasIcon) {
+                    var imgS = document.createElement('img');
+                    imgS.className = 'st-link-card__avatar';
+                    imgS.src = icon;
+                    imgS.alt = name;
+                    imgS.width = 48;
+                    imgS.height = 48;
+                    imgS.loading = 'lazy';
+                    imgS.decoding = 'async';
+                    imgS.referrerPolicy = 'no-referrer';
+                    imgS.setAttribute('data-ext-icon', '1');
+                    a.appendChild(imgS);
+                } else {
+                    var avS = document.createElement('div');
+                    avS.className = 'st-link-card__avatar st-link-card__avatar--text';
+                    avS.textContent = initial;
+                    a.appendChild(avS);
+                }
+                var bodyS = document.createElement('div');
+                bodyS.className = 'st-link-card__body';
+                var nS = document.createElement('strong');
+                nS.className = 'st-link-card__name';
+                nS.textContent = name;
+                bodyS.appendChild(nS);
+                if (desc) {
+                    var dS = document.createElement('p');
+                    dS.className = 'st-link-card__desc';
+                    dS.textContent = desc;
+                    bodyS.appendChild(dS);
+                }
+                var uS = document.createElement('p');
+                uS.className = 'st-link-card__url';
+                uS.textContent = host;
+                bodyS.appendChild(uS);
+                a.appendChild(bodyS);
+                return a;
+            }
+
+            if (layout === 'three') {
+                a.className = 'th3-link-card card';
+                if (hasIcon) {
+                    var img3 = document.createElement('img');
+                    img3.className = 'th3-link-card__avatar';
+                    img3.src = icon;
+                    img3.alt = '';
+                    img3.width = 56;
+                    img3.height = 56;
+                    img3.loading = 'lazy';
+                    img3.decoding = 'async';
+                    img3.referrerPolicy = 'no-referrer';
+                    img3.setAttribute('data-ext-icon', '1');
+                    a.appendChild(img3);
+                } else {
+                    var av3 = document.createElement('span');
+                    av3.className = 'th3-link-card__avatar th3-link-card__avatar--text';
+                    av3.textContent = initial;
+                    a.appendChild(av3);
+                }
+                var body3 = document.createElement('div');
+                body3.className = 'th3-link-card__body';
+                var n3 = document.createElement('strong');
+                n3.className = 'th3-link-card__name';
+                n3.textContent = name;
+                body3.appendChild(n3);
+                if (desc) {
+                    var d3 = document.createElement('p');
+                    d3.className = 'th3-link-card__desc';
+                    d3.textContent = desc;
+                    body3.appendChild(d3);
+                }
+                var u3 = document.createElement('span');
+                u3.className = 'th3-link-card__url font-mono';
+                u3.textContent = host;
+                body3.appendChild(u3);
+                a.appendChild(body3);
+                return a;
+            }
+
+            if (layout === 'muming') {
+                a.className = 'th5-link-card card';
+                if (hasIcon) {
+                    var img5 = document.createElement('img');
+                    img5.className = 'th5-link-card__avatar';
+                    img5.src = icon;
+                    img5.alt = '';
+                    img5.width = 44;
+                    img5.height = 44;
+                    img5.loading = 'lazy';
+                    img5.decoding = 'async';
+                    img5.referrerPolicy = 'no-referrer';
+                    img5.setAttribute('data-ext-icon', '1');
+                    a.appendChild(img5);
+                } else {
+                    var av5 = document.createElement('span');
+                    av5.className = 'th5-link-card__avatar th5-link-card__avatar--text';
+                    av5.textContent = initial;
+                    a.appendChild(av5);
+                }
+                var body5 = document.createElement('div');
+                body5.className = 'th5-link-card__body';
+                var n5 = document.createElement('strong');
+                n5.textContent = name;
+                body5.appendChild(n5);
+                if (desc) {
+                    var d5 = document.createElement('p');
+                    d5.textContent = desc;
+                    body5.appendChild(d5);
+                }
+                var u5 = document.createElement('span');
+                u5.className = 'font-mono text-xs text-muted';
+                u5.textContent = host;
+                body5.appendChild(u5);
+                a.appendChild(body5);
+                return a;
+            }
+
+            // default / docs
+            a.className = 'link-card';
+            if (hasIcon) {
+                var img = document.createElement('img');
+                img.className = 'link-avatar';
+                img.src = icon;
+                img.alt = name;
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                img.referrerPolicy = 'no-referrer';
+                img.setAttribute('data-ext-icon', '1');
+                a.appendChild(img);
+            } else {
+                var av = document.createElement('div');
+                av.className = 'link-avatar';
+                av.textContent = initial;
+                a.appendChild(av);
+            }
+            var info = document.createElement('div');
+            info.className = 'link-info';
+            var nameEl = document.createElement('span');
+            nameEl.className = 'link-name';
+            nameEl.textContent = name;
+            info.appendChild(nameEl);
+            if (desc) {
+                var pDesc = document.createElement('p');
+                pDesc.className = 'link-desc';
+                pDesc.textContent = desc;
+                info.appendChild(pDesc);
+            }
+            var pUrl = document.createElement('p');
+            pUrl.className = 'link-url';
+            pUrl.textContent = host;
+            info.appendChild(pUrl);
+            a.appendChild(info);
+            return a;
+        }
+
+        global.VS.fetchFrontLinks({ action: 'page' }).then(function (data) {
+            if (loadingEl) {
+                loadingEl.hidden = true;
+            }
+            var items = (data && Array.isArray(data.items)) ? data.items : [];
+            if (!items.length) {
+                if (emptyEl) {
+                    emptyEl.hidden = false;
+                }
+                return;
+            }
+            if (data.truncated && truncEl) {
+                var total = Number(data.total) || 0;
+                var lim = Number(data.limit) || 0;
+                var tip = truncEl.querySelector('[data-vs-links-trunc-text]');
+                if (tip) {
+                    tip.textContent = '当前共 ' + total + ' 条，为避免页面卡顿仅展示前 ' + lim + ' 条。';
+                }
+                truncEl.hidden = false;
+            }
+            if (!grid) {
+                return;
+            }
+            var frag = document.createDocumentFragment();
+            items.forEach(function (item) {
+                var card = buildCard(item);
+                if (card) {
+                    frag.appendChild(card);
+                }
+            });
+            grid.appendChild(frag);
+            grid.hidden = false;
+            if (global.VS && typeof global.VS.bindExternalImgFallback === 'function') {
+                global.VS.bindExternalImgFallback(root);
+            }
+            if (!document.getElementById('linkAvatarSwingStyle')) {
+                var style = document.createElement('style');
+                style.id = 'linkAvatarSwingStyle';
+                style.textContent = '@keyframes linkSwing{0%{transform:rotate(0)}20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(3deg)}100%{transform:rotate(0)}}.link-avatar-swing{animation:linkSwing .9s ease-in-out;transform-origin:center}';
+                document.head.appendChild(style);
+            }
+            root.querySelectorAll('.link-avatar, .st-link-card__avatar, .th3-link-card__avatar, .th5-link-card__avatar').forEach(function (avEl) {
+                if (avEl.getAttribute('data-swing-bound') === '1') {
+                    return;
+                }
+                avEl.setAttribute('data-swing-bound', '1');
+                avEl.addEventListener('click', function () {
+                    avEl.classList.remove('link-avatar-swing');
+                    void avEl.offsetWidth;
+                    avEl.classList.add('link-avatar-swing');
+                });
+            });
+        }).catch(function () {
+            if (loadingEl) {
+                loadingEl.hidden = true;
+            }
+            if (emptyEl) {
+                emptyEl.hidden = false;
+                var p = emptyEl.querySelector('p, .st-card__desc');
+                if (p) {
+                    p.textContent = '友链加载失败，请刷新重试';
+                }
+            }
+        });
+    };
+
+    function vsAutoMountFrontLinks() {
+        var foot = document.getElementById('friendLinks');
+        if (foot && foot.getAttribute('data-vs-footer-links') === '1') {
+            global.VS.mountFooterFriendLinks(foot);
+        }
+        var page = document.querySelector('[data-vs-links-page]');
+        if (page) {
+            global.VS.mountLinksPage(page);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', vsAutoMountFrontLinks);
+    } else {
+        vsAutoMountFrontLinks();
+    }
+
+    /**
      * 数据加载动效 HTML（列表 / 详情面板统一用）
      *
      * @param {string} [label]

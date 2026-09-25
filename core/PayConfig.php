@@ -13,6 +13,15 @@ class PayConfig
     const KEY_METHODS = 'pay_methods';
     const KEY_RATE = 'pay_rate';
     const KEY_PACKAGES = 'pay_packages';
+    /** 自定义金额阶梯优惠 JSON：[{min,max,percent},…]；max=0 表示不封顶 */
+    const KEY_CUSTOM_BONUS = 'pay_custom_bonus';
+    /** 用户充值页说明（Markdown 明文，空则前端不展示） */
+    const KEY_TIP_PACKAGE = 'pay_tip_package';
+    const KEY_TIP_CUSTOM = 'pay_tip_custom';
+    const KEY_TIP_CARDKEY = 'pay_tip_cardkey';
+    const TIP_MAX_LEN = 50000;
+    const BONUS_MAX_TIERS = 20;
+    const BONUS_PERCENT_MAX = 1000;
 
     /**
      * @return array
@@ -20,15 +29,58 @@ class PayConfig
     public static function all()
     {
         return array(
-            'url'      => trim((string) Config::get(self::KEY_URL, '')),
-            'pid'      => trim((string) Config::get(self::KEY_PID, '')),
-            'key'      => (string) Config::get(self::KEY_KEY, ''),
-            'channel'  => self::channels(),
-            'methods'  => self::methods(),
-            'rate'     => self::rate(),
-            'packages' => self::packages(),
-            'ready'    => self::isReady(),
+            'url'          => trim((string) Config::get(self::KEY_URL, '')),
+            'pid'          => trim((string) Config::get(self::KEY_PID, '')),
+            'key'          => (string) Config::get(self::KEY_KEY, ''),
+            'channel'      => self::channels(),
+            'methods'      => self::methods(),
+            'rate'          => self::rate(),
+            'packages'      => self::packages(),
+            'custom_bonus'  => self::customBonus(),
+            'tip_package'   => self::tip(self::KEY_TIP_PACKAGE),
+            'tip_custom'    => self::tip(self::KEY_TIP_CUSTOM),
+            'tip_cardkey'   => self::tip(self::KEY_TIP_CARDKEY),
+            'ready'         => self::isReady(),
         );
+    }
+
+    /**
+     * 读取单条充值说明（Markdown 明文）
+     *
+     * @param string $key
+     * @return string
+     */
+    public static function tip($key)
+    {
+        $raw = Config::get($key, '');
+        if (function_exists('vs_ensure_plaintext_field')) {
+            $raw = vs_ensure_plaintext_field($raw);
+        }
+        return trim((string) $raw);
+    }
+
+    /**
+     * 套餐相对兑换比例的赠送百分比（向下取整；小于 1 视为 0）
+     *
+     * @param float|string $money
+     * @param float|string $points
+     * @param float|null   $rate  为 null 时用当前配置比例
+     * @return int
+     */
+    public static function giftPercent($money, $points, $rate = null)
+    {
+        $rate = $rate === null ? self::rate() : (float) $rate;
+        $money = (float) $money;
+        $points = (float) $points;
+        if ($rate <= 0 || $money <= 0 || $points <= 0) {
+            return 0;
+        }
+        $base = $money * $rate;
+        if ($base <= 0 || $points <= $base) {
+            return 0;
+        }
+        $pct = (int) floor(($points - $base) / $base * 100);
+        return $pct >= 1 ? $pct : 0;
     }
 
     /**
@@ -95,6 +147,145 @@ class PayConfig
     }
 
     /**
+     * 自定义充值优惠档位（已规范化、按 min 升序）
+     *
+     * @return array<int,array{min:string,max:string,percent:int}>
+     */
+    public static function customBonus()
+    {
+        $raw = Config::get(self::KEY_CUSTOM_BONUS, '[]');
+        $data = is_string($raw) ? json_decode($raw, true) : $raw;
+        if (!is_array($data)) {
+            return array();
+        }
+        $parsed = self::parseCustomBonusList($data);
+        return is_array($parsed) ? $parsed : array();
+    }
+
+    /**
+     * 按实付金额匹配一档自定义优惠（≥min 且 &lt;max；max=0 不封顶）
+     *
+     * @param float|string $money
+     * @return array{min:string,max:string,percent:int}|null
+     */
+    public static function matchCustomBonus($money)
+    {
+        $money = round((float) $money, 2);
+        if ($money < 0.01) {
+            return null;
+        }
+        foreach (self::customBonus() as $tier) {
+            $min = (float) $tier['min'];
+            $max = (float) $tier['max'];
+            if ($money < $min) {
+                continue;
+            }
+            if ($max > 0 && $money >= $max) {
+                continue;
+            }
+            return $tier;
+        }
+        return null;
+    }
+
+    /**
+     * 自定义金额应到账积分（含阶梯赠送；服务端权威）
+     *
+     * @param float|string $money
+     * @param float|null   $rate
+     * @return array{points:float,percent:int,base:float}
+     */
+    public static function customPoints($money, $rate = null)
+    {
+        $rate = $rate === null ? self::rate() : (float) $rate;
+        $money = round((float) $money, 2);
+        $base = round($money * $rate, 4);
+        $percent = 0;
+        $tier = self::matchCustomBonus($money);
+        if ($tier !== null) {
+            $percent = (int) $tier['percent'];
+        }
+        $points = $percent > 0
+            ? round($base * (1 + $percent / 100), 4)
+            : $base;
+        return array(
+            'points'  => $points,
+            'percent' => $percent,
+            'base'    => $base,
+        );
+    }
+
+    /**
+     * 解析并校验自定义优惠列表；失败返回错误文案
+     *
+     * @param mixed $data
+     * @return array<int,array{min:string,max:string,percent:int}>|string
+     */
+    public static function parseCustomBonusList($data)
+    {
+        if (!is_array($data)) {
+            return '自定义充值优惠 JSON 无效';
+        }
+        if (count($data) > self::BONUS_MAX_TIERS) {
+            return '自定义充值优惠最多 ' . self::BONUS_MAX_TIERS . ' 档';
+        }
+        $tiers = array();
+        foreach ($data as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $min = isset($row['min']) ? round((float) $row['min'], 2) : 0;
+            $max = isset($row['max']) ? round((float) $row['max'], 2) : 0;
+            $percent = isset($row['percent']) ? (int) $row['percent'] : 0;
+            if ($min < 0.01) {
+                return '优惠档位起始金额须至少 0.01 元';
+            }
+            if ($max < 0) {
+                return '优惠档位上限不能为负数';
+            }
+            if ($max > 0 && $max <= $min) {
+                return '优惠档位上限须大于起始金额（或不设上限填 0）';
+            }
+            if ($percent < 1 || $percent > self::BONUS_PERCENT_MAX) {
+                return '优惠赠送比例须为 1～' . self::BONUS_PERCENT_MAX . ' 的整数';
+            }
+            $tiers[] = array(
+                'min'     => number_format($min, 2, '.', ''),
+                'max'     => number_format($max, 2, '.', ''),
+                'percent' => $percent,
+            );
+        }
+        usort($tiers, function ($a, $b) {
+            $cmp = (float) $a['min'] - (float) $b['min'];
+            if ($cmp < 0) {
+                return -1;
+            }
+            if ($cmp > 0) {
+                return 1;
+            }
+            return 0;
+        });
+        $prevMax = null;
+        foreach ($tiers as $tier) {
+            $min = (float) $tier['min'];
+            $max = (float) $tier['max'];
+            if ($prevMax !== null) {
+                if ($prevMax <= 0) {
+                    return '不封顶档位之后不能再配置其它档位';
+                }
+                if ($min < $prevMax) {
+                    return '优惠档位金额区间不能重叠';
+                }
+            }
+            $prevMax = $max > 0 ? $max : 0.0;
+            if ($max <= 0) {
+                $prevMax = 0.0;
+            }
+        }
+        return $tiers;
+    }
+
+    /**
      * @return array<int,array>
      */
     public static function packages()
@@ -116,15 +307,37 @@ class PayConfig
             if ($id === '' || $name === '' || $money <= 0 || $points <= 0) {
                 continue;
             }
+            $moneyFmt = number_format($money, 2, '.', '');
+            $pointsFmt = self::fmtPoints($points);
             $out[] = array(
                 'id'     => mb_substr($id, 0, 32, 'UTF-8'),
                 'name'   => mb_substr($name, 0, 64, 'UTF-8'),
-                'money'  => number_format($money, 2, '.', ''),
-                'points' => self::fmtPoints($points),
+                'money'  => $moneyFmt,
+                'points' => $pointsFmt,
                 'hot'    => !empty($row['hot']) ? 1 : 0,
+                'gift'   => self::giftPercent($moneyFmt, $pointsFmt),
             );
         }
         return $out;
+    }
+
+    /**
+     * @param mixed $raw
+     * @return string
+     */
+    private static function normalizeTipInput($raw)
+    {
+        if (function_exists('vs_ensure_plaintext_field')) {
+            $raw = vs_ensure_plaintext_field($raw);
+        }
+        $text = trim((string) $raw);
+        if ($text === '') {
+            return '';
+        }
+        if (function_exists('mb_substr')) {
+            return mb_substr($text, 0, self::TIP_MAX_LEN, 'UTF-8');
+        }
+        return substr($text, 0, self::TIP_MAX_LEN);
     }
 
     /**
@@ -203,14 +416,37 @@ class PayConfig
             }
         }
 
+        $bonusRaw = array();
+        if (isset($input['custom_bonus']) && is_string($input['custom_bonus'])) {
+            $decoded = json_decode($input['custom_bonus'], true);
+            if (!is_array($decoded)) {
+                return '自定义充值优惠 JSON 无效';
+            }
+            $bonusRaw = $decoded;
+        } elseif (isset($input['custom_bonus']) && is_array($input['custom_bonus'])) {
+            $bonusRaw = $input['custom_bonus'];
+        }
+        $customBonus = self::parseCustomBonusList($bonusRaw);
+        if (!is_array($customBonus)) {
+            return $customBonus;
+        }
+
+        $tipPackage = self::normalizeTipInput(isset($input['tip_package']) ? $input['tip_package'] : '');
+        $tipCustom = self::normalizeTipInput(isset($input['tip_custom']) ? $input['tip_custom'] : '');
+        $tipCardkey = self::normalizeTipInput(isset($input['tip_cardkey']) ? $input['tip_cardkey'] : '');
+
         Config::setMany(array(
-            self::KEY_URL      => $url,
-            self::KEY_PID      => $pid,
-            self::KEY_KEY      => $key,
-            self::KEY_CHANNEL  => json_encode($channel, JSON_UNESCAPED_UNICODE),
-            self::KEY_METHODS  => json_encode(array_values($methods), JSON_UNESCAPED_UNICODE),
-            self::KEY_RATE     => (string) self::fmtPoints($rate),
-            self::KEY_PACKAGES => json_encode($packages, JSON_UNESCAPED_UNICODE),
+            self::KEY_URL           => $url,
+            self::KEY_PID           => $pid,
+            self::KEY_KEY           => $key,
+            self::KEY_CHANNEL       => json_encode($channel, JSON_UNESCAPED_UNICODE),
+            self::KEY_METHODS       => json_encode(array_values($methods), JSON_UNESCAPED_UNICODE),
+            self::KEY_RATE          => (string) self::fmtPoints($rate),
+            self::KEY_PACKAGES      => json_encode($packages, JSON_UNESCAPED_UNICODE),
+            self::KEY_CUSTOM_BONUS  => json_encode($customBonus, JSON_UNESCAPED_UNICODE),
+            self::KEY_TIP_PACKAGE   => $tipPackage,
+            self::KEY_TIP_CUSTOM    => $tipCustom,
+            self::KEY_TIP_CARDKEY   => $tipCardkey,
         ));
 
         return self::all();

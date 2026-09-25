@@ -8,6 +8,9 @@ $siteCard = isset($siteCard) && is_array($siteCard) ? $siteCard : (class_exists(
     'icon' => '',
 ));
 $csrf = class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '';
+$submitTicket = class_exists('AuthSecurity')
+    ? AuthSecurity::issueSubmitTicket(AuthSecurity::SUBMIT_PURPOSE_APPLYLINK)
+    : '';
 $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
 ?>
 <main class="main-wrapper container mx-auto px-4 applylink-page" style="padding-top:88px;">
@@ -37,6 +40,7 @@ $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
         <form id="applyLinkForm" method="post" action="<?php echo vs_e($vsBase); ?>/applylink" data-ajax="1">
             <input type="hidden" name="csrf_token" value="<?php echo vs_e($csrf); ?>">
             <input type="hidden" name="action" value="apply">
+            <input type="hidden" name="submit_ticket" id="applyLinkTicket" value="<?php echo vs_e($submitTicket); ?>">
 
             <div class="form-group">
                 <label class="form-label" for="applyUrl">网站链接 *</label>
@@ -65,7 +69,8 @@ $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
                 <input type="text" id="applyContact" name="contact" class="form-input" placeholder="建议填写邮箱，审核通过后可收到通知" maxlength="100">
             </div>
 
-            <button type="submit" class="btn-geek applylink-submit" id="applySubmitBtn">提交申请</button>
+                        <?php if (function_exists('vs_captcha_field')) { vs_captcha_field(Captcha::SCENE_APPLYLINK); } ?>
+<button type="submit" class="btn-geek applylink-submit" id="applySubmitBtn">提交申请</button>
         </form>
 
         <div class="tips-card">
@@ -83,6 +88,7 @@ $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
         </p>
     </div>
 </main>
+<?php if (function_exists('vs_captcha_js')) { vs_captcha_js(Captcha::SCENE_APPLYLINK); } ?>
 <script>
 window.VS_LINK_META_URL = <?php echo json_encode($metaUrl, JSON_UNESCAPED_UNICODE); ?>;
 window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE); ?>;
