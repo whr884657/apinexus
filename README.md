@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.45-blue?logo=semver&logoColor=white" alt="version">
-  <img src="https://img.shields.io/badge/License-MIT-green?logo=opensourceinitiative&logoColor=white" alt="License: MIT">
+  <img src="https://img.shields.io/badge/version-13.26.46-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/License-AGPL--3.0-blue?logo=gnu&logoColor=white" alt="License: AGPL-3.0">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
   <a href="https://github.com/whr884657/apinexus"><img src="https://img.shields.io/badge/GitHub-whr884657%2Fapinexus-blue?logo=github&logoColor=white" alt="GitHub"></a>
@@ -36,8 +36,6 @@
     <img src="https://img.cdn1.vip/i/6a983f66cc841_1788362598.png" alt="ApiNexus QQ 群二维码" width="220">
   </a>
 </p>
-
-更多界面与交互约定见仓库内开发规范文档。
 
 ---
 
@@ -70,9 +68,16 @@
 - **PHP 扩展**：pdo、pdo_mysql、**redis**、mbstring、json、session、curl、openssl、zip
 - **目录权限**：`config/`、`data/` 可写；安装后自动生成 `config/database.php`
 
-### 结构示意
+---
 
-不在此展开逐文件清单。核心类说明见 **[CORE模块说明.md](CORE模块说明.md)**。
+## 结构示意
+
+不在此展开逐文件清单。文档怎么选：
+
+| 你想做什么 | 看哪里 |
+|------------|--------|
+| 自研 / 改装**前台主题**（取数、布局、对接） | **[CORE模块说明.md](CORE模块说明.md)** |
+| 对接**系统级外部 API**（卡密、签到、排行等，系统密钥） | **[core/api/README.md](core/api/README.md)** |
 
 ```mermaid
 flowchart LR
@@ -87,6 +92,7 @@ flowchart LR
   G --> H[(MySQL)]
   G --> I[(Redis)]
   G --> J[代理网关 /apis]
+  G --> K[系统级 API<br/>/core/api]
 ```
 
 ---
@@ -160,45 +166,100 @@ location / {
 
 ---
 
+## 接口失败码
+
+- **公开接口**：**11xxx**
+- **系统级外部 API**：**12xxx**
+
+| 公开接口 | 含义 |  | 系统级外部 API | 含义 |
+|----------|------|--|----------------|------|
+| 11001 | 未提供调用密钥 |  | 12001 | 系统密钥无效或未提供 |
+| 11002 | 密钥错误 |  | 12002 | 该系统 API 未启用 |
+| 11003 | 密钥已禁用 |  | 12003 | 参数错误 |
+| 11004 | 积分余额不足 |  | 12004 | 参数重复且冲突 |
+| 11005 | 请求过于频繁（QPM） |  | 12005 | 请求过于频繁 |
+| 11006 | 接口维护中 |  | 12006 | 请求体过大 |
+| 11007 | 接口已禁用 |  | 12007 | 不支持 JSONP |
+| 11008 | 接口不可用（审核等） |  | 12008 | 系统未安装 |
+| 11009 | 密钥校验暂不可用 |  | 12009 | 依赖未就绪 |
+| 11010 | 积分系统暂不可用 |  | 12010 | 目标不存在或不可用 |
+| 11011 | 收费接口须有效密钥 |  | 12011 | 业务处理失败 |
+| 11012 | 鉴权方式错误 |  | 12012 | 用户未注册 |
+| 11013 | 接口不存在 |  | 12013 | 账户已封禁 |
+| 11014 | 上游地址无效 |  | 12014 | 业务功能未开启 |
+| 11015 | 上游地址不允许 |  | 12015 | 已完成或请勿重复操作 |
+| 11016 | 上游请求失败 |  |  |  |
+| 11017 | 服务暂不可用 |  |  |  |
+| 11018 | 请求方式不允许 |  |  |  |
+| 11019 | 当前 IP 不在白名单 |  |  |  |
+| 11020 | 启用出口代理须有效密钥 |  |  |  |
+| 11021 | 未配置可用出口代理 |  |  |  |
+| 11022 | 出口代理不可用 |  |  |  |
+| 11023 | 密钥已过期 |  |  |  |
+| 11024 | 令牌分配积分不足 |  |  |  |
+| 11025 | 该密钥无权调用此接口 |  |  |  |
+
+---
+
 ## 版本记录
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.45（2026-09-25）
+### v13.26.46（2026-10-07）
 
-- 文章置顶；默认主题去路径、主页随机分页（E343/E344）
-- 码支付二维码分流；业务邮件去站内链；签到改 lastcheckin（E345/E346/E107）
-- 充值/支付 UI、自定义优惠、支付配置三 Tab（E347/E351～E353）
-- 聚合登录与慕名对接；短 state 修回调失效（E348/E365）
-- 评论友链防刷；折线悬停对焦（E349/E350）
-- 主题导航显隐、友链异步、今日积分消耗 KPI（E354～E356）
-- 主题设置迁 SQLite；装机检测 pdo_sqlite（E360/E361）
-- 日志字段搜索与索引；用户日志对齐管理端（E362/E363）
-- 主题三 UI/间距/参数表等（E357～E359/E364/E372）
-- OAuth 与全站 URL 安全：Flash、禁 Hash、POST 退出（E367～E369）
-- QPM 必填仅按密钥；验证码判断热修（E370/E371）
-- 分类图标全扫描；品牌脚本路径热修（E366/E261）
-- 有库变更：migrations/13.26.45.sql
+- 新增：令牌可限制允许调用的接口（全选不限制；后台只读；停用分类旧勾可留）[E378][E379]
+- 新增：管理后台「运营中心」（邮件群发 / 用户激励 / 站内私信）筹备占位 [E380]
+- 新增：系统级外部 API（卡密、日志清理、接口查询、调用排行、签到、用户信息、全站概况）与文档页；失败码 12xxx；开关单键 sysapion [E382]～[E403]
+- 优化：全站安全防护；调用日志热冷翻页与冷库定位 [E390]；列表底部分页更清晰 [E257]；系统设置分组、AI 模型搜索、UA 样例即时刷新、系统 API 细条折叠 [E405]；主题设置手机横向条卡 [E404]；主题去大白底、手机卡下保存 [E406][E407]；系统 API 细条互斥展开；日志详情完整 URL 可复制 [E408]；系统 API 一接口一条细条、去掉设置页地址复制 [E409]；默认主题终端 curl 用真实站域名；主题三首页「开始使用」进登录 [E410]；日志去大白底与游客文案
+- 新增：系统设置可自定义出站 User-Agent 品牌（不再写死 ApiNexus）[E391]
+- 修复：友情链接等后台若干问题；接口列表排序更准确 [E377]
+- 调整：开源许可由 MIT 改为 AGPL-3.0（须保留署名；衍生须开源）
+- 本版含数据库升级，请按「系统升级」完成；升级后建议重载一次网站服务
+
 - 完整历史见 [`更新记录.md`](更新记录.md)
 
+---
 
+## 赞助支持
+
+本项目开源维护。若对你有帮助，可自愿扫码赞赏（非必须）。
+
+| 支付宝 | 微信 | QQ |
+|:------:|:----:|:--:|
+| <img src="https://www.xunjinlu.fun/img/zhifubaoplay.png" alt="支付宝赞赏码" width="160"> | <img src="https://www.xunjinlu.fun/img/weizan.png" alt="微信赞赏码" width="160"> | <img src="https://www.xunjinlu.fun/img/qqplay.png" alt="QQ 赞赏码" width="160"> |
+
+<br>
+
+### 赞助致谢
+
+| 头像 | 赞助方 | 金额 |
+|:----:|--------|-----:|
+| <img src="https://q1.qlogo.cn/g?b=qq&nk=732517273&s=640" alt="Tmini" width="40" height="40"> | [Tmini - 在线API](https://api.tmini.net/) | 18.8 元 |
+| <img src="https://q1.qlogo.cn/g?b=qq&nk=642746813&s=640" alt="bbbcode" width="40" height="40"> | [bbbcode](https://bbbcode.com/) | 9.9 元 |
+| <img src="https://q1.qlogo.cn/g?b=qq&nk=642746813&s=640" alt="纽扣网络" width="40" height="40"> | [纽扣网络](https://www.nkwl.net/) | 9.9 元 |
 
 ---
 
 ## 开源协议
 
-本项目采用 **[MIT License](LICENSE)**。中文补充说明见 **[LICENSE.zh-CN.md](LICENSE.zh-CN.md)**（安装向导首次进入时须阅读确认）。
+本项目采用 **[GNU Affero GPL v3.0（AGPL-3.0）](LICENSE)**。中文部署条款见 **[LICENSE.zh-CN.md](LICENSE.zh-CN.md)**（安装向导首次进入时须阅读确认）。
 
 ### 您可以
 
-- 学习研究、个人使用、商业使用
-- 修改并再发布（须保留版权声明与 MIT 许可全文）
+- 免费学习、部署与使用（含商业环境）
+- 二次开发并追加自己的署名（**须保留原作者署名**）
+- 分发改装版并可收费，但**必须开源完整对应源码**（含仅作网络服务提供的情形）
+
+### 您不得
+
+- 移除、篡改或遮盖原作者版权与署名
+- 将衍生作品闭源销售或闭源提供服务
+- 未经书面授权，以作者名义宣发、担保您自行增加的功能
 
 ### 作者声明（免责）
 
 - 本项目按 **「原样（AS IS）」** 提供，**不提供任何明示或暗示的担保**
-- 因使用本项目产生的损害，**作者不承担责任**
-- 使用者应自行评估安全风险，做好备份、加固与合规审查
+- 因使用、篡改或部署产生的数据泄露、业务纠纷与赔偿等，**作者不承担责任**，风险由使用者自担
 - 详细条款以 **[LICENSE](LICENSE)** 与 **[LICENSE.zh-CN.md](LICENSE.zh-CN.md)** 为准
 
 ---
