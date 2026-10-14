@@ -1339,6 +1339,9 @@ class DatabaseMigrator
     /**
      * 确保 apilog 转发链请求头列（13.26.46 幂等；不含耗时/响应正文/via/conn/req*）
      *
+     * 说明：只改表结构，不对历史行做 UPDATE。缺哪列加哪列，合并为一条 ALTER，
+     * 优先 ALGORITHM=INPLACE, LOCK=NONE，避免大表上连跑三次重建锁死。
+     *
      * @return void
      */
     private static function ensureApilogExtended46()
@@ -1349,12 +1352,41 @@ class DatabaseMigrator
             }
             $pdo = Database::connect();
             $table = Database::table('apilog');
-            // 逐列幂等：避免只落了其中一列时整段 ADD 被跳过
             $cols = array(
                 'xfproto' => 'varchar(16) NOT NULL DEFAULT \'\' COMMENT \'转发协议（请求头 X-Forwarded-Proto）\'',
                 'xff'     => 'varchar(500) NOT NULL DEFAULT \'\' COMMENT \'转发链路IP（请求头 X-Forwarded-For 原文）\'',
                 'xri'     => 'varchar(45) NOT NULL DEFAULT \'\' COMMENT \'真实客户端IP头（请求头 X-Real-IP）\'',
             );
+            $missing = array();
+            foreach ($cols as $name => $decl) {
+                if (!self::tableColumnExists('apilog', $name)) {
+                    $missing[$name] = $decl;
+                }
+            }
+            if (count($missing) === 0) {
+                return;
+            }
+            $fragParts = array();
+            foreach ($missing as $name => $decl) {
+                $fragParts[] = 'ADD COLUMN `' . $name . '` ' . $decl;
+            }
+            $frag = implode(', ', $fragParts);
+            // 优先在线 DDL；不支持或半成功撞 1060 时不早退，下面逐列补缺口
+            try {
+                $pdo->exec(
+                    'ALTER TABLE `' . $table . '` ' . $frag . ', ALGORITHM=INPLACE, LOCK=NONE'
+                );
+            } catch (PDOException $eOnline) {
+                if (!self::isIgnorableSqlError($eOnline)) {
+                    try {
+                        $pdo->exec('ALTER TABLE `' . $table . '` ' . $frag);
+                    } catch (PDOException $eMerged) {
+                        if (!self::isIgnorableSqlError($eMerged)) {
+                            // 逐列兜底
+                        }
+                    }
+                }
+            }
             foreach ($cols as $name => $decl) {
                 if (self::tableColumnExists('apilog', $name)) {
                     continue;
