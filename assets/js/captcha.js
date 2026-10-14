@@ -1,14 +1,15 @@
 /**
  * 文件：assets/js/captcha.js
- * 作用：认证页验证码（本地图 / 极验3 / 极验4）
+ * 作用：认证页验证码（本地图 / 极验3 / 极验4 / Cloudflare Turnstile）
  *
- * 官方接入（弹窗滑块）：
+ * 官方接入：
  * - gt3：product=popup，appendTo 条内官方按钮 → 点击弹出 slide 滑块
  * - gt4：product=popup，appendTo 条内官方按钮 → 点击弹出 popup 滑块
+ * - cf：Turnstile explicit 渲染到 #vsCaptchaBox（CDN 优先，本地 api.js 降级）
  *
- * 禁止：bind、提交时 showCaptcha、挂载点占位文案、自定义 nativeButton 尺寸
+ * 禁止：极验 bind、提交时 showCaptcha、挂载点占位文案、自定义 nativeButton 尺寸
  *
- * @version 3.0.0
+ * @version 3.1.0
  */
 (function (global) {
     'use strict';
@@ -72,7 +73,8 @@
             return;
         }
         ['lot_number', 'captcha_output', 'pass_token', 'gen_time',
-            'geetest_challenge', 'geetest_validate', 'geetest_seccode'].forEach(function (n) {
+            'geetest_challenge', 'geetest_validate', 'geetest_seccode',
+            'cf-turnstile-response', 'cfturnstile'].forEach(function (n) {
             var el = form.querySelector('input[name="' + n + '"]');
             if (el) {
                 el.value = '';
@@ -89,6 +91,10 @@
         }
         if (state.mode === 'gt4') {
             return !!(result.lot_number && result.captcha_output && result.pass_token && result.gen_time);
+        }
+        if (state.mode === 'cf') {
+            var t = result['cf-turnstile-response'] || result.cfturnstile || '';
+            return !!(t && String(t).length > 0);
         }
         return false;
     }
@@ -107,6 +113,10 @@
             ensureHidden(form, 'captcha_output', r.captcha_output || '');
             ensureHidden(form, 'pass_token', r.pass_token || '');
             ensureHidden(form, 'gen_time', r.gen_time || '');
+        } else if (state.mode === 'cf') {
+            var tok = r['cf-turnstile-response'] || r.cfturnstile || '';
+            ensureHidden(form, 'cf-turnstile-response', tok);
+            ensureHidden(form, 'cfturnstile', tok);
         }
     }
 
@@ -173,7 +183,12 @@
         }
     }
 
-    function loadScriptOnce(src) {
+    /**
+     * @param {string} src
+     * @param {{async?: boolean}|null} opts  Turnstile 官方要求：使用 turnstile.ready() 前脚本不得带 async/defer
+     */
+    function loadScriptOnce(src, opts) {
+        var useAsync = !(opts && opts.async === false);
         return new Promise(function (resolve, reject) {
             var finished = false;
             var timer = null;
@@ -233,7 +248,12 @@
 
             var s = document.createElement('script');
             s.src = src;
-            s.async = true;
+            if (useAsync) {
+                s.async = true;
+            } else {
+                s.async = false;
+                s.removeAttribute('defer');
+            }
             s.setAttribute('data-vs-gt-src', src);
             timer = setTimeout(function () {
                 fail(s, '验证脚本加载超时');
@@ -324,6 +344,143 @@
                     wireCaptchaEvents(captcha, form);
                     waitCaptchaReady(captcha, readyTimer, settledRef, resolve, reject);
                 });
+            });
+        });
+    }
+
+    /**
+     * Cloudflare Turnstile：CDN 优先，本地 api.js 仅作降级
+     */
+    function loadTurnstileScript() {
+        var base = assetBase();
+        var cdnSrc = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        var localSrc = base ? (base + '/assets/js/turnstile/api.js') : '';
+        // 官方：调用 turnstile.ready() 时 script 不得带 async/defer
+        var syncOpts = { async: false };
+        return loadScriptOnce(cdnSrc, syncOpts).catch(function () {
+            if (!localSrc) {
+                throw new Error('Turnstile 脚本加载失败');
+            }
+            return loadScriptOnce(localSrc, syncOpts);
+        });
+    }
+
+    function whenTurnstileReady() {
+        return new Promise(function (resolve, reject) {
+            var ts = global.turnstile;
+            if (!ts || typeof ts.render !== 'function') {
+                reject(new Error('Turnstile 组件不可用'));
+                return;
+            }
+            if (typeof ts.ready === 'function') {
+                ts.ready(function () {
+                    resolve(ts);
+                });
+                return;
+            }
+            resolve(ts);
+        });
+    }
+
+    function mountCf(box) {
+        var form = resolveForm(null);
+        clearBox(box);
+        var sitekey = String(boot.captchaId || '');
+        if (!sitekey) {
+            return Promise.reject(new Error('未配置 Cloudflare Site Key'));
+        }
+
+        return loadTurnstileScript().then(function () {
+            return whenTurnstileReady();
+        }).then(function (ts) {
+            return new Promise(function (resolve, reject) {
+                var settled = false;
+                var readyTimer = setTimeout(function () {
+                    if (!settled) {
+                        settled = true;
+                        reject(new Error('验证加载超时，请刷新重试'));
+                    }
+                }, SCRIPT_TIMEOUT_MS);
+
+                var widgetId;
+                try {
+                    widgetId = ts.render(box, {
+                        sitekey: sitekey,
+                        theme: 'auto',
+                        size: 'flexible',
+                        callback: function (token) {
+                            state.result = {
+                                'cf-turnstile-response': token || '',
+                                cfturnstile: token || ''
+                            };
+                            state.ready = true;
+                            applyResultToForm(form);
+                            if (!settled) {
+                                settled = true;
+                                clearTimeout(readyTimer);
+                                resolve();
+                            }
+                        },
+                        'error-callback': function () {
+                            state.ready = false;
+                            state.result = null;
+                            clearFields(form);
+                            return true;
+                        },
+                        'expired-callback': function () {
+                            state.ready = false;
+                            state.result = null;
+                            clearFields(form);
+                        }
+                    });
+                } catch (e) {
+                    clearTimeout(readyTimer);
+                    reject(e instanceof Error ? e : new Error('Turnstile 渲染失败'));
+                    return;
+                }
+
+                state.captchaObj = {
+                    _cfWidgetId: widgetId,
+                    getValidate: function () {
+                        var tok = '';
+                        try {
+                            if (typeof ts.getResponse === 'function') {
+                                tok = ts.getResponse(widgetId) || '';
+                            }
+                        } catch (e2) {
+                            tok = '';
+                        }
+                        if (!tok && state.result) {
+                            tok = state.result['cf-turnstile-response'] || state.result.cfturnstile || '';
+                        }
+                        if (!tok) {
+                            return false;
+                        }
+                        return {
+                            'cf-turnstile-response': tok,
+                            cfturnstile: tok
+                        };
+                    },
+                    reset: function () {
+                        try {
+                            if (typeof ts.reset === 'function') {
+                                ts.reset(widgetId);
+                            }
+                        } catch (e3) {
+                            // ignore
+                        }
+                    }
+                };
+
+                // Managed 可能无交互即回调；未回调时也视为已挂载可交互
+                setTimeout(function () {
+                    if (!settled) {
+                        settled = true;
+                        clearTimeout(readyTimer);
+                        state.ready = true;
+                        resolve();
+                    }
+                }, 800);
             });
         });
     }
@@ -461,7 +618,14 @@
             return mountPromise;
         }
         state.loading = true;
-        var p = state.mode === 'gt3' ? mountGt3(box) : mountGt4(box);
+        var p;
+        if (state.mode === 'gt3') {
+            p = mountGt3(box);
+        } else if (state.mode === 'cf') {
+            p = mountCf(box);
+        } else {
+            p = mountGt4(box);
+        }
         mountPromise = p.then(function () {
             state.loading = false;
         }).catch(function (err) {
@@ -494,6 +658,9 @@
             if (state.ready && state.result && isValidateComplete(state.result)) {
                 applyResultToForm(form);
                 return true;
+            }
+            if (state.mode === 'cf') {
+                return Promise.reject(new Error('请先完成人机验证'));
             }
             return Promise.reject(new Error('请先点击验证按钮并完成滑块验证'));
         });
@@ -558,6 +725,10 @@
             fd.append('geetest_challenge', r.geetest_challenge || '');
             fd.append('geetest_validate', r.geetest_validate || '');
             fd.append('geetest_seccode', r.geetest_seccode || '');
+        } else if (state.mode === 'cf') {
+            var cft = r['cf-turnstile-response'] || r.cfturnstile || '';
+            fd.append('cf-turnstile-response', cft);
+            fd.append('cfturnstile', cft);
         } else {
             fd.append('lot_number', r.lot_number || '');
             fd.append('captcha_output', r.captcha_output || '');

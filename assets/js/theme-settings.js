@@ -55,17 +55,18 @@
                 radio.checked = isSavedActive;
             }
 
-            var preview = card.querySelector('.vs-theme-card__preview');
-            if (!preview) {
-                return;
-            }
-            var status = preview.querySelector('.vs-theme-card__status');
-            if (isSavedActive && !status) {
-                status = document.createElement('span');
-                status.className = 'vs-theme-card__status';
-                status.textContent = '当前使用';
-                preview.appendChild(status);
-            } else if (!isSavedActive && status) {
+            // 徽章挂在卡片根上（电脑预览区右上 / 手机整卡右上），勿挂进 preview（overflow 会裁切）
+            var status = card.querySelector('.vs-theme-card__status');
+            if (isSavedActive) {
+                if (!status) {
+                    status = document.createElement('span');
+                    status.className = 'vs-theme-card__status';
+                    status.textContent = '当前使用';
+                    card.appendChild(status);
+                } else if (status.parentNode !== card) {
+                    card.appendChild(status);
+                }
+            } else if (status) {
                 status.remove();
             }
         });
@@ -148,6 +149,88 @@
     });
 
     if (form) {
+        var gallery = form.querySelector('.vs-theme-gallery');
+        var cardSave = document.getElementById('themeCardSave')
+            || document.getElementById('themeMobileSave');
+        var hoveredCell = null;
+
+        function isDesktopThemeUi() {
+            return window.matchMedia && window.matchMedia('(min-width: 641px)').matches;
+        }
+
+        function cellThemeId(cell) {
+            if (!cell) {
+                return '';
+            }
+            var r = cell.querySelector('input[name="frontend_theme"]');
+            return cell.getAttribute('data-theme-id') || (r ? r.value : '');
+        }
+
+        function findPendingCell() {
+            var activeId = getActiveThemeId();
+            var found = null;
+            form.querySelectorAll('.vs-theme-card-cell').forEach(function (cell) {
+                var r = cell.querySelector('input[name="frontend_theme"]');
+                var themeId = cellThemeId(cell);
+                if (r && r.checked && themeId !== activeId) {
+                    found = cell;
+                }
+            });
+            return found;
+        }
+
+        /** 勾选「启用」所在单元格的主题，避免悬停未点选时提交错主题（E430） */
+        function ensureCardSaveTargetChecked() {
+            if (!cardSave) {
+                return;
+            }
+            var cell = cardSave.closest('.vs-theme-card-cell');
+            if (!cell) {
+                return;
+            }
+            var radio = cell.querySelector('input[name="frontend_theme"]');
+            if (radio && !radio.checked) {
+                radio.checked = true;
+            }
+        }
+
+        /**
+         * 卡下「启用」：点选待切换主题，或电脑悬停非当前主题时，插到该单元格下方（E430）。
+         * 仅该格向下延伸，网格其它列对齐起点（align-items:start）。
+         */
+        function syncCardSaveSlot() {
+            if (!cardSave || !gallery) {
+                return;
+            }
+            var activeId = getActiveThemeId();
+            var target = null;
+            if (hoveredCell && isDesktopThemeUi() && cellThemeId(hoveredCell) !== activeId) {
+                target = hoveredCell;
+            }
+            if (!target) {
+                target = findPendingCell();
+            }
+
+            gallery.querySelectorAll('.vs-theme-card-cell.is-save-open').forEach(function (cell) {
+                cell.classList.remove('is-save-open');
+            });
+
+            if (target) {
+                if (cardSave.parentNode !== target) {
+                    target.appendChild(cardSave);
+                }
+                target.classList.add('is-save-open');
+                cardSave.hidden = false;
+                cardSave.classList.add('is-open');
+            } else {
+                cardSave.classList.remove('is-open');
+                cardSave.hidden = true;
+                if (cardSave.parentNode !== gallery) {
+                    gallery.appendChild(cardSave);
+                }
+            }
+        }
+
         function refreshSelectionState() {
             var activeId = getActiveThemeId();
             form.querySelectorAll('.vs-theme-card').forEach(function (card) {
@@ -156,18 +239,68 @@
                 var isPending = !!(r && r.checked && themeId !== activeId);
                 card.classList.toggle('is-selected', isPending);
             });
+            syncCardSaveSlot();
         }
 
         form.querySelectorAll('input[name="frontend_theme"]').forEach(function (radio) {
             radio.addEventListener('change', refreshSelectionState);
         });
 
+        if (gallery) {
+            gallery.querySelectorAll('.vs-theme-card-cell').forEach(function (cell) {
+                cell.addEventListener('mouseenter', function () {
+                    if (!isDesktopThemeUi()) {
+                        return;
+                    }
+                    hoveredCell = cell;
+                    syncCardSaveSlot();
+                });
+                cell.addEventListener('mouseleave', function (ev) {
+                    if (!isDesktopThemeUi()) {
+                        return;
+                    }
+                    var next = ev.relatedTarget;
+                    if (next && cell.contains(next)) {
+                        return;
+                    }
+                    if (hoveredCell === cell) {
+                        hoveredCell = null;
+                    }
+                    syncCardSaveSlot();
+                });
+            });
+        }
+
+        if (cardSave) {
+            var saveBtn = cardSave.querySelector('[type="submit"]');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', ensureCardSaveTargetChecked);
+            }
+        }
+
+        if (window.matchMedia) {
+            var mq = window.matchMedia('(min-width: 641px)');
+            var onMq = function () {
+                if (!isDesktopThemeUi()) {
+                    hoveredCell = null;
+                }
+                syncCardSaveSlot();
+            };
+            if (typeof mq.addEventListener === 'function') {
+                mq.addEventListener('change', onMq);
+            } else if (typeof mq.addListener === 'function') {
+                mq.addListener(onMq);
+            }
+        }
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
-            var submitBtn = form.querySelector('[type="submit"]');
-            if (submitBtn) {
-                submitBtn.disabled = true;
-            }
+            ensureCardSaveTargetChecked();
+            refreshSelectionState();
+            var submitBtns = form.querySelectorAll('[type="submit"]');
+            submitBtns.forEach(function (btn) {
+                btn.disabled = true;
+            });
 
             window.VS.postForm(form)
                 .then(function (data) {
@@ -183,6 +316,7 @@
                             configBody.setAttribute('data-needs-reload', '1');
                         }
                     }
+                    hoveredCell = null;
                     refreshActiveBadges();
                     refreshSelectionState();
                 })
@@ -190,9 +324,9 @@
                     window.VS.showMessage('网络异常，请稍后重试', 'error');
                 })
                 .finally(function () {
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                    }
+                    submitBtns.forEach(function (btn) {
+                        btn.disabled = false;
+                    });
                 });
         });
 

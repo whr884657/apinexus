@@ -22,7 +22,11 @@ $step    = max(1, min(6, $step));
  */
 function vs_install_nginx_rewrite_snippet()
 {
-    return "location ~ ^/(config|data|core/data)/ {\n"
+    return "location ^~ /assets/js/sysapi-catalog/ {\n"
+        . "    deny all;\n"
+        . "    return 403;\n"
+        . "}\n"
+        . "location ~ ^/(config|data|core/data)/ {\n"
         . "    deny all;\n"
         . "    return 403;\n"
         . "}\n"
@@ -66,7 +70,7 @@ if (!$licenseAccepted) {
             $_POST['action'] = '';
         }
     } elseif ($step > 1) {
-        vs_redirect(vs_base_url() . '/install/?step=1');
+        vs_redirect(vs_site_path('/install/') . '?step=1');
     }
 }
 
@@ -162,12 +166,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'next_step' && $postStep === 1) {
         $_SESSION['vs_nginx_ack'] = 1;
-        vs_redirect(vs_base_url() . '/install/?step=2');
+        vs_redirect(vs_site_path('/install/') . '?step=2');
     }
 
     if ($action === 'next_step' && $postStep === 3) {
         if (!empty($_SESSION['vs_db_tested'])) {
-            vs_redirect(vs_base_url() . '/install/?step=4');
+            vs_redirect(vs_site_path('/install/') . '?step=4');
         } else {
             $error = '请先测试数据库连接';
             $step = 3;
@@ -176,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (($action === 'create_tables' || $action === 'clear_and_create') && $postStep === 4) {
         if (empty($_SESSION['vs_db_tested']) || empty($_SESSION['vs_install_db'])) {
-            vs_redirect(vs_base_url() . '/install/?step=3');
+            vs_redirect(vs_site_path('/install/') . '?step=3');
         }
 
         $dbConfig = $_SESSION['vs_install_db'];
@@ -193,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $action === 'clear_and_create'
             );
             $_SESSION['vs_tables_created'] = true;
-            vs_redirect(vs_base_url() . '/install/?step=5');
+            vs_redirect(vs_site_path('/install/') . '?step=5');
         } catch (Exception $e) {
             $error = '创建数据表失败：' . $e->getMessage();
             $step = 4;
@@ -202,7 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'create_admin' && $postStep === 5) {
         if (empty($_SESSION['vs_tables_created']) || empty($_SESSION['vs_install_db'])) {
-            vs_redirect(vs_base_url() . '/install/?step=4');
+            vs_redirect(vs_site_path('/install/') . '?step=4');
         }
 
         $username = trim(isset($_POST['admin_username']) ? $_POST['admin_username'] : '');
@@ -216,8 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (strlen($username) < 3) {
             $error = '管理员用户名至少 3 个字符';
             $step = 5;
-        } elseif (strlen($password) < 6) {
-            $error = '管理员密码至少 6 个字符';
+        } elseif (($pwErr = vs_password_policy_ok($password)) !== '') {
+            $error = $pwErr;
             $step = 5;
         } elseif ($password !== $password2) {
             $error = '两次输入的密码不一致';
@@ -290,7 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['vs_nginx_ack']
                 );
 
-                vs_redirect(vs_base_url() . '/install/?step=6');
+                vs_redirect(vs_site_path('/install/') . '?step=6');
             } catch (Exception $e) {
                 $error = '安装失败：' . $e->getMessage();
                 $step = 5;
@@ -301,16 +305,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ── 步骤访问控制 ──────────────────────────────────────────
 if ($step >= 2 && $step < 6 && empty($_SESSION['vs_nginx_ack']) && $licenseAccepted) {
-    vs_redirect(vs_base_url() . '/install/?step=1');
+    vs_redirect(vs_site_path('/install/') . '?step=1');
 }
 if ($step === 4 && empty($_SESSION['vs_db_tested'])) {
-    vs_redirect(vs_base_url() . '/install/?step=3');
+    vs_redirect(vs_site_path('/install/') . '?step=3');
 }
 if ($step === 5 && empty($_SESSION['vs_tables_created'])) {
-    vs_redirect(vs_base_url() . '/install/?step=4');
+    vs_redirect(vs_site_path('/install/') . '?step=4');
 }
 if ($step === 6 && !InstallChecker::isInstalled()) {
-    vs_redirect(vs_base_url() . '/install/?step=1');
+    vs_redirect(vs_site_path('/install/') . '?step=1');
 }
 
 /**
@@ -573,7 +577,7 @@ $stepTitles = array(
     5 => '管理员配置',
     6 => '安装完成',
 );
-$base = vs_base_url();
+$base = vs_site_base_path();
 
 vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
 ?>
@@ -793,5 +797,5 @@ $licenseBoot = array(
     'html'     => vs_license_zh_html(),
 );
 ?>
-<script>window.VS_INSTALL_LICENSE = <?php echo json_encode($licenseBoot, JSON_UNESCAPED_UNICODE); ?>;</script>
+<script>window.VS_INSTALL_LICENSE = <?php echo vs_json_script($licenseBoot); ?>;</script>
 <?php vs_render_foot(array('install.js')); ?>

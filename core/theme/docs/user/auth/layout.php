@@ -38,7 +38,7 @@ function vs_theme_auth_head($pageTitle)
     if ($pickerCss !== '') {
         echo '<link rel="stylesheet" href="' . vs_e($pickerCss) . '">' . "\n";
     }
-    $base = function_exists('vs_base_url') ? rtrim(vs_base_url(), '/') : '';
+    $base = function_exists('vs_site_base_path') ? vs_site_base_path() : '';
     echo '<script src="' . vs_e($base) . '/assets/js/auth-csrf.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '</head>' . "\n";
     echo '<body>' . "\n";

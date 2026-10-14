@@ -48,6 +48,13 @@ $helloLine = isset($hello['hello']) ? (string) $hello['hello'] : ('欢迎回来�
 $helloHint = isset($hello['hint']) ? (string) $hello['hint'] : '';
 $helloSlot = isset($hello['slot']) ? (string) $hello['slot'] : '';
 
+$notifyMessages = array();
+$userId = (int) UserAuth::id();
+if ($userId > 0 && class_exists('ContentManager')
+    && ContentManager::tableReady() && ContentManager::hasAudModeColumn()) {
+    $notifyMessages = ContentManager::userListMessages($userId, 20);
+}
+
 $scripts = array('user-dash-hello.js', 'user-dashboard.js');
 if (!empty($checkinBanner['show_banner'])) {
     $scripts[] = 'user-checkin.js';
@@ -58,14 +65,15 @@ vs_user_render_page(
     '控制台',
     'dashboard',
     array(
-        'dash'           => $dash,
-        'checkinBanner'  => $checkinBanner,
-        'avatarPreview'  => $avatarPreview,
-        'displayName'    => $displayName,
-        'isDeveloper'    => $isDeveloper,
-        'helloLine'      => $helloLine,
-        'helloHint'      => $helloHint,
-        'helloSlot'      => $helloSlot,
+        'dash'            => $dash,
+        'checkinBanner'   => $checkinBanner,
+        'avatarPreview'   => $avatarPreview,
+        'displayName'     => $displayName,
+        'isDeveloper'     => $isDeveloper,
+        'helloLine'       => $helloLine,
+        'helloHint'       => $helloHint,
+        'helloSlot'       => $helloSlot,
+        'notifyMessages'  => $notifyMessages,
     ),
     vs_user_refresh_btn_html('ucDashRefreshBtn'),
     $scripts

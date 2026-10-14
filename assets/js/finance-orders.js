@@ -7,7 +7,9 @@
     var pageRoot = document.getElementById('ordersPage');
     var body = document.getElementById('ordersListBody');
     var footer = document.getElementById('ordersFooter');
-    var pagerNav = document.getElementById('ordersPagerNav');
+    var prevBtn = document.getElementById('ordersPrevBtn');
+    var nextBtn = document.getElementById('ordersNextBtn');
+    var pagerNums = document.getElementById('ordersPagerNums');
     var totalEl = document.getElementById('ordersTotal');
     var pageSizeEl = document.getElementById('ordersPageSize');
     var refreshBtn = document.getElementById('orderRefreshBtn');
@@ -111,15 +113,21 @@
             + '</article>';
     }
 
+    function pagerTotalPages() {
+        var tp = Math.max(1, Math.ceil((totalCount || 0) / getPageSize()) || 1);
+        if (hasMore && page >= tp) {
+            tp = page + 1;
+        }
+        return tp;
+    }
+
     function renderPager() {
         if (footer) footer.hidden = false;
         if (totalEl) {
             totalEl.textContent = '共 ' + (totalCount || 0) + ' 条';
         }
-        if (pagerNav) {
-            pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>'
-                + '<span class="vs-api-pager__info">' + page + '</span>'
-                + '<button type="button" class="vs-api-pager__nav" data-p="1"' + (!hasMore ? ' disabled' : '') + '>下一页</button>';
+        if (window.VS && VS.applyLogsPager) {
+            VS.applyLogsPager(page, pagerTotalPages(), prevBtn, nextBtn, pagerNums);
         }
     }
 
@@ -181,18 +189,41 @@
         });
     }
 
-    if (pagerNav) {
-        pagerNav.addEventListener('click', function (e) {
-            var btn = e.target.closest('[data-p]');
-            if (!btn || btn.disabled) return;
-            var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
-            if (delta > 0 && hasMore) {
-                page += 1;
-                load();
-            } else if (delta < 0 && page > 1) {
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            if (prevBtn.disabled) {
+                return;
+            }
+            if (page > 1) {
                 page -= 1;
                 load();
             }
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            if (nextBtn.disabled) {
+                return;
+            }
+            var tp = pagerTotalPages();
+            if (page < tp) {
+                page += 1;
+                load();
+            }
+        });
+    }
+    if (pagerNums) {
+        pagerNums.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-page]');
+            if (!btn) {
+                return;
+            }
+            var next = parseInt(btn.getAttribute('data-page'), 10) || 0;
+            if (!next || next === page) {
+                return;
+            }
+            page = next;
+            load();
         });
     }
 

@@ -17,11 +17,15 @@ class GiteeOAuth
     public static function authorizeUrl(array $context = array())
     {
         $cfg = OAuthConfig::getProvider(self::PROVIDER);
+        $state = OAuthState::create(self::PROVIDER, $context);
+        if ($state === '') {
+            return '';
+        }
         $params = array(
             'client_id'     => $cfg['client_id'],
             'redirect_uri'  => OAuthConfig::callbackUrl(self::PROVIDER),
             'response_type' => 'code',
-            'state'         => OAuthState::create(self::PROVIDER, $context),
+            'state'         => $state,
         );
 
         return 'https://gitee.com/oauth/authorize?' . http_build_query($params);

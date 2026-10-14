@@ -908,6 +908,21 @@ function ensurePlaygroundUserApiKey() {
     }
     var fd = new FormData();
     fd.append('action', 'get');
+    var apiIdForScope = 0;
+    try {
+        if (window.currentApiId) {
+            apiIdForScope = parseInt(String(window.currentApiId), 10) || 0;
+        } else if (window.detailApiData && window.detailApiData.id) {
+            apiIdForScope = parseInt(String(window.detailApiData.id), 10) || 0;
+        } else if (window.playgroundApiId) {
+            apiIdForScope = parseInt(String(window.playgroundApiId), 10) || 0;
+        }
+    } catch (eId) {
+        apiIdForScope = 0;
+    }
+    if (apiIdForScope > 0) {
+        fd.append('apiid', String(apiIdForScope));
+    }
     _playgroundKeyFetch = window.VS.postForm(fd, playgroundKeysFetchUrl()).then(function (data) {
         if (data && data.csrf) {
             window.VS_CSRF_TOKEN = data.csrf;
@@ -919,6 +934,16 @@ function ensurePlaygroundUserApiKey() {
         if (data.apiKeyCount != null && window.playgroundKeyContext) {
             window.playgroundKeyContext.apiKeyCount = Number(data.apiKeyCount) || 0;
         }
+        if (Number(data.scopeBlocked) === 1) {
+            window.playgroundUserApiKey = '';
+            window.playgroundScopeBlocked = true;
+            window.playgroundScopeHint = data.scopeHint
+                ? String(data.scopeHint)
+                : '当前启用令牌均无权调用本接口，请到令牌页调整接口范围后再试';
+            return '';
+        }
+        window.playgroundScopeBlocked = false;
+        window.playgroundScopeHint = '';
         var key = data.apiKey != null ? String(data.apiKey).trim() : '';
         window.playgroundUserApiKey = key;
         return key;
@@ -979,11 +1004,28 @@ function applyPlaygroundSessionApiKey(api, container) {
     const userCenter = String(ctx.userCenterUrl || '/user/index');
     const loginUrl = String(ctx.loginUrl || '/user/login');
     const keyInput = findKeyParamInput(container);
+    if (api && api.id) {
+        window.playgroundApiId = parseInt(String(api.id), 10) || 0;
+    }
 
     return ensurePlaygroundUserApiKey().then(function (keyVal) {
         const countNow = parseInt(String((window.playgroundKeyContext && window.playgroundKeyContext.apiKeyCount != null)
             ? window.playgroundKeyContext.apiKeyCount
             : keyCount), 10) || 0;
+
+        if (loggedIn && window.playgroundScopeBlocked) {
+            var keysUrl = userCenter;
+            if (String(keysUrl).indexOf('keys') < 0) {
+                keysUrl = keysUrl.replace(/\/?$/, '/') + 'keys';
+            }
+            mountPlaygroundKeyHint(
+                container,
+                (window.playgroundScopeHint || '当前启用令牌均无权调用本接口')
+                    + ' <a class="playground-key-hint-link" href="' + keysUrl + '">去令牌页调整</a>。',
+                'warn'
+            );
+            return;
+        }
 
         if (loggedIn && keyVal && keyInput && keyInput.type !== 'file') {
             if (!String(keyInput.value || '').trim()) {

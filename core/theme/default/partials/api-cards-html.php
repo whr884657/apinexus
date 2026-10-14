@@ -62,6 +62,7 @@ foreach ($apis as $cardApi):
         : ($points > 0
             ? (rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.') . '积分/次')
             : '免费');
+    $promoLabel = !empty($cardApi['promo_label']) ? (string) $cardApi['promo_label'] : '';
     $cardClass = 'api-card' . ($cardExtraClass !== '' ? ' ' . $cardExtraClass : '');
     $shellClass = $cardShell ? $cardClass : 'detail-recommend__body';
     ?>
@@ -72,6 +73,9 @@ foreach ($apis as $cardApi):
             <span class="api-chip api-chip--points"><?php echo vs_e($billingLabel); ?></span>
         <?php else: ?>
             <span class="api-chip api-chip--free">免费</span>
+        <?php endif; ?>
+        <?php if ($promoLabel !== ''): ?>
+            <span class="api-chip api-chip--maintenance"><?php echo vs_e($promoLabel); ?></span>
         <?php endif; ?>
         <?php if ($needkey === 1): ?>
             <span class="api-chip api-chip--key">KEY必填</span>

@@ -211,7 +211,7 @@ if (!function_exists('th3_emit_console_brand_script')) {
             $src .= '?v=' . rawurlencode($ver);
         }
 
-        echo '<script>window.VS_VERSION=window.VS_VERSION||' . json_encode($ver, JSON_UNESCAPED_UNICODE) . ';</script>' . "\n";
+        echo '<script>window.VS_VERSION=window.VS_VERSION||' . vs_json_script($ver) . ';</script>' . "\n";
         echo '<script src="' . vs_e($src) . '"></script>' . "\n";
     }
 }

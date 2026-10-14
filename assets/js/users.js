@@ -168,25 +168,10 @@
     }
 
     function renderPagerNums(totalPages) {
-        if (!pagerNumsEl) {
+        if (!pagerNumsEl || !window.VS || !VS.pagerNumsHtml) {
             return;
         }
-        if (totalPages <= 1) {
-            pagerNumsEl.innerHTML = '';
-            return;
-        }
-        // 中间最多 3 个页码：当前页尽量居中（首尾贴边）
-        var start = Math.max(1, currentPage - 1);
-        var end = Math.min(totalPages, start + 2);
-        start = Math.max(1, end - 2);
-        var html = '';
-        var i;
-        for (i = start; i <= end; i += 1) {
-            html += '<button type="button" class="vs-api-pager__num'
-                + (i === currentPage ? ' is-active' : '')
-                + '" data-page="' + i + '">' + i + '</button>';
-        }
-        pagerNumsEl.innerHTML = html;
+        pagerNumsEl.innerHTML = VS.pagerNumsHtml(currentPage, totalPages);
     }
 
     function applyView() {
@@ -836,16 +821,21 @@
                 + detailItem('时间', row.createtime)
                 + detailItem('结果', row.ok_label)
                 + detailItem('状态码', httpcodeDisplay(row))
-                + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '匿名'))
+                + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '游客'))
                 + detailItem('扣费', (row.charged_label || '') + (row.charged ? (' · ' + row.cost) : ''))
                 + detailSecretItem('密钥', row.apikey, row.apikey_masked)
                 + '</div></div>'
                 + '<div class="vs-log-detail__section">'
                 + '<h4 class="vs-log-detail__section-title">网络与来源</h4>'
-                + '<div class="vs-log-detail__grid">'
+                + '<div class="vs-log-detail__grid vs-log-detail__grid--net">'
                 + detailItem('IP', row.ip)
                 + detailItem('IP 归属地', row.iploc)
                 + detailItem('出口节点', row.egress)
+                + detailItem('X-Forwarded-Proto', row.xfproto)
+                + detailItem('X-Forwarded-For', row.xff)
+                + detailItem('X-Real-IP', row.xri)
+                + '</div>'
+                + '<div class="vs-log-detail__grid">'
                 + detailItem('来源域名', row.domain)
                 + detailItem('Host', row.host)
                 + detailItem('路径', row.path, true)

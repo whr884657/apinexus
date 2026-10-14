@@ -96,6 +96,6 @@ $metaUrl = $vsBase . '/core/theme/three/api/sitemeta.php';
 </section>
 <?php if (function_exists('vs_captcha_js')) { vs_captcha_js(Captcha::SCENE_APPLYLINK); } ?>
 <script>
-window.VS_CSRF_TOKEN = <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
-window.VS_LINK_META_URL = <?php echo json_encode($metaUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
+window.VS_CSRF_TOKEN = <?php echo vs_json_script($csrf); ?>;
+window.VS_LINK_META_URL = <?php echo vs_json_script($metaUrl); ?>;
 </script>

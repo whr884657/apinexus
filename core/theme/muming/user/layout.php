@@ -89,7 +89,9 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     echo '<span class="vs-topbar__title">' . vs_e($systemName) . ' · 用户中心</span>' . "\n";
     echo '</div>' . "\n";
     echo '<div class="vs-topbar__right">' . "\n";
-
+    if (function_exists('vs_user_notify_markup')) {
+        vs_user_notify_markup();
+    }
     if ($userProfile) {
         $avatarUrl = $userProfile['avatar'];
         echo '<a href="' . vs_e($base) . '/user/account" class="vs-topbar__avatar-link" title="账号设置">' . "\n";

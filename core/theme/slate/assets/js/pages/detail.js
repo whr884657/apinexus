@@ -1,7 +1,5 @@
 /**
- * Slate 主题 · 水平 Tab 详情页脚本（与默认主题共用 DOM id：apiDetailPage、
- * detailPlayground / pg*、detailQuickstart / detailQs*、detailFeedback* 等）
- * 职责：复制 / 参数表JSON切换 / Markdown / 在线测试 / JSON 高亮
+ * 接口详情页：复制 / 参数表JSON切换 / Markdown / 在线测试 / JSON 高亮
  */
 (function () {
     'use strict';
@@ -140,9 +138,7 @@
 
     /* ---- Markdown 代码块复制 / 高亮 ---- */
     function enhanceMarkdown() {
-        if (window.SlateMarkdown && typeof window.SlateMarkdown.enhance === 'function') {
-            window.SlateMarkdown.enhance(page);
-        } else if (window.VsMarkdown && typeof window.VsMarkdown.enhance === 'function') {
+        if (window.VsMarkdown && typeof window.VsMarkdown.enhance === 'function') {
             window.VsMarkdown.enhance(page);
         } else if (window.VsSyntax && typeof window.VsSyntax.highlightAll === 'function') {
             window.VsSyntax.highlightAll(page);
@@ -263,6 +259,9 @@
         }
         var fd = new FormData();
         fd.append('action', 'get');
+        if (api && api.id) {
+            fd.append('apiid', String(api.id));
+        }
         _playgroundKeyFetch = window.VS.postForm(fd, playgroundKeysFetchUrl()).then(function (data) {
             if (data && data.csrf) {
                 window.VS_CSRF_TOKEN = data.csrf;
@@ -274,6 +273,16 @@
             if (data.apiKeyCount != null && window.playgroundKeyContext) {
                 window.playgroundKeyContext.apiKeyCount = Number(data.apiKeyCount) || 0;
             }
+            if (Number(data.scopeBlocked) === 1) {
+                window.playgroundUserApiKey = '';
+                window.playgroundScopeBlocked = true;
+                window.playgroundScopeHint = data.scopeHint
+                    ? String(data.scopeHint)
+                    : '当前启用令牌均无权调用本接口，请到令牌页调整接口范围后再试';
+                return '';
+            }
+            window.playgroundScopeBlocked = false;
+            window.playgroundScopeHint = '';
             var key = data.apiKey != null ? String(data.apiKey).trim() : '';
             window.playgroundUserApiKey = key;
             return key;
@@ -306,7 +315,14 @@
             if (old) old.remove();
             var hint = document.createElement('p');
             hint.className = 'playground-key-hint';
-            if (ctx.loggedIn && keyVal) {
+            var keysPage = (ctx.userCenterUrl || '#');
+            if (String(keysPage).indexOf('keys') < 0 && keysPage !== '#') {
+                keysPage = keysPage.replace(/\/?$/, '/') + 'keys';
+            }
+            if (ctx.loggedIn && window.playgroundScopeBlocked) {
+                hint.innerHTML = (window.playgroundScopeHint || '当前令牌无权调用本接口')
+                    + ' <a href="' + keysPage + '">去令牌页调整</a>。';
+            } else if (ctx.loggedIn && keyVal) {
                 hint.innerHTML = '已填入可用 KEY，可直接测试。管理见 <a href="' + (ctx.userCenterUrl || '#') + '">用户中心</a>。';
             } else if (ctx.loggedIn) {
                 hint.innerHTML = '账户暂无 KEY，请至 <a href="' + (ctx.userCenterUrl || '#') + '">用户中心</a> 创建。';

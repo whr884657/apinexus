@@ -111,15 +111,19 @@ class Config
 
     /**
      * 邮箱发信是否已配置可用
+     * 条件：mail_enabled=1，且 mailsmtp 启用池至少 1 条（on=1 且 host/user/fromemail 非空）
      *
      * @return bool
      */
     public static function isMailEnabled()
     {
-        return self::get('mail_enabled') === '1'
-            && self::get('mail_smtp_host') !== ''
-            && self::get('mail_smtp_user') !== ''
-            && self::get('mail_from_email') !== '';
+        if (self::get('mail_enabled') !== '1') {
+            return false;
+        }
+        if (class_exists('Mailer')) {
+            return Mailer::hasReadyAccount();
+        }
+        return false;
     }
 
     /**

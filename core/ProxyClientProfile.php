@@ -248,10 +248,12 @@ class ProxyClientProfile
             return (string) $presets[$pick]['ua'];
         }
 
-        $ver = defined('VS_VERSION') ? VS_VERSION : '1';
         $apitype = isset($row['apitype']) ? (int) $row['apitype'] : 0;
-        $prefix = ($apitype === 1) ? 'ApiNexus-Proxy/' : 'ApiNexus/';
-        return $prefix . $ver;
+        if (class_exists('OutboundUa')) {
+            return ($apitype === 1) ? OutboundUa::build('Proxy') : OutboundUa::build('');
+        }
+        $ver = defined('VS_VERSION') ? VS_VERSION : '1';
+        return (($apitype === 1) ? 'ApiNexus-Proxy/' : 'ApiNexus/') . $ver;
     }
 
     /**

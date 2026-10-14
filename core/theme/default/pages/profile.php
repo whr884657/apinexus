@@ -145,6 +145,7 @@ if (!$notFound && is_array($profile)) {
                             $billingLabel = !empty($api['billing_label'])
                                 ? (string) $api['billing_label']
                                 : ($points > 0 ? '收费' : '免费');
+                            $promoLabel = !empty($api['promo_label']) ? (string) $api['promo_label'] : '';
                             $isPaid = $points > 0
                                 || (isset($api['charge']) && (int) $api['charge'] === 1);
                             ?>
@@ -168,6 +169,9 @@ if (!$notFound && is_array($profile)) {
                                             <span class="api-chip api-chip--points"><?php echo vs_e($billingLabel); ?></span>
                                         <?php else: ?>
                                             <span class="api-chip api-chip--free">免费</span>
+                                        <?php endif; ?>
+                                        <?php if ($promoLabel !== ''): ?>
+                                            <span class="api-chip api-chip--maintenance"><?php echo vs_e($promoLabel); ?></span>
                                         <?php endif; ?>
                                         <?php if ($needkey === 1): ?>
                                             <span class="api-chip api-chip--key">KEY必填</span>

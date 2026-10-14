@@ -31,9 +31,14 @@ $billingLabel = !$notFound && !empty($api['billing_label'])
         $points
     );
 $chargeDetailLabel = $billingLabel;
+$promoLabel = !$notFound && !empty($api['promo_label']) ? (string) $api['promo_label'] : '';
+// 计费行用标价（全免不改成「免费」）；活动只追加标签
 if (!$notFound && !empty($api['charge']) && $points > 0) {
     $fmt = rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.');
     $chargeDetailLabel = $fmt . ' 积分 / 次';
+}
+if ($promoLabel !== '') {
+    $chargeDetailLabel .= ' · ' . $promoLabel;
 }
 $callsLabel = !$notFound ? number_format((int) (isset($api['calls']) ? $api['calls'] : 0)) : '0';
 $paramsList = (!$notFound && isset($api['params_list']) && is_array($api['params_list'])) ? $api['params_list'] : array();
@@ -169,7 +174,7 @@ if (!$notFound) {
       data-maintenance="<?php echo $isMaintenance ? '1' : '0'; ?>"
       data-disabled="<?php echo $isDisabled ? '1' : '0'; ?>">
   <div class="th5-page__inner max-w-5xl mx-auto px-4 sm:px-5 lg:px-8">
-    <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ 接口详情</div>
+    <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3 th5-detail-q__page-crumb">/ 接口详情</div>
 
     <?php if ($notFound): ?>
       <h1 class="font-display font-bold tracking-tight th5-page__title">接口不存在</h1>
@@ -204,7 +209,13 @@ if (!$notFound) {
             <?php endif; ?>
           </div>
           <?php if (!empty($api['desc'])): ?>
-            <p class="th5-detail-q__lead"><?php echo vs_e($api['desc']); ?></p>
+            <div class="th5-detail-q__desc" id="detailApiDesc">
+              <p class="th5-detail-q__lead"><?php echo vs_e($api['desc']); ?></p>
+              <button type="button" class="th5-detail-q__desc-toggle" id="detailApiDescToggle" aria-expanded="false">
+                <span class="th5-detail-q__desc-toggle-text">展开全文</span>
+                <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+              </button>
+            </div>
           <?php endif; ?>
           <div class="th5-detail-q__chips">
             <span class="th5-detail-q__chip"><i data-lucide="activity" style="width:14px;height:14px;"></i>调用 <?php echo vs_e($callsLabel); ?> 次</span>
@@ -332,11 +343,11 @@ if (!$notFound) {
                 <tbody>
                   <?php foreach ($paramsList as $p): ?>
                   <tr>
-                    <td class="font-mono"><?php echo vs_e($p['name']); ?></td>
-                    <td class="font-mono"><?php echo vs_e($p['type']); ?></td>
-                    <td><?php echo !empty($p['required']) ? '<span class="tag hot">是</span>' : '<span class="text-muted">否</span>'; ?></td>
-                    <td><?php echo vs_e($p['description']); ?></td>
-                    <td class="font-mono"><?php echo vs_e($p['example']); ?></td>
+                    <td class="font-mono" data-label="参数名"><?php echo vs_e($p['name']); ?></td>
+                    <td class="font-mono" data-label="类型"><?php echo vs_e($p['type']); ?></td>
+                    <td data-label="必填"><?php echo !empty($p['required']) ? '<span class="tag hot">是</span>' : '<span class="text-muted">否</span>'; ?></td>
+                    <td data-label="说明"><?php echo vs_e($p['description']); ?></td>
+                    <td class="font-mono" data-label="示例"><?php echo vs_e($p['example']); ?></td>
                   </tr>
                   <?php endforeach; ?>
                 </tbody>
@@ -544,15 +555,6 @@ if (!$notFound) {
 
       </div>
 
-      <?php if ($disclaimerBody !== ''): ?>
-        <section class="th5-panel card mt-8" id="detailDisclaimer">
-          <h2 class="font-display font-semibold text-lg m-0 mb-4">免责声明</h2>
-          <div class="markdown-body vs-md-body th5-md">
-            <?php echo TH5_md_render($disclaimerBody); ?>
-          </div>
-        </section>
-      <?php endif; ?>
-
       <?php if ($recommendApi !== null): ?>
         <section class="th5-panel card mt-8 th5-detail-q__panel" id="detailRecommend">
           <div class="th5-detail-q__panel-title"><span class="th5-detail-q__panel-icon"><i data-lucide="sparkles" style="width:17px;height:17px;"></i></span><span>推荐接口</span></div>
@@ -574,6 +576,7 @@ if (!$notFound) {
                     : '免费';
             }
             $rPaid = $rPoints > 0 || ($rBilling !== '免费' && strcasecmp($rBilling, 'free') !== 0);
+            $rPromo = trim((string) (isset($r['promo_label']) ? $r['promo_label'] : ''));
             $rNeed = isset($r['needkey']) ? (int) $r['needkey'] : 0;
             $rCalls = isset($r['calls']) ? (int) $r['calls'] : 0;
             $rCallsLabel = number_format($rCalls);
@@ -591,6 +594,7 @@ if (!$notFound) {
                 <?php else: ?>
                   <span class="th5-api-card-q__tag">推荐</span>
                 <?php endif; ?>
+
                 <span class="th5-api-card-q__method <?php echo $rMCls; ?>"><?php echo vs_e($rMethod); ?></span>
               </div>
               <h3 class="th5-api-card-q__name">
@@ -612,12 +616,26 @@ if (!$notFound) {
                   <?php else: ?>
                     <span class="tag free">免费</span>
                   <?php endif; ?>
+                  <?php if (!$rMaint && $rPromo !== ''): ?><span class="tag hot"><?php echo vs_e($rPromo); ?></span><?php endif; ?>
                   <?php if (!$rMaint && $rNeed === 1): ?><span class="tag key">KEY必填</span><?php endif; ?>
                   <?php if (!$rMaint && $rNeed === 2): ?><span class="tag key">KEY可选</span><?php endif; ?>
                 </span>
                 <span class="th5-api-card-q__arrow"><i data-lucide="arrow-up-right" style="width:15px;height:15px;"></i></span>
               </div>
             </a>
+          </div>
+        </section>
+      <?php endif; ?>
+
+      <?php if ($disclaimerBody !== ''): ?>
+        <section class="th5-panel card mt-8 th5-detail-q__disclaimer" id="detailDisclaimer">
+          <button type="button" class="th5-detail-q__disclaimer-toggle" id="detailDisclaimerToggle" aria-expanded="false">
+            <i data-lucide="shield-alert" style="width:15px;height:15px;"></i>
+            <span class="th5-detail-q__disclaimer-toggle-text">查看免责声明</span>
+            <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+          </button>
+          <div class="markdown-body vs-md-body th5-md th5-detail-q__disclaimer-body" id="detailDisclaimerBody" hidden>
+            <?php echo TH5_md_render($disclaimerBody); ?>
           </div>
         </section>
       <?php endif; ?>

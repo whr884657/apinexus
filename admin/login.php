@@ -12,7 +12,7 @@ require_once __DIR__ . '/includes/auth_layout.php';
 
 InstallChecker::requireInstalled();
 
-$base = vs_base_url();
+$base = vs_site_base_path();
 
 // 退出须在「已登录则跳转」之前处理，否则 POST 无法落到本页
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && (string) $_POST['action'] === 'logout') {
@@ -252,7 +252,7 @@ vs_auth_head('登录');
     var loginBtn = document.getElementById('loginBtn');
     var sendCodeBtn = document.getElementById('sendCodeBtn');
     var toggleEl = document.getElementById('toggleLoginMode');
-    var expiredMsg = <?php echo json_encode($expiredMsg, JSON_UNESCAPED_UNICODE); ?>;
+    var expiredMsg = <?php echo vs_json_script($expiredMsg); ?>;
     var mailEnabled = <?php echo $mailEnabled ? 'true' : 'false'; ?>;
     var mode = 'password';
     var countdown = 0;

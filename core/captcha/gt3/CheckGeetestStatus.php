@@ -60,11 +60,20 @@ class CheckGeetestStatus
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::HTTP_TIMEOUT_DEFAULT);
             curl_setopt($ch, CURLOPT_TIMEOUT, self::HTTP_TIMEOUT_DEFAULT);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_USERAGENT, class_exists('OutboundUa')
+                ? OutboundUa::build('Captcha')
+                : ('ApiNexus-Captcha/' . (defined('VS_VERSION') ? VS_VERSION : '1')));
             $body = (string) curl_exec($ch);
             vs_curl_close($ch);
         } else {
+            $uaLine = class_exists('OutboundUa')
+                ? OutboundUa::headerLine('Captcha')
+                : ('User-Agent: ApiNexus-Captcha/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
             $ctx = stream_context_create(array(
-                'http' => array('timeout' => self::HTTP_TIMEOUT_DEFAULT),
+                'http' => array(
+                    'timeout' => self::HTTP_TIMEOUT_DEFAULT,
+                    'header'  => $uaLine . "\r\n",
+                ),
             ));
             $body = (string) @file_get_contents($url, false, $ctx);
         }

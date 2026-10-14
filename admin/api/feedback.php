@@ -34,8 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error($result);
         }
         $row = ApiFeedbackManager::formatRow(ApiFeedbackManager::findById($id));
-        if (!$wasDone && is_array($row) && class_exists('FeedbackNotify')) {
-            FeedbackNotify::notifyUserHandled($row);
+        if (!$wasDone && is_array($row) && class_exists('MailNotify')) {
+            try {
+                MailNotify::notifyUserFeedbackHandled($row);
+            } catch (Exception $e) {
+                // 发信失败不阻断标记已处理
+            }
         }
         AjaxResponse::success('已标记为已处理', array('feedback' => $row));
     }
@@ -48,10 +52,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('反馈已删除', array('feedback_id' => $id));
     }
 
+    if ($action === 'list') {
+        $paged = ApiFeedbackManager::listPaged(array(
+            'q'        => isset($_POST['q']) ? (string) $_POST['q'] : '',
+            'status'   => isset($_POST['status']) ? (int) $_POST['status'] : ApiFeedbackManager::STATUS_PENDING,
+            'page'     => isset($_POST['page']) ? (int) $_POST['page'] : 1,
+            'pagesize' => isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20,
+        ));
+        $desk = '';
+        $mobile = '';
+        foreach ($paged['list'] as $row) {
+            $ctx = vs_admin_fb_row_ctx($row);
+            if ($ctx === array()) {
+                continue;
+            }
+            ob_start();
+            vs_render_admin_fb_desktop_row($ctx);
+            $desk .= ob_get_clean();
+            ob_start();
+            vs_render_admin_fb_mobile_card($ctx);
+            $mobile .= ob_get_clean();
+        }
+        AjaxResponse::success('ok', array(
+            'desktop_html' => $desk,
+            'mobile_html'  => $mobile,
+            'total'        => $paged['total'],
+            'page'         => $paged['page'],
+            'pagesize'     => $paged['pagesize'],
+            'counts'       => $paged['counts'],
+        ));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
-$rows = $tableReady ? ApiFeedbackManager::listAll() : array();
+$paged = $tableReady ? ApiFeedbackManager::listPaged(array(
+    'status'   => ApiFeedbackManager::STATUS_PENDING,
+    'page'     => 1,
+    'pagesize' => 20,
+)) : array('list' => array(), 'total' => 0, 'counts' => array('0' => 0, '1' => 0));
+$rows = $paged['list'];
+$fbTotal = (int) $paged['total'];
+$fbCounts = isset($paged['counts']) ? $paged['counts'] : array('0' => 0, '1' => 0);
 
 /**
  * @param array $row
@@ -212,8 +254,7 @@ function vs_render_admin_fb_mobile_card(array $ctx)
             </span>
         </div>
         <div class="feedback-card__content">
-            <span class="feedback-card__content-label">反馈内容</span>
-            <p class="feedback-card__content-body" data-field="content"><?php echo vs_e($ctx['content']); ?></p>
+            <p class="feedback-card__content-body" data-field="content" title="<?php echo vs_e($ctx['content']); ?>"><?php echo vs_e($ctx['content']); ?></p>
         </div>
         <div class="feedback-card__actions" data-field="actions">
             <?php echo vs_admin_fb_actions_html($ctx); ?>
@@ -237,18 +278,10 @@ if ($tableReady) {
     $headerActions = ob_get_clean();
 }
 
-$fbCounts = array('0' => 0, '1' => 0);
-foreach ($rows as $row) {
-    $st = isset($row['status']) ? (string) (int) $row['status'] : '0';
-    if (isset($fbCounts[$st])) {
-        $fbCounts[$st] += 1;
-    }
-}
-
 vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
 ?>
 
-<div id="apiFeedbackPage" data-feedback-total="<?php echo (int) count($rows); ?>">
+<div id="apiFeedbackPage" data-feedback-total="<?php echo (int) $fbTotal; ?>">
     <?php if (!$tableReady): ?>
         <div class="vs-panel">
             <?php vs_render_notice('warning', '', '请先在「系统升级」中执行数据库结构更新，以创建反馈表。', array('compact' => true)); ?>
@@ -267,7 +300,7 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
             </button>
         </div>
 
-        <div class="vs-api-list-empty vs-api-list-empty--hero" id="adminFbEmpty"<?php echo count($rows) > 0 ? ' hidden' : ''; ?>>
+        <div class="vs-api-list-empty vs-api-list-empty--hero" id="adminFbEmpty"<?php echo $fbTotal > 0 ? ' hidden' : ''; ?>>
             <div class="vs-api-list-empty__card">
                 <h3 class="vs-api-list-empty__title">暂无反馈</h3>
                 <p class="vs-api-list-empty__desc">用户提交的接口反馈将显示在此，可查看并标记处理。</p>
@@ -318,13 +351,13 @@ vs_admin_layout_start('接口反馈', 'api-feedback', $headerActions);
                         <option value="50">50</option>
                     </select>
                 </label>
-                <div class="vs-api-pager__navs" id="adminFbPagerNav">
+                <div class="vs-api-pager__navs">
                     <button type="button" class="vs-api-pager__nav" id="adminFbPrevBtn" aria-label="上一页">上一页</button>
                     <div class="vs-api-pager__nums" id="adminFbPagerNums" role="navigation" aria-label="页码"></div>
                     <button type="button" class="vs-api-pager__nav" id="adminFbNextBtn" aria-label="下一页">下一页</button>
                 </div>
             </div>
-            <p class="vs-api-list-stats" id="adminFbStats">共 <?php echo (int) count($rows); ?> 条</p>
+            <p class="vs-api-list-stats" id="adminFbStats">共 <?php echo (int) $fbTotal; ?> 条</p>
         </div>
     <?php endif; ?>
 </div>

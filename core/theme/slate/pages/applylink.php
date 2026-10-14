@@ -86,6 +86,6 @@ $metaUrl = $vsBase . '/core/theme/default/api/sitemeta.php';
 </div></main>
 <?php if (function_exists('vs_captcha_js')) { vs_captcha_js(Captcha::SCENE_APPLYLINK); } ?>
 <script>
-window.VS_LINK_META_URL = <?php echo json_encode($metaUrl, JSON_UNESCAPED_UNICODE); ?>;
-window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE); ?>;
+window.VS_LINK_META_URL = <?php echo vs_json_script($metaUrl); ?>;
+window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo vs_json_script($csrf); ?>;
 </script>

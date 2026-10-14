@@ -524,9 +524,11 @@ vs_admin_layout_start('用户管理', 'users', $headerActions);
                         <option value="50">50</option>
                     </select>
                 </label>
-                <button type="button" class="vs-api-pager__nav" id="usersPrevBtn" aria-label="上一页">上一页</button>
-                <div class="vs-api-pager__nums" id="usersPagerNums" role="navigation" aria-label="页码"></div>
-                <button type="button" class="vs-api-pager__nav" id="usersNextBtn" aria-label="下一页">下一页</button>
+                <div class="vs-api-pager__navs">
+                    <button type="button" class="vs-api-pager__nav" id="usersPrevBtn" aria-label="上一页">上一页</button>
+                    <div class="vs-api-pager__nums" id="usersPagerNums" role="navigation" aria-label="页码"></div>
+                    <button type="button" class="vs-api-pager__nav" id="usersNextBtn" aria-label="下一页">下一页</button>
+                </div>
             </div>
             <p class="vs-api-list-stats" id="usersStats">共 <?php echo (int) $userCount; ?> 条</p>
         </div>

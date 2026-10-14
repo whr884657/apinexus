@@ -1126,9 +1126,7 @@ class Updater
      */
     public static function configureCurlSsl($ch, $url = '')
     {
-        // 始终校验证书；不扫描系统 CA 路径，避免 open_basedir 报错
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        vs_curl_ssl_verify($ch);
     }
 
     /**
@@ -1148,7 +1146,9 @@ class Updater
                 CURLOPT_MAXREDIRS        => 10,
                 CURLOPT_CONNECTTIMEOUT => $timeout,
                 CURLOPT_TIMEOUT        => $timeout,
-                CURLOPT_USERAGENT      => 'ApiNexus-Updater/' . self::localVersion(),
+                CURLOPT_USERAGENT      => class_exists('OutboundUa')
+                    ? OutboundUa::buildWithVersion('Updater', self::localVersion())
+                    : ('ApiNexus-Updater/' . self::localVersion()),
             ));
             self::configureCurlSsl($ch, $url);
             $body = curl_exec($ch);
@@ -1164,16 +1164,15 @@ class Updater
             return false;
         }
 
-        $sslOptions = array(
-            'verify_peer'      => true,
-            'verify_peer_name' => true,
-        );
+        $sslOptions = vs_stream_ssl_options();
 
         $context = stream_context_create(array(
             'http' => array(
                 'method'  => 'GET',
                 'timeout' => $timeout,
-                'header'  => "User-Agent: ApiNexus-Updater/" . self::localVersion() . "\r\n",
+                'header'  => 'User-Agent: ' . (class_exists('OutboundUa')
+                    ? OutboundUa::buildWithVersion('Updater', self::localVersion())
+                    : ('ApiNexus-Updater/' . self::localVersion())) . "\r\n",
             ),
             'ssl' => $sslOptions,
         ));
@@ -1209,7 +1208,9 @@ class Updater
                 CURLOPT_MAXREDIRS      => 10,
                 CURLOPT_CONNECTTIMEOUT => 30,
                 CURLOPT_TIMEOUT        => 300,
-                CURLOPT_USERAGENT      => 'ApiNexus-Updater/' . self::localVersion(),
+                CURLOPT_USERAGENT      => class_exists('OutboundUa')
+                    ? OutboundUa::buildWithVersion('Updater', self::localVersion())
+                    : ('ApiNexus-Updater/' . self::localVersion()),
             ));
             self::configureCurlSsl($ch, $url);
             $ok = curl_exec($ch) !== false;

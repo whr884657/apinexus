@@ -83,15 +83,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ));
     }
 
+    if ($action === 'list') {
+        $paged = ApiCategoryManager::listPaged(array(
+            'q'        => isset($_POST['q']) ? (string) $_POST['q'] : '',
+            'page'     => isset($_POST['page']) ? (int) $_POST['page'] : 1,
+            'pagesize' => isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20,
+        ));
+        $desk = '';
+        $mobile = '';
+        foreach ($paged['list'] as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $ctx = vs_api_cat_row_context($row);
+            ob_start();
+            vs_render_api_cat_desktop_row($ctx);
+            $desk .= ob_get_clean();
+            ob_start();
+            vs_render_api_cat_mobile_card($ctx);
+            $mobile .= ob_get_clean();
+        }
+        AjaxResponse::success('ok', array(
+            'desktop_html' => $desk,
+            'mobile_html'  => $mobile,
+            'total'        => $paged['total'],
+            'page'         => $paged['page'],
+            'pagesize'     => $paged['pagesize'],
+        ));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
-$categories = ApiCategoryManager::listAll();
+$allCategories = ApiCategoryManager::listAll();
 $tableReady = ApiCategoryManager::tableReady();
+$paged = $tableReady ? ApiCategoryManager::listPaged(array('page' => 1, 'pagesize' => 20)) : array(
+    'list' => array(),
+    'total' => 0,
+);
+$categories = $paged['list'];
+$catTotal = (int) $paged['total'];
 $defaultIconPaths = ApiCategoryManager::defaultIconPaths();
 $iconBase = rtrim(vs_base_url(), '/');
 $categoriesForJs = array();
-foreach ($categories as $row) {
+foreach ($allCategories as $row) {
     $categoriesForJs[] = array(
         'id'        => (int) $row['id'],
         'name'      => (string) $row['name'],
@@ -253,14 +288,15 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
 <div id="apiCategoriesPage"
      data-icon-base="<?php echo vs_e($iconBase); ?>"
      data-default-icons="<?php echo vs_e(json_encode($defaultIconPaths, JSON_UNESCAPED_UNICODE)); ?>"
-     data-categories="<?php echo vs_e(json_encode($categoriesForJs, JSON_UNESCAPED_UNICODE)); ?>">
+     data-categories="<?php echo vs_e(json_encode($categoriesForJs, JSON_UNESCAPED_UNICODE)); ?>"
+     data-cat-total="<?php echo (int) $catTotal; ?>">
 
     <?php if (!$tableReady): ?>
         <div class="vs-panel vs-api-cat-panel">
             <?php vs_render_notice('warning', '', '分类管理功能尚未就绪，请前往「系统管理 → 系统升级」完成更新。', array('compact' => true)); ?>
         </div>
     <?php else: ?>
-        <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiCategoryEmpty"<?php echo count($categories) > 0 ? ' hidden' : ''; ?>>
+        <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiCategoryEmpty"<?php echo $catTotal > 0 ? ' hidden' : ''; ?>>
             <div class="vs-api-list-empty__card">
                 <h3 class="vs-api-list-empty__title">暂无分类</h3>
                 <p class="vs-api-list-empty__desc">点击右上角「添加分类」创建。分类用于前台筛选与接口归属。</p>
@@ -312,9 +348,13 @@ vs_admin_layout_start('接口分类', 'api-categories', $headerActions);
                         <option value="50">50</option>
                     </select>
                 </label>
-                <div class="vs-api-pager__navs" id="apiCatPagerNav"></div>
+                <div class="vs-api-pager__navs">
+                    <button type="button" class="vs-api-pager__nav" id="apiCatPrevBtn" aria-label="上一页">上一页</button>
+                    <div class="vs-api-pager__nums" id="apiCatPagerNums" role="navigation" aria-label="页码"></div>
+                    <button type="button" class="vs-api-pager__nav" id="apiCatNextBtn" aria-label="下一页">下一页</button>
+                </div>
             </div>
-            <div class="vs-api-list-total" id="apiCatStats">共 <?php echo (int) count($categories); ?> 条</div>
+            <div class="vs-api-list-total" id="apiCatStats">共 <?php echo (int) $catTotal; ?> 条</div>
         </div>
     <?php endif; ?>
 </div>

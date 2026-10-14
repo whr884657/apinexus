@@ -73,7 +73,11 @@ vs_admin_layout_start('订单管理', 'orders', $headerActions);
                 <option value="50">50</option>
             </select>
         </label>
-        <div class="vs-api-pager__navs" id="ordersPagerNav"></div>
+        <div class="vs-api-pager__navs">
+            <button type="button" class="vs-api-pager__nav" id="ordersPrevBtn" aria-label="上一页">上一页</button>
+            <div class="vs-api-pager__nums" id="ordersPagerNums" role="navigation" aria-label="页码"></div>
+            <button type="button" class="vs-api-pager__nav" id="ordersNextBtn" aria-label="下一页">下一页</button>
+        </div>
     </div>
     <div class="vs-api-list-total" id="ordersTotal"></div>
 </div>

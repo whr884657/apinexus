@@ -106,7 +106,7 @@
             + (boot.html || '<p>许可内容加载失败</p>')
             + '<label class="vs-license-agree" id="vsLicenseAgreeLabel">'
             + '<input type="checkbox" id="vsLicenseAgreeChk" disabled>'
-            + '<span>我已完整阅读并同意《ApiNexus 开源许可与部署使用条款》及 MIT License；理解本软件按原样提供、无任何担保，部署与运营中出现的任何问题由我自行承担，与作者无关。</span>'
+            + '<span>我已完整阅读并同意《ApiNexus 开源许可与部署使用条款》及 AGPL-3.0；理解须保留原作者署名、衍生作品（含网络服务）必须开源不得闭源；本软件按原样提供、无任何担保，部署与运营风险由我自行承担，与作者无关。</span>'
             + '</label>';
 
         VsModal.open({

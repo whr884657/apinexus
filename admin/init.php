@@ -18,7 +18,7 @@ if (class_exists('PayPendingWatch')) {
     PayPendingWatch::onRequest(0);
 }
 
-$vsBase     = vs_base_url();
+$vsBase     = vs_site_base_path();
 $vsAdmin    = Auth::user();
 $vsSiteName   = SiteContext::siteName();
 $vsSystemName = SiteContext::systemName();

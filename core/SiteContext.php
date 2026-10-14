@@ -59,6 +59,33 @@ class SiteContext
     }
 
     /**
+     * 备案绑定的站点域名（可空；供 CSP/可信 Host 白名单补充，不参与备案全等展示）
+     *
+     * @return string[]
+     */
+    public static function boundDomains()
+    {
+        $out = array();
+        if (!class_exists('Config')) {
+            return $out;
+        }
+        try {
+            $slots = array(
+                self::normalizeDomainInput(Config::get('site_domain', '')),
+                self::normalizeDomainInput(Config::get('site_domain1', '')),
+            );
+        } catch (Exception $e) {
+            return $out;
+        }
+        foreach ($slots as $d) {
+            if ($d !== '') {
+                $out[] = $d;
+            }
+        }
+        return $out;
+    }
+
+    /**
      * 当前访问 Host
      *
      * @return string

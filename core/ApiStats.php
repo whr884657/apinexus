@@ -40,6 +40,37 @@ class ApiStats
     private static $proxyPrepaid = null;
 
     /**
+     * @deprecated v13.26.46 起不再保存响应正文；保留空实现以免旧本地脚本报错
+     *
+     * @param string $body
+     * @param string $contentType
+     * @return void
+     */
+    public static function attachResponseBody($body, $contentType = '')
+    {
+        // 故意不落库：响应正文不再写入 apilog（体积与隐私）
+    }
+
+    /**
+     * @deprecated v13.26.46 起不再记录调用耗时；保留空实现以免旧调用报错
+     *
+     * @return void
+     */
+    public static function markRequestStart()
+    {
+    }
+
+    /**
+     * @deprecated v13.26.46 起不再记录调用耗时
+     *
+     * @return int
+     */
+    public static function elapsedMs()
+    {
+        return 0;
+    }
+
+    /**
      * 本请求密钥上下文（hit / guardAccess 之后可读）
      * 供本地接口按密钥归属用户返回「仅本人」数据
      *
@@ -161,10 +192,11 @@ class ApiStats
         if ($row && class_exists('ProxyClientProfile')) {
             return ProxyClientProfile::buildClientHeaders($row);
         }
-        $ver = defined('VS_VERSION') ? VS_VERSION : '1';
         return array(
             'Accept: */*',
-            'User-Agent: ApiNexus/' . $ver,
+            class_exists('OutboundUa')
+                ? OutboundUa::headerLine('')
+                : ('User-Agent: ApiNexus/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
         );
     }
 
@@ -178,8 +210,10 @@ class ApiStats
         if ($row && class_exists('ProxyClientProfile')) {
             return ProxyClientProfile::resolveUa($row);
         }
-        $ver = defined('VS_VERSION') ? VS_VERSION : '1';
-        return 'ApiNexus/' . $ver;
+        if (class_exists('OutboundUa')) {
+            return OutboundUa::build('');
+        }
+        return 'ApiNexus/' . (defined('VS_VERSION') ? VS_VERSION : '1');
     }
 
     /**
@@ -294,12 +328,13 @@ class ApiStats
     /**
      * 代理网关记账（中继完成后调用）
      *
-     * @param array $row    接口行
-     * @param bool  $ok     是否成功放行
-     * @param int   $http   HTTP 状态码（中继透传上游码；失败为业务码）
+     * @param array      $row    接口行
+     * @param bool       $ok     是否成功放行
+     * @param int        $http   HTTP 状态码（中继透传上游码；失败为业务码）
+     * @param array|null $meta   已废弃，忽略（兼容旧调用签名）
      * @return void
      */
-    public static function hitProxy(array $row, $ok = true, $http = 200)
+    public static function hitProxy(array $row, $ok = true, $http = 200, $meta = null)
     {
         try {
             if (!InstallChecker::isInstalled() || !ApiManager::tableReady()) {
@@ -334,18 +369,47 @@ class ApiStats
             return true;
         }
         $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
-        $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
-        if ($charge !== ApiManager::CHARGE_PAID || $price <= 0) {
+        // 是否收费 / 是否须 KEY：只看库表原价；全免只影响下方实扣额，不得用实扣额<=0 提前放行鉴权
+        $basePrice = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
+        if ($charge !== ApiManager::CHARGE_PAID || $basePrice <= 0) {
             return true;
         }
         if (empty(self::$keyCtx['valid']) || empty(self::$keyCtx['userid'])) {
             return array('errcode' => ApiError::CHARGE_NEED_KEY, 'msg' => '收费接口须提供有效密钥');
         }
-        if (!PointsManager::hasPointsColumn()) {
-            return array('errcode' => ApiError::POINTS_SYSTEM, 'msg' => '积分系统暂不可用');
+        $price = $basePrice;
+        if (class_exists('IncentiveManager')) {
+            $price = IncentiveManager::sitePromoEffectivePrice($basePrice, $charge);
         }
         $id = isset($row['id']) ? (int) $row['id'] : 0;
         $remark = '调用接口：' . (isset($row['name']) ? (string) $row['name'] : ('#' . $id));
+        // 活动免扣：不扣账户积分，但仍按库表原价占用令牌配额（防免单期间绕过配额）
+        if ($price <= 0) {
+            $quotaOnly = self::consumeKeyQuotaOnly(
+                (int) self::$keyCtx['keyid'],
+                (int) self::$keyCtx['userid'],
+                $basePrice
+            );
+            if (empty($quotaOnly['ok'])) {
+                return array(
+                    'errcode' => isset($quotaOnly['errcode']) ? (int) $quotaOnly['errcode'] : ApiError::KEY_QUOTA,
+                    'msg'     => isset($quotaOnly['msg']) ? (string) $quotaOnly['msg'] : '令牌分配积分不足',
+                );
+            }
+            self::$proxyPrepaid = array(
+                'userid'      => (int) self::$keyCtx['userid'],
+                'keyid'       => (int) self::$keyCtx['keyid'],
+                'apiid'       => $id,
+                'amount'      => 0.0,
+                'quota_delta' => isset($quotaOnly['quota_delta']) ? (float) $quotaOnly['quota_delta'] : 0.0,
+                'remark'      => $remark,
+                'use_quota'   => !empty($quotaOnly['use_quota']),
+            );
+            return true;
+        }
+        if (!PointsManager::hasPointsColumn()) {
+            return array('errcode' => ApiError::POINTS_SYSTEM, 'msg' => '积分系统暂不可用');
+        }
         $deduct = self::deductWithKeyQuota(
             (int) self::$keyCtx['userid'],
             $price,
@@ -360,14 +424,76 @@ class ApiStats
             );
         }
         self::$proxyPrepaid = array(
-            'userid'    => (int) self::$keyCtx['userid'],
-            'keyid'     => (int) self::$keyCtx['keyid'],
-            'apiid'     => $id,
-            'amount'    => $price,
-            'remark'    => $remark,
-            'use_quota' => !empty($deduct['use_quota']),
+            'userid'      => (int) self::$keyCtx['userid'],
+            'keyid'       => (int) self::$keyCtx['keyid'],
+            'apiid'       => $id,
+            'amount'      => $price,
+            'quota_delta' => !empty($deduct['use_quota']) ? $price : 0.0,
+            'remark'      => $remark,
+            'use_quota'   => !empty($deduct['use_quota']),
         );
         return true;
+    }
+
+    /**
+     * 不扣账户积分，仅按金额校验并占用令牌配额
+     *
+     * @param int   $keyId
+     * @param int   $userId
+     * @param float $baseAmount 库表原价
+     * @return array{ok:bool,msg?:string,errcode?:int,use_quota?:bool,quota_delta?:float}
+     */
+    private static function consumeKeyQuotaOnly($keyId, $userId, $baseAmount)
+    {
+        $keyId = (int) $keyId;
+        $userId = (int) $userId;
+        $baseAmount = class_exists('ApiManager')
+            ? ApiManager::normalizePrice($baseAmount)
+            : max(0.0, round((float) $baseAmount, 4));
+        if ($keyId <= 0 || $baseAmount <= 0) {
+            return array('ok' => true, 'use_quota' => false, 'quota_delta' => 0.0);
+        }
+        if (!class_exists('ApiKeyManager') || !method_exists('ApiKeyManager', 'prepareCharge')) {
+            return array('ok' => true, 'use_quota' => false, 'quota_delta' => 0.0);
+        }
+        $prep = ApiKeyManager::prepareCharge($keyId, $baseAmount);
+        if (empty($prep['ok'])) {
+            if (class_exists('MailNotify')) {
+                try {
+                    MailNotify::notifyKeyQuotaExhausted($userId, $keyId);
+                } catch (Exception $e) {
+                    // 发信失败不阻断
+                }
+            }
+            return array(
+                'ok'      => false,
+                'errcode' => isset($prep['errcode']) ? (int) $prep['errcode'] : ApiError::KEY_QUOTA,
+                'msg'     => isset($prep['msg']) ? (string) $prep['msg'] : '令牌分配积分不足',
+            );
+        }
+        $useQuota = !empty($prep['use_quota']);
+        if ($useQuota && method_exists('ApiKeyManager', 'adjustQuotaused')) {
+            $quotaOk = ApiKeyManager::adjustQuotaused($keyId, $baseAmount, null, true);
+            if (!$quotaOk) {
+                if (class_exists('MailNotify')) {
+                    try {
+                        MailNotify::notifyKeyQuotaExhausted($userId, $keyId);
+                    } catch (Exception $e) {
+                        // ignore
+                    }
+                }
+                return array(
+                    'ok'      => false,
+                    'errcode' => ApiError::KEY_QUOTA,
+                    'msg'     => '令牌分配积分不足',
+                );
+            }
+        }
+        return array(
+            'ok'          => true,
+            'use_quota'   => $useQuota,
+            'quota_delta' => $useQuota ? $baseAmount : 0.0,
+        );
     }
 
     /**
@@ -380,17 +506,23 @@ class ApiStats
             return;
         }
         $p = self::$proxyPrepaid;
-        $refund = PointsManager::refundApiCall(
-            (int) $p['userid'],
-            (float) $p['amount'],
-            (int) $p['apiid'],
-            (int) $p['keyid'],
-            $remark !== '' ? $remark : '上游失败退回'
-        );
-        // 仅退积分成功时回滚 quotaused，避免「积分未退却少记配额」
-        if (!empty($refund['ok']) && !empty($p['use_quota']) && class_exists('ApiKeyManager')
-            && method_exists('ApiKeyManager', 'adjustQuotaused')) {
-            ApiKeyManager::adjustQuotaused((int) $p['keyid'], -((float) $p['amount']));
+        $amount = (float) $p['amount'];
+        $quotaDelta = isset($p['quota_delta']) ? (float) $p['quota_delta'] : $amount;
+        $pointsOk = true;
+        if ($amount > 0.0000001) {
+            $refund = PointsManager::refundApiCall(
+                (int) $p['userid'],
+                $amount,
+                (int) $p['apiid'],
+                (int) $p['keyid'],
+                $remark !== '' ? $remark : '上游失败退回'
+            );
+            $pointsOk = !empty($refund['ok']);
+        }
+        // 积分已退（或本次本未扣积分）时回滚 quotaused；免扣路径用 quota_delta=库表原价
+        if ($pointsOk && !empty($p['use_quota']) && $quotaDelta > 0.0000001
+            && class_exists('ApiKeyManager') && method_exists('ApiKeyManager', 'adjustQuotaused')) {
+            ApiKeyManager::adjustQuotaused((int) $p['keyid'], -$quotaDelta);
         }
         self::$proxyPrepaid = null;
     }
@@ -531,6 +663,7 @@ class ApiStats
             return true;
         }
         $need = ApiManager::normalizeRequireKey(isset($row['needkey']) ? $row['needkey'] : ApiManager::KEY_NONE);
+        // QPM 桶与 KEY 规则：只看库表，不受全站优惠/全免影响（E437）
         if (ApiManager::hasChargeColumns()) {
             $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
             $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
@@ -567,12 +700,32 @@ class ApiStats
             return true;
         }
         $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
-        $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
-        if ($charge !== ApiManager::CHARGE_PAID || $price <= 0) {
+        // 是否收费 / 是否须 KEY：只看库表原价（与 evaluateKey / QPM 一致）
+        $basePrice = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
+        if ($charge !== ApiManager::CHARGE_PAID || $basePrice <= 0) {
             return true;
         }
+        // 库表收费：全免也不得放宽「须有效密钥」；实扣额只决定是否查余额/扣费
         if (empty(self::$keyCtx['valid']) || empty(self::$keyCtx['userid'])) {
             return array('errcode' => ApiError::CHARGE_NEED_KEY, 'msg' => '收费接口须提供有效密钥');
+        }
+        $price = $basePrice;
+        if (class_exists('IncentiveManager')) {
+            $price = IncentiveManager::sitePromoEffectivePrice($basePrice, $charge);
+        }
+        if ($price <= 0) {
+            // 免扣账户积分：仍按库表原价预检令牌配额（实际占用在预扣/记账处）
+            $keyId = !empty(self::$keyCtx['keyid']) ? (int) self::$keyCtx['keyid'] : 0;
+            if ($keyId > 0 && class_exists('ApiKeyManager') && method_exists('ApiKeyManager', 'prepareCharge')) {
+                $prep = ApiKeyManager::prepareCharge($keyId, $basePrice);
+                if (empty($prep['ok'])) {
+                    return array(
+                        'errcode' => isset($prep['errcode']) ? (int) $prep['errcode'] : ApiError::KEY_QUOTA,
+                        'msg'     => isset($prep['msg']) ? (string) $prep['msg'] : '令牌分配积分不足',
+                    );
+                }
+            }
+            return true;
         }
         if (!PointsManager::hasPointsColumn()) {
             return array('errcode' => ApiError::POINTS_SYSTEM, 'msg' => '积分系统暂不可用');
@@ -606,7 +759,8 @@ class ApiStats
             'valid'  => false,
         );
 
-        // 收费接口强制视为需要密钥
+        // 收费接口强制视为需要密钥（只看库表 charge/price/needkey）。
+        // 全站优惠（含一键全免）不得改 KEY：原要 KEY 仍要，原不要仍不要；禁止用有效价判断。
         if (ApiManager::hasChargeColumns()) {
             $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
             $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
@@ -617,7 +771,7 @@ class ApiStats
 
         // 无需密钥：软绑定身份（便于调用方自愿带密钥做用户侧统计；无 IP 白名单）
         if ($need === ApiManager::KEY_NONE) {
-            self::tryBindValidKeyIdentity($candidates);
+            self::tryBindValidKeyIdentity($candidates, $row);
             return self::evaluateBilling($row);
         }
 
@@ -641,6 +795,8 @@ class ApiStats
 
         // 多 keyways：任一通道的有效密钥即可（错误 query 不阻断正确 header/bearer）
         $sawDisabled = false;
+        $sawExpired = false;
+        $sawScopeDeny = false;
         foreach ($candidates as $raw) {
             $keyRow = ApiKeyManager::findBySecret($raw);
             if (!$keyRow) {
@@ -648,6 +804,15 @@ class ApiStats
             }
             if ((int) $keyRow['status'] !== ApiKeyManager::STATUS_ENABLED) {
                 $sawDisabled = true;
+                continue;
+            }
+            // 过期优先于范围，避免把过期钥误报成 11025
+            if (ApiKeyManager::isExpired($keyRow)) {
+                $sawExpired = true;
+                continue;
+            }
+            if (!ApiKeyManager::allowsApi($keyRow, $row)) {
+                $sawScopeDeny = true;
                 continue;
             }
             $bound = self::applyValidKeyContext($raw, $keyRow, $enforceIpAllow);
@@ -659,6 +824,15 @@ class ApiStats
 
         if ($sawDisabled) {
             return array('errcode' => ApiError::KEY_DISABLED, 'msg' => '密钥已禁用');
+        }
+        if ($sawExpired) {
+            return array('errcode' => ApiError::KEY_EXPIRED, 'msg' => '密钥已过期');
+        }
+        if ($sawScopeDeny) {
+            return array(
+                'errcode' => ApiError::KEY_SCOPE,
+                'msg'     => '该密钥无权调用本接口，请更换密钥或调整该密钥的接口范围',
+            );
         }
         // 允许通道无一有效密钥，但未允许通道出现了密钥 → 优先报鉴权方式错误
         if (self::hasKeyOutsideAllowedWays($row)) {
@@ -673,7 +847,7 @@ class ApiStats
      * @param array<int,string> $candidates
      * @return true
      */
-    private static function tryBindValidKeyIdentity(array $candidates)
+    private static function tryBindValidKeyIdentity(array $candidates, array $apiRow = array())
     {
         if ($candidates === array() || !ApiKeyManager::tableReady()) {
             return true;
@@ -684,6 +858,13 @@ class ApiStats
                 continue;
             }
             if ((int) $keyRow['status'] !== ApiKeyManager::STATUS_ENABLED) {
+                continue;
+            }
+            if (ApiKeyManager::isExpired($keyRow)) {
+                continue;
+            }
+            // 无需密钥：范围外视为「坏密钥」——不绑定身份，继续尝试下一把
+            if ($apiRow !== array() && !ApiKeyManager::allowsApi($keyRow, $apiRow)) {
                 continue;
             }
             self::applyValidKeyContext($raw, $keyRow, false);
@@ -710,6 +891,15 @@ class ApiStats
         }
         if (class_exists('ApiKeyManager') && ApiKeyManager::isExpired($keyRow)) {
             return array('errcode' => ApiError::KEY_EXPIRED, 'msg' => '密钥已过期');
+        }
+        $ownerId = (int) $keyRow['userid'];
+        try {
+            $st = class_exists('UserAuth') ? UserAuth::lookupStatus($ownerId) : null;
+            if ($st === null || (int) $st !== 1) {
+                return array('errcode' => ApiError::BAD_KEY, 'msg' => '密钥错误');
+            }
+        } catch (Exception $e) {
+            return array('errcode' => ApiError::BAD_KEY, 'msg' => '密钥错误');
         }
         self::$keyCtx = array(
             'raw'    => (string) $raw,
@@ -739,9 +929,9 @@ class ApiStats
         if (empty($prep['ok'])) {
             $failCode = isset($prep['errcode']) ? (int) $prep['errcode'] : ApiError::KEY_QUOTA;
             // 硬拦配额也发一次用尽提醒（Redis 去重）
-            if ($failCode === ApiError::KEY_QUOTA && class_exists('PointsNotify')) {
+            if ($failCode === ApiError::KEY_QUOTA && class_exists('MailNotify')) {
                 try {
-                    PointsNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
+                    MailNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
                 } catch (Exception $e) {
                     // 发信失败不阻断
                 }
@@ -778,9 +968,9 @@ class ApiStats
                     (int) $keyId,
                     '令牌配额并发冲突退回'
                 );
-                if (class_exists('PointsNotify')) {
+                if (class_exists('MailNotify')) {
                     try {
-                        PointsNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
+                        MailNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
                     } catch (Exception $e) {
                         // ignore
                     }
@@ -791,17 +981,17 @@ class ApiStats
                     'msg'     => '令牌分配积分不足',
                 );
             }
-            if (!empty($prep['crossed_exhausted']) && class_exists('PointsNotify')) {
+            if (!empty($prep['crossed_exhausted']) && class_exists('MailNotify')) {
                 try {
-                    PointsNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
+                    MailNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
                 } catch (Exception $e) {
                     // 发信失败不阻断
                 }
             }
-        } elseif (!empty($prep['crossed_exhausted']) && class_exists('PointsNotify')) {
+        } elseif (!empty($prep['crossed_exhausted']) && class_exists('MailNotify')) {
             // 配额不足走回落总积分时也提醒
             try {
-                PointsNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
+                MailNotify::notifyKeyQuotaExhausted((int) $userId, (int) $keyId);
             } catch (Exception $e) {
                 // ignore
             }
@@ -850,32 +1040,49 @@ class ApiStats
 
         $charged = 0;
         $cost = 0.0;
-        // 代理已预扣：成功只记账，不再二次扣费
+        // 代理已处理计费（含全免仅占配额）：成功只记账，不再二次扣费/占配额
         if (self::$proxyPrepaid !== null) {
-            $charged = 1;
             $cost = (float) self::$proxyPrepaid['amount'];
+            $charged = ($ok && $cost > 0.0000001) ? 1 : 0;
             if (!$ok) {
                 $charged = 0;
                 $cost = 0.0;
             }
         } elseif ($ok && ApiManager::hasChargeColumns()) {
             $charge = ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0);
-            $price = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
-            if ($charge === ApiManager::CHARGE_PAID && $price > 0
+            $basePrice = ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0);
+            $price = $basePrice;
+            if (class_exists('IncentiveManager')) {
+                $price = IncentiveManager::sitePromoEffectivePrice($basePrice, $charge);
+            }
+            if ($charge === ApiManager::CHARGE_PAID
                 && !empty(self::$keyCtx['valid']) && !empty(self::$keyCtx['userid'])) {
-                $deduct = self::deductWithKeyQuota(
-                    (int) self::$keyCtx['userid'],
-                    $price,
-                    $id,
-                    (int) self::$keyCtx['keyid'],
-                    '调用接口：' . (isset($row['name']) ? (string) $row['name'] : ('#' . $id))
-                );
-                if (!$deduct['ok']) {
-                    $err = isset($deduct['errcode']) ? (int) $deduct['errcode'] : ApiError::NO_POINTS;
-                    self::jsonExit($err, isset($deduct['msg']) ? $deduct['msg'] : '积分余额不足');
+                if ($price > 0) {
+                    $deduct = self::deductWithKeyQuota(
+                        (int) self::$keyCtx['userid'],
+                        $price,
+                        $id,
+                        (int) self::$keyCtx['keyid'],
+                        '调用接口：' . (isset($row['name']) ? (string) $row['name'] : ('#' . $id))
+                    );
+                    if (!$deduct['ok']) {
+                        $err = isset($deduct['errcode']) ? (int) $deduct['errcode'] : ApiError::NO_POINTS;
+                        self::jsonExit($err, isset($deduct['msg']) ? $deduct['msg'] : '积分余额不足');
+                    }
+                    $charged = 1;
+                    $cost = $price;
+                } elseif ($basePrice > 0) {
+                    // 本地接口全免：不扣积分，仍占令牌配额
+                    $quotaOnly = self::consumeKeyQuotaOnly(
+                        (int) self::$keyCtx['keyid'],
+                        (int) self::$keyCtx['userid'],
+                        $basePrice
+                    );
+                    if (empty($quotaOnly['ok'])) {
+                        $err = isset($quotaOnly['errcode']) ? (int) $quotaOnly['errcode'] : ApiError::KEY_QUOTA;
+                        self::jsonExit($err, isset($quotaOnly['msg']) ? $quotaOnly['msg'] : '令牌分配积分不足');
+                    }
                 }
-                $charged = 1;
-                $cost = $price;
             }
         }
 
@@ -920,9 +1127,53 @@ class ApiStats
         $apitype = ApiManager::normalizeApiType(isset($row['apitype']) ? $row['apitype'] : 0);
         $name = isset($row['name']) ? (string) $row['name'] : '';
         $hasEgress = class_exists('ApiLogManager') && ApiLogManager::hasEgressColumn();
+        $hasExt = class_exists('ApiLogManager') && ApiLogManager::hasExtendedLogColumns();
 
         $pdo = Database::connect();
-        if ($hasEgress) {
+        // 四档 INSERT：egress×转发头组合；升级窗口缺哪列就降级，避免整行写失败
+        try {
+        if ($hasEgress && $hasExt) {
+            $stmt = $pdo->prepare(
+                'INSERT INTO `' . Database::table('apilog') . '` (
+                    `apiid`, `apiname`, `apitype`, `userid`, `apikey`,
+                    `method`, `ip`, `iploc`, `egress`, `host`, `path`, `url`,
+                    `referer`, `origin`, `domain`, `ua`,
+                    `ok`, `httpcode`, `charged`, `cost`,
+                    `xfproto`, `xff`, `xri`, `createtime`
+                ) VALUES (
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, NOW()
+                )'
+            );
+            $stmt->execute(array(
+                $id,
+                mb_substr($name, 0, 100, 'UTF-8'),
+                $apitype,
+                $ctx['userid'],
+                $ctx['apikey'],
+                $ctx['method'],
+                $ctx['ip'],
+                $ctx['iploc'],
+                $ctx['egress'],
+                $ctx['host'],
+                $ctx['path'],
+                $ctx['url'],
+                $ctx['referer'],
+                $ctx['origin'],
+                $ctx['domain'],
+                $ctx['ua'],
+                $ok ? 1 : 0,
+                (int) $http,
+                $charged,
+                $cost,
+                $ctx['xfproto'],
+                $ctx['xff'],
+                $ctx['xri'],
+            ));
+        } elseif ($hasEgress) {
             $stmt = $pdo->prepare(
                 'INSERT INTO `' . Database::table('apilog') . '` (
                     `apiid`, `apiname`, `apitype`, `userid`, `apikey`,
@@ -957,6 +1208,46 @@ class ApiStats
                 (int) $http,
                 $charged,
                 $cost,
+            ));
+        } elseif ($hasExt) {
+            $stmt = $pdo->prepare(
+                'INSERT INTO `' . Database::table('apilog') . '` (
+                    `apiid`, `apiname`, `apitype`, `userid`, `apikey`,
+                    `method`, `ip`, `iploc`, `host`, `path`, `url`,
+                    `referer`, `origin`, `domain`, `ua`,
+                    `ok`, `httpcode`, `charged`, `cost`,
+                    `xfproto`, `xff`, `xri`, `createtime`
+                ) VALUES (
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, NOW()
+                )'
+            );
+            $stmt->execute(array(
+                $id,
+                mb_substr($name, 0, 100, 'UTF-8'),
+                $apitype,
+                $ctx['userid'],
+                $ctx['apikey'],
+                $ctx['method'],
+                $ctx['ip'],
+                $ctx['iploc'],
+                $ctx['host'],
+                $ctx['path'],
+                $ctx['url'],
+                $ctx['referer'],
+                $ctx['origin'],
+                $ctx['domain'],
+                $ctx['ua'],
+                $ok ? 1 : 0,
+                (int) $http,
+                $charged,
+                $cost,
+                $ctx['xfproto'],
+                $ctx['xff'],
+                $ctx['xri'],
             ));
         } else {
             // 升级窗口：结构未落地时降级旧 INSERT，避免详情日志静默丢失
@@ -995,11 +1286,14 @@ class ApiStats
                 $cost,
             ));
         }
-        $logId = (int) $pdo->lastInsertId();
-        // 仅清今日计数键；禁止热路径 SCAN 刷整页日志缓存
-        if (class_exists('RedisCache')) {
-            RedisCache::forget(RedisCache::KEY_APILOG_TODAY);
+        } catch (Exception $e) {
+            if (function_exists('error_log')) {
+                error_log('ApiStats apilog insert failed: ' . $e->getMessage());
+            }
+            return;
         }
+        $logId = (int) $pdo->lastInsertId();
+        // 今日调用由 StatDayManager::recordHit → bumpApiLogToday；禁止热路径 SCAN 刷整页日志缓存
         if ($logId > 0 && class_exists('IpLocator') && IpLocator::enabled()) {
             $ipForLoc = (string) $ctx['ip'];
             register_shutdown_function(function () use ($logId, $ipForLoc) {
@@ -1042,6 +1336,9 @@ class ApiStats
         $referer = isset($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
         $origin = isset($_SERVER['HTTP_ORIGIN']) ? (string) $_SERVER['HTTP_ORIGIN'] : '';
         $ua = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
+        $xfproto = isset($_SERVER['HTTP_X_FORWARDED_PROTO']) ? (string) $_SERVER['HTTP_X_FORWARDED_PROTO'] : '';
+        $xff = isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? (string) $_SERVER['HTTP_X_FORWARDED_FOR'] : '';
+        $xri = isset($_SERVER['HTTP_X_REAL_IP']) ? (string) $_SERVER['HTTP_X_REAL_IP'] : '';
 
         $domain = self::extractDomain($referer);
         if ($domain === '') {
@@ -1064,18 +1361,21 @@ class ApiStats
         }
 
         return array(
-            'userid'  => $userid,
-            'apikey'  => mb_substr($apikey, 0, 128, 'UTF-8'),
-            'method'  => mb_substr($method, 0, 16, 'UTF-8'),
-            'ip'      => mb_substr($ip, 0, 45, 'UTF-8'),
-            'iploc'   => '',
-            'host'    => mb_substr($host, 0, 255, 'UTF-8'),
-            'path'    => mb_substr($path, 0, 500, 'UTF-8'),
-            'url'     => mb_substr($url, 0, 1000, 'UTF-8'),
-            'referer' => mb_substr($referer, 0, 1000, 'UTF-8'),
-            'origin'  => mb_substr($origin, 0, 500, 'UTF-8'),
-            'domain'  => mb_substr($domain, 0, 255, 'UTF-8'),
-            'ua'      => mb_substr($ua, 0, 500, 'UTF-8'),
+            'userid'   => $userid,
+            'apikey'   => mb_substr($apikey, 0, 128, 'UTF-8'),
+            'method'   => mb_substr($method, 0, 16, 'UTF-8'),
+            'ip'       => mb_substr($ip, 0, 45, 'UTF-8'),
+            'iploc'    => '',
+            'host'     => mb_substr($host, 0, 255, 'UTF-8'),
+            'path'     => mb_substr($path, 0, 500, 'UTF-8'),
+            'url'      => mb_substr($url, 0, 1000, 'UTF-8'),
+            'referer'  => mb_substr($referer, 0, 1000, 'UTF-8'),
+            'origin'   => mb_substr($origin, 0, 500, 'UTF-8'),
+            'domain'   => mb_substr($domain, 0, 255, 'UTF-8'),
+            'ua'       => mb_substr($ua, 0, 500, 'UTF-8'),
+            'xfproto'  => mb_substr($xfproto, 0, 16, 'UTF-8'),
+            'xff'      => mb_substr($xff, 0, 500, 'UTF-8'),
+            'xri'      => mb_substr($xri, 0, 45, 'UTF-8'),
         );
     }
 

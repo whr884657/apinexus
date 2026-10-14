@@ -28,8 +28,7 @@
         var statusFilter = document.getElementById('adminKeyStatusFilter');
         var pageSizeEl = document.getElementById('adminKeyPageSize');
         var footerEl = document.getElementById('adminKeyFooter');
-        var pagerNavEl = document.getElementById('adminKeyPagerNav');
-        var pagerInfoEl = document.getElementById('adminKeyPagerInfo');
+        var pagerNums = document.getElementById('adminKeyPagerNums');
         var statsEl = document.getElementById('adminKeyStats');
         var prevBtn = document.getElementById('adminKeyPrevBtn');
         var nextBtn = document.getElementById('adminKeyNextBtn');
@@ -69,7 +68,8 @@
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         function defaultPageSize() {
@@ -81,13 +81,6 @@
             return n > 0 ? n : defaultPageSize();
         }
 
-        function allDesktopRows() {
-            if (!listEl) {
-                return [];
-            }
-            return Array.prototype.slice.call(listEl.querySelectorAll('tr[data-token-row]'));
-        }
-
         function getPair(id) {
             var sid = String(id);
             return {
@@ -96,121 +89,68 @@
             };
         }
 
-        function syncRowOrder(rows) {
-            if (!listEl) {
+        /** 对齐日志查询：静态上一页/下一页 + 最多 3 个页码 */
+        function renderPagerNav(totalPages, matchedLen) {
+            if (!window.VS || !VS.applyLogsPager) {
                 return;
             }
-            rows.forEach(function (row) {
-                listEl.appendChild(row);
-                if (mobileEl) {
-                    var id = row.getAttribute('data-token-row');
-                    var card = mobileEl.querySelector('.key-card[data-token-row="' + id + '"]');
-                    if (card) {
-                        mobileEl.appendChild(card);
-                    }
-                }
-            });
+            VS.applyLogsPager(currentPage, matchedLen === 0 ? 1 : totalPages, prevBtn, nextBtn, pagerNums);
         }
 
-        function matchedRows() {
-            var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-            var st = statusFilter ? String(statusFilter.value || '') : '';
-            var all = allDesktopRows();
-            var filtered = all.filter(function (row) {
-                if (st !== '' && row.getAttribute('data-token-status') !== st) {
-                    return false;
-                }
-                if (!q) {
-                    return true;
-                }
-                var hay = (row.getAttribute('data-search') || '').toLowerCase();
-                return hay.indexOf(q) !== -1;
-            });
-            syncRowOrder(filtered);
-            return filtered;
-        }
-
-        /** E257：上一页 / 当前页 / 下一页 */
-        function renderPagerNav(totalPages, matchedLen) {
-            var canPrev = currentPage > 1;
-            var canNext = matchedLen > 0 && currentPage < totalPages;
-            if (prevBtn) {
-                prevBtn.disabled = !canPrev;
-            }
-            if (nextBtn) {
-                nextBtn.disabled = !canNext;
-            }
-            if (pagerInfoEl) {
-                pagerInfoEl.textContent = String(matchedLen === 0 ? 1 : currentPage);
-            }
-            if (pagerNavEl) {
-                pagerNavEl.hidden = false;
-            }
-        }
+        var listTotal = parseInt(page.getAttribute('data-token-total') || '0', 10) || 0;
 
         function applyView() {
-            var totalAll = allDesktopRows().length;
-            var matched = matchedRows();
-            var pageSize = getPageSize();
-            var totalPages = Math.max(1, Math.ceil(matched.length / pageSize) || 1);
-            if (currentPage > totalPages) {
-                currentPage = totalPages;
-            }
-            if (currentPage < 1) {
-                currentPage = 1;
-            }
-            var start = (currentPage - 1) * pageSize;
-            var end = start + pageSize;
-            var visibleIds = {};
-
-            matched.forEach(function (row, idx) {
-                var show = idx >= start && idx < end;
-                var id = row.getAttribute('data-token-row');
-                row.hidden = !show;
-                if (show) {
-                    visibleIds[id] = true;
+            var fd = new FormData();
+            fd.append('action', 'list');
+            fd.append('q', searchInput ? String(searchInput.value || '').trim() : '');
+            fd.append('status', statusFilter ? String(statusFilter.value || '') : '');
+            fd.append('page', String(currentPage));
+            fd.append('pagesize', String(getPageSize()));
+            VS.postForm(fd, window.location.href).then(function (data) {
+                if (!data || !data.code) {
+                    throw new Error((data && data.msg) || '加载失败');
+                }
+                if (data.page) {
+                    currentPage = parseInt(data.page, 10) || currentPage;
+                }
+                listTotal = parseInt(data.total, 10) || 0;
+                if (listEl) {
+                    listEl.innerHTML = data.desktop_html || '';
+                }
+                if (mobileEl) {
+                    mobileEl.innerHTML = data.mobile_html || '';
+                }
+                page.setAttribute('data-token-total', String(listTotal));
+                var hasAny = listTotal > 0;
+                var q = searchInput ? String(searchInput.value || '').trim() : '';
+                var st = statusFilter ? String(statusFilter.value || '') : '';
+                var filtered = q !== '' || st !== '';
+                var pageItems = listEl ? listEl.querySelectorAll('tr[data-token-row]').length : 0;
+                if (emptyEl) {
+                    emptyEl.hidden = hasAny || filtered;
+                }
+                if (searchEmptyEl) {
+                    searchEmptyEl.hidden = !(filtered && pageItems === 0);
+                }
+                if (tableWrapEl) {
+                    tableWrapEl.hidden = pageItems === 0;
+                }
+                if (mobileEl) {
+                    mobileEl.hidden = pageItems === 0;
+                }
+                if (footerEl) {
+                    footerEl.hidden = listTotal === 0 && !filtered;
+                }
+                if (statsEl) {
+                    statsEl.textContent = '共 ' + listTotal + ' 条';
+                }
+                var totalPages = Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+                renderPagerNav(totalPages, listTotal);
+            }).catch(function (err) {
+                if (window.VS && VS.showMessage) {
+                    VS.showMessage(err.message || '加载失败', 'error');
                 }
             });
-            allDesktopRows().forEach(function (row) {
-                if (matched.indexOf(row) === -1) {
-                    row.hidden = true;
-                }
-            });
-            if (mobileEl) {
-                mobileEl.querySelectorAll('.key-card[data-token-row]').forEach(function (card) {
-                    var id = card.getAttribute('data-token-row');
-                    var desk = listEl ? listEl.querySelector('tr[data-token-row="' + id + '"]') : null;
-                    var inMatched = desk && matched.indexOf(desk) !== -1;
-                    card.hidden = !(inMatched && visibleIds[id]);
-                });
-            }
-
-            var hasAny = totalAll > 0;
-            var hasVisible = matched.length > 0;
-            var q = searchInput ? String(searchInput.value || '').trim() : '';
-            var st = statusFilter ? String(statusFilter.value || '') : '';
-            var filtered = q !== '' || st !== '';
-
-            if (emptyEl) {
-                emptyEl.hidden = hasAny;
-            }
-            if (searchEmptyEl) {
-                searchEmptyEl.hidden = !(hasAny && !hasVisible && filtered);
-            }
-            if (tableWrapEl) {
-                tableWrapEl.hidden = !hasVisible;
-            }
-            if (mobileEl) {
-                mobileEl.hidden = !hasVisible;
-            }
-            if (footerEl) {
-                footerEl.hidden = !hasAny;
-            }
-            if (statsEl) {
-                statsEl.textContent = '共 ' + matched.length + ' 条'
-                    + (hasAny && filtered ? ('（全部 ' + totalAll + '）') : '');
-            }
-            renderPagerNav(matched.length === 0 ? 1 : totalPages, matched.length);
         }
 
         function buildActions(id, enabled) {
@@ -272,7 +212,7 @@
                         node.setAttribute('data-copy', secret);
                     }
                 });
-                var user = el.querySelector('[data-field="username"]');
+                var user = el.querySelector('[data-field="user_display"]') || el.querySelector('[data-field="username"]');
                 var uname = user ? user.textContent : '';
                 el.setAttribute('data-search', (secret + ' ' + uname + ' #' + el.getAttribute('data-token-row')).toLowerCase());
             });
@@ -390,13 +330,38 @@
 
         if (prevBtn) {
             prevBtn.addEventListener('click', function () {
-                currentPage -= 1;
-                applyView();
+                if (prevBtn.disabled) {
+                    return;
+                }
+                if (currentPage > 1) {
+                    currentPage -= 1;
+                    applyView();
+                }
             });
         }
         if (nextBtn) {
             nextBtn.addEventListener('click', function () {
-                currentPage += 1;
+                if (nextBtn.disabled) {
+                    return;
+                }
+                var tp = Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+                if (currentPage < tp) {
+                    currentPage += 1;
+                    applyView();
+                }
+            });
+        }
+        if (pagerNums) {
+            pagerNums.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-page]');
+                if (!btn) {
+                    return;
+                }
+                var next = parseInt(btn.getAttribute('data-page'), 10) || 0;
+                if (!next || next === currentPage) {
+                    return;
+                }
+                currentPage = next;
                 applyView();
             });
         }

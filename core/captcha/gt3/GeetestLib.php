@@ -236,8 +236,12 @@ class GeetestLib
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::HTTP_TIMEOUT_DEFAULT); // 设置连接主机超时（单位：秒）
         curl_setopt($ch, CURLOPT_TIMEOUT, self::HTTP_TIMEOUT_DEFAULT); // 允许 cURL 函数执行的最长秒数（单位：秒）
-        //curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        //curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        if (function_exists('vs_curl_ssl_verify')) {
+            vs_curl_ssl_verify($ch);
+        }
+        curl_setopt($ch, CURLOPT_USERAGENT, class_exists('OutboundUa')
+            ? OutboundUa::build('Captcha')
+            : ('ApiNexus-Captcha/' . (defined('VS_VERSION') ? VS_VERSION : '1')));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         $res = curl_exec($ch);
         vs_curl_close($ch);
@@ -253,11 +257,20 @@ class GeetestLib
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::HTTP_TIMEOUT_DEFAULT); // 设置连接主机超时（单位：秒）
         curl_setopt($ch, CURLOPT_TIMEOUT, self::HTTP_TIMEOUT_DEFAULT); // 允许 cURL 函数执行的最长秒数（单位：秒）
-        //curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        //curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        if (function_exists('vs_curl_ssl_verify')) {
+            vs_curl_ssl_verify($ch);
+        }
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($param));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-type:application/x-www-form-urlencoded"]);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Content-type:application/x-www-form-urlencoded',
+            class_exists('OutboundUa')
+                ? OutboundUa::headerLine('Captcha')
+                : ('User-Agent: ApiNexus-Captcha/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
+        ));
+        curl_setopt($ch, CURLOPT_USERAGENT, class_exists('OutboundUa')
+            ? OutboundUa::build('Captcha')
+            : ('ApiNexus-Captcha/' . (defined('VS_VERSION') ? VS_VERSION : '1')));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         $res = curl_exec($ch);
         vs_curl_close($ch);

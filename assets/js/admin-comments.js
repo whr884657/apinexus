@@ -84,10 +84,6 @@
             return n > 0 ? n : (window.matchMedia('(max-width: 900px)').matches ? 10 : 20);
         }
 
-        function allRows() {
-            return listEl ? Array.prototype.slice.call(listEl.querySelectorAll('tr[data-comment-row]')) : [];
-        }
-
         function getPair(id) {
             var sid = String(id);
             return {
@@ -96,75 +92,44 @@
             };
         }
 
-        function syncOrder(rows) {
-            rows.forEach(function (row) {
-                if (listEl) listEl.appendChild(row);
-                if (mobileEl) {
-                    var card = mobileEl.querySelector('.cmt-card[data-comment-row="' + row.getAttribute('data-comment-row') + '"]');
-                    if (card) mobileEl.appendChild(card);
-                }
-            });
-        }
-
-        function matched() {
-            var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-            var rows = allRows().filter(function (row) {
-                return !q || (row.getAttribute('data-search') || '').toLowerCase().indexOf(q) !== -1;
-            });
-            syncOrder(rows);
-            return rows;
-        }
+        var listTotal = parseInt(page.getAttribute('data-comment-total') || '0', 10) || 0;
 
         function applyView() {
-            var totalAll = allRows().length;
-            var rows = matched();
-            var pageSize = getPageSize();
-            var totalPages = Math.max(1, Math.ceil(rows.length / pageSize) || 1);
-            if (currentPage > totalPages) currentPage = totalPages;
-            if (currentPage < 1) currentPage = 1;
-            var start = (currentPage - 1) * pageSize;
-            var end = start + pageSize;
-            var visible = {};
-            var filtered = !!(searchInput && String(searchInput.value || '').trim());
-
-            rows.forEach(function (row, idx) {
-                var show = idx >= start && idx < end;
-                var id = row.getAttribute('data-comment-row');
-                row.hidden = !show;
-                if (show) visible[id] = true;
-            });
-            if (mobileEl) {
-                Array.prototype.slice.call(mobileEl.querySelectorAll('.cmt-card')).forEach(function (card) {
-                    var id = card.getAttribute('data-comment-row');
-                    var inM = rows.some(function (r) { return r.getAttribute('data-comment-row') === id; });
-                    card.hidden = !(inM && visible[id]);
-                });
-            }
-            var hasAny = totalAll > 0;
-            var hasVisible = rows.length > 0 && Object.keys(visible).length > 0;
-            if (emptyEl) emptyEl.hidden = hasAny;
-            if (searchEmptyEl) searchEmptyEl.hidden = !(hasAny && !hasVisible && filtered);
-            if (tableWrapEl) tableWrapEl.hidden = !hasVisible;
-            if (mobileEl) mobileEl.hidden = !hasVisible;
-            if (footerEl) footerEl.hidden = !hasAny;
-            if (statsEl) {
-                statsEl.textContent = '共 ' + rows.length + ' 条' + (hasAny && filtered ? ('（全部 ' + totalAll + '）') : '');
-            }
-            if (prevBtn) prevBtn.disabled = currentPage <= 1;
-            if (nextBtn) nextBtn.disabled = currentPage >= totalPages || rows.length === 0;
-            if (pagerNumsEl) {
-                if (totalPages <= 1 || rows.length === 0) {
-                    pagerNumsEl.innerHTML = '';
-                } else {
-                    var html = '';
-                    var i;
-                    for (i = 1; i <= totalPages; i += 1) {
-                        html += '<button type="button" class="vs-api-pager__num' + (i === currentPage ? ' is-active' : '')
-                            + '" data-page="' + i + '">' + i + '</button>';
-                    }
-                    pagerNumsEl.innerHTML = html;
+            var fd = new FormData();
+            fd.append('action', 'list');
+            fd.append('q', searchInput ? String(searchInput.value || '').trim() : '');
+            fd.append('page', String(currentPage));
+            fd.append('pagesize', String(getPageSize()));
+            VS.postForm(fd, window.location.href).then(function (res) {
+                if (!res || Number(res.code) !== 1) {
+                    throw new Error((res && res.msg) ? res.msg : '加载失败');
                 }
-            }
+                if (res.page) {
+                    currentPage = parseInt(res.page, 10) || currentPage;
+                }
+                listTotal = parseInt(res.total, 10) || 0;
+                page.setAttribute('data-comment-total', String(listTotal));
+                if (listEl) listEl.innerHTML = res.desktop_html || '';
+                if (mobileEl) mobileEl.innerHTML = res.mobile_html || '';
+                var q = searchInput ? String(searchInput.value || '').trim() : '';
+                var filtered = q !== '';
+                var pageItems = listEl ? listEl.querySelectorAll('tr[data-comment-row]').length : 0;
+                var hasAny = listTotal > 0;
+                if (emptyEl) emptyEl.hidden = hasAny || filtered;
+                if (searchEmptyEl) searchEmptyEl.hidden = !(filtered && pageItems === 0);
+                if (tableWrapEl) tableWrapEl.hidden = pageItems === 0;
+                if (mobileEl) mobileEl.hidden = pageItems === 0;
+                if (footerEl) footerEl.hidden = listTotal === 0 && !filtered;
+                if (statsEl) statsEl.textContent = '共 ' + listTotal + ' 条';
+                var totalPages = Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+                if (window.VS && VS.applyLogsPager) {
+                    VS.applyLogsPager(currentPage, listTotal === 0 ? 1 : totalPages, prevBtn, nextBtn, pagerNumsEl);
+                }
+            }).catch(function (err) {
+                if (window.VS && VS.showMessage) {
+                    VS.showMessage((err && err.message) ? err.message : '加载失败', 'error');
+                }
+            });
         }
 
         function actionsHtml(c) {
@@ -269,24 +234,10 @@
         }
 
         function upsert(c) {
-            if (!c || !c.id) return;
-            if (c.createtime && !c.createtime_short && String(c.createtime).length >= 16) {
-                c.createtime_short = String(c.createtime).slice(0, 16);
-            }
-            var pair = getPair(c.id);
-            var d = desktopHtml(c);
-            var m = mobileHtml(c);
-            if (pair.desktop) pair.desktop.outerHTML = d;
-            else if (listEl) listEl.insertAdjacentHTML('afterbegin', d);
-            if (pair.mobile) pair.mobile.outerHTML = m;
-            else if (mobileEl) mobileEl.insertAdjacentHTML('afterbegin', m);
             applyView();
         }
 
         function remove(id) {
-            var pair = getPair(id);
-            if (pair.desktop) pair.desktop.remove();
-            if (pair.mobile) pair.mobile.remove();
             applyView();
         }
 

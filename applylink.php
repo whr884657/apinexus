@@ -8,7 +8,7 @@ define('VS_ROOT', __DIR__);
 require_once VS_ROOT . '/core/bootstrap.php';
 
 if (!InstallChecker::isInstalled()) {
-    vs_redirect(vs_base_url() . '/install/');
+    vs_redirect(vs_site_path('/install/'));
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -75,8 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     AuthSecurity::recordApplyLinkCoolDown();
     AuthSecurity::rateLimitAllow('front_applylink_ip:' . $clientIp, 3600, 20, true);
 
-    if (class_exists('LinkNotify')) {
-        LinkNotify::notifyAdminsPending($result);
+    if (class_exists('MailNotify')) {
+        try {
+            MailNotify::notifyAdminsLinkPending($result);
+        } catch (Exception $e) {
+            // 发信失败不阻断友链申请
+        }
     }
 
     AjaxResponse::success(

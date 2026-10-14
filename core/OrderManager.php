@@ -307,7 +307,8 @@ class OrderManager
     }
 
     /**
-     * 分页列表：每页条数 + keyset；附带筛选总数（短 TTL 缓存 COUNT，禁止深页 OFFSET）
+     * 分页列表：每页条数；点第 N 页用 OFFSET（before_id=0）；有 before_id 仍可走 keyset。
+     * 总数短 TTL 缓存 COUNT。
      *
      * @param array $opts userid?, status?, scope(recharge|ledger)?, ledger_bucket(account|api)?, q?, pagesize, before_id
      * @return array{list:array,total:int,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool}
@@ -407,10 +408,14 @@ class OrderManager
                 $select .= ', \'\' AS apiname, \'\' AS keysecret';
             }
 
+            $limitSql = ' LIMIT ' . ((int) $pagesize + 1);
+            if ($beforeId <= 0 && $page > 1) {
+                $limitSql .= ' OFFSET ' . (int) (($page - 1) * $pagesize);
+            }
             $sql = $select . ' FROM ' . $from
                 . ' WHERE ' . $sqlWhere
                 . ' ORDER BY o.`id` DESC'
-                . ' LIMIT ' . ((int) $pagesize + 1);
+                . $limitSql;
             $stmt = $pdo->prepare($sql);
             $stmt->execute($bind);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -623,7 +628,7 @@ class OrderManager
         if (!function_exists('mb_strpos')) {
             return false;
         }
-        foreach (array('注册赠送', '每日签到', '管理员加款', '管理员扣款', '用户充值', 'API调用', 'AI调用', '接口调用') as $strong) {
+        foreach (array('注册赠送', '每日签到', '每日签到奖励', '管理员加款', '管理员扣款', '用户充值', 'API调用', 'AI调用', '接口调用') as $strong) {
             if (mb_strpos($q, $strong) !== false) {
                 return true;
             }
@@ -754,7 +759,7 @@ class OrderManager
             array(self::DIRECT_INC, self::KIND_RECHARGE, array('充值', '用户充值')),
             array(self::DIRECT_INC, self::KIND_ADMIN_ADD, array('加款', '管理员加款')),
             array(self::DIRECT_INC, self::KIND_REGISTER, array('注册', '赠送', '注册赠送', '注册赠送积分')),
-            array(self::DIRECT_INC, self::KIND_CHECKIN, array('签到', '每日签到')),
+            array(self::DIRECT_INC, self::KIND_CHECKIN, array('签到', '每日签到', '每日签到奖励', '每日签到奖励（API）', '签到奖励API')),
             array(self::DIRECT_INC, self::KIND_REFUND, array('退回', '调用退回', '上游失败退回')),
             array(self::DIRECT_INC, self::KIND_CARDKEY, array('卡密', '卡密兑换', '兑换卡密')),
             array(self::DIRECT_DEC, self::KIND_API, array('API调用', '接口调用', '调用接口')),

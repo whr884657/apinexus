@@ -9,4 +9,4 @@ if (!defined('VS_ROOT')) {
 }
 require_once VS_ROOT . '/core/bootstrap.php';
 
-vs_redirect(vs_base_url() . '/user/recharge');
+vs_redirect(vs_site_path('/user/recharge'));

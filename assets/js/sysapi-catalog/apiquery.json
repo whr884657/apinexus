@@ -1,0 +1,365 @@
+{
+    "id": "apiquery",
+    "name": "接口查询 API",
+    "desc": "查前台可见接口：按 ID/名称/短码取详情、关键词搜索，或随机返回一条。不含上游机密。",
+    "category": "接口查询",
+    "methods": [
+        "GET",
+        "POST"
+    ],
+    "file": "apiquery.php",
+    "params": [
+        {
+            "name": "key",
+            "type": "string",
+            "required": true,
+            "description": "系统密钥。三态传钥：① Authorization: Bearer；② Header X-Api-Key / Api-Key / Apikey；③ Query ?key= / ?apikey=（GET 友好；生产优先 Header/Bearer）。亦可用 POST/JSON 的 key / apikey。在「系统设置 → 系统密钥」生成。",
+            "example": "你的系统密钥"
+        },
+        {
+            "name": "action",
+            "type": "string",
+            "required": false,
+            "description": "操作类型（英文 action = 动作）。可选：get（按条件查一条详情）、search（关键词搜列表）、random（随机一条详情）。不传 action 且也不传 id/name/slug/q 时，默认等价于 random。",
+            "example": "random"
+        },
+        {
+            "name": "id",
+            "type": "integer",
+            "required": false,
+            "description": "接口数字编号（英文 id = 标识）。正整数。用于 get：与 name、slug 三选一。也可不传 action，只传 id，系统会按 get 处理。",
+            "example": "1"
+        },
+        {
+            "name": "name",
+            "type": "string",
+            "required": false,
+            "description": "接口名称（英文 name = 名称）。精确匹配数据库里的名称。用于 get，与 id、slug 三选一。",
+            "example": "天气查询"
+        },
+        {
+            "name": "slug",
+            "type": "string",
+            "required": false,
+            "description": "代理短码（英文 slug / proxyslug = 短码）。一般是接口的调用短标识（如 apis 路径里那一段），不是数字 ID。也可写参数名 proxyslug。用于 get，与 id、name 三选一。",
+            "example": "abc12"
+        },
+        {
+            "name": "q",
+            "type": "string",
+            "required": false,
+            "description": "搜索关键词（英文 q = query 查询词）。用于 search：模糊匹配名称、描述、分类。最长约 64 字；勿滥用通配符刷库。不传 action 只传 q 时按 search 处理。",
+            "example": "天气"
+        },
+        {
+            "name": "limit",
+            "type": "integer",
+            "required": false,
+            "description": "返回条数上限（英文 limit = 限制）。仅 search 有效。整数 1～50，默认 20。",
+            "example": "20"
+        }
+    ],
+    "response": {
+        "code": 1,
+        "msg": "ok",
+        "api": {
+            "id": 1,
+            "name": "示例接口",
+            "description": "示例描述",
+            "category": "示例分类",
+            "category_name": "示例分类",
+            "methods": [
+                "GET"
+            ],
+            "method_label": "GET",
+            "call_url": "https://域名/apis/abc12",
+            "detail_url": "https://域名/detail/1",
+            "calls": 100,
+            "needkey": 1,
+            "needkey_label": "需要令牌",
+            "keyways": [
+                "query",
+                "header",
+                "bearer"
+            ],
+            "keyways_label": "Query / Header / Bearer",
+            "qpm": 60,
+            "qpm_label": "60次/分",
+            "charge": 0,
+            "charge_label": "免费",
+            "points": 0,
+            "billing_label": "",
+            "apitype": 0,
+            "maintenance": 0,
+            "disabled": 0,
+            "tags": [
+                "示例分类",
+                "需要令牌",
+                "免费"
+            ],
+            "icon": "",
+            "createtime": "2026-01-01 00:00:00",
+            "params": "[]",
+            "params_list": [],
+            "response": "{\"code\":1}",
+            "doc": "示例文档",
+            "aidoc": "",
+            "openapi_json": "{}"
+        }
+    },
+    "doc": "## 使用前准备\n\n1. **系统设置 → 系统密钥** 生成密钥。  \n2. **系统设置 → 系统级 API → 接口查询** 勾选「启用接口查询 API」并保存。  \n3. 只返回前台可见接口；**不会**回传上游密钥、上游目标 URL 等机密。\n\n## 请求怎么发\n\n- GET 或 POST；参数可走 Query / 表单 / JSON。  \n- 成功 `code=1`；失败 `code=0` 看 `msg`。  \n- **禁止** JSONP（`callback` / `jsonp`）。\n\n## 调用限流（QPM / QPS）\n\n管理员可在「系统设置 → 系统级 API」对应细条自定义本接口每分钟（QPM）与每秒（QPS）上限；**填 0 表示不限制**。超限返回 errcode=12005（请求过于频繁）。\n\n## 怎么带系统密钥（必填）\n\n推荐 `Authorization: Bearer` 或 `X-Api-Key`；也可用 `key` / `apikey`（不推荐进网址）。\n\n## 参数详解\n\n| 英文名 | 中文含义 | 必填？ | 可填什么 | 说明 |\n|--------|----------|--------|----------|------|\n| `key` / `apikey` | 系统密钥 | **是**（或 Header） | 系统密钥 | 鉴权 |\n| `action` | 操作 | 否 | `get` / `search` / `random` | 不传时按其它参数推断 |\n| `id` | 接口编号 | 查详情时三选一 | 正整数 | 与 name、slug 互斥选用 |\n| `name` | 接口名称 | 查详情时三选一 | 精确名称 | 与 id、slug 互斥选用 |\n| `slug` | 代理短码 | 查详情时三选一 | 短标识 | 也认 `proxyslug` |\n| `q` | 搜索词 | 搜索时必填 | 最长约 64 字 | 模糊匹配名称/描述/分类 |\n| `limit` | 条数上限 | 否 | 1～50，默认 20 | 仅搜索有效 |\n\n## 三种操作（action）\n\n| 参数值 | 中文 | 主要参数 | 返回什么 |\n|--------|------|----------|----------|\n| `get` | 按条件查一条详情 | `id` 或 `name` 或 `slug` 三选一 | 字段 `api`：该接口的完整详情 |\n| `search` | 按关键词搜列表 | `q` 必填；`limit` 可选 | `total` + `list`：多条摘要 |\n| `random` | 随机抽一条详情 | 无其它业务参数 | 字段 `api`：随机一条可见接口的详情 |\n\n**默认行为：** 只带系统密钥、不传 `action`，也不传 `id` / `name` / `slug` / `q` 时，效果等于 `action=random`（随机返回一条接口详情）。\n\n## 请求示例（一种类型一块）\n\n### 随机返回一条接口详情\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apiquery?action=random\"\n```\n\n### 不传查询条件（默认也是随机一条）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apiquery\"\n```\n\n### 按接口编号查询详情\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apiquery?action=get&id=1\"\n```\n\n### 按接口名称查询详情\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apiquery?action=get&name=ExampleApiName\"\n```\n\n### 按代理短码查询详情\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apiquery?action=get&slug=abc12\"\n```\n\n### 按关键词搜索接口列表\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apiquery?action=search&q=weather&limit=10\"\n```\n\n### 只传接口编号（等同按编号查详情）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apiquery?id=1\"\n```\n\n### 只传关键词（等同搜索列表）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apiquery?q=weather&limit=20\"\n```\n",
+    "sample_queries": [
+        {
+            "title": "随机返回一条接口详情",
+            "query": "action=random"
+        },
+        {
+            "title": "不传查询条件（默认也是随机一条）",
+            "query": ""
+        },
+        {
+            "title": "按接口编号查询详情",
+            "query": "action=get&id=1"
+        },
+        {
+            "title": "按接口名称查询详情",
+            "query": "action=get&name=ExampleApiName"
+        },
+        {
+            "title": "按代理短码查询详情",
+            "query": "action=get&slug=abc12"
+        },
+        {
+            "title": "按关键词搜索接口列表",
+            "query": "action=search&q=weather&limit=10"
+        },
+        {
+            "title": "只传接口编号（等同按编号查详情）",
+            "query": "id=1"
+        },
+        {
+            "title": "只传关键词（等同搜索列表）",
+            "query": "q=weather&limit=20"
+        }
+    ],
+    "enabled_key": "sysapion",
+    "response_samples": [
+        {
+            "title": "查询接口详情成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "api": {
+                    "id": 1,
+                    "name": "示例接口",
+                    "description": "示例描述",
+                    "category": "示例分类",
+                    "category_name": "示例分类",
+                    "methods": [
+                        "GET"
+                    ],
+                    "method_label": "GET",
+                    "call_url": "https://域名/apis/abc12",
+                    "detail_url": "https://域名/detail/1",
+                    "calls": 100,
+                    "needkey": 1,
+                    "needkey_label": "需要令牌",
+                    "keyways": [
+                        "query",
+                        "header",
+                        "bearer"
+                    ],
+                    "keyways_label": "Query / Header / Bearer",
+                    "qpm": 60,
+                    "qpm_label": "60次/分",
+                    "charge": 0,
+                    "charge_label": "免费",
+                    "points": 0,
+                    "billing_label": "",
+                    "apitype": 0,
+                    "maintenance": 0,
+                    "disabled": 0,
+                    "tags": [
+                        "示例分类",
+                        "需要令牌",
+                        "免费"
+                    ],
+                    "icon": "",
+                    "createtime": "2026-01-01 00:00:00",
+                    "params": "[]",
+                    "params_list": [],
+                    "response": "{\"code\":1}",
+                    "doc": "示例文档",
+                    "aidoc": "",
+                    "openapi_json": "{}"
+                }
+            }
+        },
+        {
+            "title": "搜索成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "total": 1,
+                "list": [
+                    {
+                        "id": 1,
+                        "name": "示例接口",
+                        "description": "示例描述",
+                        "category": "示例分类",
+                        "category_name": "示例分类",
+                        "methods": [
+                            "GET"
+                        ],
+                        "method_label": "GET",
+                        "call_url": "https://域名/apis/abc12",
+                        "detail_url": "https://域名/detail/1",
+                        "calls": 100,
+                        "needkey": 1,
+                        "needkey_label": "需要令牌",
+                        "keyways": [
+                            "query",
+                            "header",
+                            "bearer"
+                        ],
+                        "keyways_label": "Query / Header / Bearer",
+                        "qpm": 60,
+                        "qpm_label": "60次/分",
+                        "charge": 0,
+                        "charge_label": "免费",
+                        "points": 0,
+                        "billing_label": "",
+                        "apitype": 0,
+                        "maintenance": 0,
+                        "disabled": 0,
+                        "tags": [
+                            "示例分类",
+                            "需要令牌",
+                            "免费"
+                        ],
+                        "icon": "",
+                        "createtime": "2026-01-01 00:00:00"
+                    }
+                ]
+            }
+        },
+        {
+            "title": "随机返回一条详情成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "api": {
+                    "id": 1,
+                    "name": "示例接口",
+                    "description": "示例描述",
+                    "category": "示例分类",
+                    "category_name": "示例分类",
+                    "methods": [
+                        "GET"
+                    ],
+                    "method_label": "GET",
+                    "call_url": "https://域名/apis/abc12",
+                    "detail_url": "https://域名/detail/1",
+                    "calls": 100,
+                    "needkey": 1,
+                    "needkey_label": "需要令牌",
+                    "keyways": [
+                        "query",
+                        "header",
+                        "bearer"
+                    ],
+                    "keyways_label": "Query / Header / Bearer",
+                    "qpm": 60,
+                    "qpm_label": "60次/分",
+                    "charge": 0,
+                    "charge_label": "免费",
+                    "points": 0,
+                    "billing_label": "",
+                    "apitype": 0,
+                    "maintenance": 0,
+                    "disabled": 0,
+                    "tags": [
+                        "示例分类",
+                        "需要令牌",
+                        "免费"
+                    ],
+                    "icon": "",
+                    "createtime": "2026-01-01 00:00:00",
+                    "params": "[]",
+                    "params_list": [],
+                    "response": "{\"code\":1}",
+                    "doc": "示例文档",
+                    "aidoc": "",
+                    "openapi_json": "{}"
+                }
+            }
+        },
+        {
+            "title": "接口查询未启用",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "接口查询 API 未启用",
+                "errcode": 12002
+            }
+        },
+        {
+            "title": "接口不存在或不可用",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "接口不存在或不可用",
+                "errcode": 12010
+            }
+        },
+        {
+            "title": "暂无可用接口",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "暂无可用接口",
+                "errcode": 12010
+            }
+        },
+        {
+            "title": "缺少搜索关键词",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "请提供搜索关键词 q",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "缺少定位参数",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "请提供 id 或 name 或 slug",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "密钥无效",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "系统密钥无效或未配置",
+                "errcode": 12001
+            }
+        },
+        {
+            "title": "请求过快",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "请求过于频繁，请稍后再试",
+                "errcode": 12005
+            }
+        }
+    ],
+    "enabled_gate": "apiquery"
+}

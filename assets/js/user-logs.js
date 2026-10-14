@@ -1,6 +1,7 @@
 /**
  * 文件：assets/js/user-logs.js
- * 作用：用户中心本人调用日志（对齐管理端 UI；强制会话用户；精简详情）
+ * 作用：用户中心本人调用日志（对齐管理端；点第 N 页可跳，服务端按最大 ID 估游标）
+ * @version 1.3.1
  */
 (function () {
     'use strict';
@@ -27,9 +28,12 @@
     var hasMore = false;
     var totalCount = 0;
     var totalPages = 1;
+    var totalApprox = false;
+    var includeCold = false;
     var loadSeq = 0;
     var listAbort = null;
     var returnFocusEl = null;
+    var pageCursors = { 1: 0 };
 
     function escapeHtml(s) {
         return String(s == null ? '' : s)
@@ -103,6 +107,16 @@
         page = 1;
         hasMore = false;
         totalPages = 1;
+        pageCursors = { 1: 0 };
+        totalApprox = false;
+        includeCold = false;
+    }
+
+    function storageBadge(row) {
+        if (!row || row.storage !== 'cold') {
+            return '';
+        }
+        return '<span class="vs-log-storage is-cold" title="已归档冷库">归档</span>';
     }
 
     function methodBadge(row) {
@@ -186,7 +200,10 @@
             + '</div>'
             + '<div class="vs-log-cell vs-log-c-ok">' + statusBadge(row) + '</div>'
             + '<div class="vs-log-cell vs-log-c-code">' + httpBadge(row) + '</div>'
-            + '<div class="vs-log-cell vs-log-c-time">' + escapeHtml(row.createtime || '—') + '</div>'
+            + '<div class="vs-log-cell vs-log-c-time">'
+            + storageBadge(row)
+            + escapeHtml(row.createtime || '—')
+            + '</div>'
             + '<div class="vs-log-cell vs-log-c-act"><span class="vs-log-view">查看</span></div>'
             + '</article>';
     }
@@ -197,6 +214,7 @@
             + '<div class="vs-log-card__title">'
             + idBadge(row)
             + '<strong class="vs-log-card__name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</strong>'
+            + storageBadge(row)
             + '</div>'
             + '<div class="vs-log-card__badges">'
             + methodBadge(row)
@@ -432,25 +450,10 @@
     }
 
     function renderPagerNums() {
-        if (!pagerNums) {
+        if (!pagerNums || !window.VS || !VS.pagerNumsHtml) {
             return;
         }
-        if (totalPages <= 1) {
-            pagerNums.innerHTML = '';
-            return;
-        }
-        // 中间最多 3 个页码：当前尽量居中（首尾贴边）
-        var start = Math.max(1, page - 1);
-        var end = Math.min(totalPages, start + 2);
-        start = Math.max(1, end - 2);
-        var html = '';
-        var i;
-        for (i = start; i <= end; i += 1) {
-            html += '<button type="button" class="vs-api-pager__num'
-                + (i === page ? ' is-active' : '')
-                + '" data-page="' + i + '">' + i + '</button>';
-        }
-        pagerNums.innerHTML = html;
+        pagerNums.innerHTML = VS.pagerNumsHtml(page, totalPages);
     }
 
     function renderPager(total, pagesize) {
@@ -465,6 +468,7 @@
         }
         hasMore = page < totalPages;
         if (totalEl) {
+            /* 条数按最大日志 ID / 筛选估算；底栏只显示「共 N 条」 */
             totalEl.textContent = '共 ' + totalCount + ' 条';
         }
         if (prevBtn) {
@@ -495,6 +499,18 @@
 
     function applyListPayload(data, pagesize) {
         hasMore = !!data.has_more;
+        totalApprox = !!data.total_approx;
+        includeCold = !!data.include_cold;
+        // 记下本页实际 before_id（含服务端跳页估算），便于再跳/回跳
+        var usedBefore = parseInt(data.before_id, 10);
+        if (!usedBefore || usedBefore < 0) {
+            usedBefore = 0;
+        }
+        pageCursors[page] = page <= 1 ? 0 : usedBefore;
+        var nextBefore = parseInt(data.next_before_id, 10) || 0;
+        if (nextBefore > 0 && hasMore) {
+            pageCursors[page + 1] = nextBefore;
+        }
         renderList(data.list || [], parseInt(data.total, 10) || 0, pagesize);
     }
 
@@ -521,6 +537,14 @@
 
         var seq = ++loadSeq;
         var pagesize = getPageSize();
+        // 有缓存游标则用；否则 before_id=0 + page，由服务端按最大 ID 估算跳页（冷热均可跳，不限制）
+        var beforeId = 0;
+        if (pageCursors[page] !== undefined && pageCursors[page] !== null) {
+            beforeId = parseInt(pageCursors[page], 10) || 0;
+        }
+        if (beforeId < 0) {
+            beforeId = 0;
+        }
         setControlsDisabled(true);
         if (VS.setLoading) {
             VS.setLoading(body, isRefresh ? '正在刷新日志' : '正在加载日志');
@@ -529,7 +553,7 @@
         fd.append('action', 'list');
         fd.append('page', String(page));
         fd.append('pagesize', String(pagesize));
-        fd.append('before_id', '0');
+        fd.append('before_id', String(beforeId));
         if (isRefresh) {
             fd.append('refresh', '1');
         }
@@ -540,8 +564,8 @@
         if (okFilter !== '') {
             fd.append('ok', okFilter);
         }
-        var opts = listAbort ? { signal: listAbort.signal } : {};
-        VS.postForm(fd, window.location.href, opts).then(function (data) {
+        var reqOpts = listAbort ? { signal: listAbort.signal } : {};
+        VS.postForm(fd, window.location.href, reqOpts).then(function (data) {
             if (seq !== loadSeq) {
                 return;
             }
@@ -555,7 +579,6 @@
             if (seq !== loadSeq) {
                 return;
             }
-            // 被更新请求中止时不改 UI；若仍是当前 seq 的 Abort，复位加载态（E77）
             if (err && err.name === 'AbortError') {
                 setControlsDisabled(false);
                 return;
@@ -604,6 +627,7 @@
         if (totalPages > 0 && p > totalPages) {
             return;
         }
+        // 任意跳页：无游标时 before_id=0，服务端按 maxId-(page-1)*pagesize 估算（冷热不限）
         page = p;
         load();
     }

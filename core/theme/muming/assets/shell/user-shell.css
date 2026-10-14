@@ -1302,6 +1302,115 @@ button.vs-refresh-btn.is-spinning svg {
     min-width: 0;
 }
 
+/* ── 账号设置顶卡 + Tab（v13.26.46） ── */
+.vs-account-page {
+    max-width: 920px;
+    min-width: 0;
+}
+.vs-account-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    border-radius: 14px;
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #eef2f7);
+    box-sizing: border-box;
+}
+.vs-account-hero__avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #f1f5f9;
+}
+.vs-account-hero__meta {
+    min-width: 0;
+    flex: 1;
+}
+.vs-account-hero__name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.3;
+    word-break: break-word;
+}
+.vs-account-hero__email {
+    margin-top: 2px;
+    font-size: 13px;
+    color: #64748b;
+    word-break: break-all;
+}
+.vs-account-hero__badge {
+    display: inline-flex;
+    margin-top: 8px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e40af;
+    background: #eff6ff;
+    cursor: help;
+}
+.vs-account-hero__edit {
+    flex-shrink: 0;
+}
+.vs-tabs.vs-account-tabs {
+    display: flex;
+    gap: 2px;
+    margin: 0 0 16px;
+    border-bottom: 1px solid var(--vs-border, #e5e7eb);
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+.vs-tabs.vs-account-tabs .vs-tabs__btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-bottom: -1px;
+}
+.vs-tabs.vs-account-tabs .vs-tabs__btn:hover {
+    color: #0f172a;
+}
+.vs-tabs.vs-account-tabs .vs-tabs__btn.is-active {
+    color: #0f172a;
+    border-bottom-color: #111;
+}
+.vs-account-pane {
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #eef2f7);
+    box-sizing: border-box;
+}
+.vs-account-pane[hidden] {
+    display: none !important;
+}
+.vs-account-avatar__img--inline {
+    display: none;
+}
+@media (max-width: 640px) {
+    .vs-account-hero {
+        flex-wrap: wrap;
+    }
+    .vs-account-hero__edit {
+        width: 100%;
+    }
+}
+
 /* ── 账号设置页 ── */
 .vs-account-shell {
     display: flex;

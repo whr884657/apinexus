@@ -20,8 +20,9 @@ class OAuthHttpClient
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_CONNECTTIMEOUT => $timeout,
                 CURLOPT_TIMEOUT        => $timeout,
-                CURLOPT_USERAGENT      => 'ApiNexus-OAuth/' . VS_VERSION,
+                CURLOPT_USERAGENT      => class_exists('OutboundUa') ? OutboundUa::build('OAuth') : ('ApiNexus-OAuth/' . VS_VERSION),
             ));
+            vs_curl_ssl_verify($ch);
             $body = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             vs_curl_close($ch);
@@ -35,7 +36,11 @@ class OAuthHttpClient
             'http' => array(
                 'method'  => 'GET',
                 'timeout' => $timeout,
-                'header'  => 'User-Agent: ApiNexus-OAuth/' . VS_VERSION . "\r\n",
+                'header'  => (class_exists('OutboundUa') ? OutboundUa::headerLine('OAuth') : ('User-Agent: ApiNexus-OAuth/' . VS_VERSION)) . "\r\n",
+            ),
+            'ssl' => function_exists('vs_stream_ssl_options') ? vs_stream_ssl_options() : array(
+                'verify_peer' => true,
+                'verify_peer_name' => true,
             ),
         ));
 
@@ -62,8 +67,9 @@ class OAuthHttpClient
                 CURLOPT_HTTPHEADER     => array('Content-Type: application/x-www-form-urlencoded'),
                 CURLOPT_CONNECTTIMEOUT => $timeout,
                 CURLOPT_TIMEOUT        => $timeout,
-                CURLOPT_USERAGENT      => 'ApiNexus-OAuth/' . VS_VERSION,
+                CURLOPT_USERAGENT      => class_exists('OutboundUa') ? OutboundUa::build('OAuth') : ('ApiNexus-OAuth/' . VS_VERSION),
             ));
+            vs_curl_ssl_verify($ch);
             $response = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             vs_curl_close($ch);
@@ -77,10 +83,14 @@ class OAuthHttpClient
             'http' => array(
                 'method'  => 'POST',
                 'header'  => "Content-Type: application/x-www-form-urlencoded\r\n"
-                    . 'User-Agent: ApiNexus-OAuth/' . VS_VERSION . "\r\n"
+                    . (class_exists('OutboundUa') ? OutboundUa::headerLine('OAuth') : ('User-Agent: ApiNexus-OAuth/' . VS_VERSION)) . "\r\n"
                     . 'Content-Length: ' . strlen($body) . "\r\n",
                 'content' => $body,
                 'timeout' => $timeout,
+            ),
+            'ssl' => function_exists('vs_stream_ssl_options') ? vs_stream_ssl_options() : array(
+                'verify_peer' => true,
+                'verify_peer_name' => true,
             ),
         ));
 

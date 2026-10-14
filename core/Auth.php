@@ -11,6 +11,70 @@ class Auth
     const SESSION_KEY = 'vs_admin_id';
     const ACTIVITY_KEY = 'vs_last_activity';
 
+    /** @var array<int, int|null> */
+    private static $statusMemo = array();
+
+    /**
+     * @param int $adminId
+     * @return string
+     */
+    public static function statusCacheKey($adminId)
+    {
+        return RedisCache::KEY_ADMIN_STATUS_PREFIX . (int) $adminId;
+    }
+
+    /**
+     * 清除管理员状态缓存。凡更新 admin.status（禁用/启用/删号等）须在库写成功后调用。
+     *
+     * @param int $adminId
+     * @return void
+     */
+    public static function forgetStatusCache($adminId)
+    {
+        $adminId = (int) $adminId;
+        unset(self::$statusMemo[$adminId]);
+        if ($adminId > 0 && class_exists('RedisCache')) {
+            RedisCache::forget(self::statusCacheKey($adminId));
+        }
+    }
+
+    /**
+     * @param int $adminId
+     * @return int|null
+     */
+    public static function lookupStatus($adminId)
+    {
+        $adminId = (int) $adminId;
+        if ($adminId <= 0) {
+            return null;
+        }
+        if (array_key_exists($adminId, self::$statusMemo)) {
+            return self::$statusMemo[$adminId];
+        }
+        $factory = function () use ($adminId) {
+            $pdo = Database::connect();
+            $table = Database::table('admin');
+            $stmt = $pdo->prepare('SELECT `status` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
+            $stmt->execute(array($adminId));
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                return null;
+            }
+            return (int) $row['status'];
+        };
+        try {
+            if (class_exists('RedisCache') && RedisCache::enabled()) {
+                $st = RedisCache::remember(self::statusCacheKey($adminId), RedisCache::TTL_ADMIN_STATUS, $factory);
+            } else {
+                $st = $factory();
+            }
+        } catch (Exception $e) {
+            return null;
+        }
+        self::$statusMemo[$adminId] = ($st === null) ? null : (int) $st;
+        return self::$statusMemo[$adminId];
+    }
+
     /**
      * 管理员登录（支持用户名或邮箱）
      *
@@ -146,6 +210,17 @@ class Auth
             return false;
         }
 
+        $aid = (int) $_SESSION[self::SESSION_KEY];
+        try {
+            $st = self::lookupStatus($aid);
+            if ($st === null || (int) $st !== 1) {
+                self::logout();
+                return false;
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+
         self::touchActivity();
         return true;
     }
@@ -169,11 +244,11 @@ class Auth
     {
         if (!empty($_SESSION[self::SESSION_KEY]) && self::isSessionExpired()) {
             self::logout();
-            vs_redirect_flash(vs_base_url() . '/admin/login', 'error', '登录已超时，请重新登录');
+            vs_redirect_flash(vs_site_path('/admin/login'), 'error', '登录已超时，请重新登录');
         }
 
         if (!self::check()) {
-            vs_redirect(vs_base_url() . '/admin/login');
+            vs_redirect(vs_site_path('/admin/login'));
         }
     }
 
@@ -185,7 +260,7 @@ class Auth
     public static function redirectIfLoggedIn()
     {
         if (self::check()) {
-            vs_redirect(vs_base_url() . '/admin/index');
+            vs_redirect(vs_site_path('/admin/index'));
         }
     }
 
@@ -251,8 +326,9 @@ class Auth
         }
 
         if ($newPassword !== null && $newPassword !== '') {
-            if (strlen($newPassword) < 6) {
-                return '新密码至少 6 个字符';
+            $pwErr = vs_password_policy_ok($newPassword);
+            if ($pwErr !== '') {
+                return $pwErr;
             }
             if ($oldPassword === null || $oldPassword === '') {
                 return '修改密码需输入当前密码';
@@ -324,7 +400,7 @@ class Auth
     public static function resetPasswordById($adminId, $newPassword)
     {
         $adminId = (int) $adminId;
-        if ($adminId <= 0 || strlen($newPassword) < 6) {
+        if ($adminId <= 0 || vs_password_policy_ok($newPassword) !== '') {
             return false;
         }
 

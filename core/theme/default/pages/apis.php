@@ -41,5 +41,5 @@ $catIndex = 0;
     </section>
 </main>
 <script>
-window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php'), JSON_UNESCAPED_UNICODE); ?>;
+window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo vs_json_script(vs_site_path('/core/front/catalog.php')); ?>;
 </script>

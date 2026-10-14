@@ -19,7 +19,7 @@
  *   - 若配置了 jsonrewrite：仅对合法 JSON 正文做字段级 set/del（见 ProxyJsonRewrite；TXT/二进制不改）
  *   - v13.25.0：剥离调用方 callback/jsonp 参数，禁止 JSONP 透传上游（JsonpGuard）
  *   - v13.25.0：出站 JSON 擦除 /admin 等敏感路径（ApiOutboundSanitize）
- *   - v13.25.2：业务错误体（errcode 11001～11019）禁止改写，并强制只保留 code/msg/errcode
+ *   - v13.25.2：业务错误体（errcode 11001～11025）禁止改写，并强制只保留 code/msg/errcode
  *   - 上游响应为 3xx + Location（如随机视频跳转）：校验公网后原样把跳转还给调用方（v13.4.1）
  *     禁止服务端跟随跳转去拉最终大文件（视频等）
  *   - 可配置上游认证、出站 User-Agent / Referer（见 ProxyClientProfile）
@@ -194,6 +194,8 @@ class ApiProxy
      */
     public static function handleRequest($slug = null)
     {
+        if (class_exists('ApiStats')) {
+        }
         if ($slug === null) {
             $slug = self::resolveSlugFromRequest();
         } else {
@@ -506,7 +508,12 @@ class ApiProxy
 
         $clientHeaders = class_exists('ProxyClientProfile')
             ? ProxyClientProfile::buildClientHeaders($row)
-            : array('Accept: */*', 'User-Agent: ApiNexus-Proxy/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
+            : array(
+                'Accept: */*',
+                class_exists('OutboundUa')
+                    ? OutboundUa::headerLine('Proxy')
+                    : ('User-Agent: ApiNexus-Proxy/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
+            );
         $headers = array_merge($clientHeaders, $built['headers']);
         if ($contentType !== '' && $method === 'POST') {
             $headers[] = 'Content-Type: ' . $contentType;
@@ -533,14 +540,12 @@ class ApiProxy
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT        => self::RELAY_TIMEOUT,
-            // 兼容上游过期/自签/链不完整证书；仍限 HTTP(S)，公网 URL 已由上游地址校验把关
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0,
             CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_HEADER         => true,
             CURLOPT_ENCODING       => '',
         ));
+        vs_curl_ssl_verify($ch);
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
         }
@@ -631,6 +636,7 @@ class ApiProxy
         }
 
         $ok = ($http >= 200 && $http < 400);
+        // 不落库响应正文（体积）；不记耗时
         ApiStats::hitProxy($row, $ok, $http > 0 ? $http : 502);
 
         if ($http > 0) {

@@ -2,6 +2,7 @@
 /**
  * 文件：core/CheckinManager.php
  * 作用：每日签到（user.lastcheckin；同用户同日唯一；主题经 FrontendUser / PointsManager 调用）
+ *       系统级外部 API 开关与用户解析见 isSystemApiEnabled / resolveUserForSystemApi
  */
 
 class CheckinManager
@@ -153,6 +154,32 @@ class CheckinManager
     public static function bannerState($userId)
     {
         $enabled = Config::get('checkin_enabled', '0') === '1' && self::tableReady();
+        $range = self::pointsRange();
+        $checked = $enabled ? self::hasCheckedInToday((int) $userId) : false;
+        return array(
+            'enabled'       => $enabled,
+            'checked_today' => $checked,
+            'min'           => $range['min'],
+            'max'           => $range['max'],
+            'show_banner'   => $enabled && !$checked,
+        );
+    }
+
+    /**
+     * 系统级签到 API 是否开启（与功能开关 checkin_enabled 独立）
+     *
+     * @return bool
+     */
+    public static function isSystemApiEnabled()
+    {
+        return class_exists('SystemApiKey') && SystemApiKey::isGateOn('checkin');
+    }
+
+    /**
+     * @return array{min:int,max:int}
+     */
+    public static function pointsRange()
+    {
         $min = (int) Config::get('checkin_points_min', '10');
         $max = (int) Config::get('checkin_points_max', '30');
         if ($min < 1) {
@@ -161,13 +188,119 @@ class CheckinManager
         if ($max < $min) {
             $max = $min;
         }
-        $checked = $enabled ? self::hasCheckedInToday((int) $userId) : false;
+        if ($max > 1000000) {
+            $max = 1000000;
+        }
+        return array('min' => $min, 'max' => $max);
+    }
+
+    /**
+     * 系统 API：只读功能配置
+     *
+     * @return array{feature_enabled:bool,ready:bool,min:int,max:int}
+     */
+    public static function systemApiConfig()
+    {
+        $range = self::pointsRange();
         return array(
-            'enabled'       => $enabled,
-            'checked_today' => $checked,
-            'min'           => $min,
-            'max'           => $max,
-            'show_banner'   => $enabled && !$checked,
+            'feature_enabled' => Config::get('checkin_enabled', '0') === '1',
+            'ready'           => self::tableReady(),
+            'min'             => $range['min'],
+            'max'             => $range['max'],
+        );
+    }
+
+    /**
+     * 系统 API：按 userid / username / email 解析用户（三选一）
+     *
+     * @param array $input
+     * @return array{ok:bool,msg?:string,userid?:int}
+     */
+    public static function resolveUserForSystemApi(array $input)
+    {
+        $userId = 0;
+        if (isset($input['userid'])) {
+            $userId = (int) $input['userid'];
+        } elseif (isset($input['user_id'])) {
+            $userId = (int) $input['user_id'];
+        } elseif (isset($input['uid'])) {
+            $userId = (int) $input['uid'];
+        }
+
+        $account = '';
+        if (isset($input['username'])) {
+            $account = trim((string) $input['username']);
+        }
+        if ($account === '' && isset($input['email'])) {
+            $account = trim((string) $input['email']);
+        }
+        if ($account === '' && isset($input['account'])) {
+            $account = trim((string) $input['account']);
+        }
+
+        if ($userId <= 0 && $account === '') {
+            return array('ok' => false, 'msg' => '请提供 userid 或 username 或 email');
+        }
+
+        if (!class_exists('UserManager')) {
+            return array('ok' => false, 'msg' => '用户模块未就绪');
+        }
+
+        $row = null;
+        if ($userId > 0) {
+            $row = UserManager::findById($userId);
+        } else {
+            if (function_exists('mb_substr')) {
+                $account = mb_substr($account, 0, 128, 'UTF-8');
+            } else {
+                $account = substr($account, 0, 128);
+            }
+            $row = UserManager::findByAccount($account);
+        }
+
+        if (!is_array($row) || empty($row['id'])) {
+            return array('ok' => false, 'msg' => '该用户未注册，请注册后再签到', 'reason' => 'not_registered');
+        }
+        if (isset($row['status']) && (int) $row['status'] !== 1) {
+            return array('ok' => false, 'msg' => '账户已被封禁，不支持签到', 'reason' => 'banned');
+        }
+
+        return array('ok' => true, 'userid' => (int) $row['id']);
+    }
+
+    /**
+     * 系统 API：某用户签到状态（脱敏，不含邮箱等）
+     *
+     * @param int $userId
+     * @return array
+     */
+    public static function statusForSystemApi($userId)
+    {
+        $userId = (int) $userId;
+        $banner = self::bannerState($userId);
+        $last = '';
+        if ($userId > 0 && self::tableReady()) {
+            try {
+                $pdo = Database::connect();
+                $stmt = $pdo->prepare(
+                    'SELECT `lastcheckin` FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1'
+                );
+                $stmt->execute(array($userId));
+                $d = $stmt->fetchColumn();
+                if ($d !== false && $d !== null && $d !== '') {
+                    $last = substr((string) $d, 0, 10);
+                }
+            } catch (Exception $e) {
+                $last = '';
+            }
+        }
+        return array(
+            'userid'          => $userId,
+            'feature_enabled' => !empty($banner['enabled']),
+            'checked_today'   => !empty($banner['checked_today']),
+            'lastcheckin'     => $last,
+            'min'             => isset($banner['min']) ? (int) $banner['min'] : 0,
+            'max'             => isset($banner['max']) ? (int) $banner['max'] : 0,
         );
     }
 }

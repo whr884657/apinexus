@@ -87,7 +87,8 @@ vs_admin_layout_start('日志查询', 'logs', $headerActions);
     </div>
 </div>
 
-<div class="vs-panel vs-log-panel" id="logsPage">
+<?php /* 日志行/卡已有自身背景，禁止再外套 .vs-panel 大白底（E406） */ ?>
+<div class="vs-log-page" id="logsPage">
     <div class="vs-log-list" id="logsListBody">
         <?php vs_render_loading('正在加载日志'); ?>
     </div>
@@ -103,9 +104,11 @@ vs_admin_layout_start('日志查询', 'logs', $headerActions);
                 <option value="50">50</option>
             </select>
         </label>
-        <button type="button" class="vs-api-pager__nav" id="logsPrevBtn" aria-label="上一页">上一页</button>
-        <div class="vs-api-pager__nums" id="logsPagerNums" role="navigation" aria-label="页码"></div>
-        <button type="button" class="vs-api-pager__nav" id="logsNextBtn" aria-label="下一页">下一页</button>
+        <div class="vs-api-pager__navs">
+            <button type="button" class="vs-api-pager__nav" id="logsPrevBtn" aria-label="上一页">上一页</button>
+            <div class="vs-api-pager__nums" id="logsPagerNums" role="navigation" aria-label="页码"></div>
+            <button type="button" class="vs-api-pager__nav" id="logsNextBtn" aria-label="下一页">下一页</button>
+        </div>
     </div>
     <div class="vs-api-list-total" id="logsTotal"></div>
 </div>

@@ -43,6 +43,7 @@ foreach ($apis as $api):
         }
     }
     $isPaid = ($points > 0) || ($billing !== '免费' && strcasecmp($billing, 'free') !== 0);
+    $promoLabel = !empty($api['promo_label']) ? (string) $api['promo_label'] : '';
     $showMethods = array_slice($methods, 0, 2);
     $methodExtra = count($methods) > 2 ? count($methods) - 2 : 0;
 
@@ -57,6 +58,9 @@ foreach ($apis as $api):
             $chips[] = array('class' => 'st-api-chip--points', 'text' => $billing);
         } else {
             $chips[] = array('class' => 'st-api-chip--free', 'text' => '免费');
+        }
+        if ($promoLabel !== '') {
+            $chips[] = array('class' => 'st-api-chip--maintenance', 'text' => $promoLabel);
         }
         if ($needkey === 1) {
             $chips[] = array('class' => 'st-api-chip--key', 'text' => 'KEY必填');

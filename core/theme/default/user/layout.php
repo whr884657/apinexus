@@ -52,10 +52,7 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     echo '<div class="vs-admin-shell" id="vsAdminShell">' . "\n";
 
     echo '<aside class="vs-sidebar" id="vsSidebar">' . "\n";
-    echo '<div class="vs-sidebar__head">' . "\n";
-    vs_render_site_logo('vs-sidebar__logo');
-    echo '<span class="vs-sidebar__name">' . vs_e($systemName) . '</span>' . "\n";
-    echo '</div>' . "\n";
+    vs_user_sidebar_brand($systemName);
     echo '<nav class="vs-sidebar__nav">' . "\n";
 
     foreach ($menuGroups as $group) {
@@ -92,6 +89,9 @@ function vs_theme_user_layout_start($pageTitle, $activeMenu = '', $headerActions
     echo '</div>' . "\n";
     echo '<div class="vs-topbar__right">' . "\n";
     echo '<div class="vs-topbar__theme" id="vsThemePickerMount"></div>' . "\n";
+    if (function_exists('vs_user_notify_markup')) {
+        vs_user_notify_markup();
+    }
     if ($userProfile) {
         $avatarUrl = $userProfile['avatar'];
         echo '<a href="' . vs_e($base) . '/user/account" class="vs-topbar__avatar-link" title="账号设置">' . "\n";
@@ -127,8 +127,8 @@ function vs_theme_user_layout_end(array $extraScripts = array())
         vs_render_modal_shell();
     }
 
-    echo '<script>window.VS_BASE_URL = ' . json_encode($vsBase) . ';</script>' . "\n";
-    echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
+    echo '<script>window.VS_BASE_URL = ' . vs_json_script($vsBase) . ';</script>' . "\n";
+    echo '<script>window.VS_CSRF_TOKEN = ' . vs_json_script(AuthSecurity::csrfToken()) . ';</script>' . "\n";
     foreach (ThemeManager::userShellJsHrefs(true) as $href) {
         echo '<script src="' . vs_e($href) . '" defer></script>' . "\n";
     }

@@ -18,6 +18,32 @@ function vs_e($value)
 }
 
 /**
+ * 令牌范围摘要 HTML：数字加粗，其余保持灰字由 CSS 着色
+ *
+ * @param mixed $label 如「可调用 2 个分类 · 3 个接口」
+ * @return string 已转义 HTML
+ */
+function vs_format_scope_label_html($label)
+{
+    $escaped = htmlspecialchars((string) $label, ENT_QUOTES, 'UTF-8');
+    return (string) preg_replace('/(\d+)/', '<strong>$1</strong>', $escaped);
+}
+
+/**
+ * 写入 HTML 内联 script 的 JSON（防 </script> 逃逸）
+ *
+ * @param mixed $value
+ * @return string
+ */
+function vs_json_script($value)
+{
+    return json_encode(
+        $value,
+        JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    );
+}
+
+/**
  * 关闭 curl 句柄。
  * PHP 8.0 起句柄随对象释放，curl_close 没有作用；PHP 8.5 起再调用会出弃用警告。
  * PHP 7.4 仍是资源，必须关掉。
@@ -46,14 +72,14 @@ function vs_console_brand_script()
     $GLOBALS['vs_console_brand_emitted'] = true;
 
     $ver = defined('VS_VERSION') ? (string) VS_VERSION : '';
-    // 同站脚本必须用根相对路径，禁止 vs_base_url() 写出 https://域名（E252 / 《前端页面渲染与源码规范》§3.2）
+    // 同站脚本必须用根相对路径，禁止 vs_base_url() 写出 https://域名（E252 / 《前端页面渲染与源码规范》第3.2节）
     $src = vs_site_path('/assets/js/console-brand.js');
     if ($ver !== '') {
         $src .= '?v=' . rawurlencode($ver);
     }
 
     // 版本号先于品牌脚本；品牌脚本无 defer，保证控制台立刻可见
-    echo '<script>window.VS_VERSION=window.VS_VERSION||' . json_encode($ver, JSON_UNESCAPED_UNICODE) . ';</script>' . "\n";
+    echo '<script>window.VS_VERSION=window.VS_VERSION||' . vs_json_script($ver) . ';</script>' . "\n";
     echo '<script src="' . vs_e($src) . '"></script>' . "\n";
 }
 
@@ -157,6 +183,55 @@ function vs_render_loading($label = '正在加载', array $options = array())
 }
 
 /**
+ * 列表底栏（对齐 admin/system/logs.php：静态上一页/下一页 + __nums）
+ *
+ * @param array $opts id/hidden/total/stats_only/stats
+ *                    stats 仅允许固定系统文案（如「共 N 条」由调用方拼好的短句），
+ *                    禁止拼接请求参数、数据库原文或用户输入；输出前仍走 vs_e
+ * @return void
+ */
+function vs_render_list_pager(array $opts = array())
+{
+    $id = isset($opts['id']) ? preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $opts['id']) : 'list';
+    if ($id === '') {
+        $id = 'list';
+    }
+    $hidden = !empty($opts['hidden']);
+    $total = isset($opts['total']) ? (int) $opts['total'] : 0;
+    $statsOnly = !empty($opts['stats_only']);
+    $statsText = isset($opts['stats']) ? (string) $opts['stats'] : '';
+
+    echo '<div class="vs-api-list-footer" id="' . vs_e($id) . 'Footer"';
+    if ($hidden) {
+        echo ' hidden';
+    }
+    echo '>' . "\n";
+    if (!$statsOnly) {
+        echo '    <div class="vs-api-pager" id="' . vs_e($id) . 'Pager">' . "\n";
+        echo '        <label class="vs-api-list-pagesize" for="' . vs_e($id) . 'PageSize">' . "\n";
+        echo '            <span class="vs-api-list-pagesize__label">每页</span>' . "\n";
+        echo '            <select class="vs-input vs-select vs-api-list-pagesize__select" id="'
+            . vs_e($id) . 'PageSize" data-vs-pick="sheet">' . "\n";
+        echo '                <option value="10">10</option>' . "\n";
+        echo '                <option value="20" selected>20</option>' . "\n";
+        echo '                <option value="30">30</option>' . "\n";
+        echo '                <option value="50">50</option>' . "\n";
+        echo '            </select>' . "\n";
+        echo '        </label>' . "\n";
+        echo '        <div class="vs-api-pager__navs">' . "\n";
+        echo '            <button type="button" class="vs-api-pager__nav" id="'
+            . vs_e($id) . 'PrevBtn" aria-label="上一页">上一页</button>' . "\n";
+        echo '            <div class="vs-api-pager__nums" id="'
+            . vs_e($id) . 'PagerNums" role="navigation" aria-label="页码"></div>' . "\n";
+        echo '            <button type="button" class="vs-api-pager__nav" id="'
+            . vs_e($id) . 'NextBtn" aria-label="下一页">下一页</button>' . "\n";
+        echo '        </div>' . "\n";
+        echo '    </div>' . "\n";
+    }
+    echo '    <p class="vs-api-list-stats" id="' . vs_e($id) . 'Stats">' . vs_e($statsText) . '</p>' . "\n";
+    echo '</div>' . "\n";
+}
+/**
  * 渲染系统版本展示（有新版本时显示箭头与可点击的新版本号）
  *
  * @param array|null $updateCheck Updater::checkForUpdate() 结果
@@ -165,7 +240,7 @@ function vs_render_loading($label = '正在加载', array $options = array())
 function vs_render_version_display($updateCheck = null)
 {
     $local = 'v' . VS_VERSION;
-    $upgradeUrl = vs_base_url() . '/admin/upgrade.php';
+    $upgradeUrl = vs_site_path('/admin/upgrade.php');
 
     if (
         is_array($updateCheck)
@@ -202,7 +277,7 @@ function vs_theme_bg_preload_script()
         'f5caca', 'fdd5b0', 'f5e99e', 'b8ebd0',
         'b3d4fc', 'd4c6fd', 'efcef5', 'a8eef5',
     );
-    $allowJson = json_encode($presets);
+    $allowJson = vs_json_script($presets);
     echo '<script>';
     echo '(function(){try{var allow=' . $allowJson . ';var c=localStorage.getItem(\'login_page_bg\');if(c){var h=c.replace(\'#\',\'\').trim().toLowerCase();if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];if(h.length===8)h=h.slice(0,6);if(h.length===6&&allow.indexOf(h)>=0){var color=\'#\'+h;document.documentElement.style.setProperty(\'--page-bg\',color);document.documentElement.style.backgroundColor=color;}}document.documentElement.classList.remove(\'vs-scheme-dark\');try{localStorage.removeItem(\'admin_color_scheme\');}catch(e2){}}catch(e){}})();';
     echo '</script>' . "\n";
@@ -677,26 +752,262 @@ function vs_sanitize_http_host($host)
 }
 
 /**
- * 解析当前请求可用的 HTTP Host（优先合法 HTTP_HOST，否则 SERVER_NAME，再否则 localhost）
+ * 主机名（小写、剥端口；IPv6 保留方括号）
+ *
+ * @param string $host
+ * @return string
+ */
+function vs_host_name_only($host)
+{
+    $host = strtolower(trim((string) $host));
+    if ($host === '') {
+        return '';
+    }
+    if ($host[0] === '[') {
+        $end = strpos($host, ']');
+        if ($end === false) {
+            return '';
+        }
+        return strtolower(substr($host, 0, $end + 1));
+    }
+    if (strpos($host, ':') !== false) {
+        $host = (string) preg_replace('/:\d+$/', '', $host);
+    }
+    return $host;
+}
+
+/**
+ * www 互认的另一侧（只剥/加最左一段 www.；IP / IPv6 不加）
+ *
+ * @param string $nameOnly
+ * @return string 空表示没有孪生名
+ */
+function vs_host_www_twin($nameOnly)
+{
+    $nameOnly = strtolower(trim((string) $nameOnly));
+    if ($nameOnly === '' || $nameOnly[0] === '[') {
+        return '';
+    }
+    $ipCheck = $nameOnly;
+    if (filter_var($ipCheck, FILTER_VALIDATE_IP)) {
+        return '';
+    }
+    if (strpos($nameOnly, 'www.') === 0 && strlen($nameOnly) > 4) {
+        return substr($nameOnly, 4);
+    }
+    return 'www.' . $nameOnly;
+}
+
+/**
+ * 本站可信主机名列表（剥端口、含 www 孪生）。生成源禁止 HTTP_HOST / Origin / Referer。
+ * 已填绑定域时不以请求派生的 SERVER_NAME 扩充名单。
+ *
+ * @return string[]
+ */
+function vs_trusted_host_list()
+{
+    static $cache = null;
+    if (is_array($cache)) {
+        return $cache;
+    }
+
+    $names = array();
+    $add = function ($raw) use (&$names) {
+        $clean = vs_sanitize_http_host((string) $raw);
+        if ($clean === '') {
+            $clean = vs_sanitize_http_host(vs_host_name_only((string) $raw));
+        }
+        $name = vs_host_name_only($clean);
+        if ($name === '') {
+            return;
+        }
+        $names[$name] = true;
+        $twin = vs_host_www_twin($name);
+        if ($twin !== '') {
+            $names[$twin] = true;
+        }
+    };
+
+    if (class_exists('SiteContext') && method_exists('SiteContext', 'boundDomains')) {
+        foreach (SiteContext::boundDomains() as $d) {
+            $add($d);
+        }
+    } elseif (class_exists('Config')) {
+        try {
+            $add(Config::get('site_domain', ''));
+            $add(Config::get('site_domain1', ''));
+        } catch (Exception $e) {
+            // 安装前无配置
+        }
+    }
+
+    // 未绑定时才采用 SERVER_NAME。已绑定则忽略请求派生的 SERVER_NAME，
+    // 避免 Apache UseCanonicalName Off 时 Host 头把白名单带偏。
+    if ($names === array() && !empty($_SERVER['SERVER_NAME'])) {
+        $add($_SERVER['SERVER_NAME']);
+    }
+
+    if ($names === array()) {
+        $names['localhost'] = true;
+    }
+
+    $cache = array_keys($names);
+    return $cache;
+}
+
+/**
+ * 是否本站可信主机（剥端口 + www 一层互认）
+ *
+ * @param string $host
+ * @return bool
+ */
+function vs_is_trusted_host($host)
+{
+    $clean = vs_sanitize_http_host((string) $host);
+    $name = vs_host_name_only($clean !== '' ? $clean : (string) $host);
+    if ($name === '') {
+        return false;
+    }
+    foreach (vs_trusted_host_list() as $trusted) {
+        if ($name === $trusted) {
+            return true;
+        }
+        $twin = vs_host_www_twin($trusted);
+        if ($twin !== '' && $name === $twin) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * 解析当前请求可用的 HTTP Host
+ *
+ * 安全用途：仅当 HTTP_HOST 已在本站白名单才采用；否则 SERVER_NAME / 绑定域 / localhost。
  *
  * @return string
  */
 function vs_request_http_host()
 {
-    $candidates = array();
     if (!empty($_SERVER['HTTP_HOST'])) {
-        $candidates[] = (string) $_SERVER['HTTP_HOST'];
-    }
-    if (!empty($_SERVER['SERVER_NAME'])) {
-        $candidates[] = (string) $_SERVER['SERVER_NAME'];
-    }
-    foreach ($candidates as $raw) {
-        $host = vs_sanitize_http_host($raw);
-        if ($host !== '') {
-            return $host;
+        $h = vs_sanitize_http_host((string) $_SERVER['HTTP_HOST']);
+        if ($h !== '' && vs_is_trusted_host($h)) {
+            return $h;
         }
     }
+    if (!empty($_SERVER['SERVER_NAME'])) {
+        $h = vs_sanitize_http_host((string) $_SERVER['SERVER_NAME']);
+        if ($h !== '' && vs_is_trusted_host($h)) {
+            return $h;
+        }
+    }
+    $list = vs_trusted_host_list();
+    if (isset($list[0]) && $list[0] !== '') {
+        return $list[0];
+    }
     return 'localhost';
+}
+
+/**
+ * 出站 TLS 用的 CA 文件（只读 php.ini 与站内 core/ssl/cacert.pem，禁止扫 /etc）
+ *
+ * @return string 空表示交给 PHP/cURL 默认信任库
+ */
+function vs_ssl_cafile()
+{
+    $ini = trim((string) ini_get('curl.cainfo'));
+    if ($ini !== '') {
+        return $ini;
+    }
+    $ini = trim((string) ini_get('openssl.cafile'));
+    if ($ini !== '') {
+        return $ini;
+    }
+    if (defined('VS_ROOT')) {
+        $local = VS_ROOT . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'ssl' . DIRECTORY_SEPARATOR . 'cacert.pem';
+        if (is_file($local)) {
+            return $local;
+        }
+    }
+    return '';
+}
+
+/**
+ * @param resource|\CurlHandle $ch
+ * @return void
+ */
+function vs_curl_ssl_verify($ch)
+{
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+    $ca = vs_ssl_cafile();
+    if ($ca !== '') {
+        curl_setopt($ch, CURLOPT_CAINFO, $ca);
+    }
+}
+
+/**
+ * stream_context ssl 选项（file_get_contents 回退）
+ *
+ * @return array
+ */
+function vs_stream_ssl_options()
+{
+    $opts = array(
+        'verify_peer'       => true,
+        'verify_peer_name'  => true,
+        'allow_self_signed' => false,
+    );
+    $ca = vs_ssl_cafile();
+    if ($ca !== '') {
+        $opts['cafile'] = $ca;
+    }
+    return $opts;
+}
+
+/**
+ * 设置密码策略：长度仍 ≥ 6；拒绝常见弱口令（登录不调用）
+ *
+ * @param string $password
+ * @return string 空=通过；否则中文原因
+ */
+function vs_password_policy_ok($password)
+{
+    $password = (string) $password;
+    if (strlen($password) < 6) {
+        return '密码至少 6 位';
+    }
+    $lower = strtolower($password);
+    $weak = array(
+        '123456', '1234567', '12345678', '123456789', 'password', 'password1',
+        'admin', 'admin123', 'admin888', 'qwerty', 'abc123', '111111', '000000',
+        '666666', '888888', '654321', 'passw0rd', 'iloveyou', 'welcome',
+        'letmein', 'monkey', 'dragon', 'master', 'login', 'qwerty123',
+        '1q2w3e', '1qaz2wsx', 'adminadmin', 'root123', 'test123', 'user123',
+    );
+    if (in_array($lower, $weak, true)) {
+        return '密码过于简单';
+    }
+    return '';
+}
+
+/**
+ * 前台是否下发匿名 CSRF（已登录或确需匿名 POST 的页）
+ *
+ * @return bool
+ */
+function vs_front_csrf_should_emit()
+{
+    if (!empty($_SESSION['vs_user_id']) || !empty($_SESSION['vs_admin_id'])) {
+        return true;
+    }
+    $script = isset($_SERVER['SCRIPT_NAME']) ? str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']) : '';
+    $base = strtolower(basename($script));
+    $allow = array(
+        'index.php', 'apis.php', 'links.php', 'applylink.php', 'articles.php',
+        'detail.php', 'login.php', 'register.php', 'forgot.php',
+    );
+    return in_array($base, $allow, true);
 }
 
 /**
@@ -1795,7 +2106,7 @@ function vs_render_seo_jsonld(array $opts = array())
         '@graph'   => array($organization, $website, $webpage),
     );
     echo '<script type="application/ld+json">'
-        . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        . vs_json_script($data)
         . '</script>' . "\n";
 }
 
@@ -2043,7 +2354,7 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
     if (class_exists('AuthSecurity')) {
         AuthSecurity::sendFrontendSecurityHeaders();
     }
-    $base = vs_base_url();
+    $base = vs_site_base_path();
     $siteName = 'ApiNexus';
     $favicon = '';
     $keywords = '';
@@ -2139,18 +2450,20 @@ function vs_render_head($title, array $cssFiles = array(), $useSiteConfig = true
  */
 function vs_render_foot(array $jsFiles = array(), array $extraJsHrefs = array(), $loadRootShell = true)
 {
-    // 后台/安装仍用绝对 URL 拉根 assets；前台壳脚本已在 extraJsHrefs（主题包站内路径）
-    $assetBase = rtrim(vs_base_url(), '/');
+    // 同站资源用路径前缀，禁止 vs_base_url 写出 http://（CDN HTTPS 回源 HTTP / E373）
+    $assetBase = vs_site_base_path();
     $siteBase = vs_site_base_path();
     vs_render_modal_shell();
     if (!isset($GLOBALS['vs_front_globals_injected'])) {
         $GLOBALS['vs_front_globals_injected'] = true;
         echo '<script>' . "\n";
-        echo 'window.VS_BASE_URL = window.VS_BASE_URL || ' . json_encode($siteBase) . ';' . "\n";
-        echo 'window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || ' . json_encode(class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '') . ';' . "\n";
-        echo 'window.VS_PLAY_URL = window.VS_PLAY_URL || ' . json_encode(vs_site_path('/core/playground/relay.php')) . ';' . "\n";
-        echo 'window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || ' . json_encode(vs_site_path('/core/front/catalog.php')) . ';' . "\n";
-        echo 'window.VS_FRONT_LINKS = window.VS_FRONT_LINKS || ' . json_encode(vs_site_path('/core/front/links.php')) . ';' . "\n";
+        echo 'window.VS_BASE_URL = window.VS_BASE_URL || ' . vs_json_script($siteBase) . ';' . "\n";
+        if (vs_front_csrf_should_emit()) {
+            echo 'window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || ' . vs_json_script(class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '') . ';' . "\n";
+        }
+        echo 'window.VS_PLAY_URL = window.VS_PLAY_URL || ' . vs_json_script(vs_site_path('/core/playground/relay.php')) . ';' . "\n";
+        echo 'window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || ' . vs_json_script(vs_site_path('/core/front/catalog.php')) . ';' . "\n";
+        echo 'window.VS_FRONT_LINKS = window.VS_FRONT_LINKS || ' . vs_json_script(vs_site_path('/core/front/links.php')) . ';' . "\n";
         echo '</script>' . "\n";
     }
     if ($loadRootShell) {
@@ -2320,6 +2633,21 @@ function vs_render_site_logo($class = 'vs-logo-icon')
 }
 
 /**
+ * 用户中心侧栏顶部：图标+系统名，整块链到站点首页（E376）
+ *
+ * @param string $systemName
+ * @return void
+ */
+function vs_user_sidebar_brand($systemName)
+{
+    $home = vs_site_path('/');
+    echo '<a class="vs-sidebar__head vs-sidebar__home" href="' . vs_e($home) . '" title="返回首页">' . "\n";
+    vs_render_site_logo('vs-sidebar__logo');
+    echo '<span class="vs-sidebar__name">' . vs_e($systemName) . '</span>' . "\n";
+    echo '</a>' . "\n";
+}
+
+/**
  * 前台主题品牌图标：优先站点 Logo，未配置时使用主题内默认占位
  *
  * @param string $imgClass
@@ -2433,7 +2761,7 @@ function vs_render_404_page()
         AuthSecurity::sendSecurityHeaders();
     }
 
-    $base = vs_base_url();
+    $base = vs_site_base_path();
     $siteName = 'ApiNexus';
     if (class_exists('InstallChecker') && InstallChecker::isInstalled() && class_exists('SiteContext')) {
         $siteName = SiteContext::siteName();

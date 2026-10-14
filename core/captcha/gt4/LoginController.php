@@ -129,7 +129,15 @@ class Geetest4Login
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded'));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                'Content-type: application/x-www-form-urlencoded',
+                class_exists('OutboundUa')
+                    ? OutboundUa::headerLine('Captcha')
+                    : ('User-Agent: ApiNexus-Captcha/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
+            ));
+            curl_setopt($ch, CURLOPT_USERAGENT, class_exists('OutboundUa')
+                ? OutboundUa::build('Captcha')
+                : ('ApiNexus-Captcha/' . (defined('VS_VERSION') ? VS_VERSION : '1')));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, self::HTTP_TIMEOUT);
             curl_setopt($ch, CURLOPT_TIMEOUT, self::HTTP_TIMEOUT);
@@ -137,8 +145,7 @@ class Geetest4Login
                 curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
                 curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
             }
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+            vs_curl_ssl_verify($ch);
             $result = curl_exec($ch);
             $responsecode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             vs_curl_close($ch);
@@ -148,17 +155,17 @@ class Geetest4Login
             return (string) $result;
         }
 
+        $uaLine = class_exists('OutboundUa')
+            ? OutboundUa::headerLine('Captcha')
+            : ('User-Agent: ApiNexus-Captcha/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
         $options = array(
             'http' => array(
                 'method'  => 'POST',
-                'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+                'header'  => "Content-type: application/x-www-form-urlencoded\r\n" . $uaLine . "\r\n",
                 'content' => $data,
                 'timeout' => self::HTTP_TIMEOUT,
             ),
-            'ssl' => array(
-                'verify_peer'      => true,
-                'verify_peer_name' => true,
-            ),
+            'ssl' => vs_stream_ssl_options(),
         );
         $context = stream_context_create($options);
         $result = @file_get_contents($url, false, $context);

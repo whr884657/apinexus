@@ -57,6 +57,17 @@ function vs_admin_menu_groups()
                 array('id' => 'comments', 'title' => '评论管理', 'url' => '/admin/content/comments'),
                 array('id' => 'links', 'title' => '友情链接', 'url' => '/admin/content/links'),
                 array('id' => 'partners', 'title' => '合作伙伴', 'url' => '/admin/content/partners'),
+                array('id' => 'devapply', 'title' => '开发审核', 'url' => '/admin/content/devapply'),
+            ),
+        ),
+        array(
+            'id'       => 'ops',
+            'title'    => '运营中心',
+            'icon'     => 'share',
+            'children' => array(
+                array('id' => 'ops-mail', 'title' => '邮件群发', 'url' => '/admin/ops/mail'),
+                array('id' => 'ops-incentive', 'title' => '用户激励', 'url' => '/admin/ops/incentive'),
+                array('id' => 'ops-message', 'title' => '站内私信', 'url' => '/admin/ops/message'),
             ),
         ),
         array(
@@ -75,13 +86,16 @@ function vs_admin_menu_groups()
             'id'       => 'sysmgmt',
             'title'    => '系统管理',
             'icon'     => 'setting',
+            // 序：人员/账号 → 配置 → 对接文档 → 外观 → 运维 → 升级 → 关于
             'children' => array(
                 array('id' => 'users', 'title' => '用户管理', 'url' => '/admin/users'),
-                array('id' => 'ip', 'title' => 'IP 配置', 'url' => '/admin/system/ip'),
                 array('id' => 'account', 'title' => '账号设置', 'url' => '/admin/account'),
                 array('id' => 'settings', 'title' => '系统设置', 'url' => '/admin/settings'),
+                array('id' => 'sys-mailtpl', 'title' => '邮箱模板', 'url' => '/admin/system/mailtpl'),
+                array('id' => 'sys-api', 'title' => '系统 API', 'url' => '/admin/system/sysapi'),
                 array('id' => 'theme', 'title' => '主题设置', 'url' => '/admin/system/theme'),
                 array('id' => 'logs', 'title' => '日志查询', 'url' => '/admin/system/logs'),
+                array('id' => 'ip', 'title' => 'IP 配置', 'url' => '/admin/system/ip'),
                 array('id' => 'redis', 'title' => 'Redis', 'url' => '/admin/system/redis'),
                 array('id' => 'upgrade', 'title' => '系统升级', 'url' => '/admin/upgrade'),
                 array('id' => 'about', 'title' => '关于', 'url' => '/admin/about'),
@@ -144,6 +158,7 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     $showReviewSidebarBadge = false;
     $showFeedbackSidebarBadge = false;
     $showLinkSidebarBadge = false;
+    $showDevApplySidebarBadge = false;
     $showCommentSidebarBadge = false;
     if (InstallChecker::isInstalled()) {
         if (class_exists('ApiManager')) {
@@ -151,6 +166,7 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
         }
         if (class_exists('ApiFeedbackManager')) {
             $showFeedbackSidebarBadge = ApiFeedbackManager::countPending() > 0;
+            $showDevApplySidebarBadge = ApiFeedbackManager::countPendingDevApply() > 0;
         }
         if (class_exists('LinkManager')) {
             $showLinkSidebarBadge = LinkManager::countPendingFriend() > 0;
@@ -160,19 +176,12 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
         }
     }
     $showApiSidebarBadge = $showReviewSidebarBadge || $showFeedbackSidebarBadge;
-    $showContentSidebarBadge = $showLinkSidebarBadge || $showCommentSidebarBadge;
+    $showContentSidebarBadge = $showLinkSidebarBadge || $showDevApplySidebarBadge || $showCommentSidebarBadge;
     $notifyInbox = class_exists('AdminNotify')
         ? AdminNotify::inbox()
         : array('ok' => true, 'total' => 0, 'has_pending' => false, 'items' => array());
     $notifyTotal = isset($notifyInbox['total']) ? (int) $notifyInbox['total'] : 0;
     $notifyHasPending = !empty($notifyInbox['has_pending']);
-    $notifyItemsJson = json_encode(
-        isset($notifyInbox['items']) && is_array($notifyInbox['items']) ? $notifyInbox['items'] : array(),
-        JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS
-    );
-    if ($notifyItemsJson === false) {
-        $notifyItemsJson = '[]';
-    }
 
     $htmlClass = (function_exists('vs_site_mourning_on') && vs_site_mourning_on()) ? ' class="vs-mourning"' : '';
     echo '<!DOCTYPE html>' . "\n";
@@ -278,6 +287,12 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
                     echo ($showLinkSidebarBadge && $isOpen) ? '>' : ' hidden>';
                     echo '</span>';
                 }
+                if ($group['id'] === 'content' && $child['id'] === 'devapply') {
+                    echo '<span class="vs-sidebar__badge" id="vsDevApplyBadgeItem" aria-hidden="true"'
+                        . ' data-active="' . ($showDevApplySidebarBadge ? '1' : '0') . '"';
+                    echo ($showDevApplySidebarBadge && $isOpen) ? '>' : ' hidden>';
+                    echo '</span>';
+                }
                 if ($group['id'] === 'content' && $child['id'] === 'comments') {
                     echo '<span class="vs-sidebar__badge" id="vsCommentBadgeItem" aria-hidden="true"'
                         . ' data-active="' . ($showCommentSidebarBadge ? '1' : '0') . '"';
@@ -357,7 +372,9 @@ function vs_admin_layout_start($pageTitle, $activeMenu = '', $headerActions = ''
     echo '<p>当前没有待处理事项</p>' . "\n";
     echo '</div>' . "\n";
     echo '</div>' . "\n";
-    echo '<script type="application/json" id="vsAdminNotifyBoot">' . $notifyItemsJson . '</script>' . "\n";
+    echo '<script type="application/json" id="vsAdminNotifyBoot">' . vs_json_script(
+        isset($notifyInbox['items']) && is_array($notifyInbox['items']) ? $notifyInbox['items'] : array()
+    ) . '</script>' . "\n";
     echo '</div>' . "\n";
     if ($admin) {
         $avatarUrl = UserAvatar::resolve($admin);
@@ -399,8 +416,8 @@ function vs_admin_layout_end(array $extraScripts = array())
 
     vs_render_modal_shell();
 
-    echo '<script>window.VS_BASE_URL = ' . json_encode($vsBase) . ';</script>' . "\n";
-    echo '<script>window.VS_CSRF_TOKEN = ' . json_encode(AuthSecurity::csrfToken()) . ';</script>' . "\n";
+    echo '<script>window.VS_BASE_URL = ' . vs_json_script($vsBase) . ';</script>' . "\n";
+    echo '<script>window.VS_CSRF_TOKEN = ' . vs_json_script(AuthSecurity::csrfToken()) . ';</script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/modal.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/vs-update.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '<script src="' . vs_e($vsBase) . '/assets/js/common.js?v=' . VS_VERSION . '"></script>' . "\n";
@@ -420,18 +437,41 @@ function vs_admin_layout_end(array $extraScripts = array())
 }
 
 /**
- * 占位页面（功能开发中）
+ * 后台占位面板正文（Notice + hint；禁止再夹假按钮/假表单）
+ *
+ * @param string $panelTitle 面板标题（与菜单中文名一致）
+ * @param string $noticeBody Notice 正文（白话说明用途与「后续迭代」）
+ * @return void
+ */
+function vs_admin_placeholder_panel($panelTitle, $noticeBody)
+{
+    echo '<div class="vs-panel">' . "\n";
+    echo '    <div class="vs-panel__header">' . "\n";
+    echo '        <h2 class="vs-panel__title">' . vs_e($panelTitle) . '</h2>' . "\n";
+    echo '    </div>' . "\n";
+    echo '    <div class="vs-panel__body">' . "\n";
+    vs_render_notice('info', '功能筹备中', $noticeBody);
+    echo '        <p class="vs-form-hint">当前为占位页，暂无可用配置项。</p>' . "\n";
+    echo '    </div>' . "\n";
+    echo '</div>' . "\n";
+}
+
+/**
+ * 占位整页（壳 + 面板；功能开发中）
  *
  * @param string $pageTitle
  * @param string $activeMenu
+ * @param string $noticeBody 空则用默认短文案
  * @return void
  */
-function vs_admin_stub_page($pageTitle, $activeMenu)
+function vs_admin_stub_page($pageTitle, $activeMenu, $noticeBody = '')
 {
+    $body = trim((string) $noticeBody);
+    if ($body === '') {
+        $body = '本页功能尚在筹备，菜单与目录已预留，具体能力后续迭代。';
+    }
     vs_admin_layout_start($pageTitle, $activeMenu);
-    echo '<div class="vs-panel">';
-    echo '<p class="vs-panel__desc">功能开发中，敬请期待。</p>';
-    echo '</div>';
+    vs_admin_placeholder_panel($pageTitle, $body);
     vs_admin_layout_end();
 }
 
@@ -470,6 +510,24 @@ function vs_admin_accordion_start($id, $title, $desc = '', $open = false, $neste
 function vs_admin_accordion_end()
 {
     echo '</div></section>' . "\n";
+}
+
+/**
+ * 系统设置大板块分隔（虚线 + 标题）
+ *
+ * @param string $title 大类标题（如「站点与展示」）
+ * @return void
+ */
+function vs_admin_settings_group($title)
+{
+    $title = trim((string) $title);
+    echo '<div class="vs-settings-group" role="separator"'
+        . ($title !== '' ? ' aria-label="' . vs_e($title) . '"' : '')
+        . '>' . "\n";
+    if ($title !== '') {
+        echo '<span class="vs-settings-group__label">' . vs_e($title) . '</span>' . "\n";
+    }
+    echo '</div>' . "\n";
 }
 
 /**

@@ -215,11 +215,11 @@ foreach ($tipOrder as $tk) {
     </div>
 </div>
 <script type="application/json" id="rechargePayIcons"><?php
-    echo json_encode(array(
+    echo vs_json_script(array(
         'alipay' => isset($payIcons['alipay']) ? $payIcons['alipay'] : '',
         'wxpay'  => isset($payIcons['wxpay']) ? $payIcons['wxpay'] : '',
         'qqpay'  => isset($payIcons['qqpay']) ? $payIcons['qqpay'] : '',
-    ), JSON_UNESCAPED_UNICODE);
+    ));
 ?></script>
 <?php endif; ?>
 <?php endif; ?>

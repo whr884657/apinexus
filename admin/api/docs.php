@@ -510,7 +510,7 @@ $firstName = isset($docsCtx[0]) ? (string) $docsCtx[0]['name'] : '';
 vs_admin_layout_start('接口文档', 'api-docs');
 ?>
 
-<div id="apiDocsPage" data-first-id="<?php echo (int) $firstId; ?>"
+<div id="apiDocsPage" class="vs-docs-browser" data-first-id="<?php echo (int) $firstId; ?>"
      data-first-name="<?php echo vs_e($firstName); ?>">
     <?php if (!$tableReady): ?>
         <div class="vs-panel">
@@ -685,6 +685,6 @@ vs_admin_layout_start('接口文档', 'api-docs');
 </div>
 
 <?php
-$mdCss = rtrim(vs_base_url(), '/') . '/core/markdown/assets/css/markdown-render.css';
+$mdCss = vs_site_path('/core/markdown/assets/css/markdown-render.css');
 echo '<link rel="stylesheet" href="' . vs_e($mdCss) . '?v=' . vs_e(VS_VERSION) . '">' . "\n";
 vs_admin_layout_end(array('api-params-editor.js', 'vs-syntax.js', 'api-docs.js'));

@@ -22,7 +22,9 @@
     var pageSizeEl = document.getElementById('apiListPageSize');
     var footerEl = document.getElementById('apiListFooter');
     var pagerEl = document.getElementById('apiListPager');
-    var pagerNav = document.getElementById('apiListPagerNav');
+    var prevBtn = document.getElementById('apiListPrevBtn');
+    var nextBtn = document.getElementById('apiListNextBtn');
+    var pagerNums = document.getElementById('apiListPagerNums');
     var statsEl = document.getElementById('apiListStats');
     var currentPage = 1;
     var openAddBtn = document.getElementById('apiListOpenAddBtn');
@@ -1187,28 +1189,26 @@
         if (!listEl) {
             return;
         }
-        var rows = listEl.querySelectorAll('tr[data-api-row]');
-        var visible = 0;
-        rows.forEach(function (row) {
-            if (!row.hidden) {
-                visible += 1;
-            }
-        });
-        var hasAny = rows.length > 0;
+        var statsTotal = parseInt(page.getAttribute('data-stats-total') || '0', 10) || 0;
+        var pageItems = listEl.querySelectorAll('tr[data-api-row]').length;
+        var q = searchInput ? String(searchInput.value || '').trim() : '';
+        var cat = filterCategoryEl ? String(filterCategoryEl.value || '').trim() : '';
+        var st = filterStatusEl ? String(filterStatusEl.value || '') : '';
+        var filtered = q !== '' || cat !== '' || st !== '';
         if (emptyEl) {
-            emptyEl.hidden = hasAny;
+            emptyEl.hidden = statsTotal > 0 || filtered;
         }
         if (tableWrapEl) {
-            tableWrapEl.hidden = !hasAny;
+            tableWrapEl.hidden = pageItems === 0;
         }
         if (mobileEl) {
-            mobileEl.hidden = !hasAny;
+            mobileEl.hidden = pageItems === 0;
         }
         if (searchEmptyEl) {
-            searchEmptyEl.hidden = !(hasAny && visible === 0);
+            searchEmptyEl.hidden = !(filtered && pageItems === 0);
         }
         if (footerEl) {
-            footerEl.hidden = !hasAny;
+            footerEl.hidden = statsTotal === 0;
         }
     }
 
@@ -1226,84 +1226,6 @@
 
     function getSortMode() {
         return filterSortEl ? String(filterSortEl.value || 'newest') : 'newest';
-    }
-
-    function sortMatchedRows(rows) {
-        var mode = getSortMode();
-        rows.sort(function (a, b) {
-            var idA = parseInt(a.getAttribute('data-api-row'), 10) || 0;
-            var idB = parseInt(b.getAttribute('data-api-row'), 10) || 0;
-            var callsA = parseInt(a.getAttribute('data-api-calls'), 10) || 0;
-            var callsB = parseInt(b.getAttribute('data-api-calls'), 10) || 0;
-            var nameA = String(a.getAttribute('data-api-name') || '').toLowerCase();
-            var nameB = String(b.getAttribute('data-api-name') || '').toLowerCase();
-            if (mode === 'calls-desc') {
-                return callsB - callsA || idB - idA;
-            }
-            if (mode === 'calls-asc') {
-                return callsA - callsB || idB - idA;
-            }
-            if (mode === 'name-az') {
-                if (nameA < nameB) {
-                    return -1;
-                }
-                if (nameA > nameB) {
-                    return 1;
-                }
-                return idB - idA;
-            }
-            return idB - idA;
-        });
-        return rows;
-    }
-
-    function syncRowOrder(rows) {
-        if (!listEl) {
-            return;
-        }
-        rows.forEach(function (row) {
-            listEl.appendChild(row);
-            if (mobileEl) {
-                var id = row.getAttribute('data-api-row');
-                var card = mobileEl.querySelector('.api-card[data-api-row="' + id + '"]');
-                if (card) {
-                    mobileEl.appendChild(card);
-                }
-            }
-        });
-    }
-
-    function matchedRows() {
-        if (!listEl) {
-            return [];
-        }
-        var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-        var cat = filterCategoryEl ? String(filterCategoryEl.value || '').trim() : '';
-        var statusFilter = filterStatusEl ? String(filterStatusEl.value || '') : '';
-        var all = Array.prototype.slice.call(listEl.querySelectorAll('tr[data-api-row]'));
-        var filtered = all.filter(function (row) {
-            if (q) {
-                var hay = row.getAttribute('data-search') || '';
-                if (hay.indexOf(q) === -1) {
-                    return false;
-                }
-            }
-            if (cat) {
-                var rowCat = row.getAttribute('data-api-category') || '';
-                if (rowCat !== cat) {
-                    return false;
-                }
-            }
-            if (statusFilter !== '') {
-                if (String(row.getAttribute('data-api-status')) !== statusFilter) {
-                    return false;
-                }
-            }
-            return true;
-        });
-        filtered = sortMatchedRows(filtered);
-        syncRowOrder(filtered);
-        return filtered;
     }
 
     function buildStatsText(total, maint, pending) {
@@ -1342,63 +1264,69 @@
     }
 
     function renderPagerNav(totalPages, matchedLen) {
-        if (!pagerNav) {
+        if (!window.VS || !VS.applyLogsPager) {
             return;
         }
-        var canPrev = currentPage > 1;
-        var canNext = matchedLen > 0 && currentPage < totalPages;
-        pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"'
-            + (canPrev ? '' : ' disabled') + '>上一页</button>'
-            + '<span class="vs-api-pager__info">' + currentPage + '</span>'
-            + '<button type="button" class="vs-api-pager__nav" data-p="1"'
-            + (canNext ? '' : ' disabled') + '>下一页</button>';
+        var tp = matchedLen === 0 ? 1 : totalPages;
+        VS.applyLogsPager(currentPage, tp, prevBtn, nextBtn, pagerNums);
     }
+
+    var listFilterTotal = 0;
 
     function applyListView() {
         if (!listEl) {
             return;
         }
-        var matched = matchedRows();
-        var all = listEl.querySelectorAll('tr[data-api-row]');
-        var size = getPageSize();
-        var totalPages = Math.max(1, Math.ceil(matched.length / size) || 1);
-        if (currentPage > totalPages) {
-            currentPage = totalPages;
-        }
-        if (currentPage < 1) {
-            currentPage = 1;
-        }
-        var start = (currentPage - 1) * size;
-        var end = start + size;
-        var indexMap = {};
-        matched.forEach(function (row, i) {
-            indexMap[String(row.getAttribute('data-api-row'))] = i;
-        });
-        all.forEach(function (row) {
-            var key = String(row.getAttribute('data-api-row'));
-            var card = mobileEl ? mobileEl.querySelector('.api-card[data-api-row="' + key + '"]') : null;
-            if (!Object.prototype.hasOwnProperty.call(indexMap, key)) {
-                row.hidden = true;
-                if (card) {
-                    card.hidden = true;
-                }
-                return;
+        var fd = new FormData();
+        fd.append('action', 'list');
+        fd.append('q', searchInput ? String(searchInput.value || '').trim() : '');
+        fd.append('category', filterCategoryEl ? String(filterCategoryEl.value || '').trim() : '');
+        fd.append('status', filterStatusEl ? String(filterStatusEl.value || '') : '');
+        fd.append('sort', getSortMode());
+        fd.append('page', String(currentPage));
+        fd.append('pagesize', String(getPageSize()));
+        VS.postForm(fd, window.location.href).then(function (data) {
+            if (!data || !data.code) {
+                throw new Error((data && data.msg) || '加载失败');
             }
-            var idx = indexMap[key];
-            var show = idx >= start && idx < end;
-            row.hidden = !show;
-            if (card) {
-                card.hidden = !show;
+            if (data.page) {
+                currentPage = parseInt(data.page, 10) || currentPage;
+            }
+            listFilterTotal = parseInt(data.total, 10) || 0;
+            listEl.innerHTML = data.desktop_html || '';
+            if (mobileEl) {
+                mobileEl.innerHTML = data.mobile_html || '';
+            }
+            var statsTotal = parseInt(data.stats_total, 10) || 0;
+            var statsMaint = parseInt(data.stats_maint, 10) || 0;
+            var statsPending = parseInt(data.stats_pending, 10) || 0;
+            if (statsEl) {
+                statsEl.textContent = buildStatsText(statsTotal, statsMaint, statsPending);
+            }
+            page.setAttribute('data-stats-total', String(statsTotal));
+            page.setAttribute('data-stats-maint', String(statsMaint));
+            page.setAttribute('data-stats-pending', String(statsPending));
+            var pageItems = listEl.querySelectorAll('tr[data-api-row]').length;
+            if (tableWrapEl) {
+                tableWrapEl.hidden = pageItems === 0;
+            }
+            if (mobileEl) {
+                mobileEl.hidden = pageItems === 0;
+            }
+            if (footerEl) {
+                footerEl.hidden = statsTotal === 0;
+            }
+            if (pagerEl) {
+                pagerEl.hidden = listFilterTotal === 0;
+            }
+            var totalPages = Math.max(1, Math.ceil(listFilterTotal / getPageSize()) || 1);
+            renderPagerNav(totalPages, listFilterTotal);
+            refreshEmptyState();
+        }).catch(function (err) {
+            if (window.VS && VS.showMessage) {
+                VS.showMessage(err.message || '加载失败', 'error');
             }
         });
-        if (footerEl) {
-            footerEl.hidden = matched.length === 0 && all.length === 0;
-        }
-        if (pagerEl) {
-            pagerEl.hidden = matched.length === 0;
-        }
-        renderPagerNav(totalPages, matched.length);
-        refreshEmptyState();
     }
 
     function applySearchFilter() {
@@ -3191,23 +3119,44 @@
         });
     }
 
-    if (pagerNav) {
-        pagerNav.addEventListener('click', function (e) {
-            var btn = e.target.closest('[data-p]');
-            if (!btn || btn.disabled) {
+    function apiListTotalPages() {
+        return Math.max(1, Math.ceil(listFilterTotal / getPageSize()) || 1);
+    }
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            if (prevBtn.disabled) {
                 return;
             }
-            var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
-            var size = getPageSize();
-            var matched = matchedRows();
-            var totalPages = Math.max(1, Math.ceil(matched.length / size) || 1);
-            if (delta > 0 && currentPage < totalPages) {
-                currentPage += 1;
-                applyListView();
-            } else if (delta < 0 && currentPage > 1) {
+            if (currentPage > 1) {
                 currentPage -= 1;
                 applyListView();
             }
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            if (nextBtn.disabled) {
+                return;
+            }
+            var tp = apiListTotalPages();
+            if (currentPage < tp) {
+                currentPage += 1;
+                applyListView();
+            }
+        });
+    }
+    if (pagerNums) {
+        pagerNums.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-page]');
+            if (!btn) {
+                return;
+            }
+            var next = parseInt(btn.getAttribute('data-page'), 10) || 0;
+            if (!next || next === currentPage) {
+                return;
+            }
+            currentPage = next;
+            applyListView();
         });
     }
 

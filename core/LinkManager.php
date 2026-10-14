@@ -10,12 +10,18 @@ class LinkManager
     const STATUS_APPROVED = 1;
     const STATUS_REJECTED = 2;
 
+    /** 友情链接 */
     const KIND_FRIEND = 0;
+    /** 合作伙伴 */
     const KIND_PARTNER = 1;
+    /** 赞助 */
     const KIND_SPONSOR = 2;
 
     const ENABLED_OFF = 0;
     const ENABLED_ON = 1;
+
+    /** @var bool|null */
+    private static $hasUseridCol = null;
 
     /**
      * @return string
@@ -37,6 +43,32 @@ class LinkManager
         } catch (Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * @deprecated E426 开发者申请已迁 feedback；仅迁移 DROP 列后清缓存
+     * @return bool
+     */
+    public static function hasUseridColumn()
+    {
+        if (self::$hasUseridCol !== null) {
+            return self::$hasUseridCol;
+        }
+        try {
+            self::$hasUseridCol = class_exists('DatabaseMigrator')
+                && DatabaseMigrator::tableColumnExists('link', 'userid');
+        } catch (Exception $e) {
+            self::$hasUseridCol = false;
+        }
+        return self::$hasUseridCol;
+    }
+
+    /**
+     * @return void
+     */
+    public static function resetUseridColumnCache()
+    {
+        self::$hasUseridCol = null;
     }
 
     /**
@@ -293,42 +325,136 @@ class LinkManager
     }
 
     /**
-     * @param int|null $status null=全部（审核态）
-     * @param int|null $kind   null=全部类型
-     * @return array<int, array>
+     * 后台 Tab 条件。友链：pending / approved / disabled
+     *
+     * @param string $tab
+     * @param int    $kind
+     * @return array{sql:string,params:array}
      */
-    public static function listAll($status = null, $kind = null)
+    public static function tabFilterSql($tab, $kind = self::KIND_FRIEND)
     {
+        $tab = trim((string) $tab);
+        $kind = self::normalizeKind($kind);
+        if ($tab === 'pending') {
+            return array(
+                'sql'    => '`status` = ?',
+                'params' => array(self::STATUS_PENDING),
+            );
+        }
+        if ($tab === 'approved') {
+            return array(
+                'sql'    => '`status` = ? AND `enabled` = ?',
+                'params' => array(self::STATUS_APPROVED, self::ENABLED_ON),
+            );
+        }
+        return array(
+            'sql'    => '(`status` = ? OR (`status` = ? AND `enabled` = ?))',
+            'params' => array(self::STATUS_REJECTED, self::STATUS_APPROVED, self::ENABLED_OFF),
+        );
+    }
+
+    /**
+     * @param int $kind
+     * @return array{pending:int,approved:int,disabled?:int,rejected?:int}
+     */
+    public static function countTabs($kind)
+    {
+        $kind = self::normalizeKind($kind);
+        $empty = array('pending' => 0, 'approved' => 0, 'disabled' => 0);
         if (!self::tableReady()) {
-            return array();
+            return $empty;
         }
         try {
             $pdo = Database::connect();
-            $sql = 'SELECT * FROM `' . self::table() . '` WHERE 1=1';
-            $params = array();
-            if ($kind !== null) {
-                $sql .= ' AND `kind` = ?';
-                $params[] = self::normalizeKind($kind);
-            }
-            if ($status !== null) {
-                $sql .= ' AND `status` = ?';
-                $params[] = self::normalizeStatus($status);
-            }
-            $sql .= ' ORDER BY `sort` ASC, `id` DESC';
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $out = array();
-            if (is_array($rows)) {
-                foreach ($rows as $row) {
-                    if (is_array($row)) {
-                        $out[] = self::formatRow($row);
-                    }
-                }
+            $table = '`' . self::table() . '`';
+            $out = $empty;
+            $tabs = array('pending', 'approved', 'disabled');
+            foreach ($tabs as $tab) {
+                $tf = self::tabFilterSql($tab, $kind);
+                $stmt = $pdo->prepare(
+                    'SELECT COUNT(*) FROM ' . $table . ' WHERE `kind` = ? AND ' . $tf['sql']
+                );
+                $stmt->execute(array_merge(array($kind), $tf['params']));
+                $out[$tab] = (int) $stmt->fetchColumn();
             }
             return $out;
         } catch (Exception $e) {
-            return array();
+            return $empty;
+        }
+    }
+
+    /**
+     * 后台真分页。友链须传 tab；伙伴/赞助不传 tab 则按 kind 全量分页。
+     *
+     * @param array $opts kind, tab?, page, pagesize
+     * @return array{list:array,total:int,page:int,pagesize:int,counts:array}
+     */
+    public static function listPaged(array $opts = array())
+    {
+        $page = max(1, (int) (isset($opts['page']) ? $opts['page'] : 1));
+        $pagesize = max(1, min(50, (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20)));
+        $kind = self::normalizeKind(isset($opts['kind']) ? $opts['kind'] : self::KIND_FRIEND);
+        $tab = isset($opts['tab']) ? trim((string) $opts['tab']) : '';
+        $useTabs = ($kind === self::KIND_FRIEND);
+        $counts = $useTabs ? self::countTabs($kind) : array('all' => 0);
+        $empty = array(
+            'list'     => array(),
+            'total'    => 0,
+            'page'     => $page,
+            'pagesize' => $pagesize,
+            'counts'   => $counts,
+        );
+        if (!self::tableReady()) {
+            return $empty;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = '`' . self::table() . '`';
+            $where = array('`kind` = ?');
+            $params = array($kind);
+            if ($useTabs) {
+                if ($tab !== 'pending' && $tab !== 'approved' && $tab !== 'disabled') {
+                    $tab = 'pending';
+                }
+                $tf = self::tabFilterSql($tab, $kind);
+                $where[] = $tf['sql'];
+                foreach ($tf['params'] as $p) {
+                    $params[] = $p;
+                }
+                $total = isset($counts[$tab]) ? (int) $counts[$tab] : 0;
+            } else {
+                $cnt = $pdo->prepare('SELECT COUNT(*) FROM ' . $table . ' WHERE `kind` = ?');
+                $cnt->execute(array($kind));
+                $total = (int) $cnt->fetchColumn();
+                $counts = array('all' => $total);
+            }
+            $maxPage = max(1, (int) ceil($total / $pagesize));
+            if ($page > $maxPage) {
+                $page = $maxPage;
+            }
+            $offset = (int) (($page - 1) * $pagesize);
+            $sql = 'SELECT * FROM ' . $table . ' WHERE ' . implode(' AND ', $where)
+                . ' ORDER BY `sort` ASC, `id` DESC LIMIT ' . $pagesize . ' OFFSET ' . $offset;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $list = array();
+            if (is_array($rows)) {
+                foreach ($rows as $row) {
+                    if (is_array($row)) {
+                        $list[] = self::formatRow($row);
+                    }
+                }
+            }
+            return array(
+                'list'     => $list,
+                'total'    => $total,
+                'page'     => $page,
+                'pagesize' => $pagesize,
+                'counts'   => $counts,
+            );
+        } catch (Exception $e) {
+            return $empty;
         }
     }
 
@@ -552,17 +678,22 @@ class LinkManager
     /**
      * @param int   $id
      * @param array $data
+     * @param int   $expectedKind
      * @return true|string
      */
-    public static function update($id, array $data)
+    public static function update($id, array $data, $expectedKind)
     {
         $id = (int) $id;
+        $expectedKind = self::normalizeKind($expectedKind);
         $existing = self::findById($id);
         if (!is_array($existing)) {
             return '记录不存在';
         }
 
         $kind = self::normalizeKind(isset($existing['kind']) ? $existing['kind'] : self::KIND_FRIEND);
+        if ($kind !== $expectedKind) {
+            return '记录不存在';
+        }
         $name = trim((string) (isset($data['name']) ? $data['name'] : $existing['name']));
         $siteurlRaw = array_key_exists('siteurl', $data)
             ? trim((string) $data['siteurl'])
@@ -632,8 +763,16 @@ class LinkManager
             );
             $stmt->execute(array(
                 $name, $siteurl, $icon, $description, $contact,
-                $enabled, $status, $sort, $id, $kind,
+                $enabled, $status, $sort, $id, $expectedKind,
             ));
+            if ($stmt->rowCount() === 0) {
+                $updated = self::findById($id);
+                if (!is_array($updated)
+                    || self::normalizeKind(isset($updated['kind']) ? $updated['kind'] : -1) !== $expectedKind
+                ) {
+                    return '记录不存在';
+                }
+            }
             self::invalidateCache();
             return true;
         } catch (Exception $e) {
@@ -653,16 +792,28 @@ class LinkManager
         if (!is_array($row)) {
             return '友链不存在';
         }
-        if (self::normalizeKind(isset($row['kind']) ? $row['kind'] : 0) !== self::KIND_FRIEND) {
+        $kind = self::normalizeKind(isset($row['kind']) ? $row['kind'] : 0);
+        if ($kind !== self::KIND_FRIEND) {
             return '合作伙伴无需审核';
         }
         $status = self::normalizeStatus($status);
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'UPDATE `' . self::table() . '` SET `status` = ?, `updatetime` = NOW() WHERE `id` = ? LIMIT 1'
+                'UPDATE `' . self::table() . '` SET `status` = ?, `updatetime` = NOW()
+                 WHERE `id` = ? AND `kind` = ? LIMIT 1'
             );
-            $stmt->execute(array($status, $id));
+            $stmt->execute(array($status, $id, self::KIND_FRIEND));
+            // PDO/MySQL 在值未变时 rowCount 可能为 0，不能据此判失败
+            if ($stmt->rowCount() === 0) {
+                $again = self::findById($id);
+                if (!is_array($again)
+                    || self::normalizeKind(isset($again['kind']) ? $again['kind'] : -1) !== self::KIND_FRIEND
+                    || self::normalizeStatus(isset($again['status']) ? $again['status'] : -1) !== $status
+                ) {
+                    return '友链不存在';
+                }
+            }
             self::invalidateCache();
             return true;
         } catch (Exception $e) {
@@ -675,21 +826,39 @@ class LinkManager
      *
      * @param int $id
      * @param int $enabled
+     * @param int $expectedKind
      * @return true|string
      */
-    public static function setEnabled($id, $enabled)
+    public static function setEnabled($id, $enabled, $expectedKind)
     {
         $id = (int) $id;
-        if (!is_array(self::findById($id))) {
+        $expectedKind = self::normalizeKind($expectedKind);
+        $row = self::findById($id);
+        if (!is_array($row)) {
+            return '记录不存在';
+        }
+        $kind = self::normalizeKind(isset($row['kind']) ? $row['kind'] : -1);
+        if ($kind !== $expectedKind) {
             return '记录不存在';
         }
         $enabled = self::normalizeEnabled($enabled);
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'UPDATE `' . self::table() . '` SET `enabled` = ?, `updatetime` = NOW() WHERE `id` = ? LIMIT 1'
+                'UPDATE `' . self::table() . '` SET `enabled` = ?, `updatetime` = NOW()
+                 WHERE `id` = ? AND `kind` = ? LIMIT 1'
             );
-            $stmt->execute(array($enabled, $id));
+            $stmt->execute(array($enabled, $id, $expectedKind));
+            // PDO/MySQL 在值未变时 rowCount 可能为 0，不能据此判不存在
+            if ($stmt->rowCount() === 0) {
+                $again = self::findById($id);
+                if (!is_array($again)
+                    || self::normalizeKind(isset($again['kind']) ? $again['kind'] : -1) !== $expectedKind
+                    || self::normalizeEnabled(isset($again['enabled']) ? $again['enabled'] : -1) !== $enabled
+                ) {
+                    return '记录不存在';
+                }
+            }
             self::invalidateCache();
             return true;
         } catch (Exception $e) {
@@ -699,18 +868,28 @@ class LinkManager
 
     /**
      * @param int $id
+     * @param int $expectedKind
      * @return true|string
      */
-    public static function delete($id)
+    public static function delete($id, $expectedKind)
     {
         $id = (int) $id;
-        if (!is_array(self::findById($id))) {
+        $expectedKind = self::normalizeKind($expectedKind);
+        $row = self::findById($id);
+        if (!is_array($row)
+            || self::normalizeKind(isset($row['kind']) ? $row['kind'] : -1) !== $expectedKind
+        ) {
             return '记录不存在';
         }
         try {
             $pdo = Database::connect();
-            $stmt = $pdo->prepare('DELETE FROM `' . self::table() . '` WHERE `id` = ? LIMIT 1');
-            $stmt->execute(array($id));
+            $stmt = $pdo->prepare(
+                'DELETE FROM `' . self::table() . '` WHERE `id` = ? AND `kind` = ? LIMIT 1'
+            );
+            $stmt->execute(array($id, $expectedKind));
+            if ($stmt->rowCount() === 0) {
+                return '记录不存在';
+            }
             self::invalidateCache();
             return true;
         } catch (Exception $e) {

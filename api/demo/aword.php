@@ -11,7 +11,11 @@
 
 // —— 调用统计（须填本接口在后台的数字 ID；详见 api/统计代码使用说明.md）——
 require_once dirname(__DIR__, 2) . '/core/bootstrap.php';
-ApiStats::hit(1); // ← 改成后台「接口管理」里本接口的真实 ID
+$demoApiId = 0;
+if (class_exists('Config')) {
+    $demoApiId = (int) Config::get('demo_aword_api_id', '0');
+}
+ApiStats::hit($demoApiId > 0 ? $demoApiId : 0);
 
 
 // 禁用错误显示
@@ -93,11 +97,10 @@ foreach ($apiList as $api) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $targetUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
     curl_setopt($ch, CURLOPT_TIMEOUT, 8);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 4);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    vs_curl_ssl_verify($ch);
     curl_setopt($ch, CURLOPT_ENCODING, 'gzip');
     $outHeaders = ApiStats::outboundHeaders();
     $outHeaders[] = 'Accept-Language: zh-CN,zh;q=0.9';
@@ -127,42 +130,45 @@ foreach ($apiList as $api) {
 if ($response === false || $httpCode != 200) {
     http_response_code(502);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
+    echo json_encode(array(
         'error' => 'All upstream APIs failed',
         'code' => $httpCode,
-        'message' => $error
-    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    ), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
 
-// 获取encode参数判断返回类型
-$encode = isset($_GET['encode']) ? strtolower($_GET['encode']) : 'json';
+$encode = isset($_GET['encode']) ? strtolower((string) $_GET['encode']) : 'json';
+header('X-Content-Type-Options: nosniff');
 
-// 输出处理
 if ($encode === 'js') {
-    $callback = isset($_GET['callback']) ? $_GET['callback'] : null;
-    
-    if ($callback) {
-        if (preg_match('/^' . preg_quote($callback, '/') . '\((.+)\);?$/s', $response, $matches)) {
-            $jsonData = json_decode($matches[1], true);
-            if ($jsonData) {
-                $prettyJson = json_encode($jsonData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-                $response = $callback . '(' . $prettyJson . ');';
-            }
-        }
+    $jsonData = json_decode((string) $response, true);
+    if (!is_array($jsonData) && preg_match('/^[A-Za-z_$][A-Za-z0-9_$]{0,63}\((.+)\);?$/s', (string) $response, $m)) {
+        $jsonData = json_decode($m[1], true);
     }
-    header('Content-Type: application/javascript; charset=utf-8');
-} elseif ($encode === 'json' || empty($encode)) {
-    $jsonData = json_decode($response, true);
-    if ($jsonData) {
+    $prettyJson = is_array($jsonData)
+        ? json_encode($jsonData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+        : (string) $response;
+    $rawCb = isset($_GET['callback']) ? $_GET['callback'] : '';
+    $wrapped = JsonpGuard::wrapJsonIfSafe($prettyJson, $rawCb);
+    header('Content-Type: ' . $wrapped['contentType']);
+    echo $wrapped['body'];
+    exit;
+}
+
+if ($encode === 'json' || $encode === '') {
+    $jsonData = json_decode((string) $response, true);
+    if (is_array($jsonData)) {
         $response = json_encode($jsonData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
     }
     header('Content-Type: application/json; charset=utf-8');
-} else {
-    // 其他格式直接转发
-    if ($contentType) {
-        header('Content-Type: ' . $contentType);
-    }
+    echo $response;
+    exit;
 }
 
+$ct = is_string($contentType) ? strtolower(trim(explode(';', $contentType, 2)[0])) : '';
+$allowCt = array('application/json', 'application/javascript', 'text/plain');
+if (!in_array($ct, $allowCt, true)) {
+    $ct = 'text/plain';
+}
+header('Content-Type: ' . $ct . '; charset=utf-8');
 echo $response;

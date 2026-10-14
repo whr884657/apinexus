@@ -59,6 +59,7 @@ $apis = (!$notFound && isset($profile['apis']) && is_array($profile['apis'])) ? 
             <?php
               $points = isset($api['points']) ? (float) $api['points'] : 0;
               $billing = !empty($api['billing_label']) ? (string) $api['billing_label'] : ($points > 0 ? ($points . '积分/次') : '免费');
+              $promoLabel = !empty($api['promo_label']) ? (string) $api['promo_label'] : '';
               $methods = isset($api['methods']) && is_array($api['methods']) ? $api['methods'] : array('GET');
               $m0 = isset($methods[0]) ? strtoupper((string) $methods[0]) : 'GET';
               $detailUrl = !empty($api['detail_url']) ? (string) $api['detail_url'] : ($vsBase . '/detail/' . (int) (isset($api['id']) ? $api['id'] : 0));
@@ -72,6 +73,7 @@ $apis = (!$notFound && isset($profile['apis']) && is_array($profile['apis'])) ? 
               <div class="th5-profile-api__top">
                 <span class="tag free"><?php echo vs_e($m0); ?></span>
                 <span class="tag <?php echo $points > 0 ? 'points' : 'free'; ?>"><?php echo vs_e($billing); ?></span>
+                <?php if ($promoLabel !== ''): ?><span class="tag hot"><?php echo vs_e($promoLabel); ?></span><?php endif; ?>
               </div>
               <div class="th5-profile-api__name"><?php echo vs_e(isset($api['name']) ? $api['name'] : $initial); ?></div>
               <div class="th5-profile-api__meta text-xs text-muted">

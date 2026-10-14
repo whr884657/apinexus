@@ -1,0 +1,197 @@
+{
+    "id": "apirank",
+    "name": "调用排行 API",
+    "desc": "接口调用排行：当天 / 近 7 日 / 近 30 日 / 总计。前三者聚合日统计 TOP；总计读接口累计调用。",
+    "category": "调用排行",
+    "methods": [
+        "GET",
+        "POST"
+    ],
+    "file": "apirank.php",
+    "params": [
+        {
+            "name": "key",
+            "type": "string",
+            "required": true,
+            "description": "系统密钥。三态传钥：① Authorization: Bearer；② Header X-Api-Key / Api-Key / Apikey；③ Query ?key= / ?apikey=（GET 友好；生产优先 Header/Bearer）。亦可用 POST/JSON 的 key / apikey。在「系统设置 → 系统密钥」生成。",
+            "example": "你的系统密钥"
+        },
+        {
+            "name": "period",
+            "type": "string",
+            "required": true,
+            "description": "排行周期（英文 period = 时间段）。必填。填 today（当天，也认 1d/day）、7d（近7日，也认 week）、30d（近30日，也认 month）、total（总计/全站累计，也认 all/alltime/sum）。",
+            "example": "7d"
+        },
+        {
+            "name": "limit",
+            "type": "integer",
+            "required": false,
+            "description": "返回条数（英文 limit = 限制）。整数 1～50，默认 20。控制排行榜列出前多少名。",
+            "example": "20"
+        }
+    ],
+    "response": {
+        "code": 1,
+        "msg": "ok",
+        "period": "7d",
+        "days": 7,
+        "limit": 20,
+        "list": [
+            {
+                "rank": 1,
+                "apiid": 1,
+                "name": "示例接口",
+                "calls": 1234,
+                "detail_url": "https://域名/detail/1",
+                "call_url": "https://域名/apis/xxx",
+                "category": "示例分类"
+            }
+        ]
+    },
+    "doc": "## 使用前准备\n\n1. **系统设置 → 系统密钥** 生成密钥。  \n2. **系统设置 → 系统级 API → 调用排行** 勾选「启用调用排行 API」并保存。  \n3. 当天 / 近 7 日 / 近 30 日依赖日统计 TOP；**总计**读接口表累计 `calls`。请先完成系统升级并有调用产生统计。\n\n## 调用限流（QPM / QPS）\n\n管理员可在「系统设置 → 系统级 API」对应细条自定义本接口每分钟（QPM）与每秒（QPS）上限；**填 0 表示不限制**。超限返回 errcode=12005（请求过于频繁）。\n\n## 怎么带系统密钥（必填）\n\n推荐 `Authorization: Bearer` 或 `X-Api-Key`；也可用 `key` / `apikey`。\n\n## 参数详解\n\n| 英文名 | 中文含义 | 必填？ | 可填什么 | 说明 |\n|--------|----------|--------|----------|------|\n| `key` / `apikey` | 系统密钥 | **是**（或 Header） | 系统密钥 | 鉴权 |\n| `period` | 排行周期 | **是** | `today` / `7d` / `30d` / `total`（及别名） | 决定统计范围 |\n| `limit` | 返回条数 | 否 | 1～50，默认 20 | 榜单长度 |\n\n### period 可选值\n\n| 值 | 中文 | 别名 | 含义 | 数据来源 |\n|----|------|------|------|----------|\n| `today` | 当天 | `1d`、`day` | 当天调用排行 | 日统计 `topjson` |\n| `7d` | 近 7 日 | `week`、`7` | 近 7 天合计 | 日统计 `topjson` 相加 |\n| `30d` | 近 30 日 | `month`、`30` | 近 30 天合计 | 日统计 `topjson` 相加 |\n| `total` | 总计 | `all`、`alltime`、`sum` | 全站历史累计排行 | 接口表 `calls` 字段 |\n\n`today` / `7d` / `30d`：日统计表每天 TOP 汇总后再按周期相加。  \n`total`：前台可见接口按累计调用次数降序；返回里 `days` 为 `0`。\n\n## 返回字段（list 里每一项）\n\n| 字段 | 含义 |\n|------|------|\n| `rank` | 名次（从 1 开始） |\n| `apiid` | 接口数字 ID |\n| `name` | 接口名称 |\n| `calls` | 该周期内（或总计）调用次数 |\n| `detail_url` | 前台详情页链接 |\n| `call_url` | 前台调用地址 |\n| `category` | 分类名（若有） |\n\n顶层还有：`period`（规范化后的周期）、`days`（天数；总计为 0）、`limit`。\n\n## 请求示例（一种类型一块）\n\n### 当天排行\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apirank?period=today&limit=10\"\n```\n\n### 近 7 日排行\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apirank?period=7d&limit=20\"\n```\n\n### 近 30 日排行\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apirank?period=30d&limit=30\"\n```\n\n### 总计排行\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apirank?period=total&limit=20\"\n```\n\n### 近 7 日（默认条数）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apirank?period=7d\"\n```\n\n### 当天（别名 day）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apirank?period=day&limit=10\"\n```\n\n### 近 7 日（别名 week）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apirank?period=week\"\n```\n\n### 近 30 日（别名 month）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apirank?period=month&limit=30\"\n```\n\n### 总计（别名 all）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apirank?period=all&limit=20\"\n```\n",
+    "sample_queries": [
+        {
+            "title": "当天排行",
+            "query": "period=today&limit=10"
+        },
+        {
+            "title": "近 7 日排行",
+            "query": "period=7d&limit=20"
+        },
+        {
+            "title": "近 30 日排行",
+            "query": "period=30d&limit=30"
+        },
+        {
+            "title": "总计排行",
+            "query": "period=total&limit=20"
+        },
+        {
+            "title": "近 7 日（默认条数）",
+            "query": "period=7d"
+        },
+        {
+            "title": "当天（别名 day）",
+            "query": "period=day&limit=10"
+        },
+        {
+            "title": "近 7 日（别名 week）",
+            "query": "period=week"
+        },
+        {
+            "title": "近 30 日（别名 month）",
+            "query": "period=month&limit=30"
+        },
+        {
+            "title": "总计（别名 all）",
+            "query": "period=all&limit=20"
+        }
+    ],
+    "enabled_key": "sysapion",
+    "response_samples": [
+        {
+            "title": "近 7 日排行成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "period": "7d",
+                "days": 7,
+                "limit": 20,
+                "list": [
+                    {
+                        "rank": 1,
+                        "apiid": 1,
+                        "name": "示例接口",
+                        "calls": 1234,
+                        "detail_url": "https://域名/detail/1",
+                        "call_url": "https://域名/apis/xxx",
+                        "category": "示例分类"
+                    }
+                ]
+            }
+        },
+        {
+            "title": "当天排行成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "period": "today",
+                "days": 1,
+                "limit": 10,
+                "list": [
+                    {
+                        "rank": 1,
+                        "apiid": 1,
+                        "name": "示例接口",
+                        "calls": 56,
+                        "detail_url": "https://域名/detail/1",
+                        "call_url": "https://域名/apis/xxx",
+                        "category": "示例分类"
+                    }
+                ]
+            }
+        },
+        {
+            "title": "总计排行成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "period": "total",
+                "days": 0,
+                "limit": 20,
+                "list": [
+                    {
+                        "rank": 1,
+                        "apiid": 1,
+                        "name": "示例接口",
+                        "calls": 99999,
+                        "detail_url": "https://域名/detail/1",
+                        "call_url": "https://域名/apis/xxx",
+                        "category": "示例分类"
+                    }
+                ]
+            }
+        },
+        {
+            "title": "调用排行未启用",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "调用排行 API 未启用",
+                "errcode": 12002
+            }
+        },
+        {
+            "title": "period 非法",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "period 须为 today / 7d / 30d / total",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "密钥无效",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "系统密钥无效或未配置",
+                "errcode": 12001
+            }
+        },
+        {
+            "title": "请求过快",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "请求过于频繁，请稍后再试",
+                "errcode": 12005
+            }
+        }
+    ],
+    "enabled_gate": "apirank"
+}

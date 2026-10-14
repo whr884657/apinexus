@@ -118,7 +118,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error($result);
         }
         AiChatSession::clearAllForActor('user', (int) $userId);
-        $mail = ApiNotify::notifyAdminsPending($result);
+        $mail = array('ok' => false, 'sent' => 0, 'error' => '');
+        try {
+            $mail = MailNotify::notifyAdminsApiPending($result);
+        } catch (Exception $e) {
+            $mail = array('ok' => false, 'sent' => 0, 'error' => '发信异常');
+        }
         $msg = '已提交，等待管理员审核';
         if (!$mail['ok'] && $mail['error'] !== '' && strpos($mail['error'], '已关闭') === false) {
             $msg .= '（管理员邮件未送达：' . $mail['error'] . '）';
@@ -149,7 +154,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AiChatSession::clearAllForActor('user', (int) $userId);
         $row = ApiManager::findById($id);
         $formatted = ApiManager::formatRow($row);
-        $mail = ApiNotify::notifyAdminsPending($formatted);
+        $mail = array('ok' => false, 'sent' => 0, 'error' => '');
+        try {
+            $mail = MailNotify::notifyAdminsApiPending($formatted);
+        } catch (Exception $e) {
+            $mail = array('ok' => false, 'sent' => 0, 'error' => '发信异常');
+        }
         $msg = '已保存并重新提交审核';
         if (!$mail['ok'] && $mail['error'] !== '' && strpos($mail['error'], '已关闭') === false) {
             $msg .= '（管理员邮件未送达：' . $mail['error'] . '）';

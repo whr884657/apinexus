@@ -123,6 +123,12 @@
         "core/theme/fifth/user/pages/logs.php",
         "core/theme/fifth/user/pages/points.php",
         "core/theme/fifth/user/pages/recharge.php",
-        "core/theme/fifth/主题规范.md"
+        "core/theme/fifth/主题规范.md",
+        "core/ApiNotify.php",
+        "core/LinkNotify.php",
+        "core/FeedbackNotify.php",
+        "core/CommentNotify.php",
+        "core/PointsNotify.php",
+        "core/DevApplyNotify.php"
     ]
 }

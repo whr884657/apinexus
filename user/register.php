@@ -11,7 +11,7 @@ require_once VS_ROOT . '/admin/includes/auth_layout.php';
 InstallChecker::requireInstalled();
 UserAuth::redirectIfLoggedIn();
 
-$base = vs_base_url();
+$base = vs_site_base_path();
 $siteName = SiteContext::siteName();
 $mailEnabled = Config::isMailEnabled();
 $registerOpen = RegisterPolicy::isOpen();
@@ -147,8 +147,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($needEmailVerify && $code === '') {
             vs_auth_json(array('code' => 0, 'msg' => '请完整填写注册信息'));
         }
-        if (strlen($password) < 6) {
-            vs_auth_json(array('code' => 0, 'msg' => '密码至少 6 位'));
+        $pwErr = vs_password_policy_ok($password);
+        if ($pwErr !== '') {
+            vs_auth_json(array('code' => 0, 'msg' => $pwErr));
         }
         if ($password !== $confirm) {
             vs_auth_json(array('code' => 0, 'msg' => '两次输入的密码不一致'));

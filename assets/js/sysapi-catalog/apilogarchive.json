@@ -1,0 +1,142 @@
+{
+    "id": "apilogarchive",
+    "name": "调用日志清理 API",
+    "desc": "计划任务/运维：处理超过保留天数的调用日志。三种模式：归档（写入本机后再删在线）、直删（只删在线）、备份到本机（只写不删）。须系统密钥，并启用「调用日志清理 API」。",
+    "category": "运维任务",
+    "methods": [
+        "GET",
+        "POST"
+    ],
+    "file": "apilogarchive.php",
+    "params": [
+        {
+            "name": "key",
+            "type": "string",
+            "required": true,
+            "description": "系统密钥。三态传钥：① Authorization: Bearer；② Header X-Api-Key / Api-Key / Apikey；③ Query ?key= / ?apikey=（GET 友好；生产优先 Header/Bearer）。亦可用 POST/JSON 的 key / apikey。在「系统设置 → 系统密钥」生成。",
+            "example": "你的系统密钥"
+        },
+        {
+            "name": "action",
+            "type": "string",
+            "required": true,
+            "description": "清理模式（参数名 action）。必填，只能填其一：archive＝归档（把过期日志写入本机冷库后，再从在线库删除）；purge＝直删（不写本机，只从在线库删除过期日志）；mirror＝备份到本机（只写入本机冷库，在线库一行都不删）。",
+            "example": "archive"
+        }
+    ],
+    "response": {
+        "code": 1,
+        "msg": "归档完成",
+        "mode": "archive",
+        "archived": 120,
+        "deleted": 120,
+        "days": [
+            "2026-09-01"
+        ]
+    },
+    "doc": "## 使用前准备\n\n1. **系统设置 → 系统密钥** 生成密钥。  \n2. **系统设置 → 系统级 API → 调用日志清理** 勾选「启用调用日志清理 API」，并设好 **保留天数**（只有超过该天数的日志才会被处理）。  \n3. `archive`（归档）与 `mirror`（备份到本机）需要 PHP **PDO SQLite**；`purge`（直删）不需要。\n\n## 请求怎么发\n\n- GET 或 POST；**必须**带 `action`，不会偷偷跑默认模式。  \n- 成功 `code=1`；看 `mode`、`archived`、`deleted`。  \n- 破坏性：`purge` 会直接删在线库且不写本地，请谨慎；限流见下方「调用限流（QPM / QPS）」。\n\n## 调用限流（QPM / QPS）\n\n管理员可在「系统设置 → 系统级 API」对应细条自定义本接口每分钟（QPM）与每秒（QPS）上限；**填 0 表示不限制**。超限返回 errcode=12005（请求过于频繁）。\n\n\n## 怎么带系统密钥（必填）\n\n与卡密对接相同：推荐 `Authorization: Bearer` 或 `X-Api-Key`；不推荐 `?key=`。\n\n## 参数详解\n\n| 英文名 | 中文含义 | 必填？ | 可填什么 | 说明 |\n|--------|----------|--------|----------|------|\n| `key` / `apikey` | 系统密钥 | **是**（或 Header） | 系统密钥字符串 | 鉴权 |\n| `action` | 清理模式 | **是** | `archive` / `purge` / `mirror` | 见下表三种模式 |\n\n## 三种模式（务必读清）\n\n| 参数值 | 中文叫法 | 会不会写入本机冷库 | 会不会删除在线库过期日志 | 适合做什么 |\n|--------|----------|--------------------|--------------------------|------------|\n| `archive` | 归档 | **会** | **会（删除不可恢复）** | 日常计划任务：先备份再腾在线库 |\n| `purge` | 直删 | 否 | **会（删除不可恢复）** | 只要腾库、不需要本机副本 |\n| `mirror` | 备份到本机 | **会** | **否**（在线库原样保留） | 先留一份本机副本，暂时还不想删库 |\n\n说明：\n\n- 「本机冷库」＝服务器上的本地 SQLite 归档文件，不是云镜像、也不是磁盘克隆。  \n- 「备份到本机」＝把过期日志**复制写入**冷库；**不会**清空或删减在线库。  \n- 「归档」＝写入冷库 **并且** 删掉在线库里对应过期行。  \n- 「直删」＝**不写**冷库，直接删在线库过期行。\n\n> 后台只负责打开「启用」开关；**具体跑哪种模式完全由本次请求的 action 决定**。计划任务请写死 action；`purge` 请慎用。\n\n## 返回字段\n\n| 字段 | 含义 |\n|------|------|\n| `code` | `1` 成功 / `0` 失败 |\n| `msg` | 说明文字 |\n| `mode` | 实际执行的模式 |\n| `archived` | 写入冷库的条数（直删时多为 0） |\n| `deleted` | 从在线库删除的条数（备份到本机时多为 0） |\n| `days` | 涉及日期列表（若有） |\n\n## 请求示例（一种类型一块）\n\n### 归档：写入本机冷库，再删除在线库过期日志\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apilogarchive?action=archive\"\n```\n\n### 直删：只删除在线库过期日志，不写本机\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apilogarchive?action=purge\"\n```\n\n### 备份到本机：只写入冷库，不删除在线库\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apilogarchive?action=mirror\"\n```\n\n## 计划任务示例\n\n每天 2 点做一次归档（把密钥换成你的；也可改成 purge / mirror）：\n\n```bash\n0 2 * * * curl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/apilogarchive?action=archive\"\n```\n",
+    "sample_queries": [
+        {
+            "title": "归档：写入本机冷库，再删除在线库过期日志",
+            "query": "action=archive"
+        },
+        {
+            "title": "直删：只删除在线库过期日志，不写本机",
+            "query": "action=purge"
+        },
+        {
+            "title": "备份到本机：只写入冷库，不删除在线库",
+            "query": "action=mirror"
+        }
+    ],
+    "enabled_key": "sysapion",
+    "response_samples": [
+        {
+            "title": "归档成功（已写冷库并删在线）",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "归档完成",
+                "mode": "archive",
+                "archived": 120,
+                "deleted": 120,
+                "days": [
+                    "2026-09-01"
+                ]
+            }
+        },
+        {
+            "title": "直删成功（只删在线、未写冷库）",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "清理完成",
+                "mode": "purge",
+                "archived": 0,
+                "deleted": 80,
+                "days": [
+                    "2026-09-01"
+                ]
+            }
+        },
+        {
+            "title": "备份到本机成功（已写冷库、未删在线）",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "镜像完成",
+                "mode": "mirror",
+                "archived": 50,
+                "deleted": 0,
+                "days": [
+                    "2026-09-01"
+                ]
+            }
+        },
+        {
+            "title": "清理 API 未启用",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "调用日志清理 API 未启用",
+                "mode": "archive",
+                "archived": 0,
+                "deleted": 0,
+                "days": [],
+                "errcode": 12002
+            }
+        },
+        {
+            "title": "缺少或错误的 action",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "缺少或错误的 action（须为 archive / purge / mirror）",
+                "mode": "",
+                "archived": 0,
+                "deleted": 0,
+                "days": [],
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "密钥无效",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "系统密钥无效或未配置",
+                "errcode": 12001
+            }
+        },
+        {
+            "title": "请求过快",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "请求过于频繁，请稍后再试",
+                "errcode": 12005
+            }
+        }
+    ],
+    "enabled_gate": "apilogarchive"
+}

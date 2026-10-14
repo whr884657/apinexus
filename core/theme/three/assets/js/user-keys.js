@@ -27,10 +27,18 @@
     var expireTitle = expirePicker ? expirePicker.querySelector('[data-dt-title]') : null;
     var fallbackInput = document.getElementById('userTokenFormFallback');
     var submitBtn = document.getElementById('userTokenFormSubmitBtn');
+    var scopeAll = document.getElementById('userTokenScopeAll');
+    var scopeList = document.getElementById('userTokenScopeList');
+    var scopeSummaryWrap = document.getElementById('userTokenScopeSummaryWrap');
+    var scopeSummary = document.getElementById('userTokenScopeSummary');
+    var scopePickBtn = document.getElementById('userTokenScopePickBtn');
+    var scopePicker = document.getElementById('userTokenScopePicker');
     var formMode = 'create';
     var maxTokens = parseInt(page.getAttribute('data-token-max') || '3', 10) || 3;
     var dtView = { y: 0, m: 0 };
     var dtSelected = null;
+    var scopeState = { open: true, c: [], a: [] };
+    var scopeVisibleJson = '';
 
     if (formOverlay && formOverlay.parentNode !== document.body) {
         document.body.appendChild(formOverlay);
@@ -38,13 +46,17 @@
     if (expirePicker && expirePicker.parentNode !== document.body) {
         document.body.appendChild(expirePicker);
     }
+    if (scopePicker && scopePicker.parentNode !== document.body) {
+        document.body.appendChild(scopePicker);
+    }
 
     function escapeHtml(text) {
         return String(text)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     /** 密钥累计消耗展示（与服务端 PayConfig::fmtPoints 观感接近） */
@@ -259,6 +271,77 @@
         return window.VS.postForm(fd);
     }
 
+    if (window.VsTokenScopePicker) {
+        window.VsTokenScopePicker.init({ postAction: postAction });
+    }
+
+    function parseScopeJsonAttr(raw) {
+        var s = String(raw || '').trim();
+        if (!s) {
+            return { c: [], a: [] };
+        }
+        try {
+            var o = JSON.parse(s);
+            return {
+                c: (o && o.c) ? o.c : [],
+                a: (o && o.a) ? o.a : []
+            };
+        } catch (e) {
+            return { c: [], a: [] };
+        }
+    }
+
+    function syncScopeUi() {
+        var isList = !scopeState.open;
+        if (scopeAll) {
+            scopeAll.checked = !isList;
+        }
+        if (scopeList) {
+            scopeList.checked = isList;
+        }
+        if (scopeSummaryWrap) {
+            scopeSummaryWrap.hidden = !isList;
+        }
+        if (scopeSummary) {
+            var label = window.VsTokenScopePicker
+                ? window.VsTokenScopePicker.summaryText(scopeState)
+                : (isList ? '指定范围' : '不限制（全部接口）');
+            scopeSummary.textContent = label;
+        }
+    }
+
+    function setScopeFromToken(tokenOrRow) {
+        var open = true;
+        var c = [];
+        var a = [];
+        if (tokenOrRow && typeof tokenOrRow === 'object' && !tokenOrRow.getAttribute) {
+            open = tokenOrRow.scope_open !== false && tokenOrRow.scope_open !== 0 && tokenOrRow.scope_open !== '0';
+            if (tokenOrRow.scope_label === '范围异常') {
+                open = false;
+            }
+            c = tokenOrRow.scope_c || [];
+            a = tokenOrRow.scope_a || [];
+            if (open) {
+                c = [];
+                a = [];
+            }
+        } else if (tokenOrRow && tokenOrRow.getAttribute) {
+            open = tokenOrRow.getAttribute('data-scope-open') !== '0';
+            if (tokenOrRow.getAttribute('data-scope-label') === '范围异常') {
+                open = false;
+            }
+            var parsed = parseScopeJsonAttr(tokenOrRow.getAttribute('data-scopejson'));
+            c = parsed.c;
+            a = parsed.a;
+            if (open) {
+                c = [];
+                a = [];
+            }
+        }
+        scopeState = { open: open, c: c, a: a };
+        syncScopeUi();
+    }
+
     function openOverlay() {
         if (!formOverlay) {
             return;
@@ -279,6 +362,9 @@
             return;
         }
         closeExpirePanel();
+        if (window.VsTokenScopePicker && window.VsTokenScopePicker.isOpen()) {
+            window.VsTokenScopePicker.close();
+        }
         formOverlay.hidden = true;
         formOverlay.setAttribute('aria-hidden', 'true');
         formOverlay.classList.remove('is-open');
@@ -332,6 +418,10 @@
         return listEl.querySelector('.vs-api-list-table__body') || listEl;
     }
 
+    function formatScopeLabelHtml(label) {
+        return escapeHtml(String(label || '')).replace(/(\d+)/g, '<strong>$1</strong>');
+    }
+
     function buildRowHtml(token) {
         var id = parseInt(token.id, 10) || 0;
         var enabled = parseInt(token.status, 10) === 1;
@@ -341,12 +431,20 @@
         var quotafallback = parseInt(token.quotafallback, 10) === 1 ? 1 : 0;
         var expireRaw = token.expiretime != null ? String(token.expiretime) : '';
         var html = '';
+        var scopeOpen = token.scope_open !== false && token.scope_open !== 0 && token.scope_open !== '0' ? 1 : 0;
+        var scopeC = token.scope_c || [];
+        var scopeA = token.scope_a || [];
+        var scopeLabel = token.scope_label || (scopeOpen ? '全部可调用' : '指定范围');
+        var scopeJsonAttr = scopeOpen ? '' : JSON.stringify({ c: scopeC, a: scopeA });
         html += '<div class="vs-api-item vs-token-row' + (enabled ? '' : ' is-token-disabled') + '"'
             + ' data-token-row="' + id + '" data-token-status="' + (enabled ? '1' : '0') + '"'
             + ' data-quota="' + escapeHtml(String(quota)) + '"'
             + ' data-quotaused="' + escapeHtml(String(quotaused)) + '"'
             + ' data-quotafallback="' + quotafallback + '"'
-            + ' data-expiretime="' + escapeHtml(expireRaw) + '">';
+            + ' data-expiretime="' + escapeHtml(expireRaw) + '"'
+            + ' data-scope-open="' + scopeOpen + '"'
+            + ' data-scopejson="' + escapeHtml(scopeJsonAttr) + '"'
+            + ' data-scope-label="' + escapeHtml(scopeLabel) + '">';
         html += '<div class="vs-api-item__icon vs-token-row__icon" aria-hidden="true"><span class="vs-token-row__icon-mark">SK</span></div>';
         html += '<div class="vs-api-item__title">';
         html += '<span class="vs-api-item__name" data-field="remark">' + escapeHtml(token.remark || '') + '</span>';
@@ -362,14 +460,14 @@
             + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
             + '</button>';
         html += '</div>';
-        html += '<div class="vs-token-row__quota" data-field="quota_label" title="配额（剩余/上限）">'
-            + '<span class="vs-token-row__lbl">配额</span> ' + escapeHtml(fmtQuotaLabel(token)) + '</div>';
-        html += '<div class="vs-token-row__expire" data-field="expire_label" title="有效期">'
-            + '<span class="vs-token-row__lbl">有效期</span> ' + escapeHtml(expireLabelOf(token)) + '</div>';
-        html += '<div class="vs-api-item__calls vs-token-row__calls" title="调用次数">调用 <strong data-field="calls">'
-            + (parseInt(token.calls, 10) || 0) + '</strong></div>';
-        html += '<div class="vs-api-item__spent vs-token-row__spent" title="累计消耗积分">消耗 <strong data-field="pointsspent">'
-            + escapeHtml(fmtSpent(token.pointsspent)) + '</strong></div>';
+        html += '<div class="vs-token-row__stats">';
+        html += '<div class="vs-token-row__scope" data-field="scope_label">' + formatScopeLabelHtml(scopeLabel) + '</div>';
+        html += '<div class="vs-token-row__meta">';
+        html += '配额 <strong data-field="quota_label">' + escapeHtml(fmtQuotaLabel(token)) + '</strong>';
+        html += ' · 有效期 <strong data-field="expire_label">' + escapeHtml(expireLabelOf(token)) + '</strong>';
+        html += ' · 调用 <strong data-field="calls">' + (parseInt(token.calls, 10) || 0) + '</strong>';
+        html += ' · 消耗 <strong data-field="pointsspent">' + escapeHtml(fmtSpent(token.pointsspent)) + '</strong>';
+        html += '</div></div>';
         html += '<div class="vs-api-item__tags">';
         html += '<span class="vs-api-tag vs-api-tag--status ' + statusClass + '" data-field="status_label">'
             + escapeHtml(token.status_label || '') + '</span>';
@@ -419,6 +517,9 @@
         if (fallbackInput) {
             fallbackInput.checked = false;
         }
+        scopeState = { open: true, c: [], a: [] };
+        scopeVisibleJson = '';
+        syncScopeUi();
     }
 
     function openCreate() {
@@ -463,6 +564,7 @@
         if (fallbackInput) {
             fallbackInput.checked = row.getAttribute('data-quotafallback') === '1';
         }
+        setScopeFromToken(row);
         if (submitBtn) {
             submitBtn.textContent = '保存';
         }
@@ -552,6 +654,10 @@
         if (e.key !== 'Escape') {
             return;
         }
+        if (window.VsTokenScopePicker && window.VsTokenScopePicker.isOpen()) {
+            window.VsTokenScopePicker.close();
+            return;
+        }
         if (expirePicker && !expirePicker.hidden) {
             closeExpirePanel();
             return;
@@ -560,6 +666,54 @@
             closeOverlay();
         }
     });
+
+    function onScopeModeChange() {
+        if (scopeList && scopeList.checked) {
+            scopeState.open = false;
+            syncScopeUi();
+        } else {
+            scopeState = { open: true, c: [], a: [] };
+            syncScopeUi();
+        }
+    }
+    if (scopeAll) {
+        scopeAll.addEventListener('change', onScopeModeChange);
+    }
+    if (scopeList) {
+        scopeList.addEventListener('change', onScopeModeChange);
+    }
+    if (scopePickBtn) {
+        scopePickBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (!window.VsTokenScopePicker) {
+                window.VS.showMessage('范围选择器未加载', 'error');
+                return;
+            }
+            window.VsTokenScopePicker.open({
+                open: false,
+                c: scopeState.c || [],
+                a: scopeState.a || []
+            }, function (result) {
+                scopeState = {
+                    open: !!result.open,
+                    c: result.c || [],
+                    a: result.a || []
+                };
+                if (window.VsTokenScopePicker) {
+                    var vis = window.VsTokenScopePicker.buildPayload(false);
+                    scopeVisibleJson = (vis && vis.scope_visible) ? vis.scope_visible : '';
+                }
+                if (scopeState.open) {
+                    if (scopeAll) {
+                        scopeAll.checked = true;
+                    }
+                } else if (scopeList) {
+                    scopeList.checked = true;
+                }
+                syncScopeUi();
+            });
+        });
+    }
 
     function copySecret(text) {
         var value = String(text || '');
@@ -718,6 +872,13 @@
             if (submitBtn) {
                 submitBtn.disabled = true;
             }
+            if (scopeList && scopeList.checked && (!scopeState.c || !scopeState.c.length) && (!scopeState.a || !scopeState.a.length)) {
+                window.VS.showMessage('请至少选择一个接口或分类，或选择不限', 'error');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                }
+                return;
+            }
             var action = formMode === 'update' ? 'update' : 'create';
             var payload = {
                 remark: remark,
@@ -725,6 +886,15 @@
                 expiretime: expireInput ? String(expireInput.value || '').trim() : '',
                 quotafallback: (fallbackInput && fallbackInput.checked) ? '1' : '0'
             };
+            if (scopeList && scopeList.checked) {
+                payload.scope_mode = 'list';
+                payload.scopejson = JSON.stringify({ c: scopeState.c || [], a: scopeState.a || [] });
+                payload.scope_visible = scopeVisibleJson || '';
+            } else {
+                payload.scope_mode = 'all';
+                payload.scopejson = '';
+                payload.scope_visible = '';
+            }
             if (action === 'update') {
                 payload.token_id = formId ? formId.value : '';
             }
@@ -753,5 +923,6 @@
     }
 
     syncExpireTrigger();
+    syncScopeUi();
     syncEmptyAndStats();
 })();

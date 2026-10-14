@@ -149,9 +149,10 @@ class UserCallStats
     /**
      * 从请求解析密钥归属用户（Query / Header / Bearer）
      *
+     * @param array|null $apiRow 当前接口行（含 id/category）；传入时校验密钥接口范围
      * @return array{userid:int,keyid:int,ok:bool,errcode?:int,msg?:string}
      */
-    public static function resolveUserFromRequest()
+    public static function resolveUserFromRequest($apiRow = null)
     {
         $empty = array('userid' => 0, 'keyid' => 0, 'ok' => false);
         if (!class_exists('ApiKeyManager') || !ApiKeyManager::tableReady()) {
@@ -204,6 +205,8 @@ class UserCallStats
             ));
         }
         $sawDisabled = false;
+        $sawScopeDeny = false;
+        $apiForScope = (is_array($apiRow) && isset($apiRow['id'])) ? $apiRow : null;
         foreach ($candidates as $raw) {
             $row = ApiKeyManager::findBySecret($raw);
             if (!$row) {
@@ -218,6 +221,10 @@ class UserCallStats
                     'errcode' => ApiError::KEY_EXPIRED,
                     'msg'     => '密钥已过期',
                 ));
+            }
+            if ($apiForScope !== null && !ApiKeyManager::allowsApi($row, $apiForScope)) {
+                $sawScopeDeny = true;
+                continue;
             }
             // 个人调用统计接口本身为密钥必须；在此校验所有者 IP 白名单
             if (class_exists('UserIpAllow')) {
@@ -239,6 +246,12 @@ class UserCallStats
             return array_merge($empty, array(
                 'errcode' => ApiError::KEY_DISABLED,
                 'msg'     => '密钥已禁用',
+            ));
+        }
+        if ($sawScopeDeny) {
+            return array_merge($empty, array(
+                'errcode' => ApiError::KEY_SCOPE,
+                'msg'     => '该密钥无权调用本接口，请更换密钥或调整该密钥的接口范围',
             ));
         }
         return array_merge($empty, array(
@@ -345,6 +358,18 @@ class UserCallStats
             }
         }
         return $out;
+    }
+
+    /**
+     * 将 apiid+calls 排行转为对外简表（name + calls）
+     *
+     * @param array $rows 每项含 apiid、calls
+     * @return array<int,array{name:string,calls:int}>
+     */
+    public static function publicRankList(array $rows)
+    {
+        $nameMap = self::apiNameMap($rows);
+        return self::formatRankList($rows, $nameMap);
     }
 
     /**

@@ -188,11 +188,14 @@ $activeThemeName = isset($activeMeta['name']) ? (string) $activeMeta['name'] : $
 vs_admin_layout_start('主题设置', 'theme');
 ?>
 
-<div class="vs-panel vs-theme-settings" id="themeSettingsPage" data-active-theme="<?php echo vs_e($activeTheme); ?>" data-active-name="<?php echo vs_e($activeThemeName); ?>">
-    <nav class="vs-product-tabs vs-theme-settings__tabs" aria-label="主题设置导航">
-        <button type="button" class="vs-product-tabs__btn is-active" data-tab="switch" aria-selected="true">主题切换</button>
-        <button type="button" class="vs-product-tabs__btn" data-tab="config" aria-selected="false">主题设置</button>
-    </nav>
+<div class="vs-theme-settings" id="themeSettingsPage" data-active-theme="<?php echo vs_e($activeTheme); ?>" data-active-name="<?php echo vs_e($activeThemeName); ?>">
+    <?php /* Tab 条无大白底壳（E406/E407）；主题卡/配置在板外自成一体 */ ?>
+    <div class="vs-theme-settings__tabs-shell">
+        <nav class="vs-product-tabs vs-theme-settings__tabs" aria-label="主题设置导航">
+            <button type="button" class="vs-product-tabs__btn is-active" data-tab="switch" aria-selected="true">主题切换</button>
+            <button type="button" class="vs-product-tabs__btn" data-tab="config" aria-selected="false">主题设置</button>
+        </nav>
+    </div>
 
     <?php if (empty($themes)): ?>
         <?php vs_render_notice('warning', '', '未找到可用主题，请稍后重试或联系管理员。', array('compact' => true)); ?>
@@ -203,10 +206,10 @@ vs_admin_layout_start('主题设置', 'theme');
                     <input type="hidden" name="action" value="save_theme">
                     <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
 
-                    <div class="vs-theme-gallery-wrap">
-                        <div class="vs-theme-gallery">
-                            <?php foreach ($themes as $theme): ?>
-                                <?php $isActive = $theme['id'] === $activeTheme; ?>
+                    <div class="vs-theme-gallery">
+                        <?php foreach ($themes as $theme): ?>
+                            <?php $isActive = $theme['id'] === $activeTheme; ?>
+                            <div class="vs-theme-card-cell" data-theme-id="<?php echo vs_e($theme['id']); ?>">
                                 <label class="vs-theme-card<?php echo $isActive ? ' is-active' : ''; ?>" data-theme-id="<?php echo vs_e($theme['id']); ?>">
                                     <input type="radio" name="frontend_theme" value="<?php echo vs_e($theme['id']); ?>"<?php echo $isActive ? ' checked' : ''; ?>>
                                     <div class="vs-theme-card__preview">
@@ -214,9 +217,6 @@ vs_admin_layout_start('主题设置', 'theme');
                                             <img src="<?php echo vs_e($theme['preview_url']); ?>" alt="<?php echo vs_e($theme['name']); ?>" class="vs-theme-card__img" loading="lazy">
                                         <?php else: ?>
                                             <div class="vs-theme-card__placeholder">预览</div>
-                                        <?php endif; ?>
-                                        <?php if ($isActive): ?>
-                                            <span class="vs-theme-card__status">当前使用</span>
                                         <?php endif; ?>
                                     </div>
                                     <div class="vs-theme-card__body">
@@ -227,22 +227,25 @@ vs_admin_layout_start('主题设置', 'theme');
                                         if ($ver !== '' || $dev !== ''):
                                         ?>
                                             <div class="vs-theme-card__meta">
-                                                <?php if ($ver !== ''): ?>
-                                                    <span class="vs-theme-card__version">v<?php echo vs_e($ver); ?></span>
-                                                <?php endif; ?>
                                                 <?php if ($dev !== ''): ?>
                                                     <span class="vs-theme-card__developer"><?php echo vs_e($dev); ?></span>
+                                                <?php endif; ?>
+                                                <?php if ($ver !== ''): ?>
+                                                    <span class="vs-theme-card__version">v<?php echo vs_e($ver); ?></span>
                                                 <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
                                     </div>
+                                    <?php if ($isActive): ?>
+                                        <span class="vs-theme-card__status">当前使用</span>
+                                    <?php endif; ?>
                                 </label>
-                            <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php /* 悬停/点选非当前主题后 JS 挪到该卡单元格下方（E430）；底栏保存已取消 */ ?>
+                        <div class="vs-theme-card-save" id="themeCardSave" hidden>
+                            <button type="submit" class="vs-btn vs-btn--primary vs-theme-card-save__btn">启用</button>
                         </div>
-                    </div>
-
-                    <div class="vs-form-actions">
-                        <button type="submit" class="vs-btn vs-btn--primary">保存主题</button>
                     </div>
                 </form>
             </div>

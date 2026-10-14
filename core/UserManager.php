@@ -189,6 +189,9 @@ class UserManager
             if ($stmt->rowCount() === 0 && !self::exists($userId)) {
                 return '用户不存在';
             }
+            if (class_exists('UserAuth')) {
+                UserAuth::forgetStatusCache($userId);
+            }
             return true;
         } catch (Exception $e) {
             return '操作失败：' . $e->getMessage();
@@ -212,14 +215,36 @@ class UserManager
         try {
             $pdo = Database::connect();
             $table = Database::table('user');
+            // 读旧角色：降级时结案开发者申请（E424）
+            $prevRole = '';
+            if (class_exists('UserRole') && $role === UserRole::ROLE_USER) {
+                $prev = $pdo->prepare(
+                    'SELECT `role` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
+                );
+                $prev->execute(array($userId));
+                $prevRow = $prev->fetch(PDO::FETCH_ASSOC);
+                $prevRole = $prevRow && isset($prevRow['role'])
+                    ? UserRole::normalize($prevRow['role'])
+                    : '';
+            }
             $stmt = $pdo->prepare('UPDATE `' . $table . '` SET `role` = ? WHERE `id` = ? LIMIT 1');
             $stmt->execute(array($role, $userId));
             if ($stmt->rowCount() === 0 && !self::exists($userId)) {
                 return '用户不存在';
             }
+            if ($prevRole === UserRole::ROLE_DEVELOPER
+                && $role === UserRole::ROLE_USER
+                && class_exists('ApiFeedbackManager')
+                && method_exists('ApiFeedbackManager', 'closeDevAppliesOnDemote')
+            ) {
+                ApiFeedbackManager::closeDevAppliesOnDemote($userId);
+            }
             return true;
         } catch (Exception $e) {
-            return '操作失败：' . $e->getMessage();
+            if (function_exists('error_log')) {
+                error_log('UserManager::setRole: ' . $e->getMessage());
+            }
+            return '设置身份失败';
         }
     }
 
@@ -241,6 +266,14 @@ class UserManager
             $stmt->execute(array($userId));
             if ($stmt->rowCount() === 0) {
                 return '用户不存在';
+            }
+            if (class_exists('ApiFeedbackManager')
+                && method_exists('ApiFeedbackManager', 'deleteDevAppliesForUser')
+            ) {
+                ApiFeedbackManager::deleteDevAppliesForUser($userId);
+            }
+            if (class_exists('UserAuth')) {
+                UserAuth::forgetStatusCache($userId);
             }
             return true;
         } catch (Exception $e) {

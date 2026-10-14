@@ -362,35 +362,18 @@
             + '</article>';
     }
 
-    function renderPagerNums() {
-        if (!pagerNums) return;
-        if (totalPages <= 1) {
-            pagerNums.innerHTML = '';
-            return;
-        }
-        // 中间最多 3 个页码：当前尽量居中（首尾贴边）
-        var start = Math.max(1, page - 1);
-        var end = Math.min(totalPages, start + 2);
-        start = Math.max(1, end - 2);
-        var html = '';
-        var i;
-        for (i = start; i <= end; i += 1) {
-            html += '<button type="button" class="vs-api-pager__num'
-                + (i === page ? ' is-active' : '')
-                + '" data-page="' + i + '">' + i + '</button>';
-        }
-        pagerNums.innerHTML = html;
-    }
-
     function renderPager() {
         if (footer) footer.hidden = false;
         if (totalEl) totalEl.textContent = '共 ' + (totalCount || 0) + ' 条';
         totalPages = Math.max(1, Math.ceil((totalCount || 0) / getPageSize()) || 1);
         if (page > totalPages) page = totalPages;
         hasMore = page < totalPages;
-        if (prevBtn) prevBtn.disabled = page <= 1;
-        if (nextBtn) nextBtn.disabled = !hasMore;
-        renderPagerNums();
+        if (window.VS && VS.applyLogsPager) {
+            VS.applyLogsPager(page, totalPages, prevBtn, nextBtn, pagerNums);
+        } else {
+            if (prevBtn) prevBtn.disabled = page <= 1;
+            if (nextBtn) nextBtn.disabled = !hasMore;
+        }
     }
 
     function bindListEvents() {

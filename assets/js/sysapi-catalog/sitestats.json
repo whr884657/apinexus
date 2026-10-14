@@ -1,0 +1,93 @@
+{
+    "id": "sitestats",
+    "name": "全站概况 API",
+    "desc": "查询全站累计调用次数、今日调用次数、累计积分消耗、注册用户数。须系统密钥，并启用「全站概况 API」。",
+    "category": "全站概况",
+    "methods": [
+        "GET",
+        "POST"
+    ],
+    "file": "sitestats.php",
+    "params": [
+        {
+            "name": "key",
+            "type": "string",
+            "required": true,
+            "description": "系统密钥。三态传钥：① Authorization: Bearer；② Header X-Api-Key / Api-Key / Apikey；③ Query ?key= / ?apikey=（GET 友好；生产优先 Header/Bearer）。亦可用 POST/JSON 的 key / apikey。在「系统设置 → 系统密钥」生成。",
+            "example": "YOUR_KEY"
+        },
+        {
+            "name": "action",
+            "type": "string",
+            "required": false,
+            "description": "操作类型。目前仅 get（查询全站概况）。不传时默认 get。",
+            "example": "get"
+        }
+    ],
+    "response": {
+        "code": 1,
+        "msg": "ok",
+        "stats": {
+            "calls": 10000,
+            "today_calls": 120,
+            "pointsspent": 350.5,
+            "users": 80
+        }
+    },
+    "doc": "## 使用前准备\n\n1. **系统设置 → 系统密钥** 生成密钥。  \n2. **系统设置 → 系统级 API → 全站概况** 勾选「启用全站概况 API」并保存。  \n3. 返回的是全站汇总数字，不含用户明细、密钥或上游机密。\n\n## 请求怎么发\n\n- GET 或 POST；参数可走 Query / 表单 / JSON。  \n- 成功 `code=1`；失败 `code=0` 看 `msg` / `errcode`。  \n- **禁止** JSONP。\n\n## 调用限流（QPM / QPS）\n\n管理员可在「系统设置 → 系统级 API」对应细条自定义本接口每分钟（QPM）与每秒（QPS）上限；**填 0 表示不限制**。超限返回 errcode=12005（请求过于频繁）。\n\n## 怎么带系统密钥（必填）\n\n推荐 `Authorization: Bearer` 或 `X-Api-Key`；也可用 `key` / `apikey`（不推荐进网址）。\n\n## 参数详解\n\n| 英文名 | 中文含义 | 必填？ | 可填什么 | 说明 |\n|--------|----------|--------|----------|------|\n| `key` / `apikey` | 系统密钥 | **是**（或 Header） | 系统密钥 | 鉴权 |\n| `action` | 操作 | 否 | `get` | 不传默认 get |\n\n## 返回字段（stats）\n\n| 字段 | 含义 |\n|------|------|\n| `calls` | 全站累计调用次数 |\n| `today_calls` | 今日调用次数 |\n| `pointsspent` | 全站累计积分消耗 |\n| `users` | 注册用户数 |\n\n## 请求示例（一种类型一块）\n\n### 查询全站概况\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/sitestats?action=get\"\n```\n\n### 不传 action（默认查询）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/sitestats\"\n```\n",
+    "sample_queries": [
+        {
+            "title": "查询全站概况",
+            "query": "action=get"
+        },
+        {
+            "title": "不传 action（默认查询）",
+            "query": ""
+        }
+    ],
+    "enabled_key": "sysapion",
+    "response_samples": [
+        {
+            "title": "查询成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "stats": {
+                    "calls": 10000,
+                    "today_calls": 120,
+                    "pointsspent": 350.5,
+                    "users": 80
+                }
+            }
+        },
+        {
+            "title": "全站概况 API 未启用",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "全站概况 API 未启用",
+                "errcode": 12002
+            }
+        },
+        {
+            "title": "密钥无效",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "系统密钥无效或未配置",
+                "errcode": 12001
+            }
+        },
+        {
+            "title": "请求过快",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "请求过于频繁，请稍后再试",
+                "errcode": 12005
+            }
+        }
+    ],
+    "enabled_gate": "sitestats"
+}

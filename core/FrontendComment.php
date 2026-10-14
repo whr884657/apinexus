@@ -101,14 +101,14 @@ class FrontendComment
             }
         }
 
-        if (is_array($result) && class_exists('CommentNotify')) {
+        if (is_array($result) && class_exists('MailNotify')) {
             try {
-                CommentNotify::notifyAdminsNew($result);
+                MailNotify::notifyAdminsCommentNew($result);
                 $parentid = isset($result['parentid']) ? (int) $result['parentid'] : 0;
                 if ($parentid > 0) {
                     $parent = CommentManager::findById($parentid);
                     if (is_array($parent)) {
-                        CommentNotify::notifyParentQuoted($result, $parent);
+                        MailNotify::notifyParentQuoted($result, $parent);
                     }
                 }
             } catch (Exception $e) {

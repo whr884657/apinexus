@@ -32,7 +32,7 @@ function vs_theme_auth_head($pageTitle)
     }
     echo '<link rel="stylesheet" href="' . vs_e(ThemeManager::assetUrl($themeId, 'assets/auth.css')) . '?v=' . VS_VERSION . '">' . "\n";
     echo '<link rel="stylesheet" href="' . vs_e(ThemeManager::assetUrl($themeId, 'assets/auth-captcha.css')) . '?v=' . VS_VERSION . '">' . "\n";
-    $base = function_exists('vs_base_url') ? rtrim(vs_base_url(), '/') : '';
+    $base = function_exists('vs_site_base_path') ? vs_site_base_path() : '';
     echo '<script src="' . vs_e($base) . '/assets/js/auth-csrf.js?v=' . VS_VERSION . '"></script>' . "\n";
     echo '</head>' . "\n";
     echo '<body class="th3-auth-body">' . "\n";

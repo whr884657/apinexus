@@ -22,12 +22,10 @@ if (!InstallChecker::isInstalled()) {
 }
 
 vs_require_secure_post();
-/*
-// 仅管理员可上传（后台专用操作）
+// 仅管理员可上传（后台专用操作；禁止注释掉鉴权）
 if (!class_exists('Auth') || !Auth::check()) {
     AjaxResponse::error('无权限操作', 403);
 }
-*/
 // 频控：防持 CSRF 会话批量上传
 $adIp = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
 if (!AuthSecurity::rateLimitAllow('theme_ad_upload_ip:' . $adIp, 20, 60, true)) {
@@ -84,11 +82,19 @@ if ($ext === false) {
 $name = 'ad_' . date('Ymd_His') . '_' . substr(bin2hex(random_bytes(6)), 0, 8) . '.' . $ext;
 
 $targetDir = dirname(__DIR__) . '/assets/img/ad';
+
+// 修复：原子操作 - 使用 mkdir 返回值判断，避免竞态条件
 if (!is_dir($targetDir)) {
-    @mkdir($targetDir, 0755, true);
+    if (!@mkdir($targetDir, 0755, true)) {
+        // 创建失败，可能是权限或并发原因，再检查是否已存在
+        if (!is_dir($targetDir)) {
+            AjaxResponse::error('无法创建上传目录，请检查权限');
+        }
+    }
 }
-if (!is_dir($targetDir) || !is_writable($targetDir)) {
-    AjaxResponse::error('主题图片目录不可写，请检查目录权限');
+
+if (!is_writable($targetDir)) {
+    AjaxResponse::error('上传目录不可写，请检查目录权限');
 }
 
 $targetFile = $targetDir . '/' . $name;
@@ -101,3 +107,4 @@ $url = function_exists('vs_site_path')
     : '/core/theme/muming/assets/img/ad/' . $name;
 
 AjaxResponse::success('上传成功', array('url' => $url));
+

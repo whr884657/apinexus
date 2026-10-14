@@ -312,7 +312,7 @@ class AiApiDoc
             $task = '【本任务】只写「## 错误响应示例」与「## 业务错误码说明」（含完整错误码表）。'
                 . '错误响应 JSON 必须为 {"code":0,"msg":"…","errcode":11001} 形态，禁止写 "http":401。'
                 . '业务错误码须完整列出（不得遗漏）：'
-                . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11019。')
+                . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11025。')
                 . '代理类接口也须写上 11013～11016 与 11017。不要写调用示例与注意事项。';
         } elseif ($sectionId === 'examples') {
             $task = '【本任务】只写「## 调用示例」。必须同时包含两段非空示例：'
@@ -368,7 +368,7 @@ class AiApiDoc
             . '【鉴权强制】密钥传递方式只描述资料中的「首选鉴权」这一种（Query 或 Header 或 Bearer），'
             . '禁止罗列多种密钥请求方式，禁止写「全部支持」「支持全部鉴权方式」。'
             . '业务错误码须完整列出（不得遗漏）：'
-            . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11017。')
+            . (class_exists('ApiError') ? ApiError::aiDetailDocErrcodeClause() : '见平台 ApiError 11001～11025。')
             . '错误响应 JSON 示例必须为 {"code":0,"msg":"…","errcode":11001} 形态，禁止写 "http":401。'
             . '代理类接口也须写上 11013～11016 与 11017。'
             . '【调用示例强制】仅允许放在业务错误码章节之后；文档内调用代码只允许两种：① 终端 curl（bash）；② PHP。'

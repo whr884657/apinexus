@@ -2,6 +2,8 @@
 /**
  * 文件：core/FrontendAnnouncement.php
  * 作用：前台主题 · 已发布公告与弹窗（主题只调用本类）
+ *
+ * 防呆：仅 kind=0（站外公告）。永不读取 kind=2 站内公告；站内公告只进用户中心。
  */
 
 class FrontendAnnouncement

@@ -23,9 +23,14 @@ $billingLabel = !$notFound && !empty($api['billing_label'])
         $points
     );
 $chargeDetailLabel = $billingLabel;
+$promoLabel = !$notFound && !empty($api['promo_label']) ? (string) $api['promo_label'] : '';
+// 计费行用标价（全免不改成「免费」）；活动只追加标签
 if (!$notFound && !empty($api['charge']) && $points > 0) {
     $fmt = rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.');
     $chargeDetailLabel = $fmt . ' 积分 / 次';
+}
+if ($promoLabel !== '') {
+    $chargeDetailLabel .= ' · ' . $promoLabel;
 }
 $callsLabel = !$notFound ? number_format((int) (isset($api['calls']) ? $api['calls'] : 0)) : '0';
 $paramsList = (!$notFound && isset($api['params_list']) && is_array($api['params_list'])) ? $api['params_list'] : array();
@@ -425,15 +430,14 @@ $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
                     $qsByAuthJs[(string) $authKey] = array_map($qsRowToJs, is_array($rows) ? $rows : array());
                 }
             }
-            $qsJsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS;
             ?>
-            window.detailQsLangIcons = <?php echo json_encode(ApiQuickstart::langIconMap(), $qsJsonFlags); ?>;
-            window.detailQsSamples = <?php echo json_encode(array_map($qsRowToJs, $qsSamples), $qsJsonFlags); ?>;
-            window.detailQsBundle = <?php echo json_encode(array(
+            window.detailQsLangIcons = <?php echo vs_json_script(ApiQuickstart::langIconMap()); ?>;
+            window.detailQsSamples = <?php echo vs_json_script(array_map($qsRowToJs, $qsSamples)); ?>;
+            window.detailQsBundle = <?php echo vs_json_script(array(
                 'auths' => isset($qsBundle['auths']) ? $qsBundle['auths'] : array(),
                 'authLabels' => isset($qsBundle['authLabels']) ? $qsBundle['authLabels'] : array(),
                 'byAuth' => $qsByAuthJs,
-            ), $qsJsonFlags); ?>;
+            )); ?>;
             </script>
             <?php endif; ?>
         </div>
@@ -563,7 +567,7 @@ $stFirstTab = isset($stTabs[0]['id']) ? (string) $stTabs[0]['id'] : '';
 <?php
 $jsApi = is_array($pageApiSnapshot) ? $pageApiSnapshot : ((!$notFound && is_array($api)) ? $api : null);
 ?>
-window.detailApiData = <?php echo json_encode($jsApi === null ? null : array(
+window.detailApiData = <?php echo vs_json_script($jsApi === null ? null : array(
     'id' => (int) $jsApi['id'],
     'name' => isset($jsApi['name']) ? $jsApi['name'] : '',
     'endpoint' => $isDisabled ? '' : $endpointCopy,
@@ -574,20 +578,20 @@ window.detailApiData = <?php echo json_encode($jsApi === null ? null : array(
     'needkey' => isset($jsApi['needkey']) ? (int) $jsApi['needkey'] : 0,
     'keyways' => $keywaysList,
     'params_list' => $paramsList,
-), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-window.playgroundKeyContext = <?php echo json_encode(array(
+)); ?>;
+window.playgroundKeyContext = <?php echo vs_json_script(array(
     'loggedIn' => !empty($playground['loggedIn']),
     'apiKeyCount' => isset($playground['apiKeyCount']) ? (int) $playground['apiKeyCount'] : 0,
     'userCenterUrl' => isset($playground['userCenterUrl']) ? (string) $playground['userCenterUrl'] : ($vsBase . '/user/index'),
     'loginUrl' => isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login'),
     'keysUrl' => isset($playground['keysUrl']) ? (string) $playground['keysUrl'] : vs_site_path('/core/front/playground-key.php'),
     'feedbackReady' => !empty($playground['feedbackReady']),
-), JSON_UNESCAPED_UNICODE); ?>;
-window.VS_CSRF_TOKEN = <?php echo json_encode(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
-window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/core/playground/relay.php')); ?>;
-window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(rtrim($vsBase, '/')); ?>;
+)); ?>;
+window.VS_CSRF_TOKEN = <?php echo vs_json_script(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
+window.VS_PLAY_URL = <?php echo vs_json_script(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/core/playground/relay.php')); ?>;
+window.VS_BASE_URL = window.VS_BASE_URL || <?php echo vs_json_script(rtrim($vsBase, '/')); ?>;
 </script>
-<script type="application/json" id="detailPageMarkdownJson"><?php echo json_encode(isset($detailPageMarkdown) ? (string) $detailPageMarkdown : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
+<script type="application/json" id="detailPageMarkdownJson"><?php echo vs_json_script(isset($detailPageMarkdown) ? (string) $detailPageMarkdown : ''); ?></script>
 <script>
 (function(){
     var root=document.getElementById('apiDetailPage');

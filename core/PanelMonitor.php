@@ -1351,9 +1351,8 @@ class PanelMonitor
                 curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
             }
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'ApiNexus-PanelMonitor/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
+            vs_curl_ssl_verify($ch);
+            curl_setopt($ch, CURLOPT_USERAGENT, class_exists('OutboundUa') ? OutboundUa::build('PanelMonitor') : ('ApiNexus-PanelMonitor/' . (defined('VS_VERSION') ? VS_VERSION : '1')));
             $method = strtoupper($method);
             if ($method === 'POST') {
                 curl_setopt($ch, CURLOPT_POST, true);
@@ -1374,7 +1373,10 @@ class PanelMonitor
             return (string) $raw;
         }
 
-        $hdr = '';
+        $uaLine = class_exists('OutboundUa')
+            ? OutboundUa::headerLine('PanelMonitor')
+            : ('User-Agent: ApiNexus-PanelMonitor/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
+        $hdr = $uaLine . "\r\n";
         foreach ($headers as $h) {
             $hdr .= $h . "\r\n";
         }
@@ -1386,10 +1388,7 @@ class PanelMonitor
                 'timeout'       => $timeout,
                 'ignore_errors' => true,
             ),
-            'ssl' => array(
-                'verify_peer'      => false,
-                'verify_peer_name' => false,
-            ),
+            'ssl' => vs_stream_ssl_options(),
         );
         $ctx = stream_context_create($opts);
         $raw = @file_get_contents($url, false, $ctx);

@@ -175,6 +175,17 @@ function vs_theme_admin_render_settings_three($schema, $values)
     echo '</section>';
 
     echo '<section class="th3-admin-settings__section">';
+    echo '<h3 class="th3-admin-settings__title">首页底部合作板块</h3>';
+    echo '<p class="th3-admin-settings__hint">数据来自运营中心「内容运营 → 合作伙伴」。布局为网格卡片；标题与是否显示可自定义。无合作伙伴数据时整块隐藏。</p>';
+    echo '<div class="th3-admin-settings__checks">';
+    $renderCheckbox('show_home_partners');
+    echo '</div>';
+    echo '<div class="th3-admin-settings__grid th3-admin-settings__grid--2" style="margin-top:12px;">';
+    $renderText('home_partners_title');
+    echo '</div>';
+    echo '</section>';
+
+    echo '<section class="th3-admin-settings__section">';
     echo '<h3 class="th3-admin-settings__title">功能开关</h3>';
     echo '<div class="th3-admin-settings__checks">';
     $renderCheckbox('show_home_announce');

@@ -110,7 +110,8 @@ class StatDayManager
                 self::flushTopJson($day);
             }
             if (class_exists('RedisCache')) {
-                RedisCache::forget(RedisCache::KEY_APILOG_TODAY);
+                // 写入路径实时 +1，禁止只 forget 逼读库（E417）
+                RedisCache::bumpApiLogToday(1);
             }
             if (mt_rand(1, 40) === 1) {
                 self::pruneOld();
@@ -278,7 +279,7 @@ class StatDayManager
             }
             self::pruneOld();
             if (class_exists('RedisCache')) {
-                RedisCache::forget(RedisCache::KEY_APILOG_TODAY);
+                RedisCache::forgetApiLogToday();
             }
             return array('ok' => true, 'days' => $filled, 'msg' => '已回填 ' . $filled . ' 天');
         } catch (Exception $e) {

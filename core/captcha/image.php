@@ -26,9 +26,9 @@ if (!class_exists('Captcha') || Captcha::mode($scene) !== Captcha::MODE_LOCAL) {
 $ip = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
 $sid = (session_status() === PHP_SESSION_ACTIVE) ? session_id() : 'nosess';
 if (class_exists('AuthSecurity')) {
-    // 每分钟：同 IP 30 次；同会话 20 次
-    if (!AuthSecurity::rateLimitAllow('captcha_img_ip:' . $ip, 60, 30, true)
-        || !AuthSecurity::rateLimitAllow('captcha_img_sid:' . $sid, 60, 20, true)
+    // 每分钟：同 IP 15 次；同会话 10 次（抗刷图+OCR）
+    if (!AuthSecurity::rateLimitAllow('captcha_img_ip:' . $ip, 60, 15, true)
+        || !AuthSecurity::rateLimitAllow('captcha_img_sid:' . $sid, 60, 10, true)
     ) {
         header('HTTP/1.1 429 Too Many Requests');
         header('Retry-After: 60');

@@ -10,7 +10,7 @@ define('VS_ROOT', __DIR__);
 require_once VS_ROOT . '/core/bootstrap.php';
 
 if (!InstallChecker::isInstalled()) {
-    vs_redirect(vs_base_url() . '/install/');
+    vs_redirect(vs_site_path('/install/'));
 }
 
 $seo = vs_page_seo_pack('', array(

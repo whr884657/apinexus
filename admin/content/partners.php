@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'description' => isset($_POST['description']) ? (string) $_POST['description'] : '',
             'sort'        => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
             'enabled'     => isset($_POST['enabled']) ? (int) $_POST['enabled'] : LinkManager::ENABLED_ON,
-        ));
+        ), LinkManager::KIND_PARTNER);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($enabled, array(LinkManager::ENABLED_OFF, LinkManager::ENABLED_ON), true)) {
             AjaxResponse::error('无效操作');
         }
-        $result = LinkManager::setEnabled($id, $enabled);
+        $result = LinkManager::setEnabled($id, $enabled, LinkManager::KIND_PARTNER);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
@@ -86,11 +86,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ) {
             AjaxResponse::error('记录不存在');
         }
-        $result = LinkManager::delete($id);
+        $result = LinkManager::delete($id, LinkManager::KIND_PARTNER);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
         AjaxResponse::success('合作伙伴已删除', array('link_id' => $id));
+    }
+
+    if ($action === 'list') {
+        $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+        $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
+        $paged = LinkManager::listPaged(array(
+            'kind'     => LinkManager::KIND_PARTNER,
+            'page'     => $page,
+            'pagesize' => $pagesize,
+        ));
+        AjaxResponse::success('ok', array(
+            'list'     => $paged['list'],
+            'total'    => $paged['total'],
+            'page'     => $paged['page'],
+            'pagesize' => $paged['pagesize'],
+        ));
     }
 
     if ($action === 'purge_cache') {
@@ -102,7 +118,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $tableReady = LinkManager::tableReady();
-$partners = $tableReady ? LinkManager::listAll(null, LinkManager::KIND_PARTNER) : array();
+$paged = $tableReady ? LinkManager::listPaged(array(
+    'kind'     => LinkManager::KIND_PARTNER,
+    'page'     => 1,
+    'pagesize' => 20,
+)) : array('list' => array(), 'total' => 0);
+$partners = $paged['list'];
+$partnerTotal = (int) $paged['total'];
+
+/**
+ * @return void
+ */
+function vs_render_partner_table_head()
+{
+    ?>
+    <div class="vs-link-row vs-link-row--head" aria-hidden="true">
+        <div class="vs-link-cell">名称</div>
+        <div class="vs-link-cell">链接</div>
+        <div class="vs-link-cell">简介</div>
+        <div class="vs-link-cell">状态</div>
+        <div class="vs-link-cell">操作</div>
+    </div>
+    <?php
+}
 
 /**
  * @param array $row
@@ -115,6 +153,7 @@ function vs_render_partner_item(array $row)
     $icon = !empty($row['icon_url']) ? (string) $row['icon_url'] : '';
     $name = (string) $row['name'];
     $siteurl = (string) $row['siteurl'];
+    $desc = isset($row['description']) ? (string) $row['description'] : '';
     $statusClass = $enabled === LinkManager::ENABLED_ON ? 'is-on' : 'is-off';
     $label = $enabled === LinkManager::ENABLED_ON ? '启用' : '禁用';
     ?>
@@ -124,27 +163,29 @@ function vs_render_partner_item(array $row)
          data-name="<?php echo vs_e($name); ?>"
          data-siteurl="<?php echo vs_e($siteurl); ?>"
          data-icon="<?php echo vs_e(isset($row['icon']) ? (string) $row['icon'] : ''); ?>"
-         data-description="<?php echo vs_e(isset($row['description']) ? (string) $row['description'] : ''); ?>"
+         data-description="<?php echo vs_e($desc); ?>"
          data-sort="<?php echo (int) $row['sort']; ?>"
          data-enabled="<?php echo $enabled; ?>">
-        <div class="vs-link-row__icon">
-            <?php if ($icon !== ''): ?>
-                <img src="<?php echo vs_e($icon); ?>" alt="<?php echo vs_e($name); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
-            <?php else: ?>
-                <span class="vs-link-row__initial"><?php echo vs_e(mb_substr($name, 0, 1, 'UTF-8')); ?></span>
-            <?php endif; ?>
-        </div>
-        <div class="vs-link-row__main">
+        <div class="vs-link-cell vs-link-c-site">
+            <div class="vs-link-row__icon">
+                <?php if ($icon !== ''): ?>
+                    <img src="<?php echo vs_e($icon); ?>" alt="<?php echo vs_e($name); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
+                <?php else: ?>
+                    <span class="vs-link-row__initial"><?php echo vs_e(mb_substr($name, 0, 1, 'UTF-8')); ?></span>
+                <?php endif; ?>
+            </div>
             <div class="vs-link-row__name" data-field="name"><?php echo vs_e($name); ?></div>
-            <a class="vs-link-row__url" data-field="siteurl" href="<?php echo vs_e($siteurl); ?>" target="_blank" rel="noopener noreferrer"><?php echo vs_e($siteurl); ?></a>
-            <?php if (!empty($row['description'])): ?>
-                <div class="vs-link-row__desc" data-field="description"><?php echo vs_e((string) $row['description']); ?></div>
-            <?php endif; ?>
         </div>
-        <div class="vs-link-row__status">
+        <div class="vs-link-cell vs-link-c-url">
+            <a class="vs-link-row__url" data-field="siteurl" href="<?php echo vs_e($siteurl); ?>" target="_blank" rel="noopener noreferrer"><?php echo vs_e($siteurl); ?></a>
+        </div>
+        <div class="vs-link-cell vs-link-c-desc">
+            <div class="vs-link-row__desc" data-field="description"><?php echo $desc !== '' ? vs_e($desc) : '—'; ?></div>
+        </div>
+        <div class="vs-link-cell vs-link-c-status">
             <span class="vs-link-status <?php echo vs_e($statusClass); ?>" data-field="enabled_label"><?php echo vs_e($label); ?></span>
         </div>
-        <div class="vs-link-row__actions">
+        <div class="vs-link-cell vs-link-c-actions">
             <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-partner-action="edit" data-link-id="<?php echo $id; ?>">编辑</button>
             <?php if ($enabled === LinkManager::ENABLED_ON): ?>
                 <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-warning" data-partner-action="disable" data-link-id="<?php echo $id; ?>">禁用</button>
@@ -170,7 +211,7 @@ if ($tableReady) {
 vs_admin_layout_start('合作伙伴', 'partners', $headerActions);
 ?>
 
-<div class="vs-panel vs-link-panel" id="adminPartnersPage">
+<div class="vs-link-page" id="adminPartnersPage">
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '合作伙伴功能尚未就绪，请前往「系统管理 → 系统升级」完成数据库结构更新。', array('compact' => true)); ?>
     <?php else: ?>
@@ -182,16 +223,20 @@ vs_admin_layout_start('合作伙伴', 'partners', $headerActions);
             array('compact' => true)
         );
         ?>
-        <div class="vs-link-empty" id="partnerEmpty"<?php echo count($partners) > 0 ? ' hidden' : ''; ?>>
+        <div class="vs-link-empty" id="partnerEmpty"<?php echo $partnerTotal > 0 ? ' hidden' : ''; ?>>
             <?php vs_render_notice('info', '', '暂无合作伙伴。添加后将显示在默认主题首页「合作伙伴」区域；禁用后前台不再展示。', array('compact' => true)); ?>
         </div>
-        <div class="vs-link-list" id="partnerList"<?php echo count($partners) === 0 ? ' hidden' : ''; ?>>
+        <div class="vs-link-list" id="partnerList"<?php echo $partnerTotal === 0 ? ' hidden' : ''; ?>>
+            <?php vs_render_partner_table_head(); ?>
             <?php foreach ($partners as $pRow): ?>
                 <?php vs_render_partner_item($pRow); ?>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </div>
+<?php if ($tableReady): ?>
+<?php vs_render_list_pager(array('id' => 'partner', 'hidden' => $partnerTotal === 0, 'total' => $partnerTotal)); ?>
+<?php endif; ?>
 
 <div class="vs-overlay vs-overlay--form" id="partnerFormOverlay" hidden aria-hidden="true">
     <div class="vs-overlay__backdrop" data-overlay-close="1"></div>

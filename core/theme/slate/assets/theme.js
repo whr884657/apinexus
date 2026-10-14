@@ -275,11 +275,16 @@
                 var charge = parseInt(api.charge, 10) === 1;
                 label = (charge && points > 0) ? (points + '积分/次') : '免费';
             }
-            var paid = points > 0 || (label !== '免费' && label.toLowerCase() !== 'free');
+            var promoLabel = String(api.promo_label || '').trim();
+            // 全免也不改标价芯片：仍显示原积分文案，活动另挂标签
+            var paid = points > 0 || (label !== '免费' && label.toLowerCase() !== 'free' && label !== '活动免费');
             if (paid) {
                 chips.push('<span class="st-api-chip st-api-chip--points">' + escapeHtml(label) + '</span>');
             } else {
                 chips.push('<span class="st-api-chip st-api-chip--free">免费</span>');
+            }
+            if (promoLabel) {
+                chips.push('<span class="st-api-chip st-api-chip--maintenance">' + escapeHtml(promoLabel) + '</span>');
             }
             var keyMode = parseInt(api.needkey, 10) || 0;
             if (keyMode === 1) {

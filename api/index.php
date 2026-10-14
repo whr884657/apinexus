@@ -52,7 +52,10 @@ if ($vsUserStatsApiId <= 0) {
     vs_user_stats_exit(0, '接口未配置', null, ApiError::UNAVAILABLE);
 }
 // 填了正数但后台无此接口时，hit 会静默跳过守卫；此处先校验存在再放行
-if (!class_exists('ApiManager') || !ApiManager::tableReady() || !ApiManager::findById($vsUserStatsApiId)) {
+$vsUserStatsApiRow = (class_exists('ApiManager') && ApiManager::tableReady())
+    ? ApiManager::findById($vsUserStatsApiId)
+    : null;
+if (!is_array($vsUserStatsApiRow)) {
     vs_user_stats_exit(0, '接口未配置', null, ApiError::UNAVAILABLE);
 }
 ApiStats::hit($vsUserStatsApiId);
@@ -75,7 +78,7 @@ if (!empty($ctx['valid']) && (int) $ctx['userid'] > 0) {
     $userId = (int) $ctx['userid'];
 } else {
     // hit 已要求密钥时通常不会走到这里；仅作兜底认人（仍禁止 Cookie）
-    $resolved = UserCallStats::resolveUserFromRequest();
+    $resolved = UserCallStats::resolveUserFromRequest($vsUserStatsApiRow);
     if (empty($resolved['ok'])) {
         $err = isset($resolved['errcode']) ? (int) $resolved['errcode'] : ApiError::NO_KEY;
         $msg = isset($resolved['msg']) ? (string) $resolved['msg'] : '请提供调用密钥';

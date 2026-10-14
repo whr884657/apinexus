@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/captcha/local.php
- * 作用：本地图形验证码（GD；session 存场景绑定哈希；含基础强度）
+ * 作用：本地图形验证码（GD；session 存场景绑定哈希；抗 OCR 加强；校验不区分大小写）
  */
 
 class CaptchaLocal
@@ -11,21 +11,52 @@ class CaptchaLocal
     const SESSION_SCENE = 'vs_captcha_local_s';
     const TTL = 300;
     const LEN = 5;
-    const WIDTH = 140;
-    const HEIGHT = 44;
+    const WIDTH = 150;
+    const HEIGHT = 48;
 
     /**
+     * 专用 pepper（配置键 captcha_pepper）；缺则生成并持久化，不再复用第三方密钥/路径
+     *
      * @return string
      */
     private static function serverPepper()
     {
-        $parts = array(defined('VS_ROOT') ? (string) VS_ROOT : __DIR__);
-        if (class_exists('Config')) {
-            $parts[] = (string) Config::get('gt4_key', '');
-            $parts[] = (string) Config::get('gt3_key', '');
-            $parts[] = (string) Config::get('mail_smtp_pass', '');
+        $dedicated = self::ensureCaptchaPepper();
+        return hash('sha256', $dedicated . '|vs_local_captcha_v6');
+    }
+
+    /**
+     * @return string 非空随机 pepper（hex）
+     */
+    private static function ensureCaptchaPepper()
+    {
+        if (!class_exists('Config')) {
+            return hash('sha256', (defined('VS_ROOT') ? (string) VS_ROOT : __DIR__) . '|vs_local_captcha_fallback');
         }
-        return hash('sha256', implode('|', $parts) . '|vs_local_captcha_v3');
+        try {
+            $cur = trim((string) Config::get('captcha_pepper', ''));
+        } catch (Exception $e) {
+            $cur = '';
+        }
+        if ($cur !== '' && strlen($cur) >= 32) {
+            return $cur;
+        }
+        if (function_exists('random_bytes')) {
+            try {
+                $cur = bin2hex(random_bytes(32));
+            } catch (Exception $e) {
+                $cur = '';
+            }
+        }
+        if ($cur === '') {
+            $cur = hash('sha256', uniqid((string) mt_rand(), true) . microtime(true));
+        }
+        try {
+            Config::set('captcha_pepper', $cur);
+        } catch (Exception $e) {
+            // 安装前或写库失败：本请求仍用内存值，下次再落库
+        }
+        return $cur;
     }
 
     /**
@@ -107,6 +138,101 @@ class CaptchaLocal
     }
 
     /**
+     * 在小画布上画单字符，略放大后旋转贴到主图（无 TTF 依赖）
+     *
+     * @param resource|\GdImage $im
+     * @param string            $ch
+     * @param int               $cx
+     * @param int               $cy
+     * @param int               $color
+     * @return void
+     */
+    private static function drawWarpedChar($im, $ch, $cx, $cy, $color)
+    {
+        $tw = 28;
+        $th = 36;
+        $tmp = imagecreatetruecolor($tw, $th);
+        if ($tmp === false) {
+            imagestring($im, 5, $cx - 6, $cy - 8, $ch, $color);
+            return;
+        }
+        imagealphablending($tmp, false);
+        $transparent = imagecolorallocatealpha($tmp, 0, 0, 0, 127);
+        imagefilledrectangle($tmp, 0, 0, $tw, $th, $transparent);
+        imagealphablending($tmp, true);
+        imagestring($tmp, 5, 6 + self::randInt(-2, 2), 8 + self::randInt(-2, 2), $ch, $color);
+
+        // 相对原字形只放大一丢丢（约 1.35 倍），不撑爆 150×48 画布
+        $scale = 1.35;
+        $sw = (int) round($tw * $scale);
+        $sh = (int) round($th * $scale);
+        $scaled = imagecreatetruecolor($sw, $sh);
+        if ($scaled === false) {
+            $angle = self::randInt(-28, 28);
+            $rotated = imagerotate($tmp, $angle, $transparent);
+            imagedestroy($tmp);
+            if ($rotated === false) {
+                imagestring($im, 5, $cx - 6, $cy - 8, $ch, $color);
+                return;
+            }
+        } else {
+            imagealphablending($scaled, false);
+            $tr2 = imagecolorallocatealpha($scaled, 0, 0, 0, 127);
+            imagefilledrectangle($scaled, 0, 0, $sw, $sh, $tr2);
+            imagealphablending($scaled, true);
+            imagecopyresampled($scaled, $tmp, 0, 0, 0, 0, $sw, $sh, $tw, $th);
+            imagedestroy($tmp);
+            $angle = self::randInt(-26, 26);
+            $rotated = imagerotate($scaled, $angle, $tr2);
+            imagedestroy($scaled);
+            if ($rotated === false) {
+                imagestring($im, 5, $cx - 6, $cy - 8, $ch, $color);
+                return;
+            }
+        }
+        imagealphablending($rotated, true);
+        imagesavealpha($rotated, true);
+        $rw = imagesx($rotated);
+        $rh = imagesy($rotated);
+        imagecopy($im, $rotated, (int) ($cx - $rw / 2), (int) ($cy - $rh / 2), 0, 0, $rw, $rh);
+        imagedestroy($rotated);
+    }
+
+    /**
+     * 轻度水平波纹扭曲，打乱直线 OCR
+     *
+     * @param resource|\GdImage $im
+     * @return resource|\GdImage
+     */
+    private static function waveDistort($im)
+    {
+        $w = imagesx($im);
+        $h = imagesy($im);
+        $out = imagecreatetruecolor($w, $h);
+        if ($out === false) {
+            return $im;
+        }
+        $bg = imagecolorallocate($out, 235, 235, 235);
+        imagefilledrectangle($out, 0, 0, $w, $h, $bg);
+        // 波纹比加强版略轻一丢丢
+        $amp = self::randInt(1, 3);
+        $period = self::randInt(11, 18);
+        for ($x = 0; $x < $w; $x++) {
+            $shift = (int) round(sin($x / $period) * $amp);
+            for ($y = 0; $y < $h; $y++) {
+                $sy = $y + $shift;
+                if ($sy < 0 || $sy >= $h) {
+                    continue;
+                }
+                $rgb = imagecolorat($im, $x, $sy);
+                imagesetpixel($out, $x, $y, $rgb);
+            }
+        }
+        imagedestroy($im);
+        return $out;
+    }
+
+    /**
      * @param string $scene
      * @return void
      */
@@ -126,26 +252,62 @@ class CaptchaLocal
             header('HTTP/1.1 500 Internal Server Error');
             exit;
         }
-        $bg = imagecolorallocate($im, self::randInt(225, 245), self::randInt(225, 245), self::randInt(225, 245));
-        imagefilledrectangle($im, 0, 0, $w, $h, $bg);
+        imagealphablending($im, true);
 
-        for ($i = 0; $i < 8; $i++) {
-            $lc = imagecolorallocate($im, self::randInt(120, 200), self::randInt(120, 200), self::randInt(120, 200));
-            imageline($im, self::randInt(0, $w), self::randInt(0, $h), self::randInt(0, $w), self::randInt(0, $h), $lc);
+        // 渐变噪点底
+        for ($y = 0; $y < $h; $y++) {
+            $t = $y / max(1, $h - 1);
+            $r = (int) (220 + (245 - 220) * $t) + self::randInt(-8, 8);
+            $g = (int) (222 + (248 - 222) * $t) + self::randInt(-8, 8);
+            $b = (int) (228 + (250 - 228) * $t) + self::randInt(-8, 8);
+            $line = imagecolorallocate(
+                $im,
+                max(180, min(255, $r)),
+                max(180, min(255, $g)),
+                max(180, min(255, $b))
+            );
+            imageline($im, 0, $y, $w, $y, $line);
         }
-        for ($i = 0; $i < 120; $i++) {
-            $dc = imagecolorallocate($im, self::randInt(100, 210), self::randInt(100, 210), self::randInt(100, 210));
+
+        for ($i = 0; $i < 14; $i++) {
+            $lc = imagecolorallocate($im, self::randInt(90, 190), self::randInt(90, 190), self::randInt(90, 190));
+            if (self::randInt(0, 1) === 1 && function_exists('imagearc')) {
+                imagearc(
+                    $im,
+                    self::randInt(0, $w),
+                    self::randInt(0, $h),
+                    self::randInt(20, 80),
+                    self::randInt(10, 40),
+                    self::randInt(0, 180),
+                    self::randInt(180, 360),
+                    $lc
+                );
+            } else {
+                imageline($im, self::randInt(0, $w), self::randInt(0, $h), self::randInt(0, $w), self::randInt(0, $h), $lc);
+            }
+        }
+        for ($i = 0; $i < 220; $i++) {
+            $dc = imagecolorallocate($im, self::randInt(80, 210), self::randInt(80, 210), self::randInt(80, 210));
             imagesetpixel($im, self::randInt(0, $w - 1), self::randInt(0, $h - 1), $dc);
         }
 
         $len = strlen($code);
-        $slot = (int) ($w / ($len + 1));
+        $margin = 12;
+        $usable = $w - $margin * 2;
         for ($i = 0; $i < $len; $i++) {
-            $tc = imagecolorallocate($im, self::randInt(10, 80), self::randInt(10, 80), self::randInt(10, 80));
-            $x = $slot * ($i + 1) - 8 + self::randInt(-4, 4);
-            $y = self::randInt(10, 18);
-            imagestring($im, 5, $x, $y, $code[$i], $tc);
+            $tc = imagecolorallocate($im, self::randInt(8, 70), self::randInt(8, 70), self::randInt(8, 70));
+            $cx = (int) ($margin + ($usable * ($i + 0.5) / $len) + self::randInt(-3, 3));
+            $cy = (int) ($h / 2 + self::randInt(-4, 4));
+            self::drawWarpedChar($im, $code[$i], $cx, $cy, $tc);
         }
+
+        // 前景细线略减一丢丢（原 5 → 4）
+        for ($i = 0; $i < 4; $i++) {
+            $lc = imagecolorallocate($im, self::randInt(100, 170), self::randInt(100, 170), self::randInt(100, 170));
+            imageline($im, self::randInt(0, $w), self::randInt(0, $h), self::randInt(0, $w), self::randInt(0, $h), $lc);
+        }
+
+        $im = self::waveDistort($im);
 
         header('Content-Type: image/png');
         header('Cache-Control: no-store, no-cache, must-revalidate');

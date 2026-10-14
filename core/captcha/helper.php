@@ -8,7 +8,7 @@
  * 输出验证码挂载点
  *
  * @param string      $scene    Captcha::SCENE_*
- * @param string|null $only     null=任意；local=仅本地图；gt=仅极验三/四代
+ * @param string|null $only     null=任意；local=仅本地图；gt=仅小组件类（极验3/4、Turnstile）
  * @return void
  */
 function vs_captcha_field($scene, $only = null)
@@ -20,12 +20,16 @@ function vs_captcha_field($scene, $only = null)
     if ($only === 'local' && $mode !== Captcha::MODE_LOCAL) {
         return;
     }
-    if ($only === 'gt' && $mode !== Captcha::MODE_GT3 && $mode !== Captcha::MODE_GT4) {
+    if ($only === 'gt'
+        && $mode !== Captcha::MODE_GT3
+        && $mode !== Captcha::MODE_GT4
+        && $mode !== Captcha::MODE_CF
+    ) {
         return;
     }
     $GLOBALS['vs_captcha_scene'] = (string) $scene;
     if ($mode === Captcha::MODE_LOCAL) {
-        $base = function_exists('vs_base_url') ? rtrim(vs_base_url(), '/') : '';
+        $base = function_exists('vs_site_base_path') ? vs_site_base_path() : '';
         $img = $base . '/core/captcha/image.php?scene=' . rawurlencode((string) $scene)
             . '&t=' . rawurlencode((string) microtime(true));
         echo '<div class="field vs-captcha-field vs-captcha-field--local" id="vsCaptchaBox" data-captcha-mode="local">'
@@ -39,8 +43,10 @@ function vs_captcha_field($scene, $only = null)
             . '</div></div>' . "\n";
         return;
     }
-    echo '<div class="field vs-captcha-field vs-captcha-field--gt" id="vsCaptchaBox" data-captcha-mode="'
-        . vs_e($mode) . '" aria-label="行为验证"></div>' . "\n";
+    $aria = ($mode === Captcha::MODE_CF) ? 'Cloudflare 人机验证' : '行为验证';
+    $modClass = ($mode === Captcha::MODE_CF) ? 'vs-captcha-field--cf' : 'vs-captcha-field--gt';
+    echo '<div class="field vs-captcha-field ' . $modClass . '" id="vsCaptchaBox" data-captcha-mode="'
+        . vs_e($mode) . '" aria-label="' . vs_e($aria) . '"></div>' . "\n";
 }
 
 /**
@@ -57,10 +63,13 @@ function vs_captcha_js($scene = null)
         return;
     }
     $boot = Captcha::publicBoot($scene);
-    $base = vs_base_url();
+    $base = vs_site_base_path();
     $mode = isset($boot['mode']) ? (string) $boot['mode'] : 'local';
-    // 极验二次资源仍走官方 CDN：提前建连，缩短按钮出现等待
-    if ($mode === Captcha::MODE_GT3 || $mode === Captcha::MODE_GT4) {
+    // 极验 / Turnstile：提前建连，缩短组件出现等待
+    if ($mode === Captcha::MODE_CF) {
+        echo '<link rel="dns-prefetch" href="https://challenges.cloudflare.com">' . "\n";
+        echo '<link rel="preconnect" href="https://challenges.cloudflare.com" crossorigin>' . "\n";
+    } elseif ($mode === Captcha::MODE_GT3 || $mode === Captcha::MODE_GT4) {
         echo '<link rel="dns-prefetch" href="https://static.geetest.com">' . "\n";
         echo '<link rel="dns-prefetch" href="https://static.geevisit.com">' . "\n";
         echo '<link rel="dns-prefetch" href="https://api.geetest.com">' . "\n";
@@ -90,7 +99,7 @@ function vs_captcha_js($scene = null)
         }
     }
     echo '<script>window.VS_CAPTCHA_BOOT='
-        . json_encode($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        . vs_json_script($boot)
         . ';</script>' . "\n";
     // 全站公共：验证码逻辑仅根目录 assets/js（管理员 + 三主题认证页统一加载）
     $captchaSrc = $base . '/assets/js/captcha.js?v=' . VS_VERSION;

@@ -20,12 +20,14 @@
         }
     }
 
+    /**
+     * 是否因 CSRF/同源失败而需要带新凭证重试一次。
+     * 注意：vs_auth_json 几乎总会回填 csrf 字段，禁止仅凭「有 csrf」判定失败，
+     * 否则密码错误等业务失败也会静默重试，把已消耗的 Turnstile/极验票烧成「人机验证失败」（E429）。
+     */
     function isCsrfFail(data) {
         if (!data || typeof data !== 'object' || data.code === 1) {
             return false;
-        }
-        if (data.csrf) {
-            return true;
         }
         var msg = String(data.msg || '');
         return /凭证|csrf|刷新页面|来源无效/i.test(msg);

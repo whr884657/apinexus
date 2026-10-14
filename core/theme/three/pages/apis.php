@@ -17,7 +17,7 @@ window.TH3_HOME = {
   previewLimit: 99999,
   apiCount: <?php echo (int) $apiCount; ?>,
   statsFormat: 'compact',
-  vsBase: <?php echo json_encode($vsBase, JSON_UNESCAPED_UNICODE); ?>
+  vsBase: <?php echo vs_json_script($vsBase); ?>
 };
 </script>
 

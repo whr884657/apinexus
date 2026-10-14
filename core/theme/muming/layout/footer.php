@@ -120,10 +120,22 @@ TH5_emit_console_brand_script();
 ?>
 <!-- 看板娘助手：二次元形象 + 互动气泡 + 随机推荐接口（后台「功能开关」可关闭） -->
 <?php if (ThemeManager::themeSettingBool('mascot_enabled', true)): ?>
+<?php
+/* 多套看板娘人物：每次刷新随机出现一位（data-mascots 供 mascot.js 随机选取）
+   mini：最小化贴边探头专用图（双手扶屏幕边框、仅头+手可见） */
+$mascotSets = array(
+    array('idle' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot-idle.png'), 'happy' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot-happy.png'), 'mini' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot-mini.png')),
+    array('idle' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot2-idle.png'), 'happy' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot2-happy.png'), 'mini' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot2-mini.png')),
+    array('idle' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot3-idle.png'), 'happy' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot3-happy.png'), 'mini' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot3-mini.png')),
+    array('idle' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot4-idle.png'), 'happy' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot4-happy.png'), 'mini' => ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot4-mini.png')),
+);
+?>
 <div class="th5-mascot" id="th5Mascot" data-th5-mascot
      data-vs-base="<?php echo vs_e($vsBase); ?>"
      data-idle="<?php echo vs_e(ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot-idle.png')); ?>"
      data-happy="<?php echo vs_e(ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot-happy.png')); ?>"
+     data-mini="<?php echo vs_e(ThemeManager::assetUrl('muming', 'assets/img/mascot/mascot-mini.png')); ?>"
+     data-mascots='<?php echo vs_e(json_encode($mascotSets, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?>'
      data-site-name="<?php echo vs_e($siteName); ?>">
   <div class="th5-mascot__bubble" role="status" aria-live="polite">
     <span class="th5-mascot__bubble-text"></span>

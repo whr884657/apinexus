@@ -58,7 +58,7 @@ $firstQr = $qrCount > 0 ? $paymentQrs[0] : null;
                     </div>
 
                     <script type="application/json" id="donateQrData"><?php
-                        echo json_encode($paymentQrs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
+                        echo vs_json_script($paymentQrs);
                     ?></script>
                 </div>
             <?php endif; ?>

@@ -91,38 +91,74 @@ if (!$cfg['ready']) {
         </button>
     </div>
 
-    <form method="post" data-ajax="1" id="payConfigForm" class="vs-panel vs-pay-config-panel">
+    <form method="post" data-ajax="1" id="payConfigForm" class="vs-pay-config-form">
         <input type="hidden" name="action" value="save">
         <input type="hidden" name="packages" id="payPackages" value="<?php echo vs_e($packagesJson); ?>">
         <input type="hidden" name="custom_bonus" id="payCustomBonus" value="<?php echo vs_e($bonusJson); ?>">
-        <div class="vs-panel__body">
-            <div class="vs-pay-config-panel-pane is-active" data-pay-panel="packages" id="payPanelPackages" role="tabpanel" aria-labelledby="payTabPackages">
-                <div class="vs-form-section">
+        <div class="vs-pay-config-panel-pane is-active" data-pay-panel="packages" id="payPanelPackages" role="tabpanel" aria-labelledby="payTabPackages">
+                <?php
+                $rateStr = PayConfig::fmtPoints($cfg['rate']);
+                $rateConfigured = (float) $cfg['rate'] > 0;
+                $pkgCount = is_array($cfg['packages']) ? count($cfg['packages']) : 0;
+                $bonusCount = (isset($cfg['custom_bonus']) && is_array($cfg['custom_bonus'])) ? count($cfg['custom_bonus']) : 0;
+                vs_admin_accordion_start(
+                    'payFoldRate',
+                    '兑换比例',
+                    $rateConfigured ? ('当前 1 元 = ' . $rateStr . ' 积分') : '尚未填写，展开后配置',
+                    !$rateConfigured
+                );
+                ?>
                     <div class="vs-form-row">
-                        <label class="vs-label" for="payRate">兑换比例</label>
+                        <label class="vs-label" for="payRate">1 元兑换积分</label>
                         <input type="number" class="vs-input" id="payRate" name="rate" min="0.0001" step="0.0001"
-                               value="<?php echo vs_e(PayConfig::fmtPoints($cfg['rate'])); ?>">
-                        <p class="vs-form-hint">自定义金额：1 元兑换多少积分。套餐多于该比例时卡片自动显示「赠 xx%」。</p>
+                               value="<?php echo vs_e($rateStr); ?>">
+                        <?php vs_render_notice(
+                            'tip',
+                            '',
+                            '自定义金额按此比例兑换。当前 <strong id="payRateHintVal">' . vs_e($rateStr) . '</strong> 积分 / 元。套餐积分高于该比例时，卡片显示「赠 xx%」。',
+                            array('compact' => true, 'field' => true, 'allow_html' => true)
+                        ); ?>
                     </div>
-                    <div class="vs-form-row">
-                        <div class="vs-pkg-editor-head">
-                            <span class="vs-label">充值套餐</span>
-                            <button type="button" class="vs-btn vs-btn--primary" id="payPkgAddBtn">添加套餐</button>
-                        </div>
-                        <div class="vs-pkg-editor-list" id="payPkgList"></div>
+                <?php vs_admin_accordion_end(); ?>
+
+                <?php
+                vs_admin_accordion_start(
+                    'payFoldPkgs',
+                    '充值套餐',
+                    $pkgCount > 0 ? ('已配置 ' . $pkgCount . ' 个套餐') : '尚未配置，展开后添加',
+                    $pkgCount < 1
+                );
+                ?>
+                    <div class="vs-pkg-editor-toolbar">
+                        <button type="button" class="vs-btn vs-btn--primary" id="payPkgAddBtn">添加套餐</button>
                     </div>
-                    <div class="vs-form-row">
-                        <div class="vs-pkg-editor-head">
-                            <span class="vs-label">自定义充值优惠</span>
-                            <button type="button" class="vs-btn vs-btn--primary" id="payBonusAddBtn">添加一档</button>
-                        </div>
-                        <p class="vs-form-hint">仅作用于「自定义金额」。区间为「满起始、不足上限」；上限填 0 表示不封顶。区间不可重叠。</p>
-                        <div class="vs-bonus-editor-list" id="payBonusList"></div>
+                    <div id="payPkgList"></div>
+                <?php vs_admin_accordion_end(); ?>
+
+                <?php
+                vs_admin_accordion_start(
+                    'payFoldBonus',
+                    '自定义充值优惠',
+                    $bonusCount > 0 ? ('已配置 ' . $bonusCount . ' 档') : '尚未配置，展开后添加',
+                    $bonusCount < 1
+                );
+                ?>
+                    <div class="vs-pkg-editor-toolbar">
+                        <button type="button" class="vs-btn vs-btn--primary" id="payBonusAddBtn">添加一档</button>
                     </div>
-                </div>
+                    <?php vs_render_notice(
+                        'tip',
+                        '',
+                        '仅作用于用户端「自定义金额」，固定套餐不参与。区间为满起始、不足上限；上限填 0 表示不封顶。档位不可重叠。',
+                        array('compact' => true, 'field' => true)
+                    ); ?>
+                    <div id="payBonusList"></div>
+                <?php vs_admin_accordion_end(); ?>
             </div>
 
             <div class="vs-pay-config-panel-pane" data-pay-panel="gateway" id="payPanelGateway" role="tabpanel" aria-labelledby="payTabGateway" hidden>
+                <div class="vs-panel vs-pay-config-block">
+                    <div class="vs-panel__body">
                 <div class="vs-form-section">
                     <div class="vs-form-row">
                         <label class="vs-label" for="payUrl">接口地址</label>
@@ -175,14 +211,28 @@ if (!$cfg['ready']) {
                                 <input type="checkbox" class="vs-pay-method-input" name="methods[]" value="<?php echo vs_e($code); ?>"<?php echo $on ? ' checked' : ''; ?> hidden>
                             <?php endforeach; ?>
                         </div>
-                        <p class="vs-form-hint">支付宝、微信、QQ 三种均未启用时，用户端充值中心将只显示「卡密兑换」。</p>
+                        <?php vs_render_notice(
+                            'tip',
+                            '',
+                            '支付宝、微信、QQ 三种均未启用时，用户端充值中心只显示「卡密兑换」。',
+                            array('compact' => true, 'field' => true)
+                        ); ?>
+                    </div>
+                    </div>
                     </div>
                 </div>
             </div>
 
             <div class="vs-pay-config-panel-pane" data-pay-panel="tips" id="payPanelTips" role="tabpanel" aria-labelledby="payTabTips" hidden>
+                <div class="vs-panel vs-pay-config-block">
+                    <div class="vs-panel__body">
                 <div class="vs-form-section vs-pay-tips-section">
-                    <p class="vs-form-hint vs-pay-tips-lead">以下说明展示在用户充值中心底部。留空则用户端不显示对应板块。正文用 Markdown 自写标题与内容（系统不另加固定标题）。点「编辑」修改，底部「保存配置」写入。</p>
+                    <?php vs_render_notice(
+                        'tip',
+                        '',
+                        '以下说明展示在用户充值中心底部。留空则用户端不显示对应板块。正文用 Markdown 自写标题与内容（系统不另加固定标题）。点「编辑」修改，底部「保存配置」写入。',
+                        array('compact' => true, 'field' => true)
+                    ); ?>
                     <?php foreach ($tipDefs as $tipKey => $tip):
                         $md = (string) $tip['md'];
                         $html = $md !== '' && class_exists('Markdown') ? Markdown::render($md) : '';
@@ -216,9 +266,10 @@ if (!$cfg['ready']) {
                         </div>
                     <?php endforeach; ?>
                 </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="vs-panel__foot vs-finance-form-foot">
+        <div class="vs-pay-config-save">
             <button type="submit" class="vs-btn vs-btn--primary" id="payConfigSaveBtn">保存配置</button>
         </div>
     </form>
@@ -282,7 +333,12 @@ if (!$cfg['ready']) {
             <div class="vs-form-row">
                 <label class="vs-label" for="payBonusPercent">额外赠送（%）</label>
                 <input type="number" class="vs-input" id="payBonusPercent" min="1" max="1000" step="1" placeholder="如 5">
-                <p class="vs-form-hint">到账 = 金额 × 兑换比例 × (1 + 赠送%)。区间含起始、不含上限。</p>
+                <?php vs_render_notice(
+                    'tip',
+                    '',
+                    '到账 = 金额 × 兑换比例 × (1 + 赠送%)。区间含起始、不含上限。',
+                    array('compact' => true, 'field' => true)
+                ); ?>
             </div>
         </div>
         <footer class="vs-overlay__foot">

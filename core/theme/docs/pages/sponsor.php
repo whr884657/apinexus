@@ -60,7 +60,7 @@ $firstQr = $qrCount > 0 ? $paymentQrs[0] : null;
 
                     <?php /* 供 JS 读取全部二维码，避免依赖 DOM 属性截断 */ ?>
                     <script type="application/json" id="donateQrData"><?php
-                        echo json_encode($paymentQrs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS);
+                        echo vs_json_script($paymentQrs);
                     ?></script>
                 </div>
             <?php endif; ?>

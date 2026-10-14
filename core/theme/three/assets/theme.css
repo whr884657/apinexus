@@ -1040,6 +1040,8 @@
 .th3-page__inner--sponsor { max-width: 1040px; }
 .th3-page__inner--apply { max-width: 720px; }
 .th3-page__inner--profile { max-width: 1040px; }
+/* 接口详情：电脑端居中限宽两侧留白（对齐默认主题 content；勿被下方 max-width:100% 误伤） */
+.th3-page__inner--detail { max-width: 64rem; }
 .th3-page__title {
   font-size: clamp(1.75rem, 4vw, 2.5rem);
   letter-spacing: -0.03em;
@@ -2078,8 +2080,11 @@ html.dark .th3-article-card__bg img { opacity: 0.28; }
 .th3-article-cover {
   display: block;
   width: 100%;
-  max-height: 360px;
+  height: auto;
+  max-height: none;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
+  object-position: center;
   border-radius: var(--th3-radius);
   border: 1px solid var(--border);
   margin-bottom: 1.25rem;
@@ -2087,13 +2092,16 @@ html.dark .th3-article-card__bg img { opacity: 0.28; }
 .th3-article-detail__body {
   margin-top: 0.25rem;
 }
-/* Markdown 正文图：保留原始比例（禁止被拉成正方形） */
+/* Markdown 正文图：保留原始比例（禁止被拉成正方形 · E364） */
 .th3-md img,
 .th3-article-detail__body img,
-.th3-about-content img {
-  max-width: 100%;
-  width: auto;
-  height: auto;
+.th3-about-content img,
+.th3-article-detail .vs-md-body img {
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: none;
+  aspect-ratio: auto;
   object-fit: contain;
   border-radius: var(--th3-radius);
 }
@@ -2349,9 +2357,11 @@ span.th3-cmt-avatar:not(img) {
   border-color: color-mix(in srgb, var(--accent-3) 35%, var(--border));
   color: #b45309;
 }
+/* 接口路径行：对齐主题1 endpoint-box——路径自换行，复制钮永不掉到下一行（E422） */
 .th3-endpoint {
   display: flex;
   flex-wrap: nowrap;
+  justify-content: space-between;
   align-items: center;
   gap: 0.55rem;
   padding: 0.75rem 0.9rem;
@@ -2359,30 +2369,62 @@ span.th3-cmt-avatar:not(img) {
   border-radius: var(--th3-radius);
   background: var(--bg-2);
   border: 1px solid var(--border);
-  word-break: break-all;
-}
-@media (max-width: 640px) {
-  .th3-endpoint {
-    flex-wrap: wrap;
-  }
-  .th3-endpoint__copy {
-    margin-left: 0;
-  }
 }
 .th3-endpoint__text {
   flex: 1 1 auto;
   min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem;
+  display: block;
+  word-break: break-all;
+  line-height: 1.5;
+  color: var(--fg);
+}
+.th3-endpoint__method {
+  margin-right: 0.4rem;
+  font-weight: 700;
+}
+.th3-endpoint__path {
+  word-break: break-all;
 }
 .th3-endpoint__copy {
   flex: 0 0 auto;
+  flex-shrink: 0;
   align-self: center;
-  margin-left: auto;
+  white-space: nowrap;
 }
 .th3-endpoint__mask { letter-spacing: 0.08em; color: var(--muted); filter: blur(2px); }
+.th3-endpoint.is-blurred .th3-endpoint__mask {
+  user-select: none;
+}
+.th3-info-value--author {
+  font-family: inherit;
+}
+.th3-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  color: var(--accent);
+  text-decoration: none;
+}
+.th3-author:hover .th3-author__name {
+  text-decoration: underline;
+}
+.th3-author__avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--fg) 8%, var(--card));
+}
+.th3-author__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.th3-author__empty {
+  color: var(--muted);
+}
 .th3-info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2411,6 +2453,17 @@ span.th3-cmt-avatar:not(img) {
   line-height: 1.4;
   word-break: break-word;
 }
+/* 特殊字段着色（对齐默认主题 info-value--*） */
+.th3-info-value--method { color: var(--accent-2, #22d3ee); }
+.th3-info-value--cat { color: var(--accent, #6366f1); }
+.th3-info-value--billing { color: #c2410c; }
+.th3-info-value--key { color: #2563eb; }
+.th3-info-value--calls { color: var(--fg); font-weight: 650; }
+.th3-info-value--qpm { color: var(--fg-2, #64748b); }
+.th3-info-value--auth { color: var(--accent-3, #a855f7); }
+html.dark .th3-info-value--billing { color: #fb923c; }
+html.dark .th3-info-value--key { color: #60a5fa; }
+html.dark .th3-info-value--method { color: #67e8f9; }
 .th3-info-value a {
   color: var(--accent);
   text-decoration: none;
@@ -2580,8 +2633,8 @@ span.th3-cmt-avatar:not(img) {
   overflow-wrap: anywhere;
   white-space: normal;
 }
-.th3-detail .th3-panel,
-.th3-detail .th3-page__inner {
+/* 仅限面板防撑破；禁止绑 .th3-page__inner（会盖掉 --detail 限宽导致全屏） */
+.th3-detail .th3-panel {
   min-width: 0;
   max-width: 100%;
 }
@@ -3076,5 +3129,94 @@ body.th3-announce-modal-open { overflow: hidden; }
 .th3-announce-btn--ghost { color: var(--muted); }
 @media (max-width: 639px) {
   .th3-announce__action { display: none; }
+}
+
+/* 首页底部合作伙伴 / 广告（网格；配色跟主题3 token） */
+.th3-sec--partners {
+  padding: 3.5rem 0 4.5rem;
+  border-top: 1px solid var(--border);
+}
+.th3-partners-head {
+  margin-bottom: 1.5rem;
+}
+.th3-partners-sub {
+  color: var(--muted);
+  margin: 0;
+}
+.th3-partners-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 0.85rem;
+}
+.th3-partner-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 84px;
+  padding: 0.75rem 0.85rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 92%, var(--accent-soft));
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+.th3-partner-tile:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 14px 32px -18px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.th3-partner-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+.th3-partner-tile__initial {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--fg);
+  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+.th3-partner-tile__name {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 88%, transparent);
+  color: var(--bg);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.th3-partner-tile:hover .th3-partner-tile__name {
+  opacity: 1;
+  transform: translateY(0);
+}
+.th3-partner-tile--fallback {
+  background: linear-gradient(145deg, var(--accent-soft), var(--accent-2-soft));
+}
+@media (max-width: 639px) {
+  .th3-partners-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.65rem;
+  }
+  .th3-partner-tile {
+    height: 72px;
+    border-radius: 14px;
+  }
 }
 

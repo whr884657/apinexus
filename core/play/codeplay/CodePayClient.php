@@ -95,10 +95,17 @@ class CodePayClient
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 20,
             CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-            CURLOPT_HTTPHEADER     => array('Content-Type: application/x-www-form-urlencoded'),
+            CURLOPT_HTTPHEADER     => array(
+                'Content-Type: application/x-www-form-urlencoded',
+                class_exists('OutboundUa')
+                    ? OutboundUa::headerLine('CodePay')
+                    : ('User-Agent: ApiNexus-CodePay/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
+            ),
+            CURLOPT_USERAGENT      => class_exists('OutboundUa')
+                ? OutboundUa::build('CodePay')
+                : ('ApiNexus-CodePay/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
         ));
+        vs_curl_ssl_verify($ch);
         $raw = curl_exec($ch);
         $err = curl_error($ch);
         vs_curl_close($ch);

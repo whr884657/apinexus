@@ -129,8 +129,8 @@ vs_slate_auth_shell_start('用户登录', '欢迎回来，请登录您的账号'
     var loginBtn = document.getElementById('loginBtn');
     var sendCodeBtn = document.getElementById('sendCodeBtn');
     var toggleEl = document.getElementById('toggleLoginMode');
-    var expiredMsg = <?php echo json_encode($expiredMsg, JSON_UNESCAPED_UNICODE); ?>;
-    var oauthError = <?php echo json_encode($oauthError, JSON_UNESCAPED_UNICODE); ?>;
+    var expiredMsg = <?php echo vs_json_script($expiredMsg); ?>;
+    var oauthError = <?php echo vs_json_script($oauthError); ?>;
     var mailEnabled = <?php echo $mailEnabled ? 'true' : 'false'; ?>;
     var mode = 'password';
     var countdown = 0;

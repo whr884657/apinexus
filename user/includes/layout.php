@@ -78,6 +78,110 @@ function vs_user_stub_page($pageTitle, $activeMenu)
 }
 
 /**
+ * 用户中心顶栏铃铛（站内公告红点/自动弹窗；列表面板筹备中，不可查看）
+ *
+ * @return void
+ */
+function vs_user_notify_markup()
+{
+    global $vsBase;
+
+    $base = isset($vsBase) ? (string) $vsBase : vs_site_base_path();
+    $userId = (int) UserAuth::id();
+    $items = array();
+    $popups = array();
+    if ($userId > 0 && class_exists('ContentManager')
+        && ContentManager::tableReady() && ContentManager::hasAudModeColumn()) {
+        // items 仅供控制台；铃铛列表不再渲染
+        $items = ContentManager::userListMessages($userId, 20);
+        $popups = ContentManager::userListPopups($userId);
+    }
+    $total = count($items);
+    $hasItems = $total > 0;
+
+    echo '<div class="vs-topbar__notify"'
+        . ' id="vsUserNotify"'
+        . ' data-user-id="' . (int) $userId . '"'
+        . ' data-has-items="' . ($hasItems ? '1' : '0') . '"'
+        . ' data-has-pending="0"'
+        . ' data-total="' . (int) $total . '"'
+        . ' data-endpoint="' . vs_e($base . '/user/notify') . '">' . "\n";
+    echo '<button type="button" class="vs-notify-btn" id="vsUserNotifyBtn"'
+        . ' aria-label="通知"'
+        . ' aria-expanded="false"'
+        . ' aria-controls="vsUserNotifyPanel"'
+        . ' title="通知">' . "\n";
+    echo '<i class="vs-icon vs-icon--bell" aria-hidden="true"></i>' . "\n";
+    echo '<span class="vs-notify-btn__dot" id="vsUserNotifyDot" hidden aria-hidden="true"></span>' . "\n";
+    echo '<span class="vs-notify-btn__count" id="vsUserNotifyCount" hidden>0</span>' . "\n";
+    echo '</button>' . "\n";
+    echo '<div class="vs-notify-panel" id="vsUserNotifyPanel" role="dialog" aria-label="通知" hidden>' . "\n";
+    echo '<div class="vs-notify-panel__head">' . "\n";
+    echo '<strong class="vs-notify-panel__title">通知</strong>' . "\n";
+    echo '<span class="vs-notify-panel__meta" id="vsUserNotifyMeta">筹备中</span>' . "\n";
+    echo '</div>' . "\n";
+    echo '<div class="vs-notify-panel__list" id="vsUserNotifyList" hidden></div>' . "\n";
+    echo '<div class="vs-notify-panel__empty vs-notify-panel__empty--soon" id="vsUserNotifyEmpty">' . "\n";
+    echo '<p class="vs-notify-panel__soon-title">功能筹备中</p>' . "\n";
+    echo '<p class="vs-notify-panel__soon-desc">通知中心后续开放。站内公告请在控制台「近期站内公告」查看，或等待自动弹窗。</p>' . "\n";
+    echo '</div>' . "\n";
+    echo '</div>' . "\n";
+    echo '<script type="application/json" id="vsUserNotifyBoot">' . vs_json_script(array(
+        'user_id'   => (int) $userId,
+        'items'     => $items,
+        'popups'    => $popups,
+        'has_items' => $hasItems ? 1 : 0,
+    )) . '</script>' . "\n";
+    echo '</div>' . "\n";
+}
+
+/**
+ * 控制台「近期站内公告」面板 HTML
+ *
+ * @param array $messages userListMessages 结果
+ * @return void
+ */
+function vs_user_dash_messages_panel(array $messages = array())
+{
+    echo '<section class="vs-panel uc-dash__panel uc-dash__msg uc-motion" aria-label="近期站内公告">' . "\n";
+    echo '<div class="vs-panel__header uc-dash__panel-head">' . "\n";
+    echo '<h2 class="vs-panel__title">近期站内公告</h2>' . "\n";
+    echo '</div>' . "\n";
+    echo '<div class="vs-panel__body" id="ucDashMsgBody">' . "\n";
+    if (empty($messages)) {
+        echo '<p class="uc-dash__empty">暂无站内公告</p>' . "\n";
+    } else {
+        echo '<div class="uc-dash__msg-list" role="list">' . "\n";
+        foreach ($messages as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $id = isset($row['id']) ? (int) $row['id'] : 0;
+            if ($id <= 0) {
+                continue;
+            }
+            $title = isset($row['title']) ? (string) $row['title'] : '';
+            $time = isset($row['createtime']) ? (string) $row['createtime'] : '';
+            if ($time !== '' && strlen($time) >= 16) {
+                $time = substr($time, 0, 16);
+            }
+            $pinned = !empty($row['ispinned']);
+            echo '<button type="button" class="uc-dash__msg-row" role="listitem" data-msg-id="'
+                . (int) $id . '" title="' . vs_e($title) . '">' . "\n";
+            echo '<span class="uc-dash__msg-title">' . vs_e($title !== '' ? $title : '（无标题）') . '</span>' . "\n";
+            if ($pinned) {
+                echo '<span class="uc-dash__msg-pin">置顶</span>' . "\n";
+            }
+            echo '<span class="uc-dash__msg-time">' . vs_e($time !== '' ? $time : '—') . '</span>' . "\n";
+            echo '</button>' . "\n";
+        }
+        echo '</div>' . "\n";
+    }
+    echo '</div>' . "\n";
+    echo '</section>' . "\n";
+}
+
+/**
  * 用户中心统一图标刷新按钮（与管理员后台同款）
  *
  * @param string $id 按钮 id（如 ucDashRefreshBtn）
@@ -126,7 +230,7 @@ function vs_user_require_developer($pageTitle = '权限不足')
     }
 
     $body = '<p>您当前身份为 <strong>' . vs_e($roleLabel) . '</strong>，无权访问「API 管理」。</p>';
-    $body .= '<p>普通用户可在用户中心生成密钥并调用平台全部公开接口；如需发布自己的接口，请联系管理员将账号调整为开发者，或在注册时选择开发者身份。</p>';
+    $body .= '<p>普通用户可在用户中心生成密钥并调用平台全部公开接口；如需发布自己的接口，请前往「账号设置 → 开发者申请」提交申请，或联系管理员调整身份。</p>';
 
     vs_render_notice('warning', '权限不足', $body, array('allow_html' => true));
     echo '</div>';

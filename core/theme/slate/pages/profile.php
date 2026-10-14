@@ -115,6 +115,7 @@ $letter = isset($profile['letter']) ? (string) $profile['letter'] : 'U';
                         $billingLabel = !empty($api['billing_label'])
                             ? (string) $api['billing_label']
                             : ($points > 0 ? '收费' : '免费');
+                        $promoLabel = !empty($api['promo_label']) ? (string) $api['promo_label'] : '';
                         $isPaid = $points > 0 || (isset($api['charge']) && (int) $api['charge'] === 1);
                         ?>
                         <a class="st-profile-api api-card-stack" href="<?php echo vs_e(isset($api['detail_url']) ? $api['detail_url'] : '#'); ?>"
@@ -131,6 +132,9 @@ $letter = isset($profile['letter']) ? (string) $profile['letter'] : 'U';
                                     <?php endif; ?>
                                 </div>
                                 <span class="st-api-chip <?php echo $isPaid ? 'st-api-chip--points' : 'st-api-chip--free'; ?>"><?php echo vs_e($billingLabel); ?></span>
+                                <?php if ($promoLabel !== ''): ?>
+                                    <span class="st-api-chip st-api-chip--maintenance"><?php echo vs_e($promoLabel); ?></span>
+                                <?php endif; ?>
                             </div>
                             <div class="st-profile-api__name"><?php echo vs_e(isset($api['name']) ? $api['name'] : ''); ?></div>
                             <div class="st-profile-api__meta">

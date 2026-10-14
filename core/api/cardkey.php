@@ -4,13 +4,14 @@
  * 作用：卡密对接 API（生成 / 库存 / 出库 / 作废 / 查询）；鉴权用系统密钥
  *
  * 归属：系统级外部 API（见《系统级外部API规范》）
+ * 失败码：12xxx（SystemApiError）
  *
- * 鉴权（任选其一，与归档任务相同）：
+ * 鉴权（任选其一）：
  *   Authorization: Bearer <系统密钥>
  *   Header X-Api-Key / Api-Key / Apikey: <系统密钥>
- *   Query/POST/JSON key= 或 apikey=
+ *   Bearer / Header / POST·JSON / Query key= 或 apikey=（三态传钥）
  *
- * 须后台开启 cardkey_api_enabled；未开启即使密钥正确也拒绝。
+ * 须后台开启 sysapion.cardkey；闸关与鉴权失败统一 UNAUTH。
  *
  * 动作（action / GET·POST·JSON body）：
  *   generate  count=1～100  points=1～1000000     实时生成新卡密
@@ -19,7 +20,7 @@
  *   void      codes=… 或 code=…                   作废未使用/已发放（不可作废已兑）
  *   query     code=单张卡密
  *
- * 响应：{ code:1|0, msg, … }；失败不暴露 SQL/堆栈
+ * 响应：{ code:1|0, msg, errcode?, … }；失败不暴露 SQL/堆栈
  */
 
 define('VS_ROOT', dirname(dirname(__DIR__)));
@@ -30,40 +31,28 @@ header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
 
 if (!InstallChecker::isInstalled()) {
-    SystemApiKey::jsonExit(503, 0, '系统未安装');
+    SystemApiKey::fail(SystemApiError::NOT_INSTALLED, '系统未安装');
 }
 
-SystemApiKey::requireAuthorized();
+SystemApiKey::requireAuthorizedGate('cardkey');
 
-if (trim((string) Config::get('cardkey_api_enabled', '0')) !== '1') {
-    SystemApiKey::jsonExit(403, 0, '卡密对接 API 未启用');
-}
-
-$input = array_merge($_GET, $_POST);
-$raw = SystemApiKey::requestBody();
-if ($raw !== '') {
-    $json = json_decode($raw, true);
-    if (is_array($json)) {
-        $input = array_merge($input, $json);
-    }
-}
+$input = SystemApiKey::mergeInput();
 
 $action = isset($input['action']) ? strtolower(trim((string) $input['action'])) : '';
 if ($action === '') {
-    SystemApiKey::jsonExit(400, 0, '缺少 action（generate / stock / take / void / query）');
+    SystemApiKey::fail(SystemApiError::BAD_PARAM, '缺少 action（generate / stock / take / void / query）');
 }
 
 if (!CardKeyManager::tableReady()) {
-    SystemApiKey::jsonExit(503, 0, '卡密表未就绪，请先完成系统升级');
+    SystemApiKey::fail(SystemApiError::NOT_READY, '卡密表未就绪，请先完成系统升级');
 }
 
 if ($action === 'generate') {
-    SystemApiKey::requireRateLimit('cardkey_gen', 60, 30);
     $count = isset($input['count']) ? (int) $input['count'] : 0;
     $points = isset($input['points']) ? (int) $input['points'] : 0;
     $result = CardKeyManager::generate($count, $points, 0);
     if (empty($result['ok'])) {
-        SystemApiKey::jsonExit(400, 0, isset($result['msg']) ? (string) $result['msg'] : '生成失败');
+        SystemApiKey::fail(SystemApiError::BUSINESS, isset($result['msg']) ? (string) $result['msg'] : '生成失败');
     }
     $codes = array();
     if (!empty($result['list']) && is_array($result['list'])) {
@@ -73,7 +62,7 @@ if ($action === 'generate') {
             }
         }
     }
-    SystemApiKey::jsonExit(200, 1, isset($result['msg']) ? (string) $result['msg'] : 'ok', array(
+    SystemApiKey::ok(isset($result['msg']) ? (string) $result['msg'] : 'ok', array(
         'count'  => isset($result['count']) ? (int) $result['count'] : count($codes),
         'points' => $points,
         'codes'  => $codes,
@@ -82,13 +71,12 @@ if ($action === 'generate') {
 }
 
 if ($action === 'stock') {
-    SystemApiKey::requireRateLimit('cardkey_stock', 60, 120);
     $points = isset($input['points']) ? (int) $input['points'] : 0;
     $result = CardKeyManager::stock($points);
     if (empty($result['ok'])) {
-        SystemApiKey::jsonExit(400, 0, isset($result['msg']) ? (string) $result['msg'] : '查询失败');
+        SystemApiKey::fail(SystemApiError::BUSINESS, isset($result['msg']) ? (string) $result['msg'] : '查询失败');
     }
-    SystemApiKey::jsonExit(200, 1, 'ok', array(
+    SystemApiKey::ok('ok', array(
         'unused'        => isset($result['unused']) ? (int) $result['unused'] : 0,
         'unused_points' => isset($result['unused_points']) ? (int) $result['unused_points'] : 0,
         'by_points'     => isset($result['by_points']) ? $result['by_points'] : array(),
@@ -96,12 +84,11 @@ if ($action === 'stock') {
 }
 
 if ($action === 'take') {
-    SystemApiKey::requireRateLimit('cardkey_take', 60, 30);
     $count = isset($input['count']) ? (int) $input['count'] : 0;
     $points = isset($input['points']) ? (int) $input['points'] : 0;
     $result = CardKeyManager::takeFromStock($count, $points);
     if (empty($result['ok'])) {
-        SystemApiKey::jsonExit(400, 0, isset($result['msg']) ? (string) $result['msg'] : '出库失败');
+        SystemApiKey::fail(SystemApiError::BUSINESS, isset($result['msg']) ? (string) $result['msg'] : '出库失败');
     }
     $codes = array();
     if (!empty($result['list']) && is_array($result['list'])) {
@@ -111,7 +98,7 @@ if ($action === 'take') {
             }
         }
     }
-    SystemApiKey::jsonExit(200, 1, isset($result['msg']) ? (string) $result['msg'] : 'ok', array(
+    SystemApiKey::ok(isset($result['msg']) ? (string) $result['msg'] : 'ok', array(
         'count'  => isset($result['count']) ? (int) $result['count'] : count($codes),
         'points' => $points,
         'codes'  => $codes,
@@ -120,23 +107,31 @@ if ($action === 'take') {
 }
 
 if ($action === 'void') {
-    SystemApiKey::requireRateLimit('cardkey_void', 60, 60);
     $codes = array();
     if (isset($input['codes']) && is_array($input['codes'])) {
+        if (count($input['codes']) > 200) {
+            SystemApiKey::fail(SystemApiError::BAD_PARAM, '单次最多作废 200 张');
+        }
         $codes = $input['codes'];
     } elseif (isset($input['codes'])) {
         $rawCodes = trim((string) $input['codes']);
+        if (strlen($rawCodes) > 8192) {
+            SystemApiKey::fail(SystemApiError::BAD_PARAM, 'codes 过长');
+        }
         if ($rawCodes !== '') {
             $codes = preg_split('/[\s,;]+/', $rawCodes);
+            if (is_array($codes) && count($codes) > 200) {
+                SystemApiKey::fail(SystemApiError::BAD_PARAM, '单次最多作废 200 张');
+            }
         }
     } elseif (isset($input['code'])) {
         $codes = array($input['code']);
     }
     $result = CardKeyManager::voidUnusedByCodes($codes);
     if (empty($result['ok'])) {
-        SystemApiKey::jsonExit(400, 0, isset($result['msg']) ? (string) $result['msg'] : '作废失败');
+        SystemApiKey::fail(SystemApiError::BUSINESS, isset($result['msg']) ? (string) $result['msg'] : '作废失败');
     }
-    SystemApiKey::jsonExit(200, 1, isset($result['msg']) ? (string) $result['msg'] : 'ok', array(
+    SystemApiKey::ok(isset($result['msg']) ? (string) $result['msg'] : 'ok', array(
         'count'   => isset($result['count']) ? (int) $result['count'] : 0,
         'voided'  => isset($result['voided']) ? $result['voided'] : array(),
         'skipped' => isset($result['skipped']) ? $result['skipped'] : array(),
@@ -144,19 +139,22 @@ if ($action === 'void') {
 }
 
 if ($action === 'query') {
-    SystemApiKey::requireRateLimit('cardkey_query', 60, 60);
     $code = isset($input['code']) ? trim((string) $input['code']) : '';
     $result = CardKeyManager::findByCode($code);
     if (empty($result['ok'])) {
         $msg = isset($result['msg']) ? (string) $result['msg'] : '查询失败';
-        // 格式非法与不存在统一 404 + 模糊文案（SEC-103）
-        $http = ($msg === '卡密表未就绪' || $msg === '查询失败') ? 400 : 404;
-        SystemApiKey::jsonExit($http, 0, $msg);
+        if ($msg === '卡密表未就绪') {
+            SystemApiKey::fail(SystemApiError::NOT_READY, $msg);
+        }
+        if ($msg === '查询失败') {
+            SystemApiKey::fail(SystemApiError::BUSINESS, $msg);
+        }
+        SystemApiKey::fail(SystemApiError::NOT_FOUND, $msg);
     }
-    SystemApiKey::jsonExit(200, 1, 'ok', array(
+    SystemApiKey::ok('ok', array(
         'exists' => true,
         'card'   => isset($result['card']) ? $result['card'] : array(),
     ));
 }
 
-SystemApiKey::jsonExit(400, 0, '不支持的 action');
+SystemApiKey::fail(SystemApiError::BAD_PARAM, '不支持的 action');

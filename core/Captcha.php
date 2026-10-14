@@ -1,12 +1,13 @@
 <?php
 /**
  * 文件：core/Captcha.php
- * 作用：系统级验证码门面（本地图 / 极验3 / 极验4；管理员与用户可分别选方式）
+ * 作用：系统级验证码门面（本地图 / 极验3 / 极验4 / Cloudflare Turnstile；管理员与用户可分别选方式）
  */
 
 require_once VS_ROOT . '/core/captcha/gt3/GeetestLib.php';
 require_once VS_ROOT . '/core/captcha/gt3/CheckGeetestStatus.php';
 require_once VS_ROOT . '/core/captcha/gt4/LoginController.php';
+require_once VS_ROOT . '/core/captcha/cf/Turnstile.php';
 require_once VS_ROOT . '/core/captcha/local.php';
 require_once VS_ROOT . '/core/captcha/helper.php';
 
@@ -15,6 +16,8 @@ class Captcha
     const MODE_LOCAL = 'local';
     const MODE_GT3 = 'gt3';
     const MODE_GT4 = 'gt4';
+    /** Cloudflare Turnstile */
+    const MODE_CF = 'cf';
 
     const SCENE_ADMIN_LOGIN = 'admin_login';
     const SCENE_ADMIN_FORGOT = 'admin_forgot';
@@ -109,13 +112,17 @@ class Captcha
 
     /**
      * @param string $raw
-     * @return string local|gt3|gt4
+     * @return string local|gt3|gt4|cf
      */
     public static function normalizeMode($raw)
     {
         $m = strtolower(trim((string) $raw));
-        if ($m === self::MODE_GT3 || $m === self::MODE_GT4 || $m === self::MODE_LOCAL) {
+        if ($m === self::MODE_GT3 || $m === self::MODE_GT4 || $m === self::MODE_LOCAL || $m === self::MODE_CF) {
             return $m;
+        }
+        // 别名：turnstile / cloudflare → cf
+        if ($m === 'turnstile' || $m === 'cloudflare' || $m === 'turn') {
+            return self::MODE_CF;
         }
         return self::MODE_LOCAL;
     }
@@ -142,7 +149,7 @@ class Captcha
     }
 
     /**
-     * @return string local|gt3|gt4
+     * @return string local|gt3|gt4|cf
      */
     public static function modeAdmin()
     {
@@ -154,7 +161,7 @@ class Captcha
     }
 
     /**
-     * @return string local|gt3|gt4
+     * @return string local|gt3|gt4|cf
      */
     public static function modeUser()
     {
@@ -178,7 +185,7 @@ class Captcha
      * 按场景取验证方式（管理员 / 用户分配置）
      *
      * @param string|null $scene Captcha::SCENE_*；空则回退用户侧
-     * @return string local|gt3|gt4
+     * @return string local|gt3|gt4|cf
      */
     public static function mode($scene = null)
     {
@@ -214,6 +221,9 @@ class Captcha
         }
         if ($mode === self::MODE_GT3) {
             return self::gt3Id() !== '' && self::gt3Key() !== '';
+        }
+        if ($mode === self::MODE_CF) {
+            return self::cfId() !== '' && self::cfKey() !== '';
         }
         return self::gt4Id() !== '' && self::gt4Key() !== '';
     }
@@ -312,6 +322,26 @@ class Captcha
     }
 
     /**
+     * Cloudflare Turnstile Site Key（可下发前端）
+     *
+     * @return string
+     */
+    public static function cfId()
+    {
+        return trim((string) Config::get('cfid', ''));
+    }
+
+    /**
+     * Cloudflare Turnstile Secret Key（仅服务端）
+     *
+     * @return string
+     */
+    public static function cfKey()
+    {
+        return trim((string) Config::get('cfkey', ''));
+    }
+
+    /**
      * 前端公开配置（不含密钥）
      *
      * @param string $scene
@@ -321,7 +351,7 @@ class Captcha
     {
         $enabled = self::sceneEnabled($scene);
         $mode = self::mode($scene);
-        $base = function_exists('vs_base_url') ? rtrim(vs_base_url(), '/') : '';
+        $base = function_exists('vs_site_base_path') ? vs_site_base_path() : '';
         $out = array(
             'enabled'   => $enabled ? 1 : 0,
             'mode'      => $mode,
@@ -343,6 +373,11 @@ class Captcha
             $out['captchaId'] = self::gt3Id();
             $out['register'] = $base . '/core/captcha/register.php?scene=' . rawurlencode((string) $scene);
             $out['product'] = 'popup';
+            return $out;
+        }
+        if ($mode === self::MODE_CF) {
+            $out['captchaId'] = self::cfId();
+            $out['product'] = 'turnstile';
             return $out;
         }
         $out['captchaId'] = self::gt4Id();
@@ -417,7 +452,38 @@ class Captcha
         if ($mode === self::MODE_GT3) {
             return self::validateGt3($scene, $post);
         }
+        if ($mode === self::MODE_CF) {
+            return self::validateCf($scene, $post);
+        }
         return self::validateGt4($scene, $post);
+    }
+
+    /**
+     * Cloudflare Turnstile Siteverify
+     *
+     * @param string $scene
+     * @param array  $post
+     * @return true|string
+     */
+    private static function validateCf($scene, array $post)
+    {
+        $token = self::postStr($post, 'cf-turnstile-response');
+        if ($token === '') {
+            $token = self::postStr($post, 'cfturnstile');
+        }
+        if ($token === '') {
+            return '请完成人机验证';
+        }
+        if (!self::consumeToken('cf', $scene, $token)) {
+            return '人机验证已失效，请重新完成验证';
+        }
+        $ip = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '';
+        $res = CaptchaTurnstile::validate(self::cfKey(), $token, $ip);
+        if (!empty($res['ok'])) {
+            return true;
+        }
+        self::releaseToken('cf', $scene, $token);
+        return '人机验证未通过';
     }
 
     /**
@@ -557,6 +623,8 @@ class Captcha
             'gt4_id'        => self::gt4Id(),
             'gt4_key'       => self::gt4Key(),
             'gt4_api'       => self::gt4Api(),
+            'cfid'          => self::cfId(),
+            'cfkey'         => self::cfKey(),
             'admin_login'   => Config::get('captcha_on_admin_login', Config::get('geetest_on_admin_login', '1')) === '1',
             'admin_forgot'  => Config::get('captcha_on_admin_forgot', Config::get('geetest_on_admin_forgot', '1')) === '1',
             'user_login'    => Config::get('captcha_on_user_login', Config::get('geetest_on_user_login', '1')) === '1',

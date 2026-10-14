@@ -31,22 +31,28 @@ $billingLabel = !$notFound && !empty($api['billing_label'])
         $points
     );
 $chargeDetailLabel = $billingLabel;
+$promoLabel = !$notFound && !empty($api['promo_label']) ? (string) $api['promo_label'] : '';
+$promoMode = !$notFound && !empty($api['promo_mode']) ? (string) $api['promo_mode'] : 'off';
+// 计费行始终用标价（全免不把标价改成「免费」）；活动只追加标签
 if (!$notFound && !empty($api['charge']) && $points > 0) {
     $fmt = rtrim(rtrim(number_format($points, 4, '.', ''), '0'), '.');
     $chargeDetailLabel = $fmt . ' 积分 / 次';
+}
+if ($promoLabel !== '') {
+    $chargeDetailLabel .= ' · ' . $promoLabel;
 }
 $callsLabel = !$notFound ? number_format((int) (isset($api['calls']) ? $api['calls'] : 0)) : '0';
 $paramsList = (!$notFound && isset($api['params_list']) && is_array($api['params_list'])) ? $api['params_list'] : array();
 $paramsRaw = (!$notFound && isset($api['params'])) ? (string) $api['params'] : '';
 $paramsPretty = $paramsRaw !== '' ? FrontendApi::prettyParamsJson($paramsRaw) : '';
 $openapiJson = (!$notFound && isset($api['openapi_json'])) ? (string) $api['openapi_json'] : '';
-/* 核心注入多为紧凑 JSON；主题三展示须美化（《主题三圆角规范》§四） */
+/* 核心注入多为紧凑 JSON；主题三展示须美化（《主题三圆角规范》第四节） */
 if ($openapiJson !== '') {
     $oaDecoded = json_decode($openapiJson, true);
     if (is_array($oaDecoded)) {
         $openapiJson = (string) json_encode(
             $oaDecoded,
-            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+            JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_HEX_TAG
         );
     }
 }
@@ -168,7 +174,7 @@ if (!$notFound) {
       data-endpoint="<?php echo ($notFound || $isDisabled) ? '' : vs_e($endpointCopy); ?>"
       data-maintenance="<?php echo $isMaintenance ? '1' : '0'; ?>"
       data-disabled="<?php echo $isDisabled ? '1' : '0'; ?>">
-  <div class="th3-page__inner max-w-5xl mx-auto px-4 sm:px-5 lg:px-8">
+  <div class="th3-page__inner th3-page__inner--detail mx-auto px-4 sm:px-5 lg:px-8">
     <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">/ 接口详情</div>
 
     <?php if ($notFound): ?>
@@ -203,13 +209,13 @@ if (!$notFound) {
       <div class="th3-panel card mt-8">
         <h2 class="font-display font-semibold text-lg m-0 mb-4">接口信息</h2>
         <?php if ($endpointDisplay !== '' || $isDisabled): ?>
-          <div class="th3-endpoint font-mono text-sm mb-5">
+          <div class="th3-endpoint font-mono text-sm mb-5<?php echo $isDisabled ? ' is-blurred' : ''; ?>">
             <div class="th3-endpoint__text">
-              <span class="tag free"><?php echo vs_e(isset($api['method_label']) ? $api['method_label'] : strtoupper($primaryMethod)); ?></span>
+              <span class="th3-endpoint__method tag free"><?php echo vs_e(isset($api['method_label']) ? $api['method_label'] : strtoupper($primaryMethod)); ?></span>
               <?php if ($isDisabled): ?>
                 <span id="detailEndpoint" class="th3-endpoint__mask" title="接口已禁用"><?php echo vs_e($endpointBlurText); ?></span>
               <?php else: ?>
-                <span id="detailEndpoint" class="break-all"><?php echo vs_e($endpointDisplay); ?></span>
+                <span id="detailEndpoint" class="th3-endpoint__path"><?php echo vs_e($endpointDisplay); ?></span>
               <?php endif; ?>
             </div>
             <?php if (!$isDisabled && $endpointCopy !== ''): ?>
@@ -221,41 +227,44 @@ if (!$notFound) {
         <div class="th3-info-grid">
           <div class="th3-info-item">
             <div class="th3-info-label">方法</div>
-            <div class="th3-info-value"><?php echo vs_e(isset($api['method_label']) ? $api['method_label'] : strtoupper($primaryMethod)); ?></div>
+            <div class="th3-info-value th3-info-value--method"><?php echo vs_e(isset($api['method_label']) ? $api['method_label'] : strtoupper($primaryMethod)); ?></div>
           </div>
           <div class="th3-info-item">
             <div class="th3-info-label">分类</div>
-            <div class="th3-info-value"><?php echo vs_e(!empty($api['category_name']) ? $api['category_name'] : '未分类'); ?></div>
+            <div class="th3-info-value th3-info-value--cat"><?php echo vs_e(!empty($api['category_name']) ? $api['category_name'] : '未分类'); ?></div>
           </div>
           <div class="th3-info-item">
             <div class="th3-info-label">计费</div>
-            <div class="th3-info-value"><?php echo vs_e($chargeDetailLabel); ?></div>
+            <div class="th3-info-value th3-info-value--billing"><?php echo vs_e($chargeDetailLabel); ?></div>
           </div>
           <div class="th3-info-item">
             <div class="th3-info-label">KEY</div>
-            <div class="th3-info-value"><?php echo vs_e($keyLabel); ?></div>
+            <div class="th3-info-value th3-info-value--key"><?php echo vs_e($keyLabel); ?></div>
           </div>
           <div class="th3-info-item">
             <div class="th3-info-label">调用</div>
-            <div class="th3-info-value"><?php echo vs_e($callsLabel); ?></div>
+            <div class="th3-info-value th3-info-value--calls"><?php echo vs_e($callsLabel); ?></div>
           </div>
           <div class="th3-info-item">
             <div class="th3-info-label">QPM</div>
-            <div class="th3-info-value"><?php echo vs_e(isset($api['qpm_label']) ? $api['qpm_label'] : '不限制'); ?></div>
+            <div class="th3-info-value th3-info-value--qpm"><?php echo vs_e(isset($api['qpm_label']) ? $api['qpm_label'] : '不限制'); ?></div>
           </div>
           <div class="th3-info-item">
             <div class="th3-info-label">鉴权</div>
-            <div class="th3-info-value"><?php echo vs_e($authWayLabel); ?></div>
+            <div class="th3-info-value th3-info-value--auth"><?php echo vs_e($authWayLabel); ?></div>
           </div>
           <div class="th3-info-item">
             <div class="th3-info-label">作者</div>
-            <div class="th3-info-value">
+            <div class="th3-info-value th3-info-value--author">
               <?php if (!empty($api['author']) && is_array($api['author']) && !empty($api['author']['profile_url'])): ?>
-                <a href="<?php echo vs_e($api['author']['profile_url']); ?>" style="color:var(--accent);">
-                  <?php echo vs_e(!empty($api['author']['username']) ? $api['author']['username'] : '开发者'); ?>
+                <a class="th3-author" href="<?php echo vs_e($api['author']['profile_url']); ?>">
+                  <?php if (!empty($api['author']['avatar'])): ?>
+                    <img class="th3-author__avatar" src="<?php echo vs_e($api['author']['avatar']); ?>" alt="" width="22" height="22" loading="lazy">
+                  <?php endif; ?>
+                  <span class="th3-author__name"><?php echo vs_e(!empty($api['author']['username']) ? $api['author']['username'] : '开发者'); ?></span>
                 </a>
               <?php else: ?>
-                —
+                <span class="th3-author__empty">—</span>
               <?php endif; ?>
             </div>
           </div>
@@ -413,15 +422,14 @@ if (!$notFound) {
                     $qsByAuthJs[(string) $authKey] = array_map($qsRowToJs, is_array($rows) ? $rows : array());
                 }
             }
-            $qsJsonFlags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS;
             ?>
-            window.detailQsLangIcons = <?php echo json_encode(ApiQuickstart::langIconMap(), $qsJsonFlags); ?>;
-            window.detailQsSamples = <?php echo json_encode(array_map($qsRowToJs, $qsSamples), $qsJsonFlags); ?>;
-            window.detailQsBundle = <?php echo json_encode(array(
+            window.detailQsLangIcons = <?php echo vs_json_script(ApiQuickstart::langIconMap()); ?>;
+            window.detailQsSamples = <?php echo vs_json_script(array_map($qsRowToJs, $qsSamples)); ?>;
+            window.detailQsBundle = <?php echo vs_json_script(array(
                 'auths' => isset($qsBundle['auths']) ? $qsBundle['auths'] : array(),
                 'authLabels' => isset($qsBundle['authLabels']) ? $qsBundle['authLabels'] : array(),
                 'byAuth' => $qsByAuthJs,
-            ), $qsJsonFlags); ?>;
+            )); ?>;
             </script>
           <?php endif; ?>
         </div>
@@ -570,6 +578,12 @@ if (!$notFound) {
                       <?php else: ?>
                         <span class="tag free">免费</span>
                       <?php endif; ?>
+                      <?php
+                        $rPromo = trim((string) (isset($r['promo_label']) ? $r['promo_label'] : ''));
+                        if (!$rMaint && $rPromo !== ''):
+                      ?>
+                        <span class="tag hot"><?php echo vs_e($rPromo); ?></span>
+                      <?php endif; ?>
                       <?php if (!$rMaint && $rNeed === 1): ?><span class="tag key">KEY必填</span><?php endif; ?>
                       <?php if (!$rMaint && $rNeed === 2): ?><span class="tag key">KEY可选</span><?php endif; ?>
                     </span>
@@ -595,7 +609,7 @@ if (!$notFound) {
 <?php
 $jsApi = is_array($pageApiSnapshot) ? $pageApiSnapshot : ((!$notFound && is_array($api)) ? $api : null);
 ?>
-window.detailApiData = <?php echo json_encode($jsApi === null ? null : array(
+window.detailApiData = <?php echo vs_json_script($jsApi === null ? null : array(
     'id' => (int) $jsApi['id'],
     'name' => isset($jsApi['name']) ? $jsApi['name'] : '',
     'endpoint' => $isDisabled ? '' : $endpointCopy,
@@ -606,20 +620,20 @@ window.detailApiData = <?php echo json_encode($jsApi === null ? null : array(
     'needkey' => isset($jsApi['needkey']) ? (int) $jsApi['needkey'] : 0,
     'keyways' => $keywaysList,
     'params_list' => $paramsList,
-), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-window.playgroundKeyContext = <?php echo json_encode(array(
+)); ?>;
+window.playgroundKeyContext = <?php echo vs_json_script(array(
     'loggedIn' => !empty($playground['loggedIn']),
     'apiKeyCount' => isset($playground['apiKeyCount']) ? (int) $playground['apiKeyCount'] : 0,
     'userCenterUrl' => isset($playground['userCenterUrl']) ? (string) $playground['userCenterUrl'] : ($vsBase . '/user/index'),
     'loginUrl' => isset($playground['loginUrl']) ? (string) $playground['loginUrl'] : ($vsBase . '/user/login'),
     'keysUrl' => isset($playground['keysUrl']) ? (string) $playground['keysUrl'] : vs_site_path('/core/front/playground-key.php'),
     'feedbackReady' => !empty($playground['feedbackReady']),
-), JSON_UNESCAPED_UNICODE); ?>;
-window.VS_CSRF_TOKEN = <?php echo json_encode(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
-window.VS_PLAY_URL = <?php echo json_encode(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/core/playground/relay.php')); ?>;
-window.VS_BASE_URL = window.VS_BASE_URL || <?php echo json_encode(rtrim($vsBase, '/')); ?>;
+)); ?>;
+window.VS_CSRF_TOKEN = <?php echo vs_json_script(isset($playground['csrf']) ? (string) $playground['csrf'] : AuthSecurity::csrfToken()); ?>;
+window.VS_PLAY_URL = <?php echo vs_json_script(isset($playground['playUrl']) ? (string) $playground['playUrl'] : (rtrim($vsBase, '/') . '/core/playground/relay.php')); ?>;
+window.VS_BASE_URL = window.VS_BASE_URL || <?php echo vs_json_script(rtrim($vsBase, '/')); ?>;
 </script>
-<script type="application/json" id="detailPageMarkdownJson"><?php echo json_encode($detailPageMarkdown, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
+<script type="application/json" id="detailPageMarkdownJson"><?php echo vs_json_script(isset($detailPageMarkdown) ? (string) $detailPageMarkdown : ''); ?></script>
 <link rel="stylesheet" href="<?php echo vs_e($vsBase); ?>/core/markdown/assets/css/markdown-render.css?v=<?php echo vs_e(VS_VERSION); ?>">
 <?php $vsSyntaxHref = ThemeManager::pageScriptUrl('vs-syntax.js'); if ($vsSyntaxHref !== ''): ?>
 <script src="<?php echo vs_e($vsSyntaxHref); ?>" defer></script>

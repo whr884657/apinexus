@@ -493,10 +493,8 @@ class IpLocator
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(5, $timeout));
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'ApiNexus-IpLocator/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
-            // 自定义上游可能证书不全；内置同路径兼容
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($ch, CURLOPT_USERAGENT, class_exists('OutboundUa') ? OutboundUa::build('IpLocator') : ('ApiNexus-IpLocator/' . (defined('VS_VERSION') ? VS_VERSION : '1')));
+            vs_curl_ssl_verify($ch);
             if (defined('CURLPROTO_HTTP')) {
                 curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
             }
@@ -517,7 +515,10 @@ class IpLocator
         if (!self::assertPublicHttpUrl($url)) {
             return '';
         }
-        $hdr = '';
+        $uaLine = class_exists('OutboundUa')
+            ? OutboundUa::headerLine('IpLocator')
+            : ('User-Agent: ApiNexus-IpLocator/' . (defined('VS_VERSION') ? VS_VERSION : '1'));
+        $hdr = $uaLine . "\r\n";
         foreach ($headers as $h) {
             $hdr .= $h . "\r\n";
         }

@@ -53,6 +53,14 @@
     border-bottom: 1px solid var(--vs-border);
     flex-shrink: 0;
 }
+a.vs-sidebar__home {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+a.vs-sidebar__home:hover .vs-sidebar__name {
+    color: var(--vs-primary, #111);
+}
 
 .vs-sidebar__logo {
     width: 32px;
@@ -1300,6 +1308,115 @@ button.vs-refresh-btn.is-spinning svg {
 .vs-avatar-field .vs-input {
     flex: 1;
     min-width: 0;
+}
+
+/* ── 账号设置顶卡 + Tab（v13.26.46） ── */
+.vs-account-page {
+    max-width: 920px;
+    min-width: 0;
+}
+.vs-account-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    border-radius: 14px;
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #eef2f7);
+    box-sizing: border-box;
+}
+.vs-account-hero__avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #f1f5f9;
+}
+.vs-account-hero__meta {
+    min-width: 0;
+    flex: 1;
+}
+.vs-account-hero__name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.3;
+    word-break: break-word;
+}
+.vs-account-hero__email {
+    margin-top: 2px;
+    font-size: 13px;
+    color: #64748b;
+    word-break: break-all;
+}
+.vs-account-hero__badge {
+    display: inline-flex;
+    margin-top: 8px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e40af;
+    background: #eff6ff;
+    cursor: help;
+}
+.vs-account-hero__edit {
+    flex-shrink: 0;
+}
+.vs-tabs.vs-account-tabs {
+    display: flex;
+    gap: 2px;
+    margin: 0 0 16px;
+    border-bottom: 1px solid var(--vs-border, #e5e7eb);
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+.vs-tabs.vs-account-tabs .vs-tabs__btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-bottom: -1px;
+}
+.vs-tabs.vs-account-tabs .vs-tabs__btn:hover {
+    color: #0f172a;
+}
+.vs-tabs.vs-account-tabs .vs-tabs__btn.is-active {
+    color: #0f172a;
+    border-bottom-color: #111;
+}
+.vs-account-pane {
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: var(--vs-content-bg, #fff);
+    border: 1px solid var(--vs-border, #eef2f7);
+    box-sizing: border-box;
+}
+.vs-account-pane[hidden] {
+    display: none !important;
+}
+.vs-account-avatar__img--inline {
+    display: none;
+}
+@media (max-width: 640px) {
+    .vs-account-hero {
+        flex-wrap: wrap;
+    }
+    .vs-account-hero__edit {
+        width: 100%;
+    }
 }
 
 /* ── 账号设置页 ── */
@@ -4478,7 +4595,7 @@ select.vs-input.vs-select {
 }
 
 .vs-api-review-panel,
-#userApiManagePage.vs-panel {
+#userApiManagePage {
     padding: 14px 16px !important;
 }
 
@@ -4643,7 +4760,7 @@ select.vs-input.vs-select {
     }
 
     .vs-api-review-panel,
-    #userApiManagePage.vs-panel {
+    #userApiManagePage {
         padding: 10px 8px !important;
     }
 
@@ -4735,8 +4852,8 @@ select.vs-input.vs-select {
 /* ===== v3.23.0：真·分列列表 + 手机全宽右靠 + 分页单行 + 状态按钮高亮 ===== */
 .vs-api-list-panel,
 .vs-api-review-panel,
-#userApiManagePage.vs-panel,
-#userTokenPage.vs-panel,
+#userApiManagePage,
+#userTokenPage,
 #adminTokenPage.vs-panel {
     padding: 12px !important;
 }
@@ -5001,10 +5118,13 @@ select.vs-input.vs-select {
     min-width: 64px !important;
     padding: 0 22px 0 10px !important;
 }
-.vs-api-list-footer .vs-api-pager__nav,
-.vs-api-list-footer .vs-api-pager__num {
+.vs-api-list-footer .vs-api-pager__nav {
     padding: 0 12px !important;
     min-width: 0 !important;
+}
+.vs-api-list-footer .vs-api-pager__num {
+    padding: 0 8px !important;
+    min-width: 32px !important;
 }
 .vs-api-list-footer .vs-api-pager .vs-api-list-pagesize__label {
     line-height: 32px !important;
@@ -5070,8 +5190,8 @@ select.vs-input.vs-select {
 @media (max-width: 900px) {
     .vs-api-list-panel,
     .vs-api-review-panel,
-    #userApiManagePage.vs-panel,
-    #userTokenPage.vs-panel,
+    #userApiManagePage,
+    #userTokenPage,
     #adminTokenPage.vs-panel {
         padding: 8px 6px !important;
     }
@@ -5378,12 +5498,30 @@ select.vs-input.vs-select {
     max-width: 100%;
 }
 
-#userTokenPage .vs-token-row .vs-token-row__quota,
-#userTokenPage .vs-token-row .vs-token-row__expire {
+/* 配额/有效期已并入 .vs-token-row__meta */
+
+/* 用户令牌卡：范围行 + 元信息行（对齐管理端 key-card） */
+#userTokenPage .vs-token-row__stats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+#userTokenPage .vs-token-row__scope,
+#userTokenPage .vs-token-row__meta {
     font-size: 12px;
+    line-height: 1.35;
     color: #64748b;
-    white-space: nowrap;
     font-variant-numeric: tabular-nums;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#userTokenPage .vs-token-row__scope strong,
+#userTokenPage .vs-token-row__meta strong {
+    font-weight: 700;
+    color: #0f172a;
 }
 
 /* 令牌有效期：嵌套选择器内日历（z-index 走 .vs-nested-picker--viewport=4900） */
@@ -5522,19 +5660,16 @@ select.vs-input.vs-select {
 }
 
 @media (min-width: 901px) {
-    /* 固定列宽保证跨行垂直对齐；密钥列吃剩余空间 */
+    /* 名称 | 密钥 | 范围+元信息 | 状态 | 操作 */
     .vs-api-item.vs-token-row {
         grid-template-columns:
             32px
             minmax(100px, 0.9fr)
-            minmax(160px, 1.5fr)
-            112px
-            148px
-            96px
-            108px
+            minmax(160px, 1.4fr)
+            minmax(220px, 1.6fr)
             72px
             auto !important;
-        grid-template-areas: "icon title endpoint quota expire calls spent tags actions" !important;
+        grid-template-areas: "icon title endpoint stats tags actions" !important;
         gap: 8px 10px !important;
         align-items: center;
         padding: 12px 14px !important;
@@ -5544,7 +5679,10 @@ select.vs-input.vs-select {
         box-shadow: none !important;
         background: var(--vs-content-bg) !important;
     }
-    .vs-api-item.vs-token-row .vs-api-item__title {
+        .vs-api-item.vs-token-row .vs-api-item__icon {
+        grid-area: icon !important;
+    }
+.vs-api-item.vs-token-row .vs-api-item__title {
         grid-area: title !important;
         min-width: 0;
         max-width: none;
@@ -5561,54 +5699,14 @@ select.vs-input.vs-select {
         min-width: 0;
         width: 100%;
     }
-    .vs-api-item.vs-token-row .vs-token-row__quota {
-        grid-area: quota !important;
-        justify-self: stretch !important;
-        width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .vs-api-item.vs-token-row .vs-token-row__expire {
-        grid-area: expire !important;
-        justify-self: stretch !important;
-        width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .vs-api-item.vs-token-row .vs-token-row__stats {
+        grid-area: stats !important;
+        min-width: 0;
     }
     .vs-api-item.vs-token-row .vs-api-item__tags {
         grid-area: tags !important;
         justify-self: start !important;
         white-space: nowrap;
-    }
-    .vs-api-item.vs-token-row .vs-api-item__calls,
-    .vs-api-item.vs-token-row .vs-token-row__calls {
-        grid-area: calls !important;
-        white-space: nowrap;
-        font-size: 12px;
-        color: #64748b;
-        text-align: left !important;
-        justify-self: stretch !important;
-        width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .vs-api-item.vs-token-row .vs-api-item__spent,
-    .vs-api-item.vs-token-row .vs-token-row__spent {
-        grid-area: spent !important;
-        white-space: nowrap;
-        font-size: 12px;
-        color: #64748b;
-        justify-self: stretch !important;
-        width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .vs-api-item.vs-token-row .vs-api-item__calls strong,
-    .vs-api-item.vs-token-row .vs-api-item__spent strong {
-        color: #0f172a;
-        font-weight: 700;
     }
     .vs-api-item.vs-token-row .vs-api-item__actions {
         grid-area: actions !important;
@@ -5630,18 +5728,20 @@ select.vs-input.vs-select {
         display: inline-flex !important;
     }
     .vs-api-item.vs-token-row {
-        /* 紧凑卡：名称+状态 / Key / 配额·有效期 / 调用·消耗 / 操作右对齐 */
+        /* 紧凑卡：名称+状态 / Key / 范围 / 配额·有效期·调用·消耗 / 操作 */
         grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) auto !important;
         grid-template-areas:
             "icon title title tags"
             "endpoint endpoint endpoint endpoint"
-            ". quota expire expire"
-            ". calls spent ."
+            "stats stats stats stats"
             "actions actions actions actions" !important;
         gap: 6px 8px !important;
         padding: 12px !important;
     }
-    .vs-api-item.vs-token-row .vs-api-item__title {
+        .vs-api-item.vs-token-row .vs-api-item__icon {
+        grid-area: icon !important;
+    }
+.vs-api-item.vs-token-row .vs-api-item__title {
         grid-area: title !important;
     }
     .vs-api-item.vs-token-row .vs-api-item__endpoint {
@@ -5651,43 +5751,8 @@ select.vs-input.vs-select {
         grid-area: tags !important;
         justify-self: end !important;
     }
-    .vs-api-item.vs-token-row .vs-token-row__quota {
-        grid-area: quota !important;
-        font-size: 12px;
-        color: #64748b;
-        white-space: nowrap;
-        min-width: 0;
-    }
-    .vs-api-item.vs-token-row .vs-token-row__quota::after {
-        content: " ·";
-        color: #cbd5e1;
-        margin-left: 2px;
-    }
-    .vs-api-item.vs-token-row .vs-token-row__expire {
-        grid-area: expire !important;
-        font-size: 12px;
-        color: #64748b;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        min-width: 0;
-    }
-    .vs-api-item.vs-token-row .vs-api-item__calls,
-    .vs-api-item.vs-token-row .vs-token-row__calls {
-        grid-area: calls !important;
-        font-size: 12px;
-        color: #64748b;
-        text-align: left !important;
-        justify-self: start !important;
-        white-space: nowrap;
-        min-width: 0;
-    }
-    .vs-api-item.vs-token-row .vs-api-item__spent,
-    .vs-api-item.vs-token-row .vs-token-row__spent {
-        grid-area: spent !important;
-        font-size: 12px;
-        color: #64748b;
-        white-space: nowrap;
+    .vs-api-item.vs-token-row .vs-token-row__stats {
+        grid-area: stats !important;
         min-width: 0;
     }
     .vs-api-item.vs-token-row .vs-api-item__actions {
@@ -7014,8 +7079,7 @@ select.vs-input.vs-select {
 }
 
 .vs-api-list-footer .vs-api-pager .vs-api-pager__nav,
-.vs-api-list-footer .vs-api-pager button.vs-api-pager__nav,
-.vs-api-list-footer .vs-api-pager .vs-api-pager__num {
+.vs-api-list-footer .vs-api-pager button.vs-api-pager__nav {
     padding-left: 12px !important;
     padding-right: 12px !important;
     min-width: 0 !important;
@@ -7023,6 +7087,39 @@ select.vs-input.vs-select {
     color: #334155 !important;
     border: 1px solid #cbd5e1 !important;
     font-weight: 500 !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-api-pager__num {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    min-width: 32px !important;
+    background: #fff !important;
+    color: #334155 !important;
+    border: 1px solid #cbd5e1 !important;
+    font-weight: 500 !important;
+}
+
+/* 当前页：黑底白字（须压过上面白底 !important） */
+.vs-api-list-footer .vs-api-pager .vs-api-pager__num.is-active,
+.vs-api-list-footer .vs-api-pager button.vs-api-pager__num.is-active {
+    background: #0f172a !important;
+    color: #fff !important;
+    border-color: #0f172a !important;
+    font-weight: 600 !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-api-pager__ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 32px;
+    padding: 0 2px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 32px;
+    user-select: none;
 }
 
 .vs-api-list-footer .vs-api-pager .vs-api-pager__nav:disabled,
@@ -11362,3 +11459,195 @@ select.vs-input.vs-select {
     }
 }
 
+
+/* —— 令牌接口范围选择器 —— */
+.vs-token-scope-field .vs-token-scope-radios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    margin: 6px 0 8px;
+}
+.vs-token-scope-summary[hidden] {
+    display: none !important;
+}
+.vs-token-scope-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 4px 0 6px;
+}
+.vs-token-scope-summary__text {
+    font-size: 13px;
+    color: var(--vs-text-secondary, #64748b);
+}
+.vs-token-scope-field .vs-notice {
+    margin: 8px 0 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+.vs-scope-panel .vs-scope-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: min(70vh, 560px);
+}
+/* 对齐用户日志 .vs-log-search：模式下拉在前 + 搜索框 + 搜索按钮 */
+.vs-scope-toolbar.vs-scope-search,
+.vs-scope-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    min-width: 0;
+}
+.vs-scope-search__field {
+    flex: 0 0 auto;
+    margin: 0;
+    min-width: 0;
+}
+.vs-scope-search .vs-pick,
+.vs-scope-toolbar .vs-scope-search .vs-pick {
+    width: auto !important;
+    flex: 0 0 auto;
+    min-width: 96px;
+    max-width: 120px;
+    position: relative;
+    z-index: 2;
+}
+.vs-scope-search .vs-pick .vs-pick__btn {
+    height: 32px;
+    min-height: 32px;
+    box-sizing: border-box;
+    font-size: 12px;
+    padding: 0 28px 0 10px;
+}
+.vs-scope-search__field-select {
+    width: 108px;
+    height: 32px !important;
+    font-size: 12px;
+}
+.vs-scope-search__input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 120px;
+    max-width: 280px;
+    height: 32px !important;
+    padding: 0 10px;
+    font-size: 12px;
+    box-sizing: border-box;
+}
+.vs-scope-search__btn {
+    flex: 0 0 auto;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 14px !important;
+    font-size: 12px !important;
+    line-height: 30px !important;
+}
+.vs-scope-list {
+    flex: 1 1 auto;
+    overflow: auto;
+    min-height: 180px;
+    border: 1px solid var(--vs-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 6px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    contain: content;
+    content-visibility: auto;
+}
+#userTokenScopePicker .vs-nested-picker__backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.vs-scope-empty {
+    padding: 28px 12px;
+    text-align: center;
+    color: var(--vs-text-secondary, #64748b);
+    font-size: 13px;
+}
+.vs-scope-cat {
+    margin-bottom: 4px;
+    contain: layout style;
+}
+.vs-scope-cat__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 4px;
+}
+.vs-scope-cat__exp {
+    width: 24px;
+    height: 24px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+    transform: rotate(0deg);
+    font-size: 16px;
+    line-height: 1;
+}
+.vs-scope-cat__exp.is-open { transform: rotate(90deg); }
+.vs-scope-cat__check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    font-size: 14px;
+}
+.vs-scope-cat__n {
+    font-size: 12px;
+    color: var(--vs-text-secondary, #64748b);
+}
+.vs-scope-cat__unc-title {
+    font-size: 13px;
+    font-weight: 600;
+    padding-left: 4px;
+}
+.vs-scope-muted { font-style: normal; opacity: .65; font-size: 12px; }
+.vs-scope-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 4px 8px 28px;
+}
+.vs-scope-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px;
+    border: 1px solid var(--vs-border, #e2e8f0);
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    background: var(--vs-content-bg, #fff);
+    max-width: 100%;
+}
+.vs-scope-chip.is-on {
+    border-color: var(--vs-primary, #2563eb);
+    background: rgba(37, 99, 235, 0.1);
+}
+.vs-scope-chip.is-locked { opacity: .72; cursor: default; }
+.vs-scope-chip.is-stale { opacity: .55; text-decoration: line-through; }
+.vs-scope-chip__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 160px;
+}
+.vs-scope-chip__id {
+    color: var(--vs-text-secondary, #64748b);
+    font-size: 11px;
+}
+.vs-scope-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}

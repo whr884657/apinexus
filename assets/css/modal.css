@@ -762,6 +762,9 @@ body.vs-modal-open {
 
 .vs-overlay__foot .vs-btn {
     min-width: 120px;
+    min-height: 40px;
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .vs-overlay__foot .vs-btn--pill {

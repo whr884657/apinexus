@@ -8,6 +8,10 @@ require_once __DIR__ . '/init.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
+    // 地理/KPI 聚合可能较慢：尽早释放会话锁，避免 live/snapshot 互堵导致整页空白（对齐控制台，E466）
+    if (function_exists('session_write_close')) {
+        @session_write_close();
+    }
     $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
     if ($action === 'refresh' || $action === 'snapshot') {
         DashboardStats::assertAjaxRateLimit($action);
@@ -16,6 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'snapshot' => DashboardStats::screenSnapshot($action === 'refresh'),
             ));
         } catch (Exception $e) {
+            AjaxResponse::error('统计暂时不可用，请稍后重试');
+        } catch (Throwable $e) {
             AjaxResponse::error('统计暂时不可用，请稍后重试');
         }
     }
@@ -27,36 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ));
         } catch (Exception $e) {
             AjaxResponse::error('实时数据暂时不可用');
+        } catch (Throwable $e) {
+            AjaxResponse::error('实时数据暂时不可用');
         }
     }
     AjaxResponse::error('未知操作');
 }
 
-try {
-    $boot = DashboardStats::screenSnapshot(false);
-} catch (Exception $e) {
-    $boot = array(
-        'server_time'   => date('Y-m-d H:i:s'),
-        'live_interval' => (int) DashboardStats::LIVE_INTERVAL_DEFAULT,
-        'kpi'           => array(),
-        'hourly'        => array('labels' => array(), 'series' => array()),
-        'top_apis'      => array(),
-        'geo'           => array(
-            'china' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
-            'world' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
-        ),
-        'geo_live'      => array(
-            'china' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
-            'world' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
-        ),
-        'geo_today'     => array(
-            'china' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
-            'world' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
-        ),
-        'recent'        => array(),
-        'current_rpm'   => 0,
-    );
-}
+/* 首屏禁止同步 screenSnapshot 扫大表；壳 + AJAX snapshot（E466） */
+$boot = DashboardStats::screenBootShell();
 
 /* 不输出布局标题行「数据大屏」与标题旁全屏/刷新；全屏改到页内昼夜按钮旁 */
 vs_admin_layout_start('实时数据监控中心', 'screen', '');

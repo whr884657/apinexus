@@ -17,11 +17,15 @@ class QQOAuth
     public static function authorizeUrl(array $context = array())
     {
         $cfg = OAuthConfig::getProvider(self::PROVIDER);
+        $state = OAuthState::create(self::PROVIDER, $context);
+        if ($state === '') {
+            return '';
+        }
         $params = array(
             'response_type' => 'code',
             'client_id'     => $cfg['app_id'],
             'redirect_uri'  => OAuthConfig::callbackUrl(self::PROVIDER),
-            'state'         => OAuthState::create(self::PROVIDER, $context),
+            'state'         => $state,
             'scope'         => 'get_user_info',
         );
 

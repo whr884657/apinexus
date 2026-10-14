@@ -29,21 +29,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $beforeId = isset($_POST['before_id']) ? (int) $_POST['before_id'] : 0;
         $q = isset($_POST['q']) ? trim((string) $_POST['q']) : '';
         $qField = isset($_POST['q_field']) ? trim((string) $_POST['q_field']) : 'id';
-        // 刷新：清列表缓存后从最新重拉
+        // 刷新：回到第 1 页；本请求跳过读缓存（勿调用 invalidateApiLog，避免拖慢管理端/其他用户）
+        $skipCache = false;
         if (!empty($_POST['refresh']) && (string) $_POST['refresh'] === '1') {
-            if (class_exists('RedisCache')) {
-                RedisCache::invalidateApiLog();
-            }
             $page = 1;
             $beforeId = 0;
+            $skipCache = true;
         }
         $data = FrontendUser::myLogsPaged(array(
-            'page'      => $page,
-            'pagesize'  => $pagesize,
-            'before_id' => $beforeId,
-            'ok'        => $ok,
-            'q'         => $q,
-            'q_field'   => $qField,
+            'page'       => $page,
+            'pagesize'   => $pagesize,
+            'before_id'  => $beforeId,
+            'ok'         => $ok,
+            'q'          => $q,
+            'q_field'    => $qField,
+            'skip_cache' => $skipCache,
         ));
         if ((int) UserAuth::id() !== $userId) {
             AjaxResponse::error('会话已失效', 401);

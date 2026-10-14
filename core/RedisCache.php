@@ -20,8 +20,12 @@ class RedisCache
     const KEY_IPLOC_PREFIX = 'cache:iploc:';
     const KEY_API_PUBLIC = 'cache:api:public_list';
     /** 日志查询结果缓存键前缀（后台列表 / 后续图表等凡读 apilog 均可复用） */
-    const KEY_APILOG_PAGE_PREFIX = 'cache:apilog:query:';
-    /** 今日调用次数等汇总统计 */
+    /** v13.26.46 起后缀 query4：列表字段含转发头、彻底不含耗时，旧缓存作废 */
+    const KEY_APILOG_PAGE_PREFIX = 'cache:apilog:query4:';
+    /**
+     * 今日调用次数逻辑键前缀（完整键 = 前缀 + Y-m-d；见 apilogTodayKey）
+     * 兼容监控展示：旧无日期键 cache:apilog:today_count 升级后不再写入
+     */
     const KEY_APILOG_TODAY = 'cache:apilog:today_count';
     /** 时间窗内无筛选时的总数缓存前缀 */
     const KEY_APILOG_RANGE_TOTAL_PREFIX = 'cache:apilog:range_total:';
@@ -31,23 +35,29 @@ class RedisCache
     const KEY_ORDERS_RANGE_TOTAL_PREFIX = 'cache:orders:range_total:';
     const KEY_STAT_HITS = 'stats:cache_hits';
     const KEY_STAT_MISSES = 'stats:cache_misses';
+    const KEY_USER_STATUS_PREFIX = 'cache:user_status:';
+    const KEY_ADMIN_STATUS_PREFIX = 'cache:admin_status:';
 
-    const TTL_FRONTEND_API = 120;
-    const TTL_FRONTEND_CATEGORY = 300;
-    const TTL_FRONTEND_LINK = 300;
-    const TTL_FRONTEND_PARTNER = 300;
+    /** 前台内容长时缓存：后台保存须 invalidateFrontend / 针对性 forget（E417） */
+    const TTL_FRONTEND_API = 86400;
+    const TTL_FRONTEND_CATEGORY = 86400;
+    const TTL_FRONTEND_LINK = 86400;
+    const TTL_FRONTEND_PARTNER = 86400;
     /** 赞助商列表与伙伴同级缓存时长 */
-    const TTL_FRONTEND_SPONSOR = 300;
-    const TTL_FRONTEND_ARTICLE = 120;
-    const TTL_FRONTEND_ANNOUNCE = 60;
-    const TTL_FRONTEND_MISC = 120;
-    const TTL_API_PUBLIC = 120;
-    /** 日志查询/列表短 TTL，降低大表反复扫库 */
-    const TTL_APILOG_PAGE = 45;
-    const TTL_APILOG_STATS = 30;
+    const TTL_FRONTEND_SPONSOR = 86400;
+    const TTL_FRONTEND_ARTICLE = 86400;
+    const TTL_FRONTEND_ANNOUNCE = 86400;
+    const TTL_FRONTEND_MISC = 86400;
+    const TTL_API_PUBLIC = 86400;
+    /** 日志查询/列表短 TTL（筛选组合多，禁止 24h） */
+    const TTL_APILOG_PAGE = 90;
+    /** 今日调用无日期键时的兜底 TTL；优先用 ttlUntilEndOfDay */
+    const TTL_APILOG_STATS = 3600;
     /** 时间窗总数稍长，避免每次进页都 COUNT */
-    const TTL_APILOG_RANGE_TOTAL = 90;
-    const TTL_ORDERS_RANGE_TOTAL = 90;
+    const TTL_APILOG_RANGE_TOTAL = 180;
+    const TTL_ORDERS_RANGE_TOTAL = 180;
+    const TTL_USER_STATUS = 30;
+    const TTL_ADMIN_STATUS = 30;
 
     const MAX_RATE_LIMIT_KEYS = 2000;
     const STAT_MAX_VALUE = 100000000;
@@ -269,6 +279,9 @@ class RedisCache
             'userid'     => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
             'before_id'  => (int) (isset($opts['before_id']) ? $opts['before_id'] : 0),
             'skip_total' => !empty($opts['skip_total']) ? 1 : 0,
+            'date_from'  => isset($opts['date_from']) ? (string) $opts['date_from'] : '',
+            'date_to'    => isset($opts['date_to']) ? (string) $opts['date_to'] : '',
+            'inc_cold'   => !empty($opts['inc_cold']) ? 1 : 0,
         );
         return self::KEY_APILOG_PAGE_PREFIX . md5(json_encode($norm));
     }
@@ -310,13 +323,101 @@ class RedisCache
     public static function apilogFilterTotalKey(array $opts)
     {
         $norm = array(
-            'q'       => isset($opts['q']) ? (string) $opts['q'] : '',
-            'q_field' => isset($opts['q_field']) ? (string) $opts['q_field'] : 'id',
-            'ok'      => array_key_exists('ok', $opts) ? $opts['ok'] : null,
-            'apiid'   => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
-            'userid'  => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
+            'q'         => isset($opts['q']) ? (string) $opts['q'] : '',
+            'q_field'   => isset($opts['q_field']) ? (string) $opts['q_field'] : 'id',
+            'ok'        => array_key_exists('ok', $opts) ? $opts['ok'] : null,
+            'apiid'     => (int) (isset($opts['apiid']) ? $opts['apiid'] : 0),
+            'userid'    => (int) (isset($opts['userid']) ? $opts['userid'] : 0),
+            'date_from' => isset($opts['date_from']) ? (string) $opts['date_from'] : '',
+            'date_to'   => isset($opts['date_to']) ? (string) $opts['date_to'] : '',
         );
         return self::KEY_APILOG_RANGE_TOTAL_PREFIX . 'f:' . md5(json_encode($norm));
+    }
+
+    /**
+     * 今日调用次数逻辑键（按自然日；过 0 点自动换键）
+     *
+     * @param string $day Y-m-d，空则今天
+     * @return string
+     */
+    public static function apilogTodayKey($day = '')
+    {
+        $day = trim((string) $day);
+        if ($day === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+            $day = date('Y-m-d');
+        }
+        return self::KEY_APILOG_TODAY . ':' . $day;
+    }
+
+    /**
+     * 距今日结束的秒数（作今日计数键 TTL；至少 60）
+     *
+     * @return int
+     */
+    public static function ttlUntilEndOfDay()
+    {
+        $end = strtotime('tomorrow');
+        if ($end === false) {
+            return (int) self::TTL_APILOG_STATS;
+        }
+        return max(60, min(86400, $end - time()));
+    }
+
+    /**
+     * 今日调用 +N（写入路径实时更新；键不存在则从 0 起增并设到期）
+     *
+     * @param int $by
+     * @return void
+     */
+    public static function bumpApiLogToday($by = 1)
+    {
+        $by = (int) $by;
+        if ($by === 0 || !self::enabled()) {
+            return;
+        }
+        $logicalKey = self::apilogTodayKey();
+        $ttl = self::ttlUntilEndOfDay();
+        try {
+            RedisService::withClient(function ($redis) use ($logicalKey, $by, $ttl) {
+                $fullKey = RedisService::buildKey($logicalKey);
+                // 键不存在时禁止从 0 自增（会盖住真实总数）；留给 remember 回源
+                if (!$redis->exists($fullKey)) {
+                    return;
+                }
+                if ($by > 0) {
+                    $redis->incrBy($fullKey, $by);
+                } else {
+                    $redis->decrBy($fullKey, abs($by));
+                }
+                $redis->expire($fullKey, $ttl);
+            });
+        } catch (Exception $e) {
+            // 忽略：读路径可回源库
+        }
+    }
+
+    /**
+     * 写入今日调用绝对数（冷启动 / 回填后重建）
+     *
+     * @param int    $count
+     * @param string $day
+     * @return void
+     */
+    public static function putApiLogToday($count, $day = '')
+    {
+        $count = max(0, (int) $count);
+        self::put(self::apilogTodayKey($day), $count, self::ttlUntilEndOfDay());
+    }
+
+    /**
+     * 清除今日调用计数键（含旧无日期键 + 当日键；回填后用）
+     *
+     * @return void
+     */
+    public static function forgetApiLogToday()
+    {
+        self::forget(self::KEY_APILOG_TODAY);
+        self::forget(self::apilogTodayKey());
     }
 
     /**
@@ -361,7 +462,7 @@ class RedisCache
             return 0;
         }
 
-        self::forget(self::KEY_APILOG_TODAY);
+        self::forgetApiLogToday();
 
         try {
             return (int) RedisService::withClient(function ($redis) {
@@ -369,6 +470,7 @@ class RedisCache
                 foreach (array(
                     self::KEY_APILOG_PAGE_PREFIX,
                     self::KEY_APILOG_RANGE_TOTAL_PREFIX,
+                    self::KEY_APILOG_TODAY . ':',
                     'cache:userapilog:',
                 ) as $prefix) {
                     $pattern = RedisService::buildKey($prefix) . '*';
@@ -579,6 +681,24 @@ class RedisCache
                 'chart_color' => '#22c55e',
             ),
             array(
+                'id' => 'user_status',
+                'label' => '用户封禁状态',
+                'desc' => '登录检查与带密钥接口热路径共用；封禁/解禁/删号须立即失效',
+                'key' => self::KEY_USER_STATUS_PREFIX,
+                'ttl_hint' => self::TTL_USER_STATUS . ' 秒',
+                'pattern' => true,
+                'chart_color' => '#f43f5e',
+            ),
+            array(
+                'id' => 'admin_status',
+                'label' => '管理员状态',
+                'desc' => '后台登录检查；与用户状态键隔离',
+                'key' => self::KEY_ADMIN_STATUS_PREFIX,
+                'ttl_hint' => self::TTL_ADMIN_STATUS . ' 秒',
+                'pattern' => true,
+                'chart_color' => '#fb7185',
+            ),
+            array(
                 'id' => 'apilog_query',
                 'label' => '调用日志查询',
                 'desc' => '后台日志列表短时结果',
@@ -599,9 +719,10 @@ class RedisCache
             array(
                 'id' => 'apilog_today',
                 'label' => '今日调用次数',
-                'desc' => '优先读 statday 当日行；无表时回退 apilog COUNT',
-                'key' => self::KEY_APILOG_TODAY,
-                'ttl_hint' => self::TTL_APILOG_STATS . ' 秒',
+                'desc' => '键 cache:apilog:today_count:Y-m-d；写入 bump；冷启 remember 回源 statday/COUNT；TTL 至当日结束',
+                'key' => self::KEY_APILOG_TODAY . ':',
+                'ttl_hint' => '至当日结束（约 ' . self::ttlUntilEndOfDay() . ' 秒）',
+                'pattern' => true,
                 'chart_color' => '#ec4899',
             ),
             array(
@@ -618,7 +739,7 @@ class RedisCache
                 'label' => '控制台/大屏统计',
                 'desc' => '控制台 KPI/趋势；大屏 screen_full、geo_dist_today/live、iploc 城市计数等',
                 'key' => self::KEY_DASHBOARD_PREFIX,
-                'ttl_hint' => '分层 8～300 秒（screen_full≈60；geo_live≈轮询间隔）',
+                'ttl_hint' => '分层约 20～1800 秒（live≈20；今日≈180；24h≈600；7日≈1800；geo≈180）',
                 'pattern' => true,
                 'chart_color' => '#6366f1',
             ),
@@ -639,6 +760,15 @@ class RedisCache
                 'ttl_hint' => '86400 秒（24 小时）',
                 'pattern' => true,
                 'chart_color' => '#ef4444',
+            ),
+            array(
+                'id' => 'ops_site_promo',
+                'label' => '全站优惠镜像',
+                'desc' => '用户激励全站折扣/免费（权威在 vs_config；本键为镜像，TTL=剩余有效秒数）',
+                'key' => 'ops:incentive:site_promo',
+                'ttl_hint' => '随 expire_at 剩余时间（最长约 31 天封顶）',
+                'pattern' => false,
+                'chart_color' => '#10b981',
             ),
         );
 

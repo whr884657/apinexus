@@ -265,6 +265,9 @@
 
         var fd = new FormData();
         fd.append('action', 'get');
+        if (api && api.id) {
+            fd.append('apiid', String(api.id));
+        }
         keyFetchPromise = window.VS.postForm(fd, keysUrl()).then(function (data) {
             if (data && data.csrf) window.VS_CSRF_TOKEN = data.csrf;
             if (!data || Number(data.code) !== 1) {
@@ -274,6 +277,16 @@
             if (data.apiKeyCount != null && window.playgroundKeyContext) {
                 window.playgroundKeyContext.apiKeyCount = Number(data.apiKeyCount) || 0;
             }
+            if (Number(data.scopeBlocked) === 1) {
+                window.playgroundUserApiKey = '';
+                window.playgroundScopeBlocked = true;
+                window.playgroundScopeHint = data.scopeHint
+                    ? String(data.scopeHint)
+                    : '当前启用令牌均无权调用本接口，请到令牌页调整接口范围后再试';
+                return '';
+            }
+            window.playgroundScopeBlocked = false;
+            window.playgroundScopeHint = '';
             var key = data.apiKey != null ? String(data.apiKey).trim() : '';
             window.playgroundUserApiKey = key;
             return key;
@@ -382,6 +395,17 @@
                 var method = getMethod();
                 var params = collectParams();
                 var need = parseInt(api.needkey, 10) || 0;
+                var ctx = window.playgroundKeyContext || {};
+                if (ctx.loggedIn && window.playgroundScopeBlocked && (need === 1 || need === 2) && !keyVal) {
+                    var keysPage = String(ctx.userCenterUrl || '#');
+                    if (keysPage.indexOf('keys') < 0 && keysPage !== '#') {
+                        keysPage = keysPage.replace(/\/?$/, '/') + 'keys';
+                    }
+                    setPgBody('// ' + (window.playgroundScopeHint || '当前启用令牌均无权调用本接口')
+                        + ' 请到令牌页调整：' + keysPage, true);
+                    setStatus('范围限制', 'err');
+                    return;
+                }
                 if ((need === 1 || need === 2) && keyVal) {
                     var hasKey = false;
                     Object.keys(params).forEach(function (k) {

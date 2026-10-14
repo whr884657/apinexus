@@ -90,28 +90,43 @@
      * @returns {Promise<object>}
      */
     global.VS.postForm = function (formOrData, url, opts) {
-        var body = formOrData instanceof FormData ? formOrData : new FormData(formOrData);
-        global.VS.ensureCsrf(body);
         opts = opts || {};
+        var formEl = (formOrData && formOrData.tagName === 'FORM') ? formOrData : null;
 
-        var fetchOpts = {
-            method: 'POST',
-            body: body,
-            credentials: 'same-origin'
-        };
-        if (opts.signal) {
-            fetchOpts.signal = opts.signal;
-        }
+        var doPost = function () {
+            var body = formOrData instanceof FormData ? formOrData : new FormData(formOrData);
+            if (global.VsCaptcha && global.VsCaptcha.enabled
+                && typeof global.VsCaptcha.appendToFormData === 'function') {
+                global.VsCaptcha.appendToFormData(body);
+            }
+            global.VS.ensureCsrf(body);
 
-        return fetch(url || window.location.href, fetchOpts).then(function (res) {
-            return res.text().then(function (text) {
-                var data = global.VS.parseJsonResponse(text);
-                if (!data) {
-                    throw new Error('invalid_json');
-                }
-                return data;
+            var fetchOpts = {
+                method: 'POST',
+                body: body,
+                credentials: 'same-origin'
+            };
+            if (opts.signal) {
+                fetchOpts.signal = opts.signal;
+            }
+
+            return fetch(url || window.location.href, fetchOpts).then(function (res) {
+                return res.text().then(function (text) {
+                    var data = global.VS.parseJsonResponse(text);
+                    if (!data) {
+                        throw new Error('invalid_json');
+                    }
+                    return data;
+                });
             });
-        });
+        };
+
+        // 含人机验证的表单：提交前 ensure（补齐校验结果后再 POST）
+        if (formEl && global.VsCaptcha && global.VsCaptcha.enabled
+            && typeof global.VsCaptcha.ensure === 'function') {
+            return global.VsCaptcha.ensure(formEl).then(doPost);
+        }
+        return doPost();
     };
 
     /**
@@ -909,6 +924,151 @@
             return;
         }
         el.innerHTML = global.VS.loadingHtml(label, compact);
+    };
+
+    /**
+     * 底栏页码：固定最多 3 个连续数字（对齐日志查询）
+     * 仅 1 页：返回 [1]；第 1/2 页：1 2 3；第 3 页起窗口右移（2 3 4 …）
+     *
+     * @param {number} page
+     * @param {number} totalPages
+     * @returns {Array<number>}
+     */
+    global.VS.pagerItems = function (page, totalPages) {
+        page = Math.max(1, parseInt(page, 10) || 1);
+        totalPages = Math.max(1, parseInt(totalPages, 10) || 1);
+        if (page > totalPages) {
+            page = totalPages;
+        }
+        if (totalPages <= 1) {
+            return [1];
+        }
+        var win = Math.min(3, totalPages);
+        var start;
+        if (page <= 2) {
+            start = 1;
+        } else {
+            start = page - 1;
+        }
+        if (start + win - 1 > totalPages) {
+            start = Math.max(1, totalPages - win + 1);
+        }
+        var items = [];
+        var i;
+        for (i = 0; i < win; i += 1) {
+            items.push(start + i);
+        }
+        return items;
+    };
+
+    /**
+     * @param {number} page
+     * @param {number} totalPages
+     * @returns {string}
+     */
+    global.VS.pagerNumsHtml = function (page, totalPages) {
+        page = Math.max(1, parseInt(page, 10) || 1);
+        totalPages = Math.max(1, parseInt(totalPages, 10) || 1);
+        if (page > totalPages) {
+            page = totalPages;
+        }
+        var items = global.VS.pagerItems(page, totalPages);
+        var html = '';
+        var i;
+        var it;
+        for (i = 0; i < items.length; i += 1) {
+            it = items[i];
+            if (it === '…') {
+                html += '<span class="vs-api-pager__ellipsis" aria-hidden="true">…</span>';
+            } else {
+                html += '<button type="button" class="vs-api-pager__num'
+                    + (it === page ? ' is-active' : '')
+                    + '" data-page="' + it + '"'
+                    + (it === page ? ' aria-current="page"' : '')
+                    + '>' + it + '</button>';
+            }
+        }
+        return html;
+    };
+
+    /**
+     * 上一页 + 页码钮 + 下一页
+     *
+     * @param {number} page
+     * @param {number} totalPages
+     * @returns {string}
+     */
+    global.VS.pagerBarHtml = function (page, totalPages) {
+        page = Math.max(1, parseInt(page, 10) || 1);
+        totalPages = Math.max(1, parseInt(totalPages, 10) || 1);
+        if (page > totalPages) {
+            page = totalPages;
+        }
+        return '<button type="button" class="vs-api-pager__nav" data-p="-1"'
+            + (page > 1 ? '' : ' disabled') + '>上一页</button>'
+            + '<div class="vs-api-pager__nums">' + global.VS.pagerNumsHtml(page, totalPages) + '</div>'
+            + '<button type="button" class="vs-api-pager__nav" data-p="1"'
+            + (page < totalPages ? '' : ' disabled') + '>下一页</button>';
+    };
+
+    /**
+     * 底栏点击得到目标页码；无效返回 0
+     *
+     * @param {Event} e
+     * @param {number} currentPage
+     * @param {number} totalPages
+     * @returns {number}
+     */
+    global.VS.pagerClickPage = function (e, currentPage, totalPages) {
+        var btn = e.target && e.target.closest ? e.target.closest('[data-page], [data-p]') : null;
+        if (!btn || btn.disabled) {
+            return 0;
+        }
+        var page = Math.max(1, parseInt(currentPage, 10) || 1);
+        var tp = Math.max(1, parseInt(totalPages, 10) || 1);
+        if (btn.hasAttribute('data-page')) {
+            var p = parseInt(btn.getAttribute('data-page'), 10) || 0;
+            if (p < 1 || p > tp || p === page) {
+                return 0;
+            }
+            return p;
+        }
+        var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
+        if (delta > 0 && page < tp) {
+            return page + 1;
+        }
+        if (delta < 0 && page > 1) {
+            return page - 1;
+        }
+        return 0;
+    };
+
+    /**
+     * 对齐日志查询：静态上一页/下一页 + 填入页码（1 页也填「1」）
+     *
+     * @param {number} page
+     * @param {number} totalPages
+     * @param {HTMLElement|null} prevBtn
+     * @param {HTMLElement|null} nextBtn
+     * @param {HTMLElement|null} numsEl
+     * @returns {number} 校正后的页码
+     */
+    global.VS.applyLogsPager = function (page, totalPages, prevBtn, nextBtn, numsEl) {
+        page = Math.max(1, parseInt(page, 10) || 1);
+        totalPages = Math.max(1, parseInt(totalPages, 10) || 1);
+        if (page > totalPages) {
+            page = totalPages;
+        }
+        if (prevBtn) {
+            prevBtn.disabled = page <= 1;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = page >= totalPages;
+        }
+        if (numsEl && global.VS.pagerNumsHtml) {
+            numsEl.innerHTML = global.VS.pagerNumsHtml(page, totalPages);
+        }
+        return page;
     };
 
     var toastHost = null;

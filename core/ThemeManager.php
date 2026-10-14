@@ -1064,13 +1064,21 @@ class ThemeManager
      *
      * 安全协议 / 用户日志列表只维护这一份。主题包即使还留着同名文件，也不从主题包加载。
      *
-     * @param string $file common.js | user-logs.js
+     * @param string $file common.js | user-logs.js | user-points.js | user-api-manage.js | token-scope-picker.js
      * @return string
      */
     public static function systemJsUrl($file)
     {
         $file = basename(str_replace('\\', '/', (string) $file));
-        $allow = array('common.js', 'user-logs.js');
+        $allow = array(
+            'common.js',
+            'user-logs.js',
+            'user-points.js',
+            'user-api-manage.js',
+            'token-scope-picker.js',
+            'account.js', // 账号设置顶卡+Tab（E424）；禁主题包旧副本漂移
+            'user-notify.js', // 站内公告铃铛/弹窗（E441）；系统级唯一副本
+        );
         if (!in_array($file, $allow, true)) {
             return '';
         }
@@ -1080,13 +1088,13 @@ class ThemeManager
     /**
      * 系统级 CSS URL（根目录 assets/css）
      *
-     * @param string $file 目前仅 user-logs.css
+     * @param string $file user-logs.css | user-notify.css
      * @return string
      */
     public static function systemCssUrl($file)
     {
         $file = basename(str_replace('\\', '/', (string) $file));
-        if ($file !== 'user-logs.css') {
+        if ($file !== 'user-logs.css' && $file !== 'user-notify.css') {
             return '';
         }
         $path = VS_ROOT . '/assets/css/' . $file;
@@ -1171,8 +1179,9 @@ class ThemeManager
         if ($file === '') {
             return '';
         }
-        // 用户日志列表：系统级脚本（对齐管理端 system-logs.js），不读主题包副本
-        if ($file === 'user-logs.js') {
+        // 列表分页 / 令牌范围选择器 / 站内公告铃铛：系统级，不读主题包副本
+        if ($file === 'user-logs.js' || $file === 'user-points.js' || $file === 'user-api-manage.js'
+            || $file === 'token-scope-picker.js' || $file === 'account.js' || $file === 'user-notify.js') {
             return self::systemJsUrl($file);
         }
         if (!self::isValidTheme($themeId)) {
@@ -1241,6 +1250,10 @@ class ThemeManager
                 $out[] = $u;
             }
         }
+        $notifyCss = self::systemCssUrl('user-notify.css');
+        if ($notifyCss !== '') {
+            $out[] = $notifyCss;
+        }
         return $out;
     }
 
@@ -1262,6 +1275,10 @@ class ThemeManager
             if ($u !== '') {
                 $out[] = $u;
             }
+        }
+        $notifyJs = self::systemJsUrl('user-notify.js');
+        if ($notifyJs !== '') {
+            $out[] = $notifyJs;
         }
         return $out;
     }

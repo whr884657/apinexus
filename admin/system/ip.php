@@ -504,7 +504,11 @@ vs_admin_layout_start('IP 配置', 'ip', $headerActions);
                                 <option value="50">50</option>
                             </select>
                         </label>
-                        <div class="vs-api-pager__navs" id="adminIpAllowPagerNav"></div>
+                        <div class="vs-api-pager__navs">
+                            <button type="button" class="vs-api-pager__nav" id="adminIpAllowPrevBtn" aria-label="上一页">上一页</button>
+                            <div class="vs-api-pager__nums" id="adminIpAllowPagerNums" role="navigation" aria-label="页码"></div>
+                            <button type="button" class="vs-api-pager__nav" id="adminIpAllowNextBtn" aria-label="下一页">下一页</button>
+                        </div>
                     </div>
                     <div class="vs-api-list-total" id="adminIpAllowTotal">共 <?php echo (int) count($allowRows); ?> 条</div>
                 </div>
@@ -677,7 +681,11 @@ vs_admin_layout_start('IP 配置', 'ip', $headerActions);
                                 <option value="50">50</option>
                             </select>
                         </label>
-                        <div class="vs-api-pager__navs" id="adminIpProxyPagerNav"></div>
+                        <div class="vs-api-pager__navs">
+                            <button type="button" class="vs-api-pager__nav" id="adminIpProxyPrevBtn" aria-label="上一页">上一页</button>
+                            <div class="vs-api-pager__nums" id="adminIpProxyPagerNums" role="navigation" aria-label="页码"></div>
+                            <button type="button" class="vs-api-pager__nav" id="adminIpProxyNextBtn" aria-label="下一页">下一页</button>
+                        </div>
                     </div>
                     <div class="vs-api-list-total" id="adminIpProxyTotal">共 <?php echo (int) count($proxyRows); ?> 条</div>
                 </div>

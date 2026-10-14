@@ -1,0 +1,267 @@
+{
+    "id": "userinfo",
+    "name": "用户信息 API",
+    "desc": "按用户编号/用户名/邮箱查询资料、账号状态、角色、积分、累计调用、今日是否签到、近7日接口调用排行；可选查近7日内某一天的调用摘要。不含密码与 OAuth 等敏感字段。",
+    "category": "对接能力",
+    "methods": [
+        "GET",
+        "POST"
+    ],
+    "file": "userinfo.php",
+    "params": [
+        {
+            "name": "key",
+            "type": "string",
+            "required": true,
+            "description": "系统密钥。三态传钥：① Authorization: Bearer；② Header X-Api-Key / Api-Key / Apikey；③ Query ?key= / ?apikey=（GET 友好；生产优先 Header/Bearer）。亦可用 POST/JSON 的 key / apikey。在「系统设置 → 系统密钥」生成。",
+            "example": "YOUR_KEY"
+        },
+        {
+            "name": "action",
+            "type": "string",
+            "required": false,
+            "description": "操作类型。目前仅 get（查询用户信息）。不传时默认 get。",
+            "example": "get"
+        },
+        {
+            "name": "userid",
+            "type": "integer",
+            "required": false,
+            "description": "用户数字编号。与 username、email 三选一。也认 user_id、uid。",
+            "example": "1"
+        },
+        {
+            "name": "username",
+            "type": "string",
+            "required": false,
+            "description": "用户名（精确匹配）。与 userid、email 三选一。",
+            "example": "demo"
+        },
+        {
+            "name": "email",
+            "type": "string",
+            "required": false,
+            "description": "用户邮箱（精确匹配）。与 userid、username 三选一。也可用 account 传用户名或邮箱。",
+            "example": "user@example.com"
+        },
+        {
+            "name": "date",
+            "type": "string",
+            "required": false,
+            "description": "可选。某一天日期，格式 Y-m-d，且须在近 7 日内（含今天）。传入后响应多一段 day：该日调用次数、积分消耗、接口调用排行。",
+            "example": "2026-10-09"
+        }
+    ],
+    "response": {
+        "code": 1,
+        "msg": "ok",
+        "user": {
+            "userid": 1,
+            "username": "demo",
+            "email": "user@example.com",
+            "status": 1,
+            "status_label": "正常",
+            "role": "developer",
+            "role_label": "开发者",
+            "createtime": "2026-01-01 12:00:00",
+            "lastlogin": "2026-10-09 18:00:00",
+            "points": 100,
+            "pointsspent": 50,
+            "calls": 1000,
+            "today_calls": 12,
+            "week_calls": 80,
+            "checked_today": true,
+            "lastcheckin": "2026-10-09",
+            "rank7": [
+                {
+                    "name": "示例接口",
+                    "calls": 30
+                }
+            ]
+        }
+    },
+    "doc": "## 使用前准备\n\n1. **系统设置 → 系统密钥** 生成密钥。  \n2. **系统设置 → 系统级 API → 用户信息** 勾选「启用用户信息 API」并保存。  \n3. **不会**返回密码、OAuth 绑定标识、上游密钥等敏感信息。封禁用户仍可查询（看 `status` / `status_label`）。\n\n## 请求怎么发\n\n- GET 或 POST；参数可走 Query / 表单 / JSON。  \n- 成功 `code=1`；失败 `code=0` 看 `msg` / `errcode`。  \n- **禁止** JSONP。\n\n## 调用限流（QPM / QPS）\n\n管理员可在「系统设置 → 系统级 API」对应细条自定义本接口每分钟（QPM）与每秒（QPS）上限；**填 0 表示不限制**。超限返回 errcode=12005（请求过于频繁）。\n\n## 怎么带系统密钥（必填）\n\n推荐 `Authorization: Bearer` 或 `X-Api-Key`；也可用 `key` / `apikey`（不推荐进网址）。\n\n## 参数详解\n\n| 英文名 | 中文含义 | 必填？ | 可填什么 | 说明 |\n|--------|----------|--------|----------|------|\n| `key` / `apikey` | 系统密钥 | **是**（或 Header） | 系统密钥 | 鉴权 |\n| `action` | 操作 | 否 | `get` | 不传默认 get |\n| `userid` | 用户编号 | 三选一 | 正整数 | 也认 `user_id`、`uid` |\n| `username` | 用户名 | 三选一 | 精确用户名 | |\n| `email` | 邮箱 | 三选一 | 精确邮箱 | 也可用 `account` |\n| `date` | 某一天 | 否 | `Y-m-d`，近 7 日内 | 有则多返回 `user.day` |\n\n## 返回字段（user）\n\n| 字段 | 含义 |\n|------|------|\n| `userid` | 用户编号 |\n| `username` | 用户名 |\n| `email` | 邮箱 |\n| `status` | `1` 正常 / `0` 封禁 |\n| `status_label` | 正常 / 封禁 |\n| `role` | `user` 普通用户 / `developer` 开发者 |\n| `role_label` | 中文角色名 |\n| `createtime` | 注册时间 |\n| `lastlogin` | 最后登录时间（可能为空） |\n| `points` | 当前积分余额 |\n| `pointsspent` | 累计消耗积分 |\n| `calls` | 累计调用次数 |\n| `today_calls` | 今日调用次数 |\n| `week_calls` | 近 7 日调用合计 |\n| `checked_today` | 今天是否已签到 |\n| `lastcheckin` | 最近签到日（`Y-m-d`，可能为空） |\n| `rank7` | 近 7 日接口调用排行（`name` + `calls`） |\n| `day` | 仅当传了 `date`：该日 `calls` / `cost` / `rank` |\n\n## 请求示例（一种类型一块）\n\n### 按用户编号查询\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&userid=1\"\n```\n\n### 按用户名查询\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&username=demo\"\n```\n\n### 按邮箱查询\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&email=user@example.com\"\n```\n\n### 查询并附带某一天调用摘要\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&userid=1&date=2026-10-09\"\n```\n\n### 不传 action（默认 get）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?userid=1\"\n```\n",
+    "sample_queries": [
+        {
+            "title": "按用户编号查询",
+            "query": "action=get&userid=1"
+        },
+        {
+            "title": "按用户名查询",
+            "query": "action=get&username=demo"
+        },
+        {
+            "title": "按邮箱查询",
+            "query": "action=get&email=user@example.com"
+        },
+        {
+            "title": "查询并附带某一天调用摘要",
+            "query": "action=get&userid=1&date=2026-10-09"
+        },
+        {
+            "title": "不传 action（默认查询）",
+            "query": "userid=1"
+        }
+    ],
+    "enabled_key": "sysapion",
+    "response_samples": [
+        {
+            "title": "查询成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "user": {
+                    "userid": 1,
+                    "username": "demo",
+                    "email": "user@example.com",
+                    "status": 1,
+                    "status_label": "正常",
+                    "role": "developer",
+                    "role_label": "开发者",
+                    "createtime": "2026-01-01 12:00:00",
+                    "lastlogin": "2026-10-09 18:00:00",
+                    "points": 100,
+                    "pointsspent": 50,
+                    "calls": 1000,
+                    "today_calls": 12,
+                    "week_calls": 80,
+                    "checked_today": true,
+                    "lastcheckin": "2026-10-09",
+                    "rank7": [
+                        {
+                            "name": "示例接口",
+                            "calls": 30
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "title": "查询成功（含某一天）",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "user": {
+                    "userid": 1,
+                    "username": "demo",
+                    "email": "user@example.com",
+                    "status": 1,
+                    "status_label": "正常",
+                    "role": "user",
+                    "role_label": "普通用户",
+                    "createtime": "2026-01-01 12:00:00",
+                    "lastlogin": "2026-10-09 18:00:00",
+                    "points": 20,
+                    "pointsspent": 10,
+                    "calls": 200,
+                    "today_calls": 5,
+                    "week_calls": 40,
+                    "checked_today": false,
+                    "lastcheckin": "2026-10-08",
+                    "rank7": [
+                        {
+                            "name": "示例接口",
+                            "calls": 12
+                        }
+                    ],
+                    "day": {
+                        "date": "2026-10-09",
+                        "calls": 5,
+                        "cost": 2.5,
+                        "rank": [
+                            {
+                                "name": "示例接口",
+                                "calls": 5
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "title": "封禁用户仍可查",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "user": {
+                    "userid": 2,
+                    "username": "banned_user",
+                    "email": "banned@example.com",
+                    "status": 0,
+                    "status_label": "封禁",
+                    "role": "user",
+                    "role_label": "普通用户",
+                    "createtime": "2026-01-02 12:00:00",
+                    "lastlogin": "",
+                    "points": 0,
+                    "pointsspent": 0,
+                    "calls": 0,
+                    "today_calls": 0,
+                    "week_calls": 0,
+                    "checked_today": false,
+                    "lastcheckin": "",
+                    "rank7": []
+                }
+            }
+        },
+        {
+            "title": "用户信息 API 未启用",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "用户信息 API 未启用",
+                "errcode": 12002
+            }
+        },
+        {
+            "title": "用户未注册",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "该用户未注册",
+                "reason": "not_registered",
+                "errcode": 12012
+            }
+        },
+        {
+            "title": "缺少用户标识",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "请提供 userid 或 username 或 email",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "日期不在近7日",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "date 须在近 7 日内（含今天）",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "密钥无效",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "系统密钥无效或未配置",
+                "errcode": 12001
+            }
+        },
+        {
+            "title": "请求过快",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "请求过于频繁，请稍后再试",
+                "errcode": 12005
+            }
+        }
+    ],
+    "enabled_gate": "userinfo"
+}

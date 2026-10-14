@@ -20,7 +20,7 @@ if (!function_exists('docs4_pretty')) {
         }
         $decoded = json_decode($raw, true);
         if (json_last_error() === JSON_ERROR_NONE) {
-            return (string) json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+            return (string) json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_HEX_TAG);
         }
         return $raw;
     }
@@ -140,7 +140,7 @@ if (!function_exists('docs4_request_examples')) {
         if ($method === 'POST') {
             $curl .= " \\\n  -H \"Content-Type: application/json\"";
             if ($jsonBody !== array()) {
-                $bodyJson = (string) json_encode($jsonBody, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $bodyJson = (string) json_encode($jsonBody, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
                 $curl .= " \\\n  -d '" . $bodyJson . "'";
             }
         }
@@ -149,7 +149,7 @@ if (!function_exists('docs4_request_examples')) {
                 . "const data = await res.json();\n"
                 . 'console.log(data);';
         } else {
-            $bodyJson = (string) json_encode($jsonBody, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+            $bodyJson = (string) json_encode($jsonBody, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_HEX_TAG);
             $js = "const res = await fetch('" . addslashes($endpoint) . "', {\n"
                 . "  method: 'POST',\n"
                 . "  headers: { 'Content-Type': 'application/json' },\n"
@@ -375,11 +375,16 @@ foreach ($list as $item) {
     $needkey = isset($item['needkey']) ? (int) $item['needkey'] : 0;
     $charge = isset($item['charge']) ? (int) $item['charge'] : 0;
     $points = isset($item['points']) ? $item['points'] : 0;
+    $promoLabel = !empty($item['promo_label']) ? (string) $item['promo_label'] : '';
     $priceLabel = '';
     if ($charge === ApiManager::CHARGE_PAID) {
         $priceLabel = class_exists('PayConfig')
             ? (PayConfig::fmtPoints($points) . ' 积分/次')
             : (isset($item['billing_label']) ? (string) $item['billing_label'] : '收费');
+        // 全免保留标价文案，活动标签另挂
+        if ($promoLabel !== '') {
+            $priceLabel .= ' · ' . $promoLabel;
+        }
     }
     $aidoc = isset($item['aidoc']) ? (string) $item['aidoc'] : '';
     $keyways = isset($item['keyways']) && is_array($item['keyways']) ? $item['keyways'] : array();
@@ -482,7 +487,7 @@ if ($hasAnnounce && is_array($announcePopup) && count($announcePopup) > 0) {
     $announcePopupKey = implode('-', $ids);
 }
 
-$assetBase = function_exists('vs_base_url') ? rtrim(vs_base_url(), '/') : '';
+$assetBase = function_exists('vs_site_base_path') ? vs_site_base_path() : '';
 $mdCss = $assetBase . '/core/markdown/assets/css/markdown-render.css';
 ?>
 <link rel="stylesheet" href="<?php echo vs_e(ThemeManager::assetUrl('docs', 'assets/css/docs-browser.css')); ?>?v=<?php echo vs_e(VS_VERSION); ?>">
@@ -497,14 +502,14 @@ $mdCss = $assetBase . '/core/markdown/assets/css/markdown-render.css';
         <span class="home-announcement-action">点击查看</span>
     </button>
 </section>
-<script type="application/json" id="feer-announcement-client-data"><?php echo json_encode(array(
+<script type="application/json" id="feer-announcement-client-data"><?php echo vs_json_script(array(
     'home' => array(
         'title' => $announceTitle,
         'html' => $announceHtml,
         'autopopup' => is_array($announcePopup) && count($announcePopup) > 0,
         'popup_key' => $announcePopupKey,
     ),
-), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?></script>
+)); ?></script>
 <div class="home-announcement-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true" inert>
     <div class="home-announcement-modal__mask" data-close-announcement="1"></div>
     <div class="home-announcement-modal__card" role="dialog" aria-modal="true">
@@ -601,7 +606,7 @@ $mdCss = $assetBase . '/core/markdown/assets/css/markdown-render.css';
                                 <span>复制 Markdown</span>
                             </button>
                         </div>
-                        <script type="application/json" class="d4-md-data"><?php echo json_encode(isset($item['markdown']) ? (string) $item['markdown'] : '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?></script>
+                        <script type="application/json" class="d4-md-data"><?php echo vs_json_script(isset($item['markdown']) ? (string) $item['markdown'] : ''); ?></script>
                         <?php if ($item['desc'] !== ''): ?>
                             <div class="doc-panel__desc"><?php echo vs_e($item['desc']); ?></div>
                         <?php endif; ?>
@@ -649,7 +654,7 @@ $mdCss = $assetBase . '/core/markdown/assets/css/markdown-render.css';
                         </div>
                         <div class="doc-tab-pane" data-docs-pane="play" hidden>
                             <div class="doc-section" data-docs-slot="play"></div>
-                            <script type="application/json" class="d4-play-data"><?php echo json_encode(array(
+                            <script type="application/json" class="d4-play-data"><?php echo vs_json_script(array(
                                 'id' => (int) $item['id'],
                                 'name' => $item['name'],
                                 'endpoint' => $item['endpoint'],
@@ -660,7 +665,7 @@ $mdCss = $assetBase . '/core/markdown/assets/css/markdown-render.css';
                                 'maintenance' => (int) $item['maintenance'],
                                 'disabled' => (int) $item['disabled'],
                                 'params' => $item['params_list'],
-                            ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?></script>
+                            )); ?></script>
                         </div>
                     </div>
                 </div>
@@ -688,15 +693,15 @@ $mdCss = $assetBase . '/core/markdown/assets/css/markdown-render.css';
 <?php endif; ?>
 </div>
 <script>
-window.playgroundKeyContext = <?php echo json_encode(array(
+window.playgroundKeyContext = <?php echo vs_json_script(array(
     'loggedIn' => !empty($playground['loggedIn']),
     'apiKeyCount' => isset($playground['apiKeyCount']) ? (int) $playground['apiKeyCount'] : 0,
     'userCenterUrl' => isset($playground['userCenterUrl']) ? $playground['userCenterUrl'] : ($vsBase . '/user/index'),
     'loginUrl' => isset($playground['loginUrl']) ? $playground['loginUrl'] : ($vsBase . '/user/login'),
     'keysUrl' => isset($playground['keysUrl']) ? $playground['keysUrl'] : vs_site_path('/core/front/playground-key.php'),
-), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
-window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode(isset($playground['csrf']) ? $playground['csrf'] : (class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : ''), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
-window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(isset($playground['playUrl']) ? $playground['playUrl'] : vs_site_path('/core/playground/relay.php'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
+)); ?>;
+window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo vs_json_script(isset($playground['csrf']) ? $playground['csrf'] : (class_exists('AuthSecurity') ? AuthSecurity::csrfToken() : '')); ?>;
+window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo vs_json_script(isset($playground['playUrl']) ? $playground['playUrl'] : vs_site_path('/core/playground/relay.php')); ?>;
 </script>
 <script src="<?php echo vs_e($assetBase); ?>/assets/js/vs-syntax.js?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('docs', 'assets/js/playground-response.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

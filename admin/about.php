@@ -45,7 +45,7 @@ $envItems = array(
     array('label' => '服务器时间', 'value' => isset($infoMap['服务器时间']) ? $infoMap['服务器时间'] : date('Y-m-d H:i:s')),
 );
 
-$assetBase = rtrim(vs_base_url(), '/');
+$assetBase = vs_site_base_path();
 $imgBase = $assetBase . '/assets/img';
 
 /**
@@ -231,7 +231,7 @@ vs_admin_layout_start('关于', 'about');
 
     <div class="about-copyright about-section about-reveal" style="--about-delay:5">
         <div class="about-copyright__main">&copy; <?php echo date('Y'); ?> ApiNexus · <?php echo vs_e($systemName); ?></div>
-        <div class="about-copyright__license">采用 ApiNexus 开源许可协议 · v<?php echo vs_e(VS_VERSION); ?></div>
+        <div class="about-copyright__license">采用 AGPL-3.0 开源许可 · v<?php echo vs_e(VS_VERSION); ?></div>
     </div>
 </div>
 

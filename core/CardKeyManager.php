@@ -777,6 +777,9 @@ class CardKeyManager
      */
     public static function voidUnusedByCodes(array $codes)
     {
+        if (count($codes) > 200) {
+            return array('ok' => false, 'msg' => '单次最多作废 200 张');
+        }
         $normalized = array();
         foreach ($codes as $c) {
             $c = trim((string) $c);
@@ -812,20 +815,18 @@ class CardKeyManager
 
             $toVoid = array();
             $skipped = array();
+            // 对外 reason 统一模糊（E385 / SEC-103）：禁止区分不存在 / 已使用 / 已作废，避免枚举
+            $skipReason = '不可作废或不存在';
             foreach ($list as $code) {
                 if (!isset($found[$code])) {
-                    $skipped[] = array('code' => $code, 'reason' => '不存在');
+                    $skipped[] = array('code' => $code, 'reason' => $skipReason);
                     continue;
                 }
                 $st = $found[$code];
                 if (self::isRedeemableStatus($st)) {
                     $toVoid[] = $code;
-                } elseif ($st === self::STATUS_USED) {
-                    $skipped[] = array('code' => $code, 'reason' => '已使用');
-                } elseif ($st === self::STATUS_VOID) {
-                    $skipped[] = array('code' => $code, 'reason' => '已作废');
                 } else {
-                    $skipped[] = array('code' => $code, 'reason' => '状态不可作废');
+                    $skipped[] = array('code' => $code, 'reason' => $skipReason);
                 }
             }
 
@@ -858,12 +859,8 @@ class CardKeyManager
                     $st = isset($after[$code]) ? $after[$code] : null;
                     if ($st === self::STATUS_VOID) {
                         $voided[] = $code;
-                    } elseif ($st === self::STATUS_USED) {
-                        $skipped[] = array('code' => $code, 'reason' => '已使用');
-                    } elseif (self::isRedeemableStatus($st)) {
-                        $skipped[] = array('code' => $code, 'reason' => '并发未作废');
                     } else {
-                        $skipped[] = array('code' => $code, 'reason' => '并发变更');
+                        $skipped[] = array('code' => $code, 'reason' => $skipReason);
                     }
                 }
                 $n = count($voided);

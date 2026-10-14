@@ -44,6 +44,9 @@
     var softInFlight = false;
     var softEveryN = 6;
     var liveTickCount = 0;
+    var ready = false;
+    var initialPending = false;
+    var snapshotRetryLeft = 1;
     var topMarqueeRaf = null;
     var topMarqueeY = 0;
     var topMarqueePaused = false;
@@ -54,6 +57,7 @@
     } catch (e) {
         boot = {};
     }
+    initialPending = !!boot.boot_light;
     liveIntervalMs = readLiveIntervalMs(boot.live_interval);
 
     function readLiveIntervalMs(v) {
@@ -208,21 +212,30 @@
     }
 
     /**
-     * @param {{resetView?: boolean}} opts resetView=true 时恢复默认缩放（切换地图后首次可用）
+     * @param {{resetView?: boolean}} opts
+     *   resetView=true：用该图默认中心/缩放（中国↔世界切换必须；禁止把上一张图视口写进当前模式）
+     *   resetView=false：同图 live/软刷时保留用户拖拽（仅 capture 当前图）
      */
     function applyMapOption(opts) {
         opts = opts || {};
         var resetView = !!opts.resetView;
         var chart = ensureMapChart();
         if (!chart || !mapRegistered[mapMode]) return;
-        if (!resetView) {
-            captureMapView();
-        } else {
+        if (resetView) {
             mapViewByMode[mapMode] = null;
+        } else {
+            // 仅当 option 已是当前 mapMode 时才记视口，避免切换瞬间把世界坐标写进 china
+            try {
+                var cur = chart.getOption();
+                var curMap = cur && cur.geo && cur.geo[0] ? cur.geo[0].map : '';
+                if (curMap === mapMode) {
+                    captureMapView();
+                }
+            } catch (e) { /* ignore */ }
         }
         var option = buildMapOption(activeGeoPack());
         var saved = mapViewByMode[mapMode];
-        if (saved && saved.zoom != null && Array.isArray(saved.center)) {
+        if (!resetView && saved && saved.zoom != null && Array.isArray(saved.center)) {
             option.geo.zoom = saved.zoom;
             option.geo.center = saved.center.slice(0, 2);
         }
@@ -482,10 +495,12 @@
 
     function loadMap(mode) {
         mode = mode === 'world' ? 'world' : 'china';
+        var switching = mapMode !== mode;
         if (mapRegistered[mode]) {
             mapMode = mode;
             setMapStatus('');
-            applyMapOption();
+            // 切换中国/世界时必须 resetView：否则会把另一张图的 center/zoom 误记到当前模式（世界挪完再回中国 → 空白/飘远）
+            applyMapOption({ resetView: switching });
             return Promise.resolve();
         }
         var url = mapUrl(mode);
@@ -504,7 +519,8 @@
                 window.echarts.registerMap(mode, json);
                 mapRegistered[mode] = true;
                 setMapStatus('');
-                if (mapMode === mode) applyMapOption();
+                // 首次注册等同切换：用该图默认中心，勿 capture 上一张图的视口
+                if (mapMode === mode) applyMapOption({ resetView: true });
             })
             .catch(function () {
                 if (mapMode === mode) setMapStatus('地图加载失败，请稍后重试', true);
@@ -879,8 +895,58 @@
         }, 80);
     }
 
+    function setMapStatus(text, show) {
+        var el = document.getElementById('dsMapStatus');
+        if (!el) return;
+        if (text) el.textContent = text;
+        if (show) el.removeAttribute('hidden');
+        else el.setAttribute('hidden', 'hidden');
+    }
+
+    function fetchInitialSnapshot() {
+        if (softInFlight) return;
+        softInFlight = true;
+        setMapStatus('数据加载中…', true);
+        post('snapshot').then(function (res) {
+            if (!res || res.code !== 1 || !res.snapshot) {
+                if (initialPending && snapshotRetryLeft > 0) {
+                    snapshotRetryLeft -= 1;
+                    softInFlight = false;
+                    setTimeout(fetchInitialSnapshot, 1200);
+                    return;
+                }
+                setMapStatus((res && res.msg) || '统计加载失败', true);
+                if (window.VS && typeof window.VS.showMessage === 'function') {
+                    window.VS.showMessage((res && res.msg) || '统计加载失败', 'error');
+                }
+                return;
+            }
+            initialPending = false;
+            ready = true;
+            setMapStatus('', false);
+            renderAll(res.snapshot);
+        }).catch(function () {
+            if (initialPending && snapshotRetryLeft > 0) {
+                snapshotRetryLeft -= 1;
+                softInFlight = false;
+                setTimeout(fetchInitialSnapshot, 1200);
+                return;
+            }
+            setMapStatus('网络异常，请稍后刷新', true);
+            if (window.VS && typeof window.VS.showMessage === 'function') {
+                window.VS.showMessage('网络异常', 'error');
+            }
+        }).then(function () {
+            softInFlight = false;
+            // 须在释放 softInFlight 后再开 live，否则首拍会被闸门挡住
+            if (ready && pageVisible()) {
+                restartLivePoll();
+            }
+        });
+    }
+
     function pollLive() {
-        if (liveInFlight || !pageVisible()) return;
+        if (!ready || liveInFlight || softInFlight || !pageVisible()) return;
         liveInFlight = true;
         post('live').then(function (res) {
             if (!res || res.code !== 1 || !res.live) return;
@@ -888,7 +954,7 @@
         }).catch(function () { /* 静默 */ }).then(function () {
             liveInFlight = false;
             liveTickCount += 1;
-            if (pageVisible() && !softInFlight
+            if (ready && pageVisible() && !softInFlight
                 && liveTickCount > 0 && (liveTickCount % softEveryN) === 0) {
                 softSnapshot();
             }
@@ -896,7 +962,7 @@
     }
 
     function softSnapshot() {
-        if (softInFlight || !pageVisible()) return;
+        if (!ready || softInFlight || !pageVisible()) return;
         softInFlight = true;
         post('snapshot').then(function (res) {
             if (!res || res.code !== 1 || !res.snapshot) return;
@@ -1046,13 +1112,22 @@
     applyTheme(theme);
     setFullscreenIcon(false);
     ensureMapChart();
-    renderAll(boot);
     clockTimer = setInterval(tickClock, 1000);
-    restartLivePoll();
+
+    // 首屏壳 → 立即 AJAX 拉全量；snapshot 成功后再开 live（对齐控制台，E466）
+    if (boot.boot_light) {
+        if (boot.server_time) syncClock(boot.server_time);
+        loadMap(mapMode);
+        fetchInitialSnapshot();
+    } else {
+        ready = true;
+        renderAll(boot);
+        restartLivePoll();
+    }
 
     document.addEventListener('visibilitychange', function () {
         if (pageVisible()) {
-            restartLivePoll();
+            if (ready) restartLivePoll();
         } else {
             stopLivePoll();
         }

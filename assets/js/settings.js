@@ -1,7 +1,7 @@
 /**
  * 文件：assets/js/settings.js
  * 作用：系统设置页 AJAX 保存与折叠板块
- * @version 1.4.1
+ * @version 1.6.1
  */
 
 (function () {
@@ -38,7 +38,26 @@
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
-            postForm(form)
+            var submitBtns = form.querySelectorAll('[type="submit"]');
+            var bi;
+            for (bi = 0; bi < submitBtns.length; bi++) {
+                submitBtns[bi].disabled = true;
+            }
+            var body;
+            if (form.id === 'mailForm' && typeof window.__vsBuildMailSmtp === 'function') {
+                var mailJson = window.__vsBuildMailSmtp();
+                if (mailJson === null) {
+                    for (bi = 0; bi < submitBtns.length; bi++) {
+                        submitBtns[bi].disabled = false;
+                    }
+                    return;
+                }
+                body = new FormData(form);
+                body.set('mailsmtp', mailJson);
+            } else {
+                body = form;
+            }
+            window.VS.postForm(body)
                 .then(function (data) {
                     if (data.code === 1) {
                         var msg = data.msg || '操作成功';
@@ -46,14 +65,538 @@
                             msg += '：' + data.iploc;
                         }
                         showFlash(msg, 'success');
+                        if (form.id === 'mailForm' && typeof window.__vsRefreshMailTestOptions === 'function') {
+                            window.__vsRefreshMailTestOptions();
+                        }
                     } else {
                         showFlash(data.msg || '操作失败', 'error');
                     }
                 })
                 .catch(function () {
                     showFlash('网络异常，请稍后重试', 'error');
+                })
+                .finally(function () {
+                    for (bi = 0; bi < submitBtns.length; bi++) {
+                        submitBtns[bi].disabled = false;
+                    }
                 });
         });
+    }
+
+    /**
+     * 系统 API / 邮箱账号细条：事件委托 + is-open 控显（E413）
+     * 邮箱与系统 API 共用同一套展开逻辑，按 data-fold-group 互斥
+     */
+    function bindSettingsFolds() {
+        if (document.documentElement.getAttribute('data-vs-fold-bound') === '1') {
+            return;
+        }
+        document.documentElement.setAttribute('data-vs-fold-bound', '1');
+
+        function walkHasMailOn(el) {
+            var n = el;
+            while (n && n !== document && n !== document.body) {
+                if (n.getAttribute && n.getAttribute('data-mail-field') === 'on') {
+                    return true;
+                }
+                if (n.classList && n.classList.contains('vs-settings-mail-on')) {
+                    return true;
+                }
+                n = n.parentNode;
+            }
+            return false;
+        }
+
+        function closestBar(el) {
+            var n = el;
+            while (n && n !== document && n !== document.body) {
+                if (n.classList && n.classList.contains('vs-settings-api-fold__bar')) {
+                    return n;
+                }
+                n = n.parentNode;
+            }
+            return null;
+        }
+
+        function closestFold(el) {
+            var n = el;
+            while (n && n !== document && n !== document.body) {
+                if (n.getAttribute && (n.getAttribute('data-api-fold') !== null || n.getAttribute('data-mail-fold') !== null)) {
+                    return n;
+                }
+                n = n.parentNode;
+            }
+            return null;
+        }
+
+        function setFoldOpen(fold, open) {
+            var bar = fold.querySelector('.vs-settings-api-fold__bar');
+            var body = fold.querySelector('.vs-settings-api-fold__body');
+            if (open) {
+                fold.classList.add('is-open');
+            } else {
+                fold.classList.remove('is-open');
+            }
+            if (bar) {
+                bar.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+            if (body) {
+                if (open) {
+                    body.removeAttribute('hidden');
+                } else {
+                    body.setAttribute('hidden', '');
+                }
+            }
+        }
+
+        function closeGroup(fold) {
+            var group = fold.getAttribute('data-fold-group') || '';
+            var all = document.querySelectorAll('[data-api-fold], [data-mail-fold]');
+            var i;
+            for (i = 0; i < all.length; i++) {
+                if (all[i] === fold) {
+                    continue;
+                }
+                var g = all[i].getAttribute('data-fold-group') || '';
+                if (group !== '' && g !== '' && group !== g) {
+                    continue;
+                }
+                setFoldOpen(all[i], false);
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            var t = e.target || e.srcElement;
+            if (!t) {
+                return;
+            }
+            if (walkHasMailOn(t)) {
+                return;
+            }
+            var bar = closestBar(t);
+            if (!bar) {
+                return;
+            }
+            var fold = closestFold(bar);
+            if (!fold) {
+                return;
+            }
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            var open = fold.classList.contains('is-open');
+            if (open) {
+                setFoldOpen(fold, false);
+                return;
+            }
+            closeGroup(fold);
+            setFoldOpen(fold, true);
+        }, false);
+    }
+
+    function bindSystemApiFolds() {
+        bindSettingsFolds();
+    }
+
+    function bindMailAccounts() {
+        var listEl = document.getElementById('mailAccountList');
+        var addBtn = document.getElementById('mailAddAccountBtn');
+        var modeEl = document.getElementById('mailModeSelect');
+        var jsonEl = document.getElementById('mailsmtpJson');
+        var testSel = document.getElementById('testMailAccount');
+        var countHint = document.getElementById('mailAccountCountHint');
+        var emptyHint = document.getElementById('mailAccountEmptyHint');
+        if (!listEl) {
+            return;
+        }
+        /* 折叠只走 bindSettingsFolds 事件委托；禁止再给 bar 绑第二套 click（会双触发导致展不开） */
+        bindSettingsFolds();
+        var maxAcc = parseInt(listEl.getAttribute('data-mail-max') || '5', 10) || 5;
+
+        function randId() {
+            var s = '';
+            try {
+                var arr = new Uint8Array(4);
+                if (window.crypto && window.crypto.getRandomValues) {
+                    window.crypto.getRandomValues(arr);
+                    var i;
+                    for (i = 0; i < arr.length; i++) {
+                        s += ('0' + arr[i].toString(16)).slice(-2);
+                    }
+                    return s;
+                }
+            } catch (e) { /* ignore */ }
+            return ('m' + Date.now().toString(16) + Math.floor(Math.random() * 0xffff).toString(16)).slice(0, 8);
+        }
+
+        function folds() {
+            return listEl.querySelectorAll('[data-mail-fold]');
+        }
+
+        function isCheckboxOn(el) {
+            if (!el) {
+                return false;
+            }
+            var typ = (el.type || el.getAttribute('type') || '').toLowerCase();
+            if (typ === 'checkbox') {
+                return !!el.checked;
+            }
+            return false;
+        }
+
+        function fieldVal(fold, name) {
+            var el = fold.querySelector('[data-mail-field="' + name + '"]');
+            if (!el) {
+                return '';
+            }
+            var typ = (el.type || el.getAttribute('type') || '').toLowerCase();
+            if (typ === 'checkbox') {
+                return el.checked ? 1 : 0;
+            }
+            return String(el.value || '').trim();
+        }
+
+        function syncBadge(fold) {
+            var onEl = fold.querySelector('[data-mail-field="on"]');
+            var badge = fold.querySelector('[data-mail-badge]');
+            var on = isCheckboxOn(onEl);
+            if (badge) {
+                badge.style.display = on ? '' : 'none';
+            }
+        }
+
+        function updateTitle(fold) {
+            var titleEl = fold.querySelector('[data-mail-title]');
+            if (!titleEl) {
+                return;
+            }
+            var name = fieldVal(fold, 'name');
+            var from = fieldVal(fold, 'fromemail');
+            titleEl.textContent = name || from || '未命名账号';
+        }
+
+        function collectList() {
+            var all = folds();
+            var out = [];
+            var i;
+            for (i = 0; i < all.length && out.length < maxAcc; i++) {
+                var fold = all[i];
+                var ssl = parseInt(fieldVal(fold, 'ssl'), 10);
+                if (isNaN(ssl) || ssl < 0 || ssl > 2) {
+                    ssl = 0;
+                }
+                var port = parseInt(fieldVal(fold, 'port'), 10);
+                if (isNaN(port) || port < 1 || port > 65535) {
+                    port = 465;
+                }
+                var onEl = fold.querySelector('[data-mail-field="on"]');
+                var id = fieldVal(fold, 'id') || randId();
+                var passEl = fold.querySelector('[data-mail-field="pass"]');
+                out.push({
+                    id: id,
+                    name: fieldVal(fold, 'name'),
+                    on: isCheckboxOn(onEl) ? 1 : 0,
+                    host: fieldVal(fold, 'host'),
+                    port: port,
+                    ssl: ssl,
+                    user: fieldVal(fold, 'user'),
+                    pass: passEl ? String(passEl.value || '') : '',
+                    fromemail: fieldVal(fold, 'fromemail'),
+                    fromname: fieldVal(fold, 'fromname')
+                });
+            }
+            return out;
+        }
+
+        function syncToolbar() {
+            var n = folds().length;
+            if (addBtn) {
+                addBtn.disabled = n >= maxAcc;
+            }
+            if (countHint) {
+                countHint.textContent = '已添加 ' + n + ' / ' + maxAcc + ' 个账号';
+            }
+            if (emptyHint) {
+                if (n === 0) {
+                    emptyHint.removeAttribute('hidden');
+                } else {
+                    emptyHint.setAttribute('hidden', '');
+                }
+            }
+        }
+
+        function refreshTestOptions() {
+            if (!testSel) {
+                return;
+            }
+            var cur = testSel.value;
+            while (testSel.options.length) {
+                testSel.remove(0);
+            }
+            var o0 = document.createElement('option');
+            o0.value = '';
+            o0.textContent = '按发信策略自动选号';
+            testSel.appendChild(o0);
+            var list = collectList();
+            var i;
+            for (i = 0; i < list.length; i++) {
+                var a = list[i];
+                var o = document.createElement('option');
+                o.value = a.id;
+                o.textContent = (a.on ? '' : '（未启用）') + (a.name || a.fromemail || a.id);
+                testSel.appendChild(o);
+            }
+            if (cur) {
+                testSel.value = cur;
+            }
+            if (window.VSPick && typeof window.VSPick.refresh === 'function') {
+                window.VSPick.refresh(testSel);
+            }
+        }
+
+        /** 与后端 Mailer::hasControlChars 对齐 */
+        function hasControlChars(s) {
+            return /[\x00-\x1F\x7F]/.test(String(s || ''));
+        }
+
+        /** 与后端 Mailer::isValidSmtpHost 对齐：仅域名，禁止 IP */
+        function isValidSmtpHost(host) {
+            host = String(host || '').replace(/^\s+|\s+$/g, '');
+            if (!host || host.length > 255 || hasControlChars(host)) {
+                return false;
+            }
+            if (host.indexOf('://') !== -1 || host.indexOf('/') !== -1
+                || host.indexOf('@') !== -1 || host.indexOf(' ') !== -1
+                || host.indexOf('\\') !== -1) {
+                return false;
+            }
+            host = host.replace(/\.+$/, '');
+            if (!host) {
+                return false;
+            }
+            if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host) || host.indexOf(':') !== -1) {
+                return false;
+            }
+            return /^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)+$/.test(host);
+        }
+
+        /**
+         * @returns {string|null} mailsmtp JSON；失败返回 null
+         */
+        window.__vsBuildMailSmtp = function () {
+            if (!modeEl) {
+                showFlash('邮箱表单结构异常', 'error');
+                return null;
+            }
+            var mode = parseInt(modeEl.value, 10);
+            if (isNaN(mode) || mode < 0 || mode > 2) {
+                mode = 0;
+            }
+            var list = collectList();
+            if (list.length > maxAcc) {
+                showFlash('发信账号最多 ' + maxAcc + ' 个', 'error');
+                return null;
+            }
+            var i;
+            for (i = 0; i < list.length; i++) {
+                var a = list[i];
+                var host = String(a.host || '').replace(/^\s+|\s+$/g, '');
+                var user = String(a.user || '').replace(/^\s+|\s+$/g, '');
+                var from = String(a.fromemail || '').replace(/^\s+|\s+$/g, '');
+                var fromName = String(a.fromname || '').replace(/^\s+|\s+$/g, '');
+                if (host !== '' && !isValidSmtpHost(host)) {
+                    showFlash('SMTP 服务器请填写域名（不允许 IP 或非法字符）', 'error');
+                    return null;
+                }
+                if (user !== '' && hasControlChars(user)) {
+                    showFlash('SMTP 用户名含非法控制字符', 'error');
+                    return null;
+                }
+                if (from !== '' && (hasControlChars(from) || from.indexOf('@') < 1)) {
+                    showFlash('发件邮箱格式无效', 'error');
+                    return null;
+                }
+                if (fromName !== '' && hasControlChars(fromName)) {
+                    showFlash('发件人名称含非法控制字符', 'error');
+                    return null;
+                }
+                if (a.on) {
+                    if (host === '' || user === '' || from === '') {
+                        showFlash('已启用的账号须填写 SMTP 主机、用户名与发件邮箱', 'error');
+                        return null;
+                    }
+                }
+            }
+            var payload = JSON.stringify({ mode: mode, list: list });
+            if (jsonEl) {
+                jsonEl.value = payload;
+            }
+            return payload;
+        };
+        /* 兼容旧钩子名 */
+        window.__vsPrepareMailSmtp = function () {
+            return window.__vsBuildMailSmtp() !== null;
+        };
+        window.__vsRefreshMailTestOptions = function () {
+            var all = folds();
+            var i;
+            for (i = 0; i < all.length; i++) {
+                syncBadge(all[i]);
+            }
+            refreshTestOptions();
+            syncToolbar();
+        };
+
+        function bindFoldExtras(fold) {
+            var removeBtn = fold.querySelector('[data-mail-remove]');
+            if (removeBtn && removeBtn.getAttribute('data-bound') !== '1') {
+                removeBtn.setAttribute('data-bound', '1');
+                removeBtn.addEventListener('click', function () {
+                    if (!window.confirm('确定删除此发信账号？删除后请再点底部「保存邮箱设置」。')) {
+                        return;
+                    }
+                    if (fold.parentNode) {
+                        fold.parentNode.removeChild(fold);
+                    }
+                    syncToolbar();
+                    refreshTestOptions();
+                });
+            }
+            var onEl = fold.querySelector('[data-mail-field="on"]');
+            if (onEl && onEl.getAttribute('data-on-bound') !== '1') {
+                onEl.setAttribute('data-on-bound', '1');
+                onEl.addEventListener('change', function () {
+                    syncBadge(fold);
+                    refreshTestOptions();
+                });
+                onEl.addEventListener('click', function (e) {
+                    if (e && e.stopPropagation) {
+                        e.stopPropagation();
+                    }
+                });
+            }
+            var titleInputs = fold.querySelectorAll('[data-mail-field="name"], [data-mail-field="fromemail"]');
+            var t;
+            for (t = 0; t < titleInputs.length; t++) {
+                if (titleInputs[t].getAttribute('data-title-bound') === '1') {
+                    continue;
+                }
+                titleInputs[t].setAttribute('data-title-bound', '1');
+                titleInputs[t].addEventListener('input', function () {
+                    updateTitle(fold);
+                });
+            }
+            syncBadge(fold);
+        }
+
+        function setFoldOpen(fold, open) {
+            var bar = fold.querySelector('.vs-settings-api-fold__bar');
+            var body = fold.querySelector('.vs-settings-api-fold__body');
+            if (open) {
+                fold.classList.add('is-open');
+            } else {
+                fold.classList.remove('is-open');
+            }
+            if (bar) {
+                bar.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+            if (body) {
+                if (open) {
+                    body.removeAttribute('hidden');
+                } else {
+                    body.setAttribute('hidden', '');
+                }
+            }
+        }
+
+        function closeOtherMailFolds(except) {
+            var all = folds();
+            var j;
+            for (j = 0; j < all.length; j++) {
+                if (all[j] !== except) {
+                    setFoldOpen(all[j], false);
+                }
+            }
+        }
+
+        function buildEmptyFold() {
+            var id = randId();
+            var wrap = document.createElement('div');
+            wrap.className = 'vs-settings-api-fold';
+            wrap.setAttribute('data-mail-fold', '');
+            wrap.setAttribute('data-api-fold', '');
+            wrap.setAttribute('data-fold-group', 'mail');
+            wrap.id = 'mail-fold-' + id;
+            wrap.innerHTML =
+                '<div class="vs-settings-mail-head">' +
+                '<label class="vs-checkbox vs-settings-mail-on" title="启用后参与发信">' +
+                '<input type="checkbox" data-mail-field="on" value="1"><span>启用</span></label>' +
+                '<button type="button" class="vs-settings-api-fold__bar" aria-expanded="false" aria-controls="mail-fold-' + id + '-body">' +
+                '<span class="vs-settings-api-fold__title"><span data-mail-title>未命名账号</span>' +
+                '<span class="vs-form-hint" data-mail-badge style="margin-left:8px;display:none;">已启用</span></span>' +
+                '<i class="vs-icon vs-icon--chevron" aria-hidden="true"></i></button></div>' +
+                '<div class="vs-settings-api-fold__body" id="mail-fold-' + id + '-body" hidden>' +
+                '<input type="hidden" data-mail-field="id" value="' + id + '">' +
+                '<div class="vs-form-row"><label class="vs-label">显示名称</label>' +
+                '<input type="text" class="vs-input" data-mail-field="name" value="" maxlength="32" placeholder="如：主号腾讯"></div>' +
+                '<div class="vs-form-row"><label class="vs-label">SMTP 服务器</label>' +
+                '<input type="text" class="vs-input" data-mail-field="host" value="" autocomplete="off" placeholder="smtp.qq.com（仅域名，勿填 IP）">' +
+                '<p class="vs-form-hint">请填邮箱服务商提供的域名，不允许直接填 IP。</p></div>' +
+                '<div class="vs-form-row vs-form-row--inline"><div class="vs-form-col"><label class="vs-label">端口</label>' +
+                '<input type="text" class="vs-input" data-mail-field="port" value="465"></div>' +
+                '<div class="vs-form-col"><label class="vs-label">加密</label>' +
+                '<select class="vs-input vs-select" data-mail-field="ssl" data-vs-pick>' +
+                '<option value="0" selected>SSL（常见 465）</option>' +
+                '<option value="1">STARTTLS（常见 587）</option>' +
+                '<option value="2">无加密</option></select></div></div>' +
+                '<div class="vs-form-row"><label class="vs-label">SMTP 用户名</label>' +
+                '<input type="text" class="vs-input" data-mail-field="user" value="" autocomplete="off"></div>' +
+                '<div class="vs-form-row"><label class="vs-label">SMTP 密码</label>' +
+                '<input type="password" class="vs-input" data-mail-field="pass" value="" autocomplete="new-password" placeholder="留空则不修改已保存密码"></div>' +
+                '<div class="vs-form-row vs-form-row--inline"><div class="vs-form-col"><label class="vs-label">发件人邮箱</label>' +
+                '<input type="email" class="vs-input" data-mail-field="fromemail" value=""></div>' +
+                '<div class="vs-form-col"><label class="vs-label">发件人名称</label>' +
+                '<input type="text" class="vs-input" data-mail-field="fromname" value=""></div></div>' +
+                '<div class="vs-form-actions"><button type="button" class="vs-btn vs-btn--default" data-mail-remove>删除此账号</button></div>' +
+                '<p class="vs-form-hint">本卡内没有「确认添加」。填完后请点「保存邮箱设置」才会写入。</p>' +
+                '</div>';
+            return wrap;
+        }
+
+        var existing = folds();
+        var k;
+        for (k = 0; k < existing.length; k++) {
+            bindFoldExtras(existing[k]);
+        }
+        syncToolbar();
+        refreshTestOptions();
+
+        if (addBtn) {
+            addBtn.addEventListener('click', function () {
+                if (folds().length >= maxAcc) {
+                    showFlash('发信账号最多 ' + maxAcc + ' 个，请先删除多余账号', 'error');
+                    return;
+                }
+                var fold = buildEmptyFold();
+                listEl.appendChild(fold);
+                bindFoldExtras(fold);
+                if (window.VSPick && typeof window.VSPick.init === 'function') {
+                    window.VSPick.init(fold);
+                }
+                closeOtherMailFolds(fold);
+                setFoldOpen(fold, true);
+                syncToolbar();
+                refreshTestOptions();
+                showFlash('已增加空白邮箱卡（尚未入库）。填完后请点底部「保存邮箱设置」才会生效', 'info');
+                if (fold.scrollIntoView) {
+                    try {
+                        fold.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    } catch (err) {
+                        fold.scrollIntoView(true);
+                    }
+                }
+            });
+        }
     }
 
     function bindAccordions() {
@@ -86,17 +629,46 @@
         showFlash('复制失败，请手动选中复制', 'error');
     }
 
+    function secretEyeIconSvg(revealed) {
+        if (revealed) {
+            return '<svg class="vs-secret-field__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
+                + '<path fill="currentColor" d="M12 7a5 5 0 0 1 5 5c0 .7-.15 1.36-.4 1.96l1.48 1.48A9.8 9.8 0 0 0 21 12c-1.73-4.39-6-7.5-9-7.5-1.1 0-2.16.3-3.12.82l1.5 1.5c.5-.2 1.05-.32 1.62-.32zm-7.03-.61 1.66 1.66A9.8 9.8 0 0 0 3 12c1.73 4.39 6 7.5 9 7.5 1.55 0 3.03-.45 4.3-1.22l1.7 1.7 1.27-1.27L5.24 4.12 3.97 5.39zm5.5 5.5 3.25 3.25A3 3 0 0 1 9 12c0-.2.02-.4.06-.58l1.41 1.41zM12 9a3 3 0 0 1 2.83 4.01l-3.84-3.84c.32-.1.66-.17 1.01-.17z"/>'
+                + '</svg>';
+        }
+        return '<svg class="vs-secret-field__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
+            + '<path fill="currentColor" d="M12 5c-5 0-9.27 3.11-11 7 1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 .001 6.001A3 3 0 0 0 12 9z"/>'
+            + '</svg>';
+    }
+
+    /** 设置页密钥框：默认 password，点眼睛切换 text（无二次验证） */
+    function bindSecretFieldToggles() {
+        document.querySelectorAll('.vs-secret-field__toggle[data-secret-target]').forEach(function (btn) {
+            var id = btn.getAttribute('data-secret-target') || '';
+            var input = id ? document.getElementById(id) : null;
+            if (!input) {
+                return;
+            }
+            btn.innerHTML = secretEyeIconSvg(false);
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                var on = btn.getAttribute('aria-pressed') === 'true';
+                var next = !on;
+                input.type = next ? 'text' : 'password';
+                btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+                btn.setAttribute('aria-label', next ? '隐藏密钥' : '显示密钥');
+                btn.innerHTML = secretEyeIconSvg(next);
+            });
+        });
+    }
+
     function bindSystemApiKey() {
         var genBtn = document.getElementById('systemApiKeyGenBtn');
         var copyKeyBtn = document.getElementById('systemApiKeyCopyBtn');
         var keyInput = document.getElementById('systemApiKeyInput');
-        var cronUrlInput = document.getElementById('apilogCronUrl');
-        var copyApiBtn = document.getElementById('cardkeyApiCopyUrlBtn');
-        var apiUrlInput = document.getElementById('cardkeyApiUrlInput');
 
         if (genBtn) {
             genBtn.addEventListener('click', function () {
-                if (!window.confirm('生成新系统密钥后，旧密钥立即失效（日志清理任务与卡密对接 API 均须更新），是否继续？')) {
+                if (!window.confirm('生成新系统密钥后，旧密钥立即失效（卡密对接、签到、用户信息、调用日志清理、接口查询、调用排行、全站概况等系统 API 均须更新），是否继续？')) {
                     return;
                 }
                 genBtn.disabled = true;
@@ -105,8 +677,16 @@
                 window.VS.postForm(fd, window.location.href)
                     .then(function (data) {
                         if (data.code === 1) {
-                            if (keyInput) keyInput.value = data.system_api_key || '';
-                            if (cronUrlInput) cronUrlInput.value = data.cron_url || '';
+                            if (keyInput) {
+                                keyInput.value = data.system_api_key || '';
+                                keyInput.type = 'password';
+                                var eye = document.querySelector('.vs-secret-field__toggle[data-secret-target="systemApiKeyInput"]');
+                                if (eye) {
+                                    eye.setAttribute('aria-pressed', 'false');
+                                    eye.setAttribute('aria-label', '显示密钥');
+                                    eye.innerHTML = secretEyeIconSvg(false);
+                                }
+                            }
                             showFlash(data.msg || '系统密钥已生成', 'success');
                         } else {
                             showFlash((data && data.msg) || '生成失败', 'error');
@@ -129,73 +709,6 @@
                     return;
                 }
                 copyText(key, '系统密钥已复制');
-            });
-        }
-
-        if (copyApiBtn) {
-            copyApiBtn.addEventListener('click', function () {
-                var url = apiUrlInput ? String(apiUrlInput.value || '').trim() : '';
-                copyText(url, 'API 地址已复制');
-            });
-        }
-    }
-
-    function bindApilogCron() {
-        var archiveChk = document.getElementById('apilog_archive_enabled');
-        var purgeChk = document.getElementById('apilog_purge_enabled');
-        var copyBtn = document.getElementById('apilogCopyCronUrlBtn');
-        var urlInput = document.getElementById('apilogCronUrl');
-        var hotRow = document.getElementById('apilogHotDaysRow');
-        var hotLabel = document.getElementById('apilogHotDaysLabel');
-        var shardRow = document.getElementById('apilogShardRowsRow');
-        var cronBox = document.getElementById('apilogCronBox');
-        var syncing = false;
-
-        function syncCleanupUi() {
-            var archiveOn = !!(archiveChk && archiveChk.checked);
-            var purgeOn = !!(purgeChk && purgeChk.checked);
-            var cleanupOn = archiveOn || purgeOn;
-            if (hotRow) hotRow.hidden = !cleanupOn;
-            if (shardRow) shardRow.hidden = !archiveOn;
-            if (cronBox) cronBox.hidden = !cleanupOn;
-            if (hotLabel) {
-                hotLabel.textContent = purgeOn && !archiveOn ? '保留天数' : '热数据天数';
-            }
-        }
-
-        function onModeChange(changed) {
-            if (syncing) return;
-            syncing = true;
-            if (changed === 'archive' && archiveChk && archiveChk.checked && purgeChk) {
-                purgeChk.checked = false;
-            }
-            if (changed === 'purge' && purgeChk && purgeChk.checked && archiveChk) {
-                archiveChk.checked = false;
-            }
-            syncing = false;
-            syncCleanupUi();
-        }
-
-        if (archiveChk) {
-            archiveChk.addEventListener('change', function () { onModeChange('archive'); });
-        }
-        if (purgeChk) {
-            purgeChk.addEventListener('change', function () { onModeChange('purge'); });
-        }
-        syncCleanupUi();
-
-        if (copyBtn) {
-            copyBtn.addEventListener('click', function () {
-                var url = urlInput ? String(urlInput.value || '').trim() : '';
-                if (!url || url.indexOf('key=') < 0) {
-                    showFlash('请先在「系统密钥」生成密钥', 'error');
-                    return;
-                }
-                if (!(archiveChk && archiveChk.checked) && !(purgeChk && purgeChk.checked)) {
-                    showFlash('请先启用冷热归档或过期删除', 'error');
-                    return;
-                }
-                copyText(url, '任务链接已复制');
             });
         }
     }
@@ -228,13 +741,63 @@
         });
     }
 
+    /** @type {string[]} */
+    var aiPulledModels = [];
+
+    function renderAiModelPickerList(filterQ) {
+        var input = document.getElementById('aiModel');
+        var pickerList = document.getElementById('aiModelPickerList');
+        var pickerTitle = document.getElementById('aiModelPickerTitle');
+        var emptyEl = document.getElementById('aiModelPickerEmpty');
+        if (!pickerList) {
+            return;
+        }
+        var q = String(filterQ || '').trim().toLowerCase();
+        var models = aiPulledModels;
+        var shown = q === ''
+            ? models.slice()
+            : models.filter(function (id) {
+                return String(id).toLowerCase().indexOf(q) !== -1;
+            });
+        pickerList.innerHTML = '';
+        var current = input ? String(input.value || '').trim() : '';
+        shown.forEach(function (id) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'vs-ai-model-pick' + (id === current ? ' is-active' : '');
+            btn.textContent = id;
+            btn.title = id;
+            btn.addEventListener('click', function () {
+                if (input) {
+                    input.value = id;
+                }
+                pickerList.querySelectorAll('.vs-ai-model-pick').forEach(function (el) {
+                    el.classList.toggle('is-active', el === btn);
+                });
+                showFlash('已选择模型：' + id, 'success');
+            });
+            pickerList.appendChild(btn);
+        });
+        if (pickerTitle) {
+            if (q !== '') {
+                pickerTitle.textContent = '可用模型（匹配 ' + shown.length + ' / 共 ' + models.length + '）';
+            } else {
+                pickerTitle.textContent = '可用模型（共 ' + models.length + ' 个，点击选择）';
+            }
+        }
+        if (emptyEl) {
+            emptyEl.hidden = shown.length > 0;
+        }
+    }
+
     function fillModelDatalist(models) {
         var list = document.getElementById('aiModelList');
         var input = document.getElementById('aiModel');
         var picker = document.getElementById('aiModelPicker');
         var pickerList = document.getElementById('aiModelPickerList');
-        var pickerTitle = document.getElementById('aiModelPickerTitle');
+        var searchEl = document.getElementById('aiModelPickerSearch');
         models = Array.isArray(models) ? models.filter(function (id) { return !!String(id || '').trim(); }) : [];
+        aiPulledModels = models;
 
         if (list) {
             list.innerHTML = '';
@@ -252,6 +815,9 @@
             if (pickerList) {
                 pickerList.innerHTML = '';
             }
+            if (searchEl) {
+                searchEl.value = '';
+            }
             showFlash('未获取到可用模型', 'error');
             return;
         }
@@ -266,6 +832,9 @@
             if (pickerList) {
                 pickerList.innerHTML = '';
             }
+            if (searchEl) {
+                searchEl.value = '';
+            }
             showFlash('已自动填入唯一模型：' + models[0], 'success');
             return;
         }
@@ -273,34 +842,78 @@
         if (input && !String(input.value || '').trim()) {
             input.value = models[0];
         }
-        if (pickerTitle) {
-            pickerTitle.textContent = '可用模型（共 ' + models.length + ' 个，点击选择）';
+        if (searchEl) {
+            searchEl.value = '';
         }
-        if (pickerList) {
-            pickerList.innerHTML = '';
-            var current = input ? String(input.value || '').trim() : '';
-            models.forEach(function (id) {
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'vs-ai-model-pick' + (id === current ? ' is-active' : '');
-                btn.textContent = id;
-                btn.title = id;
-                btn.addEventListener('click', function () {
-                    if (input) {
-                        input.value = id;
-                    }
-                    pickerList.querySelectorAll('.vs-ai-model-pick').forEach(function (el) {
-                        el.classList.toggle('is-active', el === btn);
-                    });
-                    showFlash('已选择模型：' + id, 'success');
-                });
-                pickerList.appendChild(btn);
-            });
-        }
+        renderAiModelPickerList('');
         if (picker) {
             picker.hidden = false;
         }
-        showFlash('已拉取 ' + models.length + ' 个模型，请在列表中选择', 'success');
+        showFlash('已拉取 ' + models.length + ' 个模型，可搜索后点选', 'success');
+    }
+
+    function bindAiModelSearch() {
+        var searchEl = document.getElementById('aiModelPickerSearch');
+        if (!searchEl || searchEl.getAttribute('data-bound') === '1') {
+            return;
+        }
+        searchEl.setAttribute('data-bound', '1');
+        searchEl.addEventListener('input', function () {
+            renderAiModelPickerList(searchEl.value);
+        });
+    }
+
+    function bindOutboundUaPreview() {
+        var brandEl = document.getElementById('outboundUaBrand');
+        var box = document.getElementById('outboundUaSamples');
+        if (!brandEl || !box) {
+            return;
+        }
+        var ver = String(box.getAttribute('data-version') || '1').trim() || '1';
+        if (/[\r\n\/\\\s]/.test(ver)) {
+            ver = '1';
+        }
+
+        function normalizeBrand(raw) {
+            var s = String(raw || '').trim();
+            if (s === '') {
+                return 'ApiNexus';
+            }
+            if (s.length > 32) {
+                s = s.slice(0, 32);
+            }
+            if (/[\r\n\/\\\s]/.test(s) || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/.test(s)) {
+                return 'ApiNexus';
+            }
+            return s;
+        }
+
+        function buildUa(brand, component) {
+            if (!component) {
+                return brand + '/' + ver;
+            }
+            return brand + '-' + component + '/' + ver;
+        }
+
+        function refresh() {
+            var brand = normalizeBrand(brandEl.value);
+            var map = {
+                plain: buildUa(brand, ''),
+                proxy: buildUa(brand, 'Proxy'),
+                iplocator: buildUa(brand, 'IpLocator'),
+                oauth: buildUa(brand, 'OAuth')
+            };
+            Object.keys(map).forEach(function (key) {
+                var el = box.querySelector('[data-ua-sample="' + key + '"]');
+                if (el) {
+                    el.textContent = map[key];
+                }
+            });
+        }
+
+        brandEl.addEventListener('input', refresh);
+        brandEl.addEventListener('change', refresh);
+        refresh();
     }
 
     function bindAiListModels() {
@@ -858,10 +1471,14 @@
     document.addEventListener('DOMContentLoaded', function () {
         bindAccordions();
         bindRedisSettingsForm();
+        bindSecretFieldToggles();
         bindSystemApiKey();
-        bindApilogCron();
         bindAiProvider();
         bindAiListModels();
+        bindAiModelSearch();
+        bindOutboundUaPreview();
+        bindSystemApiFolds();
+        bindMailAccounts();
         bindAiTest();
         bindIplocTest();
         bindIplocExtras();

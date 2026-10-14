@@ -33,10 +33,14 @@ class OAuthService
         }
 
         if ($provider === 'qq') {
-            return QQOAuth::authorizeUrl($context);
+            $url = QQOAuth::authorizeUrl($context);
+        } else {
+            $url = GiteeOAuth::authorizeUrl($context);
         }
-
-        return GiteeOAuth::authorizeUrl($context);
+        if (!is_string($url) || $url === '') {
+            return null;
+        }
+        return $url;
     }
 
     /**
@@ -201,16 +205,16 @@ class OAuthService
         $bindUserId = isset($stateData['user_id']) ? (int) $stateData['user_id'] : 0;
 
         if ($intent === 'bind' && $bindUserId > 0) {
-            if (UserAuth::check() && UserAuth::id() !== $bindUserId) {
+            if (!UserAuth::check() || UserAuth::id() !== $bindUserId) {
                 vs_flash_set('error', '绑定会话无效，请重新登录后再试');
                 return array(
                     'status'   => 'error',
                     'msg'      => '绑定会话无效，请重新登录后再试',
-                    'redirect' => vs_base_url() . '/user/account.php',
+                    'redirect' => vs_site_path('/user/account.php'),
                 );
             }
 
-            $accountUrl = vs_base_url() . '/user/account.php';
+            $accountUrl = vs_site_path('/user/account.php');
 
             if (self::userHasBinding($bindUserId, $provider, $itemId)) {
                 self::restoreBindUserSession($bindUserId);
@@ -244,14 +248,14 @@ class OAuthService
             UserAuth::loginById((int) $user['id']);
             return array(
                 'status'   => 'login',
-                'redirect' => vs_base_url() . '/user/index.php',
+                'redirect' => vs_site_path('/user/index.php'),
             );
         }
 
         self::storeBindPending($provider, $identity);
         return array(
             'status'   => 'bind',
-            'redirect' => vs_base_url() . '/user/oauth/bind.php',
+            'redirect' => vs_site_path('/user/oauth/bind.php'),
         );
     }
 
@@ -267,7 +271,7 @@ class OAuthService
         }
 
         if (!UserAuth::check() || UserAuth::id() !== $userId) {
-            UserAuth::loginById($userId);
+            return;
         }
 
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -569,12 +573,12 @@ class OAuthService
             $table = Database::table('user');
 
             if ($provider === 'qq' || $provider === 'gitee') {
+                // 列 NOT NULL DEFAULT ''：禁止写 NULL（会 1048）
                 $field = $provider === 'qq' ? 'qqopenid' : 'giteeid';
                 $stmt = $pdo->prepare(
-                    'UPDATE `' . $table . '` SET `' . $field . '` = NULL WHERE `id` = ?'
+                    'UPDATE `' . $table . '` SET `' . $field . '` = ? WHERE `id` = ?'
                 );
-                $stmt->execute(array($userId));
-                // 再读校验：确保库内已清空（兼容历史空串）
+                $stmt->execute(array('', $userId));
                 $check = $pdo->prepare(
                     'SELECT `' . $field . '` FROM `' . $table . '` WHERE `id` = ? LIMIT 1'
                 );
@@ -582,16 +586,7 @@ class OAuthService
                 $row = $check->fetch(PDO::FETCH_ASSOC);
                 $left = $row && isset($row[$field]) ? trim((string) $row[$field]) : '';
                 if ($left !== '') {
-                    $stmt2 = $pdo->prepare(
-                        'UPDATE `' . $table . '` SET `' . $field . '` = ? WHERE `id` = ?'
-                    );
-                    $stmt2->execute(array('', $userId));
-                    $check->execute(array($userId));
-                    $row = $check->fetch(PDO::FETCH_ASSOC);
-                    $left = $row && isset($row[$field]) ? trim((string) $row[$field]) : '';
-                    if ($left !== '') {
-                        return '解绑失败：未能清除第三方绑定信息';
-                    }
+                    return '解绑失败：未能清除第三方绑定信息';
                 }
                 self::clearBindPending();
                 return true;
@@ -621,7 +616,10 @@ class OAuthService
             self::clearBindPending();
             return true;
         } catch (Exception $e) {
-            return '解绑失败：' . $e->getMessage();
+            if (function_exists('error_log')) {
+                error_log('OAuthService::unbindUser: ' . $e->getMessage());
+            }
+            return '解绑失败，请稍后重试';
         }
     }
 

@@ -18,7 +18,7 @@
  *   note    —— 已废弃；页面不再展示（保留字段仅为兼容旧 JSON，normalize 恒为空）
  *
  * 加载顺序（有本地文件就绝不会再拉仓库）：
- *   1) Redis 缓存键 cache:about:catalog:v4（TTL 约 30 分钟）
+ *   1) Redis 缓存键 cache:about:catalog:v4（TTL 86400，与前台长时内容同档）
  *   2) 本地 catalog.json（发版 ZIP / 在线更新会带上）
  *   3) 仅当本地文件缺失时：按 Updater 镜像顺序拉取仓库 raw
  *        Gitee:   https://gitee.com/{repo}/raw/main/core/vx/seed/r9/m2/catalog.json
@@ -44,7 +44,8 @@ class AboutCatalog
 
     /** 改 catalog 结构或内容后递增版本，避免旧 Redis 缓存挡住新数据 */
     const CACHE_KEY = 'cache:about:catalog:v4';
-    const CACHE_TTL = 1800;
+    /** 关于页目录极少变；与前台长时内容同档（E417） */
+    const CACHE_TTL = 86400;
 
     /**
      * 加载目录：Redis → 本地 JSON →（仅本地缺失）云端 raw → 内置默认

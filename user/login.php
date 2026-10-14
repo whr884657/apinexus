@@ -10,7 +10,7 @@ require_once VS_ROOT . '/admin/includes/auth_layout.php';
 
 InstallChecker::requireInstalled();
 
-$base = vs_base_url();
+$base = vs_site_base_path();
 
 // 退出须在「已登录则跳转」之前处理
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && (string) $_POST['action'] === 'logout') {
@@ -25,7 +25,7 @@ $siteName = SiteContext::siteName();
 $mailEnabled = Config::isMailEnabled();
 $codeTtl = 300;
 
-// 回跳地址进 Session，禁止长期挂在 ?redirect=（§2.4 / E369）
+// 回跳地址进 Session，禁止长期挂在 ?redirect=（第2.4节 / E369）
 if (isset($_GET['redirect'])) {
     $fromGet = vs_safe_login_redirect((string) $_GET['redirect']);
     if ($fromGet !== '') {

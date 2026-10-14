@@ -61,6 +61,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('ok', array('api' => ApiManager::formatRow($row)));
     }
 
+    if ($action === 'list') {
+        $paged = ApiManager::listPaged(array(
+            'q'        => isset($_POST['q']) ? (string) $_POST['q'] : '',
+            'category' => isset($_POST['category']) ? (string) $_POST['category'] : '',
+            'status'   => isset($_POST['status']) ? $_POST['status'] : '',
+            'sort'     => isset($_POST['sort']) ? (string) $_POST['sort'] : 'newest',
+            'page'     => isset($_POST['page']) ? (int) $_POST['page'] : 1,
+            'pagesize' => isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20,
+        ));
+        $desk = '';
+        $mobile = '';
+        foreach ($paged['list'] as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $ctx = vs_api_list_row_context($row);
+            if (!is_array($ctx)) {
+                continue;
+            }
+            ob_start();
+            vs_render_api_list_desktop_row($ctx);
+            $desk .= ob_get_clean();
+            ob_start();
+            vs_render_api_list_mobile_card($ctx);
+            $mobile .= ob_get_clean();
+        }
+        AjaxResponse::success('ok', array(
+            'desktop_html'  => $desk,
+            'mobile_html'   => $mobile,
+            'total'         => $paged['total'],
+            'page'          => $paged['page'],
+            'pagesize'      => $paged['pagesize'],
+            'stats_total'   => $paged['stats_total'],
+            'stats_maint'   => $paged['stats_maint'],
+            'stats_pending' => $paged['stats_pending'],
+        ));
+    }
+
     if ($action === 'openapi_preview') {
         $rate = OpenApiBuilder::assertPreviewRateLimit();
         if ($rate !== true) {
@@ -498,22 +536,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $tableReady = ApiManager::tableReady();
-$apis = $tableReady ? ApiManager::listAll() : array();
+$paged = $tableReady ? ApiManager::listPaged(array('page' => 1, 'pagesize' => 20)) : array(
+    'list'          => array(),
+    'total'         => 0,
+    'stats_total'   => 0,
+    'stats_maint'   => 0,
+    'stats_pending' => 0,
+);
+$apis = $paged['list'];
 $defaultIconPaths = ApiCategoryManager::defaultIconPaths();
 $iconBase = rtrim(vs_base_url(), '/');
 $categories = ApiCategoryManager::tableReady() ? ApiCategoryManager::listEnabled() : array();
 
-$countTotal = count($apis);
-$countMaint = 0;
-$countPending = 0;
-foreach ($apis as $_row) {
-    if ((int) (isset($_row['status']) ? $_row['status'] : 0) === ApiManager::STATUS_MAINTENANCE) {
-        $countMaint += 1;
-    }
-    if (ApiManager::hasAuditColumn() && (int) (isset($_row['audit']) ? $_row['audit'] : 1) === ApiManager::AUDIT_PENDING) {
-        $countPending += 1;
-    }
-}
+$countTotal = (int) $paged['stats_total'];
+$countMaint = (int) $paged['stats_maint'];
+$countPending = (int) $paged['stats_pending'];
 $titleMeta = '当前接口总数 ' . $countTotal;
 if ($countMaint > 0 || $countPending > 0) {
     if ($countMaint > 0) {
@@ -889,14 +926,14 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
     <?php if (!$tableReady): ?>
         <div class="vs-api-list-upgrade">
             <?php vs_render_notice('warning', '', '接口管理功能尚未就绪，请先前往「系统升级」完成更新后再使用。', array('compact' => true)); ?>
-            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
+            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_site_path('/admin/upgrade')); ?>">前往系统升级</a>
         </div>
     <?php else: ?>
         <div class="vs-api-list-tip vs-api-list-tip--enter">
             <?php vs_render_notice('info', '', '正常：可对外提供服务。维护：站点前台仍可看到，但暂不可请求。禁用：列表不展示，直接打开详情页仍可见但调用地址已隐藏。未通过审核的接口也不会在站点前台展示。', array('compact' => true)); ?>
         </div>
 
-        <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiListEmpty"<?php echo count($apis) > 0 ? ' hidden' : ''; ?>>
+        <div class="vs-api-list-empty vs-api-list-empty--hero" id="apiListEmpty"<?php echo $countTotal > 0 ? ' hidden' : ''; ?>>
             <div class="vs-api-list-empty__card">
                 <h3 class="vs-api-list-empty__title">暂无接口</h3>
                 <p class="vs-api-list-empty__desc">请点击右上角「添加接口」进行配置（名称、地址、参数与文档等）。</p>
@@ -907,7 +944,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
             <?php vs_render_notice('info', '', '没有匹配的接口。', array('compact' => true)); ?>
         </div>
 
-        <div class="vs-api-list-table-card vs-api-list-table-wrap" id="apiListTableWrap"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
+        <div class="vs-api-list-table-card vs-api-list-table-wrap" id="apiListTableWrap"<?php echo $countTotal === 0 ? ' hidden' : ''; ?>>
             <div class="vs-table-responsive">
                 <table class="vs-table vs-api-list-table">
                     <thead>
@@ -940,7 +977,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
             </div>
         </div>
 
-        <div class="mobile-api-cards" id="apiListMobile"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
+        <div class="mobile-api-cards" id="apiListMobile"<?php echo $countTotal === 0 ? ' hidden' : ''; ?>>
             <?php foreach ($apis as $row): ?>
                 <?php
                 $listCtx = vs_api_list_row_context($row);
@@ -954,7 +991,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
     </div>
 
     <?php if ($tableReady): ?>
-    <div class="vs-api-list-footer" id="apiListFooter"<?php echo count($apis) === 0 ? ' hidden' : ''; ?>>
+    <div class="vs-api-list-footer" id="apiListFooter"<?php echo $countTotal === 0 ? ' hidden' : ''; ?>>
         <div class="vs-api-pager" id="apiListPager">
             <label class="vs-api-list-pagesize" for="apiListPageSize">
                 <span class="vs-api-list-pagesize__label">每页</span>
@@ -965,7 +1002,11 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
                     <option value="50">50</option>
                 </select>
             </label>
-            <div class="vs-api-pager__navs" id="apiListPagerNav"></div>
+            <div class="vs-api-pager__navs">
+                <button type="button" class="vs-api-pager__nav" id="apiListPrevBtn" aria-label="上一页">上一页</button>
+                <div class="vs-api-pager__nums" id="apiListPagerNums" role="navigation" aria-label="页码"></div>
+                <button type="button" class="vs-api-pager__nav" id="apiListNextBtn" aria-label="下一页">下一页</button>
+            </div>
         </div>
         <div class="vs-api-list-total" id="apiListStats"><?php echo vs_e($titleMeta); ?></div>
     </div>
@@ -1298,7 +1339,7 @@ vs_admin_layout_start('接口列表', 'api-list', $headerActions);
 <?php
 echo Markdown::renderAssetsHtml();
 ?>
-<script>window.VS_AI_CODE=<?php echo json_encode(AiConfig::codeClientOptions(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;</script>
+<script>window.VS_AI_CODE=<?php echo vs_json_script(AiConfig::codeClientOptions()); ?>;</script>
 <?php
 vs_admin_layout_end(array('vs-pick.js', 'icon-picker.js', 'api-params-editor.js', 'vs-syntax.js', 'api-list.js'));
 ?>

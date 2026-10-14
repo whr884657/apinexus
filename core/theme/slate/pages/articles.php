@@ -177,10 +177,10 @@ if ($articleId > 0) {
 <script src="<?php echo vs_e(vs_site_path('/core/markdown/assets/js/markdown-render.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('slate', 'assets/js/pages/slate-markdown.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <script>
-window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE); ?>;
+window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo vs_json_script($csrf); ?>;
 window.VS_ARTICLE_COMMENT = {
     contentId: <?php echo (int) $articleId; ?>,
-    postUrl: <?php echo json_encode($vsBase . '/articles/' . (int) $articleId, JSON_UNESCAPED_UNICODE); ?>,
+    postUrl: <?php echo vs_json_script($vsBase . '/articles/' . (int) $articleId); ?>,
     count: <?php echo (int) $commentCount; ?>
 };
 </script>

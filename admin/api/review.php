@@ -40,13 +40,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $formatted = ApiManager::formatRow($row);
         $mailNote = '';
         if ($formatted && (int) $formatted['userid'] > 0) {
-            $mail = ApiNotify::notifyUserAuditResult(
-                $formatted,
-                $audit,
-                isset($formatted['rejectreason']) ? $formatted['rejectreason'] : ''
-            );
-            if (!$mail['ok']) {
-                $mailNote = $mail['error'] !== '' ? ('（邮件未送达：' . $mail['error'] . '）') : '（邮件未送达）';
+            try {
+                $mail = MailNotify::notifyUserApiAuditResult(
+                    $formatted,
+                    $audit,
+                    isset($formatted['rejectreason']) ? $formatted['rejectreason'] : ''
+                );
+                if (!$mail['ok']) {
+                    $mailNote = $mail['error'] !== '' ? ('（邮件未送达：' . $mail['error'] . '）') : '（邮件未送达）';
+                }
+            } catch (Exception $e) {
+                $mailNote = '（邮件未送达）';
             }
         }
 
@@ -65,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $tableReady = ApiManager::tableReady();
 $hasAudit = $tableReady && ApiManager::hasAuditColumn();
 $apis = $hasAudit ? ApiManager::listForReview() : array();
-$listEditBase = rtrim(vs_base_url(), '/') . '/admin/api/list?edit=';
+$listEditBase = vs_site_path('/admin/api/list') . '?edit=';
 
 $counts = array(
     '0' => 0,
@@ -322,12 +326,12 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
     <?php if (!$tableReady): ?>
         <div class="vs-panel vs-api-review-panel">
             <?php vs_render_notice('warning', '', '接口管理功能尚未就绪，请先前往「系统升级」完成更新。', array('compact' => true)); ?>
-            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
+            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_site_path('/admin/upgrade')); ?>">前往系统升级</a>
         </div>
     <?php elseif (!$hasAudit): ?>
         <div class="vs-panel vs-api-review-panel">
             <?php vs_render_notice('warning', '', '当前系统尚未具备审核功能，请先前往「系统升级」完成结构更新。', array('compact' => true)); ?>
-            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_base_url() . '/admin/upgrade'); ?>">前往系统升级</a>
+            <a class="vs-btn vs-btn--primary" href="<?php echo vs_e(vs_site_path('/admin/upgrade')); ?>">前往系统升级</a>
         </div>
     <?php else: ?>
         <div class="vs-api-list-tip">
@@ -407,7 +411,11 @@ vs_admin_layout_start('接口审核', 'api-review', $headerActions);
                         <option value="50">50</option>
                     </select>
                 </label>
-                <div class="vs-api-pager__navs" id="apiReviewPagerNav"></div>
+                <div class="vs-api-pager__navs">
+                    <button type="button" class="vs-api-pager__nav" id="apiReviewPrevBtn" aria-label="上一页">上一页</button>
+                    <div class="vs-api-pager__nums" id="apiReviewPagerNums" role="navigation" aria-label="页码"></div>
+                    <button type="button" class="vs-api-pager__nav" id="apiReviewNextBtn" aria-label="下一页">下一页</button>
+                </div>
             </div>
             <div class="vs-api-list-total" id="apiReviewStats">共 <?php echo (int) count($apis); ?> 条</div>
         </div>

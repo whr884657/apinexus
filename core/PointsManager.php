@@ -6,6 +6,38 @@
 
 class PointsManager
 {
+    /** @var int 批量入账时推迟 orders 缓存失效（>0 则 change 不逐笔 invalidate） */
+    private static $bulkOrdersDefer = 0;
+
+    /**
+     * 开始批量积分入账（推迟 Redis 订单缓存 SCAN；须与 endBulkOrders 成对）
+     *
+     * @return void
+     */
+    public static function beginBulkOrders()
+    {
+        self::$bulkOrdersDefer++;
+    }
+
+    /**
+     * 结束批量入账并统一失效订单相关缓存
+     *
+     * @return void
+     */
+    public static function endBulkOrders()
+    {
+        if (self::$bulkOrdersDefer > 0) {
+            self::$bulkOrdersDefer--;
+        }
+        if (self::$bulkOrdersDefer === 0 && class_exists('RedisCache')) {
+            try {
+                RedisCache::invalidateOrders();
+            } catch (Exception $e) {
+                // ignore
+            }
+        }
+    }
+
     /**
      * @param int $userId
      * @return float
@@ -153,6 +185,19 @@ class PointsManager
     }
 
     /**
+     * 管理端写积分：必须当前后台管理员已登录（Auth 会话）
+     *
+     * @return array{ok:bool,msg:string}|null  null=已通过
+     */
+    private static function requireAdminSession()
+    {
+        if (!class_exists('Auth') || !Auth::check() || Auth::id() <= 0) {
+            return array('ok' => false, 'msg' => '需要管理员登录后才能操作积分');
+        }
+        return null;
+    }
+
+    /**
      * 管理员调整积分（可增可减）
      *
      * @param int    $userId
@@ -162,6 +207,10 @@ class PointsManager
      */
     public static function adminAdjust($userId, $delta, $remark = '')
     {
+        $deny = self::requireAdminSession();
+        if ($deny !== null) {
+            return $deny;
+        }
         $delta = (float) $delta;
         if ($delta == 0.0) {
             return array('ok' => false, 'msg' => '调整数量不能为 0');
@@ -187,6 +236,51 @@ class PointsManager
             array(
                 'remark' => $remark !== '' ? $remark : '管理员扣款',
                 'status' => OrderManager::STATUS_DONE,
+            )
+        );
+    }
+
+    /**
+     * 运营激励·积分赠送（只增不减；流水 kind 仍为管理员加款，理由必填写入 remark）
+     *
+     * @param int    $userId
+     * @param float  $amount 须 > 0
+     * @param string $remark 非空；用户/后台积分变动「说明」可见
+     * @return array{ok:bool,msg:string,balance?:float,orderno?:string}
+     */
+    public static function opsGift($userId, $amount, $remark)
+    {
+        $deny = self::requireAdminSession();
+        if ($deny !== null) {
+            return $deny;
+        }
+        $userId = (int) $userId;
+        $amount = (float) $amount;
+        $remark = trim((string) $remark);
+        if ($userId <= 0) {
+            return array('ok' => false, 'msg' => '用户无效');
+        }
+        // 拒绝 NaN/Inf；上限与 IncentiveManager::AMOUNT_MAX 对齐，防异常入账
+        if (!is_finite($amount) || $amount < 1 || $amount > 10000) {
+            return array('ok' => false, 'msg' => '赠送积分须至少为 1');
+        }
+        if ($remark === '') {
+            return array('ok' => false, 'msg' => '赠送理由不能为空');
+        }
+        if (function_exists('mb_strlen') && mb_strlen($remark, 'UTF-8') > 120) {
+            $remark = mb_substr($remark, 0, 120, 'UTF-8');
+        } elseif (strlen($remark) > 120) {
+            $remark = substr($remark, 0, 120);
+        }
+        return self::change(
+            $userId,
+            OrderManager::DIRECT_INC,
+            OrderManager::KIND_ADMIN_ADD,
+            $amount,
+            array(
+                'remark'  => $remark,
+                'status'  => OrderManager::STATUS_DONE,
+                'paytime' => date('Y-m-d H:i:s'),
             )
         );
     }
@@ -394,7 +488,7 @@ class PointsManager
                 return false;
             }
 
-            // 码支付：禁止用回调 money 与本地订单 money 比对（见《码支付开发规范》§2.6）。
+            // 码支付：禁止用回调 money 与本地订单 money 比对（见《码支付开发规范》第2.6节）。
             // 履约只认：验签通过 + 支付成功态 + out_trade_no 命中本站 orderno；积分以本地订单 amount 为准。
 
             $userId = (int) $order['userid'];
@@ -436,9 +530,9 @@ class PointsManager
             if (class_exists('RedisCache')) {
                 RedisCache::invalidateOrders();
             }
-            if (class_exists('PointsNotify')) {
+            if (class_exists('MailNotify')) {
                 try {
-                    PointsNotify::notifyRechargeSuccess($userId, $amount, $newBal, $orderno);
+                    MailNotify::notifyRechargeSuccess($userId, $amount, $newBal, $orderno);
                 } catch (Exception $e) {
                     // 发信失败不阻断充值履约
                 }
@@ -446,7 +540,7 @@ class PointsManager
                     $paidMoney = $money !== '' && is_numeric($money)
                         ? (float) $money
                         : (float) (isset($order['money']) ? $order['money'] : 0);
-                    PointsNotify::notifyAdminsOrderPaid($orderno, $userId, $paidMoney, $amount);
+                    MailNotify::notifyAdminsOrderPaid($orderno, $userId, $paidMoney, $amount);
                 } catch (Exception $e) {
                     // 发信失败不阻断充值履约
                 }
@@ -527,9 +621,9 @@ class PointsManager
             if ($direct === OrderManager::DIRECT_DEC) {
                 if ($cur + 0.0000001 < $amount) {
                     $pdo->rollBack();
-                    if (class_exists('PointsNotify')) {
+                    if (class_exists('MailNotify')) {
                         try {
-                            PointsNotify::notifyPointsInsufficient($userId, $cur, $amount);
+                            MailNotify::notifyPointsInsufficient($userId, $cur, $amount);
                         } catch (Exception $e) {
                             // 发信失败不阻断主流程
                         }
@@ -588,12 +682,15 @@ class PointsManager
             }
 
             $pdo->commit();
-            if (class_exists('RedisCache')) {
+            if (self::$bulkOrdersDefer <= 0 && class_exists('RedisCache')) {
                 RedisCache::invalidateOrders();
             }
-            if ($direct === OrderManager::DIRECT_INC && class_exists('PointsNotify')) {
+            // 批量赠送时跳过逐用户 Redis 清理，避免上千次往返拖垮站点
+            if (self::$bulkOrdersDefer <= 0
+                && $direct === OrderManager::DIRECT_INC
+                && class_exists('MailNotify')) {
                 try {
-                    PointsNotify::clearInsufficientNoticeFlag($userId);
+                    MailNotify::clearInsufficientNoticeFlag($userId);
                 } catch (Exception $e) {
                     // ignore
                 }
@@ -601,9 +698,9 @@ class PointsManager
             if ($direct === OrderManager::DIRECT_DEC
                 && $cur > 0.0000001
                 && $newBal <= 0.0000001
-                && class_exists('PointsNotify')) {
+                && class_exists('MailNotify')) {
                 try {
-                    PointsNotify::notifyBalanceZero($userId, $newBal);
+                    MailNotify::notifyBalanceZero($userId, $newBal);
                 } catch (Exception $e) {
                     // 发信失败不阻断积分主流程
                 }
@@ -662,12 +759,28 @@ class PointsManager
     }
 
     /**
+     * 每日签到流水备注（积分变动说明）
+     *
+     * @param string $via web=用户中心；api=系统级外部签到 API
+     * @return string
+     */
+    public static function checkinRemark($via = 'web')
+    {
+        $via = strtolower(trim((string) $via));
+        if ($via === 'api' || $via === 'system_api' || $via === 'sysapi') {
+            return '每日签到奖励（API）';
+        }
+        return '每日签到奖励';
+    }
+
+    /**
      * 每日签到（随机区间积分；同用户同日仅一次）
      *
-     * @param int $userId
+     * @param int    $userId
+     * @param string $via    web=用户中心签到；api=系统外部 API 代签到（仅影响流水 remark）
      * @return array{ok:bool,msg:string,amount?:float,balance?:float}
      */
-    public static function checkin($userId)
+    public static function checkin($userId, $via = 'web')
     {
         $userId = (int) $userId;
         if ($userId <= 0) {
@@ -707,7 +820,7 @@ class PointsManager
             OrderManager::KIND_CHECKIN,
             $amount,
             array(
-                'remark'  => '每日签到奖励',
+                'remark'  => self::checkinRemark($via),
                 'status'  => OrderManager::STATUS_DONE,
                 'paytime' => date('Y-m-d H:i:s'),
             )

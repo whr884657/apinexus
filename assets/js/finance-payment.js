@@ -124,15 +124,6 @@
         return parseFloat(n).toFixed(2);
     }
 
-    function bonusRangeLabel(tier) {
-        var min = formatMoney(tier.min);
-        var max = parseFloat(tier.max);
-        if (!(max > 0)) {
-            return '满 ' + min + ' 元起';
-        }
-        return '满 ' + min + ' 元且不足 ' + formatMoney(max) + ' 元';
-    }
-
     function tiersOverlap(list) {
         var prevMax = null;
         for (var i = 0; i < list.length; i++) {
@@ -151,34 +142,135 @@
         return '';
     }
 
+    function bindAccordions() {
+        document.querySelectorAll('#payConfigPage [data-accordion]').forEach(function (section) {
+            var trigger = section.querySelector('.vs-accordion__trigger');
+            if (!trigger) {
+                return;
+            }
+            trigger.addEventListener('click', function () {
+                var isOpen = section.classList.contains('is-open');
+                section.classList.toggle('is-open', !isOpen);
+                trigger.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+            });
+        });
+    }
+
+    function setFoldDesc(id, text) {
+        var el = document.querySelector('#' + id + ' .vs-accordion__desc');
+        if (el) {
+            el.textContent = text;
+        }
+    }
+
+    function actionBtns(kind, idx) {
+        return '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-' + kind + '-edit="' + idx + '">编辑</button>'
+            + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm vs-btn--danger-text" data-' + kind + '-del="' + idx + '">删除</button>';
+    }
+
+    function pkgBadgesHtml(pkg, gift) {
+        if (!pkg.hot && gift < 1) {
+            return '';
+        }
+        var html = '<span class="vs-pkg-card__badges" aria-hidden="true">';
+        if (pkg.hot) {
+            html += '<span class="vs-pkg-card__badge vs-pkg-card__badge--hot">荐</span>';
+        }
+        if (gift >= 1) {
+            html += '<span class="vs-pkg-card__badge vs-pkg-card__badge--gift">赠' + gift + '%</span>';
+        }
+        return html + '</span>';
+    }
+
+    function pkgListBadgesHtml(pkg, gift) {
+        var html = '';
+        if (pkg.hot) {
+            html += '<span class="vs-pkg-list-badge vs-pkg-list-badge--hot">荐</span>';
+        }
+        if (gift >= 1) {
+            html += '<span class="vs-pkg-list-badge vs-pkg-list-badge--gift">赠' + gift + '%</span>';
+        }
+        return html;
+    }
+
+    function pkgCardHtml(pkg, idx, gift) {
+        var cls = 'vs-pkg-card';
+        if (pkg.hot || gift >= 1) {
+            cls += ' has-badge';
+        }
+        if (pkg.hot) {
+            cls += ' is-hot';
+        }
+        return '<div class="' + cls + '">'
+            + pkgBadgesHtml(pkg, gift)
+            + '<div class="vs-pkg-card__name">' + escapeHtml(pkg.name) + '</div>'
+            + '<div class="vs-pkg-card__money">¥' + escapeHtml(pkg.money) + '</div>'
+            + '<div class="vs-notice vs-notice--tip vs-notice--compact vs-pkg-card__pts-tip" role="status">'
+            + '<div class="vs-notice__text"><strong>' + escapeHtml(pkg.points) + '</strong> 积分</div></div>'
+            + '<div class="vs-pkg-card__actions">' + actionBtns('pkg', idx) + '</div></div>';
+    }
+
+    function pkgRowHtml(pkg, idx, gift) {
+        return '<article class="vs-finance-row vs-finance-row--pkg">'
+            + '<div class="vs-finance-cell vs-finance-mono">' + escapeHtml(pkg.id || '—') + '</div>'
+            + '<div class="vs-finance-cell">' + escapeHtml(pkg.name) + pkgListBadgesHtml(pkg, gift) + '</div>'
+            + '<div class="vs-finance-cell">¥' + escapeHtml(pkg.money) + '</div>'
+            + '<div class="vs-finance-cell">' + escapeHtml(pkg.points) + '</div>'
+            + '<div class="vs-finance-cell vs-finance-c-ops">' + actionBtns('pkg', idx) + '</div></article>';
+    }
+
+    function bonusCardHtml(tier, idx) {
+        var max = parseFloat(tier.max);
+        var toHtml = (max > 0)
+            ? '<div class="vs-bonus-card__to">且不足 <strong>' + escapeHtml(formatMoney(max)) + '</strong> 元</div>'
+            : '<div class="vs-bonus-card__to">不设上限</div>';
+        return '<div class="vs-bonus-card has-badge">'
+            + '<span class="vs-bonus-card__badges" aria-hidden="true">'
+            + '<span class="vs-bonus-card__badge">赠' + escapeHtml(String(tier.percent)) + '%</span></span>'
+            + '<div class="vs-bonus-card__from">满 <strong>' + escapeHtml(formatMoney(tier.min)) + '</strong> 元</div>'
+            + toHtml
+            + '<div class="vs-bonus-card__actions">' + actionBtns('bonus', idx) + '</div></div>';
+    }
+
+    function bonusRowHtml(tier, idx) {
+        var max = parseFloat(tier.max);
+        var maxLabel = max > 0 ? formatMoney(max) : '不封顶';
+        return '<article class="vs-finance-row vs-finance-row--bonus">'
+            + '<div class="vs-finance-cell">' + (idx + 1) + '</div>'
+            + '<div class="vs-finance-cell">' + escapeHtml(formatMoney(tier.min)) + '</div>'
+            + '<div class="vs-finance-cell">' + escapeHtml(maxLabel) + '</div>'
+            + '<div class="vs-finance-cell"><span class="vs-pkg-list-badge vs-pkg-list-badge--gift">赠'
+            + escapeHtml(String(tier.percent)) + '%</span></div>'
+            + '<div class="vs-finance-cell vs-finance-c-ops">' + actionBtns('bonus', idx) + '</div></article>';
+    }
+
     function renderPackages() {
         if (!listEl) {
             return;
         }
         if (!packages.length) {
             listEl.innerHTML = '<p class="vs-empty vs-pkg-empty">暂无套餐，点击「添加套餐」。</p>';
+            setFoldDesc('payFoldPkgs', '尚未配置，展开后添加');
             return;
         }
         var rate = currentRate();
-        listEl.innerHTML = packages.map(function (pkg, idx) {
+        var head = '<div class="vs-finance-row vs-finance-row--pkg vs-finance-row--head" aria-hidden="true">'
+            + '<div class="vs-finance-cell">ID</div>'
+            + '<div class="vs-finance-cell">名称</div>'
+            + '<div class="vs-finance-cell">金额</div>'
+            + '<div class="vs-finance-cell">对应积分</div>'
+            + '<div class="vs-finance-cell vs-finance-c-ops">操作</div></div>';
+        var rows = '';
+        var cards = '';
+        packages.forEach(function (pkg, idx) {
             var gift = giftPercent(pkg.money, pkg.points, rate);
-            var giftHtml = gift >= 1
-                ? '<span class="vs-pkg-card__gift">赠' + gift + '%</span>'
-                : '';
-            return '<div class="vs-pkg-card' + (pkg.hot ? ' is-hot' : '') + (gift >= 1 ? ' has-gift' : '') + '">'
-                + giftHtml
-                + '<div class="vs-pkg-card__main">'
-                + '<div class="vs-pkg-card__name">' + escapeHtml(pkg.name)
-                + (pkg.hot ? '<span class="vs-pkg-card__badge">荐</span>' : '')
-                + '</div>'
-                + '<div class="vs-pkg-card__money">¥' + escapeHtml(pkg.money) + '</div>'
-                + '<div class="vs-pkg-card__points">' + escapeHtml(pkg.points) + ' 积分</div>'
-                + '</div>'
-                + '<div class="vs-pkg-card__actions">'
-                + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-pkg-edit="' + idx + '">编辑</button>'
-                + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm vs-btn--danger-text" data-pkg-del="' + idx + '">删除</button>'
-                + '</div></div>';
-        }).join('');
+            rows += pkgRowHtml(pkg, idx, gift);
+            cards += pkgCardHtml(pkg, idx, gift);
+        });
+        listEl.innerHTML = '<div class="vs-finance-table-wrap vs-pay-list-desktop"><div class="vs-finance-grid">'
+            + head + rows + '</div></div>'
+            + '<div class="vs-pay-list-mobile">' + cards + '</div>';
+        setFoldDesc('payFoldPkgs', '已配置 ' + packages.length + ' 个套餐');
     }
 
     function renderBonuses() {
@@ -187,24 +279,46 @@
         }
         if (!bonuses.length) {
             bonusListEl.innerHTML = '<p class="vs-empty vs-bonus-empty">暂无档位，点击「添加一档」。留空则自定义金额仅按兑换比例到账。</p>';
+            setFoldDesc('payFoldBonus', '尚未配置，展开后添加');
             return;
         }
-        bonusListEl.innerHTML = bonuses.map(function (tier, idx) {
-            return '<div class="vs-bonus-card">'
-                + '<div class="vs-bonus-card__main">'
-                + '<div class="vs-bonus-card__range">' + escapeHtml(bonusRangeLabel(tier)) + '</div>'
-                + '<div class="vs-bonus-card__pct">额外赠送 <strong>' + escapeHtml(String(tier.percent)) + '%</strong></div>'
-                + '</div>'
-                + '<div class="vs-bonus-card__actions">'
-                + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm" data-bonus-edit="' + idx + '">编辑</button>'
-                + '<button type="button" class="vs-btn vs-btn--outline vs-btn--sm vs-btn--danger-text" data-bonus-del="' + idx + '">删除</button>'
-                + '</div></div>';
-        }).join('');
+        var head = '<div class="vs-finance-row vs-finance-row--bonus vs-finance-row--head" aria-hidden="true">'
+            + '<div class="vs-finance-cell">序号</div>'
+            + '<div class="vs-finance-cell">起始（元）</div>'
+            + '<div class="vs-finance-cell">上限（元）</div>'
+            + '<div class="vs-finance-cell">额外赠送</div>'
+            + '<div class="vs-finance-cell vs-finance-c-ops">操作</div></div>';
+        var rows = '';
+        var cards = '';
+        bonuses.forEach(function (tier, idx) {
+            rows += bonusRowHtml(tier, idx);
+            cards += bonusCardHtml(tier, idx);
+        });
+        bonusListEl.innerHTML = '<div class="vs-finance-table-wrap vs-pay-list-desktop"><div class="vs-finance-grid">'
+            + head + rows + '</div></div>'
+            + '<div class="vs-pay-list-mobile">' + cards + '</div>';
+        setFoldDesc('payFoldBonus', '已配置 ' + bonuses.length + ' 档');
+    }
+
+    function syncRateHint() {
+        var n = currentRate();
+        var label = String(n);
+        var hint = document.getElementById('payRateHintVal');
+        if (hint) {
+            hint.textContent = label;
+        }
+        setFoldDesc('payFoldRate', n > 0 ? ('当前 1 元 = ' + label + ' 积分') : '尚未填写，展开后配置');
     }
 
     if (rateInput) {
-        rateInput.addEventListener('input', renderPackages);
-        rateInput.addEventListener('change', renderPackages);
+        rateInput.addEventListener('input', function () {
+            renderPackages();
+            syncRateHint();
+        });
+        rateInput.addEventListener('change', function () {
+            renderPackages();
+            syncRateHint();
+        });
     }
 
     function openOverlayEl(el) {
@@ -592,4 +706,6 @@
     renderPackages();
     readBonuses();
     renderBonuses();
+    bindAccordions();
+    syncRateHint();
 })();

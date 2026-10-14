@@ -27,7 +27,9 @@
         var searchInput = document.getElementById('apiCatSearchInput');
         var pageSizeEl = document.getElementById('apiCatPageSize');
         var footerEl = document.getElementById('apiCatFooter');
-        var pagerNav = document.getElementById('apiCatPagerNav');
+        var prevBtn = document.getElementById('apiCatPrevBtn');
+        var nextBtn = document.getElementById('apiCatNextBtn');
+        var pagerNums = document.getElementById('apiCatPagerNums');
         var statsEl = document.getElementById('apiCatStats');
         var openAddBtn = document.getElementById('apiCatOpenAddBtn');
         var formOverlay = document.getElementById('apiCategoryFormOverlay');
@@ -169,116 +171,65 @@
             return n;
         }
 
-        function allDesktopRows() {
-            if (!listEl) {
-                return [];
-            }
-            return Array.prototype.slice.call(listEl.querySelectorAll('tr[data-category-row]'));
-        }
-
-        function syncRowOrder(rows) {
-            if (!listEl) {
-                return;
-            }
-            rows.forEach(function (row) {
-                listEl.appendChild(row);
-                if (mobileEl) {
-                    var id = row.getAttribute('data-category-row');
-                    var card = mobileEl.querySelector('.cat-card[data-category-row="' + id + '"]');
-                    if (card) {
-                        mobileEl.appendChild(card);
-                    }
-                }
-            });
-        }
-
-        function matchedRows() {
-            var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-            var all = allDesktopRows();
-            var filtered = all.filter(function (row) {
-                if (!q) {
-                    return true;
-                }
-                var hay = (row.getAttribute('data-search') || '').toLowerCase();
-                return hay.indexOf(q) !== -1;
-            });
-            syncRowOrder(filtered);
-            return filtered;
-        }
-
         function renderPagerNav(totalPages, matchedLen) {
-            if (!pagerNav) {
+            if (!window.VS || !VS.applyLogsPager) {
                 return;
             }
-            var canPrev = currentPage > 1;
-            var canNext = matchedLen > 0 && currentPage < totalPages;
-            pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"'
-                + (canPrev ? '' : ' disabled') + '>上一页</button>'
-                + '<span class="vs-api-pager__info">' + currentPage + '</span>'
-                + '<button type="button" class="vs-api-pager__nav" data-p="1"'
-                + (canNext ? '' : ' disabled') + '>下一页</button>';
+            VS.applyLogsPager(currentPage, matchedLen === 0 ? 1 : totalPages, prevBtn, nextBtn, pagerNums);
         }
+
+        var listTotal = parseInt(page.getAttribute('data-cat-total') || '0', 10) || 0;
 
         function applyView() {
-            var totalAll = allDesktopRows().length;
-            var matched = matchedRows();
-            var pageSize = getPageSize();
-            var totalPages = Math.max(1, Math.ceil(matched.length / pageSize) || 1);
-            if (currentPage > totalPages) {
-                currentPage = totalPages;
-            }
-            if (currentPage < 1) {
-                currentPage = 1;
-            }
-            var start = (currentPage - 1) * pageSize;
-            var end = start + pageSize;
-            var visibleIds = {};
-
-            matched.forEach(function (row, idx) {
-                var show = idx >= start && idx < end;
-                var id = row.getAttribute('data-category-row');
-                row.hidden = !show;
-                if (show) {
-                    visibleIds[id] = true;
+            var fd = new FormData();
+            fd.append('action', 'list');
+            fd.append('q', searchInput ? String(searchInput.value || '').trim() : '');
+            fd.append('page', String(currentPage));
+            fd.append('pagesize', String(getPageSize()));
+            VS.postForm(fd, window.location.href).then(function (data) {
+                if (!data || Number(data.code) !== 1) {
+                    throw new Error((data && data.msg) ? data.msg : '加载失败');
+                }
+                if (data.page) {
+                    currentPage = parseInt(data.page, 10) || currentPage;
+                }
+                listTotal = parseInt(data.total, 10) || 0;
+                page.setAttribute('data-cat-total', String(listTotal));
+                if (listEl) {
+                    listEl.innerHTML = data.desktop_html || '';
+                }
+                if (mobileEl) {
+                    mobileEl.innerHTML = data.mobile_html || '';
+                }
+                var q = searchInput ? String(searchInput.value || '').trim() : '';
+                var filtered = q !== '';
+                var pageItems = listEl ? listEl.querySelectorAll('tr[data-category-row]').length : 0;
+                var hasAny = listTotal > 0;
+                if (emptyEl) {
+                    emptyEl.hidden = hasAny || filtered;
+                }
+                if (searchEmptyEl) {
+                    searchEmptyEl.hidden = !(filtered && pageItems === 0);
+                }
+                if (tableWrapEl) {
+                    tableWrapEl.hidden = pageItems === 0;
+                }
+                if (mobileEl) {
+                    mobileEl.hidden = pageItems === 0;
+                }
+                if (footerEl) {
+                    footerEl.hidden = listTotal === 0 && !filtered;
+                }
+                if (statsEl) {
+                    statsEl.textContent = '共 ' + listTotal + ' 条';
+                }
+                var totalPages = Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+                renderPagerNav(listTotal === 0 ? 1 : totalPages, listTotal);
+            }).catch(function (err) {
+                if (window.VS && VS.showMessage) {
+                    VS.showMessage((err && err.message) ? err.message : '加载失败', 'error');
                 }
             });
-            allDesktopRows().forEach(function (row) {
-                if (matched.indexOf(row) === -1) {
-                    row.hidden = true;
-                }
-            });
-            if (mobileEl) {
-                mobileEl.querySelectorAll('.cat-card[data-category-row]').forEach(function (card) {
-                    var id = card.getAttribute('data-category-row');
-                    var desk = listEl ? listEl.querySelector('tr[data-category-row="' + id + '"]') : null;
-                    var inMatched = desk && matched.indexOf(desk) !== -1;
-                    card.hidden = !(inMatched && visibleIds[id]);
-                });
-            }
-
-            var hasAny = totalAll > 0;
-            var hasVisible = matched.length > 0;
-            var q = searchInput ? String(searchInput.value || '').trim() : '';
-            if (emptyEl) {
-                emptyEl.hidden = hasAny;
-            }
-            if (searchEmptyEl) {
-                searchEmptyEl.hidden = !(hasAny && !hasVisible && q !== '');
-            }
-            if (tableWrapEl) {
-                tableWrapEl.hidden = !hasVisible;
-            }
-            if (mobileEl) {
-                mobileEl.hidden = !hasVisible;
-            }
-            if (footerEl) {
-                footerEl.hidden = !hasAny;
-            }
-            if (statsEl) {
-                statsEl.textContent = '共 ' + matched.length + ' 条'
-                    + (hasAny && q ? ('（全部 ' + totalAll + '）') : '');
-            }
-            renderPagerNav(matched.length === 0 ? 1 : totalPages, matched.length);
         }
 
         function buildDesktopHtml(row) {
@@ -344,12 +295,6 @@
         }
 
         function appendItem(row) {
-            if (!listEl || !mobileEl) {
-                window.location.reload();
-                return;
-            }
-            listEl.insertAdjacentHTML('afterbegin', buildDesktopHtml(row));
-            mobileEl.insertAdjacentHTML('afterbegin', buildMobileHtml(row));
             currentPage = 1;
             applyView();
         }
@@ -418,13 +363,6 @@
         }
 
         function removePair(catId) {
-            var pair = getRowPair(catId);
-            if (pair.desktop) {
-                pair.desktop.remove();
-            }
-            if (pair.mobile) {
-                pair.mobile.remove();
-            }
             applyView();
         }
 
@@ -756,23 +694,41 @@
                 applyView();
             });
         }
-        if (pagerNav) {
-            pagerNav.addEventListener('click', function (e) {
-                var btn = e.target.closest('[data-p]');
-                if (!btn || btn.disabled) {
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                if (prevBtn.disabled) {
                     return;
                 }
-                var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
-                var pageSize = getPageSize();
-                var matched = matchedRows();
-                var totalPages = Math.max(1, Math.ceil(matched.length / pageSize) || 1);
-                if (delta > 0 && currentPage < totalPages) {
-                    currentPage += 1;
-                    applyView();
-                } else if (delta < 0 && currentPage > 1) {
+                if (currentPage > 1) {
                     currentPage -= 1;
                     applyView();
                 }
+            });
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (nextBtn.disabled) {
+                    return;
+                }
+                var tp = Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+                if (currentPage < tp) {
+                    currentPage += 1;
+                    applyView();
+                }
+            });
+        }
+        if (pagerNums) {
+            pagerNums.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-page]');
+                if (!btn) {
+                    return;
+                }
+                var next = parseInt(btn.getAttribute('data-page'), 10) || 0;
+                if (!next || next === currentPage) {
+                    return;
+                }
+                currentPage = next;
+                applyView();
             });
         }
         if (iconUrlInput) {

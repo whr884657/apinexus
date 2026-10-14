@@ -220,6 +220,72 @@ class ApiCategoryManager
     }
 
     /**
+     * 后台真分页：独立 COUNT + LIMIT OFFSET（pagesize 1–50）
+     *
+     * @param array $opts q?, page, pagesize
+     * @return array{list:array,total:int,page:int,pagesize:int}
+     */
+    public static function listPaged(array $opts = array())
+    {
+        $page = max(1, (int) (isset($opts['page']) ? $opts['page'] : 1));
+        $pagesize = max(1, min(50, (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20)));
+        $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
+        if (function_exists('mb_substr') && mb_strlen($q, 'UTF-8') > 64) {
+            $q = mb_substr($q, 0, 64, 'UTF-8');
+        } elseif (strlen($q) > 64) {
+            $q = substr($q, 0, 64);
+        }
+        $empty = array('list' => array(), 'total' => 0, 'page' => $page, 'pagesize' => $pagesize);
+        if (!self::tableReady()) {
+            return $empty;
+        }
+        try {
+            $pdo = Database::connect();
+            $apiTable = ApiManager::table();
+            $catTable = self::table();
+            $where = array('1=1');
+            $bind = array();
+            if ($q !== '') {
+                $like = function_exists('vs_sql_like_contains')
+                    ? vs_sql_like_contains($q)
+                    : ('%' . addcslashes($q, "\\%_") . '%');
+                $where[] = '(c.`name` LIKE ? ESCAPE \'\\\\\' OR c.`description` LIKE ? ESCAPE \'\\\\\')';
+                $bind[] = $like;
+                $bind[] = $like;
+            }
+            $whereSql = implode(' AND ', $where);
+            $cnt = $pdo->prepare('SELECT COUNT(*) FROM `' . $catTable . '` AS c WHERE ' . $whereSql);
+            $cnt->execute($bind);
+            $total = (int) $cnt->fetchColumn();
+            $maxPage = max(1, (int) ceil(($total > 0 ? $total : 1) / $pagesize));
+            if ($page > $maxPage) {
+                $page = $maxPage;
+            }
+            if ($total === 0) {
+                return array('list' => array(), 'total' => 0, 'page' => 1, 'pagesize' => $pagesize);
+            }
+            $offset = (int) (($page - 1) * $pagesize);
+            $sql = 'SELECT c.*,
+                    (SELECT COUNT(*) FROM `' . $apiTable . '` AS a WHERE a.`category` = c.`name`) AS api_count
+                    FROM `' . $catTable . '` AS c
+                    WHERE ' . $whereSql . '
+                    ORDER BY c.`sort` ASC, c.`id` ASC
+                    LIMIT ' . $pagesize . ' OFFSET ' . $offset;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($bind);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return array(
+                'list'     => is_array($rows) ? $rows : array(),
+                'total'    => $total,
+                'page'     => $page,
+                'pagesize' => $pagesize,
+            );
+        } catch (Exception $e) {
+            return $empty;
+        }
+    }
+
+    /**
      * 启用的分类（前台筛选用）
      *
      * @return array

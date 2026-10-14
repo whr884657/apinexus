@@ -8,48 +8,6 @@ require_once dirname(__DIR__) . '/init.php';
 
 $tableReady = ApiKeyManager::tableReady();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    vs_require_secure_post();
-
-    if (!$tableReady) {
-        AjaxResponse::error('令牌表尚未就绪，请先执行数据库结构更新');
-    }
-
-    $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
-    $id = isset($_POST['token_id']) ? (int) $_POST['token_id'] : 0;
-
-    if ($action === 'set_status') {
-        $status = isset($_POST['status']) ? (int) $_POST['status'] : ApiKeyManager::STATUS_DISABLED;
-        $result = ApiKeyManager::setStatus($id, 0, $status);
-        if ($result !== true) {
-            AjaxResponse::error($result);
-        }
-        $row = ApiKeyManager::formatRow(ApiKeyManager::findById($id));
-        $msg = ((int) $row['status'] === ApiKeyManager::STATUS_ENABLED) ? '令牌已启用' : '令牌已禁用';
-        AjaxResponse::success($msg, array('token' => $row));
-    }
-
-    if ($action === 'delete') {
-        $result = ApiKeyManager::delete($id, 0);
-        if ($result !== true) {
-            AjaxResponse::error($result);
-        }
-        AjaxResponse::success('令牌已删除', array('token_id' => $id));
-    }
-
-    if ($action === 'reset') {
-        $result = ApiKeyManager::resetSecret($id, 0);
-        if (!is_array($result)) {
-            AjaxResponse::error($result);
-        }
-        AjaxResponse::success('令牌已重置', array('token' => $result));
-    }
-
-    AjaxResponse::error('无效操作', 400);
-}
-
-$tokens = $tableReady ? ApiKeyManager::listAll() : array();
-
 /**
  * 配额展示：不限 或 剩余/上限
  *
@@ -106,21 +64,28 @@ function vs_admin_key_row_ctx(array $row)
     $spent = isset($token['pointsspent']) ? (float) $token['pointsspent'] : 0.0;
     $spentFmt = class_exists('PayConfig') ? PayConfig::fmtPoints($spent) : (string) $spent;
     $expireLabel = isset($token['expire_label']) ? (string) $token['expire_label'] : '永不过期';
+    $remark = isset($token['remark']) ? (string) $token['remark'] : '';
+    $userDisplay = $remark !== '' ? ($username . ' - ' . $remark) : $username;
+    $scopeLabel = isset($token['scope_label']) ? (string) $token['scope_label'] : '全部可调用';
+    $scopeOpen = !empty($token['scope_open']);
 
     return array(
         'id'              => $id,
         'enabled'         => $enabled,
         'secret'          => $token['secret'],
         'username'        => $username,
+        'user_display'    => $userDisplay,
         'avatar'          => $avatarLetter,
         'avatar_url'      => $avatarUrl,
         'time'            => $time,
         'calls'           => (int) $token['calls'],
         'pointsspent'     => $spent,
         'pointsspent_fmt' => $spentFmt,
-        'remark'          => $token['remark'],
+        'remark'          => $remark,
         'quota_label'     => vs_admin_key_quota_label($token),
         'expire_label'    => $expireLabel,
+        'scope_label'     => $scopeLabel,
+        'scope_open'      => $scopeOpen,
         'search'          => $search,
         'status'          => (int) $token['status'],
     );
@@ -182,10 +147,10 @@ function vs_render_admin_key_desktop_row(array $ctx)
                 <?php else: ?>
                     <div class="user-cell__avatar user-cell__avatar--letter" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></div>
                 <?php endif; ?>
-                <span class="user-cell__name" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
+                <span class="user-cell__name" data-field="user_display" title="<?php echo vs_e($ctx['user_display']); ?>"><?php echo vs_e($ctx['user_display']); ?></span>
             </div>
         </td>
-        <td><span class="remark-cell" data-field="remark" title="<?php echo vs_e($ctx['remark']); ?>"><?php echo vs_e($ctx['remark'] !== '' ? $ctx['remark'] : '—'); ?></span></td>
+        <td class="vs-api-keys-stat-cell vs-api-keys-scope-cell"><span data-field="scope_label"><?php echo vs_format_scope_label_html($ctx['scope_label']); ?></span></td>
         <td class="vs-api-keys-stat-cell"><span data-field="quota_label"><?php echo vs_e($ctx['quota_label']); ?></span></td>
         <td class="vs-api-keys-stat-cell"><span data-field="expire_label"><?php echo vs_e($ctx['expire_label']); ?></span></td>
         <td class="vs-api-keys-stat-cell"><span data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></span></td>
@@ -223,22 +188,20 @@ function vs_render_admin_key_mobile_card(array $ctx)
                 <?php else: ?>
                     <span class="key-card__avatar key-card__avatar--letter" data-field="avatar"><?php echo vs_e($ctx['avatar']); ?></span>
                 <?php endif; ?>
-                <span class="key-card__username" data-field="username"><?php echo vs_e($ctx['username']); ?></span>
+                <span class="key-card__username" data-field="user_display"><?php echo vs_e($ctx['user_display']); ?></span>
             </div>
             <span class="vs-badge <?php echo $ctx['enabled'] ? 'vs-badge--success' : 'vs-badge--error'; ?>" data-field="status_label">
                 <?php echo $ctx['enabled'] ? '正常' : '已禁用'; ?>
             </span>
         </div>
         <code class="key-card__key" data-field="secret" data-copy="<?php echo vs_e($ctx['secret']); ?>"><?php echo vs_e($ctx['secret']); ?></code>
-        <?php if ($ctx['remark'] !== ''): ?>
-            <div class="key-card__remark" data-field="remark"><?php echo vs_e($ctx['remark']); ?></div>
-        <?php endif; ?>
+        <div class="key-card__scope" data-field="scope_label"><?php echo vs_format_scope_label_html($ctx['scope_label']); ?></div>
         <div class="key-card__meta">
             <span class="key-card__time" data-field="createtime"><?php echo vs_e($ctx['time'] !== '' ? $ctx['time'] : '—'); ?></span>
             <span class="key-card__quota-expire">
-                配额 <span data-field="quota_label"><?php echo vs_e($ctx['quota_label']); ?></span>
+                配额 <strong data-field="quota_label"><?php echo vs_e($ctx['quota_label']); ?></strong>
                 ·
-                有效期 <span data-field="expire_label"><?php echo vs_e($ctx['expire_label']); ?></span>
+                有效期 <strong data-field="expire_label"><?php echo vs_e($ctx['expire_label']); ?></strong>
             </span>
             <span class="key-card__metrics" aria-label="调用与消耗">
                 调用 <strong data-field="calls"><?php echo number_format((int) $ctx['calls']); ?></strong>
@@ -253,6 +216,83 @@ function vs_render_admin_key_mobile_card(array $ctx)
     <?php
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    vs_require_secure_post();
+
+    if (!$tableReady) {
+        AjaxResponse::error('令牌表尚未就绪，请先执行数据库结构更新');
+    }
+
+    $action = isset($_POST['action']) ? (string) $_POST['action'] : '';
+    $id = isset($_POST['token_id']) ? (int) $_POST['token_id'] : 0;
+
+    if ($action === 'list') {
+        $paged = ApiKeyManager::listPaged(array(
+            'q'        => isset($_POST['q']) ? (string) $_POST['q'] : '',
+            'status'   => (isset($_POST['status']) && $_POST['status'] !== '') ? (int) $_POST['status'] : null,
+            'page'     => isset($_POST['page']) ? (int) $_POST['page'] : 1,
+            'pagesize' => isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20,
+        ));
+        $desk = '';
+        $mobile = '';
+        foreach ($paged['list'] as $row) {
+            $ctx = vs_admin_key_row_ctx($row);
+            if ($ctx === array()) {
+                continue;
+            }
+            ob_start();
+            vs_render_admin_key_desktop_row($ctx);
+            $desk .= ob_get_clean();
+            ob_start();
+            vs_render_admin_key_mobile_card($ctx);
+            $mobile .= ob_get_clean();
+        }
+        AjaxResponse::success('ok', array(
+            'desktop_html' => $desk,
+            'mobile_html'  => $mobile,
+            'total'        => $paged['total'],
+            'page'         => $paged['page'],
+            'pagesize'     => $paged['pagesize'],
+        ));
+    }
+
+    if ($action === 'set_status') {
+        $status = isset($_POST['status']) ? (int) $_POST['status'] : ApiKeyManager::STATUS_DISABLED;
+        $result = ApiKeyManager::setStatus($id, 0, $status);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        $row = ApiKeyManager::formatRow(ApiKeyManager::findById($id));
+        $msg = ((int) $row['status'] === ApiKeyManager::STATUS_ENABLED) ? '令牌已启用' : '令牌已禁用';
+        AjaxResponse::success($msg, array('token' => $row));
+    }
+
+    if ($action === 'delete') {
+        $result = ApiKeyManager::delete($id, 0);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        AjaxResponse::success('令牌已删除', array('token_id' => $id));
+    }
+
+    if ($action === 'reset') {
+        $result = ApiKeyManager::resetSecret($id, 0);
+        if (!is_array($result)) {
+            AjaxResponse::error($result);
+        }
+        AjaxResponse::success('令牌已重置', array('token' => $result));
+    }
+
+    AjaxResponse::error('无效操作', 400);
+}
+
+$paged = $tableReady ? ApiKeyManager::listPaged(array('page' => 1, 'pagesize' => 20)) : array(
+    'list' => array(),
+    'total' => 0,
+);
+$tokens = $paged['list'];
+$tokenTotal = (int) $paged['total'];
+
 $headerActions = '';
 if ($tableReady) {
     ob_start();
@@ -261,7 +301,7 @@ if ($tableReady) {
         <div class="vs-search-bar__input-wrap">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="search" class="vs-input vs-search-bar__input" id="adminKeySearchInput"
-                   placeholder="搜索令牌 Key 或用户名..." autocomplete="off">
+                   placeholder="搜索令牌 Key、备注或用户名..." autocomplete="off">
         </div>
         <select class="vs-input vs-select vs-toolbar-filter" id="adminKeyStatusFilter" data-vs-pick aria-label="状态筛选">
             <option value="">全部状态</option>
@@ -276,13 +316,13 @@ if ($tableReady) {
 vs_admin_layout_start('令牌管理', 'api-keys', $headerActions);
 ?>
 
-<div id="apiKeysPage" data-token-total="<?php echo (int) count($tokens); ?>">
+<div id="apiKeysPage" data-token-total="<?php echo (int) $tokenTotal; ?>">
     <?php if (!$tableReady): ?>
         <div class="vs-panel">
             <?php vs_render_notice('warning', '', '请先在「系统升级」中执行数据库结构更新，以创建令牌表。', array('compact' => true)); ?>
         </div>
     <?php else: ?>
-        <div class="vs-api-list-empty vs-api-list-empty--hero" id="adminKeyEmpty"<?php echo count($tokens) > 0 ? ' hidden' : ''; ?>>
+        <div class="vs-api-list-empty vs-api-list-empty--hero" id="adminKeyEmpty"<?php echo $tokenTotal > 0 ? ' hidden' : ''; ?>>
             <div class="vs-api-list-empty__card">
                 <h3 class="vs-api-list-empty__title">暂无令牌</h3>
                 <p class="vs-api-list-empty__desc">用户在用户中心「令牌管理」创建后，将显示在此。可紧急禁用泄露的令牌。</p>
@@ -295,15 +335,15 @@ vs_admin_layout_start('令牌管理', 'api-keys', $headerActions);
             </div>
         </div>
 
-        <div class="vs-api-list-table-card vs-api-list-table-wrap" id="adminKeyTableWrap"<?php echo count($tokens) === 0 ? ' hidden' : ''; ?>>
+        <div class="vs-api-list-table-card vs-api-list-table-wrap" id="adminKeyTableWrap"<?php echo $tokenTotal === 0 ? ' hidden' : ''; ?>>
             <div class="vs-table-responsive">
                 <table class="vs-table vs-api-keys-table">
                     <thead>
                         <tr>
                             <th>Key</th>
                             <th>创建时间</th>
-                            <th>归属</th>
-                            <th>备注</th>
+                            <th>用户</th>
+                            <th>范围</th>
                             <th>配额</th>
                             <th>有效期</th>
                             <th>调用</th>
@@ -321,13 +361,13 @@ vs_admin_layout_start('令牌管理', 'api-keys', $headerActions);
             </div>
         </div>
 
-        <div class="mobile-keys-cards" id="adminKeyMobile"<?php echo count($tokens) === 0 ? ' hidden' : ''; ?>>
+        <div class="mobile-keys-cards" id="adminKeyMobile"<?php echo $tokenTotal === 0 ? ' hidden' : ''; ?>>
             <?php foreach ($tokens as $row): ?>
                 <?php vs_render_admin_key_mobile_card(vs_admin_key_row_ctx($row)); ?>
             <?php endforeach; ?>
         </div>
 
-        <div class="vs-api-list-footer" id="adminKeyFooter"<?php echo count($tokens) === 0 ? ' hidden' : ''; ?>>
+        <div class="vs-api-list-footer" id="adminKeyFooter"<?php echo $tokenTotal === 0 ? ' hidden' : ''; ?>>
             <div class="vs-api-pager" id="adminKeyPager">
                 <label class="vs-api-list-pagesize" for="adminKeyPageSize">
                     <span class="vs-api-list-pagesize__label">每页</span>
@@ -338,13 +378,13 @@ vs_admin_layout_start('令牌管理', 'api-keys', $headerActions);
                         <option value="50">50</option>
                     </select>
                 </label>
-                <div class="vs-api-pager__navs" id="adminKeyPagerNav">
+                <div class="vs-api-pager__navs">
                     <button type="button" class="vs-api-pager__nav" id="adminKeyPrevBtn" aria-label="上一页">上一页</button>
-                    <span class="vs-api-pager__info" id="adminKeyPagerInfo">1</span>
+                    <div class="vs-api-pager__nums" id="adminKeyPagerNums" role="navigation" aria-label="页码"></div>
                     <button type="button" class="vs-api-pager__nav" id="adminKeyNextBtn" aria-label="下一页">下一页</button>
                 </div>
             </div>
-            <p class="vs-api-list-stats" id="adminKeyStats">共 <?php echo (int) count($tokens); ?> 条</p>
+            <p class="vs-api-list-stats" id="adminKeyStats">共 <?php echo (int) $tokenTotal; ?> 条</p>
         </div>
     <?php endif; ?>
 </div>

@@ -13,6 +13,79 @@
     var form = document.getElementById('partnerForm');
     var list = document.getElementById('partnerList');
     var empty = document.getElementById('partnerEmpty');
+    var currentPage = 1;
+    var prevBtn = document.getElementById('partnerPrevBtn');
+    var nextBtn = document.getElementById('partnerNextBtn');
+    var pagerNums = document.getElementById('partnerPagerNums');
+    var pageSizeEl = document.getElementById('partnerPageSize');
+    var footerEl = document.getElementById('partnerFooter');
+    var statsEl = document.getElementById('partnerStats');
+
+    function getPageSize() {
+        var n = pageSizeEl ? parseInt(pageSizeEl.value, 10) : 20;
+        if ([10, 20, 30, 50].indexOf(n) === -1) {
+            n = 20;
+        }
+        return n;
+    }
+
+    var listTotal = 0;
+
+    function applyListPage() {
+        if (!list) {
+            return;
+        }
+        var fd = new FormData();
+        fd.append('action', 'list');
+        fd.append('page', String(currentPage));
+        fd.append('pagesize', String(getPageSize()));
+        postAction(fd).then(function (data) {
+            if (data.page) {
+                currentPage = parseInt(data.page, 10) || currentPage;
+            }
+            listTotal = parseInt(data.total, 10) || 0;
+            var items = data.list || [];
+            var html = headHtml();
+            items.forEach(function (link) {
+                html += rowHtml(link);
+            });
+            list.innerHTML = html;
+            var has = listTotal > 0;
+            list.hidden = items.length === 0;
+            if (empty) {
+                empty.hidden = has;
+            }
+            if (footerEl) {
+                footerEl.hidden = !has;
+            }
+            if (statsEl) {
+                statsEl.textContent = '共 ' + listTotal + ' 条';
+            }
+            var totalPages = Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+            if (window.VS && VS.applyLogsPager) {
+                if (!has) {
+                    if (pagerNums) {
+                        pagerNums.innerHTML = '';
+                    }
+                    if (prevBtn) {
+                        prevBtn.disabled = true;
+                    }
+                    if (nextBtn) {
+                        nextBtn.disabled = true;
+                    }
+                } else {
+                    VS.applyLogsPager(currentPage, totalPages, prevBtn, nextBtn, pagerNums);
+                }
+            }
+            if (window.VS && window.VS.bindExternalImgFallback) {
+                window.VS.bindExternalImgFallback(list);
+            }
+        }).catch(function (err) {
+            if (window.VS && VS.showMessage) {
+                VS.showMessage(err.message || '加载失败', 'error');
+            }
+        });
+    }
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -23,9 +96,7 @@
     }
 
     function syncEmpty() {
-        var has = list && list.querySelector('[data-partner-row]');
-        if (list) list.hidden = !has;
-        if (empty) empty.hidden = !!has;
+        applyListPage();
     }
 
     function actionsHtml(link) {
@@ -54,6 +125,16 @@
         return '<span class="vs-link-row__initial">' + esc(initial) + '</span>';
     }
 
+    function headHtml() {
+        return '<div class="vs-link-row vs-link-row--head" aria-hidden="true">'
+            + '<div class="vs-link-cell">名称</div>'
+            + '<div class="vs-link-cell">链接</div>'
+            + '<div class="vs-link-cell">简介</div>'
+            + '<div class="vs-link-cell">状态</div>'
+            + '<div class="vs-link-cell">操作</div>'
+            + '</div>';
+    }
+
     function rowHtml(link) {
         var id = parseInt(link.id, 10) || 0;
         var enabled = parseInt(link.enabled, 10);
@@ -62,6 +143,7 @@
         var siteurl = link.siteurl || '';
         var icon = link.icon || '';
         var sort = link.sort != null ? link.sort : 0;
+        var desc = link.description || '';
         var label = enabled === 1 ? '启用' : '禁用';
         var cls = enabled === 1 ? 'is-on' : 'is-off';
         return (
@@ -71,37 +153,29 @@
             ' data-name="' + esc(name) + '"' +
             ' data-siteurl="' + esc(siteurl) + '"' +
             ' data-icon="' + esc(icon) + '"' +
-            ' data-description="' + esc(link.description || '') + '"' +
+            ' data-description="' + esc(desc) + '"' +
             ' data-sort="' + esc(sort) + '"' +
             ' data-enabled="' + enabled + '">' +
+            '<div class="vs-link-cell vs-link-c-site">' +
             '<div class="vs-link-row__icon">' + iconHtml(link) + '</div>' +
-            '<div class="vs-link-row__main">' +
             '<div class="vs-link-row__name" data-field="name">' + esc(name) + '</div>' +
-            '<a class="vs-link-row__url" data-field="siteurl" href="' + esc(siteurl) + '" target="_blank" rel="noopener noreferrer">' + esc(siteurl) + '</a>' +
-            (link.description ? ('<div class="vs-link-row__desc" data-field="description">' + esc(link.description) + '</div>') : '') +
             '</div>' +
-            '<div class="vs-link-row__status">' +
+            '<div class="vs-link-cell vs-link-c-url">' +
+            '<a class="vs-link-row__url" data-field="siteurl" href="' + esc(siteurl) + '" target="_blank" rel="noopener noreferrer">' + esc(siteurl) + '</a>' +
+            '</div>' +
+            '<div class="vs-link-cell vs-link-c-desc">' +
+            '<div class="vs-link-row__desc" data-field="description">' + esc(desc || '—') + '</div>' +
+            '</div>' +
+            '<div class="vs-link-cell vs-link-c-status">' +
             '<span class="vs-link-status ' + cls + '" data-field="enabled_label">' + esc(label) + '</span>' +
             '</div>' +
-            '<div class="vs-link-row__actions">' + actionsHtml(link) + '</div>' +
+            '<div class="vs-link-cell vs-link-c-actions">' + actionsHtml(link) + '</div>' +
             '</div>'
         );
     }
 
-    function upsertRow(link) {
-        if (!link || !list) return;
-        var id = parseInt(link.id, 10) || 0;
-        var html = rowHtml(link);
-        var existing = list.querySelector('[data-partner-row="' + id + '"]');
-        if (existing) {
-            existing.outerHTML = html;
-        } else {
-            list.insertAdjacentHTML('afterbegin', html);
-        }
-        syncEmpty();
-        if (window.VS && window.VS.bindExternalImgFallback) {
-            window.VS.bindExternalImgFallback(list);
-        }
+    function upsertRow() {
+        applyListPage();
     }
 
     function openOverlay() {
@@ -247,7 +321,6 @@
                 del.append('link_id', String(id));
                 postAction(del).then(function (data) {
                     VS.showMessage(data.msg || '已删除', 'success');
-                    if (row) row.remove();
                     syncEmpty();
                 }).catch(function (err) {
                     VS.showMessage(err.message || '删除失败', 'error');
@@ -268,4 +341,50 @@
             });
         });
     }
+    function listTotalPages() {
+        return Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+    }
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            if (prevBtn.disabled) {
+                return;
+            }
+            if (currentPage > 1) {
+                currentPage -= 1;
+                applyListPage();
+            }
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            if (nextBtn.disabled) {
+                return;
+            }
+            if (currentPage < listTotalPages()) {
+                currentPage += 1;
+                applyListPage();
+            }
+        });
+    }
+    if (pagerNums) {
+        pagerNums.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-page]');
+            if (!btn) {
+                return;
+            }
+            var next = parseInt(btn.getAttribute('data-page'), 10) || 0;
+            if (!next || next === currentPage) {
+                return;
+            }
+            currentPage = next;
+            applyListPage();
+        });
+    }
+    if (pageSizeEl) {
+        pageSizeEl.addEventListener('change', function () {
+            currentPage = 1;
+            applyListPage();
+        });
+    }
+    applyListPage();
 })();

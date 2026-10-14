@@ -35,6 +35,9 @@ class AggOAuth
 
         $context['item_id'] = (string) $item['id'];
         $state = OAuthState::create(self::PROVIDER, $context);
+        if ($state === '') {
+            return null;
+        }
         // 彩虹系文档回调示例常只带 type+code；把短 token 钉在 redirect_uri（ost）与 state 双通道
         $redirect = OAuthConfig::callbackUrl(self::PROVIDER) . '&ost=' . rawurlencode($state);
 

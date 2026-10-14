@@ -237,4 +237,10 @@ $kpiClass = $isDeveloper ? ' is-eight' : ' is-six';
             </div>
         </div>
     </section>
+    <?php
+    if (function_exists('vs_user_dash_messages_panel')) {
+        $notifyMessages = isset($notifyMessages) && is_array($notifyMessages) ? $notifyMessages : array();
+        vs_user_dash_messages_panel($notifyMessages);
+    }
+    ?>
 </section>

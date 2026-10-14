@@ -78,6 +78,23 @@ class AdminNotify
             }
         }
 
+        // 开发者申请（feedback.kind=1）
+        if (class_exists('ApiFeedbackManager')) {
+            $nDev = (int) ApiFeedbackManager::countPendingDevApply();
+            if ($nDev > 0) {
+                $total += $nDev;
+                $items[] = array(
+                    'id'    => 'dev_apply',
+                    'icon'  => 'users',
+                    'tone'  => 'warning',
+                    'title' => '开发审核',
+                    'desc'  => '有 ' . $nDev . ' 条开发者申请待审核',
+                    'count' => $nDev,
+                    'url'   => '/admin/content/devapply',
+                );
+            }
+        }
+
         // 评论
         if (class_exists('CommentManager')) {
             $n = (int) CommentManager::countPending();

@@ -105,6 +105,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('site_domain1', ''),
 ('site_icp1', ''),
 ('site_gongan1', ''),
+-- 出站 User-Agent 品牌前缀（见 core/OutboundUa.php；模块后缀按调用点）
+('uabrand', 'ApiNexus'),
 ('register_policy', '{"email_suffixes":[]}'),
 -- register_enabled：1全部开启 2全部关闭 3仅普通用户 4仅开发者
 ('register_enabled', '1'),
@@ -113,13 +115,7 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('register_email_verify', '1'),
 ('oauth_config', '{"qq":{"enabled":false,"app_id":"","app_key":""},"gitee":{"enabled":false,"client_id":"","client_secret":""},"agg":{"enabled":false,"apiurl":"","app_id":"","app_key":"","items":[]}}'),
 ('mail_enabled', '0'),
-('mail_smtp_host', ''),
-('mail_smtp_port', '465'),
-('mail_smtp_user', ''),
-('mail_smtp_pass', ''),
-('mail_smtp_secure', 'ssl'),
-('mail_from_email', ''),
-('mail_from_name', 'ApiNexus'),
+('mailsmtp', '{"mode":0,"list":[]}'),
 ('mail_notify_submit', '1'),
 ('mail_notify_pass', '1'),
 ('mail_notify_fail', '1'),
@@ -134,6 +130,10 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_key_quota', '1'),
 ('mail_notify_recharge_success', '1'),
 ('mail_notify_order_admin', '1'),
+('mail_notify_dev_apply', '1'),
+('mail_notify_dev_pass', '1'),
+('mail_notify_dev_fail', '1'),
+('ops_site_promo', '{"mode":"off","percent_pay":null,"expire_at":"","label":"","updated_at":"","updated_by":0}'),
 ('register_gift_enabled', '0'),
 ('register_gift_points', '100'),
 ('apikey_max', '3'),
@@ -177,7 +177,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('apilog_purge_enabled', '0'),
 ('apilog_shard_rows', '5000'),
 ('system_api_key', ''),
-('cardkey_api_enabled', '0'),
+('sysapion', '{"apilogarchive":0,"apiquery":0,"apirank":0,"cardkey":0,"checkin":0,"sitestats":0,"userinfo":0}'),
+('sysapirq', '{"apis":{"apilogarchive":{"qpm":0,"qps":0},"apiquery":{"qpm":0,"qps":0},"apirank":{"qpm":0,"qps":0},"cardkey":{"qpm":0,"qps":0},"checkin":{"qpm":0,"qps":0},"sitestats":{"qpm":0,"qps":0},"userinfo":{"qpm":0,"qps":0}}}'),
 ('captcha_mode', 'local'),
 ('captcha_mode_admin', 'local'),
 ('captcha_mode_user', 'local'),
@@ -186,6 +187,9 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('gt4_id', ''),
 ('gt4_key', ''),
 ('gt4_api', ''),
+('cfid', ''),
+('cfkey', ''),
+('captcha_pepper', ''),
 ('captcha_on_admin_login', '1'),
 ('captcha_on_admin_forgot', '1'),
 ('captcha_on_user_login', '1'),
@@ -287,6 +291,9 @@ CREATE TABLE IF NOT EXISTS `{prefix}apilog` (
     `httpcode` smallint NOT NULL DEFAULT 200 COMMENT 'HTTP状态码',
     `charged` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否扣费：0否 1是',
     `cost` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '本次扣费积分数',
+    `xfproto` varchar(16) NOT NULL DEFAULT '' COMMENT '转发协议（请求头 X-Forwarded-Proto）',
+    `xff` varchar(500) NOT NULL DEFAULT '' COMMENT '转发链路IP（请求头 X-Forwarded-For 原文）',
+    `xri` varchar(45) NOT NULL DEFAULT '' COMMENT '真实客户端IP头（请求头 X-Real-IP）',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '调用时间',
     PRIMARY KEY (`id`),
     KEY `idx_apiid` (`apiid`),
@@ -337,6 +344,7 @@ CREATE TABLE IF NOT EXISTS `{prefix}apikey` (
     `quotaused` decimal(14,4) NOT NULL DEFAULT 0.0000 COMMENT '本配额已消耗积分（相对quota；与终身pointsspent分开）',
     `quotafallback` tinyint(1) NOT NULL DEFAULT 0 COMMENT '配额用尽后：0禁止继续调用 1改扣账户总积分',
     `expiretime` datetime DEFAULT NULL COMMENT '失效时间：空表示永不过期',
+    `scopejson` text NULL COMMENT '接口调用范围JSON：NULL或空串或合法空结构=不限制全部接口；非空必须为{"c":[分类ID...],"a":[接口ID...]}（JSON正整数、去重升序；整类只写c不写该类下a；并集命中即允许）；非法值或超限一律按无权调用处理',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_secret` (`secret`),
@@ -344,21 +352,23 @@ CREATE TABLE IF NOT EXISTS `{prefix}apikey` (
     KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户API调用密钥';
 
--- 接口反馈表
+-- 接口反馈与开发者申请（共用表，kind 区分）
 CREATE TABLE IF NOT EXISTS `{prefix}feedback` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `apiid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联接口ID',
-  `userid` int unsigned NOT NULL DEFAULT 0 COMMENT '反馈用户ID',
-  `content` text NOT NULL COMMENT '反馈内容',
-  `reply` text COMMENT '处理回复',
-  `status` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '状态：0待处理 1已处理',
+  `kind` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '类型：0接口反馈 1开发者申请',
+  `apiid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联接口ID（kind=0必填；kind=1固定0）',
+  `userid` int unsigned NOT NULL DEFAULT 0 COMMENT '提交用户ID（kind=1必填）',
+  `content` text NOT NULL COMMENT '正文：接口反馈内容 / 开发者申请理由',
+  `reply` text COMMENT '处理回复（接口反馈；开发者申请可选备注）',
+  `status` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '状态：kind=0时0待处理1已处理；kind=1时0待审1通过2拒绝',
   `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '提交时间',
   `updatetime` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  KEY `idx_status` (`status`),
+  KEY `idx_kind_status` (`kind`, `status`),
+  KEY `idx_kind_userid_status` (`kind`, `userid`, `status`),
   KEY `idx_apiid` (`apiid`),
   KEY `idx_userid` (`userid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='接口反馈';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='接口反馈与开发者申请';
 
 
 -- API 接口分类表
@@ -432,8 +442,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}link` (
     `name` varchar(50) NOT NULL COMMENT '名称',
     `siteurl` varchar(255) NOT NULL COMMENT '跳转链接',
     `icon` varchar(255) NOT NULL DEFAULT '' COMMENT '图标链接',
-    `description` varchar(200) NOT NULL DEFAULT '' COMMENT '简介：友情链接简介 / 赞助说明（金额或其它支持）',
-    `contact` varchar(100) NOT NULL DEFAULT '' COMMENT '联系方式（仅友情链接使用）',
+    `description` varchar(200) NOT NULL DEFAULT '' COMMENT '简介：友链简介 / 赞助说明',
+    `contact` varchar(100) NOT NULL DEFAULT '' COMMENT '联系方式（友链申请）',
     `kind` tinyint(1) NOT NULL DEFAULT 0 COMMENT '类型：0友情链接 1合作伙伴 2赞助',
     `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用：0禁用 1启用',
     `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '审核状态：0待审 1通过 2拒绝（合作伙伴与赞助固定为1）',
@@ -447,19 +457,20 @@ CREATE TABLE IF NOT EXISTS `{prefix}link` (
     KEY `idx_sort` (`sort`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='友情链接、合作伙伴与赞助';
 
--- 公告与文章（共用表，kind 区分）
+-- 前台公告 / 文章 / 站内公告 / 邮箱模板（共用表，kind 区分）
 CREATE TABLE IF NOT EXISTS `{prefix}content` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `kind` tinyint(1) NOT NULL DEFAULT 0 COMMENT '类型：0公告 1文章',
+  `kind` tinyint(1) NOT NULL DEFAULT 0 COMMENT '类型：0前台公告 1文章 2站内公告 3邮箱模板',
   `title` varchar(200) NOT NULL DEFAULT '' COMMENT '标题',
-  `summary` varchar(500) NOT NULL DEFAULT '' COMMENT '摘要',
-  `body` mediumtext NOT NULL COMMENT '正文Markdown',
+  `summary` varchar(500) NOT NULL DEFAULT '' COMMENT '摘要（邮箱模板=发信标题）',
+  `body` mediumtext NOT NULL COMMENT '正文（公告文章Markdown；邮箱模板HTML）',
   `cover` varchar(500) NOT NULL DEFAULT '' COMMENT '封面图链接（文章用，公告可空）',
   `coverlayout` tinyint(1) NOT NULL DEFAULT 0 COMMENT '封面布局：0左侧 1右侧 2背景（仅文章）',
   `ispinned` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否置顶：0否 1是',
-  `ispopup` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否弹窗：0否 1是（公告）',
+  `ispopup` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否弹窗：0否 1是（前台公告/站内公告）',
+  `audmode` tinyint(1) NOT NULL DEFAULT 0 COMMENT '受众：0无(非站内公告) 1全站 2开发者 3普通用户',
   `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态：0草稿 1已发布 2隐藏',
-  `bindpage` tinyint(1) NOT NULL DEFAULT 0 COMMENT '绑定页面：0无 1关于页（仅文章；绑定后不进文章列表）',
+  `bindpage` tinyint(1) NOT NULL DEFAULT 0 COMMENT '绑定：0无 1关于页(仅文章)；邮箱模板方案另用≥10场景码',
   `userid` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '发布者用户ID',
   `views` int(10) unsigned NOT NULL DEFAULT 0 COMMENT '阅读量',
   `sort` int(11) NOT NULL DEFAULT 0 COMMENT '排序权重（越小越前）',
@@ -469,8 +480,33 @@ CREATE TABLE IF NOT EXISTS `{prefix}content` (
   KEY `idx_kind_status_id` (`kind`, `status`, `id`),
   KEY `idx_kind_pin_id` (`kind`, `ispinned`, `id`),
   KEY `idx_kind_popup` (`kind`, `ispopup`, `status`),
-  KEY `idx_kind_bindpage` (`kind`, `bindpage`, `status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告与文章共用内容表';
+  KEY `idx_kind_bindpage` (`kind`, `bindpage`, `status`),
+  KEY `idx_kind_status_aud_pin` (`kind`, `status`, `audmode`, `ispinned`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='前台公告、文章、站内公告与邮箱模板共用内容表';
+
+-- 邮件群发批次记录（一批一行）
+CREATE TABLE IF NOT EXISTS `{prefix}maillog` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `adminid` int unsigned NOT NULL DEFAULT 0 COMMENT '操作管理员ID',
+  `tplid` int unsigned NOT NULL DEFAULT 0 COMMENT '模板content.id',
+  `tplname` varchar(200) NOT NULL DEFAULT '' COMMENT '模板名称快照',
+  `subject` varchar(500) NOT NULL DEFAULT '' COMMENT '发信标题快照',
+  `filtersum` varchar(500) NOT NULL DEFAULT '' COMMENT '筛选条件摘要',
+  `total` int unsigned NOT NULL DEFAULT 0 COMMENT '目标人数',
+  `oknum` int unsigned NOT NULL DEFAULT 0 COMMENT '成功人数',
+  `failnum` int unsigned NOT NULL DEFAULT 0 COMMENT '失败人数',
+  `status` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '状态：0发送中 1已完成 2已中断',
+  `uids` mediumtext NOT NULL COMMENT '目标用户ID JSON数组',
+  `failjson` mediumtext COMMENT '失败明细JSON',
+  `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '开始时间',
+  `lastactivity` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '最后活动时间（tick/进度刷新）',
+  `finishtime` datetime DEFAULT NULL COMMENT '结束时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_createtime` (`createtime`),
+  KEY `idx_adminid_id` (`adminid`, `id`),
+  KEY `idx_status_id` (`status`, `id`),
+  KEY `idx_status_lastactivity` (`status`, `lastactivity`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件群发批次记录（一批一行）';
 
 -- 文章评论
 CREATE TABLE IF NOT EXISTS `{prefix}comment` (

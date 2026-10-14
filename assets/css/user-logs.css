@@ -75,13 +75,29 @@
     box-sizing: border-box;
 }
 
+.vs-log-storage {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    vertical-align: middle;
+}
+
+.vs-log-storage.is-cold {
+    color: #9a3412;
+    background: #ffedd5;
+}
+
 .vs-log-toolbar .vs-finance-filters {
     flex: 0 0 auto;
 }
 
-.vs-log-panel {
-    padding: 0 !important;
-    overflow: hidden;
+#logsPage {
+    padding: 0;
+    background: transparent;
 }
 
 .vs-log-list {
@@ -816,6 +832,17 @@
     min-height: 32px !important;
     max-height: 32px !important;
     box-sizing: border-box !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-api-pager__num {
+    min-width: 32px !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-api-pager__num.is-active,
+.vs-api-list-footer .vs-api-pager button.vs-api-pager__num.is-active {
+    background: #0f172a !important;
+    color: #fff !important;
+    border-color: #0f172a !important;
 }
 
 /* 用户详情完整路径密钥悬停明码（系统级兜底；主题 user.css 亦有同名规则） */

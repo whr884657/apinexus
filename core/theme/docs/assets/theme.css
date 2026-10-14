@@ -2311,7 +2311,7 @@ body.th5-announce-modal-open { overflow: hidden; }
    Theme five · Qiniu AI SaaS 布局覆盖层
    参考七牛云 AI Agent（qiniu.com/ai/agent）设计语言：
    浅色企业蓝 · 大数字步骤 · 白卡片+细边框+柔和阴影 ·
-   标签徽章 · 套餐原价划线 · 模型/接口上新卡 · FAQ 手风琴
+   标签徽章 · 套餐原价划线 · 模型/接口上新卡 · FAQ 折叠面板
    ═══════════════════════════════════════════════════════════ */
 
 /* ── 顶栏：企业导航（吸顶白底 + 阴影）── */
@@ -3151,7 +3151,7 @@ body.th5-announce-modal-open { overflow: hidden; }
 .th5-doc-card__title { font-size: 15px; font-weight: 700; color: var(--fg); margin-bottom: 3px; }
 .th5-doc-card__desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
 
-/* ── FAQ 手风琴 ── */
+/* ── FAQ 折叠面板 ── */
 .th5-faq { padding: 72px 0; background: var(--bg-2); }
 .th5-faq__list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 .th5-faq-item {

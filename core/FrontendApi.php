@@ -91,6 +91,9 @@ class FrontendApi
             'detail_url'  => $id > 0 ? vs_api_detail_url($id) : '',
             'charge'      => ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0),
             'charge_label'=> ApiManager::chargeLabel(isset($row['charge']) ? $row['charge'] : 0),
+            'base_points' => ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0) === ApiManager::CHARGE_PAID
+                ? (float) ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0)
+                : 0,
             'points'      => ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0) === ApiManager::CHARGE_PAID
                 ? (float) ApiManager::normalizePrice(isset($row['price']) ? $row['price'] : 0)
                 : 0,
@@ -98,6 +101,8 @@ class FrontendApi
                 ApiManager::normalizeCharge(isset($row['charge']) ? $row['charge'] : 0),
                 isset($row['price']) ? $row['price'] : 0
             ),
+            'promo_label' => '',
+            'promo_mode'  => 'off',
             'createtime'  => isset($row['createtime']) ? (string) $row['createtime'] : '',
             'params_list' => self::parseParamsList(isset($row['params']) ? (string) $row['params'] : ''),
             'author'      => $withAuthor ? self::authorForTheme(isset($row['userid']) ? (int) $row['userid'] : 0) : null,
@@ -114,6 +119,78 @@ class FrontendApi
             }
             // 详情 HTML 嵌入用紧凑 JSON，减小源码体积
             $out['openapi_json'] = OpenApiBuilder::jsonForApiRow($buildRow, false);
+        }
+        return $out;
+    }
+
+
+    /**
+     * 叠全站优惠展示字段（不改库表价；不改 needkey）
+     *
+     * - 全免：标价/points 仍显示库表原积分，只加 promo_label（活动期内免扣，不是改价）
+     * - 折扣：展示活动扣费额 + 折扣标签（库表原价仍在 base_points）
+     *
+     * @param array $item
+     * @return array
+     */
+    public static function applySitePromoToThemeItem(array $item)
+    {
+        $charge = isset($item['charge']) ? $item['charge'] : 0;
+        $base = isset($item['base_points'])
+            ? (float) $item['base_points']
+            : (isset($item['points']) ? (float) $item['points'] : 0);
+        $item['base_points'] = $base;
+        $item['points'] = $base;
+        $item['billing_label'] = self::billingLabel($charge, $base);
+        $item['promo_label'] = '';
+        $item['promo_mode'] = 'off';
+        if (!class_exists('IncentiveManager') || !class_exists('ApiManager')) {
+            return $item;
+        }
+        if (ApiManager::normalizeCharge($charge) !== ApiManager::CHARGE_PAID || $base <= 0) {
+            return $item;
+        }
+        $promo = IncentiveManager::sitePromoResolve();
+        if (empty($promo['active'])) {
+            return $item;
+        }
+        $item['promo_mode'] = isset($promo['mode']) ? (string) $promo['mode'] : 'off';
+        $item['promo_label'] = isset($promo['label']) ? (string) $promo['label'] : '';
+        if ($item['promo_mode'] === 'free') {
+            // 全免：标价不动，只挂活动标签；实扣由调用链免扣
+            if ($item['promo_label'] === '') {
+                $item['promo_label'] = '活动免费';
+            }
+            return $item;
+        }
+        if ($item['promo_mode'] === 'discount') {
+            $eff = IncentiveManager::sitePromoEffectivePrice($base, $charge);
+            if ($eff > 0) {
+                $item['points'] = $eff;
+                $item['billing_label'] = self::billingLabel($charge, $eff);
+            }
+            if ($item['promo_label'] === '' && isset($promo['percent_pay'])) {
+                $p = (int) $promo['percent_pay'];
+                $z = ($p % 10 === 0)
+                    ? (string) (int) ($p / 10)
+                    : rtrim(rtrim(number_format($p / 10, 1, '.', ''), '0'), '.');
+                $item['promo_label'] = '打' . $z . '折';
+            }
+        }
+        return $item;
+    }
+
+    /**
+     * @param array $list
+     * @return array
+     */
+    public static function applySitePromoToThemeList(array $list)
+    {
+        $out = array();
+        foreach ($list as $item) {
+            if (is_array($item)) {
+                $out[] = self::applySitePromoToThemeItem($item);
+            }
         }
         return $out;
     }
@@ -285,7 +362,7 @@ class FrontendApi
         try {
             $pdo = Database::connect();
             $stmt = $pdo->prepare(
-                'SELECT `id`, `username`, `avatar`, `role`, `status`'
+                'SELECT `id`, `username`, `avatar`, `email`, `role`, `status`'
                 . ' FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1'
             );
             $stmt->execute(array($userId));
@@ -296,7 +373,9 @@ class FrontendApi
             if (UserRole::normalize(isset($row['role']) ? $row['role'] : '') !== UserRole::ROLE_DEVELOPER) {
                 return $cache[$userId] = null;
             }
-            $avatar = isset($row['avatar']) ? trim((string) $row['avatar']) : '';
+            $avatar = class_exists('UserAvatar')
+                ? UserAvatar::resolve($row)
+                : (isset($row['avatar']) ? trim((string) $row['avatar']) : '');
             return $cache[$userId] = array(
                 'id'          => (int) $row['id'],
                 'username'    => isset($row['username']) ? (string) $row['username'] : '',
@@ -418,11 +497,11 @@ class FrontendApi
         if (class_exists('RedisCache')) {
             $cached = RedisCache::remember(RedisCache::KEY_FRONTEND_API, RedisCache::TTL_FRONTEND_API, $factory);
             if (!is_array($cached)) {
-                return self::bindRequestHostToList($factory());
+                return self::applySitePromoToThemeList(self::bindRequestHostToList($factory()));
             }
-            return self::bindRequestHostToList($cached);
+            return self::applySitePromoToThemeList(self::bindRequestHostToList($cached));
         }
-        return self::bindRequestHostToList($factory());
+        return self::applySitePromoToThemeList(self::bindRequestHostToList($factory()));
     }
 
     /**
@@ -532,7 +611,10 @@ class FrontendApi
             return null;
         }
         $item = self::formatForTheme($row, true, true);
-        return is_array($item) ? self::bindRequestHost($item) : null;
+        if (!is_array($item)) {
+            return null;
+        }
+        return self::applySitePromoToThemeItem(self::bindRequestHost($item));
     }
 
     /**

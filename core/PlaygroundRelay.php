@@ -154,7 +154,8 @@ class PlaygroundRelay
                 return self::fail((string) $built, ApiError::UPSTREAM_BAD, $displayUrl);
             }
             // 上游方法/正文由 api.upmethod 决定（与正式网关一致）；勿跟测试页所选 method
-            $result = self::httpRequestBuilt($built);
+            // UA/Referer 与正式网关一致：走 ProxyClientProfile（默认品牌 OutboundUa）
+            $result = self::httpRequestBuilt($built, $row);
             // 与正式网关一致：对代理 JSON 应用字段改写（无论上游业务成功与否）
             if (is_array($result)
                 && class_exists('ProxyJsonRewrite') && ProxyJsonRewrite::hasColumn()) {
@@ -420,9 +421,10 @@ class PlaygroundRelay
      * 按 ApiProxy::buildUpstreamRequest 结果出站（已含 URL/方法/正文）
      *
      * @param array $built
+     * @param array $row 接口行；有则按 ProxyClientProfile 拼 UA（与 ApiProxy 正式网关一致）
      * @return array
      */
-    private static function httpRequestBuilt(array $built)
+    private static function httpRequestBuilt(array $built, array $row = array())
     {
         $url = isset($built['url']) ? (string) $built['url'] : '';
         $method = isset($built['method']) ? strtoupper((string) $built['method']) : 'GET';
@@ -451,7 +453,15 @@ class PlaygroundRelay
         } else {
             curl_setopt($ch, CURLOPT_URL, $url);
         }
-        $headers = array('Accept: */*', 'User-Agent: ApiNexus-Playground/' . VS_VERSION);
+        // 有接口行：与 ApiProxy 同走 Profile（默认品牌可配）；否则仅 Playground 默认品牌
+        if ($row !== array() && class_exists('ProxyClientProfile')) {
+            $headers = ProxyClientProfile::buildClientHeaders($row);
+        } else {
+            $headers = array(
+                'Accept: */*',
+                class_exists('OutboundUa') ? OutboundUa::headerLine('Playground') : ('User-Agent: ApiNexus-Playground/' . VS_VERSION),
+            );
+        }
         foreach ($extraHeaders as $h) {
             $h = trim((string) $h);
             if ($h !== '') {
@@ -474,12 +484,11 @@ class PlaygroundRelay
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT        => self::TIMEOUT,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0,
             CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_HEADER         => true,
         ));
+        vs_curl_ssl_verify($ch);
 
         $raw = curl_exec($ch);
         $errno = curl_errno($ch);
@@ -519,7 +528,10 @@ class PlaygroundRelay
         } else {
             curl_setopt($ch, CURLOPT_URL, $url);
         }
-        $headers = array('Accept: */*', 'User-Agent: ApiNexus-Playground/' . VS_VERSION);
+        $headers = array(
+            'Accept: */*',
+            class_exists('OutboundUa') ? OutboundUa::headerLine('Playground') : ('User-Agent: ApiNexus-Playground/' . VS_VERSION),
+        );
         if (is_array($extraHeaders)) {
             foreach ($extraHeaders as $h) {
                 $h = trim((string) $h);
@@ -551,13 +563,11 @@ class PlaygroundRelay
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT        => self::TIMEOUT,
-            // 与 ApiProxy 一致：兼容上游坏证书；目标 URL 已做公网校验
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0,
             CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_HEADER         => true,
         ));
+        vs_curl_ssl_verify($ch);
 
         $raw = curl_exec($ch);
         $errno = curl_errno($ch);
@@ -619,13 +629,12 @@ class PlaygroundRelay
                 CURLOPT_FOLLOWLOCATION => false,
                 CURLOPT_CONNECTTIMEOUT => 10,
                 CURLOPT_TIMEOUT        => self::TIMEOUT,
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => 0,
                 CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
                 CURLOPT_HTTPHEADER     => $headers,
                 CURLOPT_HEADER         => true,
                 CURLOPT_HTTPGET        => true,
             ));
+            vs_curl_ssl_verify($ch);
             $raw = curl_exec($ch);
             $errno = curl_errno($ch);
             $err = curl_error($ch);
@@ -921,7 +930,7 @@ class PlaygroundRelay
         );
         @file_put_contents($metaPath, json_encode($meta, JSON_UNESCAPED_UNICODE));
 
-        return rtrim(vs_base_url(), '/') . '/core/playground/media.php?t=' . rawurlencode($token);
+        return vs_site_path('/core/playground/media.php') . '?t=' . rawurlencode($token);
     }
 
     /**

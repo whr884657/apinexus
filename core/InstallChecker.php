@@ -117,7 +117,7 @@ class InstallChecker
     public static function requireInstalled()
     {
         if (!self::isInstalled()) {
-            vs_redirect(vs_base_url() . '/install/');
+            vs_redirect(vs_site_path('/install/'));
         }
     }
 
@@ -129,7 +129,7 @@ class InstallChecker
     public static function requireNotInstalled()
     {
         if (self::isInstalled()) {
-            vs_redirect(vs_base_url() . '/');
+            vs_redirect(vs_site_path('/'));
         }
     }
 }

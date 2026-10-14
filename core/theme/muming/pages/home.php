@@ -3,7 +3,7 @@
  * 主题 five · 首页（七牛云 AI Agent SaaS 风格）
  * 布局：企业导航 / 左文右控制台 Hero / 4 步接入大数字步骤 / 新用户福利横幅 /
  *       接口上新卡片 / 企业订阅三档套餐 / ONE PLATFORM 一站式能力 /
- *       开发文档 / FAQ 手风琴 / CTA / 企业页脚
+ *       开发文档 / FAQ 折叠面板 / CTA / 企业页脚
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;

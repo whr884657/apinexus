@@ -16,7 +16,7 @@ $aiCodeOpts = isset($aiCodeOpts) && is_array($aiCodeOpts) ? $aiCodeOpts : array(
 $canLocal = !empty($canLocal);
 ?>
 
-<div class="vs-panel" id="userApiManagePage"
+<div id="userApiManagePage"
      data-icon-base="<?php echo vs_e($iconBase); ?>"
      data-can-local="<?php echo $canLocal ? '1' : '0'; ?>"
      data-default-icons="<?php echo vs_e(json_encode($defaultIconPaths, JSON_UNESCAPED_UNICODE)); ?>">
@@ -59,9 +59,11 @@ $canLocal = !empty($canLocal);
                 <option value="50">50</option>
             </select>
         </label>
-        <button type="button" class="vs-api-pager__nav" id="userApiPrevBtn" aria-label="上一页">上一页</button>
-        <div class="vs-api-pager__nums" id="userApiPagerNums" role="navigation" aria-label="页码"></div>
-        <button type="button" class="vs-api-pager__nav" id="userApiNextBtn" aria-label="下一页">下一页</button>
+        <div class="vs-api-pager__navs">
+            <button type="button" class="vs-api-pager__nav" id="userApiPrevBtn" aria-label="上一页">上一页</button>
+            <div class="vs-api-pager__nums" id="userApiPagerNums" role="navigation" aria-label="页码"></div>
+            <button type="button" class="vs-api-pager__nav" id="userApiNextBtn" aria-label="下一页">下一页</button>
+        </div>
     </div>
     <p class="vs-api-list-stats" id="userApiStats">共 <?php echo (int) count($apis); ?> 个接口</p>
 </div>
@@ -414,5 +416,5 @@ $canLocal = !empty($canLocal);
 <?php
 echo Markdown::renderAssetsHtml();
 if ($tableReady && !empty($aiReady)) {
-    echo '<script>window.VS_AI_CODE=' . json_encode($aiCodeOpts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
+    echo '<script>window.VS_AI_CODE=' . vs_json_script($aiCodeOpts) . ';</script>';
 }

@@ -40,10 +40,7 @@ $heroDesc = $heroLeadSetting !== ''
     : ($siteDesc !== '' ? $siteDesc : '面向开发者的免费接口公共服务。无需密钥，低延迟。直接调用，即刻响应。');
 $heroDescHtml = nl2br(vs_e($heroDesc));
 
-$logoSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '', $siteName));
-if ($logoSlug === '') {
-    $logoSlug = 'miscapi';
-}
+$heroCurlUrl = rtrim(vs_base_url(), '/') . '/user';
 
 $homeHeroConfig = array(
     'tagFree'       => $heroBadge1,
@@ -95,14 +92,14 @@ if ($hasAnnounce && count($announcePopup) > 0) {
         <span class="home-announcement-action">点击查看</span>
     </button>
 </section>
-<script type="application/json" id="feer-announcement-client-data"><?php echo json_encode(array(
+<script type="application/json" id="feer-announcement-client-data"><?php echo vs_json_script(array(
     'home' => array(
         'title'     => $announceTitle,
         'html'      => $announceHtml,
         'autopopup' => count($announcePopup) > 0,
         'popup_key' => $announcePopupKey,
     ),
-), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?></script>
+)); ?></script>
 <div class="home-announcement-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true" inert>
     <div class="home-announcement-modal__mask" data-close-announcement="1"></div>
     <div class="home-announcement-modal__card" role="dialog" aria-modal="true">
@@ -138,7 +135,7 @@ if ($hasAnnounce && count($announcePopup) > 0) {
                     <button type="button" class="btn-geek btn-geek--ghost" onclick="document.getElementById('playground').scrollIntoView({behavior: 'smooth'})">在线测试</button>
                 </div>
             </div>
-            <div id="hero-terminal-mount" class="w-full lg:flex-shrink-0 lg:self-end" data-logo-text="<?php echo vs_e($logoSlug); ?>"></div>
+            <div id="hero-terminal-mount" class="w-full lg:flex-shrink-0 lg:self-end" data-curl-url="<?php echo vs_e($heroCurlUrl); ?>"></div>
         </div>
     </section>
     <section id="stats-section" class="py-20 grid grid-cols-2 md:grid-cols-4 gap-8 border-b" style="border-color: var(--border-color);">
@@ -218,18 +215,18 @@ if ($hasAnnounce && count($announcePopup) > 0) {
 var apiData = [];
 var categoryNames = {};
 var statsDisplayMode = <?php echo (int) $statsDisplayMode; ?>;
-var homeHeroConfig = <?php echo json_encode($homeHeroConfig, JSON_UNESCAPED_UNICODE); ?>;
+var homeHeroConfig = <?php echo vs_json_script($homeHeroConfig); ?>;
 <?php $pgCtx = vs_playground_session_context(); ?>
-window.playgroundKeyContext = <?php echo json_encode(array(
+window.playgroundKeyContext = <?php echo vs_json_script(array(
     'loggedIn' => !empty($pgCtx['loggedIn']),
     'apiKeyCount' => (int) $pgCtx['apiKeyCount'],
     'userCenterUrl' => $pgCtx['userCenterUrl'],
     'loginUrl' => $pgCtx['loginUrl'],
     'keysUrl' => isset($pgCtx['keysUrl']) ? $pgCtx['keysUrl'] : vs_site_path('/core/front/playground-key.php'),
-), JSON_UNESCAPED_UNICODE); ?>;
-window.VS_CSRF_TOKEN = <?php echo json_encode($pgCtx['csrf'], JSON_UNESCAPED_UNICODE); ?>;
-window.VS_PLAY_URL = <?php echo json_encode($pgCtx['playUrl'], JSON_UNESCAPED_UNICODE); ?>;
-window.VS_FRONT_CATALOG = <?php echo json_encode(vs_site_path('/core/front/catalog.php'), JSON_UNESCAPED_UNICODE); ?>;
+)); ?>;
+window.VS_CSRF_TOKEN = <?php echo vs_json_script($pgCtx['csrf']); ?>;
+window.VS_PLAY_URL = <?php echo vs_json_script($pgCtx['playUrl']); ?>;
+window.VS_FRONT_CATALOG = <?php echo vs_json_script(vs_site_path('/core/front/catalog.php')); ?>;
 </script>
 <?php if ($hasAnnounce): ?>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('default', 'assets/js/pages/home-announcement.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

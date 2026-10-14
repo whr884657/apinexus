@@ -92,7 +92,7 @@ class FrontendUser
         if (!class_exists('PointsManager')) {
             return array('ok' => false, 'msg' => '积分系统未就绪');
         }
-        $result = PointsManager::checkin((int) UserAuth::id());
+        $result = PointsManager::checkin((int) UserAuth::id(), 'web');
         if (!empty($result['ok']) && isset($result['balance'])) {
             $result['points'] = PayConfig::fmtPoints($result['balance']);
         }

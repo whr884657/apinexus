@@ -1,0 +1,398 @@
+/**
+ * 文件：assets/css/user-notify.css
+ * 作用：用户中心铃铛壳（列表筹备中）+ 站内公告弹窗底栏 + 控制台近期站内公告
+ */
+
+/* 主题壳 icons.css 无铃铛时补齐（与根目录 icons.css 同款） */
+.vs-icon--bell {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/%3E%3Cpath d='M13.73 21a2 2 0 0 1-3.46 0'/%3E%3C/svg%3E");
+}
+.vs-topbar__notify.has-pending .vs-icon--bell,
+.vs-notify-btn.is-emphasis .vs-icon--bell {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/%3E%3Cpath d='M13.73 21a2 2 0 0 1-3.46 0'/%3E%3C/svg%3E");
+}
+
+.vs-topbar__notify {
+    position: relative;
+    flex-shrink: 0;
+}
+.vs-notify-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.96);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
+}
+.vs-notify-btn:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+    transform: translateY(-1px);
+}
+.vs-notify-btn:active,
+.vs-notify-btn.is-open {
+    transform: translateY(0);
+}
+.vs-topbar__notify.has-pending .vs-notify-btn,
+.vs-notify-btn.is-emphasis {
+    border-color: #fecaca;
+    background: #fef2f2;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+.vs-topbar__notify.has-pending .vs-notify-btn:hover,
+.vs-notify-btn.is-emphasis:hover {
+    border-color: #f87171;
+}
+.vs-notify-btn .vs-icon--bell {
+    width: 18px;
+    height: 18px;
+}
+.vs-notify-btn__dot {
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #dc2626;
+    border: 2px solid #fff;
+    box-sizing: content-box;
+}
+.vs-notify-btn__count {
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    box-sizing: border-box;
+}
+.vs-notify-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(360px, calc(100vw - 24px));
+    max-height: min(70vh, 420px);
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+    overflow: hidden;
+    z-index: 1200;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.vs-notify-panel.is-open,
+.vs-notify-panel:not([hidden]) {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+.vs-notify-panel[hidden] {
+    display: none !important;
+}
+.vs-notify-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #eef2f7;
+    background: #f8fafc;
+}
+.vs-notify-panel__title {
+    font-size: 0.9rem;
+    color: #0f172a;
+}
+.vs-notify-panel__meta {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+.vs-notify-panel__list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.vs-notify-panel__empty {
+    padding: 28px 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+.vs-notify-panel__empty p {
+    margin: 0;
+}
+.vs-notify-panel__empty--soon {
+    padding: 36px 20px;
+}
+.vs-notify-panel__soon-title {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #64748b;
+}
+.vs-notify-panel__soon-desc {
+    margin: 0;
+    line-height: 1.55;
+    font-size: 0.82rem;
+    color: #94a3b8;
+}
+.vs-notify-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    font: inherit;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.vs-notify-item:hover {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+.vs-notify-item.is-info {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+}
+.vs-notify-item__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    flex-shrink: 0;
+}
+.vs-notify-item__icon .vs-icon {
+    width: 16px;
+    height: 16px;
+}
+.vs-notify-item__body {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.vs-notify-item__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.vs-notify-item__title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.vs-notify-item__badge {
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #d97706;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.vs-notify-item__desc {
+    font-size: 0.78rem;
+    color: #475569;
+    line-height: 1.45;
+}
+.vs-notify-mask {
+    display: none;
+}
+body.vs-notify-drawer-open {
+    overflow: hidden;
+}
+@media (max-width: 768px) {
+    .vs-notify-mask {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 5200;
+        background: rgba(15, 23, 42, 0.45);
+    }
+    .vs-notify-mask[hidden] {
+        display: none !important;
+    }
+    .vs-notify-panel.is-drawer {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        max-width: none;
+        height: 85vh;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        border-radius: 20px 20px 0 0;
+        border: none;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+        z-index: 5201;
+        opacity: 1;
+        transform: translateY(100%);
+        pointer-events: auto;
+        overflow: hidden;
+        transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        box-sizing: border-box;
+    }
+    .vs-notify-panel.is-drawer.is-drawer-open {
+        transform: translateY(0);
+    }
+    .vs-notify-panel.is-drawer .vs-notify-panel__head {
+        flex-shrink: 0;
+    }
+    .vs-notify-panel.is-drawer .vs-notify-panel__list {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .vs-notify-panel.is-drawer .vs-notify-panel__empty {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+.uc-msg-detail__body {
+    max-height: min(55vh, 420px);
+    overflow: auto;
+    line-height: 1.65;
+    word-break: break-word;
+}
+.uc-msg-detail__plain {
+    margin: 0;
+    white-space: pre-wrap;
+    font: inherit;
+}
+.uc-msg-detail__foot {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #e2e8f0;
+}
+.uc-msg-detail__time {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.uc-dash__msg-list {
+    display: flex;
+    flex-direction: column;
+}
+.uc-dash__msg-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 4px;
+    border: 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+}
+.uc-dash__msg-row:last-child {
+    border-bottom: 0;
+}
+.uc-dash__msg-row:hover {
+    background: rgba(148, 163, 184, 0.08);
+}
+.uc-dash__msg-title {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.uc-dash__msg-pin {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #d97706;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    padding: 1px 8px;
+}
+.uc-dash__msg-time {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+html.dark .vs-notify-btn {
+    border-color: rgba(148, 163, 184, 0.28);
+    background: rgba(15, 23, 42, 0.72);
+}
+html.dark .vs-notify-panel,
+html.dark .vs-notify-item {
+    background: #0f172a;
+    border-color: rgba(148, 163, 184, 0.22);
+    color: #e2e8f0;
+}
+html.dark .vs-notify-panel__head {
+    background: rgba(15, 23, 42, 0.9);
+    border-color: rgba(148, 163, 184, 0.18);
+}
+html.dark .vs-notify-item__title {
+    color: #f8fafc;
+}
+html.dark .vs-notify-item.is-info {
+    background: rgba(14, 165, 233, 0.12);
+    border-color: rgba(56, 189, 248, 0.35);
+}
+html.dark .uc-msg-detail__foot {
+    border-color: rgba(148, 163, 184, 0.22);
+}
+html.dark .uc-dash__msg-row {
+    border-color: rgba(148, 163, 184, 0.12);
+}

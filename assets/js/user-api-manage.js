@@ -522,27 +522,10 @@
     }
 
     function renderPagerNums(totalPages) {
-        if (!pagerNumsEl) {
+        if (!pagerNumsEl || !window.VS || !VS.pagerNumsHtml) {
             return;
         }
-        pagerNumsEl.innerHTML = '';
-        var maxShow = 7;
-        var start = 1;
-        var end = totalPages;
-        if (totalPages > maxShow) {
-            start = Math.max(1, currentPage - 3);
-            end = Math.min(totalPages, start + maxShow - 1);
-            start = Math.max(1, end - maxShow + 1);
-        }
-        var i;
-        for (i = start; i <= end; i += 1) {
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'vs-api-pager__num' + (i === currentPage ? ' is-active' : '');
-            btn.textContent = String(i);
-            btn.setAttribute('data-page', String(i));
-            pagerNumsEl.appendChild(btn);
-        }
+        pagerNumsEl.innerHTML = VS.pagerNumsHtml(currentPage, totalPages);
     }
 
     function applyListView() {

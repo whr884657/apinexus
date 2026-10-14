@@ -129,9 +129,11 @@ vs_admin_layout_start('卡密管理', 'cardkey', $headerActions);
                 <option value="50">50</option>
             </select>
         </label>
-        <button type="button" class="vs-api-pager__nav" id="cardkeyPrevBtn" aria-label="上一页">上一页</button>
-        <div class="vs-api-pager__nums" id="cardkeyPagerNums" role="navigation" aria-label="页码"></div>
-        <button type="button" class="vs-api-pager__nav" id="cardkeyNextBtn" aria-label="下一页">下一页</button>
+        <div class="vs-api-pager__navs">
+            <button type="button" class="vs-api-pager__nav" id="cardkeyPrevBtn" aria-label="上一页">上一页</button>
+            <div class="vs-api-pager__nums" id="cardkeyPagerNums" role="navigation" aria-label="页码"></div>
+            <button type="button" class="vs-api-pager__nav" id="cardkeyNextBtn" aria-label="下一页">下一页</button>
+        </div>
     </div>
     <div class="vs-api-list-total" id="cardkeyTotal"></div>
 </div>

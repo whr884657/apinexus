@@ -1,7 +1,7 @@
 {
     "id": "three",
     "name": "主题3",
-    "version": "0.1.25",
+    "version": "0.1.27",
     "developer": "尋鯨錄",
     "author": "尋鯨錄",
     "description": "主题3",
@@ -197,6 +197,19 @@
             "label": "首页充值卡3 · 卖点（每行一条）",
             "type": "textarea",
             "default": "积分永久有效\n全部 API 可调用\n余额随时可查"
+        },
+        {
+            "key": "show_home_partners",
+            "label": "首页底部 · 合作伙伴 / 广告板块",
+            "type": "checkbox",
+            "default": true
+        },
+        {
+            "key": "home_partners_title",
+            "label": "首页底部合作板块 · 标题",
+            "type": "text",
+            "default": "合作伙伴",
+            "placeholder": "如：合作伙伴、广告赞助"
         },
         {
             "key": "show_home_announce",

@@ -8,7 +8,7 @@ define('VS_ROOT', __DIR__);
 require_once VS_ROOT . '/core/bootstrap.php';
 
 if (!InstallChecker::isInstalled()) {
-    vs_redirect(vs_base_url() . '/install/');
+    vs_redirect(vs_site_path('/install/'));
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,8 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::error($result);
     }
 
-    if (class_exists('FeedbackNotify')) {
-        FeedbackNotify::notifyAdminsPending($result);
+    if (class_exists('MailNotify')) {
+        try {
+            MailNotify::notifyAdminsFeedbackPending($result);
+        } catch (Exception $e) {
+            // 发信失败不阻断反馈提交
+        }
     }
 
     AjaxResponse::success('反馈已提交，我们会尽快处理', array(
@@ -51,7 +55,7 @@ $apiId = vs_resolve_path_id();
 $api = $apiId > 0 ? FrontendApi::findForThemeById($apiId) : null;
 $playground = vs_playground_session_context();
 $detailPath = $apiId > 0 ? ('/detail/' . $apiId) : '/detail';
-$loginWithRedirect = rtrim(vs_base_url(), '/') . '/user/login?redirect=' . rawurlencode($detailPath);
+$loginWithRedirect = vs_site_path('/user/login') . '?redirect=' . rawurlencode($detailPath);
 if (is_array($playground)) {
     $playground['loginUrl'] = $loginWithRedirect;
     $playground['feedbackReady'] = FrontendFeedback::tableReady();

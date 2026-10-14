@@ -1,6 +1,6 @@
 <?php
 /**
- * 来自主题四（four）· 用户令牌管理页视图
+ * 默认主题 · 用户令牌管理页视图
  */
 if (!defined('VS_THEME_RENDER')) {
     exit;
@@ -11,7 +11,7 @@ $tokens = isset($tokens) && is_array($tokens) ? $tokens : array();
 $tokenCount = isset($tokenCount) ? (int) $tokenCount : count($tokens);
 ?>
 
-<div class="vs-panel" id="userTokenPage"
+<div id="userTokenPage"
      data-token-count="<?php echo (int) $tokenCount; ?>"
      data-token-max="<?php echo (int) ApiKeyManager::maxPerUser(); ?>">
 
@@ -83,10 +83,62 @@ $tokenCount = isset($tokenCount) ? (int) $tokenCount : count($tokens);
                     <span>配额用尽后改用账户总积分</span>
                 </label>
             </div>
+            <div class="vs-form-row vs-token-scope-field">
+                <span class="vs-label">接口范围</span>
+                <div class="vs-token-scope-radios" role="radiogroup" aria-label="接口范围">
+                    <label class="vs-radio">
+                        <input type="radio" name="scope_mode_ui" id="userTokenScopeAll" value="all" checked>
+                        <span>不限制</span>
+                    </label>
+                    <label class="vs-radio">
+                        <input type="radio" name="scope_mode_ui" id="userTokenScopeList" value="list">
+                        <span>指定范围</span>
+                    </label>
+                </div>
+                <div class="vs-token-scope-summary" id="userTokenScopeSummaryWrap" hidden>
+                    <span class="vs-token-scope-summary__text" id="userTokenScopeSummary">尚未选择</span>
+                    <button type="button" class="vs-btn vs-btn--outline vs-btn--sm" id="userTokenScopePickBtn">选择接口</button>
+                </div>
+                <?php vs_render_notice(
+                    'tip',
+                    '',
+                    '范围限制只约束用该密钥发起的调用；免费且无需密钥的接口，游客仍可能调用。',
+                    array('field' => true, 'compact' => true)
+                ); ?>
+            </div>
         </form>
         <footer class="vs-overlay__foot">
             <button type="button" class="vs-btn vs-btn--default" data-overlay-close="1">取消</button>
             <button type="submit" form="userTokenForm" class="vs-btn vs-btn--primary" id="userTokenFormSubmitBtn">确定</button>
+        </footer>
+    </div>
+</div>
+
+<div class="vs-nested-picker vs-nested-picker--viewport" id="userTokenScopePicker" hidden aria-hidden="true">
+    <div class="vs-nested-picker__backdrop" data-scope-close="1"></div>
+    <div class="vs-nested-picker__panel vs-scope-panel" role="dialog" aria-modal="true" aria-labelledby="userTokenScopeTitle">
+        <div class="vs-nested-picker__handle" aria-hidden="true"></div>
+        <header class="vs-nested-picker__head">
+            <h3 class="vs-nested-picker__title" id="userTokenScopeTitle">选择接口 · 已选 0</h3>
+            <button type="button" class="vs-nested-picker__close" data-scope-close="1" aria-label="关闭">&times;</button>
+        </header>
+        <div class="vs-nested-picker__body vs-scope-body">
+            <div class="vs-scope-toolbar vs-scope-search">
+                <label class="vs-scope-search__field" for="userTokenScopeSearchMode">
+                    <select class="vs-input vs-select vs-scope-search__field-select" id="userTokenScopeSearchMode" data-scope-search-mode data-vs-pick aria-label="搜索模式">
+                        <option value="name" selected>接口名</option>
+                        <option value="id">接口 ID</option>
+                    </select>
+                </label>
+                <input type="search" class="vs-input vs-scope-search__input" data-scope-search placeholder="输入接口名…" autocomplete="off">
+                <button type="button" class="vs-btn vs-btn--primary vs-scope-search__btn" data-scope-search-btn>搜索</button>
+            </div>
+            <div class="vs-scope-list" data-scope-list></div>
+        </div>
+        <footer class="vs-nested-picker__foot vs-scope-foot">
+            <button type="button" class="vs-btn vs-btn--default" data-scope-clear>全不选</button>
+            <button type="button" class="vs-btn vs-btn--default" data-scope-close="1">取消</button>
+            <button type="button" class="vs-btn vs-btn--primary" data-scope-ok>确定</button>
         </footer>
     </div>
 </div>

@@ -337,6 +337,103 @@ class CommentManager
     }
 
     /**
+     * 后台真分页：独立 COUNT + LIMIT OFFSET（pagesize 1–50）
+     *
+     * @param array $opts q?, page, pagesize
+     * @return array{list:array,total:int,page:int,pagesize:int}
+     */
+    public static function listPaged(array $opts = array())
+    {
+        $page = max(1, (int) (isset($opts['page']) ? $opts['page'] : 1));
+        $pagesize = max(1, min(50, (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20)));
+        $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
+        if (function_exists('mb_substr') && mb_strlen($q, 'UTF-8') > 64) {
+            $q = mb_substr($q, 0, 64, 'UTF-8');
+        } elseif (strlen($q) > 64) {
+            $q = substr($q, 0, 64);
+        }
+        $empty = array('list' => array(), 'total' => 0, 'page' => $page, 'pagesize' => $pagesize);
+        if (!self::tableReady()) {
+            return $empty;
+        }
+        try {
+            $pdo = Database::connect();
+            $cmt = self::table();
+            $content = Database::table('content');
+            $from = ' FROM `' . $cmt . '` c LEFT JOIN `' . $content . '` ct ON ct.`id` = c.`contentid`';
+            $where = array('1=1');
+            $bind = array();
+            if ($q !== '') {
+                $like = function_exists('vs_sql_like_contains')
+                    ? vs_sql_like_contains($q)
+                    : ('%' . addcslashes($q, "\\%_") . '%');
+                $where[] = '(c.`body` LIKE ? ESCAPE \'\\\\\' OR c.`nickname` LIKE ? ESCAPE \'\\\\\' OR c.`email` LIKE ? ESCAPE \'\\\\\' OR ct.`title` LIKE ? ESCAPE \'\\\\\')';
+                $bind[] = $like;
+                $bind[] = $like;
+                $bind[] = $like;
+                $bind[] = $like;
+            }
+            $whereSql = implode(' AND ', $where);
+            $cnt = $pdo->prepare('SELECT COUNT(*)' . $from . ' WHERE ' . $whereSql);
+            $cnt->execute($bind);
+            $total = (int) $cnt->fetchColumn();
+            $maxPage = max(1, (int) ceil(($total > 0 ? $total : 1) / $pagesize));
+            if ($page > $maxPage) {
+                $page = $maxPage;
+            }
+            if ($total === 0) {
+                return array('list' => array(), 'total' => 0, 'page' => 1, 'pagesize' => $pagesize);
+            }
+            $offset = (int) (($page - 1) * $pagesize);
+            $sql = 'SELECT c.*, ct.`title` AS `content_title`'
+                . $from . ' WHERE ' . $whereSql
+                . ' ORDER BY c.`ispinned` DESC, c.`id` DESC LIMIT ' . $pagesize . ' OFFSET ' . $offset;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($bind);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!is_array($rows)) {
+                $rows = array();
+            }
+            $parentIds = array();
+            foreach ($rows as $row) {
+                $pid = isset($row['parentid']) ? (int) $row['parentid'] : 0;
+                if ($pid > 0) {
+                    $parentIds[$pid] = $pid;
+                }
+            }
+            $map = array();
+            if ($parentIds !== array()) {
+                $place = implode(',', array_fill(0, count($parentIds), '?'));
+                $pst = $pdo->prepare('SELECT * FROM `' . $cmt . '` WHERE `id` IN (' . $place . ')');
+                $pst->execute(array_values($parentIds));
+                $parents = $pst->fetchAll(PDO::FETCH_ASSOC);
+                if (is_array($parents)) {
+                    foreach ($parents as $p) {
+                        if (is_array($p) && isset($p['id'])) {
+                            $map[(int) $p['id']] = $p;
+                        }
+                    }
+                }
+            }
+            $list = array();
+            foreach ($rows as $row) {
+                $fmt = self::formatRow($row, $map);
+                if ($fmt) {
+                    $list[] = $fmt;
+                }
+            }
+            return array(
+                'list'     => $list,
+                'total'    => $total,
+                'page'     => $page,
+                'pagesize' => $pagesize,
+            );
+        } catch (Exception $e) {
+            return $empty;
+        }
+    }
+
+    /**
      * @param int $id
      * @return array|null
      */

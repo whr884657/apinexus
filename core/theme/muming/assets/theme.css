@@ -952,7 +952,7 @@
 
 
 /* Theme five shell */
-.th5-root { min-height: 100dvh; overflow-x: hidden; }
+.th5-root { min-height: 100dvh; overflow-x: hidden; overflow-x: clip; }
 .th5-root .font-display { font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; letter-spacing: -0.02em; }
 .th5-root .font-mono { font-family: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace; }
 .vs-seo-fallback-desc {
@@ -2383,7 +2383,7 @@ body.th5-announce-modal-open { overflow: hidden; }
    Theme five · Qiniu AI SaaS 布局覆盖层
    参考七牛云 AI Agent（qiniu.com/ai/agent）设计语言：
    浅色企业蓝 · 大数字步骤 · 白卡片+细边框+柔和阴影 ·
-   标签徽章 · 套餐原价划线 · 模型/接口上新卡 · FAQ 手风琴
+   标签徽章 · 套餐原价划线 · 模型/接口上新卡 · FAQ 折叠面板
    ═══════════════════════════════════════════════════════════ */
 
 /* ── 顶栏：企业导航（吸顶白底 + 阴影）── */
@@ -3244,7 +3244,7 @@ body.th5-announce-modal-open { overflow: hidden; }
 .th5-doc-card__title { font-size: 15px; font-weight: 700; color: var(--fg); margin-bottom: 3px; }
 .th5-doc-card__desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
 
-/* ── FAQ 手风琴 ── */
+/* ── FAQ 折叠面板 ── */
 .th5-faq { padding: 72px 0; background: var(--bg-2); }
 .th5-faq__list { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 .th5-faq-item {
@@ -3501,7 +3501,34 @@ body.th5-announce-modal-open { overflow: hidden; }
   outline: none;
   transition: border-color .22s, box-shadow .22s;
 }
+/* type=search 原生外观与清除按钮会破坏主题样式：统一禁用（放大镜由 .th5-search-q__icon 提供） */
+.th5-search-q .input { -webkit-appearance: none; appearance: none; }
+.th5-search-q .input::-webkit-search-cancel-button,
+.th5-search-q .input::-webkit-search-decoration,
+.th5-search-q .input::-webkit-search-results-button,
+.th5-search-q .input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
 .th5-search-q .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+/* 桌面端二级滚动：分类目录 + 搜索框随导航吸顶，仅卡片网格滚动（≤767px 移动端保持原布局）
+   注意：吸顶容器不加 padding-bottom / background——加了会让容器高度大于输入框：
+   ① 输入框下方出现一截背景色带（黑条）；② 放大镜 top:50% 按容器中线（含 padding）居中导致相对输入框偏下；
+   ③ 容器背景向下延伸造成与搜索框错位。靠输入框自身不透明背景遮住下方卡片即可，下边距恢复原始 20px。 */
+@media (min-width: 768px) {
+  .th5-market-q__main .th5-search-q {
+    position: sticky;
+    top: 88px; /* 与左侧分类目录同一贴顶高度（导航 4rem + 间距 24px） */
+    z-index: 20;
+    margin-bottom: 20px;
+  }
+  .th5-cat-q {
+    max-height: calc(100vh - 112px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
 .th5-api-grid-q {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3831,6 +3858,70 @@ html.dark .th5-detail-q__chip { background: rgba(15,23,42,0.5); border-color: rg
 }
 .th5-detail-q__btn--ghost:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--card)); }
 
+/* ── API 描述（移动端可折叠：默认收起仅展示部分内容，点击展开/收起） ── */
+.th5-detail-q__desc-toggle {
+  display: none; /* 桌面端不折叠，按钮隐藏 */
+  align-items: center;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .2s;
+}
+.th5-detail-q__desc-toggle:hover { color: color-mix(in srgb, var(--accent) 80%, #000); }
+.th5-detail-q__desc-toggle svg { transition: transform .25s var(--ease-out); }
+.th5-detail-q__desc.is-expanded .th5-detail-q__desc-toggle svg { transform: rotate(180deg); }
+
+/* ── 免责声明：默认仅按钮，点击展开内容 ── */
+.th5-detail-q__disclaimer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg-2);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.th5-detail-q__disclaimer-toggle:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 5%, var(--card));
+}
+.th5-detail-q__disclaimer-toggle svg:last-child { transition: transform .25s var(--ease-out); }
+.th5-detail-q__disclaimer.is-open .th5-detail-q__disclaimer-toggle svg:last-child { transform: rotate(180deg); }
+.th5-detail-q__disclaimer-body { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* ── 移动端：接口详情描述折叠 + 紧凑布局优化 ── */
+@media (max-width: 767px) {
+  .th5-detail-q__desc-toggle { display: inline-flex; }
+  .th5-detail-q__lead {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .th5-detail-q__desc.is-expanded .th5-detail-q__lead {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+  }
+  .th5-detail-q__hero { padding: 18px 16px 16px; }
+  .th5-detail-q__chips { gap: 6px; margin-top: 12px; }
+  .th5-detail-q__chip { padding: 4px 9px; font-size: 11.5px; }
+  .th5-detail-q__actions { margin-top: 16px; }
+  .th5-detail-q__btn { flex: 1 1 auto; justify-content: center; padding: 9px 12px; }
+}
+
 /* ── 接口信息面板 ── */
 .th5-detail-q__panel { padding-top: 18px; }
 .th5-detail-q__panel-title {
@@ -3873,6 +3964,15 @@ html.dark .th5-detail-q__info .th5-info-item { background: rgba(15,23,42,0.6); }
 }
 .th5-detail-q__info .th5-info-label svg { color: var(--accent); }
 .th5-detail-q__info .th5-info-value { font-size: 14px; font-weight: 600; color: var(--fg); }
+
+/* 移动端：接口信息卡片紧凑布局（方法/分类/计费等框缩小） */
+@media (max-width: 767px) {
+  .th5-detail-q__info { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .th5-detail-q__info .th5-info-item { padding: 8px 10px; border-radius: 10px; }
+  .th5-detail-q__info .th5-info-label { font-size: 10px; margin-bottom: 3px; gap: 4px; }
+  .th5-detail-q__info .th5-info-label svg { width: 12px; height: 12px; }
+  .th5-detail-q__info .th5-info-value { font-size: 12.5px; line-height: 1.35; word-break: break-word; }
+}
 
 /* ── 终端端点条 ── */
 .th5-detail-q__endpoint {
@@ -3952,6 +4052,76 @@ html.dark .th5-detail-q__endpoint { background: #0B1220; }
   .th5-detail-q__rec { grid-template-columns: 1fr; }
 }
 .th5-detail-q__rec .th5-api-card-q { height: 100%; }
+/* ═══ 主题5 · 接口详情移动端布局优化（去重 / 双列信息 / 横滑 Tab / 参数卡片化） ═══ */
+@media (max-width: 767px) {
+  /* 1) 顶部纯文本面包屑与 Hero 内面包屑重复：移动端仅保留 Hero 内带分类的面包屑 */
+  .th5-detail-q__page-crumb { display: none; }
+
+  /* 2) Hero 胶囊信息与下方「接口信息」面板逐项重复：移动端隐藏胶囊，避免两处同一数据 */
+  .th5-detail-q__chips { display: none; }
+
+  /* 3) 接口信息：8 项由 3 列（3+3+2 不齐、值被挤压）改为 2 列 4 行（整齐且值区更宽） */
+  .th5-detail-q__info { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+  /* 4) 端点条：方法 + 复制按钮同行，URL 独占一行（长地址不再挤压复制钮） */
+  .th5-detail-q__endpoint-path { flex-basis: 100%; order: 3; }
+  .th5-detail-q__endpoint-copy { margin-left: 0; }
+
+  /* 5) 页签：单行横滑（不再换行占两行），可横向滚动到全部页签 */
+  .th5-detail .th5-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-right: -1rem;
+    padding-right: 1rem;
+  }
+  .th5-detail .th5-tabs::-webkit-scrollbar { display: none; }
+  .th5-detail .th5-tabs .th5-pill { flex: 0 0 auto; white-space: nowrap; }
+
+  /* 6) 请求参数：5 列表格在窄屏挤压换行，移动端改为「每参数一张卡片」 */
+  .th5-detail .th5-table-wrap { overflow: visible; }
+  .th5-detail .th5-table thead { display: none; }
+  .th5-detail .th5-table,
+  .th5-detail .th5-table tbody,
+  .th5-detail .th5-table tr,
+  .th5-detail .th5-table td { display: block; width: 100%; }
+  .th5-detail .th5-table tr {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-2);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .th5-detail .th5-table td {
+    display: flex;
+    gap: 10px;
+    padding: 4px 0;
+    border: none;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .th5-detail .th5-table td::before {
+    content: attr(data-label);
+    flex: 0 0 44px;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  /* 7) 快速上手：鉴权 / 语言 Tab 同样单行横滑 */
+  .th5-qs-auth, .th5-qs-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .th5-qs-auth::-webkit-scrollbar, .th5-qs-tabs::-webkit-scrollbar { display: none; }
+  .th5-qs-auth .th5-pill, .th5-qs-tabs .th5-pill { flex: 0 0 auto; white-space: nowrap; }
+
+  /* 8) 详情页各面板内边距收紧，减少窄屏纵向浪费 */
+  .th5-detail .th5-panel { padding: 1rem 1rem; }
+}
 
 /* ── Tab 面板标题统一增强 ── */
 .th5-panel__tools h2,
@@ -4561,29 +4731,44 @@ html.dark .th5-faq-item::after {
   align-items: flex-start;
   max-width: min(300px, calc(100vw - 28px));
   filter: drop-shadow(0 12px 24px rgba(15, 23, 42, .14));
-  transition: opacity .35s var(--ease-out), transform .35s var(--ease-out);
+  transition: opacity .35s var(--ease-out), transform .35s var(--ease-out),
+              left .45s cubic-bezier(.22, 1, .36, 1), bottom .45s cubic-bezier(.22, 1, .36, 1);
   user-select: none;
   -webkit-user-select: none;
 }
-/* 最小化：形象与气泡淡出（visibility/opacity，不触发 display 重绘），仅保留圆形召唤按钮 */
-.th5-mascot.is-hidden .th5-mascot__bubble,
-.th5-mascot.is-hidden .th5-mascot__stage {
+/* 最小化：滑动到屏幕一侧探头（贴边位置由 JS 写入 left/bottom，CSS 过渡驱动滑动）。
+   气泡与操作按钮淡出，仅角色形象留在边缘；召唤按钮保持隐藏（角色本身可点击弹出）。 */
+.th5-mascot.is-mini .th5-mascot__bubble {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .22s var(--ease-out), visibility 0s .22s;
+  transition: opacity .2s var(--ease-out), visibility 0s .2s;
 }
-.th5-mascot.is-hidden .th5-mascot__img { animation: none; }
-.th5-mascot.is-hidden ~ .th5-mascot__recall {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition: opacity .22s var(--ease-out), visibility 0s;
+.th5-mascot.is-mini .th5-mascot__actions {
+  display: none; /* 不占位：保证最小化后容器高度=形象高度，贴底无留空 */
+}
+.th5-mascot.is-mini .th5-mascot__img { animation: none; }
+/* 贴右边缘时水平镜像（扶边探头图镜像后手扶右缘） */
+.th5-mascot.is-mini .th5-mascot__img.is-mirrored,
+.th5-mascot.is-mini .th5-mascot__img.is-mirrored:hover { transform: scaleX(-1); }
+.th5-mascot.is-mini .th5-mascot__img:hover { transform: none; }
+.th5-mascot.is-mini ~ .th5-mascot__recall {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* 点击弹出：弹性回弹动作（带轻微过冲的缓动） */
+.th5-mascot.is-pop {
+  transition: left .55s cubic-bezier(.34, 1.56, .64, 1),
+              bottom .55s cubic-bezier(.34, 1.56, .64, 1),
+              opacity .25s var(--ease-out), transform .25s var(--ease-out);
 }
 .th5-mascot__bubble {
-  position: relative;
-  margin-bottom: 10px;
-  max-width: 100%;
+  position: absolute;
+  left: 0;
+  bottom: calc(100% - 6px);
+  width: max-content;
+  max-width: min(260px, calc(100vw - 36px));
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -4692,12 +4877,14 @@ html.dark .th5-faq-item::after {
 }
 .th5-mascot__close:hover { color: var(--fg); border-color: var(--fg-2); transform: rotate(90deg); }
 /* 召唤按钮（最小化后悬浮于看板娘原位） */
-/* 拖动支持 */
-.th5-mascot,
+/* 拖动支持：仅角色形象区域可触发拖动（避免误触气泡 / 按钮 / 空白处） */
+.th5-mascot__img,
 .th5-mascot__recall { touch-action: none; }
-.th5-mascot { cursor: grab; }
+.th5-mascot__img { cursor: grab; }
 .th5-mascot.is-dragging,
 .th5-mascot.is-dragging * { cursor: grabbing !important; }
+.th5-mascot.is-dragging,
+.th5-mascot.is-dragging * { transition: none !important; }
 .th5-mascot.is-dragging .th5-mascot__img { animation-play-state: paused; }
 .th5-mascot__recall { cursor: grab; }
 /* 召唤按钮：容器外的独立 fixed 元素（始终渲染、默认透明，最小化时淡入） */

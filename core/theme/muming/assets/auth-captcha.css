@@ -9,13 +9,19 @@
   margin-bottom: 0.85rem;
 }
 
-.th5-auth .vs-captcha-field--gt {
+.th5-auth .vs-captcha-field--gt,
+.th5-auth .vs-captcha-field--cf {
   width: 100%;
   overflow: hidden;
   padding-top: 2px;
   position: relative;
   z-index: 1;
   isolation: isolate;
+}
+
+.th5-auth .vs-captcha-field--cf .cf-turnstile,
+.th5-auth .vs-captcha-field--cf iframe {
+  max-width: 100%;
 }
 
 .th5-auth .vs-captcha-field--gt .geetest_holder,

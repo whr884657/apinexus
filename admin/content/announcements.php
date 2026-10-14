@@ -1,13 +1,32 @@
 <?php
 /**
  * 文件：admin/content/announcements.php
- * 作用：公告管理（桌面表格 + 手机卡片；编辑 / 置顶 / 弹窗 / 删除）
+ * 作用：公告管理（站外公告 kind=0 + 站内公告 kind=2；桌面表格 + 手机卡片）
  */
 
 require_once dirname(__DIR__) . '/init.php';
 require_once dirname(__DIR__) . '/includes/content_helpers.php';
 
-$kind = ContentManager::KIND_ANNOUNCEMENT;
+$kinds = array(ContentManager::KIND_ANNOUNCEMENT, ContentManager::KIND_MESSAGE);
+$tableReady = ContentManager::tableReady();
+$msgReady = $tableReady && ContentManager::hasAudModeColumn();
+
+/**
+ * @param int $id
+ * @return array|null
+ */
+function vs_ann_find_allowed($id)
+{
+    $row = ContentManager::findById($id);
+    if (!$row) {
+        return null;
+    }
+    $kind = ContentManager::normalizeKind($row['kind']);
+    if ($kind !== ContentManager::KIND_ANNOUNCEMENT && $kind !== ContentManager::KIND_MESSAGE) {
+        return null;
+    }
+    return $row;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     vs_require_secure_post();
@@ -17,6 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $publishUid = AdminUserBinding::publishUserId((int) Auth::id());
         if (!is_int($publishUid)) {
             AjaxResponse::error((string) $publishUid);
+        }
+        $kind = ContentManager::normalizeKind(isset($_POST['kind']) ? $_POST['kind'] : ContentManager::KIND_ANNOUNCEMENT);
+        if ($kind !== ContentManager::KIND_ANNOUNCEMENT && $kind !== ContentManager::KIND_MESSAGE) {
+            AjaxResponse::error('无效的公告类型');
+        }
+        if ($kind === ContentManager::KIND_MESSAGE && !$msgReady) {
+            AjaxResponse::error('站内公告尚未就绪，请先执行数据库结构更新');
         }
         $payload = array(
             'kind'     => $kind,
@@ -28,6 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'userid'   => $publishUid,
             'sort'     => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
         );
+        if ($kind === ContentManager::KIND_MESSAGE) {
+            $payload['audmode'] = isset($_POST['audmode'])
+                ? (int) $_POST['audmode']
+                : ContentManager::AUD_ALL;
+        } else {
+            $payload['audmode'] = ContentManager::AUD_NONE;
+        }
         if ($action === 'create') {
             $payload['ispinned'] = 0;
             $payload['ispopup'] = 0;
@@ -38,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::success('公告已保存', array('item' => $result));
         }
         $id = isset($_POST['content_id']) ? (int) $_POST['content_id'] : 0;
-        $rowCheck = ContentManager::findById($id);
-        if (!$rowCheck || ContentManager::normalizeKind($rowCheck['kind']) !== $kind) {
+        $rowCheck = vs_ann_find_allowed($id);
+        if (!$rowCheck) {
             AjaxResponse::error('公告不存在');
         }
         $result = ContentManager::update($id, $payload);
@@ -54,34 +87,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'set_pinned') {
         $id = isset($_POST['content_id']) ? (int) $_POST['content_id'] : 0;
+        if (!vs_ann_find_allowed($id)) {
+            AjaxResponse::error('公告不存在');
+        }
         $flag = isset($_POST['ispinned']) ? (int) $_POST['ispinned'] : 0;
         $result = ContentManager::setPinned($id, $flag);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
+        $row = ContentManager::findById($id);
         AjaxResponse::success($flag ? '已置顶' : '已取消置顶', array(
             'content_id' => $id,
             'ispinned'   => ContentManager::normalizeFlag($flag),
+            'item'       => is_array($row) ? ContentManager::formatRow($row) : null,
         ));
     }
 
     if ($action === 'set_popup') {
         $id = isset($_POST['content_id']) ? (int) $_POST['content_id'] : 0;
+        if (!vs_ann_find_allowed($id)) {
+            AjaxResponse::error('公告不存在');
+        }
         $flag = isset($_POST['ispopup']) ? (int) $_POST['ispopup'] : 0;
         $result = ContentManager::setPopup($id, $flag);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
+        $row = ContentManager::findById($id);
         AjaxResponse::success($flag ? '已设为弹窗' : '已取消弹窗', array(
             'content_id' => $id,
             'ispopup'    => ContentManager::normalizeFlag($flag),
+            'item'       => is_array($row) ? ContentManager::formatRow($row) : null,
         ));
+    }
+
+    if ($action === 'set_status') {
+        $id = isset($_POST['content_id']) ? (int) $_POST['content_id'] : 0;
+        $status = isset($_POST['status']) ? (int) $_POST['status'] : -1;
+        if (!in_array($status, array(
+            ContentManager::STATUS_PUBLISHED,
+            ContentManager::STATUS_OFF,
+        ), true)) {
+            AjaxResponse::error('无效状态');
+        }
+        $row = vs_ann_find_allowed($id);
+        if (!$row) {
+            AjaxResponse::error('公告不存在');
+        }
+        if (ContentManager::normalizeKind($row['kind']) !== ContentManager::KIND_MESSAGE) {
+            AjaxResponse::error('仅站内公告支持显示/隐藏');
+        }
+        $result = ContentManager::setStatus($id, $status);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        $row = ContentManager::findById($id);
+        AjaxResponse::success(
+            ContentManager::statusLabel($status),
+            array(
+                'item' => is_array($row) ? ContentManager::formatRow($row) : null,
+            )
+        );
     }
 
     if ($action === 'delete') {
         $id = isset($_POST['content_id']) ? (int) $_POST['content_id'] : 0;
-        $row = ContentManager::findById($id);
-        if (!$row || ContentManager::normalizeKind($row['kind']) !== $kind) {
+        if (!vs_ann_find_allowed($id)) {
             AjaxResponse::error('公告不存在');
         }
         $result = ContentManager::delete($id);
@@ -91,12 +162,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('公告已删除', array('content_id' => $id));
     }
 
+    if ($action === 'list') {
+        vs_admin_content_list_ajax($kinds, 'announcement');
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
-$tableReady = ContentManager::tableReady();
-$items = $tableReady ? ContentManager::listAll($kind) : array();
-$hasItems = count($items) > 0;
+$paged = $tableReady ? ContentManager::listAdminPaged(array(
+    'kinds'    => $kinds,
+    'page'     => 1,
+    'pagesize' => 20,
+)) : array('list' => array(), 'total' => 0);
+$items = $paged['list'];
+$contentTotal = (int) $paged['total'];
+$hasItems = $contentTotal > 0;
 
 $headerActions = '';
 if ($tableReady) {
@@ -119,11 +199,11 @@ echo Markdown::renderAssetsHtml();
 <?php if (!$tableReady): ?>
     <?php vs_render_notice('warning', '尚未就绪', '请先在系统升级中执行数据库结构更新。', array('compact' => true)); ?>
 <?php else: ?>
-<div id="contentPage" data-kind="<?php echo (int) $kind; ?>" data-mode="announcement" data-content-total="<?php echo (int) count($items); ?>">
+<div id="contentPage" data-kind="0" data-mode="announcement" data-msg-ready="<?php echo $msgReady ? '1' : '0'; ?>" data-content-total="<?php echo (int) $contentTotal; ?>">
     <div class="vs-api-list-empty vs-api-list-empty--hero" id="contentEmpty"<?php echo $hasItems ? ' hidden' : ''; ?>>
         <div class="vs-api-list-empty__card">
             <h3 class="vs-api-list-empty__title">暂无公告</h3>
-            <p class="vs-api-list-empty__desc">点击右上角「发布公告」创建。保存后即可在前台展示。</p>
+            <p class="vs-api-list-empty__desc">点击右上角「发布公告」创建。可选择站外公告（前台）或站内公告（用户中心）。</p>
         </div>
     </div>
     <div class="vs-api-list-empty vs-api-list-empty--hero" id="contentSearchEmpty" hidden>
@@ -139,6 +219,8 @@ echo Markdown::renderAssetsHtml();
                 <thead>
                     <tr>
                         <th>标题</th>
+                        <th>类型</th>
+                        <th>受众</th>
                         <th>发布时间</th>
                         <th>置顶</th>
                         <th>弹窗</th>
@@ -147,7 +229,7 @@ echo Markdown::renderAssetsHtml();
                 </thead>
                 <tbody id="contentBody">
                     <?php foreach ($items as $item): ?>
-                        <?php vs_render_content_desktop_row(vs_content_row_ctx($item, true), true); ?>
+                        <?php vs_render_content_desktop_row(vs_content_row_ctx($item, 'announcement'), 'announcement'); ?>
                     <?php endforeach; ?>
                 </tbody>
             </table>
@@ -156,7 +238,7 @@ echo Markdown::renderAssetsHtml();
 
     <div class="mobile-ann-cards" id="contentMobile"<?php echo $hasItems ? '' : ' hidden'; ?>>
         <?php foreach ($items as $item): ?>
-            <?php vs_render_content_mobile_card(vs_content_row_ctx($item, true), true); ?>
+            <?php vs_render_content_mobile_card(vs_content_row_ctx($item, 'announcement'), 'announcement'); ?>
         <?php endforeach; ?>
     </div>
 
@@ -177,7 +259,7 @@ echo Markdown::renderAssetsHtml();
                 <button type="button" class="vs-api-pager__nav" id="contentNextBtn" aria-label="下一页">下一页</button>
             </div>
         </div>
-        <p class="vs-api-list-stats" id="contentStats">共 <?php echo (int) count($items); ?> 条</p>
+        <p class="vs-api-list-stats" id="contentStats">共 <?php echo (int) $contentTotal; ?> 条</p>
     </div>
 </div>
 
@@ -191,9 +273,26 @@ echo Markdown::renderAssetsHtml();
         </header>
         <form class="vs-overlay__body" id="contentForm" autocomplete="off">
             <input type="hidden" name="content_id" id="contentId" value="0">
+            <input type="hidden" name="kind" id="contentKind" value="0">
+            <input type="hidden" name="audmode" id="contentAudMode" value="1">
             <div class="vs-field">
                 <label class="vs-label" for="contentTitle">标题</label>
                 <input class="vs-input" type="text" name="title" id="contentTitle" maxlength="200" required>
+            </div>
+            <div class="vs-field">
+                <span class="vs-label">公告类型</span>
+                <div class="vs-points-seg vs-content-kind-seg" id="contentKindSeg" role="group" aria-label="公告类型">
+                    <button type="button" class="vs-points-seg__btn is-active" data-kind="0" aria-pressed="true">站外公告</button>
+                    <button type="button" class="vs-points-seg__btn" data-kind="2" aria-pressed="false"<?php echo $msgReady ? '' : ' disabled title="请先完成数据库结构更新"'; ?>>站内公告</button>
+                </div>
+            </div>
+            <div class="vs-field" id="contentAudModeWrap" hidden>
+                <span class="vs-label">受众</span>
+                <div class="vs-points-seg vs-content-aud-seg" id="contentAudModeSeg" role="group" aria-label="站内公告受众">
+                    <button type="button" class="vs-points-seg__btn is-active" data-audmode="1" aria-pressed="true">全部用户</button>
+                    <button type="button" class="vs-points-seg__btn" data-audmode="3" aria-pressed="false">普通用户</button>
+                    <button type="button" class="vs-points-seg__btn" data-audmode="2" aria-pressed="false">开发者</button>
+                </div>
             </div>
             <div class="vs-field">
                 <label class="vs-label" for="contentBody">正文（Markdown）</label>

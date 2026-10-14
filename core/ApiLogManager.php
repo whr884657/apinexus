@@ -46,6 +46,9 @@ class ApiLogManager
     /** @var bool|null 请求内缓存：apilog.egress 是否已落地 */
     private static $hasEgressCol = null;
 
+    /** @var bool|null 请求内缓存：apilog 转发头扩列是否已落地 */
+    private static $hasExtendedCol = null;
+
     /**
      * apilog.egress 是否存在（升级窗口缺列时写/读降级，避免整页失败）
      *
@@ -66,6 +69,63 @@ class ApiLogManager
             self::$hasEgressCol = false;
         }
         return self::$hasEgressCol;
+    }
+
+    /**
+     * 转发链请求头列是否已落地（xfproto/xff/xri 三者齐全；不含耗时/响应正文）
+     *
+     * @return bool
+     */
+    public static function hasExtendedLogColumns()
+    {
+        if (self::$hasExtendedCol !== null) {
+            return self::$hasExtendedCol;
+        }
+        self::$hasExtendedCol = false;
+        try {
+            if (class_exists('DatabaseMigrator')
+                && method_exists('DatabaseMigrator', 'tableColumnExists')) {
+                self::$hasExtendedCol = DatabaseMigrator::tableColumnExists('apilog', 'xfproto')
+                    && DatabaseMigrator::tableColumnExists('apilog', 'xff')
+                    && DatabaseMigrator::tableColumnExists('apilog', 'xri');
+            }
+        } catch (Exception $e) {
+            self::$hasExtendedCol = false;
+        }
+        return self::$hasExtendedCol;
+    }
+
+    /**
+     * 列表查询列
+     *
+     * @param string $alias 表别名
+     * @return string
+     */
+    public static function sqlListColumns($alias = 'l')
+    {
+        $a = preg_replace('/[^a-zA-Z0-9_]/', '', (string) $alias);
+        if ($a === '') {
+            $a = 'l';
+        }
+        $cols = array(
+            'id', 'apiid', 'apiname', 'apitype', 'userid', 'apikey', 'method',
+            'ip', 'iploc', 'egress', 'host', 'path', 'url',
+            'referer', 'origin', 'domain', 'ua',
+            'ok', 'httpcode', 'charged', 'cost', 'createtime',
+        );
+        if (self::hasExtendedLogColumns()) {
+            $cols = array_merge($cols, array(
+                'xfproto', 'xff', 'xri',
+            ));
+        }
+        $out = array();
+        foreach ($cols as $c) {
+            if ($c === 'egress' && !self::hasEgressColumn()) {
+                continue;
+            }
+            $out[] = '`' . $a . '`.`' . $c . '`';
+        }
+        return implode(', ', $out);
     }
 
     /**
@@ -266,7 +326,7 @@ class ApiLogManager
             'username'       => $username,
             'user_label'     => $userid > 0
                 ? ($username !== '' ? $username : ('用户 #' . $userid))
-                : '匿名',
+                : '游客',
             // apikey=完整（管理员可点眼睛查看）；apikey_masked=默认展示
             'apikey'         => $apikey,
             'apikey_masked'  => self::maskApikey($apikey),
@@ -291,7 +351,15 @@ class ApiLogManager
             'charged'        => $charged ? 1 : 0,
             'charged_label'  => $charged ? '已扣费' : '未扣费',
             'cost'           => number_format((float) (isset($row['cost']) ? $row['cost'] : 0), 4, '.', ''),
+            'xfproto'        => isset($row['xfproto']) ? (string) $row['xfproto'] : '',
+            'xff'            => isset($row['xff']) ? (string) $row['xff'] : '',
+            'xri'            => isset($row['xri']) ? (string) $row['xri'] : '',
             'createtime'     => isset($row['createtime']) ? (string) $row['createtime'] : '',
+            // hot|cold：列表热冷合并时前端角标（兼容原始 _storage 与已 format 的 storage）
+            'storage'        => (
+                (isset($row['_storage']) && (string) $row['_storage'] === 'cold')
+                || (isset($row['storage']) && (string) $row['storage'] === 'cold')
+            ) ? 'cold' : 'hot',
         );
     }
 
@@ -333,16 +401,18 @@ class ApiLogManager
     }
 
     /**
-     * 今日调用次数（短 TTL 缓存，供首页统计等复用）
+     * 今日调用次数（自然日键；写入 bump；冷启回源，供首页/控制台复用）
      *
      * @return int
      */
     public static function countToday()
     {
+        $cacheKey = RedisCache::apilogTodayKey();
+        $ttl = RedisCache::ttlUntilEndOfDay();
         if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
             return (int) RedisCache::remember(
-                RedisCache::KEY_APILOG_TODAY,
-                RedisCache::TTL_APILOG_STATS,
+                $cacheKey,
+                $ttl,
                 function () {
                     return StatDayManager::todayCalls();
                 }
@@ -352,8 +422,8 @@ class ApiLogManager
             return 0;
         }
         return (int) RedisCache::remember(
-            RedisCache::KEY_APILOG_TODAY,
-            RedisCache::TTL_APILOG_STATS,
+            $cacheKey,
+            $ttl,
             function () {
                 try {
                     $pdo = Database::connect();
@@ -372,7 +442,7 @@ class ApiLogManager
 
     /**
      * 分页列表：底部「每页条数」翻页。
-     * 无 before_id 时按 page+OFFSET（管理端页码跳转）；有 before_id 仍走 keyset。
+     * 热冷合并一律 keyset（id < before_id）；点第 N 页且 before_id=0 时按「筛选下最大 ID」估算跳页游标（禁 OFFSET 混冷库）。
      * 禁止「近 N 天」时间窗；筛选总数短 TTL 缓存后供底栏「共 N 条」。
      *
      * @param array $opts page, pagesize, q, ok(null|0|1), apiid, before_id
@@ -400,6 +470,17 @@ class ApiLogManager
             $beforeId = 0;
         }
         $skipTotal = !empty($opts['skip_total']);
+        $dateFrom = class_exists('ApiLogArchive')
+            ? ApiLogArchive::normalizeDay(isset($opts['date_from']) ? $opts['date_from'] : '')
+            : '';
+        $dateTo = class_exists('ApiLogArchive')
+            ? ApiLogArchive::normalizeDay(isset($opts['date_to']) ? $opts['date_to'] : '')
+            : '';
+        if ($dateFrom !== '' && $dateTo !== '' && $dateFrom > $dateTo) {
+            $tmp = $dateFrom;
+            $dateFrom = $dateTo;
+            $dateTo = $tmp;
+        }
 
         $empty = array(
             'list'           => array(),
@@ -410,9 +491,44 @@ class ApiLogManager
             'next_before_id' => 0,
             'has_more'       => false,
             'total_approx'   => false,
+            'include_cold'   => false,
+            'date_from'      => $dateFrom,
+            'date_to'        => $dateTo,
         );
         if (!self::tableReady()) {
             return $empty;
+        }
+
+        // 模糊字段无日期时只查热库，避免 1800 万冷库全扫
+        $fuzzyNeedDate = ($q !== '' && in_array($qField, array('apiname', 'ip', 'apikey'), true));
+        $hasDate = ($dateFrom !== '' || $dateTo !== '');
+        $includeCold = class_exists('ApiLogArchive')
+            && (!$fuzzyNeedDate || $hasDate);
+
+        // 点第 N 页且未带游标：用最大 ID 估算 before_id，允许任意跳页（仍走 keyset，不 OFFSET）
+        if ($page > 1 && $beforeId <= 0) {
+            $nameApiidsJump = array();
+            if ($q !== '' && $qField === 'apiname') {
+                $nameApiidsJump = self::resolveSearchApiIds($q);
+            }
+            $maxId = self::maxIdUnderFilters(
+                $q,
+                $qField,
+                $ok,
+                $apiid,
+                $userid,
+                $dateFrom,
+                $dateTo,
+                $includeCold,
+                $nameApiidsJump
+            );
+            if ($maxId <= 0) {
+                return $empty;
+            }
+            $beforeId = $maxId - (($page - 1) * $pagesize) + 1;
+            if ($beforeId < 1) {
+                $beforeId = 1;
+            }
         }
 
         $skipCache = !empty($opts['skip_cache']);
@@ -426,67 +542,85 @@ class ApiLogManager
             'userid'     => $userid,
             'before_id'  => $beforeId,
             'skip_total' => $skipTotal,
+            'date_from'  => $dateFrom,
+            'date_to'    => $dateTo,
+            'inc_cold'   => $includeCold ? 1 : 0,
         ));
 
-        $loader = function () use ($page, $pagesize, $q, $qField, $ok, $apiid, $userid, $beforeId, $skipTotal, $empty) {
+        $loader = function () use (
+            $page,
+            $pagesize,
+            $q,
+            $qField,
+            $ok,
+            $apiid,
+            $userid,
+            $beforeId,
+            $skipTotal,
+            $empty,
+            $dateFrom,
+            $dateTo,
+            $includeCold
+        ) {
                 try {
                     $pdo = Database::connect();
                     self::applyQueryTimeout($pdo);
 
-                    // 管理端页码跳转：无 before_id 时用 OFFSET；有 before_id 仍走 keyset
-                    $useOffset = ($beforeId <= 0);
-                    $offset = 0;
-                    if ($useOffset) {
-                        $offset = ($page - 1) * $pagesize;
-                        if ($offset < 0) {
-                            $offset = 0;
-                        }
-                    }
-
-                    $filters = self::buildFilters($q, $qField, $ok, $apiid, $useOffset ? 0 : $beforeId, $userid);
+                    // 热冷合并一律 keyset（页码跳转已在入口把 page 折成 before_id）
+                    $filters = self::buildFilters(
+                        $q,
+                        $qField,
+                        $ok,
+                        $apiid,
+                        $beforeId,
+                        $userid,
+                        $dateFrom,
+                        $dateTo
+                    );
                     $userIdsForCold = isset($filters['userIds']) ? $filters['userIds'] : array();
                     if ($userid > 0) {
                         $userIdsForCold = array($userid);
                     }
 
-                    // 列表始终 LEFT JOIN user，保证卡片/表格能显示用户名（禁止仅搜索时才带 username）
+                    $nameApiids = array();
+                    if ($q !== '' && $qField === 'apiname') {
+                        $nameApiids = self::resolveSearchApiIds($q);
+                    }
+
                     $from = '`' . self::table() . '` l'
                         . ' LEFT JOIN `' . Database::table('user') . '` u ON u.`id` = l.`userid`';
-                    if ($useOffset) {
-                        $sql = 'SELECT l.*, u.`username` FROM ' . $from
-                            . ' WHERE ' . $filters['whereSql']
-                            . ' ORDER BY l.`id` DESC LIMIT ' . (int) $pagesize
-                            . ' OFFSET ' . (int) $offset;
-                    } else {
-                        $sql = 'SELECT l.*, u.`username` FROM ' . $from
-                            . ' WHERE ' . $filters['whereSql']
-                            . ' ORDER BY l.`id` DESC LIMIT ' . ((int) $pagesize + 1);
-                    }
+                    $sql = 'SELECT ' . self::sqlListColumns('l') . ', u.`username` FROM ' . $from
+                        . ' WHERE ' . $filters['whereSql']
+                        . ' ORDER BY l.`id` DESC LIMIT ' . ((int) $pagesize + 1);
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute($filters['bind']);
                     $hotRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     $merged = array();
                     foreach ($hotRows as $row) {
+                        $row['_storage'] = 'hot';
                         $item = self::formatRow($row);
                         if ($item !== null) {
                             $merged[] = $item;
                         }
                     }
 
-                    // OFFSET 深页不再混补冷库（冷库无独立 keyset，页码会对不齐）
-                    $needMore = $useOffset ? 0 : (($pagesize + 1) - count($merged));
-                    if ($needMore > 0 && class_exists('ApiLogArchive')) {
-                        $cold = ApiLogArchive::listInQueryWindow(array(
-                            'days'      => 0,
-                            'before_id' => $beforeId,
-                            'pagesize'  => $needMore,
-                            'q'         => $q,
-                            'q_field'   => $qField,
-                            'ok'        => $ok,
-                            'apiid'     => $apiid,
-                            'user_ids'  => $userIdsForCold,
-                        ));
+                    $needMore = ($pagesize + 1) - count($merged);
+                    if ($needMore > 0 && $includeCold && class_exists('ApiLogArchive')) {
+                        $coldOpts = array(
+                            'date_from'    => $dateFrom,
+                            'date_to'      => $dateTo,
+                            'before_id'    => $beforeId,
+                            'pagesize'     => $needMore,
+                            'q'            => $q,
+                            'q_field'      => $qField,
+                            'ok'           => $ok,
+                            'apiid'        => $apiid,
+                            'user_ids'     => $userIdsForCold,
+                            'name_apiids'  => $nameApiids,
+                            'prune_apiids' => $nameApiids,
+                        );
+                        $cold = ApiLogArchive::listInQueryWindow($coldOpts);
                         foreach ($cold['list'] as $crow) {
                             $item = self::formatRow($crow);
                             if ($item === null) {
@@ -509,29 +643,40 @@ class ApiLogManager
                         return ((int) $b['id']) - ((int) $a['id']);
                     });
 
-                    // skip_total：轻量预览（如管理端用户弹窗）只取页内数据，避免海量日志 COUNT
                     $totalApprox = false;
                     if ($skipTotal) {
-                        if ($useOffset) {
-                            $hasMore = count($merged) >= $pagesize;
-                            $total = $offset + count($merged) + ($hasMore ? 1 : 0);
-                        } else {
-                            $hasMore = count($merged) > $pagesize;
-                            if ($hasMore) {
-                                $merged = array_slice($merged, 0, $pagesize);
-                            }
-                            $total = count($merged) + ($hasMore ? 1 : 0);
+                        $hasMore = count($merged) > $pagesize;
+                        if ($hasMore) {
+                            $merged = array_slice($merged, 0, $pagesize);
                         }
+                        $total = count($merged) + ($hasMore ? 1 : 0);
                         $totalApprox = true;
                     } else {
-                        $total = self::countFilteredCached($q, $qField, $ok, $apiid, $userid);
-                        if ($useOffset) {
-                            $hasMore = ($offset + count($merged)) < $total;
-                        } else {
-                            $hasMore = count($merged) > $pagesize;
-                            if ($hasMore) {
-                                $merged = array_slice($merged, 0, $pagesize);
+                        $hotTotal = self::countFilteredCached(
+                            $q,
+                            $qField,
+                            $ok,
+                            $apiid,
+                            $userid,
+                            $dateFrom,
+                            $dateTo
+                        );
+                        $coldTotal = 0;
+                        if ($includeCold && class_exists('ApiLogArchive')) {
+                            $coldTotal = ApiLogArchive::countInQueryWindow(array(
+                                'date_from'    => $dateFrom,
+                                'date_to'      => $dateTo,
+                                'apiid'        => $apiid,
+                                'prune_apiids' => $nameApiids,
+                            ));
+                            if ($coldTotal > 0) {
+                                $totalApprox = true;
                             }
+                        }
+                        $total = $hotTotal + $coldTotal;
+                        $hasMore = count($merged) > $pagesize;
+                        if ($hasMore) {
+                            $merged = array_slice($merged, 0, $pagesize);
                         }
                     }
 
@@ -551,6 +696,9 @@ class ApiLogManager
                         'next_before_id' => $nextBefore,
                         'has_more'       => $hasMore,
                         'total_approx'   => $totalApprox,
+                        'include_cold'   => $includeCold,
+                        'date_from'      => $dateFrom,
+                        'date_to'        => $dateTo,
                     );
                 } catch (Exception $e) {
                     return $empty;
@@ -580,6 +728,57 @@ class ApiLogManager
     }
 
     /**
+     * 当前筛选下最大日志 ID（热库 MAX + 冷库 catalog max_id；供页码跳转估算 before_id）
+     *
+     * @param string $q
+     * @param string $qField
+     * @param mixed  $ok
+     * @param int    $apiid
+     * @param int    $userid
+     * @param string $dateFrom
+     * @param string $dateTo
+     * @param bool   $includeCold
+     * @param int[]  $nameApiids
+     * @return int
+     */
+    private static function maxIdUnderFilters(
+        $q,
+        $qField,
+        $ok,
+        $apiid,
+        $userid,
+        $dateFrom,
+        $dateTo,
+        $includeCold,
+        array $nameApiids = array()
+    ) {
+        $maxId = 0;
+        try {
+            $pdo = Database::connect();
+            self::applyQueryTimeout($pdo);
+            $filters = self::buildFilters($q, $qField, $ok, $apiid, 0, $userid, $dateFrom, $dateTo);
+            $sql = 'SELECT MAX(l.`id`) FROM `' . self::table() . '` l WHERE ' . $filters['whereSql'];
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($filters['bind']);
+            $maxId = max(0, (int) $stmt->fetchColumn());
+        } catch (Exception $e) {
+            $maxId = 0;
+        }
+        if ($includeCold && class_exists('ApiLogArchive')) {
+            $coldMax = ApiLogArchive::maxIdInQueryWindow(array(
+                'date_from'    => $dateFrom,
+                'date_to'      => $dateTo,
+                'apiid'        => $apiid,
+                'prune_apiids' => $nameApiids,
+            ));
+            if ($coldMax > $maxId) {
+                $maxId = $coldMax;
+            }
+        }
+        return $maxId;
+    }
+
+    /**
      * 当前筛选条件下热库总数（短 TTL 缓存；不含 before_id）
      *
      * @param string $q
@@ -587,16 +786,18 @@ class ApiLogManager
      * @param mixed  $ok
      * @param int    $apiid
      * @param int    $userid
+     * @param string $dateFrom
+     * @param string $dateTo
      * @return int
      */
-    private static function countFilteredCached($q, $qField, $ok, $apiid, $userid = 0)
+    private static function countFilteredCached($q, $qField, $ok, $apiid, $userid = 0, $dateFrom = '', $dateTo = '')
     {
         $qField = self::normalizeQField($qField);
-        $factory = function () use ($q, $qField, $ok, $apiid, $userid) {
+        $factory = function () use ($q, $qField, $ok, $apiid, $userid, $dateFrom, $dateTo) {
             try {
                 $pdo = Database::connect();
                 self::applyQueryTimeout($pdo);
-                $filters = self::buildFilters($q, $qField, $ok, $apiid, 0, $userid);
+                $filters = self::buildFilters($q, $qField, $ok, $apiid, 0, $userid, $dateFrom, $dateTo);
                 // COUNT 禁止 JOIN user（见《数据统计与性能规范》）；搜索用户走 userid IN / EXISTS
                 $sql = 'SELECT COUNT(*) FROM `' . self::table() . '` l WHERE ' . $filters['whereSql'];
                 $stmt = $pdo->prepare($sql);
@@ -610,17 +811,54 @@ class ApiLogManager
         if (class_exists('RedisCache')) {
             return (int) RedisCache::remember(
                 RedisCache::apilogFilterTotalKey(array(
-                    'q'       => $q,
-                    'q_field' => $qField,
-                    'userid'  => $userid,
-                    'ok'      => $ok,
-                    'apiid'   => $apiid,
+                    'q'         => $q,
+                    'q_field'   => $qField,
+                    'userid'    => $userid,
+                    'ok'        => $ok,
+                    'apiid'     => $apiid,
+                    'date_from' => $dateFrom,
+                    'date_to'   => $dateTo,
                 )),
                 RedisCache::TTL_APILOG_RANGE_TOTAL,
                 $factory
             );
         }
         return (int) call_user_func($factory);
+    }
+
+    /**
+     * 接口名称前缀 → api.id 列表（冷库剪枝 / 改走 apiid IN）
+     *
+     * @param string $q
+     * @return int[]
+     */
+    public static function resolveSearchApiIds($q)
+    {
+        $q = trim((string) $q);
+        if ($q === '') {
+            return array();
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('api');
+            $like = function_exists('vs_sql_like_prefix')
+                ? vs_sql_like_prefix($q)
+                : (addcslashes($q, "\\%_") . '%');
+            $stmt = $pdo->prepare(
+                'SELECT `id` FROM `' . $table . '` WHERE `name` LIKE ? ESCAPE \'\\\\\' ORDER BY `id` DESC LIMIT 50'
+            );
+            $stmt->execute(array($like));
+            $ids = array();
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $id = (int) $row['id'];
+                if ($id > 0) {
+                    $ids[] = $id;
+                }
+            }
+            return $ids;
+        } catch (Exception $e) {
+            return array();
+        }
     }
 
     /**
@@ -806,10 +1044,20 @@ class ApiLogManager
      * @param int    $apiid
      * @param int    $beforeId
      * @param int    $userid 指定用户（管理员按用户筛日志）
+     * @param string $dateFrom YYYY-MM-DD
+     * @param string $dateTo YYYY-MM-DD
      * @return array{whereSql:string,bind:array,hasExtra:bool,userIds:int[]}
      */
-    private static function buildFilters($q, $qField, $ok, $apiid, $beforeId, $userid = 0)
-    {
+    private static function buildFilters(
+        $q,
+        $qField,
+        $ok,
+        $apiid,
+        $beforeId,
+        $userid = 0,
+        $dateFrom = '',
+        $dateTo = ''
+    ) {
         $where = array('1=1');
         $bind = array();
         $hasExtra = false;
@@ -896,6 +1144,16 @@ class ApiLogManager
             $bind[] = $apiid;
             $hasExtra = true;
         }
+        if ($dateFrom !== '') {
+            $where[] = 'l.`createtime` >= ?';
+            $bind[] = $dateFrom . ' 00:00:00';
+            $hasExtra = true;
+        }
+        if ($dateTo !== '') {
+            $where[] = 'l.`createtime` <= ?';
+            $bind[] = $dateTo . ' 23:59:59';
+            $hasExtra = true;
+        }
         if ($beforeId > 0) {
             $where[] = 'l.`id` < ?';
             $bind[] = $beforeId;
@@ -938,11 +1196,12 @@ class ApiLogManager
             'httpcode_label' => (string) $full['httpcode_label'],
             'http_class'     => (string) $full['http_class'],
             'createtime'     => (string) $full['createtime'],
+            'storage'        => (isset($full['storage']) && (string) $full['storage'] === 'cold') ? 'cold' : 'hot',
         );
     }
 
     /**
-     * 用户侧详情白名单（相对管理端精简：无类型/用户/Referer/Origin/UA/来源域名；含 path/url/host/出口节点）
+     * 用户侧详情白名单（相对管理端精简：无类型/用户/Referer/Origin/UA/来源域名/转发头/耗时；含 path/url/host/出口节点）
      *
      * @param array $row 原始行或 formatRow 结果
      * @return array|null
@@ -1073,10 +1332,10 @@ class ApiLogManager
     }
 
     /**
-     * 用户侧日志分页（强制本人 userid；单字段 q/q_field；列表白名单；详情另走 findByIdForUser）
+     * 用户侧日志分页（强制本人 userid；复用 listPaged 热冷 keyset + 日期缩窗）
      *
      * @param int   $userId 必须为正且与会话一致（由调用方保证）
-     * @param array $opts   page, pagesize, before_id, ok, q, q_field
+     * @param array $opts   page, pagesize, before_id, ok, q, q_field, date_from, date_to
      * @return array{list:array,total:int,page:int,pagesize:int,before_id:int,next_before_id:int,has_more:bool,detail_enabled:bool}
      */
     public static function listForUser($userId, array $opts = array())
@@ -1088,15 +1347,6 @@ class ApiLogManager
         if ($beforeId < 0) {
             $beforeId = 0;
         }
-        $ok = array_key_exists('ok', $opts) ? $opts['ok'] : null;
-        $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
-        if (function_exists('mb_substr')) {
-            $q = mb_substr($q, 0, 128, 'UTF-8');
-        } elseif (strlen($q) > 128) {
-            $q = substr($q, 0, 128);
-        }
-        $qField = self::normalizeQFieldForUser(isset($opts['q_field']) ? $opts['q_field'] : 'id');
-
         $empty = array(
             'list'           => array(),
             'total'          => 0,
@@ -1107,181 +1357,51 @@ class ApiLogManager
             'has_more'       => false,
             'detail_enabled' => self::detailEnabled(),
             'total_approx'   => false,
+            'include_cold'   => false,
+            'date_from'      => '',
+            'date_to'        => '',
         );
-        if ($userId <= 0 || !self::tableReady()) {
-            return $empty;
-        }
-        if (!self::detailEnabled()) {
+        if ($userId <= 0 || !self::tableReady() || !self::detailEnabled()) {
             return $empty;
         }
 
-        $cacheKey = 'cache:userapilog:page:' . md5(json_encode(array(
-            'v'         => 5,
-            'uid'       => $userId,
-            'page'      => $page,
-            'pagesize'  => $pagesize,
-            'ok'        => $ok,
-            'q'         => $q,
-            'q_field'   => $qField,
-            'before_id' => $beforeId,
-        )));
+        $qField = self::normalizeQFieldForUser(isset($opts['q_field']) ? $opts['q_field'] : 'id');
+        $paged = self::listPaged(array(
+            'page'       => $page,
+            'pagesize'   => $pagesize,
+            'before_id'  => $beforeId,
+            'ok'         => array_key_exists('ok', $opts) ? $opts['ok'] : null,
+            'q'          => isset($opts['q']) ? $opts['q'] : '',
+            'q_field'    => $qField,
+            'userid'     => $userId,
+            'date_from'  => isset($opts['date_from']) ? $opts['date_from'] : '',
+            'date_to'    => isset($opts['date_to']) ? $opts['date_to'] : '',
+            'skip_cache' => !empty($opts['skip_cache']),
+        ));
 
-        $loader = function () use ($userId, $page, $pagesize, $beforeId, $ok, $q, $qField, $empty) {
-            try {
-                $pdo = Database::connect();
-                self::applyQueryTimeout($pdo);
-
-                // 与管理端一致：无 before_id 用 OFFSET 页码；有 before_id 走 keyset
-                $useOffset = ($beforeId <= 0);
-                $offset = 0;
-                if ($useOffset) {
-                    $offset = ($page - 1) * $pagesize;
-                    if ($offset < 0) {
-                        $offset = 0;
-                    }
+        $list = array();
+        if (!empty($paged['list']) && is_array($paged['list'])) {
+            foreach ($paged['list'] as $row) {
+                $safe = self::formatUserSafeRow($row);
+                if ($safe !== null) {
+                    $list[] = $safe;
                 }
-
-                $filters = self::buildFilters($q, $qField, $ok, 0, $useOffset ? 0 : $beforeId, $userId);
-
-                if ($useOffset) {
-                    $sql = 'SELECT l.* FROM `' . self::table() . '` l'
-                        . ' WHERE ' . $filters['whereSql']
-                        . ' ORDER BY l.`id` DESC LIMIT ' . (int) $pagesize
-                        . ' OFFSET ' . (int) $offset;
-                } else {
-                    $sql = 'SELECT l.* FROM `' . self::table() . '` l'
-                        . ' WHERE ' . $filters['whereSql']
-                        . ' ORDER BY l.`id` DESC LIMIT ' . ((int) $pagesize + 1);
-                }
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute($filters['bind']);
-                $hotRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                $merged = array();
-                foreach ($hotRows as $row) {
-                    $item = self::formatUserSafeRow($row);
-                    if ($item !== null) {
-                        $merged[] = $item;
-                    }
-                }
-
-                $needMore = $useOffset ? 0 : (($pagesize + 1) - count($merged));
-                if ($needMore > 0 && class_exists('ApiLogArchive')) {
-                    $cold = ApiLogArchive::listInQueryWindow(array(
-                        'days'      => 0,
-                        'before_id' => $beforeId,
-                        'pagesize'  => $needMore,
-                        'q'         => $q,
-                        'q_field'   => $qField,
-                        'ok'        => $ok,
-                        'apiid'     => 0,
-                        'user_ids'  => array($userId),
-                    ));
-                    foreach ($cold['list'] as $crow) {
-                        $item = self::formatUserSafeRow($crow);
-                        if ($item === null) {
-                            continue;
-                        }
-                        $dup = false;
-                        foreach ($merged as $m) {
-                            if ((int) $m['id'] === (int) $item['id']) {
-                                $dup = true;
-                                break;
-                            }
-                        }
-                        if (!$dup) {
-                            $merged[] = $item;
-                        }
-                    }
-                }
-
-                usort($merged, function ($a, $b) {
-                    return ((int) $b['id']) - ((int) $a['id']);
-                });
-
-                $total = self::countForUserCached($userId, $ok, $q, $qField);
-                $totalApprox = false;
-                if ($useOffset) {
-                    $hasMore = ($offset + count($merged)) < $total;
-                } else {
-                    $hasMore = count($merged) > $pagesize;
-                    if ($hasMore) {
-                        $merged = array_slice($merged, 0, $pagesize);
-                    }
-                }
-                $listCount = count($merged);
-                if ($total < $listCount) {
-                    $total = $listCount + ($hasMore ? 1 : 0);
-                    $totalApprox = true;
-                }
-
-                $nextBefore = 0;
-                if (!empty($merged)) {
-                    $nextBefore = (int) $merged[count($merged) - 1]['id'];
-                }
-
-                return array(
-                    'list'           => $merged,
-                    'total'          => $total,
-                    'page'           => $page,
-                    'pagesize'       => $pagesize,
-                    'before_id'      => $beforeId,
-                    'next_before_id' => $nextBefore,
-                    'has_more'       => $hasMore,
-                    'detail_enabled' => true,
-                    'total_approx'   => $totalApprox,
-                );
-            } catch (Exception $e) {
-                return $empty;
             }
-        };
-
-        if (class_exists('RedisCache')) {
-            $data = RedisCache::remember($cacheKey, RedisCache::TTL_APILOG_PAGE, $loader);
-            if (!is_array($data)) {
-                return $empty;
-            }
-            $data['detail_enabled'] = true;
-            return $data;
         }
-        return $loader();
-    }
 
-    /**
-     * @param int    $userId
-     * @param mixed  $ok
-     * @param string $q
-     * @param string $qField
-     * @return int
-     */
-    private static function countForUserCached($userId, $ok, $q = '', $qField = 'id')
-    {
-        $userId = (int) $userId;
-        $q = trim((string) $q);
-        $qField = self::normalizeQFieldForUser($qField);
-        $factory = function () use ($userId, $ok, $q, $qField) {
-            try {
-                $pdo = Database::connect();
-                self::applyQueryTimeout($pdo);
-                $filters = self::buildFilters($q, $qField, $ok, 0, 0, $userId);
-                $sql = 'SELECT COUNT(*) FROM `' . self::table() . '` l WHERE ' . $filters['whereSql'];
-                $stmt = $pdo->prepare($sql);
-                $stmt->execute($filters['bind']);
-                return max(0, (int) $stmt->fetchColumn());
-            } catch (Exception $e) {
-                return 0;
-            }
-        };
-        if (class_exists('RedisCache')) {
-            $key = 'cache:userapilog:total:' . md5(json_encode(array(
-                'v'       => 5,
-                'uid'     => $userId,
-                'ok'      => $ok,
-                'q'       => $q,
-                'q_field' => $qField,
-            )));
-            return (int) RedisCache::remember($key, RedisCache::TTL_APILOG_RANGE_TOTAL, $factory);
-        }
-        return (int) call_user_func($factory);
+        return array(
+            'list'           => $list,
+            'total'          => isset($paged['total']) ? (int) $paged['total'] : 0,
+            'page'           => isset($paged['page']) ? (int) $paged['page'] : $page,
+            'pagesize'       => isset($paged['pagesize']) ? (int) $paged['pagesize'] : $pagesize,
+            'before_id'      => isset($paged['before_id']) ? (int) $paged['before_id'] : $beforeId,
+            'next_before_id' => isset($paged['next_before_id']) ? (int) $paged['next_before_id'] : 0,
+            'has_more'       => !empty($paged['has_more']),
+            'detail_enabled' => true,
+            'total_approx'   => !empty($paged['total_approx']),
+            'include_cold'   => !empty($paged['include_cold']),
+            'date_from'      => isset($paged['date_from']) ? (string) $paged['date_from'] : '',
+            'date_to'        => isset($paged['date_to']) ? (string) $paged['date_to'] : '',
+        );
     }
 }

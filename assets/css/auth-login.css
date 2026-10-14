@@ -615,10 +615,17 @@ body {
     box-sizing: border-box;
 }
 
-.vs-captcha-field--gt {
+.vs-captcha-field--gt,
+.vs-captcha-field--cf {
     width: 100%;
     overflow: hidden;
     isolation: isolate;
+}
+
+/* Cloudflare Turnstile：flexible 撑满认证表单宽 */
+.vs-captcha-field--cf .cf-turnstile,
+.vs-captcha-field--cf iframe {
+    max-width: 100%;
 }
 
 /* 仅撑满挂载条外层；禁止 width:100% 落到 .geetest_btn/.geetest_box（会拉爆弹层滑块） */

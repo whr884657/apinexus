@@ -12,7 +12,8 @@ $siteLogo = SiteContext::siteLogo();
 $hasSiteLogo = trim((string) $siteLogo) !== '';
 $siteDesc = SiteContext::siteDescription();
 $vsBase = isset($vsBase) ? rtrim((string) $vsBase, '/') : vs_site_base_path();
-$userLoggedIn = !empty($userLoggedIn);
+$userLoggedIn = class_exists('UserAuth') ? UserAuth::check() : !empty($userLoggedIn);
+$authUrl = $userLoggedIn ? ($vsBase . '/user/index') : ($vsBase . '/user/login');
 
 $apiCount = FrontendStats::approvedApiCount();
 $totalCalls = FrontendStats::totalCallCount();
@@ -21,6 +22,27 @@ $catTags = FrontendCategory::listTags();
 
 $statsNumFormat = ThemeManager::themeSetting('stats_num_format', 'compact');
 $statsNumFormat = ($statsNumFormat === 'full') ? 'full' : 'compact';
+
+/* 首页展示用假指标：每次打开加权随机（非真实监控，E422）
+ * 可用率：约 4% 出现 100%，其余在 99.99% / 99.98% 间均分（合计约 96%）
+ * 平均响应：6～35ms 池内随机，上限 35
+ */
+$statUptimeRoll = mt_rand(1, 100);
+if ($statUptimeRoll <= 4) {
+    $statUptime = '100';
+    $statUptimeDecimals = 0;
+} elseif ($statUptimeRoll <= 52) {
+    $statUptime = '99.99';
+    $statUptimeDecimals = 2;
+} else {
+    $statUptime = '99.98';
+    $statUptimeDecimals = 2;
+}
+$statLatencyPool = array(6, 8, 10, 12, 14, 15, 16, 18, 20, 22, 24, 25, 28, 30, 32, 35);
+$statLatency = (int) $statLatencyPool[mt_rand(0, count($statLatencyPool) - 1)];
+if ($statLatency > 35) {
+    $statLatency = 35;
+}
 
 $fmtInt = function ($n) {
     $n = (int) $n;
@@ -112,8 +134,8 @@ if (count($announcePopup) > 0) {
 window.TH3_HOME = {
   previewLimit: <?php echo (int) $homePreviewLimit; ?>,
   apiCount: <?php echo (int) $apiCount; ?>,
-  statsFormat: <?php echo json_encode($statsNumFormat, JSON_UNESCAPED_UNICODE); ?>,
-  vsBase: <?php echo json_encode($vsBase, JSON_UNESCAPED_UNICODE); ?>
+  statsFormat: <?php echo vs_json_script($statsNumFormat); ?>,
+  vsBase: <?php echo vs_json_script($vsBase); ?>
 };
 </script>
 <!-- ============ Hero ============ -->
@@ -129,14 +151,14 @@ window.TH3_HOME = {
     <span class="th3-announce__action">点击查看</span>
   </button>
 </section>
-<script type="application/json" id="feer-announcement-client-data"><?php echo json_encode(array(
+<script type="application/json" id="feer-announcement-client-data"><?php echo vs_json_script(array(
     'home' => array(
         'title'     => $announceTitle,
         'html'      => $announceHtml,
         'autopopup' => count($announcePopup) > 0,
         'popup_key' => $announcePopupKey,
     ),
-), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?></script>
+)); ?></script>
 <div class="th3-announce-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true" inert>
   <div class="th3-announce-modal__mask" data-close-announcement="1"></div>
   <div class="th3-announce-modal__card" role="dialog" aria-modal="true" aria-labelledby="th3AnnounceModalTitle">
@@ -178,8 +200,8 @@ window.TH3_HOME = {
           <?php echo $heroLeadHtml; ?>
         </p>
         <div class="hero-actions reveal reveal-delay-3 mt-7 sm:mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
-          <a href="<?php echo vs_e($vsBase); ?>/apis" class="btn-primary justify-center lg:justify-start">
-            浏览 API 市场
+          <a href="<?php echo vs_e($authUrl); ?>" class="btn-primary justify-center lg:justify-start">
+            开始使用
             <i data-lucide="arrow-up-right" style="width:16px;height:16px;"></i>
           </a>
           <a href="<?php echo vs_e($vsBase); ?>/apis" class="btn-ghost justify-center lg:justify-start">
@@ -280,13 +302,13 @@ window.TH3_HOME = {
       <div class="reveal reveal-delay-2">
         <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">服务可用率</div>
         <div class="font-display font-bold stat-num" style="font-size: clamp(2rem, 4vw, 3rem);">
-          <span data-count="99.99" data-decimals="2">0</span><span style="color: var(--accent-2);">%</span>
+          <span data-count="<?php echo vs_e($statUptime); ?>" data-decimals="<?php echo (int) $statUptimeDecimals; ?>">0</span><span style="color: var(--accent-2);">%</span>
         </div>
       </div>
       <div class="reveal reveal-delay-3">
         <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">平均响应</div>
         <div class="font-display font-bold stat-num" style="font-size: clamp(2rem, 4vw, 3rem);">
-          <span data-count="35">0</span><span style="color: var(--accent-3);">ms</span>
+          <span data-count="<?php echo (int) $statLatency; ?>">0</span><span style="color: var(--accent-3);">ms</span>
         </div>
       </div>
     </div>
@@ -463,6 +485,26 @@ window.TH3_HOME = {
     </div>
   </div>
 </section>
+
+<?php
+$showHomePartners = ThemeManager::themeSettingBool('show_home_partners', true);
+$homePartnersTitle = trim((string) ThemeManager::themeSetting('home_partners_title', '合作伙伴'));
+if ($homePartnersTitle === '') {
+    $homePartnersTitle = '合作伙伴';
+}
+?>
+<?php if ($showHomePartners): ?>
+<section class="th3-sec th3-sec--partners" id="home-partners" hidden>
+  <div class="max-w-5xl mx-auto px-4 sm:px-5 lg:px-8">
+    <div class="th3-partners-head reveal">
+      <h2 class="font-display font-bold tracking-tight" style="font-size: clamp(1.25rem, 3vw, 1.75rem);"><?php echo vs_e($homePartnersTitle); ?></h2>
+      <p class="th3-partners-sub text-sm mt-2">来自本站合作伙伴与广告位</p>
+    </div>
+    <div class="th3-partners-grid reveal" id="home-partners-grid"></div>
+  </div>
+</section>
+<script src="<?php echo vs_e(ThemeManager::assetUrl('three', 'assets/js/pages/home-partners.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
+<?php endif; ?>
 
 <?php if ($hasAnnounce): ?>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('three', 'assets/js/pages/home-announcement.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>

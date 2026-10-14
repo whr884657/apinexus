@@ -38,9 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error($result);
         }
         $row = CommentManager::formatRow(CommentManager::findById($id));
-        if (is_array($row) && class_exists('CommentNotify') && trim($reply) !== '') {
+        if (is_array($row) && class_exists('MailNotify') && trim($reply) !== '') {
             try {
-                CommentNotify::notifyUserAdminReply($row);
+                MailNotify::notifyUserAdminReply($row);
             } catch (Exception $e) {
                 // 邮件失败不阻断保存
             }
@@ -88,11 +88,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('评论已删除', array('comment_id' => $id));
     }
 
+    if ($action === 'list') {
+        $paged = CommentManager::listPaged(array(
+            'q'        => isset($_POST['q']) ? (string) $_POST['q'] : '',
+            'page'     => isset($_POST['page']) ? (int) $_POST['page'] : 1,
+            'pagesize' => isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20,
+        ));
+        $desk = '';
+        $mobile = '';
+        foreach ($paged['list'] as $fb) {
+            if (!is_array($fb)) {
+                continue;
+            }
+            $ctx = vs_admin_cmt_ctx($fb);
+            ob_start();
+            vs_render_cmt_desktop_row($ctx);
+            $desk .= ob_get_clean();
+            ob_start();
+            vs_render_cmt_mobile_card($ctx);
+            $mobile .= ob_get_clean();
+        }
+        AjaxResponse::success('ok', array(
+            'desktop_html' => $desk,
+            'mobile_html'  => $mobile,
+            'total'        => $paged['total'],
+            'page'         => $paged['page'],
+            'pagesize'     => $paged['pagesize'],
+        ));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
 $tableReady = CommentManager::tableReady();
-$rows = $tableReady ? CommentManager::listAll() : array();
+$paged = $tableReady ? CommentManager::listPaged(array('page' => 1, 'pagesize' => 20)) : array(
+    'list' => array(),
+    'total' => 0,
+);
+$rows = $paged['list'];
+$cmtTotal = (int) $paged['total'];
 $articles = ContentManager::tableReady()
     ? ContentManager::listAll(ContentManager::KIND_ARTICLE)
     : array();
@@ -273,7 +307,7 @@ function vs_render_cmt_mobile_card(array $ctx)
     <?php
 }
 
-$hasItems = count($rows) > 0;
+$hasItems = $cmtTotal > 0;
 $headerActions = '';
 if ($tableReady) {
     ob_start();
@@ -292,7 +326,7 @@ if ($tableReady) {
 vs_admin_layout_start('评论管理', 'comments', $headerActions);
 ?>
 
-<div id="adminCommentsPage">
+<div id="adminCommentsPage" data-comment-total="<?php echo (int) $cmtTotal; ?>">
 <?php if (!$tableReady): ?>
     <div class="vs-panel">
         <?php vs_render_notice('warning', '', '评论功能尚未就绪，请前往「系统管理 → 系统升级」完成更新。', array('compact' => true)); ?>
@@ -351,12 +385,12 @@ vs_admin_layout_start('评论管理', 'comments', $headerActions);
                 </select>
             </label>
             <div class="vs-api-pager__navs">
-                <button type="button" class="vs-api-pager__nav" id="adminCmtPrevBtn">上一页</button>
-                <div class="vs-api-pager__nums" id="adminCmtPagerNums"></div>
-                <button type="button" class="vs-api-pager__nav" id="adminCmtNextBtn">下一页</button>
+                <button type="button" class="vs-api-pager__nav" id="adminCmtPrevBtn" aria-label="上一页">上一页</button>
+                <div class="vs-api-pager__nums" id="adminCmtPagerNums" role="navigation" aria-label="页码"></div>
+                <button type="button" class="vs-api-pager__nav" id="adminCmtNextBtn" aria-label="下一页">下一页</button>
             </div>
         </div>
-        <p class="vs-api-list-stats" id="adminCmtStats">共 <?php echo (int) count($rows); ?> 条</p>
+        <p class="vs-api-list-stats" id="adminCmtStats">共 <?php echo (int) $cmtTotal; ?> 条</p>
     </div>
 <?php endif; ?>
 </div>

@@ -503,6 +503,14 @@ class DatabaseMigrator
             }
         }
 
+        // 新装已含 13.26.46：令牌范围 + 转发头 + feedback.kind，且禁止列/旧 link 申请列已不存在
+        if (!in_array('13.26.46', $applied, true)
+            && self::apilogExtended46Ready()
+            && self::feedbackKind46Ready()
+        ) {
+            self::markApplied('13.26.46');
+        }
+
         // 5.8.0 重构：热天数 / 计划任务密钥（幂等；兼容已跑过旧版 keep_days 的站点）
         self::ensureApilogArchiveConfig();
         // 13.26.5：热点索引幂等补齐（已应用过 13.26.5 仅含 config 种子的站点）
@@ -525,6 +533,25 @@ class DatabaseMigrator
         self::ensureApilogSearchIndexes45();
         // 13.26.45：主题设置 MySQL 分桶 → core/data/{id}/theme.db
         self::ensureThemeSettingsLocal45();
+        // 13.26.46：令牌接口范围 scopejson 幂等补齐
+        self::ensureApikeyScopeSchema();
+        // 13.26.46：调用日志转发头列；删耗时/响应正文/低价值头列
+        self::ensureApilogExtended46();
+        self::dropApilogDurationms46();
+        self::dropApilogRespBody46();
+        self::dropApilogLowValueHeaders46();
+        // 13.26.46：feedback.kind；link.kind=3 → feedback；再 DROP link.userid
+        self::ensureFeedbackKind46();
+        self::migrateLinkDevApplyToFeedback46();
+        self::dropLinkUserid46();
+        // 13.26.46：开发者申请邮件开关（已 mark 站点幂等补键）
+        self::ensureMailNotifyDevApply46();
+        // 13.26.46：曾误建激励任务表则幂等删除（积分赠送不落独立表，只写 orders）
+        self::dropIncentiveGiftJobIfExists46();
+        // 13.26.46：content.audmode（站内公告受众）
+        self::ensureContentAudmode46();
+        // 13.26.46：邮件群发批次表 maillog
+        self::ensureMaillog46();
     }
 
     /**
@@ -835,6 +862,596 @@ class DatabaseMigrator
     }
 
     /**
+     * 13.26.46 调用日志扩列是否终态就绪（含禁止列已删除）
+     *
+     * @return bool
+     */
+    private static function apilogExtended46Ready()
+    {
+        if (!self::tableColumnExists('apikey', 'scopejson')) {
+            return false;
+        }
+        if (!self::tableExists('apilog')) {
+            return false;
+        }
+        if (!self::tableColumnExists('apilog', 'xfproto')
+            || !self::tableColumnExists('apilog', 'xff')
+            || !self::tableColumnExists('apilog', 'xri')
+        ) {
+            return false;
+        }
+        // 曾误加列必须已 DROP，否则升级页会假绿、库仍膨胀
+        $banned = array(
+            'durationms', 'resptrunc', 'respbytes', 'respbody', 'resptype',
+            'via', 'conn', 'reqctype', 'reqclen',
+        );
+        foreach ($banned as $col) {
+            if (self::tableColumnExists('apilog', $col)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 13.26.46：feedback.kind 是否终态就绪（无残留 link 开发者申请行 / userid 列）
+     *
+     * @return bool
+     */
+    private static function feedbackKind46Ready()
+    {
+        if (!self::tableExists('feedback') || !self::tableColumnExists('feedback', 'kind')) {
+            return false;
+        }
+        if (self::tableExists('link') && self::tableColumnExists('link', 'userid')) {
+            return false;
+        }
+        if (self::tableExists('link')) {
+            try {
+                $pdo = Database::connect();
+                $stmt = $pdo->query(
+                    'SELECT COUNT(*) FROM `' . Database::table('link') . '` WHERE `kind` = 3'
+                );
+                if ($stmt && (int) $stmt->fetchColumn() > 0) {
+                    return false;
+                }
+            } catch (Exception $e) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 13.26.46：content.audmode 是否就绪
+     *
+     * @return bool
+     */
+    private static function contentAudmode46Ready()
+    {
+        return self::tableExists('content') && self::tableColumnExists('content', 'audmode');
+    }
+
+    /**
+     * 13.26.46：content.audmode 幂等补齐（站内公告受众；列默认 0，禁止 MODIFY kind）
+     *
+     * @return void
+     */
+    private static function ensureContentAudmode46()
+    {
+        if (!self::tableExists('content')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('content');
+            if (!self::tableColumnExists('content', 'audmode')) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . $table . '` '
+                    . 'ADD COLUMN `audmode` tinyint(1) NOT NULL DEFAULT 0 '
+                    . 'COMMENT \'受众：0无(非站内公告) 1全站 2开发者 3普通用户\' AFTER `ispopup`'
+                );
+            }
+            if (self::tableColumnExists('content', 'audmode')) {
+                self::execStatement(
+                    $pdo,
+                    'UPDATE `' . $table . '` SET `audmode` = 0 WHERE `kind` <> 2 AND `audmode` <> 0'
+                );
+            }
+            if (self::tableColumnExists('content', 'audmode')
+                && !self::tableIndexExists('content', 'idx_kind_status_aud_pin')
+            ) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . $table . '` '
+                    . 'ADD KEY `idx_kind_status_aud_pin` (`kind`, `status`, `audmode`, `ispinned`, `id`)'
+                );
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.46：邮件群发批次表 maillog（一批一行）
+     *
+     * @return void
+     */
+    private static function ensureMaillog46()
+    {
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('maillog');
+            if (!self::tableExists('maillog')) {
+                self::execStatement(
+                    $pdo,
+                    'CREATE TABLE IF NOT EXISTS `' . $table . '` (
+                      `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT \'主键ID\',
+                      `adminid` int unsigned NOT NULL DEFAULT 0 COMMENT \'操作管理员ID\',
+                      `tplid` int unsigned NOT NULL DEFAULT 0 COMMENT \'模板content.id\',
+                      `tplname` varchar(200) NOT NULL DEFAULT \'\' COMMENT \'模板名称快照\',
+                      `subject` varchar(500) NOT NULL DEFAULT \'\' COMMENT \'发信标题快照\',
+                      `filtersum` varchar(500) NOT NULL DEFAULT \'\' COMMENT \'筛选条件摘要\',
+                      `total` int unsigned NOT NULL DEFAULT 0 COMMENT \'目标人数\',
+                      `oknum` int unsigned NOT NULL DEFAULT 0 COMMENT \'成功人数\',
+                      `failnum` int unsigned NOT NULL DEFAULT 0 COMMENT \'失败人数\',
+                      `status` tinyint unsigned NOT NULL DEFAULT 0 COMMENT \'状态：0发送中 1已完成 2已中断\',
+                      `uids` mediumtext NOT NULL COMMENT \'目标用户ID JSON数组\',
+                      `failjson` mediumtext COMMENT \'失败明细JSON\',
+                      `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT \'开始时间\',
+                      `lastactivity` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT \'最后活动时间（tick/进度刷新）\',
+                      `finishtime` datetime DEFAULT NULL COMMENT \'结束时间\',
+                      PRIMARY KEY (`id`),
+                      KEY `idx_createtime` (`createtime`),
+                      KEY `idx_adminid_id` (`adminid`, `id`),
+                      KEY `idx_status_id` (`status`, `id`),
+                      KEY `idx_status_lastactivity` (`status`, `lastactivity`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'邮件群发批次记录（一批一行）\''
+                );
+            }
+            self::ensureMaillogLastactivity46();
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.46：maillog.lastactivity 幂等补齐（收尸按活动时间，避免误杀长任务）
+     *
+     * @return void
+     */
+    private static function ensureMaillogLastactivity46()
+    {
+        if (!self::tableExists('maillog') || self::tableColumnExists('maillog', 'lastactivity')) {
+            if (self::tableExists('maillog')
+                && self::tableColumnExists('maillog', 'lastactivity')
+                && !self::tableIndexExists('maillog', 'idx_status_lastactivity')
+            ) {
+                try {
+                    $pdo = Database::connect();
+                    self::execStatement(
+                        $pdo,
+                        'ALTER TABLE `' . Database::table('maillog') . '` '
+                        . 'ADD KEY `idx_status_lastactivity` (`status`, `lastactivity`)'
+                    );
+                } catch (Exception $e) {
+                }
+            }
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('maillog');
+            self::execStatement(
+                $pdo,
+                'ALTER TABLE `' . $table . '` '
+                . 'ADD COLUMN `lastactivity` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP '
+                . 'COMMENT \'最后活动时间（tick/进度刷新）\' AFTER `createtime`'
+            );
+            self::execStatement(
+                $pdo,
+                'UPDATE `' . $table . '` SET `lastactivity` = `createtime` '
+                . 'WHERE `lastactivity` IS NULL OR `lastactivity` < `createtime`'
+            );
+            if (!self::tableIndexExists('maillog', 'idx_status_lastactivity')) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . $table . '` ADD KEY `idx_status_lastactivity` (`status`, `lastactivity`)'
+                );
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.46：feedback.kind 幂等补齐（接口反馈=0 / 开发者申请=1）
+     *
+     * @return void
+     */
+    private static function ensureFeedbackKind46()
+    {
+        if (!self::tableExists('feedback')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('feedback');
+            if (!self::tableColumnExists('feedback', 'kind')) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . $table . '` '
+                    . 'ADD COLUMN `kind` tinyint unsigned NOT NULL DEFAULT 0 '
+                    . 'COMMENT \'类型：0接口反馈 1开发者申请\' AFTER `id`'
+                );
+            }
+            if (self::tableColumnExists('feedback', 'kind')
+                && !self::tableIndexExists('feedback', 'idx_kind_status')
+            ) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . $table . '` ADD KEY `idx_kind_status` (`kind`, `status`)'
+                );
+            }
+            if (self::tableColumnExists('feedback', 'kind')
+                && !self::tableIndexExists('feedback', 'idx_kind_userid_status')
+            ) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . $table . '` '
+                    . 'ADD KEY `idx_kind_userid_status` (`kind`, `userid`, `status`)'
+                );
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.46：将 link.kind=3 开发者申请迁入 feedback.kind=1 后删除源行
+     * 若库尚无 link.userid（极早半成品），先临时 ADD 再迁（仅服务本迁移）
+     *
+     * @return void
+     */
+    private static function migrateLinkDevApplyToFeedback46()
+    {
+        if (!self::tableExists('link') || !self::tableExists('feedback')) {
+            return;
+        }
+        if (!self::tableColumnExists('feedback', 'kind')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $linkTable = Database::table('link');
+            $fbTable = Database::table('feedback');
+
+            // 旧站可能尚无 userid：补列才能读申请人（新装终态无此列，由 dropLinkUserid46 删掉）
+            if (!self::tableColumnExists('link', 'userid')) {
+                $cntNoCol = $pdo->query(
+                    'SELECT COUNT(*) FROM `' . $linkTable . '` WHERE `kind` = 3'
+                );
+                if ($cntNoCol && (int) $cntNoCol->fetchColumn() > 0) {
+                    self::execStatement(
+                        $pdo,
+                        'ALTER TABLE `' . $linkTable . '` '
+                        . 'ADD COLUMN `userid` int unsigned NOT NULL DEFAULT 0 '
+                        . 'COMMENT \'迁移临时列\' AFTER `id`'
+                    );
+                }
+            }
+
+            if (!self::tableColumnExists('link', 'userid')) {
+                return;
+            }
+
+            $sel = $pdo->query(
+                'SELECT `id`, `userid`, `description`, `status`, `createtime`, `updatetime`'
+                . ' FROM `' . $linkTable . '` WHERE `kind` = 3 ORDER BY `id` ASC'
+            );
+            $rows = $sel ? $sel->fetchAll(PDO::FETCH_ASSOC) : array();
+            if (!is_array($rows) || count($rows) === 0) {
+                return;
+            }
+
+            $ins = $pdo->prepare(
+                'INSERT INTO `' . $fbTable . '`'
+                . ' (`kind`, `apiid`, `userid`, `content`, `reply`, `status`, `createtime`, `updatetime`)'
+                . ' VALUES (1, 0, ?, ?, \'\', ?, ?, ?)'
+            );
+            $del = $pdo->prepare(
+                'DELETE FROM `' . $linkTable . '` WHERE `id` = ? AND `kind` = 3 LIMIT 1'
+            );
+
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $id = isset($row['id']) ? (int) $row['id'] : 0;
+                $userid = isset($row['userid']) ? (int) $row['userid'] : 0;
+                if ($id <= 0 || $userid <= 0) {
+                    // 孤儿行直接删，避免卡死就绪探测
+                    if ($id > 0) {
+                        $del->execute(array($id));
+                    }
+                    continue;
+                }
+                // 幂等：同用户同理由同状态已在 feedback 则只删 link
+                $dup = $pdo->prepare(
+                    'SELECT `id` FROM `' . $fbTable . '`'
+                    . ' WHERE `kind` = 1 AND `userid` = ? AND `content` = ? AND `status` = ?'
+                    . ' LIMIT 1'
+                );
+                $content = isset($row['description']) ? (string) $row['description'] : '';
+                $status = isset($row['status']) ? (int) $row['status'] : 0;
+                if ($status !== 1 && $status !== 2) {
+                    $status = 0;
+                }
+                $dup->execute(array($userid, $content, $status));
+                if (!$dup->fetchColumn()) {
+                    $ct = isset($row['createtime']) && $row['createtime'] !== null && $row['createtime'] !== ''
+                        ? (string) $row['createtime']
+                        : date('Y-m-d H:i:s');
+                    $ut = isset($row['updatetime']) && $row['updatetime'] !== null && $row['updatetime'] !== ''
+                        ? (string) $row['updatetime']
+                        : null;
+                    $ins->execute(array($userid, $content, $status, $ct, $ut));
+                }
+                $del->execute(array($id));
+            }
+            if (class_exists('LinkManager') && method_exists('LinkManager', 'invalidateCache')) {
+                LinkManager::invalidateCache();
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.46：开发者申请迁出后删除 link.userid 及专用索引（终态与新装一致）
+     *
+     * @return void
+     */
+    private static function dropLinkUserid46()
+    {
+        if (!self::tableExists('link') || !self::tableColumnExists('link', 'userid')) {
+            return;
+        }
+        // 仍有 kind=3 则先不删列，避免丢数据
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->query(
+                'SELECT COUNT(*) FROM `' . Database::table('link') . '` WHERE `kind` = 3'
+            );
+            if ($stmt && (int) $stmt->fetchColumn() > 0) {
+                return;
+            }
+            $table = Database::table('link');
+            if (self::tableIndexExists('link', 'idx_kind_userid_status')) {
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . $table . '` DROP INDEX `idx_kind_userid_status`'
+                );
+            }
+            self::execStatement(
+                $pdo,
+                'ALTER TABLE `' . $table . '` DROP COLUMN `userid`'
+            );
+            if (class_exists('LinkManager') && method_exists('LinkManager', 'resetUseridColumnCache')) {
+                LinkManager::resetUseridColumnCache();
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.46：开发者申请业务邮件三开关幂等补键（已 mark 站点亦补）
+     *
+     * @return void
+     */
+    private static function ensureMailNotifyDevApply46()
+    {
+        try {
+            $pdo = Database::connect();
+            $cfg = Database::table('config');
+            $ins = $pdo->prepare(
+                'INSERT IGNORE INTO `' . $cfg . '` (`key`, `value`) VALUES (?, ?)'
+            );
+            foreach (array(
+                array('mail_notify_dev_apply', '1'),
+                array('mail_notify_dev_pass', '1'),
+                array('mail_notify_dev_fail', '1'),
+            ) as $row) {
+                $ins->execute($row);
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.46：仅配置种子（INSERT IGNORE / 安全 DELETE 旧长键）
+     *
+     * @param PDO    $pdo
+     * @param string $prefix
+     * @return void
+     */
+    private static function apply132646ConfigSeeds(PDO $pdo, $prefix)
+    {
+        $cfg = $prefix . 'config';
+        $seeds = array(
+            array(
+                'sysapion',
+                '{"apilogarchive":0,"apiquery":0,"apirank":0,"cardkey":0,"checkin":0,"sitestats":0,"userinfo":0}',
+            ),
+            array('uabrand', 'ApiNexus'),
+            array('mailsmtp', '{"mode":0,"list":[]}'),
+            array('cfid', ''),
+            array('cfkey', ''),
+            array('captcha_pepper', ''),
+            array(
+                'sysapirq',
+                '{"apis":{"apilogarchive":{"qpm":0,"qps":0},"apiquery":{"qpm":0,"qps":0},"apirank":{"qpm":0,"qps":0},"cardkey":{"qpm":0,"qps":0},"checkin":{"qpm":0,"qps":0},"sitestats":{"qpm":0,"qps":0},"userinfo":{"qpm":0,"qps":0}}}',
+            ),
+            array('mail_notify_dev_apply', '1'),
+            array('mail_notify_dev_pass', '1'),
+            array('mail_notify_dev_fail', '1'),
+        );
+        $ins = $pdo->prepare(
+            'INSERT IGNORE INTO `' . $cfg . '` (`key`, `value`) VALUES (?, ?)'
+        );
+        foreach ($seeds as $row) {
+            try {
+                $ins->execute($row);
+            } catch (Exception $e) {
+                // 幂等
+            }
+        }
+        try {
+            self::execStatement(
+                $pdo,
+                'UPDATE `' . $cfg . '` AS n INNER JOIN `' . $cfg . '` AS o '
+                . 'ON o.`key` = \'outbound_ua_brand\' SET n.`value` = o.`value` '
+                . 'WHERE n.`key` = \'uabrand\''
+            );
+        } catch (Exception $e) {
+            // 幂等
+        }
+        $dropKeys = array(
+            'apiquery_api_enabled',
+            'apirank_api_enabled',
+            'cardkey_api_enabled',
+            'apilog_api_enabled',
+            'outbound_ua_brand',
+        );
+        $del = $pdo->prepare('DELETE FROM `' . $cfg . '` WHERE `key` = ? LIMIT 1');
+        foreach ($dropKeys as $key) {
+            try {
+                $del->execute(array($key));
+            } catch (Exception $e) {
+                // 幂等
+            }
+        }
+    }
+
+    /**
+     * 确保 apilog 转发链请求头列（13.26.46 幂等；不含耗时/响应正文/via/conn/req*）
+     *
+     * @return void
+     */
+    private static function ensureApilogExtended46()
+    {
+        try {
+            if (!self::tableExists('apilog')) {
+                return;
+            }
+            $pdo = Database::connect();
+            $table = Database::table('apilog');
+            // 逐列幂等：避免只落了其中一列时整段 ADD 被跳过
+            $cols = array(
+                'xfproto' => 'varchar(16) NOT NULL DEFAULT \'\' COMMENT \'转发协议（请求头 X-Forwarded-Proto）\'',
+                'xff'     => 'varchar(500) NOT NULL DEFAULT \'\' COMMENT \'转发链路IP（请求头 X-Forwarded-For 原文）\'',
+                'xri'     => 'varchar(45) NOT NULL DEFAULT \'\' COMMENT \'真实客户端IP头（请求头 X-Real-IP）\'',
+            );
+            foreach ($cols as $name => $decl) {
+                if (self::tableColumnExists('apilog', $name)) {
+                    continue;
+                }
+                self::execStatement(
+                    $pdo,
+                    'ALTER TABLE `' . $table . '` ADD COLUMN `' . $name . '` ' . $decl
+                );
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 删除曾误加的耗时列 durationms（13.26.46 产品纠偏）
+     *
+     * @return void
+     */
+    private static function dropApilogDurationms46()
+    {
+        try {
+            if (!self::tableExists('apilog') || !self::tableColumnExists('apilog', 'durationms')) {
+                return;
+            }
+            $pdo = Database::connect();
+            $table = Database::table('apilog');
+            self::execStatement($pdo, 'ALTER TABLE `' . $table . '` DROP COLUMN `durationms`');
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 删除低价值扩展头列 via/conn/reqctype/reqclen（13.26.46 纠偏）
+     *
+     * @return void
+     */
+    private static function dropApilogLowValueHeaders46()
+    {
+        try {
+            if (!self::tableExists('apilog')) {
+                return;
+            }
+            $pdo = Database::connect();
+            $table = Database::table('apilog');
+            $drops = array('via', 'conn', 'reqctype', 'reqclen');
+            foreach ($drops as $col) {
+                if (!self::tableColumnExists('apilog', $col)) {
+                    continue;
+                }
+                self::execStatement($pdo, 'ALTER TABLE `' . $table . '` DROP COLUMN `' . $col . '`');
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 删除曾误加的响应正文列与相关配置（13.26.46 产品纠偏）
+     *
+     * @return void
+     */
+    private static function dropApilogRespBody46()
+    {
+        try {
+            if (!self::tableExists('apilog')) {
+                return;
+            }
+            $pdo = Database::connect();
+            $table = Database::table('apilog');
+            $drops = array('resptrunc', 'respbytes', 'respbody', 'resptype');
+            foreach ($drops as $col) {
+                if (!self::tableColumnExists('apilog', $col)) {
+                    continue;
+                }
+                self::execStatement($pdo, 'ALTER TABLE `' . $table . '` DROP COLUMN `' . $col . '`');
+            }
+            foreach (array('apilog_store_body', 'apilog_body_max') as $cfgKey) {
+                try {
+                    $stmt = $pdo->prepare(
+                        'DELETE FROM `' . Database::table('config') . '` WHERE `key` = ? LIMIT 1'
+                    );
+                    $stmt->execute(array($cfgKey));
+                } catch (Exception $e) {
+                    // 忽略单键删除失败
+                }
+            }
+            if (class_exists('Config') && method_exists('Config', 'clearCache')) {
+                Config::clearCache();
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
      * 确保兼容性热点查询索引存在（幂等）
      *
      * @return void
@@ -954,22 +1571,75 @@ class DatabaseMigrator
                 }
             }
             if (!array_key_exists('apilog_archive_enabled', $all)) {
-                Config::set('apilog_archive_enabled', '1');
+                Config::set('apilog_archive_enabled', '0');
             }
             if (!array_key_exists('apilog_purge_enabled', $all)) {
                 Config::set('apilog_purge_enabled', '0');
             }
-            // 互斥：若脏数据双开，保留归档、关删除
-            $arch = isset($all['apilog_archive_enabled']) ? trim((string) $all['apilog_archive_enabled']) : '1';
-            $purge = isset($all['apilog_purge_enabled']) ? trim((string) $all['apilog_purge_enabled']) : '0';
-            if ($arch === '1' && $purge === '1') {
-                Config::set('apilog_purge_enabled', '0');
+            // v13.26.46：系统 API 开关合并为 sysapion JSON；出站 UA 品牌 uabrand；多邮箱 mailsmtp
+            if (class_exists('SystemApiKey')) {
+                SystemApiKey::migrateGatesFromLegacy();
+            }
+            if (class_exists('Mailer')) {
+                Mailer::ensureMigrated();
+            } elseif (!array_key_exists('mailsmtp', $all)) {
+                Config::set('mailsmtp', '{"mode":0,"list":[]}');
             }
             if (!array_key_exists('apilog_shard_rows', $all)) {
                 Config::set('apilog_shard_rows', '5000');
             }
-            if (!array_key_exists('cardkey_api_enabled', $all)) {
-                Config::set('cardkey_api_enabled', '0');
+            if (!array_key_exists('uabrand', $all)) {
+                $from = isset($all['outbound_ua_brand']) ? trim((string) $all['outbound_ua_brand']) : 'ApiNexus';
+                if ($from === '') {
+                    $from = 'ApiNexus';
+                }
+                Config::set('uabrand', $from);
+            }
+            // v13.26.46：Cloudflare Turnstile 凭证键（短名 cfid / cfkey）
+            if (!array_key_exists('cfid', $all)) {
+                Config::set('cfid', '');
+            }
+            if (!array_key_exists('cfkey', $all)) {
+                Config::set('cfkey', '');
+            }
+            $dropOldCfg = array(
+                'apilog_api_enabled',
+                'cardkey_api_enabled',
+                'apiquery_api_enabled',
+                'apirank_api_enabled',
+                'outbound_ua_brand',
+                'apilogon',
+                'cardkeyon',
+                'checkinon',
+                'apiqueryon',
+                'apirankon',
+                'userinfoon',
+                'sitestatson',
+                // 旧单账号 SMTP / 发件人：已迁入 mailsmtp 后清除
+                'mail_smtp_host',
+                'mail_smtp_port',
+                'mail_smtp_user',
+                'mail_smtp_pass',
+                'mail_smtp_secure',
+                'mail_from_email',
+                'mail_from_name',
+            );
+            $allAfter = Config::all();
+            $needDrop = false;
+            foreach ($dropOldCfg as $oldKey) {
+                if (array_key_exists($oldKey, $allAfter)) {
+                    $needDrop = true;
+                    break;
+                }
+            }
+            if ($needDrop) {
+                $pdo = Database::connect();
+                $table = Database::table('config');
+                $stmt = $pdo->prepare('DELETE FROM `' . $table . '` WHERE `key` = ?');
+                foreach ($dropOldCfg as $oldKey) {
+                    $stmt->execute(array($oldKey));
+                }
+                Config::clearCache();
             }
             if (self::tableExists('cardkey') && !self::tableIndexExists('cardkey', 'idx_status_points')) {
                 try {
@@ -1362,7 +2032,8 @@ class DatabaseMigrator
             || $version === '13.26.35'
             || $version === '13.26.40'
             || $version === '13.26.41'
-            || $version === '13.26.45');
+            || $version === '13.26.45'
+            || $version === '13.26.46');
     }
 
     /**
@@ -1547,6 +2218,24 @@ class DatabaseMigrator
 
         if ($version === '7.1.0') {
             self::applyContentCoverLayoutColumn($pdo, $prefix);
+            return;
+        }
+
+        // 13.26.46：禁止跑脚本内多列 ADD / link MODIFY（半就绪库会报错或长时间锁表）
+        // 配置种子 + 逐列/逐索引 ensure* 均在此完成（forceMigrateRange / ensureVersionSchema 共用）
+        if ($version === '13.26.46') {
+            self::apply132646ConfigSeeds($pdo, $prefix);
+            self::ensureApikeyScopeSchema();
+            self::ensureApilogExtended46();
+            self::dropApilogDurationms46();
+            self::dropApilogRespBody46();
+            self::dropApilogLowValueHeaders46();
+            self::ensureFeedbackKind46();
+            self::migrateLinkDevApplyToFeedback46();
+            self::dropLinkUserid46();
+            self::dropIncentiveGiftJobIfExists46();
+            self::ensureContentAudmode46();
+            self::ensureMaillog46();
             return;
         }
 
@@ -1846,6 +2535,12 @@ class DatabaseMigrator
                 && isset($all['mail_notify_order_admin'])
                 && self::tableColumnExists('statday', 'pointscost');
         }
+        if ($version === '13.26.46') {
+            // 令牌范围 + 转发头齐全 + 禁止列已 DROP + feedback.kind + 无残留 link 申请 + content.audmode
+            return self::apilogExtended46Ready()
+                && self::feedbackKind46Ready()
+                && self::contentAudmode46Ready();
+        }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {
             return true;
@@ -1911,8 +2606,8 @@ class DatabaseMigrator
 
         $pdo = Database::connect();
         $prefix = Database::prefix();
+        // 先落结构/种子，校验通过后再 mark，避免半失败却被记为已应用
         self::executeFile($pdo, $file, $prefix);
-        self::markApplied($version);
         Config::clearCache();
 
         if ($version === '10.12.0' && class_exists('StatDayManager')) {
@@ -1928,12 +2623,64 @@ class DatabaseMigrator
         if ($version === '13.26.45') {
             self::ensureThemeSettingsLocal45();
         }
+        // 13.26.46 结构已在 executeFile 特殊分支内 ensure* 完成
 
         if (!self::versionSchemaReady($version)) {
             throw new Exception('版本 v' . $version . ' 结构更新后校验失败，请手动执行数据库结构更新');
         }
 
+        self::markApplied($version);
         return array('applied' => true, 'msg' => '已执行 ' . $version);
+    }
+
+    /**
+     * 13.26.46：删除曾误建的激励任务表（产品纠偏：赠送只写 orders，无独立表）
+     *
+     * @return void
+     */
+    private static function dropIncentiveGiftJobIfExists46()
+    {
+        if (!self::tableExists('incentive_gift_job')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('incentive_gift_job');
+            self::execStatement($pdo, 'DROP TABLE IF EXISTS `' . $table . '`');
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.46：apikey.scopejson 幂等补齐
+     *
+     * @return void
+     */
+    private static function ensureApikeyScopeSchema()
+    {
+        if (!self::tableExists('apikey') || self::tableColumnExists('apikey', 'scopejson')) {
+            if (class_exists('ApiKeyManager') && method_exists('ApiKeyManager', 'resetScopeColumnCache')) {
+                ApiKeyManager::resetScopeColumnCache();
+            }
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('apikey');
+            self::execStatement(
+                $pdo,
+                'ALTER TABLE `' . $table . '` '
+                . 'ADD COLUMN `scopejson` text NULL '
+                . 'COMMENT \'接口调用范围JSON：NULL或空串或合法空结构=不限制全部接口；非空必须为{"c":[分类ID...],"a":[接口ID...]}（JSON正整数、去重升序；整类只写c不写该类下a；并集命中即允许）；非法值或超限一律按无权调用处理\' '
+                . 'AFTER `expiretime`'
+            );
+            if (class_exists('ApiKeyManager') && method_exists('ApiKeyManager', 'resetScopeColumnCache')) {
+                ApiKeyManager::resetScopeColumnCache();
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
     }
 
     /**

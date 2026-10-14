@@ -1585,7 +1585,116 @@ button.vs-refresh-btn.is-spinning svg {
     min-width: 0;
 }
 
-/* ── 账号设置页 ── */
+/* ── 账号设置：顶卡 + Tab（管理端 / 与用户中心同构） ── */
+.vs-account-page {
+    max-width: 920px;
+    min-width: 0;
+}
+.vs-account-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #eef2f7;
+    box-sizing: border-box;
+}
+.vs-account-hero__avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #f1f5f9;
+}
+.vs-account-hero__meta {
+    min-width: 0;
+    flex: 1;
+}
+.vs-account-hero__name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.3;
+    word-break: break-word;
+}
+.vs-account-hero__email {
+    margin-top: 2px;
+    font-size: 13px;
+    color: #64748b;
+    word-break: break-all;
+}
+.vs-account-hero__badge {
+    display: inline-flex;
+    margin-top: 8px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e40af;
+    background: #eff6ff;
+    cursor: help;
+}
+.vs-account-hero__edit {
+    flex-shrink: 0;
+}
+.vs-tabs.vs-account-tabs {
+    display: flex;
+    gap: 2px;
+    margin: 0 0 16px;
+    border-bottom: 1px solid var(--vs-border, #e5e7eb);
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+.vs-tabs.vs-account-tabs .vs-tabs__btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-bottom: -1px;
+}
+.vs-tabs.vs-account-tabs .vs-tabs__btn:hover {
+    color: #0f172a;
+}
+.vs-tabs.vs-account-tabs .vs-tabs__btn.is-active {
+    color: #0f172a;
+    border-bottom-color: #111;
+}
+.vs-account-pane {
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #eef2f7;
+    box-sizing: border-box;
+}
+.vs-account-pane[hidden] {
+    display: none !important;
+}
+.vs-account-avatar__img--inline {
+    display: none;
+}
+@media (max-width: 640px) {
+    .vs-account-hero {
+        flex-wrap: wrap;
+    }
+    .vs-account-hero__edit {
+        width: 100%;
+    }
+}
+
+/* ── 账号设置页（旧左右布局兼容） ── */
 .vs-account-shell {
     display: flex;
     flex-direction: column;
@@ -1802,6 +1911,143 @@ button.vs-refresh-btn.is-spinning svg {
     border: none;
     border-top: 1px solid var(--vs-border);
     margin: 28px 0;
+}
+
+/* 系统设置大板块分隔（虚线） */
+.vs-settings-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 28px 0 16px;
+}
+.vs-settings-group::before,
+.vs-settings-group::after {
+    content: '';
+    flex: 1;
+    border-top: 1px dashed var(--vs-border, #d1d5db);
+}
+.vs-settings-group__label {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--vs-muted, #64748b);
+    white-space: nowrap;
+}
+.vs-settings-group:first-child {
+    margin-top: 8px;
+}
+/* 系统级 API 合并折叠面板内的子块标题（系统密钥常显） */
+.vs-settings-api-sub {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vs-text, #1f2937);
+}
+.vs-accordion__body > .vs-divider:first-child {
+    margin-top: 4px;
+}
+
+/* 系统密钥下方：细条折叠（非卡片），默认收起 */
+.vs-settings-api-fold {
+    margin: 10px 0 0;
+    border: 0;
+    background: transparent;
+}
+.vs-settings-api-fold__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 10px 4px;
+    border: 0;
+    border-bottom: 1px dashed var(--vs-border, #e5e7eb);
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    color: var(--vs-text, #1f2937);
+    font: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    touch-action: manipulation;
+}
+.vs-settings-api-fold__bar:hover .vs-settings-api-fold__title {
+    color: #111;
+}
+.vs-settings-api-fold__title {
+    font-size: 14px;
+    font-weight: 600;
+}
+.vs-settings-api-fold__bar .vs-icon--chevron {
+    flex-shrink: 0;
+    transition: transform 0.18s ease;
+    opacity: 0.65;
+}
+.vs-settings-api-fold.is-open .vs-settings-api-fold__bar .vs-icon--chevron {
+    transform: rotate(180deg);
+}
+/* 显示/隐藏以 is-open 为准（对齐 vs-accordion）；禁止只靠 JS 改 hidden 属性（E413） */
+.vs-settings-api-fold__body {
+    display: none;
+    padding: 12px 0 4px;
+}
+.vs-settings-api-fold__body[hidden] {
+    display: none !important;
+}
+.vs-settings-api-fold.is-open > .vs-settings-api-fold__body {
+    display: block !important;
+}
+
+/* 邮箱账号：启用开关在条头左侧；展开条与系统 API 细条同一套 bar / is-open */
+.vs-settings-mail-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    border-bottom: 1px dashed var(--vs-border, #e5e7eb);
+}
+.vs-settings-mail-head .vs-settings-api-fold__bar {
+    flex: 1;
+    min-width: 0;
+    border-bottom: 0;
+}
+.vs-settings-mail-on {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 8px 4px;
+    white-space: nowrap;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.vs-settings-mail-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+}
+.vs-settings-mail-toolbar .vs-form-hint {
+    margin: 0;
+    flex: 1 1 220px;
+}
+.vs-settings-mail-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+}
+.vs-settings-mail-add-row .vs-form-hint {
+    margin: 0;
+}
+
+.vs-outbound-ua-samples {
+    font-family: ui-monospace, Consolas, monospace;
+    line-height: 1.7;
+    word-break: break-all;
 }
 
 /* 下拉框仅保留一支箭头，避免 native + 自定义双箭头重影 */
@@ -2924,15 +3170,28 @@ select.vs-input.vs-select {
 }
 
 /* ── 后台主题设置 ── */
-.vs-theme-settings .vs-panel__header {
-    margin-bottom: 0;
+/* Tab / 画廊 / 配置均无外套大白底（E406/E407） */
+.vs-theme-settings__tabs-shell {
+    padding: 0;
+    margin: 0 0 8px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.vs-theme-settings__tabs {
+    margin: 0;
+}
+
+.vs-theme-settings-desk {
+    min-width: 0;
 }
 
 .vs-product-tabs {
     display: flex;
     align-items: stretch;
     gap: 0;
-    margin: 20px 0 0;
+    margin: 0;
     border-bottom: 1px solid var(--vs-border);
 }
 
@@ -2974,34 +3233,44 @@ select.vs-input.vs-select {
     margin-top: 24px;
 }
 
-.vs-theme-gallery-wrap {
-    padding: 0;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
+/* 卡下「启用」槽：默认隐藏；悬停/点选非当前主题后 JS 插入该单元格下方（E430） */
+.vs-theme-card-save {
+    display: none;
     width: 100%;
+    margin: 8px 0 0;
+    padding: 0;
+    flex: 0 0 auto;
+}
+.vs-theme-card-save.is-open {
+    display: block;
+}
+.vs-theme-card-save__btn {
+    width: 100%;
+    height: 40px;
+    min-height: 40px;
 }
 
 .vs-theme-gallery {
     display: grid;
-    /* mobile: full width; desktop: auto-fill from 260px min */
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 14px 16px;
     width: 100%;
+    align-items: start;
 }
 
-@media (max-width: 640px) {
-    .vs-theme-gallery {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
+.vs-theme-card-cell {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
+/* 全端横向条卡：左预览右信息（E430；电脑略高于手机） */
 .vs-theme-card {
     position: relative;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: stretch;
+    min-height: 112px;
     border: 1px solid #cfd4dc;
     border-radius: 10px;
     overflow: hidden;
@@ -3013,7 +3282,7 @@ select.vs-input.vs-select {
 
 .vs-theme-card:hover {
     border-color: #111;
-    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
     transform: translateY(-1px);
 }
 
@@ -3024,17 +3293,20 @@ select.vs-input.vs-select {
 
 .vs-theme-card.is-selected {
     border-color: #111;
-    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.14), 0 4px 16px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.14), 0 10px 24px rgba(15, 23, 42, 0.14);
+    transform: translateY(-2px);
+    z-index: 1;
 }
 
 .vs-theme-card.is-selected:hover {
     border-color: #111;
-    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.14), 0 6px 20px rgba(15, 23, 42, 0.1);
+    box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.14), 0 12px 28px rgba(15, 23, 42, 0.16);
+    transform: translateY(-3px);
 }
 
 .vs-theme-card.is-active:hover {
     border-color: #111;
-    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
 }
 
 .vs-theme-card input[type="radio"] {
@@ -3045,7 +3317,11 @@ select.vs-input.vs-select {
 
 .vs-theme-card__preview {
     position: relative;
-    aspect-ratio: 5 / 3;
+    flex: 0 0 128px;
+    width: 128px;
+    max-width: 38%;
+    min-height: 112px;
+    align-self: stretch;
     background: linear-gradient(145deg, #f0f0f2 0%, #e8e8ec 100%);
     overflow: hidden;
 }
@@ -3071,6 +3347,7 @@ select.vs-input.vs-select {
     position: absolute;
     top: 10px;
     right: 10px;
+    z-index: 2;
     padding: 5px 12px;
     border-radius: 999px;
     font-size: 11px;
@@ -3079,20 +3356,29 @@ select.vs-input.vs-select {
     color: #fff;
     background: linear-gradient(135deg, #111 0%, #333 100%);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
 }
 
 .vs-theme-card__body {
-    padding: 14px 16px 16px;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 14px 76px 14px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
 }
 
 .vs-theme-card__name {
     font-size: 16px;
     font-weight: 600;
+    line-height: 1.3;
     color: var(--vs-text);
+    word-break: break-word;
 }
 
 .vs-theme-card__meta {
-    margin-top: 4px;
+    margin-top: 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -3115,15 +3401,78 @@ select.vs-input.vs-select {
     font-weight: inherit;
 }
 
-.vs-theme-card__developer::before {
+.vs-theme-card__developer + .vs-theme-card__version::before {
     content: '·';
     margin-right: 10px;
     opacity: 0.55;
 }
 
-.vs-theme-card__meta > .vs-theme-card__developer:first-child::before {
-    content: none;
-    margin: 0;
+/* 兼容旧类名（若缓存页仍引用） */
+.vs-theme-mobile-save,
+.vs-theme-save-actions--desktop {
+    display: none !important;
+}
+
+/* 手机：单列；条卡略矮（E430） */
+@media (max-width: 640px) {
+    .vs-theme-gallery {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .vs-theme-card {
+        min-height: 92px;
+        transform: none;
+    }
+
+    .vs-theme-card:hover,
+    .vs-theme-card.is-active:hover {
+        transform: none;
+    }
+
+    .vs-theme-card.is-selected,
+    .vs-theme-card.is-selected:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.14), 0 8px 20px rgba(15, 23, 42, 0.14);
+    }
+
+    .vs-theme-card__preview {
+        flex: 0 0 108px;
+        width: 108px;
+        max-width: 36%;
+        min-height: 92px;
+    }
+
+    .vs-theme-card__body {
+        padding: 12px 72px 12px 12px;
+    }
+
+    .vs-theme-card__name {
+        font-size: 15px;
+    }
+
+    .vs-theme-card__meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .vs-theme-card__developer + .vs-theme-card__version::before {
+        content: none;
+        margin: 0;
+    }
+
+    .vs-theme-card__status {
+        top: 8px;
+        right: 8px;
+        padding: 4px 10px;
+        font-size: 10px;
+    }
+
+    .vs-theme-card-save__btn {
+        height: 44px;
+        min-height: 44px;
+    }
 }
 
 /* 接口审核 / 接口反馈 Tab（底部描边，禁止按钮框样式） */
@@ -4987,7 +5336,7 @@ select.vs-input.vs-select {
 }
 
 .vs-api-review-panel,
-#userApiManagePage.vs-panel {
+#userApiManagePage {
     padding: 14px 16px !important;
 }
 
@@ -5152,7 +5501,7 @@ select.vs-input.vs-select {
     }
 
     .vs-api-review-panel,
-    #userApiManagePage.vs-panel {
+    #userApiManagePage {
         padding: 10px 8px !important;
     }
 
@@ -5244,8 +5593,8 @@ select.vs-input.vs-select {
 /* ===== v3.23.0：真·分列列表 + 手机全宽右靠 + 分页单行 + 状态按钮高亮 ===== */
 .vs-api-list-panel,
 .vs-api-review-panel,
-#userApiManagePage.vs-panel,
-#userTokenPage.vs-panel,
+#userApiManagePage,
+#userTokenPage,
 #adminTokenPage.vs-panel {
     padding: 12px !important;
 }
@@ -5510,10 +5859,13 @@ select.vs-input.vs-select {
     min-width: 64px !important;
     padding: 0 22px 0 10px !important;
 }
-.vs-api-list-footer .vs-api-pager__nav,
-.vs-api-list-footer .vs-api-pager__num {
+.vs-api-list-footer .vs-api-pager__nav {
     padding: 0 12px !important;
     min-width: 0 !important;
+}
+.vs-api-list-footer .vs-api-pager__num {
+    padding: 0 8px !important;
+    min-width: 32px !important;
 }
 .vs-api-list-footer .vs-api-pager .vs-api-list-pagesize__label {
     line-height: 32px !important;
@@ -5614,8 +5966,8 @@ select.vs-input.vs-select {
 @media (max-width: 900px) {
     .vs-api-list-panel,
     .vs-api-review-panel,
-    #userApiManagePage.vs-panel,
-    #userTokenPage.vs-panel,
+    #userApiManagePage,
+    #userTokenPage,
     #adminTokenPage.vs-panel {
         padding: 8px 6px !important;
     }
@@ -6356,22 +6708,8 @@ select.vs-input.vs-select {
     font-size: 12px;
 }
 
-/* 生成弹窗：关闭/生成同高（覆盖全局 .vs-btn--outline 的 28px） */
-#cardkeyFormOverlay .vs-overlay__foot .vs-btn {
-    height: 40px !important;
-    min-height: 40px !important;
-    max-height: 40px !important;
-    min-width: 100px;
-    padding: 0 20px !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    line-height: 1 !important;
-    box-sizing: border-box;
-    border-radius: var(--vs-btn-radius, 10px) !important;
-}
-
-/* 支付配置·添加套餐弹窗：取消/确定同高（覆盖 .vs-btn--outline 28px，E347） */
-#payPkgOverlay .vs-overlay__foot .vs-btn {
+/* 管理端 overlay 脚栏：取消与主操作同高（覆盖全局 .vs-btn--outline 的 28px，E347） */
+.vs-overlay__foot .vs-btn {
     height: 40px !important;
     min-height: 40px !important;
     max-height: 40px !important;
@@ -6489,16 +6827,31 @@ select.vs-input.vs-select {
     border-radius: var(--vs-btn-radius, 10px) !important;
 }
 
-.vs-pay-config-panel {
-    padding: 0 !important;
-}
 .vs-pay-config-page .vs-pay-config-tabs {
     margin: 0 0 12px;
+}
+.vs-pay-config-form {
+    display: block;
 }
 .vs-pay-config-panel-pane[hidden] {
     display: none !important;
 }
-.vs-pay-tips-lead {
+.vs-pay-config-block > .vs-panel__body {
+    padding: 24px 28px;
+}
+.vs-pay-config-save {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+#payPanelPackages .vs-accordion {
+    margin-bottom: 16px;
+}
+#payPanelPackages .vs-accordion:last-child {
+    margin-bottom: 0;
+}
+.vs-pay-tips-lead,
+.vs-pay-tips-section > .vs-notice {
     margin: 0 0 16px;
 }
 .vs-pay-tip-block {
@@ -6542,13 +6895,6 @@ select.vs-input.vs-select {
 }
 .vs-pay-tip-block__editor .vs-textarea {
     min-height: 180px;
-}
-.vs-pay-config-panel > .vs-panel__body {
-    padding: 24px 28px;
-}
-.vs-pay-config-panel > .vs-panel__foot,
-.vs-pay-config-panel > .vs-finance-form-foot {
-    padding: 16px 28px;
 }
 
 .vs-finance-panel {
@@ -6615,6 +6961,29 @@ select.vs-input.vs-select {
         minmax(72px, 0.55fr)
         minmax(72px, 0.55fr)
         minmax(120px, 1.4fr);
+}
+.vs-finance-row--maillog {
+    grid-template-columns:
+        minmax(160px, 2fr)
+        minmax(88px, 0.75fr)
+        minmax(100px, 0.85fr)
+        minmax(140px, 1fr);
+}
+/* 发送记录流水：勿 display:contents（部分 WebKit 与 hidden 切换会闪）；勿挂 vs-api-list-table-wrap（手机会被双 DOM 规则藏掉） */
+.vs-ops-mail-log-wrap[hidden] {
+    display: none !important;
+}
+.vs-ops-mail-log-list {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+#opsMailPage .vs-ops-mail-pane {
+    display: none !important;
+}
+#opsMailPage[data-active-tab="send"] #opsMailPaneSend,
+#opsMailPage[data-active-tab="logs"] #opsMailPaneLogs {
+    display: block !important;
 }
 .vs-finance-meta,
 .vs-finance-head {
@@ -6808,6 +7177,20 @@ select.vs-input.vs-select {
     }
     .vs-finance-row--ledger .vs-finance-c-time { grid-area: time; }
 
+    .vs-finance-row--maillog {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "title status"
+            "count time";
+        gap: 6px 10px;
+        padding: 12px 14px;
+        align-items: start;
+    }
+    .vs-finance-row--maillog .vs-finance-c-title { grid-area: title; min-width: 0; }
+    .vs-finance-row--maillog .vs-finance-c-status { grid-area: status; justify-self: end; }
+    .vs-finance-row--maillog .vs-finance-c-count { grid-area: count; }
+    .vs-finance-row--maillog .vs-finance-c-time { grid-area: time; justify-self: end; text-align: right; }
+
     .vs-finance-m-label {
         display: inline;
         color: #94a3b8;
@@ -6824,71 +7207,128 @@ select.vs-input.vs-select {
         font-size: 12px;
     }
 }
-.vs-pkg-editor-head {
+.vs-pay-config-panel-pane .vs-notice--field {
+    margin-top: 8px;
+}
+.vs-pkg-editor-toolbar {
     display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+.vs-pay-list-desktop {
+    display: block;
+}
+.vs-pay-list-mobile {
+    display: none;
+}
+.vs-finance-row--pkg {
+    grid-template-columns:
+        minmax(96px, 0.9fr)
+        minmax(120px, 1.5fr)
+        minmax(72px, 0.7fr)
+        minmax(88px, 0.85fr)
+        minmax(148px, 0.95fr);
+}
+.vs-finance-row--bonus {
+    grid-template-columns:
+        52px
+        minmax(88px, 0.85fr)
+        minmax(88px, 0.85fr)
+        minmax(88px, 0.75fr)
+        minmax(148px, 0.95fr);
+}
+.vs-finance-c-ops {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.vs-pkg-list-badge {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-.vs-pkg-editor-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
-}
-.vs-pkg-card {
-    position: relative;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 14px;
-    background: #fff;
-}
-.vs-pkg-card.is-hot {
-    border-color: #a1a1aa;
-    background: #fafafa;
-}
-.vs-pkg-card__gift {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+    margin-left: 6px;
     font-size: 11px;
     padding: 1px 6px;
     border-radius: 6px;
-    background: #0f766e;
     color: #fff;
     font-weight: 600;
     line-height: 1.4;
+    vertical-align: middle;
 }
-.vs-pkg-card__name {
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding-right: 52px;
+.vs-pkg-list-badge--hot {
+    background: #111;
 }
-.vs-pkg-card.has-gift .vs-pkg-card__name {
-    padding-right: 64px;
+.vs-pkg-list-badge--gift {
+    background: #0f766e;
+}
+.vs-pkg-card {
+    position: relative;
+    text-align: left;
+    padding: 16px 14px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    overflow: hidden;
+}
+.vs-pkg-card.has-badge .vs-pkg-card__name {
+    padding-right: 4.25rem;
+    white-space: normal;
+    overflow: visible;
+    word-break: break-word;
+    line-height: 1.35;
+}
+.vs-pkg-card.is-hot {
+    border-color: #d4d4d8;
+}
+.vs-pkg-card__badges {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    display: inline-flex;
+    align-items: stretch;
+    overflow: hidden;
+    border-radius: 0 14px 0 8px;
+    line-height: 1.3;
 }
 .vs-pkg-card__badge {
     font-size: 11px;
-    padding: 1px 6px;
-    border-radius: 6px;
+    padding: 2px 7px;
+    border-radius: 0;
     background: #111;
     color: #fff;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+.vs-pkg-card__badge--gift {
+    background: #0f766e;
+}
+.vs-pkg-card__badges .vs-pkg-card__badge + .vs-pkg-card__badge {
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.28);
+}
+.vs-pkg-card__name {
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.35;
 }
 .vs-pkg-card__money {
-    margin-top: 8px;
-    font-size: 20px;
+    margin-top: 10px;
+    font-size: 22px;
     font-weight: 700;
     color: #111;
 }
-.vs-pkg-card__points {
-    margin-top: 4px;
+.vs-pkg-card__pts-tip {
+    margin: 8px 0 0;
+}
+.vs-pkg-card__pts-tip .vs-notice__text {
     font-size: 12px;
-    color: #64748b;
+}
+.vs-pkg-card__pts-tip strong {
+    font-weight: 700;
 }
 .vs-pkg-card__actions {
     display: flex;
+    justify-content: flex-end;
     gap: 8px;
     margin-top: 12px;
 }
@@ -6913,28 +7353,72 @@ select.vs-input.vs-select {
     font-size: 13px;
 }
 .vs-bonus-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    position: relative;
+    overflow: hidden;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 12px 14px;
+    border-radius: 14px;
+    padding: 16px 14px 14px;
     background: #fff;
 }
-.vs-bonus-card__range {
-    font-weight: 600;
-    color: #111;
+.vs-bonus-card.has-badge .vs-bonus-card__from {
+    padding-right: 4.25rem;
 }
-.vs-bonus-card__pct {
+.vs-bonus-card__badges {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    display: inline-flex;
+    overflow: hidden;
+    border-radius: 0 14px 0 8px;
+    line-height: 1.3;
+}
+.vs-bonus-card__badge {
+    font-size: 11px;
+    padding: 2px 7px;
+    background: #0f766e;
+    color: #fff;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+.vs-bonus-card__from {
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.4;
+}
+.vs-bonus-card__from strong,
+.vs-bonus-card__to strong {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.vs-bonus-card__to {
     margin-top: 4px;
     font-size: 13px;
     color: #64748b;
 }
 .vs-bonus-card__actions {
     display: flex;
+    justify-content: flex-end;
     gap: 8px;
-    flex-shrink: 0;
+    margin-top: 12px;
+}
+
+@media (max-width: 900px) {
+    .vs-pay-list-desktop {
+        display: none;
+    }
+    #payPkgList > .vs-pay-list-mobile {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+        gap: 10px;
+    }
+    #payBonusList > .vs-pay-list-mobile {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
 }
 @media (max-width: 640px) {
     .vs-bonus-card {
@@ -7244,13 +7728,28 @@ select.vs-input.vs-select {
     box-sizing: border-box;
 }
 
+.vs-log-storage {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    vertical-align: middle;
+}
+
+.vs-log-storage.is-cold {
+    color: #9a3412;
+    background: #ffedd5;
+}
+
 .vs-log-toolbar .vs-finance-filters {
     flex: 0 0 auto;
 }
 
-.vs-log-panel {
-    padding: 0 !important;
-    overflow: hidden;
+.vs-log-page {
+    min-width: 0;
 }
 
 .vs-log-list {
@@ -7761,8 +8260,15 @@ select.vs-input.vs-select {
 }
 
 .vs-log-card__badges .vs-log-method,
-.vs-log-card__badges .vs-log-status {
+.vs-log-card__badges .vs-log-status,
+.vs-log-card__badges .vs-log-storage {
     flex-shrink: 0;
+    margin-right: 0;
+}
+
+.vs-log-c-ok .vs-log-storage {
+    margin-left: 6px;
+    margin-right: 0;
 }
 
 .vs-log-card__meta {
@@ -7812,6 +8318,20 @@ select.vs-input.vs-select {
     font-weight: 700;
     color: #0f172a;
     margin-right: auto;
+    min-width: 0;
+}
+
+.vs-log-detail__hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.vs-log-detail__hero-badges .vs-log-storage {
+    margin-right: 0;
 }
 
 .vs-log-detail__section {
@@ -7847,6 +8367,17 @@ select.vs-input.vs-select {
     }
 }
 
+/* 网络与来源：前 6 个短字段两行三列平齐 */
+.vs-log-detail--admin .vs-log-detail__grid--net {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 10px;
+}
+@media (max-width: 720px) {
+    .vs-log-detail--admin .vs-log-detail__grid--net {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .vs-log-detail__item {
     padding: 10px 12px;
     border-radius: 10px;
@@ -7864,6 +8395,38 @@ select.vs-input.vs-select {
     font-size: 11px;
     color: #94a3b8;
     margin-bottom: 4px;
+}
+
+.vs-log-detail__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.vs-log-detail__head .vs-log-detail__label {
+    margin-bottom: 0;
+}
+
+.vs-log-detail__copy {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 2px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.vs-log-detail__copy:hover {
+    border-color: #cbd5e1;
+    color: #0f172a;
+    background: #f8fafc;
 }
 
 .vs-log-detail__value {
@@ -7912,6 +8475,51 @@ select.vs-input.vs-select {
 
 .vs-log-secret[data-revealed="1"] .vs-log-secret__toggle {
     color: #2563eb;
+}
+
+/* 设置页密钥：密码框 + 右侧小眼睛切换明文 */
+.vs-secret-field {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    max-width: 100%;
+}
+
+.vs-secret-field .vs-input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.vs-secret-field__toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    min-height: 40px;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.vs-secret-field__toggle:hover,
+.vs-secret-field__toggle:focus-visible {
+    color: #0f172a;
+    background: #e2e8f0;
+    outline: none;
+}
+
+.vs-secret-field__toggle[aria-pressed="true"] {
+    color: #2563eb;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.vs-secret-field__icon {
+    display: block;
 }
 
 @media (max-width: 900px) {
@@ -7994,8 +8602,7 @@ select.vs-input.vs-select {
 }
 
 .vs-api-list-footer .vs-api-pager .vs-api-pager__nav,
-.vs-api-list-footer .vs-api-pager button.vs-api-pager__nav,
-.vs-api-list-footer .vs-api-pager .vs-api-pager__num {
+.vs-api-list-footer .vs-api-pager button.vs-api-pager__nav {
     padding-left: 12px !important;
     padding-right: 12px !important;
     min-width: 0 !important;
@@ -8003,6 +8610,39 @@ select.vs-input.vs-select {
     color: #334155 !important;
     border: 1px solid #cbd5e1 !important;
     font-weight: 500 !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-api-pager__num {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    min-width: 32px !important;
+    background: #fff !important;
+    color: #334155 !important;
+    border: 1px solid #cbd5e1 !important;
+    font-weight: 500 !important;
+}
+
+/* 当前页：黑底白字（须压过上面白底 !important） */
+.vs-api-list-footer .vs-api-pager .vs-api-pager__num.is-active,
+.vs-api-list-footer .vs-api-pager button.vs-api-pager__num.is-active {
+    background: #0f172a !important;
+    color: #fff !important;
+    border-color: #0f172a !important;
+    font-weight: 600 !important;
+}
+
+.vs-api-list-footer .vs-api-pager .vs-api-pager__ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 32px;
+    padding: 0 2px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 32px;
+    user-select: none;
 }
 
 .vs-api-list-footer .vs-api-pager .vs-api-pager__nav:disabled,
@@ -8090,42 +8730,92 @@ select.vs-input.vs-select {
 
 
 
-/* ---- 友情链接 / 合作伙伴管理（双端卡片列表） ---- */
+/* ---- 友链 / 伙伴 / 赞助 / 开发审核：电脑端表格（对齐积分变动）；手机端卡片；禁整页大白底 E406/E425/E427 ---- */
+.vs-link-page {
+    min-width: 0;
+}
+/* 仅 Tab 条一小块白板；提示与列表在板外 */
+.vs-link-page__tabs-shell {
+    margin: 0 0 14px;
+    padding: 0 8px;
+    background: var(--vs-white, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    box-sizing: border-box;
+}
+.vs-link-page__tabs-shell .vs-tabs.vs-api-review-tabs {
+    margin-bottom: 0;
+    border-bottom: 0;
+}
+/* 兼容旧类名：禁止再当整页大底板 */
 .vs-link-panel {
-    padding: 16px;
+    padding: 0;
     background: transparent;
     border: 0;
     box-shadow: none;
 }
+/* 列表底板 = 积分变动 .vs-finance-panel 那种「一张表」，不是整页大桌布 */
 .vs-link-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0;
+    min-width: 0;
+    background: var(--vs-white, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 .vs-link-row {
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr) auto;
-    grid-template-areas:
-        "icon main status"
-        "actions actions actions";
-    gap: 10px 14px;
+    grid-template-columns:
+        minmax(140px, 1.2fr)
+        minmax(140px, 1.4fr)
+        minmax(100px, 1fr)
+        minmax(64px, 0.55fr)
+        minmax(180px, auto);
     align-items: center;
-    padding: 14px 16px;
-    border: 1px solid var(--vs-border, #e5e7eb);
-    border-radius: 12px;
-    background: var(--vs-white, #fff);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    gap: 8px 12px;
+    padding: 11px 16px;
+    border: 0;
+    border-bottom: 1px solid #f1f5f9;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+    font-size: 13px;
+    color: #334155;
+}
+.vs-link-row:last-child {
+    border-bottom: 0;
 }
 .vs-link-row:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    background: #f8fafc;
+}
+.vs-link-row--head {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.vs-link-row--head:hover {
+    background: #f8fafc;
+}
+.vs-link-cell {
+    min-width: 0;
+}
+.vs-link-c-site {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
 }
 .vs-link-row__icon {
-    grid-area: icon;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
     background: #f3f4f6;
     display: flex;
     align-items: center;
@@ -8134,22 +8824,12 @@ select.vs-input.vs-select {
     flex-shrink: 0;
 }
 .vs-link-row__icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.vs-link-row__initial { font-weight: 700; color: #111; font-size: 15px; }
-.vs-link-row__main { grid-area: main; min-width: 0; }
+.vs-link-row__initial { font-weight: 700; color: #111; font-size: 14px; }
 .vs-link-row__name {
     font-weight: 600;
-    color: #111;
-    font-size: 14px;
+    color: #0f172a;
+    font-size: 13px;
     line-height: 1.35;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.vs-link-row__desc {
-    font-size: 12px;
-    color: #64748b;
-    line-height: 1.4;
-    margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -8157,9 +8837,8 @@ select.vs-input.vs-select {
 .vs-link-row__url {
     display: block;
     font-size: 12px;
-    color: #6b7280;
+    color: #64748b;
     text-decoration: none;
-    margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -8172,35 +8851,27 @@ select.vs-input.vs-select {
 .vs-link-row__url:hover { color: #2563eb; }
 .vs-link-row__desc {
     font-size: 12px;
-    color: #9ca3af;
-    margin-top: 4px;
-    line-height: 1.45;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    color: #64748b;
+    line-height: 1.4;
+    white-space: nowrap;
     overflow: hidden;
-    max-height: 2.9em;
+    text-overflow: ellipsis;
 }
-.vs-link-row__status {
-    grid-area: status;
-    justify-self: end;
-    align-self: start;
-    margin-top: 2px;
+.vs-link-c-status {
+    justify-self: start;
 }
-.vs-link-row__actions {
-    grid-area: actions;
+.vs-link-c-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
     justify-content: flex-end;
-    padding-top: 10px;
-    border-top: 1px solid var(--vs-border, #e5e7eb);
+    justify-self: end;
 }
 .vs-link-status {
     display: inline-block;
     font-size: 12px;
     padding: 2px 8px;
-    border-radius: 999px;
+    border-radius: 6px;
     background: #f3f4f6;
     color: #6b7280;
     white-space: nowrap;
@@ -8208,44 +8879,199 @@ select.vs-input.vs-select {
 .vs-link-status.is-on { background: #ecfdf5; color: #059669; }
 .vs-link-status.is-off { background: #fef2f2; color: #dc2626; }
 .vs-link-status.is-pending { background: #fffbeb; color: #d97706; }
-
-@media (min-width: 901px) {
-    .vs-link-panel { padding: 20px; }
-    .vs-link-list { gap: 12px; }
-    .vs-link-row {
-        grid-template-columns: 48px minmax(0, 1fr) auto minmax(220px, auto);
-        grid-template-areas: "icon main status actions";
-        align-items: center;
-        padding: 16px 18px;
-    }
-    .vs-link-row__status {
-        align-self: center;
-        margin-top: 0;
-        justify-self: center;
-    }
-    .vs-link-row__actions {
-        justify-self: end;
-        padding-top: 0;
-        border-top: 0;
-        max-width: none;
-    }
+.vs-link-m-label {
+    display: none;
 }
 
-@media (max-width: 720px) {
-    .vs-link-panel { padding: 12px; }
-    .vs-link-list { gap: 10px; }
+/* 开发审核列：用户 / 联系 / 理由 / 状态 / 操作 */
+#adminDevApplyPage .vs-link-row {
+    grid-template-columns:
+        minmax(120px, 1.1fr)
+        minmax(140px, 1.3fr)
+        minmax(120px, 1.4fr)
+        minmax(64px, 0.55fr)
+        minmax(200px, auto);
+}
+/* 申请理由灰底单行框（电脑/手机共用；超出省略，卡片高度不随内容胀） */
+#adminDevApplyPage .vs-link-row__desc--box {
+    display: block;
+    margin: 0;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.4;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#adminDevApplyDetailOverlay #adminDevApplyDetailApproveBtn[hidden],
+#adminDevApplyDetailOverlay #adminDevApplyDetailRejectBtn[hidden],
+#adminDevApplyDetailOverlay #adminDevApplyDetailReplyEditWrap[hidden],
+#adminDevApplyDetailOverlay #adminDevApplyDetailReplyViewWrap[hidden] {
+    display: none !important;
+}
+#adminDevApplyDetailOverlay .fb-modal__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--vs-text-secondary, #6b7280);
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+#adminDevApplyDetailOverlay .fb-modal__value {
+    font-size: 0.8125rem;
+    color: var(--vs-text, #111);
+    line-height: 1.65;
+}
+#adminDevApplyDetailOverlay .fb-modal__email-link {
+    color: var(--vs-primary, #2563eb);
+    text-decoration: none;
+    word-break: break-all;
+}
+#adminDevApplyDetailOverlay .fb-modal__email-link:hover {
+    text-decoration: underline;
+}
+#adminDevApplyDetailOverlay .fb-modal__content {
+    padding: 14px;
+    background: var(--vs-bg, #f8fafc);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    color: var(--vs-text, #111);
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+#adminDevApplyDetailOverlay .fb-modal__content.is-empty-reply {
+    color: var(--vs-text-secondary, #6b7280);
+    font-style: italic;
+}
+#adminDevApplyDetailOverlay .fb-modal__meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    background: var(--vs-bg, #f8fafc);
+    border-radius: 8px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    margin-bottom: 18px;
+}
+#adminDevApplyDetailOverlay .fb-modal__id {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--vs-text-secondary, #6b7280);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+#adminDevApplyDetailOverlay .fb-modal__field {
+    margin-bottom: 18px;
+}
+#adminDevApplyDetailOverlay .fb-modal__field:last-child {
+    margin-bottom: 0;
+}
+/* 赞助列：名称 / 说明 / 链接 / 状态 / 操作（说明优先于链接） */
+#adminSponsorsPage .vs-link-row {
+    grid-template-columns:
+        minmax(120px, 1.1fr)
+        minmax(120px, 1.2fr)
+        minmax(140px, 1.3fr)
+        minmax(64px, 0.55fr)
+        minmax(180px, auto);
+}
+
+@media (max-width: 768px) {
+    .vs-link-page__tabs-shell { padding: 0 4px; margin-bottom: 12px; }
+    .vs-link-list {
+        gap: 10px;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: visible;
+    }
+    .vs-link-row--head {
+        display: none;
+    }
     .vs-link-row {
-        grid-template-columns: 40px 1fr auto;
+        grid-template-columns: minmax(0, 1fr) auto;
         grid-template-areas:
-            "icon main status"
-            "actions actions actions";
-        padding: 12px;
-        align-items: start;
+            "site status"
+            "url url"
+            "desc desc"
+            "actions actions";
+        gap: 8px 10px;
+        padding: 12px 14px;
+        align-items: center;
+        border: 1px solid var(--vs-border, #e5e7eb);
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        background: #fff;
+    }
+    .vs-link-row:last-child {
+        border-bottom: 1px solid var(--vs-border, #e5e7eb);
+    }
+    .vs-link-c-site {
+        grid-area: site;
+        min-width: 0;
+        max-width: 100%;
+    }
+    .vs-link-c-url { grid-area: url; min-width: 0; }
+    .vs-link-c-desc { grid-area: desc; min-width: 0; }
+    .vs-link-c-status { grid-area: status; justify-self: end; align-self: start; }
+    .vs-link-c-actions {
+        grid-area: actions;
+        justify-self: stretch;
+        justify-content: flex-end;
+        padding-top: 8px;
+        border-top: 1px solid var(--vs-border, #e5e7eb);
     }
     .vs-link-row__icon { width: 40px; height: 40px; }
-    .vs-link-row__actions {
-        padding-top: 10px;
-        border-top: 1px solid var(--vs-border, #e5e7eb);
+    /* 默认手机行卡描述仍可两行；开发审核用 --box 单行覆盖 */
+    .vs-link-row__desc:not(.vs-link-row__desc--box) {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .vs-link-m-label {
+        display: inline;
+        color: #94a3b8;
+        font-size: 12px;
+        margin-right: 2px;
+    }
+    /* 开发审核手机卡：顶行头像+名占满；状态贴右；禁右半空洞（E433） */
+    #adminDevApplyPage .vs-link-row {
+        grid-template-columns: minmax(0, 1fr) max-content;
+        align-items: start;
+    }
+    #adminDevApplyPage .vs-link-c-site {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
+        column-gap: 10px;
+        align-items: center;
+    }
+    #adminDevApplyPage .vs-link-row__icon {
+        grid-row: 1 / span 1;
+        grid-column: 1;
+    }
+    #adminDevApplyPage .vs-link-row__name {
+        grid-column: 2;
+        min-width: 0;
+        max-width: 100%;
+    }
+    #adminDevApplyPage .vs-link-row__url {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    #adminDevApplyPage .vs-link-row__desc--box {
+        white-space: nowrap;
+        display: block;
+        -webkit-line-clamp: unset;
+        -webkit-box-orient: unset;
     }
 }
 
@@ -10104,6 +10930,25 @@ select.vs-input.vs-select {
     white-space: nowrap;
 }
 
+/* 范围摘要：与 meta 同行字号；灰字 + 数字加粗（对齐调用/消耗） */
+#apiKeysPage .key-card__scope {
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--vs-text-secondary, #6b7280);
+    margin: 2px 0 0;
+    font-variant-numeric: tabular-nums;
+}
+#apiKeysPage .key-card__scope strong,
+#apiKeysPage .vs-api-keys-scope-cell strong {
+    font-weight: 700;
+    color: var(--vs-text, #111);
+}
+#apiKeysPage .vs-api-keys-scope-cell {
+    font-size: 12px;
+    color: var(--vs-text-secondary, #6b7280);
+    font-variant-numeric: tabular-nums;
+}
+
 #apiKeysPage .key-card__meta {
     display: flex;
     align-items: center;
@@ -10120,6 +10965,11 @@ select.vs-input.vs-select {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+#apiKeysPage .key-card__quota-expire strong {
+    font-weight: 700;
+    color: var(--vs-text, #111);
 }
 
 #apiKeysPage .key-card__time {
@@ -10189,12 +11039,12 @@ select.vs-input.vs-select {
 #apiKeysPage .vs-api-pager__navs {
     display: inline-flex;
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
 }
 #apiKeysPage .vs-api-pager__nums {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
 }
 
 @media (min-width: 769px) {
@@ -10234,14 +11084,14 @@ select.vs-input.vs-select {
 }
 
 /* ============================================================
-   #apiDocsPage — 接口文档浏览器
+   .vs-docs-browser — 接口文档 / 系统 API 浏览器
    ============================================================ */
-#apiDocsPage .docs-layout {
+.vs-docs-browser .docs-layout {
     display: flex;
     gap: 20px;
     align-items: flex-start;
 }
-#apiDocsPage .docs-tree {
+.vs-docs-browser .docs-tree {
     width: 280px;
     flex-shrink: 0;
     background: var(--vs-white, #fff);
@@ -10255,16 +11105,16 @@ select.vs-input.vs-select {
     display: flex;
     flex-direction: column;
 }
-#apiDocsPage .docs-tree__search {
+.vs-docs-browser .docs-tree__search {
     padding: 14px 16px;
     border-bottom: 1px solid var(--vs-border, #e5e7eb);
 }
-#apiDocsPage .docs-tree__search .vs-search-bar__input-wrap {
+.vs-docs-browser .docs-tree__search .vs-search-bar__input-wrap {
     position: relative;
     margin-bottom: 0;
     width: 100%;
 }
-#apiDocsPage .docs-tree__search .vs-search-bar__input-wrap svg {
+.vs-docs-browser .docs-tree__search .vs-search-bar__input-wrap svg {
     position: absolute;
     left: 12px;
     top: 50%;
@@ -10275,7 +11125,7 @@ select.vs-input.vs-select {
     pointer-events: none;
     z-index: 1;
 }
-#apiDocsPage .docs-tree__search .vs-search-bar__input {
+.vs-docs-browser .docs-tree__search .vs-search-bar__input {
     display: block;
     width: 100%;
     box-sizing: border-box;
@@ -10283,15 +11133,15 @@ select.vs-input.vs-select {
     height: 36px;
     font-size: 13px;
 }
-#apiDocsPage .docs-tree__body {
+.vs-docs-browser .docs-tree__body {
     flex: 1;
     overflow-y: auto;
     padding: 8px 0;
 }
-#apiDocsPage .docs-tree__group {
+.vs-docs-browser .docs-tree__group {
     margin-bottom: 2px;
 }
-#apiDocsPage .docs-tree__group-btn {
+.vs-docs-browser .docs-tree__group-btn {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -10306,26 +11156,26 @@ select.vs-input.vs-select {
     text-align: left;
     font-family: inherit;
 }
-#apiDocsPage .docs-tree__group-btn:hover {
+.vs-docs-browser .docs-tree__group-btn:hover {
     background: var(--vs-bg, #f8fafc);
 }
-#apiDocsPage .docs-tree__chevron {
+.vs-docs-browser .docs-tree__chevron {
     margin-left: auto;
     transition: transform 0.2s;
     color: var(--vs-text-secondary, #6b7280);
     flex-shrink: 0;
 }
-#apiDocsPage .docs-tree__group.is-open .docs-tree__chevron {
+.vs-docs-browser .docs-tree__group.is-open .docs-tree__chevron {
     transform: rotate(90deg);
 }
-#apiDocsPage .docs-tree__sub {
+.vs-docs-browser .docs-tree__sub {
     display: none;
     padding: 2px 0;
 }
-#apiDocsPage .docs-tree__group.is-open .docs-tree__sub {
+.vs-docs-browser .docs-tree__group.is-open .docs-tree__sub {
     display: block;
 }
-#apiDocsPage .docs-tree__item {
+.vs-docs-browser .docs-tree__item {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -10339,20 +11189,20 @@ select.vs-input.vs-select {
     text-align: left;
     font-family: inherit;
 }
-#apiDocsPage .docs-tree__item:hover {
+.vs-docs-browser .docs-tree__item:hover {
     background: var(--vs-bg, #f8fafc);
     color: var(--vs-text, #111);
 }
-#apiDocsPage .docs-tree__item.is-active {
+.vs-docs-browser .docs-tree__item.is-active {
     background: #f1f5f9;
     color: var(--vs-text, #111);
     font-weight: 600;
 }
-#apiDocsPage .docs-tree__item[hidden],
-#apiDocsPage .docs-tree__group[hidden] {
+.vs-docs-browser .docs-tree__item[hidden],
+.vs-docs-browser .docs-tree__group[hidden] {
     display: none !important;
 }
-#apiDocsPage .docs-tree__slash {
+.vs-docs-browser .docs-tree__slash {
     display: inline-flex;
     align-items: baseline;
     flex-shrink: 0;
@@ -10362,68 +11212,71 @@ select.vs-input.vs-select {
     line-height: 1.2;
     white-space: nowrap;
 }
-#apiDocsPage .docs-tree__slash__part--get { color: #2563eb; }
-#apiDocsPage .docs-tree__slash__part--post { color: #15803d; }
-#apiDocsPage .docs-tree__slash__part--put { color: #e37318; }
-#apiDocsPage .docs-tree__slash__part--delete { color: #dc2626; }
-#apiDocsPage .docs-tree__slash__sep {
+.vs-docs-browser .docs-tree__slash__part--get { color: #2563eb; }
+.vs-docs-browser .docs-tree__slash__part--post { color: #15803d; }
+.vs-docs-browser .docs-tree__slash__part--put { color: #e37318; }
+.vs-docs-browser .docs-tree__slash__part--delete { color: #dc2626; }
+.vs-docs-browser .docs-tree__slash__sep {
     color: #94a3b8;
     margin: 0 1px;
     font-weight: 500;
 }
-#apiDocsPage .docs-tree__item-text {
+.vs-docs-browser .docs-tree__item-text {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-#apiDocsPage .docs-content {
+.vs-docs-browser .docs-content {
     flex: 1;
     min-width: 0;
 }
-#apiDocsPage .doc-panel {
+.vs-docs-browser .doc-panel {
     background: var(--vs-white, #fff);
     border: 1px solid var(--vs-border, #e5e7eb);
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    overflow: hidden;
+    /* 勿 overflow:hidden：会卡住手机端参数表横向滑动（说明列被挤窄） */
+    overflow: visible;
     margin-bottom: 20px;
 }
-#apiDocsPage .doc-panel[hidden] {
+.vs-docs-browser .doc-panel[hidden] {
     display: none !important;
 }
-#apiDocsPage .doc-panel__head {
+.vs-docs-browser .doc-panel__head {
     padding: 20px 24px;
     border-bottom: 1px solid var(--vs-border, #e5e7eb);
 }
-#apiDocsPage .doc-panel__title-row {
+.vs-docs-browser .doc-panel__title-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
+    margin-bottom: 8px;
 }
-#apiDocsPage .doc-panel__title {
+.vs-docs-browser .doc-panel__title {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 8px;
+    margin-bottom: 0;
     flex-wrap: wrap;
+    min-width: 0;
 }
-#apiDocsPage .doc-panel__name {
+.vs-docs-browser .doc-panel__name {
     font-size: 1.125rem;
     font-weight: 700;
     color: var(--vs-text, #111);
 }
-#apiDocsPage .doc-panel__desc {
+.vs-docs-browser .doc-panel__desc {
     font-size: 0.8125rem;
     color: var(--vs-text-secondary, #6b7280);
     line-height: 1.65;
 }
 /* 文档页元信息标签：与接口列表页同色系（勿仅用 vs-badge--default） */
-#apiDocsPage .doc-panel__meta .type-badge,
-#apiDocsPage .doc-panel__meta .key-badge,
-#apiDocsPage .doc-panel__meta .charge-badge,
-#apiDocsPage .doc-panel__meta .qpm-badge {
+.vs-docs-browser .doc-panel__meta .type-badge,
+.vs-docs-browser .doc-panel__meta .key-badge,
+.vs-docs-browser .doc-panel__meta .charge-badge,
+.vs-docs-browser .doc-panel__meta .qpm-badge {
     display: inline-flex;
     align-items: center;
     padding: 2px 8px;
@@ -10433,15 +11286,15 @@ select.vs-input.vs-select {
     line-height: 1.4;
     white-space: nowrap;
 }
-#apiDocsPage .type-badge--local { background: #eef2ff; color: #4338ca; }
-#apiDocsPage .type-badge--proxy { background: #fdf2f8; color: #be185d; }
-#apiDocsPage .key-badge--required { background: #fff0f0; color: #dc2626; }
-#apiDocsPage .key-badge--optional { background: #f0f6ff; color: #2563eb; }
-#apiDocsPage .key-badge--none { background: #f1f5f9; color: #64748b; }
-#apiDocsPage .charge-badge--free { background: #f0faf5; color: #15803d; }
-#apiDocsPage .charge-badge--points { background: #fff7e8; color: #e37318; }
-#apiDocsPage .qpm-badge--limit { background: #f5f3ff; color: #6d28d9; }
-#apiDocsPage .doc-panel__meta .vs-badge {
+.vs-docs-browser .type-badge--local { background: #eef2ff; color: #4338ca; }
+.vs-docs-browser .type-badge--proxy { background: #fdf2f8; color: #be185d; }
+.vs-docs-browser .key-badge--required { background: #fff0f0; color: #dc2626; }
+.vs-docs-browser .key-badge--optional { background: #f0f6ff; color: #2563eb; }
+.vs-docs-browser .key-badge--none { background: #f1f5f9; color: #64748b; }
+.vs-docs-browser .charge-badge--free { background: #f0faf5; color: #15803d; }
+.vs-docs-browser .charge-badge--points { background: #fff7e8; color: #e37318; }
+.vs-docs-browser .qpm-badge--limit { background: #f5f3ff; color: #6d28d9; }
+.vs-docs-browser .doc-panel__meta .vs-badge {
     display: inline-flex;
     align-items: center;
     padding: 2px 8px;
@@ -10450,19 +11303,19 @@ select.vs-input.vs-select {
     font-weight: 600;
     line-height: 1.4;
 }
-#apiDocsPage .doc-panel__meta .vs-badge--success { background: #f0faf5; color: #15803d; }
-#apiDocsPage .doc-panel__meta .vs-badge--warning { background: #fff7e8; color: #e37318; }
-#apiDocsPage .doc-panel__meta .vs-badge--error { background: #fff0f0; color: #dc2626; }
-#apiDocsPage .doc-panel__meta .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+.vs-docs-browser .doc-panel__meta .vs-badge--success { background: #f0faf5; color: #15803d; }
+.vs-docs-browser .doc-panel__meta .vs-badge--warning { background: #fff7e8; color: #e37318; }
+.vs-docs-browser .doc-panel__meta .vs-badge--error { background: #fff0f0; color: #dc2626; }
+.vs-docs-browser .doc-panel__meta .vs-badge--default { background: #f1f5f9; color: #6b7280; }
 
-#apiDocsPage .doc-panel__meta {
+.vs-docs-browser .doc-panel__meta {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-top: 12px;
     flex-wrap: wrap;
 }
-#apiDocsPage .method-slash {
+.vs-docs-browser .method-slash {
     display: inline-flex;
     align-items: baseline;
     flex-shrink: 0;
@@ -10472,26 +11325,36 @@ select.vs-input.vs-select {
     line-height: 1.2;
     white-space: nowrap;
 }
-#apiDocsPage .method-slash__part--get { color: #2563eb; }
-#apiDocsPage .method-slash__part--post { color: #15803d; }
-#apiDocsPage .method-slash__part--put { color: #e37318; }
-#apiDocsPage .method-slash__part--delete { color: #dc2626; }
-#apiDocsPage .method-slash__sep {
+.vs-docs-browser .method-slash__part--get { color: #2563eb; }
+.vs-docs-browser .method-slash__part--post { color: #15803d; }
+.vs-docs-browser .method-slash__part--put { color: #e37318; }
+.vs-docs-browser .method-slash__part--delete { color: #dc2626; }
+.vs-docs-browser .method-slash__sep {
     color: #94a3b8;
     margin: 0 3px;
     font-weight: 500;
 }
-#apiDocsPage .docs-qs {
+.vs-docs-browser .docs-qs {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
-#apiDocsPage .docs-qs__auth-tabs {
+/* 请求示例：传钥方式按钮靠右上（对齐参数说明 doc-params-modes；右手原则 · E428） */
+.vs-docs-browser .docs-qs__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+.vs-docs-browser .docs-qs__auth-tabs {
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 6px;
+    margin: 0;
 }
-#apiDocsPage .docs-qs__auth-tab {
+.vs-docs-browser .docs-qs__auth-tab {
     padding: 6px 12px;
     font-size: 0.75rem;
     font-weight: 600;
@@ -10502,21 +11365,30 @@ select.vs-input.vs-select {
     cursor: pointer;
     font-family: inherit;
 }
-#apiDocsPage .docs-qs__auth-tab:hover {
+.vs-docs-browser .docs-qs__auth-tab:hover {
     color: var(--vs-text, #111);
 }
-#apiDocsPage .docs-qs__auth-tab.is-active {
+.vs-docs-browser .docs-qs__auth-tab.is-active {
     color: var(--vs-text, #111);
     border-color: var(--vs-text, #111);
     background: var(--vs-white, #fff);
 }
-#apiDocsPage .docs-qs__auth-pane[hidden] {
+.vs-docs-browser .docs-qs__auth-pane[hidden] {
     display: none !important;
 }
-#apiDocsPage .doc-panel__body {
+.vs-docs-browser .docs-qs__variant-title {
+    margin: 16px 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vs-text, #1f2937);
+}
+.vs-docs-browser .docs-qs__variant-title:first-child {
+    margin-top: 4px;
+}
+.vs-docs-browser .doc-panel__body {
     padding: 24px;
 }
-#apiDocsPage .endpoint-block {
+.vs-docs-browser .endpoint-block {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -10527,7 +11399,7 @@ select.vs-input.vs-select {
     margin-bottom: 24px;
     flex-wrap: wrap;
 }
-#apiDocsPage .endpoint-block__path {
+.vs-docs-browser .endpoint-block__path {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.8125rem;
     color: var(--vs-text, #111);
@@ -10536,7 +11408,7 @@ select.vs-input.vs-select {
     flex: 1;
     min-width: 0;
 }
-#apiDocsPage .endpoint-block__copy {
+.vs-docs-browser .endpoint-block__copy {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -10549,17 +11421,17 @@ select.vs-input.vs-select {
     cursor: pointer;
     flex-shrink: 0;
 }
-#apiDocsPage .endpoint-block__copy:hover {
+.vs-docs-browser .endpoint-block__copy:hover {
     color: var(--vs-text, #111);
 }
-#apiDocsPage .doc-tabs {
+.vs-docs-browser .doc-tabs {
     display: flex;
     gap: 4px;
     border-bottom: 1px solid var(--vs-border, #e5e7eb);
     margin-bottom: 20px;
     overflow-x: auto;
 }
-#apiDocsPage .doc-tabs__btn {
+.vs-docs-browser .doc-tabs__btn {
     padding: 10px 16px;
     font-size: 0.8125rem;
     font-weight: 500;
@@ -10571,39 +11443,47 @@ select.vs-input.vs-select {
     white-space: nowrap;
     font-family: inherit;
 }
-#apiDocsPage .doc-tabs__btn:hover {
+.vs-docs-browser .doc-tabs__btn:hover {
     color: var(--vs-text, #111);
 }
-#apiDocsPage .doc-tabs__btn.is-active {
+.vs-docs-browser .doc-tabs__btn.is-active {
     color: var(--vs-text, #111);
     border-bottom-color: var(--vs-text, #111);
 }
-#apiDocsPage .doc-tab-pane[hidden] {
+.vs-docs-browser .doc-tab-pane[hidden] {
     display: none !important;
 }
-#apiDocsPage .doc-section {
+.vs-docs-browser .doc-section {
     margin-bottom: 28px;
 }
-#apiDocsPage .doc-empty-hint {
+.vs-docs-browser .doc-empty-hint {
     margin: 0;
     font-size: 0.8125rem;
     color: var(--vs-text-secondary, #6b7280);
 }
-#apiDocsPage .params-table--wrap {
-    overflow-x: auto;
-}
-#apiDocsPage .params-table {
+.vs-docs-browser .params-table--wrap {
+    display: block;
     width: 100%;
-    border-collapse: collapse;
-    font-size: 0.8125rem;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
     border: 1px solid var(--vs-border, #e5e7eb);
     border-radius: 8px;
-    overflow: hidden;
 }
-#apiDocsPage .params-table thead {
+.vs-docs-browser .params-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    table-layout: auto;
+}
+.vs-docs-browser .params-table thead {
     background: var(--vs-bg, #f8fafc);
 }
-#apiDocsPage .params-table th {
+.vs-docs-browser .params-table th {
     text-align: left;
     padding: 10px 14px;
     color: var(--vs-text-secondary, #6b7280);
@@ -10612,20 +11492,21 @@ select.vs-input.vs-select {
     border-bottom: 1px solid var(--vs-border, #e5e7eb);
     white-space: nowrap;
 }
-#apiDocsPage .params-table td {
+.vs-docs-browser .params-table td {
     padding: 12px 14px;
     color: var(--vs-text, #111);
     border-bottom: 1px solid var(--vs-border, #e5e7eb);
     vertical-align: top;
 }
-#apiDocsPage .params-table tr:last-child td {
+.vs-docs-browser .params-table tr:last-child td {
     border-bottom: none;
 }
-#apiDocsPage .params-table__name {
+.vs-docs-browser .params-table__name {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-weight: 600;
+    white-space: nowrap;
 }
-#apiDocsPage .params-table__type {
+.vs-docs-browser .params-table__type {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.75rem;
     color: #2563eb;
@@ -10633,26 +11514,60 @@ select.vs-input.vs-select {
     padding: 2px 8px;
     border-radius: 4px;
     display: inline-block;
+    white-space: nowrap;
 }
-#apiDocsPage .params-table__required {
+.vs-docs-browser .params-table__required {
     display: inline-flex;
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 600;
+    white-space: nowrap;
 }
-#apiDocsPage .params-table__required--yes {
+.vs-docs-browser .params-table__required--yes {
     background: #fff0f0;
     color: #dc2626;
 }
-#apiDocsPage .params-table__required--no {
+.vs-docs-browser .params-table__required--no {
     background: #f1f5f9;
     color: #64748b;
 }
-#apiDocsPage .params-table__desc {
+.vs-docs-browser .params-table__desc {
     color: var(--vs-text-secondary, #6b7280);
+    min-width: 14rem;
+    max-width: 28rem;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.55;
 }
-#apiDocsPage .code-block {
+.vs-docs-browser .params-table th:nth-child(1),
+.vs-docs-browser .params-table td:nth-child(1) {
+    min-width: 5.5rem;
+}
+.vs-docs-browser .params-table th:nth-child(4),
+.vs-docs-browser .params-table td:nth-child(4) {
+    min-width: 14rem;
+}
+.vs-docs-browser .params-table th:nth-child(5),
+.vs-docs-browser .params-table td:nth-child(5) {
+    min-width: 6rem;
+    white-space: nowrap;
+}
+@media (max-width: 768px) {
+    .vs-docs-browser .params-table {
+        min-width: 36rem;
+    }
+    .vs-docs-browser .params-table__desc {
+        min-width: 16rem;
+        max-width: none;
+    }
+    .vs-docs-browser .doc-panel__body {
+        padding: 16px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+.vs-docs-browser .code-block {
     background: #ffffff;
     border: 1px solid var(--vs-border, #e5e7eb);
     border-radius: 10px;
@@ -10660,22 +11575,77 @@ select.vs-input.vs-select {
     margin-bottom: 16px;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
-#apiDocsPage .code-block__head {
+.vs-docs-browser .code-block__head {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
     padding: 10px 16px;
     background: #f8fafc;
     border-bottom: 1px solid var(--vs-border, #e5e7eb);
 }
-#apiDocsPage .code-block__lang {
+.vs-docs-browser .code-block__lang {
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--vs-text-secondary, #64748b);
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
-#apiDocsPage .code-block__pre {
+.vs-docs-browser .code-block__copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    background: var(--vs-white, #fff);
+    color: var(--vs-text-secondary, #6b7280);
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-family: inherit;
+    font-weight: 500;
+    line-height: 1;
+}
+.vs-docs-browser .code-block__copy:hover {
+    color: var(--vs-text, #111);
+    border-color: #cbd5e1;
+}
+.vs-docs-browser .code-block__copy-text {
+    letter-spacing: 0;
+    text-transform: none;
+}
+.vs-docs-browser .doc-panel__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.vs-docs-browser .doc-panel__md-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    background: var(--vs-white, #fff);
+    color: var(--vs-text-secondary, #6b7280);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    font-family: inherit;
+    line-height: 1;
+    white-space: nowrap;
+}
+.vs-docs-browser .doc-panel__md-btn:hover {
+    color: var(--vs-text, #111);
+    border-color: #cbd5e1;
+}
+.vs-docs-browser .code-block__pre {
     margin: 0;
     padding: 16px;
     overflow-x: auto;
@@ -10685,7 +11655,7 @@ select.vs-input.vs-select {
     color: #1e293b;
     background: #ffffff;
 }
-#apiDocsPage .code-block__pre code {
+.vs-docs-browser .code-block__pre code {
     font-family: inherit;
     font-size: inherit;
     color: inherit;
@@ -10694,60 +11664,60 @@ select.vs-input.vs-select {
     white-space: pre;
 }
 /* 浅色 IDE 风格 token（与 markdown-render / VsSyntax 共用类名） */
-#apiDocsPage .vs-syn--keyword { color: #7c3aed; font-weight: 600; }
-#apiDocsPage .vs-syn--string { color: #15803d; }
-#apiDocsPage .vs-syn--number { color: #c2410c; }
-#apiDocsPage .vs-syn--literal { color: #0369a1; }
-#apiDocsPage .vs-syn--key { color: #a16207; }
-#apiDocsPage .vs-syn--comment { color: #94a3b8; font-style: italic; }
-#apiDocsPage .vs-syn--func { color: #2563eb; }
-#apiDocsPage .vs-syn--attr { color: #0369a1; }
-#apiDocsPage .doc-md-body {
+.vs-docs-browser .vs-syn--keyword { color: #7c3aed; font-weight: 600; }
+.vs-docs-browser .vs-syn--string { color: #15803d; }
+.vs-docs-browser .vs-syn--number { color: #c2410c; }
+.vs-docs-browser .vs-syn--literal { color: #0369a1; }
+.vs-docs-browser .vs-syn--key { color: #a16207; }
+.vs-docs-browser .vs-syn--comment { color: #94a3b8; font-style: italic; }
+.vs-docs-browser .vs-syn--func { color: #2563eb; }
+.vs-docs-browser .vs-syn--attr { color: #0369a1; }
+.vs-docs-browser .doc-md-body {
     font-size: 0.875rem;
     line-height: 1.7;
     color: var(--vs-text, #111);
 }
-#apiDocsPage .doc-md-body .vs-md-body {
+.vs-docs-browser .doc-md-body .vs-md-body {
     max-width: 100%;
 }
-#apiDocsPage .doc-md-body .vs-md-body h1,
-#apiDocsPage .doc-md-body .vs-md-body h2,
-#apiDocsPage .doc-md-body .vs-md-body h3,
-#apiDocsPage .doc-md-body .vs-md-body h4 {
+.vs-docs-browser .doc-md-body .vs-md-body h1,
+.vs-docs-browser .doc-md-body .vs-md-body h2,
+.vs-docs-browser .doc-md-body .vs-md-body h3,
+.vs-docs-browser .doc-md-body .vs-md-body h4 {
     margin: 1.25em 0 0.55em;
     line-height: 1.35;
     color: var(--vs-text, #111);
     font-weight: 700;
 }
-#apiDocsPage .doc-md-body .vs-md-body h1 { font-size: 1.35rem; }
-#apiDocsPage .doc-md-body .vs-md-body h2 { font-size: 1.2rem; }
-#apiDocsPage .doc-md-body .vs-md-body h3 { font-size: 1.05rem; }
-#apiDocsPage .doc-md-body .vs-md-body p,
-#apiDocsPage .doc-md-body .vs-md-body ul,
-#apiDocsPage .doc-md-body .vs-md-body ol {
+.vs-docs-browser .doc-md-body .vs-md-body h1 { font-size: 1.35rem; }
+.vs-docs-browser .doc-md-body .vs-md-body h2 { font-size: 1.2rem; }
+.vs-docs-browser .doc-md-body .vs-md-body h3 { font-size: 1.05rem; }
+.vs-docs-browser .doc-md-body .vs-md-body p,
+.vs-docs-browser .doc-md-body .vs-md-body ul,
+.vs-docs-browser .doc-md-body .vs-md-body ol {
     margin: 0.75em 0;
 }
-#apiDocsPage .doc-md-body .vs-md-body img {
+.vs-docs-browser .doc-md-body .vs-md-body img {
     max-width: 100%;
     height: auto;
     border-radius: 8px;
 }
-#apiDocsPage .doc-md-body .vs-md-body a {
+.vs-docs-browser .doc-md-body .vs-md-body a {
     color: var(--vs-primary, #111);
     text-decoration: underline;
     text-underline-offset: 2px;
 }
-#apiDocsPage .doc-md-body .vs-md-body hr {
+.vs-docs-browser .doc-md-body .vs-md-body hr {
     border: 0;
     border-top: 1px solid var(--vs-border, #e5e7eb);
     margin: 1.5em 0;
 }
-#apiDocsPage .doc-md-fallback {
+.vs-docs-browser .doc-md-fallback {
     white-space: pre-wrap;
     word-break: break-word;
     margin: 0;
 }
-#apiDocsPage .docs-tree-toggle {
+.vs-docs-browser .docs-tree-toggle {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -10763,52 +11733,52 @@ select.vs-input.vs-select {
     font-family: inherit;
     text-align: left;
 }
-#apiDocsPage .docs-tree-toggle__text {
+.vs-docs-browser .docs-tree-toggle__text {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-#apiDocsPage .docs-tree-toggle__suffix {
+.vs-docs-browser .docs-tree-toggle__suffix {
     font-weight: 500;
     color: var(--vs-text-secondary, #6b7280);
 }
-#apiDocsPage .docs-tree-toggle__chevron {
+.vs-docs-browser .docs-tree-toggle__chevron {
     display: none;
     flex-shrink: 0;
     transition: transform 0.2s;
 }
 @media (max-width: 768px) {
-    #apiDocsPage .docs-layout {
+    .vs-docs-browser .docs-layout {
         flex-direction: column;
         gap: 12px;
     }
-    #apiDocsPage .docs-tree {
+    .vs-docs-browser .docs-tree {
         width: 100%;
         position: static;
         max-height: none;
         border-radius: 8px;
     }
-    #apiDocsPage .docs-tree:not(.is-open) .docs-tree__body,
-    #apiDocsPage .docs-tree:not(.is-open) .docs-tree__search {
+    .vs-docs-browser .docs-tree:not(.is-open) .docs-tree__body,
+    .vs-docs-browser .docs-tree:not(.is-open) .docs-tree__search {
         display: none;
     }
-    #apiDocsPage .docs-tree-toggle {
+    .vs-docs-browser .docs-tree-toggle {
         cursor: pointer;
     }
-    #apiDocsPage .docs-tree-toggle__chevron {
+    .vs-docs-browser .docs-tree-toggle__chevron {
         display: block;
     }
-    #apiDocsPage .docs-tree.is-open .docs-tree-toggle__chevron {
+    .vs-docs-browser .docs-tree.is-open .docs-tree-toggle__chevron {
         transform: rotate(180deg);
     }
-    #apiDocsPage .docs-content {
+    .vs-docs-browser .docs-content {
         width: 100%;
     }
-    #apiDocsPage .doc-panel__body {
+    .vs-docs-browser .doc-panel__body {
         padding: 16px;
     }
-    #apiDocsPage .doc-panel__head {
+    .vs-docs-browser .doc-panel__head {
         padding: 16px;
     }
 }
@@ -10863,11 +11833,24 @@ select.vs-input.vs-select {
     height: 32px;
     border-radius: 8px;
     background: #f1f5f9;
-    color: var(--vs-text, #111);
-    display: inline-flex;
+    color: #334155;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: visible;
+}
+#apiFeedbackPage .fb-api-icon svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    stroke: currentColor;
+}
+#apiFeedbackPage .feedback-card__header-left .fb-api-icon {
+    display: inline-flex !important;
+    visibility: visible;
+    opacity: 1;
 }
 #apiFeedbackPage .fb-name-meta {
     display: flex;
@@ -11025,7 +12008,7 @@ select.vs-input.vs-select {
     gap: 6px 18px;
     font-size: 12px;
     color: var(--vs-text-secondary, #6b7280);
-    justify-content: flex-end;
+    justify-content: flex-start;
     max-width: 100%;
     min-width: 0;
 }
@@ -11041,24 +12024,26 @@ select.vs-input.vs-select {
 }
 #apiFeedbackPage .feedback-card__content {
     margin-top: 2px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 #apiFeedbackPage .feedback-card__content-label {
-    display: block;
-    font-size: 11px;
-    color: var(--vs-text-secondary, #6b7280);
-    margin-bottom: 4px;
+    display: none;
 }
 #apiFeedbackPage .feedback-card__content-body {
     margin: 0;
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 1.4;
     color: var(--vs-text, #111);
-    word-break: break-word;
-    white-space: pre-wrap;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
 }
 #apiFeedbackPage .feedback-card__actions {
     display: flex;
@@ -11161,18 +12146,32 @@ select.vs-input.vs-select {
     max-height: 32px;
 }
 /* ---- content ops dual DOM (v10.0.0) ---- */
-#contentPage .vs-api-list-table-wrap[hidden],
-#contentPage .mobile-ann-cards[hidden],
-#contentPage .mobile-art-cards[hidden],
-#contentPage .vs-api-list-footer[hidden],
-#contentPage .vs-api-list-empty[hidden],
+/* 公告/文章：电脑端表格底板对齐积分变动 / 反馈列表 */
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-api-list-table-card {
+    background: var(--vs-white, #fff);
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-content-table th {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+}
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-api-list-table-wrap[hidden],
+:is(#contentPage, #opsMailPage, #mailtplPage) .mobile-ann-cards[hidden],
+:is(#contentPage, #opsMailPage, #mailtplPage) .mobile-art-cards[hidden],
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-api-list-footer[hidden],
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-api-list-empty[hidden],
 #adminCommentsPage .vs-api-list-table-wrap[hidden],
 #adminCommentsPage .mobile-cmt-cards[hidden],
 #adminCommentsPage .vs-api-list-footer[hidden],
 #adminCommentsPage .vs-api-list-empty[hidden] {
     display: none !important;
 }
-#contentPage .content-title-cell {
+:is(#contentPage, #opsMailPage, #mailtplPage) .content-title-cell {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
@@ -11181,7 +12180,7 @@ select.vs-input.vs-select {
     font-weight: 600;
     line-height: 1.45;
 }
-#contentPage .content-title-cell__text {
+:is(#contentPage, #opsMailPage, #mailtplPage) .content-title-cell__text {
     flex: 1 1 10rem;
     min-width: 0;
     overflow: hidden;
@@ -11191,25 +12190,25 @@ select.vs-input.vs-select {
     -webkit-box-orient: vertical;
     word-break: break-word;
 }
-#contentPage .content-title-cell .vs-badge {
+:is(#contentPage, #opsMailPage, #mailtplPage) .content-title-cell .vs-badge {
     flex: 0 0 auto;
     align-self: flex-start;
     margin-top: 1px;
 }
-#contentPage .content-author-cell {
+:is(#contentPage, #opsMailPage, #mailtplPage) .content-author-cell {
     display: flex;
     align-items: center;
     gap: 8px;
 }
-#contentPage .content-author-cell__avatar,
-#contentPage .content-author-cell__fallback {
+:is(#contentPage, #opsMailPage, #mailtplPage) .content-author-cell__avatar,
+:is(#contentPage, #opsMailPage, #mailtplPage) .content-author-cell__fallback {
     width: 28px;
     height: 28px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
 }
-#contentPage .content-author-cell__fallback {
+:is(#contentPage, #opsMailPage, #mailtplPage) .content-author-cell__fallback {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -11217,8 +12216,8 @@ select.vs-input.vs-select {
     font-size: 12px;
     color: #475569;
 }
-#contentPage .ann-card,
-#contentPage .art-card {
+:is(#contentPage, #opsMailPage, #mailtplPage) .ann-card,
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card {
     background: #fff;
     border: 1px solid var(--vs-border, #e5e7eb);
     border-radius: 12px;
@@ -11234,8 +12233,8 @@ select.vs-input.vs-select {
     flex-direction: column;
     gap: 10px;
 }
-#contentPage .ann-card__header,
-#contentPage .art-card__header {
+:is(#contentPage, #opsMailPage, #mailtplPage) .ann-card__header,
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card__header {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
@@ -11244,8 +12243,8 @@ select.vs-input.vs-select {
     margin-bottom: 8px;
     min-width: 0;
 }
-#contentPage .ann-card__title,
-#contentPage .art-card__title {
+:is(#contentPage, #opsMailPage, #mailtplPage) .ann-card__title,
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card__title {
     flex: 1 1 auto;
     font-weight: 600;
     line-height: 1.45;
@@ -11257,8 +12256,8 @@ select.vs-input.vs-select {
     -webkit-box-orient: vertical;
     word-break: break-word;
 }
-#contentPage .ann-card__tags,
-#contentPage .art-card__tags {
+:is(#contentPage, #opsMailPage, #mailtplPage) .ann-card__tags,
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card__tags {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
@@ -11267,27 +12266,27 @@ select.vs-input.vs-select {
     justify-content: flex-end;
     max-width: 50%;
 }
-#contentPage .ann-card__time,
-#contentPage .art-card__info {
+:is(#contentPage, #opsMailPage, #mailtplPage) .ann-card__time,
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card__info {
     font-size: 0.8125rem;
     color: var(--vs-text-secondary, #6b7280);
     margin-bottom: 10px;
 }
-#contentPage .art-card__info {
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card__info {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 16px;
 }
-#contentPage .art-card__info-item {
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card__info-item {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     min-width: 0;
 }
-#contentPage .ann-card__actions,
-#contentPage .art-card__actions,
+:is(#contentPage, #opsMailPage, #mailtplPage) .ann-card__actions,
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card__actions,
 #adminCommentsPage .cmt-card__actions {
     display: flex;
     justify-content: flex-end;
@@ -11296,7 +12295,7 @@ select.vs-input.vs-select {
     padding-top: 10px;
     border-top: 1px dashed #e2e8f0;
 }
-#contentPage .vs-content-actions-cell .action-btns,
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-content-actions-cell .action-btns,
 #adminCommentsPage .action-btns {
     display: flex;
     flex-wrap: wrap;
@@ -11634,34 +12633,29 @@ select.vs-input.vs-select {
         grid-column: 1 / -1;
     }
 }
-.vs-link-row__desc {
-    margin-top: 4px;
-    font-size: 0.75rem;
-    color: var(--vs-text-secondary, #6b7280);
-    line-height: 1.45;
-}
+/* 双 DOM：仅内容运营 / 邮箱模板 / 评论。邮件群发发送记录已改流水行，勿再把 #opsMailPage 表壳藏掉（E461） */
 @media (min-width: 769px) {
-    #contentPage .vs-api-list-table-wrap,
+    :is(#contentPage, #mailtplPage) .vs-api-list-table-wrap,
     #adminCommentsPage .vs-api-list-table-wrap { display: block; }
-    #contentPage .mobile-ann-cards,
-    #contentPage .mobile-art-cards,
+    :is(#contentPage, #mailtplPage) .mobile-ann-cards,
+    :is(#contentPage, #mailtplPage) .mobile-art-cards,
     #adminCommentsPage .mobile-cmt-cards { display: none !important; }
 }
 @media (max-width: 768px) {
-    #contentPage .vs-api-list-table-wrap,
+    :is(#contentPage, #mailtplPage) .vs-api-list-table-wrap,
     #adminCommentsPage .vs-api-list-table-wrap { display: none !important; }
-    #contentPage .mobile-ann-cards,
-    #contentPage .mobile-art-cards,
+    :is(#contentPage, #mailtplPage) .mobile-ann-cards,
+    :is(#contentPage, #mailtplPage) .mobile-art-cards,
     #adminCommentsPage .mobile-cmt-cards {
         display: flex;
         flex-direction: column;
         gap: 10px;
     }
 }
-#contentPage .vs-api-list-footer .vs-api-list-pagesize__select,
-#contentPage .vs-api-list-footer .vs-api-pager .vs-pick__btn,
-#contentPage .vs-api-list-footer .vs-api-pager__nav,
-#contentPage .vs-api-list-footer .vs-api-pager__num,
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-api-list-footer .vs-api-list-pagesize__select,
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-api-list-footer .vs-api-pager .vs-pick__btn,
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-api-list-footer .vs-api-pager__nav,
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-api-list-footer .vs-api-pager__num,
 #adminCommentsPage .vs-api-list-footer .vs-api-list-pagesize__select,
 #adminCommentsPage .vs-api-list-footer .vs-api-pager .vs-pick__btn,
 #adminCommentsPage .vs-api-list-footer .vs-api-pager__nav,
@@ -12113,7 +13107,7 @@ select.vs-input.vs-select {
         grid-template-columns: 1fr;
     }
 }
-#contentPage .vs-badge {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -12129,71 +13123,71 @@ select.vs-input.vs-select {
     max-width: none;
     vertical-align: middle;
 }
-#contentPage .vs-badge--success {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-badge--success {
     background: #f0faf5;
     color: #15803d;
     border-color: #86efac;
 }
-#contentPage .vs-badge--warning {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-badge--warning {
     background: #fff7e8;
     color: #c2410c;
     border-color: #fdba74;
 }
-#contentPage .vs-badge--error {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-badge--error {
     background: #fff1f2;
     color: #dc2626;
     border-color: #fca5a5;
 }
-#contentPage .vs-badge--info {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-badge--info {
     background: #eff6ff;
     color: #1d4ed8;
     border-color: #93c5fd;
 }
-#contentPage .vs-badge--default {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-badge--default {
     background: #f8fafc;
     color: #64748b;
     border-color: #cbd5e1;
 }
 
-#contentPage .vs-content-actions-cell .action-btns,
-#contentPage .ann-card__actions .action-btns,
-#contentPage .art-card__actions .action-btns {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-content-actions-cell .action-btns,
+:is(#contentPage, #opsMailPage, #mailtplPage) .ann-card__actions .action-btns,
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card__actions .action-btns {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-end;
 }
 
-#contentPage .vs-btn--outline-success {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-btn--outline-success {
     border-color: #b8e6cc;
     background: transparent;
     color: #15803d;
 }
-#contentPage .vs-btn--outline-success:hover {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-btn--outline-success:hover {
     background: #f0faf5;
     border-color: #15803d;
 }
-#contentPage .vs-btn--outline-danger {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-btn--outline-danger {
     border-color: #fecaca;
     background: transparent;
     color: #dc2626;
 }
-#contentPage .vs-btn--outline-danger:hover {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-btn--outline-danger:hover {
     background: #fff0f0;
     border-color: #dc2626;
 }
-#contentPage .vs-btn--outline-warning {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-btn--outline-warning {
     border-color: #f5d9a8;
     background: transparent;
     color: #e37318;
 }
-#contentPage .vs-btn--outline-warning:hover {
+:is(#contentPage, #opsMailPage, #mailtplPage) .vs-btn--outline-warning:hover {
     background: #fff7e8;
     border-color: #e37318;
 }
 
-#contentPage .ann-card__actions,
-#contentPage .art-card__actions {
+:is(#contentPage, #opsMailPage, #mailtplPage) .ann-card__actions,
+:is(#contentPage, #opsMailPage, #mailtplPage) .art-card__actions {
     display: flex;
     justify-content: flex-end;
     flex-wrap: wrap;
@@ -12202,24 +13196,29 @@ select.vs-input.vs-select {
     border-top: 1px dashed #e2e8f0;
 }
 
-/* ---- admin links tabs ---- */
-#adminLinksPage .vs-tabs.vs-api-review-tabs {
-    margin-bottom: 14px;
-}
-#adminLinksPage .vs-link-row[hidden] {
+/* ---- admin links / 开发审核 tabs ---- */
+#adminLinksPage .vs-link-row[hidden],
+#adminDevApplyPage .vs-link-row[hidden] {
     display: none !important;
 }
 #adminLinksPage[data-active-tab="pending"] .vs-link-row[data-link-tab]:not([data-link-tab="pending"]),
 #adminLinksPage[data-active-tab="approved"] .vs-link-row[data-link-tab]:not([data-link-tab="approved"]),
-#adminLinksPage[data-active-tab="disabled"] .vs-link-row[data-link-tab]:not([data-link-tab="disabled"]) {
+#adminLinksPage[data-active-tab="disabled"] .vs-link-row[data-link-tab]:not([data-link-tab="disabled"]),
+#adminDevApplyPage[data-active-tab="pending"] .vs-link-row[data-link-tab]:not([data-link-tab="pending"]),
+#adminDevApplyPage[data-active-tab="approved"] .vs-link-row[data-link-tab]:not([data-link-tab="approved"]),
+#adminDevApplyPage[data-active-tab="rejected"] .vs-link-row[data-link-tab]:not([data-link-tab="rejected"]) {
     display: none !important;
 }
-#adminLinksPage .vs-badge--warning { background: #fff7e8; color: #e37318; }
-#adminLinksPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
-#adminLinksPage .vs-api-review-tabs__badge {
+#adminLinksPage .vs-badge--warning,
+#adminDevApplyPage .vs-badge--warning { background: #fff7e8; color: #e37318; }
+#adminLinksPage .vs-badge--default,
+#adminDevApplyPage .vs-badge--default { background: #f1f5f9; color: #6b7280; }
+#adminLinksPage .vs-api-review-tabs__badge,
+#adminDevApplyPage .vs-api-review-tabs__badge {
     margin-left: 6px;
 }
-#adminLinksPage .vs-tabs__btn.is-active .vs-api-review-tabs__badge.vs-badge--default {
+#adminLinksPage .vs-tabs__btn.is-active .vs-api-review-tabs__badge.vs-badge--default,
+#adminDevApplyPage .vs-tabs__btn.is-active .vs-api-review-tabs__badge.vs-badge--default {
     background: #e2e8f0;
     color: #334155;
 }
@@ -12364,6 +13363,24 @@ select.vs-input.vs-select {
     content: ' · 进行中';
     color: #fbbf24;
 }
+.vs-ai-model-picker__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    margin-bottom: 8px;
+}
+.vs-ai-model-picker__search {
+    flex: 1 1 160px;
+    min-width: 140px;
+    max-width: 280px;
+}
+.vs-ai-model-picker__empty {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: var(--vs-muted, #64748b);
+}
 .vs-ai-model-picker {
     margin-top: 10px;
     border: 1px solid var(--vs-border, #e5e7eb);
@@ -12373,7 +13390,7 @@ select.vs-input.vs-select {
 }
 .vs-ai-model-picker[hidden] { display: none !important; }
 .vs-ai-model-picker__title {
-    margin: 0 0 8px;
+    margin: 0;
     font-size: 12px;
     color: var(--vs-text-secondary, #6b7280);
     font-weight: 600;
@@ -12860,3 +13877,1153 @@ select.vs-input.vs-select {
     }
 }
 
+
+
+/* ============================================================
+   .vs-docs-browser — 系统 API 参数视图（表格 / JSON / OpenAPI）
+   ============================================================ */
+.vs-docs-browser .doc-params-modes__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+.vs-docs-browser .doc-params-modes__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    margin: 0;
+}
+/* 与请求示例鉴权小按钮（docs-qs__auth-tab）同尺寸，禁止做成 36px 大按钮 */
+.vs-docs-browser .doc-params-modes__btn {
+    appearance: none;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    background: var(--vs-bg, #f8fafc);
+    color: var(--vs-text-secondary, #6b7280);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: inherit;
+    height: auto;
+    padding: 6px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    line-height: 1.2;
+    box-sizing: border-box;
+}
+.vs-docs-browser .doc-params-modes__btn:hover {
+    color: var(--vs-text, #111);
+}
+.vs-docs-browser .doc-params-modes__btn.is-active {
+    color: var(--vs-text, #111);
+    border-color: var(--vs-text, #111);
+    background: var(--vs-white, #fff);
+}
+.vs-docs-browser .doc-errcode__intro {
+    margin: 0 0 12px;
+    font-size: 0.875rem;
+    color: var(--vs-text-secondary, #6b7280);
+    line-height: 1.5;
+}
+.vs-docs-browser .doc-params-modes__pane[hidden] {
+    display: none !important;
+}
+
+
+/* ===== 运营中心 · 用户激励（积分赠送） ===== */
+.vs-incentive-page {
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+.vs-incentive-form { width: 100%; }
+.vs-incentive-fold { margin-top: 4px; width: 100%; }
+.vs-incentive-fold__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 10px 4px;
+    border: 0;
+    border-bottom: 1px dashed var(--vs-border, #e5e7eb);
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    color: var(--vs-text, #1f2937);
+    font: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+}
+.vs-incentive-fold__title-wrap {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 6px;
+    min-width: 0;
+    flex: 1;
+}
+.vs-incentive-fold__title { font-size: 15px; font-weight: 600; flex-shrink: 0; }
+/* 折叠标题旁生效摘要：与「全站优惠」四字区分，默认折叠时一眼可见 */
+.vs-incentive-fold__meta {
+    display: none;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+.vs-incentive-fold__meta.is-on {
+    display: inline-flex;
+}
+.vs-incentive-fold__meta-dash {
+    color: #94a3b8;
+    font-weight: 400;
+}
+.vs-incentive-fold__meta-text {
+    color: #0d9488;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: min(52vw, 280px);
+}
+.vs-incentive-fold__meta.is-discount .vs-incentive-fold__meta-text {
+    color: #2563eb;
+}
+.vs-incentive-fold__meta.is-free .vs-incentive-fold__meta-text {
+    color: #0d9488;
+}
+.vs-incentive-fold__meta.is-expired .vs-incentive-fold__meta-text {
+    color: #c2410c;
+    font-weight: 500;
+}
+.vs-incentive-fold__chevron { opacity: .55; transition: transform .18s ease; flex-shrink: 0; }
+.vs-incentive-fold.is-open .vs-incentive-fold__chevron { transform: rotate(180deg); }
+.vs-incentive-fold__body { display: none; padding: 12px 0 4px; }
+.vs-incentive-fold.is-open > .vs-incentive-fold__body { display: block; }
+
+/* 手机收起：虚线下露出裁切上沿的介绍小卡 */
+.vs-incentive-peek {
+    display: block;
+    overflow: hidden;
+    margin: 0 2px;
+    max-height: 72px;
+}
+.vs-incentive-fold.is-open .vs-incentive-peek { display: none; }
+.vs-incentive-peek__card {
+    margin-top: -22px;
+    padding: 28px 12px 10px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--vs-bg-soft, #f9fafb);
+    box-sizing: border-box;
+}
+.vs-incentive-peek__text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--vs-muted, #6b7280);
+}
+
+.vs-incentive-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.vs-incentive-toolbar__label {
+    display: block;
+    margin-bottom: 4px;
+}
+.vs-incentive-toolbar__filterline {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    width: 100%;
+}
+.vs-incentive-toolbar__tags {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+}
+.vs-incentive-toolbar__tags .vs-incentive-tagfield { width: 100%; }
+.vs-incentive-filter-btn {
+    height: 44px;
+    min-width: 72px;
+    flex: 0 0 auto;
+    align-self: flex-end;
+}
+.vs-incentive-exec-btn {
+    height: 44px;
+    min-width: 72px;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+.vs-incentive-tip {
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    border: 1px solid #f1c40f;
+    border-radius: 8px;
+    background: #fffbeb;
+    color: #92400e;
+    font-size: 13px;
+    line-height: 1.45;
+}
+.vs-incentive-tip.is-error {
+    border-color: #f1aeb5;
+    background: #fff5f5;
+    color: #b42318;
+}
+.vs-incentive-tip.is-ok {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+    color: #047857;
+}
+.vs-incentive-tip[hidden] { display: none !important; }
+.vs-incentive-toolbar__amount,
+.vs-incentive-toolbar__remark { width: 100%; }
+/* 手机：积分框与其它输入同宽；电脑短宽在下方 media 里设 */
+.vs-incentive-amount { max-width: none; width: 100%; }
+.vs-incentive-statusline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 12px;
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.45;
+}
+.vs-incentive-statusline__prog {
+    color: #1d4ed8;
+    font-weight: 700;
+}
+.vs-incentive-statusline__detail {
+    color: #047857;
+    font-weight: 600;
+}
+.vs-incentive-statusline__detail[hidden] {
+    display: none !important;
+}
+
+.vs-incentive-tagfield__trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: var(--vs-radius, 8px);
+    background: var(--vs-surface, #fff);
+    color: var(--vs-text, #1f2937);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.vs-incentive-tagfield__trigger:disabled { opacity: .55; cursor: not-allowed; }
+.vs-incentive-tagfield__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+.vs-incentive-tagfield__placeholder {
+    flex: 1;
+    color: var(--vs-muted, #9ca3af);
+    font-size: 14px;
+}
+.vs-incentive-tagfield__trigger .vs-icon--chevron {
+    flex-shrink: 0;
+    opacity: .55;
+    margin-left: auto;
+}
+.vs-incentive-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 2px 8px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 6px;
+    background: var(--vs-bg-soft, #f9fafb);
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vs-incentive-progress { margin: 12px 0 4px; width: 100%; }
+.vs-incentive-progress__bar {
+    height: 12px;
+    background: #eef1f4;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, .06);
+}
+/* 离子斜纹进度：灰蓝斜条 + 轻微扫光，非纯黑、非高饱和 */
+.vs-incentive-progress__fill {
+    position: relative;
+    height: 100%;
+    width: 0%;
+    border-radius: inherit;
+    overflow: hidden;
+    transition: width .15s ease;
+    background-color: #6b7280;
+    background-image:
+        repeating-linear-gradient(
+            -55deg,
+            rgba(255, 255, 255, .22) 0,
+            rgba(255, 255, 255, .22) 5px,
+            rgba(255, 255, 255, 0) 5px,
+            rgba(255, 255, 255, 0) 10px
+        ),
+        linear-gradient(90deg, #5f6b78 0%, #7b8794 45%, #64707c 100%);
+    background-size: 18px 18px, 100% 100%;
+    animation: vs-incentive-ion 0.9s linear infinite;
+}
+.vs-incentive-progress__fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, .28) 48%,
+        transparent 100%
+    );
+    background-size: 36% 100%;
+    background-repeat: no-repeat;
+    animation: vs-incentive-ion-sheen 1.6s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes vs-incentive-ion {
+    from { background-position: 0 0, 0 0; }
+    to { background-position: 18px 0, 0 0; }
+}
+@keyframes vs-incentive-ion-sheen {
+    0% { background-position: -40% 0; }
+    100% { background-position: 140% 0; }
+}
+
+.vs-incentive-tagpop,
+.vs-incentive-custompop {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+.vs-incentive-tagpop[hidden],
+.vs-incentive-custompop[hidden] { display: none !important; }
+.vs-incentive-tagpop__backdrop,
+.vs-incentive-custompop__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, .35);
+}
+.vs-incentive-tagpop__panel,
+.vs-incentive-custompop__panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 520px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--vs-surface, #fff);
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -8px 28px rgba(0,0,0,.12);
+    box-sizing: border-box;
+}
+.vs-incentive-tagpop__head,
+.vs-incentive-custompop__head,
+.vs-incentive-tagpop__foot,
+.vs-incentive-custompop__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--vs-border, #e5e7eb);
+    flex-shrink: 0;
+}
+.vs-incentive-tagpop__foot,
+.vs-incentive-custompop__foot {
+    border-bottom: 0;
+    border-top: 1px solid var(--vs-border, #e5e7eb);
+    justify-content: flex-end;
+}
+.vs-incentive-tagpop__title,
+.vs-incentive-custompop__title { font-size: 15px; font-weight: 600; }
+.vs-incentive-tagpop__close,
+.vs-incentive-custompop__close {
+    border: 0;
+    background: transparent;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--vs-muted, #6b7280);
+    padding: 0 4px;
+}
+.vs-incentive-tagpop__body,
+.vs-incentive-custompop__body {
+    padding: 14px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.vs-incentive-tagpop__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+.vs-incentive-tagchip {
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 8px;
+    background: var(--vs-bg-soft, #f9fafb);
+    color: var(--vs-text, #1f2937);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.vs-incentive-tagchip.is-on {
+    border-color: var(--vs-primary, #2563eb);
+    background: rgba(37, 99, 235, .08);
+    color: var(--vs-primary, #2563eb);
+    font-weight: 600;
+}
+body.vs-incentive-tagpop-open,
+body.vs-incentive-custompop-open { overflow: hidden; }
+
+/* 手机：筛选按钮与标签同行；确认赠送仍可整行 */
+@media (max-width: 767px) {
+    .vs-incentive-toolbar > .vs-incentive-exec-btn {
+        align-self: stretch;
+        width: 100%;
+    }
+}
+
+/* 电脑：默认可折叠（与手机一致）；展开后工具条横排拉满 */
+@media (min-width: 768px) {
+    .vs-incentive-fold__bar {
+        cursor: pointer;
+        pointer-events: auto;
+    }
+    .vs-incentive-fold__chevron { display: inline-block; }
+    .vs-incentive-fold.is-open .vs-incentive-peek { display: none; }
+    .vs-incentive-fold__body {
+        display: none;
+        width: 100%;
+    }
+    .vs-incentive-fold.is-open > .vs-incentive-fold__body {
+        display: block;
+        width: 100%;
+    }
+    .vs-incentive-toolbar {
+        display: grid;
+        grid-template-columns:
+            minmax(0, 3fr)
+            minmax(88px, 0.7fr)
+            minmax(0, 2.2fr)
+            auto;
+        align-items: end;
+        gap: 10px;
+        width: 100%;
+    }
+    .vs-incentive-toolbar__filterline {
+        min-width: 0;
+    }
+    .vs-incentive-toolbar__tags,
+    .vs-incentive-toolbar__amount,
+    .vs-incentive-toolbar__remark {
+        width: auto;
+        min-width: 0;
+    }
+    .vs-incentive-exec-btn {
+        align-self: end;
+        width: auto;
+    }
+    .vs-incentive-toolbar__tags .vs-incentive-tagfield,
+    .vs-incentive-toolbar__tags .vs-incentive-tagfield__trigger,
+    .vs-incentive-toolbar__amount .vs-input,
+    .vs-incentive-toolbar__remark .vs-input {
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+    }
+    .vs-incentive-amount {
+        max-width: none;
+        width: 100%;
+    }
+    .vs-incentive-filter-btn,
+    .vs-incentive-exec-btn {
+        align-self: end;
+        width: auto;
+        min-width: 72px;
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+    .vs-incentive-progress {
+        width: 100%;
+        margin-top: 14px;
+    }
+    /* 电脑：进度文案 + 本次结果同一行，颜色区分，不换行浪费空间 */
+    .vs-incentive-statusline {
+        flex-wrap: nowrap;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .vs-incentive-statusline__prog {
+        flex-shrink: 0;
+        color: #1d4ed8;
+    }
+    .vs-incentive-statusline__detail {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #047857;
+    }
+    .vs-incentive-tagpop,
+    .vs-incentive-custompop {
+        align-items: center;
+        padding: 24px;
+    }
+    .vs-incentive-tagpop__panel,
+    .vs-incentive-custompop__panel {
+        border-radius: 12px;
+        max-height: 80vh;
+        box-shadow: 0 16px 48px rgba(0,0,0,.16);
+    }
+    .vs-incentive-tagpop__grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* 用户激励 · 模块二全站优惠（一行表单 + 滑动/双 Tab + 自渲染时间） */
+.vs-incentive-divider {
+    margin: 28px 0 20px;
+    border: 0;
+    height: 0;
+    border-top: 2px solid rgba(15, 23, 42, 0.14);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.55);
+}
+.vs-incentive-promo__hint {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.55;
+}
+.vs-incentive-promo__hint-em {
+    color: #b45309;
+    font-weight: 700;
+}
+.vs-incentive-promo__status {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.45;
+}
+.vs-incentive-promo__status.is-active {
+    background: #ecfdf5;
+    color: #065f46;
+}
+.vs-incentive-promo__status.is-expired {
+    background: #fff7ed;
+    color: #9a3412;
+}
+/* 折扣 / 全免：滑动双 Tab（电脑滑动感；手机点选切换） */
+.vs-incentive-promo__switch {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin: 0 0 14px;
+    padding: 4px;
+    border-radius: 10px;
+    background: #e2e8f0;
+    max-width: 420px;
+}
+.vs-incentive-promo__switch-pill {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+    transition: transform .22s ease;
+    pointer-events: none;
+    z-index: 0;
+}
+.vs-incentive-promo__switch.is-free .vs-incentive-promo__switch-pill {
+    transform: translateX(100%);
+}
+.vs-incentive-promo__tab {
+    position: relative;
+    z-index: 1;
+    border: 0;
+    background: transparent;
+    padding: 9px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 8px;
+    line-height: 1.2;
+}
+.vs-incentive-promo__tab.is-active {
+    color: #0f172a;
+}
+.vs-incentive-promo__row {
+    display: grid;
+    grid-template-columns:
+        minmax(72px, 0.75fr)
+        minmax(160px, 1.35fr)
+        minmax(120px, 1.2fr)
+        auto;
+    gap: 10px;
+    align-items: end;
+    width: 100%;
+}
+.vs-incentive-promo__row.is-free {
+    grid-template-columns:
+        minmax(160px, 1.4fr)
+        minmax(120px, 1.3fr)
+        auto;
+}
+.vs-incentive-promo__row.is-free #promoZheWrap {
+    display: none;
+}
+.vs-incentive-promo__field .vs-label {
+    display: block;
+    margin-bottom: 4px;
+}
+.vs-incentive-promo__expire-btn {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.vs-incentive-promo__expire-btn:hover {
+    border-color: var(--vs-primary, #2563eb);
+}
+.vs-incentive-promo__actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 1px;
+}
+.vs-incentive-promo__actions .vs-btn {
+    min-width: 72px;
+}
+/* 管理端自渲染日历（对齐用户中心令牌有效期，样式落在 admin） */
+.vs-datetime-picker-body .vs-datetime__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.vs-datetime-picker-body .vs-datetime__title {
+    font-size: 15px;
+    font-weight: 600;
+}
+.vs-datetime-picker-body .vs-datetime__nav {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 8px;
+    background: #f1f5f9;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+}
+.vs-datetime-picker-body .vs-datetime__nav:hover {
+    background: #e2e8f0;
+}
+.vs-datetime-picker-body .vs-datetime__weekdays,
+.vs-datetime-picker-body .vs-datetime__days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+.vs-datetime-picker-body .vs-datetime__weekdays {
+    margin-bottom: 6px;
+}
+.vs-datetime-picker-body .vs-datetime__weekdays span {
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+}
+.vs-datetime-picker-body .vs-datetime__day {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    padding: 8px 0;
+    font-size: 13px;
+    cursor: pointer;
+}
+.vs-datetime-picker-body .vs-datetime__day.is-empty {
+    visibility: hidden;
+    pointer-events: none;
+}
+.vs-datetime-picker-body .vs-datetime__day:hover:not(.is-empty) {
+    background: #f1f5f9;
+}
+.vs-datetime-picker-body .vs-datetime__day.is-selected {
+    background: var(--vs-primary, #2563eb);
+    color: #fff;
+    font-weight: 600;
+}
+.vs-datetime-picker-body .vs-datetime__hm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+.vs-datetime-picker-body .vs-datetime__hm .vs-pick,
+.vs-datetime-picker-body .vs-datetime__hm .vs-select {
+    flex: 1;
+    min-width: 0;
+}
+.vs-datetime-picker-body .vs-datetime__hm-sep {
+    font-weight: 700;
+    color: #64748b;
+}
+@media (max-width: 767px) {
+    .vs-incentive-promo__switch {
+        max-width: none;
+    }
+    .vs-incentive-promo__row {
+        grid-template-columns: 1fr 1fr;
+    }
+    /* 折扣：折 + 到期一行；标签整行；操作靠右 */
+    .vs-incentive-promo__row:not(.is-free) .vs-incentive-promo__field--expire {
+        grid-column: auto;
+    }
+    .vs-incentive-promo__row:not(.is-free) #promoLabelWrap {
+        grid-column: 1 / -1;
+    }
+    /* 全免：到期 + 标签同一行 */
+    .vs-incentive-promo__row.is-free {
+        grid-template-columns: 1fr 1fr;
+    }
+    .vs-incentive-promo__row.is-free .vs-incentive-promo__field--expire,
+    .vs-incentive-promo__row.is-free #promoLabelWrap {
+        grid-column: auto;
+    }
+    .vs-incentive-promo__actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+        width: 100%;
+    }
+}
+
+/* —— 邮箱模板 / 邮件群发 —— */
+.vs-mailtpl-phbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+/* 邮件正文编辑区：约原高度 2.5～3 倍，填满状态栏上方空白；手机亦可看清输入 */
+.vs-mailtpl-editor #mailtplBodyText.vs-mailtpl-body,
+.vs-mailtpl-editor textarea.vs-mailtpl-body {
+    min-height: min(52vh, 560px);
+    height: min(52vh, 560px);
+    box-sizing: border-box;
+    resize: vertical;
+    line-height: 1.55;
+}
+@media (max-width: 900px) {
+    .vs-mailtpl-editor #mailtplBodyText.vs-mailtpl-body,
+    .vs-mailtpl-editor textarea.vs-mailtpl-body {
+        min-height: min(48vh, 420px);
+        height: min(48vh, 420px);
+    }
+}
+/* Tab 显隐改由 #opsMailPage[data-active-tab] 控制，避免 hidden 与其它 display 规则互抢导致频闪 */
+.vs-ops-mail-tplrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+.vs-ops-mail-tplrow .vs-select,
+.vs-ops-mail-tplrow .vs-input { flex: 1 1 220px; min-width: 0; }
+.vs-ops-mail-preview {
+    margin: 12px 0 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--vs-surface-2, #fafafa);
+}
+.vs-ops-mail-preview__subject {
+    margin: 0;
+    font-weight: 600;
+    word-break: break-word;
+}
+.vs-ops-mail-preview__body {
+    max-height: 160px;
+    overflow: auto;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    box-sizing: border-box;
+}
+/* 电脑左右分栏后左侧空间更大：预览最高约原 2.5～3 倍 */
+@media (min-width: 901px) {
+    .vs-ops-mail-form--split .vs-ops-mail-preview__body {
+        max-height: min(55vh, 450px);
+    }
+    .vs-ops-mail-form--split .vs-ops-mail-preview__frame {
+        max-height: min(55vh, 450px);
+    }
+}
+.vs-ops-mail-preview__html {
+    min-height: 0;
+    line-height: 1.55;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+.vs-ops-mail-preview__html img {
+    max-width: 100%;
+    height: auto;
+}
+/* 兼容旧 iframe 预览（若仍有缓存脚本） */
+.vs-ops-mail-preview__frame {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    max-height: 160px;
+    height: auto;
+    border: 0;
+    background: #fff;
+}
+.vs-ops-mail-toolbar {
+    margin-top: 8px;
+    /* 勿继承激励页电脑横排 grid：群发右侧保持「筛选行 → 已选 → 发送」上下排布 */
+    display: flex !important;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+}
+.vs-ops-mail-toolbar > .vs-incentive-toolbar__filterline {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+    gap: 8px;
+    width: 100%;
+}
+.vs-ops-mail-toolbar > .vs-incentive-exec-btn {
+    width: 100%;
+    align-self: stretch;
+}
+.vs-ops-mail-picked {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+.vs-ops-mail-picked__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.vs-ops-mail-userchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 6px 2px 2px;
+    border-radius: 999px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    background: #fff;
+    font-size: 12px;
+    max-width: 100%;
+}
+.vs-ops-mail-userchip__av {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+.vs-ops-mail-userchip__av--fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vs-surface-2, #f3f4f6);
+    font-size: 11px;
+}
+.vs-ops-mail-userchip__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 120px;
+}
+.vs-ops-mail-userchip__x {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 2px;
+    color: inherit;
+    opacity: .65;
+}
+.vs-ops-mail-userchip__x:hover { opacity: 1; }
+.vs-ops-mail-userlist {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 360px;
+    overflow: auto;
+    margin-top: 8px;
+}
+.vs-ops-mail-userrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+.vs-ops-mail-userrow.is-disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+.vs-ops-mail-userrow__av {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.vs-ops-mail-userrow__av img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.vs-ops-mail-userrow__fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vs-surface-2, #f3f4f6);
+    font-size: 13px;
+}
+.vs-ops-mail-userrow__meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.vs-ops-mail-userrow__name {
+    font-weight: 600;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.vs-ops-mail-userrow__email {
+    font-size: 12px;
+    color: var(--vs-muted, #6b7280);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+@media (max-width: 900px) {
+    .vs-ops-mail-tplrow { flex-direction: column; align-items: stretch; }
+    .vs-ops-mail-preview__body { max-height: 160px; }
+}
+
+/* —— 邮箱模板编辑：电脑左右编辑+预览；手机切换预览 —— */
+.vs-mailtpl-editor__mobilebar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.vs-mailtpl-editor__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+.vs-mailtpl-editor__preview {
+    position: sticky;
+    top: 0;
+    min-width: 0;
+}
+.vs-mailtpl-preview-card {
+    padding: 12px 14px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--vs-surface-2, #fafafa);
+    box-sizing: border-box;
+}
+.vs-mailtpl-preview-card .vs-label {
+    margin: 0 0 6px;
+}
+.vs-mailtpl-preview-card__subject {
+    margin: 0 0 12px;
+    font-weight: 600;
+    word-break: break-word;
+}
+.vs-mailtpl-preview-card__body {
+    max-height: min(52vh, 560px);
+    overflow: auto;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    box-sizing: border-box;
+}
+.vs-mailtpl-preview-card__html {
+    line-height: 1.55;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+.vs-mailtpl-preview-card__html img {
+    max-width: 100%;
+    height: auto;
+}
+.vs-mailtpl-ai-fold {
+    margin-top: 16px;
+}
+.vs-mailtpl-ai-block {
+    margin: 0 0 10px;
+    padding: 12px 14px;
+    max-height: 220px;
+    overflow: auto;
+    border-radius: 8px;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.vs-mailtpl-ai-block code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: inherit;
+    background: transparent;
+    padding: 0;
+    font-size: inherit;
+}
+
+/* —— 邮件群发：电脑左模板/预览，右筛选发送 —— */
+@media (min-width: 901px) {
+    .vs-ops-mail-form--split {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.85fr);
+        gap: 20px 24px;
+        align-items: start;
+    }
+    .vs-ops-mail-col--action {
+        position: sticky;
+        top: 8px;
+        padding: 14px 16px;
+        border: 1px solid var(--vs-border, #e5e7eb);
+        border-radius: 12px;
+        background: var(--vs-surface-2, #fafafa);
+        box-sizing: border-box;
+    }
+    /* 勿套用激励页电脑横排 grid：右侧整列仍为上下（筛选项→已选→发送） */
+    .vs-ops-mail-col--action .vs-ops-mail-toolbar.vs-incentive-toolbar {
+        display: flex;
+        margin-top: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        grid-template-columns: none;
+        width: 100%;
+    }
+    /* 筛选行保持横排：下拉在左、筛选钮在后 */
+    .vs-ops-mail-col--action .vs-incentive-toolbar__filterline {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+        flex-wrap: nowrap;
+        gap: 8px;
+        width: 100%;
+    }
+    .vs-ops-mail-col--action .vs-incentive-toolbar__tags {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: auto;
+    }
+    .vs-ops-mail-col--action .vs-incentive-filter-btn {
+        flex: 0 0 auto;
+        align-self: flex-end;
+        width: auto;
+        min-width: 72px;
+    }
+    .vs-ops-mail-col--action .vs-ops-mail-picked {
+        width: 100%;
+    }
+    .vs-ops-mail-col--action .vs-incentive-exec-btn {
+        align-self: stretch;
+        width: 100%;
+    }
+}
+@media (max-width: 900px) {
+    .vs-mailtpl-editor__mobilebar {
+        display: flex;
+    }
+    .vs-mailtpl-editor__grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .vs-mailtpl-editor[data-mode="edit"] .vs-mailtpl-editor__preview {
+        display: none;
+    }
+    .vs-mailtpl-editor[data-mode="preview"] .vs-mailtpl-editor__input {
+        display: none;
+    }
+    .vs-mailtpl-editor[data-mode="preview"] .vs-mailtpl-editor__preview {
+        display: block;
+    }
+    .vs-mailtpl-preview-card__body {
+        max-height: min(60vh, 480px);
+    }
+    .vs-ops-mail-form--split {
+        display: block;
+    }
+    .vs-ops-mail-col--action {
+        margin-top: 12px;
+    }
+}

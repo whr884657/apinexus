@@ -15,6 +15,21 @@
     var empty = document.getElementById('linkEmpty');
     var filters = document.getElementById('linkFilters');
     var activeTab = page.getAttribute('data-active-tab') || 'pending';
+    var currentPage = 1;
+    var prevBtn = document.getElementById('linkPrevBtn');
+    var nextBtn = document.getElementById('linkNextBtn');
+    var pagerNums = document.getElementById('linkPagerNums');
+    var pageSizeEl = document.getElementById('linkPageSize');
+    var footerEl = document.getElementById('linkFooter');
+    var statsEl = document.getElementById('linkStats');
+
+    function getPageSize() {
+        var n = pageSizeEl ? parseInt(pageSizeEl.value, 10) : 20;
+        if ([10, 20, 30, 50].indexOf(n) === -1) {
+            n = 20;
+        }
+        return n;
+    }
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -39,53 +54,96 @@
         return 'disabled';
     }
 
-    function refreshCounts() {
-        if (!filters || !list) {
+    var listTotal = 0;
+
+    function setCounts(counts) {
+        if (!filters || !counts) {
             return;
         }
-        var counts = { pending: 0, approved: 0, disabled: 0 };
-        Array.prototype.slice.call(list.querySelectorAll('[data-link-row]')).forEach(function (row) {
-            var key = row.getAttribute('data-link-tab') || tabKey(
-                row.getAttribute('data-link-status'),
-                row.getAttribute('data-link-enabled')
-            );
-            if (counts[key] != null) {
-                counts[key] += 1;
-            }
-        });
-        Object.keys(counts).forEach(function (key) {
+        ['pending', 'approved', 'disabled'].forEach(function (key) {
             var badge = filters.querySelector('[data-count="' + key + '"]');
             if (badge) {
-                badge.textContent = String(counts[key]);
+                badge.textContent = String(counts[key] || 0);
+            }
+        });
+    }
+
+    function paintList(items, total, counts) {
+        listTotal = parseInt(total, 10) || 0;
+        if (counts) {
+            setCounts(counts);
+        }
+        if (!list) {
+            return;
+        }
+        var html = headHtml();
+        (items || []).forEach(function (link) {
+            html += rowHtml(link);
+        });
+        list.innerHTML = html;
+        var visible = (items && items.length) ? items.length : 0;
+        list.hidden = visible === 0;
+        if (empty) {
+            empty.hidden = visible > 0;
+        }
+        if (footerEl) {
+            footerEl.hidden = listTotal === 0;
+        }
+        if (statsEl) {
+            statsEl.textContent = '共 ' + listTotal + ' 条';
+        }
+        var totalPages = Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+        if (window.VS && VS.applyLogsPager) {
+            if (listTotal === 0) {
+                if (pagerNums) {
+                    pagerNums.innerHTML = '';
+                }
+                if (prevBtn) {
+                    prevBtn.disabled = true;
+                }
+                if (nextBtn) {
+                    nextBtn.disabled = true;
+                }
+            } else {
+                VS.applyLogsPager(currentPage, totalPages, prevBtn, nextBtn, pagerNums);
+            }
+        }
+        if (window.VS && window.VS.bindExternalImgFallback) {
+            window.VS.bindExternalImgFallback(list);
+        }
+    }
+
+    function loadList() {
+        if (!list) {
+            return;
+        }
+        page.setAttribute('data-active-tab', activeTab);
+        var fd = new FormData();
+        fd.append('action', 'list');
+        fd.append('tab', activeTab);
+        fd.append('page', String(currentPage));
+        fd.append('pagesize', String(getPageSize()));
+        postAction(fd).then(function (data) {
+            if (data.page) {
+                currentPage = parseInt(data.page, 10) || currentPage;
+            }
+            paintList(data.list, data.total, data.counts);
+        }).catch(function (err) {
+            if (window.VS && VS.showMessage) {
+                VS.showMessage(err.message || '加载失败', 'error');
             }
         });
     }
 
     function applyTabFilter() {
-        if (!list) {
-            return;
-        }
-        page.setAttribute('data-active-tab', activeTab);
-        var visible = 0;
-        Array.prototype.slice.call(list.querySelectorAll('[data-link-row]')).forEach(function (row) {
-            var key = row.getAttribute('data-link-tab') || tabKey(
-                row.getAttribute('data-link-status'),
-                row.getAttribute('data-link-enabled')
-            );
-            var show = key === activeTab;
-            row.hidden = !show;
-            if (show) {
-                visible += 1;
-            }
-        });
-        var hasAny = !!list.querySelector('[data-link-row]');
-        if (list) {
-            list.hidden = !hasAny || visible === 0;
-        }
-        if (empty) {
-            empty.hidden = visible > 0;
-        }
-        refreshCounts();
+        loadList();
+    }
+
+    function upsertRow() {
+        loadList();
     }
 
     function statusDisplay(link) {
@@ -140,6 +198,16 @@
         return '<span class="vs-link-row__initial">' + esc(initial) + '</span>';
     }
 
+    function headHtml() {
+        return '<div class="vs-link-row vs-link-row--head" aria-hidden="true">'
+            + '<div class="vs-link-cell">站点</div>'
+            + '<div class="vs-link-cell">链接</div>'
+            + '<div class="vs-link-cell">简介</div>'
+            + '<div class="vs-link-cell">状态</div>'
+            + '<div class="vs-link-cell">操作</div>'
+            + '</div>';
+    }
+
     function rowHtml(link) {
         var id = parseInt(link.id, 10) || 0;
         var status = parseInt(link.status, 10) || 0;
@@ -155,9 +223,6 @@
         var sort = link.sort != null ? link.sort : 0;
         var tab = tabKey(status, enabled);
         var st = statusDisplay(link);
-        var descBlock = desc
-            ? '<div class="vs-link-row__desc" data-field="description">' + esc(desc) + '</div>'
-            : '';
         return (
             '<div class="vs-link-row"' +
             ' data-link-row="' + id + '"' +
@@ -171,36 +236,22 @@
             ' data-contact="' + esc(contact) + '"' +
             ' data-sort="' + esc(sort) + '"' +
             ' data-enabled="' + enabled + '">' +
+            '<div class="vs-link-cell vs-link-c-site">' +
             '<div class="vs-link-row__icon">' + iconHtml(link) + '</div>' +
-            '<div class="vs-link-row__main">' +
             '<div class="vs-link-row__name" data-field="name">' + esc(name) + '</div>' +
-            '<a class="vs-link-row__url" data-field="siteurl" href="' + esc(siteurl) + '" target="_blank" rel="noopener noreferrer">' + esc(siteurl) + '</a>' +
-            descBlock +
             '</div>' +
-            '<div class="vs-link-row__status">' +
+            '<div class="vs-link-cell vs-link-c-url">' +
+            '<a class="vs-link-row__url" data-field="siteurl" href="' + esc(siteurl) + '" target="_blank" rel="noopener noreferrer">' + esc(siteurl) + '</a>' +
+            '</div>' +
+            '<div class="vs-link-cell vs-link-c-desc">' +
+            '<div class="vs-link-row__desc" data-field="description">' + esc(desc || '—') + '</div>' +
+            '</div>' +
+            '<div class="vs-link-cell vs-link-c-status">' +
             '<span class="vs-link-status ' + st.cls + '" data-field="status_label">' + esc(st.label) + '</span>' +
             '</div>' +
-            '<div class="vs-link-row__actions">' + actionsHtml(link) + '</div>' +
+            '<div class="vs-link-cell vs-link-c-actions">' + actionsHtml(link) + '</div>' +
             '</div>'
         );
-    }
-
-    function upsertRow(link) {
-        if (!link || !list) {
-            return;
-        }
-        var id = parseInt(link.id, 10) || 0;
-        var html = rowHtml(link);
-        var existing = list.querySelector('[data-link-row="' + id + '"]');
-        if (existing) {
-            existing.outerHTML = html;
-        } else {
-            list.insertAdjacentHTML('afterbegin', html);
-        }
-        applyTabFilter();
-        if (window.VS && window.VS.bindExternalImgFallback) {
-            window.VS.bindExternalImgFallback(list);
-        }
     }
 
     function openOverlay() {
@@ -421,9 +472,6 @@
                 del.append('link_id', String(id));
                 postAction(del).then(function (data) {
                     VS.showMessage(data.msg || '已删除', 'success');
-                    if (row) {
-                        row.remove();
-                    }
                     applyTabFilter();
                 }).catch(function (err) {
                     VS.showMessage(err.message || '删除失败', 'error');
@@ -431,6 +479,57 @@
             });
         }
     });
+
+    function linksTotalPages() {
+        return Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+    }
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            if (prevBtn.disabled) {
+                return;
+            }
+            if (currentPage > 1) {
+                currentPage -= 1;
+                applyTabFilter();
+            }
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            if (nextBtn.disabled) {
+                return;
+            }
+            if (currentPage < linksTotalPages()) {
+                currentPage += 1;
+                applyTabFilter();
+            }
+        });
+    }
+    if (pagerNums) {
+        pagerNums.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-page]');
+            if (!btn) {
+                return;
+            }
+            var next = parseInt(btn.getAttribute('data-page'), 10) || 0;
+            if (!next || next === currentPage) {
+                return;
+            }
+            currentPage = next;
+            applyTabFilter();
+        });
+    }
+    if (pageSizeEl) {
+        pageSizeEl.addEventListener('change', function () {
+            currentPage = 1;
+            applyTabFilter();
+        });
+    }
+    if (filters) {
+        filters.addEventListener('click', function () {
+            currentPage = 1;
+        }, true);
+    }
 
     applyTabFilter();
 })();

@@ -52,7 +52,7 @@ $firstQr = $qrCount > 0 ? $qrs[0] : null;
               <p class="th3-donate__hint">点击上方按钮切换收款方式</p>
             <?php endif; ?>
           </div>
-          <script type="application/json" id="donateQrData"><?php echo json_encode($qrs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?></script>
+          <script type="application/json" id="donateQrData"><?php echo vs_json_script($qrs); ?></script>
         <?php endif; ?>
       </section>
 

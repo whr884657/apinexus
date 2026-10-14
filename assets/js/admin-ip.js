@@ -407,17 +407,20 @@
       return filtered;
     }
 
+    function pagerEls(kind) {
+      var pre = kind === 'proxy' ? 'adminIpProxy' : 'adminIpAllow';
+      return {
+        prev: document.getElementById(pre + 'PrevBtn'),
+        next: document.getElementById(pre + 'NextBtn'),
+        nums: document.getElementById(pre + 'PagerNums')
+      };
+    }
+
     function renderPagerNav(kind, totalPages, matchedLen) {
-      var nav = document.getElementById(kind === 'proxy' ? 'adminIpProxyPagerNav' : 'adminIpAllowPagerNav');
-      if (!nav) return;
+      if (!window.VS || !VS.applyLogsPager) return;
+      var els = pagerEls(kind);
       var cur = pageState[kind] || 1;
-      var canPrev = cur > 1;
-      var canNext = matchedLen > 0 && cur < totalPages;
-      nav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"'
-        + (canPrev ? '' : ' disabled') + '>上一页</button>'
-        + '<span class="vs-api-pager__info">' + cur + '</span>'
-        + '<button type="button" class="vs-api-pager__nav" data-p="1"'
-        + (canNext ? '' : ' disabled') + '>下一页</button>';
+      VS.applyLogsPager(cur, matchedLen === 0 ? 1 : totalPages, els.prev, els.next, els.nums);
     }
 
     function applyView(kind) {
@@ -779,14 +782,34 @@
           applyView(kind);
         });
       }
-      var nav = document.getElementById(kind === 'proxy' ? 'adminIpProxyPagerNav' : 'adminIpAllowPagerNav');
-      if (nav) {
-        nav.addEventListener('click', function (e) {
-          var btn = e.target.closest('.vs-api-pager__nav');
-          if (!btn || btn.disabled) return;
-          var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
-          if (!delta) return;
-          pageState[kind] = (pageState[kind] || 1) + delta;
+      var els = pagerEls(kind);
+      if (els.prev) {
+        els.prev.addEventListener('click', function () {
+          if (els.prev.disabled) return;
+          if ((pageState[kind] || 1) > 1) {
+            pageState[kind] -= 1;
+            applyView(kind);
+          }
+        });
+      }
+      if (els.next) {
+        els.next.addEventListener('click', function () {
+          if (els.next.disabled) return;
+          var matched = matchedDesktopRows(kind);
+          var totalPages = Math.max(1, Math.ceil(matched.length / getPageSize(kind)) || 1);
+          if ((pageState[kind] || 1) < totalPages) {
+            pageState[kind] += 1;
+            applyView(kind);
+          }
+        });
+      }
+      if (els.nums) {
+        els.nums.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-page]');
+          if (!btn) return;
+          var next = parseInt(btn.getAttribute('data-page'), 10) || 0;
+          if (!next || next === (pageState[kind] || 1)) return;
+          pageState[kind] = next;
           applyView(kind);
         });
       }

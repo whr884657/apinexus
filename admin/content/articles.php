@@ -120,12 +120,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ));
     }
 
+    if ($action === 'list') {
+        vs_admin_content_list_ajax($kind, false);
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
 $tableReady = ContentManager::tableReady();
-$items = $tableReady ? ContentManager::listAll($kind) : array();
-$hasItems = count($items) > 0;
+$paged = $tableReady ? ContentManager::listAdminPaged(array(
+    'kind'     => $kind,
+    'page'     => 1,
+    'pagesize' => 20,
+)) : array('list' => array(), 'total' => 0);
+$items = $paged['list'];
+$contentTotal = (int) $paged['total'];
+$hasItems = $contentTotal > 0;
 $aboutBound = $tableReady && ContentManager::isAboutBound();
 
 $headerActions = '';
@@ -153,7 +163,7 @@ echo Markdown::renderAssetsHtml();
      data-kind="<?php echo (int) $kind; ?>"
      data-mode="article"
      data-about-bound="<?php echo $aboutBound ? '1' : '0'; ?>"
-     data-content-total="<?php echo (int) count($items); ?>">
+     data-content-total="<?php echo (int) $contentTotal; ?>">
     <div class="vs-api-list-empty vs-api-list-empty--hero" id="contentEmpty"<?php echo $hasItems ? ' hidden' : ''; ?>>
         <div class="vs-api-list-empty__card">
             <h3 class="vs-api-list-empty__title">暂无文章</h3>
@@ -211,7 +221,7 @@ echo Markdown::renderAssetsHtml();
                 <button type="button" class="vs-api-pager__nav" id="contentNextBtn" aria-label="下一页">下一页</button>
             </div>
         </div>
-        <p class="vs-api-list-stats" id="contentStats">共 <?php echo (int) count($items); ?> 条</p>
+        <p class="vs-api-list-stats" id="contentStats">共 <?php echo (int) $contentTotal; ?> 条</p>
     </div>
 </div>
 

@@ -1,6 +1,7 @@
 /**
  * 文件：assets/js/system-logs.js
- * 作用：管理员 API 调用日志（每页条数 + keyset 翻页 / Abort 防叠请求 / 抽屉详情）
+ * 作用：管理员 API 调用日志（每页条数 + keyset；点第 N 页可跳，服务端按最大 ID 估游标）
+ * @version 1.3.1
  */
 (function () {
     'use strict';
@@ -27,9 +28,13 @@
     var hasMore = false;
     var totalCount = 0;
     var totalPages = 1;
+    var totalApprox = false;
+    var includeCold = false;
     var loadSeq = 0;
     var listAbort = null;
     var returnFocusEl = null;
+    /** 每页请求用的 before_id（keyset）；1 页为 0 */
+    var pageCursors = { 1: 0 };
 
     function escapeHtml(s) {
         return String(s == null ? '' : s)
@@ -104,6 +109,16 @@
         page = 1;
         hasMore = false;
         totalPages = 1;
+        pageCursors = { 1: 0 };
+        totalApprox = false;
+        includeCold = false;
+    }
+
+    function storageBadge(row) {
+        if (!row || row.storage !== 'cold') {
+            return '';
+        }
+        return '<span class="vs-log-storage is-cold" title="已归档冷库">归档</span>';
     }
 
     function methodBadge(row) {
@@ -139,21 +154,19 @@
         if (id === '' || id === '0') {
             return '<span class="vs-log-id">—</span>';
         }
-        var user = '';
+        var user = '游客';
         if (row && parseInt(row.userid, 10) > 0) {
             if (row.username) {
                 user = String(row.username);
-            } else if (row.user_label && String(row.user_label) !== '匿名') {
+            } else if (row.user_label && String(row.user_label) !== '匿名' && String(row.user_label) !== '游客') {
                 user = String(row.user_label);
+            } else {
+                user = '#' + String(row.userid);
             }
         }
-        var title = user !== '' ? ('记录 #' + id + ' · ' + user) : ('记录 ID #' + id);
-        var html = '<span class="vs-log-id" title="' + escapeHtml(title) + '">#' + escapeHtml(id);
-        if (user !== '') {
-            html += ' <span class="vs-log-id__user">' + escapeHtml(user) + '</span>';
-        }
-        html += '</span>';
-        return html;
+        var title = '记录 #' + id + ' · ' + user;
+        return '<span class="vs-log-id" title="' + escapeHtml(title) + '">#' + escapeHtml(id)
+            + ' <span class="vs-log-id__user">' + escapeHtml(user) + '</span></span>';
     }
 
     function headHtml() {
@@ -185,9 +198,14 @@
             + '<div class="vs-log-cell vs-log-c-egress">'
             + '<span class="vs-log-mono">' + escapeHtml(row.egress ? row.egress : '—') + '</span>'
             + '</div>'
-            + '<div class="vs-log-cell vs-log-c-ok">' + statusBadge(row) + '</div>'
+            + '<div class="vs-log-cell vs-log-c-ok">'
+            + statusBadge(row)
+            + storageBadge(row)
+            + '</div>'
             + '<div class="vs-log-cell vs-log-c-code">' + httpBadge(row) + '</div>'
-            + '<div class="vs-log-cell vs-log-c-time">' + escapeHtml(row.createtime || '—') + '</div>'
+            + '<div class="vs-log-cell vs-log-c-time">'
+            + escapeHtml(row.createtime || '—')
+            + '</div>'
             + '<div class="vs-log-cell vs-log-c-act"><span class="vs-log-view">查看</span></div>'
             + '</article>';
     }
@@ -202,6 +220,7 @@
             + '<div class="vs-log-card__badges">'
             + methodBadge(row)
             + statusBadge(row)
+            + storageBadge(row)
             + '</div>'
             + '</div>'
             + '<div class="vs-log-card__meta">'
@@ -219,12 +238,75 @@
             + '</article>';
     }
 
-    function detailItem(label, value, full) {
+    function detailItem(label, value, full, withCopy) {
         var v = value == null || value === '' ? '—' : String(value);
-        return '<div class="vs-log-detail__item' + (full ? ' vs-log-detail__item--full' : '') + '">'
-            + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+        var canCopy = !!(withCopy && v !== '—');
+        var head = canCopy
+            ? ('<div class="vs-log-detail__head">'
+                + '<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>'
+                + '<button type="button" class="vs-log-detail__copy" data-copy="' + escapeHtml(v) + '" aria-label="复制' + escapeHtml(label) + '">复制</button>'
+                + '</div>')
+            : ('<span class="vs-log-detail__label">' + escapeHtml(label) + '</span>');
+        return '<div class="vs-log-detail__item' + (full ? ' vs-log-detail__item--full' : '') + (canCopy ? ' vs-log-detail__item--copyable' : '') + '">'
+            + head
             + '<span class="vs-log-detail__value">' + escapeHtml(v) + '</span>'
             + '</div>';
+    }
+
+    function copyDetailText(text, okMsg) {
+        var done = function () {
+            if (window.VS && VS.showMessage) {
+                VS.showMessage(okMsg || '已复制', 'success');
+            }
+        };
+        var fail = function () {
+            if (window.VS && VS.showMessage) {
+                VS.showMessage('复制失败，请手动选择', 'error');
+            }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(fail);
+            return;
+        }
+        try {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            var ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            if (ok) {
+                done();
+            } else {
+                fail();
+            }
+        } catch (e) {
+            fail();
+        }
+    }
+
+    function bindDetailCopy(root) {
+        if (!root) {
+            return;
+        }
+        root.querySelectorAll('.vs-log-detail__copy').forEach(function (btn) {
+            if (btn.getAttribute('data-bound') === '1') {
+                return;
+            }
+            btn.setAttribute('data-bound', '1');
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var text = btn.getAttribute('data-copy') || '';
+                if (text === '') {
+                    return;
+                }
+                copyDetailText(text, '完整 URL 已复制');
+            });
+        });
     }
 
     function eyeIconSvg(off) {
@@ -296,9 +378,12 @@
         return '<div class="vs-log-detail vs-log-detail--admin">'
             + '<div class="vs-log-detail__hero">'
             + '<span class="vs-log-detail__hero-name">' + escapeHtml(row.apiname || ('接口 #' + row.apiid)) + '</span>'
+            + '<div class="vs-log-detail__hero-badges">'
             + methodBadge(row)
             + '<span class="vs-log-status ' + escapeHtml(row.ok_class || '') + '">' + escapeHtml(row.ok_label) + '</span>'
             + httpBadge(row)
+            + storageBadge(row)
+            + '</div>'
             + '</div>'
             + '<div class="vs-log-detail__section">'
             + '<h4 class="vs-log-detail__section-title">调用信息</h4>'
@@ -309,20 +394,25 @@
             + detailItem('时间', row.createtime)
             + detailItem('结果', row.ok_label)
             + detailItem('状态码', httpcodeDisplay(row))
-            + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '匿名'))
+            + detailItem('用户', row.user_label || (row.userid ? ('#' + row.userid) : '游客'))
             + detailItem('扣费', (row.charged_label || '') + (row.charged ? (' · ' + row.cost) : ''))
             + detailSecretItem('密钥', row.apikey, row.apikey_masked)
             + '</div></div>'
             + '<div class="vs-log-detail__section">'
             + '<h4 class="vs-log-detail__section-title">网络与来源</h4>'
-            + '<div class="vs-log-detail__grid">'
+            + '<div class="vs-log-detail__grid vs-log-detail__grid--net">'
             + detailItem('IP', row.ip)
             + detailItem('IP 归属地', row.iploc)
             + detailItem('出口节点', row.egress)
+            + detailItem('X-Forwarded-Proto', row.xfproto)
+            + detailItem('X-Forwarded-For', row.xff)
+            + detailItem('X-Real-IP', row.xri)
+            + '</div>'
+            + '<div class="vs-log-detail__grid">'
             + detailItem('来源域名', row.domain)
             + detailItem('Host', row.host)
             + detailItem('路径', row.path, true)
-            + detailItem('完整 URL', row.url, true)
+            + detailItem('完整 URL', row.url, true, true)
             + detailItem('Referer', row.referer, true)
             + detailItem('Origin', row.origin, true)
             + detailItem('User-Agent', row.ua, true)
@@ -373,31 +463,17 @@
             }
             detailBody.innerHTML = detailHtml(data.row);
             bindSecretToggles(detailBody);
+            bindDetailCopy(detailBody);
         }).catch(function () {
             detailBody.innerHTML = '<p class="vs-empty">网络异常</p>';
         });
     }
 
     function renderPagerNums() {
-        if (!pagerNums) {
+        if (!pagerNums || !window.VS || !VS.pagerNumsHtml) {
             return;
         }
-        if (totalPages <= 1) {
-            pagerNums.innerHTML = '';
-            return;
-        }
-        // 中间最多 3 个页码：当前尽量居中（首尾贴边）
-        var start = Math.max(1, page - 1);
-        var end = Math.min(totalPages, start + 2);
-        start = Math.max(1, end - 2);
-        var html = '';
-        var i;
-        for (i = start; i <= end; i += 1) {
-            html += '<button type="button" class="vs-api-pager__num'
-                + (i === page ? ' is-active' : '')
-                + '" data-page="' + i + '">' + i + '</button>';
-        }
-        pagerNums.innerHTML = html;
+        pagerNums.innerHTML = VS.pagerNumsHtml(page, totalPages);
     }
 
     function renderPager(total, pagesize) {
@@ -412,6 +488,7 @@
         }
         hasMore = page < totalPages;
         if (totalEl) {
+            /* 条数按最大日志 ID 估算；底栏只显示「共 N 条」，不附加归档/热冷说明 */
             totalEl.textContent = '共 ' + totalCount + ' 条';
         }
         if (prevBtn) {
@@ -442,6 +519,18 @@
 
     function applyListPayload(data, pagesize) {
         hasMore = !!data.has_more;
+        totalApprox = !!data.total_approx;
+        includeCold = !!data.include_cold;
+        // 记下本页实际 before_id（含服务端跳页估算结果），便于再跳/回跳
+        var usedBefore = parseInt(data.before_id, 10);
+        if (!usedBefore || usedBefore < 0) {
+            usedBefore = 0;
+        }
+        pageCursors[page] = page <= 1 ? 0 : usedBefore;
+        var nextBefore = parseInt(data.next_before_id, 10) || 0;
+        if (nextBefore > 0 && hasMore) {
+            pageCursors[page + 1] = nextBefore;
+        }
         renderList(data.list || [], parseInt(data.total, 10) || 0, pagesize);
     }
 
@@ -468,6 +557,14 @@
 
         var seq = ++loadSeq;
         var pagesize = getPageSize();
+        // 有缓存游标则用；否则 before_id=0 + page，由服务端按最大 ID 估算跳页（冷热均可跳）
+        var beforeId = 0;
+        if (pageCursors[page] !== undefined && pageCursors[page] !== null) {
+            beforeId = parseInt(pageCursors[page], 10) || 0;
+        }
+        if (beforeId < 0) {
+            beforeId = 0;
+        }
         setControlsDisabled(true);
         if (VS.setLoading) {
             VS.setLoading(body, isRefresh ? '正在刷新日志' : '正在加载日志');
@@ -476,7 +573,7 @@
         fd.append('action', 'list');
         fd.append('page', String(page));
         fd.append('pagesize', String(pagesize));
-        fd.append('before_id', '0');
+        fd.append('before_id', String(beforeId));
         if (isRefresh) {
             fd.append('refresh', '1');
         }
@@ -487,8 +584,8 @@
         if (okFilter !== '') {
             fd.append('ok', okFilter);
         }
-        var opts = listAbort ? { signal: listAbort.signal } : {};
-        VS.postForm(fd, window.location.href, opts).then(function (data) {
+        var reqOpts = listAbort ? { signal: listAbort.signal } : {};
+        VS.postForm(fd, window.location.href, reqOpts).then(function (data) {
             if (seq !== loadSeq) {
                 return;
             }

@@ -114,7 +114,7 @@ $showDock = $hasSocial || $hasFooterQr;
   </div>
 </footer>
 <?php if ($showRuntime && $hasRuntime): ?>
-<script>var runtimeStartDate = new Date(<?php echo json_encode($runtimeStart); ?>).getTime();</script>
+<script>var runtimeStartDate = new Date(<?php echo vs_json_script($runtimeStart); ?>).getTime();</script>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('three', 'assets/js/front-runtime.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <?php endif; ?>
 <?php

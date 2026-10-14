@@ -21,7 +21,7 @@ if ($proxySlug !== '') {
 }
 
 if (!InstallChecker::isInstalled()) {
-    vs_redirect(vs_base_url() . '/install/');
+    vs_redirect(vs_site_path('/install/'));
 }
 
 $seo = vs_page_seo_pack('全部接口', array(

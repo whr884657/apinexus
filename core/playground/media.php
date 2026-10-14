@@ -67,6 +67,7 @@ header('Content-Length: ' . (string) (int) $size);
 header('Cache-Control: private, max-age=300');
 header('X-Content-Type-Options: nosniff');
 header('Content-Disposition: inline');
+// 媒体中转沙箱：与全站 AuthSecurity CSP 分离，禁止放宽为本站 http/https
 header('Content-Security-Policy: default-src \'none\'; sandbox');
 readfile($binPath);
 exit;

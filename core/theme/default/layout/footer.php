@@ -88,20 +88,22 @@ $isLinksPage = (isset($pageKey) && $pageKey === 'links');
         </div>
     </div>
 </footer>
-<script>var SYSTEM_VERSION = <?php echo json_encode(VS_VERSION); ?>;</script>
+<script>var SYSTEM_VERSION = <?php echo vs_json_script(VS_VERSION); ?>;</script>
 <?php if (!isset($GLOBALS['vs_front_csrf_injected'])): $GLOBALS['vs_front_csrf_injected'] = true; ?>
 <script>
-window.VS_BASE_URL = <?php echo json_encode(vs_site_base_path()); ?>;
-window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode(AuthSecurity::csrfToken()); ?>;
-window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo json_encode(vs_site_path('/core/playground/relay.php')); ?>;
-window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo json_encode(vs_site_path('/core/front/catalog.php')); ?>;
-window.VS_FRONT_LINKS = window.VS_FRONT_LINKS || <?php echo json_encode(vs_site_path('/core/front/links.php')); ?>;
+window.VS_BASE_URL = <?php echo vs_json_script(vs_site_base_path()); ?>;
+<?php if (vs_front_csrf_should_emit()): ?>
+window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo vs_json_script(AuthSecurity::csrfToken()); ?>;
+<?php endif; ?>
+window.VS_PLAY_URL = window.VS_PLAY_URL || <?php echo vs_json_script(vs_site_path('/core/playground/relay.php')); ?>;
+window.VS_FRONT_CATALOG = window.VS_FRONT_CATALOG || <?php echo vs_json_script(vs_site_path('/core/front/catalog.php')); ?>;
+window.VS_FRONT_LINKS = window.VS_FRONT_LINKS || <?php echo vs_json_script(vs_site_path('/core/front/links.php')); ?>;
 </script>
 <?php
 // 壳 toast/common 已由 vs_frontend_page 逐文件加载，页脚不再重复拉取
 ?>
 <?php endif; ?>
 <?php if ($showRuntime && $hasRuntime): ?>
-<script>var runtimeStartDate = new Date(<?php echo json_encode($runtimeStart); ?>).getTime();</script>
+<script>var runtimeStartDate = new Date(<?php echo vs_json_script($runtimeStart); ?>).getTime();</script>
 <script src="<?php echo vs_e(ThemeManager::assetUrl('default', 'assets/js/front-runtime.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <?php endif; ?>

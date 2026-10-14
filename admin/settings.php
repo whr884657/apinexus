@@ -1,16 +1,17 @@
 <?php
 /**
  * 文件：admin/settings.php
- * 作用：ApiNexus 后台系统设置（站点信息、用户注册、OAuth、邮箱发信）
+ * 作用：ApiNexus 后台系统设置（站点信息、出站 User-Agent、用户注册、OAuth、邮箱发信）
  *
  * 说明：系统版本以 core/version.php 中 VS_VERSION 为准。
  */
 
 require_once __DIR__ . '/init.php';
 
-// 旧 apilog_cron_key → system_api_key（幂等）
+// 旧 apilog_cron_key → system_api_key；旧 *on 短键 → sysapion JSON（幂等）
 if (class_exists('SystemApiKey')) {
     SystemApiKey::migrateFromLegacy();
+    SystemApiKey::migrateGatesFromLegacy();
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -28,18 +29,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hotDays = ApiLogArchive::MAX_HOT_DAYS;
             }
             $shardRows = ApiLogArchive::clampShardRows($shardRows);
-            $archiveOn = isset($_POST['apilog_archive_enabled']) ? '1' : '0';
-            $purgeOn = isset($_POST['apilog_purge_enabled']) ? '1' : '0';
-            if ($archiveOn === '1' && $purgeOn === '1') {
-                AjaxResponse::error('冷热归档与过期直接删除不可同时启用，请只选其一');
-            }
             Config::setMany(array(
-                'apilog_detail'           => isset($_POST['apilog_detail']) ? '1' : '0',
-                'apilog_archive_enabled'  => $archiveOn,
-                'apilog_purge_enabled'    => $purgeOn,
-                'apilog_hot_days'         => (string) $hotDays,
-                'apilog_shard_rows'       => (string) $shardRows,
+                'apilog_detail'        => isset($_POST['apilog_detail']) ? '1' : '0',
+                'apilog_hot_days'      => (string) $hotDays,
+                'apilog_shard_rows'    => (string) $shardRows,
             ));
+            SystemApiKey::setGate('apilogarchive', isset($_POST['apilogon']));
+            SystemApiKey::setGateRate(
+                'apilogarchive',
+                isset($_POST['apilogarchive_qpm']) ? $_POST['apilogarchive_qpm'] : 0,
+                isset($_POST['apilogarchive_qps']) ? $_POST['apilogarchive_qps'] : 0
+            );
             AjaxResponse::success('日志设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败，请稍后重试');
@@ -48,8 +48,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_cardkey_api') {
         try {
-            Config::set('cardkey_api_enabled', isset($_POST['cardkey_api_enabled']) ? '1' : '0');
+            SystemApiKey::setGate('cardkey', isset($_POST['cardkeyon']));
+            SystemApiKey::setGateRate(
+                'cardkey',
+                isset($_POST['cardkey_qpm']) ? $_POST['cardkey_qpm'] : 0,
+                isset($_POST['cardkey_qps']) ? $_POST['cardkey_qps'] : 0
+            );
             AjaxResponse::success('卡密对接 API 设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_apiquery_api') {
+        try {
+            SystemApiKey::setGate('apiquery', isset($_POST['apiqueryon']));
+            SystemApiKey::setGateRate(
+                'apiquery',
+                isset($_POST['apiquery_qpm']) ? $_POST['apiquery_qpm'] : 0,
+                isset($_POST['apiquery_qps']) ? $_POST['apiquery_qps'] : 0
+            );
+            AjaxResponse::success('接口查询 API 设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_apirank_api') {
+        try {
+            SystemApiKey::setGate('apirank', isset($_POST['apirankon']));
+            SystemApiKey::setGateRate(
+                'apirank',
+                isset($_POST['apirank_qpm']) ? $_POST['apirank_qpm'] : 0,
+                isset($_POST['apirank_qps']) ? $_POST['apirank_qps'] : 0
+            );
+            AjaxResponse::success('调用排行 API 设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_sitestats_api') {
+        try {
+            SystemApiKey::setGate('sitestats', isset($_POST['sitestatson']));
+            SystemApiKey::setGateRate(
+                'sitestats',
+                isset($_POST['sitestats_qpm']) ? $_POST['sitestats_qpm'] : 0,
+                isset($_POST['sitestats_qps']) ? $_POST['sitestats_qps'] : 0
+            );
+            AjaxResponse::success('全站概况 API 设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_userinfo_api') {
+        try {
+            SystemApiKey::setGate('userinfo', isset($_POST['userinfoon']));
+            SystemApiKey::setGateRate(
+                'userinfo',
+                isset($_POST['userinfo_qpm']) ? $_POST['userinfo_qpm'] : 0,
+                isset($_POST['userinfo_qps']) ? $_POST['userinfo_qps'] : 0
+            );
+            AjaxResponse::success('用户信息 API 设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败，请稍后重试');
         }
@@ -265,7 +326,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::success('系统密钥已生成', array(
                 'system_api_key' => $key,
                 'cron_url'       => ApiLogArchive::cronUrl(),
-                'cardkey_api'    => rtrim(vs_base_url(), '/') . '/core/api/cardkey.php',
+                'cardkey_api'    => rtrim(vs_base_url(), '/') . '/core/api/cardkey',
             ));
         } catch (Exception $e) {
             AjaxResponse::error('生成失败，请稍后重试');
@@ -341,6 +402,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ));
             SiteContext::clearCache();
             AjaxResponse::success('站点设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('操作失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_outbound_ua') {
+        try {
+            $raw = trim(isset($_POST['uabrand']) ? (string) $_POST['uabrand'] : '');
+            if ($raw === '') {
+                AjaxResponse::error('请填写出站 User-Agent 品牌名');
+            }
+            $brand = OutboundUa::normalizeBrand($raw);
+            if ($brand === '') {
+                AjaxResponse::error('品牌名仅允许字母、数字、连字符与下划线，最长 32 位，且须以字母或数字开头');
+            }
+            Config::set(OutboundUa::CONFIG_KEY, $brand);
+            OutboundUa::clearMemo();
+            AjaxResponse::success('出站 User-Agent 已保存');
         } catch (Exception $e) {
             AjaxResponse::error('操作失败，请稍后重试');
         }
@@ -539,6 +618,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'checkin_points_max' => (string) $max,
             ));
             AjaxResponse::success('签到设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_checkin_api') {
+        try {
+            SystemApiKey::setGate('checkin', isset($_POST['checkinon']));
+            SystemApiKey::setGateRate(
+                'checkin',
+                isset($_POST['checkin_qpm']) ? $_POST['checkin_qpm'] : 0,
+                isset($_POST['checkin_qps']) ? $_POST['checkin_qps'] : 0
+            );
+            AjaxResponse::success('签到 API 设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败，请稍后重试');
         }
@@ -751,6 +844,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'gt4_id'                    => trim(isset($_POST['gt4_id']) ? (string) $_POST['gt4_id'] : ''),
                 'gt4_key'                   => trim(isset($_POST['gt4_key']) ? (string) $_POST['gt4_key'] : ''),
                 'gt4_api'                   => $gt4ApiIn,
+                'cfid'                      => trim(isset($_POST['cfid']) ? (string) $_POST['cfid'] : ''),
+                'cfkey'                     => trim(isset($_POST['cfkey']) ? (string) $_POST['cfkey'] : ''),
                 'captcha_on_admin_login'    => isset($_POST['captcha_on_admin_login']) ? '1' : '0',
                 'captcha_on_admin_forgot'   => isset($_POST['captcha_on_admin_forgot']) ? '1' : '0',
                 'captcha_on_user_login'     => isset($_POST['captcha_on_user_login']) ? '1' : '0',
@@ -768,15 +863,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_mail') {
         try {
+            $oldMail = Mailer::loadConfig();
+            $modeIn = isset($_POST['mail_mode']) ? (int) $_POST['mail_mode'] : 0;
+            if ($modeIn < 0 || $modeIn > 2) {
+                $modeIn = 0;
+            }
+            $listIn = array();
+            if (isset($_POST['mailsmtp']) && is_string($_POST['mailsmtp']) && trim($_POST['mailsmtp']) !== '') {
+                $mailRaw = trim((string) $_POST['mailsmtp']);
+                if (strlen($mailRaw) > Mailer::JSON_MAX_BYTES) {
+                    AjaxResponse::error('邮箱账号数据过大');
+                }
+                $decoded = Mailer::decodeConfigJson($mailRaw);
+                if (!is_array($decoded)) {
+                    AjaxResponse::error('邮箱账号数据无效');
+                }
+                if (isset($decoded['mode'])) {
+                    $modeIn = (int) $decoded['mode'];
+                    if ($modeIn < 0 || $modeIn > 2) {
+                        $modeIn = 0;
+                    }
+                }
+                if (isset($decoded['list']) && is_array($decoded['list'])) {
+                    $listIn = $decoded['list'];
+                }
+            } elseif (isset($_POST['list']) && is_array($_POST['list'])) {
+                $listIn = $_POST['list'];
+            }
+            if (count($listIn) > Mailer::MAX_ACCOUNTS) {
+                AjaxResponse::error('发信账号最多 ' . Mailer::MAX_ACCOUNTS . ' 个');
+            }
+            $newMail = Mailer::normalizeConfig(array(
+                'mode' => $modeIn,
+                'list' => $listIn,
+            ));
+            $newMail = Mailer::mergePasswords($newMail, $oldMail);
+            foreach ($newMail['list'] as $acc) {
+                $ready = !empty($acc['on']);
+                $fieldErr = Mailer::validateAccountFields($acc, $ready);
+                if ($fieldErr !== '') {
+                    AjaxResponse::error($fieldErr);
+                }
+                if (!$ready) {
+                    continue;
+                }
+                $p = isset($acc['pass']) ? (string) $acc['pass'] : '';
+                if ($p === '') {
+                    AjaxResponse::error('已启用的账号须填写 SMTP 密码（留空仅用于保留原密码；新账号请填写）');
+                }
+            }
+            Config::set(Mailer::CONFIG_KEY, Mailer::encodeConfig($newMail));
             Config::setMany(array(
                 'mail_enabled'       => isset($_POST['mail_enabled']) ? '1' : '0',
-                'mail_smtp_host'     => trim(isset($_POST['mail_smtp_host']) ? $_POST['mail_smtp_host'] : ''),
-                'mail_smtp_port'     => trim(isset($_POST['mail_smtp_port']) ? $_POST['mail_smtp_port'] : '465'),
-                'mail_smtp_user'     => trim(isset($_POST['mail_smtp_user']) ? $_POST['mail_smtp_user'] : ''),
-                'mail_smtp_pass'     => trim(isset($_POST['mail_smtp_pass']) ? $_POST['mail_smtp_pass'] : ''),
-                'mail_smtp_secure'   => trim(isset($_POST['mail_smtp_secure']) ? $_POST['mail_smtp_secure'] : 'ssl'),
-                'mail_from_email'    => trim(isset($_POST['mail_from_email']) ? $_POST['mail_from_email'] : ''),
-                'mail_from_name'     => trim(isset($_POST['mail_from_name']) ? $_POST['mail_from_name'] : SiteContext::siteName()),
                 'mail_notify_submit'     => isset($_POST['mail_notify_submit']) ? '1' : '0',
                 'mail_notify_pass'       => isset($_POST['mail_notify_pass']) ? '1' : '0',
                 'mail_notify_fail'       => isset($_POST['mail_notify_fail']) ? '1' : '0',
@@ -791,6 +929,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'mail_notify_recharge_success'    => isset($_POST['mail_notify_recharge_success']) ? '1' : '0',
                 'mail_notify_order_admin'         => isset($_POST['mail_notify_order_admin']) ? '1' : '0',
                 'mail_notify_key_quota'           => isset($_POST['mail_notify_key_quota']) ? '1' : '0',
+                'mail_notify_dev_apply'           => isset($_POST['mail_notify_dev_apply']) ? '1' : '0',
+                'mail_notify_dev_pass'            => isset($_POST['mail_notify_dev_pass']) ? '1' : '0',
+                'mail_notify_dev_fail'            => isset($_POST['mail_notify_dev_fail']) ? '1' : '0',
             ));
 
             AjaxResponse::success('邮箱设置已保存');
@@ -804,13 +945,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($testEmail === '' || !filter_var($testEmail, FILTER_VALIDATE_EMAIL)) {
             AjaxResponse::error('请输入有效的测试邮箱地址');
         }
+        $pinId = isset($_POST['mail_account_id']) ? preg_replace('/[^a-zA-Z0-9]/', '', (string) $_POST['mail_account_id']) : '';
         try {
             Mailer::send(
                 $testEmail,
                 SiteContext::siteName() . ' 邮箱测试',
-                '<p>这是一封来自 ' . htmlspecialchars(SiteContext::siteName()) . ' 的测试邮件。</p>'
+                '<p>这是一封来自 ' . htmlspecialchars(SiteContext::siteName(), ENT_QUOTES, 'UTF-8') . ' 的测试邮件。</p>',
+                $pinId
             );
-            AjaxResponse::success('测试邮件已发送，请查收');
+            AjaxResponse::success($pinId !== '' ? '测试邮件已发送（指定账号），请查收' : '测试邮件已发送，请查收');
         } catch (Exception $e) {
             AjaxResponse::error('发送失败，请检查 SMTP 配置后重试');
         }
@@ -821,6 +964,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 Config::clearCache();
 $vsCfg = Config::all();
+Mailer::ensureMigrated();
+$mailSmtpCfg = Mailer::loadConfig();
 $registerSuffixes = RegisterPolicy::formatSuffixInput(RegisterPolicy::getPolicy()['email_suffixes']);
 $oauthCfg = OAuthConfig::getAll();
 $oauthQqCallback = OAuthConfig::callbackUrl('qq');
@@ -844,6 +989,8 @@ vs_admin_layout_start('系统设置', 'settings');
 ?>
 
 <div id="settingsFlash" class="vs-settings-flash" role="alert" hidden></div>
+
+<?php vs_admin_settings_group('站点与展示'); ?>
 
 <?php
 vs_admin_accordion_start(
@@ -965,394 +1112,38 @@ vs_admin_accordion_start(
 <?php vs_admin_accordion_end(); ?>
 
 <?php
+$uaBrandCurrent = OutboundUa::brand();
+$uaSamples = OutboundUa::previewSamples($uaBrandCurrent);
 vs_admin_accordion_start(
-    'settings-register',
-    '用户注册',
-    '开放注册（全选）、按身份开放、邮箱验证与后缀白名单'
+    'settings-outbound-ua',
+    '出站 User-Agent',
+    '系统对外请求的身份品牌（代理、归属地、OAuth、更新等共用）'
 );
 ?>
-    <form method="post" action="" class="vs-form" id="registerForm" data-ajax="1">
-        <input type="hidden" name="action" value="save_register">
-        <?php
-        vs_render_notice(
-            'info',
-            '注册策略',
-            '<p>「开放注册」为<strong>全选</strong>：勾选后普通用户与开发者均可注册；取消勾选则两种都关闭。</p>'
-            . '<p>也可单独勾选「开放普通用户注册」或「开放开发者注册」。仅开放一种时，注册页<strong>不显示</strong>身份选择滑块，账号固定为该身份。</p>'
-            . '<p>以上勾选落库为单一配置项（四种模式），无需多个开关键。</p>'
-            . '<p>关闭「注册需邮箱验证」后，注册不再发送/校验邮箱验证码，仍须填写邮箱；未配置发信时也可注册。开启时须完成邮箱验证码（未配置发信则无法注册）。</p>',
-            array('allow_html' => true, 'compact' => true)
-        );
-        $allowUserChecked = RegisterPolicy::allowsUserRole();
-        $allowDevChecked = RegisterPolicy::allowsDeveloperRole();
-        $fullyOpenChecked = RegisterPolicy::isFullyOpen();
-        ?>
-        <div class="vs-form-row vs-form-row--check">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="register_enabled" id="registerEnabledMaster" value="1" <?php echo $fullyOpenChecked ? 'checked' : ''; ?>>
-                <span>开放注册</span>
-            </label>
-            <p class="vs-form-hint">全选：勾选=同时开放普通用户与开发者；取消=两种都关闭。仅开放其中一种时本项为未勾选。</p>
-        </div>
-        <div class="vs-form-row vs-form-row--check">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="register_allow_user" id="registerAllowUser" value="1" <?php echo $allowUserChecked ? 'checked' : ''; ?>>
-                <span>开放普通用户注册</span>
-            </label>
-            <p class="vs-form-hint">关闭后无法注册为普通用户；若仍开放开发者，注册页不显示身份滑块。</p>
-        </div>
-        <div class="vs-form-row vs-form-row--check">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="register_allow_developer" id="registerAllowDeveloper" value="1" <?php echo $allowDevChecked ? 'checked' : ''; ?>>
-                <span>开放开发者注册</span>
-            </label>
-            <p class="vs-form-hint">关闭后无法注册为开发者；若仍开放普通用户，注册页不显示身份滑块。</p>
-        </div>
-        <div class="vs-form-row vs-form-row--check">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="register_email_verify" value="1" <?php echo RegisterPolicy::requiresEmailVerify() ? 'checked' : ''; ?>>
-                <span>注册需邮箱验证</span>
-            </label>
-            <p class="vs-form-hint">关闭后注册不再发送/校验邮箱验证码；仍须填写邮箱作为账号邮箱。</p>
-        </div>
-        <?php
-        vs_render_notice(
-            'info',
-            '邮箱后缀白名单',
-            '<p>每行填写一个邮箱后缀（如 <code>qq.com</code> 或 <code>@163.com</code>）。</p><p>留空表示不限制，所有邮箱均可注册。</p>',
-            array('allow_html' => true, 'compact' => true)
-        );
-        ?>
+    <form method="post" action="" class="vs-form" id="outboundUaForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_outbound_ua">
+        <?php vs_render_notice('tip', '', '形态为「品牌/版本」或「品牌-模块/版本」。模块后缀由系统按场景固定（如 Proxy、IpLocator），管理员只改品牌前缀，不可再写死 ApiNexus。', array('field' => true)); ?>
         <div class="vs-form-row">
-            <label class="vs-label">允许的邮箱后缀</label>
-            <textarea name="register_email_suffixes" class="vs-textarea" rows="5"
-                      placeholder="qq.com&#10;163.com&#10;gmail.com"><?php echo vs_e($registerSuffixes); ?></textarea>
+            <label class="vs-label" for="outboundUaBrand">品牌名</label>
+            <input type="text" name="uabrand" id="outboundUaBrand" class="vs-input"
+                   maxlength="32" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,31}"
+                   value="<?php echo vs_e($uaBrandCurrent); ?>"
+                   placeholder="例如 MySite 或 ApiNexus">
+            <?php vs_render_notice('tip', '', '仅字母、数字、连字符与下划线；须以字母或数字开头；最长 32 位。留空不可保存。默认 ApiNexus。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="register_gift_enabled" value="1" <?php echo Config::get('register_gift_enabled', '0') === '1' ? 'checked' : ''; ?>>
-                <span>新用户注册成功后赠送积分</span>
-            </label>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">注册赠送积分数量</label>
-            <input type="number" name="register_gift_points" class="vs-input" min="0" max="1000000" step="1"
-                   value="<?php echo vs_e(Config::get('register_gift_points', '100')); ?>">
-            <p class="vs-form-hint">仅在上方开关开启时生效；填写 0 表示不赠送。</p>
+            <label class="vs-label">当前样例</label>
+            <div class="vs-outbound-ua-samples vs-muted" id="outboundUaSamples"
+                 data-version="<?php echo vs_e(defined('VS_VERSION') ? (string) VS_VERSION : '1'); ?>">
+                <div data-ua-sample="plain"><?php echo vs_e($uaSamples['plain']); ?></div>
+                <div data-ua-sample="proxy"><?php echo vs_e($uaSamples['proxy']); ?></div>
+                <div data-ua-sample="iplocator"><?php echo vs_e($uaSamples['iplocator']); ?></div>
+                <div data-ua-sample="oauth"><?php echo vs_e($uaSamples['oauth']); ?></div>
+            </div>
+            <?php vs_render_notice('tip', '', '输入品牌名时样例即时刷新（未保存亦可预览）；版本号随系统版本自动变化。接口若在「出站身份」里选了浏览器预设或自定义 UA，仍以该接口配置为准。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-actions">
-            <button type="submit" class="vs-btn vs-btn--primary">保存注册设置</button>
-        </div>
-    </form>
-<?php vs_admin_accordion_end(); ?>
-
-<?php
-$apikeyMaxSetting = ApiKeyManager::maxPerUser();
-vs_admin_accordion_start(
-    'settings-apikey',
-    '调用密钥',
-    '每账号可创建的密钥数量上限（默认 3，最多 20）'
-);
-?>
-    <form method="post" action="" class="vs-form" id="apikeySettingsForm" data-ajax="1">
-        <input type="hidden" name="action" value="save_apikey">
-        <?php
-        vs_render_notice(
-            'info',
-            '上限说明',
-            '<p>仅限制<strong>新建</strong>密钥。若管理员下调上限，用户已有密钥仍可正常调用；删除后不可再超过新上限新建。</p>',
-            array('allow_html' => true, 'compact' => true)
-        );
-        ?>
-        <div class="vs-form-row">
-            <label class="vs-label">每账号密钥数量上限</label>
-            <input type="number" name="apikey_max" class="vs-input" min="1" max="20" step="1" required
-                   value="<?php echo (int) $apikeyMaxSetting; ?>">
-            <p class="vs-form-hint">填写 1～20；新装默认 3。保存后立即对新建生效，不删除、不禁用已有密钥。</p>
-        </div>
-        <div class="vs-form-actions">
-            <button type="submit" class="vs-btn vs-btn--primary">保存密钥设置</button>
-        </div>
-    </form>
-<?php vs_admin_accordion_end(); ?>
-
-<?php
-vs_admin_accordion_start(
-    'settings-captcha',
-    '人机验证',
-    '登录、注册、评论、友链等场景；管理端与用户端可分选本站图形或行为验证'
-);
-?>
-    <form method="post" action="" class="vs-form" id="captchaForm" data-ajax="1">
-        <input type="hidden" name="action" value="save_captcha">
-        <?php
-        vs_render_notice(
-            'info',
-            '配置说明',
-            '<p>管理员后台与用户端可各自选择验证方式。例如用户侧用行为验证，管理员改用本站图形，可避免第三方服务异常时管理员无法登录。</p><p>三代与四代的验证 ID / 密钥可同时保存。场景开关默认：登录/注册/忘记密码开启；文章评论、申请友链默认关闭（开启后走用户侧验证方式）。未开启的场景仍有一次性提交小票与短冷却。</p>',
-            array('allow_html' => true, 'compact' => true)
-        );
-        ?>
-        <div class="vs-form-row">
-            <label class="vs-label">管理员验证方式</label>
-            <select name="captcha_mode_admin" class="vs-input">
-                <option value="local" <?php echo $captchaCfg['mode_admin'] === 'local' ? 'selected' : ''; ?>>本站图形验证码</option>
-                <option value="gt4" <?php echo $captchaCfg['mode_admin'] === 'gt4' ? 'selected' : ''; ?>>行为验证第四代</option>
-                <option value="gt3" <?php echo $captchaCfg['mode_admin'] === 'gt3' ? 'selected' : ''; ?>>行为验证第三代</option>
-            </select>
-            <p class="vs-form-hint">作用于管理员登录、管理员忘记密码。</p>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">用户验证方式</label>
-            <select name="captcha_mode_user" class="vs-input">
-                <option value="local" <?php echo $captchaCfg['mode_user'] === 'local' ? 'selected' : ''; ?>>本站图形验证码</option>
-                <option value="gt4" <?php echo $captchaCfg['mode_user'] === 'gt4' ? 'selected' : ''; ?>>行为验证第四代</option>
-                <option value="gt3" <?php echo $captchaCfg['mode_user'] === 'gt3' ? 'selected' : ''; ?>>行为验证第三代</option>
-            </select>
-            <p class="vs-form-hint">作用于用户登录、注册、忘记密码、文章评论、申请友链（以后两者勾选为准）。</p>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">第三代 · 验证 ID</label>
-            <input type="text" name="gt3_id" class="vs-input" autocomplete="off"
-                   value="<?php echo vs_e($captchaCfg['gt3_id']); ?>" placeholder="第三代 gt / 验证 ID">
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">第三代 · 验证密钥</label>
-            <input type="text" name="gt3_key" class="vs-input" autocomplete="off"
-                   value="<?php echo vs_e($captchaCfg['gt3_key']); ?>" placeholder="第三代私钥">
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">第四代 · 验证 ID</label>
-            <input type="text" name="gt4_id" class="vs-input" autocomplete="off"
-                   value="<?php echo vs_e($captchaCfg['gt4_id']); ?>" placeholder="第四代 captcha_id">
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">第四代 · 验证密钥</label>
-            <input type="text" name="gt4_key" class="vs-input" autocomplete="off"
-                   value="<?php echo vs_e($captchaCfg['gt4_key']); ?>" placeholder="第四代私钥">
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">第四代 · 二次校验地址（可选）</label>
-            <input type="text" name="gt4_api" class="vs-input"
-                   value="<?php echo vs_e($captchaCfg['gt4_api']); ?>"
-                   placeholder="默认 https://gcaptcha4.geetest.com（仅官方域名）">
-            <p class="vs-form-hint">一般无需填写；仅允许官方域名且强制 HTTPS。</p>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">启用场景</label>
-            <p class="vs-form-hint" style="margin-top:0;">可单开、多开或全开；关闭的场景不展示验证控件。</p>
-            <label class="vs-checkbox">
-                <input type="checkbox" name="captcha_on_admin_login" value="1" <?php echo $captchaCfg['admin_login'] ? 'checked' : ''; ?>>
-                <span>管理员登录</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="captcha_on_admin_forgot" value="1" <?php echo $captchaCfg['admin_forgot'] ? 'checked' : ''; ?>>
-                <span>管理员忘记密码（发送邮箱验证码时）</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="captcha_on_user_login" value="1" <?php echo $captchaCfg['user_login'] ? 'checked' : ''; ?>>
-                <span>用户登录</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="captcha_on_user_register" value="1" <?php echo $captchaCfg['user_register'] ? 'checked' : ''; ?>>
-                <span>用户注册</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="captcha_on_user_forgot" value="1" <?php echo $captchaCfg['user_forgot'] ? 'checked' : ''; ?>>
-                <span>用户忘记密码（发送邮箱验证码时）</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="captcha_on_comment" value="1" <?php echo !empty($captchaCfg['comment']) ? 'checked' : ''; ?>>
-                <span>文章评论</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="captcha_on_applylink" value="1" <?php echo !empty($captchaCfg['applylink']) ? 'checked' : ''; ?>>
-                <span>申请友链</span>
-            </label>
-        </div>
-        <div class="vs-form-actions">
-            <button type="submit" class="vs-btn vs-btn--primary">保存验证码设置</button>
-        </div>
-    </form>
-<?php vs_admin_accordion_end(); ?>
-
-<?php
-vs_admin_accordion_start(
-    'settings-checkin',
-    '每日签到',
-    '开启后用户中心可签到领取随机积分'
-);
-?>
-    <form method="post" action="" class="vs-form" id="checkinForm" data-ajax="1">
-        <input type="hidden" name="action" value="save_checkin">
-        <div class="vs-form-row">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="checkin_enabled" value="1" <?php echo Config::get('checkin_enabled', '0') === '1' ? 'checked' : ''; ?>>
-                <span>启用每日签到赠送积分</span>
-            </label>
-        </div>
-        <div class="vs-form-row vs-form-row--inline">
-            <div class="vs-form-col">
-                <label class="vs-label">最低赠送积分</label>
-                <input type="number" name="checkin_points_min" class="vs-input" min="1" max="1000000" step="1"
-                       value="<?php echo vs_e(Config::get('checkin_points_min', '10')); ?>">
-            </div>
-            <div class="vs-form-col">
-                <label class="vs-label">最高赠送积分</label>
-                <input type="number" name="checkin_points_max" class="vs-input" min="1" max="1000000" step="1"
-                       value="<?php echo vs_e(Config::get('checkin_points_max', '30')); ?>">
-            </div>
-        </div>
-        <p class="vs-form-hint">每次签到在最低与最高之间随机赠送；每位用户每天仅可签到一次。</p>
-        <div class="vs-form-actions">
-            <button type="submit" class="vs-btn vs-btn--primary">保存签到设置</button>
-        </div>
-    </form>
-<?php vs_admin_accordion_end(); ?>
-
-<?php
-vs_admin_accordion_start(
-    'settings-oauth',
-    '第三方登录',
-    'QQ 互联、Gitee、聚合登录（仅用户端）'
-);
-?>
-    <form method="post" action="" class="vs-form vs-settings-form" id="oauthForm" data-ajax="1">
-        <input type="hidden" name="action" value="save_oauth">
-        <input type="hidden" name="agg_items_json" id="aggItemsJson" value="">
-        <?php
-        vs_render_notice(
-            'info',
-            '使用说明',
-            '用户须先完成邮箱注册，首次使用第三方登录时需验证已有账号密码完成绑定。请将下方回调地址原样填入对应平台应用配置。聚合登录的「接口对应值」因各聚合商文档而异，可点胶囊右侧齿轮修改。',
-            array('compact' => true)
-        );
-        ?>
-        <div class="vs-form-row">
-            <label class="vs-label" for="oauthQqCallback">QQ 回调地址</label>
-            <div class="vs-copy-row">
-                <input type="text" class="vs-input" id="oauthQqCallback" readonly
-                       value="<?php echo vs_e($oauthQqCallback); ?>">
-                <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthQqCallback">复制</button>
-            </div>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label" for="oauthGiteeCallback">Gitee 回调地址</label>
-            <div class="vs-copy-row">
-                <input type="text" class="vs-input" id="oauthGiteeCallback" readonly
-                       value="<?php echo vs_e($oauthGiteeCallback); ?>">
-                <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthGiteeCallback">复制</button>
-            </div>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label" for="oauthAggCallback">聚合登录回调地址</label>
-            <div class="vs-copy-row">
-                <input type="text" class="vs-input" id="oauthAggCallback" readonly
-                       value="<?php echo vs_e($oauthAggCallback); ?>">
-                <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthAggCallback">复制</button>
-            </div>
-        </div>
-
-        <hr class="vs-divider">
-        <h4 class="vs-form-subtitle">QQ 互联</h4>
-        <div class="vs-form-row vs-form-row--check">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="qq_enabled" value="1" <?php echo !empty($oauthCfg['qq']['enabled']) ? 'checked' : ''; ?>>
-                <span>启用 QQ 登录</span>
-            </label>
-        </div>
-        <div class="vs-form-grid">
-            <div class="vs-form-row">
-                <label class="vs-label">App ID</label>
-                <input type="text" name="qq_app_id" class="vs-input" value="<?php echo vs_e($oauthCfg['qq']['app_id']); ?>">
-            </div>
-            <div class="vs-form-row">
-                <label class="vs-label">App Key</label>
-                <input type="text" name="qq_app_key" class="vs-input" value="<?php echo vs_e($oauthCfg['qq']['app_key']); ?>">
-            </div>
-        </div>
-
-        <hr class="vs-divider">
-
-        <h4 class="vs-form-subtitle">Gitee OAuth</h4>
-        <div class="vs-form-row vs-form-row--check">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="gitee_enabled" value="1" <?php echo !empty($oauthCfg['gitee']['enabled']) ? 'checked' : ''; ?>>
-                <span>启用 Gitee 登录</span>
-            </label>
-        </div>
-        <div class="vs-form-grid">
-            <div class="vs-form-row">
-                <label class="vs-label">Client ID</label>
-                <input type="text" name="gitee_client_id" class="vs-input" value="<?php echo vs_e($oauthCfg['gitee']['client_id']); ?>">
-            </div>
-            <div class="vs-form-row">
-                <label class="vs-label">Client Secret</label>
-                <input type="text" name="gitee_client_secret" class="vs-input" value="<?php echo vs_e($oauthCfg['gitee']['client_secret']); ?>">
-            </div>
-        </div>
-
-        <hr class="vs-divider">
-
-        <h4 class="vs-form-subtitle">聚合登录</h4>
-        <div class="vs-form-row vs-form-row--check">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="agg_enabled" value="1" <?php echo !empty($oauthCfg['agg']['enabled']) ? 'checked' : ''; ?>>
-                <span>启用聚合登录</span>
-            </label>
-        </div>
-        <?php
-        vs_render_notice(
-            'tip',
-            '',
-            '不是所有聚合平台都支持全部登录方式。前半段点击启用/停用；右侧齿轮修改「接口对应值」。改完点「应用」写入本页，再点底部「保存 OAuth 设置」提交。',
-            array('compact' => true, 'field' => true)
-        );
-        ?>
-        <div class="vs-form-row">
-            <label class="vs-label" for="aggApiurl">网关地址</label>
-            <input type="text" class="vs-input" id="aggApiurl" name="agg_apiurl"
-                   placeholder="如 https://u.example.com/"
-                   value="<?php echo vs_e(isset($oauthCfg['agg']['apiurl']) ? $oauthCfg['agg']['apiurl'] : ''); ?>">
-            <p class="vs-form-hint">填聚合平台根地址即可（勿写死某一家）；系统会自动拼接 connect.php。</p>
-        </div>
-        <div class="vs-form-grid">
-            <div class="vs-form-row">
-                <label class="vs-label" for="aggAppId">App ID</label>
-                <input type="text" class="vs-input" id="aggAppId" name="agg_app_id"
-                       value="<?php echo vs_e(isset($oauthCfg['agg']['app_id']) ? $oauthCfg['agg']['app_id'] : ''); ?>">
-            </div>
-            <div class="vs-form-row">
-                <label class="vs-label" for="aggAppKey">App Key</label>
-                <input type="text" class="vs-input" id="aggAppKey" name="agg_app_key"
-                       value="<?php echo vs_e(isset($oauthCfg['agg']['app_key']) ? $oauthCfg['agg']['app_key'] : ''); ?>">
-            </div>
-        </div>
-
-        <div class="vs-agg-block" id="aggPillRoot"
-             data-items="<?php echo vs_e(json_encode($oauthAggItems, JSON_UNESCAPED_UNICODE)); ?>">
-            <p class="vs-label">内置登录方式</p>
-            <div class="vs-agg-pills" id="aggPillsBuiltin" aria-label="内置登录方式"></div>
-            <p class="vs-label vs-agg-custom-label">自定义登录方式</p>
-            <div class="vs-agg-pills vs-agg-pills--custom" id="aggPillsCustom" aria-label="自定义登录方式"></div>
-            <div class="vs-agg-custom-add">
-                <input type="text" class="vs-input" id="aggCustomName" placeholder="名称" maxlength="32">
-                <input type="text" class="vs-input" id="aggCustomType" placeholder="接口对应值" maxlength="64">
-                <input type="text" class="vs-input" id="aggCustomIcon" placeholder="图标链接 https://…" maxlength="500">
-                <button type="button" class="vs-btn vs-btn--default" id="aggCustomAddBtn">添加</button>
-            </div>
-            <div class="vs-agg-edit" id="aggEditSlot" hidden>
-                <div class="vs-agg-edit__head">正在编辑：<strong id="aggEditName">—</strong></div>
-                <div class="vs-agg-edit__row">
-                    <input type="text" class="vs-input" id="aggEditType" maxlength="64" placeholder="接口对应值">
-                    <button type="button" class="vs-btn vs-btn--primary" id="aggEditApplyBtn">应用</button>
-                </div>
-                <p class="vs-form-hint" id="aggEditHint">此为请求聚合接口时的 type 参数。默认已按常见平台填写；若你的聚合文档不同，修改后点「应用」，再点底部保存。</p>
-            </div>
-        </div>
-
-        <div class="vs-form-actions">
-            <button type="submit" class="vs-btn vs-btn--primary">保存 OAuth 设置</button>
+            <button type="submit" class="vs-btn vs-btn--primary">保存出站 User-Agent</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>
@@ -1525,6 +1316,447 @@ vs_admin_accordion_start(
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>
+
+<?php vs_admin_settings_group('用户与账号'); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-register',
+    '用户注册',
+    '开放注册（全选）、按身份开放、邮箱验证与后缀白名单'
+);
+?>
+    <form method="post" action="" class="vs-form" id="registerForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_register">
+        <?php
+        vs_render_notice(
+            'info',
+            '注册策略',
+            '<p>「开放注册」为<strong>全选</strong>：勾选后普通用户与开发者均可注册；取消勾选则两种都关闭。</p>'
+            . '<p>也可单独勾选「开放普通用户注册」或「开放开发者注册」。仅开放一种时，注册页<strong>不显示</strong>身份选择滑块，账号固定为该身份。</p>'
+            . '<p>以上勾选落库为单一配置项（四种模式），无需多个开关键。</p>'
+            . '<p>关闭「注册需邮箱验证」后，注册不再发送/校验邮箱验证码，仍须填写邮箱；未配置发信时也可注册。开启时须完成邮箱验证码（未配置发信则无法注册）。</p>',
+            array('allow_html' => true, 'compact' => true)
+        );
+        $allowUserChecked = RegisterPolicy::allowsUserRole();
+        $allowDevChecked = RegisterPolicy::allowsDeveloperRole();
+        $fullyOpenChecked = RegisterPolicy::isFullyOpen();
+        ?>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_enabled" id="registerEnabledMaster" value="1" <?php echo $fullyOpenChecked ? 'checked' : ''; ?>>
+                <span>开放注册</span>
+            </label>
+            <p class="vs-form-hint">全选：勾选=同时开放普通用户与开发者；取消=两种都关闭。仅开放其中一种时本项为未勾选。</p>
+        </div>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_allow_user" id="registerAllowUser" value="1" <?php echo $allowUserChecked ? 'checked' : ''; ?>>
+                <span>开放普通用户注册</span>
+            </label>
+            <p class="vs-form-hint">关闭后无法注册为普通用户；若仍开放开发者，注册页不显示身份滑块。</p>
+        </div>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_allow_developer" id="registerAllowDeveloper" value="1" <?php echo $allowDevChecked ? 'checked' : ''; ?>>
+                <span>开放开发者注册</span>
+            </label>
+            <p class="vs-form-hint">关闭后无法注册为开发者；若仍开放普通用户，注册页不显示身份滑块。</p>
+        </div>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_email_verify" value="1" <?php echo RegisterPolicy::requiresEmailVerify() ? 'checked' : ''; ?>>
+                <span>注册需邮箱验证</span>
+            </label>
+            <p class="vs-form-hint">关闭后注册不再发送/校验邮箱验证码；仍须填写邮箱作为账号邮箱。</p>
+        </div>
+        <?php
+        vs_render_notice(
+            'info',
+            '邮箱后缀白名单',
+            '<p>每行填写一个邮箱后缀（如 <code>qq.com</code> 或 <code>@163.com</code>）。</p><p>留空表示不限制，所有邮箱均可注册。</p>',
+            array('allow_html' => true, 'compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label">允许的邮箱后缀</label>
+            <textarea name="register_email_suffixes" class="vs-textarea" rows="5"
+                      placeholder="qq.com&#10;163.com&#10;gmail.com"><?php echo vs_e($registerSuffixes); ?></textarea>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="register_gift_enabled" value="1" <?php echo Config::get('register_gift_enabled', '0') === '1' ? 'checked' : ''; ?>>
+                <span>新用户注册成功后赠送积分</span>
+            </label>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label">注册赠送积分数量</label>
+            <input type="number" name="register_gift_points" class="vs-input" min="0" max="1000000" step="1"
+                   value="<?php echo vs_e(Config::get('register_gift_points', '100')); ?>">
+            <p class="vs-form-hint">仅在上方开关开启时生效；填写 0 表示不赠送。</p>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存注册设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+$apikeyMaxSetting = ApiKeyManager::maxPerUser();
+vs_admin_accordion_start(
+    'settings-apikey',
+    '调用密钥',
+    '每账号可创建的密钥数量上限（默认 3，最多 20）'
+);
+?>
+    <form method="post" action="" class="vs-form" id="apikeySettingsForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_apikey">
+        <?php
+        vs_render_notice(
+            'info',
+            '上限说明',
+            '<p>仅限制<strong>新建</strong>密钥。若管理员下调上限，用户已有密钥仍可正常调用；删除后不可再超过新上限新建。</p>',
+            array('allow_html' => true, 'compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label">每账号密钥数量上限</label>
+            <input type="number" name="apikey_max" class="vs-input" min="1" max="20" step="1" required
+                   value="<?php echo (int) $apikeyMaxSetting; ?>">
+            <p class="vs-form-hint">填写 1～20；新装默认 3。保存后立即对新建生效，不删除、不禁用已有密钥。</p>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存密钥设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-captcha',
+    '人机验证',
+    '登录、注册、评论、友链等场景；管理端与用户端可分选本站图形或行为验证'
+);
+?>
+    <form method="post" action="" class="vs-form" id="captchaForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_captcha">
+        <?php
+        vs_render_notice(
+            'info',
+            '配置说明',
+            '<p>管理员后台与用户端可各自选择验证方式。若管理员改用本站图形，可避免第三方验证异常时管理员无法登录。</p><p>极验三代/四代与 Cloudflare Turnstile 的密钥需分别保存。场景开关默认：登录/注册/忘记密码开启；文章评论、申请友链默认关闭（即使选了用户端验证方式，未勾选的场景仍不拦提交）。</p>',
+            array('allow_html' => true, 'compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="captchaModeAdmin">管理员验证方式</label>
+            <select class="vs-input vs-select" name="captcha_mode_admin" id="captchaModeAdmin" data-vs-pick="sheet">
+                <option value="local" <?php echo $captchaCfg['mode_admin'] === 'local' ? 'selected' : ''; ?>>本站图形验证码</option>
+                <option value="cf" <?php echo $captchaCfg['mode_admin'] === 'cf' ? 'selected' : ''; ?>>Cloudflare Turnstile</option>
+                <option value="gt4" <?php echo $captchaCfg['mode_admin'] === 'gt4' ? 'selected' : ''; ?>>行为验证第四代</option>
+                <option value="gt3" <?php echo $captchaCfg['mode_admin'] === 'gt3' ? 'selected' : ''; ?>>行为验证第三代</option>
+            </select>
+            <p class="vs-form-hint">作用于管理员登录、管理员忘记密码。</p>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="captchaModeUser">用户验证方式</label>
+            <select class="vs-input vs-select" name="captcha_mode_user" id="captchaModeUser" data-vs-pick="sheet">
+                <option value="local" <?php echo $captchaCfg['mode_user'] === 'local' ? 'selected' : ''; ?>>本站图形验证码</option>
+                <option value="cf" <?php echo $captchaCfg['mode_user'] === 'cf' ? 'selected' : ''; ?>>Cloudflare Turnstile</option>
+                <option value="gt4" <?php echo $captchaCfg['mode_user'] === 'gt4' ? 'selected' : ''; ?>>行为验证第四代</option>
+                <option value="gt3" <?php echo $captchaCfg['mode_user'] === 'gt3' ? 'selected' : ''; ?>>行为验证第三代</option>
+            </select>
+            <p class="vs-form-hint">作用于用户登录、注册、忘记密码、文章评论、申请友链（以后两者勾选为准）。</p>
+        </div>
+        <p class="vs-form-hint" style="margin:0 0 10px;">第三方凭证按方式折叠填写（与下方「系统级 API」细条相同）；选用本站图形时可不填。</p>
+        <div class="vs-settings-api-fold" data-api-fold data-fold-group="captcha" id="captcha-fold-gt3">
+            <button type="button" class="vs-settings-api-fold__bar" aria-expanded="false" aria-controls="captcha-fold-gt3-body">
+                <span class="vs-settings-api-fold__title">行为验证第三代（极验 3）</span>
+                <i class="vs-icon vs-icon--chevron" aria-hidden="true"></i>
+            </button>
+            <div class="vs-settings-api-fold__body" id="captcha-fold-gt3-body" hidden>
+                <div class="vs-form-row">
+                    <label class="vs-label">第三代 · 验证 ID</label>
+                    <input type="text" name="gt3_id" class="vs-input" autocomplete="off"
+                           value="<?php echo vs_e($captchaCfg['gt3_id']); ?>" placeholder="第三代 gt / 验证 ID">
+                </div>
+                <div class="vs-form-row">
+                    <label class="vs-label">第三代 · 验证密钥</label>
+                    <input type="text" name="gt3_key" class="vs-input" autocomplete="off"
+                           value="<?php echo vs_e($captchaCfg['gt3_key']); ?>" placeholder="第三代私钥">
+                </div>
+            </div>
+        </div>
+        <div class="vs-settings-api-fold" data-api-fold data-fold-group="captcha" id="captcha-fold-gt4">
+            <button type="button" class="vs-settings-api-fold__bar" aria-expanded="false" aria-controls="captcha-fold-gt4-body">
+                <span class="vs-settings-api-fold__title">行为验证第四代（极验 4）</span>
+                <i class="vs-icon vs-icon--chevron" aria-hidden="true"></i>
+            </button>
+            <div class="vs-settings-api-fold__body" id="captcha-fold-gt4-body" hidden>
+                <div class="vs-form-row">
+                    <label class="vs-label">第四代 · 验证 ID</label>
+                    <input type="text" name="gt4_id" class="vs-input" autocomplete="off"
+                           value="<?php echo vs_e($captchaCfg['gt4_id']); ?>" placeholder="第四代 captcha_id">
+                </div>
+                <div class="vs-form-row">
+                    <label class="vs-label">第四代 · 验证密钥</label>
+                    <input type="text" name="gt4_key" class="vs-input" autocomplete="off"
+                           value="<?php echo vs_e($captchaCfg['gt4_key']); ?>" placeholder="第四代私钥">
+                </div>
+                <div class="vs-form-row">
+                    <label class="vs-label">第四代 · 二次校验地址（可选）</label>
+                    <input type="text" name="gt4_api" class="vs-input"
+                           value="<?php echo vs_e($captchaCfg['gt4_api']); ?>"
+                           placeholder="默认 https://gcaptcha4.geetest.com（仅官方域名）">
+                    <p class="vs-form-hint">一般无需填写；仅允许官方域名且强制 HTTPS。</p>
+                </div>
+            </div>
+        </div>
+        <div class="vs-settings-api-fold" data-api-fold data-fold-group="captcha" id="captcha-fold-cf">
+            <button type="button" class="vs-settings-api-fold__bar" aria-expanded="false" aria-controls="captcha-fold-cf-body">
+                <span class="vs-settings-api-fold__title">Cloudflare Turnstile</span>
+                <i class="vs-icon vs-icon--chevron" aria-hidden="true"></i>
+            </button>
+            <div class="vs-settings-api-fold__body" id="captcha-fold-cf-body" hidden>
+                <div class="vs-form-row">
+                    <label class="vs-label">Cloudflare · Site Key</label>
+                    <input type="text" name="cfid" class="vs-input" autocomplete="off"
+                           value="<?php echo vs_e(isset($captchaCfg['cfid']) ? $captchaCfg['cfid'] : ''); ?>"
+                           placeholder="Turnstile 小组件 Site Key（配置键 cfid）">
+                </div>
+                <div class="vs-form-row">
+                    <label class="vs-label" for="settingsCfkey">Cloudflare · Secret Key</label>
+                    <div class="vs-secret-field">
+                        <input type="password" name="cfkey" id="settingsCfkey" class="vs-input" autocomplete="new-password"
+                               value="<?php echo vs_e(isset($captchaCfg['cfkey']) ? $captchaCfg['cfkey'] : ''); ?>"
+                               placeholder="Turnstile Secret Key（配置键 cfkey，仅服务端校验）">
+                        <button type="button" class="vs-secret-field__toggle" data-secret-target="settingsCfkey"
+                                aria-label="显示密钥" aria-pressed="false" title="显示/隐藏密钥"></button>
+                    </div>
+                    <p class="vs-form-hint">默认掩码显示；点右侧眼睛可临时明文查看。须服务端 Siteverify，密钥勿泄露到前端。配置键短名 cfid / cfkey（无下划线）。详见开发规范《CloudflareTurnstile系统接入规范》。</p>
+                </div>
+            </div>
+        </div>
+        <div class="vs-form-row" style="margin-top:14px;">
+            <label class="vs-label">启用场景</label>
+            <p class="vs-form-hint" style="margin-top:0;">可单开、多开或全开；关闭的场景不展示验证控件。</p>
+            <label class="vs-checkbox">
+                <input type="checkbox" name="captcha_on_admin_login" value="1" <?php echo $captchaCfg['admin_login'] ? 'checked' : ''; ?>>
+                <span>管理员登录</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="captcha_on_admin_forgot" value="1" <?php echo $captchaCfg['admin_forgot'] ? 'checked' : ''; ?>>
+                <span>管理员忘记密码（发送邮箱验证码时）</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="captcha_on_user_login" value="1" <?php echo $captchaCfg['user_login'] ? 'checked' : ''; ?>>
+                <span>用户登录</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="captcha_on_user_register" value="1" <?php echo $captchaCfg['user_register'] ? 'checked' : ''; ?>>
+                <span>用户注册</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="captcha_on_user_forgot" value="1" <?php echo $captchaCfg['user_forgot'] ? 'checked' : ''; ?>>
+                <span>用户忘记密码（发送邮箱验证码时）</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="captcha_on_comment" value="1" <?php echo !empty($captchaCfg['comment']) ? 'checked' : ''; ?>>
+                <span>文章评论</span>
+            </label>
+            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                <input type="checkbox" name="captcha_on_applylink" value="1" <?php echo !empty($captchaCfg['applylink']) ? 'checked' : ''; ?>>
+                <span>申请友链</span>
+            </label>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存验证码设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-checkin',
+    '每日签到',
+    '开启后用户中心可签到领取随机积分'
+);
+?>
+    <form method="post" action="" class="vs-form" id="checkinForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_checkin">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="checkin_enabled" value="1" <?php echo Config::get('checkin_enabled', '0') === '1' ? 'checked' : ''; ?>>
+                <span>启用每日签到赠送积分</span>
+            </label>
+        </div>
+        <div class="vs-form-row vs-form-row--inline">
+            <div class="vs-form-col">
+                <label class="vs-label">最低赠送积分</label>
+                <input type="number" name="checkin_points_min" class="vs-input" min="1" max="1000000" step="1"
+                       value="<?php echo vs_e(Config::get('checkin_points_min', '10')); ?>">
+            </div>
+            <div class="vs-form-col">
+                <label class="vs-label">最高赠送积分</label>
+                <input type="number" name="checkin_points_max" class="vs-input" min="1" max="1000000" step="1"
+                       value="<?php echo vs_e(Config::get('checkin_points_max', '30')); ?>">
+            </div>
+        </div>
+        <p class="vs-form-hint">每次签到在最低与最高之间随机赠送；每位用户每天仅可签到一次。系统级签到 API 开关见底部「系统级 API」。</p>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存签到设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-oauth',
+    '第三方登录',
+    'QQ 互联、Gitee、聚合登录（仅用户端）'
+);
+?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="oauthForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_oauth">
+        <input type="hidden" name="agg_items_json" id="aggItemsJson" value="">
+        <?php
+        vs_render_notice(
+            'info',
+            '使用说明',
+            '用户须先完成邮箱注册，首次使用第三方登录时需验证已有账号密码完成绑定。请将下方回调地址原样填入对应平台应用配置。聚合登录的「接口对应值」因各聚合商文档而异，可点胶囊右侧齿轮修改。',
+            array('compact' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="oauthQqCallback">QQ 回调地址</label>
+            <div class="vs-copy-row">
+                <input type="text" class="vs-input" id="oauthQqCallback" readonly
+                       value="<?php echo vs_e($oauthQqCallback); ?>">
+                <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthQqCallback">复制</button>
+            </div>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="oauthGiteeCallback">Gitee 回调地址</label>
+            <div class="vs-copy-row">
+                <input type="text" class="vs-input" id="oauthGiteeCallback" readonly
+                       value="<?php echo vs_e($oauthGiteeCallback); ?>">
+                <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthGiteeCallback">复制</button>
+            </div>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="oauthAggCallback">聚合登录回调地址</label>
+            <div class="vs-copy-row">
+                <input type="text" class="vs-input" id="oauthAggCallback" readonly
+                       value="<?php echo vs_e($oauthAggCallback); ?>">
+                <button type="button" class="vs-btn vs-btn--default" data-copy-from="oauthAggCallback">复制</button>
+            </div>
+        </div>
+
+        <hr class="vs-divider">
+        <h4 class="vs-form-subtitle">QQ 互联</h4>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="qq_enabled" value="1" <?php echo !empty($oauthCfg['qq']['enabled']) ? 'checked' : ''; ?>>
+                <span>启用 QQ 登录</span>
+            </label>
+        </div>
+        <div class="vs-form-grid">
+            <div class="vs-form-row">
+                <label class="vs-label">App ID</label>
+                <input type="text" name="qq_app_id" class="vs-input" value="<?php echo vs_e($oauthCfg['qq']['app_id']); ?>">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label">App Key</label>
+                <input type="text" name="qq_app_key" class="vs-input" value="<?php echo vs_e($oauthCfg['qq']['app_key']); ?>">
+            </div>
+        </div>
+
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">Gitee OAuth</h4>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="gitee_enabled" value="1" <?php echo !empty($oauthCfg['gitee']['enabled']) ? 'checked' : ''; ?>>
+                <span>启用 Gitee 登录</span>
+            </label>
+        </div>
+        <div class="vs-form-grid">
+            <div class="vs-form-row">
+                <label class="vs-label">Client ID</label>
+                <input type="text" name="gitee_client_id" class="vs-input" value="<?php echo vs_e($oauthCfg['gitee']['client_id']); ?>">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label">Client Secret</label>
+                <input type="text" name="gitee_client_secret" class="vs-input" value="<?php echo vs_e($oauthCfg['gitee']['client_secret']); ?>">
+            </div>
+        </div>
+
+        <hr class="vs-divider">
+
+        <h4 class="vs-form-subtitle">聚合登录</h4>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="agg_enabled" value="1" <?php echo !empty($oauthCfg['agg']['enabled']) ? 'checked' : ''; ?>>
+                <span>启用聚合登录</span>
+            </label>
+        </div>
+        <?php
+        vs_render_notice(
+            'tip',
+            '',
+            '不是所有聚合平台都支持全部登录方式。前半段点击启用/停用；右侧齿轮修改「接口对应值」。改完点「应用」写入本页，再点底部「保存 OAuth 设置」提交。',
+            array('compact' => true, 'field' => true)
+        );
+        ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="aggApiurl">网关地址</label>
+            <input type="text" class="vs-input" id="aggApiurl" name="agg_apiurl"
+                   placeholder="如 https://u.example.com/"
+                   value="<?php echo vs_e(isset($oauthCfg['agg']['apiurl']) ? $oauthCfg['agg']['apiurl'] : ''); ?>">
+            <p class="vs-form-hint">填聚合平台根地址即可（勿写死某一家）；系统会自动拼接 connect.php。</p>
+        </div>
+        <div class="vs-form-grid">
+            <div class="vs-form-row">
+                <label class="vs-label" for="aggAppId">App ID</label>
+                <input type="text" class="vs-input" id="aggAppId" name="agg_app_id"
+                       value="<?php echo vs_e(isset($oauthCfg['agg']['app_id']) ? $oauthCfg['agg']['app_id'] : ''); ?>">
+            </div>
+            <div class="vs-form-row">
+                <label class="vs-label" for="aggAppKey">App Key</label>
+                <input type="text" class="vs-input" id="aggAppKey" name="agg_app_key"
+                       value="<?php echo vs_e(isset($oauthCfg['agg']['app_key']) ? $oauthCfg['agg']['app_key'] : ''); ?>">
+            </div>
+        </div>
+
+        <div class="vs-agg-block" id="aggPillRoot"
+             data-items="<?php echo vs_e(json_encode($oauthAggItems, JSON_UNESCAPED_UNICODE)); ?>">
+            <p class="vs-label">内置登录方式</p>
+            <div class="vs-agg-pills" id="aggPillsBuiltin" aria-label="内置登录方式"></div>
+            <p class="vs-label vs-agg-custom-label">自定义登录方式</p>
+            <div class="vs-agg-pills vs-agg-pills--custom" id="aggPillsCustom" aria-label="自定义登录方式"></div>
+            <div class="vs-agg-custom-add">
+                <input type="text" class="vs-input" id="aggCustomName" placeholder="名称" maxlength="32">
+                <input type="text" class="vs-input" id="aggCustomType" placeholder="接口对应值" maxlength="64">
+                <input type="text" class="vs-input" id="aggCustomIcon" placeholder="图标链接 https://…" maxlength="500">
+                <button type="button" class="vs-btn vs-btn--default" id="aggCustomAddBtn">添加</button>
+            </div>
+            <div class="vs-agg-edit" id="aggEditSlot" hidden>
+                <div class="vs-agg-edit__head">正在编辑：<strong id="aggEditName">—</strong></div>
+                <div class="vs-agg-edit__row">
+                    <input type="text" class="vs-input" id="aggEditType" maxlength="64" placeholder="接口对应值">
+                    <button type="button" class="vs-btn vs-btn--primary" id="aggEditApplyBtn">应用</button>
+                </div>
+                <p class="vs-form-hint" id="aggEditHint">此为请求聚合接口时的 type 参数。默认已按常见平台填写；若你的聚合文档不同，修改后点「应用」，再点底部保存。</p>
+            </div>
+        </div>
+
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存 OAuth 设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php vs_admin_settings_group('运维与性能'); ?>
 
 <?php
 $ipLocExtras = IpLocator::parseExtras(Config::get('ip_loc_extras', '[]'));
@@ -1837,261 +2069,210 @@ vs_admin_accordion_start(
     </form>
 <?php vs_admin_accordion_end(); ?>
 
-<?php
-vs_admin_accordion_start(
-    'settings-system-key',
-    '系统密钥',
-    '机器调用共用密钥；请妥善保管'
-);
-    $systemApiKey = SystemApiKey::get();
-    ?>
-    <div class="vs-form" id="systemKeyBox">
-        <div class="vs-form-row">
-            <label class="vs-label">系统密钥</label>
-            <input type="text" class="vs-input" id="systemApiKeyInput" readonly value="<?php echo vs_e($systemApiKey); ?>" placeholder="尚未生成">
-            <?php vs_render_notice('tip', '', '供调用日志清理、卡密对接等系统级外部 API 鉴权使用。重置后旧密钥立即失效。推荐用 Header（Authorization: Bearer 或 X-Api-Key）传钥，避免密钥写入访问日志。各功能须在对应设置中单独开启，仅有密钥不够。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-actions">
-            <button type="button" class="vs-btn vs-btn--default" id="systemApiKeyGenBtn">生成 / 重置密钥</button>
-            <button type="button" class="vs-btn vs-btn--default" id="systemApiKeyCopyBtn">复制密钥</button>
-        </div>
-    </div>
-<?php vs_admin_accordion_end(); ?>
-
-<?php
-vs_admin_accordion_start(
-    'settings-cardkey-api',
-    '卡密对接 API',
-    '商城对接：生成 / 库存 / 出库 / 作废 / 查询；须系统密钥'
-);
-    $cardkeyApiUrl = rtrim(vs_base_url(), '/') . '/core/api/cardkey.php';
-    $cardkeyApiOn = isset($vsCfg['cardkey_api_enabled']) && $vsCfg['cardkey_api_enabled'] === '1';
-    ?>
-    <form method="post" action="" class="vs-form vs-settings-form" id="cardkeyApiForm" data-ajax="1">
-        <input type="hidden" name="action" value="save_cardkey_api">
-        <div class="vs-form-row">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="cardkey_api_enabled" id="cardkey_api_enabled" value="1" <?php echo $cardkeyApiOn ? 'checked' : ''; ?>>
-                <span>启用卡密对接 API</span>
-            </label>
-            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用 /core/api/cardkey.php 也会返回错误。请先在「系统密钥」生成密钥。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">接口地址</label>
-            <input type="text" class="vs-input" id="cardkeyApiUrlInput" readonly value="<?php echo vs_e($cardkeyApiUrl); ?>">
-            <?php vs_render_notice('tip', '', '鉴权与系统密钥相同：Bearer · Header（X-Api-Key / Api-Key / Apikey）· Query/POST/JSON（key 或 apikey）。推荐 Header，少用 Query。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">接口说明</label>
-            <div class="vs-notice vs-notice--tip vs-notice--compact" style="margin:0">
-                <p class="vs-notice__text" style="margin:0 0 0.5rem">GET 或 POST，参数可用 Query / Form / JSON。</p>
-                <ul style="margin:0;padding-left:1.2rem;font-size:0.8125rem;line-height:1.55;color:var(--vs-text-secondary,#6b7280)">
-                    <li><code>action=generate</code> · <code>count</code>（1～100）· <code>points</code>（单张积分）· 实时生成</li>
-                    <li><code>action=stock</code> · 可选 <code>points</code> · 查未使用库存数量（不含已作废/已使用/已发放）</li>
-                    <li><code>action=take</code> · <code>count</code>（1～100）· 可选 <code>points</code>（指定面额）· 从库存随机出库并标为「已发放」</li>
-                    <li><code>action=void</code> · <code>codes</code>（卡密，逗号分隔或数组）或 <code>code</code>（单张）；可作废未使用/已发放</li>
-                    <li><code>action=query</code> · <code>code</code>（单张）；返回 status / used / voided / issued 等</li>
-                </ul>
-                <p class="vs-notice__text" style="margin:0.65rem 0 0">示例：<code>curl -H "Authorization: Bearer 密钥" "<?php echo vs_e($cardkeyApiUrl); ?>?action=query&amp;code=卡密"</code></p>
-            </div>
-        </div>
-        <div class="vs-form-actions">
-            <button type="submit" class="vs-btn vs-btn--primary">保存卡密 API 设置</button>
-            <button type="button" class="vs-btn vs-btn--default" id="cardkeyApiCopyUrlBtn">复制 API 地址</button>
-        </div>
-    </form>
-<?php vs_admin_accordion_end(); ?>
-
-<?php
-vs_admin_accordion_start(
-    'settings-apilog',
-    '调用日志',
-    '详细记录、冷热归档 / 过期删除与计划任务'
-);
-    $cfgHotDays = isset($vsCfg['apilog_hot_days']) ? (int) $vsCfg['apilog_hot_days'] : ApiLogArchive::DEFAULT_HOT_DAYS;
-    if ($cfgHotDays < 1) {
-        $cfgHotDays = ApiLogArchive::DEFAULT_HOT_DAYS;
-    }
-    $cfgShardRows = isset($vsCfg['apilog_shard_rows']) ? (int) $vsCfg['apilog_shard_rows'] : ApiLogArchive::DEFAULT_SHARD_ROWS;
-    $cfgShardRows = ApiLogArchive::clampShardRows($cfgShardRows);
-    $archiveOn = isset($vsCfg['apilog_archive_enabled']) ? ($vsCfg['apilog_archive_enabled'] === '1') : true;
-    $purgeOn = isset($vsCfg['apilog_purge_enabled']) && $vsCfg['apilog_purge_enabled'] === '1';
-    if ($archiveOn && $purgeOn) {
-        // 历史脏数据：优先归档
-        $purgeOn = false;
-    }
-    $cleanupOn = $archiveOn || $purgeOn;
-    $cronUrl = ApiLogArchive::cronUrl();
-    $sqliteOk = ApiLogArchive::sqliteAvailable();
-    $hasSystemKey = SystemApiKey::get() !== '';
-    ?>
-    <form method="post" action="" class="vs-form" id="apilogForm" data-ajax="1">
-        <input type="hidden" name="action" value="save_apilog">
-        <div class="vs-form-row">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="apilog_detail" value="1" <?php echo (!isset($vsCfg['apilog_detail']) || $vsCfg['apilog_detail'] !== '0') ? 'checked' : ''; ?>>
-                <span>记录详细调用日志（IP、UA、来源等）</span>
-            </label>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="apilog_archive_enabled" id="apilog_archive_enabled" value="1" <?php echo $archiveOn ? 'checked' : ''; ?> data-apilog-mode="archive">
-                <span>启用调用日志冷热归档</span>
-            </label>
-            <?php vs_render_notice('tip', '', '超过保留天数的日志先写入本机冷库，再从在线库删除（不可逆），历史仍可查。与「过期直接删除」二选一；未开启时即使密钥正确，计划任务也会拒绝执行。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-checkbox">
-                <input type="checkbox" name="apilog_purge_enabled" id="apilog_purge_enabled" value="1" <?php echo $purgeOn ? 'checked' : ''; ?> data-apilog-mode="purge">
-                <span>启用过期日志直接删除（不缓存到本地）</span>
-            </label>
-            <?php vs_render_notice('tip', '', '只删除超过保留天数的在线库日志，不写冷库。适合不需要历史冷数据、只想控制库体积的站点。与冷热归档二选一。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-row" id="apilogHotDaysRow"<?php echo $cleanupOn ? '' : ' hidden'; ?>>
-            <label class="vs-label" for="apilog_hot_days" id="apilogHotDaysLabel"><?php echo $purgeOn ? '保留天数' : '热数据天数'; ?></label>
-            <input type="number" class="vs-input" id="apilog_hot_days" name="apilog_hot_days" min="1" max="<?php echo (int) ApiLogArchive::MAX_HOT_DAYS; ?>"
-                   value="<?php echo (int) $cfgHotDays; ?>">
-            <?php vs_render_notice('tip', '', '在线库仅保留最近 N 天日志；更早的由计划任务按上方所选模式归档到冷库或直接删除。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-row" id="apilogShardRowsRow"<?php echo $archiveOn ? '' : ' hidden'; ?>>
-            <label class="vs-label" for="apilog_shard_rows">每个分片条数</label>
-            <input type="number" class="vs-input" id="apilog_shard_rows" name="apilog_shard_rows"
-                   min="<?php echo (int) ApiLogArchive::MIN_SHARD_ROWS; ?>"
-                   max="<?php echo (int) ApiLogArchive::MAX_SHARD_ROWS; ?>"
-                   value="<?php echo (int) $cfgShardRows; ?>">
-            <?php vs_render_notice('tip', '', '仅冷热归档模式有效：每个本机分片文件写入多少条日志。默认 5000。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <?php if (!$sqliteOk): ?>
-            <?php vs_render_notice('warning', '', '当前 PHP 未启用 PDO SQLite。若要使用冷热归档，请先安装并启用该扩展；「过期直接删除」不依赖 SQLite。', array('compact' => true)); ?>
-        <?php endif; ?>
-        <?php vs_render_notice('tip', '', '关闭详细日志后仍会计入各接口与密钥调用次数，适合带宽或性能有限的小站点。', array('compact' => true)); ?>
-        <div class="vs-form-actions">
-            <button type="submit" class="vs-btn vs-btn--primary">保存日志设置</button>
-        </div>
-    </form>
-    <div class="vs-form" style="margin-top:16px" id="apilogCronBox"<?php echo $cleanupOn ? '' : ' hidden'; ?>>
-        <div class="vs-form-row">
-            <label class="vs-label">日志清理计划任务</label>
-            <input type="text" class="vs-input" id="apilogCronUrl" readonly value="<?php echo vs_e($cronUrl); ?>" placeholder="<?php echo $hasSystemKey ? '' : '请先在「系统密钥」生成密钥'; ?>">
-            <?php vs_render_notice('tip', '', '须先开启冷热归档或过期删除之一，并配置系统密钥。链接默认不含密钥（避免进访问日志）。示例：0 2 * * * curl -fsS -H "Authorization: Bearer 系统密钥" 「上方链接」。若面板只能拼 URL，可自行在链接后加 ?key=密钥。未开开关时调用将返回错误。', array('field' => true, 'compact' => true)); ?>
-        </div>
-        <div class="vs-form-actions">
-            <button type="button" class="vs-btn vs-btn--default" id="apilogCopyCronUrlBtn">复制任务链接</button>
-        </div>
-    </div>
-<?php vs_admin_accordion_end(); ?>
+<?php vs_admin_settings_group('通知与智能'); ?>
 
 <?php
 vs_admin_accordion_start(
     'settings-mail',
     '邮箱发信',
-    '配置 SMTP 发信参数，并发送测试邮件验证'
+    '最多 5 个 SMTP 账号；轮询/主备/随机选号，失败自动换号一次'
 );
+$mailMode = isset($mailSmtpCfg['mode']) ? (int) $mailSmtpCfg['mode'] : 0;
+$mailList = isset($mailSmtpCfg['list']) && is_array($mailSmtpCfg['list']) ? $mailSmtpCfg['list'] : array();
 ?>
     <form method="post" action="" class="vs-form" id="mailForm" data-ajax="1">
         <input type="hidden" name="action" value="save_mail">
+        <input type="hidden" name="mailsmtp" id="mailsmtpJson" value="">
         <div class="vs-form-row">
             <label class="vs-checkbox">
                 <input type="checkbox" name="mail_enabled" value="1" <?php echo (isset($vsCfg['mail_enabled']) && $vsCfg['mail_enabled'] === '1') ? 'checked' : ''; ?>>
                 <span>启用邮箱发信</span>
             </label>
+            <?php vs_render_notice('tip', '', '总开关关闭时不发信。账号存于配置键 mailsmtp（最多 5 个）；业务通知勾选仍独立控制。', array('field' => true, 'compact' => true)); ?>
         </div>
         <div class="vs-form-row">
-            <label class="vs-label">SMTP 服务器</label>
-            <input type="text" name="mail_smtp_host" class="vs-input" value="<?php echo vs_e(isset($vsCfg['mail_smtp_host']) ? $vsCfg['mail_smtp_host'] : ''); ?>">
+            <label class="vs-label" for="mailModeSelect">发信策略</label>
+            <select class="vs-input vs-select" id="mailModeSelect" name="mail_mode" data-vs-pick="sheet">
+                <option value="0" <?php echo $mailMode === 0 ? 'selected' : ''; ?>>轮询（默认，均匀分摊）</option>
+                <option value="1" <?php echo $mailMode === 1 ? 'selected' : ''; ?>>主备（优先最上启用号）</option>
+                <option value="2" <?php echo $mailMode === 2 ? 'selected' : ''; ?>>随机</option>
+            </select>
+            <?php vs_render_notice('tip', '', '主选失败时会再换一个启用号试一次（同封最多 2 次 SMTP）。测试若指定某一账号则失败不换号。', array('field' => true, 'compact' => true)); ?>
         </div>
-        <div class="vs-form-row vs-form-row--inline">
-            <div class="vs-form-col">
-                <label class="vs-label">SMTP 端口</label>
-                <input type="text" name="mail_smtp_port" class="vs-input" value="<?php echo vs_e(isset($vsCfg['mail_smtp_port']) ? $vsCfg['mail_smtp_port'] : '465'); ?>">
-            </div>
-            <div class="vs-form-col">
-                <label class="vs-label">加密方式</label>
-                <select name="mail_smtp_secure" class="vs-input">
-                    <option value="ssl" <?php echo (isset($vsCfg['mail_smtp_secure']) && $vsCfg['mail_smtp_secure'] === 'ssl') ? 'selected' : ''; ?>>SSL</option>
-                    <option value="tls" <?php echo (isset($vsCfg['mail_smtp_secure']) && $vsCfg['mail_smtp_secure'] === 'tls') ? 'selected' : ''; ?>>TLS</option>
-                    <option value="none" <?php echo (isset($vsCfg['mail_smtp_secure']) && $vsCfg['mail_smtp_secure'] === 'none') ? 'selected' : ''; ?>>无</option>
-                </select>
-            </div>
-        </div>
+
         <div class="vs-form-row">
-            <label class="vs-label">SMTP 用户名</label>
-            <input type="text" name="mail_smtp_user" class="vs-input" value="<?php echo vs_e(isset($vsCfg['mail_smtp_user']) ? $vsCfg['mail_smtp_user'] : ''); ?>">
-        </div>
-        <div class="vs-form-row">
-            <label class="vs-label">SMTP 密码</label>
-            <input type="text" name="mail_smtp_pass" class="vs-input"
-                   value="<?php echo vs_e(isset($vsCfg['mail_smtp_pass']) ? $vsCfg['mail_smtp_pass'] : ''); ?>">
-        </div>
-        <div class="vs-form-row vs-form-row--inline">
-            <div class="vs-form-col">
-                <label class="vs-label">发件人邮箱</label>
-                <input type="email" name="mail_from_email" class="vs-input" value="<?php echo vs_e(isset($vsCfg['mail_from_email']) ? $vsCfg['mail_from_email'] : ''); ?>">
+            <label class="vs-label">发信账号（最多 <?php echo (int) Mailer::MAX_ACCOUNTS; ?> 个）</label>
+            <?php vs_render_notice('tip', '', '操作说明：① 点账号名称条展开/收起；② 左侧「启用」控制是否参与发信；③ 「再添加一个邮箱」只多出一张空白卡，不会立刻写入；④ 全页仅底部「保存邮箱设置」会入库。', array('field' => true, 'compact' => true)); ?>
+            <div id="mailAccountList" data-mail-max="<?php echo (int) Mailer::MAX_ACCOUNTS; ?>" data-fold-group="mail">
+                <?php
+                foreach ($mailList as $mi => $mAcc) {
+                    if (!is_array($mAcc)) {
+                        continue;
+                    }
+                    $mId = isset($mAcc['id']) ? (string) $mAcc['id'] : Mailer::newAccountId();
+                    $mName = isset($mAcc['name']) ? (string) $mAcc['name'] : '';
+                    $mOn = isset($mAcc['on']) && ((string) $mAcc['on'] === '1' || $mAcc['on'] === 1 || $mAcc['on'] === true);
+                    $mHost = isset($mAcc['host']) ? (string) $mAcc['host'] : '';
+                    $mPort = isset($mAcc['port']) ? (int) $mAcc['port'] : 465;
+                    $mSsl = isset($mAcc['ssl']) ? (int) $mAcc['ssl'] : 0;
+                    $mUser = isset($mAcc['user']) ? (string) $mAcc['user'] : '';
+                    $mFrom = isset($mAcc['fromemail']) ? (string) $mAcc['fromemail'] : '';
+                    $mFromName = isset($mAcc['fromname']) ? (string) $mAcc['fromname'] : '';
+                    $mTitle = $mName !== '' ? $mName : ($mFrom !== '' ? $mFrom : ('账号 ' . ((int) $mi + 1)));
+                    $foldDomId = 'mail-fold-' . preg_replace('/[^a-zA-Z0-9]/', '', $mId);
+                    ?>
+                <div class="vs-settings-api-fold" data-mail-fold data-api-fold data-fold-group="mail" id="<?php echo vs_e($foldDomId); ?>">
+                    <div class="vs-settings-mail-head">
+                        <label class="vs-checkbox vs-settings-mail-on" title="启用后参与发信">
+                            <input type="checkbox" data-mail-field="on" value="1" <?php echo $mOn ? 'checked' : ''; ?>>
+                            <span>启用</span>
+                        </label>
+                        <button type="button" class="vs-settings-api-fold__bar" aria-expanded="false" aria-controls="<?php echo vs_e($foldDomId); ?>-body">
+                            <span class="vs-settings-api-fold__title">
+                                <span data-mail-title><?php echo vs_e($mTitle); ?></span>
+                                <span class="vs-form-hint" data-mail-badge style="margin-left:8px;<?php echo $mOn ? '' : 'display:none;'; ?>">已启用</span>
+                            </span>
+                            <i class="vs-icon vs-icon--chevron" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="vs-settings-api-fold__body" id="<?php echo vs_e($foldDomId); ?>-body" hidden>
+                        <input type="hidden" data-mail-field="id" value="<?php echo vs_e($mId); ?>">
+                        <div class="vs-form-row">
+                            <label class="vs-label">显示名称</label>
+                            <input type="text" class="vs-input" data-mail-field="name" value="<?php echo vs_e($mName); ?>" maxlength="32" placeholder="如：主号腾讯">
+                        </div>
+                        <div class="vs-form-row">
+                            <label class="vs-label">SMTP 服务器</label>
+                            <input type="text" class="vs-input" data-mail-field="host" value="<?php echo vs_e($mHost); ?>" autocomplete="off" placeholder="smtp.qq.com（仅域名，勿填 IP）">
+                            <p class="vs-form-hint">请填邮箱服务商提供的域名，不允许直接填 IP。</p>
+                        </div>
+                        <div class="vs-form-row vs-form-row--inline">
+                            <div class="vs-form-col">
+                                <label class="vs-label">端口</label>
+                                <input type="text" class="vs-input" data-mail-field="port" value="<?php echo vs_e((string) $mPort); ?>">
+                            </div>
+                            <div class="vs-form-col">
+                                <label class="vs-label">加密</label>
+                                <select class="vs-input vs-select" data-mail-field="ssl" data-vs-pick>
+                                    <option value="0" <?php echo $mSsl === 0 ? 'selected' : ''; ?>>SSL（常见 465）</option>
+                                    <option value="1" <?php echo $mSsl === 1 ? 'selected' : ''; ?>>STARTTLS（常见 587）</option>
+                                    <option value="2" <?php echo $mSsl === 2 ? 'selected' : ''; ?>>无加密</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="vs-form-row">
+                            <label class="vs-label">SMTP 用户名</label>
+                            <input type="text" class="vs-input" data-mail-field="user" value="<?php echo vs_e($mUser); ?>" autocomplete="off">
+                        </div>
+                        <div class="vs-form-row">
+                            <label class="vs-label">SMTP 密码</label>
+                            <input type="password" class="vs-input" data-mail-field="pass" value="" autocomplete="new-password" placeholder="留空则不修改已保存密码">
+                            <?php vs_render_notice('tip', '', '安全起见不回显已存密码；留空表示保留原密码。新账号启用时须填写。', array('field' => true, 'compact' => true)); ?>
+                        </div>
+                        <div class="vs-form-row vs-form-row--inline">
+                            <div class="vs-form-col">
+                                <label class="vs-label">发件人邮箱</label>
+                                <input type="email" class="vs-input" data-mail-field="fromemail" value="<?php echo vs_e($mFrom); ?>">
+                            </div>
+                            <div class="vs-form-col">
+                                <label class="vs-label">发件人名称</label>
+                                <input type="text" class="vs-input" data-mail-field="fromname" value="<?php echo vs_e($mFromName); ?>">
+                            </div>
+                        </div>
+                        <div class="vs-form-actions">
+                            <button type="button" class="vs-btn vs-btn--default" data-mail-remove>删除此账号</button>
+                        </div>
+                        <?php vs_render_notice('tip', '', '本卡内没有「确认添加」按钮。填完后请点下方绿色「保存邮箱设置」写入全部账号。', array('field' => true, 'compact' => true)); ?>
+                    </div>
+                </div>
+                    <?php
+                }
+                ?>
             </div>
-            <div class="vs-form-col">
-                <label class="vs-label">发件人名称</label>
-                <input type="text" name="mail_from_name" class="vs-input" value="<?php echo vs_e(isset($vsCfg['mail_from_name']) ? $vsCfg['mail_from_name'] : ''); ?>">
+            <p class="vs-form-hint" id="mailAccountEmptyHint" <?php echo count($mailList) > 0 ? 'hidden' : ''; ?>>尚未添加发信账号，请点「再添加一个邮箱」，填写后点底部「保存邮箱设置」。</p>
+            <div class="vs-form-actions vs-settings-mail-add-row" style="margin-top:12px;">
+                <button type="button" class="vs-btn vs-btn--default" id="mailAddAccountBtn">再添加一个邮箱</button>
+                <p class="vs-form-hint" id="mailAccountCountHint" style="margin:0;"></p>
             </div>
+            <?php vs_render_notice('tip', '', '「再添加一个邮箱」= 多开一张空白卡；真正入库只有底部「保存邮箱设置」。', array('field' => true, 'compact' => true)); ?>
         </div>
-        <div class="vs-form-row">
-            <label class="vs-label">业务邮件通知</label>
-            <p class="vs-form-hint" style="margin-top:0;">总开关开启后，可分别控制下列通知是否发送（关闭则跳过对应邮件）。</p>
-            <label class="vs-checkbox">
-                <input type="checkbox" name="mail_notify_submit" value="1" <?php echo (!isset($vsCfg['mail_notify_submit']) || $vsCfg['mail_notify_submit'] === '1') ? 'checked' : ''; ?>>
-                <span>开发者投稿 / 重新提交时，通知管理员</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_pass" value="1" <?php echo (!isset($vsCfg['mail_notify_pass']) || $vsCfg['mail_notify_pass'] === '1') ? 'checked' : ''; ?>>
-                <span>审核通过时，通知投稿用户</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_fail" value="1" <?php echo (!isset($vsCfg['mail_notify_fail']) || $vsCfg['mail_notify_fail'] === '1') ? 'checked' : ''; ?>>
-                <span>审核不通过时，通知投稿用户</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_link_apply" value="1" <?php echo (!isset($vsCfg['mail_notify_link_apply']) || $vsCfg['mail_notify_link_apply'] === '1') ? 'checked' : ''; ?>>
-                <span>有新的友情链接申请时，通知管理员</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_link_pass" value="1" <?php echo (!isset($vsCfg['mail_notify_link_pass']) || $vsCfg['mail_notify_link_pass'] === '1') ? 'checked' : ''; ?>>
-                <span>友情链接审核通过时，通知申请人（联系方式需含邮箱）</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_feedback_admin" value="1" <?php echo (!isset($vsCfg['mail_notify_feedback_admin']) || $vsCfg['mail_notify_feedback_admin'] === '1') ? 'checked' : ''; ?>>
-                <span>有新的接口反馈时，通知管理员与接口发布者</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_feedback" value="1" <?php echo (!isset($vsCfg['mail_notify_feedback']) || $vsCfg['mail_notify_feedback'] === '1') ? 'checked' : ''; ?>>
-                <span>接口反馈标记已处理时，通知提交用户</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_comment_admin" value="1" <?php echo (!isset($vsCfg['mail_notify_comment_admin']) || $vsCfg['mail_notify_comment_admin'] === '1') ? 'checked' : ''; ?>>
-                <span>有新的文章评论（含引用）时，通知管理员</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_comment" value="1" <?php echo (!isset($vsCfg['mail_notify_comment']) || $vsCfg['mail_notify_comment'] === '1') ? 'checked' : ''; ?>>
-                <span>评论被引用或被管理员回复时，通知评论者</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_points_zero" value="1" <?php echo (!isset($vsCfg['mail_notify_points_zero']) || $vsCfg['mail_notify_points_zero'] === '1') ? 'checked' : ''; ?>>
-                <span>积分余额变为零时，通知用户</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_points_insufficient" value="1" <?php echo (!isset($vsCfg['mail_notify_points_insufficient']) || $vsCfg['mail_notify_points_insufficient'] === '1') ? 'checked' : ''; ?>>
-                <span>积分余额不足以调用接口时，通知用户（24 小时内仅一次）</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_recharge_success" value="1" <?php echo (!isset($vsCfg['mail_notify_recharge_success']) || $vsCfg['mail_notify_recharge_success'] === '1') ? 'checked' : ''; ?>>
-                <span>积分充值成功到账时，通知用户</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_order_admin" value="1" <?php echo (!isset($vsCfg['mail_notify_order_admin']) || $vsCfg['mail_notify_order_admin'] === '1') ? 'checked' : ''; ?>>
-                <span>用户充值订单支付成功时，通知管理员（含本单收入与今日累计）</span>
-            </label>
-            <label class="vs-checkbox" style="margin-top:8px;display:flex;">
-                <input type="checkbox" name="mail_notify_key_quota" value="1" <?php echo (!isset($vsCfg['mail_notify_key_quota']) || $vsCfg['mail_notify_key_quota'] === '1') ? 'checked' : ''; ?>>
-                <span>令牌配额用尽时通知用户</span>
-            </label>
+
+        <div class="vs-settings-api-fold" data-api-fold data-fold-group="mailbiz" id="mail-fold-biz">
+            <button type="button" class="vs-settings-api-fold__bar" aria-expanded="false" aria-controls="mail-fold-biz-body">
+                <span class="vs-settings-api-fold__title">业务邮件通知</span>
+                <i class="vs-icon vs-icon--chevron" aria-hidden="true"></i>
+            </button>
+            <div class="vs-settings-api-fold__body" id="mail-fold-biz-body" hidden>
+                <p class="vs-form-hint" style="margin-top:0;">总开关开启后，可分别控制下列通知是否发送（关闭则跳过对应邮件）。改完后点底部「保存邮箱设置」。</p>
+                <label class="vs-checkbox">
+                    <input type="checkbox" name="mail_notify_submit" value="1" <?php echo (!isset($vsCfg['mail_notify_submit']) || $vsCfg['mail_notify_submit'] === '1') ? 'checked' : ''; ?>>
+                    <span>开发者投稿 / 重新提交时，通知管理员</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_pass" value="1" <?php echo (!isset($vsCfg['mail_notify_pass']) || $vsCfg['mail_notify_pass'] === '1') ? 'checked' : ''; ?>>
+                    <span>审核通过时，通知投稿用户</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_fail" value="1" <?php echo (!isset($vsCfg['mail_notify_fail']) || $vsCfg['mail_notify_fail'] === '1') ? 'checked' : ''; ?>>
+                    <span>审核不通过时，通知投稿用户</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_link_apply" value="1" <?php echo (!isset($vsCfg['mail_notify_link_apply']) || $vsCfg['mail_notify_link_apply'] === '1') ? 'checked' : ''; ?>>
+                    <span>有新的友情链接申请时，通知管理员</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_link_pass" value="1" <?php echo (!isset($vsCfg['mail_notify_link_pass']) || $vsCfg['mail_notify_link_pass'] === '1') ? 'checked' : ''; ?>>
+                    <span>友情链接审核通过时，通知申请人（联系方式需含邮箱）</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_feedback_admin" value="1" <?php echo (!isset($vsCfg['mail_notify_feedback_admin']) || $vsCfg['mail_notify_feedback_admin'] === '1') ? 'checked' : ''; ?>>
+                    <span>有新的接口反馈时，通知管理员与接口发布者</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_feedback" value="1" <?php echo (!isset($vsCfg['mail_notify_feedback']) || $vsCfg['mail_notify_feedback'] === '1') ? 'checked' : ''; ?>>
+                    <span>接口反馈标记已处理时，通知提交用户</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_comment_admin" value="1" <?php echo (!isset($vsCfg['mail_notify_comment_admin']) || $vsCfg['mail_notify_comment_admin'] === '1') ? 'checked' : ''; ?>>
+                    <span>有新的文章评论（含引用）时，通知管理员</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_comment" value="1" <?php echo (!isset($vsCfg['mail_notify_comment']) || $vsCfg['mail_notify_comment'] === '1') ? 'checked' : ''; ?>>
+                    <span>评论被引用或被管理员回复时，通知评论者</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_points_zero" value="1" <?php echo (!isset($vsCfg['mail_notify_points_zero']) || $vsCfg['mail_notify_points_zero'] === '1') ? 'checked' : ''; ?>>
+                    <span>积分余额变为零时，通知用户</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_points_insufficient" value="1" <?php echo (!isset($vsCfg['mail_notify_points_insufficient']) || $vsCfg['mail_notify_points_insufficient'] === '1') ? 'checked' : ''; ?>>
+                    <span>积分余额不足以调用接口时，通知用户（24 小时内仅一次）</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_recharge_success" value="1" <?php echo (!isset($vsCfg['mail_notify_recharge_success']) || $vsCfg['mail_notify_recharge_success'] === '1') ? 'checked' : ''; ?>>
+                    <span>积分充值成功到账时，通知用户</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_order_admin" value="1" <?php echo (!isset($vsCfg['mail_notify_order_admin']) || $vsCfg['mail_notify_order_admin'] === '1') ? 'checked' : ''; ?>>
+                    <span>用户充值订单支付成功时，通知管理员（含本单收入与今日累计）</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_key_quota" value="1" <?php echo (!isset($vsCfg['mail_notify_key_quota']) || $vsCfg['mail_notify_key_quota'] === '1') ? 'checked' : ''; ?>>
+                    <span>令牌配额用尽时通知用户</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_dev_apply" value="1" <?php echo (!isset($vsCfg['mail_notify_dev_apply']) || $vsCfg['mail_notify_dev_apply'] === '1') ? 'checked' : ''; ?>>
+                    <span>有新的开发者申请时，通知管理员</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_dev_pass" value="1" <?php echo (!isset($vsCfg['mail_notify_dev_pass']) || $vsCfg['mail_notify_dev_pass'] === '1') ? 'checked' : ''; ?>>
+                    <span>开发者申请通过时，通知申请人</span>
+                </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_dev_fail" value="1" <?php echo (!isset($vsCfg['mail_notify_dev_fail']) || $vsCfg['mail_notify_dev_fail'] === '1') ? 'checked' : ''; ?>>
+                    <span>开发者申请未通过时，通知申请人</span>
+                </label>
+            </div>
         </div>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存邮箱设置</button>
@@ -2103,6 +2284,26 @@ vs_admin_accordion_start(
     <form method="post" action="" class="vs-form vs-form--test-mail" id="testMailForm" data-ajax="1">
         <input type="hidden" name="action" value="test_mail">
         <h4 class="vs-form-subtitle">发送测试邮件</h4>
+        <?php vs_render_notice('tip', '', '请先保存邮箱设置再测试。指定某一账号时失败不会自动换号，便于排查配置。', array('field' => true, 'compact' => true)); ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="testMailAccount">发信账号</label>
+            <select class="vs-input vs-select" name="mail_account_id" id="testMailAccount" data-vs-pick="sheet">
+                <option value="">按发信策略自动选号</option>
+                <?php foreach ($mailList as $mAccOpt) {
+                    if (!is_array($mAccOpt) || !isset($mAccOpt['id'])) {
+                        continue;
+                    }
+                    $optId = (string) $mAccOpt['id'];
+                    $optLabel = isset($mAccOpt['name']) && trim((string) $mAccOpt['name']) !== ''
+                        ? trim((string) $mAccOpt['name'])
+                        : (isset($mAccOpt['fromemail']) && trim((string) $mAccOpt['fromemail']) !== ''
+                            ? trim((string) $mAccOpt['fromemail'])
+                            : $optId);
+                    ?>
+                <option value="<?php echo vs_e($optId); ?>"><?php echo vs_e($optLabel); ?></option>
+                <?php } ?>
+            </select>
+        </div>
         <div class="vs-form-row vs-form-row--test-mail">
             <input type="email" name="test_email" class="vs-input" placeholder="测试邮箱地址" required>
             <button type="submit" class="vs-btn vs-btn--default">发送测试</button>
@@ -2130,7 +2331,7 @@ $aiPresets = AiConfig::providerPresets();
         </div>
         <div class="vs-form-row">
             <label class="vs-label" for="aiProvider">服务商</label>
-            <select class="vs-input" name="ai_provider" id="aiProvider">
+            <select class="vs-input vs-select" name="ai_provider" id="aiProvider" data-vs-pick="sheet">
                 <option value="openai" <?php echo $aiCfg['provider'] === 'openai' ? 'selected' : ''; ?>>OpenAI 兼容</option>
                 <option value="deepseek" <?php echo $aiCfg['provider'] === 'deepseek' ? 'selected' : ''; ?>>DeepSeek</option>
                 <option value="zhipu" <?php echo $aiCfg['provider'] === 'zhipu' ? 'selected' : ''; ?>>智谱清言</option>
@@ -2141,7 +2342,7 @@ $aiPresets = AiConfig::providerPresets();
         </div>
         <div class="vs-form-row">
             <label class="vs-label" for="aiApiMode">接口协议</label>
-            <select class="vs-input" name="ai_api_mode" id="aiApiMode">
+            <select class="vs-input vs-select" name="ai_api_mode" id="aiApiMode" data-vs-pick="sheet">
                 <option value="auto" <?php echo $aiCfg['api_mode'] === 'auto' ? 'selected' : ''; ?>>自动（Chat Completions → Responses）</option>
                 <option value="chat" <?php echo $aiCfg['api_mode'] === 'chat' ? 'selected' : ''; ?>>仅 Chat Completions（/chat/completions）</option>
                 <option value="responses" <?php echo $aiCfg['api_mode'] === 'responses' ? 'selected' : ''; ?>>仅 Responses API（/responses）</option>
@@ -2153,7 +2354,7 @@ $aiPresets = AiConfig::providerPresets();
             <input type="text" name="ai_baseurl" id="aiBaseurl" class="vs-input"
                    value="<?php echo vs_e($aiCfg['baseurl']); ?>"
                    placeholder="例如 https://api.deepseek.com/v1"
-                   data-presets="<?php echo vs_e(json_encode($aiPresets, JSON_UNESCAPED_SLASHES)); ?>">
+                   data-presets="<?php echo vs_e(vs_json_script($aiPresets)); ?>">
             <p class="vs-form-hint">填到 /v1 或等价根路径即可（不要带 /chat/completions）。Claude 等请填其中转的 OpenAI 兼容根地址。</p>
         </div>
         <div class="vs-form-row">
@@ -2175,10 +2376,15 @@ $aiPresets = AiConfig::providerPresets();
                 </div>
             </div>
             <div class="vs-ai-model-picker" id="aiModelPicker" hidden>
-                <p class="vs-ai-model-picker__title" id="aiModelPickerTitle">可用模型</p>
+                <div class="vs-ai-model-picker__head">
+                    <p class="vs-ai-model-picker__title" id="aiModelPickerTitle">可用模型</p>
+                    <input type="search" class="vs-input vs-ai-model-picker__search" id="aiModelPickerSearch"
+                           placeholder="搜索模型名称" autocomplete="off" enterkeyhint="search">
+                </div>
                 <div class="vs-ai-model-picker__list" id="aiModelPickerList"></div>
+                <p class="vs-ai-model-picker__empty" id="aiModelPickerEmpty" hidden>无匹配模型</p>
             </div>
-            <p class="vs-form-hint">填写根地址与密钥后可「拉取模型」：仅 1 个会自动填入；多个则显示下方列表供点选。</p>
+            <p class="vs-form-hint">填写根地址与密钥后可「拉取模型」：仅 1 个会自动填入；多个则显示下方列表（可用搜索过滤，适合上游集成多家模型时）。</p>
         </div>
         <div class="vs-form-row vs-form-row--inline">
             <div class="vs-form-col">
@@ -2196,7 +2402,7 @@ $aiPresets = AiConfig::providerPresets();
         <div class="vs-form-row vs-form-row--inline">
             <div class="vs-form-col">
                 <label class="vs-label" for="aiCodeMode">代码示例调度</label>
-                <select class="vs-input" name="ai_code_mode" id="aiCodeMode">
+                <select class="vs-input vs-select" name="ai_code_mode" id="aiCodeMode" data-vs-pick="sheet">
                     <option value="sequential" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : 'sequential') === 'sequential' ? 'selected' : ''; ?>>单线程（写完一片再写下一片）</option>
                     <option value="parallel" <?php echo (isset($aiCfg['code_mode']) ? $aiCfg['code_mode'] : '') === 'parallel' ? 'selected' : ''; ?>>多线程（浏览器并发多片）</option>
                 </select>
@@ -2217,7 +2423,278 @@ $aiPresets = AiConfig::providerPresets();
     </form>
 <?php vs_admin_accordion_end(); ?>
 
-<script>window.VS_SETTINGS_BASE = <?php echo json_encode($vsBase, JSON_UNESCAPED_UNICODE); ?>;</script>
+<?php vs_admin_settings_group('系统级 API'); ?>
+
+<?php
+vs_admin_accordion_start(
+    'settings-system-api',
+    '系统级 API',
+    '系统密钥与全部机器调用接口开关；文档见「系统管理 → 系统 API」'
+);
+    $systemApiKey = SystemApiKey::get();
+    $sysApiGates = class_exists('SystemApiKey') ? SystemApiKey::gates() : array();
+    $apiqueryApiOn = !empty($sysApiGates['apiquery']);
+    $apirankApiOn = !empty($sysApiGates['apirank']);
+    $sitestatsApiOn = !empty($sysApiGates['sitestats']);
+    $cardkeyApiOn = !empty($sysApiGates['cardkey']);
+        $cfgHotDays = isset($vsCfg['apilog_hot_days']) ? (int) $vsCfg['apilog_hot_days'] : ApiLogArchive::DEFAULT_HOT_DAYS;
+    if ($cfgHotDays < 1) {
+        $cfgHotDays = ApiLogArchive::DEFAULT_HOT_DAYS;
+    }
+    $cfgShardRows = isset($vsCfg['apilog_shard_rows']) ? (int) $vsCfg['apilog_shard_rows'] : ApiLogArchive::DEFAULT_SHARD_ROWS;
+    $cfgShardRows = ApiLogArchive::clampShardRows($cfgShardRows);
+    $apilogApiOn = !empty($sysApiGates['apilogarchive']);
+    $sqliteOk = ApiLogArchive::sqliteAvailable();
+    $checkinApiOn = !empty($sysApiGates['checkin']);
+    $userinfoApiOn = !empty($sysApiGates['userinfo']);
+    $sysApiRatesAll = class_exists('SystemApiKey') ? SystemApiKey::rates() : array('apis' => array());
+    $sysApiRates = isset($sysApiRatesAll['apis']) && is_array($sysApiRatesAll['apis'])
+        ? $sysApiRatesAll['apis']
+        : array();
+    $sysApiQpmMax = class_exists('SystemApiKey') ? (int) SystemApiKey::QPM_MAX : 1000000;
+    $sysApiQpsMax = class_exists('SystemApiKey') ? (int) SystemApiKey::QPS_MAX : 10000;
+    /**
+     * 单接口 QPM/QPS 表单项（0=不限；与 sysapirq 对齐）
+     *
+     * @param string $gateId
+     * @return void
+     */
+    $vsRenderSysApiRateFields = function ($gateId) use ($sysApiRates, $sysApiQpmMax, $sysApiQpsMax) {
+        $gateId = preg_replace('/[^a-z0-9_]/', '', strtolower((string) $gateId));
+        $row = isset($sysApiRates[$gateId]) && is_array($sysApiRates[$gateId])
+            ? $sysApiRates[$gateId]
+            : array('qpm' => 0, 'qps' => 0);
+        $qpm = isset($row['qpm']) ? (int) $row['qpm'] : 0;
+        $qps = isset($row['qps']) ? (int) $row['qps'] : 0;
+        if ($qpm < 0) {
+            $qpm = 0;
+        }
+        if ($qps < 0) {
+            $qps = 0;
+        }
+        echo '<div class="vs-form-row vs-form-row--2">' . "\n";
+        echo '<div class="vs-form-col">' . "\n";
+        echo '<label class="vs-label" for="' . vs_e($gateId) . '_qpm">每分钟上限（QPM）</label>' . "\n";
+        echo '<input type="number" class="vs-input" id="' . vs_e($gateId) . '_qpm" name="' . vs_e($gateId) . '_qpm"'
+            . ' min="0" max="' . (int) $sysApiQpmMax . '" step="1" value="' . (int) $qpm . '">' . "\n";
+        echo '</div>' . "\n";
+        echo '<div class="vs-form-col">' . "\n";
+        echo '<label class="vs-label" for="' . vs_e($gateId) . '_qps">每秒上限（QPS）</label>' . "\n";
+        echo '<input type="number" class="vs-input" id="' . vs_e($gateId) . '_qps" name="' . vs_e($gateId) . '_qps"'
+            . ' min="0" max="' . (int) $sysApiQpsMax . '" step="1" value="' . (int) $qps . '">' . "\n";
+        echo '</div>' . "\n";
+        echo '</div>' . "\n";
+        vs_render_notice(
+            'tip',
+            '',
+            '仅约束本接口。填 0 表示不限制。超限返回「请求过于频繁」（errcode 12005）。计数按系统密钥 + 访问 IP。',
+            array('field' => true, 'compact' => true)
+        );
+    };
+
+?>
+    <h4 class="vs-settings-api-sub">系统密钥</h4>
+
+    <div class="vs-form" id="systemKeyBox">
+        <div class="vs-form-row">
+            <label class="vs-label" for="systemApiKeyInput">系统密钥</label>
+            <div class="vs-secret-field">
+                <input type="password" class="vs-input" id="systemApiKeyInput" readonly
+                       value="<?php echo vs_e($systemApiKey); ?>" placeholder="尚未生成" autocomplete="off">
+                <button type="button" class="vs-secret-field__toggle" data-secret-target="systemApiKeyInput"
+                        aria-label="显示密钥" aria-pressed="false" title="显示/隐藏密钥"></button>
+            </div>
+            <?php vs_render_notice('tip', '', '默认掩码显示，点右侧眼睛可临时明文查看。供本页全部系统级外部 API 鉴权使用。重置后旧密钥立即失效。推荐用 Header（Authorization: Bearer 或 X-Api-Key）传钥，避免密钥写入访问日志。各功能须在对应设置中单独开启，仅有密钥不够。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-actions">
+            <button type="button" class="vs-btn vs-btn--default" id="systemApiKeyGenBtn">生成 / 重置密钥</button>
+            <button type="button" class="vs-btn vs-btn--default" id="systemApiKeyCopyBtn">复制密钥</button>
+        </div>
+    </div>
+
+    <?php
+    /**
+     * 系统密钥下方各 API 能力：默认折叠为细条（非卡片），点名称展开
+     *
+     * @param string $id
+     * @param string $title
+     * @param callable $bodyFn
+     * @return void
+     */
+    $vsRenderSysApiFold = function ($id, $title, $bodyFn) {
+        $id = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $id);
+        echo '<div class="vs-settings-api-fold" data-api-fold data-fold-group="sysapi" id="sysapi-fold-' . vs_e($id) . '">' . "\n";
+        echo '<button type="button" class="vs-settings-api-fold__bar" aria-expanded="false" aria-controls="sysapi-fold-body-' . vs_e($id) . '">' . "\n";
+        echo '<span class="vs-settings-api-fold__title">' . vs_e($title) . '</span>' . "\n";
+        echo '<i class="vs-icon vs-icon--chevron" aria-hidden="true"></i>' . "\n";
+        echo '</button>' . "\n";
+        echo '<div class="vs-settings-api-fold__body" id="sysapi-fold-body-' . vs_e($id) . '" hidden>' . "\n";
+        $bodyFn();
+        echo '</div></div>' . "\n";
+    };
+
+    $vsRenderSysApiFold('cardkey', '卡密对接', function () use ($cardkeyApiOn, $vsRenderSysApiRateFields) {
+        ?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="cardkeyApiForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_cardkey_api">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="cardkeyon" id="cardkeyon" value="1" <?php echo $cardkeyApiOn ? 'checked' : ''; ?>>
+                <span>启用卡密对接 API</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用 /core/api/cardkey 也会返回错误。请先在「系统密钥」生成密钥。对接说明见「系统管理 → 系统 API」。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php $vsRenderSysApiRateFields('cardkey'); ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存卡密对接 API 设置</button>
+        </div>
+    </form>
+        <?php
+    });
+
+    $vsRenderSysApiFold('checkin', '签到', function () use ($checkinApiOn, $vsRenderSysApiRateFields) {
+        ?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="checkinApiForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_checkin_api">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="checkinon" id="checkinon" value="1" <?php echo $checkinApiOn ? 'checked' : ''; ?>>
+                <span>启用签到 API</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用 /core/api/checkin 也会返回错误。代签到还须在上方「每日签到」启用赠送积分。对接说明见「系统管理 → 系统 API」。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php $vsRenderSysApiRateFields('checkin'); ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存签到 API 设置</button>
+        </div>
+    </form>
+        <?php
+    });
+
+    $vsRenderSysApiFold('userinfo', '用户信息', function () use ($userinfoApiOn, $vsRenderSysApiRateFields) {
+        ?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="userinfoApiForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_userinfo_api">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="userinfoon" id="userinfoon" value="1" <?php echo $userinfoApiOn ? 'checked' : ''; ?>>
+                <span>启用用户信息 API</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用 /core/api/userinfo 也会返回错误。可查资料、积分、调用与近7日排行；不含密码等敏感字段。对接说明见「系统管理 → 系统 API」。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php $vsRenderSysApiRateFields('userinfo'); ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存用户信息 API 设置</button>
+        </div>
+    </form>
+        <?php
+    });
+
+    $vsRenderSysApiFold('apilog', '调用日志清理', function () use ($vsCfg, $apilogApiOn, $cfgHotDays, $cfgShardRows, $sqliteOk, $vsRenderSysApiRateFields) {
+        ?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="apilogForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_apilog">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="apilog_detail" value="1" <?php echo (!isset($vsCfg['apilog_detail']) || $vsCfg['apilog_detail'] !== '0') ? 'checked' : ''; ?>>
+                <span>记录详细调用日志（IP、UA、来源、转发头等；不存响应正文）</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭后仍会计入各接口与密钥调用次数，适合带宽或性能有限的小站点。响应正文永不落库，以免撑大数据库。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="apilogon" id="apilogon" value="1" <?php echo $apilogApiOn ? 'checked' : ''; ?>>
+                <span>启用调用日志清理 API</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用清理接口也会返回错误。请先在「系统密钥」生成密钥。清理模式不在后台勾选，由请求参数 action 指定。对接说明见「系统管理 → 系统 API」。', array('field' => true, 'compact' => true)); ?>
+            <?php vs_render_notice('warning', '', '开启后 archive / purge / mirror 三种模式均可调用（须带正确 action）。计划任务请写死需要的 action；purge 会直接删在线库且不写本地，请谨慎。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php $vsRenderSysApiRateFields('apilogarchive'); ?>
+        <div class="vs-form-row">
+            <label class="vs-label" for="apilog_hot_days">保留天数</label>
+            <input type="number" class="vs-input" id="apilog_hot_days" name="apilog_hot_days" min="1" max="<?php echo (int) ApiLogArchive::MAX_HOT_DAYS; ?>"
+                   value="<?php echo (int) $cfgHotDays; ?>">
+            <?php vs_render_notice('tip', '', '超过该天数的日志才会被清理 API 处理（写入冷库和/或从在线库删除，取决于 action）。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="apilog_shard_rows">每个分片条数</label>
+            <input type="number" class="vs-input" id="apilog_shard_rows" name="apilog_shard_rows"
+                   min="<?php echo (int) ApiLogArchive::MIN_SHARD_ROWS; ?>"
+                   max="<?php echo (int) ApiLogArchive::MAX_SHARD_ROWS; ?>"
+                   value="<?php echo (int) $cfgShardRows; ?>">
+            <?php vs_render_notice('tip', '', '写入本机冷库时，每个分片文件大约多少条。默认 5000。仅 archive / mirror 用到；purge 不写本地。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php if (!$sqliteOk): ?>
+            <?php vs_render_notice('warning', '', '当前 PHP 未启用 PDO SQLite。action=archive / mirror 需要该扩展；action=purge（只删在线库）不依赖 SQLite。', array('compact' => true)); ?>
+        <?php endif; ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存调用日志清理设置</button>
+        </div>
+    </form>
+        <?php
+    });
+
+    $vsRenderSysApiFold('apiquery', '接口查询', function () use ($apiqueryApiOn, $vsRenderSysApiRateFields) {
+        ?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="apiqueryApiForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_apiquery_api">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="apiqueryon" id="apiqueryon" value="1" <?php echo $apiqueryApiOn ? 'checked' : ''; ?>>
+                <span>启用接口查询 API</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用 /core/api/apiquery 也会返回错误。请先在「系统密钥」生成密钥。对接说明见「系统管理 → 系统 API」。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php $vsRenderSysApiRateFields('apiquery'); ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存接口查询 API 设置</button>
+        </div>
+    </form>
+        <?php
+    });
+
+    $vsRenderSysApiFold('apirank', '调用排行', function () use ($apirankApiOn, $vsRenderSysApiRateFields) {
+        ?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="apirankApiForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_apirank_api">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="apirankon" id="apirankon" value="1" <?php echo $apirankApiOn ? 'checked' : ''; ?>>
+                <span>启用调用排行 API</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用 /core/api/apirank 也会返回错误。当天/近7日/近30日来自日统计 TOP；总计（period=total）读接口累计调用。对接说明见「系统管理 → 系统 API」。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php $vsRenderSysApiRateFields('apirank'); ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存调用排行 API 设置</button>
+        </div>
+    </form>
+        <?php
+    });
+
+    $vsRenderSysApiFold('sitestats', '全站概况', function () use ($sitestatsApiOn, $vsRenderSysApiRateFields) {
+        ?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="sitestatsApiForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_sitestats_api">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="sitestatson" id="sitestatson" value="1" <?php echo $sitestatsApiOn ? 'checked' : ''; ?>>
+                <span>启用全站概况 API</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用 /core/api/sitestats 也会返回错误。可查累计调用、今日调用、累计积分消耗、注册用户数。对接说明见「系统管理 → 系统 API」。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php $vsRenderSysApiRateFields('sitestats'); ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存全站概况 API 设置</button>
+        </div>
+    </form>
+        <?php
+    });
+    ?>
+
+<?php vs_admin_accordion_end(); ?>
+
+<script>window.VS_SETTINGS_BASE = <?php echo vs_json_script($vsBase); ?>;</script>
 
 <?php vs_admin_layout_end(array('settings.js')); ?>
 

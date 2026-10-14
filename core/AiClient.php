@@ -874,6 +874,9 @@ class AiClient
             'Accept: text/event-stream, application/json',
             'Authorization: Bearer ' . $apiKey,
             'Content-Type: application/json',
+            class_exists('OutboundUa')
+                ? OutboundUa::headerLine('Ai')
+                : ('User-Agent: ApiNexus-Ai/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
         );
         $errHold = array('');
         // 首包前上游也可能「思考」很久：靠进度回调给浏览器/CDN 打 SSE 心跳，避免空闲掐断
@@ -882,8 +885,6 @@ class AiClient
             CURLOPT_RETURNTRANSFER => false,
             CURLOPT_CONNECTTIMEOUT => min(15, $timeout),
             CURLOPT_TIMEOUT        => $timeout,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_CUSTOMREQUEST  => strtoupper($method),
             CURLOPT_POSTFIELDS     => $jsonBody !== null ? $jsonBody : '{}',
             CURLOPT_HTTPHEADER     => $headers,
@@ -913,6 +914,7 @@ class AiClient
             },
         );
         curl_setopt_array($ch, $opts);
+        vs_curl_ssl_verify($ch);
         $ok = curl_exec($ch);
         $errno = curl_errno($ch);
         $err = curl_error($ch);
@@ -954,14 +956,15 @@ class AiClient
         $headers = array(
             'Accept: application/json',
             'Authorization: Bearer ' . $apiKey,
+            class_exists('OutboundUa')
+                ? OutboundUa::headerLine('Ai')
+                : ('User-Agent: ApiNexus-Ai/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
         );
         $method = strtoupper($method);
         $opts = array(
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => min(15, $timeout),
             CURLOPT_TIMEOUT        => $timeout,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_CUSTOMREQUEST  => $method,
         );
         if ($method === 'POST') {
@@ -970,6 +973,7 @@ class AiClient
         }
         $opts[CURLOPT_HTTPHEADER] = $headers;
         curl_setopt_array($ch, $opts);
+        vs_curl_ssl_verify($ch);
         $resp = curl_exec($ch);
         $errno = curl_errno($ch);
         $err = curl_error($ch);

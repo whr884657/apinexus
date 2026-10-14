@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'description' => isset($_POST['description']) ? (string) $_POST['description'] : '',
             'sort'        => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
             'enabled'     => isset($_POST['enabled']) ? (int) $_POST['enabled'] : LinkManager::ENABLED_ON,
-        ));
+        ), LinkManager::KIND_SPONSOR);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($enabled, array(LinkManager::ENABLED_OFF, LinkManager::ENABLED_ON), true)) {
             AjaxResponse::error('无效操作');
         }
-        $result = LinkManager::setEnabled($id, $enabled);
+        $result = LinkManager::setEnabled($id, $enabled, LinkManager::KIND_SPONSOR);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
@@ -86,18 +86,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ) {
             AjaxResponse::error('记录不存在');
         }
-        $result = LinkManager::delete($id);
+        $result = LinkManager::delete($id, LinkManager::KIND_SPONSOR);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
         AjaxResponse::success('赞助已删除', array('link_id' => $id));
     }
 
+    if ($action === 'list') {
+        $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+        $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
+        $paged = LinkManager::listPaged(array(
+            'kind'     => LinkManager::KIND_SPONSOR,
+            'page'     => $page,
+            'pagesize' => $pagesize,
+        ));
+        AjaxResponse::success('ok', array(
+            'list'     => $paged['list'],
+            'total'    => $paged['total'],
+            'page'     => $paged['page'],
+            'pagesize' => $paged['pagesize'],
+        ));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
 $tableReady = LinkManager::tableReady();
-$sponsors = $tableReady ? LinkManager::listAll(null, LinkManager::KIND_SPONSOR) : array();
+$paged = $tableReady ? LinkManager::listPaged(array(
+    'kind'     => LinkManager::KIND_SPONSOR,
+    'page'     => 1,
+    'pagesize' => 20,
+)) : array('list' => array(), 'total' => 0);
+$sponsors = $paged['list'];
+$sponsorTotal = (int) $paged['total'];
+
+/**
+ * @return void
+ */
+function vs_render_sponsor_table_head()
+{
+    ?>
+    <div class="vs-link-row vs-link-row--head" aria-hidden="true">
+        <div class="vs-link-cell">名称</div>
+        <div class="vs-link-cell">赞助说明</div>
+        <div class="vs-link-cell">链接</div>
+        <div class="vs-link-cell">状态</div>
+        <div class="vs-link-cell">操作</div>
+    </div>
+    <?php
+}
 
 /**
  * @param array $row
@@ -123,37 +161,37 @@ function vs_render_sponsor_item(array $row)
          data-description="<?php echo vs_e($description); ?>"
          data-sort="<?php echo (int) $row['sort']; ?>"
          data-enabled="<?php echo $enabled; ?>">
-        <div class="vs-link-row__icon">
-            <?php if ($icon !== ''): ?>
-                <img src="<?php echo vs_e($icon); ?>" alt="<?php echo vs_e($name); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
-            <?php else: ?>
-                <span class="vs-link-row__initial"><?php echo vs_e(mb_substr($name, 0, 1, 'UTF-8')); ?></span>
-            <?php endif; ?>
-        </div>
-        <div class="vs-link-row__main">
+        <div class="vs-link-cell vs-link-c-site">
+            <div class="vs-link-row__icon">
+                <?php if ($icon !== ''): ?>
+                    <img src="<?php echo vs_e($icon); ?>" alt="<?php echo vs_e($name); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
+                <?php else: ?>
+                    <span class="vs-link-row__initial"><?php echo vs_e(mb_substr($name, 0, 1, 'UTF-8')); ?></span>
+                <?php endif; ?>
+            </div>
             <div class="vs-link-row__name" data-field="name"><?php echo vs_e($name); ?></div>
-            <?php if ($description !== ''): ?>
-                <div class="vs-link-row__desc" data-field="description"><?php echo vs_e($description); ?></div>
-            <?php else: ?>
-                <div class="vs-link-row__desc" data-field="description" hidden></div>
-            <?php endif; ?>
+        </div>
+        <div class="vs-link-cell vs-link-c-desc">
+            <div class="vs-link-row__desc" data-field="description"><?php echo $description !== '' ? vs_e($description) : '—'; ?></div>
+        </div>
+        <div class="vs-link-cell vs-link-c-url">
             <?php if ($siteurl !== ''): ?>
                 <a class="vs-link-row__url" data-field="siteurl" href="<?php echo vs_e($siteurl); ?>" target="_blank" rel="noopener noreferrer"><?php echo vs_e($siteurl); ?></a>
             <?php else: ?>
                 <span class="vs-link-row__url is-empty" data-field="siteurl">未填写链接</span>
             <?php endif; ?>
         </div>
-        <div class="vs-link-row__status">
+        <div class="vs-link-cell vs-link-c-status">
             <span class="vs-link-status <?php echo vs_e($statusClass); ?>" data-field="enabled_label"><?php echo vs_e($label); ?></span>
         </div>
-        <div class="vs-link-row__actions">
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-sponsor-action="edit" data-link-id="<?php echo $id; ?>">编辑</button>
+        <div class="vs-link-cell vs-link-c-actions">
+            <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-sponsor-action="edit" data-link-id="<?php echo $id; ?>">编辑</button>
             <?php if ($enabled === LinkManager::ENABLED_ON): ?>
-                <button type="button" class="vs-btn vs-btn--pill vs-btn--default" data-sponsor-action="disable" data-link-id="<?php echo $id; ?>">禁用</button>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-sponsor-action="disable" data-link-id="<?php echo $id; ?>">禁用</button>
             <?php else: ?>
-                <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-primary" data-sponsor-action="enable" data-link-id="<?php echo $id; ?>">启用</button>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-sponsor-action="enable" data-link-id="<?php echo $id; ?>">启用</button>
             <?php endif; ?>
-            <button type="button" class="vs-btn vs-btn--pill vs-btn--pill-danger" data-sponsor-action="delete" data-link-id="<?php echo $id; ?>">删除</button>
+            <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-danger" data-sponsor-action="delete" data-link-id="<?php echo $id; ?>">删除</button>
         </div>
     </div>
     <?php
@@ -171,21 +209,26 @@ if ($tableReady) {
 vs_admin_layout_start('赞助管理', 'sponsor', $headerActions);
 ?>
 
-<div class="vs-panel vs-link-panel" id="adminSponsorsPage">
+<div class="vs-link-page" id="adminSponsorsPage">
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '赞助功能尚未就绪，请前往「系统管理 → 系统升级」完成数据库结构更新。', array('compact' => true)); ?>
     <?php else: ?>
+        <?php /* 电脑端表格对齐积分变动；禁整页大白底，仅列表一张表底板（E427） */ ?>
         <?php vs_render_notice('tip', '', '赞助与友情链接、合作伙伴共用数据表。名称对应赞助人；图片为头像；跳转链接为博客/主页（选填）；赞助说明填写金额或其它支持（如「技术支持」）。收款二维码请在「系统设置 → 站点扩展」配置。', array('compact' => true)); ?>
-        <div class="vs-link-empty" id="sponsorEmpty"<?php echo count($sponsors) > 0 ? ' hidden' : ''; ?>>
+        <div class="vs-link-empty" id="sponsorEmpty"<?php echo $sponsorTotal > 0 ? ' hidden' : ''; ?>>
             <?php vs_render_notice('info', '', '暂无赞助记录。添加并启用后将显示在默认主题「赞助」页。', array('compact' => true)); ?>
         </div>
-        <div class="vs-link-list" id="sponsorList"<?php echo count($sponsors) === 0 ? ' hidden' : ''; ?>>
+        <div class="vs-link-list" id="sponsorList"<?php echo $sponsorTotal === 0 ? ' hidden' : ''; ?>>
+            <?php vs_render_sponsor_table_head(); ?>
             <?php foreach ($sponsors as $row): ?>
                 <?php vs_render_sponsor_item($row); ?>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </div>
+<?php if ($tableReady): ?>
+<?php vs_render_list_pager(array('id' => 'sponsor', 'hidden' => $sponsorTotal === 0, 'total' => $sponsorTotal)); ?>
+<?php endif; ?>
 
 <div class="vs-overlay vs-overlay--form" id="sponsorFormOverlay" hidden aria-hidden="true">
     <div class="vs-overlay__backdrop" data-overlay-close="1"></div>
@@ -235,4 +278,4 @@ vs_admin_layout_start('赞助管理', 'sponsor', $headerActions);
 </div>
 
 <?php
-vs_admin_layout_end(array('admin-sponsors.js'));
+vs_admin_layout_end(array('vs-pick.js', 'admin-sponsors.js'));

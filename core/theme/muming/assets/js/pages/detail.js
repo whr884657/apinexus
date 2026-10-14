@@ -208,6 +208,17 @@
         });
     }
 
+    /* —— 移动端：请求完成后将响应区滚入视口（避免结果在屏幕下方看不到） —— */
+    function scrollPgIntoView() {
+        if (!responseEl) return;
+        var mm = window.matchMedia && window.matchMedia('(max-width: 767px)');
+        if (mm && mm.matches) {
+            setTimeout(function () {
+                try { responseEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) { /* ignore */ }
+            }, 80);
+        }
+    }
+
     function getMethod() {
         if (methodSelector) {
             var active = methodSelector.querySelector('.th5-pill.is-active,[data-method].is-active');
@@ -432,10 +443,12 @@
                         var label = ok ? ('OK ' + (http || 200)) : ((data && data.msg) ? String(data.msg) : 'Error');
                         setStatus(label + ' ' + ms + 'ms', ok ? 'ok' : 'err');
                         VsPR.renderRelayPayload(data, responseEl);
+                        scrollPgIntoView();
                     }).catch(function (err) {
                         setStatus('Error', 'err');
                         var raw = err && err.message ? String(err.message) : 'network error';
                         setPgBody('// 请求失败: ' + raw, true);
+                        scrollPgIntoView();
                     });
                     return;
                 }
@@ -460,7 +473,9 @@
                     var ms = Math.round(performance.now() - start);
                     var ok = (res.status || 0) >= 200 && (res.status || 0) < 400;
                     setStatus(String(res.status || 0) + (ok ? ' OK' : ' Error') + ' ' + ms + 'ms', ok ? 'ok' : 'err');
-                    return VsPR.renderFetchResponse(res, responseEl);
+                    return VsPR.renderFetchResponse(res, responseEl).then(function () {
+                        scrollPgIntoView();
+                    });
                 }).catch(function (err) {
                     setStatus('Error', 'err');
                     var raw = err && err.message ? String(err.message) : 'network error';
@@ -468,6 +483,7 @@
                         ? '请求失败（常见于跨域或上游未允许跨域）'
                         : raw;
                     setPgBody('// 请求失败: ' + msg, true);
+                    scrollPgIntoView();
                 });
             });
         });
@@ -533,6 +549,35 @@
             }).then(function () {
                 if (btn) btn.disabled = false;
             });
+        });
+    })();
+
+    /* —— API 描述（移动端折叠：默认收起仅展示部分内容） —— */
+    (function initDescToggle() {
+        var box = document.getElementById('detailApiDesc');
+        var btn = document.getElementById('detailApiDescToggle');
+        if (!box || !btn) return;
+        btn.addEventListener('click', function () {
+            var expanded = box.classList.toggle('is-expanded');
+            btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            var labelEl = btn.querySelector('.th5-detail-q__desc-toggle-text');
+            if (labelEl) labelEl.textContent = expanded ? '收起' : '展开全文';
+        });
+    })();
+
+    /* —— 免责声明（默认仅按钮，点击展开/收起内容） —— */
+    (function initDisclaimerToggle() {
+        var section = document.getElementById('detailDisclaimer');
+        var btn = document.getElementById('detailDisclaimerToggle');
+        var body = document.getElementById('detailDisclaimerBody');
+        if (!section || !btn || !body) return;
+        btn.addEventListener('click', function () {
+            var open = body.hidden;
+            body.hidden = !open;
+            section.classList.toggle('is-open', open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            var labelEl = btn.querySelector('.th5-detail-q__disclaimer-toggle-text');
+            if (labelEl) labelEl.textContent = open ? '收起免责声明' : '查看免责声明';
         });
     })();
 })();

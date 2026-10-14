@@ -58,7 +58,7 @@ if ($articleId > 0) {
       <?php if (!empty($article['cover'])): ?>
         <img class="th3-article-cover" src="<?php echo vs_e($article['cover']); ?>"
              alt="<?php echo vs_e($article['title']); ?>"
-             width="920" height="360" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+             width="1600" height="900" loading="lazy" decoding="async" referrerpolicy="no-referrer">
       <?php endif; ?>
 
       <div class="markdown-body vs-md-body th3-md th3-article-detail__body" data-vs-md="desktop">
@@ -197,10 +197,10 @@ if ($articleId > 0) {
 <?php endif; ?>
 <script src="<?php echo vs_e(vs_site_path('/core/markdown/assets/js/markdown-render.js')); ?>?v=<?php echo vs_e(VS_VERSION); ?>" defer></script>
 <script>
-window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo json_encode($csrf, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
+window.VS_CSRF_TOKEN = window.VS_CSRF_TOKEN || <?php echo vs_json_script($csrf); ?>;
 window.VS_ARTICLE_COMMENT = {
   contentId: <?php echo (int) $articleId; ?>,
-  postUrl: <?php echo json_encode($vsBase . '/articles/' . (int) $articleId, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>,
+  postUrl: <?php echo vs_json_script($vsBase . '/articles/' . (int) $articleId); ?>,
   count: <?php echo (int) $commentCount; ?>
 };
 </script>

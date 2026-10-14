@@ -29,6 +29,15 @@ function vs_keys_extra_from_post()
         $raw = trim((string) $_POST['expiretime']);
         $extra['expiretime'] = ($raw === '') ? '' : str_replace('T', ' ', $raw);
     }
+    if (array_key_exists('scope_mode', $_POST)) {
+        $extra['scope_mode'] = trim((string) $_POST['scope_mode']);
+    }
+    if (array_key_exists('scopejson', $_POST)) {
+        $extra['scopejson'] = (string) $_POST['scopejson'];
+    }
+    if (array_key_exists('scope_visible', $_POST)) {
+        $extra['scope_visible'] = (string) $_POST['scope_visible'];
+    }
     return $extra;
 }
 
@@ -149,6 +158,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ));
     }
 
+    // 接口范围选择器目录：前台可见接口 + 全部分类（含停用，便于已授权展示）
+    if ($action === 'scope_catalog') {
+        if (!ApiKeyManager::hasScopeColumn()) {
+            AjaxResponse::error('接口范围功能尚未就绪，请先完成系统升级');
+        }
+        $ip = class_exists('AuthSecurity') ? AuthSecurity::clientIp() : '0.0.0.0';
+        if (!AuthSecurity::rateLimitAllow('user_scope_catalog_uid:' . $userId, 30, 60, true)
+            || !AuthSecurity::rateLimitAllow('user_scope_catalog_ip:' . $ip, 60, 60, true)) {
+            AjaxResponse::error('请求过于频繁，请稍后再试', 429);
+        }
+        $categories = array();
+        if (class_exists('ApiCategoryManager') && ApiCategoryManager::tableReady()) {
+            foreach (ApiCategoryManager::listAll() as $cat) {
+                if (!is_array($cat) || !isset($cat['id'])) {
+                    continue;
+                }
+                $categories[] = array(
+                    'id'     => (int) $cat['id'],
+                    'name'   => isset($cat['name']) ? (string) $cat['name'] : '',
+                    'status' => isset($cat['status']) ? (int) $cat['status'] : 1,
+                );
+            }
+        }
+        $apis = array();
+        if (class_exists('ApiManager') && ApiManager::tableReady()) {
+            foreach (ApiManager::listPublicLiteAll() as $api) {
+                if (!is_array($api) || !isset($api['id'])) {
+                    continue;
+                }
+                $catName = isset($api['category']) ? trim((string) $api['category']) : '';
+                $apis[] = array(
+                    'id'       => (int) $api['id'],
+                    'name'     => isset($api['name']) ? (string) $api['name'] : '',
+                    'category' => $catName,
+                    'cid'      => $catName !== '' ? ApiKeyManager::resolveCategoryIdByName($catName) : 0,
+                );
+            }
+        }
+        AjaxResponse::success('ok', array(
+            'categories' => $categories,
+            'apis'       => $apis,
+        ));
+    }
+
     AjaxResponse::error('无效操作', 400);
 }
 
@@ -175,6 +228,16 @@ function vs_render_user_token_item(array $row)
     $expireRaw = isset($token['expiretime']) && $token['expiretime'] !== null ? (string) $token['expiretime'] : '';
     $quotaLabel = vs_token_quota_label($token);
     $expireLabel = isset($token['expire_label']) ? (string) $token['expire_label'] : '永不过期';
+    $scopeOpen = !empty($token['scope_open']) ? 1 : 0;
+    $scopeC = isset($token['scope_c']) && is_array($token['scope_c']) ? $token['scope_c'] : array();
+    $scopeA = isset($token['scope_a']) && is_array($token['scope_a']) ? $token['scope_a'] : array();
+    $scopeLabel = isset($token['scope_label']) ? (string) $token['scope_label'] : '全部可调用';
+    $scopeJsonAttr = $scopeOpen
+        ? ''
+        : json_encode(array('c' => array_values($scopeC), 'a' => array_values($scopeA)), JSON_UNESCAPED_UNICODE);
+    if (!is_string($scopeJsonAttr)) {
+        $scopeJsonAttr = '';
+    }
     $createShort = (string) $token['createtime'];
     if ($createShort !== '' && strlen($createShort) >= 16) {
         $createShort = substr($createShort, 0, 16);
@@ -186,7 +249,10 @@ function vs_render_user_token_item(array $row)
          data-quota="<?php echo vs_e((string) $quota); ?>"
          data-quotaused="<?php echo vs_e((string) $quotaused); ?>"
          data-quotafallback="<?php echo $quotafallback; ?>"
-         data-expiretime="<?php echo vs_e($expireRaw); ?>">
+         data-expiretime="<?php echo vs_e($expireRaw); ?>"
+         data-scope-open="<?php echo $scopeOpen; ?>"
+         data-scopejson="<?php echo vs_e($scopeJsonAttr); ?>"
+         data-scope-label="<?php echo vs_e($scopeLabel); ?>">
         <div class="vs-api-item__icon vs-token-row__icon" aria-hidden="true">
             <span class="vs-token-row__icon-mark">SK</span>
         </div>
@@ -200,13 +266,18 @@ function vs_render_user_token_item(array $row)
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             </button>
         </div>
-        <div class="vs-token-row__quota" data-field="quota_label" title="配额（剩余/上限）"><span class="vs-token-row__lbl">配额</span> <?php echo vs_e($quotaLabel); ?></div>
-        <div class="vs-token-row__expire" data-field="expire_label" title="有效期"><span class="vs-token-row__lbl">有效期</span> <?php echo vs_e($expireLabel); ?></div>
-        <div class="vs-api-item__calls vs-token-row__calls" title="调用次数">调用 <strong data-field="calls"><?php echo (int) $token['calls']; ?></strong></div>
-        <div class="vs-api-item__spent vs-token-row__spent" title="累计消耗积分">消耗 <strong data-field="pointsspent"><?php
-            $spent = isset($token['pointsspent']) ? (float) $token['pointsspent'] : 0.0;
-            echo vs_e(class_exists('PayConfig') ? PayConfig::fmtPoints($spent) : (string) $spent);
-        ?></strong></div>
+        <div class="vs-token-row__stats">
+            <div class="vs-token-row__scope" data-field="scope_label"><?php echo vs_format_scope_label_html($scopeLabel); ?></div>
+            <div class="vs-token-row__meta">
+                配额 <strong data-field="quota_label"><?php echo vs_e($quotaLabel); ?></strong>
+                · 有效期 <strong data-field="expire_label"><?php echo vs_e($expireLabel); ?></strong>
+                · 调用 <strong data-field="calls"><?php echo (int) $token['calls']; ?></strong>
+                · 消耗 <strong data-field="pointsspent"><?php
+                    $spent = isset($token['pointsspent']) ? (float) $token['pointsspent'] : 0.0;
+                    echo vs_e(class_exists('PayConfig') ? PayConfig::fmtPoints($spent) : (string) $spent);
+                ?></strong>
+            </div>
+        </div>
         <div class="vs-api-item__tags">
             <span class="vs-api-tag vs-api-tag--status <?php echo $statusClass; ?>" data-field="status_label"><?php echo vs_e($token['status_label']); ?></span>
             <?php if ($quota > 0 && $quotafallback === 1): ?>
@@ -243,5 +314,5 @@ vs_user_render_page(
         'tokenCount' => $tokenCount,
     ),
     $headerActions,
-    $tableReady ? array('user-keys.js') : array()
+    $tableReady ? array('token-scope-picker.js', 'user-keys.js') : array()
 );

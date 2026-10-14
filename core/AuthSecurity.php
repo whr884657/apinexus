@@ -257,7 +257,8 @@ class AuthSecurity
         if (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443) {
             return true;
         }
-        if (!self::trustForwardedHeaders()) {
+        // 转发头仅当 trust_proxy=1 且 REMOTE_ADDR 落在 trusted_proxies（E412）
+        if (!self::mayTrustForwardedClientHints()) {
             return false;
         }
         if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
@@ -331,6 +332,47 @@ class AuthSecurity
      *
      * @return void
      */
+    /**
+     * 本站 http + https 源列表（动态，不含全网 http:）
+     *
+     * 主机只来自 vs_trusted_host_list()（SERVER_NAME + 绑定域 + www 孪生），禁止 Origin/Referer/HTTP_HOST。
+     *
+     * @return string 空格分隔的 origin，可能为空
+     */
+    private static function cspSameSiteOriginList()
+    {
+        $hosts = array();
+        if (function_exists('vs_trusted_host_list')) {
+            foreach (vs_trusted_host_list() as $h) {
+                self::cspCollectHost($hosts, $h);
+            }
+        } elseif (!empty($_SERVER['SERVER_NAME'])) {
+            self::cspCollectHost($hosts, (string) $_SERVER['SERVER_NAME']);
+        }
+        $tokens = array();
+        foreach (array_keys($hosts) as $host) {
+            $tokens[] = 'http://' . $host;
+            $tokens[] = 'https://' . $host;
+        }
+        return implode(' ', $tokens);
+    }
+
+    /**
+     * @param array<string,bool> $hosts
+     * @param mixed              $raw
+     * @return void
+     */
+    private static function cspCollectHost(array &$hosts, $raw)
+    {
+        if (!function_exists('vs_sanitize_http_host')) {
+            return;
+        }
+        $h = vs_sanitize_http_host((string) $raw);
+        if ($h !== '') {
+            $hosts[$h] = true;
+        }
+    }
+
     private static function sendContentSecurityPolicy()
     {
         // 极验 3/4：loader 动态注入脚本；三代容灾走 api.geevisit.com/ajax.php（E274）
@@ -338,19 +380,24 @@ class AuthSecurity
         $gtApi = 'https://api.geetest.com https://api.geevisit.com https://monitor.geetest.com';
         $gtGcaptcha4 = 'https://gcaptcha4.geetest.com https://gcaptcha4.geevisit.com https://gcaptcha4.gsensebot.com';
         $gtMisc = 'https://dn-staticdown.qbox.me';
-        $gtScript = $gtStatic . ' ' . $gtApi . ' ' . $gtGcaptcha4;
+        // Cloudflare Turnstile（小组件 + Siteverify）
+        $cfTurnstile = 'https://challenges.cloudflare.com';
+        $gtScript = $gtStatic . ' ' . $gtApi . ' ' . $gtGcaptcha4 . ' ' . $cfTurnstile;
         $gtFrame = $gtScript . ' ' . $gtMisc;
+        $site = self::cspSameSiteOriginList();
+        $siteSp = ($site !== '') ? (' ' . $site) : '';
         $csp = implode('; ', array(
             "default-src 'self'",
             "base-uri 'self'",
             "object-src 'none'",
             "frame-ancestors 'self'",
             "form-action 'self'",
-            "script-src 'self' 'unsafe-inline' " . $gtScript,
-            "style-src 'self' 'unsafe-inline' " . $gtScript,
+            "script-src 'self' 'unsafe-inline' " . $gtScript . $siteSp,
+            "style-src 'self' 'unsafe-inline' " . $gtScript . $siteSp,
             "img-src 'self' data: blob: https: http:",
             "font-src 'self' data: " . $gtScript,
-            "connect-src 'self' https: http://v1.hitokoto.cn https://v1.hitokoto.cn https://international.v1.hitokoto.cn "
+            "connect-src 'self' https:" . $siteSp
+                . ' http://v1.hitokoto.cn https://v1.hitokoto.cn https://international.v1.hitokoto.cn '
                 . $gtScript,
             "media-src 'self' data: blob: https: http:",
             "frame-src 'self' " . $gtFrame,
@@ -431,122 +478,84 @@ class AuthSecurity
     }
 
     /**
-     * 规范化 Host（去端口、小写；IPv6 方括号保留内层）
-     *
-     * @param string $host
-     * @return string
-     */
-    public static function normalizeRequestHost($host)
-    {
-        $host = strtolower(trim((string) $host));
-        if ($host === '') {
-            return '';
-        }
-        if ($host[0] === '[') {
-            $end = strpos($host, ']');
-            if ($end !== false) {
-                return substr($host, 0, $end + 1);
-            }
-        }
-        if (strpos($host, ':') !== false) {
-            $host = preg_replace('/:\d+$/', '', $host);
-        }
-        return $host;
-    }
-
-    /**
-     * 从 Origin / Referer URL 取出 host
-     *
-     * @param string $url
-     * @return string
-     */
-    private static function hostFromUrl($url)
-    {
-        $url = trim((string) $url);
-        if ($url === '') {
-            return '';
-        }
-        $parts = parse_url($url);
-        if (!is_array($parts) || empty($parts['host'])) {
-            return '';
-        }
-        $host = strtolower((string) $parts['host']);
-        if (isset($parts['port']) && (int) $parts['port'] > 0) {
-            // HTTP_HOST 可能带非默认端口，一并纳入比较集合由调用方处理
-        }
-        return $host;
-    }
-
-    /**
      * 校验请求来源（同源）
      *
-     * 说明：部分浏览器 / 隐私模式 / 应用内 WebView 的同源 fetch 可能不带 Origin/Referer。
-     * 此时仍依赖 CSRF Token，避免误杀登录；有头时再严格比对 Host。
+     * Origin/Referer 主机须落在本站可信名单。无来源头时仅当 Sec-Fetch-Site=same-origin
+     * 且当前 Host 可信。禁止 same-site 单独放行，禁止无头默认 true。
      *
      * @return bool
      */
     public static function validateSameOrigin()
     {
-        $rawHost = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
-        $host = self::normalizeRequestHost($rawHost);
-        if ($host === '') {
+        $fetchSite = isset($_SERVER['HTTP_SEC_FETCH_SITE'])
+            ? strtolower(trim((string) $_SERVER['HTTP_SEC_FETCH_SITE']))
+            : '';
+
+        $origin = !empty($_SERVER['HTTP_ORIGIN']) ? (string) $_SERVER['HTTP_ORIGIN'] : '';
+        $referer = !empty($_SERVER['HTTP_REFERER']) ? (string) $_SERVER['HTTP_REFERER'] : '';
+
+        $trusted = function ($urlOrHost) {
+            $raw = trim((string) $urlOrHost);
+            if ($raw === '') {
+                return false;
+            }
+            if (strpos($raw, '://') !== false) {
+                $parts = parse_url($raw);
+                if (!is_array($parts) || empty($parts['host'])) {
+                    return false;
+                }
+                $h = (string) $parts['host'];
+                if (isset($parts['port']) && (int) $parts['port'] > 0) {
+                    $h .= ':' . (int) $parts['port'];
+                }
+                return function_exists('vs_is_trusted_host') && vs_is_trusted_host($h);
+            }
+            return function_exists('vs_is_trusted_host') && vs_is_trusted_host($raw);
+        };
+
+        if ($origin !== '') {
+            return $trusted($origin);
+        }
+        if ($referer !== '') {
+            return $trusted($referer);
+        }
+
+        if ($fetchSite !== 'same-origin') {
             return false;
         }
-
-        $candidates = array();
-        if (!empty($_SERVER['HTTP_ORIGIN'])) {
-            $candidates[] = (string) $_SERVER['HTTP_ORIGIN'];
+        $rawHost = isset($_SERVER['HTTP_HOST']) ? (string) $_SERVER['HTTP_HOST'] : '';
+        if ($rawHost === '' && !empty($_SERVER['SERVER_NAME'])) {
+            $rawHost = (string) $_SERVER['SERVER_NAME'];
         }
-        if (!empty($_SERVER['HTTP_REFERER'])) {
-            $candidates[] = (string) $_SERVER['HTTP_REFERER'];
-        }
-
-        if ($candidates === array()) {
-            return true;
-        }
-
-        foreach ($candidates as $url) {
-            $candHost = self::hostFromUrl($url);
-            if ($candHost === '') {
-                continue;
-            }
-            if ($candHost === $host) {
-                return true;
-            }
-            // www / 裸域宽松互认（仅一层）
-            if ($candHost === 'www.' . $host || $host === 'www.' . $candHost) {
-                return true;
-            }
-        }
-
-        return false;
+        return $trusted($rawHost);
     }
 
     /**
      * 客户端 IP
      *
-     * 默认只用 REMOTE_ADDR。仅当配置 trust_proxy=1 时采信 X-Forwarded-For 首段。
+     * 默认只用 REMOTE_ADDR。仅当 trust_proxy=1 且 REMOTE_ADDR 落在 trusted_proxies
+     * 白名单时，才采信 X-Forwarded-For 最左段（E412）。
      *
      * @return string
      */
     public static function clientIp()
     {
-        $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
-        if (!self::trustForwardedHeaders()) {
-            return $ip;
+        $remote = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+        if (!self::mayTrustForwardedClientHints()) {
+            return $remote;
         }
         if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && $_SERVER['HTTP_X_FORWARDED_FOR'] !== '') {
             $parts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
             $candidate = trim($parts[0]);
             if (filter_var($candidate, FILTER_VALIDATE_IP)) {
-                $ip = $candidate;
+                return $candidate;
             }
         }
-        return $ip;
+        return $remote;
     }
 
     /**
-     * 是否信任反向代理转发头（XFF / X-Forwarded-Proto）
+     * 配置开关：是否允许在「可信代理」前提下读转发头
      *
      * @return bool
      */
@@ -555,7 +564,106 @@ class AuthSecurity
         if (!class_exists('Config')) {
             return false;
         }
-        return Config::get('trust_proxy', '0') === '1';
+        try {
+            return Config::get('trust_proxy', '0') === '1';
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 是否可采信本请求的 XFF / X-Forwarded-Proto（开关 + REMOTE_ADDR 白名单）
+     *
+     * @return bool
+     */
+    public static function mayTrustForwardedClientHints()
+    {
+        if (!self::trustForwardedHeaders()) {
+            return false;
+        }
+        $remote = isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '';
+        return self::isTrustedProxyAddress($remote);
+    }
+
+    /**
+     * REMOTE_ADDR 是否落在 config.trusted_proxies（IP 或 CIDR，逗号/换行分隔）
+     * 名单为空 → 一律否（fail-closed，防伪造 XFF 绕过限流）
+     *
+     * @param string $ip
+     * @return bool
+     */
+    public static function isTrustedProxyAddress($ip)
+    {
+        $ip = trim((string) $ip);
+        if ($ip === '' || !filter_var($ip, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+        $raw = '';
+        if (class_exists('Config')) {
+            try {
+                $raw = trim((string) Config::get('trusted_proxies', ''));
+            } catch (Exception $e) {
+                $raw = '';
+            }
+        }
+        if ($raw === '') {
+            return false;
+        }
+        $parts = preg_split('/[\s,;]+/', $raw);
+        if (!is_array($parts)) {
+            return false;
+        }
+        foreach ($parts as $entry) {
+            $entry = trim((string) $entry);
+            if ($entry === '') {
+                continue;
+            }
+            if (self::ipMatchesTrustedEntry($ip, $entry)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param string $ip
+     * @param string $entry IP 或 CIDR
+     * @return bool
+     */
+    private static function ipMatchesTrustedEntry($ip, $entry)
+    {
+        if (strpos($entry, '/') === false) {
+            return strcasecmp($ip, $entry) === 0;
+        }
+        $bits = explode('/', $entry, 2);
+        if (count($bits) !== 2) {
+            return false;
+        }
+        $subnet = trim($bits[0]);
+        $mask = (int) $bits[1];
+        if (!filter_var($subnet, FILTER_VALIDATE_IP) || !filter_var($ip, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+        $ipBin = @inet_pton($ip);
+        $subBin = @inet_pton($subnet);
+        if ($ipBin === false || $subBin === false || strlen($ipBin) !== strlen($subBin)) {
+            return false;
+        }
+        $len = strlen($ipBin);
+        $maxBits = $len * 8;
+        if ($mask < 0 || $mask > $maxBits) {
+            return false;
+        }
+        $fullBytes = (int) floor($mask / 8);
+        $remain = $mask % 8;
+        if ($fullBytes > 0 && substr($ipBin, 0, $fullBytes) !== substr($subBin, 0, $fullBytes)) {
+            return false;
+        }
+        if ($remain === 0) {
+            return true;
+        }
+        $maskByte = (~(0xff >> $remain)) & 0xff;
+        return (ord($ipBin[$fullBytes]) & $maskByte) === (ord($subBin[$fullBytes]) & $maskByte);
     }
 
     /**

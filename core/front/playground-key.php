@@ -2,6 +2,7 @@
 /**
  * 文件：core/front/playground-key.php
  * 作用：前台在线测试按需拉取当前用户启用 KEY（POST + CSRF；禁止 SSR 明文进 HTML）
+ *       可选 apiid：优先返回对该接口有范围权限的密钥；全无则 scopeBlocked=1
  *
  * 公网地址：{站点根}/core/front/playground-key.php（带 .php 直访）
  */
@@ -40,8 +41,21 @@ if ($action !== '' && $action !== 'get') {
     AjaxResponse::error('无效操作', 400);
 }
 
+$apiId = isset($_POST['apiid']) ? (int) $_POST['apiid'] : 0;
+$apiRow = null;
+if ($apiId > 0 && class_exists('ApiManager') && ApiManager::tableReady()) {
+    $apiRow = ApiManager::findById($apiId);
+    if (!is_array($apiRow)) {
+        $apiRow = null;
+    }
+}
+
 $apiKey = '';
 $apiKeyCount = 0;
+$scopeBlocked = 0;
+$inScopeKey = '';
+$anyEnabledKey = '';
+
 if (class_exists('ApiKeyManager') && ApiKeyManager::tableReady()) {
     foreach (ApiKeyManager::listByUser($uid) as $row) {
         if (!is_array($row)) {
@@ -53,14 +67,51 @@ if (class_exists('ApiKeyManager') && ApiKeyManager::tableReady()) {
         if (!$enabled) {
             continue;
         }
+        if (ApiKeyManager::isExpired($row)) {
+            continue;
+        }
         $apiKeyCount++;
-        if ($apiKey === '' && !empty($row['secret'])) {
-            $apiKey = (string) $row['secret'];
+        $secret = !empty($row['secret']) ? (string) $row['secret'] : '';
+        if ($secret === '') {
+            continue;
+        }
+        if ($anyEnabledKey === '') {
+            $anyEnabledKey = $secret;
+        }
+        if ($apiRow === null) {
+            if ($apiKey === '') {
+                $apiKey = $secret;
+            }
+            continue;
+        }
+        if (ApiKeyManager::allowsApi($row, $apiRow)) {
+            if ($inScopeKey === '') {
+                $inScopeKey = $secret;
+            }
         }
     }
 }
 
-AjaxResponse::success('ok', array(
+if ($apiRow !== null) {
+    if ($inScopeKey !== '') {
+        $apiKey = $inScopeKey;
+    } elseif ($apiKeyCount > 0) {
+        $apiKey = '';
+        $scopeBlocked = 1;
+    } else {
+        $apiKey = '';
+    }
+} elseif ($apiKey === '' && $anyEnabledKey !== '') {
+    $apiKey = $anyEnabledKey;
+}
+
+$payload = array(
     'apiKey'      => $apiKey,
     'apiKeyCount' => $apiKeyCount,
-));
+);
+if ($scopeBlocked === 1) {
+    $payload['scopeBlocked'] = 1;
+    $payload['scopeHint'] = '当前启用令牌均无权调用本接口，请到令牌页调整接口范围后再试';
+}
+
+AjaxResponse::success('ok', $payload);

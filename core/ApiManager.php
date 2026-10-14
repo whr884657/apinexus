@@ -528,12 +528,50 @@ class ApiManager
      */
     public static function listPublic()
     {
-        // 前台列表硬顶，防止接口极多时一次加载打爆内存（主题卡片场景）
+        // 前台主题卡片硬顶，防止接口极多时一次加载打爆内存；令牌选接口勿用本方法
         return self::listFiltered(array(
             'status_in' => array(self::STATUS_NORMAL, self::STATUS_MAINTENANCE),
             'audit'     => self::AUDIT_APPROVED,
             'limit'     => 500,
         ));
+    }
+
+    /** @var array<int,array<string,mixed>>|null 本请求内轻量公开列表缓存 */
+    private static $publicLiteAllCache = null;
+
+    /**
+     * 令牌范围目录 / 满勾对照：公开接口全量（仅 id/name/category，无 LIMIT、不拉 doc）
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function listPublicLiteAll()
+    {
+        if (self::$publicLiteAllCache !== null) {
+            return self::$publicLiteAllCache;
+        }
+        self::$publicLiteAllCache = array();
+        if (!self::tableReady()) {
+            return self::$publicLiteAllCache;
+        }
+        try {
+            $pdo = Database::connect();
+            $sql = 'SELECT a.`id`, a.`name`, a.`category`
+                    FROM `' . self::table() . '` AS a
+                    WHERE a.`status` IN (?, ?)';
+            $params = array((int) self::STATUS_NORMAL, (int) self::STATUS_MAINTENANCE);
+            if (self::hasAuditColumn()) {
+                $sql .= ' AND a.`audit` = ?';
+                $params[] = (int) self::AUDIT_APPROVED;
+            }
+            $sql .= ' ORDER BY a.`id` DESC';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            self::$publicLiteAllCache = is_array($rows) ? $rows : array();
+        } catch (Exception $e) {
+            self::$publicLiteAllCache = array();
+        }
+        return self::$publicLiteAllCache;
     }
 
     /**
@@ -820,6 +858,121 @@ class ApiManager
             return is_array($rows) ? $rows : array();
         } catch (Exception $e) {
             return array();
+        }
+    }
+
+    /**
+     * 后台接口列表真分页（独立 COUNT；页长 1～50）
+     *
+     * @param array $opts q?, category?, status?, sort?, page, pagesize
+     * @return array{list:array,total:int,page:int,pagesize:int,stats_total:int,stats_maint:int,stats_pending:int}
+     */
+    public static function listPaged(array $opts = array())
+    {
+        $page = max(1, (int) (isset($opts['page']) ? $opts['page'] : 1));
+        $pagesize = max(1, min(50, (int) (isset($opts['pagesize']) ? $opts['pagesize'] : 20)));
+        $q = isset($opts['q']) ? trim((string) $opts['q']) : '';
+        if ($q !== '') {
+            if (function_exists('mb_substr') && mb_strlen($q, 'UTF-8') > 64) {
+                $q = mb_substr($q, 0, 64, 'UTF-8');
+            } elseif (strlen($q) > 64) {
+                $q = substr($q, 0, 64);
+            }
+        }
+        $category = isset($opts['category']) ? trim((string) $opts['category']) : '';
+        $statusRaw = array_key_exists('status', $opts) ? $opts['status'] : '';
+        $status = ($statusRaw === '' || $statusRaw === null) ? null : self::normalizeStatus($statusRaw);
+        $sort = isset($opts['sort']) ? trim((string) $opts['sort']) : 'newest';
+        if ($sort === 'calls-desc') {
+            $orderSql = 'a.`calls` DESC, a.`id` DESC';
+        } elseif ($sort === 'calls-asc') {
+            $orderSql = 'a.`calls` ASC, a.`id` DESC';
+        } elseif ($sort === 'name-az') {
+            $orderSql = 'a.`name` ASC, a.`id` DESC';
+        } else {
+            $orderSql = 'a.`id` DESC';
+        }
+
+        $empty = array(
+            'list'          => array(),
+            'total'         => 0,
+            'page'          => $page,
+            'pagesize'      => $pagesize,
+            'stats_total'   => 0,
+            'stats_maint'   => 0,
+            'stats_pending' => 0,
+        );
+        if (!self::tableReady()) {
+            return $empty;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = self::table();
+            $userTable = Database::table('user');
+            $from = '`' . $table . '` AS a LEFT JOIN `' . $userTable . '` AS u ON u.`id` = a.`userid`';
+            $where = array('1=1');
+            $bind = array();
+            if ($status !== null && self::isValidStatus($status)) {
+                $where[] = 'a.`status` = ?';
+                $bind[] = $status;
+            }
+            if ($category !== '') {
+                $where[] = 'a.`category` = ?';
+                $bind[] = $category;
+            }
+            if ($q !== '') {
+                $like = function_exists('vs_sql_like_contains')
+                    ? vs_sql_like_contains($q)
+                    : ('%' . addcslashes($q, "\\%_") . '%');
+                $where[] = '(a.`name` LIKE ? ESCAPE \'\\\\\' OR a.`endpoint` LIKE ? ESCAPE \'\\\\\' OR a.`category` LIKE ? ESCAPE \'\\\\\' OR u.`username` LIKE ? ESCAPE \'\\\\\')';
+                $bind[] = $like;
+                $bind[] = $like;
+                $bind[] = $like;
+                $bind[] = $like;
+            }
+            $whereSql = implode(' AND ', $where);
+            $cnt = $pdo->prepare('SELECT COUNT(*) FROM ' . $from . ' WHERE ' . $whereSql);
+            $cnt->execute($bind);
+            $total = (int) $cnt->fetchColumn();
+
+            $statsTotal = (int) $pdo->query('SELECT COUNT(*) FROM `' . $table . '`')->fetchColumn();
+            $statsMaint = (int) $pdo->query(
+                'SELECT COUNT(*) FROM `' . $table . '` WHERE `status` = ' . (int) self::STATUS_MAINTENANCE
+            )->fetchColumn();
+            $statsPending = 0;
+            if (self::hasAuditColumn()) {
+                $statsPending = (int) $pdo->query(
+                    'SELECT COUNT(*) FROM `' . $table . '` WHERE `audit` = ' . (int) self::AUDIT_PENDING
+                )->fetchColumn();
+            }
+
+            $maxPage = max(1, (int) ceil(($total > 0 ? $total : 1) / $pagesize));
+            if ($page > $maxPage) {
+                $page = $maxPage;
+            }
+            $list = array();
+            if ($total > 0) {
+                $offset = (int) (($page - 1) * $pagesize);
+                $stmt = $pdo->prepare(
+                    'SELECT a.*, u.`username`, u.`email` FROM ' . $from
+                    . ' WHERE ' . $whereSql . ' ORDER BY ' . $orderSql . ' LIMIT '
+                    . $pagesize . ' OFFSET ' . $offset
+                );
+                $stmt->execute($bind);
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $list = is_array($rows) ? $rows : array();
+            }
+            return array(
+                'list'          => $list,
+                'total'         => $total,
+                'page'          => $page,
+                'pagesize'      => $pagesize,
+                'stats_total'   => $statsTotal,
+                'stats_maint'   => $statsMaint,
+                'stats_pending' => $statsPending,
+            );
+        } catch (Exception $e) {
+            return $empty;
         }
     }
 

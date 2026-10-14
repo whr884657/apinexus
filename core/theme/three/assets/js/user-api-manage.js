@@ -522,27 +522,10 @@
     }
 
     function renderPagerNums(totalPages) {
-        if (!pagerNumsEl) {
+        if (!pagerNumsEl || !window.VS || !VS.pagerNumsHtml) {
             return;
         }
-        pagerNumsEl.innerHTML = '';
-        var maxShow = 7;
-        var start = 1;
-        var end = totalPages;
-        if (totalPages > maxShow) {
-            start = Math.max(1, currentPage - 3);
-            end = Math.min(totalPages, start + maxShow - 1);
-            start = Math.max(1, end - maxShow + 1);
-        }
-        var i;
-        for (i = start; i <= end; i += 1) {
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'vs-api-pager__num' + (i === currentPage ? ' is-active' : '');
-            btn.textContent = String(i);
-            btn.setAttribute('data-page', String(i));
-            pagerNumsEl.appendChild(btn);
-        }
+        pagerNumsEl.innerHTML = VS.pagerNumsHtml(currentPage, totalPages);
     }
 
     function applyListView() {
@@ -777,36 +760,7 @@
 
     var paramsEditor = document.getElementById('userApiParamsEditor');
     if (window.VsParamsEditor && paramsEditor) {
-        window.VsParamsEditor.mount(paramsEditor, {
-            hiddenId: 'userApiFormParams',
-            openapiMeta: function () {
-                var apitypeEl = document.getElementById('userApiFormApiType');
-                var endpointEl = document.getElementById('userApiFormEndpoint');
-                var slugEl = document.getElementById('userApiFormProxySlug');
-                var nameEl = document.getElementById('userApiFormName');
-                var descEl = document.getElementById('userApiFormDesc');
-                var needEl = document.getElementById('userApiFormNeedkey');
-                return {
-                    api_id: formId ? String(formId.value || '') : '',
-                    name: nameEl ? nameEl.value.trim() : '',
-                    description: descEl ? descEl.value.trim() : '',
-                    endpoint: endpointEl ? endpointEl.value.trim() : '',
-                    method: getSelectedMethods().join(','),
-                    keyways: getSelectedKeyways().join(','),
-                    apitype: apitypeEl ? String(parseInt(apitypeEl.value, 10) === 1 ? 1 : 0) : '0',
-                    proxyslug: slugEl ? slugEl.value.trim() : '',
-                    needkey: needEl ? String(parseInt(needEl.value, 10) || 0) : '0'
-                };
-            },
-            openapiPreview: function (meta) {
-                return postAction('openapi_preview', meta).then(function (data) {
-                    if (!data || data.code !== 1) {
-                        throw new Error((data && data.msg) ? data.msg : 'OpenAPI 预览失败');
-                    }
-                    return data.openapi_json || '';
-                });
-            }
-        });
+        window.VsParamsEditor.mount(paramsEditor, { hiddenId: 'userApiFormParams' });
     }
 
     function syncUserKeyParam() {

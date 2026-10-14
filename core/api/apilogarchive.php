@@ -1,19 +1,23 @@
 <?php
 /**
  * 文件：core/api/apilogarchive.php
- * 作用：调用日志清理 HTTP API（冷热归档 或 过期直接删除；须系统密钥 + 后台开关）
+ * 作用：调用日志清理 HTTP API（须系统密钥 + 后台「调用日志清理 API」开关）
  *
  * 归属：系统级外部 API（见《系统级外部API规范》）
+ * 失败码：12xxx（SystemApiError）
  *
  * 鉴权（任选其一）：
- *   Query/POST  ?key= 或 ?apikey=
- *   Header      Authorization: Bearer <密钥>
- *               X-Api-Key / Api-Key / Apikey: <密钥>
+ *   Authorization: Bearer <系统密钥>
+ *   Header X-Api-Key / Api-Key / Apikey: <系统密钥>
+ *   Bearer / Header / POST·JSON / Query key= 或 apikey=（三态传钥）
  *
- * 后台未启用「冷热归档」或「过期删除」时，即使密钥正确也返回错误（防密钥泄露误跑）。
+ * 参数 action（必填，GET / POST / JSON 均可）：
+ *   archive — 超过保留天数的日志写入本机冷库，再从在线库删除
+ *   purge   — 超过保留天数的日志只从在线库删除，不写本机
+ *   mirror  — 超过保留天数的日志写入本机冷库，在线库不删
  *
- * 用法（crontab 建议每日 02:30）：
- *   curl -fsS "https://域名/core/api/apilogarchive.php?key=密钥"
+ * 用法示例：
+ *   curl -fsS -H "Authorization: Bearer 密钥" "https://域名/core/api/apilogarchive?action=archive"
  */
 
 define('VS_ROOT', dirname(dirname(__DIR__)));
@@ -21,29 +25,40 @@ require_once VS_ROOT . '/core/bootstrap.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
+header('Cache-Control: no-store');
 
 if (!InstallChecker::isInstalled()) {
-    http_response_code(503);
-    echo json_encode(array('code' => 0, 'msg' => '系统未安装'), JSON_UNESCAPED_UNICODE);
-    exit;
+    SystemApiKey::fail(SystemApiError::NOT_INSTALLED, '系统未安装');
 }
 
-SystemApiKey::requireAuthorized();
-SystemApiKey::requireRateLimit('archive', 60, 6);
+SystemApiKey::requireAuthorizedGate('apilogarchive');
+
+$input = SystemApiKey::mergeInput();
+
+$action = isset($input['action']) ? strtolower(trim((string) $input['action'])) : '';
+if ($action === '') {
+    SystemApiKey::fail(SystemApiError::BAD_PARAM, '缺少 action（archive / purge / mirror）');
+}
+if ($action !== 'archive' && $action !== 'purge' && $action !== 'mirror') {
+    SystemApiKey::fail(SystemApiError::BAD_PARAM, '缺少或错误的 action（须为 archive / purge / mirror）');
+}
 
 @set_time_limit(600);
-$result = ApiLogArchive::runScheduled();
-$code = !empty($result['ok']) ? 1 : 0;
-if ($code !== 1) {
-    $msg = isset($result['msg']) ? (string) $result['msg'] : '执行失败';
-    $http = (strpos($msg, '未启用') !== false) ? 403 : 500;
-    http_response_code($http);
-}
-echo json_encode(array(
-    'code'     => $code,
-    'msg'      => isset($result['msg']) ? $result['msg'] : '',
-    'mode'     => isset($result['mode']) ? $result['mode'] : '',
+$result = ApiLogArchive::runAction($action);
+$msg = isset($result['msg']) ? (string) $result['msg'] : '执行失败';
+$extra = array(
+    'mode'     => isset($result['mode']) ? $result['mode'] : $action,
     'archived' => isset($result['archived']) ? (int) $result['archived'] : 0,
     'deleted'  => isset($result['deleted']) ? (int) $result['deleted'] : 0,
     'days'     => isset($result['days']) ? $result['days'] : array(),
-), JSON_UNESCAPED_UNICODE);
+);
+if (!empty($result['ok'])) {
+    SystemApiKey::ok($msg, $extra);
+}
+if (strpos($msg, '未启用') !== false) {
+    SystemApiKey::fail(SystemApiError::API_OFF, $msg, $extra);
+}
+if (strpos($msg, '缺少或错误') !== false) {
+    SystemApiKey::fail(SystemApiError::BAD_PARAM, $msg, $extra);
+}
+SystemApiKey::fail(SystemApiError::BUSINESS, $msg, $extra);

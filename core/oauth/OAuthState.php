@@ -49,7 +49,9 @@ class OAuthState
 
         $token = bin2hex(random_bytes(16));
         if (!self::storePayload($token, $payload)) {
-            // 极端：存储失败时退回签名内联（可能被聚合网关截断，仅兜底）
+            if ($intent === 'bind') {
+                return '';
+            }
             return self::encodeInline($payload);
         }
 
@@ -271,8 +273,12 @@ class OAuthState
      */
     private static function encodeInline(array $payload)
     {
+        $hmacKey = self::signingKey();
+        if ($hmacKey === '') {
+            return '';
+        }
         $json = json_encode($payload, JSON_UNESCAPED_UNICODE);
-        $sig = hash_hmac('sha256', $json, self::signingKey());
+        $sig = hash_hmac('sha256', $json, $hmacKey);
 
         return self::base64UrlEncode($json) . '.' . $sig;
     }
@@ -298,7 +304,11 @@ class OAuthState
             return false;
         }
 
-        $expected = hash_hmac('sha256', $json, self::signingKey());
+        $hmacKey = self::signingKey();
+        if ($hmacKey === '') {
+            return false;
+        }
+        $expected = hash_hmac('sha256', $json, $hmacKey);
         if (!hash_equals($expected, $parts[1])) {
             return false;
         }
@@ -317,25 +327,23 @@ class OAuthState
             return $key;
         }
 
-        $parts = array('apinexus-oauth-state-v1');
-        $lockFile = VS_ROOT . '/config/install.lock';
-        if (is_file($lockFile)) {
-            $parts[] = trim((string) @file_get_contents($lockFile));
-        }
-
+        $secret = '';
         try {
-            if (InstallChecker::isInstalled()) {
-                $oauth = OAuthConfig::getAll();
-                $parts[] = isset($oauth['gitee']['client_secret']) ? (string) $oauth['gitee']['client_secret'] : '';
-                $parts[] = isset($oauth['qq']['app_key']) ? (string) $oauth['qq']['app_key'] : '';
-                $parts[] = isset($oauth['agg']['app_key']) ? (string) $oauth['agg']['app_key'] : '';
+            if (class_exists('Config') && class_exists('InstallChecker') && InstallChecker::isInstalled()) {
+                $secret = (string) Config::get('oauth_state_secret', '');
+                if (strlen($secret) < 32) {
+                    $secret = bin2hex(random_bytes(32));
+                    Config::set('oauth_state_secret', $secret);
+                }
             }
         } catch (Exception $e) {
-            // ignore
+            $secret = '';
         }
-
-        $parts[] = vs_base_url();
-        $key = hash('sha256', implode('|', $parts));
+        if ($secret === '' || strlen($secret) < 32) {
+            $key = '';
+            return '';
+        }
+        $key = hash('sha256', 'apinexus-oauth-state-v1|' . $secret);
 
         return $key;
     }

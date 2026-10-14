@@ -5,7 +5,8 @@
  *
  * 对外 JSON：{ "code": 0, "msg": "…", "errcode": 11001 }
  * HTTP 传输层固定 200，业务成败看 code / errcode。
- * 业务失败码范围：11001～11024
+ * 业务失败码范围：11001～11025（公开网关）
+ * 系统级外部 API 用 12xxx，见 SystemApiError（勿混用）
  */
 
 class ApiError
@@ -58,9 +59,11 @@ class ApiError
     const KEY_EXPIRED = 11023;
     /** 令牌分配积分不足 */
     const KEY_QUOTA = 11024;
+    /** 该密钥无权调用此接口（范围限制） */
+    const KEY_SCOPE = 11025;
 
     /**
-     * 业务错误码 → 文案（11001～11024；不含传输层 200/302）
+     * 业务错误码 → 文案（11001～11025；不含传输层 200/302）
      *
      * @return array<int,string>
      */
@@ -91,6 +94,7 @@ class ApiError
             self::PROXY_FAIL       => '出口代理不可用',
             self::KEY_EXPIRED      => '密钥已过期',
             self::KEY_QUOTA        => '令牌分配积分不足',
+            self::KEY_SCOPE        => '该密钥无权调用此接口',
         );
     }
 
@@ -132,11 +136,11 @@ class ApiError
     public static function isKnown($errcode)
     {
         $code = (int) $errcode;
-        return $code === 200 || $code === 302 || ($code >= 11001 && $code <= 11024);
+        return $code === 200 || $code === 302 || ($code >= 11001 && $code <= 11025);
     }
 
     /**
-     * 是否为平台业务失败码（11001～11024；不含 200/302）
+     * 是否为平台业务失败码（11001～11025；不含 200/302）
      *
      * @param int $errcode
      * @return bool
@@ -144,7 +148,7 @@ class ApiError
     public static function isBusinessFailure($errcode)
     {
         $code = (int) $errcode;
-        return $code >= 11001 && $code <= 11024;
+        return $code >= 11001 && $code <= 11025;
     }
 
     /**

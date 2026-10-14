@@ -153,6 +153,68 @@ class UserStat7Manager
     }
 
     /**
+     * 近 7 日窗口内某一天的调用摘要（供系统 API；无数据则 calls=0）
+     *
+     * @param int    $userId
+     * @param string $ymd Y-m-d
+     * @return array{ok:bool,msg?:string,date?:string,calls?:int,cost?:float,rank?:array<int,array{apiid:int,calls:int}>}
+     */
+    public static function dayDetail($userId, $ymd)
+    {
+        $userId = (int) $userId;
+        $ymd = substr(trim((string) $ymd), 0, 10);
+        if ($userId <= 0) {
+            return array('ok' => false, 'msg' => '用户无效');
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ymd)) {
+            return array('ok' => false, 'msg' => 'date 须为 Y-m-d');
+        }
+        $window = array();
+        for ($i = self::KEEP_DAYS - 1; $i >= 0; $i--) {
+            $window[date('Y-m-d', strtotime('-' . $i . ' day'))] = true;
+        }
+        if (!isset($window[$ymd])) {
+            return array('ok' => false, 'msg' => 'date 须在近 ' . self::KEEP_DAYS . ' 日内（含今天）');
+        }
+        if (!self::hasColumn()) {
+            return array(
+                'ok'    => true,
+                'date'  => $ymd,
+                'calls' => 0,
+                'cost'  => 0.0,
+                'rank'  => array(),
+            );
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT `stat7` FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1'
+            );
+            $stmt->execute(array($userId));
+            $raw = $stmt->fetchColumn();
+            $map = self::pruneToWindow(self::decode($raw === false ? '' : (string) $raw));
+            $row = isset($map[$ymd]) && is_array($map[$ymd]) ? $map[$ymd] : array();
+            $calls = isset($row['calls']) ? (int) $row['calls'] : 0;
+            $cost = isset($row['cost']) ? round((float) $row['cost'], 4) : 0.0;
+            $apis = array();
+            if (!empty($row['apis']) && is_array($row['apis'])) {
+                foreach ($row['apis'] as $aid => $n) {
+                    $apis[(string) $aid] = (int) $n;
+                }
+            }
+            return array(
+                'ok'    => true,
+                'date'  => $ymd,
+                'calls' => $calls,
+                'cost'  => $cost,
+                'rank'  => self::rankApis($apis, 10),
+            );
+        } catch (Exception $e) {
+            return array('ok' => false, 'msg' => '读取日统计失败');
+        }
+    }
+
+    /**
      * 读取并规范化近 7 日结构（供控制台；未登录勿调用）
      *
      * @param int $userId

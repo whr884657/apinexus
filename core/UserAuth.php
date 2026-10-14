@@ -11,6 +11,70 @@ class UserAuth
     const SESSION_KEY = 'vs_user_id';
     const ACTIVITY_KEY = 'vs_user_last_activity';
 
+    /** @var array<int, int|null> */
+    private static $statusMemo = array();
+
+    /**
+     * @param int $userId
+     * @return string
+     */
+    public static function statusCacheKey($userId)
+    {
+        return RedisCache::KEY_USER_STATUS_PREFIX . (int) $userId;
+    }
+
+    /**
+     * @param int $userId
+     * @return void
+     */
+    public static function forgetStatusCache($userId)
+    {
+        $userId = (int) $userId;
+        unset(self::$statusMemo[$userId]);
+        if ($userId > 0 && class_exists('RedisCache')) {
+            RedisCache::forget(self::statusCacheKey($userId));
+        }
+    }
+
+    /**
+     * 账号 status：1 正常，其它为无效；用户不存在为 null。
+     *
+     * @param int $userId
+     * @return int|null
+     */
+    public static function lookupStatus($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return null;
+        }
+        if (array_key_exists($userId, self::$statusMemo)) {
+            return self::$statusMemo[$userId];
+        }
+        $factory = function () use ($userId) {
+            $pdo = Database::connect();
+            $table = Database::table('user');
+            $stmt = $pdo->prepare('SELECT `status` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
+            $stmt->execute(array($userId));
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                return null;
+            }
+            return (int) $row['status'];
+        };
+        try {
+            if (class_exists('RedisCache') && RedisCache::enabled()) {
+                $st = RedisCache::remember(self::statusCacheKey($userId), RedisCache::TTL_USER_STATUS, $factory);
+            } else {
+                $st = $factory();
+            }
+        } catch (Exception $e) {
+            return null;
+        }
+        self::$statusMemo[$userId] = ($st === null) ? null : (int) $st;
+        return self::$statusMemo[$userId];
+    }
+
     /**
      * 用户登录（支持用户名或邮箱）
      *
@@ -114,6 +178,17 @@ class UserAuth
             return false;
         }
 
+        $uid = (int) $_SESSION[self::SESSION_KEY];
+        try {
+            $st = self::lookupStatus($uid);
+            if ($st === null || (int) $st !== 1) {
+                self::logout();
+                return false;
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+
         self::touchActivity();
         return true;
     }
@@ -133,11 +208,11 @@ class UserAuth
     {
         if (!empty($_SESSION[self::SESSION_KEY]) && self::isSessionExpired()) {
             self::logout();
-            vs_redirect_flash(vs_base_url() . '/user/login.php', 'error', '登录已超时，请重新登录');
+            vs_redirect_flash(vs_site_path('/user/login.php'), 'error', '登录已超时，请重新登录');
         }
 
         if (!self::check()) {
-            vs_redirect(vs_base_url() . '/user/login.php');
+            vs_redirect(vs_site_path('/user/login.php'));
         }
     }
 
@@ -147,7 +222,7 @@ class UserAuth
     public static function redirectIfLoggedIn()
     {
         if (self::check()) {
-            vs_redirect(vs_base_url() . '/user/index.php');
+            vs_redirect(vs_site_path('/user/index.php'));
             return;
         }
 
@@ -155,7 +230,7 @@ class UserAuth
         if (!empty($_SESSION[self::SESSION_KEY])) {
             self::touchActivity();
             if (self::check()) {
-                vs_redirect(vs_base_url() . '/user/index.php');
+                vs_redirect(vs_site_path('/user/index.php'));
             }
         }
     }
@@ -338,8 +413,9 @@ class UserAuth
         if ($suffixMsg !== null) {
             return $suffixMsg;
         }
-        if (strlen($password) < 6) {
-            return '密码至少 6 位';
+        $pwErr = vs_password_policy_ok($password);
+        if ($pwErr !== '') {
+            return $pwErr;
         }
 
         try {
@@ -387,7 +463,7 @@ class UserAuth
     public static function resetPasswordById($userId, $newPassword)
     {
         $userId = (int) $userId;
-        if ($userId <= 0 || strlen($newPassword) < 6) {
+        if ($userId <= 0 || vs_password_policy_ok($newPassword) !== '') {
             return false;
         }
 
@@ -538,8 +614,9 @@ class UserAuth
         }
 
         if ($newPassword !== null && $newPassword !== '') {
-            if (strlen($newPassword) < 6) {
-                return '新密码至少 6 个字符';
+            $pwErr = vs_password_policy_ok($newPassword);
+            if ($pwErr !== '') {
+                return $pwErr;
             }
             if ($oldPassword === null || $oldPassword === '') {
                 return '修改密码需输入当前密码';

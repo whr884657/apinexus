@@ -109,13 +109,13 @@ $seoFallbackDesc = $siteDesc !== '' ? $siteDesc : $siteName;
         <span class="st-announce__action">点击查看</span>
     </button>
 </section>
-<script type="application/json" id="feer-announcement-client-data"><?php echo json_encode(array(
+<script type="application/json" id="feer-announcement-client-data"><?php echo vs_json_script(array(
     'home' => array(
         'title'     => $announceTitle,
         'autopopup' => count($announcePopup) > 0,
         'popup_key' => $announcePopupKey,
     ),
-), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?></script>
+)); ?></script>
 <template id="stAnnounceBodyTpl"><?php echo $announceHtml; ?></template>
 <div class="st-announce-modal" id="homeAnnouncementModal" data-modal-kind="home" aria-hidden="true" inert>
     <div class="st-announce-modal__mask" data-close-announcement="1"></div>

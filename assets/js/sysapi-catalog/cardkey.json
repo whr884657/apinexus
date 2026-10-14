@@ -1,0 +1,253 @@
+{
+    "id": "cardkey",
+    "name": "卡密对接 API",
+    "desc": "商城/外部系统对接：生成、查库存、出库（已发放）、作废、查询。须系统密钥，并在系统设置中启用「卡密对接 API」。",
+    "category": "对接能力",
+    "methods": [
+        "GET",
+        "POST"
+    ],
+    "file": "cardkey.php",
+    "params": [
+        {
+            "name": "key",
+            "type": "string",
+            "required": true,
+            "description": "系统密钥。三态传钥：① Authorization: Bearer；② Header X-Api-Key / Api-Key / Apikey；③ Query ?key= / ?apikey=（GET 友好；生产优先 Header/Bearer）。亦可用 POST/JSON 的 key / apikey。在「系统设置 → 系统密钥」生成。",
+            "example": "你的系统密钥"
+        },
+        {
+            "name": "action",
+            "type": "string",
+            "required": true,
+            "description": "操作类型（英文 action = 动作）。必填，只能填其一：generate（生成新卡）、stock（查未使用库存）、take（从库存出库并标已发放）、void（作废）、query（查单张状态）。",
+            "example": "query"
+        },
+        {
+            "name": "count",
+            "type": "integer",
+            "required": false,
+            "description": "张数（英文 count = 数量）。整数，范围 1～100。action=generate 与 take 时必填；其它操作可省略。",
+            "example": "1"
+        },
+        {
+            "name": "points",
+            "type": "integer",
+            "required": false,
+            "description": "单张积分（英文 points = 积分面额）。正整数。generate 时必填；stock / take 时可选，填了则只处理该面额；query / void 不用。",
+            "example": "100"
+        },
+        {
+            "name": "code",
+            "type": "string",
+            "required": false,
+            "description": "单张卡密明文（英文 code = 卡密码）。query 必填；void 作废一张时也可用本参数。须符合系统卡密格式。",
+            "example": "卡密原文"
+        },
+        {
+            "name": "codes",
+            "type": "string",
+            "required": false,
+            "description": "多张卡密（英文 codes = 卡密列表）。void 时用：逗号/空白/分号分隔的字符串，或 JSON 数组。单次最多 200 张；字符串体量勿过大。",
+            "example": "码1,码2"
+        }
+    ],
+    "response": {
+        "code": 1,
+        "msg": "ok",
+        "exists": true,
+        "card": {
+            "code": "示例卡密",
+            "points": 100,
+            "status": 0,
+            "status_label": "未使用",
+            "createtime": "2026-01-01 12:00:00",
+            "usetime": "",
+            "used": false,
+            "voided": false,
+            "issued": false,
+            "available": true
+        }
+    },
+    "doc": "## 使用前准备\n\n1. **系统设置 → 系统密钥**：生成并复制密钥（必填鉴权）。  \n2. **系统设置 → 卡密对接 API**：勾选启用并保存。  \n3. 两步都做好后才能调用；仅有密钥但未开开关也会被拒绝。\n\n## 请求怎么发\n\n- 方法：GET 或 POST。  \n- 参数位置：网址 Query、表单 POST、或 JSON 正文（`Content-Type: application/json`）。  \n- 成功：`code` 为 `1`；失败：`code` 为 `0`，看 `msg`。  \n- **禁止**带 `callback` / `jsonp` 等 JSONP 参数。\n\n## 调用限流（QPM / QPS）\n\n管理员可在「系统设置 → 系统级 API」对应细条自定义本接口每分钟（QPM）与每秒（QPS）上限；**填 0 表示不限制**。超限返回 errcode=12005（请求过于频繁）。\n\n## 怎么带系统密钥（必填，任选一种）\n\n| 方式 | 怎么写 | 建议 |\n|------|--------|------|\n| Bearer | 请求头 `Authorization: Bearer YOUR_KEY` | **推荐** |\n| Header | 请求头 `X-Api-Key: YOUR_KEY`（也认 `Api-Key` / `Apikey`） | 推荐 |\n| 参数 | Query/表单/JSON 的 `key` 或 `apikey` | 可用但不推荐（易进访问日志） |\n\n## 参数详解（每个字段）\n\n| 英文名 | 中文含义 | 必填？ | 可填什么 | 说明 |\n|--------|----------|--------|----------|------|\n| `key` / `apikey` | 系统密钥 | **是**（或改用 Header） | 64 位左右的系统密钥字符串 | 鉴权用，不是用户令牌 |\n| `action` | 操作类型 | **是** | `generate` / `stock` / `take` / `void` / `query` | 决定本次干什么 |\n| `count` | 张数 | generate、take 时是 | 1～100 的整数 | 其它操作可省略 |\n| `points` | 积分面额 | generate 时是 | 正整数 | stock/take 可选作筛选 |\n| `code` | 单张卡密 | query 时是；void 单张可用 | 卡密明文 | 须符合格式 |\n| `codes` | 多张卡密 | void 多张时用 | 逗号分隔或数组，≤200 张 | 与 `code` 二选一思路 |\n\n## 五种操作（action）\n\n| 值 | 中文 | 必填业务参数 | 做什么 |\n|----|------|--------------|--------|\n| `query` | 查询 | `code` | 查该卡是否存在及状态（对外不暴露可枚举细节） |\n| `stock` | 查库存 | 无；可选 `points` | 只统计「未使用」库存 |\n| `generate` | 生成 | `count`、`points` | 现场造新卡，成功看 `codes` |\n| `take` | 出库 | `count`；可选 `points` | 从未使用库存取出并标「已发放」 |\n| `void` | 作废 | `code` 或 `codes` | 可作废未使用/已发放；已兑换不可作废 |\n\n## 商城常见顺序\n\n1. `stock` 看货 → 2. 有货 `take` → 3. 没货 `generate` → 4. 查状态 `query` / 作废 `void`。\n\n## 请求示例（一种类型一块）\n\n### 查询单张卡密状态\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/cardkey?action=query&code=EXAMPLE_CODE\"\n```\n\n### 查询全部未使用库存\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/cardkey?action=stock\"\n```\n\n### 按积分面额查库存\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/cardkey?action=stock&points=100\"\n```\n\n### 生成卡密\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/cardkey?action=generate&count=1&points=100\"\n```\n\n### 从库存出库（不限面额）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/cardkey?action=take&count=1\"\n```\n\n### 从库存出库（指定面额）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/cardkey?action=take&count=1&points=100\"\n```\n\n### 作废单张卡密\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/cardkey?action=void&code=EXAMPLE_CODE\"\n```\n\n### 作废多张卡密\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/cardkey?action=void&codes=CODE1,CODE2\"\n```\n",
+    "sample_queries": [
+        {
+            "title": "查询单张卡密状态",
+            "query": "action=query&code=EXAMPLE_CODE"
+        },
+        {
+            "title": "查询全部未使用库存",
+            "query": "action=stock"
+        },
+        {
+            "title": "按积分面额查库存",
+            "query": "action=stock&points=100"
+        },
+        {
+            "title": "生成卡密",
+            "query": "action=generate&count=1&points=100"
+        },
+        {
+            "title": "从库存出库（不限面额）",
+            "query": "action=take&count=1"
+        },
+        {
+            "title": "从库存出库（指定面额）",
+            "query": "action=take&count=1&points=100"
+        },
+        {
+            "title": "作废单张卡密",
+            "query": "action=void&code=EXAMPLE_CODE"
+        },
+        {
+            "title": "作废多张卡密",
+            "query": "action=void&codes=CODE1,CODE2"
+        }
+    ],
+    "enabled_key": "sysapion",
+    "response_samples": [
+        {
+            "title": "查询单张成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "exists": true,
+                "card": {
+                    "code": "示例卡密",
+                    "points": 100,
+                    "status": 0,
+                    "status_label": "未使用",
+                    "createtime": "2026-01-01 12:00:00",
+                    "usetime": "",
+                    "used": false,
+                    "voided": false,
+                    "issued": false,
+                    "available": true
+                }
+            }
+        },
+        {
+            "title": "查库存成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "unused": 10,
+                "unused_points": 1000,
+                "by_points": [
+                    {
+                        "points": 100,
+                        "unused": 10
+                    }
+                ]
+            }
+        },
+        {
+            "title": "生成成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "count": 1,
+                "points": 100,
+                "codes": [
+                    "示例卡密"
+                ],
+                "list": [
+                    {
+                        "code": "示例卡密",
+                        "points": 100
+                    }
+                ]
+            }
+        },
+        {
+            "title": "出库成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "count": 1,
+                "points": 0,
+                "codes": [
+                    "示例卡密"
+                ],
+                "list": [
+                    {
+                        "code": "示例卡密",
+                        "points": 100
+                    }
+                ]
+            }
+        },
+        {
+            "title": "作废成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "count": 1,
+                "voided": [
+                    "示例卡密"
+                ],
+                "skipped": []
+            }
+        },
+        {
+            "title": "卡密对接未启用",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "卡密对接 API 未启用",
+                "errcode": 12002
+            }
+        },
+        {
+            "title": "卡密不存在或不可用",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "卡密不存在或不可用",
+                "errcode": 12010
+            }
+        },
+        {
+            "title": "缺少 action",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "缺少 action",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "不支持的 action",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "不支持的 action",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "密钥无效",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "系统密钥无效或未配置",
+                "errcode": 12001
+            }
+        },
+        {
+            "title": "请求过快",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "请求过于频繁，请稍后再试",
+                "errcode": 12005
+            }
+        }
+    ],
+    "enabled_gate": "cardkey"
+}

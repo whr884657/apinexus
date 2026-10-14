@@ -11,7 +11,11 @@ InstallChecker::requireInstalled();
 
 $provider = isset($_GET['provider']) ? $_GET['provider'] : '';
 $intent = isset($_GET['intent']) ? (string) $_GET['intent'] : 'login';
+// 主参 id（与 accountButtons 一致）；兼容误传 item_id
 $itemId = isset($_GET['id']) ? trim((string) $_GET['id']) : '';
+if ($itemId === '' && isset($_GET['item_id'])) {
+    $itemId = trim((string) $_GET['item_id']);
+}
 $base = vs_base_url();
 $accountUrl = $base . '/user/account.php';
 $loginUrl = $base . '/user/login.php';

@@ -6,11 +6,16 @@
 
 class DashboardStats
 {
-    const TTL_LIVE = 8;
-    const TTL_TODAY = 60;
-    const TTL_HOUR = 120;
-    const TTL_WEEK = 300;
-    const TTL_GEO = 60;
+    /** 极热 live：转速/最近几条（仍跟轮询间隔取 max） */
+    const TTL_LIVE = 20;
+    /** 今日 KPI / 成功失败 / 整页快照 */
+    const TTL_TODAY = 180;
+    /** 24 小时趋势 */
+    const TTL_HOUR = 600;
+    /** 7 日趋势 */
+    const TTL_WEEK = 1800;
+    /** 地理分布今日 */
+    const TTL_GEO = 180;
 
     /** @var string|null */
     private static $epochCache = null;
@@ -96,6 +101,32 @@ class DashboardStats
             'server'       => array(),
             'boot_light'   => true,
             'live_interval'=> self::liveIntervalSeconds(),
+        );
+    }
+
+    /**
+     * 数据大屏首屏壳（禁止同步扫 apilog / 地理聚合；重数据走 AJAX snapshot）
+     *
+     * @return array
+     */
+    public static function screenBootShell()
+    {
+        $emptyGeo = array(
+            'china' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
+            'world' => array('cities' => array(), 'flows' => array(), 'hub' => array()),
+        );
+        return array(
+            'server_time'   => date('Y-m-d H:i:s'),
+            'live_interval' => self::liveIntervalSeconds(),
+            'kpi'           => array(),
+            'hourly'        => array('labels' => array(), 'series' => array()),
+            'top_apis'      => array(),
+            'geo_live'      => $emptyGeo,
+            'geo_today'     => $emptyGeo,
+            'geo'           => $emptyGeo,
+            'recent'        => array(),
+            'current_rpm'   => 0,
+            'boot_light'    => true,
         );
     }
 
@@ -323,6 +354,7 @@ class DashboardStats
             'geo'           => $geoLive,
             'recent'        => isset($pack['recent']) ? $pack['recent'] : array(),
             'current_rpm'   => isset($pack['current_rpm']) ? (int) $pack['current_rpm'] : 0,
+            'boot_light'    => false,
         );
     }
 
@@ -1293,6 +1325,10 @@ class DashboardStats
         return class_exists('GeoCityCoords') ? GeoCityCoords::world() : array();
     }
 
+    /**
+     * @param int $days
+     * @return array<string,array{guest:int,key:int,points:int}>
+     */
     private static function typeCountsLastDays($days)
     {
         $days = max(1, min(31, (int) $days));

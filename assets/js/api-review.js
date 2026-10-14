@@ -27,7 +27,9 @@
         var searchInput = document.getElementById('apiReviewSearchInput');
         var pageSizeEl = document.getElementById('apiReviewPageSize');
         var footerEl = document.getElementById('apiReviewFooter');
-        var pagerNav = document.getElementById('apiReviewPagerNav');
+        var prevBtn = document.getElementById('apiReviewPrevBtn');
+        var nextBtn = document.getElementById('apiReviewNextBtn');
+        var pagerNums = document.getElementById('apiReviewPagerNums');
         var statsEl = document.getElementById('apiReviewStats');
         var overlay = document.getElementById('apiReviewRejectOverlay');
         var reasonInput = document.getElementById('apiReviewRejectReason');
@@ -166,16 +168,10 @@
         }
 
         function renderPagerNav(totalPages, matchedLen) {
-            if (!pagerNav) {
+            if (!window.VS || !VS.applyLogsPager) {
                 return;
             }
-            var canPrev = currentPage > 1;
-            var canNext = matchedLen > 0 && currentPage < totalPages;
-            pagerNav.innerHTML = '<button type="button" class="vs-api-pager__nav" data-p="-1"'
-                + (canPrev ? '' : ' disabled') + '>上一页</button>'
-                + '<span class="vs-api-pager__info">' + currentPage + '</span>'
-                + '<button type="button" class="vs-api-pager__nav" data-p="1"'
-                + (canNext ? '' : ' disabled') + '>下一页</button>';
+            VS.applyLogsPager(currentPage, matchedLen === 0 ? 1 : totalPages, prevBtn, nextBtn, pagerNums);
         }
 
         function applyView() {
@@ -410,23 +406,44 @@
             });
         }
 
-        if (pagerNav) {
-            pagerNav.addEventListener('click', function (e) {
-                var btn = e.target.closest('[data-p]');
-                if (!btn || btn.disabled) {
+        function reviewTotalPages() {
+            return Math.max(1, Math.ceil(matchedRows().length / getPageSize()) || 1);
+        }
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function () {
+                if (prevBtn.disabled) {
                     return;
                 }
-                var delta = parseInt(btn.getAttribute('data-p'), 10) || 0;
-                var pageSize = getPageSize();
-                var matched = matchedRows();
-                var totalPages = Math.max(1, Math.ceil(matched.length / pageSize) || 1);
-                if (delta > 0 && currentPage < totalPages) {
-                    currentPage += 1;
-                    applyView();
-                } else if (delta < 0 && currentPage > 1) {
+                if (currentPage > 1) {
                     currentPage -= 1;
                     applyView();
                 }
+            });
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (nextBtn.disabled) {
+                    return;
+                }
+                var tp = reviewTotalPages();
+                if (currentPage < tp) {
+                    currentPage += 1;
+                    applyView();
+                }
+            });
+        }
+        if (pagerNums) {
+            pagerNums.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-page]');
+                if (!btn) {
+                    return;
+                }
+                var next = parseInt(btn.getAttribute('data-page'), 10) || 0;
+                if (!next || next === currentPage) {
+                    return;
+                }
+                currentPage = next;
+                applyView();
             });
         }
 

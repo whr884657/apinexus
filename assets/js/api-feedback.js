@@ -95,13 +95,6 @@
             return n > 0 ? n : defaultPageSize();
         }
 
-        function allDesktopRows() {
-            if (!listEl) {
-                return [];
-            }
-            return Array.prototype.slice.call(listEl.querySelectorAll('tr[data-feedback-row]'));
-        }
-
         function getPair(id) {
             var sid = String(id);
             return {
@@ -110,127 +103,83 @@
             };
         }
 
-        function syncRowOrder(rows) {
-            if (!listEl) {
-                return;
-            }
-            rows.forEach(function (row) {
-                listEl.appendChild(row);
-                if (mobileEl) {
-                    var id = row.getAttribute('data-feedback-row');
-                    var card = mobileEl.querySelector('.feedback-card[data-feedback-row="' + id + '"]');
-                    if (card) {
-                        mobileEl.appendChild(card);
-                    }
-                }
-            });
-        }
-
-        function matchedRows() {
-            var q = searchInput ? String(searchInput.value || '').trim().toLowerCase() : '';
-            var st = getStatusFilter();
-            var all = allDesktopRows();
-            var filtered = all.filter(function (row) {
-                if (st !== '' && row.getAttribute('data-feedback-status') !== st) {
-                    return false;
-                }
-                if (!q) {
-                    return true;
-                }
-                var hay = (row.getAttribute('data-search') || '').toLowerCase();
-                return hay.indexOf(q) !== -1;
-            });
-            syncRowOrder(filtered);
-            return filtered;
-        }
-
         function renderPagerNums(totalPages) {
-            if (!pagerNumsEl) {
-                return;
+            if (window.VS && VS.applyLogsPager) {
+                VS.applyLogsPager(currentPage, Math.max(1, totalPages), prevBtn, nextBtn, pagerNumsEl);
             }
-            if (totalPages <= 1) {
-                pagerNumsEl.innerHTML = '';
-                return;
-            }
-            var html = '';
-            var i;
-            for (i = 1; i <= totalPages; i += 1) {
-                html += '<button type="button" class="vs-api-pager__num'
-                    + (i === currentPage ? ' is-active' : '')
-                    + '" data-page="' + i + '">' + i + '</button>';
-            }
-            pagerNumsEl.innerHTML = html;
         }
+
+        function paintCounts(counts) {
+            if (!counts) {
+                return;
+            }
+            var n0 = parseInt(counts['0'], 10) || 0;
+            var n1 = parseInt(counts['1'], 10) || 0;
+            page.querySelectorAll('[data-count]').forEach(function (el) {
+                var k = el.getAttribute('data-count');
+                if (k === '0') {
+                    el.textContent = String(n0);
+                }
+                if (k === '1') {
+                    el.textContent = String(n1);
+                }
+            });
+        }
+
+        var listTotal = parseInt(page.getAttribute('data-feedback-total') || '0', 10) || 0;
 
         function applyView() {
-            var totalAll = allDesktopRows().length;
-            var matched = matchedRows();
-            var pageSize = getPageSize();
-            var totalPages = Math.max(1, Math.ceil(matched.length / pageSize) || 1);
-            if (currentPage > totalPages) {
-                currentPage = totalPages;
-            }
-            if (currentPage < 1) {
-                currentPage = 1;
-            }
-            var start = (currentPage - 1) * pageSize;
-            var end = start + pageSize;
-            var visibleIds = {};
-
-            matched.forEach(function (row, idx) {
-                var show = idx >= start && idx < end;
-                var id = row.getAttribute('data-feedback-row');
-                row.hidden = !show;
-                if (show) {
-                    visibleIds[id] = true;
+            var fd = new FormData();
+            fd.append('action', 'list');
+            fd.append('q', searchInput ? String(searchInput.value || '').trim() : '');
+            fd.append('status', String(getStatusFilter()));
+            fd.append('page', String(currentPage));
+            fd.append('pagesize', String(getPageSize()));
+            VS.postForm(fd, window.location.href).then(function (data) {
+                if (!ok(data)) {
+                    throw new Error(msg(data, '加载失败'));
                 }
-            });
-            allDesktopRows().forEach(function (row) {
-                if (matched.indexOf(row) === -1) {
-                    row.hidden = true;
+                if (data.page) {
+                    currentPage = parseInt(data.page, 10) || currentPage;
                 }
+                listTotal = parseInt(data.total, 10) || 0;
+                page.setAttribute('data-feedback-total', String(listTotal));
+                paintCounts(data.counts);
+                if (listEl) {
+                    listEl.innerHTML = data.desktop_html || '';
+                }
+                if (mobileEl) {
+                    mobileEl.innerHTML = data.mobile_html || '';
+                }
+                var q = searchInput ? String(searchInput.value || '').trim() : '';
+                var filtered = q !== '';
+                var pageItems = listEl ? listEl.querySelectorAll('tr[data-feedback-row]').length : 0;
+                var n0 = data.counts ? (parseInt(data.counts['0'], 10) || 0) : 0;
+                var n1 = data.counts ? (parseInt(data.counts['1'], 10) || 0) : 0;
+                var hasRepo = n0 + n1 > 0;
+                if (emptyEl) {
+                    emptyEl.hidden = hasRepo || filtered;
+                }
+                if (searchEmptyEl) {
+                    searchEmptyEl.hidden = !(pageItems === 0 && (filtered || hasRepo));
+                }
+                if (tableWrapEl) {
+                    tableWrapEl.hidden = pageItems === 0;
+                }
+                if (mobileEl) {
+                    mobileEl.hidden = pageItems === 0;
+                }
+                if (footerEl) {
+                    footerEl.hidden = listTotal === 0 && !filtered;
+                }
+                if (statsEl) {
+                    statsEl.textContent = '共 ' + listTotal + ' 条';
+                }
+                var totalPages = Math.max(1, Math.ceil(listTotal / getPageSize()) || 1);
+                renderPagerNums(listTotal === 0 ? 1 : totalPages);
+            }).catch(function (err) {
+                window.VS.showMessage((err && err.message) ? err.message : '加载失败', 'error');
             });
-            if (mobileEl) {
-                mobileEl.querySelectorAll('.feedback-card[data-feedback-row]').forEach(function (card) {
-                    var id = card.getAttribute('data-feedback-row');
-                    var desk = listEl ? listEl.querySelector('tr[data-feedback-row="' + id + '"]') : null;
-                    var inMatched = desk && matched.indexOf(desk) !== -1;
-                    card.hidden = !(inMatched && visibleIds[id]);
-                });
-            }
-
-            var hasAny = totalAll > 0;
-            var hasVisible = matched.length > 0;
-            var q = searchInput ? String(searchInput.value || '').trim() : '';
-            var st = getStatusFilter();
-            var filtered = q !== '' || st !== '';
-
-            if (emptyEl) {
-                emptyEl.hidden = hasAny;
-            }
-            if (searchEmptyEl) {
-                searchEmptyEl.hidden = !(hasAny && !hasVisible && filtered);
-            }
-            if (tableWrapEl) {
-                tableWrapEl.hidden = !hasVisible;
-            }
-            if (mobileEl) {
-                mobileEl.hidden = !hasVisible;
-            }
-            if (footerEl) {
-                footerEl.hidden = !hasAny;
-            }
-            if (statsEl) {
-                statsEl.textContent = '共 ' + matched.length + ' 条'
-                    + (hasAny && filtered ? ('（全部 ' + totalAll + '）') : '');
-            }
-            if (prevBtn) {
-                prevBtn.disabled = currentPage <= 1;
-            }
-            if (nextBtn) {
-                nextBtn.disabled = currentPage >= totalPages || matched.length === 0;
-            }
-            renderPagerNums(matched.length === 0 ? 0 : totalPages);
         }
 
         function buildActions(id, pending) {
@@ -282,13 +231,6 @@
         }
 
         function removePair(id) {
-            var pair = getPair(id);
-            if (pair.desktop) {
-                pair.desktop.remove();
-            }
-            if (pair.mobile) {
-                pair.mobile.remove();
-            }
             applyView();
         }
 

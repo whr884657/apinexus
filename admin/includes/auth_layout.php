@@ -117,7 +117,7 @@ function vs_auth_head($title)
 {
     AuthSecurity::sendSecurityHeaders();
 
-    $base = vs_base_url();
+    $base = vs_site_base_path();
     $systemName = SiteContext::systemName();
     $favicon = SiteContext::siteFavicon();
 
@@ -170,7 +170,7 @@ function vs_auth_left_panel($withEyeIds = true)
  */
 function vs_auth_foot($characterOptionsJs = '')
 {
-    $base = vs_base_url();
+    $base = vs_site_base_path();
     if ($characterOptionsJs !== '') {
         echo '<script>' . $characterOptionsJs . '</script>' . "\n";
     }
@@ -193,6 +193,12 @@ function vs_auth_foot($characterOptionsJs = '')
  */
 function vs_auth_json(array $data, $code = 200)
 {
+    if (isset($data['code']) && (int) $data['code'] === 0 && class_exists('AuthSecurity')) {
+        AuthSecurity::rotateCsrfToken();
+        if (!isset($data['csrf'])) {
+            $data['csrf'] = AuthSecurity::csrfToken();
+        }
+    }
     AuthSecurity::sendSecurityHeaders();
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');

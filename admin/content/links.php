@@ -29,9 +29,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         AjaxResponse::success('友链已添加', array('link' => $result));
     }
 
+    if ($action === 'list') {
+        $tab = isset($_POST['tab']) ? (string) $_POST['tab'] : 'pending';
+        if ($tab !== 'pending' && $tab !== 'approved' && $tab !== 'disabled') {
+            $tab = 'pending';
+        }
+        $page = isset($_POST['page']) ? (int) $_POST['page'] : 1;
+        $pagesize = isset($_POST['pagesize']) ? (int) $_POST['pagesize'] : 20;
+        $paged = LinkManager::listPaged(array(
+            'kind'     => LinkManager::KIND_FRIEND,
+            'tab'      => $tab,
+            'page'     => $page,
+            'pagesize' => $pagesize,
+        ));
+        AjaxResponse::success('ok', array(
+            'list'     => $paged['list'],
+            'total'    => $paged['total'],
+            'page'     => $paged['page'],
+            'pagesize' => $paged['pagesize'],
+            'counts'   => $paged['counts'],
+        ));
+    }
+
     if ($action === 'update') {
         $id = isset($_POST['link_id']) ? (int) $_POST['link_id'] : 0;
         $before = LinkManager::findById($id);
+        if (!is_array($before)
+            || LinkManager::normalizeKind(isset($before['kind']) ? $before['kind'] : -1) !== LinkManager::KIND_FRIEND
+        ) {
+            AjaxResponse::error('记录不存在');
+        }
         $newStatus = isset($_POST['status']) ? (int) $_POST['status'] : LinkManager::STATUS_APPROVED;
         $result = LinkManager::update($id, array(
             'name'        => isset($_POST['name']) ? (string) $_POST['name'] : '',
@@ -42,17 +69,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'sort'        => isset($_POST['sort']) ? (int) $_POST['sort'] : 0,
             'enabled'     => isset($_POST['enabled']) ? (int) $_POST['enabled'] : LinkManager::ENABLED_ON,
             'status'      => $newStatus,
-        ));
+        ), LinkManager::KIND_FRIEND);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
         $row = LinkManager::findById($id);
-        if ($newStatus === LinkManager::STATUS_APPROVED && is_array($row) && class_exists('LinkNotify')) {
+        if ($newStatus === LinkManager::STATUS_APPROVED && is_array($row) && class_exists('MailNotify')) {
             $prev = is_array($before)
                 ? LinkManager::normalizeStatus(isset($before['status']) ? $before['status'] : 0)
                 : LinkManager::STATUS_PENDING;
             if ($prev !== LinkManager::STATUS_APPROVED) {
-                LinkNotify::notifyApplicantApproved(LinkManager::formatRow($row));
+                try {
+                    MailNotify::notifyLinkApplicantApproved(LinkManager::formatRow($row));
+                } catch (Exception $e) {
+                    // 发信失败不阻断友链保存
+                }
             }
         }
         AjaxResponse::success('友链已保存', array(
@@ -71,18 +102,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             AjaxResponse::error('无效状态');
         }
         $before = LinkManager::findById($id);
+        if (!is_array($before)
+            || LinkManager::normalizeKind(isset($before['kind']) ? $before['kind'] : -1) !== LinkManager::KIND_FRIEND
+        ) {
+            AjaxResponse::error('记录不存在');
+        }
         $result = LinkManager::setStatus($id, $status);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
-        if ($status === LinkManager::STATUS_APPROVED && class_exists('LinkNotify')) {
+        if ($status === LinkManager::STATUS_APPROVED && class_exists('MailNotify')) {
             $row = LinkManager::findById($id);
             if (is_array($row)) {
                 $prev = is_array($before)
                     ? LinkManager::normalizeStatus(isset($before['status']) ? $before['status'] : 0)
                     : LinkManager::STATUS_PENDING;
                 if ($prev !== LinkManager::STATUS_APPROVED) {
-                    LinkNotify::notifyApplicantApproved(LinkManager::formatRow($row));
+                    try {
+                        MailNotify::notifyLinkApplicantApproved(LinkManager::formatRow($row));
+                    } catch (Exception $e) {
+                        // 发信失败不阻断状态变更
+                    }
                 }
             }
         }
@@ -99,7 +139,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($enabled, array(LinkManager::ENABLED_OFF, LinkManager::ENABLED_ON), true)) {
             AjaxResponse::error('无效操作');
         }
-        $result = LinkManager::setEnabled($id, $enabled);
+        $existing = LinkManager::findById($id);
+        if (!is_array($existing)
+            || LinkManager::normalizeKind(isset($existing['kind']) ? $existing['kind'] : -1) !== LinkManager::KIND_FRIEND
+        ) {
+            AjaxResponse::error('记录不存在');
+        }
+        $result = LinkManager::setEnabled($id, $enabled, LinkManager::KIND_FRIEND);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
@@ -115,7 +161,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'delete') {
         $id = isset($_POST['link_id']) ? (int) $_POST['link_id'] : 0;
-        $result = LinkManager::delete($id);
+        $existing = LinkManager::findById($id);
+        if (!is_array($existing)
+            || LinkManager::normalizeKind(isset($existing['kind']) ? $existing['kind'] : -1) !== LinkManager::KIND_FRIEND
+        ) {
+            AjaxResponse::error('记录不存在');
+        }
+        $result = LinkManager::delete($id, LinkManager::KIND_FRIEND);
         if ($result !== true) {
             AjaxResponse::error($result);
         }
@@ -126,7 +178,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $tableReady = LinkManager::tableReady();
-$links = $tableReady ? LinkManager::listAll(null, LinkManager::KIND_FRIEND) : array();
+$paged = $tableReady ? LinkManager::listPaged(array(
+    'kind'     => LinkManager::KIND_FRIEND,
+    'tab'      => 'pending',
+    'page'     => 1,
+    'pagesize' => 20,
+)) : array(
+    'list'   => array(),
+    'total'  => 0,
+    'counts' => array('pending' => 0, 'approved' => 0, 'disabled' => 0),
+);
+$links = $paged['list'];
+$counts = $paged['counts'];
 
 /**
  * pending | approved | disabled
@@ -148,19 +211,20 @@ function vs_link_tab_key($status, $enabled)
     return 'disabled';
 }
 
-$counts = array(
-    'pending'  => 0,
-    'approved' => 0,
-    'disabled' => 0,
-);
-foreach ($links as $countRow) {
-    $tab = vs_link_tab_key(
-        isset($countRow['status']) ? $countRow['status'] : 0,
-        isset($countRow['enabled']) ? $countRow['enabled'] : 1
-    );
-    if (isset($counts[$tab])) {
-        $counts[$tab] += 1;
-    }
+/**
+ * @return void
+ */
+function vs_render_link_table_head()
+{
+    ?>
+    <div class="vs-link-row vs-link-row--head" aria-hidden="true">
+        <div class="vs-link-cell">站点</div>
+        <div class="vs-link-cell">链接</div>
+        <div class="vs-link-cell">简介</div>
+        <div class="vs-link-cell">状态</div>
+        <div class="vs-link-cell">操作</div>
+    </div>
+    <?php
 }
 
 /**
@@ -201,24 +265,30 @@ function vs_render_link_item(array $row)
          data-contact="<?php echo vs_e(isset($row['contact']) ? (string) $row['contact'] : ''); ?>"
          data-sort="<?php echo (int) $row['sort']; ?>"
          data-enabled="<?php echo $enabled; ?>">
-        <div class="vs-link-row__icon">
-            <?php if ($icon !== ''): ?>
-                <img src="<?php echo vs_e($icon); ?>" alt="<?php echo vs_e($name); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
-            <?php else: ?>
-                <span class="vs-link-row__initial"><?php echo vs_e(mb_substr($name, 0, 1, 'UTF-8')); ?></span>
-            <?php endif; ?>
-        </div>
-        <div class="vs-link-row__main">
+        <div class="vs-link-cell vs-link-c-site">
+            <div class="vs-link-row__icon">
+                <?php if ($icon !== ''): ?>
+                    <img src="<?php echo vs_e($icon); ?>" alt="<?php echo vs_e($name); ?>" width="32" height="32" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-ext-icon="1">
+                <?php else: ?>
+                    <span class="vs-link-row__initial"><?php echo vs_e(mb_substr($name, 0, 1, 'UTF-8')); ?></span>
+                <?php endif; ?>
+            </div>
             <div class="vs-link-row__name" data-field="name"><?php echo vs_e($name); ?></div>
+        </div>
+        <div class="vs-link-cell vs-link-c-url">
             <a class="vs-link-row__url" data-field="siteurl" href="<?php echo vs_e($siteurl); ?>" target="_blank" rel="noopener noreferrer"><?php echo vs_e($siteurl); ?></a>
+        </div>
+        <div class="vs-link-cell vs-link-c-desc">
             <?php if ($desc !== ''): ?>
                 <div class="vs-link-row__desc" data-field="description"><?php echo vs_e($desc); ?></div>
+            <?php else: ?>
+                <div class="vs-link-row__desc" data-field="description">—</div>
             <?php endif; ?>
         </div>
-        <div class="vs-link-row__status">
+        <div class="vs-link-cell vs-link-c-status">
             <span class="vs-link-status <?php echo vs_e($statusClass); ?>" data-field="status_label"><?php echo vs_e($displayLabel); ?></span>
         </div>
-        <div class="vs-link-row__actions">
+        <div class="vs-link-cell vs-link-c-actions">
             <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-link-action="edit" data-link-id="<?php echo $id; ?>">编辑</button>
             <?php if ($status === LinkManager::STATUS_PENDING): ?>
                 <button type="button" class="vs-btn vs-btn--sm vs-btn--outline-success" data-link-action="approve" data-link-id="<?php echo $id; ?>">通过</button>
@@ -248,32 +318,39 @@ if ($tableReady) {
 vs_admin_layout_start('友情链接', 'links', $headerActions);
 ?>
 
-<div class="vs-panel vs-link-panel" id="adminLinksPage" data-active-tab="pending">
+<div class="vs-link-page" id="adminLinksPage" data-active-tab="pending">
     <?php if (!$tableReady): ?>
         <?php vs_render_notice('warning', '', '友情链接功能尚未就绪，请前往「系统管理 → 系统升级」完成数据库结构更新。', array('compact' => true)); ?>
     <?php else: ?>
-        <div class="vs-tabs vs-api-review-tabs" id="linkFilters" role="tablist" aria-label="友链筛选">
-            <button type="button" class="vs-tabs__btn vs-link-filter is-active" data-filter="pending" role="tab" aria-selected="true">
-                待审核<span class="vs-badge vs-badge--warning vs-api-review-tabs__badge" data-count="pending"><?php echo (int) $counts['pending']; ?></span>
-            </button>
-            <button type="button" class="vs-tabs__btn vs-link-filter" data-filter="approved" role="tab" aria-selected="false">
-                已通过<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="approved"><?php echo (int) $counts['approved']; ?></span>
-            </button>
-            <button type="button" class="vs-tabs__btn vs-link-filter" data-filter="disabled" role="tab" aria-selected="false">
-                已禁用<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="disabled"><?php echo (int) $counts['disabled']; ?></span>
-            </button>
+        <?php /* 仅 Tab 条小白板；电脑端表格对齐积分变动；禁整页 .vs-panel（E406/E425/E427） */ ?>
+        <div class="vs-link-page__tabs-shell">
+            <div class="vs-tabs vs-api-review-tabs" id="linkFilters" role="tablist" aria-label="友链筛选">
+                <button type="button" class="vs-tabs__btn vs-link-filter is-active" data-filter="pending" role="tab" aria-selected="true">
+                    待审核<span class="vs-badge vs-badge--warning vs-api-review-tabs__badge" data-count="pending"><?php echo (int) $counts['pending']; ?></span>
+                </button>
+                <button type="button" class="vs-tabs__btn vs-link-filter" data-filter="approved" role="tab" aria-selected="false">
+                    已通过<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="approved"><?php echo (int) $counts['approved']; ?></span>
+                </button>
+                <button type="button" class="vs-tabs__btn vs-link-filter" data-filter="disabled" role="tab" aria-selected="false">
+                    已禁用<span class="vs-badge vs-badge--default vs-api-review-tabs__badge" data-count="disabled"><?php echo (int) $counts['disabled']; ?></span>
+                </button>
+            </div>
         </div>
 
         <div class="vs-link-empty" id="linkEmpty"<?php echo $counts['pending'] > 0 ? ' hidden' : ''; ?>>
             <?php vs_render_notice('info', '', '当前 Tab 暂无友链。可手动添加，或等待访客在前台「申请友链」提交。', array('compact' => true)); ?>
         </div>
         <div class="vs-link-list" id="linkList"<?php echo count($links) === 0 ? ' hidden' : ''; ?>>
+            <?php vs_render_link_table_head(); ?>
             <?php foreach ($links as $row): ?>
                 <?php vs_render_link_item($row); ?>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </div>
+<?php if ($tableReady): ?>
+<?php vs_render_list_pager(array('id' => 'link', 'hidden' => $counts['pending'] === 0, 'total' => $counts['pending'])); ?>
+<?php endif; ?>
 
 <div class="vs-overlay vs-overlay--lg" id="linkFormOverlay" hidden aria-hidden="true">
     <div class="vs-overlay__backdrop" data-overlay-close="1"></div>

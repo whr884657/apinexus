@@ -280,14 +280,13 @@ class LinkSiteMeta
                 CURLOPT_FOLLOWLOCATION => false,
                 CURLOPT_CONNECTTIMEOUT => self::TIMEOUT,
                 CURLOPT_TIMEOUT        => self::TIMEOUT,
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_USERAGENT      => 'ApiNexus-LinkMeta/1.0',
+                CURLOPT_USERAGENT      => class_exists('OutboundUa') ? OutboundUa::build('LinkMeta') : 'ApiNexus-LinkMeta/1.0',
                 CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
                 CURLOPT_REDIR_PROTOCOLS=> CURLPROTO_HTTP | CURLPROTO_HTTPS,
                 CURLOPT_ENCODING       => '',
                 CURLOPT_HEADER         => true,
             ));
+            vs_curl_ssl_verify($ch);
             $raw = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);

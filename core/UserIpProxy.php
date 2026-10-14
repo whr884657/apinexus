@@ -1558,11 +1558,15 @@ class UserIpProxy
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 8,
             CURLOPT_TIMEOUT        => 15,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-            CURLOPT_HTTPHEADER     => array('Accept: */*', 'User-Agent: ApiNexus-IpProxy/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
+            CURLOPT_HTTPHEADER     => array(
+                'Accept: */*',
+                class_exists('OutboundUa')
+                    ? OutboundUa::headerLine('IpProxy')
+                    : ('User-Agent: ApiNexus-IpProxy/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
+            ),
         ));
+        vs_curl_ssl_verify($ch);
         $body = curl_exec($ch);
         $errno = curl_errno($ch);
         $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -2427,14 +2431,15 @@ class UserIpProxy
                 CURLOPT_FOLLOWLOCATION => false,
                 CURLOPT_CONNECTTIMEOUT => 10,
                 CURLOPT_TIMEOUT        => 20,
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
                 CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
                 CURLOPT_HTTPHEADER     => array(
                     'Accept: */*',
-                    'User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1'),
+                    class_exists('OutboundUa')
+                        ? OutboundUa::headerLine('IpProxy-Test')
+                        : ('User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
                 ),
             ));
+            vs_curl_ssl_verify($ch);
             $body = curl_exec($ch);
             $errno = curl_errno($ch);
             $echoHttp = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -2491,14 +2496,15 @@ class UserIpProxy
                     CURLOPT_FOLLOWLOCATION => false,
                     CURLOPT_CONNECTTIMEOUT => 10,
                     CURLOPT_TIMEOUT        => 20,
-                    CURLOPT_SSL_VERIFYPEER => true,
-                    CURLOPT_SSL_VERIFYHOST => 2,
                     CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
                     CURLOPT_HTTPHEADER     => array(
                         'Accept: */*',
-                        'User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1'),
+                        class_exists('OutboundUa')
+                        ? OutboundUa::headerLine('IpProxy-Test')
+                        : ('User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
                     ),
                 ));
+                vs_curl_ssl_verify($chR);
                 $reachBody = curl_exec($chR);
                 $reachErrno = curl_errno($chR);
                 $reachHttp = (int) curl_getinfo($chR, CURLINFO_HTTP_CODE);
@@ -2545,15 +2551,16 @@ class UserIpProxy
                     CURLOPT_FOLLOWLOCATION => false,
                     CURLOPT_CONNECTTIMEOUT => 10,
                     CURLOPT_TIMEOUT        => 20,
-                    CURLOPT_SSL_VERIFYPEER => true,
-                    CURLOPT_SSL_VERIFYHOST => 2,
                     CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
                     CURLOPT_HTTPHEADER     => array(
                         'Accept: application/json',
                         'X-API-Key: ' . $apiKey,
-                        'User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1'),
+                        class_exists('OutboundUa')
+                        ? OutboundUa::headerLine('IpProxy-Test')
+                        : ('User-Agent: ApiNexus-IpProxy-Test/' . (defined('VS_VERSION') ? VS_VERSION : '1')),
                     ),
                 ));
+                vs_curl_ssl_verify($ch2);
                 $siteBody = curl_exec($ch2);
                 $siteErrno = curl_errno($ch2);
                 $siteHttp = (int) curl_getinfo($ch2, CURLINFO_HTTP_CODE);
