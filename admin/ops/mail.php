@@ -371,26 +371,28 @@ vs_admin_layout_start('邮件群发', 'ops-mail');
                             <label class="vs-label" for="opsMailTempSubject">发信标题</label>
                             <div class="vs-mailtpl-phbar" id="opsMailTempPhBar" data-ph-targets="opsMailTempSubject,opsMailTempBody">
                                 <?php
-                                $opsPhCommon = class_exists('MailChannels')
-                                    ? MailChannels::commonPlaceholderKeys()
-                                    : array('用户名', '站点名', '站点名称', '站点链接', '日期', '时间', '余额', '用户头像');
-                                foreach ($opsPhCommon as $phKey) {
-                                    $phKey = trim((string) $phKey);
-                                    if ($phKey === '') {
+                                $opsPhItems = class_exists('MailChannels')
+                                    ? MailChannels::placeholderCatalog()
+                                    : array();
+                                foreach ($opsPhItems as $phRow) {
+                                    $phKey = isset($phRow['key']) ? trim((string) $phRow['key']) : '';
+                                    $phLabel = isset($phRow['label']) ? trim((string) $phRow['label']) : $phKey;
+                                    if ($phKey === '' || !preg_match('/^[a-z][a-z0-9]*$/', $phKey)) {
                                         continue;
                                     }
                                     $phToken = '{{' . $phKey . '}}';
                                     echo '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-ph="'
-                                        . vs_e($phToken) . '">' . vs_e($phToken) . '</button>';
+                                        . vs_e($phToken) . '" title="' . vs_e($phToken) . '">'
+                                        . vs_e($phLabel) . '</button>';
                                 }
                                 ?>
                             </div>
-                            <p class="vs-form-hint">群发仅公共占位符（按收件人替换）。接口名/评论/令牌等场景值请到「邮箱模板」绑定对应系统场景使用。</p>
-                            <input class="vs-input" type="text" id="opsMailTempSubject" maxlength="500" placeholder="例：你好，{{用户名}}">
+                            <p class="vs-form-hint">按钮中文、插入英文键；群发按收件人赋值，未涉及的键为空（如验证码键）。</p>
+                            <input class="vs-input" type="text" id="opsMailTempSubject" maxlength="500" placeholder="例：你好，{{username}}">
                         </div>
                         <div class="vs-field">
                             <label class="vs-label" for="opsMailTempBody">邮件正文（HTML）</label>
-                            <textarea class="vs-input vs-textarea" id="opsMailTempBody" rows="10" placeholder="HTML；可插入 {{用户名}} {{站点名}} 等"></textarea>
+                            <textarea class="vs-input vs-textarea vs-mailtpl-body vs-ops-mail-temp-body" id="opsMailTempBody" rows="32" placeholder="HTML；可插入 {{username}} {{browsertitle}} 等"></textarea>
                         </div>
                     </div>
                 </div>

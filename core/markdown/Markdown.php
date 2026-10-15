@@ -308,6 +308,17 @@ class Markdown
     }
 
     /**
+     * 对外：DOM 白名单消毒（站内公告等二次消毒入口）
+     *
+     * @param string $html
+     * @return string
+     */
+    public static function sanitizeHtml($html)
+    {
+        return self::sanitizeRenderedHtml($html);
+    }
+
+    /**
      * 白名单消毒（DOM）：禁止再靠正则黑名单
      *
      * @param string $html
@@ -430,6 +441,28 @@ class Markdown
             }
             foreach ($toRemove as $rn) {
                 $node->removeAttribute($rn);
+            }
+            // target=_blank 强制 noopener（防反向标签劫持，E478）
+            if ($tag === 'a' && strtolower((string) $node->getAttribute('target')) === '_blank') {
+                $rel = trim((string) $node->getAttribute('rel'));
+                $parts = $rel !== '' ? preg_split('/\s+/', $rel) : array();
+                if (!is_array($parts)) {
+                    $parts = array();
+                }
+                $need = array('noopener', 'noreferrer');
+                foreach ($need as $token) {
+                    $has = false;
+                    foreach ($parts as $p) {
+                        if (strtolower((string) $p) === $token) {
+                            $has = true;
+                            break;
+                        }
+                    }
+                    if (!$has) {
+                        $parts[] = $token;
+                    }
+                }
+                $node->setAttribute('rel', trim(implode(' ', $parts)));
             }
         }
 

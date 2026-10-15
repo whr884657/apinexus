@@ -2,7 +2,7 @@
 
 > **路径：** 项目根目录 `CORE模块说明.md`  
 > **性质：** 核心运行时（`core/`）模块说明，以及与主题包的**基础**对接边界  
-> **版本：** **13.26.46**（与 `core/version.php` 中 `VS_VERSION` 一致）  
+> **版本：** **13.26.47**（与 `core/version.php` 中 `VS_VERSION` 一致）  
 > **读者：** 核心维护者、二次开发；主题作者请**优先**读根目录 [`主题开发对接说明.md`](主题开发对接说明.md)  
 
 ### 怎么读（建议）
@@ -902,14 +902,14 @@ $showPartners = ThemeManager::themeSettingBool('show_partners', true);
 | [`core/api/README.md`](core/api/README.md) | 系统级外部 API（商城/计划任务；**主题勿用**） |
 | 《请求与表单规范》 | POST / CSRF / AJAX |
 | 《Git提交规范》 | 提交说明中文、禁止 AI 署名 |
-| 《邮箱发信规范》 | 业务邮件 E432 + 运营群发第4.12节（OpsMail / maillog；E442～E457） |
+| 《邮箱发信规范》 | 业务邮件 E432 + 运营群发第4.12节（OpsMail / maillog；E442～E457）+ **全局英文占位符第4.13节 / E468**（验证码可绑 30～34） |
 | 《用户激励规范》 | 运营激励；筛选 `scope=mail` 供群发复用 |
 | `update-log.json` / `更新记录.md` | 版本变更（本文不按版本分章） |
-| `修改流程记录/13.26.46.md` | 本机点位级改动（不进仓） |
+| `修改流程记录/13.26.47.md` | 本机点位级改动（不进仓） |
 
 **维护约定：** 新增模块时：① 给中文**模块名**并归入附录 A 分类；② 附录 B 按「一模块一表」补卡片；③ 主题可见能力同步第 6 / 8 节速查。特色能力（如申请开发者、Turnstile、运营群发）另在第 16 节留流程图。`SystemApi*` / `core/api/*` 细则只写 [`core/api/README.md`](core/api/README.md) 与《系统级外部API规范》。改完须同步本文件与《修改流程记录》。
 
-**文档版本标注：** 13.26.46  
+**文档版本标注：** 13.26.47  
 
 ---
 
@@ -1154,7 +1154,7 @@ flowchart LR
 
 ### A · 通知
 
-> **强制（E432 / v13.26.46）：** 业务邮件主题、正文、`mail_notify_*` 开关与发信调用**只**在 `MailNotify`（`core/MailNotify.php`）。SMTP 传输为 `Mailer`。站内待办 `AdminNotify` 不属业务邮件。旧分文件 `ApiNotify` / `LinkNotify` / `FeedbackNotify` / `CommentNotify` / `PointsNotify` / `DevApplyNotify` **已删除**；在线升级按 `install/obsolete-files.json` 清理旧站残留。主题**禁止**调用 `MailNotify` / `Mailer` / `OpsMailManager` / `MailLogManager`（邮件由系统内部或后台运营触发）。运营群发细则见《邮箱发信规范》第4.12节 / E442～E457。
+> **强制（E432 / v13.26.46；占位符 E468 / v13.26.47）：** 业务邮件主题、正文、`mail_notify_*` 开关与发信调用**只**在 `MailNotify`（`core/MailNotify.php`）。SMTP 传输为 `Mailer`。场景与占位符真相源为 `MailChannels`（全局英文短连写，见《邮箱发信规范》第4.13节）。站内待办 `AdminNotify` 不属业务邮件。旧分文件 `ApiNotify` / `LinkNotify` / `FeedbackNotify` / `CommentNotify` / `PointsNotify` / `DevApplyNotify` **已删除**；在线升级按 `install/obsolete-files.json` 清理旧站残留。主题**禁止**调用 `MailNotify` / `Mailer` / `OpsMailManager` / `MailLogManager` / `MailChannels`（邮件由系统内部或后台运营触发）。运营群发细则见《邮箱发信规范》第4.12节 / E442～E457；占位符见第4.13节 / E468。
 
 | 模块名 | 类名 | 路径 |
 |--------|------|------|
@@ -2383,7 +2383,7 @@ flowchart LR
 | **分类** | 内容运营 |
 | **职责** | 公告 / 文章 / 站内公告 / **邮箱模板**共用管理（表 content；kind：0 站外公告 / 1 文章 / 2 站内公告 / **3 邮箱模板**；站内用 audmode；模板入库 `sanitizeMailHtml`，见 E441 / E442） |
 | **主题可见** | 禁止（后台 / 内部；站内公告仅用户中心：弹窗+控制台；铃铛列表不可看；邮箱模板勿进主题） |
-| **公开方法 / 入口** | `table` · `tableReady` · `hasBindPageColumn` · `hasAudModeColumn` · `normalizeKind` · `normalizeStatus` · `normalizeFlag` · `normalizeAudMode` · `normalizeMessageAudMode` · `audModeLabel` · `userMatchesAudMode` · `kindLabel` · `statusLabel` · `normalizeBindPage` · `bindPageLabel` · `normalizeCoverLayout` · `coverLayoutLabel` · `plainTextPreview` · `formatRow` · `findById` · `listAll` · `listPaged` · `listAdminPaged` · `create` · `update` · `delete` · `findBoundAboutId` · `isAboutBound` · `findBoundAboutRow` · `setStatus` · `setPinned` · `setPopup` · `incrementViews` · `userListMessages` · `userListPopups` · `userMessageDetail` |
+| **公开方法 / 入口** | `table` · `tableReady` · `hasBindPageColumn` · `hasAudModeColumn` · `normalizeKind` · `normalizeStatus` · `normalizeFlag` · `normalizeAudMode` · `normalizeMessageAudMode` · `audModeLabel` · `userMatchesAudMode` · `kindLabel` · `statusLabel` · `normalizeBindPage` · `bindPageLabel` · `normalizeCoverLayout` · `coverLayoutLabel` · `plainTextPreview` · `formatRow` · `findById` · `listAll` · `listPaged` · `listAdminPaged` · `create` · `update` · `delete` · `findBoundAboutId` · `isAboutBound` · `findBoundAboutRow` · `setStatus` · `setPinned` · `setPopup` · `incrementViews` · `userListMessages` · `userListMessagesPaged` · `userListPopups` · `userMessageDetail` · `sanitizeUserMessageHtml` |
 
 ---
 

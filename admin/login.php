@@ -75,8 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if (!$admin) {
                 vs_auth_json_mail($mailPurpose, array(
-                    'code' => 0,
-                    'msg'  => '该邮箱未在本站注册，无法发送验证码',
+                    'code' => 1,
+                    'msg'  => '若该邮箱已注册，验证码将发送至该邮箱',
                 ));
             }
 
@@ -88,14 +88,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $_SESSION['admin_login_code_expires'] = time() + $codeTtl;
             AuthSecurity::resetOtpFailCount('admin_login');
 
-            $body = Mailer::otpMailBody(
-                $admin['username'],
-                $systemName,
-                '登录',
-                $code,
-                $codeTtl
-            );
-            Mailer::send($emailCanonical, $systemName . ' 登录验证码', $body);
+            $subject = $systemName . ' 登录验证码';
+            $body = null;
+            if (class_exists('MailNotify') && class_exists('MailChannels')) {
+                $bound = MailNotify::renderOtpBoundTemplate(
+                    MailChannels::OTP_ADMIN_LOGIN,
+                    0,
+                    $code,
+                    $codeTtl,
+                    '登录',
+                    array(
+                        'username' => isset($admin['username']) ? $admin['username'] : '',
+                        'email'    => $emailCanonical,
+                    )
+                );
+                if (is_array($bound)) {
+                    $subject = $bound['subject'];
+                    $body = $bound['body'];
+                }
+            }
+            if ($body === null) {
+                $body = Mailer::otpMailBody(
+                    $admin['username'],
+                    $systemName,
+                    '登录',
+                    $code,
+                    $codeTtl
+                );
+            }
+            Mailer::send($emailCanonical, $subject, $body);
 
             vs_auth_json_mail($mailPurpose, array(
                 'code' => 1,

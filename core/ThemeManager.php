@@ -1064,7 +1064,7 @@ class ThemeManager
      *
      * 安全协议 / 用户日志列表只维护这一份。主题包即使还留着同名文件，也不从主题包加载。
      *
-     * @param string $file common.js | user-logs.js | user-points.js | user-api-manage.js | token-scope-picker.js
+     * @param string $file common.js | user-logs.js | user-points.js | user-api-manage.js | token-scope-picker.js | account.js | user-notify.js | user-messages.js
      * @return string
      */
     public static function systemJsUrl($file)
@@ -1078,6 +1078,7 @@ class ThemeManager
             'token-scope-picker.js',
             'account.js', // 账号设置顶卡+Tab（E424）；禁主题包旧副本漂移
             'user-notify.js', // 站内公告铃铛/弹窗（E441）；系统级唯一副本
+            'user-messages.js', // 全部站内公告列表+底分页（E441/E469）；须与 pageScriptUrl 白名单同步（E471）
         );
         if (!in_array($file, $allow, true)) {
             return '';
@@ -1181,7 +1182,8 @@ class ThemeManager
         }
         // 列表分页 / 令牌范围选择器 / 站内公告铃铛：系统级，不读主题包副本
         if ($file === 'user-logs.js' || $file === 'user-points.js' || $file === 'user-api-manage.js'
-            || $file === 'token-scope-picker.js' || $file === 'account.js' || $file === 'user-notify.js') {
+            || $file === 'token-scope-picker.js' || $file === 'account.js' || $file === 'user-notify.js'
+            || $file === 'user-messages.js') {
             return self::systemJsUrl($file);
         }
         if (!self::isValidTheme($themeId)) {

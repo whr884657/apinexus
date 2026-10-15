@@ -4,11 +4,11 @@
 (function () {
     'use strict';
 
-    var MOBILE_BREAK = 768;
-    var STORAGE_KEY = 'vs_admin_sidebar_collapsed';
+    var STORAGE_KEY = 'vs_user_sidebar_collapsed';
+    var mqMobile = window.matchMedia ? window.matchMedia('(max-width: 768px)') : null;
 
     function isMobile() {
-        return window.innerWidth <= MOBILE_BREAK;
+        return !!(mqMobile && mqMobile.matches);
     }
 
     function initSidebar() {
@@ -58,7 +58,13 @@
             });
         }
 
-        window.addEventListener('resize', refreshLayout);
+        if (mqMobile) {
+            if (typeof mqMobile.addEventListener === 'function') {
+                mqMobile.addEventListener('change', refreshLayout);
+            } else if (typeof mqMobile.addListener === 'function') {
+                mqMobile.addListener(refreshLayout);
+            }
+        }
         refreshLayout();
 
         initSidebarGroups();
@@ -107,3 +113,4 @@
         boot();
     }
 })();
+

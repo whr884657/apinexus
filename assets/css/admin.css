@@ -14645,12 +14645,24 @@ body.vs-incentive-custompop-open { overflow: hidden; }
 .vs-mailtpl-phbar {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
     margin-bottom: 8px;
 }
-/* 邮件正文编辑区：约原高度 2.5～3 倍，填满状态栏上方空白；手机亦可看清输入 */
+/* 占位符按钮略缩小，避免挤占正文区 */
+.vs-mailtpl-phbar .vs-btn {
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    line-height: 24px !important;
+    border-radius: 6px !important;
+}
+/* 邮件正文编辑区：模板与群发临时撰写同高 */
 .vs-mailtpl-editor #mailtplBodyText.vs-mailtpl-body,
-.vs-mailtpl-editor textarea.vs-mailtpl-body {
+.vs-mailtpl-editor textarea.vs-mailtpl-body,
+#opsMailTempBody.vs-mailtpl-body,
+#opsMailTempBody.vs-ops-mail-temp-body {
     min-height: min(52vh, 560px);
     height: min(52vh, 560px);
     box-sizing: border-box;
@@ -14659,7 +14671,9 @@ body.vs-incentive-custompop-open { overflow: hidden; }
 }
 @media (max-width: 900px) {
     .vs-mailtpl-editor #mailtplBodyText.vs-mailtpl-body,
-    .vs-mailtpl-editor textarea.vs-mailtpl-body {
+    .vs-mailtpl-editor textarea.vs-mailtpl-body,
+    #opsMailTempBody.vs-mailtpl-body,
+    #opsMailTempBody.vs-ops-mail-temp-body {
         min-height: min(48vh, 420px);
         height: min(48vh, 420px);
     }
@@ -14868,13 +14882,14 @@ body.vs-incentive-custompop-open { overflow: hidden; }
     .vs-ops-mail-preview__body { max-height: 160px; }
 }
 
-/* —— 邮箱模板编辑：电脑左右编辑+预览；手机切换预览 —— */
-.vs-mailtpl-editor__mobilebar {
+/* —— 邮箱模板编辑：电脑左右编辑+预览；手机右上角粘性预览 —— */
+.vs-mailtpl-editor {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.vs-mailtpl-editor__preview-btn {
     display: none;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
 }
 .vs-mailtpl-editor__grid {
     display: grid;
@@ -14920,18 +14935,37 @@ body.vs-incentive-custompop-open { overflow: hidden; }
     max-width: 100%;
     height: auto;
 }
+.vs-mailtpl-ph-fold,
 .vs-mailtpl-ai-fold {
     margin-top: 16px;
 }
+/* 浅灰代码容器：顶栏放复制，正文区单独滚动，避免滚动正文盖住按钮 */
+.vs-mailtpl-codewrap {
+    margin: 0;
+    border: 1px solid var(--vs-border, #e5e7eb);
+    border-radius: 8px;
+    background: #f8fafc;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+.vs-mailtpl-codewrap__bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 8px 8px 0;
+}
+.vs-mailtpl-codewrap__copy {
+    flex: 0 0 auto;
+}
 .vs-mailtpl-ai-block {
-    margin: 0 0 10px;
-    padding: 12px 14px;
+    margin: 0;
+    padding: 8px 14px 12px;
     max-height: 220px;
     overflow: auto;
-    border-radius: 8px;
-    border: 1px solid var(--vs-border, #e5e7eb);
-    background: #0f172a;
-    color: #e2e8f0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: #0f172a;
     font-size: 12px;
     line-height: 1.5;
     white-space: pre-wrap;
@@ -15001,8 +15035,16 @@ body.vs-incentive-custompop-open { overflow: hidden; }
     }
 }
 @media (max-width: 900px) {
-    .vs-mailtpl-editor__mobilebar {
-        display: flex;
+    /* sticky：随 overlay body 滚动时仍钉在视口右上，避免 absolute 滚走 */
+    .vs-mailtpl-editor__preview-btn {
+        display: inline-flex;
+        position: sticky;
+        top: 0;
+        align-self: flex-end;
+        margin: 0 0 8px;
+        z-index: 6;
+        background: var(--vs-surface, #fff);
+        box-shadow: 0 1px 0 var(--vs-border, #e5e7eb);
     }
     .vs-mailtpl-editor__grid {
         grid-template-columns: 1fr;

@@ -6,11 +6,12 @@
 (function () {
     'use strict';
 
-    var MOBILE_BREAK = 768;
-    var STORAGE_KEY = 'vs_admin_sidebar_collapsed';
+    /** 与管理端折叠键隔离，避免控制台/用户中心互相抢状态导致侧栏频闪 */
+    var STORAGE_KEY = 'vs_user_sidebar_collapsed';
+    var mqMobile = window.matchMedia ? window.matchMedia('(max-width: 768px)') : null;
 
     function isMobile() {
-        return window.innerWidth <= MOBILE_BREAK;
+        return !!(mqMobile && mqMobile.matches);
     }
 
     function initSidebar() {
@@ -63,7 +64,14 @@
             });
         }
 
-        window.addEventListener('resize', refreshLayout);
+        // 用 matchMedia change，避免窗口宽度在滚动条出现/消失时反复跨 768 触发 resize 频闪
+        if (mqMobile) {
+            if (typeof mqMobile.addEventListener === 'function') {
+                mqMobile.addEventListener('change', refreshLayout);
+            } else if (typeof mqMobile.addListener === 'function') {
+                mqMobile.addListener(refreshLayout);
+            }
+        }
         refreshLayout();
 
         initSidebarGroups();

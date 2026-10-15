@@ -7140,6 +7140,16 @@ select.vs-input.vs-select {
     cursor: not-allowed !important;
 }
 
+/* 当前页：黑底白字（须压过上面白底 !important；E257） */
+.vs-api-list-footer .vs-api-pager .vs-api-pager__num.is-active,
+.vs-api-list-footer .vs-api-pager button.vs-api-pager__num.is-active {
+    background: #0f172a !important;
+    color: #fff !important;
+    border-color: #0f172a !important;
+    font-weight: 600 !important;
+    min-width: 32px !important;
+}
+
 /* 列表页标题行工具栏统一 32px（日志/财务筛选刷新/搜索） */
 .vs-log-toolbar .vs-btn,
 .vs-log-toolbar .vs-log-search__input,

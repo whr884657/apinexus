@@ -470,6 +470,9 @@ class OpsMailManager
                 $vars = class_exists('MailNotify')
                     ? MailNotify::buildCommonVars($uid, $user)
                     : array();
+                if (class_exists('MailChannels')) {
+                    $vars = MailChannels::prepareVars(MailChannels::BIND_CUSTOM, $vars);
+                }
                 $subject = class_exists('MailNotify')
                     ? MailNotify::applyPlaceholders($subjectTpl, $vars, false)
                     : $subjectTpl;

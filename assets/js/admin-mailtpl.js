@@ -145,6 +145,7 @@
             if (!overlay) {
                 return;
             }
+            setPreviewMode(false);
             overlay.classList.remove('is-open');
             overlay.hidden = true;
             overlay.setAttribute('aria-hidden', 'true');
@@ -158,16 +159,15 @@
         function loadPhCatalog() {
             var el = document.getElementById('mailtplPhCatalog');
             if (!el) {
-                return { common: [], byBind: {} };
+                return { items: [] };
             }
             try {
                 var raw = JSON.parse(el.textContent || '{}');
                 return {
-                    common: Array.isArray(raw.common) ? raw.common : [],
-                    byBind: (raw.byBind && typeof raw.byBind === 'object') ? raw.byBind : {}
+                    items: Array.isArray(raw.items) ? raw.items : []
                 };
             } catch (e) {
-                return { common: [], byBind: {} };
+                return { items: [] };
             }
         }
 
@@ -180,37 +180,32 @@
                 .replace(/</g, '&lt;');
         }
 
+        function escHtml(s) {
+            return String(s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
         function refreshPhBar() {
             if (!phBar) {
                 return;
             }
-            var bind = form && form.bindpage ? String(form.bindpage.value || '0') : '0';
-            var keys = [];
-            var seen = {};
-            function pushKeys(list) {
-                var i;
-                var k;
-                if (!Array.isArray(list)) {
-                    return;
-                }
-                for (i = 0; i < list.length; i++) {
-                    k = String(list[i] || '').trim();
-                    if (k === '' || seen[k]) {
-                        continue;
-                    }
-                    seen[k] = true;
-                    keys.push(k);
-                }
-            }
-            pushKeys(phCatalog.common);
-            pushKeys(phCatalog.byBind[bind] || phCatalog.byBind[String(parseInt(bind, 10) || 0)] || []);
+            var items = phCatalog.items || [];
             var html = '';
             var j;
+            var key;
+            var label;
             var ph;
-            for (j = 0; j < keys.length; j++) {
-                ph = '{{' + keys[j] + '}}';
+            for (j = 0; j < items.length; j++) {
+                key = String((items[j] && items[j].key) || '').trim();
+                label = String((items[j] && items[j].label) || key).trim();
+                if (key === '' || !/^[a-z][a-z0-9]*$/.test(key)) {
+                    continue;
+                }
+                ph = '{{' + key + '}}';
                 html += '<button type="button" class="vs-btn vs-btn--sm vs-btn--outline" data-ph="'
-                    + escAttr(ph) + '">' + escAttr(ph) + '</button>';
+                    + escAttr(ph) + '" title="' + escAttr(ph) + '">' + escHtml(label) + '</button>';
             }
             phBar.innerHTML = html;
         }
@@ -310,68 +305,70 @@
 
         function demoReplace(text) {
             var map = {
-                '用户名': '示例用户',
-                '站点名': '示例站点',
-                '站点名称': '示例站点',
-                '站点链接': 'https://example.com',
-                '站点地址': 'https://example.com',
-                '系统名': 'ApiNexus',
-                '用户邮箱': 'user@example.com',
-                '用户编号': '10001',
-                '用户角色': '普通用户',
-                '余额': '12.5',
-                '日期': '2026-10-14',
-                '时间': '20:00:00',
-                '日期时间': '2026-10-14 20:00:00',
-                '接口名': '示例接口',
-                '关联接口': '示例接口',
-                '接口地址': '/api/demo',
-                '接口编号': '88',
-                '提交者': '开发者A',
-                '提交用户': '用户B',
-                '拒绝原因': '资料不完整',
-                '原因说明': '资料不完整',
-                '网站名称': '示例网站',
-                '网站名': '示例网站',
-                '网站链接': 'https://friend.example.com',
-                '联系方式': 'mail@friend.example.com',
-                '编号': '9',
-                '反馈编号': '31',
-                '反馈内容': '这是一段反馈示例。',
-                '处理回复': '已处理，请查收。',
-                '评论编号': '55',
-                '关联文章': '示例文章',
-                '标题': '示例文章',
-                '评论者': '评论用户',
-                '是否引用': '否',
-                '引用评论': '',
-                '评论内容': '这是一条评论示例。',
-                '原评论': '原评论内容',
-                '管理员回复': '管理员回复示例',
-                '通知类型': '评论被引用',
-                '令牌备注': '测试令牌',
-                '令牌名称': '测试令牌',
-                '令牌编号': '7',
-                '分配配额': '100',
-                '配额回落': '是',
-                '到账积分': '50',
-                '订单号': 'ORD20261014001',
-                '本单收入': '¥10.00',
-                '今日累计充值收入': '¥88.00',
-                '本次需要': '3',
-                '申请编号': '12',
-                '申请人': '申请人C',
-                '注册邮箱': 'dev@example.com',
-                '申请理由': '希望投稿接口',
-                '用户头像': '<span style="display:inline-block;width:48px;height:48px;border-radius:50%;background:#e5e7eb;"></span>',
-                '用户头像地址': ''
+                browsertitle: '示例浏览器标题',
+                systemname: 'ApiNexus',
+                siteurl: 'https://example.com',
+                username: '示例用户',
+                userid: '10001',
+                useremail: 'user@example.com',
+                userrole: '普通用户',
+                useravatar: '<span style="display:inline-block;width:48px;height:48px;border-radius:50%;background:#e5e7eb;"></span>',
+                useravatarurl: 'https://example.com/avatar.png',
+                balance: '12.5',
+                date: '2026-10-15',
+                time: '20:00:00',
+                datetime: '2026-10-15 20:00:00',
+                year: '2026',
+                month: '10',
+                day: '15',
+                weekday: '星期三',
+                hour: '20',
+                minute: '00',
+                second: '00',
+                apiname: '示例接口',
+                apiid: '88',
+                apiurl: 'https://example.com/detail?id=88',
+                submitter: '开发者A',
+                rejectreason: '资料不完整',
+                linkname: '示例友链站',
+                linkurl: 'https://friend.example.com',
+                linkcontact: 'mail@friend.example.com',
+                linkid: '9',
+                feedbackid: '31',
+                feedbackbody: '这是一段反馈示例。',
+                feedbackreply: '已处理，请查收。',
+                commentid: '55',
+                articletitle: '示例文章',
+                articleurl: 'https://example.com/articles/1',
+                commenter: '评论用户',
+                commentbody: '这是一条评论示例。',
+                quotebody: '原评论内容',
+                isquote: '否',
+                adminreply: '管理员回复示例',
+                notifytype: '评论被引用',
+                keyname: '测试令牌',
+                keyid: '7',
+                keyquota: '100',
+                keyquotafallback: '是',
+                pointsneed: '3',
+                pointscredit: '50',
+                orderno: 'ORD20261015001',
+                orderincome: '¥10.00',
+                orderincometoday: '¥88.00',
+                applyid: '12',
+                applyreason: '希望投稿接口',
+                applicant: '申请人C',
+                handlereply: '审核通过，欢迎加入。',
+                otpcode: '123456',
+                otpttl: '5',
+                otpaction: '登录'
             };
             return String(text || '').replace(/\{\{\s*([^}]+?)\s*\}\}/g, function (m, key) {
                 var k = String(key || '').trim();
                 if (Object.prototype.hasOwnProperty.call(map, k)) {
                     return map[k];
                 }
-                return m;
+                return '';
             });
         }
 
@@ -381,8 +378,8 @@
                 .replace(/<(script|iframe|object|embed|form|svg|math|link|meta|base|style)(\s[^>]*)?>[\s\S]*?<\/\1>/gi, '')
                 .replace(/<(script|iframe|object|embed|form|svg|math|link|meta|base|style)(\s[^>]*)?\/?>/gi, '')
                 .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-                .replace(/\s(href|src|xlink:href)\s*=\s*(['"])\s*(javascript|data):[^'"]*\2/gi, '')
-                .replace(/\s(href|src|xlink:href)\s*=\s*(javascript|data):[^\s>]*/gi, '');
+                .replace(/\s(href|src|xlink:href)\s*=\s*(['"])\s*(javascript|vbscript|data):[^'"]*\2/gi, '')
+                .replace(/\s(href|src|xlink:href)\s*=\s*(javascript|vbscript|data):[^\s>]*/gi, '');
             var wrap = document.createElement('div');
             wrap.innerHTML = raw;
             var kill = wrap.querySelectorAll('script,iframe,object,embed,form,svg,math,link,meta,base,style');
@@ -400,7 +397,7 @@
                 for (j = 0; j < attrs.length; j++) {
                     var name = String(attrs[j].name || '').toLowerCase();
                     var val = String(attrs[j].value || '');
-                    if (name.indexOf('on') === 0 || /^(javascript|data):/i.test(val.trim())) {
+                    if (name.indexOf('on') === 0 || /^(javascript|vbscript|data):/i.test(val.trim())) {
                         el.removeAttribute(attrs[j].name);
                     }
                 }
@@ -437,7 +434,7 @@
             editorRoot.setAttribute('data-mode', on ? 'preview' : 'edit');
             if (previewToggle) {
                 previewToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
-                previewToggle.textContent = on ? '返回编辑' : '在线预览';
+                previewToggle.textContent = on ? '返回编辑' : '预览';
             }
             if (on) {
                 updatePreview();

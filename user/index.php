@@ -52,7 +52,7 @@ $notifyMessages = array();
 $userId = (int) UserAuth::id();
 if ($userId > 0 && class_exists('ContentManager')
     && ContentManager::tableReady() && ContentManager::hasAudModeColumn()) {
-    $notifyMessages = ContentManager::userListMessages($userId, 20);
+    $notifyMessages = ContentManager::userListMessages($userId, 8);
 }
 
 $scripts = array('user-dash-hello.js', 'user-dashboard.js');

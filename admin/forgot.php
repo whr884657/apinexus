@@ -68,8 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if (!$admin) {
                 vs_auth_json_mail($mailPurpose, array(
-                    'code' => 0,
-                    'msg'  => '该邮箱未在本站注册，无法发送验证码',
+                    'code' => 1,
+                    'msg'  => '若该邮箱已注册，验证码将发送至该邮箱',
                 ));
             }
 
@@ -81,14 +81,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $_SESSION['reset_code_expires'] = time() + $codeTtl;
             AuthSecurity::resetOtpFailCount('admin_reset');
 
-            $body = '<div style="font-family:sans-serif;line-height:1.8;">';
-            $body .= '<p>您好，' . htmlspecialchars($admin['username']) . '：</p>';
-            $body .= '<p>您正在申请重置 ' . htmlspecialchars($systemName) . ' 管理员密码，验证码为：</p>';
-            $body .= '<p style="font-size:24px;font-weight:bold;margin:16px 0;">' . htmlspecialchars($code) . '</p>';
-            $body .= '<p>验证码 ' . (int) ($codeTtl / 60) . ' 分钟内有效，请勿泄露给他人。</p>';
-            $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
+            $subject = $systemName . ' 密码重置验证码';
+            $body = null;
+            if (class_exists('MailNotify') && class_exists('MailChannels')) {
+                $bound = MailNotify::renderOtpBoundTemplate(
+                    MailChannels::OTP_ADMIN_FORGOT,
+                    0,
+                    $code,
+                    $codeTtl,
+                    '重置密码',
+                    array(
+                        'username' => isset($admin['username']) ? $admin['username'] : '',
+                        'email'    => $emailCanonical,
+                    )
+                );
+                if (is_array($bound)) {
+                    $subject = $bound['subject'];
+                    $body = $bound['body'];
+                }
+            }
+            if ($body === null) {
+                $body = '<div style="font-family:sans-serif;line-height:1.8;">';
+                $body .= '<p>您好，' . htmlspecialchars($admin['username']) . '：</p>';
+                $body .= '<p>您正在申请重置 ' . htmlspecialchars($systemName) . ' 管理员密码，验证码为：</p>';
+                $body .= '<p style="font-size:24px;font-weight:bold;margin:16px 0;">' . htmlspecialchars($code) . '</p>';
+                $body .= '<p>验证码 ' . (int) ($codeTtl / 60) . ' 分钟内有效，请勿泄露给他人。</p>';
+                $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
+            }
 
-            Mailer::send($emailCanonical, $systemName . ' 密码重置验证码', $body);
+            Mailer::send($emailCanonical, $subject, $body);
 
             vs_auth_json_mail($mailPurpose, array(
                 'code' => 1,

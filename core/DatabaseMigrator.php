@@ -552,6 +552,8 @@ class DatabaseMigrator
         self::ensureContentAudmode46();
         // 13.26.46：邮件群发批次表 maillog
         self::ensureMaillog46();
+        // 13.26.47：邮箱模板中文占位 → 英文（幂等；本版无 migrations/13.26.47.sql、不进账本）
+        self::ensureMailPlaceholders47();
     }
 
     /**
@@ -967,6 +969,92 @@ class DatabaseMigrator
                     'ALTER TABLE `' . $table . '` '
                     . 'ADD KEY `idx_kind_status_aud_pin` (`kind`, `status`, `audmode`, `ispinned`, `id`)'
                 );
+            }
+        } catch (Exception $e) {
+            // 下次结构更新重试
+        }
+    }
+
+    /**
+     * 13.26.47：邮箱模板中文占位是否已清（无 {{…中文…}}）
+     *
+     * @return bool
+     */
+    private static function mailPlaceholders47Ready()
+    {
+        if (!self::tableExists('content') || !class_exists('MailChannels')) {
+            return true;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('content');
+            // 仅「可映射」中文占位阻塞；错别字/未知中文键不阻塞（E473）
+            $stmt = $pdo->query(
+                'SELECT `title`, `summary`, `body` FROM `' . $table . '` WHERE `kind` = 3'
+            );
+            if (!$stmt) {
+                return false;
+            }
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                foreach (array('title', 'summary', 'body') as $col) {
+                    $text = isset($row[$col]) ? (string) $row[$col] : '';
+                    if ($text !== '' && MailChannels::textHasMappableChinesePlaceholder($text)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 13.26.47：邮箱模板 {{中文}} → {{英文短连写}}（幂等；不做运行时双轨）
+     *
+     * @return void
+     */
+    private static function ensureMailPlaceholders47()
+    {
+        try {
+            if (!self::tableExists('content') || !class_exists('MailChannels')) {
+                return;
+            }
+            $pdo = Database::connect();
+            $table = Database::table('content');
+            $hasBind = self::tableColumnExists('content', 'bindpage');
+            $cols = $hasBind
+                ? 'SELECT `id`, `title`, `summary`, `body`, `bindpage` FROM `' . $table . '` WHERE `kind` = 3'
+                : 'SELECT `id`, `title`, `summary`, `body` FROM `' . $table . '` WHERE `kind` = 3';
+            $stmt = $pdo->query($cols);
+            if (!$stmt) {
+                return;
+            }
+            $upd = $pdo->prepare(
+                'UPDATE `' . $table . '` SET `title` = ?, `summary` = ?, `body` = ? WHERE `id` = ? LIMIT 1'
+            );
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $id = isset($row['id']) ? (int) $row['id'] : 0;
+                if ($id <= 0) {
+                    continue;
+                }
+                $bind = $hasBind && isset($row['bindpage']) ? (int) $row['bindpage'] : 0;
+                $title = isset($row['title']) ? (string) $row['title'] : '';
+                $summary = isset($row['summary']) ? (string) $row['summary'] : '';
+                $body = isset($row['body']) ? (string) $row['body'] : '';
+                $nt = MailChannels::migrateChinesePlaceholdersInText($title, $bind);
+                $ns = MailChannels::migrateChinesePlaceholdersInText($summary, $bind);
+                $nb = MailChannels::migrateChinesePlaceholdersInText($body, $bind);
+                if ($nt === $title && $ns === $summary && $nb === $body) {
+                    continue;
+                }
+                $upd->execute(array($nt, $ns, $nb, $id));
             }
         } catch (Exception $e) {
             // 下次结构更新重试

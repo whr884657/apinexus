@@ -40,7 +40,7 @@ class MailNotify
         $siteName = self::siteName();
         $username = self::userName($userId);
         $vars = self::buildCommonVars($userId);
-        $vars['余额'] = self::fmtPoints($balance);
+        $vars['balance'] = self::fmtPoints($balance);
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::POINTS_ZERO : 19,
@@ -112,8 +112,8 @@ class MailNotify
         $username = self::userName($userId);
 
         $vars = self::buildCommonVars($userId);
-        $vars['余额'] = self::fmtPoints($balance);
-        $vars['本次需要'] = (float) $need > 0 ? self::fmtPoints($need) : '';
+        $vars['balance'] = self::fmtPoints($balance);
+        $vars['pointsneed'] = (float) $need > 0 ? self::fmtPoints($need) : '';
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::POINTS_INSUFFICIENT : 20,
@@ -194,9 +194,9 @@ class MailNotify
         $username = self::userName($userId);
 
         $vars = self::buildCommonVars($userId);
-        $vars['到账积分'] = self::fmtPoints($amount);
-        $vars['余额'] = self::fmtPoints($balance);
-        $vars['订单号'] = trim((string) $orderno);
+        $vars['pointscredit'] = self::fmtPoints($amount);
+        $vars['balance'] = self::fmtPoints($balance);
+        $vars['orderno'] = trim((string) $orderno);
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::RECHARGE_SUCCESS : 22,
@@ -283,11 +283,10 @@ class MailNotify
         $username = self::userName($userId);
 
         $vars = self::buildCommonVars($userId);
-        $vars['令牌备注'] = $remark;
-        $vars['令牌名称'] = $remark;
-        $vars['令牌编号'] = (string) $keyId;
-        $vars['分配配额'] = $quota > 0 ? self::fmtPoints($quota) : '';
-        $vars['配额回落'] = $fallback ? '是' : '否';
+        $vars['keyname'] = $remark;
+        $vars['keyid'] = (string) $keyId;
+        $vars['keyquota'] = $quota > 0 ? self::fmtPoints($quota) : '';
+        $vars['keyquotafallback'] = $fallback ? '是' : '否';
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::KEY_QUOTA : 21,
@@ -355,10 +354,10 @@ class MailNotify
         $siteName = self::siteName();
 
         $vars = self::buildCommonVars($userId);
-        $vars['订单号'] = $orderno;
-        $vars['本单收入'] = '¥' . number_format($money, 2, '.', '');
-        $vars['到账积分'] = $points > 0 ? self::fmtPoints($points) : '';
-        $vars['今日累计充值收入'] = '¥' . number_format($todayTotal, 2, '.', '');
+        $vars['orderno'] = $orderno;
+        $vars['orderincome'] = '¥' . number_format($money, 2, '.', '');
+        $vars['pointscredit'] = $points > 0 ? self::fmtPoints($points) : '';
+        $vars['orderincometoday'] = '¥' . number_format($todayTotal, 2, '.', '');
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::ORDER_ADMIN : 23,
@@ -415,10 +414,10 @@ class MailNotify
         $apiId = isset($api['id']) ? (int) $api['id'] : 0;
 
         $vars = self::buildCommonVars($userId);
-        $vars['接口名'] = $name;
-        $vars['接口地址'] = $endpoint;
-        $vars['接口编号'] = (string) $apiId;
-        $vars['提交者'] = $username !== '' ? $username : ('UID ' . $userId);
+        $vars['apiname'] = $name;
+        $vars['apiurl'] = $endpoint;
+        $vars['apiid'] = (string) $apiId;
+        $vars['submitter'] = $username !== '' ? $username : ('UID ' . $userId);
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::API_SUBMIT : 10,
@@ -478,11 +477,12 @@ class MailNotify
         $apiUserId = isset($api['userid']) ? (int) $api['userid'] : 0;
 
         $apiId = isset($api['id']) ? (int) $api['id'] : 0;
+        $endpoint = isset($api['endpoint']) ? (string) $api['endpoint'] : '';
         $vars = self::buildCommonVars($apiUserId);
-        $vars['接口名'] = $name;
-        $vars['接口编号'] = $apiId > 0 ? (string) $apiId : '';
-        $vars['拒绝原因'] = $reason;
-        $vars['原因说明'] = $reason;
+        $vars['apiname'] = $name;
+        $vars['apiid'] = $apiId > 0 ? (string) $apiId : '';
+        $vars['apiurl'] = $endpoint;
+        $vars['rejectreason'] = $reason;
 
         $channel = $audit === ApiManager::AUDIT_APPROVED
             ? (class_exists('MailChannels') ? MailChannels::API_PASS : 11)
@@ -540,11 +540,10 @@ class MailNotify
         $id = isset($link['id']) ? (int) $link['id'] : 0;
 
         $vars = self::buildCommonVars(0);
-        $vars['网站名称'] = $name;
-        $vars['网站名'] = $name;
-        $vars['网站链接'] = $siteurl;
-        $vars['联系方式'] = $contact !== '' ? $contact : '未填写';
-        $vars['编号'] = (string) $id;
+        $vars['linkname'] = $name;
+        $vars['linkurl'] = $siteurl;
+        $vars['linkcontact'] = $contact !== '' ? $contact : '未填写';
+        $vars['linkid'] = (string) $id;
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::LINK_APPLY : 13,
@@ -590,12 +589,15 @@ class MailNotify
 
         $siteName = self::siteName();
         $name = isset($link['name']) ? (string) $link['name'] : '';
-
         $siteurl = isset($link['siteurl']) ? (string) $link['siteurl'] : '';
+        $contact = isset($link['contact']) ? (string) $link['contact'] : '';
+        $id = isset($link['id']) ? (int) $link['id'] : 0;
+
         $vars = self::buildCommonVars(0);
-        $vars['网站名称'] = $name;
-        $vars['网站名'] = $name;
-        $vars['网站链接'] = $siteurl;
+        $vars['linkname'] = $name;
+        $vars['linkurl'] = $siteurl;
+        $vars['linkcontact'] = $contact !== '' ? $contact : '未填写';
+        $vars['linkid'] = $id > 0 ? (string) $id : '';
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::LINK_PASS : 14,
@@ -656,12 +658,11 @@ class MailNotify
 
         $submitterLabel = $username !== '' ? $username : ('用户#' . $userId);
         $vars = self::buildCommonVars($userId);
-        $vars['反馈编号'] = (string) $id;
-        $vars['关联接口'] = $apiName;
-        $vars['接口名'] = $apiName;
-        $vars['接口编号'] = $apiId > 0 ? (string) $apiId : '';
-        $vars['提交用户'] = $submitterLabel;
-        $vars['反馈内容'] = $content;
+        $vars['feedbackid'] = (string) $id;
+        $vars['apiname'] = $apiName;
+        $vars['apiid'] = $apiId > 0 ? (string) $apiId : '';
+        $vars['username'] = $submitterLabel;
+        $vars['feedbackbody'] = $content;
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::FEEDBACK_ADMIN : 15,
@@ -721,12 +722,15 @@ class MailNotify
         $content = isset($feedback['content']) ? trim((string) $feedback['content']) : '';
         $reply = isset($feedback['reply']) ? trim((string) $feedback['reply']) : '';
         $feedbackUserId = isset($feedback['userid']) ? (int) $feedback['userid'] : 0;
+        $feedbackId = isset($feedback['id']) ? (int) $feedback['id'] : 0;
+        $apiId = isset($feedback['apiid']) ? (int) $feedback['apiid'] : 0;
 
         $vars = self::buildCommonVars($feedbackUserId);
-        $vars['关联接口'] = $apiName;
-        $vars['接口名'] = $apiName;
-        $vars['反馈内容'] = $content;
-        $vars['处理回复'] = $reply;
+        $vars['feedbackid'] = $feedbackId > 0 ? (string) $feedbackId : '';
+        $vars['apiname'] = $apiName;
+        $vars['apiid'] = $apiId > 0 ? (string) $apiId : '';
+        $vars['feedbackbody'] = $content;
+        $vars['feedbackreply'] = $reply;
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::FEEDBACK_USER : 16,
@@ -784,14 +788,17 @@ class MailNotify
         $parentid = isset($comment['parentid']) ? (int) $comment['parentid'] : 0;
         $commentUserId = isset($comment['userid']) ? (int) $comment['userid'] : 0;
 
+        $quoteBody = self::parentCommentBody($comment, $parentid);
+        $articleUrl = self::articleUrl($comment);
+
         $vars = self::buildCommonVars($commentUserId);
-        $vars['评论编号'] = (string) $id;
-        $vars['关联文章'] = $title;
-        $vars['标题'] = $title;
-        $vars['评论者'] = $nickname;
-        $vars['是否引用'] = $parentid > 0 ? '是' : '否';
-        $vars['引用评论'] = $parentid > 0 ? (string) $parentid : '';
-        $vars['评论内容'] = $bodyText;
+        $vars['commentid'] = (string) $id;
+        $vars['articletitle'] = $title;
+        $vars['articleurl'] = $articleUrl;
+        $vars['commenter'] = $nickname;
+        $vars['isquote'] = $parentid > 0 ? '是' : '否';
+        $vars['quotebody'] = $quoteBody;
+        $vars['commentbody'] = $bodyText;
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::COMMENT_ADMIN : 17,
@@ -820,6 +827,11 @@ class MailNotify
             $html .= '<li>引用评论：#' . $parentid . '</li>';
         }
         $html .= '</ul>';
+        if ($quoteBody !== '') {
+            $html .= '<p>被引用内容：</p>';
+            $html .= '<p style="padding:12px;background:#f8fafc;border-radius:8px;">'
+                . nl2br(self::e($quoteBody)) . '</p>';
+        }
         if ($bodyText !== '') {
             $html .= '<p>评论内容：</p>';
             $html .= '<p style="padding:12px;background:#f8fafc;border-radius:8px;">'
@@ -863,14 +875,17 @@ class MailNotify
         $origBody = isset($parentComment['body']) ? trim((string) $parentComment['body']) : '';
         $parentUserId = isset($parentComment['userid']) ? (int) $parentComment['userid'] : 0;
 
+        $commentId = isset($comment['id']) ? (int) $comment['id'] : 0;
         $vars = self::buildCommonVars($parentUserId);
-        $vars['关联文章'] = $title;
-        $vars['标题'] = $title;
-        $vars['评论者'] = $quoter;
-        $vars['原评论'] = $origBody;
-        $vars['评论内容'] = $quoteBody;
-        $vars['管理员回复'] = '';
-        $vars['通知类型'] = '评论被引用';
+        $vars['commentid'] = $commentId > 0 ? (string) $commentId : '';
+        $vars['articletitle'] = $title;
+        $vars['articleurl'] = self::articleUrl($comment);
+        $vars['commenter'] = $quoter;
+        $vars['quotebody'] = $origBody;
+        $vars['commentbody'] = $quoteBody;
+        $vars['isquote'] = '是';
+        $vars['adminreply'] = '';
+        $vars['notifytype'] = '评论被引用';
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::COMMENT_USER : 18,
@@ -929,14 +944,17 @@ class MailNotify
         $bodyText = isset($comment['body']) ? trim((string) $comment['body']) : '';
         $commentUserId = isset($comment['userid']) ? (int) $comment['userid'] : 0;
 
+        $commentId = isset($comment['id']) ? (int) $comment['id'] : 0;
         $vars = self::buildCommonVars($commentUserId);
-        $vars['关联文章'] = $title;
-        $vars['标题'] = $title;
-        $vars['评论者'] = '';
-        $vars['原评论'] = '';
-        $vars['评论内容'] = $bodyText;
-        $vars['管理员回复'] = $reply;
-        $vars['通知类型'] = '管理员回复';
+        $vars['commentid'] = $commentId > 0 ? (string) $commentId : '';
+        $vars['articletitle'] = $title;
+        $vars['articleurl'] = self::articleUrl($comment);
+        $vars['commenter'] = self::commentNickname($comment);
+        $vars['quotebody'] = '';
+        $vars['commentbody'] = $bodyText;
+        $vars['isquote'] = '否';
+        $vars['adminreply'] = $reply;
+        $vars['notifytype'] = '管理员回复';
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::COMMENT_USER : 18,
@@ -991,10 +1009,10 @@ class MailNotify
 
         $applicant = $username !== '' ? $username : ('用户#' . $userId);
         $vars = self::buildCommonVars($userId);
-        $vars['申请编号'] = (string) $id;
-        $vars['申请人'] = $applicant;
-        $vars['注册邮箱'] = $email;
-        $vars['申请理由'] = $content;
+        $vars['applyid'] = (string) $id;
+        $vars['applicant'] = $applicant;
+        $vars['useremail'] = $email;
+        $vars['applyreason'] = $content;
 
         $bound = self::renderBoundTemplate(
             class_exists('MailChannels') ? MailChannels::DEV_APPLY : 24,
@@ -1059,10 +1077,18 @@ class MailNotify
 
         $reply = isset($apply['reply']) ? trim((string) $apply['reply']) : '';
         $applyUserId = isset($apply['userid']) ? (int) $apply['userid'] : 0;
+        $applyId = isset($apply['id']) ? (int) $apply['id'] : 0;
+        $applyReason = isset($apply['content']) ? trim((string) $apply['content']) : '';
+        if ($applyReason === '' && isset($apply['reason'])) {
+            $applyReason = trim((string) $apply['reason']);
+        }
 
         $vars = self::buildCommonVars($applyUserId);
-        $vars['申请人'] = $username !== '' ? $username : ('用户#' . $applyUserId);
-        $vars['处理回复'] = $reply;
+        $vars['applyid'] = $applyId > 0 ? (string) $applyId : '';
+        $vars['applicant'] = $username !== '' ? $username : ('用户#' . $applyUserId);
+        $vars['applyreason'] = $applyReason;
+        $vars['useremail'] = $to;
+        $vars['handlereply'] = $reply;
 
         $channel = $passed
             ? (class_exists('MailChannels') ? MailChannels::DEV_PASS : 25)
@@ -1281,35 +1307,41 @@ class MailNotify
                 $balance = 0.0;
             }
         }
-        $siteName = self::siteName();
+        $browserTitle = self::siteName();
+        $systemName = class_exists('SiteContext')
+            ? trim((string) SiteContext::systemName())
+            : $browserTitle;
+        if ($systemName === '') {
+            $systemName = $browserTitle;
+        }
         $siteUrl = self::siteUrl();
         return array(
-            '站点名'     => $siteName,
-            '站点名称'   => $siteName,
-            '站点链接'   => $siteUrl,
-            '站点地址'   => $siteUrl,
-            '系统名'     => class_exists('SiteContext') ? (string) SiteContext::systemName() : $siteName,
-            '用户名'     => $username !== '' ? $username : ('用户#' . $userId),
-            '用户编号'   => (string) $userId,
-            '用户邮箱'   => $email,
-            '用户角色'   => $roleLabel,
-            '用户头像地址'=> $avatarUrl,
-            '用户头像'   => $avatarHtml,
-            '余额'       => self::fmtPoints($balance),
-            '日期'       => date('Y-m-d', $now),
-            '时间'       => date('H:i:s', $now),
-            '日期时间'   => date('Y-m-d H:i:s', $now),
-            '年'         => date('Y', $now),
-            '月'         => date('m', $now),
-            '日'         => date('d', $now),
-            '星期'       => '星期' . $weekMap[(int) date('w', $now)],
-            '时'         => date('H', $now),
-            '分'         => date('i', $now),
-            '秒'         => date('s', $now),
+            'browsertitle'  => $browserTitle,
+            'systemname'    => $systemName,
+            'siteurl'       => $siteUrl,
+            'username'      => $username !== '' ? $username : ($userId > 0 ? ('用户#' . $userId) : ''),
+            'userid'        => $userId > 0 ? (string) $userId : '',
+            'useremail'     => $email,
+            'userrole'      => $roleLabel,
+            'useravatarurl' => $avatarUrl,
+            'useravatar'    => $avatarHtml,
+            'balance'       => self::fmtPoints($balance),
+            'date'          => date('Y-m-d', $now),
+            'time'          => date('H:i:s', $now),
+            'datetime'      => date('Y-m-d H:i:s', $now),
+            'year'          => date('Y', $now),
+            'month'         => date('m', $now),
+            'day'           => date('d', $now),
+            'weekday'       => '星期' . $weekMap[(int) date('w', $now)],
+            'hour'          => date('H', $now),
+            'minute'        => date('i', $now),
+            'second'        => date('s', $now),
         );
     }
 
     /**
+     * 头像绝对 URL（带协议与域名；相对路径拼站根）
+     *
      * @param string $avatar
      * @return string
      */
@@ -1319,18 +1351,48 @@ class MailNotify
         if ($avatar === '') {
             return '';
         }
+        // 拒绝危险协议（含编码绕过粗滤）
+        $probe = html_entity_decode($avatar, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $probe = preg_replace('/[\x00-\x1F\x7F]+/', '', (string) $probe);
+        $compact = preg_replace('/\s+/', '', (string) $probe);
+        if (is_string($compact) && preg_match('/^(?:javascript|vbscript|data)\s*:/i', $compact)) {
+            return '';
+        }
+        // 邮件内仅嵌本站头像，拒绝任意外链（防追踪像素，E474）
+        $siteHost = '';
+        $base = self::siteUrl();
+        if ($base !== '') {
+            $h = parse_url($base, PHP_URL_HOST);
+            if (is_string($h) && $h !== '') {
+                $siteHost = strtolower($h);
+            }
+        }
         if (preg_match('#^https?://#i', $avatar)) {
+            $ah = parse_url($avatar, PHP_URL_HOST);
+            if (!is_string($ah) || $ah === '' || $siteHost === '' || strtolower($ah) !== $siteHost) {
+                return '';
+            }
             return $avatar;
         }
-        if (isset($avatar[0]) && $avatar[0] === '/' && function_exists('vs_base_url')) {
-            $base = rtrim((string) vs_base_url(), '/');
-            return $base !== '' ? ($base . $avatar) : $avatar;
+        if (strpos($avatar, '//') === 0) {
+            $abs = 'https:' . $avatar;
+            $ah = parse_url($abs, PHP_URL_HOST);
+            if (!is_string($ah) || $ah === '' || $siteHost === '' || strtolower($ah) !== $siteHost) {
+                return '';
+            }
+            return $abs;
         }
-        return '';
+        if ($base === '') {
+            return '';
+        }
+        if (isset($avatar[0]) && $avatar[0] === '/') {
+            return $base . $avatar;
+        }
+        return $base . '/' . ltrim(str_replace('\\', '/', $avatar), '/');
     }
 
     /**
-     * 替换 {{键}}；文字键转义，用户头像为白名单 HTML
+     * 替换 {{英文键}}；文字转义，useravatar 为白名单 HTML；未知/空键 → 空串
      *
      * @param string               $text
      * @param array<string,string> $vars
@@ -1345,11 +1407,14 @@ class MailNotify
         }
         $out = preg_replace_callback('/\{\{\s*([^}]+?)\s*\}\}/u', function ($m) use ($vars, $isHtml) {
             $key = trim((string) $m[1]);
-            if ($key === '' || !array_key_exists($key, $vars)) {
-                return $m[0];
+            if ($key === '' || !preg_match('/^[a-z][a-z0-9]*$/', $key)) {
+                return '';
+            }
+            if (!array_key_exists($key, $vars)) {
+                return '';
             }
             $val = (string) $vars[$key];
-            if ($key === '用户头像') {
+            if ($key === 'useravatar') {
                 return $isHtml ? $val : '';
             }
             return $isHtml ? htmlspecialchars($val, ENT_QUOTES, 'UTF-8') : $val;
@@ -1564,19 +1629,58 @@ class MailNotify
         if ($hosts === array()) {
             return $text;
         }
-        $hostRe = implode('|', array_map(function ($h) {
-            return preg_quote($h, '#');
-        }, array_keys($hosts)));
-        // 仅剥可点击站内链接（保留头像等 img src）
-        $text = preg_replace(
-            '#\shref\s*=\s*([\'"])\s*https?://(?:www\.)?(?:' . $hostRe . ')[^\'"]*\1#i',
-            '',
+        // 按 URL host 判定站内（防 user@本站 绕过，E475）
+        $text = preg_replace_callback(
+            '#\shref\s*=\s*([\'"])\s*(https?://[^\'"]+)\1#i',
+            function ($m) use ($hosts) {
+                $url = (string) $m[2];
+                $h = parse_url($url, PHP_URL_HOST);
+                if (!is_string($h) || $h === '') {
+                    return $m[0];
+                }
+                $h = strtolower($h);
+                if (strpos($h, 'www.') === 0) {
+                    $h = substr($h, 4);
+                }
+                foreach (array_keys($hosts) as $allowed) {
+                    $a = (string) $allowed;
+                    if (strpos($a, 'www.') === 0) {
+                        $a = substr($a, 4);
+                    }
+                    if ($h === $a) {
+                        return '';
+                    }
+                }
+                return $m[0];
+            },
             $text
         );
-        // 纯文本中的绝对站内 URL（避开已在标签属性内的，粗略：非引号后）
-        $text = preg_replace(
-            '#(?<!["\'=])https?://(?:www\.)?(?:' . $hostRe . ')[^\s<\'"]*#i',
-            '',
+        if (!is_string($text)) {
+            return '';
+        }
+        $text = preg_replace_callback(
+            '#(?<!["\'=])(https?://[^\s<\'"]+)#i',
+            function ($m) use ($hosts) {
+                $url = (string) $m[1];
+                $h = parse_url($url, PHP_URL_HOST);
+                if (!is_string($h) || $h === '') {
+                    return $m[0];
+                }
+                $h = strtolower($h);
+                if (strpos($h, 'www.') === 0) {
+                    $h = substr($h, 4);
+                }
+                foreach (array_keys($hosts) as $allowed) {
+                    $a = (string) $allowed;
+                    if (strpos($a, 'www.') === 0) {
+                        $a = substr($a, 4);
+                    }
+                    if ($h === $a) {
+                        return '';
+                    }
+                }
+                return $m[0];
+            },
             $text
         );
         return is_string($text) ? $text : '';
@@ -1603,20 +1707,53 @@ class MailNotify
         if (trim($subject) === '' || trim($body) === '') {
             return null;
         }
+        // OTP：正文缺 {{otpcode}} 则回退内置（禁止空验证码邮件，E476）
+        if (class_exists('MailChannels') && MailChannels::isOtpChannel($bindpage)
+            && !MailChannels::bodyHasOtpCodePlaceholder($body)) {
+            return null;
+        }
         if (class_exists('MailChannels')) {
             $vars = MailChannels::prepareVars($bindpage, $vars);
         }
         $subject = self::applyPlaceholders($subject, $vars, false);
         $body = self::applyPlaceholders($body, $vars, true);
-        // 系统场景：渲染后再剥一次站内 URL（占位符展开后也可能带入）
-        if (class_exists('MailChannels') && MailChannels::isSystemChannel($bindpage)) {
+        // 消毒后再判空（L-4）
+        if (trim($subject) === '' || trim(strip_tags($body)) === '') {
+            return null;
+        }
+        // 业务通知：渲染后再剥站内可点击链；验证码场景保留本站链接
+        if (class_exists('MailChannels') && MailChannels::isBusinessChannel($bindpage)) {
             $subject = self::stripSiteUrls($subject);
             $body = self::stripSiteUrls($body);
+            if (trim($subject) === '' || trim(strip_tags($body)) === '') {
+                return null;
+            }
         }
         return array(
             'subject' => $subject,
             'body'    => $body,
         );
+    }
+
+    /**
+     * 验证码：优先已发布绑定模板，否则 null（调用方回退 otpMailBody）
+     *
+     * @param int    $bindpage MailChannels::OTP_*
+     * @param int    $userId
+     * @param string $code
+     * @param int    $ttlSeconds
+     * @param string $actionLabel 如 注册/登录/重置密码
+     * @param array|null $userRow
+     * @return array{subject:string,body:string}|null
+     */
+    public static function renderOtpBoundTemplate($bindpage, $userId, $code, $ttlSeconds, $actionLabel, $userRow = null)
+    {
+        $vars = self::buildCommonVars((int) $userId, $userRow);
+        $vars['otpcode'] = preg_replace('/\D+/', '', (string) $code);
+        $mins = max(1, (int) ceil(max(1, (int) $ttlSeconds) / 60));
+        $vars['otpttl'] = (string) $mins;
+        $vars['otpaction'] = trim((string) $actionLabel);
+        return self::renderBoundTemplate((int) $bindpage, $vars);
     }
 
     /**
@@ -1801,6 +1938,62 @@ class MailNotify
         }
         $id = isset($comment['contentid']) ? (int) $comment['contentid'] : 0;
         return $id > 0 ? ('文章#' . $id) : '相关文章';
+    }
+
+    /**
+     * 文章前台绝对链接（/articles/{contentid}）
+     *
+     * @param array $comment
+     * @return string
+     */
+    private static function articleUrl(array $comment)
+    {
+        $id = isset($comment['contentid']) ? (int) $comment['contentid'] : 0;
+        if ($id <= 0) {
+            return '';
+        }
+        if (function_exists('vs_base_url')) {
+            $base = rtrim((string) vs_base_url(), '/');
+            if ($base !== '') {
+                return $base . '/articles/' . $id;
+            }
+        }
+        $site = self::siteUrl();
+        return $site !== '' ? ($site . '/articles/' . $id) : '';
+    }
+
+    /**
+     * 被引用评论正文（优先 formatRow.parent.excerpt，否则按 parentid 读库）
+     *
+     * @param array $comment
+     * @param int   $parentid
+     * @return string
+     */
+    private static function parentCommentBody(array $comment, $parentid)
+    {
+        $parentid = (int) $parentid;
+        if ($parentid <= 0) {
+            return '';
+        }
+        if (isset($comment['parent']) && is_array($comment['parent'])) {
+            $excerpt = isset($comment['parent']['excerpt'])
+                ? trim((string) $comment['parent']['excerpt'])
+                : '';
+            if ($excerpt !== '' && $excerpt !== '原评论不可用') {
+                return $excerpt;
+            }
+        }
+        if (!class_exists('CommentManager')) {
+            return '';
+        }
+        try {
+            $parent = CommentManager::findById($parentid);
+            if (is_array($parent) && isset($parent['body'])) {
+                return trim((string) $parent['body']);
+            }
+        } catch (Exception $e) {
+        }
+        return '';
     }
 
     /**

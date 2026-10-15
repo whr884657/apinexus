@@ -143,11 +143,15 @@ function vs_user_notify_markup()
  */
 function vs_user_dash_messages_panel(array $messages = array())
 {
-    echo '<section class="vs-panel uc-dash__panel uc-dash__msg uc-motion" aria-label="近期站内公告">' . "\n";
+    $base = function_exists('vs_site_path') ? vs_site_path('/user/messages') : '/user/messages';
+    // 固定高度：与「近期调用」同用 panel--scroll；列表最多 8 条
+    $messages = array_slice(array_values($messages), 0, 8);
+    echo '<section class="vs-panel uc-dash__panel uc-dash__panel--scroll uc-dash__msg uc-motion" aria-label="近期站内公告">' . "\n";
     echo '<div class="vs-panel__header uc-dash__panel-head">' . "\n";
     echo '<h2 class="vs-panel__title">近期站内公告</h2>' . "\n";
+    echo '<a class="uc-dash__more" href="' . vs_e($base) . '">全部公告</a>' . "\n";
     echo '</div>' . "\n";
-    echo '<div class="vs-panel__body" id="ucDashMsgBody">' . "\n";
+    echo '<div class="vs-panel__body uc-dash__scroll-body" id="ucDashMsgBody">' . "\n";
     if (empty($messages)) {
         echo '<p class="uc-dash__empty">暂无站内公告</p>' . "\n";
     } else {

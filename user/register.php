@@ -96,14 +96,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $_SESSION['user_reg_code_expires'] = time() + $codeTtl;
             AuthSecurity::resetOtpFailCount('user_register');
 
-            $body = '<div style="font-family:sans-serif;line-height:1.8;">';
-            $body .= '<p>您好：</p>';
-            $body .= '<p>您正在注册 ' . htmlspecialchars($siteName) . ' 用户账号，验证码为：</p>';
-            $body .= '<p style="font-size:24px;font-weight:bold;margin:16px 0;">' . htmlspecialchars($code) . '</p>';
-            $body .= '<p>验证码 ' . (int) ($codeTtl / 60) . ' 分钟内有效，请勿泄露给他人。</p>';
-            $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
+            $subject = $siteName . ' 注册验证码';
+            $body = null;
+            if (class_exists('MailNotify') && class_exists('MailChannels')) {
+                $bound = MailNotify::renderOtpBoundTemplate(
+                    MailChannels::OTP_USER_REGISTER,
+                    0,
+                    $code,
+                    $codeTtl,
+                    '注册',
+                    array('username' => $username, 'email' => $email)
+                );
+                if (is_array($bound)) {
+                    $subject = $bound['subject'];
+                    $body = $bound['body'];
+                }
+            }
+            if ($body === null) {
+                $body = '<div style="font-family:sans-serif;line-height:1.8;">';
+                $body .= '<p>您好：</p>';
+                $body .= '<p>您正在注册 ' . htmlspecialchars($siteName) . ' 用户账号，验证码为：</p>';
+                $body .= '<p style="font-size:24px;font-weight:bold;margin:16px 0;">' . htmlspecialchars($code) . '</p>';
+                $body .= '<p>验证码 ' . (int) ($codeTtl / 60) . ' 分钟内有效，请勿泄露给他人。</p>';
+                $body .= '<p>如非本人操作，请忽略此邮件。</p></div>';
+            }
 
-            if (!Mailer::send($email, $siteName . ' 注册验证码', $body)) {
+            if (!Mailer::send($email, $subject, $body)) {
                 vs_auth_json_mail($mailPurpose, array('code' => 0, 'msg' => '验证码发送失败，请稍后重试'));
             }
 

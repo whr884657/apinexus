@@ -94,30 +94,28 @@
         return m;
     }
 
-        function migrateStorageKeys(uid) {
+    function migrateStorageKeys(uid) {
+        uid = parseInt(uid, 10) || 0;
+        if (uid <= 0) {
+            return;
+        }
         try {
             var oldAck = storageGet(localStorage, POPUP_ACK_LEGACY);
             var oldSeen = storageGet(localStorage, POPUP_SEEN_LEGACY);
-            
             if (oldAck) {
                 storageSet(localStorage, POPUP_ACK_PREFIX + uid, oldAck);
             }
             if (oldSeen) {
                 storageSet(localStorage, POPUP_SEEN_PREFIX + uid, oldSeen);
             }
-            
-            // 修复：清理旧键，防止状态混乱（v13.26.46）
             try {
                 localStorage.removeItem(POPUP_ACK_LEGACY);
                 localStorage.removeItem(POPUP_SEEN_LEGACY);
-            } catch (e) {}
-        } catch (e) {}
+            } catch (eClean) { /* ignore */ }
+        } catch (eMig) { /* ignore */ }
     }
-        // 执行存储键迁移
-        if (userId) {
-            migrateStorageKeys(userId);
-        }
-        function init() {
+
+    function init() {
         var root = document.getElementById('vsUserNotify');
         var btn = document.getElementById('vsUserNotifyBtn');
         var panel = document.getElementById('vsUserNotifyPanel');
@@ -128,6 +126,8 @@
         var countEl = document.getElementById('vsUserNotifyCount');
         var bootEl = document.getElementById('vsUserNotifyBoot');
         var dashEl = document.getElementById('ucDashMsgBody');
+        /** 控制台近期列表固定条数（与近期调用排行同量级） */
+        var DASH_MSG_LIMIT = 8;
 
         // 先解析 boot，确保 userId 可用于 ack 键（只存 content id，键带用户）
         var bootPack = { user_id: 0, items: [], popups: [], has_items: 0 };
@@ -158,6 +158,7 @@
         if (root && userId > 0) {
             root.setAttribute('data-user-id', String(userId));
         }
+        migrateStorageKeys(userId);
 
         var ackKey = POPUP_ACK_PREFIX + String(userId);
         var seenKey = POPUP_SEEN_PREFIX + String(userId);
@@ -403,7 +404,7 @@
             if (!dashEl) {
                 return;
             }
-            items = Array.isArray(items) ? items : [];
+            items = Array.isArray(items) ? items.slice(0, DASH_MSG_LIMIT) : [];
             if (items.length === 0) {
                 dashEl.innerHTML = '<p class="uc-dash__empty">暂无站内公告</p>';
                 return;

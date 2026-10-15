@@ -257,10 +257,7 @@ $hasItems = $contentTotal > 0;
 $bindOptions = class_exists('MailChannels') ? MailChannels::optionsForSelect() : array(0 => '自定义（群发可用）');
 $phCatalog = class_exists('MailChannels')
     ? MailChannels::placeholderCatalogForUi()
-    : array(
-        'common' => array('用户名', '站点名', '站点名称', '站点链接', '日期', '时间', '余额', '用户头像'),
-        'byBind' => array('0' => array()),
-    );
+    : array('items' => array());
 
 $headerActions = '';
 if ($tableReady) {
@@ -283,7 +280,7 @@ vs_admin_layout_start('邮箱模板', 'sys-mailtpl', $headerActions);
     <?php vs_render_notice('warning', '尚未就绪', '请先在系统升级中执行数据库结构更新。', array('compact' => true)); ?>
 <?php else: ?>
 <div id="mailtplPage" data-content-total="<?php echo (int) $contentTotal; ?>">
-    <?php vs_render_notice('tip', '', '发信标题与正文支持占位符如 {{用户名}}、{{站点名}}、{{站点名称}}、{{站点链接}}、{{日期}}。绑定系统场景后由业务通知自动使用；自定义模板可供「邮件群发」选用。', array('compact' => true)); ?>
+    <?php vs_render_notice('tip', '', '发信标题与正文支持英文占位符（按钮为中文，点击插入如 {{username}}、{{browsertitle}}、{{siteurl}}）。全场景通用，未赋值则为空；绑定场景决定由哪类业务/验证码使用该模板。', array('compact' => true)); ?>
 
     <div class="vs-api-list-empty vs-api-list-empty--hero" id="mailtplEmpty"<?php echo $hasItems ? ' hidden' : ''; ?>>
         <div class="vs-api-list-empty__card">
@@ -361,37 +358,28 @@ vs_admin_layout_start('邮箱模板', 'sys-mailtpl', $headerActions);
             $aiLines = array();
             $aiLines[] = '请按以下约定编写一封 HTML 邮件模板（发信标题 + 正文）：';
             $aiLines[] = '';
-            $aiLines[] = '【可用占位符 · 公共】';
-            foreach ($phCatalog['common'] as $k) {
-                $aiLines[] = '{{' . $k . '}}';
-            }
-            $aiLines[] = '';
-            $aiLines[] = '【可用占位符 · 按绑定场景】（只使用当前绑定场景下列出的键）';
-            if (class_exists('MailChannels')) {
-                foreach (MailChannels::catalog() as $code => $row) {
-                    $keys = MailChannels::scenarioPlaceholderKeys($code);
-                    if (!$keys) {
-                        continue;
-                    }
-                    $aiLines[] = '· ' . $row['label'] . '：' . implode(' ', array_map(function ($x) {
-                        return '{{' . $x . '}}';
-                    }, $keys));
+            $aiLines[] = '【可用占位符 · 全局英文键 · 全场景可写 · 无下划线】';
+            $aiLines[] = '（格式：中文含义 = {{英文键}}；未赋值发信时为空）';
+            $phItems = isset($phCatalog['items']) && is_array($phCatalog['items']) ? $phCatalog['items'] : array();
+            foreach ($phItems as $row) {
+                $k = isset($row['key']) ? trim((string) $row['key']) : '';
+                $lb = isset($row['label']) ? trim((string) $row['label']) : $k;
+                if ($k === '') {
+                    continue;
                 }
+                $aiLines[] = $lb . ' = {{' . $k . '}}';
             }
             $aiLines[] = '';
             $aiLines[] = '【安全注意 · 必须遵守】';
             $aiLines[] = '1. 禁止 <script>、<iframe>、<object>、<embed>、<form>、<svg>、<math>、<link>、<meta>、<base>、<style> 标签。';
             $aiLines[] = '2. 禁止任何 on* 事件属性（如 onclick）与 javascript: / data: 伪协议链接。';
-            $aiLines[] = '3. 可用安全行内 style；图片仅用 https 或站内路径；占位符写成 {{键名}}。';
-            $aiLines[] = '4. 系统通知场景发信时会剥站内可点击链接；自定义/群发模板可使用 {{站点链接}}。';
-            $aiLines[] = '5. 不要编造未列出的占位符；缺值时该占位会替换为空。';
+            $aiLines[] = '3. 可用安全行内 style；图片仅用 https 或绝对站内路径；占位符只写英文短连写 {{key}}。';
+            $aiLines[] = '4. 业务通知渲染后会剥站内可点击链接；验证码/群发可使用 {{siteurl}}。';
+            $aiLines[] = '5. 不要编造未列出的占位符；缺值时该占位会替换为空。浏览器标题={{browsertitle}}，系统名称={{systemname}}，本站链接={{siteurl}}，友链对方站={{linkurl}}。';
             $aiPromptText = implode("\n", $aiLines);
             ?>
             <div class="vs-mailtpl-editor" id="mailtplEditor" data-mode="edit">
-                <div class="vs-mailtpl-editor__mobilebar">
-                    <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" id="mailtplPreviewToggle" aria-pressed="false">在线预览</button>
-                    <span class="vs-form-hint">手机：点此在编辑 / 预览间切换</span>
-                </div>
+                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-mailtpl-editor__preview-btn" id="mailtplPreviewToggle" aria-pressed="false">预览</button>
                 <div class="vs-mailtpl-editor__grid">
                     <div class="vs-mailtpl-editor__input" id="mailtplEditorInput">
                         <div class="vs-field">
@@ -400,7 +388,7 @@ vs_admin_layout_start('邮箱模板', 'sys-mailtpl', $headerActions);
                         </div>
                         <div class="vs-field">
                             <label class="vs-label" for="mailtplSummary">发信标题</label>
-                            <input class="vs-input" type="text" name="summary" id="mailtplSummary" maxlength="500" required placeholder="支持 {{站点名}} {{用户名}} 等">
+                            <input class="vs-input" type="text" name="summary" id="mailtplSummary" maxlength="500" required placeholder="支持 {{browsertitle}} {{username}} 等">
                         </div>
                         <div class="vs-field">
                             <label class="vs-label" for="mailtplBind">绑定场景</label>
@@ -414,8 +402,8 @@ vs_admin_layout_start('邮箱模板', 'sys-mailtpl', $headerActions);
                         <div class="vs-field">
                             <label class="vs-label" for="mailtplBodyText">邮件正文（HTML）</label>
                             <div class="vs-mailtpl-phbar" id="mailtplPhBar" data-ph-targets="mailtplSummary,mailtplBodyText"></div>
-                            <p class="vs-form-hint" id="mailtplPhHint">占位符随「绑定场景」切换。电脑右侧为实时预览。</p>
-                            <textarea class="vs-input vs-textarea vs-mailtpl-body" name="body" id="mailtplBodyText" rows="32" placeholder="HTML；可插入 {{用户名}} 等"></textarea>
+                            <p class="vs-form-hint" id="mailtplPhHint">按钮为中文，点击插入英文占位符；全表固定不随绑定场景增减。电脑右侧实时预览；手机点右上角「预览」。</p>
+                            <textarea class="vs-input vs-textarea vs-mailtpl-body" name="body" id="mailtplBodyText" rows="32" placeholder="HTML；可插入 {{username}} 等"></textarea>
                         </div>
                     </div>
                     <div class="vs-mailtpl-editor__preview" id="mailtplEditorPreview" aria-live="polite">
@@ -436,15 +424,18 @@ vs_admin_layout_start('邮箱模板', 'sys-mailtpl', $headerActions);
                         <option value="2">停用</option>
                     </select>
                 </div>
-                <div class="vs-settings-api-fold vs-mailtpl-ai-fold" id="mailtplAiFold">
+                <div class="vs-settings-api-fold vs-mailtpl-ph-fold" id="mailtplAiFold">
                     <button type="button" class="vs-settings-api-fold__bar" id="mailtplAiFoldBar" aria-expanded="false" aria-controls="mailtplAiFoldBody">
-                        <span class="vs-settings-api-fold__title">AI / 占位符说明（点击展开，可复制）</span>
+                        <span class="vs-settings-api-fold__title">占位符说明（点击展开）</span>
                         <i class="vs-icon vs-icon--chevron" aria-hidden="true"></i>
                     </button>
                     <div class="vs-settings-api-fold__body" id="mailtplAiFoldBody" hidden>
-                        <p class="vs-form-hint">给 AI 写模板时可整段复制；已含当前全部公共与场景占位符及安全约束。</p>
-                        <pre class="vs-mailtpl-ai-block" id="mailtplAiBlock"><code><?php echo vs_e($aiPromptText); ?></code></pre>
-                        <button type="button" class="vs-btn vs-btn--sm vs-btn--outline" id="mailtplAiCopyBtn">复制说明</button>
+                        <div class="vs-mailtpl-codewrap">
+                            <div class="vs-mailtpl-codewrap__bar">
+                                <button type="button" class="vs-btn vs-btn--sm vs-btn--outline vs-mailtpl-codewrap__copy" id="mailtplAiCopyBtn" title="复制说明">复制</button>
+                            </div>
+                            <pre class="vs-mailtpl-ai-block" id="mailtplAiBlock"><code><?php echo vs_e($aiPromptText); ?></code></pre>
+                        </div>
                     </div>
                 </div>
             </div>

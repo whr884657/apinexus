@@ -88,9 +88,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         try {
             $user = UserAuth::findByEmail($email);
             if (!$user) {
+                // 中性文案，避免邮箱枚举（E479）
                 vs_auth_json_mail($mailPurpose, array(
-                    'code' => 0,
-                    'msg'  => '该邮箱未在本站注册，无法发送验证码',
+                    'code' => 1,
+                    'msg'  => '若该邮箱已注册，验证码将发送至该邮箱',
                 ));
             }
 
@@ -102,14 +103,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $_SESSION['user_login_code_expires'] = time() + $codeTtl;
             AuthSecurity::resetOtpFailCount('user_login');
 
-            $body = Mailer::otpMailBody(
-                isset($user['username']) ? $user['username'] : $emailCanonical,
-                $siteName,
-                '登录',
-                $code,
-                $codeTtl
-            );
-            Mailer::send($emailCanonical, $siteName . ' 登录验证码', $body);
+            $subject = $siteName . ' 登录验证码';
+            $body = null;
+            if (class_exists('MailNotify') && class_exists('MailChannels')) {
+                $bound = MailNotify::renderOtpBoundTemplate(
+                    MailChannels::OTP_USER_LOGIN,
+                    (int) $user['id'],
+                    $code,
+                    $codeTtl,
+                    '登录',
+                    $user
+                );
+                if (is_array($bound)) {
+                    $subject = $bound['subject'];
+                    $body = $bound['body'];
+                }
+            }
+            if ($body === null) {
+                $body = Mailer::otpMailBody(
+                    isset($user['username']) ? $user['username'] : $emailCanonical,
+                    $siteName,
+                    '登录',
+                    $code,
+                    $codeTtl
+                );
+            }
+            Mailer::send($emailCanonical, $subject, $body);
 
             vs_auth_json_mail($mailPurpose, array(
                 'code' => 1,

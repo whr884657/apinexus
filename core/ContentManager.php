@@ -366,6 +366,24 @@ class ContentManager
     }
 
     /**
+     * 站内公告详情 HTML 消毒：复用 Markdown DOM 白名单（禁止正则黑名单，E477）
+     *
+     * @param string $html
+     * @return string
+     */
+    public static function sanitizeUserMessageHtml($html)
+    {
+        $html = (string) $html;
+        if ($html === '') {
+            return '';
+        }
+        if (class_exists('Markdown') && method_exists('Markdown', 'sanitizeHtml')) {
+            return Markdown::sanitizeHtml($html);
+        }
+        return vs_e(strip_tags($html));
+    }
+
+    /**
      * @param array $row
      * @return array
      */
@@ -740,10 +758,14 @@ class ContentManager
             if (trim($body) === '') {
                 return '请填写邮件正文';
             }
+            if (class_exists('MailChannels') && MailChannels::isOtpChannel($bindpage)
+                && !MailChannels::bodyHasOtpCodePlaceholder($body)) {
+                return '验证码场景正文必须包含 {{otpcode}}';
+            }
             if (class_exists('MailNotify')) {
                 $body = MailNotify::sanitizeMailHtml($body);
-                // 系统场景模板：入库即剥站内 URL（E432）
-                if (class_exists('MailChannels') && MailChannels::isSystemChannel($bindpage)) {
+                // 业务通知 10～26：入库即剥站内 URL（E432）；验证码/自定义不剥
+                if (class_exists('MailChannels') && MailChannels::isBusinessChannel($bindpage)) {
                     $summary = MailNotify::stripSiteUrls($summary);
                     $body = MailNotify::stripSiteUrls($body);
                 }
@@ -890,9 +912,13 @@ class ContentManager
             if (trim($body) === '') {
                 return '请填写邮件正文';
             }
+            if (class_exists('MailChannels') && MailChannels::isOtpChannel($bindpage)
+                && !MailChannels::bodyHasOtpCodePlaceholder($body)) {
+                return '验证码场景正文必须包含 {{otpcode}}';
+            }
             if (class_exists('MailNotify')) {
                 $body = MailNotify::sanitizeMailHtml($body);
-                if (class_exists('MailChannels') && MailChannels::isSystemChannel($bindpage)) {
+                if (class_exists('MailChannels') && MailChannels::isBusinessChannel($bindpage)) {
                     $summary = MailNotify::stripSiteUrls($summary);
                     $body = MailNotify::stripSiteUrls($body);
                 }
@@ -1189,15 +1215,84 @@ class ContentManager
     }
 
     /**
-     * 用户可见站内公告列表（只读；默认 20，最大 50；不拉全文 body）
+     * 站内公告可见范围 WHERE + 绑定（置顶全员可见；角色匹配 audmode）
      *
-     * @param int $userId
-     * @param int $limit
+     * @param string $role
+     * @param string $q 标题搜索（已截断）
+     * @return array{0:string,1:array}
+     */
+    private static function userMessageVisibleWhere($role, $q = '')
+    {
+        $sql = 'c.`kind` = ?
+                  AND c.`status` = ?
+                  AND (
+                        c.`ispinned` = 1
+                     OR c.`audmode` = ?
+                     OR (c.`audmode` = ? AND ? = ?)
+                     OR (c.`audmode` = ? AND ? = ?)
+                  )';
+        $params = array(
+            self::KIND_MESSAGE,
+            self::STATUS_PUBLISHED,
+            self::AUD_ALL,
+            self::AUD_DEVELOPER,
+            $role,
+            UserRole::ROLE_DEVELOPER,
+            self::AUD_USER,
+            $role,
+            UserRole::ROLE_USER,
+        );
+        $q = trim((string) $q);
+        if ($q !== '') {
+            $sql .= ' AND c.`title` LIKE ? ESCAPE \'\\\\\'';
+            $like = function_exists('vs_sql_like_contains')
+                ? vs_sql_like_contains($q)
+                : ('%' . str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), $q) . '%');
+            $params[] = $like;
+        }
+        return array($sql, $params);
+    }
+
+    /**
+     * 格式化用户站内公告列表行（不拉全文）
+     *
+     * @param array $row
+     * @return array|null
+     */
+    private static function formatUserMessageListItem(array $row)
+    {
+        $item = self::formatRow($row);
+        if (!is_array($item)) {
+            return null;
+        }
+        $body = isset($item['body']) ? (string) $item['body'] : '';
+        return array(
+            'id'         => (int) $item['id'],
+            'title'      => (string) $item['title'],
+            'preview'    => self::plainTextPreview($body, 80),
+            'ispinned'   => (int) $item['ispinned'],
+            'ispopup'    => (int) $item['ispopup'],
+            'createtime' => (string) $item['createtime'],
+        );
+    }
+
+    /**
+     * 用户可见站内公告列表（只读；默认 20，最大 100；不拉全文 body；控制台/铃铛用）
+     *
+     * @param int    $userId
+     * @param int    $limit
+     * @param string $q
      * @return array<int, array>
      */
-    public static function userListMessages($userId, $limit = 20)
+    public static function userListMessages($userId, $limit = 20, $q = '')
     {
-        $limit = max(1, min(50, (int) $limit));
+        $limit = max(1, min(100, (int) $limit));
+        $q = trim((string) $q);
+        if (function_exists('mb_substr')) {
+            $q = mb_substr($q, 0, 80, 'UTF-8');
+        } else {
+            $q = substr($q, 0, 80);
+        }
         if (!self::tableReady() || !self::hasAudModeColumn()) {
             return array();
         }
@@ -1208,32 +1303,14 @@ class ContentManager
         $role = $user['role'];
         try {
             $pdo = Database::connect();
-            // 置顶对全员可见；预览仅截断正文前缀，避免 mediumtext 放大
+            list($whereSql, $params) = self::userMessageVisibleWhere($role, $q);
             $sql = 'SELECT c.`id`, c.`title`, LEFT(c.`body`, 2000) AS `body`, c.`ispinned`, c.`ispopup`,
                            c.`audmode`, c.`status`, c.`kind`, c.`createtime`
                 FROM `' . self::table() . '` c
-                WHERE c.`kind` = ?
-                  AND c.`status` = ?
-                  AND (
-                        c.`ispinned` = 1
-                     OR c.`audmode` = ?
-                     OR (c.`audmode` = ? AND ? = ?)
-                     OR (c.`audmode` = ? AND ? = ?)
-                  )
-                ORDER BY c.`ispinned` DESC, c.`id` DESC
-                LIMIT ' . $limit;
+                WHERE ' . $whereSql
+                . ' ORDER BY c.`ispinned` DESC, c.`id` DESC LIMIT ' . $limit;
             $stmt = $pdo->prepare($sql);
-            $stmt->execute(array(
-                self::KIND_MESSAGE,
-                self::STATUS_PUBLISHED,
-                self::AUD_ALL,
-                self::AUD_DEVELOPER,
-                $role,
-                UserRole::ROLE_DEVELOPER,
-                self::AUD_USER,
-                $role,
-                UserRole::ROLE_USER,
-            ));
+            $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $out = array();
             if (is_array($rows)) {
@@ -1241,21 +1318,91 @@ class ContentManager
                     if (!is_array($row)) {
                         continue;
                     }
-                    $item = self::formatRow($row);
-                    $body = isset($item['body']) ? (string) $item['body'] : '';
-                    $out[] = array(
-                        'id'         => (int) $item['id'],
-                        'title'      => (string) $item['title'],
-                        'preview'    => self::plainTextPreview($body, 80),
-                        'ispinned'   => (int) $item['ispinned'],
-                        'ispopup'    => (int) $item['ispopup'],
-                        'createtime' => (string) $item['createtime'],
-                    );
+                    $one = self::formatUserMessageListItem($row);
+                    if ($one !== null) {
+                        $out[] = $one;
+                    }
                 }
             }
             return $out;
         } catch (Exception $e) {
             return array();
+        }
+    }
+
+    /**
+     * 用户全部站内公告真分页（OFFSET + COUNT；pagesize 1～50）
+     *
+     * @param int    $userId
+     * @param int    $page
+     * @param int    $pagesize
+     * @param string $q
+     * @return array{items:array,total:int,page:int,pagesize:int}
+     */
+    public static function userListMessagesPaged($userId, $page = 1, $pagesize = 20, $q = '')
+    {
+        $page = max(1, (int) $page);
+        $pagesize = max(1, min(50, (int) $pagesize));
+        $q = trim((string) $q);
+        if (function_exists('mb_substr')) {
+            $q = mb_substr($q, 0, 80, 'UTF-8');
+        } else {
+            $q = substr($q, 0, 80);
+        }
+        $empty = array(
+            'items'    => array(),
+            'total'    => 0,
+            'page'     => $page,
+            'pagesize' => $pagesize,
+        );
+        if (!self::tableReady() || !self::hasAudModeColumn()) {
+            return $empty;
+        }
+        $user = self::loadUserForMessage($userId);
+        if ($user === null) {
+            return $empty;
+        }
+        $role = $user['role'];
+        try {
+            $pdo = Database::connect();
+            list($whereSql, $params) = self::userMessageVisibleWhere($role, $q);
+            $from = ' FROM `' . self::table() . '` c WHERE ' . $whereSql;
+            $cnt = $pdo->prepare('SELECT COUNT(*)' . $from);
+            $cnt->execute($params);
+            $total = (int) $cnt->fetchColumn();
+            $maxPage = max(1, (int) ceil(($total > 0 ? $total : 1) / $pagesize));
+            if ($page > $maxPage) {
+                $page = $maxPage;
+            }
+            $offset = ($page - 1) * $pagesize;
+            $sql = 'SELECT c.`id`, c.`title`, LEFT(c.`body`, 2000) AS `body`, c.`ispinned`, c.`ispopup`,
+                           c.`audmode`, c.`status`, c.`kind`, c.`createtime`'
+                . $from
+                . ' ORDER BY c.`ispinned` DESC, c.`id` DESC LIMIT ' . (int) $pagesize
+                . ' OFFSET ' . (int) $offset;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $items = array();
+            if (is_array($rows)) {
+                foreach ($rows as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+                    $one = self::formatUserMessageListItem($row);
+                    if ($one !== null) {
+                        $items[] = $one;
+                    }
+                }
+            }
+            return array(
+                'items'    => $items,
+                'total'    => $total,
+                'page'     => $page,
+                'pagesize' => $pagesize,
+            );
+        } catch (Exception $e) {
+            return $empty;
         }
     }
 
