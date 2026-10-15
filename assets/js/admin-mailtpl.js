@@ -555,6 +555,15 @@
                 var id = parseInt(form.content_id.value, 10) || 0;
                 var fd = new FormData(form);
                 fd.append('action', id > 0 ? 'update' : 'create');
+                // 完整 HTML 易被 WAF 拦成 403，前端只见 invalid_json；body 须 VS64B 传输（E481）
+                try {
+                    if (form.body && window.VS && typeof window.VS.encodeTransportField === 'function') {
+                        fd.set('body', window.VS.encodeTransportField(form.body.value || ''));
+                    }
+                } catch (encErr) {
+                    window.VS.showMessage((encErr && encErr.message) ? encErr.message : '正文编码失败', 'error');
+                    return;
+                }
                 saveBtn.disabled = true;
                 VS.postForm(fd, window.location.href).then(function (res) {
                     if (!ok(res)) {
@@ -564,7 +573,11 @@
                     closeOverlay();
                     applyView();
                 }).catch(function (err) {
-                    window.VS.showMessage((err && err.message) ? err.message : '保存失败', 'error');
+                    var em = (err && err.message) ? String(err.message) : '保存失败';
+                    if (em === 'invalid_json') {
+                        em = '保存被拦截或返回异常，请缩短正文或刷新后重试';
+                    }
+                    window.VS.showMessage(em, 'error');
                 }).then(function () {
                     saveBtn.disabled = false;
                 });

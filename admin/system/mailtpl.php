@@ -132,11 +132,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_int($publishUid)) {
             AjaxResponse::error((string) $publishUid);
         }
+        // HTML 模板易触发 WAF(403→前端 invalid_json)；body 走 VS64B 传输，入库前解码为明文（E481）
+        $rawBody = isset($_POST['body']) ? (string) $_POST['body'] : '';
+        $bodyPlain = function_exists('vs_decode_transport_field')
+            ? vs_decode_transport_field($rawBody)
+            : $rawBody;
         $payload = array(
             'kind'     => $kind,
             'title'    => isset($_POST['title']) ? (string) $_POST['title'] : '',
             'summary'  => isset($_POST['summary']) ? (string) $_POST['summary'] : '',
-            'body'     => isset($_POST['body']) ? (string) $_POST['body'] : '',
+            'body'     => $bodyPlain,
             'bindpage' => isset($_POST['bindpage']) ? (int) $_POST['bindpage'] : 0,
             'status'   => isset($_POST['status'])
                 ? (int) $_POST['status']

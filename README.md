@@ -221,6 +221,7 @@ location / {
 - 修复：用户中心侧栏频闪（折叠键与管理端隔离，改用 matchMedia）
 - 优化：邮箱模板占位符说明与手机预览交互；群发临时撰写正文加高
 - 修复：邮箱模板手机预览粘性定位与占位符说明复制分区滚动
+- 修复：邮箱模板保存完整 HTML 被网关拦截（403/invalid_json）
 
 - 完整历史见 [`更新记录.md`](更新记录.md)
 
@@ -272,7 +273,7 @@ location / {
 
 ## 作者与仓库
 
-- 开发者个人站：[www.xunjinlu.fun](https://www.xunjinlu.fun/)
+- 开发者个人站：[api.xunjinlu.fun](https://api.xunjinlu.fun/)
 - Gitee：[https://gitee.com/xunjinlu/apinexus](https://gitee.com/xunjinlu/apinexus)
 - GitCode：[https://gitcode.com/xunjinlu/apinexus](https://gitcode.com/xunjinlu/apinexus)
 - GitHub：[https://github.com/whr884657/apinexus](https://github.com/whr884657/apinexus)
