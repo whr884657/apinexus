@@ -134,9 +134,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         // HTML 模板易触发 WAF(403→前端 invalid_json)；body 走 VS64B 传输，入库前解码为明文（E481）
         $rawBody = isset($_POST['body']) ? (string) $_POST['body'] : '';
-        $bodyPlain = function_exists('vs_decode_transport_field')
-            ? vs_decode_transport_field($rawBody)
-            : $rawBody;
+        if (!function_exists('vs_decode_transport_field')) {
+            AjaxResponse::error('传输解码不可用，请升级核心文件后重试');
+        }
+        $bodyPlain = vs_decode_transport_field($rawBody);
+        // 非空正文经客户端必须带传输前缀；解码后仍带前缀或空 → 禁止入库（对齐 E295，防包装串落库）
+        if (trim($rawBody) !== '') {
+            $hasPrefix = (defined('VS_TRANSPORT_PREFIX') && strncmp($rawBody, VS_TRANSPORT_PREFIX, strlen(VS_TRANSPORT_PREFIX)) === 0)
+                || (defined('VS_TRANSPORT_PREFIX_LEGACY') && strncmp($rawBody, VS_TRANSPORT_PREFIX_LEGACY, strlen(VS_TRANSPORT_PREFIX_LEGACY)) === 0);
+            if (!$hasPrefix) {
+                AjaxResponse::error('邮件正文须经安全传输编码后提交，请强制刷新后台缓存后再保存');
+            }
+            $stillWrapped = (defined('VS_TRANSPORT_PREFIX') && strncmp($bodyPlain, VS_TRANSPORT_PREFIX, strlen(VS_TRANSPORT_PREFIX)) === 0)
+                || (defined('VS_TRANSPORT_PREFIX_LEGACY') && strncmp($bodyPlain, VS_TRANSPORT_PREFIX_LEGACY, strlen(VS_TRANSPORT_PREFIX_LEGACY)) === 0);
+            if ($bodyPlain === '' || $stillWrapped) {
+                AjaxResponse::error('邮件正文解码失败，请缩短内容或检查网络拦截后重试');
+            }
+        }
         $payload = array(
             'kind'     => $kind,
             'title'    => isset($_POST['title']) ? (string) $_POST['title'] : '',

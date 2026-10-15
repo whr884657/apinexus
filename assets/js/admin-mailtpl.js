@@ -553,17 +553,33 @@
         if (saveBtn && form) {
             saveBtn.addEventListener('click', function () {
                 var id = parseInt(form.content_id.value, 10) || 0;
-                var fd = new FormData(form);
-                fd.append('action', id > 0 ? 'update' : 'create');
-                // 完整 HTML 易被 WAF 拦成 403，前端只见 invalid_json；body 须 VS64B 传输（E481）
+                var rawBody = form.body ? String(form.body.value || '') : '';
+                // 对齐 api-list：只往 FormData 写编码后的 body，禁止先塞明文再 set（防漏编码直打 WAF，E481）
+                if (rawBody !== '' && !(window.VS && typeof window.VS.encodeTransportField === 'function')) {
+                    window.VS.showMessage('页面脚本未就绪，请强制刷新后台后再保存', 'error');
+                    return;
+                }
+                var packedBody = '';
                 try {
-                    if (form.body && window.VS && typeof window.VS.encodeTransportField === 'function') {
-                        fd.set('body', window.VS.encodeTransportField(form.body.value || ''));
-                    }
+                    packedBody = rawBody === ''
+                        ? ''
+                        : window.VS.encodeTransportField(rawBody);
                 } catch (encErr) {
                     window.VS.showMessage((encErr && encErr.message) ? encErr.message : '正文编码失败', 'error');
                     return;
                 }
+                if (rawBody !== '' && (packedBody === '' || packedBody.indexOf('VS64B:') !== 0)) {
+                    window.VS.showMessage('正文编码异常，请刷新后重试', 'error');
+                    return;
+                }
+                var fd = new FormData();
+                fd.append('action', id > 0 ? 'update' : 'create');
+                fd.append('content_id', String(id));
+                fd.append('title', form.title ? String(form.title.value || '') : '');
+                fd.append('summary', form.summary ? String(form.summary.value || '') : '');
+                fd.append('body', packedBody);
+                fd.append('bindpage', form.bindpage ? String(form.bindpage.value || '0') : '0');
+                fd.append('status', form.status ? String(form.status.value || '1') : '1');
                 saveBtn.disabled = true;
                 VS.postForm(fd, window.location.href).then(function (res) {
                     if (!ok(res)) {
@@ -575,7 +591,7 @@
                 }).catch(function (err) {
                     var em = (err && err.message) ? String(err.message) : '保存失败';
                     if (em === 'invalid_json') {
-                        em = '保存被拦截或返回异常，请缩短正文或刷新后重试';
+                        em = '保存被拦截或返回异常，请强制刷新后台缓存后重试';
                     }
                     window.VS.showMessage(em, 'error');
                 }).then(function () {
