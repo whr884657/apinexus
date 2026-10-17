@@ -6,6 +6,7 @@
     RewriteRule ^config/ - [F,L]
     RewriteRule ^data/ - [F,L]
     RewriteRule ^core/data/ - [F,L]
+    RewriteRule ^core/geo/ - [F,L]
     # 系统 API Catalog JSON：仅 PHP 本地读，禁止 HTTP 直链（E412）
     RewriteRule ^assets/js/sysapi-catalog/ - [F,L]
 

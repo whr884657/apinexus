@@ -30,6 +30,7 @@ class MailChannels
     const DEV_APPLY = 24;
     const DEV_PASS = 25;
     const DEV_FAIL = 26;
+    const API_STATUS_SUB = 27;
 
     /** 验证码 30～34（无 mail_notify_*，靠 SMTP 总开关 + 入口 send_code） */
     const OTP_USER_REGISTER = 30;
@@ -61,6 +62,7 @@ class MailChannels
             self::DEV_APPLY => array('label' => '开发者申请通知管理员', 'config' => 'mail_notify_dev_apply'),
             self::DEV_PASS => array('label' => '开发者申请通过', 'config' => 'mail_notify_dev_pass'),
             self::DEV_FAIL => array('label' => '开发者申请拒绝', 'config' => 'mail_notify_dev_fail'),
+            self::API_STATUS_SUB => array('label' => '接口状态订阅', 'config' => 'mail_notify_apistatus'),
             self::OTP_USER_REGISTER => array('label' => '用户注册验证码', 'config' => ''),
             self::OTP_USER_LOGIN => array('label' => '用户登录验证码', 'config' => ''),
             self::OTP_USER_FORGOT => array('label' => '用户忘记密码验证码', 'config' => ''),
@@ -81,7 +83,7 @@ class MailChannels
     }
 
     /**
-     * 业务通知 10～26（渲染后可剥站内可点击链；验证码不剥）
+     * 业务通知 10～27（渲染后可剥站内可点击链；场景 27 保留纯文本详情地址；验证码不剥）
      *
      * @param mixed $bind
      * @return bool
@@ -89,7 +91,7 @@ class MailChannels
     public static function isBusinessChannel($bind)
     {
         $n = (int) $bind;
-        return $n >= self::API_SUBMIT && $n <= self::DEV_FAIL;
+        return $n >= self::API_SUBMIT && $n <= self::API_STATUS_SUB;
     }
 
     /**
@@ -103,7 +105,7 @@ class MailChannels
     }
 
     /**
-     * 邮箱模板允许的 bindpage：0 / 业务 10～26 / 验证码 30～34
+     * 邮箱模板允许的 bindpage：0 / 业务 10～27 / 验证码 30～34
      *
      * @param mixed $bind
      * @return bool
@@ -192,6 +194,10 @@ class MailChannels
             array('key' => 'apiname', 'label' => '接口名称'),
             array('key' => 'apiid', 'label' => '接口编号'),
             array('key' => 'apiurl', 'label' => '接口地址'),
+            array('key' => 'apidesc', 'label' => '接口描述'),
+            array('key' => 'apidetailurl', 'label' => '接口详情地址'),
+            array('key' => 'apistatuslabel', 'label' => '接口变更'),
+            array('key' => 'apisublist', 'label' => '订阅变更列表'),
             array('key' => 'submitter', 'label' => '提交者'),
             array('key' => 'rejectreason', 'label' => '拒绝原因'),
             array('key' => 'linkname', 'label' => '友链网站名'),

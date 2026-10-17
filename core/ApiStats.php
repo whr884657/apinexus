@@ -345,12 +345,15 @@ class ApiStats
                 return;
             }
             // 已预扣但上游失败：退回积分
+            $refundOk = true;
             if (!$ok && self::$proxyPrepaid !== null) {
-                self::refundProxyPrepaid('上游调用失败退回');
+                $refundOk = self::refundProxyPrepaid('上游调用失败退回');
             }
             self::write($row, (bool) $ok, (int) $http);
             self::$done[$id] = true;
-            self::$proxyPrepaid = null;
+            if ($refundOk) {
+                self::$proxyPrepaid = null;
+            }
         } catch (Exception $e) {
             // ignore
         }
@@ -424,13 +427,14 @@ class ApiStats
             );
         }
         self::$proxyPrepaid = array(
-            'userid'      => (int) self::$keyCtx['userid'],
-            'keyid'       => (int) self::$keyCtx['keyid'],
-            'apiid'       => $id,
-            'amount'      => $price,
-            'quota_delta' => !empty($deduct['use_quota']) ? $price : 0.0,
-            'remark'      => $remark,
-            'use_quota'   => !empty($deduct['use_quota']),
+            'userid'        => (int) self::$keyCtx['userid'],
+            'keyid'         => (int) self::$keyCtx['keyid'],
+            'apiid'         => $id,
+            'amount'        => $price,
+            'quota_delta'   => !empty($deduct['use_quota']) ? $price : 0.0,
+            'remark'        => $remark,
+            'use_quota'     => !empty($deduct['use_quota']),
+            'debit_orderno' => isset($deduct['orderno']) ? (string) $deduct['orderno'] : '',
         );
         return true;
     }
@@ -498,12 +502,12 @@ class ApiStats
 
     /**
      * @param string $remark
-     * @return void
+     * @return bool
      */
     private static function refundProxyPrepaid($remark = '')
     {
         if (self::$proxyPrepaid === null) {
-            return;
+            return true;
         }
         $p = self::$proxyPrepaid;
         $amount = (float) $p['amount'];
@@ -515,16 +519,23 @@ class ApiStats
                 $amount,
                 (int) $p['apiid'],
                 (int) $p['keyid'],
-                $remark !== '' ? $remark : '上游失败退回'
+                $remark !== '' ? $remark : '上游失败退回',
+                isset($p['debit_orderno']) ? (string) $p['debit_orderno'] : ''
             );
             $pointsOk = !empty($refund['ok']);
         }
         // 积分已退（或本次本未扣积分）时回滚 quotaused；免扣路径用 quota_delta=库表原价
-        if ($pointsOk && !empty($p['use_quota']) && $quotaDelta > 0.0000001
+        if (!$pointsOk) {
+            return false;
+        }
+        if (!empty($p['use_quota']) && $quotaDelta > 0.0000001
             && class_exists('ApiKeyManager') && method_exists('ApiKeyManager', 'adjustQuotaused')) {
-            ApiKeyManager::adjustQuotaused((int) $p['keyid'], -$quotaDelta);
+            if (!ApiKeyManager::adjustQuotaused((int) $p['keyid'], -$quotaDelta)) {
+                return false;
+            }
         }
         self::$proxyPrepaid = null;
+        return true;
     }
 
     /**
@@ -966,7 +977,8 @@ class ApiStats
                     (float) $amount,
                     (int) $apiId,
                     (int) $keyId,
-                    '令牌配额并发冲突退回'
+                    '令牌配额并发冲突退回',
+                    isset($deduct['orderno']) ? (string) $deduct['orderno'] : ''
                 );
                 if (class_exists('MailNotify')) {
                     try {
@@ -1328,8 +1340,10 @@ class ApiStats
         $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
         $path = parse_url($uri, PHP_URL_PATH);
         $path = is_string($path) ? $path : '';
-        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
+        $https = class_exists('AuthSecurity')
+            ? AuthSecurity::isHttps()
+            : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443));
         $scheme = $https ? 'https' : 'http';
         $url = $host !== '' ? ($scheme . '://' . $host . $uri) : $uri;
 

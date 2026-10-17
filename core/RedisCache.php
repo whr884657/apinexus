@@ -37,27 +37,40 @@ class RedisCache
     const KEY_STAT_MISSES = 'stats:cache_misses';
     const KEY_USER_STATUS_PREFIX = 'cache:user_status:';
     const KEY_ADMIN_STATUS_PREFIX = 'cache:admin_status:';
+    /** 已订阅接口状态的用户列表（变更订阅或封禁后失效） */
+    const KEY_SUB_APISTATUS_USERS = 'cache:sub:apistatus:users';
+    const KEY_SUB_APISTATUS_USERS_VERSION = 'cache:sub:apistatus:users:version';
+    /** 待发的接口状态变更（Redis 列表，不落库） */
+    const KEY_SUB_APISTATUS_QUEUE = 'cache:sub:apistatus:queue';
 
-    /** 前台内容长时缓存：后台保存须 invalidateFrontend / 针对性 forget（E417） */
-    const TTL_FRONTEND_API = 86400;
-    const TTL_FRONTEND_CATEGORY = 86400;
-    const TTL_FRONTEND_LINK = 86400;
-    const TTL_FRONTEND_PARTNER = 86400;
+    /** 前台列表短缓存：约 10 秒，保存时仍 invalidateFrontend / forget（E485） */
+    const TTL_FRONTEND_API = 10;
+    const TTL_FRONTEND_CATEGORY = 10;
+    const TTL_FRONTEND_LINK = 10;
+    const TTL_FRONTEND_PARTNER = 10;
     /** 赞助商列表与伙伴同级缓存时长 */
-    const TTL_FRONTEND_SPONSOR = 86400;
-    const TTL_FRONTEND_ARTICLE = 86400;
-    const TTL_FRONTEND_ANNOUNCE = 86400;
-    const TTL_FRONTEND_MISC = 86400;
-    const TTL_API_PUBLIC = 86400;
+    const TTL_FRONTEND_SPONSOR = 10;
+    const TTL_FRONTEND_ARTICLE = 10;
+    const TTL_FRONTEND_ANNOUNCE = 10;
+    const TTL_FRONTEND_MISC = 10;
+    const TTL_API_PUBLIC = 10;
     /** 日志查询/列表短 TTL（筛选组合多，禁止 24h） */
     const TTL_APILOG_PAGE = 90;
-    /** 今日调用无日期键时的兜底 TTL；优先用 ttlUntilEndOfDay */
+    /** 全站今日调用次数缓存（控制台 / 大屏 / 前台首页共用；E485） */
+    const TTL_APILOG_TODAY = 10;
+    /** 今日调用无日期键时的兜底 TTL */
     const TTL_APILOG_STATS = 3600;
     /** 时间窗总数稍长，避免每次进页都 COUNT */
     const TTL_APILOG_RANGE_TOTAL = 180;
     const TTL_ORDERS_RANGE_TOTAL = 180;
     const TTL_USER_STATUS = 30;
     const TTL_ADMIN_STATUS = 30;
+    /** 订阅用户名单；改订阅、封禁、改邮箱时 invalidateApiStatusSubscribers */
+    const TTL_SUB_APISTATUS_USERS = 600;
+    /** 待发队列整体保留 7 天，过期由键 TTL 与消费时按 at 丢弃 */
+    const TTL_SUB_APISTATUS_QUEUE = 604800;
+    const TTL_SUB_APISTATUS_CLAIM = 900;
+    const MAX_SUB_APISTATUS_QUEUE = 300;
 
     const MAX_RATE_LIMIT_KEYS = 2000;
     const STAT_MAX_VALUE = 100000000;
@@ -69,6 +82,80 @@ class RedisCache
     public static function enabled()
     {
         return RedisService::extensionLoaded() && RedisService::ping();
+    }
+
+    /**
+     * 读缓存；未命中则执行回调，仅当代际号仍为查询前的值时写回。
+     * 封禁等失效必须先推进代际再删缓存，避免旧查询把旧状态写回去。
+     *
+     * @param string   $logicalKey
+     * @param string   $versionKey
+     * @param int      $ttl
+     * @param callable $factory
+     * @return mixed
+     */
+    public static function rememberGuarded($logicalKey, $versionKey, $ttl, $factory)
+    {
+        if (!self::enabled()) {
+            return call_user_func($factory);
+        }
+
+        try {
+            return RedisService::withClient(function ($redis) use ($logicalKey, $versionKey, $ttl, $factory) {
+                $fullKey = RedisService::buildKey($logicalKey);
+                $verKey = RedisService::buildKey($versionKey);
+                $generation = (int) $redis->get($verKey);
+                $raw = $redis->get($fullKey);
+                if ($raw !== false && $raw !== '') {
+                    $cached = self::safeUnserialize($raw);
+                    if (is_array($cached)
+                        && isset($cached['g'], $cached['v'])
+                        && (int) $cached['g'] === $generation
+                    ) {
+                        self::incrStat($redis, self::KEY_STAT_HITS);
+                        return $cached['v'];
+                    }
+                }
+
+                self::incrStat($redis, self::KEY_STAT_MISSES);
+                $value = call_user_func($factory);
+                $payload = serialize(array('g' => $generation, 'v' => $value));
+                $script = "local v=redis.call('GET',KEYS[1]); if not v then v='0' end; "
+                    . "if v~=ARGV[1] then return 0 end; "
+                    . "redis.call('SETEX',KEYS[2],ARGV[3],ARGV[2]); return 1";
+                $redis->eval(
+                    $script,
+                    array($verKey, $fullKey, (string) $generation, $payload, max(1, (int) $ttl)),
+                    2
+                );
+                self::maybeMaintain($redis);
+                return $value;
+            });
+        } catch (Exception $e) {
+            return call_user_func($factory);
+        }
+    }
+
+    /**
+     * 推进代际并删除对应缓存。进行中的 rememberGuarded 写回会因代际不符而放弃。
+     *
+     * @param string $logicalKey
+     * @param string $versionKey
+     * @return void
+     */
+    public static function invalidateGuarded($logicalKey, $versionKey)
+    {
+        if (!self::enabled()) {
+            return;
+        }
+        try {
+            RedisService::withClient(function ($redis) use ($logicalKey, $versionKey) {
+                $redis->incr(RedisService::buildKey($versionKey));
+                $redis->del(RedisService::buildKey($logicalKey));
+            });
+        } catch (Exception $e) {
+            // 缓存有 TTL，数据库仍是权威数据
+        }
     }
 
     /**
@@ -173,6 +260,223 @@ class RedisCache
     public static function set($logicalKey, $value, $ttl)
     {
         self::put($logicalKey, $value, $ttl);
+    }
+
+    /**
+     * 接口状态变更写入待发队列。队列满时拒绝新事件并返回 false，不裁掉旧事件。
+     *
+     * @param int $apiId
+     * @param int $toStatus
+     * @return bool
+     */
+    public static function pushApiStatusNotice($apiId, $toStatus)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId <= 0 || !self::enabled()) {
+            return false;
+        }
+        try {
+            $id = bin2hex(random_bytes(16));
+        } catch (Throwable $e) {
+            return false;
+        }
+        $payload = json_encode(array(
+            'id'    => $id,
+            'apiid' => $apiId,
+            'to'    => (int) $toStatus,
+            'at'    => time(),
+        ));
+        if (!is_string($payload)) {
+            return false;
+        }
+        try {
+            return (bool) RedisService::withClient(function ($redis) use ($payload) {
+                $key = RedisService::buildKey(self::KEY_SUB_APISTATUS_QUEUE);
+                $script = "local n=redis.call('LLEN',KEYS[1]); "
+                    . "if n>=tonumber(ARGV[2]) then return 0 end; "
+                    . "redis.call('RPUSH',KEYS[1],ARGV[1]); "
+                    . "redis.call('EXPIRE',KEYS[1],tonumber(ARGV[3])); return 1";
+                return $redis->eval(
+                    $script,
+                    array($key, $payload, self::MAX_SUB_APISTATUS_QUEUE, self::TTL_SUB_APISTATUS_QUEUE),
+                    1
+                );
+            });
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 原子领取一批待发记录；每条事件以稳定 ID 独立加锁。
+     *
+     * @param int $limit
+     * @return array{ok:bool,events:array<int,array>}
+     */
+    public static function claimApiStatusNotices($limit)
+    {
+        $limit = (int) $limit;
+        if ($limit <= 0 || !self::enabled()) {
+            return array('ok' => false, 'events' => array());
+        }
+        try {
+            return RedisService::withClient(function ($redis) use ($limit) {
+                $key = RedisService::buildKey(self::KEY_SUB_APISTATUS_QUEUE);
+                $rawRows = $redis->lRange($key, 0, $limit - 1);
+                if (!is_array($rawRows)) {
+                    return array('ok' => false, 'events' => array());
+                }
+                $events = array();
+                foreach ($rawRows as $raw) {
+                    $raw = (string) $raw;
+                    $decoded = json_decode($raw, true);
+                    $id = is_array($decoded) && !empty($decoded['id'])
+                        ? (string) $decoded['id']
+                        : 'invalid-' . hash('sha256', $raw);
+                    $claimToken = bin2hex(random_bytes(16));
+                    $claimKey = RedisService::buildKey(self::KEY_SUB_APISTATUS_QUEUE . ':claim:' . $id);
+                    $claimed = $redis->set(
+                        $claimKey,
+                        $claimToken,
+                        array('nx', 'ex' => self::TTL_SUB_APISTATUS_CLAIM)
+                    );
+                    if (!$claimed) {
+                        continue;
+                    }
+                    $events[] = array(
+                        'id' => $id,
+                        'apiid' => is_array($decoded) && isset($decoded['apiid']) ? (int) $decoded['apiid'] : 0,
+                        'tostatus' => is_array($decoded) && isset($decoded['to']) ? (int) $decoded['to'] : -1,
+                        'at' => is_array($decoded) && isset($decoded['at']) ? (int) $decoded['at'] : 0,
+                        '_raw' => $raw,
+                        '_claim' => $claimToken,
+                    );
+                }
+                return array('ok' => true, 'events' => $events);
+            });
+        } catch (Exception $e) {
+            return array('ok' => false, 'events' => array());
+        }
+    }
+
+    /**
+     * 精确 ack 已成功处理的事件，或释放失败事件的领取锁。
+     *
+     * @param array<int,array> $events
+     * @param bool $ack
+     * @return void
+     */
+    public static function finishApiStatusNotices(array $events, $ack)
+    {
+        if ($events === array() || !self::enabled()) {
+            return;
+        }
+        try {
+            RedisService::withClient(function ($redis) use ($events, $ack) {
+                $queueKey = RedisService::buildKey(self::KEY_SUB_APISTATUS_QUEUE);
+                foreach ($events as $event) {
+                    if (empty($event['_claim']) || empty($event['_raw']) || empty($event['id'])) {
+                        continue;
+                    }
+                    $claimKey = RedisService::buildKey(self::KEY_SUB_APISTATUS_QUEUE . ':claim:' . $event['id']);
+                    if ($ack) {
+                        $script = "if redis.call('GET',KEYS[2])==ARGV[1] then "
+                            . "redis.call('LREM',KEYS[1],1,ARGV[2]); "
+                            . "redis.call('DEL',KEYS[2]); return 1 end; return 0";
+                        $redis->eval($script, array($queueKey, $claimKey, $event['_claim'], $event['_raw']), 2);
+                    } else {
+                        $script = "if redis.call('GET',KEYS[1])==ARGV[1] then "
+                            . "return redis.call('DEL',KEYS[1]) end; return 0";
+                        $redis->eval($script, array($claimKey, $event['_claim']), 1);
+                    }
+                }
+            });
+        } catch (Exception $e) {
+            // 领取锁过期后可重试；精确 ack 不删除后续事件
+        }
+    }
+
+    /**
+     * 读取订阅名单缓存及其代际号。
+     *
+     * @return array{available:bool,generation:int,users:array|null}
+     */
+    public static function apiStatusSubscribersCacheSnapshot()
+    {
+        $miss = array('available' => false, 'generation' => 0, 'users' => null);
+        if (!self::enabled()) {
+            return $miss;
+        }
+        try {
+            return RedisService::withClient(function ($redis) {
+                $versionKey = RedisService::buildKey(self::KEY_SUB_APISTATUS_USERS_VERSION);
+                $generation = (int) $redis->get($versionKey);
+                $raw = $redis->get(RedisService::buildKey(self::KEY_SUB_APISTATUS_USERS));
+                if ($raw === false || $raw === '') {
+                    return array('available' => true, 'generation' => $generation, 'users' => null);
+                }
+                $cached = self::safeUnserialize($raw);
+                if (!is_array($cached)
+                    || !isset($cached['generation'], $cached['users'])
+                    || (int) $cached['generation'] !== $generation
+                    || !is_array($cached['users'])
+                ) {
+                    return array('available' => true, 'generation' => $generation, 'users' => null);
+                }
+                return array('available' => true, 'generation' => $generation, 'users' => $cached['users']);
+            });
+        } catch (Exception $e) {
+            return $miss;
+        }
+    }
+
+    /**
+     * 仅在名单缓存仍处于查询开始时的代际下写入。
+     *
+     * @param int $generation
+     * @param array $users
+     * @return void
+     */
+    public static function putApiStatusSubscribersIfCurrent($generation, array $users)
+    {
+        if (!self::enabled()) {
+            return;
+        }
+        $payload = serialize(array('generation' => (int) $generation, 'users' => $users));
+        try {
+            RedisService::withClient(function ($redis) use ($generation, $payload) {
+                $versionKey = RedisService::buildKey(self::KEY_SUB_APISTATUS_USERS_VERSION);
+                $cacheKey = RedisService::buildKey(self::KEY_SUB_APISTATUS_USERS);
+                $script = "local v=redis.call('GET',KEYS[1]); if not v then v='0' end; "
+                    . "if v~=ARGV[1] then return 0 end; "
+                    . "redis.call('SETEX',KEYS[2],ARGV[3],ARGV[2]); return 1";
+                $redis->eval(
+                    $script,
+                    array($versionKey, $cacheKey, (string) (int) $generation, $payload, self::TTL_SUB_APISTATUS_USERS),
+                    2
+                );
+            });
+        } catch (Exception $e) {
+            // 缓存失败不影响名单查询结果
+        }
+    }
+
+    /** 使订阅名单缓存失效并推进代际。 */
+    public static function invalidateApiStatusSubscribers()
+    {
+        if (!self::enabled()) {
+            return;
+        }
+        try {
+            RedisService::withClient(function ($redis) {
+                $versionKey = RedisService::buildKey(self::KEY_SUB_APISTATUS_USERS_VERSION);
+                $cacheKey = RedisService::buildKey(self::KEY_SUB_APISTATUS_USERS);
+                $redis->incr($versionKey);
+                $redis->del($cacheKey);
+            });
+        } catch (Exception $e) {
+            // 缓存有 TTL，数据库仍是权威数据
+        }
     }
 
     /**
@@ -376,7 +680,7 @@ class RedisCache
             return;
         }
         $logicalKey = self::apilogTodayKey();
-        $ttl = self::ttlUntilEndOfDay();
+        $ttl = (int) self::TTL_APILOG_TODAY;
         try {
             RedisService::withClient(function ($redis) use ($logicalKey, $by, $ttl) {
                 $fullKey = RedisService::buildKey($logicalKey);
@@ -406,7 +710,7 @@ class RedisCache
     public static function putApiLogToday($count, $day = '')
     {
         $count = max(0, (int) $count);
-        self::put(self::apilogTodayKey($day), $count, self::ttlUntilEndOfDay());
+        self::put(self::apilogTodayKey($day), $count, (int) self::TTL_APILOG_TODAY);
     }
 
     /**
@@ -681,9 +985,25 @@ class RedisCache
                 'chart_color' => '#22c55e',
             ),
             array(
+                'id' => 'sub_apistatus_users',
+                'label' => '接口状态订阅用户',
+                'desc' => '已打开订阅的用户名单；改订阅、封禁、改邮箱后推进代际并清除',
+                'key' => self::KEY_SUB_APISTATUS_USERS,
+                'ttl_hint' => self::TTL_SUB_APISTATUS_USERS . ' 秒',
+                'chart_color' => '#a855f7',
+            ),
+            array(
+                'id' => 'sub_apistatus_queue',
+                'label' => '接口状态待发邮件',
+                'desc' => '接口上架、下架、维护待发队列，计划任务消费',
+                'key' => self::KEY_SUB_APISTATUS_QUEUE,
+                'ttl_hint' => '7 天',
+                'chart_color' => '#7c3aed',
+            ),
+            array(
                 'id' => 'user_status',
                 'label' => '用户封禁状态',
-                'desc' => '登录检查与带密钥接口热路径共用；封禁/解禁/删号须立即失效',
+                'desc' => '登录检查与带密钥接口热路径共用；封禁/解禁/删号推进代际并立即失效',
                 'key' => self::KEY_USER_STATUS_PREFIX,
                 'ttl_hint' => self::TTL_USER_STATUS . ' 秒',
                 'pattern' => true,
@@ -692,7 +1012,7 @@ class RedisCache
             array(
                 'id' => 'admin_status',
                 'label' => '管理员状态',
-                'desc' => '后台登录检查；与用户状态键隔离',
+                'desc' => '后台登录检查；与用户状态键隔离；禁用时推进代际',
                 'key' => self::KEY_ADMIN_STATUS_PREFIX,
                 'ttl_hint' => self::TTL_ADMIN_STATUS . ' 秒',
                 'pattern' => true,
@@ -719,9 +1039,9 @@ class RedisCache
             array(
                 'id' => 'apilog_today',
                 'label' => '今日调用次数',
-                'desc' => '键 cache:apilog:today_count:Y-m-d；写入 bump；冷启 remember 回源 statday/COUNT；TTL 至当日结束',
+                'desc' => '键 cache:apilog:today_count:Y-m-d；写入 bump；冷启 remember 回源 statday/COUNT',
                 'key' => self::KEY_APILOG_TODAY . ':',
-                'ttl_hint' => '至当日结束（约 ' . self::ttlUntilEndOfDay() . ' 秒）',
+                'ttl_hint' => self::TTL_APILOG_TODAY . ' 秒',
                 'pattern' => true,
                 'chart_color' => '#ec4899',
             ),

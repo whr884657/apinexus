@@ -102,11 +102,69 @@ class Config
      */
     public static function setMany(array $items)
     {
-        foreach ($items as $key => $value) {
-            self::set($key, $value);
+        if (array_key_exists('checkin_points_min', $items) || array_key_exists('checkin_points_max', $items)) {
+            $range = self::normalizeCheckinPointsRange(
+                array_key_exists('checkin_points_min', $items)
+                    ? $items['checkin_points_min']
+                    : self::get('checkin_points_min', '10'),
+                array_key_exists('checkin_points_max', $items)
+                    ? $items['checkin_points_max']
+                    : self::get('checkin_points_max', '30')
+            );
+            $items['checkin_points_min'] = (string) $range['min'];
+            $items['checkin_points_max'] = (string) $range['max'];
         }
+
+        $pdo = Database::connect();
+        $ownsTransaction = !$pdo->inTransaction();
+        $table = Database::table('config');
+        try {
+            if ($ownsTransaction) {
+                $pdo->beginTransaction();
+            }
+            $stmt = $pdo->prepare(
+                'INSERT INTO `' . $table . '` (`key`, `value`) VALUES (?, ?) '
+                . 'ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)'
+            );
+            foreach ($items as $key => $value) {
+                $key = (string) $key;
+                if (class_exists('InstallChecker') && $key === InstallChecker::CONFIG_KEY_DONE) {
+                    if (trim((string) $value) !== '1') {
+                        throw new Exception('禁止修改或清除安装完成标记');
+                    }
+                    $value = '1';
+                }
+                $stmt->execute(array($key, (string) $value));
+            }
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+        } catch (Exception $e) {
+            if ($ownsTransaction && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+
         self::$cache = null;
         SiteContext::clearCache();
+    }
+
+    /**
+     * Keep check-in point bounds valid for both persistence and runtime reads.
+     *
+     * @param mixed $min
+     * @param mixed $max
+     * @return array{min:int,max:int}
+     */
+    public static function normalizeCheckinPointsRange($min, $max)
+    {
+        $min = max(1, min(1000000, (int) $min));
+        $max = max(1, min(1000000, (int) $max));
+        if ($max < $min) {
+            $max = $min;
+        }
+        return array('min' => $min, 'max' => $max);
     }
 
     /**

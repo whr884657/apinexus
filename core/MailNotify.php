@@ -442,6 +442,80 @@ class MailNotify
     }
 
     /**
+     * 接口上架、下架、维护：每个订阅用户一封，正文可含多条。
+     *
+     * @param array $user
+     * @param array<int,array{label:string,name:string,desc:string,url:string}> $items
+     * @return array{ok:bool,sent:int,error:string}
+     */
+    public static function notifyApiStatusDigest(array $user, array $items)
+    {
+        if (!Config::isMailEnabled()) {
+            return array('ok' => false, 'sent' => 0, 'error' => '邮箱发信未配置');
+        }
+        if (Config::get('mail_notify_apistatus', '0') !== '1') {
+            return array('ok' => false, 'sent' => 0, 'error' => '已关闭接口状态订阅邮件');
+        }
+        $to = isset($user['email']) ? trim((string) $user['email']) : '';
+        if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return array('ok' => false, 'sent' => 0, 'error' => '用户邮箱无效');
+        }
+        if (count($items) === 0) {
+            return array('ok' => false, 'sent' => 0, 'error' => '没有可通知的变更');
+        }
+        $userId = isset($user['id']) ? (int) $user['id'] : 0;
+        $vars = self::buildCommonVars($userId);
+        $lines = array();
+        foreach ($items as $item) {
+            $label = isset($item['label']) ? (string) $item['label'] : '';
+            $name = isset($item['name']) ? (string) $item['name'] : '';
+            $desc = isset($item['desc']) ? (string) $item['desc'] : '暂无描述';
+            $url = isset($item['url']) ? (string) $item['url'] : '';
+            $block = $label . '　' . $name . "\n" . $desc;
+            if ($url !== '') {
+                $block .= "\n详情：" . $url;
+            }
+            $lines[] = $block;
+        }
+        $vars['apisublist'] = implode("\n\n", $lines);
+        $vars['apiname'] = '';
+        $vars['apidesc'] = '';
+        $vars['apidetailurl'] = '';
+        $vars['apistatuslabel'] = '';
+        if (count($items) === 1) {
+            $one = $items[0];
+            $vars['apiname'] = isset($one['name']) ? (string) $one['name'] : '';
+            $vars['apidesc'] = isset($one['desc']) ? (string) $one['desc'] : '';
+            $vars['apidetailurl'] = isset($one['url']) ? (string) $one['url'] : '';
+            $vars['apistatuslabel'] = isset($one['label']) ? (string) $one['label'] : '';
+        }
+        $channel = class_exists('MailChannels') ? MailChannels::API_STATUS_SUB : 27;
+        $bound = self::renderBoundTemplate($channel, $vars);
+        if (is_array($bound)) {
+            return self::sendOne($to, $bound['subject'], $bound['body']);
+        }
+        $siteName = self::siteName();
+        $who = isset($vars['username']) ? (string) $vars['username'] : '';
+        $subject = '【' . $siteName . '】您订阅的接口有更新';
+        $body = '<p>您好，' . self::e($who) . '：</p>';
+        $body .= '<p>您订阅的接口有新的上架、下架或维护。</p>';
+        foreach ($items as $item) {
+            $label = isset($item['label']) ? (string) $item['label'] : '';
+            $name = isset($item['name']) ? (string) $item['name'] : '';
+            $desc = isset($item['desc']) ? (string) $item['desc'] : '暂无描述';
+            $url = isset($item['url']) ? (string) $item['url'] : '';
+            $body .= '<p>' . self::e($label) . '　' . self::e($name) . '<br>'
+                . nl2br(self::e($desc));
+            if ($url !== '') {
+                $body .= '<br>详情：' . self::e($url);
+            }
+            $body .= '</p>';
+        }
+        $body .= '<p>本邮件由系统自动发送。</p>';
+        return self::sendOne($to, $subject, $body);
+    }
+
+    /**
      * 审核完成后通知投稿用户
      *
      * @param array  $api
@@ -1594,7 +1668,7 @@ class MailNotify
      * @param string $text
      * @return string
      */
-    public static function stripSiteUrls($text)
+    public static function stripSiteUrls($text, $keepPlain = false)
     {
         $text = (string) $text;
         if ($text === '') {
@@ -1657,6 +1731,9 @@ class MailNotify
         );
         if (!is_string($text)) {
             return '';
+        }
+        if ($keepPlain) {
+            return $text;
         }
         $text = preg_replace_callback(
             '#(?<!["\'=])(https?://[^\s<\'"]+)#i',
@@ -1723,8 +1800,10 @@ class MailNotify
         }
         // 业务通知：渲染后再剥站内可点击链；验证码场景保留本站链接
         if (class_exists('MailChannels') && MailChannels::isBusinessChannel($bindpage)) {
-            $subject = self::stripSiteUrls($subject);
-            $body = self::stripSiteUrls($body);
+            $keepPlain = class_exists('MailChannels')
+                && (int) $bindpage === MailChannels::API_STATUS_SUB;
+            $subject = self::stripSiteUrls($subject, $keepPlain);
+            $body = self::stripSiteUrls($body, $keepPlain);
             if (trim($subject) === '' || trim(strip_tags($body)) === '') {
                 return null;
             }

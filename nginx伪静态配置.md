@@ -6,7 +6,7 @@
 > **权威同步（四处必须一致）：**  
 > ① 本文「情况 A」　② 安装向导 `install/index.php` → `vs_install_nginx_rewrite_snippet()`　③ 根目录 `.htaccess`　④ 根目录 `README.md`「伪静态」节  
 > 另：站点地图为 `/sitemap.xml`（伪静态）。**v13.26.16 起不再提供根目录 `robots.txt`**（Disallow 会暴露目录结构，见易错点 E250）。改伪静态规则时勿只改一处（见易错点 E236）。  
-> **v13.21.0+：** 安装向导第 1 步默认提供情况 A 全文并支持一键复制。**v13.26.5+：** 含 `/sitemap.xml` 与 `config|data` 合并 deny。**v13.26.45+：** deny 扩含 `core/data`（主题本地 SQLite 配置）。**v13.26.46+：** deny `assets/js/sysapi-catalog/`（系统 API 文档 JSON，仅 PHP 本地读，E412）。
+> **v13.21.0+：** 安装向导第 1 步默认提供情况 A 全文并支持一键复制。**v13.26.5+：** 含 `/sitemap.xml` 与 `config|data` 合并 deny。**v13.26.45+：** deny 扩含 `core/data`（主题本地 SQLite 配置）。**v13.26.46+：** deny `assets/js/sysapi-catalog/`（系统 API 文档 JSON，仅 PHP 本地读，E412）。**v13.26.48+：** deny 扩含 `core/geo`（飞线城市坐标数据，E484）。
 
 ---
 
@@ -37,7 +37,7 @@ location ^~ /assets/js/sysapi-catalog/ {
     deny all;
     return 403;
 }
-location ~ ^/(config|data|core/data)/ {
+location ~ ^/(config|data|core/data|core/geo)/ {
     deny all;
     return 403;
 }
@@ -64,7 +64,7 @@ location ^~ /assets/js/sysapi-catalog/ {
     deny all;
     return 403;
 }
-location ~ ^/(config|data|core/data)/ {
+location ~ ^/(config|data|core/data|core/geo)/ {
     deny all;
     return 403;
 }
@@ -79,7 +79,7 @@ location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
 }
 ```
 
-> **重要：** Nginx **不读** `.htaccess`。务必加上面的 `sysapi-catalog` deny 与 `/config/`、`/data/`、`/core/data/` 合并 deny（须写在其它 `location ~` **之前**），否则 Catalog JSON、运行时日志、数据库配置与主题本地 `theme.db` 可能被直链下载。
+> **重要：** Nginx **不读** `.htaccess`。务必加上面的 `sysapi-catalog` deny 与 `/config/`、`/data/`、`/core/data/`、`/core/geo/` 合并 deny（须写在其它 `location ~` **之前**），否则 Catalog JSON、运行时日志、数据库配置、主题本地 `theme.db` 与飞线坐标库可能被直链下载。
 
 若站点**已有**旧的「仅 detail」单页规则，请**删掉**那条，改用上面的**通用**第二段。
 
@@ -88,7 +88,7 @@ location ~ ^/([a-z0-9_-]+)/([0-9]+)/?$ {
 | 顺序 | 规则 | 作用 |
 |------|------|------|
 | 1（必须在上） | `assets/js/sysapi-catalog/` deny | **禁止直链**系统 API 文档 JSON（仅 PHP 读） |
-| 2（必须在上） | `config` / `data` / `core/data` 合并 deny | **禁止直链**配置、运行时目录与主题本地库 |
+| 2（必须在上） | `config` / `data` / `core/data` / `core/geo` 合并 deny | **禁止直链**配置、运行时目录、主题本地库与飞线坐标库 |
 | 3 | `/apis/{短码}` | **代理网关**（特殊：内部 `_vs_slug`，不是 `?id=`） |
 | 4 | `/sitemap.xml` | **站点地图** → `sitemap.php` |
 | 5 | `/{页面名}/{数字ID}` | **通用路径式资源**：落到 `/{页面名}.php?id={数字ID}` |
@@ -166,3 +166,11 @@ proxy_send_timeout 300s;
 | `/articles` 等 | 去 `.php` 的 `try_files` |
 
 保存、重载后仍异常时：先确认伪静态已生效，再确认 **apis 在通用规则之上**、通用规则在 `location /` 之上。
+
+---
+
+## 六、反向代理与真实访客（运维 · v13.26.48）
+
+伪静态规则本身**不用**为反向代理改动。若网站前面还有 Nginx / CDN，请在后台 **系统设置 → 运维与性能 → 反向代理** 勾选并填写「反代机器 IP」（默认关闭）。
+
+反代向 PHP 传递访客信息时，须用反代自己看到的客户端 IP **覆盖** `X-Forwarded-For`，不要把访客自带的伪造地址再 `$proxy_add_x_forwarded_for` 追加进去，否则打开开关后别人仍可换假 IP 躲开按 IP 的次数限制（E412 / E482 / SEC-014）。

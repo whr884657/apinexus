@@ -400,44 +400,61 @@ class ApiLogManager
         return null;
     }
 
-    /**
-     * 今日调用次数（自然日键；写入 bump；冷启回源，供首页/控制台复用）
-     *
-     * @return int
-     */
     public static function countToday()
     {
         $cacheKey = RedisCache::apilogTodayKey();
-        $ttl = RedisCache::ttlUntilEndOfDay();
+        $ttl = (int) RedisCache::TTL_APILOG_TODAY;
         if (class_exists('StatDayManager') && StatDayManager::tableReady()) {
-            return (int) RedisCache::remember(
-                $cacheKey,
-                $ttl,
-                function () {
-                    return StatDayManager::todayCalls();
-                }
-            );
+            return self::rememberRawTodayCount($cacheKey, $ttl, function () {
+                return StatDayManager::todayCalls();
+            });
         }
         if (!self::tableReady()) {
             return 0;
         }
-        return (int) RedisCache::remember(
-            $cacheKey,
-            $ttl,
-            function () {
-                try {
-                    $pdo = Database::connect();
-                    self::applyQueryTimeout($pdo);
-                    $stmt = $pdo->query(
-                        'SELECT COUNT(*) FROM `' . self::table() . '`
-                         WHERE `createtime` >= CURDATE() AND `createtime` < DATE_ADD(CURDATE(), INTERVAL 1 DAY)'
-                    );
-                    return max(0, (int) $stmt->fetchColumn());
-                } catch (Exception $e) {
-                    return 0;
-                }
+        return self::rememberRawTodayCount($cacheKey, $ttl, function () {
+            try {
+                $pdo = Database::connect();
+                self::applyQueryTimeout($pdo);
+                $stmt = $pdo->query(
+                    'SELECT COUNT(*) FROM `' . self::table() . '` '
+                    . 'WHERE `createtime` >= CURDATE() AND `createtime` < DATE_ADD(CURDATE(), INTERVAL 1 DAY)'
+                );
+                return max(0, (int) $stmt->fetchColumn());
+            } catch (Exception $e) {
+                return 0;
             }
-        );
+        });
+    }
+
+    /**
+     * 今日计数使用 Redis 原始十进制整数，和 INCRBY 共用同一数据类型。
+     * 旧的序列化值会在冷启时转换，避免写路径在短 TTL 内持续 INCRBY 失败。
+     *
+     * @param string   $logicalKey
+     * @param int      $ttl
+     * @param callable $factory
+     * @return int
+     */
+    private static function rememberRawTodayCount($logicalKey, $ttl, $factory)
+    {
+        if (!class_exists('RedisCache') || !RedisCache::enabled() || !class_exists('RedisService')) {
+            return max(0, (int) call_user_func($factory));
+        }
+        try {
+            return (int) RedisService::withClient(function ($redis) use ($logicalKey, $ttl, $factory) {
+                $fullKey = RedisService::buildKey($logicalKey);
+                $raw = $redis->get($fullKey);
+                if ($raw !== false && preg_match('/^\d+$/', (string) $raw)) {
+                    return max(0, (int) $raw);
+                }
+                $value = max(0, (int) call_user_func($factory));
+                $redis->setex($fullKey, max(1, (int) $ttl), (string) $value);
+                return $value;
+            });
+        } catch (Exception $e) {
+            return max(0, (int) call_user_func($factory));
+        }
     }
 
     /**

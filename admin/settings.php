@@ -139,9 +139,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $apiKey = isset($_POST['panelmonitor_apikey']) ? (string) $_POST['panelmonitor_apikey'] : '';
             $enabledRaw = isset($_POST['panelmonitor_enabled']) ? strtolower(trim((string) $_POST['panelmonitor_enabled'])) : '';
             $enabled = ($enabledRaw === '1' || $enabledRaw === 'on' || $enabledRaw === 'true' || $enabledRaw === 'yes');
+            $hubIp = isset($_POST['screenhubip']) ? trim((string) $_POST['screenhubip']) : '';
+            if ($hubIp !== '' && !filter_var($hubIp, FILTER_VALIDATE_IP)) {
+                AjaxResponse::error('请填写有效的服务器公网 IP');
+            }
             $saved = PanelMonitor::persistConfig($provider, $baseUrl, $apiKey, $enabled, $interval);
             if ($saved !== true) {
                 AjaxResponse::error(is_string($saved) ? $saved : '保存失败');
+            }
+            $prevHub = trim((string) Config::get('screenhubip', ''));
+            Config::set('screenhubip', $hubIp);
+            if ($prevHub !== $hubIp && class_exists('DashboardStats')) {
+                DashboardStats::invalidateGeoCache();
             }
             AjaxResponse::success('控制台设置已保存');
         } catch (Exception $e) {
@@ -612,12 +621,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($max > 1000000) {
                 $max = 1000000;
             }
+            $mode = isset($_POST['checkin_streak_mode']) ? strtolower(trim((string) $_POST['checkin_streak_mode'])) : 'off';
+            if ($mode !== 'fixed' && $mode !== 'percent') {
+                $mode = 'off';
+            }
+            $bonusValue = isset($_POST['checkin_streak_value']) ? (int) $_POST['checkin_streak_value'] : 0;
+            if ($bonusValue < 0) {
+                $bonusValue = 0;
+            }
+            if ($mode === 'percent' && $bonusValue > 500) {
+                $bonusValue = 500;
+            }
+            if ($bonusValue > 1000000) {
+                $bonusValue = 1000000;
+            }
             Config::setMany(array(
-                'checkin_enabled'    => isset($_POST['checkin_enabled']) ? '1' : '0',
-                'checkin_points_min' => (string) $min,
-                'checkin_points_max' => (string) $max,
+                'checkin_enabled'       => isset($_POST['checkin_enabled']) ? '1' : '0',
+                'checkin_points_min'    => (string) $min,
+                'checkin_points_max'    => (string) $max,
+                'checkin_streak_mode'   => $mode,
+                'checkin_streak_value'  => (string) $bonusValue,
             ));
             AjaxResponse::success('签到设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_subscribe') {
+        try {
+            Config::set('subon', isset($_POST['subon']) ? '1' : '0');
+            AjaxResponse::success('订阅通知设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_cron_api') {
+        try {
+            SystemApiKey::setGate('cron', isset($_POST['cronon']));
+            SystemApiKey::setGateRate(
+                'cron',
+                isset($_POST['cron_qpm']) ? $_POST['cron_qpm'] : 0,
+                isset($_POST['cron_qps']) ? $_POST['cron_qps'] : 0
+            );
+            AjaxResponse::success('计划任务 API 设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败，请稍后重试');
         }
@@ -747,6 +795,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'ip_loc_extras'    => json_encode($extras, JSON_UNESCAPED_UNICODE),
             ));
             AjaxResponse::success('IP 归属地设置已保存');
+        } catch (Exception $e) {
+            AjaxResponse::error('保存失败，请稍后重试');
+        }
+    }
+
+    if ($action === 'save_proxy') {
+        try {
+            $on = (isset($_POST['proxyon']) && (string) $_POST['proxyon'] === '1') ? '1' : '0';
+            $raw = isset($_POST['proxyips']) ? (string) $_POST['proxyips'] : '';
+            $norm = AuthSecurity::normalizeProxyIpList($raw, $on === '1');
+            if (empty($norm['ok'])) {
+                AjaxResponse::error(isset($norm['error']) ? (string) $norm['error'] : '反代机器 IP 格式不正确');
+            }
+            Config::setMany(array(
+                'proxyon'  => $on,
+                'proxyips' => isset($norm['value']) ? (string) $norm['value'] : '',
+            ));
+            AjaxResponse::success('反向代理设置已保存');
         } catch (Exception $e) {
             AjaxResponse::error('保存失败，请稍后重试');
         }
@@ -932,6 +998,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'mail_notify_dev_apply'           => isset($_POST['mail_notify_dev_apply']) ? '1' : '0',
                 'mail_notify_dev_pass'            => isset($_POST['mail_notify_dev_pass']) ? '1' : '0',
                 'mail_notify_dev_fail'            => isset($_POST['mail_notify_dev_fail']) ? '1' : '0',
+                'mail_notify_apistatus'           => isset($_POST['mail_notify_apistatus']) ? '1' : '0',
             ));
 
             AjaxResponse::success('邮箱设置已保存');
@@ -1602,9 +1669,61 @@ vs_admin_accordion_start(
                        value="<?php echo vs_e(Config::get('checkin_points_max', '30')); ?>">
             </div>
         </div>
-        <p class="vs-form-hint">每次签到在最低与最高之间随机赠送；每位用户每天仅可签到一次。系统级签到 API 开关见底部「系统级 API」。</p>
+        <div class="vs-form-row vs-form-row--inline">
+            <div class="vs-form-col">
+                <label class="vs-label">连续满 7 天额外奖励</label>
+                <select name="checkin_streak_mode" class="vs-input vs-select" data-vs-pick="sheet">
+                    <?php $streakMode = Config::get('checkin_streak_mode', 'off'); ?>
+                    <option value="off" <?php echo $streakMode === 'off' ? 'selected' : ''; ?>>关闭</option>
+                    <option value="fixed" <?php echo $streakMode === 'fixed' ? 'selected' : ''; ?>>固定积分</option>
+                    <option value="percent" <?php echo $streakMode === 'percent' ? 'selected' : ''; ?>>按当日随机积分的百分比</option>
+                </select>
+            </div>
+            <div class="vs-form-col">
+                <label class="vs-label">额外数值</label>
+                <input type="number" name="checkin_streak_value" class="vs-input" min="0" max="1000000" step="1"
+                       value="<?php echo vs_e(Config::get('checkin_streak_value', '0')); ?>">
+            </div>
+        </div>
+        <p class="vs-form-hint">每次签到在最低与最高之间随机赠送；每位用户每天仅可签到一次。连续满 7 天后，第 7 天以及之后每个连续签到日都按上面的方式加发；关闭则只发随机积分。百分比只乘当天随机到的积分，四舍五入，不足 1 分按 1 分。中间断一天，连续天数从 1 重新计。系统级签到 API 开关见底部「系统级 API」。</p>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存签到设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
+$subOn = Config::get('subon', '0') === '1';
+$cronMount = '';
+if (class_exists('SystemApiCatalog')) {
+    $cronMount = SystemApiCatalog::endpointUrl('cron') . '?action=run&job=apistatus';
+}
+vs_admin_accordion_start(
+    'settings-subscribe',
+    '订阅通知',
+    '用户可订阅接口上架、下架与维护，由计划任务发信'
+);
+?>
+    <form method="post" action="" class="vs-form" id="subscribeForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_subscribe">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="subon" value="1" <?php echo $subOn ? 'checked' : ''; ?>>
+                <span>允许用户订阅接口状态</span>
+            </label>
+        </div>
+        <?php if ($subOn): ?>
+            <?php vs_render_notice('warning', '', '请在服务器计划任务中每 10 分钟访问一次下面的地址，并带上系统密钥。还须打开底部「系统级 API → 计划任务」，以及邮箱设置里的「接口上架、下架或维护」。密钥不要写进别人能看到的页面，计划任务里用请求头传递。', array('compact' => true)); ?>
+            <div class="vs-form-row">
+                <label class="vs-label">计划任务地址</label>
+                <input type="text" class="vs-input" readonly value="<?php echo vs_e($cronMount); ?>">
+            </div>
+            <p class="vs-form-hint">示例：curl -fsS -H "Authorization: Bearer 你的系统密钥" "<?php echo vs_e($cronMount); ?>"</p>
+        <?php else: ?>
+            <?php vs_render_notice('tip', '', '关闭时用户不能打开订阅，计划任务也不会发信。', array('compact' => true)); ?>
+        <?php endif; ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存订阅设置</button>
         </div>
     </form>
 <?php vs_admin_accordion_end(); ?>
@@ -1876,6 +1995,49 @@ vs_admin_accordion_start(
 <?php vs_admin_accordion_end(); ?>
 
 <?php
+$proxyOn = Config::get('proxyon', '0') === '1';
+$proxyIps = (string) Config::get('proxyips', '');
+$proxySeen = isset($_SERVER['REMOTE_ADDR']) ? trim((string) $_SERVER['REMOTE_ADDR']) : '';
+if (!filter_var($proxySeen, FILTER_VALIDATE_IP)) {
+    $proxySeen = '';
+}
+vs_admin_accordion_start(
+    'settings-proxy',
+    '反向代理',
+    '网站在 Nginx 或 CDN 后面时，识别真实访客，并判断访问是不是 HTTPS'
+);
+?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="proxyForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_proxy">
+        <?php vs_render_notice(
+            'tip',
+            '',
+            '默认关闭。服务器直接对外、没有反代时不要勾选。勾选后，登录次数、验证码、找回密码、第三方登录、评论、友链、人机验证、免密钥接口的次数限制，以及调用日志里的 IP、支付回调和分享链接的网址，都会按真实访客来算。Nginx 必须用它自己看到的访客 IP 覆盖转发头；如果把访客自己带来的地址再往后追加，别人换一个假 IP 就能躲开次数限制。',
+            array('field' => true)
+        ); ?>
+        <div class="vs-form-row vs-form-row--check">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="proxyon" id="proxyOn" value="1" <?php echo $proxyOn ? 'checked' : ''; ?>>
+                <span>信任反向代理（识别真实访客 IP 和 HTTPS）</span>
+            </label>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="proxySeenIp">这次连到服务器的机器 IP</label>
+            <input type="text" class="vs-input" id="proxySeenIp" value="<?php echo vs_e($proxySeen !== '' ? $proxySeen : '未能识别'); ?>" readonly>
+            <?php vs_render_notice('tip', '', '你如果正通过反代打开这个后台，这个地址一般就是要填进下面名单的那一个。这里只供对照，不会自动填入，也不会自动勾选。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="proxyIps">反代机器 IP</label>
+            <textarea class="vs-textarea" name="proxyips" id="proxyIps" rows="4" placeholder="192.168.1.10"><?php echo vs_e($proxyIps); ?></textarea>
+            <p class="vs-form-hint">每行一个，也可以用逗号或分号。例如 192.168.1.10 或 10.0.0.0/8。填反代或 CDN 连到本机时用的 IP。关闭时也可以先写上，保存后先不生效。</p>
+        </div>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存反向代理设置</button>
+        </div>
+    </form>
+<?php vs_admin_accordion_end(); ?>
+
+<?php
 vs_admin_accordion_start(
     'settings-redis',
     'Redis 设置',
@@ -1994,6 +2156,14 @@ $pmHasKey = $pmApiKey !== '';
             </select>
             <?php vs_render_notice('tip', '', '控制台与数据大屏共用此间隔：可选 1～5 秒（高性能/无防火墙）或 10/15/20/30 秒（默认 10，更稳）。时钟本地每秒走动不发请求；KPI/最近调用/服务器/飞线按间隔刷新；趋势与 TOP 约每 6 次 live 软刷一次。切到后台标签页会自动暂停轮询（E202）。', array('field' => true, 'compact' => true)); ?>
         </div>
+        <div class="vs-form-row">
+            <label class="vs-label" for="screenhubip">服务器公网 IP</label>
+            <input type="text" class="vs-input" id="screenhubip" name="screenhubip"
+                   value="<?php echo vs_e(isset($vsCfg['screenhubip']) ? (string) $vsCfg['screenhubip'] : ''); ?>"
+                   placeholder="例如 203.0.113.10"
+                   autocomplete="off">
+            <?php vs_render_notice('tip', '', '留空则自动判断数据大屏上本站的位置。填写后，代表本站的那个点按这个 IP 的归属地落位。只影响大屏落点，不改变访客 IP 和调用日志。', array('field' => true, 'compact' => true)); ?>
+        </div>
 
         <hr class="vs-divider">
         <h4 class="vs-form-subtitle">服务器监控</h4>
@@ -2006,10 +2176,10 @@ $pmHasKey = $pmApiKey !== '';
             </label>
         </div>
         <div class="vs-form-row">
-            <label class="vs-label" for="panelmonitor_provider">面板类型</label>
+            <label class="vs-label" for="panelmonitor_provider_pick">面板类型</label>
             <input type="hidden" name="panelmonitor_provider" id="panelmonitor_provider_hidden"
                    value="<?php echo vs_e($pmProvider); ?>">
-            <select class="vs-input" id="panelmonitor_provider" data-vs-pick
+            <select class="vs-input" id="panelmonitor_provider_pick" data-vs-pick="sheet"
                     aria-label="面板类型">
                 <option value=""<?php echo $pmProvider === '' ? ' selected' : ''; ?>>请选择</option>
                 <option value="baota"<?php echo $pmProvider === 'baota' ? ' selected' : ''; ?>>宝塔面板</option>
@@ -2272,6 +2442,10 @@ $mailList = isset($mailSmtpCfg['list']) && is_array($mailSmtpCfg['list']) ? $mai
                     <input type="checkbox" name="mail_notify_dev_fail" value="1" <?php echo (!isset($vsCfg['mail_notify_dev_fail']) || $vsCfg['mail_notify_dev_fail'] === '1') ? 'checked' : ''; ?>>
                     <span>开发者申请未通过时，通知申请人</span>
                 </label>
+                <label class="vs-checkbox" style="margin-top:8px;display:flex;">
+                    <input type="checkbox" name="mail_notify_apistatus" value="1" <?php echo (isset($vsCfg['mail_notify_apistatus']) && $vsCfg['mail_notify_apistatus'] === '1') ? 'checked' : ''; ?>>
+                    <span>接口上架、下架或维护时，通知已订阅的用户</span>
+                </label>
             </div>
         </div>
         <div class="vs-form-actions">
@@ -2446,6 +2620,7 @@ vs_admin_accordion_start(
     $apilogApiOn = !empty($sysApiGates['apilogarchive']);
     $sqliteOk = ApiLogArchive::sqliteAvailable();
     $checkinApiOn = !empty($sysApiGates['checkin']);
+    $cronApiOn = !empty($sysApiGates['cron']);
     $userinfoApiOn = !empty($sysApiGates['userinfo']);
     $sysApiRatesAll = class_exists('SystemApiKey') ? SystemApiKey::rates() : array('apis' => array());
     $sysApiRates = isset($sysApiRatesAll['apis']) && is_array($sysApiRatesAll['apis'])
@@ -2667,6 +2842,26 @@ vs_admin_accordion_start(
         <?php $vsRenderSysApiRateFields('apirank'); ?>
         <div class="vs-form-actions">
             <button type="submit" class="vs-btn vs-btn--primary">保存调用排行 API 设置</button>
+        </div>
+    </form>
+        <?php
+    });
+
+    $vsRenderSysApiFold('cron', '计划任务', function () use ($cronApiOn, $vsRenderSysApiRateFields) {
+        ?>
+    <form method="post" action="" class="vs-form vs-settings-form" id="cronApiForm" data-ajax="1">
+        <input type="hidden" name="action" value="save_cron_api">
+        <div class="vs-form-row">
+            <label class="vs-checkbox">
+                <input type="checkbox" name="cronon" id="cronon" value="1" <?php echo $cronApiOn ? 'checked' : ''; ?>>
+                <span>启用计划任务 API</span>
+            </label>
+            <?php vs_render_notice('tip', '', '关闭时，即使持有系统密钥调用 /core/api/cron 也会返回错误。当前任务 job=apistatus 用于接口状态订阅。对接说明见「系统管理 → 系统 API」。', array('field' => true, 'compact' => true)); ?>
+        </div>
+        <?php vs_render_notice('warning', '', '计划任务可触发批量通知。启用前建议配置每分钟和每秒上限；对应值为 0 时，该维度不限制请求频率。', array('field' => true, 'compact' => true)); ?>
+        <?php $vsRenderSysApiRateFields('cron'); ?>
+        <div class="vs-form-actions">
+            <button type="submit" class="vs-btn vs-btn--primary">保存计划任务 API 设置</button>
         </div>
     </form>
         <?php

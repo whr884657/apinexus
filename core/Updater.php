@@ -759,48 +759,16 @@ class Updater
     }
 
     /**
-     * 下载并应用更新
+     * 单请求更新无法保证部署后的迁移加载新代码，拒绝执行。
+     * 在线更新必须经 applyUpdateStep 的独立 HTTP 请求完成各步骤。
      *
      * @return array
      */
     public static function applyUpdate()
     {
-        $prepared = self::prepareUpdateContext();
-        if (empty($prepared['ok'])) {
-            return array('ok' => false, 'msg' => $prepared['msg']);
-        }
-
-        $download = self::updateStepDownload($prepared);
-        if (empty($download['ok'])) {
-            return $download;
-        }
-
-        $extract = self::updateStepExtract($prepared);
-        if (empty($extract['ok'])) {
-            self::cleanupUpdateWorkspace($prepared['updateDir']);
-            self::clearUpdateWork();
-            return $extract;
-        }
-
-        $deploy = self::updateStepDeploy($prepared);
-        if (empty($deploy['ok'])) {
-            self::cleanupUpdateWorkspace($prepared['updateDir']);
-            self::clearUpdateWork();
-            return $deploy;
-        }
-
-        $migrate = self::updateStepMigrate($prepared);
-        if (empty($migrate['ok'])) {
-            return $migrate;
-        }
-
-        unset($_SESSION['vs_update_dismiss']);
-        self::clearCheckCache();
-
         return array(
-            'ok'      => true,
-            'msg'     => $migrate['msg'],
-            'version' => $migrate['version'],
+            'ok'  => false,
+            'msg' => '请使用系统升级页的分步更新流程，文件覆盖与数据库迁移必须分属不同请求',
         );
     }
 

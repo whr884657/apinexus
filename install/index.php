@@ -10,6 +10,71 @@ require_once VS_ROOT . '/core/bootstrap.php';
 
 InstallChecker::requireNotInstalled();
 
+/**
+ * 绑定安装流程到首次建立的服务端会话。
+ *
+ * 安装包没有既有的部署环境 token 配置；这里不生成或回显可被访客复制的“安装密钥”。
+ * 会话 ID、客户端地址和 User-Agent 只在服务端会话中保存，用于阻断会话固定和跨客户端接管。
+ *
+ * @return bool
+ */
+function vs_install_session_guard()
+{
+    if (function_exists('session_status') && session_status() !== PHP_SESSION_ACTIVE) {
+        return false;
+    }
+
+    $sessionId = function_exists('session_id') ? (string) session_id() : '';
+    if ($sessionId === '') {
+        return false;
+    }
+
+    $clientBinding = $sessionId . "\\n"
+        . (isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '') . "\\n"
+        . (isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '');
+
+    if (!isset($_SESSION['vs_install_session_hash'])) {
+        if (function_exists('session_regenerate_id') && @session_regenerate_id(true) === false) {
+            return false;
+        }
+        $sessionId = function_exists('session_id') ? (string) session_id() : '';
+        if ($sessionId === '') {
+            return false;
+        }
+        $clientBinding = $sessionId . "\\n"
+            . (isset($_SERVER['REMOTE_ADDR']) ? (string) $_SERVER['REMOTE_ADDR'] : '') . "\\n"
+            . (isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '');
+        $_SESSION['vs_install_session_hash'] = hash('sha256', $sessionId);
+        $_SESSION['vs_install_client_hash'] = hash('sha256', $clientBinding);
+        return true;
+    }
+
+    $sessionHash = hash('sha256', $sessionId);
+    $clientHash = hash('sha256', $clientBinding);
+    return isset($_SESSION['vs_install_session_hash'], $_SESSION['vs_install_client_hash'])
+        && hash_equals((string) $_SESSION['vs_install_session_hash'], $sessionHash)
+        && hash_equals((string) $_SESSION['vs_install_client_hash'], $clientHash);
+}
+
+/**
+ * 安装阶段 POST 的同源与 CSRF 校验。
+ *
+ * @return bool
+ */
+function vs_install_validate_post()
+{
+    if (!class_exists('AuthSecurity') || !AuthSecurity::validateSameOrigin()) {
+        return false;
+    }
+    $token = isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'] : '';
+    return AuthSecurity::validateCsrf($token);
+}
+
+if (!vs_install_session_guard()) {
+    http_response_code(403);
+    exit('安装会话已失效，请重新打开安装页面');
+}
+
 $error   = '';
 $success = '';
 $step    = isset($_GET['step']) ? (int) $_GET['step'] : 1;
@@ -26,7 +91,7 @@ function vs_install_nginx_rewrite_snippet()
         . "    deny all;\n"
         . "    return 403;\n"
         . "}\n"
-        . "location ~ ^/(config|data|core/data)/ {\n"
+        . "location ~ ^/(config|data|core/data|core/geo)/ {\n"
         . "    deny all;\n"
         . "    return 403;\n"
         . "}\n"
@@ -46,6 +111,9 @@ function vs_install_nginx_rewrite_snippet()
 
 // ── POST：同意开源许可（安装门禁）────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'accept_license') {
+    if (!class_exists('AuthSecurity') || !AuthSecurity::validateSameOrigin()) {
+        AjaxResponse::error('安装请求来源无效，请刷新页面重试');
+    }
     $agree = isset($_POST['agree']) ? (string) $_POST['agree'] : '';
     if ($agree !== '1') {
         AjaxResponse::error('请勾选同意开源许可与部署使用条款');
@@ -76,6 +144,9 @@ if (!$licenseAccepted) {
 
 // ── POST：测试 MySQL + Redis（同一按钮、同一请求）────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'test_db') {
+    if (!vs_install_validate_post()) {
+        AjaxResponse::error('安装请求已失效，请刷新页面重试');
+    }
     $dbConfig = array(
         'host'     => trim(isset($_POST['host']) ? $_POST['host'] : 'localhost'),
         'port'     => trim(isset($_POST['port']) ? $_POST['port'] : '3306'),
@@ -164,6 +235,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? $_POST['action'] : '';
     $postStep = isset($_POST['step']) ? (int) $_POST['step'] : $step;
 
+    if ($action !== '' && !vs_install_validate_post()) {
+        $error = '安装请求已失效，请刷新页面重试';
+        $step = $postStep > 0 ? $postStep : $step;
+        $action = '';
+    }
+
     if ($action === 'next_step' && $postStep === 1) {
         $_SESSION['vs_nginx_ack'] = 1;
         vs_redirect(vs_site_path('/install/') . '?step=2');
@@ -230,6 +307,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = '邮箱格式不正确';
             $step = 5;
         } else {
+            $pdo = null;
+            $adminId = 0;
             try {
                 $dbConfig = $_SESSION['vs_install_db'];
                 $pdo = Database::testConnection($dbConfig);
@@ -238,50 +317,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $stmt = $pdo->prepare('INSERT INTO `' . $table . '` (`username`, `password`, `email`, `status`, `createtime`) VALUES (?, ?, ?, 1, NOW())');
                 $stmt->execute(array($username, vs_password_hash($password), $email));
+                $adminId = (int) $pdo->lastInsertId();
 
                 writeDatabaseConfig($dbConfig);
+                // seedAppliedUpTo 要求安装状态已成立；失败时 catch 会撤销锁、配置和本次管理员记录。
                 writeInstallLock();
 
-                try {
-                    if (class_exists('Config')) {
-                        Config::clearCache();
-                    }
-                    if (class_exists('InstallChecker')) {
-                        InstallChecker::markInstalledInConfig();
-                    }
-                    $redisPrefix = isset($_SESSION['vs_install_redis_prefix'])
-                        ? (string) $_SESSION['vs_install_redis_prefix']
-                        : RedisService::DEFAULT_PREFIX;
-                    $normPrefix = RedisService::normalizePrefix($redisPrefix, true);
-                    if ($normPrefix === false) {
-                        $normPrefix = RedisService::DEFAULT_PREFIX;
-                    }
-                    Config::set(RedisService::CONFIG_PREFIX, $normPrefix);
+                if (class_exists('Config')) {
+                    Config::clearCache();
+                }
+                if (class_exists('InstallChecker')) {
+                    InstallChecker::markInstalledInConfig();
+                }
+                $redisPrefix = isset($_SESSION['vs_install_redis_prefix'])
+                    ? (string) $_SESSION['vs_install_redis_prefix']
+                    : RedisService::DEFAULT_PREFIX;
+                $normPrefix = RedisService::normalizePrefix($redisPrefix, true);
+                if ($normPrefix === false) {
+                    $normPrefix = RedisService::DEFAULT_PREFIX;
+                }
+                Config::set(RedisService::CONFIG_PREFIX, $normPrefix);
 
-                    $redisPass = isset($_SESSION['vs_install_redis_password'])
-                        ? (string) $_SESSION['vs_install_redis_password']
-                        : '';
-                    Config::set(RedisService::CONFIG_PASSWORD, $redisPass);
+                $redisPass = isset($_SESSION['vs_install_redis_password'])
+                    ? (string) $_SESSION['vs_install_redis_password']
+                    : '';
+                Config::set(RedisService::CONFIG_PASSWORD, $redisPass);
 
-                    $redisDb = isset($_SESSION['vs_install_redis_database'])
-                        ? RedisService::normalizeDatabase($_SESSION['vs_install_redis_database'])
-                        : 0;
-                    if ($redisDb === false) {
-                        $redisDb = 0;
-                    }
-                    Config::set(RedisService::CONFIG_DATABASE, (string) $redisDb);
-                    Config::set(RedisService::CONFIG_HOST, '127.0.0.1');
-                    Config::set(RedisService::CONFIG_PORT, '6379');
+                $redisDb = isset($_SESSION['vs_install_redis_database'])
+                    ? RedisService::normalizeDatabase($_SESSION['vs_install_redis_database'])
+                    : 0;
+                if ($redisDb === false) {
+                    $redisDb = 0;
+                }
+                Config::set(RedisService::CONFIG_DATABASE, (string) $redisDb);
+                Config::set(RedisService::CONFIG_HOST, '127.0.0.1');
+                Config::set(RedisService::CONFIG_PORT, '6379');
 
-                    if (class_exists('DatabaseMigrator') && defined('VS_VERSION')) {
-                        DatabaseMigrator::seedAppliedUpTo(VS_VERSION);
-                    }
-                    if (class_exists('ThemeSettingsStore')) {
-                        ThemeSettingsStore::ensureBuiltinDirs();
-                        ThemeSettingsStore::migrateFromMysql(false);
-                    }
-                } catch (Exception $seedEx) {
-                    // 播种失败不阻断安装
+                if (!defined('VS_VERSION')) {
+                    throw new Exception('代码版本不可用，安装未完成');
+                }
+                vs_install_seed_and_verify(VS_VERSION);
+
+                if (class_exists('ThemeSettingsStore')) {
+                    ThemeSettingsStore::ensureBuiltinDirs();
+                    ThemeSettingsStore::migrateFromMysql(false);
                 }
 
                 unset(
@@ -296,6 +375,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 vs_redirect(vs_site_path('/install/') . '?step=6');
             } catch (Exception $e) {
+                vs_install_cleanup_failed($pdo, isset($table) ? $table : '', $adminId);
                 $error = '安装失败：' . $e->getMessage();
                 $step = 5;
             }
@@ -315,6 +395,104 @@ if ($step === 5 && empty($_SESSION['vs_tables_created'])) {
 }
 if ($step === 6 && !InstallChecker::isInstalled()) {
     vs_redirect(vs_site_path('/install/') . '?step=1');
+}
+
+/**
+ * 新装播种迁移账本，并验证写入后的完整版本集合。
+ *
+ * @param string $codeVersion
+ * @return void
+ * @throws Exception
+ */
+function vs_install_seed_and_verify($codeVersion)
+{
+    if (!class_exists('DatabaseMigrator')) {
+        throw new Exception('数据库迁移器不可用，安装未完成');
+    }
+
+    $codeVersion = DatabaseMigrator::normalizeVersionToken($codeVersion);
+    if ($codeVersion === '') {
+        throw new Exception('代码版本无效，安装未完成');
+    }
+
+    $dir = DatabaseMigrator::migrationsDir();
+    if (!is_dir($dir)) {
+        throw new Exception('迁移目录不可读，安装未完成');
+    }
+
+    $files = glob($dir . '/*.sql');
+    if ($files === false) {
+        throw new Exception('迁移脚本列表读取失败，安装未完成');
+    }
+
+    $expected = array();
+    foreach ($files as $file) {
+        $version = basename($file, '.sql');
+        if (preg_match('/^\\d+\\.\\d+\\.\\d+$/', $version)
+            && version_compare($version, $codeVersion, '<=')) {
+            $expected[] = $version;
+        }
+    }
+    usort($expected, 'version_compare');
+    $seeded = DatabaseMigrator::seedAppliedUpTo($codeVersion);
+    if (!is_int($seeded) || $seeded < 0) {
+        throw new Exception('迁移账本播种失败，安装未完成');
+    }
+
+    Config::clearCache();
+    $applied = DatabaseMigrator::getAppliedVersions();
+    usort($applied, 'version_compare');
+    foreach ($expected as $version) {
+        if (!in_array($version, $applied, true)) {
+            throw new Exception('迁移账本回读校验失败，安装未完成');
+        }
+    }
+    foreach ($applied as $version) {
+        if (version_compare($version, $codeVersion, '>')) {
+            throw new Exception('迁移账本包含未来版本，安装未完成');
+        }
+    }
+
+    $raw = Config::get(DatabaseMigrator::CONFIG_KEY, null);
+    $decoded = is_string($raw) ? json_decode($raw, true) : $raw;
+    if (!is_array($decoded)) {
+        throw new Exception('迁移账本格式校验失败，安装未完成');
+    }
+    $decoded = array_values(array_unique(array_map('strval', $decoded)));
+    usort($decoded, 'version_compare');
+    if ($decoded !== $applied || array_diff($expected, $applied) !== array()) {
+        throw new Exception('迁移账本写入后校验失败，安装未完成');
+    }
+}
+
+/**
+ * 清理未完成安装留下的锁、配置标记和本次管理员记录，保留重试路径。
+ *
+ * @param PDO|null $pdo
+ * @param string $adminTable
+ * @param int $adminId
+ * @return void
+ */
+function vs_install_cleanup_failed($pdo, $adminTable, $adminId)
+{
+    try {
+        if ($pdo instanceof PDO) {
+            if ((int) $adminId > 0) {
+                $stmt = $pdo->prepare('DELETE FROM `' . str_replace('`', '``', $adminTable) . '` WHERE `id` = ? LIMIT 1');
+                $stmt->execute(array((int) $adminId));
+            }
+            $configTable = Database::table('config');
+            $stmt = $pdo->prepare('DELETE FROM `' . str_replace('`', '``', $configTable) . '` WHERE `key` = ? LIMIT 1');
+            $stmt->execute(array(InstallChecker::CONFIG_KEY_DONE));
+        }
+    } catch (Exception $e) {
+        // 清理失败不覆盖原始安装错误；锁和配置文件仍继续移除。
+    }
+    @unlink(InstallChecker::lockFile());
+    @unlink(InstallChecker::configFile());
+    if (class_exists('Config')) {
+        Config::clearCache();
+    }
 }
 
 /**
@@ -621,6 +799,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                         <pre class="vs-nginx-code" id="nginxSnippetPre"><?php echo vs_e($nginxSnippet); ?></pre>
                     </div>
                     <form method="post" action="" class="vs-form" id="nginxAckForm">
+                        <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
                         <input type="hidden" name="step" value="1">
                         <input type="hidden" name="action" value="next_step">
                         <div class="vs-form-actions">
@@ -664,6 +843,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                 <h2 class="vs-card-title">第三步：数据库配置</h2>
                 <p class="vs-card-desc">请填写 MySQL 与 Redis 信息，点击「测试连接」将<strong>同时</strong>检测两者。数据表前缀固定为 <code>vs_</code>；Redis 默认连接 <code>127.0.0.1:6379</code>。</p>
                 <form method="post" action="" class="vs-form" id="dbForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
                     <input type="hidden" name="step" value="3">
                     <div class="vs-form-grid">
                         <div class="vs-form-row">
@@ -725,6 +905,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                     </div>
                     <p class="vs-card-desc">如需全新安装，请先清空现有数据表。普通「创建数据表」按钮已禁用。</p>
                     <form method="post" action="" class="vs-form" id="clearDbForm">
+                        <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
                         <input type="hidden" name="step" value="4">
                         <input type="hidden" name="action" value="clear_and_create">
                         <div class="vs-form-actions">
@@ -735,6 +916,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                 <?php else: ?>
                     <p class="vs-card-desc">数据库为空，可以直接创建 ApiNexus 所需的数据表。</p>
                     <form method="post" action="" class="vs-form">
+                        <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
                         <input type="hidden" name="step" value="4">
                         <input type="hidden" name="action" value="create_tables">
                         <div class="vs-form-actions">
@@ -747,6 +929,7 @@ vs_render_head('安装向导 - 第' . $step . '步', array('install.css'));
                 <h2 class="vs-card-title">第五步：管理员配置</h2>
                 <p class="vs-card-desc">请设置系统管理员账号，密码将加密存储。</p>
                 <form method="post" action="" class="vs-form" id="adminForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo vs_e(AuthSecurity::csrfToken()); ?>">
                     <input type="hidden" name="step" value="5">
                     <input type="hidden" name="action" value="create_admin">
                     <div class="vs-form-grid">

@@ -826,10 +826,6 @@ class DashboardStats
         return self::geoDistributionToday();
     }
 
-    /**
-     * @param string $mode live|today
-     * @return array
-     */
     private static function buildGeoPayload($mode)
     {
         $mode = ($mode === 'live') ? 'live' : 'today';
@@ -849,6 +845,9 @@ class DashboardStats
         $hub = self::serverHubPoint();
         $china = self::buildGeoCities($chinaCoords, $counts);
         $world = self::buildGeoCities($worldCoords, $counts);
+        $provinces = self::buildProvinceRows($counts);
+        $chinaOther = self::otherGeoCounts($chinaCoords, $kindCounts, true);
+        $worldOther = self::otherGeoCounts($worldCoords, $kindCounts, false);
         $chinaHub = $hub;
         $worldHub = array(
             'name'  => isset($hub['name']) ? (string) $hub['name'] : '本站',
@@ -857,16 +856,64 @@ class DashboardStats
         return array(
             'mode'  => $mode,
             'china' => array(
-                'cities' => $china,
-                'flows'  => self::buildKindFlows($chinaCoords, $kindCounts, $chinaHub, $flowLimit),
-                'hub'    => $chinaHub,
+                'cities'    => $china,
+                'provinces' => $provinces,
+                'other'     => $chinaOther,
+                'flows'     => self::buildKindFlows($chinaCoords, $kindCounts, $chinaHub, $flowLimit),
+                'hub'       => $chinaHub,
             ),
             'world' => array(
                 'cities' => $world,
+                'other'  => $worldOther,
                 'flows'  => self::buildKindFlows($worldCoords, $kindCounts, $worldHub, $flowLimit),
                 'hub'    => $worldHub,
             ),
         );
+    }
+
+    private static function buildProvinceRows(array $counts)
+    {
+        $sum = array();
+        if (!class_exists('GeoCityCoords')) {
+            return array();
+        }
+        foreach ($counts as $city => $n) {
+            $n = (int) $n;
+            if ($n <= 0) {
+                continue;
+            }
+            $province = GeoCityCoords::provinceOf($city);
+            if ($province === '') {
+                continue;
+            }
+            $mapName = GeoCityCoords::mapRegionName($province);
+            if ($mapName === '') {
+                continue;
+            }
+            if (!isset($sum[$mapName])) {
+                $sum[$mapName] = 0;
+            }
+            $sum[$mapName] += $n;
+        }
+        $rows = array();
+        foreach ($sum as $name => $count) {
+            $rows[] = array(
+                'name'  => $name,
+                'count' => (int) $count,
+            );
+        }
+        return $rows;
+    }
+
+    public static function invalidateGeoCache()
+    {
+        if (!class_exists('RedisCache')) {
+            return;
+        }
+        $prefix = RedisCache::KEY_DASHBOARD_PREFIX . self::epoch() . ':';
+        foreach (array('server_hub_point', 'geo_dist_today', 'geo_dist_live') as $suffix) {
+            RedisCache::forget($prefix . $suffix);
+        }
     }
 
     /**
@@ -878,7 +925,18 @@ class DashboardStats
     {
         return self::remember('server_hub_point', 86400, function () {
             $coords = array_merge(self::worldCityCoords(), self::chinaCityCoords());
-            $ip = self::guessServerPublicIp();
+            $forced = '';
+            if (class_exists('Config')) {
+                try {
+                    $forced = trim((string) Config::get('screenhubip', ''));
+                } catch (Exception $e) {
+                    $forced = '';
+                }
+            }
+            if ($forced !== '' && !filter_var($forced, FILTER_VALIDATE_IP)) {
+                $forced = '';
+            }
+            $ip = $forced !== '' ? $forced : self::guessServerPublicIp();
             $loc = '';
             if ($ip !== '' && class_exists('IpLocator') && IpLocator::enabled()) {
                 $loc = IpLocator::lookup($ip);
@@ -979,6 +1037,42 @@ class DashboardStats
             return $b['count'] - $a['count'];
         });
         return $out;
+    }
+
+
+    private static function otherGeoCounts($coords, array $kindCounts, $requireProvince = false)
+    {
+        $other = 0;
+        $total = self::geoCountTotal($kindCounts);
+        foreach ($kindCounts as $city => $kinds) {
+            $mapped = ($city !== '__other__' && isset($coords[$city]));
+            if ($mapped && $requireProvince && class_exists('GeoCityCoords')) {
+                $province = GeoCityCoords::provinceOf($city);
+                $mapped = GeoCityCoords::mapRegionName($province) !== '';
+            }
+            if (!$mapped) {
+                $other += (int) (isset($kinds['total']) ? $kinds['total'] : 0);
+            }
+        }
+        return array(array(
+            'name'   => '其他',
+            'count'  => $other,
+            'mapped' => max(0, $total - $other),
+            'total'  => $total,
+        ));
+    }
+
+    /**
+     * @param array<string,array> $kindCounts
+     * @return int
+     */
+    private static function geoCountTotal(array $kindCounts)
+    {
+        $total = 0;
+        foreach ($kindCounts as $kinds) {
+            $total += (int) (isset($kinds['total']) ? $kinds['total'] : 0);
+        }
+        return $total;
     }
 
     /**
@@ -1176,11 +1270,6 @@ class DashboardStats
         );
     }
 
-    /**
-     * @param string $whereTime SQL 时间条件（已内嵌安全整型）
-     * @param int $limit
-     * @return array<string,array{key:int,guest:int,fail:int,total:int}>
-     */
     private static function aggregateIplocKinds($whereTime, $limit = 200)
     {
         $limit = max(20, min(400, (int) $limit));
@@ -1191,14 +1280,14 @@ class DashboardStats
             $pdo = Database::connect();
             self::applyTimeout($pdo);
             // ok=0 → 失败；ok=1 且有密钥 → 密钥成功；ok=1 无密钥 → 游客
+            $table = '`' . Database::table('apilog') . '`';
             $sql = 'SELECT `iploc`,
                     SUM(CASE WHEN `ok` = 0 THEN 1 ELSE 0 END) AS fail_c,
                     SUM(CASE WHEN `ok` = 1 AND `apikey` <> \'\' THEN 1 ELSE 0 END) AS key_c,
                     SUM(CASE WHEN `ok` = 1 AND (`apikey` = \'\' OR `apikey` IS NULL) THEN 1 ELSE 0 END) AS guest_c,
                     COUNT(*) AS total_c
-                FROM `' . Database::table('apilog') . '`
+                FROM ' . $table . '
                 WHERE ' . $whereTime . '
-                  AND `iploc` <> \'\'
                 GROUP BY `iploc`
                 ORDER BY total_c DESC
                 LIMIT ' . (int) $limit;
@@ -1209,7 +1298,7 @@ class DashboardStats
                     $city = self::parseProvinceCapital((string) $r['iploc']);
                 }
                 if ($city === '') {
-                    continue;
+                    $city = '__other__';
                 }
                 if (!isset($out[$city])) {
                     $out[$city] = array('key' => 0, 'guest' => 0, 'fail' => 0, 'total' => 0);
@@ -1218,6 +1307,41 @@ class DashboardStats
                 $out[$city]['guest'] += (int) $r['guest_c'];
                 $out[$city]['fail'] += (int) $r['fail_c'];
                 $out[$city]['total'] += (int) $r['total_c'];
+            }
+
+            // 汇总查询补齐被 LIMIT 截掉的低频归属地，保证三种身份和总量可对账。
+            $totalSql = 'SELECT
+                    SUM(CASE WHEN `ok` = 0 THEN 1 ELSE 0 END) AS fail_c,
+                    SUM(CASE WHEN `ok` = 1 AND `apikey` <> \'\' THEN 1 ELSE 0 END) AS key_c,
+                    SUM(CASE WHEN `ok` = 1 AND (`apikey` = \'\' OR `apikey` IS NULL) THEN 1 ELSE 0 END) AS guest_c,
+                    COUNT(*) AS total_c
+                FROM ' . $table . '
+                WHERE ' . $whereTime;
+            $totalRow = $pdo->query($totalSql)->fetch(PDO::FETCH_ASSOC);
+            if (is_array($totalRow)) {
+                $seen = array('key' => 0, 'guest' => 0, 'fail' => 0, 'total' => 0);
+                foreach ($out as $row) {
+                    foreach ($seen as $kind => $ignored) {
+                        $seen[$kind] += (int) $row[$kind];
+                    }
+                }
+                $delta = array(
+                    'key'   => max(0, (int) $totalRow['key_c'] - $seen['key']),
+                    'guest' => max(0, (int) $totalRow['guest_c'] - $seen['guest']),
+                    'fail'  => max(0, (int) $totalRow['fail_c'] - $seen['fail']),
+                    'total' => 0,
+                );
+                // 分类字段与总量来自同一行集合，最后一项校正任何历史脏数据造成的差异。
+                $delta['total'] = $delta['key'] + $delta['guest'] + $delta['fail'];
+                if ($delta['total'] > 0) {
+                    if (!isset($out['__other__'])) {
+                        $out['__other__'] = array('key' => 0, 'guest' => 0, 'fail' => 0, 'total' => 0);
+                    }
+                    $out['__other__']['key'] += $delta['key'];
+                    $out['__other__']['guest'] += $delta['guest'];
+                    $out['__other__']['fail'] += $delta['fail'];
+                    $out['__other__']['total'] += $delta['total'];
+                }
             }
             return $out;
         } catch (Exception $e) {
@@ -1787,14 +1911,18 @@ class DashboardStats
      */
     private static function pointscostDay($day)
     {
-        if (!class_exists('StatDayManager') || !StatDayManager::tableReady()) {
+        $day = trim((string) $day);
+        if ($day === '' || !class_exists('StatDayManager') || !StatDayManager::tableReady()) {
             return 0.0;
         }
-        $row = StatDayManager::getDay($day);
-        if (!$row || !isset($row['pointscost'])) {
-            return 0.0;
-        }
-        return round((float) $row['pointscost'], 4);
+        $cached = self::remember('pointscost_' . $day, 10, function () use ($day) {
+            $row = StatDayManager::getDay($day);
+            if (!$row || !isset($row['pointscost'])) {
+                return 0.0;
+            }
+            return round((float) $row['pointscost'], 4);
+        });
+        return round((float) $cached, 4);
     }
 
     /**

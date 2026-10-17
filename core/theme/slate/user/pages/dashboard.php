@@ -77,7 +77,7 @@ $kpiClass = $isDeveloper ? ' is-eight' : ' is-six';
 
 <?php if (!empty($checkinBanner['show_banner'])): ?>
 <div class="uc-checkin-banner uc-motion" id="ucCheckinBanner" role="region" aria-label="每日签到">
-    <span class="uc-checkin-banner__label">每日签到</span>
+    <span class="uc-checkin-banner__label">每日签到<?php if (!empty($checkinBanner['streak_days'])): ?> · 已连续 <?php echo (int) $checkinBanner['streak_days']; ?> 天<?php endif; ?></span>
     <button type="button" class="vs-btn vs-btn--primary vs-btn--sm uc-checkin-banner__btn" id="ucCheckinBtn">签到</button>
 </div>
 <?php endif; ?>

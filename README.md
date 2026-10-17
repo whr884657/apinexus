@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-13.26.47-blue?logo=semver&logoColor=white" alt="version">
+  <img src="https://img.shields.io/badge/version-13.26.48-blue?logo=semver&logoColor=white" alt="version">
   <img src="https://img.shields.io/badge/License-AGPL--3.0-blue?logo=gnu&logoColor=white" alt="License: AGPL-3.0">
   <a href="https://gitee.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/Gitee-xunjinlu%2Fapinexus-red?logo=gitee&logoColor=white" alt="Gitee"></a>
   <a href="https://gitcode.com/xunjinlu/apinexus"><img src="https://img.shields.io/badge/GitCode-xunjinlu%2Fapinexus-orange?logo=git&logoColor=white" alt="GitCode"></a>
@@ -114,7 +114,7 @@ flowchart LR
 
 ### Apache
 
-项目根目录 `.htaccess` 已含：禁止直链 `config/`、`data/`、`core/data/`；`/apis/{短码}` 代理；`/sitemap.xml`；通用 `/{页面}/{数字ID}` → `/{页面}.php?id=`。启用 `mod_rewrite` 即可。
+项目根目录 `.htaccess` 已含：禁止直链 `config/`、`data/`、`core/data/`、`core/geo/`；`/apis/{短码}` 代理；`/sitemap.xml`；通用 `/{页面}/{数字ID}` → `/{页面}.php?id=`。启用 `mod_rewrite` 即可。
 
 ### Nginx（宝塔「伪静态」请只粘贴英文规则，不要带中文注释）
 
@@ -125,7 +125,7 @@ location ^~ /assets/js/sysapi-catalog/ {
     deny all;
     return 403;
 }
-location ~ ^/(config|data|core/data)/ {
+location ~ ^/(config|data|core/data|core/geo)/ {
     deny all;
     return 403;
 }
@@ -145,7 +145,7 @@ location / {
 
 | 顺序 | 规则 | 作用 |
 |------|------|------|
-| 1 | `config` + `data` + `core/data` 合并 deny | 禁止直链配置、运行时目录与主题本地库 |
+| 1 | `config` + `data` + `core/data` + `core/geo` 合并 deny | 禁止直链配置、运行时目录、主题本地库与飞线坐标库 |
 | 2 | `/apis/{短码}` | 代理网关 |
 | 3 | `/sitemap.xml` | 站点地图 |
 | 4 | `/{页面}/{数字}` | 路径式资源 → `?id=` |
@@ -210,18 +210,20 @@ location / {
 
 > 此处**仅保留最新一条**；完整历史见 **[更新记录.md](更新记录.md)**。
 
-### v13.26.47（2026-10-16）
+### v13.26.48（2026-10-16）
 
-- 调整：邮件占位符改为全局英文短连写（无下划线）；按钮中文、插入英文；一键一义全场景通用，未赋值则为空
-- 新增：可绑定验证码场景（用户注册/登录/忘记密码、管理员登录/忘记密码）；有模板用模板，无则回退原 OTP 正文
-- 修复：浏览器标题与系统名称拆开；本站链接与友链申请网址拆开；用户头像地址统一为带域名的绝对 URL
-- 优化：覆盖本版后自动将邮箱模板内旧中文占位替换为英文键（无需单独执行数据库升级）
-- 修复：站内公告脚本报错导致弹窗/点击失效；控制台公告区固定高度与条数，并提供全部公告页
-- 修复：全部站内公告页补底部分页（真 COUNT + 每页条数），五主题同结构
-- 修复：用户中心侧栏频闪（折叠键与管理端隔离，改用 matchMedia）
-- 优化：邮箱模板占位符说明与手机预览交互；群发临时撰写正文加高
-- 修复：邮箱模板手机预览粘性定位与占位符说明复制分区滚动
-- 修复：邮箱模板保存完整 HTML 被网关拦截（403/invalid_json）；缺编码或解码失败拒存
+- 新增：系统设置「运维与性能」增加「反向代理」。默认关闭；开启后须填写反代机器 IP，才会按真实访客识别 IP 和 HTTPS
+- 修复：控制台与监控里的面板类型改为弹层选择，展开后可以正常收起
+- 新增：控制台与监控可填写服务器公网 IP，用来指定数据大屏上本站所在位置；留空则自动判断
+- 优化：数据大屏城市蓝点缩小为圆点并保留涟漪；鼠标放在省份上显示该省合计次数；青海各州归属更准确
+- 优化：飞线城市坐标库大幅扩充（国内至县级、全球城市与中英别名）；归属解析改为统一长别名与省内提示，不再为单省写特例
+- 优化：全站今日调用与今日积分消耗改为缓存约 10 秒；前台接口列表（含每个接口调用次数）、分类、公告、文章、友链、伙伴、赞助也改为约 10 秒，保存时仍会清掉缓存
+- 优化：每日签到改为记住最近 7 天和连续天数。满 7 天后每个连续签到日都可以额外赠送固定积分或按当天随机积分的百分比；不开启则仍只发随机积分。中间断签从第 1 天重计
+- 新增：用户中心账号设置增加「订阅通知」。站点打开后，用户可订阅接口上架、下架与维护。变更先记队列，由计划任务接口汇总发到注册邮箱。默认关闭
+- 修复：状态通知、SMTP、限流与安装升级链的并发和失败处理更稳妥，避免重复发送、误删队列或误报成功；改邮箱后订阅名单立即作废，封禁状态不会被进行中的查询写回
+- 修复：签到、退款、今日统计和地理大屏在异常配置、并发和缓存失效时保持可对账
+- 调整：计划任务设置提示批量通知风险；QPM/QPS 为 0 的既有不限语义保持不变
+- 本版含数据库升级，请按「系统升级」完成
 
 - 完整历史见 [`更新记录.md`](更新记录.md)
 

@@ -1328,13 +1328,6 @@ class PanelMonitor
         return $url;
     }
 
-    /**
-     * @param string $method
-     * @param string $url
-     * @param string $body
-     * @param array  $headers
-     * @return string
-     */
     private static function httpRequest($method, $url, $body, array $headers)
     {
         $timeout = self::HTTP_TIMEOUT;
@@ -1344,8 +1337,9 @@ class PanelMonitor
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
+            // 面板地址允许本机/RFC1918 等受支持的私有入口，但禁止盲目跨跳转。
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 0);
             if (defined('CURLPROTO_HTTP') && defined('CURLPROTO_HTTPS')) {
                 curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
                 curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
@@ -1367,8 +1361,8 @@ class PanelMonitor
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $err = curl_error($ch);
             vs_curl_close($ch);
-            if ($raw === false || $code >= 400 || $code === 0) {
-                throw new Exception($err !== '' ? $err : 'http ' . $code);
+            if ($raw === false || $code >= 300 || $code === 0) {
+                throw new Exception($err !== '' ? $err : ($code >= 300 && $code < 400 ? 'redirect not allowed' : 'http ' . $code));
             }
             return (string) $raw;
         }
@@ -1382,16 +1376,22 @@ class PanelMonitor
         }
         $opts = array(
             'http' => array(
-                'method'        => strtoupper($method),
-                'header'        => $hdr,
-                'content'       => $body,
-                'timeout'       => $timeout,
-                'ignore_errors' => true,
+                'method'          => strtoupper($method),
+                'header'          => $hdr,
+                'content'         => $body,
+                'timeout'         => $timeout,
+                'ignore_errors'   => true,
+                'follow_location' => 0,
+                'max_redirects'   => 0,
             ),
             'ssl' => vs_stream_ssl_options(),
         );
         $ctx = stream_context_create($opts);
         $raw = @file_get_contents($url, false, $ctx);
+        $statusLine = isset($http_response_header[0]) ? (string) $http_response_header[0] : '';
+        if ($statusLine !== '' && preg_match('/\s3\d\d\s/', $statusLine)) {
+            throw new Exception('redirect not allowed');
+        }
         if ($raw === false) {
             throw new Exception('request failed');
         }

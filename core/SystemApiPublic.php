@@ -150,12 +150,17 @@ class SystemApiPublic
             : (isset($row['role']) ? (string) $row['role'] : 'user');
         $roleLabel = class_exists('UserRole') ? UserRole::label($role) : $role;
 
-        $lastcheckin = '';
-        if (!empty($row['lastcheckin'])) {
-            $lastcheckin = substr((string) $row['lastcheckin'], 0, 10);
+        if (class_exists('CheckinManager')) {
+            $checkinView = CheckinManager::present(isset($row['lastcheckin']) ? $row['lastcheckin'] : '');
+        } else {
+            $checkinView = array(
+                'lastcheckin'   => '',
+                'checked_today' => false,
+                'checkin_days'  => array(),
+                'streak_days'   => 0,
+                'streak_full'   => false,
+            );
         }
-        $today = class_exists('CheckinManager') ? CheckinManager::today() : date('Y-m-d');
-        $checkedToday = ($lastcheckin !== '' && $lastcheckin === $today);
 
         $stats = array();
         if (class_exists('UserCallStats')) {
@@ -190,8 +195,11 @@ class SystemApiPublic
                 ? (int) $stats[UserCallStats::FIELD_TODAY] : 0,
             'week_calls'    => isset($stats[UserCallStats::FIELD_WEEK])
                 ? (int) $stats[UserCallStats::FIELD_WEEK] : 0,
-            'checked_today' => $checkedToday,
-            'lastcheckin'   => $lastcheckin,
+            'checked_today' => !empty($checkinView['checked_today']),
+            'lastcheckin'   => isset($checkinView['lastcheckin']) ? (string) $checkinView['lastcheckin'] : '',
+            'checkin_days'  => isset($checkinView['checkin_days']) ? $checkinView['checkin_days'] : array(),
+            'streak_days'   => isset($checkinView['streak_days']) ? (int) $checkinView['streak_days'] : 0,
+            'streak_full'   => !empty($checkinView['streak_full']),
             'rank7'         => isset($stats[UserCallStats::FIELD_RANK7])
                 && is_array($stats[UserCallStats::FIELD_RANK7])
                 ? $stats[UserCallStats::FIELD_RANK7] : array(),

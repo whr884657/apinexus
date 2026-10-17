@@ -129,6 +129,9 @@
         "core/FeedbackNotify.php",
         "core/CommentNotify.php",
         "core/PointsNotify.php",
-        "core/DevApplyNotify.php"
+        "core/DevApplyNotify.php",
+        "core/SubscribeManager.php",
+        "core/ApiSubLog.php",
+        "core/CronRunner.php"
     ]
 }

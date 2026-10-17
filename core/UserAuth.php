@@ -32,7 +32,8 @@ class UserAuth
         $userId = (int) $userId;
         unset(self::$statusMemo[$userId]);
         if ($userId > 0 && class_exists('RedisCache')) {
-            RedisCache::forget(self::statusCacheKey($userId));
+            $key = self::statusCacheKey($userId);
+            RedisCache::invalidateGuarded($key, $key . ':ver');
         }
     }
 
@@ -64,7 +65,8 @@ class UserAuth
         };
         try {
             if (class_exists('RedisCache') && RedisCache::enabled()) {
-                $st = RedisCache::remember(self::statusCacheKey($userId), RedisCache::TTL_USER_STATUS, $factory);
+                $key = self::statusCacheKey($userId);
+                $st = RedisCache::rememberGuarded($key, $key . ':ver', RedisCache::TTL_USER_STATUS, $factory);
             } else {
                 $st = $factory();
             }
@@ -659,6 +661,9 @@ class UserAuth
             $savedBlog = $blog !== null ? $blog : '';
             $savedWallpaper = $wallpaper !== null ? $wallpaper : '';
             $uid = self::id();
+            $oldEmailStmt = $pdo->prepare('SELECT `email` FROM `' . $table . '` WHERE `id` = ? LIMIT 1');
+            $oldEmailStmt->execute(array($uid));
+            $oldEmail = vs_normalize_email((string) $oldEmailStmt->fetchColumn());
 
             $fields = array('`email` = ?', '`avatar` = ?');
             $params = array($email, $savedAvatar);
@@ -686,6 +691,10 @@ class UserAuth
 
             $stmt = $pdo->prepare('UPDATE `' . $table . '` SET ' . implode(', ', $fields) . ' WHERE `id` = ?');
             $stmt->execute($params);
+
+            if ($oldEmail !== $email && class_exists('RedisCache')) {
+                RedisCache::invalidateApiStatusSubscribers();
+            }
 
             if ($username !== null && isset($_SESSION['vs_user_username'])) {
                 $_SESSION['vs_user_username'] = $username;

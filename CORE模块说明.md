@@ -2,7 +2,7 @@
 
 > **路径：** 项目根目录 `CORE模块说明.md`  
 > **性质：** 核心运行时（`core/`）模块说明，以及与主题包的**基础**对接边界  
-> **版本：** **13.26.47**（与 `core/version.php` 中 `VS_VERSION` 一致）  
+> **版本：** **13.26.48**（与 `core/version.php` 中 `VS_VERSION` 一致）  
 > **读者：** 核心维护者、二次开发；主题作者请**优先**读根目录 [`主题开发对接说明.md`](主题开发对接说明.md)  
 
 ### 怎么读（建议）
@@ -905,11 +905,11 @@ $showPartners = ThemeManager::themeSettingBool('show_partners', true);
 | 《邮箱发信规范》 | 业务邮件 E432 + 运营群发第4.12节（OpsMail / maillog；E442～E457）+ **全局英文占位符第4.13节 / E468**（验证码可绑 30～34） |
 | 《用户激励规范》 | 运营激励；筛选 `scope=mail` 供群发复用 |
 | `update-log.json` / `更新记录.md` | 版本变更（本文不按版本分章） |
-| `修改流程记录/13.26.47.md` | 本机点位级改动（不进仓） |
+| `修改流程记录/13.26.48.md` | 本机点位级改动（不进仓） |
 
 **维护约定：** 新增模块时：① 给中文**模块名**并归入附录 A 分类；② 附录 B 按「一模块一表」补卡片；③ 主题可见能力同步第 6 / 8 节速查。特色能力（如申请开发者、Turnstile、运营群发）另在第 16 节留流程图。`SystemApi*` / `core/api/*` 细则只写 [`core/api/README.md`](core/api/README.md) 与《系统级外部API规范》。改完须同步本文件与《修改流程记录》。
 
-**文档版本标注：** 13.26.47  
+**文档版本标注：** 13.26.48  
 
 ---
 
@@ -1340,7 +1340,7 @@ flowchart LR
 <details>
 <summary>补充说明（展开）</summary>
 
-**约定（E417）：** 前台内容/接口列表 TTL **86400**，后台保存须 `invalidateFrontend` 或针对性 `forget`；今日调用键按自然日，写入 `bumpApiLogToday`（键不存在则跳过，留给 `remember` 回源）；用户中心日志刷新 **禁止** `invalidateApiLog`，仅 `skip_cache` + 回第 1 页。详见《Redis缓存键前缀规范》第八节。
+**约定（E485）：** 前台内容/接口列表 TTL **10 秒**，后台保存仍须 `invalidateFrontend` 或针对性 `forget`；今日调用键 TTL **10 秒**，写入 `bumpApiLogToday`（键不存在则跳过，留给 `remember` 回源）；用户中心日志刷新 **禁止** `invalidateApiLog`，仅 `skip_cache` + 回第 1 页。详见《Redis缓存键前缀规范》第八节。
 
 </details>
 
@@ -1730,14 +1730,16 @@ flowchart LR
 | **类名** | `AuthSecurity` |
 | **路径** | `core/AuthSecurity.php` |
 | **分类** | 认证安全 |
-| **职责** | 认证页安全防护（CSRF、频率限制、登录防暴力）；全站 CSP（可信本站 http+https 动态 origin，E373）；同源校验（Origin/Referer 须可信主机） |
+| **职责** | 认证页安全防护（CSRF、频率限制、登录防暴力）；全站 CSP（可信本站 http+https 动态 origin，E373）；同源校验（Origin/Referer 须可信主机）；反向代理双锁 `proxyon` + `proxyips`（E482） |
 | **主题可见** | 禁止（后台 / 内部） |
-| **公开方法 / 入口** | `sessionCookieSecure` · `detectSessionRealm` · `currentSessionRealm` · `configureSessionCookies` · `expireNamedSessionCookie` · `clearSessionCookie` · `isHttps` · `sendSecurityHeaders` · `sendFrontendSecurityHeaders` · `ensureCsrfToken` · `rotateCsrfToken` · `csrfToken` · `validateCsrf` · `validateSameOrigin` · `clientIp` · `trustForwardedHeaders` · `mayTrustForwardedClientHints` · `isTrustedProxyAddress` · `rateLimitAllow` · `secondsSinceLastHit` · `issueMailTicket` · `validateAndConsumeMailTicket` · `withMailTicket` · `checkLoginAllowed` · `recordLoginFailure` · `checkMailCodeAllowed` · `recordMailCodeAttempt` · `recordMailCodeSent` · `checkResetSubmitAllowed` · `recordResetSubmit` · `recordOtpFailure` · `clearOtpSession` · `resetOtpFailCount` · `checkOAuthStartAllowed` · `recordOAuthStart` · `checkOAuthCallbackAllowed` · `recordOAuthCallback` · `requireAuthPost` |
+| **公开方法 / 入口** | `sessionCookieSecure` · `detectSessionRealm` · `currentSessionRealm` · `configureSessionCookies` · `expireNamedSessionCookie` · `clearSessionCookie` · `isHttps` · `sendSecurityHeaders` · `sendFrontendSecurityHeaders` · `ensureCsrfToken` · `rotateCsrfToken` · `csrfToken` · `validateCsrf` · `validateSameOrigin` · `clientIp` · `trustForwardedHeaders` · `mayTrustForwardedClientHints` · `isTrustedProxyAddress` · `normalizeProxyIpList` · `rateLimitAllow` · `secondsSinceLastHit` · `issueMailTicket` · `validateAndConsumeMailTicket` · `withMailTicket` · `checkLoginAllowed` · `recordLoginFailure` · `checkMailCodeAllowed` · `recordMailCodeAttempt` · `recordMailCodeSent` · `checkResetSubmitAllowed` · `recordResetSubmit` · `recordOtpFailure` · `clearOtpSession` · `resetOtpFailCount` · `checkOAuthStartAllowed` · `recordOAuthStart` · `checkOAuthCallbackAllowed` · `recordOAuthCallback` · `requireAuthPost` |
 
 <details>
 <summary>补充说明（展开）</summary>
 
 **CSP（v13.26.46）：** `sendContentSecurityPolicy` 经 `cspSameSiteOriginList()` 把 **`vs_trusted_host_list()`**（`SERVER_NAME` + 绑定域 + www 孪生）写成 `http://主机` + `https://主机`，写入 `script-src` / `style-src` / `connect-src`；`form-action` **仅** `'self'`。**禁止** Origin / Referer / HTTP_HOST 入名单，禁止全网 `http:`。`validateSameOrigin`：有 Origin/Referer 则主机须可信；无头仅 `Sec-Fetch-Site=same-origin` 且当前 Host 可信。**禁止** `same-site` 单独放行。
+
+**反向代理（v13.26.48 / E482）：** `trustForwardedHeaders` 读 `proxyon`；`isTrustedProxyAddress` 读 `proxyips`。默认关闭；空名单 fail-closed。后台「系统设置 → 运维与性能 → 反向代理」经 `normalizeProxyIpList` 保存。主题勿读这两键。
 
 </details>
 
@@ -1879,9 +1881,9 @@ flowchart LR
 | **类名** | `UserManager` |
 | **路径** | `core/UserManager.php` |
 | **分类** | 认证安全 |
-| **职责** | 管理员用户列表查询 |
-| **主题可见** | 禁止（后台 / 内部） |
-| **公开方法 / 入口** | `all` · `attachListStats` · `findByAccount` · `findById` · `count` · `setStatus` · `setRole` · `delete` · `exists` |
+| **职责** | 管理员用户列表查询；用户订阅开关 `user.subjson`（`subscribeSiteOn` / `wantsApiStatus` / `setApiStatus` / `apiStatusSubscribers`） |
+| **主题可见** | 禁止（后台 / 内部；账号页由 `user/account.php` 注入） |
+| **公开方法 / 入口** | `all` · `attachListStats` · `findByAccount` · `findById` · `count` · `setStatus` · `setRole` · `delete` · `exists` · `subscribeSiteOn` · `wantsApiStatus` · `setApiStatus` · `apiStatusSubscribers` |
 
 ---
 
@@ -2098,9 +2100,9 @@ flowchart LR
 | **类名** | `ApiManager` |
 | **路径** | `core/ApiManager.php` |
 | **分类** | 接口核心 |
-| **职责** | API 接口数据管理（后台接口列表 CRUD、用户投稿） |
+| **职责** | API 接口数据管理（后台接口列表 CRUD、用户投稿）。状态订阅待发写 Redis，由 `flushStatusSubscribe` 消费，不建表、不另建文件 |
 | **主题可见** | 禁止（后台 / 内部） |
-| **公开方法 / 入口** | `table` · `tableReady` · `hasAuditColumn` · `hasRejectReasonColumn` · `hasProxyColumns` · `hasChargeColumns` · `hasQpmColumn` · `hasKeywaysColumn` · `hasUpstreamAuthColumns` · `hasProxyClientColumns` · `hasUpmethodColumn` · `normalizeUpmethod` · `upmethodLabel` · `upmethodHttp` · `normalizeUpauth` · `normalizeUpkeyvia` · `normalizeUpkeyname` · `normalizeUpkey` · `upauthLabel` · `normalizeQpm` · `qpmLabel` · `normalizeKeyways` · `keywaysToStorage` · `keywaysLabel` · `normalizeCharge` · `normalizePrice` · `chargeLabel` · `listPublic` · `listPublicLiteAll` · `countPublic` · `countApproved` · `totalCallCount` · `categoriesFromList` · `listAll` · `listByAudit` · `listForReview` · `countPendingReview` · `listPendingReviewBrief` · `listByUser` · `attachUserIdIfOrphan` · `listFiltered` · `findById` · `create` · `update` · `updateDocsContent` · `setStatus` · `setAuditStatus` · `normalizeRejectReason` · `delete` · `incrementCallCount` · `normalizeStatus` · `statusLabel` · `isValidStatus` · `normalizeAuditStatus` · `isValidAuditStatus` · `auditStatusLabel` · `auditStatusClass` · `formatRow` · `formatRowSummary` · `normalizeApiType` · `apiTypeLabel` · `apiTypeBadge` · `requireKeyBadge` · `resolveCallPath` · `resolveCallUrl` · `normalizeMethods` · `methodsToStorage` · `methodsLabel` · `normalizeRequireKey` · `requireKeyLabel` |
+| **公开方法 / 入口** | `table` · `tableReady` · `hasAuditColumn` · `hasRejectReasonColumn` · `hasProxyColumns` · `hasChargeColumns` · `hasQpmColumn` · `hasKeywaysColumn` · `hasUpstreamAuthColumns` · `hasProxyClientColumns` · `hasUpmethodColumn` · `normalizeUpmethod` · `upmethodLabel` · `upmethodHttp` · `normalizeUpauth` · `normalizeUpkeyvia` · `normalizeUpkeyname` · `normalizeUpkey` · `upauthLabel` · `normalizeQpm` · `qpmLabel` · `normalizeKeyways` · `keywaysToStorage` · `keywaysLabel` · `normalizeCharge` · `normalizePrice` · `chargeLabel` · `listPublic` · `listPublicLiteAll` · `countPublic` · `countApproved` · `totalCallCount` · `categoriesFromList` · `listAll` · `listByAudit` · `listForReview` · `countPendingReview` · `listPendingReviewBrief` · `listByUser` · `attachUserIdIfOrphan` · `listFiltered` · `findById` · `create` · `update` · `updateDocsContent` · `setStatus` · `setAuditStatus` · `normalizeRejectReason` · `delete` · `incrementCallCount` · `normalizeStatus` · `statusLabel` · `isValidStatus` · `normalizeAuditStatus` · `isValidAuditStatus` · `auditStatusLabel` · `auditStatusClass` · `formatRow` · `formatRowSummary` · `normalizeApiType` · `apiTypeLabel` · `apiTypeBadge` · `requireKeyBadge` · `resolveCallPath` · `resolveCallUrl` · `normalizeMethods` · `methodsToStorage` · `methodsLabel` · `normalizeRequireKey` · `requireKeyLabel` · `flushStatusSubscribe` |
 
 <details>
 <summary>补充说明（展开）</summary>
@@ -2260,9 +2262,9 @@ flowchart LR
 | **类名** | `GeoCityCoords` |
 | **路径** | `core/GeoCityCoords.php` |
 | **分类** | 观测与日志 |
-| **职责** | 数据大屏飞线城市经纬度全量库（国内地级市加强 + 全球主要城市 + 中英别名） |
+| **职责** | 数据大屏飞线城市经纬度全量库（国内至县级加强 + 全球城市 + 中英别名）；数据文件在 `core/geo/`，本类负责加载与归属解析（E484） |
 | **主题可见** | 禁止（后台 / 内部） |
-| **公开方法 / 入口** | `china` · `world` · `aliases` · `matchNamesSorted` · `resolveCityName` |
+| **公开方法 / 入口** | `china` · `world` · `aliases` · `regionHints` · `matchNamesSorted` · `provinceOf` · `resolveCityName` |
 
 ---
 
@@ -2441,14 +2443,14 @@ flowchart LR
 | **类名** | `CheckinManager` |
 | **路径** | `core/CheckinManager.php` |
 | **分类** | 积分支付 |
-| **职责** | 每日签到占位与状态（`user.lastcheckin`；同用户同日唯一；主题经 FrontendUser / PointsManager 调用）。积分流水在 `orders.kind=3`，**无**独立签到表（v13.26.45 起 DROP `checkin`）。流水备注：用户中心「每日签到奖励」、系统 API「每日签到奖励（API）」。系统级签到 HTTP 见 [`core/api/README.md`](core/api/README.md)。 |
+| **职责** | 每日签到占位与状态（`user.lastcheckin` 为 JSON：`days` 最多 7 日、`streak` 不封顶；断签清空后从 1 计；主题经 FrontendUser / PointsManager 调用）。`streak>=7` 且后台开启时每天加发。积分流水在 `orders.kind=3`，**无**独立签到表（v13.26.45 起 DROP `checkin`）。系统级签到 HTTP 见 [`core/api/README.md`](core/api/README.md)。 |
 | **主题可见** | 禁止（后台 / 内部；主题只渲染入口注入的签到 UI） |
-| **公开方法 / 入口** | `tableReady` · `today` · `hasCheckedInToday` · `record` · `deleteToday` · `bannerState` · `pointsRange` |
+| **公开方法 / 入口** | `tableReady` · `today` · `present` · `bonusAmount` · `bonusConfig` · `hasCheckedInToday` · `record` · `occupyMeta` · `deleteToday` · `bannerState` · `pointsRange` · `systemApiConfig` · `statusForSystemApi` |
 
 <details>
 <summary>补充说明（展开）</summary>
 
-**判定：** 今日已签 ⇔ `lastcheckin` 等于服务器当日 `Y-m-d`。
+**判定：** 今日已签 ⇔ JSON 里 `days` 的最后一天等于服务器当日。第几天看 `streak`，不看 `days` 的个数。入账失败须还原占位前的整段 JSON。
 
 </details>
 

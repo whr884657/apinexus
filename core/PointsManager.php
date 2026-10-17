@@ -168,7 +168,7 @@ class PointsManager
      * @param string $remark
      * @return array{ok:bool,msg:string,balance?:float}
      */
-    public static function refundApiCall($userId, $amount, $apiId, $keyId, $remark = '')
+    public static function refundApiCall($userId, $amount, $apiId, $keyId, $remark = '', $debitOrderNo = '')
     {
         return self::change(
             (int) $userId,
@@ -176,10 +176,11 @@ class PointsManager
             OrderManager::KIND_REFUND,
             (float) $amount,
             array(
-                'apiid'  => (int) $apiId,
-                'keyid'  => (int) $keyId,
-                'remark' => $remark !== '' ? $remark : '上游失败退回',
-                'status' => OrderManager::STATUS_DONE,
+                'apiid'             => (int) $apiId,
+                'keyid'             => (int) $keyId,
+                'remark'            => $remark !== '' ? $remark : '上游失败退回',
+                'status'            => OrderManager::STATUS_DONE,
+                'refund_for_orderno' => trim((string) $debitOrderNo),
             )
         );
     }
@@ -548,7 +549,7 @@ class PointsManager
             return true;
         } catch (Exception $e) {
             try {
-                if (isset($pdo) && $pdo->inTransaction()) {
+                if ($ownsTransaction && isset($pdo) && $pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
             } catch (Exception $e2) {
@@ -594,7 +595,7 @@ class PointsManager
      * @param array $extra
      * @return array
      */
-    private static function change($userId, $direct, $kind, $amount, array $extra = array())
+    private static function change($userId, $direct, $kind, $amount, array $extra = array(), $sharedPdo = null)
     {
         $userId = (int) $userId;
         $amount = round((float) $amount, 4);
@@ -606,21 +607,76 @@ class PointsManager
         }
 
         try {
-            $pdo = Database::connect();
-            $pdo->beginTransaction();
+            $pdo = $sharedPdo ?: Database::connect();
+            $ownsTransaction = !$pdo->inTransaction();
+            if ($ownsTransaction) {
+                $pdo->beginTransaction();
+            }
             $stmt = $pdo->prepare(
                 'SELECT `points` FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1 FOR UPDATE'
             );
             $stmt->execute(array($userId));
             $cur = $stmt->fetchColumn();
             if ($cur === false) {
-                $pdo->rollBack();
+                if ($ownsTransaction) {
+                    $pdo->rollBack();
+                }
                 return array('ok' => false, 'msg' => '用户不存在');
+            }
+            $refundFor = trim((string) (isset($extra['refund_for_orderno']) ? $extra['refund_for_orderno'] : ''));
+            if ($direct === OrderManager::DIRECT_INC && $kind === OrderManager::KIND_REFUND && $refundFor !== '') {
+                $orderTable = OrderManager::table();
+                $debitStmt = $pdo->prepare(
+                    'SELECT `userid`, `direct`, `kind`, `amount`, `apiid`, `keyid`, `status` FROM `' . $orderTable . '`'
+                    . ' WHERE `orderno` = ? LIMIT 1 FOR UPDATE'
+                );
+                $debitStmt->execute(array($refundFor));
+                $debit = $debitStmt->fetch(PDO::FETCH_ASSOC);
+                if (!$debit
+                    || (int) $debit['userid'] !== $userId
+                    || (int) $debit['direct'] !== OrderManager::DIRECT_DEC
+                    || (int) $debit['kind'] !== OrderManager::KIND_API
+                    || (int) $debit['apiid'] !== (int) (isset($extra['apiid']) ? $extra['apiid'] : 0)
+                    || (int) $debit['keyid'] !== (int) (isset($extra['keyid']) ? $extra['keyid'] : 0)
+                    || (int) $debit['status'] !== OrderManager::STATUS_DONE
+                    || abs(round((float) $debit['amount'], 4) - $amount) > 0.0000001) {
+                    if ($ownsTransaction) {
+                        $pdo->rollBack();
+                    }
+                    return array('ok' => false, 'msg' => '原扣款记录不可退回');
+                }
+                $refundStmt = $pdo->prepare(
+                    'SELECT `orderno` FROM `' . $orderTable . '` WHERE `userid` = ? AND `direct` = ?'
+                    . ' AND `kind` = ? AND `status` = ? AND `tradeno` = ? LIMIT 1'
+                );
+                $refundStmt->execute(array(
+                    $userId,
+                    OrderManager::DIRECT_INC,
+                    OrderManager::KIND_REFUND,
+                    OrderManager::STATUS_DONE,
+                    $refundFor,
+                ));
+                $existingRefund = $refundStmt->fetchColumn();
+                if ($existingRefund !== false) {
+                    if ($ownsTransaction) {
+                        $pdo->commit();
+                    }
+                    return array(
+                        'ok' => true,
+                        'msg' => 'ok',
+                        'balance' => (float) $cur,
+                        'orderno' => (string) $existingRefund,
+                        'amount' => $amount,
+                        'already_refunded' => true,
+                    );
+                }
             }
             $cur = (float) $cur;
             if ($direct === OrderManager::DIRECT_DEC) {
                 if ($cur + 0.0000001 < $amount) {
-                    $pdo->rollBack();
+                    if ($ownsTransaction) {
+                        $pdo->rollBack();
+                    }
                     if (class_exists('MailNotify')) {
                         try {
                             MailNotify::notifyPointsInsufficient($userId, $cur, $amount);
@@ -647,26 +703,44 @@ class PointsManager
                 )->execute(array($newBal, $userId));
             }
 
-            $orderno = OrderManager::genOrderNo($direct === OrderManager::DIRECT_DEC ? 'DC' : 'IN');
+            $orderno = '';
             $ins = $pdo->prepare(
                 'INSERT INTO `' . OrderManager::table() . '` (
                     `orderno`, `userid`, `direct`, `kind`, `amount`, `balance`, `money`,
                     `apiid`, `keyid`, `paytype`, `tradeno`, `status`, `remark`, `createtime`, `paytime`
-                ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, \'\', \'\', ?, ?, NOW(), ?)'
+                ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, \'\', ?, ?, ?, NOW(), ?)'
             );
-            $ins->execute(array(
-                $orderno,
-                $userId,
-                (int) $direct,
-                (int) $kind,
-                $amount,
-                $newBal,
-                (int) (isset($extra['apiid']) ? $extra['apiid'] : 0),
-                (int) (isset($extra['keyid']) ? $extra['keyid'] : 0),
-                (int) (isset($extra['status']) ? $extra['status'] : OrderManager::STATUS_DONE),
-                (string) (isset($extra['remark']) ? $extra['remark'] : ''),
-                isset($extra['paytime']) ? $extra['paytime'] : null,
-            ));
+            $inserted = false;
+            for ($attempt = 0; $attempt < 5; $attempt++) {
+                $orderno = OrderManager::genOrderNo($direct === OrderManager::DIRECT_DEC ? 'DC' : 'IN');
+                try {
+                    $ins->execute(array(
+                        $orderno,
+                        $userId,
+                        (int) $direct,
+                        (int) $kind,
+                        $amount,
+                        $newBal,
+                        (int) (isset($extra['apiid']) ? $extra['apiid'] : 0),
+                        (int) (isset($extra['keyid']) ? $extra['keyid'] : 0),
+                        isset($extra['refund_for_orderno']) ? (string) $extra['refund_for_orderno'] : '',
+                        (int) (isset($extra['status']) ? $extra['status'] : OrderManager::STATUS_DONE),
+                        (string) (isset($extra['remark']) ? $extra['remark'] : ''),
+                        isset($extra['paytime']) ? $extra['paytime'] : null,
+                    ));
+                    $inserted = true;
+                    break;
+                } catch (PDOException $insertException) {
+                    $isDuplicate = isset($insertException->errorInfo[1])
+                        && (int) $insertException->errorInfo[1] === 1062;
+                    if (!$isDuplicate || $attempt >= 4) {
+                        throw $insertException;
+                    }
+                }
+            }
+            if (!$inserted) {
+                throw new Exception('订单号生成失败');
+            }
 
             // 密钥维度累计消耗：仅 API 扣费 / 调用退回且带 keyid（与账户 pointsspent 并存）
             $keyIdForSpent = (int) (isset($extra['keyid']) ? $extra['keyid'] : 0);
@@ -681,12 +755,14 @@ class PointsManager
                 }
             }
 
-            $pdo->commit();
-            if (self::$bulkOrdersDefer <= 0 && class_exists('RedisCache')) {
+            if ($ownsTransaction) {
+                $pdo->commit();
+            }
+            if ($ownsTransaction && self::$bulkOrdersDefer <= 0 && class_exists('RedisCache')) {
                 RedisCache::invalidateOrders();
             }
             // 批量赠送时跳过逐用户 Redis 清理，避免上千次往返拖垮站点
-            if (self::$bulkOrdersDefer <= 0
+            if ($ownsTransaction && self::$bulkOrdersDefer <= 0
                 && $direct === OrderManager::DIRECT_INC
                 && class_exists('MailNotify')) {
                 try {
@@ -695,7 +771,7 @@ class PointsManager
                     // ignore
                 }
             }
-            if ($direct === OrderManager::DIRECT_DEC
+            if ($ownsTransaction && $direct === OrderManager::DIRECT_DEC
                 && $cur > 0.0000001
                 && $newBal <= 0.0000001
                 && class_exists('MailNotify')) {
@@ -714,7 +790,7 @@ class PointsManager
             );
         } catch (Exception $e) {
             try {
-                if (isset($pdo) && $pdo->inTransaction()) {
+                if ($ownsTransaction && isset($pdo) && $pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
             } catch (Exception $e2) {
@@ -773,13 +849,6 @@ class PointsManager
         return '每日签到奖励';
     }
 
-    /**
-     * 每日签到（随机区间积分；同用户同日仅一次）
-     *
-     * @param int    $userId
-     * @param string $via    web=用户中心签到；api=系统外部 API 代签到（仅影响流水 remark）
-     * @return array{ok:bool,msg:string,amount?:float,balance?:float}
-     */
     public static function checkin($userId, $via = 'web')
     {
         $userId = (int) $userId;
@@ -792,45 +861,75 @@ class PointsManager
         if (!class_exists('CheckinManager') || !CheckinManager::tableReady()) {
             return array('ok' => false, 'msg' => '签到功能尚未就绪，请先完成系统升级');
         }
-        $min = (int) Config::get('checkin_points_min', '10');
-        $max = (int) Config::get('checkin_points_max', '30');
-        if ($min < 1) {
-            $min = 1;
-        }
-        if ($max < $min) {
-            $max = $min;
-        }
-        if ($max > 1000000) {
-            $max = 1000000;
+        $range = CheckinManager::pointsRange();
+        try {
+            $base = (float) (function_exists('random_int')
+                ? random_int($range['min'], $range['max'])
+                : mt_rand($range['min'], $range['max']));
+        } catch (Exception $e) {
+            return array('ok' => false, 'msg' => '签到积分配置无效');
         }
 
-        $amount = (float) (function_exists('random_int')
-            ? random_int($min, $max)
-            : mt_rand($min, $max));
-
-        // 先占位 lastcheckin=今日，防止并发重复发放
-        $saved = CheckinManager::record($userId, $amount);
-        if ($saved !== true) {
-            return array('ok' => false, 'msg' => is_string($saved) ? $saved : '今日已签到');
-        }
-
-        $result = self::change(
-            $userId,
-            OrderManager::DIRECT_INC,
-            OrderManager::KIND_CHECKIN,
-            $amount,
-            array(
-                'remark'  => self::checkinRemark($via),
-                'status'  => OrderManager::STATUS_DONE,
-                'paytime' => date('Y-m-d H:i:s'),
-            )
-        );
-        if (empty($result['ok'])) {
-            CheckinManager::deleteToday($userId);
+        $pdo = null;
+        try {
+            $pdo = Database::connect();
+            $pdo->beginTransaction();
+            // record() 在同一事务里锁用户行并复核 status，避免封禁/签到竞态。
+            $saved = CheckinManager::record($userId, $base, $pdo);
+            if ($saved !== true) {
+                $pdo->rollBack();
+                return array('ok' => false, 'msg' => is_string($saved) ? $saved : '今日已签到');
+            }
+            $meta = CheckinManager::occupyMeta($userId);
+            $streak = is_array($meta) && isset($meta['streak']) ? (int) $meta['streak'] : 1;
+            $bonus = CheckinManager::bonusAmount($base, $streak);
+            $amount = round($base + $bonus, 4);
+            $remark = self::checkinRemark($via);
+            if ($bonus > 0) {
+                $extra = PayConfig::fmtPoints($bonus);
+                $remark = strtolower(trim((string) $via)) === 'api'
+                    ? '每日签到奖励（API，连续' . $streak . '天额外' . $extra . '）'
+                    : '每日签到奖励（连续' . $streak . '天额外' . $extra . '）';
+            }
+            $result = self::change(
+                $userId,
+                OrderManager::DIRECT_INC,
+                OrderManager::KIND_CHECKIN,
+                $amount,
+                array(
+                    'remark'  => $remark,
+                    'status'  => OrderManager::STATUS_DONE,
+                    'paytime' => date('Y-m-d H:i:s'),
+                ),
+                $pdo
+            );
+            if (empty($result['ok'])) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                return $result;
+            }
+            $pdo->commit();
+            $msg = '签到成功，获得 ' . PayConfig::fmtPoints($base) . ' 积分';
+            if ($bonus > 0) {
+                $msg .= '，连续签到第 ' . $streak . ' 天，额外获得 ' . PayConfig::fmtPoints($bonus) . ' 积分';
+            }
+            $result['msg'] = $msg;
+            $result['amount'] = $amount;
+            $result['base'] = $base;
+            $result['bonus'] = $bonus;
+            $result['bonus_applied'] = $bonus > 0;
+            $result['streak_days'] = $streak;
+            $result['streak_full'] = $streak >= 7;
+            $result['checkin_days'] = is_array($meta) && isset($meta['days']) ? $meta['days'] : array();
+            $result['lastcheckin'] = is_array($meta) && isset($meta['lastcheckin'])
+                ? (string) $meta['lastcheckin'] : CheckinManager::today();
             return $result;
+        } catch (Exception $e) {
+            if ($pdo instanceof PDO && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            return array('ok' => false, 'msg' => '签到失败，请稍后重试');
         }
-        $result['msg'] = '签到成功，获得 ' . PayConfig::fmtPoints($amount) . ' 积分';
-        $result['amount'] = $amount;
-        return $result;
     }
 }

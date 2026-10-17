@@ -161,6 +161,110 @@ class RateLimitStore
     }
 
     /**
+     * Redis 内原子检查并占用一个窗口额度。
+     *
+     * @param string $bucket
+     * @param int    $windowSeconds
+     * @param int    $maxAttempts
+     * @param bool   $record
+     * @return bool
+     * @throws Exception
+     */
+    private static function redisAllow($bucket, $windowSeconds, $maxAttempts, $record)
+    {
+        $windowSeconds = max(1, (int) $windowSeconds);
+        $winKey = RedisService::buildKey(self::redisWindowKey($bucket, $windowSeconds));
+        $lastKey = RedisService::buildKey(self::redisLastKey($bucket));
+        $script = <<<'LUA'
+local current = tonumber(redis.call('GET', KEYS[1]) or '0')
+if current >= tonumber(ARGV[1]) then
+    return 0
+end
+if ARGV[2] == '1' then
+    current = redis.call('INCR', KEYS[1])
+    if current == 1 then
+        redis.call('EXPIRE', KEYS[1], tonumber(ARGV[3]) + 60)
+    end
+    redis.call('SETEX', KEYS[2], tonumber(ARGV[4]), ARGV[5])
+end
+return 1
+LUA;
+        $args = array(
+            $winKey,
+            $lastKey,
+            (string) max(0, (int) $maxAttempts),
+            $record ? '1' : '0',
+            (string) $windowSeconds,
+            (string) self::RETENTION_SECONDS,
+            (string) time(),
+        );
+        $result = RedisService::withClient(function ($redis) use ($script, $args) {
+            if (!is_object($redis) || !method_exists($redis, 'eval')) {
+                throw new Exception('Redis eval unavailable');
+            }
+            return $redis->eval($script, $args, 2);
+        });
+        if ($result === false || $result === null) {
+            throw new Exception('Redis eval failed');
+        }
+        return (int) $result === 1;
+    }
+
+    /**
+     * MySQL 回退：用连接级命名锁包住检查与插入，避免 check/record 竞态。
+     *
+     * @param string $bucket
+     * @param int    $windowSeconds
+     * @param int    $maxAttempts
+     * @param bool   $record
+     * @return bool
+     */
+    private static function mysqlAllow($bucket, $windowSeconds, $maxAttempts, $record)
+    {
+        if (!self::isReady()) {
+            return true;
+        }
+        $pdo = Database::connect();
+        $limitKey = self::limitKey($bucket);
+        $since = time() - (int) $windowSeconds;
+        if (!$record) {
+            $stmt = $pdo->prepare(
+                'SELECT COUNT(*) FROM `' . self::table() . '` WHERE `limitkey` = ? AND `createtime` >= ?'
+            );
+            $stmt->execute(array($limitKey, $since));
+            return (int) $stmt->fetchColumn() < (int) $maxAttempts;
+        }
+
+        $lockName = 'vs_rl:' . substr(hash('sha256', $limitKey . ':' . (int) $windowSeconds), 0, 56);
+        $lockStmt = $pdo->prepare('SELECT GET_LOCK(?, 5)');
+        $lockStmt->execute(array($lockName));
+        if ((int) $lockStmt->fetchColumn() !== 1) {
+            return false;
+        }
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT COUNT(*) FROM `' . self::table() . '` WHERE `limitkey` = ? AND `createtime` >= ?'
+            );
+            $stmt->execute(array($limitKey, $since));
+            if ((int) $stmt->fetchColumn() >= (int) $maxAttempts) {
+                return false;
+            }
+            $insert = $pdo->prepare(
+                'INSERT INTO `' . self::table() . '` (`limitkey`, `createtime`) VALUES (?, ?)'
+            );
+            $insert->execute(array($limitKey, time()));
+            return true;
+        } finally {
+            try {
+                $release = $pdo->prepare('SELECT RELEASE_LOCK(?)');
+                $release->execute(array($lockName));
+            } catch (Exception $eRelease) {
+                // 连接释放时 MySQL 会自动释放命名锁。
+            }
+        }
+    }
+
+    /**
      * @param string $bucket
      * @param int    $windowSeconds
      * @param int    $maxAttempts
@@ -169,16 +273,16 @@ class RateLimitStore
      */
     public static function allow($bucket, $windowSeconds, $maxAttempts, $record = true)
     {
-        $count = self::countHits($bucket, $windowSeconds);
-        if ($count >= $maxAttempts) {
-            return false;
+        $windowSeconds = max(1, (int) $windowSeconds);
+        $maxAttempts = max(0, (int) $maxAttempts);
+        if (RedisCache::enabled()) {
+            try {
+                return self::redisAllow($bucket, $windowSeconds, $maxAttempts, $record);
+            } catch (Exception $e) {
+                // Redis 不可用时使用同样具备原子锁的 MySQL 路径。
+            }
         }
-
-        if ($record) {
-            self::recordHit($bucket, $windowSeconds);
-        }
-
-        return true;
+        return self::mysqlAllow($bucket, $windowSeconds, $maxAttempts, $record);
     }
 
     /**

@@ -68,9 +68,19 @@ class DatabaseInstaller
      */
     public static function dropExistingTables(PDO $pdo, $prefix, $dbname)
     {
+        $prefix = (string) $prefix;
+        if ($prefix === '') {
+            throw new Exception('数据表前缀不能为空');
+        }
+
         $tables = self::getExistingTables($pdo, $prefix, $dbname);
         foreach ($tables as $table) {
-            $pdo->exec('DROP TABLE IF EXISTS `' . $table . '`');
+            $table = (string) $table;
+            // DROP 前再次按字面前缀校验，防止元数据查询结果误匹配共享库表。
+            if (substr($table, 0, strlen($prefix)) !== $prefix) {
+                continue;
+            }
+            $pdo->exec('DROP TABLE IF EXISTS `' . str_replace('`', '``', $table) . '`');
         }
     }
 
@@ -89,9 +99,12 @@ class DatabaseInstaller
         }
 
         $stmt = $pdo->prepare(
-            'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME LIKE ?'
+            'SELECT TABLE_NAME FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME LIKE ? ESCAPE \'\\\\\''
         );
-        $stmt->execute(array($dbname, $prefix . '%'));
+        // 前缀是字面量；必须转义 \, % 和 _，避免共享库中相似表名被纳入清表范围。
+        $literalPrefix = addcslashes((string) $prefix, "\\\\%_");
+        $stmt->execute(array($dbname, $literalPrefix . '%'));
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $tables = array();

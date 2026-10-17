@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：core/UserManager.php
- * 作用：管理员用户列表查询
+ * 作用：管理员用户列表，以及用户订阅开关（user.subjson）
  */
 
 class UserManager
@@ -192,6 +192,9 @@ class UserManager
             if (class_exists('UserAuth')) {
                 UserAuth::forgetStatusCache($userId);
             }
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateApiStatusSubscribers();
+            }
             return true;
         } catch (Exception $e) {
             return '操作失败：' . $e->getMessage();
@@ -275,6 +278,9 @@ class UserManager
             if (class_exists('UserAuth')) {
                 UserAuth::forgetStatusCache($userId);
             }
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateApiStatusSubscribers();
+            }
             return true;
         } catch (Exception $e) {
             return '删除失败：' . $e->getMessage();
@@ -300,6 +306,154 @@ class UserManager
             return (bool) $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             return false;
+        }
+    }
+
+    /**
+     * 站点是否开放订阅
+     *
+     * @return bool
+     */
+    public static function subscribeSiteOn()
+    {
+        return Config::get('subon', '0') === '1';
+    }
+
+    /**
+     * @param int $userId
+     * @return bool
+     */
+    public static function wantsApiStatus($userId)
+    {
+        $bag = self::readSubscribeBag((int) $userId);
+        return !empty($bag['apistatus']);
+    }
+
+    /**
+     * @param int $userId
+     * @param int $on 0|1
+     * @return true|string
+     */
+    public static function setApiStatus($userId, $on)
+    {
+        $userId = (int) $userId;
+        $on = ((int) $on) === 1 ? 1 : 0;
+        if ($userId <= 0) {
+            return '请先登录';
+        }
+        if ($on === 1 && !self::subscribeSiteOn()) {
+            return '站点尚未开放订阅';
+        }
+        if (!class_exists('DatabaseMigrator') || !DatabaseMigrator::tableColumnExists('user', 'subjson')) {
+            return '订阅功能尚未就绪，请先完成系统升级';
+        }
+        $bag = self::readSubscribeBag($userId);
+        $bag['apistatus'] = $on;
+        $json = json_encode($bag, JSON_UNESCAPED_UNICODE);
+        if (!is_string($json)) {
+            return '保存失败，请稍后重试';
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'UPDATE `' . Database::table('user') . '` SET `subjson` = ? WHERE `id` = ? LIMIT 1'
+            );
+            $stmt->execute(array($json, $userId));
+            if (class_exists('RedisCache')) {
+                RedisCache::invalidateApiStatusSubscribers();
+            }
+            return true;
+        } catch (Exception $e) {
+            return '保存失败，请稍后重试';
+        }
+    }
+
+    /**
+     * 已打开接口状态订阅、且邮箱可用的正常用户。
+     * 查询失败与成功但无订阅者必须由结果类型区分。
+     *
+     * @return array{ok:bool,users:array<int,array>,error:string}
+     */
+    public static function apiStatusSubscribers()
+    {
+        $snapshot = array('available' => false, 'generation' => 0, 'users' => null);
+        if (class_exists('RedisCache')) {
+            $snapshot = RedisCache::apiStatusSubscribersCacheSnapshot();
+            if (!empty($snapshot['available']) && is_array($snapshot['users'])) {
+                return array('ok' => true, 'users' => $snapshot['users'], 'error' => '');
+            }
+        }
+        try {
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT `id`, `username`, `email`, `subjson` FROM `' . Database::table('user') . '` '
+                . 'WHERE `status` = 1 AND `id` > ? AND `subjson` IS NOT NULL AND `subjson` <> \'\' '
+                . 'ORDER BY `id` ASC LIMIT 200'
+            );
+            $out = array();
+            $lastId = 0;
+            do {
+                $stmt->execute(array($lastId));
+                $batchCount = 0;
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $batchCount++;
+                    $lastId = (int) $row['id'];
+                    $raw = isset($row['subjson']) ? (string) $row['subjson'] : '';
+                    $bag = json_decode($raw, true);
+                    if (!is_array($bag) || (int) (isset($bag['apistatus']) ? $bag['apistatus'] : 0) !== 1) {
+                        continue;
+                    }
+                    $email = isset($row['email']) ? trim((string) $row['email']) : '';
+                    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        continue;
+                    }
+                    unset($row['subjson']);
+                    $out[] = $row;
+                }
+            } while ($batchCount === 200);
+        } catch (Exception $e) {
+            return array('ok' => false, 'users' => array(), 'error' => 'database_query_failed');
+        }
+        if (class_exists('RedisCache')) {
+            RedisCache::putApiStatusSubscribersIfCurrent(
+                isset($snapshot['generation']) ? (int) $snapshot['generation'] : 0,
+                $out
+            );
+        }
+        return array('ok' => true, 'users' => $out, 'error' => '');
+    }
+
+    /**
+     * @param int $userId
+     * @return array
+     */
+    private static function readSubscribeBag($userId)
+    {
+        $userId = (int) $userId;
+        if ($userId <= 0) {
+            return array('apistatus' => 0);
+        }
+        try {
+            if (!class_exists('DatabaseMigrator') || !DatabaseMigrator::tableColumnExists('user', 'subjson')) {
+                return array('apistatus' => 0);
+            }
+            $pdo = Database::connect();
+            $stmt = $pdo->prepare(
+                'SELECT `subjson` FROM `' . Database::table('user') . '` WHERE `id` = ? LIMIT 1'
+            );
+            $stmt->execute(array($userId));
+            $raw = $stmt->fetchColumn();
+            $bag = array();
+            if (is_string($raw) && $raw !== '') {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $bag = $decoded;
+                }
+            }
+            $bag['apistatus'] = (!empty($bag['apistatus']) && (int) $bag['apistatus'] === 1) ? 1 : 0;
+            return $bag;
+        } catch (Exception $e) {
+            return array('apistatus' => 0);
         }
     }
 }

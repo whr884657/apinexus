@@ -1134,7 +1134,7 @@
     }
 
     function syncPanelProviderHidden() {
-        var sel = document.getElementById('panelmonitor_provider');
+        var sel = document.getElementById('panelmonitor_provider_pick');
         var hidden = document.getElementById('panelmonitor_provider_hidden');
         if (sel && hidden) {
             hidden.value = String(sel.value || '');
@@ -1144,7 +1144,7 @@
     function bindPanelMonitorTest() {
         var btn = document.getElementById('panelMonitorTestBtn');
         var form = document.getElementById('dashboardForm');
-        var providerSel = document.getElementById('panelmonitor_provider');
+        var providerSel = document.getElementById('panelmonitor_provider_pick');
         if (providerSel) {
             providerSel.addEventListener('change', syncPanelProviderHidden);
             syncPanelProviderHidden();
@@ -1159,7 +1159,7 @@
         }
         btn.addEventListener('click', function () {
             syncPanelProviderHidden();
-            var provider = document.getElementById('panelmonitor_provider');
+            var provider = document.getElementById('panelmonitor_provider_pick');
             var baseurl = document.getElementById('panelmonitor_baseurl');
             var apikey = document.getElementById('panelmonitor_apikey');
             var hidden = document.getElementById('panelmonitor_provider_hidden');

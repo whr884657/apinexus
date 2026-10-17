@@ -257,7 +257,7 @@ class AuthSecurity
         if (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443) {
             return true;
         }
-        // 转发头仅当 trust_proxy=1 且 REMOTE_ADDR 落在 trusted_proxies（E412）
+        // 转发头仅当 proxyon=1 且 REMOTE_ADDR 落在 proxyips（E412）
         if (!self::mayTrustForwardedClientHints()) {
             return false;
         }
@@ -533,8 +533,8 @@ class AuthSecurity
     /**
      * 客户端 IP
      *
-     * 默认只用 REMOTE_ADDR。仅当 trust_proxy=1 且 REMOTE_ADDR 落在 trusted_proxies
-     * 白名单时，才采信 X-Forwarded-For 最左段（E412）。
+     * 默认只用 REMOTE_ADDR。仅当 proxyon=1 且 REMOTE_ADDR 落在 proxyips
+     * 名单时，才采信 X-Forwarded-For 最左段（E412）。
      *
      * @return string
      */
@@ -545,9 +545,16 @@ class AuthSecurity
             return $remote;
         }
         if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && $_SERVER['HTTP_X_FORWARDED_FOR'] !== '') {
-            $parts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-            $candidate = trim($parts[0]);
-            if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+            $parts = explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR']);
+            // 可信反代通常追加客户端地址；从右向左跳过可信代理节点，避免信任外部伪造的最左段。
+            for ($i = count($parts) - 1; $i >= 0; $i--) {
+                $candidate = trim((string) $parts[$i]);
+                if (!filter_var($candidate, FILTER_VALIDATE_IP)) {
+                    continue;
+                }
+                if (self::isTrustedProxyAddress($candidate)) {
+                    continue;
+                }
                 return $candidate;
             }
         }
@@ -565,7 +572,7 @@ class AuthSecurity
             return false;
         }
         try {
-            return Config::get('trust_proxy', '0') === '1';
+            return Config::get('proxyon', '0') === '1';
         } catch (Exception $e) {
             return false;
         }
@@ -586,7 +593,7 @@ class AuthSecurity
     }
 
     /**
-     * REMOTE_ADDR 是否落在 config.trusted_proxies（IP 或 CIDR，逗号/换行分隔）
+     * REMOTE_ADDR 是否落在 config.proxyips（IP 或 CIDR，逗号/换行分隔）
      * 名单为空 → 一律否（fail-closed，防伪造 XFF 绕过限流）
      *
      * @param string $ip
@@ -601,7 +608,7 @@ class AuthSecurity
         $raw = '';
         if (class_exists('Config')) {
             try {
-                $raw = trim((string) Config::get('trusted_proxies', ''));
+                $raw = trim((string) Config::get('proxyips', ''));
             } catch (Exception $e) {
                 $raw = '';
             }
@@ -626,6 +633,104 @@ class AuthSecurity
     }
 
     /**
+     * 整理反代机器 IP 名单（config.proxyips）
+     *
+     * 非法条目整单拒绝。开关打开时名单不得为空。
+     *
+     * @param string $raw
+     * @param bool   $requireNonEmpty
+     * @return array{ok:bool,value:string,error:string}
+     */
+    public static function normalizeProxyIpList($raw, $requireNonEmpty)
+    {
+        $raw = trim((string) $raw);
+        if (strlen($raw) > 2000) {
+            return array('ok' => false, 'value' => '', 'error' => '反代机器 IP 内容过长');
+        }
+        $parts = preg_split('/[\s,;]+/', $raw);
+        if (!is_array($parts)) {
+            $parts = array();
+        }
+        $tokens = array();
+        foreach ($parts as $entry) {
+            $entry = trim((string) $entry);
+            if ($entry !== '') {
+                $tokens[] = $entry;
+            }
+        }
+        if (count($tokens) > 50) {
+            return array('ok' => false, 'value' => '', 'error' => '反代机器 IP 最多填写 50 条');
+        }
+        $good = array();
+        $bad = array();
+        $seen = array();
+        foreach ($tokens as $entry) {
+            if (!self::isValidProxyListEntry($entry)) {
+                $bad[] = $entry;
+                continue;
+            }
+            $key = strtolower($entry);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $good[] = $entry;
+        }
+        if ($bad !== array()) {
+            $show = array_slice($bad, 0, 5);
+            return array(
+                'ok'    => false,
+                'value' => '',
+                'error' => '反代机器 IP 无法识别：' . implode('、', $show),
+            );
+        }
+        if ($requireNonEmpty && $good === array()) {
+            return array(
+                'ok'    => false,
+                'value' => '',
+                'error' => '请先填写反代机器 IP。只打开开关不会生效',
+            );
+        }
+        return array(
+            'ok'    => true,
+            'value' => implode("\n", $good),
+            'error' => '',
+        );
+    }
+
+    /**
+     * @param string $entry
+     * @return bool
+     */
+    private static function isValidProxyListEntry($entry)
+    {
+        $entry = trim((string) $entry);
+        if ($entry === '' || strlen($entry) > 64) {
+            return false;
+        }
+        if (strpos($entry, '/') === false) {
+            return (bool) filter_var($entry, FILTER_VALIDATE_IP);
+        }
+        $bits = explode('/', $entry, 2);
+        if (count($bits) !== 2) {
+            return false;
+        }
+        $subnet = trim($bits[0]);
+        $maskRaw = trim($bits[1]);
+        if (!filter_var($subnet, FILTER_VALIDATE_IP) || !preg_match('/^\d+$/', $maskRaw)) {
+            return false;
+        }
+        $mask = (int) $maskRaw;
+        $bin = @inet_pton($subnet);
+        if ($bin === false) {
+            return false;
+        }
+        $maxBits = strlen($bin) * 8;
+        // /0 会把所有来源都变成可信反代，必须拒绝。
+        return $mask > 0 && $mask <= $maxBits;
+    }
+
+    /**
      * @param string $ip
      * @param string $entry IP 或 CIDR
      * @return bool
@@ -633,7 +738,11 @@ class AuthSecurity
     private static function ipMatchesTrustedEntry($ip, $entry)
     {
         if (strpos($entry, '/') === false) {
-            return strcasecmp($ip, $entry) === 0;
+            $ipBin = @inet_pton(trim((string) $ip));
+            $entryBin = @inet_pton(trim((string) $entry));
+            return $ipBin !== false && $entryBin !== false
+                && strlen($ipBin) === strlen($entryBin)
+                && hash_equals($ipBin, $entryBin);
         }
         $bits = explode('/', $entry, 2);
         if (count($bits) !== 2) {
@@ -651,7 +760,7 @@ class AuthSecurity
         }
         $len = strlen($ipBin);
         $maxBits = $len * 8;
-        if ($mask < 0 || $mask > $maxBits) {
+        if ($mask <= 0 || $mask > $maxBits) {
             return false;
         }
         $fullBytes = (int) floor($mask / 8);

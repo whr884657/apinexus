@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS `{prefix}user` (
     `proxystrategy` tinyint(1) NOT NULL DEFAULT 0 COMMENT '出口代理选用策略：0轮询 1随机 2优先首条启用',
     `createtime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     `lastlogin` datetime DEFAULT NULL COMMENT '最后登录时间',
-    `lastcheckin` date DEFAULT NULL COMMENT '最近签到日期（空表示从未签到；与服务器当日比较判定今日是否已签）',
+    `lastcheckin` text NULL COMMENT '最近签到JSON（days最多7个日期，streak为连续天数；空表示从未签到）',
+    `subjson` text NULL COMMENT '订阅开关JSON（apistatus：接口上架下架维护）',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_username` (`username`),
     UNIQUE KEY `uk_email` (`email`),
@@ -133,6 +134,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('mail_notify_dev_apply', '1'),
 ('mail_notify_dev_pass', '1'),
 ('mail_notify_dev_fail', '1'),
+('mail_notify_apistatus', '0'),
+('subon', '0'),
 ('ops_site_promo', '{"mode":"off","percent_pay":null,"expire_at":"","label":"","updated_at":"","updated_by":0}'),
 ('register_gift_enabled', '0'),
 ('register_gift_points', '100'),
@@ -140,6 +143,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('checkin_enabled', '0'),
 ('checkin_points_min', '10'),
 ('checkin_points_max', '30'),
+('checkin_streak_mode', 'off'),
+('checkin_streak_value', '0'),
 ('frontend_theme', 'default'),
 -- 遗留键：权威已迁至 core/data/{themeId}/theme.db（v13.26.45+）；保持 {}，禁止再写入分桶
 ('themesettings', '{}'),
@@ -177,8 +182,8 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('apilog_purge_enabled', '0'),
 ('apilog_shard_rows', '5000'),
 ('system_api_key', ''),
-('sysapion', '{"apilogarchive":0,"apiquery":0,"apirank":0,"cardkey":0,"checkin":0,"sitestats":0,"userinfo":0}'),
-('sysapirq', '{"apis":{"apilogarchive":{"qpm":0,"qps":0},"apiquery":{"qpm":0,"qps":0},"apirank":{"qpm":0,"qps":0},"cardkey":{"qpm":0,"qps":0},"checkin":{"qpm":0,"qps":0},"sitestats":{"qpm":0,"qps":0},"userinfo":{"qpm":0,"qps":0}}}'),
+('sysapion', '{"apilogarchive":0,"apiquery":0,"apirank":0,"cardkey":0,"checkin":0,"cron":0,"sitestats":0,"userinfo":0}'),
+('sysapirq', '{"apis":{"apilogarchive":{"qpm":0,"qps":0},"apiquery":{"qpm":0,"qps":0},"apirank":{"qpm":0,"qps":0},"cardkey":{"qpm":0,"qps":0},"checkin":{"qpm":0,"qps":0},"cron":{"qpm":0,"qps":0},"sitestats":{"qpm":0,"qps":0},"userinfo":{"qpm":0,"qps":0}}}'),
 ('captcha_mode', 'local'),
 ('captcha_mode_admin', 'local'),
 ('captcha_mode_user', 'local'),
@@ -207,6 +212,9 @@ INSERT INTO `{prefix}config` (`key`, `value`) VALUES
 ('redis_password', ''),
 ('redis_database', '0'),
 ('redis_prefix', 'apinexus:'),
+('proxyon', '0'),
+('proxyips', ''),
+('screenhubip', ''),
 ('install_done', '1');
 
 -- 邮箱验证码发信频率限制记录

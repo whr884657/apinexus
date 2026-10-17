@@ -8,6 +8,7 @@ class LinkSiteMeta
 {
     const TIMEOUT = 8;
     const MAX_BYTES = 524288;
+    const MAX_HEADER_BYTES = 65536;
     const MAX_REDIRECTS = 3;
 
     /**
@@ -275,8 +276,13 @@ class LinkSiteMeta
                 vs_curl_close($ch);
                 return null;
             }
+            $headerBlob = '';
+            $body = '';
+            $headerBytes = 0;
+            $bodyBytes = 0;
+            $responseLimitExceeded = false;
             curl_setopt_array($ch, array(
-                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_RETURNTRANSFER => false,
                 CURLOPT_FOLLOWLOCATION => false,
                 CURLOPT_CONNECTTIMEOUT => self::TIMEOUT,
                 CURLOPT_TIMEOUT        => self::TIMEOUT,
@@ -284,18 +290,35 @@ class LinkSiteMeta
                 CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
                 CURLOPT_REDIR_PROTOCOLS=> CURLPROTO_HTTP | CURLPROTO_HTTPS,
                 CURLOPT_ENCODING       => '',
-                CURLOPT_HEADER         => true,
+                CURLOPT_HEADER         => false,
+                CURLOPT_HEADERFUNCTION => function ($ch, $line) use (&$headerBlob, &$headerBytes, &$responseLimitExceeded) {
+                    $len = strlen((string) $line);
+                    if ($len === 0 || $headerBytes + $len > self::MAX_HEADER_BYTES) {
+                        $responseLimitExceeded = true;
+                        return 0;
+                    }
+                    $headerBytes += $len;
+                    $headerBlob .= $line;
+                    return $len;
+                },
+                CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$body, &$bodyBytes, &$responseLimitExceeded) {
+                    $len = strlen((string) $chunk);
+                    if ($len === 0 || $bodyBytes + $len > self::MAX_BYTES) {
+                        $responseLimitExceeded = true;
+                        return 0;
+                    }
+                    $bodyBytes += $len;
+                    $body .= $chunk;
+                    return $len;
+                },
             ));
             vs_curl_ssl_verify($ch);
-            $raw = curl_exec($ch);
+            $execResult = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
             vs_curl_close($ch);
-            if (!is_string($raw) || $raw === '') {
+            if ($execResult === false || $responseLimitExceeded || $body === '') {
                 return null;
             }
-            $headerBlob = substr($raw, 0, $headerSize);
-            $body = substr($raw, $headerSize);
 
             if ($code >= 300 && $code < 400) {
                 $next = self::locationFromHeaders($headerBlob, $current);
@@ -307,9 +330,6 @@ class LinkSiteMeta
             }
             if ($code < 200 || $code >= 400 || !is_string($body) || $body === '') {
                 return null;
-            }
-            if (strlen($body) > self::MAX_BYTES) {
-                $body = substr($body, 0, self::MAX_BYTES);
             }
             return $body;
         }

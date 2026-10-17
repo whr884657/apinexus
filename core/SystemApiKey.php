@@ -569,6 +569,7 @@ class SystemApiKey
             'apirank',
             'cardkey',
             'checkin',
+            'cron',
             'sitestats',
             'userinfo',
         );

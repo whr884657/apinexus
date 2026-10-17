@@ -81,12 +81,19 @@ if ($action === 'status' || $action === 'do') {
 
     $st = CheckinManager::statusForSystemApi($userId);
     SystemApiKey::ok(isset($result['msg']) ? (string) $result['msg'] : '签到成功', array(
-        'userid'        => $userId,
-        'amount'        => isset($result['amount']) ? (float) $result['amount'] : 0,
-        'balance'       => isset($result['balance']) ? (float) $result['balance'] : null,
-        'checked_today' => true,
-        'min'           => isset($st['min']) ? (int) $st['min'] : 0,
-        'max'           => isset($st['max']) ? (int) $st['max'] : 0,
+        'userid'         => $userId,
+        'amount'         => isset($result['amount']) ? (float) $result['amount'] : 0,
+        'base'           => isset($result['base']) ? (float) $result['base'] : 0,
+        'bonus'          => isset($result['bonus']) ? (int) $result['bonus'] : 0,
+        'bonus_applied'  => !empty($result['bonus_applied']),
+        'streak_days'    => isset($result['streak_days']) ? (int) $result['streak_days'] : 0,
+        'streak_full'    => !empty($result['streak_full']),
+        'checkin_days'   => isset($result['checkin_days']) && is_array($result['checkin_days']) ? $result['checkin_days'] : array(),
+        'lastcheckin'    => isset($result['lastcheckin']) ? (string) $result['lastcheckin'] : '',
+        'balance'        => isset($result['balance']) ? (float) $result['balance'] : null,
+        'checked_today'  => true,
+        'min'            => isset($st['min']) ? (int) $st['min'] : 0,
+        'max'            => isset($st['max']) ? (int) $st['max'] : 0,
     ));
 }
 

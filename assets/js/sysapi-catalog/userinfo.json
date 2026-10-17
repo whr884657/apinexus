@@ -72,6 +72,9 @@
             "week_calls": 80,
             "checked_today": true,
             "lastcheckin": "2026-10-09",
+            "checkin_days": ["2026-10-07", "2026-10-08", "2026-10-09"],
+            "streak_days": 3,
+            "streak_full": false,
             "rank7": [
                 {
                     "name": "示例接口",
@@ -80,7 +83,7 @@
             ]
         }
     },
-    "doc": "## 使用前准备\n\n1. **系统设置 → 系统密钥** 生成密钥。  \n2. **系统设置 → 系统级 API → 用户信息** 勾选「启用用户信息 API」并保存。  \n3. **不会**返回密码、OAuth 绑定标识、上游密钥等敏感信息。封禁用户仍可查询（看 `status` / `status_label`）。\n\n## 请求怎么发\n\n- GET 或 POST；参数可走 Query / 表单 / JSON。  \n- 成功 `code=1`；失败 `code=0` 看 `msg` / `errcode`。  \n- **禁止** JSONP。\n\n## 调用限流（QPM / QPS）\n\n管理员可在「系统设置 → 系统级 API」对应细条自定义本接口每分钟（QPM）与每秒（QPS）上限；**填 0 表示不限制**。超限返回 errcode=12005（请求过于频繁）。\n\n## 怎么带系统密钥（必填）\n\n推荐 `Authorization: Bearer` 或 `X-Api-Key`；也可用 `key` / `apikey`（不推荐进网址）。\n\n## 参数详解\n\n| 英文名 | 中文含义 | 必填？ | 可填什么 | 说明 |\n|--------|----------|--------|----------|------|\n| `key` / `apikey` | 系统密钥 | **是**（或 Header） | 系统密钥 | 鉴权 |\n| `action` | 操作 | 否 | `get` | 不传默认 get |\n| `userid` | 用户编号 | 三选一 | 正整数 | 也认 `user_id`、`uid` |\n| `username` | 用户名 | 三选一 | 精确用户名 | |\n| `email` | 邮箱 | 三选一 | 精确邮箱 | 也可用 `account` |\n| `date` | 某一天 | 否 | `Y-m-d`，近 7 日内 | 有则多返回 `user.day` |\n\n## 返回字段（user）\n\n| 字段 | 含义 |\n|------|------|\n| `userid` | 用户编号 |\n| `username` | 用户名 |\n| `email` | 邮箱 |\n| `status` | `1` 正常 / `0` 封禁 |\n| `status_label` | 正常 / 封禁 |\n| `role` | `user` 普通用户 / `developer` 开发者 |\n| `role_label` | 中文角色名 |\n| `createtime` | 注册时间 |\n| `lastlogin` | 最后登录时间（可能为空） |\n| `points` | 当前积分余额 |\n| `pointsspent` | 累计消耗积分 |\n| `calls` | 累计调用次数 |\n| `today_calls` | 今日调用次数 |\n| `week_calls` | 近 7 日调用合计 |\n| `checked_today` | 今天是否已签到 |\n| `lastcheckin` | 最近签到日（`Y-m-d`，可能为空） |\n| `rank7` | 近 7 日接口调用排行（`name` + `calls`） |\n| `day` | 仅当传了 `date`：该日 `calls` / `cost` / `rank` |\n\n## 请求示例（一种类型一块）\n\n### 按用户编号查询\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&userid=1\"\n```\n\n### 按用户名查询\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&username=demo\"\n```\n\n### 按邮箱查询\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&email=user@example.com\"\n```\n\n### 查询并附带某一天调用摘要\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&userid=1&date=2026-10-09\"\n```\n\n### 不传 action（默认 get）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?userid=1\"\n```\n",
+    "doc": "## 使用前准备\n\n1. **系统设置 → 系统密钥** 生成密钥。  \n2. **系统设置 → 系统级 API → 用户信息** 勾选「启用用户信息 API」并保存。  \n3. **不会**返回密码、OAuth 绑定标识、上游密钥等敏感信息。封禁用户仍可查询（看 `status` / `status_label`）。\n\n## 请求怎么发\n\n- GET 或 POST；参数可走 Query / 表单 / JSON。  \n- 成功 `code=1`；失败 `code=0` 看 `msg` / `errcode`。  \n- **禁止** JSONP。\n\n## 调用限流（QPM / QPS）\n\n管理员可在「系统设置 → 系统级 API」对应细条自定义本接口每分钟（QPM）与每秒（QPS）上限；**填 0 表示不限制**。超限返回 errcode=12005（请求过于频繁）。\n\n## 怎么带系统密钥（必填）\n\n推荐 `Authorization: Bearer` 或 `X-Api-Key`；也可用 `key` / `apikey`（不推荐进网址）。\n\n## 参数详解\n\n| 英文名 | 中文含义 | 必填？ | 可填什么 | 说明 |\n|--------|----------|--------|----------|------|\n| `key` / `apikey` | 系统密钥 | **是**（或 Header） | 系统密钥 | 鉴权 |\n| `action` | 操作 | 否 | `get` | 不传默认 get |\n| `userid` | 用户编号 | 三选一 | 正整数 | 也认 `user_id`、`uid` |\n| `username` | 用户名 | 三选一 | 精确用户名 | |\n| `email` | 邮箱 | 三选一 | 精确邮箱 | 也可用 `account` |\n| `date` | 某一天 | 否 | `Y-m-d`，近 7 日内 | 有则多返回 `user.day` |\n\n## 返回字段（user）\n\n| 字段 | 含义 |\n|------|------|\n| `userid` | 用户编号 |\n| `username` | 用户名 |\n| `email` | 邮箱 |\n| `status` | `1` 正常 / `0` 封禁 |\n| `status_label` | 正常 / 封禁 |\n| `role` | `user` 普通用户 / `developer` 开发者 |\n| `role_label` | 中文角色名 |\n| `createtime` | 注册时间 |\n| `lastlogin` | 最后登录时间（可能为空） |\n| `points` | 当前积分余额 |\n| `pointsspent` | 累计消耗积分 |\n| `calls` | 累计调用次数 |\n| `today_calls` | 今日调用次数 |\n| `week_calls` | 近 7 日调用合计 |\n| `checked_today` | 今天是否已签到 |\n| `lastcheckin` | 最近一次签到日（`Y-m-d`，可能为空；断了也返回这一天） |\n| `checkin_days` | 当前连续段日期，最多 7 个；已断则为空数组 |\n| `streak_days` | 连续第几天，可大于 7；已断为 0 |\n| `streak_full` | 连续是否已满 7 天 |\n| `rank7` | 近 7 日接口调用排行（`name` + `calls`） |\n| `day` | 仅当传了 `date`：该日 `calls` / `cost` / `rank` |\n\n## 请求示例（一种类型一块）\n\n### 按用户编号查询\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&userid=1\"\n```\n\n### 按用户名查询\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&username=demo\"\n```\n\n### 按邮箱查询\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&email=user@example.com\"\n```\n\n### 查询并附带某一天调用摘要\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?action=get&userid=1&date=2026-10-09\"\n```\n\n### 不传 action（默认 get）\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/userinfo?userid=1\"\n```\n",
     "sample_queries": [
         {
             "title": "按用户编号查询",
@@ -128,6 +131,9 @@
                     "week_calls": 80,
                     "checked_today": true,
                     "lastcheckin": "2026-10-09",
+                    "checkin_days": ["2026-10-07", "2026-10-08", "2026-10-09"],
+                    "streak_days": 3,
+                    "streak_full": false,
                     "rank7": [
                         {
                             "name": "示例接口",
@@ -160,6 +166,9 @@
                     "week_calls": 40,
                     "checked_today": false,
                     "lastcheckin": "2026-10-08",
+                    "checkin_days": ["2026-10-08"],
+                    "streak_days": 1,
+                    "streak_full": false,
                     "rank7": [
                         {
                             "name": "示例接口",
@@ -203,6 +212,9 @@
                     "week_calls": 0,
                     "checked_today": false,
                     "lastcheckin": "",
+                    "checkin_days": [],
+                    "streak_days": 0,
+                    "streak_full": false,
                     "rank7": []
                 }
             }

@@ -2128,6 +2128,142 @@ class DatabaseMigrator
     }
 
     /**
+     * 13.26.48：用户订阅 JSON、站点开关与邮件开关。待发不落库，不建队列表。
+     *
+     * @return void
+     */
+    public static function ensureSubscribe48()
+    {
+        if (!self::tableExists('user')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $user = Database::table('user');
+            if (!self::tableColumnExists('user', 'subjson')) {
+                $pdo->exec(
+                    'ALTER TABLE `' . $user . '` ADD COLUMN `subjson` text NULL '
+                    . 'COMMENT \'订阅开关JSON（apistatus：接口上架下架维护）\' AFTER `lastcheckin`'
+                );
+            }
+            $cfg = Database::table('config');
+            $pdo->exec(
+                'INSERT IGNORE INTO `' . $cfg . '` (`key`, `value`) VALUES '
+                . '(\'proxyon\', \'0\'), (\'proxyips\', \'\'), (\'screenhubip\', \'\'), '
+                . '(\'checkin_streak_mode\', \'off\'), (\'checkin_streak_value\', \'0\'), '
+                . '(\'subon\', \'0\'), (\'mail_notify_apistatus\', \'0\')'
+            );
+            Config::clearCache();
+        } catch (Exception $e) {
+            // 下次再试
+        }
+    }
+
+    /**
+     * 13.26.48：user.lastcheckin 改为 TEXT JSON，并把旧的单个日期收成 streak=1。
+     * 仅显式传入迁移标志时执行；普通结构探测调用只允许读结构，不改用户数据。
+     *
+     * @param bool $migration 是否处于版本迁移/数据库维护路径
+     * @return void
+     */
+    public static function ensureLastcheckinJson48($migration = false)
+    {
+        if (!$migration || !self::tableExists('user') || !self::tableColumnExists('user', 'lastcheckin')) {
+            return;
+        }
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('user');
+            $changed = false;
+            $type = self::lastcheckinColumnType();
+            if (in_array($type, array('date', 'datetime', 'timestamp'), true)) {
+                $pdo->exec(
+                    'ALTER TABLE `' . $table . '` MODIFY COLUMN `lastcheckin` text NULL '
+                    . 'COMMENT \'最近签到JSON（days最多7个日期，streak为连续天数；空表示从未签到）\''
+                );
+                $changed = true;
+                $type = 'text';
+            }
+            // 只转换已知的终态 TEXT；未知类型不做整列 MODIFY，留待维护入口报告未就绪。
+            if ($type !== 'text') {
+                return;
+            }
+            $updated = $pdo->exec(
+                'UPDATE `' . $table . '` SET `lastcheckin` = CONCAT(\'{"days":["\', LEFT(`lastcheckin`, 10), \'"],"streak":1}\') '
+                . 'WHERE `lastcheckin` IS NOT NULL AND `lastcheckin` <> \'\' AND `lastcheckin` NOT LIKE \'{%\' '
+                . 'AND LEFT(`lastcheckin`, 10) REGEXP \'^[0-9]{4}-[0-9]{2}-[0-9]{2}$\''
+            );
+            if ((int) $updated > 0) {
+                $changed = true;
+            }
+            if ($changed) {
+                Config::clearCache();
+            }
+        } catch (Exception $e) {
+            // 迁移就绪探测会失败，下次结构更新重试
+        }
+    }
+
+    /**
+     * 返回 user.lastcheckin 的数据库类型。
+     *
+     * @return string
+     */
+    private static function lastcheckinColumnType()
+    {
+        try {
+            $pdo = Database::connect();
+            $dbName = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+            if ($dbName === '') {
+                return '';
+            }
+            $stmt = $pdo->prepare(
+                'SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?
+                 LIMIT 1'
+            );
+            $stmt->execute(array($dbName, Database::table('user'), 'lastcheckin'));
+            return strtolower((string) $stmt->fetchColumn());
+        } catch (Exception $e) {
+            return '';
+        }
+    }
+
+    /**
+     * lastcheckin 为 TEXT 且没有剩余旧日期值。
+     *
+     * @return bool
+     */
+    private static function lastcheckinStoresJson()
+    {
+        return self::lastcheckinColumnType() === 'text'
+            && !self::lastcheckinLegacyDatesRemain();
+    }
+
+    /**
+     * 是否仍有未转换的旧日期值。
+     *
+     * @return bool
+     */
+    private static function lastcheckinLegacyDatesRemain()
+    {
+        try {
+            $pdo = Database::connect();
+            $table = Database::table('user');
+            $stmt = $pdo->query(
+                'SELECT 1 FROM `' . $table . '` '
+                . 'WHERE `lastcheckin` IS NOT NULL AND `lastcheckin` <> \'\' '
+                . 'AND `lastcheckin` NOT LIKE \'{%\' '
+                . 'AND LEFT(`lastcheckin`, 10) REGEXP \'^[0-9]{4}-[0-9]{2}-[0-9]{2}$\' '
+                . 'LIMIT 1'
+            );
+            return $stmt->fetchColumn() !== false;
+        } catch (Exception $e) {
+            return true;
+        }
+    }
+
+    /**
      * 该版本是否有可探测的结构就绪条件
      *
      * @param string $version
@@ -2153,7 +2289,8 @@ class DatabaseMigrator
             || $version === '13.26.40'
             || $version === '13.26.41'
             || $version === '13.26.45'
-            || $version === '13.26.46');
+            || $version === '13.26.46'
+            || $version === '13.26.48');
     }
 
     /**
@@ -2343,6 +2480,12 @@ class DatabaseMigrator
 
         // 13.26.46：禁止跑脚本内多列 ADD / link MODIFY（半就绪库会报错或长时间锁表）
         // 配置种子 + 逐列/逐索引 ensure* 均在此完成（forceMigrateRange / ensureVersionSchema 共用）
+        if ($version === '13.26.48') {
+            self::ensureLastcheckinJson48(true);
+            self::ensureSubscribe48();
+            return;
+        }
+
         if ($version === '13.26.46') {
             self::apply132646ConfigSeeds($pdo, $prefix);
             self::ensureApikeyScopeSchema();
@@ -2660,6 +2803,17 @@ class DatabaseMigrator
             return self::apilogExtended46Ready()
                 && self::feedbackKind46Ready()
                 && self::contentAudmode46Ready();
+        }
+        if ($version === '13.26.48') {
+            $all = Config::all();
+            return isset($all['proxyon']) && isset($all['proxyips'])
+                && isset($all['screenhubip'])
+                && isset($all['checkin_streak_mode'])
+                && isset($all['checkin_streak_value'])
+                && isset($all['subon'])
+                && isset($all['mail_notify_apistatus'])
+                && self::lastcheckinStoresJson()
+                && self::tableColumnExists('user', 'subjson');
         }
         $file = self::migrationsDir() . '/' . $version . '.sql';
         if (!is_file($file)) {

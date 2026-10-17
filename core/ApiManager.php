@@ -1138,6 +1138,7 @@ class ApiManager
                 ));
             }
             $id = (int) $pdo->lastInsertId();
+            self::noteStatusSubscribe($id, -1, 0, (int) $parsed['status'], (int) $auditStatus);
             self::applyChargeFields($id, $parsed);
             self::applyQpmField($id, $parsed);
             self::applyKeywaysField($id, $parsed);
@@ -1329,6 +1330,16 @@ class ApiManager
             self::applyProxyClientFields($apiId, $parsed);
             self::applyJsonRewriteField($apiId, $parsed);
             RedisCache::invalidateFrontend();
+            $newAudit = $hasAuditInPayload
+                ? (int) $auditStatus
+                : (int) (isset($row['audit']) ? $row['audit'] : self::AUDIT_APPROVED);
+            self::noteStatusSubscribe(
+                $apiId,
+                isset($row['status']) ? $row['status'] : self::STATUS_NORMAL,
+                isset($row['audit']) ? $row['audit'] : self::AUDIT_APPROVED,
+                (int) $parsed['status'],
+                $newAudit
+            );
             return true;
         } catch (Exception $e) {
             return '保存失败，请稍后重试';
@@ -1403,7 +1414,8 @@ class ApiManager
         if ($apiId <= 0 || !self::isValidStatus($status)) {
             return '无效操作';
         }
-        if (!self::findById($apiId)) {
+        $row = self::findById($apiId);
+        if (!$row) {
             return '接口不存在';
         }
 
@@ -1414,6 +1426,13 @@ class ApiManager
             );
             $stmt->execute(array($status, $apiId));
             RedisCache::invalidateFrontend();
+            self::noteStatusSubscribe(
+                $apiId,
+                isset($row['status']) ? $row['status'] : self::STATUS_NORMAL,
+                isset($row['audit']) ? $row['audit'] : self::AUDIT_APPROVED,
+                $status,
+                isset($row['audit']) ? $row['audit'] : self::AUDIT_APPROVED
+            );
             return true;
         } catch (Exception $e) {
             return '操作失败，请稍后重试';
@@ -1438,7 +1457,8 @@ class ApiManager
         if (!self::hasAuditColumn()) {
             return '请先执行数据库结构更新';
         }
-        if (!self::findById($apiId)) {
+        $row = self::findById($apiId);
+        if (!$row) {
             return '接口不存在';
         }
 
@@ -1463,6 +1483,13 @@ class ApiManager
                 $stmt->execute(array($auditStatus, $apiId));
             }
             RedisCache::invalidateFrontend();
+            self::noteStatusSubscribe(
+                $apiId,
+                isset($row['status']) ? $row['status'] : self::STATUS_NORMAL,
+                isset($row['audit']) ? $row['audit'] : self::AUDIT_APPROVED,
+                isset($row['status']) ? $row['status'] : self::STATUS_NORMAL,
+                $auditStatus
+            );
             return true;
         } catch (Exception $e) {
             return '操作失败，请稍后重试';
@@ -2538,4 +2565,193 @@ class ApiManager
         $key = self::normalizeRequireKey($value);
         return isset($map[$key]) ? $map[$key] : '无需 KEY';
     }
+
+    /**
+     * 接口上架、下架、维护写入订阅队列。失败不阻断保存。
+     *
+     * @param int $apiId
+     * @param int $oldStatus
+     * @param int $oldAudit
+     * @param int $newStatus
+     * @param int $newAudit
+     * @return void
+     */
+    private static function noteStatusSubscribe($apiId, $oldStatus, $oldAudit, $newStatus, $newAudit)
+    {
+        $apiId = (int) $apiId;
+        if ($apiId <= 0 || !class_exists('RedisCache')) {
+            return;
+        }
+        $oldPublic = (int) $oldAudit === self::AUDIT_APPROVED;
+        $newPublic = (int) $newAudit === self::AUDIT_APPROVED;
+        if (!$oldPublic && !$newPublic) {
+            return;
+        }
+        $from = $oldPublic ? (int) $oldStatus : -1;
+        $to = $newPublic ? (int) $newStatus : self::STATUS_DISABLED;
+        if ($from === -1 && $to === self::STATUS_DISABLED) {
+            return;
+        }
+        if ($from === $to || self::subscribeStatusLabel($to) === '') {
+            return;
+        }
+        if (!RedisCache::pushApiStatusNotice($apiId, $to) && function_exists('error_log')) {
+            error_log('ApiManager::noteStatusSubscribe: 接口状态通知入队失败');
+        }
+    }
+
+    /**
+     * 计划任务 job=apistatus：汇总待发变更并交给 MailNotify。
+     *
+     * @return array{ok:bool,msg:string,job:string,events:int,mailed:int,skipped:string}
+     */
+    public static function flushStatusSubscribe()
+    {
+        $result = array(
+            'ok'      => true,
+            'msg'     => 'ok',
+            'job'     => 'apistatus',
+            'events'  => 0,
+            'mailed'  => 0,
+            'skipped' => '',
+        );
+        if (!class_exists('RedisCache') || !RedisCache::enabled()) {
+            $result['skipped'] = 'redis_off';
+            return $result;
+        }
+        if (!class_exists('UserManager') || !UserManager::subscribeSiteOn()) {
+            $result['skipped'] = 'site_off';
+            return $result;
+        }
+        if (Config::get('mail_notify_apistatus', '0') !== '1') {
+            $result['skipped'] = 'mail_off';
+            return $result;
+        }
+        if (!Config::isMailEnabled()) {
+            $result['ok'] = false;
+            $result['msg'] = '邮箱发信未配置';
+            $result['skipped'] = 'smtp_off';
+            return $result;
+        }
+
+        $claim = RedisCache::claimApiStatusNotices(30);
+        if (empty($claim['ok'])) {
+            $result['ok'] = false;
+            $result['msg'] = '通知队列暂不可用';
+            $result['skipped'] = 'queue_error';
+            return $result;
+        }
+        $rows = isset($claim['events']) && is_array($claim['events']) ? $claim['events'] : array();
+        if ($rows === array()) {
+            $result['skipped'] = 'empty_or_claimed';
+            return $result;
+        }
+
+        $fresh = array();
+        $discard = array();
+        $cutoff = time() - RedisCache::TTL_SUB_APISTATUS_QUEUE;
+        foreach ($rows as $row) {
+            $apiId = isset($row['apiid']) ? (int) $row['apiid'] : 0;
+            $toStatus = isset($row['tostatus']) ? (int) $row['tostatus'] : -1;
+            $at = isset($row['at']) ? (int) $row['at'] : 0;
+            if ($at <= 0 || $at < $cutoff || $apiId <= 0 || self::subscribeStatusLabel($toStatus) === '') {
+                $discard[] = $row;
+                continue;
+            }
+            $fresh[] = $row;
+        }
+        RedisCache::finishApiStatusNotices($discard, true);
+        $result['events'] = count($fresh);
+        if ($fresh === array()) {
+            return $result;
+        }
+
+        $subscribers = UserManager::apiStatusSubscribers();
+        if (empty($subscribers['ok']) || !isset($subscribers['users']) || !is_array($subscribers['users'])) {
+            RedisCache::finishApiStatusNotices($fresh, false);
+            $result['ok'] = false;
+            $result['msg'] = '订阅名单读取失败，本轮变更已保留';
+            $result['skipped'] = 'subscriber_lookup_failed';
+            return $result;
+        }
+        $users = $subscribers['users'];
+        if ($users === array()) {
+            RedisCache::finishApiStatusNotices($fresh, true);
+            $result['skipped'] = 'no_subscriber';
+            return $result;
+        }
+
+        $items = self::subscribeBuildItems($fresh);
+        if ($items === array()) {
+            // 接口已删除或没有可发送的有效变更：按既定产品规则确认并丢弃。
+            RedisCache::finishApiStatusNotices($fresh, true);
+            $result['skipped'] = 'no_items';
+            return $result;
+        }
+        $allSent = true;
+        foreach ($users as $user) {
+            try {
+                $sent = MailNotify::notifyApiStatusDigest($user, $items);
+            } catch (Throwable $e) {
+                $sent = array('ok' => false, 'sent' => 0);
+            }
+            if (!empty($sent['ok']) && !empty($sent['sent'])) {
+                $result['mailed'] += (int) $sent['sent'];
+            } else {
+                $allSent = false;
+            }
+        }
+        if (!$allSent) {
+            RedisCache::finishApiStatusNotices($fresh, false);
+            $result['ok'] = false;
+            $result['msg'] = '邮件未全部发出，本轮变更已保留待下次计划任务';
+            $result['skipped'] = 'send_failed';
+            return $result;
+        }
+        RedisCache::finishApiStatusNotices($fresh, true);
+        return $result;
+    }
+
+    /**
+     * @param int $status
+     * @return string
+     */
+    private static function subscribeStatusLabel($status)
+    {
+        $status = (int) $status;
+        if ($status === self::STATUS_NORMAL) {
+            return '上架';
+        }
+        if ($status === self::STATUS_DISABLED) {
+            return '下架';
+        }
+        if ($status === self::STATUS_MAINTENANCE) {
+            return '维护';
+        }
+        return '';
+    }
+
+    /**
+     * @param array<int,array> $rows
+     * @return array<int,array{label:string,name:string,desc:string,url:string}>
+     */
+    private static function subscribeBuildItems(array $rows)
+    {
+        $items = array();
+        foreach ($rows as $row) {
+            $apiId = isset($row['apiid']) ? (int) $row['apiid'] : 0;
+            $label = self::subscribeStatusLabel(isset($row['tostatus']) ? $row['tostatus'] : -1);
+            if ($apiId <= 0 || $label === '') {
+                continue;
+            }
+            $items[] = array(
+                'label' => $label,
+                'name'  => '接口#' . $apiId,
+                'desc'  => '接口状态已变更',
+                'url'   => '',
+            );
+        }
+        return $items;
+    }
+
 }

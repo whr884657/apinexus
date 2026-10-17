@@ -34,7 +34,8 @@ class Auth
         $adminId = (int) $adminId;
         unset(self::$statusMemo[$adminId]);
         if ($adminId > 0 && class_exists('RedisCache')) {
-            RedisCache::forget(self::statusCacheKey($adminId));
+            $key = self::statusCacheKey($adminId);
+            RedisCache::invalidateGuarded($key, $key . ':ver');
         }
     }
 
@@ -64,7 +65,8 @@ class Auth
         };
         try {
             if (class_exists('RedisCache') && RedisCache::enabled()) {
-                $st = RedisCache::remember(self::statusCacheKey($adminId), RedisCache::TTL_ADMIN_STATUS, $factory);
+                $key = self::statusCacheKey($adminId);
+                $st = RedisCache::rememberGuarded($key, $key . ':ver', RedisCache::TTL_ADMIN_STATUS, $factory);
             } else {
                 $st = $factory();
             }

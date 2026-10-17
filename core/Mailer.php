@@ -706,29 +706,29 @@ class Mailer
         }
 
         stream_set_timeout($socket, 10);
-        self::readResponse($socket);
+        self::readResponse($socket, array(220));
 
         $ehloHost = self::safeEhloHostname();
-        self::smtpCommand($socket, 'EHLO ' . $ehloHost);
+        self::smtpCommand($socket, 'EHLO ' . $ehloHost, array(250));
 
         if ($secure === 'tls') {
-            self::smtpCommand($socket, 'STARTTLS');
+            self::smtpCommand($socket, 'STARTTLS', array(220));
             if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
                 fclose($socket);
                 throw new Exception('STARTTLS 握手失败');
             }
-            self::smtpCommand($socket, 'EHLO ' . $ehloHost);
+            self::smtpCommand($socket, 'EHLO ' . $ehloHost, array(250));
         }
 
         if ($user !== '') {
-            self::smtpCommand($socket, 'AUTH LOGIN');
-            self::smtpCommand($socket, base64_encode($user));
-            self::smtpCommand($socket, base64_encode($pass));
+            self::smtpCommand($socket, 'AUTH LOGIN', array(334));
+            self::smtpCommand($socket, base64_encode($user), array(334));
+            self::smtpCommand($socket, base64_encode($pass), array(235));
         }
 
-        self::smtpCommand($socket, 'MAIL FROM:<' . $fromEmail . '>');
-        self::smtpCommand($socket, 'RCPT TO:<' . $to . '>');
-        self::smtpCommand($socket, 'DATA');
+        self::smtpCommand($socket, 'MAIL FROM:<' . $fromEmail . '>', array(250));
+        self::smtpCommand($socket, 'RCPT TO:<' . $to . '>', array(250, 251));
+        self::smtpCommand($socket, 'DATA', array(354));
 
         $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
         $encodedFromName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
@@ -741,9 +741,9 @@ class Mailer
         $message .= chunk_split(base64_encode($body));
         $message .= "\r\n.";
 
-        fwrite($socket, $message . "\r\n");
-        self::readResponse($socket);
-        self::smtpCommand($socket, 'QUIT');
+        self::writeAll($socket, $message . "\r\n");
+        self::readResponse($socket, array(250));
+        self::smtpCommand($socket, 'QUIT', array(221));
         fclose($socket);
 
         return true;
@@ -826,35 +826,59 @@ class Mailer
     /**
      * @param resource $socket
      * @param string   $command
+     * @param array<int,int> $expectedCodes
      * @return void
      * @throws Exception
      */
-    private static function smtpCommand($socket, $command)
+    private static function smtpCommand($socket, $command, array $expectedCodes)
     {
-        fwrite($socket, $command . "\r\n");
-        self::readResponse($socket);
+        self::writeAll($socket, $command . "\r\n");
+        self::readResponse($socket, $expectedCodes);
     }
 
     /**
      * @param resource $socket
+     * @param string $data
+     * @return void
+     * @throws Exception
+     */
+    private static function writeAll($socket, $data)
+    {
+        $length = strlen($data);
+        $written = 0;
+        while ($written < $length) {
+            $count = @fwrite($socket, substr($data, $written));
+            if ($count === false || $count === 0) {
+                throw new Exception('SMTP 写入失败');
+            }
+            $written += $count;
+        }
+    }
+
+    /**
+     * @param resource $socket
+     * @param array<int,int> $expectedCodes
      * @return string
      * @throws Exception
      */
-    private static function readResponse($socket)
+    private static function readResponse($socket, array $expectedCodes)
     {
         $response = '';
-        while ($line = fgets($socket, 515)) {
+        $complete = false;
+        while (($line = @fgets($socket, 515)) !== false) {
             $response .= $line;
             if (isset($line[3]) && $line[3] === ' ') {
+                $complete = true;
                 break;
             }
         }
-
-        $code = (int) substr($response, 0, 3);
-        if ($code >= 400) {
-            throw new Exception('SMTP 错误：' . trim($response));
+        if (!$complete || strlen($response) < 3 || !preg_match('/^([0-9]{3})(?:[ -])/', $response, $match)) {
+            throw new Exception('SMTP 响应不完整');
         }
-
+        $code = (int) $match[1];
+        if (!in_array($code, $expectedCodes, true)) {
+            throw new Exception('SMTP 阶段响应错误：' . $code);
+        }
         return $response;
     }
 }

@@ -1,7 +1,7 @@
 <?php
 /**
  * 文件：user/account.php
- * 作用：用户账号设置（顶卡 + Tab：第三方 / 基本信息 / 密码 / 开发者申请）
+ * 作用：用户账号设置（顶卡 + Tab：第三方 / 订阅通知 / 基本信息 / 密码 / 开发者申请）
  */
 
 require_once __DIR__ . '/init.php';
@@ -50,6 +50,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'provider' => $provider,
             'item_id'  => $itemId,
         ));
+    }
+
+    if ($action === 'save_subscribe') {
+        $on = isset($_POST['apistatus']) ? 1 : 0;
+        $result = UserManager::setApiStatus((int) $vsUser['id'], $on);
+        if ($result !== true) {
+            AjaxResponse::error($result);
+        }
+        AjaxResponse::success($on === 1 ? '已开启接口状态订阅' : '已关闭接口状态订阅');
     }
 
     if ($action === 'save_profile') {
@@ -187,6 +196,8 @@ vs_user_render_page(
         'oauthButtons'     => $oauthButtons,
         'devApply'         => $devApply,
         'devApplyPending'  => $devApplyPending,
+        'apiSubOn'         => UserManager::wantsApiStatus((int) $vsUser['id']),
+        'apiSubSiteOn'     => UserManager::subscribeSiteOn(),
     ),
     '',
     array('account.js')

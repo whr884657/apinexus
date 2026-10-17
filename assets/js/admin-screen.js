@@ -251,7 +251,8 @@
         var isChina = mapMode === 'china';
         var isDesktop = window.innerWidth >= 1200;
 
-        var choropleth = cities
+        var regionRows = (isChina && Array.isArray(pack.provinces)) ? pack.provinces : cities;
+        var choropleth = regionRows
             .filter(function (c) { return c && c.name && (parseInt(c.count, 10) || 0) > 0; })
             .map(function (c) {
                 return { name: c.name, value: parseInt(c.count, 10) || 0 };
@@ -378,7 +379,7 @@
                 formatter: function (p) {
                     if (!p) return '';
                     if (p.seriesName === '调用量') {
-                        return esc(p.name) + '<br/>调用量: ' + fmtNum(p.value || 0);
+                        return esc(p.name) + '<br/>调用: ' + fmtNum(p.value || 0) + ' 次';
                     }
                     if (p.seriesName === '调用城市') {
                         var v = (p.value && p.value[2] != null) ? p.value[2] : 0;
@@ -462,16 +463,12 @@
                     rippleEffect: {
                         period: 4,
                         brushType: 'stroke',
-                        scale: 4
+                        scale: 2.2
                     },
-                    symbolSize: function (val) {
-                        var c = (val && val[2]) ? val[2] : 1;
-                        return Math.max(6, Math.min(20, 4 + Math.sqrt(c) * 0.9));
-                    },
+                    symbolSize: 3,
                     itemStyle: {
                         color: colors.scatter,
-                        shadowBlur: 10,
-                        shadowColor: colors.scatter
+                        shadowBlur: 0
                     },
                     data: scatter
                 },

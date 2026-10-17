@@ -1,6 +1,7 @@
 [
     "cardkey",
     "checkin",
+    "cron",
     "userinfo",
     "apilogarchive",
     "apiquery",

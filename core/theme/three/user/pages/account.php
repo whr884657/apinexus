@@ -25,6 +25,8 @@ $oauthBindings = isset($oauthBindings) && is_array($oauthBindings) ? $oauthBindi
 $oauthButtons = isset($oauthButtons) && is_array($oauthButtons) ? $oauthButtons : array();
 $devApply = (isset($devApply) && is_array($devApply)) ? $devApply : null;
 $devApplyPending = (isset($devApplyPending) && is_array($devApplyPending)) ? $devApplyPending : null;
+$apiSubOn = !empty($apiSubOn);
+$apiSubSiteOn = !empty($apiSubSiteOn);
 if (empty($oauthButtons)) {
     if (!empty($oauthProviders['qq'])) {
         $oauthButtons[] = array(
@@ -53,7 +55,7 @@ $roleTip = $roleLabel === '开发者'
 $defaultTab = 'oauth';
 if (isset($_GET['tab'])) {
     $t = (string) $_GET['tab'];
-    if (in_array($t, array('oauth', 'profile', 'password', 'dev'), true)) {
+    if (in_array($t, array('oauth', 'subscribe', 'profile', 'password', 'dev'), true)) {
         $defaultTab = $t;
     }
 }
@@ -80,6 +82,8 @@ if (isset($_GET['tab'])) {
     <div class="vs-tabs vs-account-tabs vs-recharge-tabs" id="accountTabs" role="tablist" aria-label="账号设置">
         <button type="button" class="vs-tabs__btn vs-account-tab<?php echo $defaultTab === 'oauth' ? ' is-active' : ''; ?>"
                 data-account-tab="oauth" role="tab" aria-selected="<?php echo $defaultTab === 'oauth' ? 'true' : 'false'; ?>">第三方账号</button>
+        <button type="button" class="vs-tabs__btn vs-account-tab<?php echo $defaultTab === 'subscribe' ? ' is-active' : ''; ?>"
+                data-account-tab="subscribe" role="tab" aria-selected="<?php echo $defaultTab === 'subscribe' ? 'true' : 'false'; ?>">订阅通知</button>
         <button type="button" class="vs-tabs__btn vs-account-tab<?php echo $defaultTab === 'profile' ? ' is-active' : ''; ?>"
                 data-account-tab="profile" role="tab" aria-selected="<?php echo $defaultTab === 'profile' ? 'true' : 'false'; ?>">基本信息</button>
         <button type="button" class="vs-tabs__btn vs-account-tab<?php echo $defaultTab === 'password' ? ' is-active' : ''; ?>"
@@ -133,6 +137,25 @@ if (isset($_GET['tab'])) {
         <?php else: ?>
             <?php vs_render_notice('info', '', '管理员尚未开启第三方登录，或当前无可绑定的方式。', array('compact' => true)); ?>
         <?php endif; ?>
+    </div>
+
+    <div class="vs-account-pane" data-account-pane="subscribe"<?php echo $defaultTab === 'subscribe' ? '' : ' hidden'; ?>>
+        <form method="post" action="" class="vs-form vs-account-form" id="accountSubscribeForm" data-ajax="1">
+            <input type="hidden" name="action" value="save_subscribe">
+            <?php if (empty($apiSubSiteOn)): ?>
+                <?php vs_render_notice('info', '', '站点尚未开放订阅。', array('compact' => true)); ?>
+            <?php endif; ?>
+            <div class="vs-form-row">
+                <label class="vs-checkbox">
+                    <input type="checkbox" name="apistatus" value="1" <?php echo !empty($apiSubOn) ? 'checked' : ''; ?><?php echo empty($apiSubSiteOn) ? ' disabled' : ''; ?>>
+                    <span>接口上架、下架与维护</span>
+                </label>
+            </div>
+            <p class="vs-form-hint">打开后，接口上架、下架或进入维护时，会发到你的注册邮箱。只改描述不会发信。</p>
+            <div class="vs-form-actions">
+                <button type="submit" class="vs-btn vs-btn--primary"<?php echo empty($apiSubSiteOn) ? ' disabled' : ''; ?>>保存订阅</button>
+            </div>
+        </form>
     </div>
 
     <div class="vs-account-pane" data-account-pane="profile"<?php echo $defaultTab === 'profile' ? '' : ' hidden'; ?>>

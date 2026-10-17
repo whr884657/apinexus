@@ -41,6 +41,9 @@ class ApiProxy
     /** 中继响应体上限（约 16MB） */
     const RELAY_MAX_BODY = 16777216;
 
+    /** 中继响应头上限（含多段状态头） */
+    const RELAY_MAX_HEADERS = 131072;
+
     /** 中继超时秒数 */
     const RELAY_TIMEOUT = 45;
 
@@ -225,6 +228,13 @@ class ApiProxy
             ApiStats::hitProxy($row, false, ApiError::UPSTREAM_BLOCKED);
             vs_api_error_exit(ApiError::UPSTREAM_BLOCKED, '上游地址不允许指向内网或非公网主机');
         }
+        // 用户自备出口由调用方控制；平台上游认证不得经明文 HTTP 经过该出口。
+        if (self::requestUsesUserEgress() && self::hasConfiguredUpstreamAuth($row)
+            && strcasecmp((string) parse_url($target, PHP_URL_SCHEME), 'http') === 0
+        ) {
+            ApiStats::hitProxy($row, false, ApiError::UPSTREAM_BLOCKED);
+            vs_api_error_exit(ApiError::UPSTREAM_BLOCKED, '启用出口代理时，带认证的上游必须使用 HTTPS');
+        }
 
         $clientMethod = isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string) $_SERVER['REQUEST_METHOD']) : 'GET';
         if ($clientMethod === '') {
@@ -364,6 +374,47 @@ class ApiProxy
             'rawBody'     => $rawBody,
             'contentType' => $contentType,
         );
+    }
+
+    /**
+     * @param array $row
+     * @return bool
+     */
+    private static function hasConfiguredUpstreamAuth(array $row)
+    {
+        if (!class_exists('ApiManager') || !ApiManager::hasUpstreamAuthColumns()) {
+            return false;
+        }
+        $mode = ApiManager::normalizeUpauth(isset($row['upauth']) ? $row['upauth'] : 0);
+        return $mode !== ApiManager::UPAUTH_NONE;
+    }
+
+    /**
+     * @return bool
+     */
+    private static function requestUsesUserEgress()
+    {
+        return class_exists('UserIpProxy') && UserIpProxy::requestWantsEgress();
+    }
+
+    /**
+     * @param string $contentType
+     * @return bool
+     */
+    private static function isActiveContentType($contentType)
+    {
+        $base = strtolower(trim(explode(';', (string) $contentType, 2)[0]));
+        return in_array($base, array(
+            'text/html',
+            'application/xhtml+xml',
+            'image/svg+xml',
+            'text/xml',
+            'application/xml',
+            'application/javascript',
+            'text/javascript',
+            'application/ecmascript',
+            'text/ecmascript',
+        ), true);
     }
 
     /**
@@ -534,15 +585,40 @@ class ApiProxy
         } else {
             curl_setopt($ch, CURLOPT_URL, $url);
         }
+        $respHeaders = '';
+        $respBody = '';
+        $headerBytes = 0;
+        $bodyBytes = 0;
+        $responseLimitExceeded = false;
         curl_setopt_array($ch, array(
             CURLOPT_CUSTOMREQUEST  => $method,
-            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_RETURNTRANSFER => false,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_TIMEOUT        => self::RELAY_TIMEOUT,
             CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_HTTPHEADER     => $headers,
-            CURLOPT_HEADER         => true,
+            CURLOPT_HEADER         => false,
+            CURLOPT_HEADERFUNCTION => function ($ch, $line) use (&$respHeaders, &$headerBytes, &$responseLimitExceeded) {
+                $len = strlen((string) $line);
+                if ($len === 0 || $headerBytes + $len > self::RELAY_MAX_HEADERS) {
+                    $responseLimitExceeded = true;
+                    return 0;
+                }
+                $headerBytes += $len;
+                $respHeaders .= $line;
+                return $len;
+            },
+            CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$respBody, &$bodyBytes, &$responseLimitExceeded) {
+                $len = strlen((string) $chunk);
+                if ($len === 0 || $bodyBytes + $len > self::RELAY_MAX_BODY) {
+                    $responseLimitExceeded = true;
+                    return 0;
+                }
+                $bodyBytes += $len;
+                $respBody .= $chunk;
+                return $len;
+            },
             CURLOPT_ENCODING       => '',
         ));
         vs_curl_ssl_verify($ch);
@@ -559,22 +635,24 @@ class ApiProxy
             vs_api_error_exit($errcode, $msg);
         }
 
-        $raw = curl_exec($ch);
+        $execResult = curl_exec($ch);
         $errno = curl_errno($ch);
         $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
         vs_curl_close($ch);
 
-        if ($raw === false || $errno) {
+        if ($responseLimitExceeded) {
+            ApiStats::hitProxy($row, false, ApiError::UPSTREAM_FAIL);
+            vs_api_error_exit(ApiError::UPSTREAM_FAIL, '上游响应超过允许大小');
+        }
+        if ($execResult === false || $errno) {
             ApiStats::hitProxy($row, false, ApiError::UPSTREAM_FAIL);
             vs_api_error_exit(ApiError::UPSTREAM_FAIL, '上游请求失败');
         }
 
         // 上游若返回跳转（如随机视频 302），透传 Location；禁止跟随拉取最终大文件
         if ($http === 301 || $http === 302 || $http === 303 || $http === 307 || $http === 308) {
-            $headerBlob = substr($raw, 0, $headerSize);
             $loc = '';
-            if (preg_match('/^Location:\s*(.+)$/mi', $headerBlob, $lm)) {
+            if (preg_match('/^Location:\s*(.+)$/mi', $respHeaders, $lm)) {
                 $loc = trim($lm[1]);
             }
             if ($loc !== '') {
@@ -589,12 +667,6 @@ class ApiProxy
                 header('Location: ' . $next, true, $http);
                 exit;
             }
-        }
-
-        $respHeaders = substr($raw, 0, $headerSize);
-        $respBody = substr($raw, $headerSize);
-        if (strlen($respBody) > self::RELAY_MAX_BODY) {
-            $respBody = substr($respBody, 0, self::RELAY_MAX_BODY);
         }
 
         // 提取上游 Content-Type，供 JSON 改写判定
@@ -635,6 +707,8 @@ class ApiProxy
             }
         }
 
+        // 主动内容不得以本站源可执行：保留正文但强制下载、nosniff，并给文档型内容加 sandbox。
+        $activeContent = self::isActiveContentType($upstreamCt);
         $ok = ($http >= 200 && $http < 400);
         // 不落库响应正文（体积）；不记耗时
         ApiStats::hitProxy($row, $ok, $http > 0 ? $http : 502);
@@ -649,6 +723,10 @@ class ApiProxy
             'proxy-authorization', 'te', 'trailer', 'upgrade', 'content-length',
             'content-encoding', 'location', 'set-cookie', 'set-cookie2',
         );
+        if ($activeContent) {
+            $skip[] = 'content-disposition';
+            $skip[] = 'content-type';
+        }
         // 改写后强制覆盖 Content-Type，避免上游旧类型残留
         if ($jsonRewritten) {
             $skip[] = 'content-type';
@@ -674,7 +752,13 @@ class ApiProxy
                 header(trim($hk) . ': ' . trim($hv), false);
             }
         }
-        if ($jsonRewritten) {
+        if ($activeContent) {
+            header('X-Content-Type-Options: nosniff');
+            header('Content-Security-Policy: sandbox');
+            header('Content-Disposition: attachment; filename="upstream-response.bin"');
+            header('Content-Type: application/octet-stream');
+            $sentCt = true;
+        } elseif ($jsonRewritten) {
             header('Content-Type: ' . ($upstreamCt !== '' ? $upstreamCt : 'application/json; charset=utf-8'));
             $sentCt = true;
         }

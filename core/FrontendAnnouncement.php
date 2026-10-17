@@ -103,43 +103,19 @@ class FrontendAnnouncement
         return $factory();
     }
 
-    /**
-     * 弹窗公告：已发布且 ispopup=1
-     *
-     * @return array<int, array>
-     */
     public static function listPopups()
     {
-        if (!ContentManager::tableReady()) {
+        $items = self::listForTheme();
+        if (!is_array($items)) {
             return array();
         }
-        try {
-            $pdo = Database::connect();
-            $sql = 'SELECT * FROM `' . ContentManager::table() . '`
-                WHERE `kind` = ? AND `status` = ? AND `ispopup` = 1
-                ORDER BY `ispinned` DESC, `id` DESC';
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute(array(
-                ContentManager::KIND_ANNOUNCEMENT,
-                ContentManager::STATUS_PUBLISHED,
-            ));
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $out = array();
-            if (is_array($rows)) {
-                foreach ($rows as $row) {
-                    if (!is_array($row)) {
-                        continue;
-                    }
-                    $item = self::formatForTheme($row);
-                    if ($item !== null) {
-                        $out[] = $item;
-                    }
-                }
+        $out = array();
+        foreach ($items as $item) {
+            if (is_array($item) && !empty($item['ispopup'])) {
+                $out[] = $item;
             }
-            return $out;
-        } catch (Exception $e) {
-            return array();
         }
+        return $out;
     }
 
     /**

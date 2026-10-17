@@ -1,0 +1,113 @@
+{
+    "id": "cron",
+    "name": "计划任务 API",
+    "desc": "系统级计划任务入口。以后新增的定时任务都走本接口，用 job 区分。当前 job=apistatus：把接口上架、下架、维护变更发给已订阅用户。",
+    "category": "对接能力",
+    "methods": [
+        "GET",
+        "POST"
+    ],
+    "file": "cron.php",
+    "params": [
+        {
+            "name": "key",
+            "type": "string",
+            "required": true,
+            "description": "系统密钥。三态传钥：Authorization: Bearer、Header X-Api-Key、Query key / apikey。",
+            "example": "你的系统密钥"
+        },
+        {
+            "name": "action",
+            "type": "string",
+            "required": true,
+            "description": "操作。当前只认 run。",
+            "example": "run"
+        },
+        {
+            "name": "job",
+            "type": "string",
+            "required": true,
+            "description": "任务名。当前只认 apistatus（发送接口状态订阅邮件）。以后的任务仍用本接口，另起 job 名。",
+            "example": "apistatus"
+        }
+    ],
+    "response": {
+        "code": 1,
+        "msg": "ok",
+        "job": "apistatus",
+        "events": 2,
+        "mailed": 3,
+        "skipped": ""
+    },
+    "doc": "## 使用前准备\n\n1. **系统设置 → 系统密钥** 生成密钥。\n2. **系统设置 → 系统级 API → 计划任务**：勾选启用并保存。\n3. **系统设置 → 订阅通知**：打开站点订阅。打开后页面会给出建议挂载的 curl。\n4. **系统设置 → 业务邮件通知**：勾选「接口状态订阅」，并配好 SMTP。\n5. 用户在账号设置「订阅通知」里打开「接口上架、下架与维护」。\n\n建议每 10 分钟请求一次。待发记在 Redis，不建表。须启用 Redis，否则 `skipped` 为 `redis_off`。站点订阅或邮件开关关闭时，本任务返回成功且 `skipped` 为 `site_off` / `mail_off`，队列保留。超过 7 天仍未发出的记录会过期。\n\n## 请求怎么发\n\n- GET 或 POST。成功 `code=1`。失败 `code=0`，看 `msg` 与 `errcode`（12xxx）。\n- **禁止** JSONP。\n\n## 调用限流（QPM / QPS）\n\n在「系统设置 → 系统级 API → 计划任务」配置。填 0 表示不限制。超限 errcode=12005。\n\n## 返回字段\n\n| 字段 | 含义 |\n|------|------|\n| `job` | 本次任务名 |\n| `events` | 本轮读到的待发条数 |\n| `mailed` | 成功发出的用户数（每人一封汇总信） |\n| `skipped` | 空表示已处理。`redis_off` 未启用 Redis；`site_off` 站点未开；`mail_off` 邮件开关未开；`no_subscriber` 没有订阅用户（本轮已从 Redis 丢掉） |\n\n闸关与错钥都是 errcode=12001、文案「无权访问」。SMTP 未开或一封都没发出时失败（errcode=12011），Redis 队列保留，下次再发。至少有一封成功则整批从 Redis 丢掉。\n\n## 请求示例\n\n```bash\ncurl -fsS -H \"Authorization: Bearer YOUR_KEY\" \"https://your.example.com/core/api/cron?action=run&job=apistatus\"\n```\n",
+    "sample_queries": [
+        {
+            "title": "发送接口状态订阅",
+            "query": "action=run&job=apistatus"
+        }
+    ],
+    "response_samples": [
+        {
+            "title": "发送成功",
+            "http": 200,
+            "body": {
+                "code": 1,
+                "msg": "ok",
+                "job": "apistatus",
+                "events": 2,
+                "mailed": 3,
+                "skipped": ""
+            }
+        },
+        {
+            "title": "计划任务未启用或密钥无效",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "无权访问",
+                "errcode": 12001
+            }
+        },
+        {
+            "title": "缺少 action",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "缺少 action（run）",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "缺少 job",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "缺少 job",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "未知 job",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "不支持的 job",
+                "errcode": 12003
+            }
+        },
+        {
+            "title": "发信失败，队列保留",
+            "http": 200,
+            "body": {
+                "code": 0,
+                "msg": "邮件未发出，本轮变更保留待下次计划任务",
+                "errcode": 12011,
+                "job": "apistatus",
+                "events": 2,
+                "mailed": 0,
+                "skipped": "send_failed"
+            }
+        }
+    ],
+    "enabled_gate": "cron"
+}

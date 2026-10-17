@@ -15,6 +15,7 @@
 |------|----------|----------|-------------------------|
 | cardkey | `cardkey.php` | `/core/api/cardkey` | `cardkey` |
 | checkin | `checkin.php` | `/core/api/checkin` | `checkin` |
+| cron | `cron.php` | `/core/api/cron` | `cron` |
 | userinfo | `userinfo.php` | `/core/api/userinfo` | `userinfo` |
 | apilogarchive | `apilogarchive.php` | `/core/api/apilogarchive` | `apilogarchive` |
 | apiquery | `apiquery.php` | `/core/api/apiquery` | `apiquery` |
@@ -41,7 +42,7 @@
 | `SystemApiCatalog` | `SystemApiCatalog.php` | 后台文档目录（读 `{短名}.json` + 公共 `errcode.json`） |
 | `SystemApiPublic` | `SystemApiPublic.php` | 接口查询 / 调用排行 / 用户信息 / 全站概况业务（脱敏） |
 
-相关业务还可落到 `CardKeyManager`、`CheckinManager`、`ApiLogArchive`、`PointsManager` 等（主题仍走 `Frontend*`）。
+相关业务还可落到 `CardKeyManager`、`CheckinManager`、`ApiManager`、`UserManager`、`ApiLogArchive`、`PointsManager` 等（主题仍走 `Frontend*`）。
 
 ---
 
@@ -57,7 +58,16 @@
 - `action`：`do`（也认 `checkin`）/ `status` / `config`
 - 用户：`userid` / `username` / `email` 三选一；限流在 `requireAuthorizedGate` 内统一执行
 - 未注册 `errcode=12012` + `reason=not_registered`；封禁 `12013` + `banned`
-- 代签到流水备注：`每日签到奖励（API）`（用户中心为 `每日签到奖励`）
+- `lastcheckin` 存 JSON（`days` 最多 7 日，`streak` 为连续第几天）。`do` 成功返回 `amount`（合计）、`base`、`bonus`、`streak_days`、`checkin_days`
+- 连续满 7 天且后台额外奖励开启时，当天及之后每个连续日都加发；成功句写明「连续签到第 M 天」
+- 代签到流水备注：未加发为 `每日签到奖励（API）`（用户中心为 `每日签到奖励`）；加发时括号内写连续天数与额外积分
+
+### `cron.php` · 计划任务
+
+- 以后的定时任务都走本文件，用 `job` 区分。当前只认 `action=run`、`job=apistatus`
+- `apistatus`：调用 `ApiManager::flushStatusSubscribe`，把待发的上架、下架、维护按用户汇总成一封邮件。用户开关在 `UserManager`。站点订阅或邮件开关关闭时不标已通知
+- 未知 `job` 为参数错误（12003）。闸关与错钥同为 12001。SMTP 未开或一封都没发出为业务失败（12011），队列保留
+- 限流键 `sysapirq.cron`，0 表示不限制
 
 ### `userinfo.php` · 用户信息
 
